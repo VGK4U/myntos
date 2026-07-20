@@ -45,12 +45,7 @@ echo ""
 echo "Starting FastAPI Backend with Gunicorn (2 UvicornWorkers, background)..."
 cd "$SCRIPT_DIR/backend"
 
-# Redirect stdout and stderr to a file in the frontend's public directory
-# so we can view it from the browser if it crashes!
-(sleep 15 && python -m uvicorn app.main:app \
-    --host 0.0.0.0 \
-    --port 8000 \
-    --log-level info > ../frontend/public/backend_debug.txt 2>&1) &
+gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --preload &
 BACKEND_PID=$!
 echo "Backend PID: $BACKEND_PID"
 
