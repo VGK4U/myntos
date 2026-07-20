@@ -42,10 +42,10 @@ sleep 1
 # --preload ensures lifespan/startup (APScheduler, DB migrations) runs once in the
 # master process before workers fork — prevents duplicate background jobs.
 echo ""
-echo "Starting FastAPI Backend with Gunicorn (2 UvicornWorkers, background)..."
+echo "Starting FastAPI Backend with Uvicorn (background)..."
 cd "$SCRIPT_DIR/backend"
 
-gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --preload &
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info &
 BACKEND_PID=$!
 echo "Backend PID: $BACKEND_PID"
 

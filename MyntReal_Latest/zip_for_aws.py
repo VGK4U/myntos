@@ -33,6 +33,22 @@ def main():
                 if not spec.match_file(rel_path):
                     zipf.write(file_path, rel_path)
                     
+        # Dynamically inject the .env variables securely into the zip without writing to disk
+        if os.path.exists('.env'):
+            env_config_lines = ["option_settings:", "  aws:elasticbeanstalk:application:environment:"]
+            with open('.env', 'r', encoding='utf-8') as env_file:
+                for line in env_file:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, val = line.split('=', 1)
+                        key = key.strip()
+                        val = val.strip().strip('"').strip("'")
+                        env_config_lines.append(f'    {key}: "{val}"')
+            
+            env_config_content = '\n'.join(env_config_lines) + '\n'
+            zipf.writestr('.ebextensions/01_env.config', env_config_content)
+            print("Successfully injected secure environment variables into the ZIP.")
+
     print(f"Successfully created {zip_name} (Size: {os.path.getsize(zip_name) / (1024*1024):.2f} MB)")
 
 if __name__ == '__main__':
