@@ -12,6 +12,8 @@ session_data*
 *.pem
 *.cert
 secrets.txt
+.ebextensions/
+*.zip
 
 # Database files (for local development)
 *.sqlite
