@@ -2076,7 +2076,7 @@ function _renderMePagination(total, pg, pageSize){
 let _lvPage = 1, _lvTotal = 0, _lvLoaded = false;
 const _lvExpanded  = new Set();
 const _lvDetailCache = {};
-const _lvLvlLabel  = {0:'L0 Bonus',1:'L1 Source',2:'L2 Senior',3:'L3 Extended',4:'L4 Core',5:'L5 Support',6:'L1 Source'};
+const _lvLvlLabel  = {0:'L0 Bonus',1:'L1 Source',2:'L2 Senior',3:'L3 Extended',4:'L4 Core',5:'L5 Support',6:'L6 Showroom'};
 
 function debounceLeadView(){ clearTimeout(window._lvDebTimer); window._lvDebTimer = setTimeout(()=>loadLeadView(1), 400); }
 

@@ -242,24 +242,29 @@ function toast(msg, kind='success'){
 }
 function fmt(n){ return '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:2}); }
 function fmtDt(s){ if(!s)return '-'; const ist=(s.endsWith('Z')||s.includes('+'))?s:s+'+05:30'; const d=new Date(ist); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit',timeZone:'Asia/Kolkata'}) + ' ' + d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'}); }
+function _isoDate(s){
+  if(!s || s==='null' || s==='undefined') return null;
+  if(typeof s !== 'string') s = String(s);
+  s = s.trim();
+  if(!s) return null;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(s + 'T00:00:00+05:30');
+  const ist = (s.endsWith('Z') || s.includes('+')) ? s : s + '+05:30';
+  const d = new Date(ist);
+  if(!isNaN(d.getTime())) return d;
+  const d2 = new Date(s);
+  return isNaN(d2.getTime()) ? null : d2;
+}
+
 function fmtDate(s){
-  if(!s || s==='null' || s==='undefined') return '—';
-  try {
-    const ist = (typeof s==='string' && (s.endsWith('Z')||s.includes('+'))) ? s : s+'+05:30';
-    const d = new Date(ist);
-    if(isNaN(d.getTime())) return '—';
-    return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Kolkata'});
-  } catch(e){ return '—'; }
+  const d = _isoDate(s);
+  if(!d) return '—';
+  return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Kolkata'});
 }
 
 function getDateKey(s){
-  if(!s || s==='null' || s==='undefined') return 'NO_DATE';
-  try {
-    const ist = (typeof s==='string' && (s.endsWith('Z')||s.includes('+'))) ? s : s+'+05:30';
-    const d = new Date(ist);
-    if(isNaN(d.getTime())) return 'NO_DATE';
-    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-  } catch(e){ return 'NO_DATE'; }
+  const d = _isoDate(s);
+  if(!d) return 'NO_DATE';
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 function debouncedLoad(){ clearTimeout(window._dt); window._dt = setTimeout(loadList, 350); }
 

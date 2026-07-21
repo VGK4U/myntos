@@ -143,7 +143,7 @@ class VGKCashIncomeEntry(BaseModel):
             'cancelled_reason':        self.cancelled_reason,
             'adjustment_ref_entry_id': self.adjustment_ref_entry_id,
             'adjustment_reason':       self.adjustment_reason,
-            'income_date':             self.income_date.isoformat() if hasattr(self.income_date, 'isoformat') and self.income_date else (str(self.income_date) if self.income_date else None),
+            'income_date':             (self.income_date.isoformat() + 'T00:00:00+05:30') if hasattr(self.income_date, 'isoformat') and self.income_date else ((str(self.income_date) + 'T00:00:00+05:30') if self.income_date else (self.created_at.isoformat() if self.created_at else None)),
             'created_at':              self.created_at.isoformat() if self.created_at else None,
             'updated_at':              self.updated_at.isoformat() if self.updated_at else None,
         }

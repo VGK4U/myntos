@@ -4113,13 +4113,13 @@ def member_earnings_dashboard(
             # DC-VGK-EARN-DASH-001: level-wise breakdown + new summary fields
             "income_by_level":        _lvl,
             "total_files":            files_map.get(m.id, 0),
-            # DC-VGK-EARN-DASH-002 (Jul 2026): Level 6 entries (deep-chain commission) are folded
-            # into the L1 Source column so they remain visible without adding a new column.
-            "l1_source":              float(_lvl.get(1, {}).get("amount", 0)) + float(_lvl.get(6, {}).get("amount", 0)),
+            # DC-VGK-EARN-DASH-002: Unfolded Level 6 entries into dedicated l6_showroom field.
+            "l1_source":              float(_lvl.get(1, {}).get("amount", 0)),
             "l2_senior":              float(_lvl.get(2, {}).get("amount", 0)),
             "l3_extended":            float(_lvl.get(3, {}).get("amount", 0)),
             "l4_core":                float(_lvl.get(4, {}).get("amount", 0)),
             "l5_support":             float(_lvl.get(5, {}).get("amount", 0)),
+            "l6_showroom":            float(_lvl.get(6, {}).get("amount", 0)),
             "l0_bonus":               float(_lvl.get(0, {}).get("amount", 0)),
             "l1_files":               l1_files_map.get(m.id, 0),
         })
@@ -4138,6 +4138,7 @@ def member_earnings_dashboard(
         'l3':          lambda x: x['l3_extended'],
         'l4':          lambda x: x['l4_core'],
         'l5':          lambda x: x['l5_support'],
+        'l6':          lambda x: x['l6_showroom'],
         'l0':          lambda x: x['l0_bonus'],
         'total_files': lambda x: x['total_files'],
         'files':       lambda x: x['l1_files'],

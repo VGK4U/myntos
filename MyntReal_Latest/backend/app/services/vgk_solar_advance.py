@@ -659,6 +659,7 @@ def apply_slab_bonus_if_active(
                         partner_id              = partner.id,
                         source_lead_id          = _adv_lv.lead_id,
                         level                   = 0,  # level=0 avoids unique constraint clash with ADVANCE (level>=1)
+                        income_date             = _vci_created_at.date() if hasattr(_vci_created_at, 'date') else _vci_created_at,
                         deal_value_total        = 0,
                         deal_value_excl_tax     = 0,
                         commission_pct          = 0,

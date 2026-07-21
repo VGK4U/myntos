@@ -215,6 +215,7 @@ class SecurityManager:
                     plain_password.encode('utf-8'),
                     salt=_salt,
                     n=int(_N), r=int(_r), p=int(_p),
+                    maxmem=67108864,
                     dklen=len(_expected)
                 )
                 result = _hmac.compare_digest(_derived, _expected)

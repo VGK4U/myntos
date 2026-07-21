@@ -108,10 +108,10 @@ def _enrich_entry_bulk(
 ) -> dict:
     """DC-BULK-ENRICH-001: O(1) enrichment using pre-fetched in-memory maps.
 
-    Replaces _enrich_entry() inside unified_list to eliminate N+1 queries.
-    All four maps are keyed by integer ID and built before the loop.
     """
     d = entry.to_dict()
+    if not d.get('income_date') and getattr(entry, 'created_at', None):
+        d['income_date'] = entry.created_at.isoformat()
     d['level_label'] = LEVEL_LABELS.get(entry.level, f'L{entry.level}')
 
     partner = partner_map.get(entry.partner_id)
@@ -187,7 +187,7 @@ def confirm_or_reject_entry(
     current_employee: StaffEmployee = Depends(get_current_staff_user),
 ):
     """
-    Sales staff: confirm (DRAFT → PENDING) or reject (DRAFT → CANCELLED).
+    Sales staff: confirm (DRAFT -> PENDING) or reject (DRAFT -> CANCELLED).
     On confirm: points debited (or waived if insufficient), cash income credited.
     """
     from app.services.vgk_cash_income import confirm_cash_income, reject_cash_income
@@ -276,7 +276,7 @@ def release_entry(
     current_employee: StaffEmployee = Depends(get_current_staff_user),
 ):
     """
-    Accounts staff: release PENDING → RELEASED.
+    Accounts staff: release PENDING -> RELEASED.
     Deducts 8% admin charges + 2% TDS; credits net to partner's vgk_cash_wallet.
     """
     from app.services.vgk_cash_income import release_cash_income
@@ -423,7 +423,7 @@ def member_wallet(
     total = q.count()
     txns = q.order_by(VGKWalletTransaction.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
 
-    # Build map: (ref_type, ref_id) → wallet_after of matching PAYOUT txn
+    # Build map: (ref_type, ref_id) -> wallet_after of matching PAYOUT txn
     # so the Balance column in the member view shows the post-disbursement balance.
     # BONANZA_CASH_PAYOUT takes precedence over SLAB_BONUS_PAYOUT for the final balance shown.
     _payout_rows = db.query(VGKWalletTransaction).filter(
@@ -478,7 +478,7 @@ def member_wallet(
             # DC-WALLET-CUMBAL-002: Do NOT override wallet_after with the post-disbursement
             # balance. Payout/offset txns (SOLAR_ADV_PAYOUT, BONANZA_CASH_PAYOUT, etc.) are
             # hidden from the member view, so overriding the CR row's wallet_after with their
-            # post-payout value (e.g. ₹0) is confusing — the member sees "+₹1,000 → Balance ₹0".
+            # post-payout value (e.g. ₹0) is confusing — the member sees "+₹1,000 -> Balance ₹0".
             # The raw stored wallet_after (balance at the moment the credit hit) is the correct
             # value to display for a running balance visible to the member.
         return d
@@ -945,7 +945,7 @@ def unified_list(
     can_pay      = is_super or 'finance' in dept or 'bank' in dept or 'account' in dept
 
     def _actions_for(e):
-        # DC-NO-RELEASE-001: Release button removed. All income flows PENDING→Stage1→Stage2(Paid).
+        # DC-NO-RELEASE-001: Release button removed. All income flows PENDING->Stage1->Stage2(Paid).
         acts = []
         if e.status == 'DRAFT' and (can_sales or is_super):
             acts += ['confirm', 'reject']
@@ -1493,7 +1493,7 @@ def field_allowance_stage1_approve(
 ):
     """
     DC_VGK_FIELD_ALLOWANCE_STAGE_20260615 — Stage 1: Approve a pending field allowance.
-    Moves status from 'Pending' → 'Stage1Approved'.
+    Moves status from 'Pending' -> 'Stage1Approved'.
     WVV: Write sets stage_1_approved_by/at; Verify checks status==Pending; Validate emp exists.
     """
     from app.services.vgk_cash_income import _get_ist
@@ -1532,7 +1532,7 @@ def field_allowance_stage2_mark_paid(
 ):
     """
     DC_VGK_FIELD_ALLOWANCE_STAGE_20260615 — Stage 2: Mark a Stage1Approved field allowance as paid.
-    Moves status from 'Stage1Approved' → 'Payout Completed'.
+    Moves status from 'Stage1Approved' -> 'Payout Completed'.
     WVV: Write sets stage_2_paid_by/at + paid_at; Verify checks status; Validate emp exists.
     """
     from app.services.vgk_cash_income import _get_ist

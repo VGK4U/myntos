@@ -264,9 +264,22 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
     if _showroom_p and (_showroom_pct > 0 or (_showroom_type == 'AMOUNT' and _showroom_amt > 0)):
         if _showroom_type == 'AMOUNT' and _showroom_amt > 0:
             levels_map[6] = (_showroom_p, Decimal('0'))          # pct placeholder
-            _level_comm_overrides[6] = _showroom_amt.quantize(Decimal('0.01'))
         else:
             levels_map[6] = (_showroom_p, _showroom_pct)
+
+    # DC-CHAIN-DEDUP-001: Deduplicate partners in chain map so lower levels (L5/L6)
+    # do not grant double commissions to a partner already assigned at L1/L2.
+    _chain_seen_pids: set = set()
+    _deduped_levels_map: dict = {}
+    for _cl, (_cp, _cpct) in levels_map.items():
+        if _cp is None:
+            continue
+        if _cp.id in _chain_seen_pids:
+            pass
+        else:
+            _chain_seen_pids.add(_cp.id)
+            _deduped_levels_map[_cl] = (_cp, _cpct)
+    levels_map = _deduped_levels_map
 
     created = 0
     for level, (partner, pct) in levels_map.items():
@@ -323,6 +336,7 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
             source_lead_id        = lead.id,
             category_id           = category_id,
             level                 = level,
+            income_date           = getattr(lead, 'income_date', None) or _get_ist().date(),
             deal_value_total      = deal_total,
             deal_value_excl_tax   = deal_ex_tax,
             confirmed_final_value = Decimal(str(_cfv)) if (_cfv is not None) else None,

@@ -137,38 +137,38 @@ def apply_extra_commission_if_active(
 
                     admin  = (amount * ADMIN_CHARGE_PCT / 100).quantize(Decimal('0.01'))
                     tds    = (amount * TDS_PCT           / 100).quantize(Decimal('0.01'))
-                    net    = amount - admin - tds
-
                     _sp = db.begin_nested()
                     try:
                         entry_no = _next_entry_number(db, company_id)
+                        _inc_date = (lead.submit_date.date() if hasattr(lead.submit_date, 'date') else lead.submit_date) if getattr(lead, 'submit_date', None) else now_ist.date()
 
                         db.execute(text("""
                             INSERT INTO vgk_cash_income_entries
                               (company_id, entry_number, partner_id, source_lead_id,
                                kind, status, commission_amount, admin_charges,
-                               tds_amount, net_payout, level, notes,
+                               tds_amount, net_payout, level, notes, income_date,
                                created_at, updated_at)
                             VALUES
                               (:co, :en, :pid, :lid,
                                'EXTRA_COMMISSION', 'PENDING',
                                :ca, :ac, :ta, :np, :lv,
-                               :notes, :now, :now)
+                               :notes, :inc_date, :now, :now)
                         """), {
-                            'co':    company_id,
-                            'en':    entry_no,
-                            'pid':   partner_id,
-                            'lid':   lead_id,
-                            'ca':    float(amount),
-                            'ac':    float(admin),
-                            'ta':    float(tds),
-                            'np':    float(net),
-                            'lv':    lv,
-                            'notes': (
+                            'co':       company_id,
+                            'en':       entry_no,
+                            'pid':      partner_id,
+                            'lid':      lead_id,
+                            'ca':       float(amount),
+                            'ac':       float(admin),
+                            'ta':       float(tds),
+                            'np':       float(net),
+                            'lv':       lv,
+                            'notes':    (
                                 f'Special Bonanza: {_bz.name} | '
                                 f'Trigger: {trigger_event} | L{lv} Extra Commission'
                             ),
-                            'now': now_ist,
+                            'inc_date': _inc_date,
+                            'now':      now_ist,
                         })
 
                         db.execute(text("""

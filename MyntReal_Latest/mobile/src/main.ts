@@ -155,6 +155,7 @@ import { VGKSettingsPage } from './pages/vgk/VGKSettings';
 import { VGKCouponActivatePage } from './pages/vgk/VGKCouponActivate';
 import { VGKCouponProgressPage } from './pages/vgk/VGKCouponProgress';
 import { VGKCouponTransferPage } from './pages/vgk/VGKCouponTransfer';
+import { VGKIncomeUnified } from './pages/vgk/VGKIncomeUnified';
 // Zynova Portal Pages
 import { ZynovaRealEstate } from './pages/zynova/ZynovaRealEstate';
 import { ZynovaInsurance } from './pages/zynova/ZynovaInsurance';
@@ -1011,6 +1012,9 @@ class MNRApp {
         break;
       case 'vgk-coupon-transfer':
         page = new VGKCouponTransferPage(this.pageContainer);
+        break;
+      case 'vgk-income-unified':
+        page = new VGKIncomeUnified(this.pageContainer);
         break;
 
       // Zynova Portal Pages

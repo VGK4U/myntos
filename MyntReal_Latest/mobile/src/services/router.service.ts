@@ -153,6 +153,7 @@ export type PageRoute =
   | 'vgk-coupon-activate'
   | 'vgk-coupon-progress'
   | 'vgk-coupon-transfer'
+  | 'vgk-income-unified'
   // Zynova Portal Routes
   | 'zynova-real-estate'
   | 'zynova-insurance'
@@ -346,6 +347,7 @@ class RouterService {
     'vgk-coupon-activate': { id: 'vgk-coupon-activate', title: 'Activate Coupon', icon: 'zap', showInTabs: false, portal: 'mnr' },
     'vgk-coupon-progress': { id: 'vgk-coupon-progress', title: 'Coupon Progress', icon: 'bar-chart-2', showInTabs: false, portal: 'mnr' },
     'vgk-coupon-transfer': { id: 'vgk-coupon-transfer', title: 'Transfer Coupons', icon: 'send', showInTabs: false, portal: 'mnr' },
+    'vgk-income-unified': { id: 'vgk-income-unified', title: 'VGK Income — Unified', icon: 'trending-up', showInTabs: false, portal: 'staff' },
 
 
 
