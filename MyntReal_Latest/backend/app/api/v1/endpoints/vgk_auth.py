@@ -984,27 +984,27 @@ def vgk_my_leads(
     source_count = db.query(CRMLead).filter(CRMLead.associated_partner_id == mid).count()
     support_count = db.query(CRMLead).filter(CRMLead.vgk_field_support_id == mid).count()
 
-    guru_lead_ids = [
+    guru_lead_ids = list(set([
         r[0] for r in db.execute(
             sa_text("SELECT DISTINCT source_lead_id FROM vgk_team_income_entries "
                     "WHERE partner_id=:pid AND level=2 AND source_lead_id IS NOT NULL"),
             {"pid": mid}
         ).fetchall()
-    ]
-    zguru_lead_ids = [
+    ] + [r.id for r in db.query(CRMLead.id).filter(CRMLead.team_senior_partner_id == mid).all()]))
+    zguru_lead_ids = list(set([
         r[0] for r in db.execute(
             sa_text("SELECT DISTINCT source_lead_id FROM vgk_team_income_entries "
                     "WHERE partner_id=:pid AND level=3 AND source_lead_id IS NOT NULL"),
             {"pid": mid}
         ).fetchall()
-    ]
-    core_lead_ids = [
+    ] + [r.id for r in db.query(CRMLead.id).filter(CRMLead.team_extended_partner_id == mid).all()]))
+    core_lead_ids = list(set([
         r[0] for r in db.execute(
             sa_text("SELECT DISTINCT source_lead_id FROM vgk_team_income_entries "
                     "WHERE partner_id=:pid AND level=4 AND source_lead_id IS NOT NULL"),
             {"pid": mid}
         ).fetchall()
-    ]
+    ] + [r.id for r in db.query(CRMLead.id).filter(CRMLead.team_core_partner_id == mid).all()]))
     guru_count = len(guru_lead_ids)
     zguru_count = len(zguru_lead_ids)
     core_count  = len(core_lead_ids)
@@ -2273,7 +2273,15 @@ def vgk_dashboard_summary(
             SELECT COUNT(*)                               AS total,
                    COUNT(CASE WHEN status='NEW' THEN 1 END) AS new_c,
                    COUNT(CASE WHEN status='WON' THEN 1 END) AS won
-            FROM crm_leads WHERE associated_partner_id=:pid
+            FROM crm_leads WHERE id IN (
+                SELECT id FROM crm_leads WHERE associated_partner_id=:pid
+                UNION
+                SELECT id FROM crm_leads WHERE vgk_field_support_id=:pid
+                UNION
+                SELECT source_lead_id FROM vgk_team_income_entries WHERE partner_id=:pid AND level>=2 AND source_lead_id IS NOT NULL
+                UNION
+                SELECT id FROM crm_leads WHERE team_senior_partner_id=:pid OR team_extended_partner_id=:pid OR team_core_partner_id=:pid
+            )
         ),
         orders AS (
             SELECT COUNT(*) AS total,
@@ -3889,8 +3897,27 @@ async def vgk_update_lead(
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
 
-    if lead.associated_partner_id != current_member.id:
-        raise HTTPException(status_code=403, detail="You can only edit leads you submitted as Source")
+    # Allow any assigned partner to edit
+    authorized = False
+    if current_member.id in (
+        lead.associated_partner_id,
+        lead.team_senior_partner_id,
+        lead.team_extended_partner_id,
+        lead.team_core_partner_id,
+        lead.vgk_field_support_id
+    ):
+        authorized = True
+    else:
+        # Check legacy income entries for legacy L2/L3/L4 support
+        legacy_auth = db.execute(
+            sa_text("SELECT 1 FROM vgk_team_income_entries WHERE partner_id=:pid AND source_lead_id=:lid LIMIT 1"),
+            {"pid": current_member.id, "lid": lead.id}
+        ).scalar()
+        if legacy_auth:
+            authorized = True
+
+    if not authorized:
+        raise HTTPException(status_code=403, detail="You can only edit leads assigned to you")
 
     _old_status = lead.status
 

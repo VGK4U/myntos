@@ -12996,6 +12996,9 @@ async def update_lead_full(
     guru_id: Optional[str] = Body(None),
     z_guru_id: Optional[str] = Body(None),
     adi_guru_id: Optional[str] = Body(None),
+    team_senior_partner_id: Optional[int] = Body(None),
+    team_extended_partner_id: Optional[int] = Body(None),
+    team_core_partner_id: Optional[int] = Body(None),
     source_ref_type: Optional[str] = Body(None),
     source_ref_id: Optional[str] = Body(None),
     source_ref_name: Optional[str] = Body(None),
@@ -13155,16 +13158,21 @@ async def update_lead_full(
                 lead.handler_type = None
                 lead.handler_id = None
     
-    if guru_id is not None:
-        lead.guru_id = guru_id if guru_id else None
-    
-    if adi_guru_id is not None:
-        lead.adi_guru_id = adi_guru_id if adi_guru_id else None
+    if guru_id is not None or ('guru_id' in locals() and guru_id is None):
+        lead.guru_id = guru_id
+
+    if adi_guru_id is not None or ('adi_guru_id' in locals() and adi_guru_id is None):
+        lead.adi_guru_id = adi_guru_id
 
     # DC Protocol (Apr 2026): 8 previously-missing fields now persisted by this endpoint.
     # These were silently dropped (FastAPI ignored unknown Body keys). Now declared and saved.
-    if z_guru_id is not None:
-        lead.z_guru_id = z_guru_id if z_guru_id else None
+    if z_guru_id is not None or ('z_guru_id' in locals() and z_guru_id is None):
+        lead.z_guru_id = z_guru_id
+    
+    # DC-HCI: We must accept None to clear out previous data (e.g. if Senior was Hari Teja, but is now changed to MNR user)
+    lead.team_senior_partner_id = team_senior_partner_id
+    lead.team_extended_partner_id = team_extended_partner_id
+    lead.team_core_partner_id = team_core_partner_id
 
     if source_ref_type is not None:
         lead.source_ref_type = source_ref_type if source_ref_type else None
@@ -13175,6 +13183,18 @@ async def update_lead_full(
             lead.mnr_handler_id = str(source_ref_id)
         elif source_ref_type in ('vgk', 'vgk_partner', 'partner', 'vendor', 'staff') and not source_ref_id:
             lead.mnr_handler_id = None
+            
+        # Keep associated_partner_id in sync when source is a VGK partner
+        if source_ref_type in ('vgk', 'vgk_partner', 'partner') and source_ref_id:
+            try:
+                lead.associated_partner_id = int(source_ref_id)
+            except (ValueError, TypeError):
+                pass
+        elif source_ref_type in ('mnr', 'staff') and source_ref_id:
+            lead.associated_partner_id = None
+        elif not source_ref_id:
+            lead.associated_partner_id = None
+
     if source_ref_name is not None:
         lead.source_ref_name = source_ref_name if source_ref_name else None
 
@@ -13217,7 +13237,9 @@ async def update_lead_full(
         lead.field_staff_id = field_staff_id if field_staff_id else None
     
     if associated_partner_id is not None:
-        lead.associated_partner_id = associated_partner_id if associated_partner_id else None
+        # Only override if we haven't already explicitly synced it from a partner source reference
+        if not (source_ref_type in ('vgk', 'vgk_partner', 'partner') and source_ref_id):
+            lead.associated_partner_id = associated_partner_id if associated_partner_id else None
     
     if deal_value_total is not None:
         lead.deal_value_total = deal_value_total
