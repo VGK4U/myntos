@@ -56,7 +56,7 @@ if __name__ == '__main__':
     try:
         import pathspec
     except ImportError:
-        import subprocess
-        subprocess.check_call(['python', '-m', 'pip', 'install', 'pathspec'])
+        import subprocess, sys
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pathspec'])
         import pathspec
     main()

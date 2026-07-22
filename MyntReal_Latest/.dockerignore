@@ -65,3 +65,7 @@ media_backup/
 .canvas/
 test_endpoints.js
 start_local.bat
+test_env/
+mobile/node_modules/
+frontend/storage/
+backend/storage/
