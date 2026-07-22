@@ -11,13 +11,14 @@ VGK and EA have equal full permissions on all Accounts module features.
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, status, File, Form, UploadFile, Body, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from typing import Optional, List
 from decimal import Decimal
 from datetime import date
 
 from app.core.database import get_db
 from app.models.staff import StaffEmployee
-from app.models.staff_accounts import PurchaseInvoiceUpload, PurchaseInvoiceLineItem, HSNMaster, VendorMaster, StockItemMaster, StockItemImage, RevenueCategory, IncomeEntry, AssociatedCompany, EmployeeFundLedger, EmployeeFundTransfer, ExpenseEntry, CashflowRegister, FundAllocation, SolarVendorLedger
+from app.models.staff_accounts import PurchaseInvoiceUpload, PurchaseInvoiceLineItem, HSNMaster, VendorMaster, StockItemMaster, StockItemImage, RevenueCategory, IncomeEntry, AssociatedCompany, EmployeeFundLedger, EmployeeFundTransfer, ExpenseEntry, CashflowRegister, FundAllocation, SolarVendorLedger, StockLedger
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
 from app.services.staff_accounts_service import (
     AssociatedCompanyService,
@@ -57,9 +58,10 @@ from app.services.staff_accounts_service import (
     ACCOUNTS_ALLOWED_ROLES,
     is_accounts_allowed_role,
     is_accounts_allowed_employee,
-    ServiceCenterGivenOutService
+    ServiceCenterGivenOutService,
+    log_accounts_audit
 )
-from app.services.sfms_seed import run_sfms_seed
+from app.services.sfms_seed import run_sfms_seed, seed_mynt_real_llp, seed_default_income_sources
 from app.services.sfms_cache_service import sfms_cache
 from app.schemas.staff_accounts import (
     AssociatedCompanyCreate,
@@ -2608,6 +2610,7 @@ async def bulk_upload_stock_items(
             db.query(StockItemMaster.item_code).all()
         )
 
+        row_num = 1
         for row_num, raw_row in enumerate(rows_iter, start=2):
             if all(v is None for v in raw_row):
                 continue
@@ -2822,7 +2825,7 @@ async def bulk_upload_stock_items(
         
         result = StockItemBulkUploadResult(
             success=len(errors) == 0,
-            total_rows=len(df),
+            total_rows=max(0, row_num - 1),
             created_count=len(created_items),
             error_count=len(errors),
             errors=[e.model_dump() for e in errors],
@@ -3179,7 +3182,7 @@ async def add_opening_balance(
         if not item:
             raise HTTPException(status_code=404, detail="Stock item not found")
         
-        company = db.query(SFMSCompany).filter(SFMSCompany.id == company_id).first()
+        company = db.query(AssociatedCompany).filter(AssociatedCompany.id == company_id).first()
         if not company:
             raise HTTPException(status_code=404, detail="Company not found")
         
@@ -3273,7 +3276,7 @@ async def get_opening_balance(
         
         results = []
         for entry in entries:
-            company = db.query(SFMSCompany).filter(SFMSCompany.id == entry.company_id).first()
+            company = db.query(AssociatedCompany).filter(AssociatedCompany.id == entry.company_id).first()
             results.append({
                 "id": entry.id,
                 "company_id": entry.company_id,

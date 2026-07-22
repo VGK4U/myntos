@@ -2975,7 +2975,7 @@ def get_my_leads(
                     or_(
                         SignupCategory.name.ilike(category),
                         SignupCategory.name.ilike(f"%{category}%"),
-                        SignupCategory.code.ilike(category)
+                        SignupCategory.slug.ilike(category)
                     )
                 ).all()
                 _cat_ids.extend([r.id for r in _matched_cats])
@@ -3359,7 +3359,7 @@ def list_leads(
                     or_(
                         SignupCategory.name.ilike(category),
                         SignupCategory.name.ilike(f"%{category}%"),
-                        SignupCategory.code.ilike(category)
+                        SignupCategory.slug.ilike(category)
                     )
                 ).all()
                 _cat_ids.extend([r.id for r in _matched_cats])
@@ -4763,7 +4763,7 @@ def master_leads(
                     or_(
                         SignupCategory.name.ilike(category),
                         SignupCategory.name.ilike(f"%{category}%"),
-                        SignupCategory.code.ilike(category)
+                        SignupCategory.slug.ilike(category)
                     )
                 ).all()
                 _cat_ids.extend([r.id for r in _matched_cats])
@@ -5624,6 +5624,7 @@ def lead_analytics(
             'completed_received': float(getattr(r, 'comp_received', 0) or 0),
         }
 
+    _EXCL_PIPE_PS = ['cancelled', 'not_interested', 'completed', 'loan_rejected', 'different_vendor', 'documents_issue']
     _pipe_cond = _and_(_won_ok, _or_(CRMLead.solar_pipeline_status.is_(None), ~CRMLead.solar_pipeline_status.in_(_EXCL_PIPE_PS)))
     _sr = base.with_entities(
         _f.count(CRMLead.id).label('total'),
@@ -12005,7 +12006,7 @@ async def get_unified_my_leads(
                     or_(
                         SignupCategory.name.ilike(category),
                         SignupCategory.name.ilike(f"%{category}%"),
-                        SignupCategory.code.ilike(category)
+                        SignupCategory.slug.ilike(category)
                     )
                 ).all()
                 _cat_ids.extend([r.id for r in _matched_cats])

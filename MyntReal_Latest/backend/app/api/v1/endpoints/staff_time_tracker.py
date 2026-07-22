@@ -28,7 +28,7 @@ import logging
 
 from app.core.database import get_db
 from app.core.security import SecurityManager
-from app.models.staff import StaffEmployee
+from app.models.staff import StaffEmployee, StaffRole, StaffDepartment
 from app.models.staff_attendance import (
     StaffAttendance, StaffAttendanceBreak, StaffAttendanceLog,
     StaffBreakType, StaffLocationDriftEvent, StaffRealtimeLocation,
@@ -2524,7 +2524,8 @@ async def get_gps_gaps(
     
     # Check authorization - user can view their own or managers can view team
     if attendance.employee_id != current_user.id:
-        if not has_staff_permission(current_user, 'manage_team', db):
+        hierarchy_level = current_user.role.hierarchy_level if current_user.role else 0
+        if hierarchy_level < 60:
             raise HTTPException(status_code=403, detail="Not authorized to view this record")
     
     # Get gap records from location history

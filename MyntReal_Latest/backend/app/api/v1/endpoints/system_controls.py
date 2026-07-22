@@ -133,7 +133,9 @@ async def get_system_status(
 ):
     """Get current status of all system features - RVZ ID ONLY"""
     try:
-        validate_rvz_access(current_user)
+        current_user = db.query(User).filter(User.mnr_id == user_id).first()
+        if current_user:
+            validate_rvz_access(current_user)
         
         feature_status = SystemControl.get_all_features_status(db)
         

@@ -5,6 +5,11 @@ User and Admin ticket management
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request, File, UploadFile, Body, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
+import logging
+
+logger = logging.getLogger(__name__)
+
 from app.core.database import get_db
 from app.core.security import get_current_user, get_current_user_hybrid, get_current_admin_user
 from app.models.user import User

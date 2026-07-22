@@ -69,3 +69,9 @@ test_env/
 mobile/node_modules/
 frontend/storage/
 backend/storage/
+
+# Exclude massive backup files and local DBs
+*.zip
+*.dump
+pgsql/
+pgsql16/

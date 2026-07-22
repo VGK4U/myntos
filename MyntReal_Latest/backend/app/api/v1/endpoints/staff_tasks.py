@@ -1936,6 +1936,7 @@ async def add_comment(
         file_content = await file.read()
         file_size = len(file_content)
         
+        MAX_FILE_SIZE = 5 * 1024 * 1024
         if file_size > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=400,

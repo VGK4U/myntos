@@ -1856,7 +1856,9 @@ async def get_public_announcements(
         FeedbackSubmission.id,
         User.name,
         User.city,
-        FeedbackSubmission.user_id
+        FeedbackSubmission.user_id,
+        FeedbackSubmission.display_order,
+        FeedbackSubmission.approved_at
     ).order_by(
         FeedbackSubmission.display_order.asc().nullslast(),
         FeedbackSubmission.approved_at.desc()
