@@ -12346,9 +12346,22 @@ async def get_unified_lead_details(
     elif is_partner:
         has_access = (
             lead.associated_partner_id == user_id or
+            lead.team_senior_partner_id == user_id or
+            lead.team_extended_partner_id == user_id or
+            lead.team_core_partner_id == user_id or
+            lead.vgk_field_support_id == user_id or
             (lead.primary_owner_type == 'partner' and lead.primary_owner_id == user_id) or
             (lead.created_by_type == 'partner' and lead.created_by_id == user_id_str)
         )
+        if not has_access:
+            from sqlalchemy import text
+            # Legacy L2/L3/L4 support check
+            legacy_auth = db.execute(
+                text("SELECT 1 FROM vgk_team_income_entries WHERE partner_id=:pid AND source_lead_id=:lid LIMIT 1"),
+                {"pid": user_id, "lid": lead.id}
+            ).scalar()
+            if legacy_auth:
+                has_access = True
     else:
         # DC Protocol (Dec 31, 2025): primary_owner_id is Integer - NOT for MNR string IDs
         # MNR access via mnr_handler_id (VARCHAR) or created_by fields
