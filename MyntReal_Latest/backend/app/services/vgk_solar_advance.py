@@ -100,8 +100,10 @@ def check_and_create_advance(db: Session, lead_id: int) -> dict:
             return {'created': False, 'reason': 'CIBIL not confirmed'}
 
         score = lead.cibil_score or 0
-        if score < CIBIL_MIN_SCORE:
-            return {'created': False, 'reason': f'CIBIL score {score} < {CIBIL_MIN_SCORE}'}
+        # DC-CIBIL-SCORE-OPTIONAL-001: User requested that if CIBIL is tick marked (confirmed),
+        # the ₹1000 advance is added to L1. We bypass the strict score >= 600 requirement.
+        # if score < CIBIL_MIN_SCORE:
+        #     return {'created': False, 'reason': f'CIBIL score {score} < {CIBIL_MIN_SCORE}'}
 
         now = _get_ist()
         created_numbers = []
