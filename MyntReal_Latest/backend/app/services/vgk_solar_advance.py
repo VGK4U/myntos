@@ -625,6 +625,26 @@ def apply_slab_bonus_if_active(
         if not bonanza:
             return {'slab_applied': False, 'reason': 'no_active_bonanza'}
 
+        # DC-SLAB-DEDUP-001 (Jul 2026): Deduplicate to prevent multiple payouts for the same bonanza.
+        # Check if the partner has already received a SLAB_BONUS entry matching this bonanza name.
+        _already_received = db.execute(text("""
+            SELECT id FROM vgk_cash_income_entries
+            WHERE partner_id = :pid
+              AND kind = 'SLAB_BONUS'
+              AND notes LIKE :pfx
+            LIMIT 1
+        """), {
+            'pid': partner.id,
+            'pfx': f'Slab Wise Bonanza — {bonanza.name}%'
+        }).fetchone()
+
+        if _already_received:
+            logger.info(
+                f'[SLAB-DEDUP] Partner {partner.id} has already claimed slab bonus for '
+                f'bonanza {bonanza.id} ({bonanza.name}) — skipping additional payout'
+            )
+            return {'slab_applied': False, 'reason': 'already_claimed_for_campaign'}
+
         slab_amount   = Decimal(str(bonanza.slab_extra_amount))
         wallet_before = partner.vgk_cash_wallet or Decimal('0')
         wallet_after  = wallet_before + slab_amount

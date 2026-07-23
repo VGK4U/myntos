@@ -85,12 +85,8 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
     # deal_value_excl_tax is stored in the entry for audit only — not used in calculation.
     deal_ex_tax = Decimal(str(lead.deal_value_excl_tax or 0))
 
-    # DC-COMM-DVR-001 (Jun 2026): Commission base = deal_value_received (DVR) for ALL categories.
-    # DVR = actual amount received from the customer at balance-received stage.
-    # confirmed_final_value and solar_value are NOT used as the commission base (audit/snapshot only).
-    # Fallback to deal_value_total only when DVR is zero (payment not yet recorded).
-    _dvr = Decimal(str(lead.deal_value_received or 0))
-    commission_base = _dvr if _dvr > 0 else deal_total
+    # DC-FIX-COMM-BASE (Jul 2026): Calculate commission on deal_value_excl_tax instead of deal_value_total / received.
+    commission_base = deal_ex_tax
 
     if commission_base <= 0:
         _cfv = getattr(lead, 'confirmed_final_value', None)

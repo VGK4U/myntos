@@ -137,6 +137,7 @@ def apply_extra_commission_if_active(
 
                     admin  = (amount * ADMIN_CHARGE_PCT / 100).quantize(Decimal('0.01'))
                     tds    = (amount * TDS_PCT           / 100).quantize(Decimal('0.01'))
+                    net    = amount - admin - tds
                     _sp = db.begin_nested()
                     try:
                         entry_no = _next_entry_number(db, company_id)
@@ -191,28 +192,37 @@ def apply_extra_commission_if_active(
 
                         _wp = db.begin_nested()
                         try:
+                            # Fetch current wallet balance for logging
+                            _partner = db.execute(text(
+                                "SELECT vgk_cash_wallet FROM official_partners WHERE id = :pid FOR UPDATE"
+                            ), {'pid': partner_id}).fetchone()
+                            wallet_before = Decimal(str(_partner.vgk_cash_wallet or 0)) if _partner else Decimal('0')
+                            wallet_after = wallet_before + amount
+
                             db.execute(text("""
                                 UPDATE official_partners
-                                   SET vgk_cash_wallet = COALESCE(vgk_cash_wallet, 0) + :amt
+                                   SET vgk_cash_wallet = :wa
                                  WHERE id = :pid
-                            """), {'amt': float(amount), 'pid': partner_id})
-                            db.execute(text("""
-                                INSERT INTO vgk_wallet_transactions
-                                  (partner_id, txn_type, amount, reference_entry_number,
-                                   notes, created_at)
-                                VALUES
-                                  (:pid, 'EXTRA_COMMISSION_CREDIT', :amt, :en,
-                                   :notes, :now)
-                            """), {
-                                'pid':   partner_id,
-                                'amt':   float(amount),
-                                'en':    entry_no,
-                                'notes': (
+                            """), {'wa': float(wallet_after), 'pid': partner_id})
+
+                            # Log wallet transaction using standard helper
+                            from app.services.vgk_cash_income import _log_wallet_txn
+                            _log_wallet_txn(
+                                db,
+                                partner_id=partner_id,
+                                company_id=company_id,
+                                txn_type='EXTRA_COMMISSION_CREDIT',
+                                direction='CR',
+                                amount=amount,
+                                wallet_before=wallet_before,
+                                wallet_after=wallet_after,
+                                ref_type='VGK_EXTRA_COMMISSION',
+                                ref_id=_bz.id,
+                                description=(
                                     f'Special Bonanza Extra Commission — '
                                     f'{_bz.name} | {trigger_event} | L{lv}'
                                 ),
-                                'now': now_ist,
-                            })
+                            )
                             _wp.commit()
                         except Exception as _we:
                             try:
