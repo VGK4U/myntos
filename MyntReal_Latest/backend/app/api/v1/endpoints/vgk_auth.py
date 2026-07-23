@@ -975,13 +975,19 @@ def vgk_my_leads(
     segment=support       → L5 field support (vgk_field_support_id == member.id)
     Legacy segments source_marked/field_assistant still accepted as aliases.
     """
-    from sqlalchemy import asc, desc as sqldesc
+    from sqlalchemy import asc, desc as sqldesc, or_, and_
 
     page_size = 20
     mid = current_member.id
 
     # --- Tab counts (unfiltered) ---
-    source_count = db.query(CRMLead).filter(CRMLead.associated_partner_id == mid).count()
+    mid_str = str(mid)
+    source_condition = or_(
+        CRMLead.associated_partner_id == mid,
+        and_(CRMLead.created_by_type == 'partner', CRMLead.created_by_id == mid_str),
+        and_(CRMLead.source_ref_type.in_(['partner', 'vgk_partner']), CRMLead.source_ref_id == mid_str)
+    )
+    source_count = db.query(CRMLead).filter(source_condition).count()
     support_count = db.query(CRMLead).filter(CRMLead.vgk_field_support_id == mid).count()
 
     guru_lead_ids = list(set([
@@ -1010,7 +1016,7 @@ def vgk_my_leads(
     core_count  = len(core_lead_ids)
 
     all_lead_ids = list(set(
-        [r.id for r in db.query(CRMLead.id).filter(CRMLead.associated_partner_id == mid).all()] +
+        [r.id for r in db.query(CRMLead.id).filter(source_condition).all()] +
         [r.id for r in db.query(CRMLead.id).filter(CRMLead.vgk_field_support_id == mid).all()] +
         guru_lead_ids + zguru_lead_ids + core_lead_ids
     ))
@@ -1019,7 +1025,7 @@ def vgk_my_leads(
     # --- Build base query by segment ---
     norm = segment.lower()
     if norm in ("source", "source_marked"):
-        query = db.query(CRMLead).filter(CRMLead.associated_partner_id == mid)
+        query = db.query(CRMLead).filter(source_condition)
     elif norm in ("support", "field_assistant"):
         query = db.query(CRMLead).filter(CRMLead.vgk_field_support_id == mid)
     elif norm == "core":
@@ -2281,6 +2287,8 @@ def vgk_dashboard_summary(
                 SELECT source_lead_id FROM vgk_team_income_entries WHERE partner_id=:pid AND level>=2 AND source_lead_id IS NOT NULL
                 UNION
                 SELECT id FROM crm_leads WHERE team_senior_partner_id=:pid OR team_extended_partner_id=:pid OR team_core_partner_id=:pid
+                UNION
+                SELECT id FROM crm_leads WHERE source_ref_type IN ('partner', 'vgk_partner') AND source_ref_id = CAST(:pid AS VARCHAR)
             )
         ),
         orders AS (

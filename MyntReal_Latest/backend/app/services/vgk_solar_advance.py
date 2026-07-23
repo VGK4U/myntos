@@ -108,8 +108,19 @@ def check_and_create_advance(db: Session, lead_id: int) -> dict:
         now = _get_ist()
         created_numbers = []
 
+        # DC-L1-GROUND-SOURCE-001: L1 advance should credit the Ground Source instead of the Showroom partner
+        l1_partner_id = None
+        if lead.source_ref_type in ('partner', 'vgk_partner') and lead.source_ref_id and lead.source_ref_id.isdigit():
+            l1_partner_id = int(lead.source_ref_id)
+        elif lead.mnr_handler_id:
+            l1_partner_id = lead.mnr_handler_id
+        else:
+            l1_partner_id = lead.associated_partner_id
+
         # Advance tiers: (level, partner_id, amount)
-        tiers = [(1, lead.associated_partner_id, ADVANCE_AMOUNT)]
+        tiers = []
+        if l1_partner_id:
+            tiers.append((1, l1_partner_id, ADVANCE_AMOUNT))
         if lead.team_senior_partner_id:
             tiers.append((2, lead.team_senior_partner_id, L2_ADVANCE_AMOUNT))
 

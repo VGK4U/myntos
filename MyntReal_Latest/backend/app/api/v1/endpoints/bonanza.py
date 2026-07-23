@@ -2552,8 +2552,8 @@ async def edit_bonanza(
     if data.target_requirement is not None:
         bonanza.target_requirement = data.target_requirement
     if data.max_winners is not None:
-        if data.max_winners < 1 or data.max_winners > 500:
-            raise HTTPException(status_code=400, detail="Max winners must be between 1 and 500")
+        if data.max_winners < 1 or (data.max_winners > 500 and data.max_winners != 9999999):
+            raise HTTPException(status_code=400, detail="Max winners must be between 1 and 500 (or unlimited)")
         # DC PROTOCOL: Cannot set max_winners lower than current claims
         if data.max_winners < bonanza.current_winners:
             raise HTTPException(

@@ -11737,10 +11737,12 @@ async def get_unified_my_leads(
         if staff_companies:
             query = query.filter(CRMLead.company_id.in_(staff_companies))
     elif is_partner_user:
-        # DC Protocol (Apr 2026): Partner users — restrict to their own company_id
-        partner_company = getattr(current_user, 'company_id', None)
-        if partner_company:
-            query = query.filter(CRMLead.company_id == partner_company)
+        # DC Protocol (Jul 2026 Fix): Do NOT restrict partners to their base company_id.
+        pass
+
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"[DEBUG-LEADS] Starting unified-my-leads for partner. user_id={user_id}, segment={segment}")
     
     if segment == 'my':
         if is_staff_user:
@@ -11814,6 +11816,7 @@ async def get_unified_my_leads(
                     and_(CRMLead.source_ref_type.in_(('partner', 'vgk_partner')), CRMLead.source_ref_id == user_id_str))
             ).all()]
             _all_partner_lead_ids = list(set(_guru_all_ids + _fs_ids + _src_ids))
+            logger.info(f"[DEBUG-LEADS] segment={segment}, _all_partner_lead_ids={_all_partner_lead_ids}")
             if _all_partner_lead_ids:
                 query = query.filter(CRMLead.id.in_(_all_partner_lead_ids))
             else:
@@ -12098,7 +12101,7 @@ async def get_unified_my_leads(
             )
 
     total = query.count()
-
+    logger.info(f"[DEBUG-LEADS] Final query total count: {total}")
     # Sort support (T003 — DC Protocol Mar 2026)
     from sqlalchemy import asc as _asc, desc as _desc
     _sort_col_map = {
@@ -12149,6 +12152,7 @@ async def get_unified_my_leads(
                 and_(CRMLead.source_ref_type.in_(('partner', 'vgk_partner')), CRMLead.source_ref_id == user_id_str))
         ).count()
         _sc_supp = db.query(CRMLead).filter(CRMLead.vgk_field_support_id == user_id).count()
+        logger.info(f"[DEBUG-LEADS] _sc_src={_sc_src}")
         _guru_all_rows = db.execute(
             text("SELECT DISTINCT source_lead_id FROM vgk_team_income_entries "
                  "WHERE partner_id=:pid AND level IN (2,3) AND source_lead_id IS NOT NULL"),
@@ -12351,7 +12355,8 @@ async def get_unified_lead_details(
             lead.team_core_partner_id == user_id or
             lead.vgk_field_support_id == user_id or
             (lead.primary_owner_type == 'partner' and lead.primary_owner_id == user_id) or
-            (lead.created_by_type == 'partner' and lead.created_by_id == user_id_str)
+            (lead.created_by_type == 'partner' and lead.created_by_id == user_id_str) or
+            (lead.source_ref_type in ('partner', 'vgk_partner') and lead.source_ref_id == user_id_str)
         )
         if not has_access:
             from sqlalchemy import text
@@ -12447,6 +12452,7 @@ async def update_lead_mnr_assignment(
     lead_id: int,
     mnr_handler_id: Optional[str] = Body(None),
     guru_id: Optional[str] = Body(None),
+    z_guru_id: Optional[str] = Body(None),
     adi_guru_id: Optional[str] = Body(None),
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user)
@@ -12472,6 +12478,17 @@ async def update_lead_mnr_assignment(
             
             if guru_id is None and handler.referrer_id:
                 lead.guru_id = handler.referrer_id
+                _guru = db.query(User).filter(User.id == handler.referrer_id).first()
+                if _guru and _guru.referrer_id:
+                    _zguru = db.query(User).filter(User.id == _guru.referrer_id).first()
+                    if _zguru:
+                        if z_guru_id is None:
+                            lead.z_guru_id = _zguru.id
+                        if _zguru.referrer_id:
+                            _adiguru = db.query(User).filter(User.id == _zguru.referrer_id).first()
+                            if _adiguru:
+                                if adi_guru_id is None:
+                                    lead.adi_guru_id = _adiguru.id
         else:
             lead.mnr_handler_id = None
             if lead.handler_type == 'member':
@@ -12484,6 +12501,9 @@ async def update_lead_mnr_assignment(
             if not guru:
                 raise HTTPException(status_code=400, detail="Guru user not found")
         lead.guru_id = guru_id if guru_id else None
+    
+    if z_guru_id is not None:
+        lead.z_guru_id = z_guru_id if z_guru_id else None
     
     if adi_guru_id is not None:
         if adi_guru_id:
@@ -12503,6 +12523,9 @@ async def update_lead_mnr_assignment(
     if lead.guru_id:
         guru = db.query(User).filter(User.id == lead.guru_id).first()
         result['guru_name'] = guru.name if guru else None
+    if lead.z_guru_id:
+        z_guru = db.query(User).filter(User.id == lead.z_guru_id).first()
+        result['z_guru_name'] = z_guru.name if z_guru else None
     if lead.adi_guru_id:
         adi_guru = db.query(User).filter(User.id == lead.adi_guru_id).first()
         result['adi_guru_name'] = adi_guru.name if adi_guru else None
@@ -13052,7 +13075,8 @@ async def update_lead_full(
             detail=f"Company mismatch: Lead belongs to company {lead.company_id}, but request specified company {company_id}"
         )
     
-    is_staff = hasattr(current_user, 'emp_code') and current_user.emp_code
+    is_staff = isinstance(current_user, StaffEmployee)
+    is_partner = hasattr(current_user, 'partner_code')  # or isinstance(current_user, OfficialPartner)
     
     # DC Protocol (Dec 31, 2025): Proper RBAC checks for both staff and MNR users
     # DC Protocol (Jan 2026): Added team leader authority check
@@ -13088,6 +13112,30 @@ async def update_lead_full(
         
         if not is_owner and not is_team_leader:
             raise HTTPException(status_code=403, detail="You can only edit leads assigned to you or your team members")
+    elif is_partner:
+        user_id_str = str(current_user.id)
+        has_access = (
+            lead.associated_partner_id == current_user.id or
+            lead.team_senior_partner_id == current_user.id or
+            lead.team_extended_partner_id == current_user.id or
+            lead.team_core_partner_id == current_user.id or
+            lead.vgk_field_support_id == current_user.id or
+            (lead.primary_owner_type == 'partner' and lead.primary_owner_id == current_user.id) or
+            (lead.created_by_type == 'partner' and lead.created_by_id == user_id_str) or
+            (lead.source_ref_type in ('partner', 'vgk_partner') and lead.source_ref_id == user_id_str)
+        )
+        if not has_access:
+            from sqlalchemy import text
+            # Legacy L2/L3/L4 support check
+            legacy_auth = db.execute(
+                text("SELECT 1 FROM vgk_team_income_entries WHERE partner_id=:pid AND source_lead_id=:lid LIMIT 1"),
+                {"pid": current_user.id, "lid": lead.id}
+            ).scalar()
+            if legacy_auth:
+                has_access = True
+        
+        if not has_access:
+            raise HTTPException(status_code=403, detail="You do not have access to this lead")
     else:
         # DC Protocol (Dec 31, 2025): MNR RBAC must match GET filter logic exactly
         # MNR users can edit leads where:
@@ -13207,6 +13255,25 @@ async def update_lead_full(
             lead.associated_partner_id = None
         elif not source_ref_id:
             lead.associated_partner_id = None
+
+    # DC Protocol: Auto-populate uplines (L2, L3, L4) based on Ground Source (mnr_handler_id)
+    if lead.mnr_handler_id:
+        try:
+            _muser = db.query(User).filter(User.id == lead.mnr_handler_id).first()
+            if _muser and _muser.referrer_id:
+                _guru = db.query(User).filter(User.id == _muser.referrer_id).first()
+                if _guru:
+                    if not lead.guru_id: lead.guru_id = _guru.id
+                    if _guru.referrer_id:
+                        _zguru = db.query(User).filter(User.id == _guru.referrer_id).first()
+                        if _zguru:
+                            if not lead.z_guru_id: lead.z_guru_id = _zguru.id
+                            if _zguru.referrer_id:
+                                _adiguru = db.query(User).filter(User.id == _zguru.referrer_id).first()
+                                if _adiguru:
+                                    if not lead.adi_guru_id: lead.adi_guru_id = _adiguru.id
+        except Exception as e:
+            print(f"[CRM] Auto-populate uplines error: {str(e)}")
 
     if source_ref_name is not None:
         lead.source_ref_name = source_ref_name if source_ref_name else None
