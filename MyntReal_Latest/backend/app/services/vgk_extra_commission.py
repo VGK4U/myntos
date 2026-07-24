@@ -74,23 +74,50 @@ def apply_extra_commission_if_active(
             5: _l5_id,
         }
 
-        # DC-EC-PER-LEVEL-TRIGGER-001: fetch all active EC bonanzas (no global trigger filter —
-        # per-level trigger matching is done in Python below).
+        # DC-EC-PER-LEVEL-TRIGGER-001: fetch all active EC / brand-specific bonanzas.
+        # Check dates dynamically in Python below to support dual-stage Submitted-DVR trigger.
         _active = db.execute(text("""
-            SELECT b.id, b.name,
-                   b.trigger_event,
+            SELECT b.id, b.name, b.start_date, b.end_date, b.grace_days,
+                   b.trigger_event, b.advance_count_basis, b.reward_type,
                    b.ec_l1_trigger, b.ec_l2_trigger, b.ec_l3_trigger,
                    b.ec_l4_trigger, b.ec_l5_trigger,
                    b.ec_l1_amount,  b.ec_l2_amount,  b.ec_l3_amount,
                    b.ec_l4_amount,  b.ec_l5_amount
             FROM   bonanza b
-            WHERE  b.reward_type = 'extra_commission'
+            WHERE  b.reward_type IN ('extra_commission', 'brand_wise_commission')
               AND  b.status      = 'Approved'
               AND  b.is_deleted  = FALSE
-              AND  NOW()::date BETWEEN b.start_date::date AND b.end_date::date
         """)).fetchall()
 
         for _bz in _active:
+            # ── DUAL-STAGE ELIGIBILITY CHECK ────────────────────────────────
+            # Evaluate lead's eligibility date against campaign validity dates.
+            # Using campaign's advance_count_basis determines whether to check
+            # file submission date or first payment date.
+            basis = (getattr(_bz, 'advance_count_basis', None) or 'CIBIL').upper()
+            submit_dt = getattr(lead, 'submit_date', None)
+            first_pmt_dt = getattr(lead, 'first_payment_received_date', None)
+
+            if basis == 'DVR':
+                elig_date = first_pmt_dt
+            elif basis == 'BOTH':
+                elig_date = submit_dt if submit_dt else first_pmt_dt
+            else:  # CIBIL
+                elig_date = submit_dt
+
+            if hasattr(elig_date, 'date'):
+                elig_date = elig_date.date()
+
+            grace = int(getattr(_bz, 'grace_days', 0) or 0)
+            bz_start = _bz.start_date.date() if hasattr(_bz.start_date, 'date') else _bz.start_date
+            bz_end = _bz.end_date.date() if hasattr(_bz.end_date, 'date') else _bz.end_date
+
+            from datetime import timedelta
+            bz_end_with_grace = bz_end + timedelta(days=grace)
+
+            if not elig_date or not (bz_start <= elig_date <= bz_end_with_grace):
+                continue
+
             try:
                 _cat_rows = db.execute(text("""
                     SELECT category_id FROM bonanza_category_filters
@@ -102,19 +129,51 @@ def apply_extra_commission_if_active(
                     if category_id not in _allowed_cats:
                         continue
 
-                # DC-EC-PER-LEVEL-TRIGGER-001: resolve per-level amounts filtered by effective trigger.
-                # For each level N: effective_trigger = ec_lN_trigger if set, else global trigger_event.
-                # Only include level if effective_trigger == current trigger_event AND amount > 0.
-                _global_trigger = getattr(_bz, 'trigger_event', None)
+                # ── RESOLVE AMOUNTS AND TRIGGERS ─────────────────────────────
+                # If reward_type is brand_wise_commission, query overrides from bonanza_brand_filters.
+                # Otherwise, use global campaign fields and filter by brand.
                 level_amounts = {}
-                for lv in [1, 2, 3, 4, 5]:
-                    _per_trig = getattr(_bz, f'ec_l{lv}_trigger', None)
-                    _eff_trig = _per_trig if _per_trig else _global_trigger
-                    if _eff_trig != trigger_event:
-                        continue
-                    val = getattr(_bz, f'ec_l{lv}_amount', None)
-                    if val and float(val) > 0:
-                        level_amounts[lv] = Decimal(str(val))
+                if _bz.reward_type == 'brand_wise_commission':
+                    _brand_cfg = db.execute(text("""
+                        SELECT ec_l1_amount, ec_l2_amount, ec_l3_amount, ec_l4_amount, ec_l5_amount,
+                               ec_l1_trigger, ec_l2_trigger, ec_l3_trigger, ec_l4_trigger, ec_l5_trigger,
+                               trigger_event
+                        FROM bonanza_brand_filters
+                        WHERE bonanza_id = :bid AND brand_id = :brand_id
+                    """), {'bid': _bz.id, 'brand_id': getattr(lead, 'solar_brand_id', None)}).fetchone()
+
+                    if not _brand_cfg:
+                        continue  # Brand not configured for this brand-wise campaign
+                    
+                    _global_trigger = _brand_cfg.trigger_event if _brand_cfg.trigger_event else getattr(_bz, 'trigger_event', None)
+                    for lv in [1, 2, 3, 4, 5]:
+                        _per_trig = getattr(_brand_cfg, f'ec_l{lv}_trigger', None)
+                        _eff_trig = _per_trig if _per_trig else _global_trigger
+                        if _eff_trig != trigger_event:
+                            continue
+                        val = getattr(_brand_cfg, f'ec_l{lv}_amount', None)
+                        if val and float(val) > 0:
+                            level_amounts[lv] = Decimal(str(val))
+                else:
+                    _brand_rows = db.execute(text("""
+                        SELECT brand_id FROM bonanza_brand_filters
+                        WHERE bonanza_id = :bid
+                    """), {'bid': _bz.id}).fetchall()
+
+                    if _brand_rows:
+                        _allowed_brands = {r.brand_id for r in _brand_rows}
+                        if getattr(lead, 'solar_brand_id', None) not in _allowed_brands:
+                            continue
+
+                    _global_trigger = getattr(_bz, 'trigger_event', None)
+                    for lv in [1, 2, 3, 4, 5]:
+                        _per_trig = getattr(_bz, f'ec_l{lv}_trigger', None)
+                        _eff_trig = _per_trig if _per_trig else _global_trigger
+                        if _eff_trig != trigger_event:
+                            continue
+                        val = getattr(_bz, f'ec_l{lv}_amount', None)
+                        if val and float(val) > 0:
+                            level_amounts[lv] = Decimal(str(val))
 
                 if not level_amounts:
                     continue
@@ -143,17 +202,18 @@ def apply_extra_commission_if_active(
                         entry_no = _next_entry_number(db, company_id)
                         _inc_date = (lead.submit_date.date() if hasattr(lead.submit_date, 'date') else lead.submit_date) if getattr(lead, 'submit_date', None) else now_ist.date()
 
-                        db.execute(text("""
+                        vci_id = db.execute(text("""
                             INSERT INTO vgk_cash_income_entries
                               (company_id, entry_number, partner_id, source_lead_id,
                                kind, status, commission_amount, admin_charges,
                                tds_amount, net_payout, level, notes, income_date,
-                               created_at, updated_at)
+                               bonanza_id, created_at, updated_at)
                             VALUES
                               (:co, :en, :pid, :lid,
                                'EXTRA_COMMISSION', 'PENDING',
                                :ca, :ac, :ta, :np, :lv,
-                               :notes, :inc_date, :now, :now)
+                               :notes, :inc_date, :bid, :now, :now)
+                            RETURNING id
                         """), {
                             'co':       company_id,
                             'en':       entry_no,
@@ -169,17 +229,19 @@ def apply_extra_commission_if_active(
                                 f'Trigger: {trigger_event} | L{lv} Extra Commission'
                             ),
                             'inc_date': _inc_date,
+                            'bid':      _bz.id,
                             'now':      now_ist,
-                        })
+                        }).scalar()
 
                         db.execute(text("""
                             INSERT INTO bonanza_extra_commission_log
-                              (bonanza_id, lead_id, level, partner_id, created_at)
-                            VALUES (:bid, :lid, :lv, :pid, :now)
+                              (bonanza_id, lead_id, level, partner_id, vci_entry_id, created_at)
+                            VALUES (:bid, :lid, :lv, :pid, :vci_id, :now)
                             ON CONFLICT (bonanza_id, lead_id, level) DO NOTHING
                         """), {
                             'bid': _bz.id, 'lid': lead_id,
-                            'lv': lv, 'pid': partner_id, 'now': now_ist,
+                            'lv': lv, 'pid': partner_id,
+                            'vci_id': vci_id, 'now': now_ist,
                         })
 
                         _sp.commit()

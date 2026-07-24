@@ -482,6 +482,38 @@ class BonanzaCategoryFilter(BaseModel):
         return f'<BonanzaCategoryFilter bonanza={self.bonanza_id} cat={self.category_id}>'
 
 
+# DC-BRAND-BONANZA-001 (Jul 2026): Brand filter for brand-specific bonanzas.
+# NULL = all brands. Non-NULL = only leads in listed brand_ids qualify.
+class BonanzaBrandFilter(BaseModel):
+    __tablename__ = 'bonanza_brand_filters'
+
+    id          = Column(Integer, primary_key=True)
+    bonanza_id  = Column(Integer, ForeignKey('bonanza.id', ondelete='CASCADE'), nullable=False, index=True)
+    brand_id    = Column(Integer, ForeignKey('vgk_incentive_brands.id', ondelete='CASCADE'), nullable=False)
+
+    # Overrides for Brand Specific Extra Commission (reward_type = 'brand_wise_commission')
+    ec_l1_amount  = Column(Numeric(10, 2), nullable=True)
+    ec_l2_amount  = Column(Numeric(10, 2), nullable=True)
+    ec_l3_amount  = Column(Numeric(10, 2), nullable=True)
+    ec_l4_amount  = Column(Numeric(10, 2), nullable=True)
+    ec_l5_amount  = Column(Numeric(10, 2), nullable=True)
+
+    ec_l1_trigger = Column(String(50), nullable=True)
+    ec_l2_trigger = Column(String(50), nullable=True)
+    ec_l3_trigger = Column(String(50), nullable=True)
+    ec_l4_trigger = Column(String(50), nullable=True)
+    ec_l5_trigger = Column(String(50), nullable=True)
+
+    trigger_event = Column(String(50), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint('bonanza_id', 'brand_id', name='uq_bonanza_brand_filter'),
+    )
+
+    def __repr__(self):
+        return f'<BonanzaBrandFilter bonanza={self.bonanza_id} brand={self.brand_id}>'
+
+
 # DC-EXTRA-COMM-001 (Jul 2026): Idempotency log for extra commission payouts.
 # Prevents double-firing if trigger is called more than once for the same lead+level.
 class BonanzaExtraCommissionLog(BaseModel):

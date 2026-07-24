@@ -136,6 +136,15 @@ tbody tr { background: #ffffff !important; }
             </select>
         </div>
         <div>
+            <label>Current Status</label>
+            <select class="form-select" id="filterCurrentStatus" style="min-width:140px">
+                <option value="">All</option>
+                <option value="Running" selected>🏃 Running</option>
+                <option value="Expired">⌛ Expired</option>
+                <option value="Cancelled">🚫 Cancelled</option>
+            </select>
+        </div>
+        <div>
             <label>Search</label>
             <input class="form-control" id="filterSearch" placeholder="Campaign name…" style="min-width:180px">
         </div>
@@ -158,14 +167,16 @@ tbody tr { background: #ffffff !important; }
                         <th>Period</th>
                         <th>Target</th>
                         <th>Reward</th>
+                        <th>Eligible People</th>
                         <th>Claims</th>
                         <th>Status</th>
+                        <th>Current Status</th>
                         <th>Actions</th>
                     </tr>
                     <!-- closing tr duplicated above; keep below -->
                 </thead>
                 <tbody id="bonanzaTbody">
-                    <tr><td colspan="8" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>
+                    <tr><td colspan="10" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>
                 </tbody>
             </table>
         </div>
@@ -189,6 +200,15 @@ tbody tr { background: #ffffff !important; }
                 <label>Campaign</label>
                 <select class="form-select" id="mFilterBonanza" style="min-width:220px">
                     <option value="">All Campaigns</option>
+                </select>
+            </div>
+            <div>
+                <label>Current Status</label>
+                <select class="form-select" id="mFilterCurrentStatus" onchange="onTrackCurrentStatusChange()" style="min-width:140px">
+                    <option value="">All</option>
+                    <option value="Running" selected>🏃 Running</option>
+                    <option value="Expired">⌛ Expired</option>
+                    <option value="Cancelled">🚫 Cancelled</option>
                 </select>
             </div>
             <div>
@@ -237,8 +257,13 @@ tbody tr { background: #ffffff !important; }
                 </div>
                 <div class="form-group">
                     <label>Segment (Category)</label>
-                    <select class="form-select" id="mSegment">
+                    <select class="form-select" id="mSegment" onchange="toggleRewardFields()">
                         <option value="">All Segments</option>
+                    </select>
+                </div>
+                <div class="form-group" id="mBrandGrp">
+                    <label>Brand Filters (Select one or more, Optional)</label>
+                    <select class="form-select" id="mBrand" multiple style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12.5px;height:80px" onchange="onBrandChange()">
                     </select>
                 </div>
                 <div class="form-group" id="mTargetGrp">
@@ -258,6 +283,15 @@ tbody tr { background: #ffffff !important; }
                     <label>Max Winners</label>
                     <input class="form-control" id="mMaxWinners" type="number" min="1" value="50" placeholder="50">
                 </div>
+                <div class="form-group" id="mAdvanceCountBasisGrp" style="display:none;grid-column:span 2">
+                    <label style="font-size:12px;color:#a5b4fc;font-weight:600;display:block;margin-bottom:4px">Advance Count Basis</label>
+                    <select class="form-select" id="mAdvanceCountBasis" style="background:#0f172a;border-color:#4338ca;color:#e2e8f0;font-size:13px">
+                        <option value="DVR">DVR Only — count 1st-payment DVR advances (₹1,000/₹500 per file, ≥ 1 Jul 2026)</option>
+                        <option value="CIBIL">CIBIL Only — count file submissions/clearances (₹1,000 per file)</option>
+                        <option value="BOTH">Both — count either kind (each lead counted once)</option>
+                    </select>
+                    <div style="font-size:10.5px;color:#6b7280;margin-top:3px">Controls which type of solar advance is counted when measuring a partner's progress toward this bonanza's targets.</div>
+                </div>
                 <div class="form-group">
                     <label>Reward Type *</label>
                     <select class="form-select" id="mRewardType" onchange="toggleRewardFields()">
@@ -265,6 +299,7 @@ tbody tr { background: #ffffff !important; }
                         <option value="bonus">Bonus</option>
                         <option value="slab_wise">⚡ Slab Wise (Solar File Advance + Extra)</option>
                         <option value="extra_commission">🎯 Special Bonanza — Extra Commission</option>
+                        <option value="brand_wise_commission">🏷️ Brand Specific Extra Commission</option>
                         <option value="award">Award</option>
                         <option value="gift">Gift</option>
                     </select>
@@ -293,15 +328,7 @@ tbody tr { background: #ffffff !important; }
                                 <div style="font-size:10.5px;color:#7c3aed;margin-top:3px">The additional bonus this bonanza campaign pays on top of the base.</div>
                             </div>
                         </div>
-                        <!-- DC-SOLAR-DVR-ADV-20260701-001: advance kind that counts toward this campaign's slab target -->
-                        <div style="margin-top:12px">
-                            <label style="font-size:12px;color:#a5b4fc;font-weight:600;display:block;margin-bottom:4px">Advance Count Basis</label>
-                            <select class="form-select" id="mAdvanceCountBasis" style="background:#0f172a;border-color:#4338ca;color:#e2e8f0;font-size:13px">
-                                <option value="DVR">DVR Only — count 1st-payment DVR advances (₹1,000/₹500 per file, ≥ 1 Jul 2026)</option>
-                                <option value="BOTH">Both — count either kind (each lead counted once)</option>
-                            </select>
-                            <div style="font-size:10.5px;color:#6b7280;margin-top:3px">Controls which type of solar advance is counted when measuring a partner's progress toward this bonanza's slab targets.</div>
-                        </div>
+
                         <div id="slabPreview" style="margin-top:12px;background:rgba(0,0,0,.35);border-radius:8px;padding:10px 14px;font-size:13px;display:none">
                             <div style="color:#a5b4fc;font-weight:600;margin-bottom:6px;font-size:11px;letter-spacing:.04em;text-transform:uppercase">Auto-Credit Preview — Per File Released</div>
                             <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
@@ -415,6 +442,17 @@ tbody tr { background: #ffffff !important; }
                         </div>
                         <div id="pltInfoNote" style="margin-top:10px;padding:8px 12px;background:rgba(5,150,105,.08);border-radius:6px;font-size:11px;color:#6ee7b7">
                             <i class="fas fa-info-circle me-1"></i>Each level fires at its own configured trigger. Same lead fires once per level per bonanza — counted independently across different bonanzas.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Brand specific incentives configuration -->
+                <div class="form-group" id="brandWiseIncentiveGrp" style="display:none;grid-column:span 2">
+                    <div style="background:linear-gradient(135deg,#0c1022,#1d1330);border:1.5px solid #a78bfa;border-radius:12px;padding:16px 18px">
+                        <div style="font-weight:700;font-size:13px;color:#c4b5fd;margin-bottom:4px"><i class="fas fa-tags me-2"></i>Brand-Specific Extra Commission Overrides</div>
+                        <div style="font-size:11px;color:#9ca3af;margin-bottom:14px">Select brand and define custom trigger events and payout amounts. If a brand is enabled but has no custom settings, it will use global defaults (if set) or skip.</div>
+                        <div id="brandConfigContainer" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                            <!-- JS will dynamically populate brand config boxes here -->
                         </div>
                     </div>
                 </div>
@@ -588,6 +626,47 @@ tbody tr { background: #ffffff !important; }
         </div>
     </div>
 </div>
+
+<!-- Member Progress Details Modal -->
+<div class="modal-overlay" id="mtrackDetailsModal">
+    <div class="modal-box" style="max-width:1000px; width:95%">
+        <div class="modal-header" style="background:linear-gradient(135deg,#1e3a5f,#0f2440); color:#fff">
+            <h4><i class="fas fa-list me-2"></i><span id="mtrackDetailsModalTitle">Achievement Details</span></h4>
+            <button onclick="document.getElementById('mtrackDetailsModal').classList.remove('open')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#fff">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:20px; overflow-y:auto; max-height:calc(100vh - 200px)">
+            <div id="mtrackDetailsInfo" style="display:flex; justify-content:space-between; margin-bottom:15px; background:#f8fafc; padding:12px 16px; border-radius:8px; border:1px solid #e2e8f0; font-size:13px; color:#334155">
+                <div><strong>Campaign:</strong> <span id="mtrackDetailsCampaign">—</span></div>
+                <div><strong>Partner:</strong> <span id="mtrackDetailsPartner">—</span></div>
+                <div><strong>Basis:</strong> <span id="mtrackDetailsBasis">—</span></div>
+            </div>
+            
+            <div style="overflow-x:auto">
+                <table class="table" style="width:100%; border-collapse:collapse; font-size:12.5px" id="mtrackDetailsTable">
+                    <thead>
+                        <tr style="background:#ede9fe; border-bottom:2px solid #ddd6fe">
+                            <th style="padding:10px; text-align:center">#</th>
+                            <th style="padding:10px">Lead Name</th>
+                            <th style="padding:10px">Phone / Mobile</th>
+                            <th style="padding:10px">Submit Date</th>
+                            <th style="padding:10px">Payment Date</th>
+                            <th style="padding:10px">Status</th>
+                            <th style="padding:10px">Solar Stage</th>
+                            <th style="padding:10px">Brand</th>
+                            <th style="padding:10px; text-align:right">Deal Value</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mtrackDetailsTbody">
+                        <tr><td colspan="9" style="text-align:center; padding:32px; color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading details…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary-vgk" onclick="document.getElementById('mtrackDetailsModal').classList.remove('open')">Close</button>
+        </div>
+    </div>
+</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/staff_sidebar.js"></script>
@@ -595,7 +674,7 @@ tbody tr { background: #ffffff !important; }
 <script>
 const BASE = '/api/v1/staff';
 const BONANZA_BASE = '/api/v1/bonanza';
-let _bonanzas = [], _segments = [];
+let _bonanzas = [], _segments = [], _brands = [];
 
 async function loadSegments() {
     try {
@@ -608,18 +687,30 @@ async function loadSegments() {
     } catch(e) {}
 }
 
+async function loadBrands() {
+    try {
+        const r = await staffFetch('/api/v1/vgk/brands?active_only=true');
+        const d = await r.json();
+        _brands = d.brands || [];
+        const sel = document.getElementById('mBrand');
+        sel.innerHTML = _brands.map(b => `<option value="${b.id}">${escH(b.brand_name)}</option>`).join('');
+    } catch(e) {}
+}
+
 async function loadBonanzas() {
     const status = document.getElementById('filterStatus').value;
+    const currentStatus = document.getElementById('filterCurrentStatus').value;
     const search = document.getElementById('filterSearch').value.trim().toLowerCase();
     const tbody = document.getElementById('bonanzaTbody');
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
     try {
         const r = await staffFetch(BONANZA_BASE + '/vgk/all-bonanzas');
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed to load');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed to load');
         let items = d.bonanzas || [];
         if (status) items = items.filter(b => b.status === status);
         if (search) items = items.filter(b => (b.name||'').toLowerCase().includes(search));
+        if (currentStatus) items = items.filter(b => getCampaignCurrentStatus(b) === currentStatus);
         _bonanzas = items;
 
         document.getElementById('statTotal').textContent = d.total || 0;
@@ -628,7 +719,7 @@ async function loadBonanzas() {
         document.getElementById('statClaims').textContent = items.reduce((s,b) => s + (b.total_claims||0), 0);
 
         if (!items.length) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-inbox me-2"></i>No bonanzas found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-inbox me-2"></i>No bonanzas found</td></tr>';
             return;
         }
 
@@ -641,9 +732,12 @@ async function loadBonanzas() {
         tbody.innerHTML = items.map(b => {
             const pct = b.max_winners ? Math.round((b.current_winners||0) / b.max_winners * 100) : 0;
             // DC_BONANZA_SLABWISE_001: per-file model — show per-file slab amount × N files
+            const isBrandWise = b.reward_type === 'brand_wise_commission';
             const rewardText = b.reward_type === 'slab_wise'
                 ? `<span style="color:#fbbf24;font-weight:700">₹${(b.slab_extra_amount||0).toLocaleString('en-IN')} / file</span><span style="font-size:10px;color:#9ca3af;display:block">×N files submitted · base ₹${(b.slab_base_reference||0).toLocaleString('en-IN')}/file (display only)</span>`
-                : (b.is_monetary ? `₹${(b.reward_amount||0).toLocaleString('en-IN')}` : (b.award_name || '—'));
+                : (isBrandWise
+                    ? `<span style="color:#a78bfa;font-weight:700">🏷️ Brand Overrides</span><span style="font-size:10px;color:#9ca3af;display:block">${(b.brand_configs || []).map(bc => bc.brand_name || bc.brand_id).join(', ') || 'None configured'}</span>`
+                    : (b.is_monetary ? `₹${(b.reward_amount||0).toLocaleString('en-IN')}` : (b.award_name || '—')));
             const statusCls = { Pending: 'badge-pending', Approved: 'badge-approved', Paused: 'badge-paused', Cancelled: 'badge-cancelled', Draft: 'badge-draft' }[b.status] || 'badge-draft';
             const period = `${fmtDate(b.start_date)} → ${fmtDate(b.end_date)}`;
             const claimsSummary = Object.entries(b.claims_summary||{}).map(([k,v]) => `<span style="font-size:10px;background:#f3f4f6;padding:2px 6px;border-radius:4px;margin:1px">${escH(k)}: ${v}</span>`).join('');
@@ -672,21 +766,43 @@ async function loadBonanzas() {
                   </div>`
                 : '';
 
+            const currStatus = getCampaignCurrentStatus(b);
+            let currStatusBadge = '';
+            if (currStatus === 'Running') {
+                currStatusBadge = `<span class="badge" style="background:#10b981;color:#fff;padding:3px 8px;border-radius:4px"><i class="fas fa-play me-1" style="font-size:9px"></i>Running</span>`;
+            } else if (currStatus === 'Expired') {
+                currStatusBadge = `<span class="badge" style="background:#6b7280;color:#fff;padding:3px 8px;border-radius:4px"><i class="fas fa-history me-1" style="font-size:9px"></i>Expired</span>`;
+            } else if (currStatus === 'Cancelled') {
+                currStatusBadge = `<span class="badge" style="background:#ef4444;color:#fff;padding:3px 8px;border-radius:4px"><i class="fas fa-ban me-1" style="font-size:9px"></i>Cancelled</span>`;
+            } else if (currStatus === 'Paused') {
+                currStatusBadge = `<span class="badge" style="background:#f59e0b;color:#fff;padding:3px 8px;border-radius:4px"><i class="fas fa-pause me-1" style="font-size:9px"></i>Paused</span>`;
+            } else if (currStatus === 'Pending') {
+                currStatusBadge = `<span class="badge" style="background:#3b82f6;color:#fff;padding:3px 8px;border-radius:4px"><i class="fas fa-clock me-1" style="font-size:9px"></i>Pending</span>`;
+            } else {
+                currStatusBadge = `<span class="badge" style="background:#4b5563;color:#fff;padding:3px 8px;border-radius:4px">${escH(currStatus)}</span>`;
+            }
+
             return `<tr>
                 <td><div style="font-weight:700;font-size:13px;color:#111">${escH(b.name)}</div><div style="font-size:11px;color:#9ca3af">Grace: ${b.grace_days ?? 15}d · Max: ${b.max_winners}</div></td>
-                <td><span style="background:#f5f3ff;color:#7c3aed;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700">${escH(b.segment_name||'All')}</span></td>
+                <td><span style="background:#f5f3ff;color:#7c3aed;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700">${escH(b.segment_name||'All')}</span><div style="font-size:10px;color:#4b5563;margin-top:4px"><i class="fas fa-tag me-1" style="font-size:9px"></i>${escH(b.brand_names || (isBrandWise ? 'Brand Specific' : 'All Brands'))}</div></td>
                 <td style="font-size:12px;white-space:nowrap">${period}</td>
                 <td>
                     <strong>${b.target_requirement}</strong> deals
                     ${b.registered_target_bonus ? `<div style="font-size:10px;color:#7c3aed;margin-top:2px"><i class="fas fa-id-card" style="margin-right:2px"></i>+${b.registered_target_bonus} for registered → ${b.target_requirement + b.registered_target_bonus} deals</div>` : ''}
                 </td>
-                <td><div style="font-weight:700;font-size:13px">${b.reward_type === 'slab_wise' ? rewardText : escH(rewardText)}</div><div style="font-size:11px;color:#9ca3af">${escH(b.reward_type||'cash')}</div>${slabsHtml}</td>
+                <td><div style="font-weight:700;font-size:13px">${['slab_wise', 'brand_wise_commission'].includes(b.reward_type) ? rewardText : escH(rewardText)}</div><div style="font-size:11px;color:#9ca3af">${escH(b.reward_type||'cash')}</div>${slabsHtml}</td>
+                <td>
+                    <div style="font-size:13px;font-weight:700;color:#059669">
+                        <i class="fas fa-users me-1" style="font-size:11px"></i>${b.eligible_partners_count || 0}
+                    </div>
+                </td>
                 <td>
                     <div style="font-size:12px;font-weight:700">${b.current_winners||0} / ${b.max_winners}</div>
                     <div class="progress-mini" style="margin-top:4px"><div class="progress-mini-fill" style="width:${pct}%"></div></div>
                     <div style="margin-top:4px">${claimsSummary}</div>
                 </td>
                 <td><span class="badge ${statusCls}">${escH(b.status)}</span></td>
+                <td>${currStatusBadge}</td>
                 <td>
                     <button class="btn-sm-icon edit" title="Edit" onclick="openEditModal(${b.id})"><i class="fas fa-edit"></i></button>
                     <button class="btn-sm-icon" title="Manage Slabs" onclick="openSlabsModal(${b.id},\`${escH(b.name)}\`)" style="color:#7c3aed;border-color:#c4b5fd"><i class="fas fa-layer-group"></i></button>
@@ -698,12 +814,13 @@ async function loadBonanzas() {
             </tr>`;
         }).join('');
     } catch(e) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>${escH(e.message)}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:32px;color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>${escH(e.message)}</td></tr>`;
     }
 }
 
 function clearFilters() {
     document.getElementById('filterStatus').value = '';
+    document.getElementById('filterCurrentStatus').value = 'Running';
     document.getElementById('filterSearch').value = '';
     loadBonanzas();
 }
@@ -732,18 +849,49 @@ function _togglePltColumns(rt) {
     }
 }
 
+function onBrandChange() {
+    const rt = document.getElementById('mRewardType').value;
+    if (rt === 'brand_wise_commission') {
+        renderBrandConfigs();
+        return;
+    }
+    const brandSel = document.getElementById('mBrand');
+    const selectedBrands = Array.from(brandSel.selectedOptions).map(o => o.value).filter(Boolean);
+    if (selectedBrands.length > 0) {
+        const rtSelect = document.getElementById('mRewardType');
+        if (rtSelect.value !== 'extra_commission') {
+            rtSelect.value = 'extra_commission';
+            toggleRewardFields();
+        }
+        // Set L1 = 1000 (file_submitted) and L5 = 500 (first_payment)
+        document.getElementById('pltL1Trigger').value = 'file_submitted';
+        document.getElementById('pltL1Amt').value = '1000';
+        document.getElementById('pltL5Trigger').value = 'first_payment';
+        document.getElementById('pltL5Amt').value = '500';
+    }
+}
+
 function toggleRewardFields() {
     const rt = document.getElementById('mRewardType').value;
     const isMonetary     = ['cash','bonus'].includes(rt);
     const isSlabWise     = rt === 'slab_wise';
     const isExtraComm    = rt === 'extra_commission';
+    const isBrandWiseComm = rt === 'brand_wise_commission';
     const isAwardGift    = rt === 'award' || rt === 'gift';
-    const isAutoFire     = isSlabWise || isExtraComm;  // these hide target/cap/grace
+    const isAutoFire     = isSlabWise || isExtraComm || isBrandWiseComm;  // these hide target/cap/grace
     document.getElementById('rewardAmtGrp').style.display       = isMonetary ? '' : 'none';
     document.getElementById('awardNameGrp').style.display       = isAwardGift ? '' : 'none';
     document.getElementById('slabWiseGrp').style.display        = isSlabWise  ? '' : 'none';
     // DC-EC-PER-LEVEL-TRIGGER-001: unified trigger grid for all non-slab types
-    document.getElementById('perLevelTriggerGrp').style.display = !isSlabWise ? '' : 'none';
+    document.getElementById('perLevelTriggerGrp').style.display = (!isSlabWise && !isBrandWiseComm) ? '' : 'none';
+    
+    // Brand Specific incentives
+    document.getElementById('brandWiseIncentiveGrp').style.display = isBrandWiseComm ? '' : 'none';
+    document.getElementById('mBrandGrp').style.display = '';
+    if (isBrandWiseComm) {
+        renderBrandConfigs();
+    }
+
     _togglePltColumns(rt);
     // Auto-fire types: hide target/reg-bonus/grace/max-winners
     const hideAuto = isAutoFire ? 'none' : '';
@@ -751,6 +899,9 @@ function toggleRewardFields() {
     document.getElementById('mRegBonusGrp').style.display   = hideAuto;
     document.getElementById('mGraceGrp').style.display      = hideAuto;
     document.getElementById('mMaxWinnersGrp').style.display = hideAuto;
+    const segId = document.getElementById('mSegment').value;
+    const isSolar = ['6', '19', '36', '48'].includes(String(segId));
+    document.getElementById('mAdvanceCountBasisGrp').style.display = isSolar ? '' : 'none';
     if (isSlabWise) updateSlabPreview();
 }
 
@@ -830,6 +981,7 @@ function openCreateModal() {
     document.getElementById('mStartDate').value = '';
     document.getElementById('mEndDate').value = '';
     document.getElementById('mSegment').value = '';
+    document.getElementById('mBrand').value = '';
     document.getElementById('mTarget').value = '';
     document.getElementById('mRegBonus').value = '';
     document.getElementById('mGrace').value = '15';
@@ -851,6 +1003,7 @@ function openCreateModal() {
         document.getElementById('pltL'+n+'Note').value = '';
     });
     Array.from(document.getElementById('pltCategoryFilter').options).forEach(o => o.selected = false);
+    Array.from(document.getElementById('mBrand').options).forEach(o => o.selected = false);
     document.getElementById('modalError').style.display = 'none';
     window._pendingBonanzaImageFile = null;
     _resetImageField();
@@ -859,6 +1012,7 @@ function openCreateModal() {
     _existingSlabs = [];
     hideInlineSlabForm();
     renderInlineSlabs();
+    renderBrandConfigs();
     toggleRewardFields();
     document.getElementById('bonanzaModal').classList.add('open');
 }
@@ -883,6 +1037,12 @@ function openEditModal(id) {
     document.getElementById('mStartDate').value = _toLocalDatetimeValue(b.start_date);
     document.getElementById('mEndDate').value = _toLocalDatetimeValue(b.end_date);
     document.getElementById('mSegment').value = b.segment_id || '';
+    
+    const _savedBrandIds = new Set((b.brand_filter_ids || []).map(Number));
+    Array.from(document.getElementById('mBrand').options).forEach(o => {
+        o.selected = _savedBrandIds.has(Number(o.value));
+    });
+
     document.getElementById('mTarget').value = b.target_requirement || '';
     document.getElementById('mRegBonus').value = b.registered_target_bonus != null ? b.registered_target_bonus : '';
     document.getElementById('mGrace').value = b.grace_days ?? 15;
@@ -917,10 +1077,10 @@ function openEditModal(id) {
     _setBonanzaImage(b.image_url || '');
     // Load existing slabs into inline section
     _inlineSlabs = [];
-    _existingSlabs = [];
     hideInlineSlabForm();
-    renderInlineSlabs(); // shows loading state
+    renderInlineSlabs();
     _loadExistingSlabsForEdit(id);
+    renderBrandConfigs(b);
     toggleRewardFields();
     document.getElementById('bonanzaModal').classList.add('open');
 }
@@ -940,24 +1100,27 @@ async function saveBonanza() {
     };
     const isSlabWise  = rewardType === 'slab_wise';
     const isExtraComm = rewardType === 'extra_commission';
+    const isBrandWiseComm = rewardType === 'brand_wise_commission';
     const isAwardGift = rewardType === 'award' || rewardType === 'gift';
     const slabExtra  = isSlabWise ? (parseFloat(document.getElementById('mSlabExtra').value) || null) : null;
     const slabBase   = isSlabWise ? (parseFloat(document.getElementById('mSlabBaseRef').value) || null) : null;
+    const _brandOpts = Array.from(document.getElementById('mBrand').selectedOptions).map(o => parseInt(o.value)).filter(n => !isNaN(n));
     const body = {
         name: document.getElementById('mName').value.trim(),
         start_date: _toISO(document.getElementById('mStartDate').value),
         end_date: _toISO(document.getElementById('mEndDate').value),
         segment_id: document.getElementById('mSegment').value ? parseInt(document.getElementById('mSegment').value) : null,
+        brand_filter_ids: isBrandWiseComm ? null : (_brandOpts.length > 0 ? _brandOpts : null),
         // EC has no target — DB constraint relaxed to allow 0 for extra_commission (positive_target_relaxed_ec migration)
-        target_requirement: isExtraComm ? 0 : (parseInt(document.getElementById('mTarget').value) || 1),
-        registered_target_bonus: document.getElementById('mRegBonus').value !== '' ? parseInt(document.getElementById('mRegBonus').value) : null,
-        grace_days: isExtraComm ? 0 : (parseInt(document.getElementById('mGrace').value) || 15),
-        max_winners: isExtraComm ? 9999999 : (parseInt(document.getElementById('mMaxWinners').value) || 50),
+        target_requirement: (isExtraComm || isBrandWiseComm) ? 0 : (parseInt(document.getElementById('mTarget').value) || 1),
+        registered_target_bonus: (isExtraComm || isBrandWiseComm) ? null : (document.getElementById('mRegBonus').value !== '' ? parseInt(document.getElementById('mRegBonus').value) : null),
+        grace_days: (isExtraComm || isBrandWiseComm) ? 0 : (parseInt(document.getElementById('mGrace').value) || 15),
+        max_winners: (isExtraComm || isBrandWiseComm) ? 9999999 : (parseInt(document.getElementById('mMaxWinners').value) || 50),
         reward_type: rewardType,
         is_monetary: isMonetary || isSlabWise,
         reward_amount: isMonetary ? (parseFloat(document.getElementById('mRewardAmount').value) || null) : null,
         // award_name only makes sense for award/gift types — extra_commission and slab_wise never have one
-        award_name: isAwardGift ? (document.getElementById('mAwardName').value.trim() || null) : null,
+        award_name: isAwardGift ? (document.getElementById('mAwardName').value.trim() || null) : (isBrandWiseComm ? document.getElementById('mName').value.trim() : null),
         reward_text: document.getElementById('mRewardText').value.trim() || null,
         total_budget: document.getElementById('mBudget').value ? parseFloat(document.getElementById('mBudget').value) : null,
         portal: 'VGK',
@@ -968,10 +1131,10 @@ async function saveBonanza() {
         slab_extra_amount: slabExtra,
         slab_base_reference: slabBase,
         // DC-SOLAR-DVR-ADV-20260701-001
-        advance_count_basis: isSlabWise ? (document.getElementById('mAdvanceCountBasis').value || 'DVR') : 'DVR',
+        advance_count_basis: ['6', '19', '36', '48'].includes(String(document.getElementById('mSegment').value)) ? (document.getElementById('mAdvanceCountBasis').value || 'DVR') : 'DVR',
     };
     // DC-EC-PER-LEVEL-TRIGGER-001: unified per-level trigger payload for all non-slab types
-    if (!isSlabWise) {
+    if (!isSlabWise && !isBrandWiseComm) {
         [1,2,3,4,5].forEach(n => {
             body['ec_l'+n+'_trigger'] = document.getElementById('pltL'+n+'Trigger').value || null;
             body['ec_l'+n+'_amount']  = parseFloat(document.getElementById('pltL'+n+'Amt').value) || null;
@@ -984,6 +1147,44 @@ async function saveBonanza() {
         // target/max_winners/grace already set in body init above for extra_commission
         body.is_monetary = false;
         body.registered_target_bonus = null;
+    }
+    if (isBrandWiseComm) {
+        body.is_monetary = false;
+        body.registered_target_bonus = null;
+        
+        const brandConfigs = [];
+        const brandSel = document.getElementById('mBrand');
+        const selectedBrandIds = Array.from(brandSel.selectedOptions).map(o => parseInt(o.value)).filter(n => !isNaN(n));
+        
+        selectedBrandIds.forEach(brandId => {
+            const cfg = {
+                brand_id: brandId,
+                ec_l1_amount: null,
+                ec_l2_amount: null,
+                ec_l3_amount: null,
+                ec_l4_amount: null,
+                ec_l5_amount: null,
+                ec_l1_trigger: null,
+                ec_l2_trigger: null,
+                ec_l3_trigger: null,
+                ec_l4_trigger: null,
+                ec_l5_trigger: null,
+                trigger_event: null
+            };
+            for (let lv = 1; lv <= 5; lv++) {
+                const amtEl = document.querySelector(`.brand-config-amount[data-brand-id="${brandId}"][data-level="${lv}"]`);
+                const trgEl = document.querySelector(`.brand-config-trigger[data-brand-id="${brandId}"][data-level="${lv}"]`);
+                const amtVal = amtEl ? amtEl.value : '';
+                const trgVal = trgEl ? trgEl.value : '';
+                if (amtVal !== '') cfg[`ec_l${lv}_amount`] = parseFloat(amtVal);
+                if (trgVal !== '') cfg[`ec_l${lv}_trigger`] = trgVal;
+            }
+            const globalTrgEl = document.querySelector(`.brand-config-global-trigger[data-brand-id="${brandId}"]`);
+            const globalTrg = globalTrgEl ? globalTrgEl.value : '';
+            if (globalTrg !== '') cfg.trigger_event = globalTrg;
+            brandConfigs.push(cfg);
+        });
+        body.brand_configs = brandConfigs;
     }
     if (isAwardGift) {
         body.is_monetary = false;
@@ -1008,7 +1209,23 @@ async function saveBonanza() {
         body.grace_days               = 0;
         body.registered_target_bonus  = null;
     }
-    if (!isSlabWise && !isExtraComm && !isAwardGift && (!body.target_requirement || body.target_requirement < 1)) { showErr('Target must be at least 1'); return; }
+    if (!isSlabWise && !isExtraComm && !isBrandWiseComm && !isAwardGift && (!body.target_requirement || body.target_requirement < 1)) { showErr('Target must be at least 1'); return; }
+    if (isBrandWiseComm) {
+        if (!body.brand_configs || body.brand_configs.length === 0) {
+            showErr('Select and configure at least one brand for Brand Specific Extra Commission'); return;
+        }
+        for (let i = 0; i < body.brand_configs.length; i++) {
+            const cfg = body.brand_configs[i];
+            const hasAnyTrig = cfg.ec_l1_trigger || cfg.ec_l2_trigger || cfg.ec_l3_trigger || cfg.ec_l4_trigger || cfg.ec_l5_trigger || cfg.trigger_event;
+            const hasAnyAmt = cfg.ec_l1_amount != null || cfg.ec_l2_amount != null || cfg.ec_l3_amount != null || cfg.ec_l4_amount != null || cfg.ec_l5_amount != null;
+            if (!hasAnyTrig) {
+                showErr('Each enabled brand must have at least one Trigger Event (or default fallback trigger) configured'); return;
+            }
+            if (!hasAnyAmt) {
+                showErr('Each enabled brand must have at least one level Amount configured'); return;
+            }
+        }
+    }
     if (isAwardGift && (!body.target_requirement || body.target_requirement < 1)) { showErr('Target (number of files required) must be at least 1'); return; }
     if (isSlabWise && !slabExtra) { showErr('Extra Slab Amount is required for Slab Wise bonanzas'); return; }
     // DC-EC-PER-LEVEL-TRIGGER-001: require at least one level to have both a trigger AND an amount
@@ -1022,7 +1239,7 @@ async function saveBonanza() {
         const _anyParticipate = [1,2,3,4,5].some(n => document.getElementById('atL'+n+'Participate').checked);
         if (!_anyParticipate) { showErr('Select at least one participating level when a trigger event is set'); return; }
     }
-    if (!isMonetary && !isSlabWise && !isExtraComm && !isAwardGift && !body.award_name) { showErr('Award name is required'); return; }
+    if (!isMonetary && !isSlabWise && !isExtraComm && !isBrandWiseComm && !isAwardGift && !body.award_name) { showErr('Award name is required'); return; }
 
     const btn = document.getElementById('modalSaveBtn');
     btn.disabled = true;
@@ -1035,7 +1252,12 @@ async function saveBonanza() {
             r = await staffFetch(BONANZA_BASE + '/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         }
         d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed to save');
+        if (!r.ok) {
+            let errMsg = d.detail || d.message || 'Failed to save';
+            if (d.errors && d.errors.length > 0) errMsg += ': ' + d.errors[0];
+            if (d.debug_error) errMsg += ' (' + d.debug_error + ')';
+            throw new Error(errMsg);
+        }
 
         // Post pending slabs (both create and edit modes)
         const targetBonanzaId = editId ? parseInt(editId) : (d.bonanza_id || d.bonanza?.id || d.id || null);
@@ -1052,7 +1274,7 @@ async function saveBonanza() {
                     });
                     if (!slabResp.ok) {
                         const se = await slabResp.json().catch(() => ({}));
-                        slabErrors.push(`Slab "${slab.slab_label}": ${se.detail || slabResp.status}`);
+                        slabErrors.push(`Slab "${slab.slab_label}": ${se.detail || se.message || slabResp.status}`);
                         continue;
                     }
                     // Upload slab image if one was selected
@@ -1105,6 +1327,132 @@ function showErr(msg) {
     el.style.display = '';
 }
 
+function renderBrandConfigs(campaign = null) {
+    const container = document.getElementById('brandConfigContainer');
+    if (!container) return;
+    
+    // 1. Read currently typed values from the DOM to preserve them
+    const currentValues = {};
+    container.querySelectorAll('.brand-config-amount').forEach(el => {
+        const brid = el.getAttribute('data-brand-id');
+        const lv = el.getAttribute('data-level');
+        if (!currentValues[brid]) currentValues[brid] = {};
+        currentValues[brid][`ec_l${lv}_amount`] = el.value;
+    });
+    container.querySelectorAll('.brand-config-trigger').forEach(el => {
+        const brid = el.getAttribute('data-brand-id');
+        const lv = el.getAttribute('data-level');
+        if (!currentValues[brid]) currentValues[brid] = {};
+        currentValues[brid][`ec_l${lv}_trigger`] = el.value;
+    });
+    container.querySelectorAll('.brand-config-global-trigger').forEach(el => {
+        const brid = el.getAttribute('data-brand-id');
+        if (!currentValues[brid]) currentValues[brid] = {};
+        currentValues[brid].trigger_event = el.value;
+    });
+
+    // 2. Map existing campaign configuration if provided
+    const mergedMap = {};
+    if (campaign && campaign.brand_configs) {
+        campaign.brand_configs.forEach(cfg => {
+            mergedMap[cfg.brand_id] = { ...cfg };
+        });
+    }
+
+    // 3. Merge currently typed inputs into the map
+    Object.keys(currentValues).forEach(brid => {
+        const bId = parseInt(brid);
+        if (!mergedMap[bId]) mergedMap[bId] = {};
+        [1,2,3,4,5].forEach(lv => {
+            const amt = currentValues[brid][`ec_l${lv}_amount`];
+            const trg = currentValues[brid][`ec_l${lv}_trigger`];
+            if (amt !== '') mergedMap[bId][`ec_l${lv}_amount`] = amt;
+            if (trg !== '') mergedMap[bId][`ec_l${lv}_trigger`] = trg;
+        });
+        const gtrg = currentValues[brid].trigger_event;
+        if (gtrg !== '') mergedMap[bId].trigger_event = gtrg;
+    });
+
+    // 4. Get selected brand IDs from the multi-select dropdown
+    const brandSel = document.getElementById('mBrand');
+    const selectedBrandIds = new Set(Array.from(brandSel.selectedOptions).map(o => parseInt(o.value)).filter(n => !isNaN(n)));
+
+    // 5. Generate HTML only for the selected brands
+    let html = '';
+    _brands.forEach(b => {
+        if (!selectedBrandIds.has(b.id)) return;
+        
+        const cfg = mergedMap[b.id] || {};
+        
+        html += `
+        <div style="background:rgba(15,23,42,0.6);border:1.5px solid #6366f1;border-radius:10px;padding:12px 14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <div style="font-weight:700;color:#c7d2fe;font-size:13.5px">
+                    🏷️ ${escH(b.brand_name)}
+                </div>
+            </div>
+            
+            <div id="brandConfigDetails-${b.id}" style="margin-top:8px;border-top:1px solid #4b5563;padding-top:10px">
+                <div style="overflow-x:auto">
+                    <table style="width:100%;border-collapse:collapse;font-size:12px">
+                        <thead>
+                            <tr style="border-bottom:1px solid #4b5563">
+                                <th style="text-align:left;padding:4px;color:#a78bfa;font-size:11px">Level</th>
+                                <th style="text-align:left;padding:4px;color:#a78bfa;font-size:11px">Trigger Event</th>
+                                <th style="text-align:left;padding:4px;color:#a78bfa;font-size:11px;width:120px">Amount (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+        `;
+        
+        [1,2,3,4,5].forEach(lv => {
+            const trg = cfg[`ec_l${lv}_trigger`] || '';
+            const amt = cfg[`ec_l${lv}_amount`] != null ? cfg[`ec_l${lv}_amount`] : '';
+            
+            html += `
+                            <tr style="border-bottom:1px solid #374151">
+                                <td style="padding:4px;color:#9ca3af;font-weight:600">L${lv}</td>
+                                <td style="padding:4px">
+                                    <select class="form-select brand-config-trigger" data-brand-id="${b.id}" data-level="${lv}" style="background:#0f172a;border-color:#4b5563;color:#e2e8f0;font-size:11px;padding:2px 4px;width:100%">
+                                        <option value="">— global/none —</option>
+                                        <option value="file_submitted" ${trg === 'file_submitted' ? 'selected' : ''}>📋 File Submitted</option>
+                                        <option value="first_payment" ${trg === 'first_payment' ? 'selected' : ''}>💳 First Payment</option>
+                                        <option value="file_completed" ${trg === 'file_completed' ? 'selected' : ''}>✅ File Completed</option>
+                                    </select>
+                                </td>
+                                <td style="padding:4px">
+                                    <input type="number" class="form-control brand-config-amount" data-brand-id="${b.id}" data-level="${lv}" value="${amt}" min="0" placeholder="e.g. 500" style="background:#0f172a;border-color:#4b5563;color:#e2e8f0;font-size:11px;padding:2px 4px;width:100%">
+                                </td>
+                            </tr>
+            `;
+        });
+        
+        const globalTrg = cfg.trigger_event || '';
+        html += `
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+                    <label style="font-size:11px;color:#9ca3af;font-weight:600">Default Fallback Trigger:</label>
+                    <select class="form-select brand-config-global-trigger" data-brand-id="${b.id}" style="background:#0f172a;border-color:#4b5563;color:#e2e8f0;font-size:11px;padding:2px 4px;width:auto">
+                        <option value="">— select —</option>
+                        <option value="file_submitted" ${globalTrg === 'file_submitted' ? 'selected' : ''}>📋 File Submitted</option>
+                        <option value="first_payment" ${globalTrg === 'first_payment' ? 'selected' : ''}>💳 First Payment</option>
+                        <option value="file_completed" ${globalTrg === 'file_completed' ? 'selected' : ''}>✅ File Completed</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+
+    if (selectedBrandIds.size === 0) {
+        container.innerHTML = '<div style="grid-column:span 2;text-align:center;padding:12px;color:#9ca3af;font-style:italic"><i class="fas fa-info-circle me-1"></i>Select one or more brands from the "Brand" dropdown above to configure overrides.</div>';
+    }
+}
+
 function openApprove(id, name) {
     document.getElementById('approveBonanzaId').value = id;
     document.getElementById('approveName').textContent = name;
@@ -1118,7 +1466,7 @@ async function confirmApprove() {
     try {
         const r = await staffFetch(BONANZA_BASE + '/approve/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed');
         document.getElementById('approveModal').classList.remove('open');
         loadBonanzas();
     } catch(e) {
@@ -1133,7 +1481,7 @@ async function cancelBonanza(id, name) {
     try {
         const r = await staffFetch(BONANZA_BASE + '/cancel/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed');
         loadBonanzas();
     } catch(e) {
         alert('Error: ' + e.message);
@@ -1145,7 +1493,7 @@ async function pauseBonanza(id, name) {
     try {
         const r = await staffFetch(BONANZA_BASE + '/pause/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed');
         loadBonanzas();
     } catch(e) {
         alert('Error: ' + e.message);
@@ -1158,10 +1506,34 @@ async function activateBonanza(id, name, currentStatus) {
     try {
         const r = await staffFetch(BONANZA_BASE + '/activate/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed');
         loadBonanzas();
     } catch(e) {
         alert('Error: ' + e.message);
+    }
+}
+
+function getCampaignCurrentStatus(b) {
+    if (b.status === 'Cancelled') return 'Cancelled';
+    if (b.status === 'Paused') return 'Paused';
+    if (b.status === 'Pending') return 'Pending';
+    if (b.status === 'Draft') return 'Draft';
+    
+    const now = new Date();
+    const start = new Date(b.start_date);
+    const end = new Date(b.end_date);
+    const graceDays = b.grace_days ?? 15;
+    const endWithGrace = new Date(end.getTime() + graceDays * 24 * 60 * 60 * 1000);
+    
+    start.setHours(0, 0, 0, 0);
+    endWithGrace.setHours(23, 59, 59, 999);
+    
+    if (now < start) {
+        return 'Upcoming';
+    } else if (now > endWithGrace) {
+        return 'Expired';
+    } else {
+        return 'Running';
     }
 }
 
@@ -1368,7 +1740,7 @@ async function loadSlabs() {
     try {
         const r = await staffFetch(`${BONANZA_BASE}/${_slabsBonanzaId}/slabs`);
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed to load slabs');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed to load slabs');
         const slabs = d.slabs || [];
         if (!slabs.length) {
             listDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#6b7280;font-size:13px"><i class="fas fa-inbox me-2"></i>No slabs yet. Add reward tiers below.</div>';
@@ -1453,7 +1825,7 @@ async function saveSlab() {
         const method = editId ? 'PUT' : 'POST';
         const r = await staffFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed to save slab');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed to save slab');
         resetSlabForm();
         await loadSlabs();
     } catch(e) {
@@ -1467,7 +1839,7 @@ async function deleteSlab(slabId, label) {
     try {
         const r = await staffFetch(`${BONANZA_BASE}/${_slabsBonanzaId}/slabs/${slabId}`, { method: 'DELETE' });
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed');
         await loadSlabs();
     } catch(e) {
         alert('Error: ' + e.message);
@@ -1509,6 +1881,7 @@ async function loadEcCategories() {
 
 async function init() {
     await loadSegments();
+    await loadBrands();
     await loadEcCategories();
     await loadBonanzas();
 }
@@ -1527,9 +1900,42 @@ function mgmtSwitchTab(tab) {
 function mgmtClearTrackFilters() {
     document.getElementById('mFilterBonanza').value = '';
     document.getElementById('mFilterPartner').value = '';
+    document.getElementById('mFilterCurrentStatus').value = 'Running';
     mgmtSetTrackView('all');
     _mgmtTrackLoaded = false;
     mgmtLoadTracking();
+}
+
+function onTrackCurrentStatusChange() {
+    if (_mgmtTrackApiData) {
+        mgmtRenderTracking(_mgmtTrackApiData);
+    }
+}
+
+function updateTrackCampaignOptions(rows) {
+    const sel = document.getElementById('mFilterBonanza');
+    const currentVal = sel.value;
+    
+    // Clear all options except the first one
+    sel.innerHTML = '<option value="">All Campaigns</option>';
+    
+    const seenBz = new Set();
+    rows.forEach(row => {
+        if (!seenBz.has(row.bonanza_id)) {
+            const opt = document.createElement('option');
+            opt.value = row.bonanza_id;
+            opt.textContent = row.name;
+            sel.appendChild(opt);
+            seenBz.add(row.bonanza_id);
+        }
+    });
+    
+    // Restore previous selection if it still exists
+    if (Array.from(sel.options).some(o => o.value === currentVal)) {
+        sel.value = currentVal;
+    } else {
+        sel.value = "";
+    }
 }
 
 let _mgmtTrackView = 'progress';
@@ -1563,10 +1969,7 @@ async function loadMgmtBonanzaOptions() {
                 existing.add(String(b.id));
             }
         });
-        // Auto-select most recent bonanza (first after "All Campaigns")
-        if (!sel.value && sel.options.length > 1) {
-            sel.value = sel.options[1].value;
-        }
+        // Default to "All Campaigns" (value="") so all approved campaigns are shown
     } catch(e) {}
 }
 
@@ -1585,7 +1988,7 @@ async function mgmtLoadTracking() {
     try {
         const r = await staffFetch(url);
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed');
         _mgmtTrackLoaded  = true;
         // DC-MGMT-HIDE-54: hide "Extra Field Allowance Rs. 3000/-" from management tracking
         const filtered = Object.assign({}, d, {
@@ -1593,19 +1996,6 @@ async function mgmtLoadTracking() {
         });
         _mgmtTrackApiData = filtered;
         mgmtRenderTracking(filtered);
-
-        // Populate bonanza filter dropdown — unique bonanzas from rows (also skip 54)
-        const sel = document.getElementById('mFilterBonanza');
-        const existing = new Set(Array.from(sel.options).map(o => o.value));
-        const seenBz   = new Set();
-        (filtered.rows || []).forEach(row => {
-            if (!seenBz.has(row.bonanza_id) && !existing.has(String(row.bonanza_id))) {
-                const opt = document.createElement('option');
-                opt.value = row.bonanza_id; opt.textContent = row.name;
-                sel.appendChild(opt); existing.add(String(row.bonanza_id));
-            }
-            seenBz.add(row.bonanza_id);
-        });
     } catch(e) {
         content.innerHTML = `<div style="text-align:center;padding:32px;color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>${escBonanzaH(e.message)}</div>`;
     }
@@ -1624,18 +2014,30 @@ const MGMT_CLAIM_COLORS = {
 
 function mgmtRenderTracking(d) {
     const content = document.getElementById('mgmtTrackingContent');
-    const rows    = d.rows || [];
+    const currStatusFilter = document.getElementById('mFilterCurrentStatus').value;
+    const bonanzaId = document.getElementById('mFilterBonanza').value;
+
+    let rows = d.rows || [];
+    if (currStatusFilter && !bonanzaId) {
+        rows = rows.filter(row => getCampaignCurrentStatus(row) === currStatusFilter);
+    }
+
+    if (!bonanzaId) {
+        updateTrackCampaignOptions(rows);
+    }
 
     // Summary stats
-    const nonZeroSet = new Set(), claimedSet = new Set();
+    const nonZeroSet = new Set(), claimedSet = new Set(), eligibleSet = new Set(), totalPartnerSet = new Set();
     rows.forEach(row => (row.members || []).forEach(m => {
+        totalPartnerSet.add(m.partner_id);
         if (m.achieved > 0)  nonZeroSet.add(m.partner_id);
         if (m.claim_status)  claimedSet.add(m.partner_id);
+        if (m.is_eligible)   eligibleSet.add(m.partner_id);
     }));
-    document.getElementById('mStatTotal').textContent    = d.total_members || 0;
-    document.getElementById('mStatEligible').textContent = d.eligible_count || 0;
+    document.getElementById('mStatTotal').textContent    = totalPartnerSet.size || d.total_members || 0;
+    document.getElementById('mStatEligible').textContent = eligibleSet.size;
     document.getElementById('mStatClaimed').textContent  = claimedSet.size;
-    document.getElementById('mStatZero').textContent     = Math.max(0, (d.total_members || 0) - nonZeroSet.size);
+    document.getElementById('mStatZero').textContent     = Math.max(0, (totalPartnerSet.size || d.total_members || 0) - nonZeroSet.size);
 
     if (!rows.length) {
         content.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280"><i class="fas fa-inbox me-2"></i>No active bonanzas</div>';
@@ -1657,134 +2059,116 @@ function mgmtRenderTracking(d) {
     });
 
     const html = groupOrder.map(g => {
-        const hasSlabs = g.tiers.length > 1;
         let tableHtml = '';
 
-        if (hasSlabs) {
-            // ── Tier-column layout: members = rows, tiers = column groups ────
-            const memberMap = {};
-            const baseOrder = [];
-            g.tiers.forEach((tier, ti) => {
-                (tier.members || []).forEach(m => {
-                    if (!memberMap[m.partner_id]) {
-                        memberMap[m.partner_id] = {
-                            partner_id: m.partner_id, partner_name: m.partner_name,
-                            partner_code: m.partner_code, claim_status: m.claim_status,
-                            tiers: {}, any_eligible: false
-                        };
-                        if (ti === 0) baseOrder.push(m.partner_id);
-                    }
-                    memberMap[m.partner_id].tiers[tier.row_key] = {
-                        achieved: m.achieved, gap: m.gap, is_eligible: m.is_eligible
+        // ── Tier-column layout: members = rows, tiers = column groups ────
+        const memberMap = {};
+        const baseOrder = [];
+        g.tiers.forEach((tier, ti) => {
+            (tier.members || []).forEach(m => {
+                if (!memberMap[m.partner_id]) {
+                    memberMap[m.partner_id] = {
+                        partner_id: m.partner_id, partner_name: m.partner_name,
+                        partner_code: m.partner_code, claim_status: m.claim_status,
+                        tiers: {}, any_eligible: false
                     };
-                    if (m.is_eligible) memberMap[m.partner_id].any_eligible = true;
-                });
+                    if (ti === 0) baseOrder.push(m.partner_id);
+                }
+                memberMap[m.partner_id].tiers[tier.row_key] = {
+                    eligible: m.eligible ?? 0,
+                    achieved: m.achieved, gap: m.gap, is_eligible: m.is_eligible
+                };
+                if (m.is_eligible) memberMap[m.partner_id].any_eligible = true;
             });
+        });
 
-            let displayOrder = baseOrder;
-            if (_mgmtTrackView === 'achieved') {
-                displayOrder = baseOrder.filter(pid => memberMap[pid].any_eligible);
-            } else if (_mgmtTrackView === 'progress') {
-                displayOrder = baseOrder.filter(pid =>
-                    Object.values(memberMap[pid].tiers).some(t => (t.achieved || 0) > 0)
-                );
-            }
+        let displayOrder = baseOrder;
+        if (_mgmtTrackView === 'achieved') {
+            displayOrder = baseOrder.filter(pid => memberMap[pid].any_eligible);
+        } else if (_mgmtTrackView === 'progress') {
+            displayOrder = baseOrder.filter(pid =>
+                Object.values(memberMap[pid].tiers).some(t => (t.achieved || 0) > 0 || (t.eligible || 0) > 0)
+            );
+        }
 
-            const tierColHeaders = g.tiers.map(tier => {
-                const lbl = tier.tier_label || `🏅 ${tier.award_name} (${tier.target} deals)`;
-                return `<th colspan="2" style="text-align:center;border-left:1px solid #e5e7eb;white-space:nowrap">
-                    <div style="color:#7c3aed;font-size:11px;font-weight:700">${escBonanzaH(lbl)}</div>
-                    <div style="color:#6b7280;font-size:10px">${tier.eligible_count} eligible</div>
-                </th>`;
+        const tierColHeaders = g.tiers.map(tier => {
+            const lbl = tier.tier_label || `🏅 ${tier.award_name || 'Reward'} (${tier.target} deals)`;
+            return `<th colspan="3" style="text-align:center;border-left:1px solid #e5e7eb;white-space:nowrap">
+                <div style="color:#7c3aed;font-size:11px;font-weight:700">${escBonanzaH(lbl)}</div>
+                <div style="color:#6b7280;font-size:10px">${tier.eligible_count} eligible</div>
+            </th>`;
+        }).join('');
+        const tierSubHeaders = g.tiers.map(() =>
+            `<th style="text-align:center;border-left:1px solid #e5e7eb">Elig</th><th style="text-align:center">Done</th><th style="text-align:center">Need</th>`
+        ).join('');
+        const totalCols = 2 + g.tiers.length * 3 + 1;
+
+        const memberRows = displayOrder.map((pid, idx) => {
+            const md = memberMap[pid];
+            const tierCells = g.tiers.map(tier => {
+                const t = (md.tiers || {})[tier.row_key] || {};
+                const eligibleCount = t.eligible ?? 0;
+                const achievedCount = t.achieved ?? 0;
+                
+                let eligCell = '';
+                if (eligibleCount > 0) {
+                    eligCell = `<a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${tier.bonanza_id}" data-partner-id="${md.partner_id}" data-campaign-name="${escH(tier.name)}" data-partner-name="${escH(md.partner_name)}" data-only-triggered="false" style="color:#1e3a8a; font-weight:700; text-decoration:underline; font-size:13px">${eligibleCount}</a>`;
+                } else {
+                    eligCell = `<span style="color:#9ca3af">0</span>`;
+                }
+
+                let doneCell = '';
+                if (achievedCount > 0) {
+                    doneCell = `<a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${tier.bonanza_id}" data-partner-id="${md.partner_id}" data-campaign-name="${escH(tier.name)}" data-partner-name="${escH(md.partner_name)}" data-only-triggered="true" style="color:${t.is_eligible ? '#059669' : '#7c3aed'}; font-weight:800; text-decoration:underline; font-size:13px">${achievedCount}</a>`;
+                    if (t.is_eligible) {
+                        doneCell += `&nbsp;<i class="fas fa-check-circle" style="color:#059669;font-size:10px"></i>`;
+                    }
+                } else {
+                    doneCell = `<span style="font-weight:700;color:#9ca3af">0</span>`;
+                }
+                const needCell = (t.gap > 0)
+                    ? `<span style="color:#dc2626;font-weight:600">-${t.gap}</span>`
+                    : `<span style="color:#059669;font-weight:600">✓</span>`;
+                return `<td style="text-align:center;border-left:1px solid #e5e7eb">${eligCell}</td><td style="text-align:center">${doneCell}</td><td style="text-align:center">${needCell}</td>`;
             }).join('');
-            const tierSubHeaders = g.tiers.map(() =>
-                `<th style="text-align:center;border-left:1px solid #e5e7eb">Done</th><th style="text-align:center">Need</th>`
-            ).join('');
-            const totalCols = 2 + g.tiers.length * 2 + 1;
+            const claimBadge = md.claim_status
+                ? `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(0,0,0,.06);color:${MGMT_CLAIM_COLORS[md.claim_status]||'#374151'}">${escBonanzaH(md.claim_status)}</span>`
+                : `<span style="color:#9ca3af;font-size:10px">—</span>`;
+            const rowCls = md.any_eligible ? 'mtrack-eligible' : '';
+            return `<tr class="${rowCls}">
+                <td style="width:28px;color:#9ca3af;font-size:11px;text-align:center">${idx+1}</td>
+                <td><div style="font-weight:700;font-size:13px;color:#111827">${escBonanzaH(md.partner_name)}</div>
+                    <div style="font-size:11px;color:#6b7280">${escBonanzaH(md.partner_code)}</div></td>
+                ${tierCells}
+                <td>${claimBadge}</td>
+            </tr>`;
+        }).join('') || `<tr><td colspan="${totalCols}" style="text-align:center;padding:14px;color:#9ca3af">No members match</td></tr>`;
 
-            const memberRows = displayOrder.map((pid, idx) => {
-                const md = memberMap[pid];
-                const tierCells = g.tiers.map(tier => {
-                    const t = (md.tiers || {})[tier.row_key] || {};
-                    const doneCell = t.is_eligible
-                        ? `<span style="color:#059669;font-weight:800">${t.achieved}</span>&nbsp;<i class="fas fa-check-circle" style="color:#059669;font-size:10px"></i>`
-                        : `<span style="font-weight:700;color:#111827">${t.achieved ?? 0}</span>`;
-                    const needCell = (t.gap > 0)
-                        ? `<span style="color:#dc2626;font-weight:600">-${t.gap}</span>`
-                        : `<span style="color:#059669;font-weight:600">✓</span>`;
-                    return `<td style="text-align:center;border-left:1px solid #e5e7eb">${doneCell}</td><td style="text-align:center">${needCell}</td>`;
-                }).join('');
-                const claimBadge = md.claim_status
-                    ? `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(0,0,0,.06);color:${MGMT_CLAIM_COLORS[md.claim_status]||'#374151'}">${escBonanzaH(md.claim_status)}</span>`
-                    : `<span style="color:#9ca3af;font-size:10px">—</span>`;
-                const rowCls = md.any_eligible ? 'mtrack-eligible' : '';
-                return `<tr class="${rowCls}">
-                    <td style="width:28px;color:#9ca3af;font-size:11px;text-align:center">${idx+1}</td>
-                    <td><div style="font-weight:700;font-size:13px;color:#111827">${escBonanzaH(md.partner_name)}</div>
-                        <div style="font-size:11px;color:#6b7280">${escBonanzaH(md.partner_code)}</div></td>
-                    ${tierCells}
-                    <td>${claimBadge}</td>
-                </tr>`;
-            }).join('') || `<tr><td colspan="${totalCols}" style="text-align:center;padding:14px;color:#9ca3af">No members match</td></tr>`;
+        tableHtml = `<div style="overflow-x:auto"><table>
+            <thead>
+                <tr><th rowspan="2" style="width:28px">#</th><th rowspan="2">Member</th>${tierColHeaders}<th rowspan="2">Claim</th></tr>
+                <tr>${tierSubHeaders}</tr>
+            </thead>
+            <tbody>${memberRows}</tbody>
+        </table></div>`;
 
-            tableHtml = `<div style="overflow-x:auto"><table>
-                <thead>
-                    <tr><th rowspan="2" style="width:28px">#</th><th rowspan="2">Member</th>${tierColHeaders}<th rowspan="2">Claim</th></tr>
-                    <tr>${tierSubHeaders}</tr>
-                </thead>
-                <tbody>${memberRows}</tbody>
-            </table></div>`;
-
-        } else {
-            // ── Simple single-tier layout ─────────────────────────────────────
-            const tier = g.tiers[0];
-            let members = tier.members || [];
-            if (_mgmtTrackView === 'achieved') members = members.filter(m => m.is_eligible);
-            else if (_mgmtTrackView === 'progress') members = members.filter(m => (m.achieved || 0) > 0);
-
-            const memberRows = members.map((m, idx) => {
-                const isElig = m.is_eligible;
-                const doneCell = isElig
-                    ? `<span style="color:#059669;font-weight:800">${m.achieved}</span>&nbsp;<i class="fas fa-check-circle" style="color:#059669;font-size:10px"></i>`
-                    : `<span style="font-weight:700;color:#111827">${m.achieved}</span>`;
-                const gapCell = m.gap > 0
-                    ? `<span style="color:#dc2626;font-weight:600">Need ${m.gap} more</span>`
-                    : `<span style="color:#059669;font-weight:600">✓ Done</span>`;
-                const claimBadge = m.claim_status
-                    ? `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(0,0,0,.06);color:${MGMT_CLAIM_COLORS[m.claim_status]||'#374151'}">${escBonanzaH(m.claim_status)}</span>`
-                    : `<span style="color:#9ca3af;font-size:10px">—</span>`;
-                const rowCls = isElig ? 'mtrack-eligible' : (m.gap > 0 && m.gap <= 2 ? 'mtrack-close' : '');
-                return `<tr class="${rowCls}">
-                    <td style="width:28px;color:#9ca3af;font-size:11px;text-align:center">${idx+1}</td>
-                    <td><div style="font-weight:700;font-size:13px;color:#111827">${escBonanzaH(m.partner_name)}</div>
-                        <div style="font-size:11px;color:#6b7280">${escBonanzaH(m.partner_code)}</div></td>
-                    <td style="text-align:center">${doneCell}</td>
-                    <td style="text-align:center">${gapCell}</td>
-                    <td>${claimBadge}</td>
-                </tr>`;
-            }).join('') || `<tr><td colspan="5" style="text-align:center;padding:14px;color:#9ca3af">No members match</td></tr>`;
-
-            const awardBadge = tier.award_name
-                ? `<span style="font-size:11px;color:#6b7280;margin-left:8px">🏅 ${escBonanzaH(tier.award_name)}</span>` : '';
-            const eligBadge = `<span style="font-size:11px;color:#6b7280;float:right">Target: ${tier.target} · ${tier.eligible_count} eligible</span>`;
-            tableHtml = `
-                <div style="padding:8px 16px;background:#f9fafb;border-bottom:1px solid #e5e7eb">
-                    ${awardBadge}${eligBadge}
-                </div>
-                <div style="overflow-x:auto"><table>
-                    <thead><tr>
-                        <th style="width:28px">#</th><th>Member</th>
-                        <th style="text-align:center">Done</th>
-                        <th style="text-align:center">Remaining</th>
-                        <th>Claim Status</th>
-                    </tr></thead>
-                    <tbody>${memberRows}</tbody>
-                </table></div>`;
+        const currStatus = getCampaignCurrentStatus(g.tiers[0]);
+        let currStatusBadge = '';
+        if (currStatus === 'Running') {
+            currStatusBadge = `<span class="badge" style="background:#10b981;color:#fff;padding:2px 6px;font-size:10px;border-radius:4px;margin-left:8px"><i class="fas fa-play me-1" style="font-size:8px"></i>Running</span>`;
+        } else if (currStatus === 'Expired') {
+            currStatusBadge = `<span class="badge" style="background:#6b7280;color:#fff;padding:2px 6px;font-size:10px;border-radius:4px;margin-left:8px"><i class="fas fa-history me-1" style="font-size:8px"></i>Expired</span>`;
+        } else if (currStatus === 'Cancelled') {
+            currStatusBadge = `<span class="badge" style="background:#ef4444;color:#fff;padding:2px 6px;font-size:10px;border-radius:4px;margin-left:8px"><i class="fas fa-ban me-1" style="font-size:8px"></i>Cancelled</span>`;
+        } else if (currStatus === 'Paused') {
+            currStatusBadge = `<span class="badge" style="background:#f59e0b;color:#fff;padding:2px 6px;font-size:10px;border-radius:4px;margin-left:8px"><i class="fas fa-pause me-1" style="font-size:8px"></i>Paused</span>`;
+        } else if (currStatus === 'Pending') {
+            currStatusBadge = `<span class="badge" style="background:#3b82f6;color:#fff;padding:2px 6px;font-size:10px;border-radius:4px;margin-left:8px"><i class="fas fa-clock me-1" style="font-size:8px"></i>Pending</span>`;
         }
 
         return `<div class="table-card" style="margin-bottom:20px">
-            <div class="table-card-header">
-                <h3><i class="fas fa-trophy me-2" style="color:#f59e0b"></i>${escBonanzaH(g.name)}</h3>
+            <div class="table-card-header" style="display:flex;align-items:center;justify-content:space-between">
+                <h3><i class="fas fa-trophy me-2" style="color:#f59e0b"></i>${escBonanzaH(g.name)}${currStatusBadge}</h3>
                 <span style="font-size:11px;color:#6b7280">${fmtD(g.start_date)} → ${fmtD(g.end_date)}&nbsp;·&nbsp;${g.basis}</span>
             </div>
             ${tableHtml}
@@ -1795,6 +2179,66 @@ function mgmtRenderTracking(d) {
     _applyMgmtBtnState(_mgmtTrackView);
 }
 // ── End DC-VGK-MEMBER-TRACKING-002 ───────────────────────────────────────────
+
+function openTrackDetailsFromLink(el) {
+    const bid = el.getAttribute('data-bonanza-id');
+    const pid = el.getAttribute('data-partner-id');
+    const campaignName = el.getAttribute('data-campaign-name');
+    const partnerName = el.getAttribute('data-partner-name');
+    const onlyTriggered = el.getAttribute('data-only-triggered') === 'true';
+    openTrackDetails(bid, pid, campaignName, partnerName, onlyTriggered);
+}
+
+async function openTrackDetails(bonanzaId, partnerId, campaignName, partnerName, onlyTriggered = false) {
+    const modal = document.getElementById('mtrackDetailsModal');
+    const tbody = document.getElementById('mtrackDetailsTbody');
+    
+    // Set headers
+    document.getElementById('mtrackDetailsCampaign').textContent = campaignName;
+    document.getElementById('mtrackDetailsPartner').textContent = partnerName;
+    document.getElementById('mtrackDetailsBasis').textContent = "Loading...";
+    
+    // Clear old rows
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:32px; color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading details…</td></tr>';
+    
+    // Open modal
+    modal.classList.add('open');
+    
+    try {
+        const r = await staffFetch(`${BONANZA_BASE}/vgk/member-tracking/details?bonanza_id=${bonanzaId}&partner_id=${partnerId}&only_triggered=${onlyTriggered}`);
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed to load details');
+        
+        document.getElementById('mtrackDetailsBasis').textContent = d.bonanza?.basis || '—';
+        
+        const leads = d.leads || [];
+        if (!leads.length) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px; color:#9ca3af"><i class="fas fa-inbox me-1"></i>No qualifying leads found</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = leads.map((l, i) => {
+            const submitDate = l.submit_date ? fmtDate(l.submit_date) : '—';
+            const paymentDate = l.payment_date ? fmtDate(l.payment_date) : '—';
+            const dealValue = l.deal_value > 0 ? '₹' + l.deal_value.toLocaleString('en-IN') : '—';
+            
+            return `<tr style="border-bottom:1px solid #f1f5f9">
+                <td style="text-align:center; padding:10px; color:#64748b">${i + 1}</td>
+                <td style="padding:10px; font-weight:600; color:#1e293b">${escH(l.customer_name)}</td>
+                <td style="padding:10px; white-space:nowrap"><a href="tel:${escH(l.mobile)}" style="color:#2563eb; text-decoration:none; font-weight:600">${escH(l.mobile)}</a></td>
+                <td style="padding:10px">${submitDate}</td>
+                <td style="padding:10px">${paymentDate}</td>
+                <td style="padding:10px"><span class="badge" style="background:#f1f5f9; color:#475569">${escH(l.status)}</span></td>
+                <td style="padding:10px"><span style="color:#0891b2">${escH(l.solar_pipeline_status || '—')}</span></td>
+                <td style="padding:10px; color:#475569">${escH(l.brand_name || '—')}</td>
+                <td style="padding:10px; text-align:right; font-weight:600; color:#0f172a">${dealValue}</td>
+            </tr>`;
+        }).join('');
+        
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:32px; color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>${escH(e.message)}</td></tr>`;
+    }
+}
 
 document.addEventListener('DOMContentLoaded', async function() {
     if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
