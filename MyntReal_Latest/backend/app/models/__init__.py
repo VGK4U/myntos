@@ -147,6 +147,9 @@ from app.models.solar import CRMSolarLeadTech
 # MNR E-Com Lite — Marketplace (DC Protocol - Feb 2026)
 from app.models.marketplace import MarketspareItem, MarketplaceSyncLog, MarketplaceCategoryConfig
 
+# Recharge & Bill Payment System (A1Topup + Razorpay)
+from app.models.recharge import RechargeTransaction
+
 # Staff Payroll System Models (DC Protocol Compliant - Jan 07, 2026)
 from app.models.staff_payroll import (
     StaffPayrollProfile, StaffPayrollStatutoryConfig, StaffPayrollCycle,
@@ -438,4 +441,7 @@ __all__ = [
     "DEFAULT_STATUTORY_CONFIG",
     "MemberLifecycleTracker",
     "CRMSolarLeadTech",
+    
+    # Recharge & Bill Payment System
+    "RechargeTransaction",
 ]

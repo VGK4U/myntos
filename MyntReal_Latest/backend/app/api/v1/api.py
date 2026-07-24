@@ -142,6 +142,12 @@ api_router.include_router(staff_employees.router, tags=["Staff Employees"])
 api_router.include_router(staff_departments.router, tags=["Staff Departments"])
 api_router.include_router(staff_nda.router, tags=["Staff NDA Management"])
 api_router.include_router(staff_tasks.router, prefix="/staff/tasks", tags=["Staff Task Management"])
+# from app.api.v1.endpoints import platform_b2b_billing
+# api_router.include_router(platform_b2b_billing.router, prefix="/platform-b2b/billing", tags=["Platform B2B Billing (Phase 4)"])
+
+# Recharge & Bill Payment (A1Topup + Razorpay)
+from app.api.v1.endpoints import recharge
+api_router.include_router(recharge.router, prefix="/recharge", tags=["Mobile Recharge"])
 api_router.include_router(staff_day_plans.router, prefix="/staff/day-plans", tags=["Staff Day Planner"])
 api_router.include_router(staff_time_tracker.router, prefix="/staff/attendance", tags=["Staff Time Tracker & Attendance"])
 api_router.include_router(staff_kra.router, prefix="/staff/kra", tags=["Staff KRA Performance Management"])

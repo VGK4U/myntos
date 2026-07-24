@@ -4259,8 +4259,79 @@ def member_income_entries_detail(
     except Exception:
         vsca_rows = []
 
-    # Batch-resolve client names + mobile numbers from CRM in one query (VCI + VSCA)
-    lead_ids = list({r.source_lead_id for r in list(rows) + list(vsca_rows) if r.source_lead_id})
+    # DC-BONANZA-EARNINGS-001 (Jul 2026): Fetch BonanzaProgress records for cash/bonus/extra_commission
+    # so they reflect in Member Wise Earnings. We join bonanza_extra_commission_log by created_at
+    # to find the specific lead_id that triggered the claim.
+    bp_rows = []
+    try:
+        _bp_status_clause = ""
+        _bp_params: dict = {"pid": partner_id}
+        if _status_val and _status_val not in ('BALANCE_RECEIVED_PLUS',):
+            if _status_val in ('DRAFT', 'PENDING'):
+                _bp_status_clause = " AND bp.processed_status = 'Pending'"
+            elif _status_val in ('RELEASED', 'PAID'):
+                _bp_status_clause = " AND bp.processed_status = 'Paid'"
+            else:
+                _bp_status_clause = " AND bp.processed_status = :bp_st"
+                _bp_params["bp_st"] = _status_val
+                
+        if date_from:
+            _bp_status_clause += " AND COALESCE(bp.processed_date::date, bp.created_at::date) >= CAST(:bp_date_from AS DATE)"
+            _bp_params["bp_date_from"] = date_from
+        if date_to:
+            _bp_status_clause += " AND COALESCE(bp.processed_date::date, bp.created_at::date) <= CAST(:bp_date_to AS DATE)"
+            _bp_params["bp_date_to"] = date_to
+
+        bp_rows = db.execute(text(
+            "SELECT bp.id, 'BP-' || bp.id AS entry_number, "
+            "  CASE WHEN bp.processed_status = 'Pending' THEN 'PENDING' "
+            "       WHEN bp.processed_status = 'Paid' THEN 'PAID' "
+            "       ELSE UPPER(bp.processed_status) END AS status, "
+            "  'SLAB_BONUS' AS kind, bp.claim_level AS level, "
+            "  COALESCE(bp.processed_date::date, bp.created_at::date)::text AS entry_date, "
+            "  0::float AS commission_pct, "
+            "  CASE WHEN bp.claim_level = 1 THEN b.ec_l1_amount "
+            "       WHEN bp.claim_level = 2 THEN b.ec_l2_amount "
+            "       WHEN bp.claim_level = 3 THEN b.ec_l3_amount "
+            "       WHEN bp.claim_level = 4 THEN b.ec_l4_amount "
+            "       WHEN bp.claim_level = 5 THEN b.ec_l5_amount "
+            "       ELSE 0 END::float AS commission_amount, "
+            "  CASE WHEN bp.processed_status = 'Paid' THEN "
+            "    (CASE WHEN bp.claim_level = 1 THEN b.ec_l1_amount "
+            "          WHEN bp.claim_level = 2 THEN b.ec_l2_amount "
+            "          WHEN bp.claim_level = 3 THEN b.ec_l3_amount "
+            "          WHEN bp.claim_level = 4 THEN b.ec_l4_amount "
+            "          WHEN bp.claim_level = 5 THEN b.ec_l5_amount ELSE 0 END) * 0.10 "
+            "  ELSE 0 END::float AS admin_charges, "
+            "  0::float AS tds_amount, "
+            "  CASE WHEN bp.processed_status = 'Paid' THEN "
+            "    (CASE WHEN bp.claim_level = 1 THEN b.ec_l1_amount "
+            "          WHEN bp.claim_level = 2 THEN b.ec_l2_amount "
+            "          WHEN bp.claim_level = 3 THEN b.ec_l3_amount "
+            "          WHEN bp.claim_level = 4 THEN b.ec_l4_amount "
+            "          WHEN bp.claim_level = 5 THEN b.ec_l5_amount ELSE 0 END) * 0.90 "
+            "  ELSE 0 END::float AS net_payout, "
+            "  becl.lead_id AS source_lead_id, "
+            "  NULL::integer AS category_id, "
+            "  0::float AS solar_value_entry, "
+            "  0::float AS cfv_raw, "
+            "  0::float AS dvt_raw "
+            "FROM bonanza_progress bp "
+            "JOIN bonanza b ON bp.bonanza_id = b.id "
+            "LEFT JOIN bonanza_extra_commission_log becl "
+            "  ON becl.bonanza_id = bp.bonanza_id "
+            " AND becl.partner_id = bp.partner_id "
+            " AND becl.level = bp.claim_level "
+            " AND becl.created_at = bp.created_at "
+            "WHERE bp.partner_id = :pid AND b.reward_type IN ('cash', 'bonus', 'extra_commission') "
+            + _bp_status_clause +
+            "ORDER BY bp.created_at DESC"
+        ), _bp_params).fetchall()
+    except Exception:
+        bp_rows = []
+
+    # Batch-resolve client names + mobile numbers from CRM in one query (VCI + VSCA + BP)
+    lead_ids = list({r.source_lead_id for r in list(rows) + list(vsca_rows) + list(bp_rows) if r.source_lead_id})
     lead_info: dict = {}
     if lead_ids:
         try:
@@ -4281,7 +4352,7 @@ def member_income_entries_detail(
     result = []
     _lvl_labels_map = {0:'Comm', 1:'Source', 2:'Senior', 3:'Extended', 4:'Core', 5:'Support'}
 
-    def _build_row(r, is_vsca: bool = False):
+    def _build_row(r, is_vsca: bool = False, is_bp: bool = False):
         _li    = lead_info.get(r.source_lead_id) if r.source_lead_id else None
         client = _li["name"]   if _li else None
         mobile = _li["mobile"] if _li else None
@@ -4302,7 +4373,7 @@ def member_income_entries_detail(
             "id":                int(r.id),
             "entry_number":      r.entry_number or f"INC-{r.id}",
             "status":            r.status,
-            "kind":              r.kind or ("DVR_ADVANCE" if is_vsca else "COMMISSION"),
+            "kind":              r.kind or ("SLAB_BONUS" if is_bp else ("DVR_ADVANCE" if is_vsca else "COMMISSION")),
             "level":             _lvl_int,
             "level_label":       _lvl_labels_map.get(_lvl_int, f"L{_lvl_int}") if _lvl_int is not None else "—",
             "income_date":       r.entry_date,
@@ -4320,9 +4391,11 @@ def member_income_entries_detail(
         }
 
     for r in rows:
-        result.append(_build_row(r, is_vsca=False))
+        result.append(_build_row(r, is_vsca=False, is_bp=False))
     for r in vsca_rows:
-        result.append(_build_row(r, is_vsca=True))
+        result.append(_build_row(r, is_vsca=True, is_bp=False))
+    for r in bp_rows:
+        result.append(_build_row(r, is_vsca=False, is_bp=True))
 
     # Sort merged list by income_date descending then entry_number descending
     result.sort(key=lambda x: (x.get("income_date") or ""), reverse=True)

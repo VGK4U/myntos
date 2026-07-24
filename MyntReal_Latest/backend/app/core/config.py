@@ -49,6 +49,15 @@ class Settings(BaseSettings):
     REDIS_URL: Optional[str] = None
     REDIS_PASSWORD: Optional[str] = None
     
+    # Razorpay Configuration
+    RAZORPAY_KEY_ID: Optional[str] = None
+    RAZORPAY_KEY_SECRET: Optional[str] = None
+    
+    # A1Topup Configuration
+    A1TOPUP_USERNAME: Optional[str] = None
+    A1TOPUP_PASSWORD: Optional[str] = None
+    A1TOPUP_TEST_MODE: bool = True
+    
     # Email Configuration (preserve ReplitMail integration)
     MAIL_SERVER: Optional[str] = None
     MAIL_PORT: int = 587

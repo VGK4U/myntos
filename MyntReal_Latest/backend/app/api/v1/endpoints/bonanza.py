@@ -2640,7 +2640,38 @@ async def edit_bonanza(
     bonanza.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(bonanza)
-    
+
+    # DC-EC-PER-LEVEL-TRIGGER-001 (Jul 2026): Retroactive Evaluation
+    # If triggers were updated, retroactively apply them to all leads in the bonanza period.
+    if bonanza.reward_type in ('cash', 'bonus', 'slab_wise', 'extra_commission', 'award', 'gift'):
+        try:
+            from app.services.vgk_cash_bonus_trigger import apply_cash_bonus_trigger_if_active
+            from app.models.crm import CRMLead
+            from sqlalchemy import or_, func
+            # Fetch leads that were active/created during the bonanza period
+            _leads = db.query(CRMLead).filter(
+                or_(
+                    func.date(CRMLead.submit_date) >= bonanza.start_date.date(),
+                    func.date(CRMLead.first_payment_date) >= bonanza.start_date.date(),
+                    func.date(CRMLead.complete_date) >= bonanza.start_date.date()
+                ),
+                or_(
+                    func.date(CRMLead.submit_date) <= bonanza.end_date.date(),
+                    func.date(CRMLead.first_payment_date) <= bonanza.end_date.date(),
+                    func.date(CRMLead.complete_date) <= bonanza.end_date.date()
+                )
+            ).all()
+            for _lead in _leads:
+                if getattr(_lead, 'submit_date', None):
+                    apply_cash_bonus_trigger_if_active(db, _lead, 'file_submitted')
+                if getattr(_lead, 'first_payment_date', None):
+                    apply_cash_bonus_trigger_if_active(db, _lead, 'first_payment')
+                if getattr(_lead, 'complete_date', None):
+                    apply_cash_bonus_trigger_if_active(db, _lead, 'file_completed')
+            db.commit()
+        except Exception as e:
+            logger.error(f"Retroactive bonanza evaluation failed for bonanza {bonanza.id}: {e}")
+            
     return {
         "success": True,
         "message": f"Bonanza '{bonanza.name}' updated successfully",

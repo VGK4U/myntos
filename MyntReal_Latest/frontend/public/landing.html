@@ -793,6 +793,8 @@
     </style>
     <script src="/public/js/mnr-lightbox.js"></script>
     <script src="/public/js/share-modal.js"></script>
+  <!-- SweetAlert2 for nicer popups -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
     <!-- HUB HEADER — always visible -->
@@ -812,6 +814,7 @@
             <div class="hub-dropdown">
               <button class="hub-dropdown-trigger">Verticals ▾</button>
               <div class="hub-dropdown-menu">
+                <a href="#" data-bs-toggle="modal" data-bs-target="#rechargeModal">📱 Mobile Recharge</a>
                 <a href="/hub/manthra">⚡ Manthra EV</a>
                 <a href="/hub/hgs">☀️ Har Ghar Solar</a>
                 <a href="/hub/etc">🎓 EVolution Training</a>
@@ -863,6 +866,18 @@
                     </div>
 
                     <ul class="offering-list">
+                    
+                        <!-- Mobile Recharge — Green -->
+                        <li class="offering-item has-link" data-bs-toggle="modal" data-bs-target="#rechargeModal" style="background:linear-gradient(135deg,#064e3b,#059669);border-color:rgba(110,231,183,0.35);box-shadow:0 4px 18px rgba(5,150,105,0.45);">
+                            <div class="offering-icon" style="background:linear-gradient(135deg,#10b981,#047857);box-shadow:0 3px 12px rgba(16,185,129,0.45);">
+                                <i class="fas fa-mobile-alt" style="color:#fff;"></i>
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="offering-text">Mobile Recharge</div>
+                                <div class="offering-sub">Instant Top-ups · All Operators · No Login Required</div>
+                            </div>
+                            <span style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:0.57rem;font-weight:800;padding:5px 11px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(16,185,129,0.4);">RECHARGE</span>
+                        </li>
 
                         <!-- VGK4U EV Spares — Dark Blue -->
                         <li class="offering-item has-link" onclick="navigateTo('/marketplace')" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8);border-color:rgba(147,197,253,0.35);box-shadow:0 4px 18px rgba(29,78,216,0.45);">
@@ -1578,6 +1593,250 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => { loadLandingAnnouncements(); });
+    </script>
+    <!-- Recharge Modal -->
+    <div class="modal fade" id="rechargeModal" tabindex="-1" aria-labelledby="rechargeModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:20px; overflow:hidden; border:none; box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
+          <div class="modal-header" style="background: linear-gradient(135deg, #10b981, #047857); color: white; border-bottom: none; padding: 20px 24px;">
+            <h5 class="modal-title" id="rechargeModalLabel" style="font-weight: 800; letter-spacing: 0.5px;"><i class="fas fa-bolt me-2"></i>Instant Mobile Recharge</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body" style="padding: 24px; background: #f8fafc;">
+            <form id="rechargeForm">
+              <div class="mb-3">
+                <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;">Mobile Number</label>
+                <input type="tel" class="form-control" id="rechargeMobile" required pattern="[0-9]{10}" placeholder="Enter 10-digit number" style="border-radius: 10px; padding: 12px; border: 1px solid #cbd5e1;">
+              </div>
+              <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;">Operator</label>
+                    <select class="form-select" id="rechargeOperator" required style="border-radius: 10px; padding: 12px; border: 1px solid #cbd5e1;">
+                      <option value="">Select Operator</option>
+                      <option value="Airtel">Airtel</option>
+                      <option value="Jio">Jio</option>
+                      <option value="VI">VI</option>
+                      <option value="BSNL">BSNL</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;">Circle (Optional)</label>
+                    <select class="form-select" id="rechargeCircle" style="border-radius: 10px; padding: 12px; border: 1px solid #cbd5e1;">
+                      <option value="">Select Circle</option>
+                      <option value="Andhra Pradesh">Andhra Pradesh</option>
+                      <option value="Delhi">Delhi</option>
+                      <option value="Karnataka">Karnataka</option>
+                      <option value="Maharashtra">Maharashtra</option>
+                      <option value="Tamil Nadu">Tamil Nadu</option>
+                    </select>
+                  </div>
+              </div>
+              <div class="mb-4">
+                <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;">Amount (₹)</label>
+                <input type="number" class="form-control" id="rechargeAmount" required min="10" placeholder="Select a plan below or enter amount" style="border-radius: 10px; padding: 12px; border: 1px solid #cbd5e1; font-weight: 700; color: #0f172a;" readonly>
+              </div>
+
+              <!-- Dynamic Plans Container -->
+              <div id="plansSection" style="display: none; margin-bottom: 20px;">
+                  <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;">Available Plans</label>
+                  <div id="rechargePlansContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 250px; overflow-y: auto; padding: 5px;">
+                      <!-- Plans will be injected here via JS -->
+                  </div>
+              </div>
+              
+              <div class="mb-3">
+                <p style="font-size: 0.75rem; color: #64748b; font-weight: 500; margin-bottom: 8px;">Guest Details (For receipt)</p>
+                <div class="row">
+                    <div class="col-6">
+                        <input type="text" class="form-control form-control-sm" id="rechargeGuestName" placeholder="Name (Optional)" style="border-radius: 8px;">
+                    </div>
+                    <div class="col-6">
+                        <input type="email" class="form-control form-control-sm" id="rechargeGuestEmail" placeholder="Email (Optional)" style="border-radius: 8px;">
+                    </div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn w-100" id="rechargeSubmitBtn" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border-radius: 10px; padding: 12px; font-weight: 700; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(16,185,129,0.3);">
+                Proceed to Pay
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+      // Fetch plans when operator is selected
+      document.getElementById('rechargeOperator').addEventListener('change', async function(e) {
+          const operator = e.target.value;
+          const plansSection = document.getElementById('plansSection');
+          const plansContainer = document.getElementById('rechargePlansContainer');
+          const amountInput = document.getElementById('rechargeAmount');
+          
+          if(!operator) {
+              plansSection.style.display = 'none';
+              amountInput.value = '';
+              return;
+          }
+          
+          plansContainer.innerHTML = '<div style="grid-column: 1 / -1; text-align: center;"><i class="fas fa-spinner fa-spin"></i> Fetching best plans...</div>';
+          plansSection.style.display = 'block';
+          amountInput.value = '';
+          
+          try {
+              const res = await fetch(`http://127.0.0.1:8000/api/v1/recharge/plans?operator=${operator}`);
+              const plans = await res.json();
+              
+              if(plans.length === 0) {
+                  plansContainer.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #64748b;">No static plans found for this operator.</div>';
+                  amountInput.removeAttribute('readonly');
+                  return;
+              }
+              
+              let html = '';
+              plans.forEach(plan => {
+                  html += `
+                  <div class="plan-card" style="border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px; cursor: pointer; transition: all 0.2s;" onclick="selectPlan(${plan.amount}, this)">
+                      <div style="font-size: 1.25rem; font-weight: 800; color: #10b981; margin-bottom: 5px;">₹${plan.amount}</div>
+                      <div style="font-size: 0.8rem; font-weight: 600; color: #334155;"><i class="fas fa-clock text-muted me-1"></i> ${plan.validity}</div>
+                      <div style="font-size: 0.8rem; font-weight: 600; color: #334155; margin-bottom: 8px;"><i class="fas fa-wifi text-muted me-1"></i> ${plan.data_benefit}</div>
+                      <div style="font-size: 0.75rem; color: #64748b; line-height: 1.2;">${plan.description}</div>
+                  </div>
+                  `;
+              });
+              plansContainer.innerHTML = html;
+              amountInput.setAttribute('readonly', 'true');
+          } catch(err) {
+              plansContainer.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #ef4444;">Error fetching plans.</div>';
+              amountInput.removeAttribute('readonly');
+          }
+      });
+      
+      function selectPlan(amount, cardElement) {
+          document.getElementById('rechargeAmount').value = amount;
+          // Highlight selected card
+          document.querySelectorAll('.plan-card').forEach(el => {
+              el.style.borderColor = '#e2e8f0';
+              el.style.background = 'transparent';
+          });
+          cardElement.style.borderColor = '#10b981';
+          cardElement.style.background = '#f0fdf4';
+      }
+
+      document.getElementById('rechargeForm').addEventListener('submit', async function(e) {
+          e.preventDefault();
+          const btn = document.getElementById('rechargeSubmitBtn');
+          btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+          btn.disabled = true;
+
+          const data = {
+              mobile_number: document.getElementById('rechargeMobile').value,
+              operator: document.getElementById('rechargeOperator').value,
+              circle: document.getElementById('rechargeCircle').value || null,
+              amount: parseFloat(document.getElementById('rechargeAmount').value),
+              guest_name: document.getElementById('rechargeGuestName').value || null,
+              guest_email: document.getElementById('rechargeGuestEmail').value || null
+          };
+
+          try {
+              // Call our backend to create order
+              const res = await fetch('http://127.0.0.1:8000/api/v1/recharge/create-order', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(data)
+              });
+              const orderData = await res.json();
+
+              if(!res.ok) {
+                  alert(orderData.detail || "Failed to create order");
+                  btn.innerHTML = 'Proceed to Pay';
+                  btn.disabled = false;
+                  return;
+              }
+
+              // Initialize Razorpay
+              const options = {
+                  "key": orderData.key_id,
+                  "amount": orderData.amount,
+                  "currency": orderData.currency,
+                  "name": "VGK4U Mobile Recharge",
+                  "description": `Recharge for ${data.mobile_number} (${data.operator})`,
+                  "order_id": orderData.order_id,
+                  "handler": async function (response) {
+                      // Verify Payment
+                      try {
+                          const verifyRes = await fetch('http://127.0.0.1:8000/api/v1/recharge/verify-payment', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                  razorpay_order_id: response.razorpay_order_id,
+                                  razorpay_payment_id: response.razorpay_payment_id,
+                                  razorpay_signature: response.razorpay_signature
+                              })
+                          });
+                          const verifyData = await verifyRes.json();
+                          if(verifyRes.ok) {
+                              let statusText = "Payment successful! Recharge initiated.";
+                              let iconType = "success";
+                              if(verifyData.recharge_status === "Success") {
+                                  statusText = "Payment successful and recharge completed!";
+                              } else if(verifyData.recharge_status === "Failed") {
+                                  statusText = "Payment successful, but the recharge failed at the operator side. We will check the status shortly.";
+                                  iconType = "warning";
+                              } else {
+                                  statusText = "Payment successful! Your recharge is pending and will be completed soon.";
+                                  iconType = "info";
+                              }
+                              
+                              Swal.fire({
+                                  title: 'Status',
+                                  text: statusText,
+                                  icon: iconType,
+                                  confirmButtonText: 'OK'
+                              });
+
+                              var modal = bootstrap.Modal.getInstance(document.getElementById('rechargeModal'));
+                              modal.hide();
+                              document.getElementById('rechargeForm').reset();
+                          } else {
+                              Swal.fire('Error', verifyData.detail || "Payment verification failed", 'error');
+                          }
+                      } catch(err) {
+                          Swal.fire('Error', 'Error verifying payment.', 'error');
+                      }
+                  },
+                  "prefill": {
+                      "name": data.guest_name || "",
+                      "email": data.guest_email || "",
+                      "contact": data.mobile_number
+                  },
+                  "theme": {
+                      "color": "#10b981"
+                  }
+              };
+              const rzp1 = new Razorpay(options);
+              rzp1.on('payment.failed', function (response){
+                  alert("Payment Failed: " + response.error.description);
+              });
+              rzp1.open();
+
+          } catch(err) {
+              alert("An error occurred. Please try again.");
+          } finally {
+              btn.innerHTML = 'Proceed to Pay';
+              btn.disabled = false;
+          }
+      });
+
+      // Auto-open modal if navigated from hub
+      document.addEventListener('DOMContentLoaded', function() {
+          const urlParams = new URLSearchParams(window.location.search);
+          if(urlParams.get('openRecharge') === 'true') {
+              var rechargeModal = new bootstrap.Modal(document.getElementById('rechargeModal'));
+              rechargeModal.show();
+          }
+      });
     </script>
 </body>
 </html>

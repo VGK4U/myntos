@@ -8085,33 +8085,9 @@ def update_lead(
         except Exception as _tr_e:
             logger.warning(f'[DC-TEAM-RETRIGGER-001] Retrigger failed lead {lead_id}: {_tr_e}')
 
-    # DC-HCI-001 (Jul 2026): If associated_partner_id changed AND income entries exist for the
-    # old partner, cancel/adjust them and re-trigger for the new partner.
-    _new_partner_id = lead.associated_partner_id
-    if (
-        _pre_update_partner_id
-        and _new_partner_id
-        and _pre_update_partner_id != _new_partner_id
-        and 'associated_partner_id' in update_data
-    ):
-        try:
-            from app.services.vgk_income_correction import handle_handler_change_income_correction
-            _hci_result = handle_handler_change_income_correction(
-                db=db,
-                lead=lead,
-                old_partner_id=_pre_update_partner_id,
-                new_partner_id=_new_partner_id,
-                changed_by_name=getattr(current_employee, 'name', '') or getattr(current_employee, 'full_name', '') or str(current_employee.emp_code),
-                staff_id=current_employee.id,
-            )
-            logger.info(
-                f'[DC-HCI-001] Lead {lead_id}: correction done — '
-                f'cancelled={_hci_result.get("cancelled",0)} '
-                f'adjusted_paid={_hci_result.get("adjusted_paid",0)} '
-                f'new_drafts={_hci_result.get("new_drafts",0)}'
-            )
-        except Exception as _hci_e:
-            logger.warning(f'[DC-HCI-001] Handler change income correction failed lead {lead_id}: {_hci_e}')
+    # DC-HCI-001 (Jul 2026): Handler change income correction is now natively handled
+    # by DC-DEDUP-LEVEL-001 in vgk_cash_income_drafts for ALL levels (L1-L6), so
+    # we no longer need to call handle_handler_change_income_correction here.
 
     # DC_CIBIL_ADVANCE_001: Solar CIBIL Advance lifecycle hooks (non-blocking)
     _cibil_advance_trigger_keys = {'solar_pipeline_status', 'cibil_confirmed', 'cibil_score', 'solar_brand_id'}

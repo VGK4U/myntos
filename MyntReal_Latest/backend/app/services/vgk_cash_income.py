@@ -107,29 +107,146 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
         logger.info(f'[VGK-CI] Lead {lead.id}: commission base zero after advance deduction — skipping')
         return 0
 
-    # DC-SHOWROOM-CLEAR-001 (Jul 2026): If showroom_vgk_id was cleared (None), cancel any
-    # existing DRAFT L6 entries for this lead NOW — before the solar stage gate — so orphan
-    # DRAFTs are cleaned up even when the lead is at installation_pending or other pre-balance
-    # stages.  DC-DEDUP-LEVEL-001 only fires inside the levels_map loop (far below), and L6 is
-    # absent from the map when showroom is None.  Only DRAFT status is touched; PENDING and
-    # beyond are left for manual review.
-    _showroom_id_early = getattr(lead, 'showroom_vgk_id', None)
-    if not _showroom_id_early:
-        _l6_orphans_early = db.query(VGKCashIncomeEntry).filter(
-            VGKCashIncomeEntry.company_id     == company_id,
-            VGKCashIncomeEntry.source_lead_id == lead.id,
-            VGKCashIncomeEntry.level          == 6,
-            VGKCashIncomeEntry.status         == 'DRAFT',
-        ).all()
-        for _l6_orph in _l6_orphans_early:
-            _l6_orph.status = 'CANCELLED'
-            if hasattr(_l6_orph, 'updated_at'):
-                _l6_orph.updated_at = _get_ist()
-            logger.info(
-                f'[VGK-CI] DC-SHOWROOM-CLEAR-001: Lead {lead.id} L6 orphan '
-                f'{_l6_orph.entry_number} (partner {_l6_orph.partner_id}) → CANCELLED '
-                f'(showroom_vgk_id cleared)'
-            )
+    # DC-SHOWROOM-CLEAR-001 / DC-DEDUP-LEVEL-001 UPGRADED (Jul 2026):
+    # Determine the expected partner for each level (1-6) based on the config and overrides.
+    # We do a pre-pass to find ANY active entry (DRAFT/PENDING/RELEASED/PAID) whose partner
+    # does NOT match the expected partner for that level. If found, we cancel it (or adjust if PAID)
+    # and reverse the wallet. This centrally guarantees that ANY level assignment change in the CRM
+    # perfectly corrects the income ledger without needing explicit hooks per-level in crm.py.
+    
+    # 1. Compute expected partners
+    _exp_partners = {}
+    
+    # DC Protocol May 2026: Resolve L1 partner first
+    l1 = db.query(OfficialPartner).filter(OfficialPartner.id == lead.associated_partner_id).first()
+    if l1:
+        cfg = db.query(VGKTeamCommissionConfig).filter(
+            VGKTeamCommissionConfig.company_id == company_id,
+            VGKTeamCommissionConfig.category_id == category_id,
+            VGKTeamCommissionConfig.is_active == True,
+            VGKTeamCommissionConfig.is_paid_member == True,
+        ).order_by(VGKTeamCommissionConfig.updated_at.desc()).first() if category_id else None
+        
+        if not cfg:
+            cfg = db.query(VGKTeamCommissionConfig).filter(
+                VGKTeamCommissionConfig.company_id == company_id,
+                VGKTeamCommissionConfig.category_id == category_id,
+                VGKTeamCommissionConfig.is_active == True,
+            ).order_by(VGKTeamCommissionConfig.updated_at.desc()).first() if category_id else None
+            
+        if cfg:
+            _l2_ovr = db.query(OfficialPartner).filter(OfficialPartner.id == getattr(lead, 'team_senior_partner_id', None)).first() if getattr(lead, 'team_senior_partner_id', None) else None
+            _l3_ovr = db.query(OfficialPartner).filter(OfficialPartner.id == getattr(lead, 'team_extended_partner_id', None)).first() if getattr(lead, 'team_extended_partner_id', None) else None
+            _l4_ovr = db.query(OfficialPartner).filter(OfficialPartner.id == getattr(lead, 'team_core_partner_id', None)).first() if getattr(lead, 'team_core_partner_id', None) else None
+            l2 = _l2_ovr if _l2_ovr else (db.query(OfficialPartner).filter(OfficialPartner.id == l1.parent_partner_id).first() if l1.parent_partner_id else None)
+            l3 = _l3_ovr if _l3_ovr else (db.query(OfficialPartner).filter(OfficialPartner.id == l2.parent_partner_id).first() if (l2 and l2.parent_partner_id) else None)
+            l4_core = _l4_ovr if _l4_ovr else (db.query(OfficialPartner).filter(OfficialPartner.id == l3.parent_partner_id).first() if (l3 and l3.parent_partner_id) else None)
+            
+            _l5_id = lead.vgk_field_support_id or 31
+            l5 = db.query(OfficialPartner).filter(OfficialPartner.id == _l5_id).first()
+            
+            def _vgk_active_chk(p) -> bool:
+                return p is not None and bool(getattr(p, 'partner_code', None)) and p.partner_code.upper().startswith('VGK07')
+            
+            is_loyal_chk = bool(getattr(l1, 'is_loyal_coupon', False))
+            
+            _exp_partners[1] = l1.id
+            _exp_partners[2] = l2.id if _vgk_active_chk(l2) else None
+            _exp_partners[3] = None if is_loyal_chk else (l3.id if _vgk_active_chk(l3) else None)
+            _exp_partners[4] = None if is_loyal_chk else (l4_core.id if _vgk_active_chk(l4_core) else None)
+            _exp_partners[5] = None if is_loyal_chk else (l5.id if l5 else None)
+            
+            _showroom_id_chk = getattr(lead, 'showroom_vgk_id', None)
+            _exp_partners[6] = _showroom_id_chk
+
+    # 2. Find and cancel/adjust non-matching active entries
+    _all_active_comms = db.query(VGKCashIncomeEntry).filter(
+        VGKCashIncomeEntry.company_id     == company_id,
+        VGKCashIncomeEntry.source_lead_id == lead.id,
+        VGKCashIncomeEntry.kind.notin_(['ADJUSTMENT', 'ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'SLAB_BONUS']),
+        VGKCashIncomeEntry.status.notin_(['CANCELLED']),
+    ).all()
+    
+    _now = _get_ist()
+    for _ent in _all_active_comms:
+        if _ent.level in _exp_partners:
+            _expected_pid = _exp_partners[_ent.level]
+            # If the partner_id doesn't match the expected one, it's an orphan and must be reversed.
+            # This handles both reassignment (Partner A -> Partner B) and clearing (Partner A -> None).
+            if _ent.partner_id != _expected_pid:
+                _op = db.query(OfficialPartner).filter(OfficialPartner.id == _ent.partner_id).first()
+                _gross = Decimal(str(_ent.commission_amount or 0))
+                _net_pay = Decimal(str(_ent.net_payout or 0))
+                
+                if _ent.status == 'PAID':
+                    _adj_amount = _net_pay if _net_pay > 0 else _gross
+                    if _adj_amount > 0 and _op:
+                        db.flush()
+                        _adj_entry = VGKCashIncomeEntry(
+                            company_id             = _ent.company_id,
+                            entry_number           = _next_entry_number(db, _ent.company_id),
+                            partner_id             = _ent.partner_id,
+                            source_lead_id         = lead.id,
+                            category_id            = _ent.category_id,
+                            level                  = _ent.level,
+                            deal_value_total       = _ent.deal_value_total,
+                            deal_value_excl_tax    = _ent.deal_value_excl_tax,
+                            commission_pct         = _ent.commission_pct,
+                            commission_amount      = _adj_amount,
+                            points_debit_required  = Decimal('0'),
+                            points_actually_debited= Decimal('0'),
+                            status                 = 'PENDING',
+                            kind                   = 'ADJUSTMENT',
+                            net_payout             = _adj_amount,
+                            adjustment_ref_entry_id= _ent.id,
+                            adjustment_reason      = f'Adjusted Lead #{lead.id} — L{_ent.level} reassigned',
+                            notes                  = f'Deduction — replaces paid entry {_ent.entry_number}',
+                        )
+                        db.add(_adj_entry)
+                        db.flush()
+                        
+                        _wb = _op.vgk_cash_wallet or Decimal('0')
+                        _wa = max(Decimal('0'), _wb - _adj_amount)
+                        _op.vgk_cash_wallet = _wa
+                        _op.updated_at = _now
+                        _log_wallet_txn(
+                            db, _op.id, company_id,
+                            txn_type='HANDLER_CHANGE_ADJUSTMENT', direction='DR',
+                            amount=_adj_amount, wallet_before=_wb, wallet_after=_wa,
+                            ref_type='VGK_CASH_INCOME', ref_id=_adj_entry.id,
+                            description=f'Adjustment (L{_ent.level} changed) — {_ent.entry_number} Lead #{lead.id}',
+                            staff_id=None,
+                        )
+                    logger.info(f'[VGK-CI] Lead {lead.id} L{_ent.level} PAID orphan {_ent.entry_number} → ADJUSTMENT')
+                else:
+                    _reverse_amount = Decimal('0')
+                    if _ent.status in ('DRAFT', 'PENDING', 'STAGE1_APPROVED'):
+                        _reverse_amount = _gross
+                    elif _ent.status == 'RELEASED':
+                        _reverse_amount = _net_pay if _net_pay > 0 else _gross
+                        if _op:
+                            _earned = getattr(_op, 'vgk_cash_earned_total', None) or Decimal('0')
+                            _op.vgk_cash_earned_total = max(Decimal('0'), _earned - _gross)
+
+                    _ent.status = 'CANCELLED'
+                    _ent.cancelled_reason = f'Level {_ent.level} partner reassigned/cleared'
+                    if hasattr(_ent, 'updated_at'):
+                        _ent.updated_at = _now
+
+                    if _reverse_amount > 0 and _op:
+                        _wb = _op.vgk_cash_wallet or Decimal('0')
+                        _wa = max(Decimal('0'), _wb - _reverse_amount)
+                        _op.vgk_cash_wallet = _wa
+                        _op.updated_at = _now
+                        _log_wallet_txn(
+                            db, _op.id, company_id,
+                            txn_type='HANDLER_CHANGE_REVERSAL', direction='DR',
+                            amount=_reverse_amount, wallet_before=_wb, wallet_after=_wa,
+                            ref_type='VGK_CASH_INCOME', ref_id=_ent.id,
+                            description=f'Income reversed (L{_ent.level} changed) — {_ent.entry_number} Lead #{lead.id}',
+                            staff_id=None,
+                        )
+                    logger.info(f'[VGK-CI] Lead {lead.id} L{_ent.level} orphan {_ent.entry_number} → CANCELLED')
 
     # DC-SOLAR-STAGE-GATE-001 (Jul 2026): Solar leads (category_id=6) must only generate
     # COMMISSION entries once the deal balance is confirmed (solar_pipeline_status in
@@ -282,23 +399,7 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
         if not partner or (pct <= 0 and level not in _level_comm_overrides):
             continue
 
-        # DC-DEDUP-LEVEL-001 (Jun 2026): When a partner is reassigned, cancel any DRAFT
-        # entries for the same (lead, level) but a DIFFERENT partner before creating the
-        # new entry. This prevents orphan DRAFTs accumulating on every re-assignment.
-        # Only DRAFT status is auto-cancelled — PENDING/STAGE1_APPROVED/PAID are not touched.
-        _orphans = db.query(VGKCashIncomeEntry).filter(
-            VGKCashIncomeEntry.company_id     == company_id,
-            VGKCashIncomeEntry.source_lead_id == lead.id,
-            VGKCashIncomeEntry.level          == level,
-            VGKCashIncomeEntry.partner_id     != partner.id,
-            VGKCashIncomeEntry.status         == 'DRAFT',
-        ).all()
-        for _orph in _orphans:
-            _orph.status = 'CANCELLED'
-            if hasattr(_orph, 'updated_at'):
-                _orph.updated_at = _get_ist()
-            logger.info(f'[VGK-CI] DC-DEDUP-LEVEL-001: Lead {lead.id} L{level} orphan '
-                        f'{_orph.entry_number} (partner {_orph.partner_id}) → CANCELLED')
+        # DC-DEDUP-LEVEL-001 is now handled comprehensively in the pre-pass above.
 
         # DC-CANCEL-REGEN-001 (Jun 2026): Exclude CANCELLED entries from idempotency check.
         # A CANCELLED entry must not block regeneration — it is historical/voided.

@@ -256,7 +256,7 @@ background:#f1f5f9;
 transform:translateX(4px);
 }
 
-.dropdown:hover .dropdown-menu{
+.dropdown.active .dropdown-menu{
 display:flex;
 }
 

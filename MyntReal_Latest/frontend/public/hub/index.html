@@ -63,8 +63,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="preload" href="/hub/Assets/hero-bg.webp" as="image" fetchpriority="high">
-<link rel="stylesheet" href="/hub/style.css?v=9">
+<link rel="stylesheet" href="/hub/style.css?v=2">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- SweetAlert2 for nicer popups -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
@@ -87,11 +89,12 @@
         <a href="/hub/about">About</a>
         <a href="/hub/media">Media</a>
 
-        <div class="dropdown">
-          <a href="#" class="dropdown-trigger">
+        <div class="dropdown" onclick="this.classList.toggle('active')">
+          <a href="#" class="dropdown-trigger" onclick="event.preventDefault()">
             Verticals <span class="dropdown-arrow">▾</span>
           </a>
           <div class="dropdown-menu">
+            <a href="#" onclick="openRechargeModal(event)">📱 Mobile Recharge</a>
             <a href="/hub/manthra">⚡ Manthra EV</a>
             <a href="/hub/hgs">☀️ Har Ghar Solar</a>
             <a href="/hub/etc">🎓 EVolution Training</a>
@@ -416,69 +419,44 @@
 </section>
 
 <!-- ══ FOOTER ══ -->
-<footer class="site-footer">
-  <div class="container footer-grid">
-
-    <div class="footer-brand">
-      <img src="/hub/Assets/MyntWhite.png" alt="MyntReal">
-      <p>MyntReal integrates multiple high-growth industries into one scalable ecosystem including EV, Solar, Training, Insurance and Real Estate services.</p>
-      <div class="footer-social" id="sm-hub"></div>
-      <script>(function(){fetch('/api/v1/social-links/hub').then(function(r){return r.ok?r.json():[];}).then(function(ls){if(!ls||!ls.length)return;var ic={facebook:'fa-brands fa-facebook-f',instagram:'fa-brands fa-instagram',youtube:'fa-brands fa-youtube',linkedin:'fa-brands fa-linkedin-in',google:'fa-brands fa-google'};var el=document.getElementById('sm-hub');el.innerHTML=ls.map(function(l){return'<a href="'+l.url+'" target="_blank" rel="noopener"><i class="'+ic[l.platform]+'"></i></a>';}).join('');}).catch(function(){});})();</script>
+<footer class="footer">
+  <div class="container footer-top">
+    <div class="footer-col">
+      <img src="/hub/Assets/Myntreal.logo.png" alt="MyntReal Logo" style="width:180px; margin-bottom:20px;">
+      <p style="color:#cbd5e1">Empowering individuals and businesses across India through unified digital services.</p>
+      <div class="footer-social">
+        <div id="sm-hub"></div>
+      </div>
     </div>
-
-    <div class="footer-links">
-      <h4>Company</h4>
-      <a href="/hub">Home</a>
-      <a href="/hub/about">About</a>
-      <a href="/hub/media">Media</a>
-      <a href="/hub/verticals">Verticals</a>
-      <a href="/hub/contact">Contact</a>
-      <a href="/careers">Careers</a>
-    </div>
-
-    <div class="footer-links">
+    
+    <div class="footer-col">
       <h4>Our Verticals</h4>
-      <a href="/hub/manthra">Manthra EV</a>
-      <a href="/hub/hgs">Har Ghar Solar</a>
-      <a href="/hub/etc">EVolution Training</a>
-      <a href="/hub/care">VGK Care</a>
-      <a href="/hub/realestate">VGK Real Dreams</a>
-    </div>
-
-    <div class="footer-links">
-      <h4>Explore by State</h4>
-      <a href="/andhra-pradesh">Andhra Pradesh</a>
-      <a href="/telangana">Telangana</a>
-      <a href="/ev-company-andhra-pradesh">EV Company in AP</a>
-      <a href="/ev-company-telangana">EV Company in TS</a>
-      <a href="/business-opportunities">Business Opportunities</a>
-    </div>
-
-    <div class="footer-links">
-      <h4>Get Support</h4>
-      <a href="/service-request">Support Form</a>
-      <a href="/service-request?category=ev">Manthra EV Support</a>
-      <a href="/service-request?category=solar">Solar Support</a>
-      <a href="/service-request?category=etc">Training Support</a>
-      <a href="/service-request?category=care">VGK Care Support</a>
-      <a href="/service-request?category=realestate">Real Estate Support</a>
-    </div>
-
-    <div class="footer-links footer-contact">
-      <h4>Contact</h4>
-      <p>📍 Survey No. 156/1, Mainroad Saripalli</p>
-      <p>Pendurthi, Visakhapatnam — 531173</p>
-      <p>📞 +91 8585852738</p>
-      <p>✉ contact@myntreal.com</p>
-      <div class="footer-newsletter">
-        <h5>Get Updates</h5>
-        <div class="newsletter-box">
-          <input type="email" placeholder="Enter your email">
-          <button>Subscribe</button>
-        </div>
+      <div class="footer-links">
+        <a href="/hub/manthra">Manthra EV</a>
+        <a href="/hub/hgs">Har Ghar Solar</a>
+        <a href="/hub/etc">EVolution Training</a>
+        <a href="/hub/realestate">VGK Real Dreams</a>
+        <a href="/hub/care">VGK Care</a>
       </div>
     </div>
 
+    <div class="footer-col">
+      <h4>Quick Links</h4>
+      <div class="footer-links">
+        <a href="/hub/about">About Us</a>
+        <a href="/hub/contact">Contact</a>
+        <a href="/careers">Careers</a>
+      </div>
+    </div>
+
+    <div class="footer-col">
+      <h4>Stay Updated</h4>
+      <p style="color:#cbd5e1; margin-bottom:15px">Join our newsletter for the latest updates.</p>
+      <form class="newsletter-box">
+        <input type="email" placeholder="Email Address" required>
+        <button type="submit"><i class="fas fa-paper-plane"></i></button>
+      </form>
+    </div>
   </div>
 
   <div class="footer-divider"></div>
@@ -493,39 +471,31 @@
   </div>
 </footer>
 
-
 <script>
 /* ── Mobile menu ── */
 const menuToggle = document.getElementById("menuToggle");
 const navMenu    = document.getElementById("navMenu");
 const overlay    = document.getElementById("navOverlay");
 
-menuToggle.addEventListener("click", () => {
-  menuToggle.classList.toggle("active");
-  navMenu.classList.toggle("active");
-  overlay.classList.toggle("active");
-});
-overlay.addEventListener("click", () => {
-  menuToggle.classList.remove("active");
-  navMenu.classList.remove("active");
-  overlay.classList.remove("active");
-});
-
-/* Mobile dropdown toggle */
-document.querySelectorAll(".dropdown-trigger").forEach(trigger => {
-  trigger.addEventListener("click", e => {
-    if (window.innerWidth < 900) {
-      e.preventDefault();
-      trigger.parentElement.classList.toggle("active");
-    }
-  });
-});
-/* 3-second hover-out delay for Verticals dropdown */
-(function(){var t;document.querySelectorAll('.dropdown').forEach(function(dd){dd.addEventListener('mouseenter',function(){clearTimeout(t);});dd.addEventListener('mouseleave',function(){dd.classList.add('active');t=setTimeout(function(){dd.classList.remove('active');},3000);});});})();
+if(menuToggle) {
+    menuToggle.addEventListener("click", () => {
+      menuToggle.classList.toggle("active");
+      navMenu.classList.toggle("active");
+      overlay.classList.toggle("active");
+    });
+}
+if(overlay) {
+    overlay.addEventListener("click", () => {
+      menuToggle.classList.remove("active");
+      navMenu.classList.remove("active");
+      overlay.classList.remove("active");
+    });
+}
 
 /* ── Header scroll shadow ── */
 window.addEventListener("scroll", () => {
-  document.getElementById("header").classList.toggle("scrolled", window.scrollY > 50);
+  let header = document.getElementById("header");
+  if(header) header.classList.toggle("scrolled", window.scrollY > 50);
 });
 
 /* ── Section reveal (IntersectionObserver — no GSAP needed) ── */
@@ -554,6 +524,7 @@ const track = document.getElementById("whyTrack");
 const dots  = document.querySelectorAll(".dot");
 
 function updateWhy() {
+  if(!track) return;
   track.style.transform = `translateX(-${whyIndex * 100}%)`;
   dots.forEach(d => d.classList.remove("active"));
   if (dots[whyIndex]) dots[whyIndex].classList.add("active");
@@ -563,6 +534,364 @@ function prevWhy() { whyIndex = (whyIndex - 1 + 3) % 3; updateWhy(); }
 function goWhy(i)  { whyIndex = i; updateWhy(); }
 
 setInterval(nextWhy, 4500);
+</script>
+
+<style>
+/* Foolproof override against cached styles */
+.dropdown .dropdown-menu {
+    display: none !important;
+}
+.dropdown.active .dropdown-menu {
+    display: flex !important;
+}
+
+.custom-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+}
+.custom-modal-overlay.show {
+    display: flex;
+}
+.custom-modal {
+    background: #f8fafc;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+}
+.custom-modal-header {
+    background: linear-gradient(135deg, #10b981, #047857);
+    color: white;
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.custom-modal-title {
+    margin: 0;
+    font-weight: 800;
+    font-size: 1.25rem;
+}
+.custom-modal-close {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1.7rem;
+    cursor: pointer;
+    line-height: 1;
+}
+.custom-modal-body {
+    padding: 24px;
+}
+.custom-modal-body label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 5px;
+}
+.custom-modal-body input, .custom-modal-body select {
+    width: 100%;
+    border-radius: 10px;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    margin-bottom: 15px;
+    box-sizing: border-box;
+}
+.custom-modal-row {
+    display: flex;
+    gap: 15px;
+}
+.custom-modal-col {
+    flex: 1;
+}
+.btn-pay {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border-radius: 10px;
+    padding: 12px;
+    font-weight: 700;
+    width: 100%;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(16,185,129,0.3);
+    margin-top: 10px;
+}
+.btn-pay:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+</style>
+
+<div class="custom-modal-overlay" id="hubRechargeModal">
+  <div class="custom-modal">
+    <div class="custom-modal-header">
+      <h3 class="custom-modal-title">📱 Instant Mobile Recharge</h3>
+      <button class="custom-modal-close" onclick="closeRechargeModal()">&times;</button>
+    </div>
+    <div class="custom-modal-body">
+      <form id="hubRechargeForm">
+        <label>Mobile Number</label>
+        <input type="tel" id="hubRechargeMobile" required pattern="[0-9]{10}" placeholder="Enter 10-digit number">
+        
+        <div class="custom-modal-row">
+            <div class="custom-modal-col">
+              <label>Operator</label>
+              <select id="hubRechargeOperator" required>
+                <option value="">Select Operator</option>
+                <option value="Airtel">Airtel</option>
+                <option value="Jio">Jio</option>
+                <option value="VI">VI</option>
+                <option value="BSNL">BSNL</option>
+              </select>
+            </div>
+            <div class="custom-modal-col">
+              <label>Circle (Optional)</label>
+              <select id="hubRechargeCircle">
+                <option value="">Select Circle</option>
+                <option value="Andhra Pradesh">Andhra Pradesh</option>
+                <option value="Delhi">Delhi</option>
+                <option value="Karnataka">Karnataka</option>
+                <option value="Maharashtra">Maharashtra</option>
+                <option value="Tamil Nadu">Tamil Nadu</option>
+              </select>
+            </div>
+        </div>
+        
+        <label>Amount (₹)</label>
+        <input type="number" id="hubRechargeAmount" required min="10" placeholder="Select a plan below or enter amount" readonly>
+        
+        <!-- Dynamic Plans Container -->
+        <div id="hubPlansSection" style="display: none; margin-bottom: 20px;">
+            <label style="margin-top:10px;">Available Plans</label>
+            <div id="hubRechargePlansContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 250px; overflow-y: auto; padding: 5px;">
+                <!-- Plans will be injected here via JS -->
+            </div>
+        </div>
+        
+        <label>Guest Details (For receipt)</label>
+        <div class="custom-modal-row">
+            <div class="custom-modal-col">
+                <input type="text" id="hubRechargeGuestName" placeholder="Name (Optional)">
+            </div>
+            <div class="custom-modal-col">
+                <input type="email" id="hubRechargeGuestEmail" placeholder="Email (Optional)">
+            </div>
+        </div>
+
+        <button type="submit" class="btn-pay" id="hubRechargeSubmitBtn">Proceed to Pay</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+/* Recharge Modal Logic */
+function openRechargeModal(e) {
+    if(e) e.preventDefault();
+    document.getElementById('hubRechargeModal').classList.add('show');
+    // close dropdown menu just in case
+    document.querySelectorAll('.dropdown').forEach(dd => dd.classList.remove('active'));
+}
+function closeRechargeModal() {
+    document.getElementById('hubRechargeModal').classList.remove('show');
+}
+
+// Close on outside click
+document.getElementById('hubRechargeModal').addEventListener('click', function(e) {
+    if(e.target === this) closeRechargeModal();
+});
+
+document.getElementById('hubRechargeOperator').addEventListener('change', async function(e) {
+    const operator = e.target.value;
+    const plansSection = document.getElementById('hubPlansSection');
+    const plansContainer = document.getElementById('hubRechargePlansContainer');
+    const amountInput = document.getElementById('hubRechargeAmount');
+    
+    if(!operator) {
+        plansSection.style.display = 'none';
+        amountInput.value = '';
+        return;
+    }
+    
+    plansContainer.innerHTML = '<div style="grid-column: 1 / -1; text-align: center;"><i class="fas fa-spinner fa-spin"></i> Fetching best plans...</div>';
+    plansSection.style.display = 'block';
+    amountInput.value = '';
+    
+    try {
+        const res = await fetch(`http://127.0.0.1:8000/api/v1/recharge/plans?operator=${operator}`);
+        const plans = await res.json();
+        
+        if(plans.length === 0) {
+            plansContainer.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #64748b;">No static plans found for this operator.</div>';
+            amountInput.removeAttribute('readonly');
+            return;
+        }
+        
+        let html = '';
+        plans.forEach(plan => {
+            html += `
+            <div class="hub-plan-card" style="border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px; cursor: pointer; transition: all 0.2s;" onclick="selectHubPlan(${plan.amount}, this)">
+                <div style="font-size: 1.25rem; font-weight: 800; color: #10b981; margin-bottom: 5px;">₹${plan.amount}</div>
+                <div style="font-size: 0.8rem; font-weight: 600; color: #334155;"><i class="fas fa-clock text-muted me-1"></i> ${plan.validity}</div>
+                <div style="font-size: 0.8rem; font-weight: 600; color: #334155; margin-bottom: 8px;"><i class="fas fa-wifi text-muted me-1"></i> ${plan.data_benefit}</div>
+                <div style="font-size: 0.75rem; color: #64748b; line-height: 1.2;">${plan.description}</div>
+            </div>
+            `;
+        });
+        plansContainer.innerHTML = html;
+        amountInput.setAttribute('readonly', 'true');
+    } catch(err) {
+        plansContainer.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #ef4444;">Error fetching plans.</div>';
+        amountInput.removeAttribute('readonly');
+    }
+});
+
+function selectHubPlan(amount, cardElement) {
+    document.getElementById('hubRechargeAmount').value = amount;
+    // Highlight selected card
+    document.querySelectorAll('.hub-plan-card').forEach(el => {
+        el.style.borderColor = '#e2e8f0';
+        el.style.background = 'transparent';
+    });
+    cardElement.style.borderColor = '#10b981';
+    cardElement.style.background = '#f0fdf4';
+}
+
+document.getElementById('hubRechargeForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('hubRechargeSubmitBtn');
+    btn.innerHTML = 'Processing...';
+    btn.disabled = true;
+
+    const data = {
+        mobile_number: document.getElementById('hubRechargeMobile').value,
+        operator: document.getElementById('hubRechargeOperator').value,
+        circle: document.getElementById('hubRechargeCircle').value || null,
+        amount: parseFloat(document.getElementById('hubRechargeAmount').value),
+        guest_name: document.getElementById('hubRechargeGuestName').value || null,
+        guest_email: document.getElementById('hubRechargeGuestEmail').value || null
+    };
+
+    try {
+        const res = await fetch('http://127.0.0.1:8000/api/v1/recharge/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const orderData = await res.json();
+
+        if(!res.ok) {
+            alert(orderData.detail || "Failed to create order");
+            btn.innerHTML = 'Proceed to Pay';
+            btn.disabled = false;
+            return;
+        }
+
+        const options = {
+            "key": orderData.key_id,
+            "amount": orderData.amount,
+            "currency": orderData.currency,
+            "name": "VGK4U Mobile Recharge",
+            "description": `Recharge for ${data.mobile_number} (${data.operator})`,
+            "order_id": orderData.order_id,
+            "handler": async function (response) {
+                try {
+                    const verifyRes = await fetch('http://127.0.0.1:8000/api/v1/recharge/verify-payment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature
+                        })
+                    });
+                    const verifyData = await verifyRes.json();
+                    if(verifyRes.ok) {
+                        let statusText = "Payment successful! Recharge initiated.";
+                        let iconType = "success";
+                        if(verifyData.recharge_status === "Success") {
+                            statusText = "Payment successful and recharge completed!";
+                        } else if(verifyData.recharge_status === "Failed") {
+                            statusText = "Payment successful, but the recharge failed at the operator side. We will check the status shortly.";
+                            iconType = "warning";
+                        } else {
+                            statusText = "Payment successful! Your recharge is pending and will be completed soon.";
+                            iconType = "info";
+                        }
+                        
+                        Swal.fire({
+                            title: 'Status',
+                            text: statusText,
+                            icon: iconType,
+                            confirmButtonText: 'OK'
+                        });
+
+                        closeRechargeModal();
+                        document.getElementById('hubRechargeForm').reset();
+                    } else {
+                        Swal.fire('Error', verifyData.detail || "Payment verification failed", 'error');
+                    }
+                } catch(err) {
+                    Swal.fire('Error', 'Error verifying payment.', 'error');
+                }
+            },
+            "prefill": {
+                "name": data.guest_name || "",
+                "email": data.guest_email || "",
+                "contact": data.mobile_number
+            },
+            "theme": {
+                "color": "#10b981"
+            },
+            "config": {
+                "display": {
+                    "blocks": {
+                        "upi": {
+                            "name": "Pay via UPI",
+                            "instruments": [
+                                { "method": "upi" }
+                            ]
+                        },
+                        "other": {
+                            "name": "Other Payment Modes",
+                            "instruments": [
+                                { "method": "card" },
+                                { "method": "netbanking" },
+                                { "method": "wallet" },
+                                { "method": "emi" },
+                                { "method": "paylater" }
+                            ]
+                        }
+                    },
+                    "sequence": ["block.upi", "block.other"],
+                    "preferences": {
+                        "show_default_blocks": true
+                    }
+                }
+            }
+        };
+        const rzp1 = new Razorpay(options);
+        rzp1.on('payment.failed', function (response){
+            alert("Payment Failed: " + response.error.description);
+        });
+        rzp1.open();
+
+    } catch(err) {
+        alert("An error occurred. Please try again.");
+    } finally {
+        btn.innerHTML = 'Proceed to Pay';
+        btn.disabled = false;
+    }
+});
 </script>
 
 </body>
