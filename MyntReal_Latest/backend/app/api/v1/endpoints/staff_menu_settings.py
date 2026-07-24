@@ -491,9 +491,9 @@ CANONICAL_MENU_REGISTRY = [
         'is_default_visible': True,
         'is_default_accessible': True,
         'audience_scope': 'staff',
-        'sidebar_section': 'my-earnings',
-        'sidebar_section_title': 'MY EARNINGS',
-        'sidebar_section_order': 19,
+        'sidebar_section': 'staff-dashboard',
+        'sidebar_section_title': 'STAFF DASHBOARD',
+        'sidebar_section_order': 2,
     },
     {
         'menu_code': 'staff_income_trigger',
@@ -4517,7 +4517,7 @@ async def sync_sidebar_to_registry_legacy(
         # 8-JOURNEY, 9-LOCATION, 10-REIMBURSEMENT, 11-SERVICE TICKETS, 12-ACCOUNTS,
         # 13-BUSINESS PARTNERS, 14-NDA, 15-CONFIGURATION, 16-ZYNOVA, 17-MNR, 18-MNR USER SIDEBAR
         'progress': ('PROGRESS', 1, ['/staff/progress']),
-        'staff-dashboard': ('STAFF DASHBOARD', 2, ['/staff/dashboard', '/staff/employees', '/staff/employee-directory', '/staff/my-kyc', '/staff/kyc-approvals', '/staff/change-password', '/staff/2fa-settings']),
+        'staff-dashboard': ('STAFF DASHBOARD', 2, ['/staff/dashboard', '/staff/employees', '/staff/employee-directory', '/staff/my-kyc', '/staff/kyc-approvals', '/staff/change-password', '/staff/2fa-settings', '/staff/my-lead-incentives']),
         'attendance': ('ATTENDANCE', 3, ['/staff/my-attendance', '/staff/my-leaves', '/staff/leave-approvals', '/staff/team-attendance', '/staff/attendance-sheet', '/staff/attendance-reports', '/staff/attendance-exceptions', '/staff/attendance-computation', '/staff/team-attendance-summary']),
         'crm': ('CRM & LEADS', 4, ['/staff/crm/dashboard', '/staff/leads', '/staff/crm/team-leads', '/staff/my-leads', '/staff/crm/lead-sources', '/rvz/crm-leads', '/rvz/crm/leads', '/staff/call-management', '/staff/dialer', '/staff/call-quality', '/staff/crm/sales-report']),
         'task-management': ('TASK MANAGEMENT', 5, ['/staff/tasks/assigned-by-me-v2', '/staff/tasks/assigned-to-me', '/staff/tasks/team-activities', '/staff/tasks/tracker', '/staff/team-activities', '/staff/manager-review', '/staff/task-review']),
@@ -4525,7 +4525,7 @@ async def sync_sidebar_to_registry_legacy(
         'timesheet': ('TIMESHEET', 7, ['/staff/my-timesheet', '/staff/timesheet-approval']),
         'journey-tracking': ('JOURNEY TRACKING', 8, ['/staff/my-journeys', '/staff/team-journeys', '/staff/all-journeys', '/staff/vgk4u-journeys']),
         'location-tracking': ('LOCATION TRACKING', 9, ['/staff/my-location-history', '/staff/team-location-tracker']),
-        'my-earnings': ('MY EARNINGS', 19, ['/staff/my-lead-incentives']),
+        'my-earnings': ('MY EARNINGS', 19, []),
         'reimbursement': ('REIMBURSEMENT', 10, ['/staff/accounts/my-reimbursements', '/staff/accounts/reimbursement-approvals']),
         'service-tickets': ('SERVICE TICKETS', 11, ['/staff/service-tickets/dashboard', '/staff/inventory/service-center-tracking', '/staff/service-tickets/performance', '/staff/service-tickets/procurement', '/staff/service-tickets/procurement-queue', '/staff/service-tickets/raise', '/staff/service-tickets/reports', '/staff/service-tickets/queue', '/staff/service-center-revenue']),
         'accounts': ('ACCOUNTS', 12, ['/staff/accounts/balance-sheet', '/staff/accounts/fund-allocations', '/staff/accounts/expense-entries', '/staff/accounts/income-entries', '/staff/accounts/vendors', '/staff/accounts/purchase-invoices', '/staff/accounts/sales-invoices', '/staff/accounts/reports', '/staff/accounts/payables', '/staff/accounts/receivables', '/staff/accounts/duties-taxes', '/staff/accounts/capital', '/staff/accounts/cash-in-hand', '/rvz/sales-revenue', '/staff/accounts/party-ledger', '/staff/inventory/bom', '/staff/inventory/manufacturing', '/staff/inventory/procurement', '/staff/inventory/intake', '/staff/inventory/stock-items', '/staff/inventory/stock-ledger', '/staff/inventory/stock-transfers', '/staff/inventory/stock-validation', '/staff/inventory/vendor-returns', '/staff/inventory/accessories', '/staff/payroll/profiles', '/staff/payroll/cycles', '/staff/payroll/runs', '/staff/payroll/approvals', '/staff/payroll/consultant-invoices', '/staff/payroll/allowance-catalog', '/staff/payroll/documents', '/staff/accounts/expense-categories', '/staff/accounts/pricing', '/staff/income-trigger']),
@@ -4672,7 +4672,7 @@ async def sync_sidebar_to_registry_legacy(
         ('/staff/all-location', 'location-tracking', 'LOCATION TRACKING', 9),
         ('/staff/team-live', 'location-tracking', 'LOCATION TRACKING', 9),
         # My Earnings - Section 19
-        ('/staff/my-lead-incentives', 'my-earnings', 'MY EARNINGS', 19),
+        ('/staff/my-lead-incentives', 'staff-dashboard', 'STAFF DASHBOARD', 2),
         # KRA - Section 6
         ('/staff/my-kras', 'kra-management', 'KRA MANAGEMENT', 6),
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ('/staff/kra-', 'kra-management', 'KRA MANAGEMENT', 6),

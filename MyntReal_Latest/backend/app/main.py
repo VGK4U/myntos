@@ -9324,13 +9324,13 @@ def _startup_worker():
                    '/staff/my-lead-incentives','staff',
                    'fas fa-hand-holding-usd', 101, 'staff', 'canonical', 'CANONICAL_MENU_REGISTRY',
                    true, true, true, true,
-                   'my-earnings', 'MY EARNINGS', 19,
+                   'staff-dashboard', 'STAFF DASHBOARD', 2,
                    NOW(), NOW())
                 ON CONFLICT (route_path) DO UPDATE SET
                   menu_code='staff_my_lead_incentives',
-                  sidebar_section='my-earnings',
-                  sidebar_section_title='MY EARNINGS',
-                  sidebar_section_order=19,
+                  sidebar_section='staff-dashboard',
+                  sidebar_section_title='STAFF DASHBOARD',
+                  sidebar_section_order=2,
                   is_active=true,
                   updated_at=NOW()
             """))
@@ -9364,7 +9364,7 @@ def _startup_worker():
                     '/staff/my-lead-incentives',
                     NULL, 'staff', 'fas fa-hand-holding-usd', 101,
                     true, true, true,
-                    'my-earnings', 'MY EARNINGS', 19,
+                    'staff-dashboard', 'STAFF DASHBOARD', 2,
                     'staff', NOW(), NOW()
                 FROM associated_companies ac
                 ON CONFLICT DO NOTHING
