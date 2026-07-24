@@ -8,47 +8,47 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
   body { background:#f8fafc; font-family:'Inter',sans-serif; margin:0; padding:0; }
-  .page-wrap { max-width:1100px; margin:0 auto; padding:24px 20px 48px; }
-  .page-header { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:18px 22px; margin-bottom:20px; display:flex; align-items:flex-start; gap:14px; }
-  .page-header-icon { width:42px; height:42px; border-radius:8px; background:#e0e7ff; display:flex; align-items:center; justify-content:center; font-size:1.1rem; color:#4f46e5; flex-shrink:0; }
+  .page-wrap { width:99%; max-width:1600px; margin:0 auto; padding:12px 10px 24px; }
+  .page-header { background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:12px 18px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .page-header-icon { width:38px; height:38px; border-radius:6px; background:#e0e7ff; display:flex; align-items:center; justify-content:center; font-size:1rem; color:#4f46e5; flex-shrink:0; }
   .page-header-info { flex:1; }
-  .page-header h1 { margin:0 0 3px; font-size:1.05rem; font-weight:700; color:#1e293b; }
-  .page-header .meta { font-size:0.8rem; color:#6b7280; display:flex; flex-wrap:wrap; gap:10px; }
-  .meta-chip { background:#f1f5f9; border-radius:4px; padding:2px 8px; font-weight:500; }
+  .page-header h1 { margin:0 0 2px; font-size:0.95rem; font-weight:700; color:#1e293b; }
+  .page-header .meta { font-size:0.76rem; color:#6b7280; display:flex; flex-wrap:wrap; gap:8px; }
+  .meta-chip { background:#f1f5f9; border-radius:4px; padding:1px 6px; font-weight:500; }
   .meta-chip.purple { background:#ede9fe; color:#6d28d9; }
   .meta-chip.blue { background:#dbeafe; color:#1d4ed8; }
   .meta-chip.green { background:#dcfce7; color:#15803d; }
-  .card { background:#fff; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; }
-  .card-body { overflow-x:auto; }
-  table { width:100%; border-collapse:collapse; font-size:0.82rem; }
-  thead th { background:#f8fafc; padding:9px 12px; text-align:left; font-weight:600; color:#64748b; font-size:0.72rem; text-transform:uppercase; letter-spacing:.04em; border-bottom:2px solid #e5e7eb; white-space:nowrap; }
+  .card { background:#fff; border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; }
+  .card-body { overflow-x:auto; padding:0; }
+  table { width:100%; border-collapse:collapse; font-size:0.75rem; table-layout:auto; }
+  thead th { background:#f8fafc; padding:6px 8px; text-align:left; font-weight:700; color:#475569; font-size:0.68rem; text-transform:uppercase; letter-spacing:.03em; border-bottom:2px solid #e2e8f0; white-space:nowrap; }
   tbody tr { border-bottom:1px solid #f1f5f9; transition:background .12s; }
   tbody tr:hover { background:#fafafa; }
-  td { padding:9px 12px; vertical-align:middle; }
-  .badge { display:inline-block; padding:2px 7px; border-radius:4px; font-size:0.7rem; font-weight:600; }
+  td { padding:6px 8px; vertical-align:middle; white-space:nowrap; }
+  .badge { display:inline-block; padding:1px 5px; border-radius:3px; font-size:0.65rem; font-weight:600; }
   .badge-self { background:#fef3c7; color:#92400e; }
   .badge-co { background:#e0e7ff; color:#3730a3; }
-  .badge-crm { background:#f0fdf4; color:#15803d; }
-  .badge-direct { background:#fdf4ff; color:#7e22ce; }
-  .name-cell { font-weight:600; color:#1e293b; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .phone-cell { color:#6b7280; font-size:0.78rem; }
-  .source-cell { color:#6b7280; font-size:0.76rem; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .role-cell { color:#0891b2; font-size:0.78rem; }
-  .amount-cell { text-align:right; font-weight:600; color:#059669; }
-  .date-cell { color:#6b7280; font-size:0.78rem; white-space:nowrap; }
-  .view-link { color:#7c3aed; font-size:0.75rem; white-space:nowrap; }
-  .view-link:hover { text-decoration:underline; }
-  .empty-state { text-align:center; padding:60px 20px; color:#9ca3af; }
-  .empty-state i { font-size:2.5rem; margin-bottom:12px; display:block; }
-  .loading-state { text-align:center; padding:60px 20px; color:#6b7280; }
+  .badge-crm { background:#f0fdf4; color:#15803d; padding:1px 4px; }
+  .badge-direct { background:#fdf4ff; color:#7e22ce; padding:1px 4px; }
+  .name-cell { font-weight:600; color:#1e293b; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .phone-cell { color:#6b7280; font-size:0.72rem; }
+  .source-cell { color:#6b7280; font-size:0.72rem; max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .role-cell { font-size:0.72rem; font-weight:600; }
+  .amount-cell { text-align:right; font-weight:600; }
+  .date-cell { color:#6b7280; font-size:0.72rem; white-space:nowrap; }
+  .view-link { color:#7c3aed; font-size:0.78rem; transition:color 0.12s; }
+  .view-link:hover { color:#4f46e5; }
+  .empty-state { text-align:center; padding:50px 20px; color:#9ca3af; }
+  .empty-state i { font-size:2rem; margin-bottom:10px; display:block; }
+  .loading-state { text-align:center; padding:50px 20px; color:#6b7280; }
   .error-state { text-align:center; padding:40px 20px; color:#ef4444; }
-  .back-btn { display:inline-flex; align-items:center; gap:6px; color:#6b7280; font-size:0.82rem; text-decoration:none; border:1px solid #e5e7eb; border-radius:6px; padding:6px 12px; background:#fff; cursor:pointer; margin-bottom:16px; transition:background .15s; }
+  .back-btn { display:inline-flex; align-items:center; gap:6px; color:#475569; font-size:0.8rem; text-decoration:none; border:1px solid #cbd5e1; border-radius:6px; padding:5px 10px; background:#fff; cursor:pointer; margin-bottom:12px; transition:background .15s; }
   .back-btn:hover { background:#f1f5f9; }
-  .sno { color:#9ca3af; font-size:0.72rem; }
-  .summary-bar { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
-  .sum-card { background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:10px 16px; min-width:120px; }
-  .sum-card .val { font-size:1.2rem; font-weight:700; color:#1e293b; }
-  .sum-card .lbl { font-size:0.72rem; color:#6b7280; margin-top:1px; }
+  .sno { color:#9ca3af; font-size:0.7rem; font-weight:500; }
+  .summary-bar { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  .sum-card { background:#fff; border:1px solid #e5e7eb; border-radius:6px; padding:8px 12px; min-width:100px; }
+  .sum-card .val { font-size:1.1rem; font-weight:700; color:#1e293b; }
+  .sum-card .lbl { font-size:0.68rem; color:#6b7280; margin-top:1px; }
 </style>
 </head>
 <body>
@@ -57,10 +57,27 @@
   <button class="back-btn" onclick="window.close()"><i class="fa fa-times"></i> Close Tab</button>
 
   <div class="page-header">
-    <div class="page-header-icon"><i class="fa fa-list-check"></i></div>
-    <div class="page-header-info">
-      <h1 id="pg-title">Loading source data…</h1>
-      <div class="meta" id="pg-meta"></div>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <div class="page-header-icon"><i class="fa fa-list-check"></i></div>
+      <div class="page-header-info">
+        <h1 id="pg-title">Loading source data…</h1>
+        <div class="meta" id="pg-meta"></div>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <label for="cat-filter" style="font-size:0.78rem; font-weight:700; color:#374151;">Category:</label>
+      <select id="cat-filter" onchange="onCategoryChange()" style="padding:4px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.8rem; font-weight:600; color:#374151; background:#fff; outline:none; cursor:pointer; min-width:160px;">
+        <option value="all">All Categories</option>
+        <option value="training">ETC Students</option>
+        <option value="solar">Solar</option>
+        <option value="ev_b2c">EV B2C</option>
+        <option value="ev_b2b_new">EV B2B (New)</option>
+        <option value="ev_b2b_existing">EV B2B (Existing)</option>
+        <option value="insurance">Insurance</option>
+        <option value="real_estate">Real Estate</option>
+        <option value="service_spares">Service Spares</option>
+        <option value="service_revenue">Service Revenue</option>
+      </select>
     </div>
   </div>
 
@@ -81,8 +98,11 @@ const MONTHS = ['','January','February','March','April','May','June','July','Aug
 const CAT_LABEL = {
   training:'ETC Students', solar:'Solar', ev_b2c:'EV B2C', ev_b2b:'EV B2B',
   ev_b2b_new:'EV B2B (New)', ev_b2b_existing:'EV B2B (Existing)',
-  insurance:'Insurance', real_estate:'Real Estate'
+  insurance:'Insurance', real_estate:'Real Estate',
+  service_spares:'Service Spares', service_revenue:'Service Revenue'
 };
+
+let loggedInUserCode = '';
 
 function authHdr() {
   const t = localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token') || '';
@@ -100,12 +120,21 @@ function fmtNum(n) {
 async function loadData() {
   const params = new URLSearchParams(window.location.search);
   const empId    = params.get('employee_id');
-  const slug     = params.get('category_slug');
+  let slug     = params.get('category_slug');
+  if (!slug) {
+    slug = 'all';
+    params.set('category_slug', 'all');
+    window.history.replaceState({}, '', window.location.pathname + '?' + params.toString());
+  }
   const month    = parseInt(params.get('month'));
   const year     = parseInt(params.get('year'));
   const compId   = parseInt(params.get('company_id')) || 0;
   const empName  = decodeURIComponent(params.get('emp_name') || '');
-  const catLabel = CAT_LABEL[slug] || decodeURIComponent(params.get('cat_label') || slug || '');
+
+  const select = document.getElementById('cat-filter');
+  if (select) select.value = slug;
+
+  const catLabel = slug === 'all' ? 'All Categories' : (CAT_LABEL[slug] || decodeURIComponent(params.get('cat_label') || slug || ''));
 
   document.title = `Source · ${catLabel} · ${empName}`;
   document.getElementById('pg-title').textContent = `Source Verification — ${catLabel}`;
@@ -121,6 +150,14 @@ async function loadData() {
   }
 
   try {
+    if (!loggedInUserCode) {
+      const meRes = await fetch(`${API}/staff/auth/me`, { headers: authHdr() });
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        loggedInUserCode = meData?.employee?.emp_code || '';
+      }
+    }
+
     let url = `${API}/staff/incentive-achievements/drilldown?month=${month}&year=${year}&employee_id=${empId}&category_slug=${slug}`;
     if (compId) url += `&company_id=${compId}`;
     const r = await fetch(url, { headers: authHdr() });
@@ -136,36 +173,36 @@ async function loadData() {
   }
 }
 
-// Map category slug → tab key used by mnr-leads-master
-const SLUG_TAB = {
-  training:'etc', solar:'solar', ev_b2c:'ev_b2c',
-  ev_b2b:'ev_b2b', ev_b2b_new:'ev_b2b', ev_b2b_existing:'ev_b2b',
-  insurance:'insurance', real_estate:'real_dreams', real_dreams:'real_dreams',
-};
+function onCategoryChange() {
+  const select = document.getElementById('cat-filter');
+  const val = select.value;
+  const params = new URLSearchParams(window.location.search);
+  params.set('category_slug', val);
+  const newUrl = window.location.pathname + '?' + params.toString();
+  window.history.replaceState({}, '', newUrl);
+  loadData();
+}
 
 function renderTable(d) {
   const rows = d.data || [];
   const urlP   = new URLSearchParams(window.location.search);
-  const slug   = urlP.get('category_slug') || '';
+  const slug   = urlP.get('category_slug') || 'all';
   const month  = parseInt(urlP.get('month'));
   const year   = parseInt(urlP.get('year'));
   const empId  = urlP.get('employee_id') || '';
   const empName = decodeURIComponent(urlP.get('emp_name') || '');
-  const tabKey = SLUG_TAB[slug] || 'solar';
 
-  // Build date range for the month (YYYY-MM-01 … YYYY-MM-last)
-  const pad  = n => String(n).padStart(2,'0');
-  const lastDay = new Date(year, month, 0).getDate();
-  const dateFrom = `${year}-${pad(month)}-01`;
-  const dateTo   = `${year}-${pad(month)}-${pad(lastDay)}`;
-  // "View in CRM" → /staff/leads pre-filtered to the incentive month + employee
-  const crmUrl = `/staff/leads?inc_month=${month}&inc_year=${year}&inc_employee_id=${empId}&inc_emp_name=${encodeURIComponent(empName)}`;
+  const isPrivileged = loggedInUserCode === 'MR10001' || loggedInUserCode === 'MR10025';
 
-  // incentive_total = sum of incentive_count (may be > rows.length for multi-role direct students)
   const incentiveTotal = d.incentive_total != null ? d.incentive_total : rows.reduce((s,r) => s+(r.incentive_count||1), 0);
   const selfCount = rows.filter(r => r.lead_type === 'Self').reduce((s,r) => s+(r.incentive_count||1), 0);
   const coCount   = rows.filter(r => r.lead_type === 'Company').reduce((s,r) => s+(r.incentive_count||1), 0);
+  
   const totalDV   = rows.reduce((s, r) => s + (r.deal_value||0), 0);
+  const totalDVR  = rows.reduce((s, r) => s + (r.deal_value_received||0), 0);
+  const totalCV   = rows.reduce((s, r) => s + (r.confirmed_value||0), 0);
+  const totalInc  = rows.reduce((s, r) => s + (r.incentive_amount||0), 0);
+
   const sumBar = document.getElementById('sum-bar');
   sumBar.style.display = 'flex';
   sumBar.innerHTML = `
@@ -173,7 +210,10 @@ function renderTable(d) {
     <div class="sum-card"><div class="val">${rows.length}</div><div class="lbl">Unique Records</div></div>
     <div class="sum-card"><div class="val">${coCount}</div><div class="lbl">Company Leads</div></div>
     <div class="sum-card"><div class="val">${selfCount}</div><div class="lbl">Self Leads</div></div>
-    ${totalDV > 0 ? `<div class="sum-card"><div class="val" style="color:#059669;">₹${fmtNum(totalDV)}</div><div class="lbl">Total Deal Value</div></div>` : ''}
+    ${isPrivileged && totalDV > 0 ? `<div class="sum-card"><div class="val" style="color:#2563eb;">₹${fmtNum(totalDV)}</div><div class="lbl">Total Deal Value</div></div>` : ''}
+    ${isPrivileged && totalDVR > 0 ? `<div class="sum-card"><div class="val" style="color:#0d9488;">₹${fmtNum(totalDVR)}</div><div class="lbl">Total Received</div></div>` : ''}
+    ${isPrivileged && totalCV > 0 ? `<div class="sum-card"><div class="val" style="color:#d97706;">₹${fmtNum(totalCV)}</div><div class="lbl">Total Confirmed</div></div>` : ''}
+    ${totalInc > 0 ? `<div class="sum-card"><div class="val" style="color:#7c3aed;">₹${fmtNum(totalInc)}</div><div class="lbl">Total Incentive</div></div>` : ''}
   `;
 
   if (!rows.length) {
@@ -184,31 +224,71 @@ function renderTable(d) {
   const tableRows = rows.map((r, i) => {
     const typeBadge = r.lead_type === 'Self'
       ? '<span class="badge badge-self">Self</span>'
-      : '<span class="badge badge-co">Company</span>';
+      : '<span class="badge badge-co">Co</span>';
     const recBadge = r.record_type === 'crm_lead'
-      ? '<span class="badge badge-crm">CRM Lead</span>'
-      : '<span class="badge badge-direct">ETC Direct</span>';
-    const roles  = (r.roles||[]).join(', ') || '—';
+      ? '<span class="badge badge-crm" title="CRM Lead">CRM</span>'
+      : (r.record_type === 'service_ticket'
+         ? '<span class="badge badge-co" title="Service Ticket">TKT</span>'
+         : '<span class="badge badge-direct" title="ETC Direct Student">ETC</span>');
+      
+    const rolesMapped = (r.roles||[]).map(role => {
+      if (role === 'Telecaller') return '<span style="color:#0891b2;" title="Telecaller">TC</span>';
+      if (role === 'Field Staff') return '<span style="color:#059669;" title="Field Staff">FS</span>';
+      if (role === 'Handler') return '<span style="color:#b45309;" title="Handler">HD</span>';
+      return esc(role);
+    }).join(', ') || '—';
+
+    const catShort = (r.category||'—')
+      .replace('ETC Training', 'ETC')
+      .replace('EV B2B (New)', 'B2B(N)')
+      .replace('EV B2B (Existing)', 'B2B(E)');
+
     const dv     = r.deal_value > 0 ? `₹${fmtNum(r.deal_value)}` : '—';
-    const date   = r.completion_date ? r.completion_date.slice(0,10) : '—';
+    const dvr    = r.deal_value_received > 0 ? `₹${fmtNum(r.deal_value_received)}` : '—';
+    const cv     = r.confirmed_value > 0 ? `₹${fmtNum(r.confirmed_value)}` : '—';
+    const incPct = r.incentive_pct || '—';
+    const incAmt = r.incentive_amount != null ? `₹${fmtNum(r.incentive_amount)}` : '—';
+    
+    let date = '—';
+    if (r.completion_date) {
+      const parts = r.completion_date.slice(0,10).split('-');
+      if (parts.length === 3) {
+        date = `${parts[2]}/${parts[1]}/${parts[0].slice(2)}`;
+      }
+    }
+
     const cnt    = (r.incentive_count||1);
     const cntBadge = cnt > 1
-      ? ` <span title="Counts ${cnt}× (${roles})" style="background:#fef3c7;color:#92400e;font-size:0.68rem;padding:1px 5px;border-radius:3px;font-weight:700;">×${cnt}</span>`
+      ? ` <span title="Counts ${cnt}×" style="background:#fef3c7;color:#92400e;font-size:0.62rem;padding:0px 3px;border-radius:2px;font-weight:700;">×${cnt}</span>`
       : '';
+      
+    const leadSlug = r.category_slug || slug;
+    const crmUrl = `/staff/leads?inc_month=${month}&inc_year=${year}&inc_employee_id=${empId}&inc_emp_name=${encodeURIComponent(empName)}`;
+    
     const link   = r.record_type === 'crm_lead'
-      ? `<a class="view-link" href="${crmUrl}" target="_blank"><i class="fa fa-external-link-alt"></i> View in CRM</a>`
-      : '—';
+      ? `<a class="view-link" href="${crmUrl}" target="_blank" title="View in CRM"><i class="fa fa-external-link-alt"></i></a>`
+      : (r.record_type === 'service_ticket'
+         ? `<a class="view-link" href="/staff/progress" target="_blank" title="View Tickets"><i class="fa fa-external-link-alt"></i></a>`
+         : '—');
+      
     return `<tr>
       <td class="sno">${i+1}</td>
       <td><div class="name-cell" title="${esc(r.name||'')}">${esc(r.name||'—')}${cntBadge}</div></td>
       <td class="phone-cell">${esc(r.phone||'—')}</td>
+      <td style="font-weight:600;color:#475569;">${esc(catShort)}</td>
       <td>${typeBadge}</td>
-      <td class="role-cell">${esc(roles)}</td>
+      <td class="role-cell">${rolesMapped}</td>
       <td class="source-cell" title="${esc(r.source||'')}">${esc(r.source||'—')}</td>
-      <td class="amount-cell">${dv}</td>
+      ${isPrivileged ? `
+        <td class="amount-cell" style="color:#2563eb;">${dv}</td>
+        <td class="amount-cell" style="color:#0d9488;">${dvr}</td>
+        <td class="amount-cell" style="color:#d97706;font-weight:700;">${cv}</td>
+        <td style="text-align:center;font-weight:700;color:#475569;">${incPct}</td>
+      ` : ''}
+      <td class="amount-cell" style="color:#7c3aed;font-weight:700;">${incAmt}</td>
       <td class="date-cell">${date}</td>
       <td>${recBadge}</td>
-      <td>${link}</td>
+      <td style="text-align:center;">${link}</td>
     </tr>`;
   }).join('');
 
@@ -219,13 +299,20 @@ function renderTable(d) {
           <th>#</th>
           <th>Name</th>
           <th>Phone</th>
+          <th>Cat</th>
           <th>Type</th>
           <th>Role</th>
           <th>Source</th>
-          <th style="text-align:right;">Deal Value</th>
-          <th>Completed</th>
-          <th>Record</th>
-          <th>Link</th>
+          ${isPrivileged ? `
+            <th style="text-align:right;">Deal Value</th>
+            <th style="text-align:right;">Received</th>
+            <th style="text-align:right;">Confirmed</th>
+            <th style="text-align:center;">Rate</th>
+          ` : ''}
+          <th style="text-align:right;">Incentive</th>
+          <th>Date</th>
+          <th>Rec</th>
+          <th style="text-align:center;">Link</th>
         </tr>
       </thead>
       <tbody>${tableRows}</tbody>

@@ -1278,6 +1278,40 @@ def incentive_access_check(
     }
 
 
+def _ensure_default_service_configs(db: Session, company_id: int, month: int, year: int):
+    co = 1 if not company_id or company_id == 0 else company_id
+    existing = db.execute(text(
+        "SELECT category_slug FROM staff_incentive_config "
+        "WHERE company_id = :co AND month = :mo AND year = :yr"
+    ), {"co": co, "mo": month, "yr": year}).fetchall()
+    existing_slugs = {r[0] for r in existing}
+    
+    inserted_any = False
+    if 'service_spares' not in existing_slugs:
+        db.execute(text("""
+            INSERT INTO staff_incentive_config 
+            (company_id, month, year, category_slug, category_label, min_target_value, min_target_unit, 
+             incentive_rate_without_support, incentive_rate_with_support, incentive_rate_direct_work, incentive_type, is_active)
+            VALUES (:co, :mo, :yr, 'service_spares', 'Service Spares', 0.0, 'amount', 0.0, 2.0, 0.0, 'percentage', TRUE)
+        """), {"co": co, "mo": month, "yr": year})
+        inserted_any = True
+        
+    if 'service_revenue' not in existing_slugs:
+        db.execute(text("""
+            INSERT INTO staff_incentive_config 
+            (company_id, month, year, category_slug, category_label, min_target_value, min_target_unit, 
+             incentive_rate_without_support, incentive_rate_with_support, incentive_rate_direct_work, incentive_type, is_active)
+            VALUES (:co, :mo, :yr, 'service_revenue', 'Service Revenue', 0.0, 'amount', 0.0, 10.0, 0.0, 'percentage', TRUE)
+        """), {"co": co, "mo": month, "yr": year})
+        inserted_any = True
+        
+    if inserted_any:
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+
+
 @router.get("/incentive-config", summary="Get incentive config table")
 def get_incentive_config(
     company_id: int = Query(1),
@@ -1286,6 +1320,8 @@ def get_incentive_config(
     db: Session = Depends(get_db),
     me: StaffEmployee = Depends(get_current_staff_user)
 ):
+    if month and year:
+        _ensure_default_service_configs(db, company_id, month, year)
     where = ["company_id = :co"]
     params: dict = {"co": company_id}
     if month:
@@ -1477,6 +1513,8 @@ def get_incentive_achievements(
     date_from = datetime(year, month, 1)
     date_to = datetime(year, month, _last_day, 23, 59, 59)
 
+    _ensure_default_service_configs(db, cfg_company_id, month, year)
+
     # Load incentive config (use cfg_company_id as reference rates)
     cfg_rows = db.execute(text(
         "SELECT category_slug, min_target_value, min_target_unit, "
@@ -1487,16 +1525,27 @@ def get_incentive_achievements(
         "WHERE company_id=:co AND month=:mo AND year=:yr AND is_active=TRUE"
     ), {'co': cfg_company_id, 'mo': month, 'yr': year}).fetchall()
 
-    if not cfg_rows:
-        return {'success': True, 'data': [], 'note': 'No incentive config for this month/company'}
-
     cfg_by_slug = {r[0]: {
         'min_target_value': float(r[1]), 'min_target_unit': r[2],
         'rate_no': float(r[3]), 'rate_wi': float(r[4]),
         'rate_dw': float(r[5] or 0),  # DC-INCENTIVE-LEAD-TYPE-003: Direct Work rate
         'itype': r[6], 'bonus_trigger': float(r[7]) if r[7] else None,
         'bonus_mul': float(r[8] or 1.2)
-    } for r in cfg_rows}
+    } for r in cfg_rows} if cfg_rows else {}
+
+    # Ensure service spares and service revenue always exist in config context by default
+    if 'service_spares' not in cfg_by_slug:
+        cfg_by_slug['service_spares'] = {
+            'min_target_value': 0.0, 'min_target_unit': 'amount',
+            'rate_no': 0.0, 'rate_wi': 2.0, 'rate_dw': 0.0,
+            'itype': 'percentage', 'bonus_trigger': None, 'bonus_mul': 1.2
+        }
+    if 'service_revenue' not in cfg_by_slug:
+        cfg_by_slug['service_revenue'] = {
+            'min_target_value': 0.0, 'min_target_unit': 'amount',
+            'rate_no': 0.0, 'rate_wi': 10.0, 'rate_dw': 0.0,
+            'itype': 'percentage', 'bonus_trigger': None, 'bonus_mul': 1.2
+        }
 
     # Category slug → ILIKE patterns
     CAT_PATTERNS = {
@@ -1595,7 +1644,13 @@ def get_incentive_achievements(
                 SELECT l.id                                                             AS lead_id,
                        l.telecaller_id::TEXT                                            AS emp_key,
                        l.category_id                                                    AS category_id,
-                       COALESCE(NULLIF(l.deal_value_received,0), l.deal_value, 0)      AS dvr,
+                       COALESCE((
+                           SELECT SUM(ie.amount) 
+                           FROM income_entries ie 
+                           WHERE ie.lead_id = l.id 
+                             AND ie.is_deleted = FALSE 
+                             AND ie.status = 'CONFIRMED'
+                       ), 0)                                                            AS dvr,
                        {_sup}                                                           AS has_support,
                        l.associated_partner_id                                          AS partner_id,
                        CASE WHEN (
@@ -1618,7 +1673,7 @@ def get_incentive_achievements(
                                          AND vci.status NOT IN ('CANCELLED')
                                    ) = 1
                                )
-                           )
+                            )
                        ) THEN TRUE ELSE FALSE END                                       AS is_direct_work
                 FROM crm_leads l
                 WHERE {_comp_where}
@@ -1627,7 +1682,13 @@ def get_incentive_achievements(
                 SELECT l.id                                                             AS lead_id,
                        l.field_staff_id::TEXT                                           AS emp_key,
                        l.category_id                                                    AS category_id,
-                       COALESCE(NULLIF(l.deal_value_received,0), l.deal_value, 0)      AS dvr,
+                       COALESCE((
+                           SELECT SUM(ie.amount) 
+                           FROM income_entries ie 
+                           WHERE ie.lead_id = l.id 
+                             AND ie.is_deleted = FALSE 
+                             AND ie.status = 'CONFIRMED'
+                       ), 0)                                                            AS dvr,
                        {_sup}                                                           AS has_support,
                        l.associated_partner_id                                          AS partner_id,
                        CASE WHEN (
@@ -1814,6 +1875,53 @@ def get_incentive_achievements(
             emp_data[_ek][_training_slug]['direct_count'] += 1
             emp_data[_ek][_training_slug]['direct_amount'] += float(_dvr_etc or 0)
 
+    # Service Team Spares & Service Revenue (payment_status = 'paid')
+    _service_rows = []
+    if 'service_spares' in cfg_by_slug or 'service_revenue' in cfg_by_slug:
+        _srv_q = f"""
+            SELECT t.service_technician_id::TEXT AS emp_key,
+                   COALESCE(b.spares_amount, 0) AS spares,
+                   COALESCE(b.service_amount, 0) + COALESCE(b.labour_amount, 0) AS service_rev
+            FROM service_ticket t
+            JOIN service_ticket_billing b ON b.ticket_id = t.id
+            WHERE b.created_at BETWEEN :df AND :dt
+              AND b.payment_status = 'paid'
+              AND t.service_technician_id IS NOT NULL
+              {"AND t.service_technician_id::TEXT = :eid" if employee_id else ""}
+        """
+        _srv_p = {'df': date_from, 'dt': date_to}
+        if employee_id:
+            _srv_p['eid'] = employee_id
+        _service_rows = db.execute(text(_srv_q), _srv_p).fetchall()
+
+    for emp_key, spares, service_rev in _service_rows:
+        if not emp_key:
+            continue
+        if emp_key not in emp_data:
+            emp_data[emp_key] = {}
+        
+        # Insert Service Spares
+        if 'service_spares' in cfg_by_slug and float(spares) > 0:
+            if 'service_spares' not in emp_data[emp_key]:
+                emp_data[emp_key]['service_spares'] = {
+                    'self_count': 0, 'self_amount': 0.0,
+                    'company_count': 0, 'company_amount': 0.0,
+                    'direct_count': 0, 'direct_amount': 0.0,
+                }
+            emp_data[emp_key]['service_spares']['company_count'] += 1
+            emp_data[emp_key]['service_spares']['company_amount'] += float(spares)
+
+        # Insert Service Revenue
+        if 'service_revenue' in cfg_by_slug and float(service_rev) > 0:
+            if 'service_revenue' not in emp_data[emp_key]:
+                emp_data[emp_key]['service_revenue'] = {
+                    'self_count': 0, 'self_amount': 0.0,
+                    'company_count': 0, 'company_amount': 0.0,
+                    'direct_count': 0, 'direct_amount': 0.0,
+                }
+            emp_data[emp_key]['service_revenue']['company_count'] += 1
+            emp_data[emp_key]['service_revenue']['company_amount'] += float(service_rev)
+
     # Build employee map — start from leads, then merge all active staff if show_all
     emp_ids_from_leads = list(emp_data.keys())
     emp_map = {}
@@ -1970,6 +2078,12 @@ def incentive_achievements_drilldown(
     import calendar as _cal
     from datetime import date as _date_cls
 
+    def fmtNum(n):
+        try:
+            return f"{float(n):,.0f}"
+        except:
+            return "0"
+
     all_companies = not company_id or company_id == 0
     _last_day = _cal.monthrange(year, month)[1]
     date_from = datetime(year, month, 1)
@@ -1986,7 +2100,7 @@ def incentive_achievements_drilldown(
         return {'success': False, 'data': [], 'message': 'Employee not found'}
     emp_db_id, emp_code, emp_name = emp_row
 
-    # Map slug → category IDs
+    # Category slug mapping & patterns
     CAT_PATTERNS = {
         'solar':           ['%solar%'],
         'ev_b2c':          ['%ev%b2c%', '%ev b2c%', '%ev-b2c%'],
@@ -1997,9 +2111,6 @@ def incentive_achievements_drilldown(
         'insurance':       ['%insurance%'],
         'real_estate':     ['%real%estate%', '%real dream%', '%property%'],
     }
-    patterns = CAT_PATTERNS.get(category_slug, [])
-    if not patterns:
-        return {'success': False, 'data': [], 'message': f'Unknown category slug: {category_slug}'}
 
     if all_companies:
         all_cats = db.execute(text("SELECT id, name FROM signup_categories")).fetchall()
@@ -2008,229 +2119,519 @@ def incentive_achievements_drilldown(
             "SELECT id, name FROM signup_categories WHERE company_id=:co"
         ), {'co': company_id}).fetchall()
 
-    cat_ids = []
-    for cid, cname in all_cats:
-        cn = (cname or '').lower()
-        for pat in patterns:
-            pc = pat.replace('%', '')
-            if pc and all(p in cn for p in pc.split() if p):
-                cat_ids.append(cid)
-                break
+    # Load all incentive configs for this month/company to calculate incentive info per lead
+    cfg_co = 1 if not company_id or company_id == 0 else company_id
+    _ensure_default_service_configs(db, cfg_co, month, year)
+    cfg_rows = db.execute(text(
+        "SELECT category_slug, min_target_value, min_target_unit, "
+        "incentive_rate_without_support, incentive_rate_with_support, "
+        "incentive_rate_direct_work, incentive_type, "
+        "bonus_trigger_value, bonus_multiplier "
+        "FROM staff_incentive_config "
+        "WHERE company_id=:co AND month=:mo AND year=:yr AND is_active=TRUE"
+    ), {'co': cfg_co, 'mo': month, 'yr': year}).fetchall()
 
-    # Resolve all EV B2B category IDs
-    _b2b_pats = ['%ev%b2b%', '%ev b2b%', '%ev-b2b%']
+    cfg_by_slug = {r[0]: {
+        'min_target_value': float(r[1]), 'min_target_unit': r[2],
+        'rate_no': float(r[3]), 'rate_wi': float(r[4]),
+        'rate_dw': float(r[5] or 0),
+        'itype': r[6], 'bonus_trigger': float(r[7]) if r[7] else None,
+        'bonus_mul': float(r[8] or 1.2)
+    } for r in cfg_rows} if cfg_rows else {}
+
+    # Ensure service spares and service revenue default configs exist
+    if 'service_spares' not in cfg_by_slug:
+        cfg_by_slug['service_spares'] = {
+            'min_target_value': 0.0, 'min_target_unit': 'amount',
+            'rate_no': 0.0, 'rate_wi': 2.0, 'rate_dw': 0.0,
+            'itype': 'percentage', 'bonus_trigger': None, 'bonus_mul': 1.2
+        }
+    if 'service_revenue' not in cfg_by_slug:
+        cfg_by_slug['service_revenue'] = {
+            'min_target_value': 0.0, 'min_target_unit': 'amount',
+            'rate_no': 0.0, 'rate_wi': 10.0, 'rate_dw': 0.0,
+            'itype': 'percentage', 'bonus_trigger': None, 'bonus_mul': 1.2
+        }
+
+    # Resolve category IDs for B2B category
     _b2b_cids = []
     for cid, cname in all_cats:
         cn = (cname or '').lower()
-        for pat in _b2b_pats:
+        for pat in ['%ev%b2b%', '%ev b2b%', '%ev-b2b%']:
             pc = pat.replace('%', '')
             if pc and all(p in cn for p in pc.split() if p):
                 _b2b_cids.append(cid)
                 break
     _b2b_cids_str = ",".join(str(i) for i in _b2b_cids) if _b2b_cids else "NULL"
 
-    if not cat_ids:
-        return {'success': True, 'data': [], 'count': 0, 'employee': emp_name,
-                'employee_id': emp_db_id, 'category_slug': category_slug,
-                'month': month, 'year': year, 'message': 'No matching categories'}
+    # Define which slugs to fetch
+    if category_slug == 'all':
+        slugs_to_process = ['training', 'solar', 'ev_b2c', 'ev_b2b_new', 'ev_b2b_existing', 'insurance', 'real_estate', 'service_spares', 'service_revenue']
+    else:
+        slugs_to_process = [category_slug]
+
+    slug_to_cat_ids = {}
+    for slg in slugs_to_process:
+        patterns = CAT_PATTERNS.get(slg, [])
+        cids = []
+        for cid, cname in all_cats:
+            cn = (cname or '').lower()
+            for pat in patterns:
+                pc = pat.replace('%', '')
+                if pc and all(p in cn for p in pc.split() if p):
+                    cids.append(cid)
+                    break
+        slug_to_cat_ids[slg] = cids
 
     _co_clause = "" if all_companies else "AND l.company_id = :co"
     results = []
 
-    if category_slug == 'training':
-        # ── CRM-linked ETC — use SAME _comp_where as main endpoint ────────
-        # DC-ETC-DRILLDOWN-001: match exactly what the main achievement
-        # endpoint counts: either standard completion OR etc_students link.
-        # DC-CLOSE-DATE-001: use actual close date, not updated_at.
-        _drl_close = """CASE 
-            WHEN l.solar_pipeline_status IN ('completed', 'subsidy_pending')
-            THEN COALESCE(
-                (SELECT MAX(t.transaction_date) FROM crm_lead_transactions t WHERE t.lead_id = l.id), 
-                l.actual_close_date, 
-                l.updated_at
-            )
-            ELSE COALESCE(l.actual_close_date, l.updated_at)
-        END"""
-        _etc_comp = f"""(
-            (
+    for slug in slugs_to_process:
+        cat_ids = slug_to_cat_ids.get(slug, [])
+        if not cat_ids and slug not in ('service_spares', 'service_revenue'):
+            continue
+
+        cfg = cfg_by_slug.get(slug, {
+            'rate_no': 0.0, 'rate_wi': 0.0, 'rate_dw': 0.0, 'itype': 'percentage'
+        })
+
+        if slug == 'training':
+            _drl_close = """CASE 
+                WHEN l.solar_pipeline_status IN ('completed', 'subsidy_pending')
+                THEN COALESCE(
+                    (SELECT MAX(t.transaction_date) FROM crm_lead_transactions t WHERE t.lead_id = l.id), 
+                    l.actual_close_date, 
+                    l.updated_at
+                )
+                ELSE COALESCE(l.actual_close_date, l.updated_at)
+            END"""
+            _etc_comp = f"""(
+                (
+                    l.solar_pipeline_status IN ('completed', 'subsidy_pending')
+                    OR l.ev_b2b_stage = 'completed'
+                    OR (l.category_id IN ({_b2b_cids_str}) AND l.status IN ('won', 'completed'))
+                    OR (l.status = 'completed'
+                        AND l.solar_pipeline_status IS NULL
+                        AND l.ev_b2b_stage IS NULL)
+                ) AND ({_drl_close}) BETWEEN :df AND :dt
+                OR EXISTS (
+                    SELECT 1 FROM etc_students s
+                    WHERE s.crm_lead_id = l.id
+                    AND s.training_completed_date IS NOT NULL
+                    AND s.training_completed_date BETWEEN :df_d AND :dt_d
+                    AND s.is_active = TRUE
+                )
+            )"""
+            crm_q = text(f"""
+                SELECT DISTINCT ON (l.id)
+                    l.id,
+                    COALESCE(l.name, '—')   AS cname,
+                    COALESCE(l.phone, '—') AS cphone,
+                    l.source,
+                    -- dv (percentage base) is confirmed value from income_entries
+                    COALESCE((
+                        SELECT SUM(ie.amount) 
+                        FROM income_entries ie 
+                        WHERE ie.lead_id = l.id 
+                          AND ie.is_deleted = FALSE 
+                          AND ie.status = 'CONFIRMED'
+                    ), 0) AS dv,
+                    -- deal_value_received is sum of non-rejected, non-estimated entries
+                    COALESCE((
+                        SELECT SUM(ie.amount) 
+                        FROM income_entries ie 
+                        WHERE ie.lead_id = l.id 
+                          AND ie.is_deleted = FALSE 
+                          AND ie.status NOT IN ('REJECTED', 'ESTIMATED')
+                    ), 0) AS deal_value_received,
+                    -- confirmed_value is sum of confirmed entries
+                    COALESCE((
+                        SELECT SUM(ie.amount) 
+                        FROM income_entries ie 
+                        WHERE ie.lead_id = l.id 
+                          AND ie.is_deleted = FALSE 
+                          AND ie.status = 'CONFIRMED'
+                    ), 0) AS confirmed_value,
+                    COALESCE(l.deal_value_total, l.deal_value, 0) AS deal_value_total,
+                    COALESCE(
+                        (SELECT es2.training_completed_date::text
+                         FROM etc_students es2
+                         WHERE es2.crm_lead_id = l.id
+                           AND es2.training_completed_date IS NOT NULL
+                           AND es2.is_active = TRUE
+                         ORDER BY es2.training_completed_date LIMIT 1),
+                        COALESCE(l.actual_close_date, l.updated_at)::text
+                    ) AS comp_date,
+                    sc.name AS cat_name,
+                    CASE WHEN (
+                        (l.source IS NULL OR l.source != 'Self Lead')
+                        AND l.guru_id IS NULL
+                        AND l.z_guru_id IS NULL
+                        AND l.adi_guru_id IS NULL
+                        AND (l.mnr_handler_id IS NULL OR l.mnr_handler_id = '')
+                        AND (
+                            l.associated_partner_id IS NULL
+                            OR (
+                                l.associated_partner_id IS NOT NULL
+                                AND (
+                                    SELECT COUNT(DISTINCT vci.partner_id)
+                                    FROM vgk_cash_income_entries vci
+                                    WHERE vci.source_lead_id = l.id
+                                      AND vci.status NOT IN ('CANCELLED')
+                                ) = 1
+                            )
+                        )
+                    ) THEN TRUE ELSE FALSE END AS is_direct,
+                    ARRAY_REMOVE(ARRAY[
+                        CASE WHEN l.telecaller_id::text = :emp_id   THEN 'Telecaller'  END,
+                        CASE WHEN l.field_staff_id::text = :emp_id  THEN 'Field Staff' END
+                    ], NULL) AS roles
+                FROM crm_leads l
+                JOIN signup_categories sc ON sc.id = l.category_id
+                WHERE l.category_id = ANY(:cat_ids)
+                  AND {_etc_comp}
+                  AND (
+                      l.telecaller_id::text = :emp_id
+                      OR l.field_staff_id::text = :emp_id
+                  ) {_co_clause}
+                ORDER BY l.id, l.updated_at DESC
+            """)
+            p = {'cat_ids': cat_ids, 'df': date_from, 'dt': date_to,
+                 'df_d': df_d, 'dt_d': dt_d,
+                 'emp_id': str(emp_db_id)}
+            if not all_companies:
+                p['co'] = company_id
+            for r in db.execute(crm_q, p).fetchall():
+                # ETC crm leads are always Company unless is_direct is True
+                final_ltype = 'Direct' if r[10] else 'Company'
+                rate = cfg['rate_dw'] if r[10] else cfg['rate_wi']
+                base_val = float(r[4]) if r[4] else 0.0
+                incentive_amount = (base_val * rate) / 100.0 if cfg['itype'] == 'percentage' else rate
+                results.append({
+                    'id': r[0], 'name': r[1], 'phone': r[2], 'source': r[3],
+                    'deal_value': float(r[7]) if r[7] else 0.0,
+                    'deal_value_received': float(r[5]) if r[5] else 0.0,
+                    'confirmed_value': float(r[6]) if r[6] else 0.0,
+                    'completion_date': str(r[8])[:10] if r[8] else None,
+                    'category': r[9], 'lead_type': final_ltype,
+                    'roles': list(r[11]) if r[11] else ['Handler'],
+                    'record_type': 'crm_lead',
+                    'incentive_count': 1,
+                    'category_slug': slug,
+                    'incentive_pct': f"{rate}%" if cfg['itype'] == 'percentage' else f"₹{fmtNum(rate)}/unit",
+                    'incentive_amount': round(incentive_amount, 2),
+                })
+
+            # Direct ETC students
+            _co_etc = "AND es.company_id = :co" if not all_companies else ""
+            dir_q = text(f"""
+                SELECT
+                    es.id,
+                    COALESCE(es.name, '—') AS cname,
+                    COALESCE(es.phone, '—') AS cphone,
+                    'Direct ETC' AS source,
+                    COALESCE(es.deal_value_received, 0) AS dv,
+                    es.training_completed_date::text AS comp_date,
+                    'ETC Students' AS cat_name,
+                    'Direct' AS ltype,
+                    ARRAY_REMOVE(ARRAY[
+                        CASE WHEN es.telecaller_emp_code = :emp_code THEN 'Telecaller'  END,
+                        CASE WHEN es.field_staff_emp_code= :emp_code THEN 'Field Staff' END
+                    ], NULL) AS roles,
+                    (CASE WHEN es.telecaller_emp_code  = :emp_code THEN 1 ELSE 0 END
+                     + CASE WHEN es.field_staff_emp_code = :emp_code THEN 1 ELSE 0 END
+                    ) AS incentive_count
+                FROM etc_students es
+                WHERE es.training_completed_date BETWEEN :df_d AND :dt_d
+                  AND es.crm_lead_id IS NULL
+                  AND es.is_active = TRUE
+                  AND (
+                      es.telecaller_emp_code  = :emp_code
+                      OR es.field_staff_emp_code = :emp_code
+                  ) {_co_etc}
+            """)
+            dp = {'df_d': df_d, 'dt_d': dt_d, 'emp_code': emp_code}
+            if not all_companies:
+                dp['co'] = company_id
+            for r in db.execute(dir_q, dp).fetchall():
+                rate = cfg['rate_dw']
+                base_val = float(r[4]) if r[4] else 0.0
+                inc_cnt = int(r[9]) if r[9] else 1
+                incentive_amount = ((base_val * rate) / 100.0 if cfg['itype'] == 'percentage' else rate) * inc_cnt
+                results.append({
+                    'id': r[0], 'name': r[1], 'phone': r[2], 'source': r[3],
+                    'deal_value': float(r[4]) if r[4] else 0.0,
+                    'deal_value_received': float(r[4]) if r[4] else 0.0,
+                    'confirmed_value': float(r[4]) if r[4] else 0.0,
+                    'completion_date': str(r[5])[:10] if r[5] else None,
+                    'category': r[6], 'lead_type': 'Direct',
+                    'roles': list(r[8]) if r[8] else ['Handler'],
+                    'record_type': 'etc_student',
+                    'incentive_count': inc_cnt,
+                    'category_slug': slug,
+                    'incentive_pct': f"{rate}%" if cfg['itype'] == 'percentage' else f"₹{fmtNum(rate)}/unit",
+                    'incentive_amount': round(incentive_amount, 2),
+                })
+        elif slug in ('service_spares', 'service_revenue'):
+            _co_tkt = "AND t.company_id = :co" if not all_companies else ""
+            tkt_q = text(f"""
+                SELECT
+                    t.id,
+                    COALESCE(t.customer_name, '—') AS cname,
+                    COALESCE(t.customer_phone, '—') AS cphone,
+                    COALESCE(t.ticket_id, '—') AS source,
+                    COALESCE(b.spares_amount, 0) AS spares_amount,
+                    COALESCE(b.service_amount, 0) + COALESCE(b.labour_amount, 0) AS service_amount,
+                    b.payment_status AS payment_status,
+                    b.created_at::text AS comp_date,
+                    'Service Ticket' AS cat_name,
+                    'Company' AS ltype,
+                    ARRAY['Technician']::text[] AS roles
+                FROM service_ticket t
+                JOIN service_ticket_billing b ON b.ticket_id = t.id
+                WHERE b.created_at BETWEEN :df AND :dt
+                  AND b.payment_status = 'paid'
+                  AND t.service_technician_id::text = :emp_id {_co_tkt}
+            """)
+            p = {'df': date_from, 'dt': date_to, 'emp_id': str(emp_db_id)}
+            if not all_companies:
+                p['co'] = company_id
+            
+            for r in db.execute(tkt_q, p).fetchall():
+                rate = cfg['rate_wi']
+                confirmed_value = float(r[4]) if slug == 'service_spares' else float(r[5])
+                if confirmed_value == 0:
+                    continue
+                incentive_amount = (confirmed_value * rate) / 100.0 if cfg['itype'] == 'percentage' else rate
+                results.append({
+                    'id': r[0], 'name': r[1], 'phone': r[2], 'source': r[3],
+                    'deal_value': confirmed_value,
+                    'deal_value_received': confirmed_value,
+                    'confirmed_value': confirmed_value,
+                    'completion_date': str(r[7])[:10] if r[7] else None,
+                    'category': 'Service Spares' if slug == 'service_spares' else 'Service Revenue',
+                    'lead_type': 'Company',
+                    'roles': list(r[10]) if r[10] else ['Technician'],
+                    'record_type': 'service_ticket',
+                    'incentive_count': 1,
+                    'category_slug': slug,
+                    'incentive_pct': f"{rate}%" if cfg['itype'] == 'percentage' else f"₹{fmtNum(rate)}/unit",
+                    'incentive_amount': round(incentive_amount, 2),
+                })
+        else:
+            _drl_close2 = """CASE 
+                WHEN l.solar_pipeline_status IN ('completed', 'subsidy_pending')
+                THEN COALESCE(
+                    (SELECT MAX(t.transaction_date) FROM crm_lead_transactions t WHERE t.lead_id = l.id), 
+                    l.actual_close_date, 
+                    l.updated_at
+                )
+                ELSE COALESCE(l.actual_close_date, l.updated_at)
+            END"""
+            _comp_where = f"""(
                 l.solar_pipeline_status IN ('completed', 'subsidy_pending')
-                OR l.ev_b2b_stage = 'completed'
+                OR l.ev_b2b_stage       = 'completed'
                 OR (l.category_id IN ({_b2b_cids_str}) AND l.status IN ('won', 'completed'))
                 OR (l.status = 'completed'
                     AND l.solar_pipeline_status IS NULL
                     AND l.ev_b2b_stage IS NULL)
-            ) AND ({_drl_close}) BETWEEN :df AND :dt
-            OR EXISTS (
-                SELECT 1 FROM etc_students s
-                WHERE s.crm_lead_id = l.id
-                AND s.training_completed_date IS NOT NULL
-                AND s.training_completed_date BETWEEN :df_d AND :dt_d
-                AND s.is_active = TRUE
-            )
-        )"""
-        crm_q = text(f"""
-            SELECT DISTINCT ON (l.id)
-                l.id,
-                COALESCE(l.name, '—')   AS cname,
-                COALESCE(l.phone, '—') AS cphone,
-                l.source,
-                COALESCE(NULLIF(l.deal_value_received,0), l.deal_value, 0) AS dv,
-                COALESCE(
-                    (SELECT es2.training_completed_date::text
-                     FROM etc_students es2
-                     WHERE es2.crm_lead_id = l.id
-                       AND es2.training_completed_date IS NOT NULL
-                       AND es2.is_active = TRUE
-                     ORDER BY es2.training_completed_date LIMIT 1),
-                    COALESCE(l.actual_close_date, l.updated_at)::text
-                ) AS comp_date,
-                sc.name AS cat_name,
-                CASE
-                    WHEN l.source = 'Self Lead' THEN 'Self'
-                    WHEN (l.guru_id IS NOT NULL OR l.z_guru_id IS NOT NULL
-                          OR l.adi_guru_id IS NOT NULL
-                          OR (l.mnr_handler_id IS NOT NULL AND l.mnr_handler_id != '')
-                          OR l.associated_partner_id IS NOT NULL) THEN 'Company'
-                    ELSE 'Direct'
-                END AS ltype,
-                ARRAY_REMOVE(ARRAY[
-                    CASE WHEN l.telecaller_id::text = :emp_id   THEN 'Telecaller'  END,
-                    CASE WHEN l.field_staff_id::text = :emp_id  THEN 'Field Staff' END
-                ], NULL) AS roles
-            FROM crm_leads l
-            JOIN signup_categories sc ON sc.id = l.category_id
-            WHERE l.category_id = ANY(:cat_ids)
-              AND {_etc_comp}
-              AND (
-                  l.telecaller_id::text = :emp_id
-                  OR l.field_staff_id::text = :emp_id
-              ) {_co_clause}
-            ORDER BY l.id, l.updated_at DESC
-        """)
-        p = {'cat_ids': cat_ids, 'df': date_from, 'dt': date_to,
-             'df_d': df_d, 'dt_d': dt_d,
-             'emp_code': emp_code, 'emp_id': str(emp_db_id)}
-        if not all_companies:
-            p['co'] = company_id
-        for r in db.execute(crm_q, p).fetchall():
-            results.append({
-                'id': r[0], 'name': r[1], 'phone': r[2], 'source': r[3],
-                'deal_value': float(r[4]) if r[4] else 0,
-                'completion_date': str(r[5])[:10] if r[5] else None,
-                'category': r[6], 'lead_type': r[7],
-                'roles': list(r[8]) if r[8] else ['Handler'],
-                'record_type': 'crm_lead',
-                'incentive_count': 1,
-            })
-        # ── Direct ETC students (no crm_lead_id) ──────────────────────────
-        # DC-ETC-DIRECT-ROLECOUNT-001: main endpoint counts per-role via UNION ALL
-        # (no dedup). Return one row per student but include incentive_count = number
-        # of roles this employee holds for that student — so source total matches.
-        _co_etc = "AND es.company_id = :co" if not all_companies else ""
-        dir_q = text(f"""
-            SELECT
-                es.id,
-                COALESCE(es.name, '—') AS cname,
-                COALESCE(es.phone, '—') AS cphone,
-                'Direct ETC' AS source,
-                COALESCE(es.deal_value_received, 0) AS dv,
-                es.training_completed_date::text AS comp_date,
-                'ETC Students' AS cat_name,
-                'Direct' AS ltype,
-                ARRAY_REMOVE(ARRAY[
-                    CASE WHEN es.telecaller_emp_code = :emp_code THEN 'Telecaller'  END,
-                    CASE WHEN es.field_staff_emp_code= :emp_code THEN 'Field Staff' END
-                ], NULL) AS roles,
-                (CASE WHEN es.telecaller_emp_code  = :emp_code THEN 1 ELSE 0 END
-                 + CASE WHEN es.field_staff_emp_code = :emp_code THEN 1 ELSE 0 END
-                ) AS incentive_count
-            FROM etc_students es
-            WHERE es.training_completed_date BETWEEN :df_d AND :dt_d
-              AND es.crm_lead_id IS NULL
-              AND es.is_active = TRUE
-              AND (
-                  es.telecaller_emp_code  = :emp_code
-                  OR es.field_staff_emp_code = :emp_code
-              ) {_co_etc}
-        """)
-        dp = {'df_d': df_d, 'dt_d': dt_d, 'emp_code': emp_code}
-        if not all_companies:
-            dp['co'] = company_id
-        for r in db.execute(dir_q, dp).fetchall():
-            results.append({
-                'id': r[0], 'name': r[1], 'phone': r[2], 'source': r[3],
-                'deal_value': float(r[4]) if r[4] else 0,
-                'completion_date': str(r[5])[:10] if r[5] else None,
-                'category': r[6], 'lead_type': r[7],
-                'roles': list(r[8]) if r[8] else ['Handler'],
-                'record_type': 'etc_student',
-                'incentive_count': int(r[9]) if r[9] else 1,
-            })
-    else:
-        # ── Standard CRM path ─────────────────────────────────────────────
-        # DC-CLOSE-DATE-001: use actual close date, not updated_at.
-        _drl_close2 = """CASE 
-            WHEN l.solar_pipeline_status IN ('completed', 'subsidy_pending')
-            THEN COALESCE(
-                (SELECT MAX(t.transaction_date) FROM crm_lead_transactions t WHERE t.lead_id = l.id), 
-                l.actual_close_date, 
-                l.updated_at
-            )
-            ELSE COALESCE(l.actual_close_date, l.updated_at)
-        END"""
-        _comp_where = f"""(
-            l.solar_pipeline_status IN ('completed', 'subsidy_pending')
-            OR l.ev_b2b_stage       = 'completed'
-            OR (l.category_id IN ({_b2b_cids_str}) AND l.status IN ('won', 'completed'))
-            OR (l.status = 'completed'
-                AND l.solar_pipeline_status IS NULL
-                AND l.ev_b2b_stage IS NULL)
-        ) AND ({_drl_close2}) BETWEEN :df AND :dt"""
-        crm_q = text(f"""
-            SELECT DISTINCT ON (l.id)
-                l.id,
-                COALESCE(l.name, '—')   AS cname,
-                COALESCE(l.phone, '—') AS cphone,
-                l.source,
-                COALESCE(NULLIF(l.deal_value_received,0), l.deal_value, 0) AS dv,
-                COALESCE(l.actual_close_date, l.updated_at)::text AS comp_date,
-                sc.name AS cat_name,
-                CASE
-                    WHEN l.source = 'Self Lead' THEN 'Self'
-                    WHEN (l.guru_id IS NOT NULL OR l.z_guru_id IS NOT NULL
-                          OR l.adi_guru_id IS NOT NULL
-                          OR (l.mnr_handler_id IS NOT NULL AND l.mnr_handler_id != '')
-                          OR l.associated_partner_id IS NOT NULL) THEN 'Company'
-                    ELSE 'Direct'
-                END AS ltype,
-                ARRAY_REMOVE(ARRAY[
-                    CASE WHEN l.telecaller_id::text = :emp_id   THEN 'Telecaller'  END,
-                    CASE WHEN l.field_staff_id::text = :emp_id  THEN 'Field Staff' END
-                ], NULL) AS roles
-            FROM crm_leads l
-            JOIN signup_categories sc ON sc.id = l.category_id
-            WHERE l.category_id = ANY(:cat_ids)
-              AND {_comp_where}
-              AND (
-                  l.telecaller_id::text = :emp_id
-                  OR l.field_staff_id::text = :emp_id
-              ) {_co_clause}
-            ORDER BY l.id, l.updated_at DESC
-        """)
-        p = {'cat_ids': cat_ids, 'df': date_from, 'dt': date_to,
-             'emp_code': emp_code, 'emp_id': str(emp_db_id)}
-        if not all_companies:
-            p['co'] = company_id
-        for r in db.execute(crm_q, p).fetchall():
-            results.append({
-                'id': r[0], 'name': r[1], 'phone': r[2], 'source': r[3],
-                'deal_value': float(r[4]) if r[4] else 0,
-                'completion_date': str(r[5])[:10] if r[5] else None,
-                'category': r[6], 'lead_type': r[7],
-                'roles': list(r[8]) if r[8] else ['Handler'],
-                'record_type': 'crm_lead',
-                'incentive_count': 1,
-            })
+            ) AND ({_drl_close2}) BETWEEN :df AND :dt"""
+            crm_q = text(f"""
+                SELECT DISTINCT ON (l.id)
+                    l.id,
+                    COALESCE(l.name, '—')   AS cname,
+                    COALESCE(l.phone, '—') AS cphone,
+                    l.source,
+                    -- dv (percentage base) is confirmed value from income_entries
+                    COALESCE((
+                        SELECT SUM(ie.amount) 
+                        FROM income_entries ie 
+                        WHERE ie.lead_id = l.id 
+                          AND ie.is_deleted = FALSE 
+                          AND ie.status = 'CONFIRMED'
+                    ), 0) AS dv,
+                    -- deal_value_received is sum of non-rejected, non-estimated entries
+                    COALESCE((
+                        SELECT SUM(ie.amount) 
+                        FROM income_entries ie 
+                        WHERE ie.lead_id = l.id 
+                          AND ie.is_deleted = FALSE 
+                          AND ie.status NOT IN ('REJECTED', 'ESTIMATED')
+                    ), 0) AS deal_value_received,
+                    -- confirmed_value is sum of confirmed entries
+                    COALESCE((
+                        SELECT SUM(ie.amount) 
+                        FROM income_entries ie 
+                        WHERE ie.lead_id = l.id 
+                          AND ie.is_deleted = FALSE 
+                          AND ie.status = 'CONFIRMED'
+                    ), 0) AS confirmed_value,
+                    COALESCE(l.deal_value_total, l.deal_value, 0) AS deal_value_total,
+                    COALESCE(l.actual_close_date, l.updated_at)::text AS comp_date,
+                    sc.name AS cat_name,
+                    CASE
+                        WHEN l.source = 'Self Lead' THEN 'Self'
+                        WHEN (l.guru_id IS NOT NULL OR l.z_guru_id IS NOT NULL
+                              OR l.adi_guru_id IS NOT NULL
+                              OR (l.mnr_handler_id IS NOT NULL AND l.mnr_handler_id != '')
+                              OR l.associated_partner_id IS NOT NULL) THEN 'Company'
+                        ELSE 'Direct'
+                    END AS default_ltype,
+                    CASE WHEN (
+                        (l.source IS NULL OR l.source != 'Self Lead')
+                        AND l.guru_id IS NULL
+                        AND l.z_guru_id IS NULL
+                        AND l.adi_guru_id IS NULL
+                        AND (l.mnr_handler_id IS NULL OR l.mnr_handler_id = '')
+                        AND (
+                            l.associated_partner_id IS NULL
+                            OR (
+                                l.associated_partner_id IS NOT NULL
+                                AND (
+                                    SELECT COUNT(DISTINCT vci.partner_id)
+                                    FROM vgk_cash_income_entries vci
+                                    WHERE vci.source_lead_id = l.id
+                                      AND vci.status NOT IN ('CANCELLED')
+                                ) = 1
+                            )
+                        )
+                    ) THEN TRUE ELSE FALSE END AS is_direct,
+                    ARRAY_REMOVE(ARRAY[
+                        CASE WHEN l.telecaller_id::text = :emp_id   THEN 'Telecaller'  END,
+                        CASE WHEN l.field_staff_id::text = :emp_id  THEN 'Field Staff' END
+                    ], NULL) AS roles,
+                    (CASE WHEN l.associated_partner_id IS NOT NULL AND EXISTS (
+                        SELECT 1 FROM crm_leads l2
+                        WHERE l2.associated_partner_id = l.associated_partner_id
+                          AND l2.category_id = ANY(:b2b_cids)
+                          AND l2.id != l.id
+                          AND CASE 
+                              WHEN l2.solar_pipeline_status IN ('completed', 'subsidy_pending')
+                              THEN COALESCE(
+                                  (SELECT MAX(t.transaction_date) FROM crm_lead_transactions t WHERE t.lead_id = l2.id), 
+                                  l2.actual_close_date, 
+                                  l2.updated_at
+                              )
+                              ELSE COALESCE(l2.actual_close_date, l2.updated_at)
+                          END < :df
+                    ) THEN TRUE ELSE FALSE END) AS has_prior_b2b
+                FROM crm_leads l
+                JOIN signup_categories sc ON sc.id = l.category_id
+                WHERE l.category_id = ANY(:cat_ids)
+                  AND {_comp_where}
+                  AND (
+                      l.telecaller_id::text = :emp_id
+                      OR l.field_staff_id::text = :emp_id
+                  ) {_co_clause}
+                ORDER BY l.id, l.updated_at DESC
+            """)
+            p = {'cat_ids': cat_ids, 'df': date_from, 'dt': date_to,
+                 'b2b_cids': _b2b_cids, 'emp_id': str(emp_db_id)}
+            if not all_companies:
+                p['co'] = company_id
+            for r in db.execute(crm_q, p).fetchall():
+                lead_slug = slug
+                if slug in ('ev_b2b_new', 'ev_b2b_existing'):
+                    lead_slug = 'ev_b2b_existing' if r[13] else 'ev_b2b_new'
+                    cfg = cfg_by_slug.get(lead_slug, cfg)
+
+                final_ltype = 'Direct' if r[11] else r[10]
+                if final_ltype == 'Self':
+                    rate = cfg['rate_no']
+                elif final_ltype == 'Company':
+                    rate = cfg['rate_wi']
+                else:
+                    rate = cfg['rate_dw']
+
+                base_val = float(r[4]) if r[4] else 0.0
+                incentive_amount = (base_val * rate) / 100.0 if cfg['itype'] == 'percentage' else rate
+                results.append({
+                    'id': r[0], 'name': r[1], 'phone': r[2], 'source': r[3],
+                    'deal_value': float(r[7]) if r[7] else 0.0,
+                    'deal_value_received': float(r[5]) if r[5] else 0.0,
+                    'confirmed_value': float(r[6]) if r[6] else 0.0,
+                    'completion_date': str(r[8])[:10] if r[8] else None,
+                    'category': r[9], 'lead_type': final_ltype,
+                    'roles': list(r[12]) if r[12] else ['Handler'],
+                    'record_type': 'crm_lead',
+                    'incentive_count': 1,
+                    'category_slug': lead_slug,
+                    'incentive_pct': f"{rate}%" if cfg['itype'] == 'percentage' else f"₹{fmtNum(rate)}/unit",
+                    'incentive_amount': round(incentive_amount, 2),
+                })
+
+    # Apply targets and bonus triggers per category slug
+    # 1. Fetch employee min targets for this month/year
+    target_rows = db.execute(text(
+        "SELECT category_slug, min_target "
+        "FROM staff_incentive_employee_targets "
+        "WHERE month=:mo AND year=:yr AND employee_id=:eid"
+    ), {'mo': month, 'yr': year, 'eid': int(emp_db_id)}).fetchall()
+    
+    target_map = {r[0]: float(r[1]) for r in target_rows if r[1] is not None}
+    
+    # 2. Group results by category_slug to get totals (total_count and total_amount)
+    slug_stats = {}
+    for r in results:
+        s = r['category_slug']
+        if s not in slug_stats:
+            slug_stats[s] = {'self_count': 0, 'self_amount': 0.0, 'company_count': 0, 'company_amount': 0.0, 'direct_count': 0, 'direct_amount': 0.0}
+        
+        ltype = r['lead_type']
+        cnt = r.get('incentive_count', 1)
+        val = r['confirmed_value']
+        
+        if ltype == 'Self':
+            slug_stats[s]['self_count'] += cnt
+            slug_stats[s]['self_amount'] += val
+        elif ltype == 'Company':
+            slug_stats[s]['company_count'] += cnt
+            slug_stats[s]['company_amount'] += val
+        else: # Direct
+            slug_stats[s]['direct_count'] += cnt
+            slug_stats[s]['direct_amount'] += val
+
+    # 3. For each category slug, evaluate target gate and bonus applied
+    _INC_DEFAULT_TARGET = 2.0
+    for r in results:
+        s = r['category_slug']
+        cfg = cfg_by_slug.get(s, {
+            'min_target_value': _INC_DEFAULT_TARGET, 'min_target_unit': 'count',
+            'rate_no': 0.0, 'rate_wi': 0.0, 'rate_dw': 0.0, 'itype': 'percentage',
+            'bonus_trigger': None, 'bonus_mul': 1.2
+        })
+        
+        emp_min_target = target_map.get(s, _INC_DEFAULT_TARGET)
+        stats = slug_stats.get(s, {'self_count': 0, 'self_amount': 0.0, 'company_count': 0, 'company_amount': 0.0, 'direct_count': 0, 'direct_amount': 0.0})
+        
+        total_count = stats['self_count'] + stats['company_count'] + stats['direct_count']
+        total_amount = stats['self_amount'] + stats['company_amount'] + stats['direct_amount']
+        
+        total_gate_val = total_count if cfg['min_target_unit'] == 'count' else total_amount
+        target_met = (emp_min_target == 0) or (total_gate_val >= emp_min_target)
+        
+        company_target_val = stats['company_count'] + stats['direct_count'] if cfg['min_target_unit'] == 'count' \
+                             else stats['company_amount'] + stats['direct_amount']
+        
+        bonus_applied = False
+        if target_met and cfg.get('bonus_trigger') is not None and company_target_val >= cfg['bonus_trigger']:
+            bonus_applied = True
+            
+        # Recalculate cell-level values
+        if not target_met:
+            r['incentive_amount'] = 0.0
+            r['incentive_pct'] = '—'
+        elif bonus_applied and r['lead_type'] in ('Company', 'Direct'):
+            ltype = r['lead_type']
+            rate = cfg['rate_dw'] if ltype == 'Direct' else cfg['rate_wi']
+            new_rate = rate * cfg['bonus_mul']
+            
+            if cfg['itype'] == 'percentage':
+                r['incentive_pct'] = f"{new_rate}%"
+            else:
+                r['incentive_pct'] = f"₹{fmtNum(new_rate)}/unit"
+                
+            r['incentive_amount'] = round(r['incentive_amount'] * cfg['bonus_mul'], 2)
 
     incentive_total = sum(r.get('incentive_count', 1) for r in results)
     return {

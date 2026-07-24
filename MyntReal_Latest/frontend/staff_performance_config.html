@@ -522,11 +522,13 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
               <th style="padding:9px 12px;text-align:center;">B2B New</th>
               <th style="padding:9px 12px;text-align:center;">B2B Exist.</th>
               <th style="padding:9px 12px;text-align:center;">Insurance</th>
+              <th style="padding:9px 12px;text-align:center;">Spares</th>
+              <th style="padding:9px 12px;text-align:center;">Service Rev</th>
               <th style="padding:9px 12px;text-align:right;font-weight:700;color:#92400e;">Total Earned</th>
             </tr>
           </thead>
           <tbody id="inc-ach-body">
-            <tr><td colspan="9" style="text-align:center;padding:24px;color:#9ca3af;"><div class="loading-ring"></div></td></tr>
+            <tr><td colspan="10" style="text-align:center;padding:24px;color:#9ca3af;"><div class="loading-ring"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -1617,6 +1619,8 @@ const INC_CATEGORY_LABELS = {
   insurance:       'Insurance',
   real_estate:     'Real Estate',
   etc_students:    'ETC Students',
+  service_spares:  'Service Spares',
+  service_revenue: 'Service Revenue',
 };
 
 const INC_CATEGORY_UNIT_LABELS = {
@@ -1634,6 +1638,7 @@ function deriveIncSlug(name) {
   if (n.includes('training') || n.includes('etc')) return 'training';
   if (n.includes('insurance')) return 'insurance';
   if (n.includes('real') || n.includes('property') || n.includes('dream')) return 'real_estate';
+  if (n.includes('spares')) return 'service_spares';
   return n.trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
 }
 
@@ -1652,8 +1657,24 @@ async function loadSignupCats(compId) {
 function populateCatSelect(cats, selectedSlug) {
   const sel = document.getElementById('inc-edit-cat-select');
   sel.innerHTML = '<option value="">-- Select Category --</option>';
+  
+  // Custom Service Team options
+  const serviceOptions = [
+    { slug: 'service_spares', label: 'Service Spares (Service Team)' },
+    { slug: 'service_revenue', label: 'Service Revenue (Service Team)' }
+  ];
+  serviceOptions.forEach(opt => {
+    const o = document.createElement('option');
+    o.value = opt.slug;
+    o.dataset.label = opt.label;
+    o.textContent = opt.label;
+    if (selectedSlug && opt.slug === selectedSlug) o.selected = true;
+    sel.appendChild(o);
+  });
+  
   cats.forEach(c => {
     const slug = deriveIncSlug(c.name);
+    if (slug === 'service_spares' || slug === 'ev_spares') return;
     const o = document.createElement('option');
     o.value = slug;
     o.dataset.label = c.name;
@@ -1831,7 +1852,7 @@ async function loadIncEmpTargets() {
 function renderIncEmpTargets() {
   const thead = document.getElementById('inc-emp-tgt-thead');
   const tbody = document.getElementById('inc-emp-tgt-tbody');
-  const slugLabels = { training:'Training', solar:'Solar', ev_b2c:'EV B2C', ev_b2b_new:'EV B2B New', ev_b2b_existing:'EV B2B Existing', insurance:'Insurance' };
+  const slugLabels = { training:'Training', solar:'Solar', ev_b2c:'EV B2C', ev_b2b_new:'EV B2B New', ev_b2b_existing:'EV B2B Existing', insurance:'Insurance', service_spares:'Service Spares', service_revenue:'Service Revenue' };
   // Header
   let hCols = '<th style="padding:7px 10px;text-align:left;font-weight:700;background:#f8f7ff;color:#374151;border-bottom:2px solid #e0d7ff;white-space:nowrap;">Employee</th>';
   ACH_CATS_ORDERED.forEach(slug => {
@@ -2011,8 +2032,8 @@ async function saveIncentiveRow() {
 }
 
 // ── Achievement Calculation ────────────────────────────────────────────────────
-// Column order matches table headers: training, solar, ev_b2c, ev_b2b_new, ev_b2b_existing, insurance
-const ACH_CATS = ['training','solar','ev_b2c','ev_b2b_new','ev_b2b_existing','insurance'];
+// Column order matches table headers: training, solar, ev_b2c, ev_b2b_new, ev_b2b_existing, insurance, service_spares, service_revenue
+const ACH_CATS = ['training','solar','ev_b2c','ev_b2b_new','ev_b2b_existing','insurance','service_spares','service_revenue'];
 
 async function loadAchievements() {
   const month   = document.getElementById('inc-month').value;
@@ -2022,7 +2043,7 @@ async function loadAchievements() {
   const body    = document.getElementById('inc-ach-body');
   const info    = document.getElementById('inc-ach-info');
 
-  body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;"><div class="loading-ring"></div></td></tr>`;
+  body.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:24px;"><div class="loading-ring"></div></td></tr>`;
   info.style.display = 'none';
 
   try {
@@ -2056,7 +2077,7 @@ async function loadAchievements() {
     info.textContent = `${MONTHS[parseInt(month)] || ''} ${year} · ${empLabel}`;
     info.style.display = '';
   } catch(e) {
-    body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;color:#ef4444;">${escHtml(e.message)}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:24px;color:#ef4444;">${escHtml(e.message)}</td></tr>`;
     toast(e.message, 'error');
   }
 }
@@ -2064,11 +2085,11 @@ async function loadAchievements() {
 function renderAchievements(rows) {
   const body = document.getElementById('inc-ach-body');
   if (!rows.length) {
-    body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px;color:#9ca3af;"><i class="fa fa-inbox fa-2x mb-2 d-block"></i>No achievement data found for this period.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:32px;color:#9ca3af;"><i class="fa fa-inbox fa-2x mb-2 d-block"></i>No achievement data found for this period.</td></tr>`;
     return;
   }
-  const UNIT = { training:'students', solar:'deals', ev_b2c:'deals', ev_b2b:'deals', ev_b2b_new:'deals', ev_b2b_existing:'deals', insurance:'₹', real_estate:'₹' };
-  const CAT_LABEL = { training:'ETC Students', solar:'Solar', ev_b2c:'B2C', ev_b2b:'B2B', ev_b2b_new:'B2B (New)', ev_b2b_existing:'B2B (Exist.)', insurance:'Insurance', real_estate:'Real Estate' };
+  const UNIT = { training:'students', solar:'deals', ev_b2c:'deals', ev_b2b:'deals', ev_b2b_new:'deals', ev_b2b_existing:'deals', insurance:'₹', real_estate:'₹', service_spares:'₹', service_revenue:'₹' };
+  const CAT_LABEL = { training:'ETC Students', solar:'Solar', ev_b2c:'B2C', ev_b2b:'B2B', ev_b2b_new:'B2B (New)', ev_b2b_existing:'B2B (Exist.)', insurance:'Insurance', real_estate:'Real Estate', service_spares:'Service Spares', service_revenue:'Service Revenue' };
 
   let html = '';
   rows.forEach((emp, idx) => {
