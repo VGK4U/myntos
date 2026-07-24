@@ -1685,7 +1685,7 @@
           amountInput.value = '';
           
           try {
-              const res = await fetch(`http://127.0.0.1:8000/api/v1/recharge/plans?operator=${operator}`);
+              const res = await fetch(`/api/v1/recharge/plans?operator=${operator}`);
               const plans = await res.json();
               
               if(plans.length === 0) {
@@ -1741,7 +1741,7 @@
 
           try {
               // Call our backend to create order
-              const res = await fetch('http://127.0.0.1:8000/api/v1/recharge/create-order', {
+              const res = await fetch('/api/v1/recharge/create-order', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(data)
@@ -1766,7 +1766,7 @@
                   "handler": async function (response) {
                       // Verify Payment
                       try {
-                          const verifyRes = await fetch('http://127.0.0.1:8000/api/v1/recharge/verify-payment', {
+                          const verifyRes = await fetch('/api/v1/recharge/verify-payment', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({

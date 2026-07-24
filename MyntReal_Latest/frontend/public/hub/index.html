@@ -738,7 +738,7 @@ document.getElementById('hubRechargeOperator').addEventListener('change', async 
     amountInput.value = '';
     
     try {
-        const res = await fetch(`http://127.0.0.1:8000/api/v1/recharge/plans?operator=${operator}`);
+        const res = await fetch(`/api/v1/recharge/plans?operator=${operator}`);
         currentOperatorPlans = await res.json();
         
         if(currentOperatorPlans.length === 0) {
@@ -830,7 +830,7 @@ document.getElementById('hubRechargeForm').addEventListener('submit', async func
     };
 
     try {
-        const res = await fetch('http://127.0.0.1:8000/api/v1/recharge/create-order', {
+        const res = await fetch('/api/v1/recharge/create-order', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -853,7 +853,7 @@ document.getElementById('hubRechargeForm').addEventListener('submit', async func
             "order_id": orderData.order_id,
             "handler": async function (response) {
                 try {
-                    const verifyRes = await fetch('http://127.0.0.1:8000/api/v1/recharge/verify-payment', {
+                    const verifyRes = await fetch('/api/v1/recharge/verify-payment', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
