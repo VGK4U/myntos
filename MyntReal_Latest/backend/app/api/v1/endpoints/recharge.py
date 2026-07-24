@@ -4,6 +4,7 @@ from app.core.database import get_db
 from app.core.config import settings
 from app.models.recharge import RechargeTransaction
 from pydantic import BaseModel
+from typing import Optional
 import razorpay
 import requests
 
@@ -29,9 +30,9 @@ class CreateOrderRequest(BaseModel):
     amount: float # in INR
     mobile_number: str
     operator: str
-    circle: str = None
-    guest_email: str = None
-    guest_name: str = None
+    circle: Optional[str] = None
+    guest_email: Optional[str] = None
+    guest_name: Optional[str] = None
 
 @router.post("/create-order")
 def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)):
