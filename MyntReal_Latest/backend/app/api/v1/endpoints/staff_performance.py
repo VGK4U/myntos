@@ -1526,6 +1526,9 @@ def get_incentive_achievements(
                     slug_to_cat_ids[slug].append(cat_id)
                     break
 
+    b2b_cids = slug_to_cat_ids.get('ev_b2b', [])
+    b2b_cids_str = ",".join(str(i) for i in b2b_cids) if b2b_cids else "NULL"
+
     # DC Protocol: telecaller_id + field_staff_id each get 1x credit per lead.
     # handler_id is EXCLUDED — incentives are only earned via explicit tele/field assignment
     # (DC-INCENTIVE-TELE-FIELD-ONLY-001). Lead owner / handler do NOT earn incentive credit.
@@ -1558,11 +1561,20 @@ def get_incentive_achievements(
     # after completion don't smuggle it into a later month's incentive period.
     # All CRM leads (including solar) use actual_close_date; ETC uses training_completed_date
     # via the EXISTS subquery below.
-    _close_date_expr = "COALESCE(l.actual_close_date, l.updated_at)"
+    _close_date_expr = """CASE 
+        WHEN l.solar_pipeline_status IN ('completed', 'subsidy_pending')
+        THEN COALESCE(
+            (SELECT MAX(t.transaction_date) FROM crm_lead_transactions t WHERE t.lead_id = l.id), 
+            l.actual_close_date, 
+            l.updated_at
+        )
+        ELSE COALESCE(l.actual_close_date, l.updated_at)
+    END"""
     _comp_where = f"""(
         (
-            l.solar_pipeline_status = 'completed'
+            l.solar_pipeline_status IN ('completed', 'subsidy_pending')
             OR l.ev_b2b_stage = 'completed'
+            OR (l.category_id IN ({b2b_cids_str}) AND l.status IN ('won', 'completed'))
             OR (l.status = 'completed'
                 AND l.solar_pipeline_status IS NULL
                 AND l.ev_b2b_stage IS NULL)
@@ -1745,7 +1757,7 @@ def get_incentive_achievements(
     # DC-B2B-SPLIT-001: Route B2B leads to ev_b2b_new or ev_b2b_existing.
     # New partner = associated_partner_id has NO prior completed B2B lead before this period.
     if use_b2b_split and b2b_pending:
-        _b2b_pids = list({p for _, p, _, _ in b2b_pending if p is not None})
+        _b2b_pids = list({p for _, p, _, _, _ in b2b_pending if p is not None})
         _existing_pids: set = set()
         if _b2b_pids and b2b_cat_ids:
             _prior = db.execute(text("""
@@ -1756,6 +1768,7 @@ def get_incentive_achievements(
                   AND l.updated_at < :cutoff
                   AND (
                     l.ev_b2b_stage = 'completed'
+                    OR l.status = 'won'
                     OR (l.status = 'completed'
                         AND l.solar_pipeline_status IS NULL
                         AND l.ev_b2b_stage IS NULL)
@@ -2003,6 +2016,19 @@ def incentive_achievements_drilldown(
             if pc and all(p in cn for p in pc.split() if p):
                 cat_ids.append(cid)
                 break
+
+    # Resolve all EV B2B category IDs
+    _b2b_pats = ['%ev%b2b%', '%ev b2b%', '%ev-b2b%']
+    _b2b_cids = []
+    for cid, cname in all_cats:
+        cn = (cname or '').lower()
+        for pat in _b2b_pats:
+            pc = pat.replace('%', '')
+            if pc and all(p in cn for p in pc.split() if p):
+                _b2b_cids.append(cid)
+                break
+    _b2b_cids_str = ",".join(str(i) for i in _b2b_cids) if _b2b_cids else "NULL"
+
     if not cat_ids:
         return {'success': True, 'data': [], 'count': 0, 'employee': emp_name,
                 'employee_id': emp_db_id, 'category_slug': category_slug,
@@ -2016,11 +2042,20 @@ def incentive_achievements_drilldown(
         # DC-ETC-DRILLDOWN-001: match exactly what the main achievement
         # endpoint counts: either standard completion OR etc_students link.
         # DC-CLOSE-DATE-001: use actual close date, not updated_at.
-        _drl_close = "COALESCE(l.actual_close_date, l.updated_at)"
+        _drl_close = """CASE 
+            WHEN l.solar_pipeline_status IN ('completed', 'subsidy_pending')
+            THEN COALESCE(
+                (SELECT MAX(t.transaction_date) FROM crm_lead_transactions t WHERE t.lead_id = l.id), 
+                l.actual_close_date, 
+                l.updated_at
+            )
+            ELSE COALESCE(l.actual_close_date, l.updated_at)
+        END"""
         _etc_comp = f"""(
             (
-                l.solar_pipeline_status = 'completed'
+                l.solar_pipeline_status IN ('completed', 'subsidy_pending')
                 OR l.ev_b2b_stage = 'completed'
+                OR (l.category_id IN ({_b2b_cids_str}) AND l.status IN ('won', 'completed'))
                 OR (l.status = 'completed'
                     AND l.solar_pipeline_status IS NULL
                     AND l.ev_b2b_stage IS NULL)
@@ -2134,10 +2169,19 @@ def incentive_achievements_drilldown(
     else:
         # ── Standard CRM path ─────────────────────────────────────────────
         # DC-CLOSE-DATE-001: use actual close date, not updated_at.
-        _drl_close2 = "COALESCE(l.actual_close_date, l.updated_at)"
+        _drl_close2 = """CASE 
+            WHEN l.solar_pipeline_status IN ('completed', 'subsidy_pending')
+            THEN COALESCE(
+                (SELECT MAX(t.transaction_date) FROM crm_lead_transactions t WHERE t.lead_id = l.id), 
+                l.actual_close_date, 
+                l.updated_at
+            )
+            ELSE COALESCE(l.actual_close_date, l.updated_at)
+        END"""
         _comp_where = f"""(
-            l.solar_pipeline_status = 'completed'
+            l.solar_pipeline_status IN ('completed', 'subsidy_pending')
             OR l.ev_b2b_stage       = 'completed'
+            OR (l.category_id IN ({_b2b_cids_str}) AND l.status IN ('won', 'completed'))
             OR (l.status = 'completed'
                 AND l.solar_pipeline_status IS NULL
                 AND l.ev_b2b_stage IS NULL)

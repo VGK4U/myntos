@@ -491,6 +491,21 @@ class BonanzaBrandFilter(BaseModel):
     bonanza_id  = Column(Integer, ForeignKey('bonanza.id', ondelete='CASCADE'), nullable=False, index=True)
     brand_id    = Column(Integer, ForeignKey('vgk_incentive_brands.id', ondelete='CASCADE'), nullable=False)
 
+    # Overrides for Brand Specific Extra Commission (reward_type = 'brand_wise_commission')
+    ec_l1_amount  = Column(Numeric(10, 2), nullable=True)
+    ec_l2_amount  = Column(Numeric(10, 2), nullable=True)
+    ec_l3_amount  = Column(Numeric(10, 2), nullable=True)
+    ec_l4_amount  = Column(Numeric(10, 2), nullable=True)
+    ec_l5_amount  = Column(Numeric(10, 2), nullable=True)
+
+    ec_l1_trigger = Column(String(50), nullable=True)
+    ec_l2_trigger = Column(String(50), nullable=True)
+    ec_l3_trigger = Column(String(50), nullable=True)
+    ec_l4_trigger = Column(String(50), nullable=True)
+    ec_l5_trigger = Column(String(50), nullable=True)
+
+    trigger_event = Column(String(50), nullable=True)
+
     __table_args__ = (
         UniqueConstraint('bonanza_id', 'brand_id', name='uq_bonanza_brand_filter'),
     )

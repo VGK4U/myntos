@@ -66,6 +66,21 @@ def _resolve_actor_id(current_user) -> str:
     return str(current_user.id)
 
 
+class BonanzaBrandConfig(BaseModel):
+    brand_id: int
+    ec_l1_amount: Optional[float] = None
+    ec_l2_amount: Optional[float] = None
+    ec_l3_amount: Optional[float] = None
+    ec_l4_amount: Optional[float] = None
+    ec_l5_amount: Optional[float] = None
+    ec_l1_trigger: Optional[str] = None
+    ec_l2_trigger: Optional[str] = None
+    ec_l3_trigger: Optional[str] = None
+    ec_l4_trigger: Optional[str] = None
+    ec_l5_trigger: Optional[str] = None
+    trigger_event: Optional[str] = None
+
+
 class BonanzaUpdate(BaseModel):
     name: Optional[str] = None
     start_date: Optional[datetime] = None
@@ -105,6 +120,7 @@ class BonanzaUpdate(BaseModel):
     ec_l4_trigger: Optional[str] = None
     ec_l5_trigger: Optional[str] = None
     brand_filter_ids: Optional[List[int]] = None
+    brand_configs: Optional[List[BonanzaBrandConfig]] = None
 
 
 class BonanzaCreate(BaseModel):
@@ -171,6 +187,7 @@ class BonanzaCreate(BaseModel):
     ec_l4_trigger: Optional[str] = None
     ec_l5_trigger: Optional[str] = None
     brand_filter_ids: Optional[List[int]] = None
+    brand_configs: Optional[List[BonanzaBrandConfig]] = None
 
 
 class BonanzaApprove(BaseModel):
@@ -261,6 +278,39 @@ async def create_bonanza(
                        "for extra_commission bonanzas"
             )
 
+    if data.reward_type == 'brand_wise_commission':
+        if not data.brand_configs:
+            raise HTTPException(
+                status_code=400,
+                detail="At least one brand configuration must be specified for Brand Specific Extra Commission bonanzas"
+            )
+        for cfg in data.brand_configs:
+            _all_cfg_triggers = [
+                cfg.ec_l1_trigger, cfg.ec_l2_trigger, cfg.ec_l3_trigger,
+                cfg.ec_l4_trigger, cfg.ec_l5_trigger, cfg.trigger_event
+            ]
+            for _t in _all_cfg_triggers:
+                if _t and _t not in _valid_triggers:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Invalid trigger value '{_t}' for brand ID {cfg.brand_id}. Must be one of: {sorted(_valid_triggers)}"
+                    )
+            _cfg_amounts = [
+                cfg.ec_l1_amount, cfg.ec_l2_amount, cfg.ec_l3_amount,
+                cfg.ec_l4_amount, cfg.ec_l5_amount
+            ]
+            _has_any_cfg_trigger = any(_all_cfg_triggers)
+            if not _has_any_cfg_trigger:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"At least one trigger must be configured for brand ID {cfg.brand_id}"
+                )
+            if not any(_cfg_amounts):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"At least one level amount must be set for brand ID {cfg.brand_id}"
+                )
+
     # DC_BONANZA_SLABWISE_AUTO_001: One active Slab Wise per segment — no overlapping campaigns
     if data.reward_type == 'slab_wise':
         from sqlalchemy import text as _t
@@ -338,12 +388,12 @@ async def create_bonanza(
         advance_count_basis=data.advance_count_basis or 'DVR',
 
         # DC-EXTRA-COMM-001
-        trigger_event=data.trigger_event if data.reward_type in ('extra_commission', 'award', 'gift') else None,
-        ec_l1_amount=data.ec_l1_amount if data.reward_type in ('extra_commission', 'cash', 'bonus') else None,
-        ec_l2_amount=data.ec_l2_amount if data.reward_type in ('extra_commission', 'cash', 'bonus') else None,
-        ec_l3_amount=data.ec_l3_amount if data.reward_type in ('extra_commission', 'cash', 'bonus') else None,
-        ec_l4_amount=data.ec_l4_amount if data.reward_type in ('extra_commission', 'cash', 'bonus') else None,
-        ec_l5_amount=data.ec_l5_amount if data.reward_type in ('extra_commission', 'cash', 'bonus') else None,
+        trigger_event=data.trigger_event if data.reward_type in ('extra_commission', 'brand_wise_commission', 'award', 'gift') else None,
+        ec_l1_amount=data.ec_l1_amount if data.reward_type in ('extra_commission', 'brand_wise_commission', 'cash', 'bonus') else None,
+        ec_l2_amount=data.ec_l2_amount if data.reward_type in ('extra_commission', 'brand_wise_commission', 'cash', 'bonus') else None,
+        ec_l3_amount=data.ec_l3_amount if data.reward_type in ('extra_commission', 'brand_wise_commission', 'cash', 'bonus') else None,
+        ec_l4_amount=data.ec_l4_amount if data.reward_type in ('extra_commission', 'brand_wise_commission', 'cash', 'bonus') else None,
+        ec_l5_amount=data.ec_l5_amount if data.reward_type in ('extra_commission', 'brand_wise_commission', 'cash', 'bonus') else None,
 
         # DC-AWARD-TRIGGER-001: award/gift per-level participation config
         award_level_notes=data.award_level_notes if data.reward_type in ('award', 'gift') else None,
@@ -371,7 +421,44 @@ async def create_bonanza(
         db.commit()
 
     # DC-BRAND-BONANZA-001: persist brand filters after bonanza is committed
-    if data.reward_type in ('extra_commission', 'award', 'gift', 'cash', 'bonus') and data.brand_filter_ids:
+    if data.reward_type == 'brand_wise_commission' and data.brand_configs:
+        for cfg in data.brand_configs:
+            db.execute(text("""
+                INSERT INTO bonanza_brand_filters 
+                  (bonanza_id, brand_id, ec_l1_amount, ec_l2_amount, ec_l3_amount, ec_l4_amount, ec_l5_amount,
+                   ec_l1_trigger, ec_l2_trigger, ec_l3_trigger, ec_l4_trigger, ec_l5_trigger, trigger_event)
+                VALUES
+                  (:bid, :brid, :l1_amt, :l2_amt, :l3_amt, :l4_amt, :l5_amt,
+                   :l1_trig, :l2_trig, :l3_trig, :l4_trig, :l5_trig, :trig_ev)
+                ON CONFLICT (bonanza_id, brand_id) DO UPDATE SET
+                  ec_l1_amount = EXCLUDED.ec_l1_amount,
+                  ec_l2_amount = EXCLUDED.ec_l2_amount,
+                  ec_l3_amount = EXCLUDED.ec_l3_amount,
+                  ec_l4_amount = EXCLUDED.ec_l4_amount,
+                  ec_l5_amount = EXCLUDED.ec_l5_amount,
+                  ec_l1_trigger = EXCLUDED.ec_l1_trigger,
+                  ec_l2_trigger = EXCLUDED.ec_l2_trigger,
+                  ec_l3_trigger = EXCLUDED.ec_l3_trigger,
+                  ec_l4_trigger = EXCLUDED.ec_l4_trigger,
+                  ec_l5_trigger = EXCLUDED.ec_l5_trigger,
+                  trigger_event = EXCLUDED.trigger_event
+            """), {
+                'bid': bonanza.id,
+                'brid': cfg.brand_id,
+                'l1_amt': cfg.ec_l1_amount,
+                'l2_amt': cfg.ec_l2_amount,
+                'l3_amt': cfg.ec_l3_amount,
+                'l4_amt': cfg.ec_l4_amount,
+                'l5_amt': cfg.ec_l5_amount,
+                'l1_trig': cfg.ec_l1_trigger,
+                'l2_trig': cfg.ec_l2_trigger,
+                'l3_trig': cfg.ec_l3_trigger,
+                'l4_trig': cfg.ec_l4_trigger,
+                'l5_trig': cfg.ec_l5_trigger,
+                'trig_ev': cfg.trigger_event
+            })
+        db.commit()
+    elif data.reward_type in ('extra_commission', 'award', 'gift', 'cash', 'bonus') and data.brand_filter_ids:
         for _brand_id in data.brand_filter_ids:
             db.execute(text("""
                 INSERT INTO bonanza_brand_filters (bonanza_id, brand_id)
@@ -2648,7 +2735,35 @@ async def edit_bonanza(
     # DC-AWARD-TRIGGER-001: update award_level_notes on edit
     if data.award_level_notes is not None and bonanza.reward_type in ('award', 'gift'):
         bonanza.award_level_notes = data.award_level_notes or None
-    if data.brand_filter_ids is not None and bonanza.reward_type in ('extra_commission', 'award', 'gift', 'cash', 'bonus'):
+    if bonanza.reward_type == 'brand_wise_commission' and data.brand_configs is not None:
+        db.execute(
+            text("DELETE FROM bonanza_brand_filters WHERE bonanza_id = :bid"),
+            {"bid": bonanza.id}
+        )
+        for cfg in data.brand_configs:
+            db.execute(text("""
+                INSERT INTO bonanza_brand_filters 
+                  (bonanza_id, brand_id, ec_l1_amount, ec_l2_amount, ec_l3_amount, ec_l4_amount, ec_l5_amount,
+                   ec_l1_trigger, ec_l2_trigger, ec_l3_trigger, ec_l4_trigger, ec_l5_trigger, trigger_event)
+                VALUES
+                  (:bid, :brid, :l1_amt, :l2_amt, :l3_amt, :l4_amt, :l5_amt,
+                   :l1_trig, :l2_trig, :l3_trig, :l4_trig, :l5_trig, :trig_ev)
+            """), {
+                'bid': bonanza.id,
+                'brid': cfg.brand_id,
+                'l1_amt': cfg.ec_l1_amount,
+                'l2_amt': cfg.ec_l2_amount,
+                'l3_amt': cfg.ec_l3_amount,
+                'l4_amt': cfg.ec_l4_amount,
+                'l5_amt': cfg.ec_l5_amount,
+                'l1_trig': cfg.ec_l1_trigger,
+                'l2_trig': cfg.ec_l2_trigger,
+                'l3_trig': cfg.ec_l3_trigger,
+                'l4_trig': cfg.ec_l4_trigger,
+                'l5_trig': cfg.ec_l5_trigger,
+                'trig_ev': cfg.trigger_event
+            })
+    elif data.brand_filter_ids is not None and bonanza.reward_type in ('extra_commission', 'award', 'gift', 'cash', 'bonus'):
         db.execute(
             text("DELETE FROM bonanza_brand_filters WHERE bonanza_id = :bid"),
             {"bid": bonanza.id}
@@ -4459,16 +4574,46 @@ def list_vgk_bonanzas_staff(
     brand_filters_map = {}
     if bonanza_ids:
         rows = db.execute(text("""
-            SELECT bf.bonanza_id, bf.brand_id, b.brand_name
+            SELECT bf.bonanza_id, bf.brand_id, b.brand_name,
+                   bf.ec_l1_amount, bf.ec_l2_amount, bf.ec_l3_amount, bf.ec_l4_amount, bf.ec_l5_amount,
+                   bf.ec_l1_trigger, bf.ec_l2_trigger, bf.ec_l3_trigger, bf.ec_l4_trigger, bf.ec_l5_trigger,
+                   bf.trigger_event
             FROM bonanza_brand_filters bf
             JOIN vgk_incentive_brands b ON bf.brand_id = b.id
             WHERE bf.bonanza_id = ANY(:ids)
         """), {"ids": bonanza_ids}).fetchall()
         for r in rows:
-            bid, brid, bname = r[0], r[1], r[2]
+            bid = r[0]
             if bid not in brand_filters_map:
                 brand_filters_map[bid] = []
-            brand_filters_map[bid].append({"id": brid, "name": bname})
+            brand_filters_map[bid].append({
+                "id": r[1],
+                "brand_id": r[1],
+                "name": r[2],
+                "brand_name": r[2],
+                "ec_l1_amount": float(r[3]) if r[3] is not None else None,
+                "ec_l2_amount": float(r[4]) if r[4] is not None else None,
+                "ec_l3_amount": float(r[5]) if r[5] is not None else None,
+                "ec_l4_amount": float(r[6]) if r[6] is not None else None,
+                "ec_l5_amount": float(r[7]) if r[7] is not None else None,
+                "ec_l1_trigger": r[8],
+                "ec_l2_trigger": r[9],
+                "ec_l3_trigger": r[10],
+                "ec_l4_trigger": r[11],
+                "ec_l5_trigger": r[12],
+                "trigger_event": r[13]
+            })
+
+    category_filters_map = {}
+    if bonanza_ids:
+        rows = db.execute(text("""
+            SELECT bonanza_id, category_id FROM bonanza_category_filters WHERE bonanza_id = ANY(:ids)
+        """), {"ids": bonanza_ids}).fetchall()
+        for r in rows:
+            bid, cid = r[0], r[1]
+            if bid not in category_filters_map:
+                category_filters_map[bid] = []
+            category_filters_map[bid].append(cid)
 
     claims_count = {}
     if bonanza_ids:
@@ -4483,9 +4628,31 @@ def list_vgk_bonanzas_staff(
                 claims_count[bid] = {}
             claims_count[bid][row[1]] = int(row[2])
 
+    eligible_partners_map = {}
+    if bonanza_ids:
+        ec_rows = db.execute(text("""
+            SELECT bonanza_id, COUNT(DISTINCT partner_id)
+            FROM bonanza_extra_commission_log
+            WHERE bonanza_id = ANY(:ids)
+            GROUP BY bonanza_id
+        """), {"ids": bonanza_ids}).fetchall()
+        for r in ec_rows:
+            eligible_partners_map[r[0]] = r[1]
+            
+        std_rows = db.execute(text("""
+            SELECT bonanza_id, COUNT(DISTINCT partner_id)
+            FROM bonanza_progress
+            WHERE bonanza_id = ANY(:ids) AND partner_id IS NOT NULL
+            GROUP BY bonanza_id
+        """), {"ids": bonanza_ids}).fetchall()
+        for r in std_rows:
+            if r[0] not in eligible_partners_map or eligible_partners_map[r[0]] == 0:
+                eligible_partners_map[r[0]] = r[1]
+
     result = []
     for b in bonanzas:
         cc = claims_count.get(b.id, {})
+        brand_configs = brand_filters_map.get(b.id, [])
         result.append({
             "id": b.id,
             "name": b.name,
@@ -4512,10 +4679,25 @@ def list_vgk_bonanzas_staff(
             "total_budget": float(b.total_budget) if b.total_budget else None,
             "registered_target_bonus": b.registered_target_bonus,
             "image_url": b.image_url,
-            "brand_filter_ids": [bf["id"] for bf in brand_filters_map.get(b.id, [])],
-            "brand_names": ", ".join([bf["name"] for bf in brand_filters_map.get(b.id, [])]) or "All Brands",
+            "brand_filter_ids": [bf["brand_id"] for bf in brand_configs],
+            "brand_names": ", ".join([bf["brand_name"] for bf in brand_configs]) or "All Brands",
+            "brand_configs": brand_configs,
+            "category_filter_ids": category_filters_map.get(b.id, []),
+            "ec_l1_amount": float(b.ec_l1_amount) if b.ec_l1_amount is not None else None,
+            "ec_l2_amount": float(b.ec_l2_amount) if b.ec_l2_amount is not None else None,
+            "ec_l3_amount": float(b.ec_l3_amount) if b.ec_l3_amount is not None else None,
+            "ec_l4_amount": float(b.ec_l4_amount) if b.ec_l4_amount is not None else None,
+            "ec_l5_amount": float(b.ec_l5_amount) if b.ec_l5_amount is not None else None,
+            "ec_l1_trigger": b.ec_l1_trigger,
+            "ec_l2_trigger": b.ec_l2_trigger,
+            "ec_l3_trigger": b.ec_l3_trigger,
+            "ec_l4_trigger": b.ec_l4_trigger,
+            "ec_l5_trigger": b.ec_l5_trigger,
+            "trigger_event": b.trigger_event,
+            "advance_count_basis": b.advance_count_basis,
             "claims_summary": cc,
             "total_claims": sum(cc.values()),
+            "eligible_partners_count": eligible_partners_map.get(b.id, 0),
             "created_by": b.created_by
         })
 
@@ -4939,10 +5121,20 @@ def vgk_member_tracking(
         grace = bz.grace_days if bz.grace_days is not None else 15
         basis = (getattr(bz, 'advance_count_basis', None) or 'CIBIL').upper()
 
-        # ── Achieved count per partner for this bonanza ───────────────────────
+        eligible_map = {}
+        achieved_map = {}
+
+        # Get brand filters for this bonanza
+        bf_rows = db.execute(text("""
+            SELECT brand_id FROM bonanza_brand_filters WHERE bonanza_id = :bid
+        """), {'bid': bz.id}).fetchall()
+        brand_ids = [r[0] for r in bf_rows]
+        is_brand_bonanza = bz.reward_type in ('brand_wise_commission', 'extra_commission') or len(brand_ids) > 0
+
+        # ── Count per partner for this bonanza ──────────────────────────────
         if basis == 'FIRST_DVR':
             # DC-BONANZA-FIRST-DVR-002: count CONFIRMED income_entries by income_date
-            # (lead owner = associated_partner_id).  Replaces COMMISSION-entry approach.
+            # (lead owner = associated_partner_id).
             count_rows = db.execute(text("""
                 SELECT cl.associated_partner_id, COUNT(DISTINCT ie.lead_id)
                 FROM income_entries ie
@@ -4955,34 +5147,52 @@ def vgk_member_tracking(
                 GROUP BY cl.associated_partner_id
             """), {'pids': partner_ids, 'start': bz.start_date,
                    'end': bz.end_date, 'grace': grace}).fetchall()
+            achieved_map = {r[0]: int(r[1]) for r in count_rows}
+
+            # Eligible for FIRST_DVR: submitted in range matching segment
+            seg = bz.segment_id
+            _is_solar = seg and seg in _SOLAR_CAT_IDS
+            seg_clause = "AND cl.category_id = ANY(:seg_list)" if _is_solar else ("AND cl.category_id = :seg" if seg else "")
+            params = {
+                'pids': partner_ids,
+                'start': bz.start_date,
+                'end': bz.end_date,
+                'seg_list': list(_SOLAR_CAT_IDS)
+            }
+            if seg and not _is_solar:
+                params['seg'] = seg
+            elig_rows = db.execute(text(f"""
+                SELECT COALESCE(
+                    cl.associated_partner_id,
+                    CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
+                              AND cl.source_ref_id IS NOT NULL
+                              AND cl.source_ref_id ~ '^[0-9]+$'
+                         THEN cl.source_ref_id::int END
+                ) AS partner_id,
+                COUNT(DISTINCT cl.id)
+                FROM crm_leads cl
+                WHERE COALESCE(
+                    cl.associated_partner_id,
+                    CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
+                              AND cl.source_ref_id IS NOT NULL
+                              AND cl.source_ref_id ~ '^[0-9]+$'
+                         THEN cl.source_ref_id::int END
+                ) = ANY(:pids)
+                  AND cl.submit_date IS NOT NULL
+                  AND cl.submit_date >= CAST(:start AS DATE)
+                  AND cl.submit_date <= CAST(:end AS DATE)
+                  {seg_clause}
+                GROUP BY partner_id
+            """), params).fetchall()
+            eligible_map = {r[0]: int(r[1]) for r in elig_rows}
+
         else:
             seg = bz.segment_id
             _is_solar = seg and seg in _SOLAR_CAT_IDS
             if _is_solar:
-                # SOLAR CAMPAIGN path: count advances from vgk_solar_cibil_advances
-                if basis == 'DVR':
-                    kind_filter = "AND a.kind = 'DVR_ADVANCE'"
-                    eff_date_sql = "cl.first_payment_received_date"
-                    null_guard = "cl.first_payment_received_date IS NOT NULL"
-                elif basis == 'BOTH':
-                    kind_filter = (
-                        "AND ("
-                        "  a.kind = 'ADVANCE' "
-                        "  OR (a.kind = 'DVR_ADVANCE' "
-                        "      AND cl.first_payment_received_date IS NOT NULL)"
-                        ")"
-                    )
-                    eff_date_sql = (
-                        "CASE WHEN a.kind = 'DVR_ADVANCE' "
-                        "THEN cl.first_payment_received_date "
-                        "ELSE GREATEST(cl.submit_date, COALESCE(cl.cibil_score_updated_at::date, cl.submit_date)) END"
-                    )
-                    null_guard = "cl.submit_date IS NOT NULL"
-                else:  # CIBIL (default)
-                    kind_filter = "AND a.kind = 'ADVANCE'"
-                    eff_date_sql = "GREATEST(cl.submit_date, COALESCE(cl.cibil_score_updated_at::date, cl.submit_date))"
-                    null_guard = "cl.submit_date IS NOT NULL"
-
+                seg_clause = "AND cl.category_id = ANY(:seg_list)"
+                brand_clause = "AND cl.solar_brand_id = ANY(:brand_ids)" if brand_ids else ""
+                
                 params = {
                     'pids': partner_ids,
                     'start': bz.start_date,
@@ -4990,19 +5200,76 @@ def vgk_member_tracking(
                     'grace': grace,
                     'seg_list': list(_SOLAR_CAT_IDS)
                 }
-                count_rows = db.execute(text(f"""
-                    SELECT a.partner_id, COUNT(DISTINCT a.lead_id)
-                    FROM vgk_solar_cibil_advances a
-                    JOIN crm_leads cl ON cl.id = a.lead_id
-                    WHERE a.partner_id = ANY(:pids)
-                      AND a.status IN ('RELEASED','PENDING')
-                      AND {null_guard}
-                      AND {eff_date_sql} >= CAST(:start AS DATE)
-                      AND {eff_date_sql} <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
-                      {kind_filter}
-                      AND cl.category_id = ANY(:seg_list)
-                    GROUP BY a.partner_id
-                """), params).fetchall()
+                if brand_ids:
+                    params['brand_ids'] = brand_ids
+
+                if is_brand_bonanza:
+                    # Brand Bonanza: Eligible = submitted in campaign range OR received payment in campaign range + grace.
+                    # Done = (submitted in campaign range AND received payment at any time) OR received payment in campaign range + grace.
+                    count_rows = db.execute(text(f"""
+                        SELECT COALESCE(
+                            cl.associated_partner_id,
+                            CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
+                                      AND cl.source_ref_id IS NOT NULL
+                                      AND cl.source_ref_id ~ '^[0-9]+$'
+                                 THEN cl.source_ref_id::int END
+                        ) AS partner_id,
+                        COUNT(DISTINCT CASE WHEN (
+                            (cl.submit_date IS NOT NULL AND cl.submit_date >= CAST(:start AS DATE) AND cl.submit_date <= CAST(:end AS DATE))
+                            OR
+                            (cl.first_payment_received_date IS NOT NULL AND cl.first_payment_received_date >= CAST(:start AS DATE) AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL))
+                        ) THEN cl.id END) AS eligible_count,
+                        COUNT(DISTINCT CASE WHEN (
+                            (cl.submit_date IS NOT NULL AND cl.submit_date >= CAST(:start AS DATE) AND cl.submit_date <= CAST(:end AS DATE) AND cl.first_payment_received_date IS NOT NULL)
+                            OR
+                            (cl.first_payment_received_date IS NOT NULL AND cl.first_payment_received_date >= CAST(:start AS DATE) AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL))
+                        ) THEN cl.id END) AS done_count
+                        FROM crm_leads cl
+                        WHERE COALESCE(
+                            cl.associated_partner_id,
+                            CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
+                                      AND cl.source_ref_id IS NOT NULL
+                                      AND cl.source_ref_id ~ '^[0-9]+$'
+                                 THEN cl.source_ref_id::int END
+                        ) = ANY(:pids)
+                          {seg_clause}
+                          {brand_clause}
+                        GROUP BY partner_id
+                    """), params).fetchall()
+                    for r in count_rows:
+                        eligible_map[r[0]] = int(r[1])
+                        achieved_map[r[0]] = int(r[2])
+                else:
+                    # Standard Solar: Eligible = submitted in campaign range.
+                    # Done = first payment received in campaign range + grace days (regardless of submit date).
+                    count_rows = db.execute(text(f"""
+                        SELECT COALESCE(
+                            cl.associated_partner_id,
+                            CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
+                                      AND cl.source_ref_id IS NOT NULL
+                                      AND cl.source_ref_id ~ '^[0-9]+$'
+                                 THEN cl.source_ref_id::int END
+                        ) AS partner_id,
+                        COUNT(DISTINCT CASE WHEN cl.submit_date IS NOT NULL 
+                                             AND cl.submit_date >= CAST(:start AS DATE)
+                                             AND cl.submit_date <= CAST(:end AS DATE) THEN cl.id END) AS eligible_count,
+                        COUNT(DISTINCT CASE WHEN cl.first_payment_received_date IS NOT NULL 
+                                             AND cl.first_payment_received_date >= CAST(:start AS DATE)
+                                             AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL) THEN cl.id END) AS done_count
+                        FROM crm_leads cl
+                        WHERE COALESCE(
+                            cl.associated_partner_id,
+                            CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
+                                      AND cl.source_ref_id IS NOT NULL
+                                      AND cl.source_ref_id ~ '^[0-9]+$'
+                                 THEN cl.source_ref_id::int END
+                        ) = ANY(:pids)
+                          {seg_clause}
+                        GROUP BY partner_id
+                    """), params).fetchall()
+                    for r in count_rows:
+                        eligible_map[r[0]] = int(r[1])
+                        achieved_map[r[0]] = int(r[2])
             else:
                 # NON-SOLAR CAMPAIGN path: count completed deals in CRM
                 seg_clause = "AND cld.revenue_category_id = :seg_id" if seg else ""
@@ -5015,26 +5282,29 @@ def vgk_member_tracking(
                 if seg:
                     params['seg_id'] = seg
                 count_rows = db.execute(text(f"""
-                    SELECT cld.deal_source_id, COUNT(*)
+                    SELECT cld.deal_source_id,
+                           COUNT(DISTINCT cld.id) AS eligible_count,
+                           COUNT(DISTINCT CASE WHEN cld.deal_value_balance = 0
+                                                AND cld.status = 'completed'
+                                                AND cld.close_date IS NOT NULL
+                                                AND cld.close_date <= :end + INTERVAL '1 day' * :grace THEN cld.id END) AS done_count
                     FROM crm_lead_deals cld
                     WHERE cld.deal_source_id IN (
                         SELECT partner_code FROM official_partners WHERE id = ANY(:pids)
                     )
                       AND cld.deal_date >= :start
                       AND cld.deal_date <= :end
-                      AND cld.deal_value_balance = 0
-                      AND cld.status = 'completed'
-                      AND cld.close_date IS NOT NULL
-                      AND cld.close_date <= :end + INTERVAL '1 day' * :grace
                       {seg_clause}
                     GROUP BY cld.deal_source_id
                 """), params).fetchall()
                 
                 # Map partner_code back to partner_id
                 code_to_id = {r[2]: r[0] for r in all_partner_rows if r[2]}
-                count_rows = [(code_to_id.get(r[0]), r[1]) for r in count_rows if code_to_id.get(r[0])]
-
-        achieved_map = {r[0]: int(r[1]) for r in count_rows}
+                for r in count_rows:
+                    pid = code_to_id.get(r[0])
+                    if pid:
+                        eligible_map[pid] = int(r[1])
+                        achieved_map[pid] = int(r[2])
 
         # Claim statuses (bonanza level — no slab-level claim tracking)
         claim_rows = db.execute(text("""
@@ -5079,6 +5349,7 @@ def vgk_member_tracking(
                     "partner_id":   pid,
                     "partner_name": partner_map[pid]["name"],
                     "partner_code": partner_map[pid]["code"],
+                    "eligible":     eligible_map.get(pid, 0),
                     "achieved":     achieved,
                     "gap":          gap,
                     "is_eligible":  is_elig,
@@ -5099,6 +5370,8 @@ def vgk_member_tracking(
                 "award_name":    t["award"],
                 "start_date":    bz.start_date.isoformat() if bz.start_date else None,
                 "end_date":      bz.end_date.isoformat()   if bz.end_date   else None,
+                "status":        bz.status,
+                "grace_days":    grace,
                 "members":       members_list,
                 "eligible_count": elig_count,
                 "total_members":  len(members_list),
@@ -5130,3 +5403,252 @@ def my_advance_cap(
     company_id = getattr(current_user, 'company_id', 1)
     cap = get_cap_status(db, partner_id, company_id)
     return {"success": True, "cap_status": cap}
+
+
+@router.get("/vgk/member-tracking/details")
+def vgk_member_tracking_details(
+    bonanza_id: int,
+    partner_id: int,
+    only_triggered: bool = False,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user_hybrid),
+):
+    from app.models.staff import StaffEmployee
+    if not isinstance(current_user, StaffEmployee):
+        raise HTTPException(status_code=403, detail="Staff access required")
+
+    bz = db.query(Bonanza).filter(Bonanza.id == bonanza_id, Bonanza.is_deleted == False).first()
+    if not bz:
+        raise HTTPException(status_code=404, detail="Bonanza not found")
+
+    partner = db.execute(text("SELECT id, partner_name, partner_code FROM official_partners WHERE id = :pid"), {'pid': partner_id}).fetchone()
+    if not partner:
+        raise HTTPException(status_code=404, detail="Partner not found")
+
+    grace = bz.grace_days if bz.grace_days is not None else 15
+    basis = (getattr(bz, 'advance_count_basis', None) or 'CIBIL').upper()
+
+    leads_list = []
+
+    # Get brand filters for this bonanza
+    bf_rows = db.execute(text("""
+        SELECT brand_id FROM bonanza_brand_filters WHERE bonanza_id = :bid
+    """), {'bid': bz.id}).fetchall()
+    brand_ids = [r[0] for r in bf_rows]
+    is_brand_bonanza = bz.reward_type in ('brand_wise_commission', 'extra_commission') or len(brand_ids) > 0
+
+    if basis == 'FIRST_DVR':
+        if only_triggered:
+            rows = db.execute(text("""
+                SELECT DISTINCT cl.id, cl.name, cl.phone, cl.submit_date, cl.first_payment_received_date, 
+                       cl.status, cl.solar_pipeline_status, cl.category_id, cl.solar_brand_id, b.brand_name,
+                       cl.deal_value_total, ie.income_date
+                FROM income_entries ie
+                JOIN crm_leads cl ON cl.id = ie.lead_id
+                LEFT JOIN vgk_incentive_brands b ON b.id = cl.solar_brand_id
+                WHERE cl.associated_partner_id = :pid
+                  AND ie.status = 'CONFIRMED'
+                  AND ie.lead_id IS NOT NULL
+                  AND ie.income_date >= :start
+                  AND ie.income_date <= :end + INTERVAL '1 day' * :grace
+                ORDER BY ie.income_date DESC
+            """), {'pid': partner_id, 'start': bz.start_date, 'end': bz.end_date, 'grace': grace}).fetchall()
+            for r in rows:
+                leads_list.append({
+                    "lead_id": r[0],
+                    "customer_name": r[1] or '—',
+                    "mobile": r[2] or '—',
+                    "submit_date": r[3].isoformat() if r[3] else None,
+                    "payment_date": r[11].isoformat() if r[11] else None,
+                    "status": r[5] or '—',
+                    "solar_pipeline_status": r[6] or '—',
+                    "brand_name": r[9] or '—',
+                    "deal_value": float(r[10]) if r[10] is not None else 0.0,
+                })
+        else:
+            seg = bz.segment_id
+            _is_solar = seg and seg in _SOLAR_CAT_IDS
+            seg_clause = "AND cl.category_id = ANY(:seg_list)" if _is_solar else ("AND cl.category_id = :seg" if seg else "")
+            params = {
+                'pid': partner_id,
+                'start': bz.start_date,
+                'end': bz.end_date,
+                'seg_list': list(_SOLAR_CAT_IDS)
+            }
+            if seg and not _is_solar:
+                params['seg'] = seg
+            rows = db.execute(text(f"""
+                SELECT DISTINCT cl.id, cl.name, cl.phone, cl.submit_date, cl.first_payment_received_date, 
+                       cl.status, cl.solar_pipeline_status, cl.category_id, cl.solar_brand_id, b.brand_name,
+                       cl.deal_value_total
+                FROM crm_leads cl
+                LEFT JOIN vgk_incentive_brands b ON b.id = cl.solar_brand_id
+                WHERE (
+                    cl.associated_partner_id = :pid
+                    OR (
+                        cl.source_ref_type IN ('vgk','vgk_partner','partner')
+                        AND cl.source_ref_id IS NOT NULL
+                        AND cl.source_ref_id ~ '^[0-9]+$'
+                        AND cl.source_ref_id::int = :pid
+                    )
+                )
+                  AND cl.submit_date IS NOT NULL
+                  AND cl.submit_date >= CAST(:start AS DATE)
+                  AND cl.submit_date <= CAST(:end AS DATE)
+                  {seg_clause}
+                ORDER BY cl.submit_date DESC
+            """), params).fetchall()
+            for r in rows:
+                leads_list.append({
+                    "lead_id": r[0],
+                    "customer_name": r[1] or '—',
+                    "mobile": r[2] or '—',
+                    "submit_date": r[3].isoformat() if r[3] else None,
+                    "payment_date": r[4].isoformat() if r[4] else None,
+                    "status": r[5] or '—',
+                    "solar_pipeline_status": r[6] or '—',
+                    "brand_name": r[9] or '—',
+                    "deal_value": float(r[10]) if r[10] is not None else 0.0,
+                })
+    else:
+        seg = bz.segment_id
+        _is_solar = seg and seg in _SOLAR_CAT_IDS
+        if _is_solar:
+            brand_clause = "AND cl.solar_brand_id = ANY(:brand_ids)" if brand_ids else ""
+            
+            if is_brand_bonanza:
+                if only_triggered:
+                    where_clause = """
+                        AND (
+                            (cl.submit_date IS NOT NULL AND cl.submit_date >= CAST(:start AS DATE) AND cl.submit_date <= CAST(:end AS DATE) AND cl.first_payment_received_date IS NOT NULL)
+                            OR
+                            (cl.first_payment_received_date IS NOT NULL AND cl.first_payment_received_date >= CAST(:start AS DATE) AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL))
+                        )
+                    """
+                else:
+                    where_clause = """
+                        AND (
+                            (cl.submit_date IS NOT NULL AND cl.submit_date >= CAST(:start AS DATE) AND cl.submit_date <= CAST(:end AS DATE))
+                            OR
+                            (cl.first_payment_received_date IS NOT NULL AND cl.first_payment_received_date >= CAST(:start AS DATE) AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL))
+                        )
+                    """
+                order_col = "sort_date"
+            else:
+                if only_triggered:
+                    # Standard solar achievements: payment in range (regardless of submit date)
+                    where_clause = """
+                        AND cl.first_payment_received_date IS NOT NULL
+                        AND cl.first_payment_received_date >= CAST(:start AS DATE)
+                        AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
+                    """
+                    order_col = "cl.first_payment_received_date"
+                else:
+                    # General eligible list: submit date in range
+                    where_clause = """
+                        AND cl.submit_date IS NOT NULL
+                        AND cl.submit_date >= CAST(:start AS DATE)
+                        AND cl.submit_date <= CAST(:end AS DATE)
+                    """
+                    order_col = "cl.submit_date"
+                
+            params = {
+                'pid': partner_id,
+                'start': bz.start_date,
+                'end': bz.end_date,
+                'grace': grace,
+                'seg_list': list(_SOLAR_CAT_IDS)
+            }
+            if brand_ids:
+                params['brand_ids'] = brand_ids
+
+            rows = db.execute(text(f"""
+                SELECT DISTINCT cl.id, cl.name, cl.phone, cl.submit_date, cl.first_payment_received_date, 
+                       cl.status, cl.solar_pipeline_status, cl.category_id, cl.solar_brand_id, b.brand_name,
+                       cl.deal_value_total,
+                       COALESCE(cl.first_payment_received_date, cl.submit_date) AS sort_date
+                FROM crm_leads cl
+                LEFT JOIN vgk_incentive_brands b ON b.id = cl.solar_brand_id
+                WHERE (
+                    cl.associated_partner_id = :pid
+                    OR (
+                        cl.source_ref_type IN ('vgk','vgk_partner','partner')
+                        AND cl.source_ref_id IS NOT NULL
+                        AND cl.source_ref_id ~ '^[0-9]+$'
+                        AND cl.source_ref_id::int = :pid
+                    )
+                )
+                  {where_clause}
+                  AND cl.category_id = ANY(:seg_list)
+                  {brand_clause}
+                ORDER BY {order_col} DESC
+            """), params).fetchall()
+            for r in rows:
+                leads_list.append({
+                    "lead_id": r[0],
+                    "customer_name": r[1] or '—',
+                    "mobile": r[2] or '—',
+                    "submit_date": r[3].isoformat() if r[3] else None,
+                    "payment_date": r[4].isoformat() if r[4] else None,
+                    "status": r[5] or '—',
+                    "solar_pipeline_status": r[6] or '—',
+                    "brand_name": r[9] or '—',
+                    "deal_value": float(r[10]) if r[10] is not None else 0.0,
+                })
+        else:
+            seg_clause = "AND cld.revenue_category_id = :seg_id" if seg else ""
+            where_clause = "AND cld.deal_date >= :start AND cld.deal_date <= :end"
+            if only_triggered:
+                where_clause += """
+                    AND cld.deal_value_balance = 0
+                    AND cld.status = 'completed'
+                    AND cld.close_date IS NOT NULL
+                    AND cld.close_date <= :end + INTERVAL '1 day' * :grace
+                """
+            params = {
+                'pid': partner_id,
+                'partner_code': partner[2],
+                'start': bz.start_date,
+                'end': bz.end_date,
+                'grace': grace,
+            }
+            if seg:
+                params['seg_id'] = seg
+            rows = db.execute(text(f"""
+                SELECT DISTINCT cld.id, cl.id, cl.name, cl.phone, cld.deal_date, cld.close_date, 
+                       cld.status, cl.solar_pipeline_status, b.brand_name, cld.deal_value_total
+                FROM crm_lead_deals cld
+                LEFT JOIN crm_leads cl ON cl.id = cld.lead_id
+                LEFT JOIN vgk_incentive_brands b ON b.id = cl.solar_brand_id
+                WHERE cld.deal_source_id = :partner_code
+                  {where_clause}
+                  {seg_clause}
+                ORDER BY cld.deal_date DESC
+            """), params).fetchall()
+            for r in rows:
+                leads_list.append({
+                    "lead_id": r[1] or r[0],
+                    "customer_name": r[2] or '—',
+                    "mobile": r[3] or '—',
+                    "submit_date": r[4].isoformat() if r[4] else None,
+                    "payment_date": r[5].isoformat() if r[5] else None,
+                    "status": r[6] or '—',
+                    "solar_pipeline_status": r[7] or '—',
+                    "brand_name": r[8] or '—',
+                    "deal_value": float(r[9]) if r[9] is not None else 0.0,
+                })
+
+    return {
+        "success": True,
+        "bonanza": {
+            "id": bz.id,
+            "name": bz.name,
+            "basis": basis,
+        },
+        "partner": {
+            "id": partner[0],
+            "name": partner[1],
+            "code": partner[2],
+        },
+        "leads": leads_list,
+    }
