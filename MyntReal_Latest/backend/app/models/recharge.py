@@ -44,6 +44,8 @@ class RechargePlan(Base):
     id = Column(Integer, primary_key=True, index=True)
     operator = Column(String, nullable=False, index=True) # e.g., 'Airtel', 'Jio'
     circle = Column(String, nullable=True) # e.g., 'All India'
+    category = Column(String, nullable=True) # e.g., 'Truly Unlimited', 'Data Add-on'
+    tags = Column(String, nullable=True) # e.g., '5G, Prime Video'
     amount = Column(Float, nullable=False)
     validity = Column(String, nullable=False) # e.g., '28 Days'
     data_benefit = Column(String, nullable=True) # e.g., '1.5 GB/Day'

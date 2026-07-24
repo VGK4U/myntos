@@ -671,6 +671,10 @@ setInterval(nextWhy, 4500);
         <!-- Dynamic Plans Container -->
         <div id="hubPlansSection" style="display: none; margin-bottom: 20px;">
             <label style="margin-top:10px;">Available Plans</label>
+            <!-- Category Tabs Container -->
+            <div id="hubPlanTabs" style="display: flex; gap: 8px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 5px; scrollbar-width: none;">
+               <!-- Tabs injected here -->
+            </div>
             <div id="hubRechargePlansContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 250px; overflow-y: auto; padding: 5px;">
                 <!-- Plans will be injected here via JS -->
             </div>
@@ -710,10 +714,13 @@ document.getElementById('hubRechargeModal').addEventListener('click', function(e
     if(e.target === this) closeRechargeModal();
 });
 
+let currentOperatorPlans = []; // Store plans globally for filtering
+
 document.getElementById('hubRechargeOperator').addEventListener('change', async function(e) {
     const operator = e.target.value;
     const plansSection = document.getElementById('hubPlansSection');
     const plansContainer = document.getElementById('hubRechargePlansContainer');
+    const tabsContainer = document.getElementById('hubPlanTabs');
     const amountInput = document.getElementById('hubRechargeAmount');
     
     if(!operator) {
@@ -723,37 +730,75 @@ document.getElementById('hubRechargeOperator').addEventListener('change', async 
     }
     
     plansContainer.innerHTML = '<div style="grid-column: 1 / -1; text-align: center;"><i class="fas fa-spinner fa-spin"></i> Fetching best plans...</div>';
+    tabsContainer.innerHTML = '';
     plansSection.style.display = 'block';
     amountInput.value = '';
     
     try {
         const res = await fetch(`http://127.0.0.1:8000/api/v1/recharge/plans?operator=${operator}`);
-        const plans = await res.json();
+        currentOperatorPlans = await res.json();
         
-        if(plans.length === 0) {
+        if(currentOperatorPlans.length === 0) {
             plansContainer.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #64748b;">No static plans found for this operator.</div>';
             amountInput.removeAttribute('readonly');
             return;
         }
         
-        let html = '';
-        plans.forEach(plan => {
-            html += `
-            <div class="hub-plan-card" style="border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px; cursor: pointer; transition: all 0.2s;" onclick="selectHubPlan(${plan.amount}, this)">
-                <div style="font-size: 1.25rem; font-weight: 800; color: #10b981; margin-bottom: 5px;">₹${plan.amount}</div>
-                <div style="font-size: 0.8rem; font-weight: 600; color: #334155;"><i class="fas fa-clock text-muted me-1"></i> ${plan.validity}</div>
-                <div style="font-size: 0.8rem; font-weight: 600; color: #334155; margin-bottom: 8px;"><i class="fas fa-wifi text-muted me-1"></i> ${plan.data_benefit}</div>
-                <div style="font-size: 0.75rem; color: #64748b; line-height: 1.2;">${plan.description}</div>
-            </div>
-            `;
+        // Extract unique categories
+        const categories = [...new Set(currentOperatorPlans.map(p => p.category || 'Other'))];
+        let tabsHtml = '';
+        categories.forEach((cat, idx) => {
+            tabsHtml += `<div class="hub-plan-tab ${idx === 0 ? 'active' : ''}" onclick="filterHubPlans('${cat}', this)" style="padding: 6px 12px; background: ${idx === 0 ? '#10b981' : '#e2e8f0'}; color: ${idx === 0 ? 'white' : '#334155'}; border-radius: 20px; font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: 0.3s;">${cat}</div>`;
         });
-        plansContainer.innerHTML = html;
+        tabsContainer.innerHTML = tabsHtml;
+        
+        // Render first category by default
+        renderHubPlans(categories[0]);
         amountInput.setAttribute('readonly', 'true');
     } catch(err) {
         plansContainer.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #ef4444;">Error fetching plans.</div>';
         amountInput.removeAttribute('readonly');
     }
 });
+
+function filterHubPlans(category, tabElement) {
+    // Update active tab styling
+    document.querySelectorAll('.hub-plan-tab').forEach(el => {
+        el.style.background = '#e2e8f0';
+        el.style.color = '#334155';
+    });
+    tabElement.style.background = '#10b981';
+    tabElement.style.color = 'white';
+    
+    renderHubPlans(category);
+}
+
+function renderHubPlans(category) {
+    const plansContainer = document.getElementById('hubRechargePlansContainer');
+    const filteredPlans = currentOperatorPlans.filter(p => (p.category || 'Other') === category);
+    
+    let html = '';
+    filteredPlans.forEach(plan => {
+        let tagsHtml = '';
+        if(plan.tags) {
+            const tags = plan.tags.split(',').map(t => t.trim()).filter(t => t);
+            tags.forEach(tag => {
+                tagsHtml += `<span style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; margin-right: 4px; display: inline-block; margin-bottom: 4px;">${tag}</span>`;
+            });
+        }
+        
+        html += `
+        <div class="hub-plan-card" style="border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px; cursor: pointer; transition: all 0.2s; position: relative;" onclick="selectHubPlan(${plan.amount}, this)">
+            <div style="font-size: 1.25rem; font-weight: 800; color: #10b981; margin-bottom: 5px;">₹${plan.amount}</div>
+            <div style="font-size: 0.8rem; font-weight: 600; color: #334155;"><i class="fas fa-clock text-muted me-1"></i> ${plan.validity}</div>
+            <div style="font-size: 0.8rem; font-weight: 600; color: #334155; margin-bottom: 8px;"><i class="fas fa-wifi text-muted me-1"></i> ${plan.data_benefit}</div>
+            <div style="margin-bottom: 4px;">${tagsHtml}</div>
+            <div style="font-size: 0.75rem; color: #64748b; line-height: 1.2;">${plan.description}</div>
+        </div>
+        `;
+    });
+    plansContainer.innerHTML = html;
+}
 
 function selectHubPlan(amount, cardElement) {
     document.getElementById('hubRechargeAmount').value = amount;

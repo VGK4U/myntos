@@ -130,12 +130,18 @@ def verify_payment(req: VerifyPaymentRequest, db: Session = Depends(get_db)):
                 "orderid": str(tx.id),
                 "format": "json"
             }
-            if tx.circle:
-                params["circlecode"] = tx.circle
+            params["circlecode"] = tx.circle if tx.circle else "2"
                 
             try:
                 response = requests.get(a1_url, params=params)
-                data = response.json()
+                print(f"A1Topup Raw Response: {response.text}")
+                
+                try:
+                    data = response.json()
+                except Exception:
+                    print("A1Topup returned non-JSON response.")
+                    data = {}
+                    
                 if data.get("status") == "Success":
                     tx.api_status = "Success"
                     tx.api_tx_id = str(data.get("txid", ""))
@@ -144,7 +150,7 @@ def verify_payment(req: VerifyPaymentRequest, db: Session = Depends(get_db)):
                     tx.api_status = "Failed"
                     tx.api_tx_id = str(data.get("txid", "ERROR"))
             except Exception as e:
-                print(f"A1Topup API Error: {e}")
+                print(f"A1Topup API Request Error: {e}")
                 tx.api_status = "Failed"
                 
             db.commit()
@@ -180,6 +186,8 @@ def get_plans(operator: str = None, db: Session = Depends(get_db)):
             "id": p.id,
             "operator": p.operator,
             "circle": p.circle,
+            "category": p.category,
+            "tags": p.tags,
             "amount": p.amount,
             "validity": p.validity,
             "data_benefit": p.data_benefit,
