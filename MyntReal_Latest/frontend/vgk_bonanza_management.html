@@ -237,7 +237,7 @@ tbody tr { background: #ffffff !important; }
                 </div>
                 <div class="form-group">
                     <label>Segment (Category)</label>
-                    <select class="form-select" id="mSegment">
+                    <select class="form-select" id="mSegment" onchange="toggleRewardFields()">
                         <option value="">All Segments</option>
                     </select>
                 </div>
@@ -262,6 +262,15 @@ tbody tr { background: #ffffff !important; }
                 <div class="form-group" id="mMaxWinnersGrp">
                     <label>Max Winners</label>
                     <input class="form-control" id="mMaxWinners" type="number" min="1" value="50" placeholder="50">
+                </div>
+                <div class="form-group" id="mAdvanceCountBasisGrp" style="display:none;grid-column:span 2">
+                    <label style="font-size:12px;color:#a5b4fc;font-weight:600;display:block;margin-bottom:4px">Advance Count Basis</label>
+                    <select class="form-select" id="mAdvanceCountBasis" style="background:#0f172a;border-color:#4338ca;color:#e2e8f0;font-size:13px">
+                        <option value="DVR">DVR Only — count 1st-payment DVR advances (₹1,000/₹500 per file, ≥ 1 Jul 2026)</option>
+                        <option value="CIBIL">CIBIL Only — count file submissions/clearances (₹1,000 per file)</option>
+                        <option value="BOTH">Both — count either kind (each lead counted once)</option>
+                    </select>
+                    <div style="font-size:10.5px;color:#6b7280;margin-top:3px">Controls which type of solar advance is counted when measuring a partner's progress toward this bonanza's targets.</div>
                 </div>
                 <div class="form-group">
                     <label>Reward Type *</label>
@@ -298,15 +307,7 @@ tbody tr { background: #ffffff !important; }
                                 <div style="font-size:10.5px;color:#7c3aed;margin-top:3px">The additional bonus this bonanza campaign pays on top of the base.</div>
                             </div>
                         </div>
-                        <!-- DC-SOLAR-DVR-ADV-20260701-001: advance kind that counts toward this campaign's slab target -->
-                        <div style="margin-top:12px">
-                            <label style="font-size:12px;color:#a5b4fc;font-weight:600;display:block;margin-bottom:4px">Advance Count Basis</label>
-                            <select class="form-select" id="mAdvanceCountBasis" style="background:#0f172a;border-color:#4338ca;color:#e2e8f0;font-size:13px">
-                                <option value="DVR">DVR Only — count 1st-payment DVR advances (₹1,000/₹500 per file, ≥ 1 Jul 2026)</option>
-                                <option value="BOTH">Both — count either kind (each lead counted once)</option>
-                            </select>
-                            <div style="font-size:10.5px;color:#6b7280;margin-top:3px">Controls which type of solar advance is counted when measuring a partner's progress toward this bonanza's slab targets.</div>
-                        </div>
+
                         <div id="slabPreview" style="margin-top:12px;background:rgba(0,0,0,.35);border-radius:8px;padding:10px 14px;font-size:13px;display:none">
                             <div style="color:#a5b4fc;font-weight:600;margin-bottom:6px;font-size:11px;letter-spacing:.04em;text-transform:uppercase">Auto-Credit Preview — Per File Released</div>
                             <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
@@ -783,6 +784,9 @@ function toggleRewardFields() {
     document.getElementById('mRegBonusGrp').style.display   = hideAuto;
     document.getElementById('mGraceGrp').style.display      = hideAuto;
     document.getElementById('mMaxWinnersGrp').style.display = hideAuto;
+    const segId = document.getElementById('mSegment').value;
+    const isSolar = ['6', '19', '36', '48'].includes(String(segId));
+    document.getElementById('mAdvanceCountBasisGrp').style.display = isSolar ? '' : 'none';
     if (isSlabWise) updateSlabPreview();
 }
 
@@ -1010,7 +1014,7 @@ async function saveBonanza() {
         slab_extra_amount: slabExtra,
         slab_base_reference: slabBase,
         // DC-SOLAR-DVR-ADV-20260701-001
-        advance_count_basis: isSlabWise ? (document.getElementById('mAdvanceCountBasis').value || 'DVR') : 'DVR',
+        advance_count_basis: ['6', '19', '36', '48'].includes(String(document.getElementById('mSegment').value)) ? (document.getElementById('mAdvanceCountBasis').value || 'DVR') : 'DVR',
     };
     // DC-EC-PER-LEVEL-TRIGGER-001: unified per-level trigger payload for all non-slab types
     if (!isSlabWise) {

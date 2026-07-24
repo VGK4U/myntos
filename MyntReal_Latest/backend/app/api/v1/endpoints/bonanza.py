@@ -3517,12 +3517,13 @@ async def get_all_user_bonanza_eligibility(
                 if pid_key in eligible_user_ids:
                     continue  # already in list (claimed)
                 _elig_basis = (getattr(bonanza, 'advance_count_basis', None) or 'CIBIL').upper()
+                _is_solar = bonanza.segment_id in _SOLAR_CAT_IDS
                 if _elig_basis == 'FIRST_DVR':
                     adv_count = _count_first_dvr_income_for_bonanza(db, pr[0], bonanza)
                 elif _is_solar_award_dvr(db, bonanza):
                     # DC-SOLAR-AWARD-DVR-001: award/gift + Solar + created ≥ 2026-07-01 → DVR stage
                     adv_count = _count_solar_advances_for_bonanza(db, pr[0], bonanza, basis_override='DVR')
-                elif bonanza.reward_type == 'slab_wise' or _elig_basis != 'CIBIL':
+                elif _is_solar or bonanza.reward_type == 'slab_wise' or _elig_basis != 'CIBIL':
                     adv_count = _count_solar_advances_for_bonanza(db, pr[0], bonanza)
                 else:
                     adv_count = _count_vgk_completed_deals(db, pr[2] or str(pr[0]), bonanza)
@@ -4955,64 +4956,83 @@ def vgk_member_tracking(
             """), {'pids': partner_ids, 'start': bz.start_date,
                    'end': bz.end_date, 'grace': grace}).fetchall()
         else:
-            # DC-BONANZA-FIRST-PMT-001: For CIBIL/DVR/BOTH basis bonanzas on solar segment,
-            # count solar leads per partner where the ACTUAL first validated payment was received
-            # within the bonanza window (first_payment_received_date from crm_lead_transactions).
-            # Replaces the old crm_lead_deals query which had 0 solar deals in Jul 2026.
-            seg        = bz.segment_id
-            # DC-BONANZA-SOLAR-MULTICOMP-001: segment_id=6 is MyntReal's Solar category.
-            # Across 4 companies solar appears as category_ids 6,19,36,48 (_SOLAR_CAT_IDS).
-            # When segment matches any solar id, expand filter to ALL solar category ids so
-            # leads from all companies are counted. Cast start/end to DATE (bonanza stores
-            # timestamps; first_payment_received_date is DATE — 00:00:00 < 14:18:00 gap
-            # would silently drop same-day leads otherwise).
-            if seg and seg in _SOLAR_CAT_IDS:
-                seg_clause = "AND cl.category_id = ANY(:seg_list)"
-                params     = {'pids': partner_ids,
-                              'start': bz.start_date,
-                              'end': bz.end_date,
-                              'grace': grace,
-                              'seg_list': list(_SOLAR_CAT_IDS)}
-            elif seg:
-                seg_clause = "AND cl.category_id = :seg"
-                params     = {'pids': partner_ids,
-                              'start': bz.start_date,
-                              'end': bz.end_date,
-                              'grace': grace,
-                              'seg': seg}
+            seg = bz.segment_id
+            _is_solar = seg and seg in _SOLAR_CAT_IDS
+            if _is_solar:
+                # SOLAR CAMPAIGN path: count advances from vgk_solar_cibil_advances
+                if basis == 'DVR':
+                    kind_filter = "AND a.kind = 'DVR_ADVANCE'"
+                    eff_date_sql = "cl.first_payment_received_date"
+                    null_guard = "cl.first_payment_received_date IS NOT NULL"
+                elif basis == 'BOTH':
+                    kind_filter = (
+                        "AND ("
+                        "  a.kind = 'ADVANCE' "
+                        "  OR (a.kind = 'DVR_ADVANCE' "
+                        "      AND cl.first_payment_received_date IS NOT NULL)"
+                        ")"
+                    )
+                    eff_date_sql = (
+                        "CASE WHEN a.kind = 'DVR_ADVANCE' "
+                        "THEN cl.first_payment_received_date "
+                        "ELSE GREATEST(cl.submit_date, COALESCE(cl.cibil_score_updated_at::date, cl.submit_date)) END"
+                    )
+                    null_guard = "cl.submit_date IS NOT NULL"
+                else:  # CIBIL (default)
+                    kind_filter = "AND a.kind = 'ADVANCE'"
+                    eff_date_sql = "GREATEST(cl.submit_date, COALESCE(cl.cibil_score_updated_at::date, cl.submit_date))"
+                    null_guard = "cl.submit_date IS NOT NULL"
+
+                params = {
+                    'pids': partner_ids,
+                    'start': bz.start_date,
+                    'end': bz.end_date,
+                    'grace': grace,
+                    'seg_list': list(_SOLAR_CAT_IDS)
+                }
+                count_rows = db.execute(text(f"""
+                    SELECT a.partner_id, COUNT(DISTINCT a.lead_id)
+                    FROM vgk_solar_cibil_advances a
+                    JOIN crm_leads cl ON cl.id = a.lead_id
+                    WHERE a.partner_id = ANY(:pids)
+                      AND a.status IN ('RELEASED','PENDING')
+                      AND {null_guard}
+                      AND {eff_date_sql} >= CAST(:start AS DATE)
+                      AND {eff_date_sql} <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
+                      {kind_filter}
+                      AND cl.category_id = ANY(:seg_list)
+                    GROUP BY a.partner_id
+                """), params).fetchall()
             else:
-                seg_clause = ""
-                params     = {'pids': partner_ids,
-                              'start': bz.start_date,
-                              'end': bz.end_date,
-                              'grace': grace}
-            # DC-BONANZA-SRC-REF-001 (Jul 2026): ground-source partners are stored as
-            # source_ref_id (type vgk/vgk_partner/partner) when associated_partner_id
-            # was never backfilled.  COALESCE makes both columns equally eligible so
-            # Velaga Ramnath-type partners are counted even with NULL associated_partner_id.
-            count_rows = db.execute(text(f"""
-                SELECT COALESCE(
-                    cl.associated_partner_id,
-                    CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
-                              AND cl.source_ref_id IS NOT NULL
-                              AND cl.source_ref_id ~ '^[0-9]+$'
-                         THEN cl.source_ref_id::int END
-                ) AS partner_id,
-                COUNT(DISTINCT cl.id)
-                FROM crm_leads cl
-                WHERE COALESCE(
-                    cl.associated_partner_id,
-                    CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
-                              AND cl.source_ref_id IS NOT NULL
-                              AND cl.source_ref_id ~ '^[0-9]+$'
-                         THEN cl.source_ref_id::int END
-                ) = ANY(:pids)
-                  AND cl.first_payment_received_date IS NOT NULL
-                  AND cl.first_payment_received_date >= CAST(:start AS DATE)
-                  AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
-                  {seg_clause}
-                GROUP BY partner_id
-            """), params).fetchall()
+                # NON-SOLAR CAMPAIGN path: count completed deals in CRM
+                seg_clause = "AND cld.revenue_category_id = :seg_id" if seg else ""
+                params = {
+                    'pids': partner_ids,
+                    'start': bz.start_date,
+                    'end': bz.end_date,
+                    'grace': grace,
+                }
+                if seg:
+                    params['seg_id'] = seg
+                count_rows = db.execute(text(f"""
+                    SELECT cld.deal_source_id, COUNT(*)
+                    FROM crm_lead_deals cld
+                    WHERE cld.deal_source_id IN (
+                        SELECT partner_code FROM official_partners WHERE id = ANY(:pids)
+                    )
+                      AND cld.deal_date >= :start
+                      AND cld.deal_date <= :end
+                      AND cld.deal_value_balance = 0
+                      AND cld.status = 'completed'
+                      AND cld.close_date IS NOT NULL
+                      AND cld.close_date <= :end + INTERVAL '1 day' * :grace
+                      {seg_clause}
+                    GROUP BY cld.deal_source_id
+                """), params).fetchall()
+                
+                # Map partner_code back to partner_id
+                code_to_id = {r[2]: r[0] for r in all_partner_rows if r[2]}
+                count_rows = [(code_to_id.get(r[0]), r[1]) for r in count_rows if code_to_id.get(r[0])]
 
         achieved_map = {r[0]: int(r[1]) for r in count_rows}
 
