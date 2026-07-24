@@ -116,6 +116,20 @@ const StaffSidebar = {
         // Get user data from localStorage or API
         await this.loadUserData();
         
+        if (this.userData) {
+            const u = this.userData;
+            if (u.staff_type === 'FREELANCER' && u.freelancer_access_mode === 'only_leads') {
+                const allowedPaths = ['/staff/dashboard', '/staff/mnr-leads-master', '/staff/mnr-leads', '/staff/login'];
+                const currentPath = window.location.pathname;
+                const isAllowed = allowedPaths.some(p => currentPath === p || currentPath.startsWith(p + '/') || currentPath.startsWith(p + '?'));
+                if (!isAllowed) {
+                    console.warn('[DC-REDIRECT] Restricted freelancer accessed unauthorized page:', currentPath, 'redirecting to dashboard');
+                    window.location.href = '/staff/dashboard';
+                    return;
+                }
+            }
+        }
+        
         if (!this.userData) {
             if (this.authError === 'NO_TOKEN' || this.authError === 'AUTH_FAILED') {
                 const currentPath = window.location.pathname + window.location.search;
@@ -454,8 +468,11 @@ const StaffSidebar = {
         try {
             const cachedData = localStorage.getItem('staff_user');
             if (cachedData) {
-                this.userData = JSON.parse(cachedData);
-                return;
+                const parsed = JSON.parse(cachedData);
+                if (parsed && parsed.freelancer_access_mode !== undefined && parsed.staff_type !== 'FREELANCER') {
+                    this.userData = parsed;
+                    return;
+                }
             }
 
             const token = localStorage.getItem('staff_token');
@@ -957,29 +974,33 @@ const StaffSidebar = {
             ['VGK4U','VGK4U SUPREME'].includes(_ovSt)
         );
 
-        html += `
-            <a href="/staff/progress" class="nav-item pinned-top-link ${isProgressActive ? 'active' : ''}">
-                <i class="fas fa-chart-line"></i>
-                <span>Progress</span>
-            </a>
-            ${_showOverview ? `
-            <a href="/staff/overview" class="nav-item pinned-top-link ${isOverviewActive ? 'active' : ''}">
-                <i class="fas fa-table-cells"></i>
-                <span>Overview</span>
-            </a>` : ''}
-            <a href="/staff/tasks/day-planner" class="nav-item pinned-top-link ${isDayPlannerActive ? 'active' : ''}">
-                <i class="fas fa-calendar-day"></i>
-                <span>Task Planner</span>
-            </a>
-            <a href="/staff/kra-status" class="nav-item pinned-top-link ${isKraStatusActive ? 'active' : ''}">
-                <i class="fas fa-chart-bar"></i>
-                <span>KRA Status</span>
-            </a>
-            <a href="/staff/timesheet" class="nav-item pinned-top-link ${isTimesheetActive ? 'active' : ''}">
-                <i class="fas fa-clock"></i>
-                <span>Time Sheet</span>
-            </a>
-        `;
+        const isRestrictedFreelancer = this.userData?.staff_type === 'FREELANCER' && this.userData?.freelancer_access_mode === 'only_leads';
+
+        if (!isRestrictedFreelancer) {
+            html += `
+                <a href="/staff/progress" class="nav-item pinned-top-link ${isProgressActive ? 'active' : ''}">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Progress</span>
+                </a>
+                ${_showOverview ? `
+                <a href="/staff/overview" class="nav-item pinned-top-link ${isOverviewActive ? 'active' : ''}">
+                    <i class="fas fa-table-cells"></i>
+                    <span>Overview</span>
+                </a>` : ''}
+                <a href="/staff/tasks/day-planner" class="nav-item pinned-top-link ${isDayPlannerActive ? 'active' : ''}">
+                    <i class="fas fa-calendar-day"></i>
+                    <span>Task Planner</span>
+                </a>
+                <a href="/staff/kra-status" class="nav-item pinned-top-link ${isKraStatusActive ? 'active' : ''}">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>KRA Status</span>
+                </a>
+                <a href="/staff/timesheet" class="nav-item pinned-top-link ${isTimesheetActive ? 'active' : ''}">
+                    <i class="fas fa-clock"></i>
+                    <span>Time Sheet</span>
+                </a>
+            `;
+        }
 
         for (const section of menu.sections) {
             if (section.id === 'progress' || section.title === 'PROGRESS') {

@@ -3844,6 +3844,17 @@ async def get_my_menus(
     # Combine original grants with cascaded menus
     all_menus = list(registry_menus) + cascaded_menus
 
+    # DC Protocol (Jul 2026): Freelancer Only Leads access restriction
+    if current_user.staff_type == 'FREELANCER' and getattr(current_user, 'freelancer_access_mode', 'default') == 'only_leads':
+        allowed_codes = {
+            'staff_dashboard_main',
+            'staff_leads', 'staff_my_leads',
+            'staff_ev_spares_leads', 'staff_ev_b2b_leads', 'staff_solar_leads',
+            'staff_insurance_leads', 'staff_etc_leads', 'staff_real_dreams_leads', 'staff_ev_b2c_leads'
+        }
+        all_menus = [m for m in all_menus if m.menu_code in allowed_codes]
+        logger.info(f"[DC-FREELANCER-ACCESS] Restricted menus for freelancer {current_user.emp_code} to only leads.")
+
     # DC Protocol: Internal section role-based filtering
     # 'internal' section is ONLY for VGK Mentor (vgk4u) and EA (ea) roles
     # VGK Mentor (vgk4u staff_type) is already handled by the supreme access path above

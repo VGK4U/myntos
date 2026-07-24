@@ -460,7 +460,7 @@
                     </select>
                     <select id="statusFilter" onchange="filterEmployees()">
                         <option value="">All Status</option>
-                        <option value="active">Active</option>
+                        <option value="active" selected>Active</option>
                         <option value="inactive">Inactive</option>
                         <option value="deactivated">Deactivated</option>
                         <option value="resigned">Resigned</option>
@@ -576,6 +576,14 @@
                                     <option value="MYNT_REAL">Mynt Staff (MR ID)</option>
                                 </select>
                                 <small class="text-muted">MN Staff: MN10001+ | Freelancer: FL10001+ | Mynt Staff: MR10001+</small>
+                            </div>
+                            <div class="col-md-6" id="freelancerAccessContainer" style="display: none;">
+                                <label class="form-label">Access Level</label>
+                                <select class="form-select" id="freelancerAccessMode">
+                                    <option value="default">Default</option>
+                                    <option value="only_leads">Only Leads</option>
+                                </select>
+                                <small class="text-muted">Only Leads restricts access to assigned leads and dashboard only.</small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Role *</label>
@@ -1015,6 +1023,14 @@
                     modalEl.addEventListener('hidden.bs.modal', function() {
                         this.setAttribute('aria-hidden', 'true');
                     });
+                }
+            });
+            
+            document.getElementById('staffType').addEventListener('change', function() {
+                const isFreelancer = this.value === 'FREELANCER';
+                document.getElementById('freelancerAccessContainer').style.display = isFreelancer ? 'block' : 'none';
+                if (!isFreelancer) {
+                    document.getElementById('freelancerAccessMode').value = 'default';
                 }
             });
             
@@ -1466,7 +1482,7 @@
                     const data = await response.json();
                     allEmployees = data.employees || data || [];
                     updateSortIcons();
-                    renderEmployees(applyEmpSort(allEmployees));
+                    filterEmployees();
                     populateReportingManagerDropdown();
                     updateExecDashboard();
                     if (currentView === 'tree') renderTree();
@@ -1948,6 +1964,8 @@
             document.getElementById('lastName').value = '';
             document.getElementById('staffType').value = 'MN_STAFF';  // DC: Default to MN Staff (Dec 04, 2025)
             document.getElementById('staffType').disabled = false;  // DC: Enable for new employees
+            document.getElementById('freelancerAccessMode').value = 'default';
+            document.getElementById('freelancerAccessContainer').style.display = 'none';
             document.getElementById('reportingManagerId').value = '';
             document.getElementById('baseCompanyId').value = '';  // DC Protocol (Dec 15, 2025)
             
@@ -2017,6 +2035,9 @@
             document.getElementById('email').value = emp.email || '';
             document.getElementById('phone').value = emp.phone || '';
             document.getElementById('staffType').value = emp.staff_type || 'MYNT_REAL';  // DC: Handle staff type
+            const isFreelancer = (emp.staff_type || 'MYNT_REAL') === 'FREELANCER';
+            document.getElementById('freelancerAccessContainer').style.display = isFreelancer ? 'block' : 'none';
+            document.getElementById('freelancerAccessMode').value = emp.freelancer_access_mode || 'default';
             document.getElementById('roleId').value = emp.role_id || '';
             document.getElementById('departmentId').value = emp.department_id || '';
             document.getElementById('designation').value = emp.designation || '';
@@ -2130,6 +2151,7 @@
                 team_tag: document.getElementById('teamTag').value || null,
                 // [DC-PARTNER-CONTACTS-001] Linked partner showroom for dual portal login
                 linked_partner_id: document.getElementById('linkedPartnerId').value ? parseInt(document.getElementById('linkedPartnerId').value) : null,
+                freelancer_access_mode: document.getElementById('freelancerAccessMode').value,
             };
             
             // DC Protocol (Jan 2026): Include emp_code and staff_type only if VGK4U
@@ -2141,7 +2163,7 @@
             }
             
             try {
-                const url = isEdit ? `/api/v1/staff/employees/${id}` : '/api/v1/staff/employees/';
+                const url = isEdit ? `/api/v1/staff/employees/${id}` : '/api/v1/staff/employees';
                 const method = isEdit ? 'PUT' : 'POST';
                 
                 const response = await staffFetch(url, {

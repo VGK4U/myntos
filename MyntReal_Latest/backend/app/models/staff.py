@@ -207,6 +207,10 @@ class StaffEmployee(Base):
     # Sales/Service dept staff can log into partner portal and see this showroom's view
     linked_partner_id = Column(Integer, ForeignKey('official_partners.id', ondelete='SET NULL'), nullable=True, index=True)
     
+    # DC Protocol (Jul 2026): Freelancer access mode for module restriction
+    # Values: 'default', 'only_leads'
+    freelancer_access_mode = Column(String(32), default='default', nullable=True)
+    
     # DC Protocol (Jan 2026): Employment Type - Probation/Confirmed tracking
     employment_type = Column(String(32), default='probation', nullable=False, index=True)  # probation, confirmed, extended_probation
     probation_period_months = Column(Integer, default=6, nullable=True)  # Standard: 3, 6, 9, 12 months
@@ -328,6 +332,7 @@ class StaffEmployee(Base):
             "team_tag": self.team_tag,
             # [DC-PARTNER-CONTACTS-001] Linked partner showroom for dual portal login
             "linked_partner_id": getattr(self, 'linked_partner_id', None),
+            "freelancer_access_mode": getattr(self, 'freelancer_access_mode', 'default'),
         }
         
         if include_sensitive:

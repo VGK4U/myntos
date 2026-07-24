@@ -182,7 +182,7 @@
     <div id="headerContainer"></div>
 
     <div class="content-area">
-            <div class="stats-grid">
+            <div class="stats-grid" id="adminStatsGrid">
                 <div class="stat-card">
                     <div class="stat-icon blue"><i class="fas fa-users"></i></div>
                     <div class="stat-info">
@@ -209,6 +209,50 @@
                     <div class="stat-info">
                         <h3 id="lastLogin">-</h3>
                         <p>Last Login</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Freelancer Executive Leads Stats Grid -->
+            <div class="stats-grid" id="freelancerLeadsGrid" style="display: none;">
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="fas fa-list-alt"></i></div>
+                    <div class="stat-info">
+                        <h3 id="restrictedTotalLeads">0</h3>
+                        <p>Total Assigned Leads</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange"><i class="fas fa-phone-alt"></i></div>
+                    <div class="stat-info">
+                        <h3 id="restrictedContacted">0</h3>
+                        <p>Contacted</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="fas fa-trophy"></i></div>
+                    <div class="stat-info">
+                        <h3 id="restrictedWon">0</h3>
+                        <p>Won Deals</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple"><i class="fas fa-clock"></i></div>
+                    <div class="stat-info">
+                        <h3 id="restrictedOverdue">0</h3>
+                        <p>Overdue Follow-ups</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Freelancer Leads Status Breakdown Card -->
+            <div class="card mb-4" id="restrictedLeadStatusCard" style="display: none;">
+                <div class="card-header">
+                    <i class="fas fa-chart-pie me-2 text-primary"></i>Assigned Leads Status Breakdown
+                </div>
+                <div class="card-body">
+                    <div class="row text-center" id="restrictedStatusBreakdownContainer">
+                        <!-- Populated via Javascript -->
                     </div>
                 </div>
             </div>
@@ -256,11 +300,11 @@
                         </div>
                         <div class="card-body">
                             <div class="quick-actions">
-                                <a href="/staff/employees" class="quick-action-btn">
+                                <a href="/staff/employees" class="quick-action-btn" id="btnQuickAddEmployee">
                                     <i class="fas fa-user-plus"></i>
                                     <span>Add Employee</span>
                                 </a>
-                                <a href="/staff/departments" class="quick-action-btn">
+                                <a href="/staff/departments" class="quick-action-btn" id="btnQuickAddDepartment">
                                     <i class="fas fa-plus-circle"></i>
                                     <span>Add Department</span>
                                 </a>
@@ -320,6 +364,8 @@
     <script src="/shared/staff_inactivity_manager.js"></script>
     <script src="/staff_header.js"></script>
     <script>
+        let currentProfile = null;
+
         document.addEventListener('DOMContentLoaded', async function() {
             const token = localStorage.getItem('staff_token');
             if (!token) {
@@ -332,8 +378,8 @@
             if (typeof StaffHeader !== 'undefined') StaffHeader.init();
             if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
             updateHeaderUserInfo();
+            await loadProfileData();
             loadDashboardData();
-            loadProfileData();
             loadMyEarnings();
         });
         
@@ -365,22 +411,83 @@
         
         async function loadDashboardData() {
             try {
-                const [empRes, deptRes] = await Promise.all([
-                    staffFetch('/api/v1/staff/employees?status=active'),
-                    staffFetch('/api/v1/staff/departments')
-                ]);
+                const isRestrictedFreelancer = currentProfile && currentProfile.staff_type === 'FREELANCER' && currentProfile.freelancer_access_mode === 'only_leads';
                 
-                if (empRes.ok) {
-                    const data = await empRes.json();
-                    const employees = data.employees || [];
-                    document.getElementById('totalEmployees').textContent = employees.length;
-                    document.getElementById('activeEmployees').textContent = employees.filter(e => e.is_active).length;
-                }
-                
-                if (deptRes.ok) {
-                    const data = await deptRes.json();
-                    const departments = data.departments || [];
-                    document.getElementById('totalDepartments').textContent = departments.length;
+                if (isRestrictedFreelancer) {
+                    document.getElementById('adminStatsGrid').style.display = 'none';
+                    document.getElementById('freelancerLeadsGrid').style.display = 'grid';
+                    document.getElementById('restrictedLeadStatusCard').style.display = 'block';
+                    
+                    const btnAddEmp = document.getElementById('btnQuickAddEmployee');
+                    const btnAddDept = document.getElementById('btnQuickAddDepartment');
+                    if (btnAddEmp) btnAddEmp.style.display = 'none';
+                    if (btnAddDept) btnAddDept.style.display = 'none';
+                    
+                    const leadRes = await staffFetch('/api/v1/crm/dashboard-v2');
+                    if (leadRes.ok) {
+                        const leadData = await leadRes.json();
+                        const myPerf = leadData.my_performance || {};
+                        const summary = myPerf.summary || {};
+                        
+                        document.getElementById('restrictedTotalLeads').textContent = summary.total_leads || 0;
+                        document.getElementById('restrictedContacted').textContent = summary.contacted || summary.contacted_today || 0;
+                        document.getElementById('restrictedWon').textContent = summary.won || 0;
+                        document.getElementById('restrictedOverdue').textContent = summary.overdue || 0;
+                        
+                        const statuses = ['new', 'contacted', 'interested', 'qualified', 'proposal', 'on_hold', 'won', 'lost'];
+                        const labels = {
+                            new: 'New', contacted: 'Contacted', interested: 'Interested',
+                            qualified: 'Qualified', proposal: 'Proposal', on_hold: 'On Hold',
+                            won: 'Won', lost: 'Lost'
+                        };
+                        const colors = {
+                            new: 'text-primary', contacted: 'text-info', interested: 'text-warning',
+                            qualified: 'text-success', proposal: 'text-secondary', on_hold: 'text-dark',
+                            won: 'text-success fw-bold', lost: 'text-danger'
+                        };
+                        
+                        const container = document.getElementById('restrictedStatusBreakdownContainer');
+                        container.innerHTML = statuses.map(s => {
+                            const count = summary[s] || 0;
+                            const label = labels[s];
+                            const colorClass = colors[s] || 'text-muted';
+                            return `
+                                <div class="col-6 col-md-3 mb-3">
+                                    <div class="card p-2 border-light bg-light-subtle">
+                                        <div class="small text-muted text-uppercase fw-semibold" style="font-size: 0.75rem;">${label}</div>
+                                        <div class="h4 mt-1 ${colorClass}">${count}</div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                } else {
+                    document.getElementById('adminStatsGrid').style.display = 'grid';
+                    document.getElementById('freelancerLeadsGrid').style.display = 'none';
+                    document.getElementById('restrictedLeadStatusCard').style.display = 'none';
+                    
+                    const btnAddEmp = document.getElementById('btnQuickAddEmployee');
+                    const btnAddDept = document.getElementById('btnQuickAddDepartment');
+                    if (btnAddEmp) btnAddEmp.style.display = 'flex';
+                    if (btnAddDept) btnAddDept.style.display = 'flex';
+                    
+                    const [empRes, deptRes] = await Promise.all([
+                        staffFetch('/api/v1/staff/employees?status=active'),
+                        staffFetch('/api/v1/staff/departments')
+                    ]);
+                    
+                    if (empRes.ok) {
+                        const data = await empRes.json();
+                        const employees = data.employees || [];
+                        document.getElementById('totalEmployees').textContent = employees.length;
+                        document.getElementById('activeEmployees').textContent = employees.filter(e => e.is_active).length;
+                    }
+                    
+                    if (deptRes.ok) {
+                        const data = await deptRes.json();
+                        const departments = data.departments || [];
+                        document.getElementById('totalDepartments').textContent = departments.length;
+                    }
                 }
                 
                 document.getElementById('lastLogin').textContent = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
@@ -446,6 +553,9 @@
                 if (response.ok) {
                     const data = await response.json();
                     const profile = data.employee || data;
+                    currentProfile = profile;
+                    localStorage.setItem('staff_user', JSON.stringify(profile));
+                    
                     document.getElementById('profileCode').textContent = profile.emp_code || profile.employee_code || '-';
                     document.getElementById('profileEmail').textContent = profile.email || '-';
                     document.getElementById('profileDept').textContent = profile.department_name || 'Not Assigned';
