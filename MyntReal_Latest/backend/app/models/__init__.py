@@ -13,7 +13,7 @@ from app.models.coupon import Coupon, EnhancedCoupon, CouponActivationTracker, P
 from app.models.coupon_transfer import CouponTransfer
 from app.models.awards import DirectAwardTier, UserAwardProgress, MatchingAwardTier, UserMatchingAwardProgress, AwardAuditLog
 from app.models.award_price_change import AwardPriceChangeRequest
-from app.models.bonanza import DynamicBonanza, DynamicBonanzaReward, DynamicBonanzaHistory  # DC Protocol: BonanzaProgress deprecated
+from app.models.bonanza import DynamicBonanza, DynamicBonanzaReward, DynamicBonanzaHistory, Bonanza, BonanzaBrandFilter  # DC Protocol: BonanzaProgress deprecated
 from app.models.field_allowance import FieldAllowanceEligibility, FieldAllowanceProgress, AllowanceSchemeSelector, AllowanceTierDefinition
 from app.models.system_control import SystemControl, AppSettings, CustomRole, TermsAndConditionsVersion
 from app.models.system import SystemCheckpoint

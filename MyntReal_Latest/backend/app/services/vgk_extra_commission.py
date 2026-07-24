@@ -91,6 +91,16 @@ def apply_extra_commission_if_active(
         """)).fetchall()
 
         for _bz in _active:
+            # DC-BRAND-BONANZA-001 (Jul 2026): brand-specific campaign filter
+            _brand_rows = db.execute(text("""
+                SELECT brand_id FROM bonanza_brand_filters
+                WHERE bonanza_id = :bid
+            """), {'bid': _bz.id}).fetchall()
+
+            if _brand_rows:
+                _allowed_brands = {r.brand_id for r in _brand_rows}
+                if getattr(lead, 'solar_brand_id', None) not in _allowed_brands:
+                    continue
             try:
                 _cat_rows = db.execute(text("""
                     SELECT category_id FROM bonanza_category_filters
@@ -143,17 +153,18 @@ def apply_extra_commission_if_active(
                         entry_no = _next_entry_number(db, company_id)
                         _inc_date = (lead.submit_date.date() if hasattr(lead.submit_date, 'date') else lead.submit_date) if getattr(lead, 'submit_date', None) else now_ist.date()
 
-                        db.execute(text("""
+                        vci_id = db.execute(text("""
                             INSERT INTO vgk_cash_income_entries
                               (company_id, entry_number, partner_id, source_lead_id,
                                kind, status, commission_amount, admin_charges,
                                tds_amount, net_payout, level, notes, income_date,
-                               created_at, updated_at)
+                               bonanza_id, created_at, updated_at)
                             VALUES
                               (:co, :en, :pid, :lid,
                                'EXTRA_COMMISSION', 'PENDING',
                                :ca, :ac, :ta, :np, :lv,
-                               :notes, :inc_date, :now, :now)
+                               :notes, :inc_date, :bid, :now, :now)
+                            RETURNING id
                         """), {
                             'co':       company_id,
                             'en':       entry_no,
@@ -169,17 +180,19 @@ def apply_extra_commission_if_active(
                                 f'Trigger: {trigger_event} | L{lv} Extra Commission'
                             ),
                             'inc_date': _inc_date,
+                            'bid':      _bz.id,
                             'now':      now_ist,
-                        })
+                        }).scalar()
 
                         db.execute(text("""
                             INSERT INTO bonanza_extra_commission_log
-                              (bonanza_id, lead_id, level, partner_id, created_at)
-                            VALUES (:bid, :lid, :lv, :pid, :now)
+                              (bonanza_id, lead_id, level, partner_id, vci_entry_id, created_at)
+                            VALUES (:bid, :lid, :lv, :pid, :vci_id, :now)
                             ON CONFLICT (bonanza_id, lead_id, level) DO NOTHING
                         """), {
                             'bid': _bz.id, 'lid': lead_id,
-                            'lv': lv, 'pid': partner_id, 'now': now_ist,
+                            'lv': lv, 'pid': partner_id,
+                            'vci_id': vci_id, 'now': now_ist,
                         })
 
                         _sp.commit()

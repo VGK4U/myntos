@@ -482,6 +482,23 @@ class BonanzaCategoryFilter(BaseModel):
         return f'<BonanzaCategoryFilter bonanza={self.bonanza_id} cat={self.category_id}>'
 
 
+# DC-BRAND-BONANZA-001 (Jul 2026): Brand filter for brand-specific bonanzas.
+# NULL = all brands. Non-NULL = only leads in listed brand_ids qualify.
+class BonanzaBrandFilter(BaseModel):
+    __tablename__ = 'bonanza_brand_filters'
+
+    id          = Column(Integer, primary_key=True)
+    bonanza_id  = Column(Integer, ForeignKey('bonanza.id', ondelete='CASCADE'), nullable=False, index=True)
+    brand_id    = Column(Integer, ForeignKey('vgk_incentive_brands.id', ondelete='CASCADE'), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint('bonanza_id', 'brand_id', name='uq_bonanza_brand_filter'),
+    )
+
+    def __repr__(self):
+        return f'<BonanzaBrandFilter bonanza={self.bonanza_id} brand={self.brand_id}>'
+
+
 # DC-EXTRA-COMM-001 (Jul 2026): Idempotency log for extra commission payouts.
 # Prevents double-firing if trigger is called more than once for the same lead+level.
 class BonanzaExtraCommissionLog(BaseModel):

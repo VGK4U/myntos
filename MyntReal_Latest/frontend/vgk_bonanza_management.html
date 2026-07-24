@@ -241,6 +241,11 @@ tbody tr { background: #ffffff !important; }
                         <option value="">All Segments</option>
                     </select>
                 </div>
+                <div class="form-group" id="mBrandGrp">
+                    <label>Brand Filters (Select one or more, Optional)</label>
+                    <select class="form-select" id="mBrand" multiple style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12.5px;height:80px" onchange="onBrandChange()">
+                    </select>
+                </div>
                 <div class="form-group" id="mTargetGrp">
                     <label>Target — Activated Members (deals) *</label>
                     <input class="form-control" id="mTarget" type="number" min="1" placeholder="e.g. 5">
@@ -595,7 +600,7 @@ tbody tr { background: #ffffff !important; }
 <script>
 const BASE = '/api/v1/staff';
 const BONANZA_BASE = '/api/v1/bonanza';
-let _bonanzas = [], _segments = [];
+let _bonanzas = [], _segments = [], _brands = [];
 
 async function loadSegments() {
     try {
@@ -608,6 +613,16 @@ async function loadSegments() {
     } catch(e) {}
 }
 
+async function loadBrands() {
+    try {
+        const r = await staffFetch('/api/v1/vgk/brands?active_only=true');
+        const d = await r.json();
+        _brands = d.brands || [];
+        const sel = document.getElementById('mBrand');
+        sel.innerHTML = _brands.map(b => `<option value="${b.id}">${escH(b.brand_name)}</option>`).join('');
+    } catch(e) {}
+}
+
 async function loadBonanzas() {
     const status = document.getElementById('filterStatus').value;
     const search = document.getElementById('filterSearch').value.trim().toLowerCase();
@@ -616,7 +631,7 @@ async function loadBonanzas() {
     try {
         const r = await staffFetch(BONANZA_BASE + '/vgk/all-bonanzas');
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed to load');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed to load');
         let items = d.bonanzas || [];
         if (status) items = items.filter(b => b.status === status);
         if (search) items = items.filter(b => (b.name||'').toLowerCase().includes(search));
@@ -674,7 +689,7 @@ async function loadBonanzas() {
 
             return `<tr>
                 <td><div style="font-weight:700;font-size:13px;color:#111">${escH(b.name)}</div><div style="font-size:11px;color:#9ca3af">Grace: ${b.grace_days ?? 15}d · Max: ${b.max_winners}</div></td>
-                <td><span style="background:#f5f3ff;color:#7c3aed;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700">${escH(b.segment_name||'All')}</span></td>
+                <td><span style="background:#f5f3ff;color:#7c3aed;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700">${escH(b.segment_name||'All')}</span><div style="font-size:10px;color:#4b5563;margin-top:4px"><i class="fas fa-tag me-1" style="font-size:9px"></i>${escH(b.brand_names || 'All Brands')}</div></td>
                 <td style="font-size:12px;white-space:nowrap">${period}</td>
                 <td>
                     <strong>${b.target_requirement}</strong> deals
@@ -729,6 +744,23 @@ function _togglePltColumns(rt) {
     } else {
         if (infoEl) infoEl.innerHTML = '<i class="fas fa-info-circle me-1"></i>A BonanzaProgress <b>Pending</b> claim is auto-created per level per lead when the trigger fires. Claims follow the standard 5-step approval flow before payout.';
         if (subEl)  subEl.textContent = 'Set a per-level trigger to auto-create Pending payout claims. Each level fires at its own trigger point — same lead counts independently per bonanza.';
+    }
+}
+
+function onBrandChange() {
+    const brandSel = document.getElementById('mBrand');
+    const selectedBrands = Array.from(brandSel.selectedOptions).map(o => o.value).filter(Boolean);
+    if (selectedBrands.length > 0) {
+        const rt = document.getElementById('mRewardType');
+        if (rt.value !== 'extra_commission') {
+            rt.value = 'extra_commission';
+            toggleRewardFields();
+        }
+        // Set L1 = 1000 (file_submitted) and L5 = 500 (first_payment)
+        document.getElementById('pltL1Trigger').value = 'file_submitted';
+        document.getElementById('pltL1Amt').value = '1000';
+        document.getElementById('pltL5Trigger').value = 'first_payment';
+        document.getElementById('pltL5Amt').value = '500';
     }
 }
 
@@ -830,6 +862,7 @@ function openCreateModal() {
     document.getElementById('mStartDate').value = '';
     document.getElementById('mEndDate').value = '';
     document.getElementById('mSegment').value = '';
+    document.getElementById('mBrand').value = '';
     document.getElementById('mTarget').value = '';
     document.getElementById('mRegBonus').value = '';
     document.getElementById('mGrace').value = '15';
@@ -851,6 +884,7 @@ function openCreateModal() {
         document.getElementById('pltL'+n+'Note').value = '';
     });
     Array.from(document.getElementById('pltCategoryFilter').options).forEach(o => o.selected = false);
+    Array.from(document.getElementById('mBrand').options).forEach(o => o.selected = false);
     document.getElementById('modalError').style.display = 'none';
     window._pendingBonanzaImageFile = null;
     _resetImageField();
@@ -883,6 +917,12 @@ function openEditModal(id) {
     document.getElementById('mStartDate').value = _toLocalDatetimeValue(b.start_date);
     document.getElementById('mEndDate').value = _toLocalDatetimeValue(b.end_date);
     document.getElementById('mSegment').value = b.segment_id || '';
+    
+    const _savedBrandIds = new Set((b.brand_filter_ids || []).map(Number));
+    Array.from(document.getElementById('mBrand').options).forEach(o => {
+        o.selected = _savedBrandIds.has(Number(o.value));
+    });
+
     document.getElementById('mTarget').value = b.target_requirement || '';
     document.getElementById('mRegBonus').value = b.registered_target_bonus != null ? b.registered_target_bonus : '';
     document.getElementById('mGrace').value = b.grace_days ?? 15;
@@ -943,11 +983,13 @@ async function saveBonanza() {
     const isAwardGift = rewardType === 'award' || rewardType === 'gift';
     const slabExtra  = isSlabWise ? (parseFloat(document.getElementById('mSlabExtra').value) || null) : null;
     const slabBase   = isSlabWise ? (parseFloat(document.getElementById('mSlabBaseRef').value) || null) : null;
+    const _brandOpts = Array.from(document.getElementById('mBrand').selectedOptions).map(o => parseInt(o.value)).filter(n => !isNaN(n));
     const body = {
         name: document.getElementById('mName').value.trim(),
         start_date: _toISO(document.getElementById('mStartDate').value),
         end_date: _toISO(document.getElementById('mEndDate').value),
         segment_id: document.getElementById('mSegment').value ? parseInt(document.getElementById('mSegment').value) : null,
+        brand_filter_ids: _brandOpts.length > 0 ? _brandOpts : null,
         // EC has no target — DB constraint relaxed to allow 0 for extra_commission (positive_target_relaxed_ec migration)
         target_requirement: isExtraComm ? 0 : (parseInt(document.getElementById('mTarget').value) || 1),
         registered_target_bonus: document.getElementById('mRegBonus').value !== '' ? parseInt(document.getElementById('mRegBonus').value) : null,
@@ -1035,7 +1077,12 @@ async function saveBonanza() {
             r = await staffFetch(BONANZA_BASE + '/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         }
         d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed to save');
+        if (!r.ok) {
+            let errMsg = d.detail || d.message || 'Failed to save';
+            if (d.errors && d.errors.length > 0) errMsg += ': ' + d.errors[0];
+            if (d.debug_error) errMsg += ' (' + d.debug_error + ')';
+            throw new Error(errMsg);
+        }
 
         // Post pending slabs (both create and edit modes)
         const targetBonanzaId = editId ? parseInt(editId) : (d.bonanza_id || d.bonanza?.id || d.id || null);
@@ -1052,7 +1099,7 @@ async function saveBonanza() {
                     });
                     if (!slabResp.ok) {
                         const se = await slabResp.json().catch(() => ({}));
-                        slabErrors.push(`Slab "${slab.slab_label}": ${se.detail || slabResp.status}`);
+                        slabErrors.push(`Slab "${slab.slab_label}": ${se.detail || se.message || slabResp.status}`);
                         continue;
                     }
                     // Upload slab image if one was selected
@@ -1118,7 +1165,7 @@ async function confirmApprove() {
     try {
         const r = await staffFetch(BONANZA_BASE + '/approve/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed');
         document.getElementById('approveModal').classList.remove('open');
         loadBonanzas();
     } catch(e) {
@@ -1133,7 +1180,7 @@ async function cancelBonanza(id, name) {
     try {
         const r = await staffFetch(BONANZA_BASE + '/cancel/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed');
         loadBonanzas();
     } catch(e) {
         alert('Error: ' + e.message);
@@ -1145,7 +1192,7 @@ async function pauseBonanza(id, name) {
     try {
         const r = await staffFetch(BONANZA_BASE + '/pause/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed');
         loadBonanzas();
     } catch(e) {
         alert('Error: ' + e.message);
@@ -1158,7 +1205,7 @@ async function activateBonanza(id, name, currentStatus) {
     try {
         const r = await staffFetch(BONANZA_BASE + '/activate/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed');
         loadBonanzas();
     } catch(e) {
         alert('Error: ' + e.message);
@@ -1368,7 +1415,7 @@ async function loadSlabs() {
     try {
         const r = await staffFetch(`${BONANZA_BASE}/${_slabsBonanzaId}/slabs`);
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed to load slabs');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed to load slabs');
         const slabs = d.slabs || [];
         if (!slabs.length) {
             listDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#6b7280;font-size:13px"><i class="fas fa-inbox me-2"></i>No slabs yet. Add reward tiers below.</div>';
@@ -1453,7 +1500,7 @@ async function saveSlab() {
         const method = editId ? 'PUT' : 'POST';
         const r = await staffFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed to save slab');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed to save slab');
         resetSlabForm();
         await loadSlabs();
     } catch(e) {
@@ -1467,7 +1514,7 @@ async function deleteSlab(slabId, label) {
     try {
         const r = await staffFetch(`${BONANZA_BASE}/${_slabsBonanzaId}/slabs/${slabId}`, { method: 'DELETE' });
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed');
         await loadSlabs();
     } catch(e) {
         alert('Error: ' + e.message);
@@ -1509,6 +1556,7 @@ async function loadEcCategories() {
 
 async function init() {
     await loadSegments();
+    await loadBrands();
     await loadEcCategories();
     await loadBonanzas();
 }
@@ -1585,7 +1633,7 @@ async function mgmtLoadTracking() {
     try {
         const r = await staffFetch(url);
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed');
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed');
         _mgmtTrackLoaded  = true;
         // DC-MGMT-HIDE-54: hide "Extra Field Allowance Rs. 3000/-" from management tracking
         const filtered = Object.assign({}, d, {

@@ -35,6 +35,7 @@ class VGKCashIncomeEntry(BaseModel):
     partner_id             = Column(Integer, ForeignKey('official_partners.id', ondelete='CASCADE'), nullable=False, index=True)
     source_lead_id         = Column(Integer, ForeignKey('crm_leads.id', ondelete='SET NULL'), nullable=True, index=True)
     category_id            = Column(Integer, ForeignKey('signup_categories.id', ondelete='SET NULL'), nullable=True)
+    bonanza_id             = Column(Integer, ForeignKey('bonanza.id', ondelete='SET NULL'), nullable=True)
 
     level                  = Column(SmallInteger, nullable=False)
     income_date            = Column(Date, nullable=True)

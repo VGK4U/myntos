@@ -104,6 +104,7 @@ class BonanzaUpdate(BaseModel):
     ec_l3_trigger: Optional[str] = None
     ec_l4_trigger: Optional[str] = None
     ec_l5_trigger: Optional[str] = None
+    brand_filter_ids: Optional[List[int]] = None
 
 
 class BonanzaCreate(BaseModel):
@@ -169,6 +170,7 @@ class BonanzaCreate(BaseModel):
     ec_l3_trigger: Optional[str] = None
     ec_l4_trigger: Optional[str] = None
     ec_l5_trigger: Optional[str] = None
+    brand_filter_ids: Optional[List[int]] = None
 
 
 class BonanzaApprove(BaseModel):
@@ -366,6 +368,16 @@ async def create_bonanza(
                 VALUES (:bid, :cid)
                 ON CONFLICT (bonanza_id, category_id) DO NOTHING
             """), {'bid': bonanza.id, 'cid': _cat_id})
+        db.commit()
+
+    # DC-BRAND-BONANZA-001: persist brand filters after bonanza is committed
+    if data.reward_type in ('extra_commission', 'award', 'gift', 'cash', 'bonus') and data.brand_filter_ids:
+        for _brand_id in data.brand_filter_ids:
+            db.execute(text("""
+                INSERT INTO bonanza_brand_filters (bonanza_id, brand_id)
+                VALUES (:bid, :brid)
+                ON CONFLICT (bonanza_id, brand_id) DO NOTHING
+            """), {'bid': bonanza.id, 'brid': _brand_id})
         db.commit()
     
     return {
@@ -2636,11 +2648,25 @@ async def edit_bonanza(
     # DC-AWARD-TRIGGER-001: update award_level_notes on edit
     if data.award_level_notes is not None and bonanza.reward_type in ('award', 'gift'):
         bonanza.award_level_notes = data.award_level_notes or None
+    if data.brand_filter_ids is not None and bonanza.reward_type in ('extra_commission', 'award', 'gift', 'cash', 'bonus'):
+        db.execute(
+            text("DELETE FROM bonanza_brand_filters WHERE bonanza_id = :bid"),
+            {"bid": bonanza.id}
+        )
+        for _brand_id in data.brand_filter_ids:
+            db.execute(
+                text("INSERT INTO bonanza_brand_filters (bonanza_id, brand_id) "
+                     "VALUES (:bid, :brid) ON CONFLICT DO NOTHING"),
+                {"bid": bonanza.id, "brid": _brand_id}
+            )
 
     bonanza.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(bonanza)
     
+    brand_rows = db.execute(text("SELECT brand_id FROM bonanza_brand_filters WHERE bonanza_id = :bid"), {"bid": bonanza.id}).fetchall()
+    brand_ids = [r[0] for r in brand_rows]
+
     return {
         "success": True,
         "message": f"Bonanza '{bonanza.name}' updated successfully",
@@ -2654,7 +2680,8 @@ async def edit_bonanza(
             "current_winners": bonanza.current_winners,
             "award_name": bonanza.award_name,
             "reward_amount": float(bonanza.reward_amount) if bonanza.reward_amount else None,
-            "image_url": bonanza.image_url
+            "image_url": bonanza.image_url,
+            "brand_filter_ids": brand_ids
         }
     }
 
@@ -4427,6 +4454,21 @@ def list_vgk_bonanzas_staff(
 
     from app.models.bonanza import BonanzaProgress
     bonanza_ids = [b.id for b in bonanzas]
+    
+    brand_filters_map = {}
+    if bonanza_ids:
+        rows = db.execute(text("""
+            SELECT bf.bonanza_id, bf.brand_id, b.brand_name
+            FROM bonanza_brand_filters bf
+            JOIN vgk_incentive_brands b ON bf.brand_id = b.id
+            WHERE bf.bonanza_id = ANY(:ids)
+        """), {"ids": bonanza_ids}).fetchall()
+        for r in rows:
+            bid, brid, bname = r[0], r[1], r[2]
+            if bid not in brand_filters_map:
+                brand_filters_map[bid] = []
+            brand_filters_map[bid].append({"id": brid, "name": bname})
+
     claims_count = {}
     if bonanza_ids:
         rows = db.execute(text("""
@@ -4469,6 +4511,8 @@ def list_vgk_bonanzas_staff(
             "total_budget": float(b.total_budget) if b.total_budget else None,
             "registered_target_bonus": b.registered_target_bonus,
             "image_url": b.image_url,
+            "brand_filter_ids": [bf["id"] for bf in brand_filters_map.get(b.id, [])],
+            "brand_names": ", ".join([bf["name"] for bf in brand_filters_map.get(b.id, [])]) or "All Brands",
             "claims_summary": cc,
             "total_claims": sum(cc.values()),
             "created_by": b.created_by
