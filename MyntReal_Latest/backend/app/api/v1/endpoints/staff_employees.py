@@ -112,6 +112,9 @@ class EmployeeCreateRequest(BaseModel):
     # DC Protocol (Mar 2026): Team Tag — Team A/B/C grouping for compliance reporting
     team_tag: Optional[str] = None  # team_a, team_b, team_c, or None
 
+    # DC Protocol (Jul 2026): Freelancer access mode for module restriction (default vs only_leads)
+    freelancer_access_mode: Optional[str] = 'default'
+
     @field_validator('email', mode='before')
     @classmethod
     def empty_str_to_none(cls, v):
@@ -191,6 +194,9 @@ class EmployeeUpdateRequest(BaseModel):
 
     # [DC-PARTNER-CONTACTS-001] Link to partner showroom for dual portal login
     linked_partner_id: Optional[int] = None  # FK → official_partners.id; None = no link
+
+    # DC Protocol (Jul 2026): Freelancer access mode for module restriction
+    freelancer_access_mode: Optional[str] = None
 
 
 class DepartmentCreateRequest(BaseModel):
@@ -975,6 +981,7 @@ async def create_employee(
         is_experienced=data.is_experienced,  # DC Protocol (Jan 2026): Is Experienced flag
         call_tracking_enabled=data.call_tracking_enabled,  # DC Protocol (Feb 2026): Call tracking
         team_tag=data.team_tag,  # DC Protocol (Mar 2026): Team A/B/C tag
+        freelancer_access_mode=data.freelancer_access_mode,  # DC Protocol (Jul 2026): Freelancer access mode
         password_hash=SecurityManager.get_password_hash(emp_code),  # Default password = emp_code
         requires_password_change=True,  # Force password change on first login
         kyc_status='pending',
@@ -1281,6 +1288,13 @@ async def update_employee(
             setattr(employee, 'linked_partner_id', _lp_id if _lp_id else None)
         except Exception:
             pass  # Column may not exist yet (bootstrap pending)
+
+    # DC Protocol (Jul 2026): Handle freelancer access mode update
+    if data.freelancer_access_mode is not None:
+        valid_modes = ['default', 'only_leads']
+        if data.freelancer_access_mode not in valid_modes:
+            raise HTTPException(status_code=400, detail="Invalid freelancer_access_mode. Must be default or only_leads")
+        employee.freelancer_access_mode = data.freelancer_access_mode
 
     # DC Protocol (Dec 15, 2025): Handle base company update
     if data.base_company_id is not None:

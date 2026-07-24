@@ -20320,6 +20320,45 @@ finally:
         pass
 
 
+# DC-FREELANCER-ACCESS-001 (Jul 2026): Add freelancer_access_mode column to staff_employees table
+try:
+    from sqlalchemy import text as _fa_text
+    from app.core.database import SessionLocal as _fa_SL
+    _fa_db = _fa_SL()
+    _fa_mk = "freelancer_access_mode_col_20260724"
+    if _fa_mk not in _applied_keys:
+        _col_exists = _fa_db.execute(_fa_text("""
+            SELECT EXISTS (
+                SELECT 1 FROM information_schema.columns 
+                WHERE table_name='staff_employees' AND column_name='freelancer_access_mode'
+            )
+        """)).scalar()
+        if not _col_exists:
+            _fa_db.execute(_fa_text("""
+                ALTER TABLE staff_employees 
+                ADD COLUMN freelancer_access_mode VARCHAR(32) DEFAULT 'default'
+            """))
+        _fa_db.execute(
+            _fa_text("INSERT INTO dc_migrations(key) VALUES(:k) ON CONFLICT(key) DO NOTHING"),
+            {"k": _fa_mk}
+        )
+        _fa_db.commit()
+        print("[DC-FREELANCER-ACCESS-001] ✅ freelancer_access_mode column added to staff_employees", flush=True)
+    else:
+        print("[DC-FREELANCER-ACCESS-001] ⏭️  Already applied — skipping", flush=True)
+except Exception as _fa_e:
+    print(f"[DC-FREELANCER-ACCESS-001] ⚠️ Non-fatal: {_fa_e}", flush=True)
+    try:
+        _fa_db.rollback()
+    except Exception:
+        pass
+finally:
+    try:
+        _fa_db.close()
+    except Exception:
+        pass
+
+
 if __name__ == "__main__":
     # Development server configuration (only used for local testing)
     # Production uses gunicorn/uvicorn workers via start.sh

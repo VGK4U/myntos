@@ -501,6 +501,17 @@
             if (redirect && redirect.startsWith('/') && !redirect.includes('//')) {
                 return decodeURIComponent(redirect);
             }
+            try {
+                const userStr = localStorage.getItem('staff_user');
+                if (userStr) {
+                    const user = JSON.parse(userStr);
+                    if (user.staff_type === 'FREELANCER' && user.freelancer_access_mode === 'only_leads') {
+                        return '/staff/dashboard';
+                    }
+                }
+            } catch (e) {
+                console.error('[DC-REDIRECT] Error parsing staff user:', e);
+            }
             return '/staff/progress';
         }
 

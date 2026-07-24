@@ -1599,6 +1599,47 @@ let expandedRow = null;
 let editingLead = null;
 let _leadsCache = [];
 let _viewerEmpCode = '';
+let _isRestrictedFreelancer = false;
+try {
+  const cachedUser = localStorage.getItem('staff_user');
+  if (cachedUser) {
+    const u = JSON.parse(cachedUser);
+    if (u.staff_type === 'FREELANCER' && u.freelancer_access_mode === 'only_leads') {
+      _isRestrictedFreelancer = true;
+    }
+  }
+} catch (_) {}
+(async()=>{
+  try {
+    const token = localStorage.getItem('staff_token');
+    if (token) {
+      const response = await fetch('/api/v1/staff/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const profile = data.employee || data;
+        if (profile) {
+          const wasRestricted = _isRestrictedFreelancer;
+          _isRestrictedFreelancer = (profile.staff_type === 'FREELANCER' && profile.freelancer_access_mode === 'only_leads');
+          if (wasRestricted !== _isRestrictedFreelancer) {
+            console.log('[DC-RESTRICT] Restricted freelancer status changed dynamically:', _isRestrictedFreelancer);
+            localStorage.setItem('staff_user', JSON.stringify(profile));
+            buildTableHead();
+            if (activeTab === 'etc') {
+              loadEtcStudents(1);
+              loadEtcStageStats();
+            } else if (activeTab !== 'ground-source') {
+              loadData();
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[DC-RESTRICT] Error updating profile data:', err);
+  }
+})();
 (async()=>{try{const r=await staffFetch('/api/v1/auth/me');if(r&&r.ok){const d=await r.json();_viewerEmpCode=(d.data?.emp_code||d.emp_code||d.employee?.emp_code||'');}}catch(e){}})();
 let _selectedLeadIds = new Set();
 let _etcCache = [];
@@ -1679,126 +1720,187 @@ function switchTab(key) {
     return;
   }
   if (activeTab === 'etc') {
-    thead.innerHTML = `<tr>
-      <th>S.No</th><th>Reg ID</th><th>Student ID</th>
-      <th class="sortable" onclick="sortByCol('batch_no')">Batch<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('batch_start_date')">Start Date<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('training_completed_date')">Comp. Date<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('name')">Name<span class="sort-icon"></span></th>
-      <th>Phone</th>
-      <th class="sortable" onclick="sortByCol('state')">State<span class="sort-icon"></span></th>
-      <th>District</th>
-      <th>Course</th>
-      <th class="sortable" onclick="sortByCol('score')">Score<span class="sort-icon"></span></th>
-      <th>Stage</th><th>Handler</th><th>MNR</th><th>Hostel</th>
-      <th class="sortable" onclick="sortByCol('package_value')">Pkg Value<span class="sort-icon"></span></th>
-      <th>CRM Status</th>
-      <th>VGK Status</th><th>VGK ID</th><th>Earnings</th>
-      <th>Actions</th>
-    </tr>`;
+    if (_isRestrictedFreelancer) {
+      thead.innerHTML = `<tr>
+        <th>S.No</th><th>Reg ID</th><th>Student ID</th>
+        <th class="sortable" onclick="sortByCol('batch_no')">Batch<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('batch_start_date')">Start Date<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('training_completed_date')">Comp. Date<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('name')">Name<span class="sort-icon"></span></th>
+        <th>Phone</th>
+        <th class="sortable" onclick="sortByCol('state')">State<span class="sort-icon"></span></th>
+        <th>District</th>
+        <th>Course</th>
+        <th class="sortable" onclick="sortByCol('score')">Score<span class="sort-icon"></span></th>
+        <th>Stage</th>
+      </tr>`;
+    } else {
+      thead.innerHTML = `<tr>
+        <th>S.No</th><th>Reg ID</th><th>Student ID</th>
+        <th class="sortable" onclick="sortByCol('batch_no')">Batch<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('batch_start_date')">Start Date<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('training_completed_date')">Comp. Date<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('name')">Name<span class="sort-icon"></span></th>
+        <th>Phone</th>
+        <th class="sortable" onclick="sortByCol('state')">State<span class="sort-icon"></span></th>
+        <th>District</th>
+        <th>Course</th>
+        <th class="sortable" onclick="sortByCol('score')">Score<span class="sort-icon"></span></th>
+        <th>Stage</th><th>Handler</th><th>MNR</th><th>Hostel</th>
+        <th class="sortable" onclick="sortByCol('package_value')">Pkg Value<span class="sort-icon"></span></th>
+        <th>CRM Status</th>
+        <th>VGK Status</th><th>VGK ID</th><th>Earnings</th>
+        <th>Actions</th>
+      </tr>`;
+    }
   } else if (activeTab === 'solar') {
-    thead.innerHTML = `<tr>
-      <th><input type="checkbox" id="selectAllChk" onchange="toggleSelectAll(this)" title="Select All" style="cursor:pointer"></th>
-      <th></th>
-      <th class="sortable" onclick="sortByCol('id')">ID<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('name')">Name<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('phone')">Phone<span class="sort-icon"></span></th>
-      <th>Stage</th>
-      <th class="sortable" onclick="sortByCol('loan_bank')">Bank<span class="sort-icon"></span></th>
-      <th>Branch</th>
-      <th class="sortable" onclick="sortByCol('submit_date')" title="Sort by Submit Date">Submitted Date<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('installation_date')">Install Date<span class="sort-icon"></span></th>
-      <th title="Total deal value minus received amount">Balance Pending</th>
-      <th title="Locked at completion — used for all payout/incentive calculations" style="white-space:nowrap">Commission Status &#10003;</th>
-      <th class="sortable" onclick="sortByCol('application_no')">App No<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('accepted_date')">Accepted<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('status')">Status<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('solar_pipeline_status_updated_at')" title="Sort by when Stage was last changed">Stage Date<span class="sort-icon"></span></th>
-      <th class="sortable" id="daysColTh" onclick="sortByCol('_days')" title="Days since Submit Date — or Days in current Stage when a Stage filter is active. Click to sort.">Days<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('complete_date')" title="Sort by Complete Date">Complete Date<span class="sort-icon"></span></th>
-      <th title="Panel serial numbers (up to 15) + brand, make, warranty">Panel Nos</th>
-      <th title="Inverter serial number + brand, make, warranty">Inverter No</th>
-      <th>Comments</th>
-      <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('telecaller_id')">Support (Telecaller)<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('field_staff_id')">Showroom (Field)<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('source_ref_name')">Ground Source<span class="sort-icon"></span></th>
-      <th>Senior</th>
-      <th>Extended</th>
-      <th>Core</th>
-      <th>Field Supp</th>
-      <th>Supp Staff</th>
-      <th>Tech Staff 1</th>
-      <th>Tech Staff 2</th>
-      <th class="sortable" onclick="sortByCol('pincode')">Pincode<span class="sort-icon"></span></th>
-      <th>Bank IFSC</th>
-      <th>Vendor</th>
-      <th>Vendor Status</th>
-      <th>Bank Entry?</th>
-      <th>Statement?</th>
-      <th>Monthly Inc (₹)</th>
-      <th>Co-Applicant</th>
-      <th>Co-App Aadhaar</th>
-      <th>Co-App PAN</th>
-      <th>Co-App Bank A/C</th>
-      <th>Co-App IFSC</th>
-      <th>Docs</th>
-      <th title="Uploaded / Total Required">Doc Count</th>
-      <th class="sortable" onclick="sortByCol('material_reach_date')">Material Dt<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('existing_association')">Association<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('deal_value_total')" title="Contracted deal value">Deal Total<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('deal_value_received')" title="Amount received from confirmed transactions">Received<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('next_followup_date')">Next Followup<span class="sort-icon"></span></th>
-      <th>VGK</th>
-      <th>Actions</th>
-    </tr>`;
+    if (_isRestrictedFreelancer) {
+      thead.innerHTML = `<tr>
+        <th></th>
+        <th class="sortable" onclick="sortByCol('id')">ID<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('name')">Name<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('phone')">Phone<span class="sort-icon"></span></th>
+        <th>Stage</th>
+        <th class="sortable" onclick="sortByCol('loan_bank')">Bank<span class="sort-icon"></span></th>
+        <th>Branch</th>
+        <th class="sortable" onclick="sortByCol('submit_date')" title="Sort by Submit Date">Submitted Date<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('installation_date')">Install Date<span class="sort-icon"></span></th>
+        <th title="Total deal value minus received amount">Balance Pending</th>
+        <th class="sortable" onclick="sortByCol('application_no')">App No<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('accepted_date')">Accepted<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('status')">Status<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('solar_pipeline_status_updated_at')" title="Sort by when Stage was last changed">Stage Date<span class="sort-icon"></span></th>
+        <th class="sortable" id="daysColTh" onclick="sortByCol('_days')" title="Days since Submit Date — or Days in current Stage when a Stage filter is active. Click to sort.">Days<span class="sort-icon"></span></th>
+        <th>Comments</th>
+      </tr>`;
+    } else {
+      thead.innerHTML = `<tr>
+        <th><input type="checkbox" id="selectAllChk" onchange="toggleSelectAll(this)" title="Select All" style="cursor:pointer"></th>
+        <th></th>
+        <th class="sortable" onclick="sortByCol('id')">ID<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('name')">Name<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('phone')">Phone<span class="sort-icon"></span></th>
+        <th>Stage</th>
+        <th class="sortable" onclick="sortByCol('loan_bank')">Bank<span class="sort-icon"></span></th>
+        <th>Branch</th>
+        <th class="sortable" onclick="sortByCol('submit_date')" title="Sort by Submit Date">Submitted Date<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('installation_date')">Install Date<span class="sort-icon"></span></th>
+        <th title="Total deal value minus received amount">Balance Pending</th>
+        <th title="Locked at completion — used for all payout/incentive calculations" style="white-space:nowrap">Commission Status &#10003;</th>
+        <th class="sortable" onclick="sortByCol('application_no')">App No<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('accepted_date')">Accepted<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('status')">Status<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('solar_pipeline_status_updated_at')" title="Sort by when Stage was last changed">Stage Date<span class="sort-icon"></span></th>
+        <th class="sortable" id="daysColTh" onclick="sortByCol('_days')" title="Days since Submit Date — or Days in current Stage when a Stage filter is active. Click to sort.">Days<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('complete_date')" title="Sort by Complete Date">Complete Date<span class="sort-icon"></span></th>
+        <th title="Panel serial numbers (up to 15) + brand, make, warranty">Panel Nos</th>
+        <th title="Inverter serial number + brand, make, warranty">Inverter No</th>
+        <th>Comments</th>
+        <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('telecaller_id')">Support (Telecaller)<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('field_staff_id')">Showroom (Field)<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('source_ref_name')">Ground Source<span class="sort-icon"></span></th>
+        <th>Senior</th>
+        <th>Extended</th>
+        <th>Core</th>
+        <th>Field Supp</th>
+        <th>Supp Staff</th>
+        <th>Tech Staff 1</th>
+        <th>Tech Staff 2</th>
+        <th class="sortable" onclick="sortByCol('pincode')">Pincode<span class="sort-icon"></span></th>
+        <th>Bank IFSC</th>
+        <th>Vendor</th>
+        <th>Vendor Status</th>
+        <th>Bank Entry?</th>
+        <th>Statement?</th>
+        <th>Monthly Inc (₹)</th>
+        <th>Co-Applicant</th>
+        <th>Co-App Aadhaar</th>
+        <th>Co-App PAN</th>
+        <th>Co-App Bank A/C</th>
+        <th>Co-App IFSC</th>
+        <th>Docs</th>
+        <th title="Uploaded / Total Required">Doc Count</th>
+        <th class="sortable" onclick="sortByCol('material_reach_date')">Material Dt<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('existing_association')">Association<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('deal_value_total')" title="Contracted deal value">Deal Total<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('deal_value_received')" title="Amount received from confirmed transactions">Received<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('next_followup_date')">Next Followup<span class="sort-icon"></span></th>
+        <th>VGK</th>
+        <th>Actions</th>
+      </tr>`;
+    }
   } else {
-    thead.innerHTML = `<tr>
-      <th></th>
-      <th class="sortable" onclick="sortByCol('id')">ID<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('name')">Name<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('phone')">Phone<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('status')">Status<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('priority')">Priority<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('telecaller_id')">Support (Telecaller)<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('field_staff_id')">Showroom (Field)<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('source_ref_name')">Ground Source<span class="sort-icon"></span></th>
-      <th>Field Supp</th>
-      <th>Supp Staff</th>
-      <th>Tech Staff 1</th>
-      <th>Tech Staff 2</th>
-      <th class="sortable" onclick="sortByCol('deal_value_total')" title="Contracted deal value">Deal Total<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('deal_value_received')" title="Amount received from confirmed transactions">Received<span class="sort-icon"></span></th>
-      <th title="Locked at completion — payout base" style="white-space:nowrap">Confirmed &#10003;</th>
-      <th class="sortable" onclick="sortByCol('next_followup_date')">Next Followup<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('created_at')">Created<span class="sort-icon"></span></th>
-      <th>Actions</th>
-    </tr>`;
+    if (_isRestrictedFreelancer) {
+      thead.innerHTML = `<tr>
+        <th></th>
+        <th class="sortable" onclick="sortByCol('id')">ID<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('name')">Name<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('phone')">Phone<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('status')">Status<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('priority')">Priority<span class="sort-icon"></span></th>
+        <th>Comments</th>
+      </tr>`;
+    } else {
+      thead.innerHTML = `<tr>
+        <th></th>
+        <th class="sortable" onclick="sortByCol('id')">ID<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('name')">Name<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('phone')">Phone<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('status')">Status<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('priority')">Priority<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('telecaller_id')">Support (Telecaller)<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('field_staff_id')">Showroom (Field)<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('source_ref_name')">Ground Source<span class="sort-icon"></span></th>
+        <th>Field Supp</th>
+        <th>Supp Staff</th>
+        <th>Tech Staff 1</th>
+        <th>Tech Staff 2</th>
+        <th class="sortable" onclick="sortByCol('deal_value_total')" title="Contracted deal value">Deal Total<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('deal_value_received')" title="Amount received from confirmed transactions">Received<span class="sort-icon"></span></th>
+        <th title="Locked at completion — payout base" style="white-space:nowrap">Confirmed &#10003;</th>
+        <th class="sortable" onclick="sortByCol('next_followup_date')">Next Followup<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('created_at')">Created<span class="sort-icon"></span></th>
+        <th>Actions</th>
+      </tr>`;
+    }
   }
   if (activeTab === 'ev-b2b') {
-    thead.innerHTML = `<tr>
-      <th></th>
-      <th class="sortable" onclick="sortByCol('id')">ID<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('name')">Name<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('phone')">Phone<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('status')">Status<span class="sort-icon"></span></th>
-      <th>B2B Stage</th>
-      <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('telecaller_id')">Support (Telecaller)<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('field_staff_id')">Showroom (Field)<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('source_ref_name')">Ground Source<span class="sort-icon"></span></th>
-      <th>Field Supp</th>
-      <th>Supp Staff</th>
-      <th>Tech Staff 1</th>
-      <th>Tech Staff 2</th>
-      <th class="sortable" onclick="sortByCol('deal_value_total')" title="Contracted deal value">Deal Total<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('deal_value_received')" title="Amount received from confirmed transactions">Received<span class="sort-icon"></span></th>
-      <th title="Locked at completion — payout base" style="white-space:nowrap">Confirmed &#10003;</th>
-      <th class="sortable" onclick="sortByCol('next_followup_date')">Next Followup<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('created_at')">Created<span class="sort-icon"></span></th>
-      <th>Actions</th>
-    </tr>`;
+    if (_isRestrictedFreelancer) {
+      thead.innerHTML = `<tr>
+        <th></th>
+        <th class="sortable" onclick="sortByCol('id')">ID<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('name')">Name<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('phone')">Phone<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('status')">Status<span class="sort-icon"></span></th>
+        <th>B2B Stage</th>
+        <th>Comments</th>
+      </tr>`;
+    } else {
+      thead.innerHTML = `<tr>
+        <th></th>
+        <th class="sortable" onclick="sortByCol('id')">ID<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('name')">Name<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('phone')">Phone<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('status')">Status<span class="sort-icon"></span></th>
+        <th>B2B Stage</th>
+        <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('telecaller_id')">Support (Telecaller)<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('field_staff_id')">Showroom (Field)<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('source_ref_name')">Ground Source<span class="sort-icon"></span></th>
+        <th>Field Supp</th>
+        <th>Supp Staff</th>
+        <th>Tech Staff 1</th>
+        <th>Tech Staff 2</th>
+        <th class="sortable" onclick="sortByCol('deal_value_total')" title="Contracted deal value">Deal Total<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('deal_value_received')" title="Amount received from confirmed transactions">Received<span class="sort-icon"></span></th>
+        <th title="Locked at completion — payout base" style="white-space:nowrap">Confirmed &#10003;</th>
+        <th class="sortable" onclick="sortByCol('next_followup_date')">Next Followup<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('created_at')">Created<span class="sort-icon"></span></th>
+        <th>Actions</th>
+      </tr>`;
+    }
   }
   updateSortIndicators();
 }
@@ -1963,7 +2065,9 @@ function renderLeadsTable(leads) {
   const tbody = document.getElementById('leadsTableBody');
   const isSolar = activeTab==='solar';
   const isB2B = activeTab==='ev-b2b';
-  const cols = isSolar ? 36 : isB2B ? 17 : 17;
+  const cols = _isRestrictedFreelancer
+    ? (isSolar ? 16 : isB2B ? 7 : 7)
+    : (isSolar ? 36 : isB2B ? 20 : 20);
   if (!leads.length) {
     tbody.innerHTML = `<tr><td colspan="${cols}" class="no-data"><i class="fas fa-inbox"></i> No leads found</td></tr>`;
     document.getElementById('tableCountLabel').textContent = '0 leads';
@@ -2027,7 +2131,6 @@ function renderLeadsTable(leads) {
         : '<span style="color:#d1d5db">—</span>';
       const _sdName = (l.name||'Lead #'+l.id).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
       const docB = `<button class="sdoc-open-btn" onclick="openSolarDocs(${l.id},'${_sdName}')" title="Manage Solar Documents"><i class="fas fa-folder-open"></i> Docs</button><button class="share-link-btn" id="slkBtn_${l.id}" onclick="createShareLink(${l.id},'${_sdName}',this)" title="Generate 6-hour share link"><i class="fas fa-share-alt"></i></button>`;
-      // DC-DAYS-COL-001: Days cell — colour-banded pill
       const _dv = _computeLeadDays(l);
       const _activePipeline = pipelineFilterVal || document.getElementById('filterSolarStage')?.value || '';
       const _daysTip = _activePipeline ? 'Days in current Stage' : 'Days since Submit Date';
@@ -2040,6 +2143,30 @@ function renderLeadsTable(leads) {
           })();
       const _balPendVal = l.deal_value_balance || (dv - (l.deal_value_received||0));
       const _balPendChip = _balPendVal > 0 ? `<span class="value-chip" style="background:#fee2e2;color:#b91c1c">₹${fmtVal(_balPendVal)}</span>` : '—';
+
+      if (_isRestrictedFreelancer) {
+        return `<tr class="lead-row" data-id="${l.id}">
+          <td><button class="btn-expand" id="exp_${l.id}" onclick="toggleExpand(${l.id})"><i class="fas fa-chevron-down"></i></button></td>
+          <td><span style="font-family:monospace;font-size:10.5px;color:#1e3a5f;font-weight:700">#${l.id}</span></td>
+          <td style="font-weight:600;color:#1f2937;max-width:130px;overflow:hidden;text-overflow:ellipsis">${esc(l.name||'—')}</td>
+          <td>${phoneCell}</td>
+          <td style="min-width:90px;padding:3px 4px">
+            ${l.solar_pipeline_status?`<span class="pipeline-badge ps-${l.solar_pipeline_status}">${PIPELINE_LABELS[l.solar_pipeline_status]||l.solar_pipeline_status}</span>`:'<span style="color:#9ca3af;font-size:9.5px">— Stage</span>'}
+          </td>
+          <td style="font-size:10.5px;max-width:80px;overflow:hidden;text-overflow:ellipsis">${esc(l.loan_bank||'—')}</td>
+          <td style="font-size:10.5px;max-width:80px;overflow:hidden;text-overflow:ellipsis" title="${esc(l.bank_branch||'')}">${esc(l.bank_branch||'—')}</td>
+          <td style="font-size:10.5px">${l.submit_date?fmtDateShort(l.submit_date):'—'}</td>
+          <td style="font-size:10.5px">${l.installation_date?fmtDateShort(l.installation_date):'—'}</td>
+          <td style="font-size:11px">${_balPendChip}</td>
+          <td style="font-family:monospace;font-size:10.5px;color:#d97706;font-weight:700">${esc(l.application_no||'—')}</td>
+          <td style="font-size:10.5px">${l.accepted_date?fmtDateShort(l.accepted_date):'—'}</td>
+          <td><span class="status-badge s-${st}">${STATUS_LABELS[st]||st}</span></td>
+          <td style="font-size:10px;color:#6b7280;white-space:nowrap">${l.solar_pipeline_status_updated_at?fmtDateShort(l.solar_pipeline_status_updated_at):'—'}</td>
+          ${_daysCell}
+          <td class="cmn-td" style="text-align:center;min-width:110px">${_commentCell(l)}</td>
+        </tr>`;
+      }
+
       return `<tr class="lead-row" data-id="${l.id}">
         <td style="text-align:center"><input type="checkbox" class="lead-chk" data-id="${l.id}" onchange="onLeadCheckChange(this)" style="cursor:pointer"></td>
         <td><button class="btn-expand" id="exp_${l.id}" onclick="toggleExpand(${l.id})"><i class="fas fa-chevron-down"></i></button></td>
@@ -2101,6 +2228,19 @@ function renderLeadsTable(leads) {
       const bStage = l.ev_b2b_stage||'';
       const bStageB = bStage ? `<span class="b2b-stage-badge bs-${bStage}">${B2B_STAGE_LABELS[bStage]||bStage}</span>` : '<span style="color:#d1d5db">—</span>';
       const src = l.source ? `<span class="source-tag">${esc(l.source)}</span>` : '—';
+
+      if (_isRestrictedFreelancer) {
+        return `<tr class="lead-row" data-id="${l.id}">
+          <td><button class="btn-expand" id="exp_${l.id}" onclick="toggleExpand(${l.id})"><i class="fas fa-chevron-down"></i></button></td>
+          <td><span style="font-family:monospace;font-size:10.5px;color:#1e3a5f;font-weight:700">#${l.id}</span></td>
+          <td style="font-weight:600;color:#1f2937;max-width:140px;overflow:hidden;text-overflow:ellipsis">${esc(l.name||'—')}</td>
+          <td>${phoneCell}</td>
+          <td><span class="status-badge s-${st}">${STATUS_LABELS[st]||st}</span></td>
+          <td>${bStageB}</td>
+          <td class="cmn-td" style="text-align:center;min-width:110px">${_commentCell(l)}</td>
+        </tr>`;
+      }
+
       return `<tr class="lead-row" data-id="${l.id}">
         <td><button class="btn-expand" id="exp_${l.id}" onclick="toggleExpand(${l.id})"><i class="fas fa-chevron-down"></i></button></td>
         <td><span style="font-family:monospace;font-size:10.5px;color:#1e3a5f;font-weight:700">#${l.id}</span></td>
@@ -2125,6 +2265,19 @@ function renderLeadsTable(leads) {
       </tr>`;
     } else {
       const src = l.source ? `<span class="source-tag">${esc(l.source)}</span>` : '—';
+
+      if (_isRestrictedFreelancer) {
+        return `<tr class="lead-row" data-id="${l.id}">
+          <td><button class="btn-expand" id="exp_${l.id}" onclick="toggleExpand(${l.id})"><i class="fas fa-chevron-down"></i></button></td>
+          <td><span style="font-family:monospace;font-size:10.5px;color:#1e3a5f;font-weight:700">#${l.id}</span></td>
+          <td style="font-weight:600;color:#1f2937;max-width:140px;overflow:hidden;text-overflow:ellipsis">${esc(l.name||'—')}</td>
+          <td>${phoneCell}</td>
+          <td><span class="status-badge s-${st}">${STATUS_LABELS[st]||st}</span></td>
+          <td><span class="priority-badge p-${pr}">${pr}</span></td>
+          <td class="cmn-td" style="text-align:center;min-width:110px">${_commentCell(l)}</td>
+        </tr>`;
+      }
+
       return `<tr class="lead-row" data-id="${l.id}">
         <td><button class="btn-expand" id="exp_${l.id}" onclick="toggleExpand(${l.id})"><i class="fas fa-chevron-down"></i></button></td>
         <td><span style="font-family:monospace;font-size:10.5px;color:#1e3a5f;font-weight:700">#${l.id}</span></td>
@@ -2169,7 +2322,9 @@ function toggleExpand(leadId) {
   }
   const l = _leadsCache.find(x=>x.id==leadId);
   if (!l) return;
-  const cols = activeTab==='solar'?37:17;
+  const cols = _isRestrictedFreelancer
+    ? (activeTab==='solar'?16:7)
+    : (activeTab==='solar'?37:17);
   const dr = document.createElement('tr');
   dr.className='detail-row'; dr.dataset.parentId=leadId;
   dr.innerHTML=`<td colspan="${cols}">${buildDetailPanel(l)}</td>`;
@@ -2244,11 +2399,14 @@ function buildDetailPanel(l) {
       ${l.documents_folder_link?`<div style="margin-top:7px"><a href="${esc(l.documents_folder_link)}" target="_blank" class="maps-btn" style="background:#dbeafe;color:#1d4ed8"><i class="fas fa-folder-open"></i> Open Docs</a></div>`:''}
     </div>`;
   }
-  html+=`<div class="detail-section"><h6><i class="fas fa-rupee-sign"></i> Deal</h6>
-    <div class="detail-field"><div class="lbl">Total (Quoted)</div><div>${l.deal_value_total?'₹'+fmtVal(l.deal_value_total):'—'}</div></div>
-    <div class="detail-field"><div class="lbl">Received</div><div style="font-weight:700;color:#065f46">${l.deal_value_received?'₹'+fmtVal(l.deal_value_received):'—'}</div></div>
-    <div class="detail-field"><div class="lbl">Balance</div><div style="color:${l.deal_value_balance>0?'#b91c1c':'#6b7280'}">${l.deal_value_balance?'₹'+fmtVal(l.deal_value_balance):'—'}</div></div>
-    <div class="detail-field"><div class="lbl" title="Locked at completion — used for all payout/incentive calculations">Confirmed Final &#128274;</div><div style="font-weight:800;color:${l.confirmed_final_value?'#92400e':'#9ca3af'};background:${l.confirmed_final_value?'#fef3c7':'transparent'};padding:${l.confirmed_final_value?'2px 6px':'0'};border-radius:4px">${l.confirmed_final_value?'₹'+fmtVal(l.confirmed_final_value):'Not locked'}</div></div>
+    const confirmedFinalField = (typeof _isRestrictedFreelancer !== 'undefined' && _isRestrictedFreelancer) ? '' : `
+      <div class="detail-field"><div class="lbl" title="Locked at completion — used for all payout/incentive calculations">Confirmed Final &#128274;</div><div style="font-weight:800;color:${l.confirmed_final_value?'#92400e':'#9ca3af'};background:${l.confirmed_final_value?'#fef3c7':'transparent'};padding:${l.confirmed_final_value?'2px 6px':'0'};border-radius:4px">${l.confirmed_final_value?'₹'+fmtVal(l.confirmed_final_value):'Not locked'}</div></div>`;
+
+    html+=`<div class="detail-section"><h6><i class="fas fa-rupee-sign"></i> Deal</h6>
+      <div class="detail-field"><div class="lbl">Total (Quoted)</div><div>${l.deal_value_total?'₹'+fmtVal(l.deal_value_total):'—'}</div></div>
+      <div class="detail-field"><div class="lbl">Received</div><div style="font-weight:700;color:#065f46">${l.deal_value_received?'₹'+fmtVal(l.deal_value_received):'—'}</div></div>
+      <div class="detail-field"><div class="lbl">Balance</div><div style="color:${l.deal_value_balance>0?'#b91c1c':'#6b7280'}">${l.deal_value_balance?'₹'+fmtVal(l.deal_value_balance):'—'}</div></div>
+      ${confirmedFinalField}
     <div class="detail-field"><div class="lbl">Expected Close</div><div>${v(l.expected_close_date?fmtDateShort(l.expected_close_date):null)}</div></div>
     <div class="detail-field"><div class="lbl">Lost Reason</div><div>${v(l.lost_reason)}</div></div>
   </div>`;
@@ -2940,15 +3098,38 @@ function renderEtcRow(s){
   // DC Protocol (Apr 2026): Use JSON.stringify so CRM IDs ('crm_123') are quoted in onclick handlers
   const sid=JSON.stringify(s.id);
   const score=s.score!=null?s.score:null;
-  let sb=`<span class="score-badge sc-na" style="cursor:pointer" onclick="etcCellClick(this,${sid},'score','${score??''}','number',null,0,100)">—</span>`;
-  if(score!==null){const cls=score>=75?'sc-high':score>=50?'sc-mid':'sc-low';sb=`<span class="score-badge ${cls}" style="cursor:pointer" onclick="etcCellClick(this,${sid},'score','${score}','number',null,0,100)">${score}%</span>`;}
   const cs=s.crm_status||'';
   const csBadge=cs?`<span style="display:inline-block;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:700;background:${ETC_CRM_STATUS_BG[cs]||'#f3f4f6'};color:${ETC_CRM_STATUS_COLORS[cs]||'#374151'}">${cs.charAt(0).toUpperCase()+cs.slice(1)}</span>`:'—';
   const ct=s.course_type||'';
-  const ctBadge=`<span class="etc-cell-edit" onclick="etcSelectClick(this,${sid},'course_type','${ct}',[['','—'],['EV Training 15 Days','EV 15D'],['Battery Training 15 Days','Bat 15D'],['Entrepreneur Training 7 Days','Ent 7D']])">${ct?`<span style="display:inline-block;padding:2px 6px;border-radius:8px;font-size:9.5px;font-weight:700;white-space:nowrap;background:${ETC_COURSE_BG[ct]||'#f3f4f6'};color:${ETC_COURSE_COLORS[ct]||'#374151'}">${ETC_COURSE_LABELS[ct]||ct}</span>`:'<span style="color:#9ca3af;font-size:10px">—</span>'}</span>`;
-  const batchCell=`<span class="etc-cell-edit" onclick="etcBatchClick(this,${sid},'${esc(s.batch_no||'')}',${isCrm&&!s.student_id?1:0})">${s.batch_no?(isCrm&&!s.student_id?`<span class="batch-pill" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">${esc(s.batch_no)}</span>`:`<span class="batch-pill">${esc(s.batch_no)}</span>`):'<span style="color:#9ca3af">—</span>'}</span>`;
   const stgMap={training_completed:{lbl:'Training Completed',cls:'stage-tc'},under_training:{lbl:'Under Training',cls:'stage-ut'},schedule_pending:{lbl:'Schedule Pending',cls:'stage-sp'}};
   const stgInfo=stgMap[s.training_stage];
+  const rowStyle=isCrm?'background:#f0fdf4;':'';
+
+  if (typeof _isRestrictedFreelancer !== 'undefined' && _isRestrictedFreelancer) {
+    const ctBadgeRestricted = ct ? `<span style="display:inline-block;padding:2px 6px;border-radius:8px;font-size:9.5px;font-weight:700;white-space:nowrap;background:${ETC_COURSE_BG[ct]||'#f3f4f6'};color:${ETC_COURSE_COLORS[ct]||'#374151'}">${ETC_COURSE_LABELS[ct]||ct}</span>` : '<span style="color:#9ca3af;font-size:10px">—</span>';
+    const scoreBadgeRestricted = score !== null ? `<span class="score-badge ${score>=75?'sc-high':score>=50?'sc-mid':'sc-low'}">${score}%</span>` : '—';
+    const stageBadgeRestricted = stgInfo ? `<span class="stage-badge ${stgInfo.cls}">${stgInfo.lbl}</span>` : '—';
+    return `<tr class="etc-row" data-sid="${s.id}" style="${rowStyle}">
+        <td style="color:#9ca3af;font-size:10px">${s.sno||'—'}</td>
+        <td><span class="reg-id">${esc(s.registration_id||'—')}</span></td>
+        <td><span class="stu-id">${esc(s.student_id||'—')}</span></td>
+        <td>${s.batch_no ? `<span class="batch-pill">${esc(s.batch_no)}</span>` : '<span style="color:#9ca3af">—</span>'}</td>
+        <td style="font-size:10.5px">${s.batch_start_date?s.batch_start_date.slice(0,10):'—'}</td>
+        <td style="font-size:10.5px;${s.training_completed_date?'color:#059669;font-weight:600':'color:#d97706'}">${s.training_completed_date?s.training_completed_date.slice(0,10):'—'}</td>
+        <td style="font-weight:600;color:#1f2937">${esc(s.name||'—')}</td>
+        <td style="font-size:11px;min-width:110px"><span class="phone-mask">••••••••••</span> <button class="phone-reveal" onclick="revealPhone(this,${JSON.stringify(s.phone).replace(/"/g,'&quot;')},event)" title="View number">👁</button></td>
+        <td style="font-size:10.5px">${esc(s.state||'—')}</td>
+        <td style="font-size:10.5px">${esc(s.district||'—')}</td>
+        <td>${ctBadgeRestricted}</td>
+        <td>${scoreBadgeRestricted}</td>
+        <td>${stageBadgeRestricted}</td>
+      </tr>`;
+  }
+
+  let sb=`<span class="score-badge sc-na" style="cursor:pointer" onclick="etcCellClick(this,${sid},'score','${score??''}','number',null,0,100)">—</span>`;
+  if(score!==null){const cls=score>=75?'sc-high':score>=50?'sc-mid':'sc-low';sb=`<span class="score-badge ${cls}" style="cursor:pointer" onclick="etcCellClick(this,${sid},'score','${score}','number',null,0,100)">${score}%</span>`;}
+  const ctBadge=`<span class="etc-cell-edit" onclick="etcSelectClick(this,${sid},'course_type','${ct}',[['','—'],['EV Training 15 Days','EV 15D'],['Battery Training 15 Days','Bat 15D'],['Entrepreneur Training 7 Days','Ent 7D']])">${ct?`<span style="display:inline-block;padding:2px 6px;border-radius:8px;font-size:9.5px;font-weight:700;white-space:nowrap;background:${ETC_COURSE_BG[ct]||'#f3f4f6'};color:${ETC_COURSE_COLORS[ct]||'#374151'}">${ETC_COURSE_LABELS[ct]||ct}</span>`:'<span style="color:#9ca3af;font-size:10px">—</span>'}</span>`;
+  const batchCell=`<span class="etc-cell-edit" onclick="etcBatchClick(this,${sid},'${esc(s.batch_no||'')}',${isCrm&&!s.student_id?1:0})">${s.batch_no?(isCrm&&!s.student_id?`<span class="batch-pill" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">${esc(s.batch_no)}</span>`:`<span class="batch-pill">${esc(s.batch_no)}</span>`):'<span style="color:#9ca3af">—</span>'}</span>`;
   const stageBadge=`<span class="stage-edit-wrap" onclick="openEtcStageEdit(${sid},'${s.training_stage||''}',event)" title="Click to change stage">${stgInfo?`<span class="stage-badge ${stgInfo.cls}">${stgInfo.lbl}</span>`:'<span style="color:#9ca3af;font-size:10px">—</span>'}<i class="fas fa-pen stg-pencil"></i></span>`;
   const vs=s.vgk_status||'Pending';
   const vsColor=vs==='Active'?'#065f46':vs==='Inactive'?'#991b1b':'#92400e';
@@ -2962,7 +3143,6 @@ function renderEtcRow(s){
   const _hc=(code,name,clr,bg,ico,ttl)=>code?`<span style="display:inline-flex;align-items:center;gap:2px;background:${bg};border-radius:5px;padding:1px 5px;font-size:9px;font-weight:700;color:${clr}" title="${ttl}"><i class="${ico}" style="font-size:7px"></i>${esc(code)}${name?` · ${esc(name.split(' ')[0])}`:''}</span>`:'';
   const hParts=[_hc(s.handler_emp_code,s.handler_name,'#1e40af','#dbeafe','fas fa-user-shield','Source/Handler'),_hc(s.telecaller_emp_code,s.telecaller_name,'#6d28d9','#ede9fe','fas fa-phone-alt','Telecaller'),_hc(s.field_staff_emp_code,s.field_staff_name,'#065f46','#d1fae5','fas fa-map-marker-alt','Field Staff')].filter(Boolean);
   const hndChip=hParts.length?`<span style="display:inline-flex;flex-direction:column;gap:2px">${hParts.join('')}</span>`:'<span style="color:#d1d5db;font-size:10px">—</span>';
-  const rowStyle=isCrm?'background:#f0fdf4;':'';
   const actionBtn=isCrm
     ?`<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
         <button class="btn-edit" style="background:#dcfce7;color:#166534;font-size:10px;padding:3px 8px" onclick="etcEnrollLead(${s.crm_lead_id},${JSON.stringify(s).replace(/"/g,'&quot;')})"><i class="fas fa-user-plus"></i> Enroll</button>
@@ -3176,6 +3356,10 @@ async function saveEtcStudent(){
 
 // ── Lead Edit Modal ───────────────────────────────────────────────────────
 function openEdit(leadId){
+  if (typeof _isRestrictedFreelancer !== 'undefined' && _isRestrictedFreelancer) {
+    if (typeof showToast === 'function') showToast('You do not have permission to edit leads', 'error');
+    return;
+  }
   const l=_leadsCache.find(x=>x.id==leadId); if(!l)return;
   editingLead=l;
   document.getElementById('solarSection').style.display=activeTab==='solar'?'block':'none';
@@ -3907,6 +4091,7 @@ function efOnFsTypeChange(){}
 })();
 
 function inlineCellEdit(td) {
+  if (typeof _isRestrictedFreelancer !== 'undefined' && _isRestrictedFreelancer) return;
   closeIcWidget();
   const leadId = +td.dataset.lid;
   const field = td.dataset.field;
@@ -4013,6 +4198,7 @@ const _icHandlerTimers = {};
 function closeIcHandlerWidget() { document.getElementById('ic-handler-widget')?.remove(); }
 
 function inlineHandlerEdit(td) {
+  if (typeof _isRestrictedFreelancer !== 'undefined' && _isRestrictedFreelancer) return;
   if (td.dataset.type === 'handler_guru' || td.dataset.type === 'handler_zguru' || td.dataset.type === 'handler_core') return;
   closeIcWidget();
   closeIcHandlerWidget();

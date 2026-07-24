@@ -2057,7 +2057,14 @@ def get_crm_dashboard_v2(
 
     common_filters = base_lead_filters()
 
+    my_restricted = (
+        (current_employee.staff_type or '').upper() == 'FREELANCER' and 
+        getattr(current_employee, 'freelancer_access_mode', 'default') == 'only_leads'
+    )
+
     def owner_filters(emp_id):
+        if my_restricted:
+            return [_crm_assignment_filter(emp_id, current_employee.emp_code)] + common_filters
         return [CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id == emp_id] + common_filters
 
     my_id = current_employee.id
@@ -3213,6 +3220,10 @@ def list_leads(
     is_leader = has_direct_reports(current_employee.id, db, StaffEmployee)
     can_view_all = is_admin or is_leader
     
+    is_restricted_freelancer = (staff_type == 'FREELANCER' and getattr(current_employee, 'freelancer_access_mode', 'default') == 'only_leads')
+    if is_restricted_freelancer:
+        can_view_all = False
+    
     query = db.query(CRMLead).filter(CRMLead.company_id == company_id)
     
     # VISIBILITY FILTER LOGIC:
@@ -3226,23 +3237,27 @@ def list_leads(
         # DC Protocol (Mar 2026): Include all "my" leads: owned + handler roles, so synced leads
         # assigned via telecaller_id (not just primary_owner_id) also appear in staff's own leads page.
         # DC Protocol (Mar 2026): Also include truly unassigned sheet leads so all staff can see and claim them.
-        query = query.filter(
-            or_(
-                and_(
-                    CRMLead.primary_owner_type == 'staff',
-                    CRMLead.primary_owner_id == current_employee.id
-                ),
-                CRMLead.telecaller_id == current_employee.id,
-                CRMLead.field_staff_id == current_employee.id,
-                and_(
-                    CRMLead.handler_type == 'unassigned',
-                    CRMLead.status == 'new',
-                    CRMLead.primary_owner_id.is_(None),
-                    CRMLead.telecaller_id.is_(None),
-                    CRMLead.field_staff_id.is_(None),
-                ),
+        # However, restricted freelancer is still barred from fresh claimable leads unless explicitly owned.
+        if is_restricted_freelancer:
+            query = query.filter(_crm_assignment_filter(current_employee.id, current_employee.emp_code))
+        else:
+            query = query.filter(
+                or_(
+                    and_(
+                        CRMLead.primary_owner_type == 'staff',
+                        CRMLead.primary_owner_id == current_employee.id
+                    ),
+                    CRMLead.telecaller_id == current_employee.id,
+                    CRMLead.field_staff_id == current_employee.id,
+                    and_(
+                        CRMLead.handler_type == 'unassigned',
+                        CRMLead.status == 'new',
+                        CRMLead.primary_owner_id.is_(None),
+                        CRMLead.telecaller_id.is_(None),
+                        CRMLead.field_staff_id.is_(None),
+                    ),
+                )
             )
-        )
     elif assigned_to_me:
         # "Assigned Leads" - filter to leads assigned to current user
         query = query.filter(or_(
@@ -3250,6 +3265,9 @@ def list_leads(
             CRMLead.field_staff_id == current_employee.id,
             CRMLead.handler_id == current_employee.emp_code  # Legacy fallback
         ))
+    elif is_restricted_freelancer:
+        # Restricted freelancers: strictly see their assigned leads only
+        query = query.filter(_crm_assignment_filter(current_employee.id, current_employee.emp_code))
     elif not can_view_all:
         # Non-privileged users with no specific filter: see their scope only
         # (owned/assigned leads + fresh/unassigned leads for claiming)
@@ -7194,6 +7212,18 @@ def create_lead(
     }
 
 
+def _validate_freelancer_lead_access(lead: CRMLead, current_employee: StaffEmployee):
+    if (current_employee.staff_type or '').upper() == 'FREELANCER' and getattr(current_employee, 'freelancer_access_mode', 'default') == 'only_leads':
+        is_assigned = (
+            (lead.primary_owner_type == 'staff' and lead.primary_owner_id == current_employee.id) or
+            (lead.telecaller_id == current_employee.id) or
+            (lead.field_staff_id == current_employee.id) or
+            (lead.handler_type == 'staff' and lead.handler_id == current_employee.emp_code)
+        )
+        if not is_assigned:
+            raise HTTPException(status_code=403, detail="Access denied: Lead is not assigned to you")
+
+
 @router.get("/leads/{lead_id}")
 def get_lead(
     lead_id: int,
@@ -7211,6 +7241,8 @@ def get_lead(
         
         if not lead:
             raise HTTPException(status_code=404, detail="Lead not found")
+            
+        _validate_freelancer_lead_access(lead, current_employee)
         
         try:
             lead_dict = lead.to_dict()
@@ -7454,6 +7486,8 @@ def update_lead(
     
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
+        
+    _validate_freelancer_lead_access(lead, current_employee)
     
     # DC Protocol: Validate that the provided company_id matches lead's current company
     # VGK4U admin bypasses this check (manager-level cross-company access)
