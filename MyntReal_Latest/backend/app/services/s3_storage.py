@@ -69,6 +69,8 @@ class S3StorageService:
                     except ClientError:
                         pass
                 logger.warning(f"⚠️ File not found in S3: {file_path}")
+            elif e.response.get('Error', {}).get('Code') in ('InvalidAccessKeyId', 'SignatureDoesNotMatch', 'AccessDenied', 'NoCredentialsError'):
+                logger.warning(f"⚠️ S3 Download skipped for {file_path} (AWS credentials not configured/valid in dev)")
             else:
                 logger.error(f"❌ S3 Download failed for {file_path}: {e}")
             return None

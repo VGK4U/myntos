@@ -1859,7 +1859,7 @@ class StaffMenuRegistry(Base):
     menu_code = Column(String(64), nullable=False, unique=True, index=True)
     menu_name = Column(String(128), nullable=False)
     menu_description = Column(Text, nullable=True)
-    route_path = Column(String(256), nullable=False, index=True)
+    route_path = Column(String(256), nullable=False, unique=True, index=True)
     
     # Categorization
     menu_category = Column(String(64), nullable=True, index=True)

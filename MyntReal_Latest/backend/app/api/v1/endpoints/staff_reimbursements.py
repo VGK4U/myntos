@@ -527,6 +527,9 @@ async def get_approval_queue(
     
     if approval_level == 'manager' and not is_finance:
         query = query.filter(StaffReimbursementClaim.employee_id != current_user.id)
+        if not (is_manager or is_supreme):
+            subordinate_ids = [e[0] for e in db.query(StaffEmployee.id).filter(StaffEmployee.reporting_manager_id == current_user.id).all()]
+            query = query.filter(StaffReimbursementClaim.employee_id.in_(subordinate_ids if subordinate_ids else [-1]))
     
     total = query.count()
     claims = query.order_by(StaffReimbursementClaim.submitted_at.asc()).offset((page - 1) * limit).limit(limit).all()

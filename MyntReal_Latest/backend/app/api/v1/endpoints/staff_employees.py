@@ -340,21 +340,13 @@ async def list_employees(
     
     role_code = current_user.role.role_code.lower() if current_user.role and current_user.role.role_code else None
     
-    # DC: Apply role-based visibility filtering
-    if role_code in VIEW_ALL_ROLES:
+    # DC: Apply role-based visibility filtering - Aligned with user's data
+    if role_code in VIEW_ALL_ROLES or current_user.emp_code == "MR10001":
         # Key Leadership and HR can see all employees
         pass
-    elif role_code in VIEW_REPORTS_ROLES:
-        # Leadership Role, Team Leader, Manager: Can only see direct reports
-        query = query.filter(StaffEmployee.reporting_manager_id == current_user.id)
     else:
-        # Senior/Junior Executive: No access to employee list (return empty)
-        return {
-            "success": True,
-            "employees": [],
-            "pagination": {"page": page, "limit": limit, "total": 0, "pages": 0},
-            "message": "Access denied. Your role does not have access to employee list."
-        }
+        # Aligned with their data: see self and direct reports
+        query = query.filter(or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id))
     
     if status_filter:
         query = query.filter(StaffEmployee.status == status_filter)
@@ -454,6 +446,10 @@ async def get_employees_directory(
     #     )
     
     query = db.query(StaffEmployee).filter(StaffEmployee.status == 'active')
+    stats_base = db.query(StaffEmployee).filter(StaffEmployee.status == 'active')
+    if role_code not in VIEW_ALL_ROLES and current_user.emp_code != "MR10001":
+        query = query.filter(or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id))
+        stats_base = stats_base.filter(or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id))
     
     # Apply filters
     if department_id:
@@ -479,18 +475,9 @@ async def get_employees_directory(
     
     # Get totals for stats
     total = query.count()
-    total_approved = db.query(StaffEmployee).filter(
-        StaffEmployee.status == 'active',
-        StaffEmployee.kyc_status == 'approved'
-    ).count()
-    total_pending = db.query(StaffEmployee).filter(
-        StaffEmployee.status == 'active',
-        StaffEmployee.kyc_status.in_(['pending', 'submitted'])
-    ).count()
-    total_rejected = db.query(StaffEmployee).filter(
-        StaffEmployee.status == 'active',
-        StaffEmployee.kyc_status == 'rejected'
-    ).count()
+    total_approved = stats_base.filter(StaffEmployee.kyc_status == 'approved').count()
+    total_pending = stats_base.filter(StaffEmployee.kyc_status.in_(['pending', 'submitted'])).count()
+    total_rejected = stats_base.filter(StaffEmployee.kyc_status == 'rejected').count()
     
     # Get employees with pagination
     employees = query.order_by(StaffEmployee.emp_code)\
@@ -2194,6 +2181,14 @@ async def list_pending_kyc(
     #     )
     
     query = db.query(StaffEmployeeKyc)
+    stats_base = db.query(StaffEmployeeKyc)
+    if role_code not in KYC_APPROVAL_ROLES and role_code not in VIEW_ALL_ROLES and current_user.emp_code != "MR10001":
+        query = query.join(StaffEmployee, StaffEmployeeKyc.employee_id == StaffEmployee.id).filter(
+            or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id)
+        )
+        stats_base = stats_base.join(StaffEmployee, StaffEmployeeKyc.employee_id == StaffEmployee.id).filter(
+            or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id)
+        )
     
     # Handle status filter - filter by specific status if provided, otherwise show all
     if status_filter and status_filter.strip():
@@ -2217,9 +2212,9 @@ async def list_pending_kyc(
             "pages": (total + limit - 1) // limit
         },
         "stats": {
-            "pending": db.query(StaffEmployeeKyc).filter_by(status='submitted').count(),
-            "approved": db.query(StaffEmployeeKyc).filter_by(status='approved').count(),
-            "rejected": db.query(StaffEmployeeKyc).filter_by(status='rejected').count()
+            "pending": stats_base.filter(StaffEmployeeKyc.status == 'submitted').count(),
+            "approved": stats_base.filter(StaffEmployeeKyc.status == 'approved').count(),
+            "rejected": stats_base.filter(StaffEmployeeKyc.status == 'rejected').count()
         }
     }
 

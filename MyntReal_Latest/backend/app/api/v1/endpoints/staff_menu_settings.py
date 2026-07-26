@@ -3747,6 +3747,22 @@ async def get_my_menus(
     if _dept_auto_codes:
         granted_menu_codes.update(_dept_auto_codes)
         logger.info(f"[DC-DEPT-AUTO-GRANT] Merged {len(_dept_auto_codes)} dept-auto codes into granted_menu_codes for employee {employee_id}")
+    
+    # DC Protocol: Auto-grant ALL Staff Dashboard items to every logged-in user
+    _STAFF_DASHBOARD_AUTO_CODES = {
+        'staff_dashboard', 'DASHBOARD',
+        'staff_employees', 'EMPLOYEES',
+        'staff_employee_directory', 'EMPLOYEE_DIRECTORY',
+        'staff_offboarding', 'OFFBOARDING',
+        'staff_training_videos', 'TRAINING_VIDEOS',
+        'staff_my_kyc', 'MY_KYC',
+        'staff_kyc_approvals', 'KYC_APPROVALS',
+        'staff_manager_review', 'REVIEW_DASHBOARD',
+        'staff_my_lead_incentives', 'STAFF_MY_LEAD_INCENTIVES',
+        'staff_my_reimbursements', 'MY_REIMBURSEMENT_CLAIMS', 'staff_reimbursements',
+        'staff_reimbursement_approvals', 'REIMBURSEMENT_APPROVALS', 'reimbursement_approvals'
+    }
+    granted_menu_codes.update(_STAFF_DASHBOARD_AUTO_CODES)
     logger.info(f"[DC-MY-MENUS] Resolved {len(granted_menu_codes)} unique menu_codes from {len(employee_settings)} settings")
     
     # REGISTRY LOOKUP: Fetch menu details from StaffMenuRegistry (company-agnostic)
@@ -3843,6 +3859,33 @@ async def get_my_menus(
     
     # Combine original grants with cascaded menus
     all_menus = list(registry_menus) + cascaded_menus
+
+    # DC Protocol: Ensure every logged-in staff user receives all Staff Dashboard menu items in their API response
+    _STAFF_DASHBOARD_ROUTES = {
+        '/staff/dashboard',
+        '/staff/employees',
+        '/staff/employee-directory',
+        '/staff/offboarding',
+        '/staff/training-videos',
+        '/staff/my-kyc',
+        '/staff/kyc-approvals',
+        '/staff/manager-review',
+        '/staff/my-lead-incentives',
+        '/staff/accounts/my-reimbursements',
+        '/staff/accounts/reimbursement-approvals'
+    }
+    existing_routes = {m.route_path for m in all_menus if m.route_path}
+    missing_sd_routes = _STAFF_DASHBOARD_ROUTES - existing_routes
+    if missing_sd_routes:
+        sd_menus = db.query(StaffMenuRegistry).filter(
+            StaffMenuRegistry.route_path.in_(missing_sd_routes),
+            StaffMenuRegistry.is_active == True,
+            StaffMenuRegistry.audience_scope.in_(['staff', 'shared'])
+        ).all()
+        for sdm in sd_menus:
+            if sdm.route_path not in existing_routes:
+                all_menus.append(sdm)
+                existing_routes.add(sdm.route_path)
 
     # DC Protocol (Jul 2026): Freelancer Only Leads access restriction
     if current_user.staff_type == 'FREELANCER' and getattr(current_user, 'freelancer_access_mode', 'default') == 'only_leads':
@@ -4528,7 +4571,7 @@ async def sync_sidebar_to_registry_legacy(
         # 8-JOURNEY, 9-LOCATION, 10-REIMBURSEMENT, 11-SERVICE TICKETS, 12-ACCOUNTS,
         # 13-BUSINESS PARTNERS, 14-NDA, 15-CONFIGURATION, 16-ZYNOVA, 17-MNR, 18-MNR USER SIDEBAR
         'progress': ('PROGRESS', 1, ['/staff/progress']),
-        'staff-dashboard': ('STAFF DASHBOARD', 2, ['/staff/dashboard', '/staff/employees', '/staff/employee-directory', '/staff/my-kyc', '/staff/kyc-approvals', '/staff/change-password', '/staff/2fa-settings', '/staff/my-lead-incentives']),
+        'staff-dashboard': ('STAFF DASHBOARD', 2, ['/staff/dashboard', '/staff/employees', '/staff/employee-directory', '/staff/offboarding', '/staff/training-videos', '/staff/my-kyc', '/staff/kyc-approvals', '/staff/change-password', '/staff/2fa-settings', '/staff/my-lead-incentives']),
         'attendance': ('ATTENDANCE', 3, ['/staff/my-attendance', '/staff/my-leaves', '/staff/leave-approvals', '/staff/team-attendance', '/staff/attendance-sheet', '/staff/attendance-reports', '/staff/attendance-exceptions', '/staff/attendance-computation', '/staff/team-attendance-summary']),
         'crm': ('CRM & LEADS', 4, ['/staff/crm/dashboard', '/staff/leads', '/staff/crm/team-leads', '/staff/my-leads', '/staff/crm/lead-sources', '/rvz/crm-leads', '/rvz/crm/leads', '/staff/call-management', '/staff/dialer', '/staff/call-quality', '/staff/crm/sales-report']),
         'task-management': ('TASK MANAGEMENT', 5, ['/staff/tasks/assigned-by-me-v2', '/staff/tasks/assigned-to-me', '/staff/tasks/team-activities', '/staff/tasks/tracker', '/staff/team-activities', '/staff/manager-review', '/staff/task-review']),

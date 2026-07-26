@@ -738,12 +738,13 @@ const StaffSidebar = {
         for (const section of menuMaster) {
             const sectionItems = [];
             const sectionSubSections = [];
+            const isStaffDashboardSection = (section.section_code === 'STAFF_DASHBOARD' || section.section_label === 'STAFF DASHBOARD');
             
             // Process regular items
             if (section.items) {
                 for (const item of section.items) {
                     // DC Protocol: Match by route_path (reliable) instead of menu_code (format mismatch)
-                    const shouldInclude = !hasRouteAccess || (allowedPaths && allowedPaths.has(item.route));
+                    const shouldInclude = isStaffDashboardSection || !hasRouteAccess || (allowedPaths && allowedPaths.has(item.route));
                     if (shouldInclude) {
                         sectionItems.push({
                             icon: item.icon || 'fas fa-circle',
@@ -762,7 +763,7 @@ const StaffSidebar = {
                     
                     for (const item of subSection.items || []) {
                         // DC Protocol: Match by route_path for subSection items too
-                        const shouldInclude = !hasRouteAccess || (allowedPaths && allowedPaths.has(item.route));
+                        const shouldInclude = isStaffDashboardSection || !hasRouteAccess || (allowedPaths && allowedPaths.has(item.route));
                         if (shouldInclude) {
                             subItems.push({
                                 icon: item.icon || 'fas fa-circle',

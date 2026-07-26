@@ -6527,7 +6527,8 @@ class VGKPointsLedger(BaseModel):
         CheckConstraint(
             "reason_code IN ('WELCOME_BONUS','ACTIVATION_BONUS','LOYAL_BONUS','BONANZA_REWARD',"
             "'PRODUCT_DISCOUNT','COMMISSION_ADJUSTMENT','MANUAL_ADJUSTMENT','MIGRATION_BALANCE',"
-            "'CAMPAIGN_BONUS','AUTO_REFILL','COMPANY_ROYALTY','INCOME_EARNED','BONANZA_CASH_CREDIT')",
+            "'CAMPAIGN_BONUS','AUTO_REFILL','COMPANY_ROYALTY','INCOME_EARNED','BONANZA_CASH_CREDIT',"
+            "'REFERRAL_BONUS','SIGNUP_BONUS','SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION')",
             name='vgk_points_reason_check'
         ),
         Index('idx_vgk_pts_partner', 'partner_id'),

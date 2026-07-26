@@ -29,13 +29,8 @@ OFFBOARDING_ACCESS_ROLES = ['hr', 'ea', 'vgk4u', 'ceo', 'md']
 
 
 def _check_offboarding_access(current_user: StaffEmployee):
-    role_code = current_user.role.role_code.lower() if current_user.role and current_user.role.role_code else None
-    hierarchy = current_user.role.hierarchy_level if current_user.role else 0
-    if role_code not in OFFBOARDING_ACCESS_ROLES and hierarchy < 150:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only HR/EA/VGK4U can access offboarding"
-        )
+    # DC Protocol: Menu-based access control - page assignment = full access
+    pass
 
 
 def _get_employee_or_404(db: Session, employee_id: int) -> StaffEmployee:
@@ -56,9 +51,15 @@ async def list_offboarding_employees(
 ):
     _check_offboarding_access(current_user)
 
-    employees = db.query(StaffEmployee).filter(
+    query = db.query(StaffEmployee).filter(
         StaffEmployee.status.in_(['deactivated', 'resigned'])
-    ).order_by(StaffEmployee.updated_at.desc()).all()
+    )
+    role_code = current_user.role.role_code.lower() if current_user.role and current_user.role.role_code else None
+    hierarchy = current_user.role.hierarchy_level if current_user.role else 0
+    if role_code not in OFFBOARDING_ACCESS_ROLES and hierarchy < 150:
+        query = query.filter(or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id))
+
+    employees = query.order_by(StaffEmployee.updated_at.desc()).all()
 
     result = []
     for emp in employees:

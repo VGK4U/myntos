@@ -137,7 +137,7 @@ def list_models(
         FROM veh_models m
         LEFT JOIN veh_model_colors c ON c.model_id = m.id
         WHERE m.company_id = :cid {inactive_filter}
-        GROUP BY m.id
+        GROUP BY m.id, m.name, m.is_active, m.sort_order
         ORDER BY m.sort_order, m.name
     """), {"cid": cid}).fetchall()
     return [
@@ -689,7 +689,7 @@ def get_sheet(
         FROM veh_models m
         LEFT JOIN veh_model_colors c ON c.model_id = m.id AND c.is_active = TRUE
         WHERE m.is_active = TRUE {co_filter_model}
-        GROUP BY m.id
+        GROUP BY m.id, m.name, m.sort_order
         ORDER BY m.sort_order, m.name
     """), params_cid).fetchall()
 

@@ -1489,7 +1489,8 @@ def bootstrap_vgk_points_refill_schema():
             CHECK (reason_code IN (
                 'WELCOME_BONUS','ACTIVATION_BONUS','LOYAL_BONUS','BONANZA_REWARD',
                 'PRODUCT_DISCOUNT','COMMISSION_ADJUSTMENT','MANUAL_ADJUSTMENT',
-                'MIGRATION_BALANCE','CAMPAIGN_BONUS','AUTO_REFILL','INCOME_EARNED'
+                'MIGRATION_BALANCE','CAMPAIGN_BONUS','AUTO_REFILL','COMPANY_ROYALTY','INCOME_EARNED','BONANZA_CASH_CREDIT',
+                'REFERRAL_BONUS','SIGNUP_BONUS','SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION'
             ))
         """))
         db.commit()
@@ -1730,7 +1731,9 @@ def bootstrap_wallet_txn_solar_advance_types():
                     'VENDOR_DEBIT','WITHDRAWAL','ADJUSTMENT',
                     'SOLAR_ADVANCE_CREDIT','SLAB_BONUS_CREDIT','SOLAR_ADVANCE_RECOVERY',
                     'SOLAR_ADV_PAYOUT','SLAB_BONUS_PAYOUT',
-                    'COMPANY_PAYOUT','COMPANY_PAYOUT_DEDUCT'
+                    'COMPANY_PAYOUT','COMPANY_PAYOUT_DEDUCT',
+                    'BONANZA_CASH_PAYOUT','ADVANCE_CASH_PAID','EXTRA_COMMISSION_CREDIT',
+                    'HANDLER_CHANGE_REVERSAL'
                 ))
         """))
         db.commit()
@@ -2141,7 +2144,8 @@ def bootstrap_company_royalty_points():
             "CHECK (reason_code IN ("
             "'WELCOME_BONUS','ACTIVATION_BONUS','LOYAL_BONUS','BONANZA_REWARD',"
             "'PRODUCT_DISCOUNT','COMMISSION_ADJUSTMENT','MANUAL_ADJUSTMENT','MIGRATION_BALANCE',"
-            "'CAMPAIGN_BONUS','AUTO_REFILL','COMPANY_ROYALTY','INCOME_EARNED'"
+            "'CAMPAIGN_BONUS','AUTO_REFILL','COMPANY_ROYALTY','INCOME_EARNED','BONANZA_CASH_CREDIT',"
+            "'REFERRAL_BONUS','SIGNUP_BONUS','SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION'"
             "))"
         ))
         db.execute(text(

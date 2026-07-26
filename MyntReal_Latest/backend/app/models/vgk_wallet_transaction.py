@@ -47,7 +47,8 @@ class VGKWalletTransaction(BaseModel):
             "'WITHDRAWAL','ADJUSTMENT',"
             "'SOLAR_ADVANCE_CREDIT','SLAB_BONUS_CREDIT','SOLAR_ADVANCE_RECOVERY',"
             "'SOLAR_ADV_PAYOUT','SLAB_BONUS_PAYOUT',"
-            "'COMPANY_PAYOUT','COMPANY_PAYOUT_DEDUCT'"
+            "'COMPANY_PAYOUT','COMPANY_PAYOUT_DEDUCT',"
+            "'BONANZA_CASH_PAYOUT','ADVANCE_CASH_PAID','EXTRA_COMMISSION_CREDIT','HANDLER_CHANGE_REVERSAL'"
             ")",
             name='vgk_wallet_txn_type_check'
         ),

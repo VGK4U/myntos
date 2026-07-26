@@ -1431,7 +1431,8 @@ def add_vgk_loyal_coupon_column():
                 "CHECK (reason_code IN ("
                 "'WELCOME_BONUS','ACTIVATION_BONUS','LOYAL_BONUS','BONANZA_REWARD',"
                 "'PRODUCT_DISCOUNT','COMMISSION_ADJUSTMENT','MANUAL_ADJUSTMENT','MIGRATION_BALANCE',"
-                "'CAMPAIGN_BONUS','AUTO_REFILL'"
+                "'CAMPAIGN_BONUS','AUTO_REFILL','COMPANY_ROYALTY','INCOME_EARNED','BONANZA_CASH_CREDIT',"
+                "'REFERRAL_BONUS','SIGNUP_BONUS','SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION'"
                 "))"
             ))
             conn.commit()
@@ -1574,7 +1575,8 @@ def add_vgk_wallet_system_schema():
                         'SOLAR_ADVANCE_CREDIT','SLAB_BONUS_CREDIT','SOLAR_ADVANCE_RECOVERY',
                         'SOLAR_ADV_PAYOUT','SLAB_BONUS_PAYOUT',
                         'COMPANY_PAYOUT','COMPANY_PAYOUT_DEDUCT',
-                        'BONANZA_CASH_PAYOUT','ADVANCE_CASH_PAID'
+                        'BONANZA_CASH_PAYOUT','ADVANCE_CASH_PAID','EXTRA_COMMISSION_CREDIT',
+                        'HANDLER_CHANGE_REVERSAL'
                     ))
             """))
             _conn.commit()
@@ -4299,7 +4301,8 @@ def fix_vgk_promo_reason_code():
                 "ALTER TABLE vgk_points_ledger ADD CONSTRAINT vgk_points_reason_check "
                 "CHECK (reason_code IN ('WELCOME_BONUS','ACTIVATION_BONUS','LOYAL_BONUS','BONANZA_REWARD',"
                 "'PRODUCT_DISCOUNT','COMMISSION_ADJUSTMENT','MANUAL_ADJUSTMENT','MIGRATION_BALANCE',"
-                "'CAMPAIGN_BONUS'))"
+                "'CAMPAIGN_BONUS','AUTO_REFILL','COMPANY_ROYALTY','INCOME_EARNED','BONANZA_CASH_CREDIT',"
+                "'REFERRAL_BONUS','SIGNUP_BONUS','SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION'))"
             ))
             conn.commit()
             print("[DC-VGK-PROMO] ✅ vgk_points_ledger reason_code constraint updated with CAMPAIGN_BONUS", flush=True)
@@ -4417,6 +4420,25 @@ def _startup_worker():
         print(f"[DC-STARTUP] ✅ Migration key cache: {len(_applied_keys)} keys preloaded (fast-skip active)", flush=True)
     except Exception as _ke:
         print(f"[DC-STARTUP] ⚠️ Key cache load skipped (per-migration fallback active): {_ke}", flush=True)
+
+    # ── DC-STARTUP: Ensure Critical Unique Indexes & Constraints ─────────────
+    # Guarantees ON CONFLICT clauses (route_path, menu_code, name) never fail with InvalidColumnReference
+    try:
+        with engine.begin() as _conn:
+            _conn.execute(_sa_text("DELETE FROM staff_menu_registry a USING staff_menu_registry b WHERE a.id > b.id AND a.route_path = b.route_path"))
+            _conn.execute(_sa_text("CREATE UNIQUE INDEX IF NOT EXISTS idx_menu_registry_route_unique ON staff_menu_registry(route_path)"))
+            _conn.execute(_sa_text("DELETE FROM staff_menu_registry a USING staff_menu_registry b WHERE a.id > b.id AND a.menu_code = b.menu_code"))
+            _conn.execute(_sa_text("CREATE UNIQUE INDEX IF NOT EXISTS idx_menu_registry_code_unique ON staff_menu_registry(menu_code)"))
+            _conn.execute(_sa_text("CREATE TABLE IF NOT EXISTS expense_main_category (id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, description TEXT, is_direct_expense BOOLEAN NOT NULL DEFAULT FALSE, created_by_id VARCHAR(50) NOT NULL, updated_by_id VARCHAR(50), is_active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMP NOT NULL DEFAULT NOW(), updated_at TIMESTAMP NOT NULL DEFAULT NOW())"))
+            _conn.execute(_sa_text("DELETE FROM expense_main_category a USING expense_main_category b WHERE a.id > b.id AND a.name = b.name"))
+            _conn.execute(_sa_text("CREATE UNIQUE INDEX IF NOT EXISTS idx_expense_main_cat_name ON expense_main_category(name)"))
+            _conn.execute(_sa_text("CREATE TABLE IF NOT EXISTS income_main_category (id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, description TEXT, created_by_id VARCHAR(50) NOT NULL, updated_by_id VARCHAR(50), is_active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMP NOT NULL DEFAULT NOW(), updated_at TIMESTAMP NOT NULL DEFAULT NOW())"))
+            _conn.execute(_sa_text("DELETE FROM income_main_category a USING income_main_category b WHERE a.id > b.id AND a.name = b.name"))
+            _conn.execute(_sa_text("CREATE UNIQUE INDEX IF NOT EXISTS idx_income_main_cat_name ON income_main_category(name)"))
+            _conn.execute(_sa_text("CREATE UNIQUE INDEX IF NOT EXISTS uq_jv_company_voucher_number ON journal_vouchers(company_id, voucher_number) WHERE company_id IS NOT NULL"))
+        print("[DC-STARTUP] ✅ Critical unique indexes & constraints verified/ensured on DB tables", flush=True)
+    except Exception as _idx_e:
+        print(f"[DC-STARTUP] ⚠️ Could not verify/ensure critical indexes (non-fatal): {_idx_e}", flush=True)
 
     def _mig_done(key: str) -> None:
         """Mark migration as applied in DB + update local cache atomically."""
@@ -10000,7 +10022,8 @@ def _startup_worker():
                         'WELCOME_BONUS','ACTIVATION_BONUS','LOYAL_BONUS','BONANZA_REWARD',
                         'PRODUCT_DISCOUNT','COMMISSION_ADJUSTMENT','MANUAL_ADJUSTMENT',
                         'MIGRATION_BALANCE','CAMPAIGN_BONUS','AUTO_REFILL','COMPANY_ROYALTY',
-                        'INCOME_EARNED','BONANZA_CASH_CREDIT'
+                        'INCOME_EARNED','BONANZA_CASH_CREDIT','REFERRAL_BONUS','SIGNUP_BONUS',
+                        'SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION'
                     )
                 )
             """))
@@ -12183,7 +12206,8 @@ def _startup_worker():
                 "'WELCOME_BONUS','ACTIVATION_BONUS','LOYAL_BONUS','BONANZA_REWARD',"
                 "'PRODUCT_DISCOUNT','COMMISSION_ADJUSTMENT','MANUAL_ADJUSTMENT','MIGRATION_BALANCE',"
                 "'CAMPAIGN_BONUS','AUTO_REFILL','COMPANY_ROYALTY',"
-                "'INCOME_EARNED','BONANZA_CASH_CREDIT'"
+                "'INCOME_EARNED','BONANZA_CASH_CREDIT','REFERRAL_BONUS','SIGNUP_BONUS',"
+                "'SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION'"
                 "))"
             ))
             _conn_re.commit()
@@ -13703,6 +13727,10 @@ def _startup_worker():
                 """))
                 _conn.execute(text("""
                     ALTER TABLE journal_vouchers
+                    DROP CONSTRAINT IF EXISTS uq_jv_company_voucher_number
+                """))
+                _conn.execute(text("""
+                    ALTER TABLE journal_vouchers
                     ADD CONSTRAINT uq_jv_company_voucher_number
                     UNIQUE (company_id, voucher_number)
                 """))
@@ -13785,7 +13813,7 @@ def _startup_worker():
 
     # DC-SOLAR-COMM-BACKFILL-001: Generate missing COMMISSION drafts for solar leads at subsidy_pending or completed
     try:
-        with Session(engine) as _session:
+        with SessionLocal() as _session:
             _mk = 'solar_comm_backfill_20260719'
             _exists = _mk in _applied_keys
             if not _exists:
@@ -15375,7 +15403,7 @@ def _startup_worker():
             _mvs_key = 'dc_mnr_vgk_source_backfill_001'
             _mvs_done = _mvs_key in _applied_keys
             if not _mvs_done:
-                from backend.app.models.crm import CRMLeadSource, DEFAULT_LEAD_SOURCES
+                from app.models.crm import CRMLeadSource, DEFAULT_LEAD_SOURCES
                 from sqlalchemy import text as _txt2
 
                 # 1. Ensure 'MNR' source row exists for every company
@@ -17743,7 +17771,8 @@ try:
                 'WELCOME_BONUS','ACTIVATION_BONUS','LOYAL_BONUS','BONANZA_REWARD',
                 'PRODUCT_DISCOUNT','COMMISSION_ADJUSTMENT','MANUAL_ADJUSTMENT',
                 'MIGRATION_BALANCE','CAMPAIGN_BONUS','AUTO_REFILL','COMPANY_ROYALTY',
-                'INCOME_EARNED','BONANZA_CASH_CREDIT','REFERRAL_BONUS','SIGNUP_BONUS'
+                'INCOME_EARNED','BONANZA_CASH_CREDIT','REFERRAL_BONUS','SIGNUP_BONUS',
+                'SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION'
             ]::varchar[]))
         """))
         _rfb_db.execute(_rfb_text(
@@ -19846,7 +19875,7 @@ try:
                         'SOLAR_ADV_PAYOUT','SLAB_BONUS_PAYOUT',
                         'COMPANY_PAYOUT','COMPANY_PAYOUT_DEDUCT',
                         'BONANZA_CASH_PAYOUT','ADVANCE_CASH_PAID',
-                        'EXTRA_COMMISSION_CREDIT'
+                        'EXTRA_COMMISSION_CREDIT','HANDLER_CHANGE_REVERSAL'
                     ))
             """))
 

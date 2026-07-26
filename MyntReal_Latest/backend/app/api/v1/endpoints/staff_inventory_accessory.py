@@ -133,7 +133,7 @@ def list_brands(
         FROM acc_brands b
         LEFT JOIN acc_specs s ON s.brand_id = b.id
         WHERE b.category = :cat AND b.company_id = :cid {inactive_filter}
-        GROUP BY b.id
+        GROUP BY b.id, b.name, b.is_active, b.sort_order, b.sub_type
         ORDER BY b.sub_type NULLS LAST, b.sort_order, b.name
     """), {"cat": category, "cid": cid}).fetchall()
     return [{"id": r[0], "name": r[1], "is_active": r[2], "sort_order": r[3],
@@ -570,7 +570,7 @@ def get_sheet(
         FROM acc_brands b
         LEFT JOIN acc_specs s ON s.brand_id = b.id AND s.is_active = TRUE
         WHERE b.category = :cat AND b.is_active = TRUE {co_filter}
-        GROUP BY b.id
+        GROUP BY b.id, b.name, b.sort_order, b.sub_type
         ORDER BY b.sub_type NULLS LAST, b.sort_order, b.name
     """), params_cid).fetchall()
 
