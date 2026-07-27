@@ -6383,71 +6383,163 @@ def _resolve_phone_duplicate(phone, alt_phone, db, exclude_lead_id=None):
     return existing, owner, owner_active
 
 
-@router.get("/exec-handler-leads")
-def exec_handler_leads(
-    handler_type: str = Query(..., description="Handler category: ground/handler/support/field/guru/zguru/adguru/partner/source"),
-    handler_key: str = Query(..., description="Identifier (emp_code / mnr_id / partner_code / source_label / gs_id)"),
-    handler_type_ext: Optional[str] = Query(None, description="Secondary type qualifier — for ground: gs_type (mnr/vgk/partner/staff)"),
-    category: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    source: Optional[str] = Query(None),
-    solar_pipeline_status: Optional[str] = Query(None),
-    created_from: Optional[str] = Query(None),
-    created_to: Optional[str] = Query(None),
-    closed_from: Optional[str] = Query(None),
-    closed_to: Optional[str] = Query(None),
-    submit_date_from: Optional[str] = Query(None),
-    submit_date_to: Optional[str] = Query(None),
-    complete_date_from: Optional[str] = Query(None),
-    complete_date_to: Optional[str] = Query(None),
-    limit: int = Query(200, ge=1, le=500),
-    db: Session = Depends(get_db),
-    current_employee: StaffEmployee = Depends(get_current_staff_user)
+def _apply_exec_dashboard_common_filters(
+    base, db, current_employee, is_admin,
+    category=None, status=None, source=None, net_source=None,
+    guru_filter=None, z_guru_filter=None, telecaller_emp_code=None,
+    field_staff_emp_code=None, pincode=None, search=None,
+    created_from=None, created_to=None, closed_from=None, closed_to=None,
+    submit_date_from=None, submit_date_to=None, complete_date_from=None, complete_date_to=None,
+    first_dvr_from=None, first_dvr_to=None, solar_pipeline_status=None,
+    accepted_date_from=None, accepted_date_to=None, installation_date_from=None, installation_date_to=None,
+    material_reach_date_from=None, material_reach_date_to=None, next_followup_from=None, next_followup_to=None,
+    ev_b2b_stage=None, combined_bank_filter=None, company_id_filter=None
 ):
-    """DC-EXEC-DRILLDOWN-001: Lightweight lead list for one handler cell — exec dashboard drill-down.
-    Applies same dashboard filters as lead-analytics so row counts match exactly."""
     from app.models.signup_category import SignupCategory as _SC2
-    from sqlalchemy import literal as _lit
+    from sqlalchemy import or_ as _sa_or, and_ as _sa_and
+    from datetime import datetime as _fdt
 
-    POST_WON = ['won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed']
-    _is_admin = is_vgk_admin((current_employee.staff_type or '').upper())
-    # DC-EXEC-DRILLDOWN-002: named leadership roles get full (all-company) access here too,
-    # matching the _AN_FULL_ACCESS rule already used by the lead-analytics summary endpoint —
-    # otherwise leadership staff see summary counts that include other companies' leads but
-    # get "No data" when they drill into a specific handler cell.
-    _eh_role_code = (current_employee.role.role_code if current_employee.role else '') or ''
-    if _eh_role_code in {'vgk4u', 'vgk4u_supreme', 'key_leadership', 'leadership_role', 'team_leader', 'manager'}:
-        _is_admin = True
+    def _cl(val):
+        if hasattr(val, 'default'):
+            return val.default if val.default is not ... else None
+        return val
 
-    def _pd(s):
-        try:
-            return datetime.fromisoformat(s.replace('Z', '+00:00').replace('T00:00:00+00:00', ''))
-        except Exception:
-            return None
+    category = _cl(category)
+    status = _cl(status)
+    source = _cl(source)
+    net_source = _cl(net_source)
+    guru_filter = _cl(guru_filter)
+    z_guru_filter = _cl(z_guru_filter)
+    telecaller_emp_code = _cl(telecaller_emp_code)
+    field_staff_emp_code = _cl(field_staff_emp_code)
+    pincode = _cl(pincode)
+    search = _cl(search)
+    solar_pipeline_status = _cl(solar_pipeline_status)
+    created_from = _cl(created_from)
+    created_to = _cl(created_to)
+    closed_from = _cl(closed_from)
+    closed_to = _cl(closed_to)
+    submit_date_from = _cl(submit_date_from)
+    submit_date_to = _cl(submit_date_to)
+    complete_date_from = _cl(complete_date_from)
+    complete_date_to = _cl(complete_date_to)
+    accepted_date_from = _cl(accepted_date_from)
+    accepted_date_to = _cl(accepted_date_to)
+    installation_date_from = _cl(installation_date_from)
+    installation_date_to = _cl(installation_date_to)
+    material_reach_date_from = _cl(material_reach_date_from)
+    material_reach_date_to = _cl(material_reach_date_to)
+    next_followup_from = _cl(next_followup_from)
+    next_followup_to = _cl(next_followup_to)
+    first_dvr_from = _cl(first_dvr_from)
+    first_dvr_to = _cl(first_dvr_to)
+    ev_b2b_stage = _cl(ev_b2b_stage)
+    combined_bank_filter = _cl(combined_bank_filter)
+    company_id_filter = _cl(company_id_filter)
 
-    # Company scope — mirrors lead-analytics
-    _all_cos = db.query(AssociatedCompany).filter(AssociatedCompany.is_active == True).all()
-    if _is_admin:
-        _co_ids = [c.id for c in _all_cos]
-    else:
-        _co_ids = [current_employee.base_company_id] if current_employee.base_company_id else [c.id for c in _all_cos]
+    # Team-scoped visibility (mirrors lead_analytics)
+    _role_code = (current_employee.role.role_code if current_employee.role else '') or ''
+    _FULL_ACCESS = {'vgk4u', 'vgk4u_supreme', 'key_leadership', 'leadership_role', 'team_leader', 'manager'}
+    if not is_admin and _role_code not in _FULL_ACCESS:
+        _sub_ids = [
+            row.id for row in db.query(StaffEmployee.id).filter(
+                StaffEmployee.reporting_manager_id == current_employee.id,
+                StaffEmployee.status == 'active'
+            ).all()
+        ]
+        _allowed = [current_employee.id] + _sub_ids
+        base = base.filter(_sa_or(
+            CRMLead.telecaller_id.in_(_allowed),
+            CRMLead.field_staff_id.in_(_allowed),
+            _sa_and(
+                CRMLead.primary_owner_type == 'staff',
+                CRMLead.primary_owner_id.in_(_allowed)
+            )
+        ))
 
-    base = db.query(CRMLead).filter(CRMLead.company_id.in_(_co_ids))
-
-    # Standard dashboard filters
     if category:
         _cids = [r.id for r in db.query(_SC2.id).filter(_SC2.name == category).all()]
         if _cids:
             _dsq = db.query(CRMLeadDeal.lead_id).filter(CRMLeadDeal.revenue_category_id.in_(_cids)).scalar_subquery()
-            base = base.filter(or_(CRMLead.category_id.in_(_cids), CRMLead.id.in_(_dsq)))
+            base = base.filter(_sa_or(CRMLead.category_id.in_(_cids), CRMLead.id.in_(_dsq)))
         else:
             base = base.filter(CRMLead.id == -1)
     if status:
+        POST_WON = ['won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed']
         base = base.filter(CRMLead.status.in_(POST_WON) if status == 'won_plus' else CRMLead.status == status)
     if source:
         base = base.filter(CRMLead.source.ilike(f'%{source}%'))
+    if net_source:
+        base = base.filter(_sa_or(
+            CRMLead.source_ref_name.ilike(f'%{net_source}%'),
+            CRMLead.source_ref_id.ilike(f'%{net_source}%'),
+            CRMLead.mnr_handler_id.ilike(f'%{net_source}%')
+        ))
+    if guru_filter:
+        from app.models.user import User as _GFUser
+        _gf_user = db.query(_GFUser).filter(
+            _sa_or(
+                _GFUser.id.ilike(f'%{guru_filter}%'),
+                _GFUser.name.ilike(f'%{guru_filter}%') if hasattr(_GFUser, 'name') else False,
+                _GFUser.full_name.ilike(f'%{guru_filter}%') if hasattr(_GFUser, 'full_name') else False,
+            )
+        ).first()
+        if _gf_user:
+            base = base.filter(CRMLead.guru_id == str(_gf_user.id))
+        else:
+            base = base.filter(CRMLead.guru_id.ilike(f'%{guru_filter}%'))
+    if z_guru_filter:
+        from app.models.user import User as _ZGFUser
+        _zgf_user = db.query(_ZGFUser).filter(
+            _sa_or(
+                _ZGFUser.id.ilike(f'%{z_guru_filter}%'),
+                _ZGFUser.name.ilike(f'%{z_guru_filter}%') if hasattr(_ZGFUser, 'name') else False,
+                _ZGFUser.full_name.ilike(f'%{z_guru_filter}%') if hasattr(_ZGFUser, 'full_name') else False,
+            )
+        ).first()
+        if _zgf_user:
+            base = base.filter(CRMLead.z_guru_id == str(_zgf_user.id))
+        else:
+            base = base.filter(CRMLead.z_guru_id.ilike(f'%{z_guru_filter}%'))
+    if telecaller_emp_code:
+        _tc = db.query(StaffEmployee).filter(
+            StaffEmployee.emp_code.ilike(f'%{telecaller_emp_code}%'),
+            StaffEmployee.status == 'active'
+        ).first()
+        base = base.filter(CRMLead.telecaller_id == _tc.id) if _tc else base.filter(CRMLead.id == -1)
+    if field_staff_emp_code:
+        _fs = db.query(StaffEmployee).filter(
+            StaffEmployee.emp_code.ilike(f'%{field_staff_emp_code}%'),
+            StaffEmployee.status == 'active'
+        ).first()
+        base = base.filter(CRMLead.field_staff_id == _fs.id) if _fs else base.filter(CRMLead.id == -1)
+    if pincode:
+        base = base.filter(CRMLead.pincode.ilike(f'%{pincode}%'))
+    if search:
+        base = base.filter(_sa_or(
+            CRMLead.name.ilike(f'%{search}%'),
+            CRMLead.phone.ilike(f'%{search}%')
+        ))
     if solar_pipeline_status:
         base = base.filter(CRMLead.solar_pipeline_status == solar_pipeline_status)
+    if ev_b2b_stage:
+        base = base.filter(CRMLead.ev_b2b_stage == ev_b2b_stage)
+    if combined_bank_filter:
+        _CBF_MAP = {
+            'with_bank': ('pending_with_bank', 'waiting_for_bank_loan'),
+            'loan_rejected': ('loan_rejected', 'bank_loan_rejected'),
+        }
+        if combined_bank_filter in _CBF_MAP:
+            _cbf_ps, _cbf_st = _CBF_MAP[combined_bank_filter]
+            base = base.filter(_sa_or(
+                CRMLead.solar_pipeline_status == _cbf_ps,
+                CRMLead.status == _cbf_st
+            ))
+    def _pd(s):
+        try:
+            return _fdt.fromisoformat(s.replace('Z', '+00:00').replace('T00:00:00+00:00', ''))
+        except Exception:
+            return None
     if created_from:
         v = _pd(created_from)
         if v: base = base.filter(CRMLead.created_at >= v)
@@ -6472,6 +6564,130 @@ def exec_handler_leads(
     if complete_date_to:
         v = _pd(complete_date_to)
         if v: base = base.filter(CRMLead.complete_date <= (v.date() if hasattr(v, 'date') else v))
+    if accepted_date_from:
+        v = _pd(accepted_date_from)
+        if v: base = base.filter(CRMLead.accepted_date >= v)
+    if accepted_date_to:
+        v = _pd(accepted_date_to)
+        if v: base = base.filter(CRMLead.accepted_date <= v)
+    if installation_date_from:
+        v = _pd(installation_date_from)
+        if v: base = base.filter(CRMLead.installation_date >= v)
+    if installation_date_to:
+        v = _pd(installation_date_to)
+        if v: base = base.filter(CRMLead.installation_date <= v)
+    if material_reach_date_from:
+        v = _pd(material_reach_date_from)
+        if v: base = base.filter(CRMLead.material_reach_date >= v)
+    if material_reach_date_to:
+        v = _pd(material_reach_date_to)
+        if v: base = base.filter(CRMLead.material_reach_date <= v)
+    if next_followup_from:
+        v = _pd(next_followup_from)
+        if v: base = base.filter(CRMLead.next_followup_date >= v)
+    if next_followup_to:
+        v = _pd(next_followup_to)
+        if v: base = base.filter(CRMLead.next_followup_date <= v)
+    if first_dvr_from:
+        try:
+            from datetime import date as _ddate
+            _dvrf = _ddate.fromisoformat(first_dvr_from[:10])
+            base = base.filter(CRMLead.first_payment_received_date >= _dvrf)
+        except Exception: pass
+    if first_dvr_to:
+        try:
+            from datetime import date as _ddate, timedelta as _dtd
+            _dvrt = _ddate.fromisoformat(first_dvr_to[:10])
+            base = base.filter(CRMLead.first_payment_received_date < _dvrt + _dtd(days=1))
+        except Exception: pass
+    return base
+
+
+@router.get("/exec-handler-leads")
+def exec_handler_leads(
+    handler_type: str = Query(..., description="Handler category: ground/handler/support/field/guru/zguru/adguru/partner/source"),
+    handler_key: str = Query(..., description="Identifier (emp_code / mnr_id / partner_code / source_label / gs_id)"),
+    handler_type_ext: Optional[str] = Query(None, description="Secondary type qualifier — for ground: gs_type (mnr/vgk/partner/staff)"),
+    category: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    source: Optional[str] = Query(None),
+    net_source: Optional[str] = Query(None),
+    guru_filter: Optional[str] = Query(None),
+    z_guru_filter: Optional[str] = Query(None),
+    telecaller_emp_code: Optional[str] = Query(None),
+    field_staff_emp_code: Optional[str] = Query(None),
+    pincode: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    solar_pipeline_status: Optional[str] = Query(None),
+    created_from: Optional[str] = Query(None),
+    created_to: Optional[str] = Query(None),
+    closed_from: Optional[str] = Query(None),
+    closed_to: Optional[str] = Query(None),
+    submit_date_from: Optional[str] = Query(None),
+    submit_date_to: Optional[str] = Query(None),
+    complete_date_from: Optional[str] = Query(None),
+    complete_date_to: Optional[str] = Query(None),
+    accepted_date_from: Optional[str] = Query(None),
+    accepted_date_to: Optional[str] = Query(None),
+    installation_date_from: Optional[str] = Query(None),
+    installation_date_to: Optional[str] = Query(None),
+    material_reach_date_from: Optional[str] = Query(None),
+    material_reach_date_to: Optional[str] = Query(None),
+    next_followup_from: Optional[str] = Query(None),
+    next_followup_to: Optional[str] = Query(None),
+    first_dvr_from: Optional[str] = Query(None),
+    first_dvr_to: Optional[str] = Query(None),
+    ev_b2b_stage: Optional[str] = Query(None),
+    combined_bank_filter: Optional[str] = Query(None),
+    company_id_filter: Optional[int] = Query(None),
+    limit: int = Query(200, ge=1, le=500),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """DC-EXEC-DRILLDOWN-001: Lightweight lead list for one handler cell — exec dashboard drill-down.
+    Applies same dashboard filters as lead-analytics so row counts match exactly."""
+    from app.models.signup_category import SignupCategory as _SC2
+    from sqlalchemy import literal as _lit
+
+    def _cl(val):
+        if hasattr(val, 'default'):
+            return val.default if val.default is not ... else None
+        return val
+
+    handler_type = _cl(handler_type)
+    handler_key = _cl(handler_key)
+    handler_type_ext = _cl(handler_type_ext)
+    limit = _cl(limit)
+
+    POST_WON = ['won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed']
+    _is_admin = is_vgk_admin((current_employee.staff_type or '').upper())
+    _eh_role_code = (current_employee.role.role_code if current_employee.role else '') or ''
+    if _eh_role_code in {'vgk4u', 'vgk4u_supreme', 'key_leadership', 'leadership_role', 'team_leader', 'manager'}:
+        _is_admin = True
+
+    # Company scope — mirrors lead-analytics
+    _all_cos = db.query(AssociatedCompany).filter(AssociatedCompany.is_active == True).all()
+    if company_id_filter and _is_admin:
+        _co_ids = [company_id_filter]
+    elif _is_admin:
+        _co_ids = [c.id for c in _all_cos]
+    else:
+        _co_ids = [current_employee.base_company_id] if current_employee.base_company_id else [c.id for c in _all_cos]
+
+    base = db.query(CRMLead).filter(CRMLead.company_id.in_(_co_ids))
+
+    base = _apply_exec_dashboard_common_filters(
+        base, db, current_employee, _is_admin,
+        category=category, status=status, source=source, net_source=net_source,
+        guru_filter=guru_filter, z_guru_filter=z_guru_filter, telecaller_emp_code=telecaller_emp_code,
+        field_staff_emp_code=field_staff_emp_code, pincode=pincode, search=search,
+        created_from=created_from, created_to=created_to, closed_from=closed_from, closed_to=closed_to,
+        submit_date_from=submit_date_from, submit_date_to=submit_date_to, complete_date_from=complete_date_from, complete_date_to=complete_date_to,
+        first_dvr_from=first_dvr_from, first_dvr_to=first_dvr_to, solar_pipeline_status=solar_pipeline_status,
+        accepted_date_from=accepted_date_from, accepted_date_to=accepted_date_to, installation_date_from=installation_date_from, installation_date_to=installation_date_to,
+        material_reach_date_from=material_reach_date_from, material_reach_date_to=material_reach_date_to, next_followup_from=next_followup_from, next_followup_to=next_followup_to,
+        ev_b2b_stage=ev_b2b_stage, combined_bank_filter=combined_bank_filter, company_id_filter=company_id_filter
+    )
 
     # Handler-specific filter — mirrors the GROUP BY key used in lead-analytics
     if handler_type == 'handler':
@@ -6585,6 +6801,7 @@ def exec_handler_leads(
             'created_at': l.created_at.isoformat() if l.created_at else None,
             'submit_date': l.submit_date.isoformat() if l.submit_date else None,
             'first_payment_received_date': (l.first_payment_received_date or _txmap.get(l.id)).isoformat() if (l.first_payment_received_date or _txmap.get(l.id)) else None,
+            'installation_date': l.installation_date.isoformat() if l.installation_date else None,
             'source': l.source or '—',
             'ground_source': l.source_ref_name or '—',
             'ground_support': _unmap.get(l.mnr_handler_id, l.mnr_handler_id) if l.mnr_handler_id else '—',
@@ -6596,6 +6813,7 @@ def exec_handler_leads(
             'brand_name': _bmap.get(l.solar_brand_id) if l.solar_brand_id else None,
             'deal_value_total': float(l.deal_value_total or 0),
             'deal_value_received': float(l.deal_value_received or 0),
+            'balance_pending': float(l.deal_value_balance or 0),
             'latest_note': _nmap.get(l.id),
         } for l in _leads],
     }
@@ -6609,6 +6827,13 @@ def exec_trend_leads(
     category: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     source: Optional[str] = Query(None),
+    net_source: Optional[str] = Query(None),
+    guru_filter: Optional[str] = Query(None),
+    z_guru_filter: Optional[str] = Query(None),
+    telecaller_emp_code: Optional[str] = Query(None),
+    field_staff_emp_code: Optional[str] = Query(None),
+    pincode: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
     solar_pipeline_status: Optional[str] = Query(None),
     created_from: Optional[str] = Query(None),
     created_to: Optional[str] = Query(None),
@@ -6618,16 +6843,39 @@ def exec_trend_leads(
     submit_date_to: Optional[str] = Query(None),
     complete_date_from: Optional[str] = Query(None),
     complete_date_to: Optional[str] = Query(None),
+    accepted_date_from: Optional[str] = Query(None),
+    accepted_date_to: Optional[str] = Query(None),
+    installation_date_from: Optional[str] = Query(None),
+    installation_date_to: Optional[str] = Query(None),
+    material_reach_date_from: Optional[str] = Query(None),
+    material_reach_date_to: Optional[str] = Query(None),
+    next_followup_from: Optional[str] = Query(None),
+    next_followup_to: Optional[str] = Query(None),
+    first_dvr_from: Optional[str] = Query(None),
+    first_dvr_to: Optional[str] = Query(None),
+    ev_b2b_stage: Optional[str] = Query(None),
+    combined_bank_filter: Optional[str] = Query(None),
+    company_id_filter: Optional[int] = Query(None),
     limit: int = Query(200, ge=1, le=500),
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
     """DC-EXEC-DRILLDOWN-003: Lightweight lead list for a trend cell.
     Applies the exact same bucketing and stage filter logic as the trends dashboard tables."""
-    from app.models.signup_category import SignupCategory as _SC2
-    from app.models.user import User as _User
     from sqlalchemy import cast as _sa_cast, Date as _sa_Date, and_ as _sa_and, or_ as _sa_or, func as _sa_func
     from datetime import date as _date, timedelta as _td
+    from app.models.signup_category import SignupCategory as _SC2
+    from app.models.user import User as _User
+
+    def _cl(val):
+        if hasattr(val, 'default'):
+            return val.default if val.default is not ... else None
+        return val
+
+    period_type = _cl(period_type)
+    label = _cl(label)
+    metric = _cl(metric)
+    limit = _cl(limit)
 
     POST_WON = ['won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed']
     _EXCL_WON_PS = ['loan_rejected', 'documents_issue', 'not_interested', 'cancelled', 'different_vendor']
@@ -6638,59 +6886,29 @@ def exec_trend_leads(
     if _eh_role_code in {'vgk4u', 'vgk4u_supreme', 'key_leadership', 'leadership_role', 'team_leader', 'manager'}:
         _is_admin = True
 
-    def _pd(s):
-        try:
-            return datetime.fromisoformat(s.replace('Z', '+00:00').replace('T00:00:00+00:00', ''))
-        except Exception:
-            return None
-
     # Parse company filters
     _all_cos = db.query(AssociatedCompany).filter(AssociatedCompany.is_active == True).all()
-    if _is_admin:
+    if company_id_filter and _is_admin:
+        _co_ids = [company_id_filter]
+    elif _is_admin:
         _co_ids = [c.id for c in _all_cos]
     else:
         _co_ids = [current_employee.base_company_id] if current_employee.base_company_id else [c.id for c in _all_cos]
 
     base = db.query(CRMLead).filter(CRMLead.company_id.in_(_co_ids))
 
-    # Standard dashboard filters
-    if category:
-        _cids = [r.id for r in db.query(_SC2.id).filter(_SC2.name == category).all()]
-        if _cids:
-            _dsq = db.query(CRMLeadDeal.lead_id).filter(CRMLeadDeal.revenue_category_id.in_(_cids)).scalar_subquery()
-            base = base.filter(_sa_or_(CRMLead.category_id.in_(_cids), CRMLead.id.in_(_dsq)))
-        else:
-            base = base.filter(CRMLead.id == -1)
-    if status:
-        base = base.filter(CRMLead.status.in_(POST_WON) if status == 'won_plus' else CRMLead.status == status)
-    if source:
-        base = base.filter(CRMLead.source.ilike(f'%{source}%'))
-    if solar_pipeline_status:
-        base = base.filter(CRMLead.solar_pipeline_status == solar_pipeline_status)
-    if created_from:
-        v = _pd(created_from)
-        if v: base = base.filter(CRMLead.created_at >= v)
-    if created_to:
-        v = _pd(created_to)
-        if v: base = base.filter(CRMLead.created_at <= v)
-    if closed_from:
-        v = _pd(closed_from)
-        if v: base = base.filter(CRMLead.actual_close_date >= v)
-    if closed_to:
-        v = _pd(closed_to)
-        if v: base = base.filter(CRMLead.actual_close_date <= v)
-    if submit_date_from:
-        v = _pd(submit_date_from)
-        if v: base = base.filter(CRMLead.submit_date >= (v.date() if hasattr(v, 'date') else v))
-    if submit_date_to:
-        v = _pd(submit_date_to)
-        if v: base = base.filter(CRMLead.submit_date <= (v.date() if hasattr(v, 'date') else v))
-    if complete_date_from:
-        v = _pd(complete_date_from)
-        if v: base = base.filter(CRMLead.complete_date >= (v.date() if hasattr(v, 'date') else v))
-    if complete_date_to:
-        v = _pd(complete_date_to)
-        if v: base = base.filter(CRMLead.complete_date <= (v.date() if hasattr(v, 'date') else v))
+    base = _apply_exec_dashboard_common_filters(
+        base, db, current_employee, _is_admin,
+        category=category, status=status, source=source, net_source=net_source,
+        guru_filter=guru_filter, z_guru_filter=z_guru_filter, telecaller_emp_code=telecaller_emp_code,
+        field_staff_emp_code=field_staff_emp_code, pincode=pincode, search=search,
+        created_from=created_from, created_to=created_to, closed_from=closed_from, closed_to=closed_to,
+        submit_date_from=submit_date_from, submit_date_to=submit_date_to, complete_date_from=complete_date_from, complete_date_to=complete_date_to,
+        first_dvr_from=first_dvr_from, first_dvr_to=first_dvr_to, solar_pipeline_status=solar_pipeline_status,
+        accepted_date_from=accepted_date_from, accepted_date_to=accepted_date_to, installation_date_from=installation_date_from, installation_date_to=installation_date_to,
+        material_reach_date_from=material_reach_date_from, material_reach_date_to=material_reach_date_to, next_followup_from=next_followup_from, next_followup_to=next_followup_to,
+        ev_b2b_stage=ev_b2b_stage, combined_bank_filter=combined_bank_filter, company_id_filter=company_id_filter
+    )
 
     # Determine period start/end dates
     start_dt = None
@@ -6710,7 +6928,7 @@ def exec_trend_leads(
         for _wk in range(12):
             _ws = _week_start - _td(weeks=_wk)
             lbl = f"W{12-_wk} ({_ws.strftime('%d %b')})"
-            lbl_alt = f"W{12-_wk} ({_ws.strftime('%-d %b')})"
+            lbl_alt = f"W{12-_wk} ({_ws.day} {_ws.strftime('%b')})"
             if label == lbl or label == lbl_alt:
                 start_dt = _ws.date()
                 end_dt = start_dt + _td(days=6)
