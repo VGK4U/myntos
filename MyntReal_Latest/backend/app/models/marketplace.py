@@ -122,6 +122,7 @@ class MarketspareItem(Base):
     images_gallery = Column(JSONB, default=list, nullable=True)  # up to 5 uploaded images [{url,label,is_primary}]
     search_vector  = Column(TSVECTOR, nullable=True)
     is_active      = Column(Boolean, nullable=False, default=True)
+    show_in_marketplace = Column(Boolean, nullable=False, default=False)
     # Enhanced product management — March 2026
     min_stock_threshold     = Column(Integer, nullable=False, default=0)   # auto-raise ZYPR when available_qty < this
     revenue_contribution_pct = Column(Numeric(6, 2), nullable=False, default=0)  # % of total revenue this SKU contributes
@@ -165,6 +166,7 @@ class MarketspareItem(Base):
             'speciality': self.speciality,
             'image_data': self.image_data or [],
             'is_active': self.is_active,
+            'show_in_marketplace': bool(self.show_in_marketplace),
             'min_stock_threshold': int(self.min_stock_threshold or 0),
             'revenue_contribution_pct': float(self.revenue_contribution_pct or 0),
             'manually_overridden': bool(self.manually_overridden),

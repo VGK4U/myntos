@@ -1102,7 +1102,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-const COMPANY_ID = 1;
+let COMPANY_ID = 1;
 window.__MARKETPLACE_COMPANY_ID__ = COMPANY_ID;
 let state = {
   page:1, search:'', selectedCats:new Set(),
@@ -1744,7 +1744,7 @@ const _pageLoadTime = Date.now();
 async function loadProducts(){
   const grid=document.getElementById('productsGrid');
   grid.innerHTML='<div class="loader-box"><i class="fas fa-spinner fa-spin fa-2x mb-2" style="color:var(--green)"></i><br>Loading…</div>';
-  const params=new URLSearchParams({company_id:COMPANY_ID,page:state.page});
+  const params=new URLSearchParams({company_id:COMPANY_ID,page:state.page,_t:Date.now()});
   if(state.segmentId) params.set('segment_id',state.segmentId);
   if(state.sort) params.set('sort',state.sort);
   if(state.search) params.set('search',state.search);
@@ -1756,7 +1756,7 @@ async function loadProducts(){
   if(state.discountMode && state.discountMode!=='promo') params.set('discount_mode',state.discountMode);
   ++_productsLoadCount;
   try{
-    const _resp=await fetch('/api/v1/marketplace/products?'+params);
+    const _resp=await fetch('/api/v1/marketplace/products?'+params, { cache: 'no-cache' });
     if(!_resp.ok) throw new Error('HTTP '+_resp.status);
     const data=await _resp.json();
     if(!data||!Array.isArray(data.products)) throw new Error('Bad response');
@@ -1797,7 +1797,6 @@ async function loadProducts(){
 function renderPriceBlock(p){
   if(!(p.dealer_price>0)) return `<div class="p-por"><i class="fas fa-info-circle me-1"></i>Price on request</div>`;
   const hasDisc = p.discount_amount>0 && p.discount_label;
-  const exTax = p.net_before_tax || p.dealer_price;
 
   if(hasDisc){
     const discPct = state.discountMode==='promo'?(state.promoPct+'%'):((_DISC_PCTS[state.discountMode]||0)+'%');
@@ -1809,7 +1808,7 @@ function renderPriceBlock(p){
         </div>
         <div class="p-disc-block">
           <div class="pdb-row pdb-base">
-            <span>Base Price</span><span>${fmt(p.dealer_price)}</span>
+            <span>Base Price (MRP)</span><span>${fmt(p.display_mrp)}</span>
           </div>
           <div class="pdb-row pdb-saving">
             <span><i class="fas fa-tag me-1" style="font-size:.65rem;"></i>Saving (${discPct})</span>
@@ -1817,7 +1816,7 @@ function renderPriceBlock(p){
           </div>
           <div class="pdb-row pdb-effective">
             <span>Effective <span class="extax-badge">EXCL.TAX</span></span>
-            <span>${fmt(exTax)}</span>
+            <span>${fmt(p.net_before_tax)}</span>
           </div>
           <div class="pdb-row pdb-gst">
             <span>Incl. ${p.gst_percent}% GST <span class="incl-badge">FINAL</span></span>
@@ -1834,7 +1833,7 @@ function renderPriceBlock(p){
         <span class="off-tag">${p.mrp_discount_pct}% off</span>
       </div>
       <div class="p-extax-row">
-        <span class="p-extax">${fmt(p.dealer_price)}</span>
+        <span class="p-extax">${fmt(p.net_before_tax || p.display_mrp)}</span>
         <span class="p-extax-label">EXCL. TAX</span>
       </div>
       <div class="p-intax-row">Incl. ${p.gst_percent}% GST: <span class="p-intax-val">${fmt(p.final_price)}</span></div>
@@ -1967,7 +1966,8 @@ async function validateDealer(){
   if(state.discountMode==='mnr'||state.discountMode==='mnr_points'){document.getElementById('dealerStatus').innerHTML='<span style="color:#fcd34d">Clear MNR discount first</span>';return;}
   document.getElementById('dealerStatus').innerHTML='<span style="color:rgba(255,255,255,.5)"><i class="fas fa-spinner fa-spin me-1"></i>Verifying…</span>';
   try{
-    const d=await(await fetch(`/api/v1/marketplace/validate-dealer?dealer_code=${encodeURIComponent(val)}`)).json();
+    const segParam=state.segmentId?`&segment_id=${state.segmentId}`:'';
+    const d=await(await fetch(`/api/v1/marketplace/validate-dealer?dealer_code=${encodeURIComponent(val)}&company_id=${COMPANY_ID}${segParam}`)).json();
     if(d.valid){
       state.discountMode='partner';state.discountName=d.name+' ('+d.dealer_code+')';
       _DISC_PCTS.partner=d.discount_pct||12;
@@ -1986,7 +1986,8 @@ async function validateStudent(){
   if(state.discountMode==='partner'){document.getElementById('studentStatus').innerHTML='<span style="color:#fcd34d">Clear partner discount first</span>';return;}
   document.getElementById('studentStatus').innerHTML='<span style="color:rgba(255,255,255,.5)"><i class="fas fa-spinner fa-spin me-1"></i>Verifying…</span>';
   try{
-    const d=await(await fetch(`/api/v1/marketplace/validate-student?student_id=${encodeURIComponent(val)}`)).json();
+    const segParam=state.segmentId?`&segment_id=${state.segmentId}`:'';
+    const d=await(await fetch(`/api/v1/marketplace/validate-student?student_id=${encodeURIComponent(val)}&company_id=${COMPANY_ID}${segParam}`)).json();
     if(d.valid){
       state.discountMode='student';state.discountName=d.name+' ('+d.student_id+')';
       _DISC_PCTS.student=d.discount_pct||10;
@@ -2162,18 +2163,19 @@ function _resyncUncoveredBasketItems(coveredIds){
   const labelBase=_DISC_LABELS[state.discountMode]||'Discount';
   Object.values(state.basket).forEach(({product:p})=>{
     if(coveredIds.has(p.id)) return;
+    const mrp = p.display_mrp || p.dealer_price || 0;
     if(discPct>0){
-      p.discount_amount=+(p.dealer_price*discPct/100).toFixed(2);
-      p.net_before_tax=+(p.dealer_price-p.discount_amount).toFixed(2);
+      p.discount_amount=+(mrp*discPct/100).toFixed(2);
+      p.net_before_tax=+(mrp-p.discount_amount).toFixed(2);
       p.gst_amount=+(p.net_before_tax*(p.gst_percent||0)/100).toFixed(2);
       p.final_price=+(p.net_before_tax+p.gst_amount).toFixed(2);
       p.discount_label=`${labelBase} (${discPct}%)`;
       p.discount_percent=discPct;
     }else{
       p.discount_amount=0;
-      p.net_before_tax=p.dealer_price;
-      p.gst_amount=+(p.dealer_price*(p.gst_percent||0)/100).toFixed(2);
-      p.final_price=+(p.dealer_price+p.gst_amount).toFixed(2);
+      p.net_before_tax=mrp;
+      p.gst_amount=+(mrp*(p.gst_percent||0)/100).toFixed(2);
+      p.final_price=+(mrp+p.gst_amount).toFixed(2);
       p.discount_label='';
       p.discount_percent=0;
     }
@@ -2214,7 +2216,7 @@ function renderBasket(){
 
   let base=0,disc=0,gstMap={},final=0;
   items.forEach(({product:p,qty})=>{
-    base+=p.dealer_price*qty;
+    base+=(p.display_mrp||p.dealer_price)*qty;
     disc+=(p.discount_amount||0)*qty;
     const k=p.gst_percent+'%';gstMap[k]=(gstMap[k]||0)+(p.gst_amount||0)*qty;
     final+=p.final_price*qty;
@@ -2273,16 +2275,17 @@ function renderBasket(){
 function showBreakup(id){
   const p=state.productMap[id];if(!p)return;
   const hasDisc=p.discount_amount>0&&p.discount_label;
-  const exTax=p.net_before_tax||p.dealer_price;
   const warn=p.margin_warning?`<div class="alert alert-warning py-1 px-3 m-2" style="font-size:0.8rem;">${esc(p.margin_warning)}</div>`:'';
   document.getElementById('breakupBody').innerHTML=`${warn}
   <div class="view-price-box mx-2 my-2">
     <div class="vpb-header"><i class="fas fa-tag me-2"></i>${esc(p.name)}</div>
-    <div class="vpb-row vpb-muted"><span>Display MRP</span><span><s>${fmt(p.display_mrp)}</s></span></div>
-    <div class="vpb-row vpb-saving" style="font-size:0.76rem;"><span><i class="fas fa-tag me-1"></i>VGK4U Discount (${p.markup_percent}%)</span><span>− ${fmt(p.mrp_discount_amount)}</span></div>
-    <div class="vpb-row vpb-effective"><span>Base Price <span class="extax-badge">EXCL.TAX</span></span><span>${fmt(p.dealer_price)}</span></div>
-    ${hasDisc?`<div class="vpb-row vpb-saving"><span><i class="fas fa-tag me-1"></i>${esc(p.discount_label)}</span><span>− ${fmt(p.discount_amount)}</span></div>
-    <div class="vpb-row vpb-effective"><span>Effective <span class="extax-badge">EXCL.TAX</span></span><span>${fmt(exTax)}</span></div>`:''}
+    <div class="vpb-row vpb-muted"><span>Display MRP</span><span>${fmt(p.display_mrp)}</span></div>
+    ${hasDisc?`
+    <div class="vpb-row vpb-saving"><span><i class="fas fa-tag me-1"></i>${esc(p.discount_label)}</span><span>− ${fmt(p.discount_amount)}</span></div>
+    <div class="vpb-row vpb-effective"><span>Effective Price <span class="extax-badge">EXCL.TAX</span></span><span><strong>${fmt(p.net_before_tax)}</strong></span></div>
+    `:`
+    <div class="vpb-row vpb-effective"><span>Base Price <span class="extax-badge">EXCL.TAX</span></span><span><strong>${fmt(p.net_before_tax || p.display_mrp)}</strong></span></div>
+    `}
     <div class="vpb-row vpb-muted" style="font-size:0.76rem;"><span>GST (${p.gst_percent}%)</span><span>+${fmt(p.gst_amount)}</span></div>
     <div class="vpb-row vpb-total"><span>Final Price <span class="incl-badge">INCL.TAX</span></span><span>${fmt(p.final_price)}</span></div>
   </div>
@@ -2316,11 +2319,13 @@ function showView(id){
   if(hasPrice){
     priceHtml=`<div class="view-price-box">
       <div class="vpb-header"><i class="fas fa-rupee-sign me-2"></i>Price Breakdown</div>
-      <div class="vpb-row vpb-muted"><span>Display MRP</span><span><s>${fmt(p.display_mrp)}</s></span></div>
-      <div class="vpb-row vpb-saving" style="font-size:0.76rem;"><span><i class="fas fa-tag me-1"></i>VGK4U Discount (${p.mrp_discount_pct}%)</span><span>− ${fmt(p.mrp_discount_amount)}</span></div>
-      <div class="vpb-row vpb-effective"><span>Base Price <span class="extax-badge">EXCL.TAX</span></span><span>${fmt(p.dealer_price)}</span></div>
-      ${hasDisc?`<div class="vpb-row vpb-saving"><span><i class="fas fa-tag me-1"></i>${esc(p.discount_label)}</span><span>− ${fmt(p.discount_amount)}</span></div>
-      <div class="vpb-row vpb-effective"><span>Effective <span class="extax-badge">EXCL.TAX</span></span><span>${fmt(exTax)}</span></div>`:''}
+      <div class="vpb-row vpb-muted"><span>Display MRP</span><span>${fmt(p.display_mrp)}</span></div>
+      ${hasDisc?`
+      <div class="vpb-row vpb-saving"><span><i class="fas fa-tag me-1"></i>${esc(p.discount_label)}</span><span>− ${fmt(p.discount_amount)}</span></div>
+      <div class="vpb-row vpb-effective"><span>Effective Price <span class="extax-badge">EXCL.TAX</span></span><span><strong>${fmt(p.net_before_tax)}</strong></span></div>
+      `:`
+      <div class="vpb-row vpb-effective"><span>Base Price <span class="extax-badge">EXCL.TAX</span></span><span><strong>${fmt(p.net_before_tax || p.display_mrp)}</strong></span></div>
+      `}
       <div class="vpb-row vpb-muted" style="font-size:0.76rem;"><span>GST (${p.gst_percent}%)</span><span>+${fmt(p.gst_amount)}</span></div>
       <div class="vpb-row vpb-total"><span>Final Price <span class="incl-badge">INCL.TAX</span></span><span>${fmt(p.final_price)}</span></div>
     </div>`;
@@ -2424,11 +2429,13 @@ function downloadProductPDF(id){
     </table>
     <h3>Price Breakdown</h3>
     <table>
-      <tr><td>Display MRP</td><td><s>₹${p.display_mrp.toFixed(2)}</s></td></tr>
-      <tr style="color:#16a34a;font-weight:700;"><td>VGK4U Discount (${p.markup_percent}%)</td><td>− ₹${p.mrp_discount_amount.toFixed(2)}</td></tr>
-      <tr><td><strong>Base Price (Excl. Tax)</strong></td><td><strong>₹${p.dealer_price.toFixed(2)}</strong></td></tr>
-      ${hasDisc?`<tr class="saving"><td>${p.discount_label}</td><td>− ₹${p.discount_amount.toFixed(2)}</td></tr>
-      <tr><td><strong>Effective Price (Excl. Tax)</strong></td><td><strong>₹${exTax.toFixed(2)}</strong></td></tr>`:''}
+      <tr><td>Display MRP (Excl. Tax)</td><td>₹${p.display_mrp.toFixed(2)}</td></tr>
+      ${hasDisc?`
+      <tr class="saving"><td>${p.discount_label}</td><td>− ₹${p.discount_amount.toFixed(2)}</td></tr>
+      <tr><td><strong>Effective Price (Excl. Tax)</strong></td><td><strong>₹${exTax.toFixed(2)}</strong></td></tr>
+      `:`
+      <tr><td><strong>Base Price (Excl. Tax)</strong></td><td><strong>₹${exTax.toFixed(2)}</strong></td></tr>
+      `}
       <tr><td>GST (${p.gst_percent}%)</td><td>+₹${p.gst_amount.toFixed(2)}</td></tr>
       <tr class="total"><td>Final Price (Incl. Tax)</td><td>₹${p.final_price.toFixed(2)}</td></tr>
     </table>
@@ -2471,6 +2478,7 @@ function downloadPDF(){
 
   items.forEach(({product:p,qty})=>{
     sno++;
+    const baseRate=+(p.display_mrp||p.dealer_price||0);
     const exTax=+(p.net_before_tax||p.dealer_price||0);
     const inclTax=+(p.final_price||exTax);
     const saving=+(p.discount_amount||0);
@@ -2489,16 +2497,16 @@ function downloadPDF(){
       <td style="text-align:center;">${sno}</td>
       <td>${desc}</td>
       <td style="text-align:center;">${qty}</td>
-      <td style="text-align:right;">₹${exTax.toFixed(2)}</td>
-      <td style="text-align:right;">₹${(exTax*qty).toFixed(2)}</td>
+      <td style="text-align:right;">₹${baseRate.toFixed(2)}</td>
+      <td style="text-align:right;">₹${(baseRate*qty).toFixed(2)}</td>
       ${hasDiscount?`<td style="text-align:right;color:#dc2626;">${saving>0?'−₹'+(saving*qty).toFixed(2):'—'}</td>`:''}
-      <td style="text-align:right;">₹${((exTax-saving)*qty).toFixed(2)}</td>
+      <td style="text-align:right;">₹${(exTax*qty).toFixed(2)}</td>
       <td>${gstCell}</td>
       <td style="text-align:right;font-weight:700;color:#1a2e4a;">₹${(inclTax*qty).toFixed(2)}</td>
     </tr>`;
-    baseTot+=exTax*qty;savingTot+=saving*qty;effTot+=(exTax-saving)*qty;taxAmtTot+=taxAmt*qty;lineTot+=inclTax*qty;
+    baseTot+=baseRate*qty;savingTot+=saving*qty;effTot+=exTax*qty;taxAmtTot+=taxAmt*qty;lineTot+=inclTax*qty;
     if(!gstSummary[taxPct])gstSummary[taxPct]={taxable:0,tax:0};
-    gstSummary[taxPct].taxable+=(exTax-saving)*qty;
+    gstSummary[taxPct].taxable+=exTax*qty;
     gstSummary[taxPct].tax+=taxAmt*qty;
   });
 
@@ -2883,7 +2891,25 @@ window.vgkScrollToProduct = function(id) {
 
 // Boot — DC Protocol Mar 2026: loadSegments sets state.segmentType then calls
 // applySegmentView() which routes to the correct loader (ECOM or REAL_DREAMS).
-loadSegments();
+(async () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const qCid = parseInt(urlParams.get('company_id'));
+  if (qCid && !isNaN(qCid)) {
+    COMPANY_ID = qCid;
+    window.__MARKETPLACE_COMPANY_ID__ = COMPANY_ID;
+  } else {
+    try {
+      const r = await fetch('/api/v1/auth/me');
+      if (r.ok) {
+        const u = await r.json();
+        if (u.active_company_id) COMPANY_ID = u.active_company_id;
+        else if (u.base_company_id) COMPANY_ID = u.base_company_id;
+        window.__MARKETPLACE_COMPANY_ID__ = COMPANY_ID;
+      }
+    } catch(e) {}
+  }
+  loadSegments();
+})();
 </script>
 <script src="/vgk_assistant.js" defer></script>
 

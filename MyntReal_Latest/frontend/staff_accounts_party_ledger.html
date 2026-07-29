@@ -229,6 +229,9 @@
             <button class="page-tab-btn" id="tabBtnCwise" onclick="switchTab('cwise')">
                 <i class="fas fa-coins"></i> Cash-wise
             </button>
+            <button class="page-tab-btn" id="tabBtnDeleted" onclick="switchTab('deleted')">
+                <i class="fas fa-trash-alt" style="color:#ef4444;"></i> Deleted Entries
+            </button>
         </div>
 
         <!-- ── PARTY LEDGER TAB ── -->
@@ -836,6 +839,78 @@
             </div>
         </div>
         </div><!-- /tab-cwise -->
+        
+        <!-- ── DELETED ENTRIES TAB ── -->
+        <div class="tab-panel" id="tab-deleted">
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-filter me-2"></i>Filters for Deleted Entries</span>
+                </div>
+                <div class="card-body">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label>Company</label>
+                            <select id="delFilterCompany" onchange="loadDeletedLedger(1)">
+                                <option value="">All Companies</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>From Date</label>
+                            <input type="date" id="delFromDate" onchange="loadDeletedLedger(1)">
+                        </div>
+                        <div class="filter-group">
+                            <label>To Date</label>
+                            <input type="date" id="delToDate" onchange="loadDeletedLedger(1)">
+                        </div>
+                        <div class="filter-group">
+                            <label>Search / Particulars</label>
+                            <input type="text" id="delParticulars" placeholder="Search particulars…" oninput="loadDeletedLedger(1)">
+                        </div>
+                        <div class="filter-group">
+                            <label>Ref / Voucher #</label>
+                            <input type="text" id="delRefNumber" placeholder="Search voucher #…" oninput="loadDeletedLedger(1)">
+                        </div>
+                        <div class="filter-group" style="align-self: flex-end;">
+                            <button class="btn-outline" onclick="resetDeletedFilters()">
+                                <i class="fas fa-undo"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-trash-alt me-2" style="color:#ef4444;"></i>Deleted Ledger Entries</span>
+                    <span style="font-size:12px;color:#6b7280;" id="delRecordCount">—</span>
+                </div>
+                <div class="card-body" style="padding:0;">
+                    <div id="delLoadingState" class="loading-spinner" style="display:none;padding:30px;"><div class="spinner"></div></div>
+                    <div id="delEmptyState" class="empty-state">
+                        <i class="fas fa-trash-alt"></i>
+                        <h3>No Deleted Entries Found</h3>
+                    </div>
+                    <div id="delTableWrap" style="display:none;overflow-x:auto;">
+                        <table class="data-table" id="delDataTable">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Party</th>
+                                    <th>Reference Type</th>
+                                    <th>Ref / Voucher #</th>
+                                    <th>Particulars</th>
+                                    <th class="text-right" style="text-align:right;">Debit (₹)</th>
+                                    <th class="text-right" style="text-align:right;">Credit (₹)</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="delTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="delPagination" style="display:none;padding:14px;"></div>
+                </div>
+            </div>
+        </div>
 
     </div>
     </div>
@@ -1174,7 +1249,8 @@
                     [
                         'filterCompany',
                         'alFilterCompany', 'cashFilterCompany',
-                        'pwiseCompany', 'awiseCompany', 'cwiseCompany'
+                        'pwiseCompany', 'awiseCompany', 'cwiseCompany',
+                        'delFilterCompany'
                     ].forEach(id => {
                         const el = document.getElementById(id);
                         if (el) el.innerHTML = '<option value="">All Companies</option>' + optionsHtml;
@@ -1223,7 +1299,7 @@
             // If same name appears as VENDOR + CUSTOMER, merge into one "Party" entry
             // so the ledger shows ALL transactions in one place.
             const seenByName = new Map(); // normalised-name → index in parties[]
-            const addParty = (type, id, name) => {
+            const addParty = (type, id, name, displayName) => {
                 const key = `${type}:${id}`;
                 if (seen.has(key)) return;
                 seen.add(key);
@@ -1240,7 +1316,7 @@
                 }
                 const m = PARTY_TYPE_META[type] || { badge: type, badgeColor: '#6b7280', badgeBg: '#f3f4f6' };
                 seenByName.set(nk, parties.length);
-                parties.push({ type, id: parseInt(id) || 0, name, ...m });
+                parties.push({ type, id: parseInt(id) || 0, name, displayName: displayName || name, ...m });
             };
             try {
                 // DC-PARTY-MASTER-001: Single source — all party types from master tables
@@ -1251,7 +1327,7 @@
                 if (qs.length) partyUrl += '?' + qs.join('&');
                 const pr = await staffFetch(partyUrl);
                 const pd = await pr.json();
-                if (pd.parties) pd.parties.forEach(p => addParty(p.party_type, p.party_id, p.party_name));
+                if (pd.parties) pd.parties.forEach(p => addParty(p.party_type, p.party_id, p.party_name, p.display_name));
             } catch (e) {
                 if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
             }
@@ -1270,7 +1346,8 @@
         }
 
         function comboItemHtml(p, q) {
-            const hi = p.name.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<u>$1</u>');
+            const displayName = p.displayName || p.name;
+            const hi = displayName.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<u>$1</u>');
             return `<div class="party-combo-item" onmousedown="event.preventDefault()" onclick="selectParty('${p.type}','${p.id}','${p.name.replace(/'/g,"\\'")}','${q}')">
                 ${badgeHtml(p)}<span>${hi}</span></div>`;
         }
@@ -1293,7 +1370,11 @@
         function renderFilterCombo(q) {
             const drop = document.getElementById('filterPartyDropdown');
             const query = (q || '').toLowerCase().trim();
-            const matches = allPartiesForModal.filter(p => !query || p.name.toLowerCase().includes(query));
+            const matches = allPartiesForModal.filter(p => 
+                !query || 
+                p.name.toLowerCase().includes(query) ||
+                (p.displayName && p.displayName.toLowerCase().includes(query))
+            );
             let html = '';
             matches.slice(0, 30).forEach(p => { html += comboItemHtml(p, q); });
             if (q && q.trim()) {
@@ -2511,7 +2592,7 @@
         // DC-ACCT-TAB: 6-tab switching + Account/Cash/Consolidated logic
         // ══════════════════════════════════════════════════════════════
 
-        const ALL_TABS = ['party', 'acct', 'cash', 'pwise', 'awise', 'cwise'];
+        const ALL_TABS = ['party', 'acct', 'cash', 'pwise', 'awise', 'cwise', 'deleted'];
 
         function switchTab(tab) {
             ALL_TABS.forEach(t => {
@@ -2526,6 +2607,7 @@
             if (tab === 'pwise') { loadPartyWise(); }
             if (tab === 'awise') { loadAccountWise(); }
             if (tab === 'cwise') { loadCashWise(); }
+            if (tab === 'deleted') { loadDeletedLedger(1); }
         }
 
         // ── Reset filters ──
@@ -3646,6 +3728,94 @@
         }
         function getPlStatuses() {
             return [...document.querySelectorAll('.pl-stat-chk:checked')].map(c => c.value).join(',');
+        }
+
+        let currentDelPage = 1;
+        async function loadDeletedLedger(page = 1) {
+            currentDelPage = page;
+            const companyId = document.getElementById('delFilterCompany').value;
+            const fromDate = document.getElementById('delFromDate').value;
+            const toDate = document.getElementById('delToDate').value;
+            const particulars = document.getElementById('delParticulars').value.trim();
+            const refNumber = document.getElementById('delRefNumber').value.trim();
+
+            const loadingState = document.getElementById('delLoadingState');
+            const tableWrap = document.getElementById('delTableWrap');
+            const emptyState = document.getElementById('delEmptyState');
+            const tbody = document.getElementById('delTableBody');
+
+            loadingState.style.display = 'block';
+            tableWrap.style.display = 'none';
+            emptyState.style.display = 'none';
+
+            try {
+                let url = `${API_BASE}/party-ledger?page=${page}&page_size=30&source_status=CANCELLED`;
+                if (companyId) url += `&company_id=${companyId}`;
+                if (fromDate)  url += `&date_from=${fromDate}`;
+                if (toDate)    url += `&date_to=${toDate}`;
+                if (particulars) url += `&particulars=${encodeURIComponent(particulars)}`;
+                if (refNumber)   url += `&reference_number=${encodeURIComponent(refNumber)}`;
+
+                const res = await staffFetch(url);
+                const data = await res.json();
+                loadingState.style.display = 'none';
+
+                if (data.success && data.entries && data.entries.length) {
+                    tbody.innerHTML = data.entries.map(e => {
+                        const fmtAmt = v => parseFloat(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        return `<tr style="opacity: 0.7;">
+                            <td>${e.transaction_date || '—'}</td>
+                            <td><strong>${e.party_name || '—'}</strong><br><small style="color:#6b7280;">${e.party_type || ''}</small></td>
+                            <td><span style="background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;">${e.reference_type || ''}</span></td>
+                            <td class="mono" style="color:#4f46e5;">${e.reference_number || '—'}</td>
+                            <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${e.particulars || ''}">${e.particulars || '—'}</td>
+                            <td class="text-right" style="color:#dc2626;font-weight:600;text-align:right;">₹${fmtAmt(e.debit_amount)}</td>
+                            <td class="text-right" style="color:#059669;font-weight:600;text-align:right;">₹${fmtAmt(e.credit_amount)}</td>
+                            <td><span style="background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;">CANCELLED</span></td>
+                        </tr>`;
+                    }).join('');
+                    tableWrap.style.display = 'block';
+                    document.getElementById('delRecordCount').textContent = `${data.total || 0} entries`;
+                    renderDelPagination(data.total);
+                } else {
+                    emptyState.style.display = 'block';
+                    document.getElementById('delRecordCount').textContent = '0 entries';
+                    document.getElementById('delPagination').style.display = 'none';
+                }
+            } catch (e) {
+                loadingState.style.display = 'none';
+                emptyState.style.display = 'block';
+                emptyState.innerHTML = `<i class="fas fa-exclamation-circle" style="color:#ef4444;"></i><h3>Error Loading Entries</h3><p>${e.message}</p>`;
+            }
+        }
+
+        function renderDelPagination(total) {
+            const totalPages = Math.ceil(total / 30);
+            const pagination = document.getElementById('delPagination');
+            if (totalPages <= 1) { pagination.style.display = 'none'; return; }
+            let html = `<button ${currentDelPage===1?'disabled':''} onclick="goToDelPage(1)" title="First page">« First</button>`;
+            html += `<button ${currentDelPage===1?'disabled':''} onclick="goToDelPage(${currentDelPage-1})"><i class="fas fa-chevron-left"></i></button>`;
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<button class="${currentDelPage===i?'active':''}" onclick="goToDelPage(${i})">${i}</button>`;
+            }
+            html += `<button ${currentDelPage===totalPages?'disabled':''} onclick="goToDelPage(${currentDelPage+1})"><i class="fas fa-chevron-right"></i></button>`;
+            html += `<button ${currentDelPage===totalPages?'disabled':''} onclick="goToDelPage(${totalPages})" title="Last page">Last »</button>`;
+            pagination.innerHTML = html;
+            pagination.style.display = 'flex';
+        }
+
+        function goToDelPage(page) {
+            currentDelPage = page;
+            loadDeletedLedger(page);
+        }
+
+        function resetDeletedFilters() {
+            document.getElementById('delFilterCompany').value = '';
+            document.getElementById('delFromDate').value = '';
+            document.getElementById('delToDate').value = '';
+            document.getElementById('delParticulars').value = '';
+            document.getElementById('delRefNumber').value = '';
+            loadDeletedLedger(1);
         }
     </script>
 

@@ -7608,6 +7608,13 @@ const server = http.createServer(async (req, res) => {
       const isPartnerContext = referer.includes('/partner/') || referer.includes('/partner-');
       const isMnrContext = !isStaffContext && !isPartnerContext;
 
+      if (url.includes('/marketplace/')) {
+        console.log(`[DC-PROXY-API-MKT-${requestId}] url=${url} referer=${referer} isStaffContext=${isStaffContext} hasCookie=${!!cookieStr}`);
+        if (cookieStr) {
+          console.log(`[DC-PROXY-API-MKT-${requestId}] cookieStr=${cookieStr.substring(0, 200)}`);
+        }
+      }
+
       const staffTokenMatch = cookieStr.match(/staff_token=([^;]+)/);
       const partnerTokenMatch = cookieStr.match(/partner_token=([^;]+)/);
       const sessionTokenMatch = cookieStr.match(/session_token=([^;]+)/);

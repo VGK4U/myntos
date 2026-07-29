@@ -5604,7 +5604,7 @@ async def list_ledger_parties(
         eq = db.query(_SE_P.id, _SE_P.full_name, _SE_P.emp_code).filter(_SE_P.status == 'active')
         for eid, ename, ecode in eq.order_by(_SE_P.full_name).all():
             label = (ename or '') + (f' ({ecode})' if ecode else '')
-            parties.append({'party_type': 'EMPLOYEE', 'party_id': eid, 'party_name': label})
+            parties.append({'party_type': 'EMPLOYEE', 'party_id': eid, 'party_name': ename, 'display_name': label})
             seen_ids[('EMPLOYEE', eid)] = True
 
     # 4. Ledger-only entries (CUSTOMER, EXTERNAL, custom) not in master tables

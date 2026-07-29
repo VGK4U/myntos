@@ -1365,7 +1365,7 @@
         const s  = (document.getElementById('ldg-search').value || '').toLowerCase();
         const t  = document.getElementById('ldg-type').value;
         const rows = _ledgerParties.filter(p =>
-            (!s || (p.party_name||'').toLowerCase().includes(s)) &&
+            (!s || (p.party_name||'').toLowerCase().includes(s) || (p.display_name||'').toLowerCase().includes(s)) &&
             (!t || p.party_type === t)
         );
         document.getElementById('ldg-count-lbl').textContent = `${rows.length} of ${_ledgerParties.length} parties`;

@@ -271,6 +271,14 @@
          TAB: LEDGER ENTRIES
     ═══════════════════════════════════════════════════════ -->
     <div id="sec_entries">
+        <div class="tab-nav" style="margin-bottom: 16px; border-bottom: 1.5px solid #e5e7eb;">
+            <button class="tab-btn active" id="tabGlActive" onclick="switchGlTab('ACTIVE')">
+                <i class="fas fa-check-circle" style="color:#10b981;"></i> Active Entries
+            </button>
+            <button class="tab-btn" id="tabGlDeleted" onclick="switchGlTab('DELETED')">
+                <i class="fas fa-trash-alt" style="color:#ef4444;"></i> Deleted Entries
+            </button>
+        </div>
         <div class="filter-bar">
             <div class="filter-group">
                 <label>Company</label>
@@ -880,6 +888,7 @@ const API_BASE = '/api/v1/staff/accounts';
 let _companies  = [];
 let _page       = 1, _totalPages = 1;
 let _activeTab  = 'entries';
+let _glTabStatus = 'ACTIVE';
 
 /* ── After any mutation: refresh entries list + whichever summary tab is open ── */
 function _refreshAllViews() {
@@ -993,6 +1002,17 @@ function updateStats(rows) {
 /* ═══════════════════════════════════════════════════════════════════
    LEDGER ENTRIES
 ═══════════════════════════════════════════════════════════════════ */
+function switchGlTab(status) {
+    _glTabStatus = status;
+    document.querySelectorAll('#sec_entries .tab-btn').forEach(btn => btn.classList.remove('active'));
+    if (status === 'ACTIVE') {
+        document.getElementById('tabGlActive').classList.add('active');
+    } else {
+        document.getElementById('tabGlDeleted').classList.add('active');
+    }
+    loadLedger(1);
+}
+
 async function loadLedger(page = 1) {
     _page = page;
     const body = document.getElementById('tableBody');
@@ -1005,7 +1025,7 @@ async function loadLedger(page = 1) {
     const df = document.getElementById('fFrom').value;
     const dt = document.getElementById('fTo').value;
     const rt  = document.getElementById('fRefType').value;
-    const gss = getGlStatuses();
+    const gss = _glTabStatus === 'DELETED' ? 'CANCELLED' : getGlStatuses();
     const rn = document.getElementById('fRefNum').value;
     if (co) url += `&company_id=${co}`;
     if (tp) url += `&account_type=${encodeURIComponent(tp)}`;
@@ -1129,15 +1149,16 @@ async function loadLedger(page = 1) {
             </thead>
             <tbody>${glObRow}${entries.map(e => {
                 const isAuto = AUTO_TYPES.includes(e.reference_type);
+                const isCancelled = e.source_status === 'CANCELLED';
                 const safeRef = (e.reference_number || '').replace(/'/g, "\\'");
                 const viewBtn = e.reference_number ? `<button class="btn-sm-view" onclick="viewVoucher('${safeRef}',${e.company_id})" title="View Dr/Cr sides"><i class="fas fa-eye"></i></button>` : '';
-                const editBtn = `<button class="btn-sm-edit" onclick="openEntryEdit(${e.id})" title="Edit entry"><i class="fas fa-edit"></i></button>`;
-                const delBtn  = `<button class="btn-sm-del" onclick="deleteEntry(${e.id})" title="Delete entry"><i class="fas fa-trash"></i></button>`;
+                const editBtn = isCancelled ? '' : `<button class="btn-sm-edit" onclick="openEntryEdit(${e.id})" title="Edit entry"><i class="fas fa-edit"></i></button>`;
+                const delBtn  = isCancelled ? '' : `<button class="btn-sm-del" onclick="deleteEntry(${e.id})" title="Delete entry"><i class="fas fa-trash"></i></button>`;
                 const part = (e.particulars || e.narration || '').replace(/"/g,'&quot;');
-                return `<tr>
+                return `<tr style="${isCancelled ? 'opacity:.55;' : ''}">
                 <td style="white-space:nowrap;font-weight:600;">${e.transaction_date || '—'}</td>
                 <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;" title="${e.account_name}">${e.account_name}</td>
-                <td><span class="hc-badge ${tcm[e.account_type] || ''}">${e.account_type}</span>${(function(){const s=(e.source_status||'').toUpperCase();if(s==='MANUAL')return '<br><span class="src-manual">Manual</span>';if(s==='TALLY_IMPORT')return '<br><span class="src-tally">Tally</span>';if(s==='OPENING_BALANCE')return '<br><span class="src-opening">Opening</span>';if(s==='CONFIRMED')return '<br><span class="src-confirmed">Confirmed</span>';return '';})()}</td>
+                <td><span class="hc-badge ${tcm[e.account_type] || ''}">${e.account_type}</span>${(function(){const s=(e.source_status||'').toUpperCase();if(s==='MANUAL')return '<br><span class="src-manual">Manual</span>';if(s==='TALLY_IMPORT')return '<br><span class="src-tally">Tally</span>';if(s==='OPENING_BALANCE')return '<br><span class="src-opening">Opening</span>';if(s==='CONFIRMED')return '<br><span class="src-confirmed">Confirmed</span>';if(s==='CANCELLED')return '<br><span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;">CANCELLED</span>';return '';})()}</td>
                 <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${part}">${part || '<span style="color:#d1d5db;">—</span>'}</td>
                 <td style="font-size:11px;white-space:nowrap;">${e.voucher_type?`<span class="vch-chip" style="font-size:10px;">${e.voucher_type}</span>`:''} ${e.reference_number?`<code style="font-size:10px;background:#f3f4f6;padding:1px 4px;border-radius:3px;">${e.reference_number}</code>`:''} ${!e.voucher_type&&!e.reference_number?'<span style="color:#d1d5db;">—</span>':''}</td>
                 <td style="white-space:nowrap;">${e.main_category_name?`<span style="background:#e0f2fe;color:#0c4a6e;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;">${e.main_category_name}</span>`:'<span style="color:#d1d5db;">—</span>'}</td>

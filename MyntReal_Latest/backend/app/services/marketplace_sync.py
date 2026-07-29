@@ -987,6 +987,7 @@ def run_sync(db: Session, company_id: int, triggered_by: str = 'manual', segment
                     warranty_details=item.get('warranty_details'),
                     warranty_cost=item.get('warranty_cost'),
                     is_active=True,
+                    show_in_marketplace=True,
                     segment_id=resolved_segment_id,
                     source='sheet',
                     company_id=company_id,

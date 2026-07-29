@@ -650,6 +650,7 @@
                     </div>
                     <div class="form-group">
                         <label>Vendor / Party (Optional) <span id="vendorCrDrBadge"></span></label>
+                        <input type="text" id="formVendorSearch" placeholder="Type to search vendor..." style="margin-bottom:6px;width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
                         <select id="formVendor" onchange="updateVendorCrDr()">
                             <option value="">No Vendor</option>
                         </select>
@@ -833,6 +834,7 @@
         let totalPages = 1;
         let selectedExpense = null;
         let fundAllocations = [];
+        let allVendors = [];
         let _expenseEmployees = [];   // DC_EXP_BEHALF_001: cached employee list for behalf-of selector
         let _canCreateOnBehalf = false;
         
@@ -861,6 +863,22 @@
             document.getElementById('formDate').valueAsDate = new Date();
             
             await Promise.all([loadCompanies(), loadCategories(), loadVendors(), loadFundAllocations(), loadExpenseEmployees()]);
+            
+            // Attach vendor search listener
+            document.getElementById('formVendorSearch').addEventListener('input', function() {
+                const q = this.value.toLowerCase().trim();
+                if (!q) {
+                    populateVendorDropdown(allVendors);
+                    return;
+                }
+                const filtered = allVendors.filter(v => {
+                    const name = (v.vendor_name || v.name || '').toLowerCase();
+                    const code = (v.vendor_code || '').toLowerCase();
+                    return name.includes(q) || code.includes(q);
+                });
+                populateVendorDropdown(filtered);
+            });
+
             await loadExpenses();
 
             // Auto-show fund balance card on load
@@ -1146,23 +1164,31 @@
         
         async function loadVendors() {
             try {
-                const response = await staffFetch(`${API_BASE}/vendors`);
+                const response = await staffFetch(`${API_BASE}/vendors?page_size=500`);
                 if (response.ok) {
                     const data = await response.json();
-                    const vendors = data.vendors || [];
-                    const select = document.getElementById('formVendor');
-                    
-                    vendors.filter(v => v.is_active).forEach(vendor => {
-                        const option = document.createElement('option');
-                        option.value = vendor.id;
-                        option.textContent = vendor.vendor_name || vendor.name;
-                        select.appendChild(option);
-                    });
+                    allVendors = data.vendors || [];
+                    populateVendorDropdown(allVendors);
                 }
             } catch (e) {
                 if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
                 console.error('Error loading vendors:', e);
             }
+        }
+
+        function populateVendorDropdown(vendorsList) {
+            const select = document.getElementById('formVendor');
+            const prevVal = select.value;
+            select.innerHTML = '<option value="">No Vendor</option>';
+            vendorsList.filter(v => v.is_active !== false).forEach(vendor => {
+                const option = document.createElement('option');
+                option.value = vendor.id;
+                option.textContent = vendor.vendor_name || vendor.name;
+                if (prevVal && String(vendor.id) === String(prevVal)) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
         }
         
         async function loadFundAllocations(targetEmpId) {
@@ -2605,18 +2631,33 @@
             document.getElementById('transferSubCat').value = '';
             document.getElementById('transferSubCat').disabled = true;
 
-            const r = await staffFetch(API_BASE + '/expense-behalf-employees');
-            if (r.ok) {
-                const d = await r.json();
-                transferEmployees = d.employees || [];
+            try {
+                const r = await staffFetch(API_BASE + '/expense-behalf-employees');
+                if (r.ok) {
+                    const d = await r.json();
+                    transferEmployees = d.employees || [];
+                }
+            } catch (e) {
+                console.error('Error fetching transfer employees:', e);
             }
-            // DC_TRANSFER_POP_001: Populate From/To immediately — do NOT wait for company selection
-            _populateTransferDropdowns();
-            // Load category picker
-            ExpCatPicker.init(
-                document.getElementById('transferMainCat'),
-                document.getElementById('transferSubCat')
-            );
+
+            try {
+                // DC_TRANSFER_POP_001: Populate From/To immediately — do NOT wait for company selection
+                _populateTransferDropdowns();
+            } catch (e) {
+                console.error('Error populating dropdowns:', e);
+            }
+
+            try {
+                // Load category picker
+                await ExpCatPicker.init(
+                    document.getElementById('transferMainCat'),
+                    document.getElementById('transferSubCat')
+                );
+            } catch (e) {
+                console.error('Error initializing category picker:', e);
+            }
+
             document.getElementById('transferModal').classList.add('active');
         }
 

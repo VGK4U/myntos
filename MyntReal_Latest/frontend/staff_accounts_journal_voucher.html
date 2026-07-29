@@ -144,6 +144,32 @@
         .tally-lines-table td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; font-size: 12px; }
         .tally-lines-table tr:last-child td { border-bottom: none; }
         .tally-total-row td { background: #f9fafb; font-weight: 700; font-size: 12px; border-top: 2px solid #e5e7eb; }
+        
+        /* Filter tabs */
+        .tab-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            border: none;
+            background: none;
+            color: #4b5563;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 6px 6px 0 0;
+        }
+        .tab-btn:hover {
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        .tab-btn.active {
+            color: #4f46e5;
+            border-bottom: 2px solid #4f46e5;
+            background-color: #f5f3ff;
+        }
     </style>
 </head>
 <body>
@@ -473,10 +499,20 @@
         <!-- ═══ VOUCHER LIST ═══ -->
         <div class="card">
             <div class="card-header">
-                <span><i class="fas fa-list me-2" style="color:#6366f1;"></i>Posted Vouchers</span>
+                <span><i class="fas fa-list me-2" style="color:#6366f1;"></i>Journal Vouchers</span>
                 <span style="font-size:12px; color:#6b7280;" id="listCount"></span>
             </div>
             <div class="card-body" style="padding-bottom:4px;">
+                <!-- Filter Tabs -->
+                <div class="tabs-container" style="display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 2px;">
+                    <button class="tab-btn active" id="tabPosted" onclick="switchTab('POSTED')">
+                        <i class="fas fa-check-circle" style="color:#10b981;"></i> Posted Entries
+                    </button>
+                    <button class="tab-btn" id="tabCancelled" onclick="switchTab('CANCELLED')">
+                        <i class="fas fa-trash-alt" style="color:#ef4444;"></i> Deleted Entries
+                    </button>
+                </div>
+
                 <div class="filter-bar" style="margin-bottom:16px;">
                     <div class="filter-group2">
                         <label>Company</label>
@@ -492,11 +528,11 @@
                             <option>CONTRA</option><option>JOURNAL</option>
                         </select>
                     </div>
-                    <div class="filter-group2">
+                    <div class="filter-group2" style="display:none;">
                         <label>Status</label>
                         <select id="lStatus" onchange="loadVouchers(1)">
-                            <option value="">All</option>
-                            <option>POSTED</option><option>CANCELLED</option>
+                            <option value="POSTED">POSTED</option>
+                            <option value="CANCELLED">CANCELLED</option>
                         </select>
                     </div>
                     <div class="filter-group2">
@@ -2310,6 +2346,17 @@
     function closeJvViewModal() {
         document.getElementById('jvViewModal').style.display = 'none';
     }
+
+    window.switchTab = function(status) {
+        document.getElementById('lStatus').value = status;
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        if (status === 'POSTED') {
+            document.getElementById('tabPosted').classList.add('active');
+        } else {
+            document.getElementById('tabCancelled').classList.add('active');
+        }
+        loadVouchers(1);
+    };
 
     async function loadVouchers(page = 1) {
         _listPage = page;

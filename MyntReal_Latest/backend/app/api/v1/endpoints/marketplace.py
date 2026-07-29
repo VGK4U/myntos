@@ -26,6 +26,18 @@ from app.services.marketplace_pricing import enrich_product_with_pricing
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+def _resolve_company_id(db: Session, company_id: int) -> int:
+    """
+    Fallback mechanism: if the requested company_id has no products in
+    the database, resolve to the master company_id = 1.
+    """
+    if company_id == 1:
+        return 1
+    count = db.query(MarketspareItem).filter(MarketspareItem.company_id == company_id).count()
+    if count == 0:
+        return 1
+    return company_id
+
 PAGE_SIZE = 24
 
 # ── Sync concurrency guard ────────────────────────────────────────────────────
@@ -132,7 +144,7 @@ async def serve_product_image(filename: str):
         pass
 
     # Fallback: local filesystem (dev convenience)
-    local_path = Path('/home/runner/workspace/frontend/public/marketplace/product-images') / filename
+    local_path = Path('.') / 'frontend' / 'public' / 'marketplace' / 'product-images' / filename
     if local_path.exists():
         return Response(content=local_path.read_bytes(), media_type=content_type,
                         headers={'Cache-Control': 'public, max-age=3600'})
@@ -226,9 +238,11 @@ def get_filter_options(
     db: Session = Depends(get_db),
 ):
     """Distinct filter values for model, spec. Scoped to category/categories if provided."""
+    company_id = _resolve_company_id(db, company_id)
     q = db.query(MarketspareItem).filter(
         MarketspareItem.company_id == company_id,
         MarketspareItem.is_active == True,
+        MarketspareItem.show_in_marketplace == True,
     )
     # Phase 3: segment filter
     resolved_seg_id = segment_id
@@ -277,9 +291,11 @@ def list_products(
     model, spec, color filters, price range, pagination.
     discount_mode: 'mnr' (3% off) | 'partner' (12% off) | 'student' (10% off) | None
     """
+    company_id = _resolve_company_id(db, company_id)
     q = db.query(MarketspareItem).filter(
         MarketspareItem.company_id == company_id,
         MarketspareItem.is_active == True,
+        MarketspareItem.show_in_marketplace == True,
     )
 
     # Phase 3: segment filter — resolve slug → id if needed
@@ -370,10 +386,12 @@ def get_product(
     db: Session = Depends(get_db),
 ):
     """Single product with full price breakdown."""
+    company_id = _resolve_company_id(db, company_id)
     item = db.query(MarketspareItem).filter(
         MarketspareItem.id == product_id,
         MarketspareItem.company_id == company_id,
         MarketspareItem.is_active == True,
+        MarketspareItem.show_in_marketplace == True,
     ).first()
     if not item:
         raise HTTPException(status_code=404, detail='Product not found')
@@ -396,12 +414,14 @@ def list_categories(
     db: Session = Depends(get_db),
 ):
     """Distinct active categories with item count. Optionally scoped to segment."""
+    company_id = _resolve_company_id(db, company_id)
     q = db.query(
         MarketspareItem.category_name,
         func.count(MarketspareItem.id).label('count'),
     ).filter(
         MarketspareItem.company_id == company_id,
         MarketspareItem.is_active == True,
+        MarketspareItem.show_in_marketplace == True,
     )
     # Phase 3: segment filter
     resolved_seg_id = segment_id
@@ -632,6 +652,7 @@ def get_category_configs(
     db: Session = Depends(get_db),
 ):
     """List all category configs. Staff only."""
+    company_id = _resolve_company_id(db, company_id)
     configs = db.query(MarketplaceCategoryConfig).filter(
         MarketplaceCategoryConfig.company_id == company_id
     ).order_by(MarketplaceCategoryConfig.category_name).all()
@@ -647,6 +668,7 @@ def upsert_category_config(
     db: Session = Depends(get_db),
 ):
     """Create or update a category config. Staff only."""
+    company_id = _resolve_company_id(db, company_id)
     markup = float(payload.get('markup_percent', 15))
     if not (0 < markup <= 100):
         raise HTTPException(status_code=400, detail='markup_percent must be between 1 and 100')
@@ -922,6 +944,7 @@ def list_admin_products(
     current_user=Depends(get_current_user_hybrid),
     db: Session = Depends(get_db),
 ):
+    company_id = _resolve_company_id(db, company_id)
     q = db.query(MarketspareItem).filter(MarketspareItem.company_id == company_id)
     if search:
         q = q.filter(or_(
@@ -1017,6 +1040,7 @@ def update_admin_product(
     current_user=Depends(get_current_user_hybrid),
     db: Session = Depends(get_db),
 ):
+    company_id = _resolve_company_id(db, company_id)
     item = db.query(MarketspareItem).filter(
         MarketspareItem.id == product_id,
         MarketspareItem.company_id == company_id,
@@ -1113,7 +1137,7 @@ async def upload_product_image(
 
     # Also write to local filesystem for dev convenience
     try:
-        img_dir = Path('/home/runner/workspace/frontend/public/marketplace/product-images')
+        img_dir = Path('.') / 'frontend' / 'public' / 'marketplace' / 'product-images'
         img_dir.mkdir(parents=True, exist_ok=True)
         (img_dir / filename).write_bytes(content)
     except Exception as e:
@@ -1158,6 +1182,7 @@ def toggle_product(
     db: Session = Depends(get_db),
 ):
     """Activate / deactivate a product. Staff only."""
+    company_id = _resolve_company_id(db, company_id)
     item = db.query(MarketspareItem).filter(
         MarketspareItem.id == product_id,
         MarketspareItem.company_id == company_id,
@@ -1179,6 +1204,7 @@ def stock_dashboard(
     Executive-level stock intelligence dashboard.
     Returns KPIs, category breakdown, top restock items, and procurement budget estimate.
     """
+    company_id = _resolve_company_id(db, company_id)
     all_items = db.query(MarketspareItem).filter(
         MarketspareItem.company_id == company_id,
         MarketspareItem.is_active == True,

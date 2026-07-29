@@ -424,6 +424,12 @@
                         </div>
                     </div>
                     <div class="form-group"><label>GST Rate</label><input type="text" id="formGstRate" readonly placeholder="Auto-calculated from HSN" style="background-color: #f5f5f5; cursor: not-allowed;"></div>
+                    <div class="form-group" style="margin-top: 16px;">
+                        <label class="d-flex align-items-center gap-2" style="cursor: pointer; font-weight: 500;">
+                            <input type="checkbox" id="formShowInMarketplace" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span>Show in Marketplace</span>
+                        </label>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -550,6 +556,13 @@
                     </div>
 
                     <div class="form-group" style="margin-top:16px;">
+                        <label class="d-flex align-items-center gap-2" style="cursor: pointer; font-weight: 500;">
+                            <input type="checkbox" id="editShowInMarketplace" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span>Show in Marketplace</span>
+                        </label>
+                    </div>
+
+                    <div class="form-group" style="margin-top:8px;">
                         <label class="d-flex align-items-center gap-2">
                             <input type="checkbox" id="editIsActive" checked style="width: auto;">
                             <span>Active</span>
@@ -1355,6 +1368,7 @@
 
         async function openCreateModal() { 
             document.getElementById('createForm').reset(); 
+            document.getElementById('formShowInMarketplace').checked = false;
             document.getElementById('formApplicableCompanies').value = '[]';
             document.getElementById('formCompanyBadges').innerHTML = '';
             document.getElementById('formMarkupPct').value = 27;
@@ -1410,6 +1424,7 @@
             document.getElementById('editMarkupPct').value = _mk;
             calcSellingRate('edit');
             document.getElementById('editIsActive').checked = item.is_active !== false;
+            document.getElementById('editShowInMarketplace').checked = item.show_in_marketplace === true;
             
             document.getElementById('editOpeningQty').value = '';
             document.getElementById('editOpeningValue').value = '';
@@ -1535,7 +1550,8 @@
                 purchase_rate: parseFloat(document.getElementById('formPurchaseRate').value) || 0,
                 selling_rate: parseFloat(document.getElementById('formSellingRate').value) || 0,
                 reorder_level: parseInt(document.getElementById('formReorder').value) || 10,
-                hsn_id: document.getElementById('formHsnId').value ? parseInt(document.getElementById('formHsnId').value) : null
+                hsn_id: document.getElementById('formHsnId').value ? parseInt(document.getElementById('formHsnId').value) : null,
+                show_in_marketplace: document.getElementById('formShowInMarketplace').checked
             };
             
             try {
@@ -1610,7 +1626,8 @@
                 reorder_level: parseInt(document.getElementById('editReorder').value) || 10,
                 hsn_id: document.getElementById('editHsnId').value ? parseInt(document.getElementById('editHsnId').value) : null,
                 is_active: document.getElementById('editIsActive').checked,
-                marketplace_sku: mktSkuVal || null
+                marketplace_sku: mktSkuVal || null,
+                show_in_marketplace: document.getElementById('editShowInMarketplace').checked
             };
             
             try {

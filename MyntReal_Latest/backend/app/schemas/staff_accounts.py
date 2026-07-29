@@ -1326,6 +1326,7 @@ class StockItemMasterBase(BaseModel):
     
     purchase_rate: Decimal = Field(default=Decimal("0.00"), ge=0, description="Purchase rate")
     selling_rate: Decimal = Field(default=Decimal("0.00"), ge=0, description="Selling rate")
+    show_in_marketplace: Optional[bool] = Field(default=False, description="Whether to show this item in the marketplace catalog")
     
     model_config = {"extra": "forbid"}
     
@@ -1403,6 +1404,7 @@ class StockItemMasterUpdate(BaseModel):
     
     is_active: Optional[bool] = None
     marketplace_sku: Optional[str] = Field(None, max_length=120, description="Marketplace SKU to link for price+qty sync")
+    show_in_marketplace: Optional[bool] = None
     
     model_config = {"extra": "forbid"}
     
@@ -1506,6 +1508,7 @@ class StockItemMasterResponse(BaseModel):
 
     marketplace_sku: Optional[str] = None
     marketplace_linked: bool = False
+    show_in_marketplace: bool = False
     
     is_active: bool
     

@@ -2292,6 +2292,7 @@ class StockItemMasterService:
             purchase_rate=data.purchase_rate,
             selling_rate=data.selling_rate,
             is_active=data.is_active,
+            show_in_marketplace=getattr(data, 'show_in_marketplace', False),
             created_by_id=employee.id
         )
         
@@ -2750,6 +2751,7 @@ class StockItemMasterService:
 
         # Price: selling_rate → dealer_price
         mkt.dealer_price = float(stock_item.selling_rate or 0)
+        mkt.show_in_marketplace = bool(stock_item.show_in_marketplace)
 
         # Qty: compute net from stock ledger across all companies
         from app.models.staff_accounts import StockLedger as _SL
@@ -5721,10 +5723,14 @@ class PartyLedgerService:
             query = query.filter(PartyLedger.reference_type == reference_type.upper())
 
         # DC-SOURCE-STATUS-001: multi-value source_status filter (comma-separated)
-        if source_status:
+        if source_status and source_status.strip():
             _statuses = [s.strip().upper() for s in source_status.split(',') if s.strip()]
             if _statuses:
                 query = query.filter(PartyLedger.source_status.in_(_statuses))
+            else:
+                query = query.filter(PartyLedger.source_status != 'CANCELLED')
+        else:
+            query = query.filter(PartyLedger.source_status != 'CANCELLED')
 
         if date_from:
             query = query.filter(PartyLedger.transaction_date >= date_from)
@@ -5748,13 +5754,15 @@ class PartyLedgerService:
             if party_type and party_id:
                 _pre_base = db.query(PartyLedger).filter(
                     PartyLedger.party_type == party_type,
-                    PartyLedger.party_id == party_id
+                    PartyLedger.party_id == party_id,
+                    PartyLedger.source_status != 'CANCELLED'
                 )
                 if company_id:
                     _pre_base = _pre_base.filter(PartyLedger.company_id == company_id)
             elif party_name:
                 _pre_base = db.query(PartyLedger).filter(
-                    PartyLedger.party_name.ilike(f'%{party_name}%')
+                    PartyLedger.party_name.ilike(f'%{party_name}%'),
+                    PartyLedger.source_status != 'CANCELLED'
                 )
                 if company_id:
                     _pre_base = _pre_base.filter(PartyLedger.company_id == company_id)
@@ -5788,7 +5796,8 @@ class PartyLedgerService:
                 ob_base = db.query(PartyLedger).filter(
                     PartyLedger.party_type == party_type,
                     PartyLedger.party_id == party_id,
-                    PartyLedger.reference_type == 'OPENING_BALANCE'
+                    PartyLedger.reference_type == 'OPENING_BALANCE',
+                    PartyLedger.source_status != 'CANCELLED'
                 )
                 if company_id:
                     ob_base = ob_base.filter(PartyLedger.company_id == company_id)
@@ -5831,7 +5840,8 @@ class PartyLedgerService:
                 # Unified (name-only) mode: sum all OPENING_BALANCE rows for this name
                 ob_base_n = db.query(PartyLedger).filter(
                     PartyLedger.party_name.ilike(f'%{party_name}%'),
-                    PartyLedger.reference_type == 'OPENING_BALANCE'
+                    PartyLedger.reference_type == 'OPENING_BALANCE',
+                    PartyLedger.source_status != 'CANCELLED'
                 )
                 if company_id:
                     ob_base_n = ob_base_n.filter(PartyLedger.company_id == company_id)
@@ -5914,6 +5924,8 @@ class PartyLedgerService:
             func.sum(PartyLedger.debit_amount).label('total_debit'),
             func.sum(PartyLedger.credit_amount).label('total_credit'),
             func.max(PartyLedger.transaction_date).label('last_date')
+        ).filter(
+            PartyLedger.source_status != 'CANCELLED'
         ).group_by(
             PartyLedger.party_type,
             PartyLedger.party_id,
@@ -19982,8 +19994,23 @@ class LedgerPostingService:
             txn_date = expense_entry.expense_date
             ref_number = expense_entry.entry_number
             ref_id = expense_entry.id
-            vendor_name = (expense_entry.vendor_name or '').strip() or 'Petty Cash'
+            vendor_name = (expense_entry.vendor_name or '').strip()
             vendor_id = expense_entry.vendor_id or 0
+            _resolved_party_type = 'VENDOR'
+            if vendor_name and vendor_name != 'Petty Cash':
+                try:
+                    # Resolve party using the helper to get canonical type, id, and name
+                    _res_type, _res_id, _res_name = JournalVoucherService._resolve_party_by_name(db, vendor_name, company_id)
+                    if _res_name:
+                        vendor_name = _res_name
+                        _resolved_party_type = _res_type
+                        if not vendor_id:
+                            vendor_id = _res_id
+                except Exception:
+                    pass
+            if not vendor_name:
+                vendor_name = 'Petty Cash'
+
             payment_mode = (expense_entry.payment_mode or 'CASH').upper()
             narration_base = f"{'REVERSAL: ' if is_reversal else ''}{expense_entry.entry_number}" \
                              + (f" | {expense_entry.narration}" if expense_entry.narration else "")
@@ -20013,7 +20040,7 @@ class LedgerPostingService:
             # 1. Party Ledger (vendor/payee) — only if vendor exists
             if vendor_name and vendor_name != 'Petty Cash':
                 LedgerPostingService._add_party(
-                    db, company_id, 'VENDOR', vendor_id, vendor_name, txn_date,
+                    db, company_id, _resolved_party_type, vendor_id, vendor_name, txn_date,
                     party_entry_type, 'EXPENSE', ref_id, ref_number, amount,
                     f"{voucher}: {narration_base}",
                     voucher, expense_acct_name, approved_by_id, now
@@ -20074,6 +20101,30 @@ class LedgerPostingService:
                 f"{voucher}: {narration_base}",
                 voucher, vendor_name, approved_by_id, now
             )
+
+            # 4. Vendor Account Legs (only if payment_mode is CASH and a vendor is named)
+            if payment_mode == 'CASH' and vendor_name and vendor_name != 'Petty Cash':
+                LedgerPostingService._ensure_party_ledger_master(
+                    db, company_id, vendor_name, _resolved_party_type, approved_by_id, now
+                )
+                
+                # Purchase Liability leg (Credit for normal, Debit for reversal)
+                purchase_entry_type = 'DEBIT' if is_reversal else 'CREDIT'
+                LedgerPostingService._add_acct(
+                    db, company_id, 'PARTY', vendor_name, txn_date,
+                    purchase_entry_type, 'EXPENSE', ref_id, ref_number, amount,
+                    f"{voucher}: Purchase - {narration_base}",
+                    voucher, expense_acct_name, approved_by_id, now
+                )
+                
+                # Cash Payment leg (Debit for normal, Credit for reversal)
+                payment_entry_type = 'CREDIT' if is_reversal else 'DEBIT'
+                LedgerPostingService._add_acct(
+                    db, company_id, 'PARTY', vendor_name, txn_date,
+                    payment_entry_type, 'EXPENSE', ref_id, ref_number, amount,
+                    f"{voucher}: Payment - {narration_base}",
+                    voucher, pm_name, approved_by_id, now
+                )
 
             # Mark ledger_updated on the expense entry (DC-SHOW-IN-LEDGER-001: reversal clears the flag)
             expense_entry.ledger_updated = not is_reversal
@@ -20294,10 +20345,14 @@ class LedgerPostingService:
         if reference_number: q = q.filter(_AL.reference_number.ilike(f'%{reference_number}%'))
         if particulars:     q = q.filter(_AL.particulars.ilike(f'%{particulars}%'))
         # DC-SOURCE-STATUS-001: multi-value source_status filter (comma-separated)
-        if source_status:
+        if source_status and source_status.strip():
             _ss = [s.strip().upper() for s in source_status.split(',') if s.strip()]
             if _ss:
                 q = q.filter(_AL.source_status.in_(_ss))
+            else:
+                q = q.filter(_AL.source_status != 'CANCELLED')
+        else:
+            q = q.filter(_AL.source_status != 'CANCELLED')
         total = q.count()
         agg = q.with_entities(
             func.sum(_AL.debit_amount).label('td'),
@@ -20318,7 +20373,7 @@ class LedgerPostingService:
             func.sum(_AL.debit_amount).label('total_debit'),
             func.sum(_AL.credit_amount).label('total_credit'),
             func.max(_AL.transaction_date).label('last_date'),
-        ).group_by(_AL.account_type, _AL.account_name, _AL.company_id)
+        ).filter(_AL.source_status != 'CANCELLED').group_by(_AL.account_type, _AL.account_name, _AL.company_id)
         if company_id:   q = q.filter(_AL.company_id == company_id)
         if account_type: q = q.filter(_AL.account_type == account_type.upper())
         return q.order_by(_AL.account_type, _AL.account_name).all()
@@ -20366,7 +20421,7 @@ class LedgerPostingService:
                 func.sum(_AL.debit_amount).label('td'),
                 func.sum(_AL.credit_amount).label('tc'),
                 func.max(_AL.transaction_date).label('last_d'),
-            ).filter(_AL.account_type == acct_type, _AL.transaction_date <= p_end)
+            ).filter(_AL.account_type == acct_type, _AL.transaction_date <= p_end, _AL.source_status != 'CANCELLED')
             if company_id:
                 bal_q = bal_q.filter(_AL.company_id == company_id)
             bal_map = {}
@@ -20381,7 +20436,8 @@ class LedgerPostingService:
                     func.sum(_AL.credit_amount).label('pc'),
                 ).filter(_AL.account_type == acct_type,
                          _AL.transaction_date >= p_start,
-                         _AL.transaction_date <= p_end)
+                         _AL.transaction_date <= p_end,
+                         _AL.source_status != 'CANCELLED')
                 if company_id:
                     prd_q = prd_q.filter(_AL.company_id == company_id)
                 prd_map = {(r.account_name, r.company_id): (float(r.pd or 0), float(r.pc or 0))
@@ -20491,6 +20547,94 @@ class JournalVoucherService:
         5: 'MR',   # Mynt Real LLP (same brand as co=4)
         # Lucky (future): 'LK'
     }
+
+    @staticmethod
+    def _resolve_party_by_name(db, name: str, company_id: int) -> tuple:
+        """
+        Look up a party name across all database tables.
+        Returns a tuple: (party_type, party_id, canonical_name)
+        """
+        if not name:
+            return 'EXTERNAL', 0, ''
+            
+        nm_clean = name.strip()
+        nm_upper = nm_clean.upper()
+        
+        # 1. Look up in VendorMaster
+        try:
+            from app.models.staff_accounts import VendorMaster as _VM
+            from sqlalchemy import func, or_
+            v = db.query(_VM).filter(
+                func.upper(func.trim(_VM.vendor_name)) == nm_upper,
+                or_(
+                    _VM.applicable_companies.contains([company_id]),
+                    _VM.applicable_companies.contains(['ALL'])
+                )
+            ).order_by(_VM.id.asc()).first()
+            if v:
+                return 'VENDOR', v.id, v.vendor_name
+        except Exception:
+            pass
+            
+        # 2. Look up in StaffEmployee
+        try:
+            from app.models.staff import StaffEmployee as _SE
+            from sqlalchemy import func
+            s = db.query(_SE).filter(
+                func.upper(func.trim(_SE.full_name)) == nm_upper
+            ).order_by(_SE.id.asc()).first()
+            if s:
+                return 'EMPLOYEE', s.id, s.full_name
+        except Exception:
+            pass
+            
+        # 3. Look up in OfficialPartner
+        try:
+            from app.models.staff_accounts import OfficialPartner as _OP
+            from sqlalchemy import func
+            p = db.query(_OP).filter(
+                func.upper(func.trim(_OP.partner_name)) == nm_upper
+            ).order_by(_OP.id.asc()).first()
+            if p:
+                _PT_NORM = {
+                    'DEALER':         'VENDOR',
+                    'DISTRIBUTOR':    'VENDOR',
+                    'REAL_DREAM_PARTNER': 'VENDOR',
+                    'SERVICE_CENTER': 'VENDOR',
+                    'VENDOR':         'VENDOR',
+                    'VGK_TEAM':       'USER'
+                }
+                pt = _PT_NORM.get(p.category, 'VENDOR')
+                return pt, p.id, p.partner_name
+        except Exception:
+            pass
+            
+        # 4. Look up in User (MNR Members)
+        try:
+            from app.models.user import User as _User
+            from sqlalchemy import func
+            u = db.query(_User).filter(
+                func.upper(func.trim(_User.name)) == nm_upper
+            ).order_by(_User.id.asc()).first()
+            if u:
+                return 'MNR_USER', 0, u.name
+        except Exception:
+            pass
+            
+        # 5. Look up in ManualPartyMaster
+        try:
+            from app.models.staff_accounts import ManualPartyMaster as _MP
+            from sqlalchemy import func
+            m = db.query(_MP).filter(
+                func.upper(func.trim(_MP.name)) == nm_upper
+            ).order_by(_MP.id.asc()).first()
+            if m:
+                return 'EXTERNAL', m.id, m.name
+        except Exception:
+            pass
+            
+        # Fallback to external
+        return 'EXTERNAL', 0, nm_clean
 
     @staticmethod
     def _co_prefix(company_id: int) -> str:
@@ -20716,52 +20860,39 @@ class JournalVoucherService:
         # (case-insensitive), treat party_id as stale (e.g. leftover from a prior selection in
         # the same form session). In that case keep the user-typed name and clear the bad ID so
         # the party_ledger entry is never posted under the wrong party.
-        if _resolved_party_id and _resolved_party_id > 0 and vtype in ('PAYMENT', 'RECEIPT', 'CONTRA') \
-                and _resolved_party_type in ('VENDOR', 'EXTERNAL'):
+        if _resolved_party_id and _resolved_party_id > 0 and vtype in ('PAYMENT', 'RECEIPT', 'CONTRA'):
             try:
-                from app.models.staff_accounts import VendorMaster as _VMA_LOCK
-                _vm_lock = db.query(_VMA_LOCK).filter(_VMA_LOCK.id == _resolved_party_id).first()
-                if _vm_lock:
-                    _input_nm = _resolved_party_name.strip().upper()
-                    _db_nm    = _vm_lock.vendor_name.strip().upper()
-                    if _input_nm and _input_nm != _db_nm:
-                        # Stale party_id: user typed a completely different party name.
-                        # Discard the ID, keep the user-provided name.
-                        _resolved_party_id = 0
-                        jv.party_id = None
+                _res_type, _res_id, _res_name = JournalVoucherService._resolve_party_by_name(db, _resolved_party_name, company_id)
+                if _res_id and _res_id == _resolved_party_id:
+                    _resolved_party_name = _res_name
+                    _resolved_party_type = _res_type
+                else:
+                    if _res_name:
+                        _resolved_party_name = _res_name
+                        _resolved_party_type = _res_type
+                        _resolved_party_id = _res_id
                     else:
-                        # Names match (or user left name blank) → use canonical DB name.
-                        _resolved_party_name = _vm_lock.vendor_name
-                        _resolved_party_type = 'VENDOR'
+                        _resolved_party_id = 0
             except Exception:
                 pass
-        # DC-JV-PARTY-SYNC-001: keep jv.party_name in sync with _resolved_party_name so the
-        # JV record always reflects what will be posted to party_ledger (prevents display mismatch
-        # where Edit modal shows one name but ledger contains another).
+
+        # DC-JV-PARTY-SYNC-001: keep jv.party_name in sync with _resolved_party_name
         if _resolved_party_name:
             jv.party_name = _resolved_party_name
             jv.party_type = _resolved_party_type
             jv.party_id   = _resolved_party_id or None
 
         # DC-PARTY-ID-RESOLVE-001: When party_name is known but party_id was not supplied
-        # (frontend typed name without selecting from dropdown → party_id=None/0), look up
-        # VendorMaster by name+company and back-fill the correct party_id onto the JV.
-        # Prevents null-party_id PAYMENT JVs where name-only lookup could later mis-attribute
-        # party_ledger entries if the JV is edited and the name no longer matches.
-        if _resolved_party_id == 0 and _resolved_party_name \
-                and vtype in ('PAYMENT', 'RECEIPT', 'CONTRA') \
-                and _resolved_party_type in ('VENDOR', 'EXTERNAL'):
+        if _resolved_party_id == 0 and _resolved_party_name and vtype in ('PAYMENT', 'RECEIPT', 'CONTRA'):
             try:
-                from app.models.staff_accounts import VendorMaster as _VMA_IDRES
-                _vm_idres = db.query(_VMA_IDRES).filter(
-                    func.upper(func.trim(_VMA_IDRES.vendor_name)) == _resolved_party_name.strip().upper(),
-                    _VMA_IDRES.applicable_companies.op('@>')(func.to_jsonb(company_id))
-                ).order_by(_VMA_IDRES.id.asc()).first()
-                if _vm_idres:
-                    _resolved_party_id   = _vm_idres.id
-                    _resolved_party_name = _vm_idres.vendor_name
-                    _resolved_party_type = 'VENDOR'
-                    jv.party_id          = _vm_idres.id   # keep JV record in sync
+                _res_type, _res_id, _res_name = JournalVoucherService._resolve_party_by_name(db, _resolved_party_name, company_id)
+                if _res_name:
+                    _resolved_party_id   = _res_id
+                    _resolved_party_name = _res_name
+                    _resolved_party_type = _res_type
+                    jv.party_id          = _res_id or None
+                    jv.party_type        = _res_type
+                    jv.party_name        = _res_name
             except Exception:
                 pass
 
@@ -20769,23 +20900,10 @@ class JournalVoucherService:
             # Try CR account name — it's the vendor/party receiving the payment
             _candidate = (cr_account_name or '').strip()
             if _candidate:
-                try:
-                    from app.models.staff_accounts import VendorMaster as _VMA
-                    _vm = db.query(_VMA).filter(
-                        func.upper(func.trim(_VMA.vendor_name)) == _candidate.upper(),
-                        _VMA.applicable_companies.op('@>')(func.to_jsonb(company_id))
-                    ).order_by(_VMA.id.asc()).first()
-                    if _vm:
-                        _resolved_party_name = _vm.vendor_name
-                        _resolved_party_type = 'VENDOR'
-                        _resolved_party_id   = _vm.id
-                    else:
-                        _resolved_party_name = _candidate
-                        _resolved_party_type = 'VENDOR'
-                except Exception:
-                    _resolved_party_name = _candidate
-                    _resolved_party_type = 'VENDOR'
-            # Also update the JV record so the party column shows correctly
+                _res_type, _res_id, _res_name = JournalVoucherService._resolve_party_by_name(db, _candidate, company_id)
+                _resolved_party_name = _res_name or _candidate
+                _resolved_party_type = _res_type
+                _resolved_party_id   = _res_id
             if _resolved_party_name:
                 jv.party_name = _resolved_party_name
                 jv.party_type = _resolved_party_type
@@ -20795,37 +20913,23 @@ class JournalVoucherService:
             # Try DR account name — it's the customer/party making the payment
             _candidate = (dr_account_name or '').strip()
             if _candidate:
-                _resolved_party_name = _candidate
-                _resolved_party_type = party_type or 'CUSTOMER'
+                _res_type, _res_id, _res_name = JournalVoucherService._resolve_party_by_name(db, _candidate, company_id)
+                _resolved_party_name = _res_name or _candidate
+                _resolved_party_type = _res_type
+                _resolved_party_id   = _res_id
             if _resolved_party_name:
                 jv.party_name = _resolved_party_name
                 jv.party_type = _resolved_party_type
                 jv.party_id   = _resolved_party_id or None
 
         # DC-JV-PARTY-BOTH-002: JOURNAL type — post DEBIT to DR party, CREDIT to CR party.
-        # Replaces the old single-block + DC-JV-PARTY-BOTH-001 guard which (a) hardcoded
-        # DEBIT for all JOURNAL parties regardless of side, and (b) silently skipped the
-        # DR party when party_name happened to equal cr_account_name.
-        # PAYMENT / RECEIPT / CONTRA continue to use _resolved_party_name (unchanged).
-        # DC-JV-VENDOR-LOOKUP-001: vendor lookup is scoped by company_id (applicable_companies
-        # array contains the JV's company) and uses ORDER BY id ASC for deterministic results.
-        # This prevents cross-company name collisions from returning the wrong vendor record.
         if vtype == 'JOURNAL':
             _jv_dr_nm = (dr_account_name or '').strip()
             _jv_cr_nm = (cr_account_name or '').strip()
             if dr_account_type.upper() == 'PARTY' and _jv_dr_nm:
-                _jv_dr_tp, _jv_dr_pid = 'EXTERNAL', 0
-                try:
-                    from app.models.staff_accounts import VendorMaster as _VMA_DR
-                    _vm_dr = db.query(_VMA_DR).filter(
-                        func.upper(func.trim(_VMA_DR.vendor_name)) == _jv_dr_nm.strip().upper(),
-                        _VMA_DR.applicable_companies.op('@>')(func.to_jsonb(company_id))
-                    ).order_by(_VMA_DR.id.asc()).first()
-                    if _vm_dr:
-                        _jv_dr_tp, _jv_dr_pid = 'VENDOR', _vm_dr.id
-                        _jv_dr_nm = _vm_dr.vendor_name  # normalise to master name
-                except Exception:
-                    pass
+                _jv_dr_tp, _jv_dr_pid, _canonical_dr_nm = JournalVoucherService._resolve_party_by_name(db, _jv_dr_nm, company_id)
+                if _canonical_dr_nm:
+                    _jv_dr_nm = _canonical_dr_nm
                 LedgerPostingService._ensure_party_ledger_master(
                     db, company_id, _jv_dr_nm, _jv_dr_tp, employee.id, now)
                 LedgerPostingService._add_party(
@@ -20836,18 +20940,9 @@ class JournalVoucherService:
                     main_category_id=_jv_main_cat_id, sub_category_id=_jv_sub_cat_id
                 )
             if cr_account_type.upper() == 'PARTY' and _jv_cr_nm:
-                _jv_cr_tp, _jv_cr_pid = 'EXTERNAL', 0
-                try:
-                    from app.models.staff_accounts import VendorMaster as _VMA_CR
-                    _vm_cr = db.query(_VMA_CR).filter(
-                        func.upper(func.trim(_VMA_CR.vendor_name)) == _jv_cr_nm.strip().upper(),
-                        _VMA_CR.applicable_companies.op('@>')(func.to_jsonb(company_id))
-                    ).order_by(_VMA_CR.id.asc()).first()
-                    if _vm_cr:
-                        _jv_cr_tp, _jv_cr_pid = 'VENDOR', _vm_cr.id
-                        _jv_cr_nm = _vm_cr.vendor_name  # normalise to master name
-                except Exception:
-                    pass
+                _jv_cr_tp, _jv_cr_pid, _canonical_cr_nm = JournalVoucherService._resolve_party_by_name(db, _jv_cr_nm, company_id)
+                if _canonical_cr_nm:
+                    _jv_cr_nm = _canonical_cr_nm
                 LedgerPostingService._ensure_party_ledger_master(
                     db, company_id, _jv_cr_nm, _jv_cr_tp, employee.id, now)
                 LedgerPostingService._add_party(
@@ -20863,17 +20958,13 @@ class JournalVoucherService:
                 db, company_id, _resolved_party_name, _resolved_party_type, employee.id, now
             )
             # DC-PARTY-SIDE-001: Derive entry_type from actual DR/CR account_type placement,
-            # NOT from voucher_type alone. Mirrors the JOURNAL branch above.
-            # A party manually placed on the DR side (fvDrType=PARTY) gets DEBIT even in RECEIPT;
-            # a party on CR side gets CREDIT even in PAYMENT. Falls back to voucher-type inference
-            # only when no PARTY-typed side is explicitly present.
+            # NOT from voucher_type alone.
             if dr_account_type.upper() == 'PARTY':
                 p_entry_type = 'DEBIT'
             elif cr_account_type.upper() == 'PARTY':
                 p_entry_type = 'CREDIT'
             else:
                 p_entry_type = 'DEBIT' if vtype == 'PAYMENT' else 'CREDIT'
-            # Particulars = counterpart account (opposite side), same as JOURNAL branch.
             _particulars = cr_account_name if p_entry_type == 'DEBIT' else dr_account_name
             LedgerPostingService._add_party(
                 db, company_id,
@@ -21262,18 +21353,78 @@ class JournalVoucherService:
         jv.cr_account_name = cr_account_name
         jv.amount = amount
         jv.narration = narration
-        jv.party_type = party_type
-        jv.party_name = party_name
-        jv.party_id = party_id if party_id is not None else None
         jv.payment_mode = payment_mode
         jv.reference_number = reference_number
         jv.category_id = category_id if category_id else None
         jv.income_category_id = income_category_id if income_category_id else None
         jv.updated_at = now
-        db.flush()
+
+        _resolved_party_name = (party_name or '').strip()
+        _resolved_party_type = party_type or 'EXTERNAL'
+        _resolved_party_id   = party_id if party_id is not None else 0
+
+        _PT_NORM = {
+            'STAFF':          'EMPLOYEE',
+            'VGK_MEMBER':     'CUSTOMER',
+            'MNR_MEMBER':     'MNR_USER',
+            'MNR_USER':       'MNR_USER',
+            'DEALER':         'VENDOR',
+            'DISTRIBUTOR':    'VENDOR',
+            'RD_PARTNER':     'VENDOR',
+            'SERVICE_CENTER': 'VENDOR',
+            'PARTNER_VENDOR': 'VENDOR',
+        }
+        _resolved_party_type = _PT_NORM.get(_resolved_party_type, _resolved_party_type)
 
         vtype = jv.voucher_type
         vnum = jv.voucher_number
+
+        if _resolved_party_id and _resolved_party_id > 0 and vtype in ('PAYMENT', 'RECEIPT', 'CONTRA'):
+            try:
+                _res_type, _res_id, _res_name = JournalVoucherService._resolve_party_by_name(db, _resolved_party_name, jv.company_id)
+                if _res_id and _res_id == _resolved_party_id:
+                    _resolved_party_name = _res_name
+                    _resolved_party_type = _res_type
+                else:
+                    if _res_name:
+                        _resolved_party_name = _res_name
+                        _resolved_party_type = _res_type
+                        _resolved_party_id = _res_id
+                    else:
+                        _resolved_party_id = 0
+            except Exception:
+                pass
+
+        if _resolved_party_id == 0 and _resolved_party_name and vtype in ('PAYMENT', 'RECEIPT', 'CONTRA'):
+            try:
+                _res_type, _res_id, _res_name = JournalVoucherService._resolve_party_by_name(db, _resolved_party_name, jv.company_id)
+                if _res_name:
+                    _resolved_party_id   = _res_id
+                    _resolved_party_name = _res_name
+                    _resolved_party_type = _res_type
+            except Exception:
+                pass
+
+        if not _resolved_party_name and vtype == 'PAYMENT':
+            _candidate = (cr_account_name or '').strip()
+            if _candidate:
+                _res_type, _res_id, _res_name = JournalVoucherService._resolve_party_by_name(db, _candidate, jv.company_id)
+                _resolved_party_name = _res_name or _candidate
+                _resolved_party_type = _res_type
+                _resolved_party_id   = _res_id
+
+        if not _resolved_party_name and vtype == 'RECEIPT':
+            _candidate = (dr_account_name or '').strip()
+            if _candidate:
+                _res_type, _res_id, _res_name = JournalVoucherService._resolve_party_by_name(db, _candidate, jv.company_id)
+                _resolved_party_name = _res_name or _candidate
+                _resolved_party_type = _res_type
+                _resolved_party_id   = _res_id
+
+        jv.party_name = _resolved_party_name or None
+        jv.party_type = _resolved_party_type if _resolved_party_name else None
+        jv.party_id = _resolved_party_id if (_resolved_party_name and _resolved_party_id > 0) else None
+        db.flush()
 
         # DC_LEDGER_CATEGORY_001: Resolve main_category_id from expense sub-category for ledger display (update path)
         _upd_main_cat_id = None
@@ -21307,12 +21458,6 @@ class JournalVoucherService:
         )
 
         # ── Step 5: Re-post party_ledger ──────────────────────────────────────
-        # DC-JV-PARTY-BOTH-002 (update): JOURNAL — DEBIT to DR party, CREDIT to CR party.
-        # PAYMENT / RECEIPT / CONTRA — use _resolved_party_name (unchanged).
-        _resolved_party_name = (party_name or '').strip()
-        _resolved_party_type = party_type or 'EXTERNAL'
-        _resolved_party_id   = party_id if party_id is not None else 0
-
         _jv_edit_dr_tp, _jv_edit_dr_nm = 'EXTERNAL', ''
         _jv_edit_cr_tp, _jv_edit_cr_nm = 'EXTERNAL', ''
 
@@ -21320,21 +21465,9 @@ class JournalVoucherService:
             _jv_edit_dr_nm = (dr_account_name or '').strip()
             _jv_edit_cr_nm = (cr_account_name or '').strip()
             if dr_account_type.upper() == 'PARTY' and _jv_edit_dr_nm:
-                _jv_edit_dr_tp, _jv_edit_dr_pid = 'EXTERNAL', 0
-                try:
-                    # DC-JV-VENDOR-LOOKUP-002: mirror CREATE path — scope by applicable_companies
-                    # so cross-company name collisions never return the wrong vendor record.
-                    from app.models.staff_accounts import VendorMaster as _VMA_DR2
-                    _vm_dr2 = db.query(_VMA_DR2).filter(
-                        func.upper(func.trim(_VMA_DR2.vendor_name)) == _jv_edit_dr_nm.strip().upper(),
-                        _VMA_DR2.applicable_companies.op('@>')(func.to_jsonb(jv.company_id))
-                    ).order_by(_VMA_DR2.id.asc()).first()
-                    if _vm_dr2:
-                        _jv_edit_dr_tp  = 'VENDOR'
-                        _jv_edit_dr_pid = _vm_dr2.id
-                        _jv_edit_dr_nm  = _vm_dr2.vendor_name   # normalise to master name
-                except Exception:
-                    pass
+                _jv_edit_dr_tp, _jv_edit_dr_pid, _canonical_dr_nm = JournalVoucherService._resolve_party_by_name(db, _jv_edit_dr_nm, jv.company_id)
+                if _canonical_dr_nm:
+                    _jv_edit_dr_nm = _canonical_dr_nm
                 LedgerPostingService._ensure_party_ledger_master(
                     db, jv.company_id, _jv_edit_dr_nm, _jv_edit_dr_tp, employee.id, now)
                 LedgerPostingService._add_party(
@@ -21345,20 +21478,9 @@ class JournalVoucherService:
                     main_category_id=_upd_main_cat_id, sub_category_id=_upd_sub_cat_id
                 )
             if cr_account_type.upper() == 'PARTY' and _jv_edit_cr_nm:
-                _jv_edit_cr_tp, _jv_edit_cr_pid = 'EXTERNAL', 0
-                try:
-                    # DC-JV-VENDOR-LOOKUP-002: mirror CREATE path — scope by applicable_companies
-                    from app.models.staff_accounts import VendorMaster as _VMA_CR2
-                    _vm_cr2 = db.query(_VMA_CR2).filter(
-                        func.upper(func.trim(_VMA_CR2.vendor_name)) == _jv_edit_cr_nm.strip().upper(),
-                        _VMA_CR2.applicable_companies.op('@>')(func.to_jsonb(jv.company_id))
-                    ).order_by(_VMA_CR2.id.asc()).first()
-                    if _vm_cr2:
-                        _jv_edit_cr_tp  = 'VENDOR'
-                        _jv_edit_cr_pid = _vm_cr2.id
-                        _jv_edit_cr_nm  = _vm_cr2.vendor_name   # normalise to master name
-                except Exception:
-                    pass
+                _jv_edit_cr_tp, _jv_edit_cr_pid, _canonical_cr_nm = JournalVoucherService._resolve_party_by_name(db, _jv_edit_cr_nm, jv.company_id)
+                if _canonical_cr_nm:
+                    _jv_edit_cr_nm = _canonical_cr_nm
                 LedgerPostingService._ensure_party_ledger_master(
                     db, jv.company_id, _jv_edit_cr_nm, _jv_edit_cr_tp, employee.id, now)
                 LedgerPostingService._add_party(
@@ -21369,23 +21491,9 @@ class JournalVoucherService:
                     main_category_id=_upd_main_cat_id, sub_category_id=_upd_sub_cat_id
                 )
         elif _resolved_party_name:
-            # DC-PARTY-TYPE-NORM-002 (update path): apply same normalization as create path.
-            _PT_NORM_UPD = {
-                'STAFF':          'EMPLOYEE',
-                'VGK_MEMBER':     'CUSTOMER',
-                'MNR_MEMBER':     'MNR_USER',
-                'MNR_USER':       'MNR_USER',
-                'DEALER':         'VENDOR',
-                'DISTRIBUTOR':    'VENDOR',
-                'RD_PARTNER':     'VENDOR',
-                'SERVICE_CENTER': 'VENDOR',
-                'PARTNER_VENDOR': 'VENDOR',
-            }
-            _resolved_party_type = _PT_NORM_UPD.get(_resolved_party_type, _resolved_party_type)
             LedgerPostingService._ensure_party_ledger_master(
                 db, jv.company_id, _resolved_party_name, _resolved_party_type, employee.id, now
             )
-            # DC-PARTY-SIDE-001 (update path): honour actual DR/CR placement, not voucher type.
             if dr_account_type.upper() == 'PARTY':
                 p_entry_type = 'DEBIT'
             elif cr_account_type.upper() == 'PARTY':
@@ -21475,6 +21583,7 @@ class JournalVoucherService:
         if date_from:         q = q.filter(_JV.voucher_date >= date_from)
         if date_to:           q = q.filter(_JV.voucher_date <= date_to)
         if status:            q = q.filter(_JV.status == status.upper())
+        else:                 q = q.filter(_JV.status != 'CANCELLED')
         if reference_number:  q = q.filter(_JV.reference_number.ilike(f'%{reference_number}%'))
         total = q.count()
         agg = q.with_entities(func.sum(_JV.amount).label('ta')).first()

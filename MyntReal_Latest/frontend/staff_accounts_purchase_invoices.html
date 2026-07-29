@@ -1354,6 +1354,12 @@
                         </div>
                     </div>
                     <div class="form-group"><label>GST Rate</label><input type="text" id="qcStockGstRate" readonly placeholder="Auto-calculated from HSN" style="background-color: #f5f5f5; cursor: not-allowed;"></div>
+                    <div class="form-group" style="margin-top: 16px;">
+                        <label style="cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="qcStockShowInMarketplace" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span>Show in Marketplace</span>
+                        </label>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -5132,6 +5138,7 @@
 
         async function qcInitStockItemModal() {
             document.getElementById('qcStockItemForm').reset();
+            document.getElementById('qcStockShowInMarketplace').checked = false;
             document.getElementById('qcStockApplicableCompanies').value = '[]';
             document.getElementById('qcStockCompanyBadges').innerHTML = '';
             document.getElementById('qcStockColors').innerHTML = '';
@@ -5633,7 +5640,8 @@
                 selling_rate: parseFloat(document.getElementById('qcStockSellingRate').value) || 0,
                 reorder_level: parseInt(document.getElementById('qcStockReorder').value) || 10,
                 hsn_id: document.getElementById('qcStockHsnId').value ? parseInt(document.getElementById('qcStockHsnId').value) : null,
-                applicable_companies: applicableCompanies
+                applicable_companies: applicableCompanies,
+                show_in_marketplace: document.getElementById('qcStockShowInMarketplace').checked
             };
             
             try {

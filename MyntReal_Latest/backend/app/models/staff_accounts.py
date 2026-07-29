@@ -579,6 +579,7 @@ class StockItemMaster(BaseModel):
     marketplace_sku = Column(String(120), nullable=True, index=True)
     
     is_active = Column(Boolean, default=True, nullable=False)
+    show_in_marketplace = Column(Boolean, default=False, nullable=False)
     
     created_by_id = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
     updated_by_id = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
@@ -621,6 +622,7 @@ class StockItemMaster(BaseModel):
             'marketplace_sku': self.marketplace_sku,
             'marketplace_linked': bool(self.marketplace_sku),
             'is_active': self.is_active,
+            'show_in_marketplace': bool(self.show_in_marketplace),
             'description': self.description,
             'brand': self.brand,
             'model_compat': self.model_compat

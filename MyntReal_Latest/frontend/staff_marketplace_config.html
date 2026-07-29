@@ -107,7 +107,7 @@ tr.row-inactive{opacity:.45;}
       <h4><i class="fas fa-store me-2" style="color:var(--mnr-gold)"></i>Marketplace Lite — Configuration</h4>
       <small style="color:var(--mnr-muted);">Phase 1 · Price Intelligence Layer · EV Spare Parts</small>
     </div>
-    <a href="/marketplace" target="_blank" class="btn btn-sm" style="background:var(--mnr-accent);color:#fff;border-radius:7px;">
+    <a href="/marketplace" id="viewMktBtn" target="_blank" class="btn btn-sm" style="background:var(--mnr-accent);color:#fff;border-radius:7px;">
       <i class="fas fa-external-link-alt me-1"></i>View Marketplace
     </a>
   </div>
@@ -240,9 +240,14 @@ tr.row-inactive{opacity:.45;}
     <div class="section-card">
       <div class="card-header-mnr d-flex align-items-center justify-content-between flex-wrap gap-2">
         <h6><i class="fas fa-images me-2"></i>Product Stock — Company-wise with Images</h6>
-        <button class="sync-btn" style="padding:7px 16px;font-size:0.82rem;" onclick="triggerSync().then(()=>loadProducts())">
-          <i class="fas fa-sync me-1"></i>Sync from Google Sheet
-        </button>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-sm btn-outline-secondary" style="border-radius:7px;padding:7px 14px;font-size:0.82rem;border-color:var(--mnr-border);color:var(--mnr-text);background:transparent;" onclick="loadProducts()">
+            <i class="fas fa-redo me-1"></i>Refresh Table
+          </button>
+          <button class="sync-btn" style="padding:7px 16px;font-size:0.82rem;margin:0;" onclick="triggerSync().then(()=>loadProducts())">
+            <i class="fas fa-sync me-1"></i>Sync from Google Sheet
+          </button>
+        </div>
       </div>
       <!-- Filter Bar -->
       <div class="filter-bar">
@@ -603,6 +608,8 @@ let selectedFile = null;
       else if (u.base_company_id) COMPANY_ID = u.base_company_id;
     }
   } catch(e) {}
+  const mktBtn = document.getElementById('viewMktBtn');
+  if (mktBtn) mktBtn.href = `/marketplace?company_id=${COMPANY_ID}`;
   loadAll();
   editModal = new bootstrap.Modal(document.getElementById('editProdModal'));
 })();
@@ -939,6 +946,7 @@ async function loadProducts() {
     company_id: COMPANY_ID,
     page: prodPage,
     per_page: PROD_PER_PAGE,
+    _t: Date.now()
   });
   if (q) params.set('search', q);
   if (company) params.set('company_filter', company);
@@ -947,7 +955,7 @@ async function loadProducts() {
   if (stockF) params.set('stock_filter', stockF);
 
   try {
-    const r = await fetch(`/api/v1/marketplace/admin/products?${params}`);
+    const r = await fetch(`/api/v1/marketplace/admin/products?${params}`, { cache: 'no-cache' });
     if (!r.ok) throw new Error('Failed ' + r.status);
     const data = await r.json();
     renderProdTable(data.products);
@@ -972,11 +980,32 @@ async function loadProducts() {
   }
 }
 
+function proxyGdrive(u) {
+  return u && (u.includes('drive.google.com') || u.includes('googleapis.com') || u.includes('googleusercontent.com') || u.includes('docs.google.com'))
+    ? '/api/proxy-image?url=' + encodeURIComponent(u)
+    : u;
+}
+
 function imgSrc(p) {
+  // 1. Prefer extracted image_data thumbnails from Google Sheet sync
+  if (p.image_data && p.image_data.length && p.image_data[0].thumb) {
+    return proxyGdrive(p.image_data[0].thumb);
+  }
+  if (p.image_data && p.image_data.length && p.image_data[0].url) {
+    return proxyGdrive(p.image_data[0].url);
+  }
+
+  // 2. Fallback to raw image_url
   if (!p.image_url) return null;
   const u = p.image_url.trim();
   if (!u) return null;
-  if (u.startsWith('/') || u.startsWith('http')) return u;
+
+  // Ignore raw Google Drive folder URLs in <img> tags
+  if (u.includes('/drive/folders/')) return null;
+
+  if (u.startsWith('/') || u.startsWith('http')) {
+    return proxyGdrive(u);
+  }
   return '/marketplace/product-images/' + u;
 }
 
@@ -1026,8 +1055,8 @@ function renderProdTable(products) {
       </td>
       <td>${p.company_name ? `<span class="company-badge">${esc(p.company_name)}</span>` : '<span style="color:var(--mnr-muted);font-size:0.78rem;">—</span>'}</td>
       <td>
-        <div style="font-weight:600;font-size:0.85rem;" title="Dealer Cost (excl. Tax)">₹${Number(p.dealer_price||0).toLocaleString('en-IN')}</div>
-        <div style="font-size:0.7rem;color:var(--mnr-muted);margin-top:1px;" title="MRP = Dealer Price × (1 + Markup %)">MRP: ₹${Number(p.display_mrp||0).toLocaleString('en-IN')}</div>
+        <div style="font-weight:600;font-size:0.85rem;" title="Dealer Price after Markup (excl. Tax)">₹${Number(p.display_mrp||0).toLocaleString('en-IN')}</div>
+        <div style="font-size:0.7rem;color:var(--mnr-muted);margin-top:1px;" title="Base Cost = original rate from Google Sheet (excl. Tax)">Base Cost: ₹${Number(p.dealer_price||0).toLocaleString('en-IN')}</div>
         <div style="font-size:0.68rem;color:var(--mnr-green);margin-top:1px;" title="Customer Price = Dealer Price + GST (without member discounts)">Cust: ₹${Number(p.base_final_price||0).toLocaleString('en-IN')}</div>
       </td>
       <td>
@@ -1100,7 +1129,7 @@ function updateLiveCalculations() {
   const gst = editModalGstPercent;
 
   const mrp = price * (1 + markup / 100);
-  const custPrice = price * (1 + gst / 100);
+  const custPrice = mrp * (1 + gst / 100);
 
   const mrpEl = document.getElementById('editLiveMrp');
   const custEl = document.getElementById('editLiveCustPrice');
