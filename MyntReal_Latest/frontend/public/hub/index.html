@@ -645,7 +645,7 @@ setInterval(nextWhy, 4500);
         <input type="tel" id="hubRechargeMobile" required pattern="[0-9]{10}" placeholder="Enter 10-digit number">
         
         <div class="custom-modal-row">
-            <div class="custom-modal-col">
+            <div class="custom-modal-col" style="flex: 1;">
               <label>Operator</label>
               <select id="hubRechargeOperator" required>
                 <option value="">Select Operator</option>
@@ -653,17 +653,6 @@ setInterval(nextWhy, 4500);
                 <option value="Jio">Jio</option>
                 <option value="VI">VI</option>
                 <option value="BSNL">BSNL</option>
-              </select>
-            </div>
-            <div class="custom-modal-col">
-              <label>Circle (Optional)</label>
-              <select id="hubRechargeCircle">
-                <option value="">Select Circle</option>
-                <option value="Andhra Pradesh">Andhra Pradesh</option>
-                <option value="Delhi">Delhi</option>
-                <option value="Karnataka">Karnataka</option>
-                <option value="Maharashtra">Maharashtra</option>
-                <option value="Tamil Nadu">Tamil Nadu</option>
               </select>
             </div>
         </div>
@@ -674,9 +663,13 @@ setInterval(nextWhy, 4500);
         <!-- Dynamic Plans Container -->
         <div id="hubPlansSection" style="display: none; margin-bottom: 20px;">
             <label style="margin-top:10px;">Available Plans</label>
-            <!-- Category Tabs Container -->
-            <div id="hubPlanTabs" style="display: flex; gap: 8px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 5px; scrollbar-width: none;">
-               <!-- Tabs injected here -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <!-- Category Tabs Container -->
+                <div id="hubPlanTabs" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; flex: 1;">
+                   <!-- Tabs injected here -->
+                </div>
+                <!-- Search Box -->
+                <input type="text" id="hubPlanSearch" placeholder="Search plans (e.g. 5G, 2GB)..." style="padding: 6px 12px; border-radius: 20px; border: 1px solid #cbd5e1; font-size: 0.8rem; width: 200px;" onkeyup="filterHubPlansBySearch()">
             </div>
             <div id="hubRechargePlansContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 250px; overflow-y: auto; padding: 5px;">
                 <!-- Plans will be injected here via JS -->
@@ -747,16 +740,17 @@ document.getElementById('hubRechargeOperator').addEventListener('change', async 
             return;
         }
         
-        // Extract unique categories
-        const categories = [...new Set(currentOperatorPlans.map(p => p.category || 'Other'))];
+        // Extract unique categories and add 'All'
+        const categories = ['All', ...new Set(currentOperatorPlans.map(p => p.category || 'Other'))];
         let tabsHtml = '';
         categories.forEach((cat, idx) => {
             tabsHtml += `<div class="hub-plan-tab ${idx === 0 ? 'active' : ''}" onclick="filterHubPlans('${cat}', this)" style="padding: 6px 12px; background: ${idx === 0 ? '#10b981' : '#e2e8f0'}; color: ${idx === 0 ? 'white' : '#334155'}; border-radius: 20px; font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: 0.3s;">${cat}</div>`;
         });
         tabsContainer.innerHTML = tabsHtml;
         
-        // Render first category by default
-        renderHubPlans(categories[0]);
+        // Render 'All' category by default
+        window.currentPlanCategory = 'All';
+        renderHubPlans('All');
         amountInput.setAttribute('readonly', 'true');
     } catch(err) {
         plansContainer.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #ef4444;">Error fetching plans.</div>';
@@ -770,15 +764,48 @@ function filterHubPlans(category, tabElement) {
         el.style.background = '#e2e8f0';
         el.style.color = '#334155';
     });
-    tabElement.style.background = '#10b981';
-    tabElement.style.color = 'white';
+    if(tabElement) {
+        tabElement.style.background = '#10b981';
+        tabElement.style.color = 'white';
+    }
     
-    renderHubPlans(category);
+    // Store current category
+    window.currentPlanCategory = category;
+    
+    const searchTerm = document.getElementById('hubPlanSearch') ? document.getElementById('hubPlanSearch').value.toLowerCase() : '';
+    renderHubPlans(category, searchTerm);
 }
 
-function renderHubPlans(category) {
+function filterHubPlansBySearch() {
+    const searchTerm = document.getElementById('hubPlanSearch').value.toLowerCase();
+    const category = window.currentPlanCategory || 'All';
+    
+    // Auto-switch to 'All' tab if searching to ensure maximum visibility
+    if (searchTerm.length > 0 && category !== 'All') {
+        const allTab = Array.from(document.querySelectorAll('.hub-plan-tab')).find(el => el.innerText === 'All');
+        if (allTab) {
+            filterHubPlans('All', allTab);
+            return;
+        }
+    }
+    
+    renderHubPlans(category, searchTerm);
+}
+
+function renderHubPlans(category, searchTerm = '') {
     const plansContainer = document.getElementById('hubRechargePlansContainer');
-    const filteredPlans = currentOperatorPlans.filter(p => (p.category || 'Other') === category);
+    let filteredPlans = category === 'All' 
+        ? currentOperatorPlans 
+        : currentOperatorPlans.filter(p => (p.category || 'Other') === category);
+    
+    if (searchTerm) {
+        filteredPlans = filteredPlans.filter(p => 
+            p.description.toLowerCase().includes(searchTerm) || 
+            (p.data_benefit && p.data_benefit.toLowerCase().includes(searchTerm)) ||
+            (p.tags && p.tags.toLowerCase().includes(searchTerm)) ||
+            p.amount.toString().includes(searchTerm)
+        );
+    }
     
     let html = '';
     filteredPlans.forEach(plan => {
@@ -823,7 +850,7 @@ document.getElementById('hubRechargeForm').addEventListener('submit', async func
     const data = {
         mobile_number: document.getElementById('hubRechargeMobile').value,
         operator: document.getElementById('hubRechargeOperator').value,
-        circle: document.getElementById('hubRechargeCircle').value || null,
+        circle: null,
         amount: parseFloat(document.getElementById('hubRechargeAmount').value),
         guest_name: document.getElementById('hubRechargeGuestName').value || null,
         guest_email: document.getElementById('hubRechargeGuestEmail').value || null
@@ -864,25 +891,32 @@ document.getElementById('hubRechargeForm').addEventListener('submit', async func
                     });
                     const verifyData = await verifyRes.json();
                     if(verifyRes.ok) {
-                        let statusText = "Payment successful! Recharge initiated.";
-                        let iconType = "success";
                         if(verifyData.recharge_status === "Success") {
-                            statusText = "Payment successful and recharge completed!";
-                        } else if(verifyData.recharge_status === "Failed") {
-                            statusText = "Payment successful, but the recharge failed at the operator side. We will check the status shortly.";
-                            iconType = "warning";
+                            Swal.fire({
+                                title: 'Recharge Successful! 🎉',
+                                html: 'Your mobile pack is now active.<br><br><small style="color: #64748b;">A confirmation WhatsApp message has been sent to your number.</small>',
+                                icon: 'success',
+                                confirmButtonText: 'Great!',
+                                confirmButtonColor: '#10b981'
+                            });
+                        } else if(verifyData.recharge_status === "Refunded (Operator Failed)") {
+                            Swal.fire({
+                                title: 'Recharge Failed ❌',
+                                html: 'The operator network is temporarily down or the plan is invalid.<br><br><b>A full refund has been instantly initiated</b> to your bank account. It will reflect in 3-5 days.<br><br><small style="color: #64748b;">A WhatsApp notification has been sent to your number.</small>',
+                                icon: 'error',
+                                confirmButtonText: 'Understood',
+                                confirmButtonColor: '#ef4444'
+                            });
                         } else {
-                            statusText = "Payment successful! Your recharge is pending and will be completed soon.";
-                            iconType = "info";
+                            Swal.fire({
+                                title: 'Recharge Pending ⏳',
+                                html: 'Your payment was successful but the operator is taking longer to respond. It will be completed shortly.',
+                                icon: 'info',
+                                confirmButtonText: 'OK',
+                                confirmButtonColor: '#3b82f6'
+                            });
                         }
                         
-                        Swal.fire({
-                            title: 'Status',
-                            text: statusText,
-                            icon: iconType,
-                            confirmButtonText: 'OK'
-                        });
-
                         closeRechargeModal();
                         document.getElementById('hubRechargeForm').reset();
                     } else {

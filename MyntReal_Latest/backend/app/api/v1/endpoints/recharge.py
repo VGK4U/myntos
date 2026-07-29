@@ -1,12 +1,24 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.config import settings
-from app.models.recharge import RechargeTransaction
+from app.models.recharge import RechargeTransaction, RechargePlan
+from app.core.database import get_db, SessionLocal
 from pydantic import BaseModel
 from typing import Optional
 import razorpay
 import requests
+
+def notify_user_bg(mobile_number: str, message: str):
+    try:
+        from app.services.whatsapp_auto_service import send_direct_whatsapp
+        db = SessionLocal()
+        try:
+            send_direct_whatsapp(db=db, phone=mobile_number, message=message)
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"Failed to send background WA: {e}")
 
 A1TOPUP_OPERATOR_MAP = {
     "Airtel": "A",
@@ -39,7 +51,16 @@ def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)):
     if not razorpay_client:
         raise HTTPException(status_code=500, detail="Razorpay keys (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET) are missing in the server's .env file.")
 
-    # 1. Create order in Razorpay (amount in paise)
+    # 1. Strict Validation: Check if the amount is valid for this operator
+    valid_plan = db.query(RechargePlan).filter(
+        RechargePlan.operator.ilike(f"%{req.operator}%"),
+        RechargePlan.amount == req.amount
+    ).first()
+    
+    if not valid_plan:
+        raise HTTPException(status_code=400, detail="Invalid recharge amount for this operator. Please select a valid plan.")
+
+    # 2. Create order in Razorpay (amount in paise)
     order_amount = int(req.amount * 100)
     order_currency = "INR"
 
@@ -83,7 +104,7 @@ class VerifyPaymentRequest(BaseModel):
     razorpay_signature: str
     
 @router.post("/verify-payment")
-def verify_payment(req: VerifyPaymentRequest, db: Session = Depends(get_db)):
+def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     tx = db.query(RechargeTransaction).filter(
         RechargeTransaction.razorpay_order_id == req.razorpay_order_id
     ).first()
@@ -110,11 +131,19 @@ def verify_payment(req: VerifyPaymentRequest, db: Session = Depends(get_db)):
     db.commit()
     
     # A1Topup Trigger (Step 3)
-    if getattr(settings, "A1TOPUP_TEST_MODE", True):
+    # CRITICAL FAILSAFE: If Razorpay is using test keys, we MUST mock A1Topup to prevent real money loss!
+    is_test_mode = getattr(settings, "A1TOPUP_TEST_MODE", True)
+    if settings.RAZORPAY_KEY_ID and settings.RAZORPAY_KEY_ID.startswith("rzp_test_"):
+        is_test_mode = True
+
+    if is_test_mode:
         # Mock mode prevents real money deduction
         tx.api_status = "Success"
         tx.api_tx_id = f"MOCK_A1_{tx.id}"
         tx.api_operator_id = "MOCK_OP_123"
+        
+        success_msg = f"✅ (TEST MODE) Success! Your mobile recharge of ₹{int(tx.amount)} for {tx.mobile_number} is complete. TXN ID: {tx.id}"
+        background_tasks.add_task(notify_user_bg, tx.mobile_number, success_msg)
         db.commit()
     else:
         # Call Real A1Topup API
@@ -147,6 +176,9 @@ def verify_payment(req: VerifyPaymentRequest, db: Session = Depends(get_db)):
                     tx.api_status = "Success"
                     tx.api_tx_id = str(data.get("txid", ""))
                     tx.api_operator_id = str(data.get("opid", ""))
+                    
+                    success_msg = f"✅ Success! Your mobile recharge of ₹{int(tx.amount)} for {tx.mobile_number} is complete. TXN ID: {tx.id}"
+                    background_tasks.add_task(notify_user_bg, tx.mobile_number, success_msg)
                 else:
                     tx.api_status = "Failed"
                     tx.api_tx_id = str(data.get("txid", "ERROR"))
@@ -158,6 +190,22 @@ def verify_payment(req: VerifyPaymentRequest, db: Session = Depends(get_db)):
         else:
             tx.api_status = "Failed"
             db.commit()
+            
+    # Step 4: Automatic Refund if A1Topup Failed
+    if tx.api_status == "Failed" and razorpay_client:
+        try:
+            # Trigger Razorpay refund
+            razorpay_client.payment.refund(req.razorpay_payment_id, {"amount": int(tx.amount * 100)})
+            tx.payment_status = "Refunded"
+            tx.api_status = "Refunded (Operator Failed)"
+            db.commit()
+            
+            fail_msg = f"❌ Recharge Failed. We could not process your recharge of ₹{int(tx.amount)} for {tx.mobile_number}. A full refund has been initiated to your bank account."
+            background_tasks.add_task(notify_user_bg, tx.mobile_number, fail_msg)
+        except Exception as refund_err:
+            print(f"Razorpay Refund Error: {refund_err}")
+            tx.payment_status = "Refund Failed"
+            db.commit()
     
     return {
         "status": "success", 
@@ -166,7 +214,6 @@ def verify_payment(req: VerifyPaymentRequest, db: Session = Depends(get_db)):
         "recharge_status": tx.api_status
     }
 
-from app.models.recharge import RechargePlan
 
 @router.get("/plans")
 def get_plans(operator: str = None, db: Session = Depends(get_db)):

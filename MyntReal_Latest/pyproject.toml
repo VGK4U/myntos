@@ -51,4 +51,5 @@ dependencies = [
     "idna>=3.11",
     "pdfminer.six>=20251230",
     "protobuf>=6.33.5,<7.0.0",
+    "razorpay>=1.4.1",
 ]
