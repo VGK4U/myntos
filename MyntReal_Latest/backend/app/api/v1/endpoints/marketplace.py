@@ -1025,7 +1025,7 @@ def update_admin_product(
     # Fields that can be edited — available_qty always sheet-authoritative so excluded
     editable = ['name', 'description', 'brand', 'model_compat', 'specifications',
                 'color', 'speciality', 'dealer_price', 'company_name',
-                'min_stock_threshold', 'markup_percent']
+                'min_stock_threshold', 'markup_percent', 'image_url']
     
     if 'markup_percent' in payload and payload['markup_percent'] is not None:
         try:
@@ -1121,6 +1121,31 @@ async def upload_product_image(
     item.image_url = image_url
     db.commit()
     return {'success': True, 'image_url': image_url}
+
+
+@router.delete('/admin/products/{product_id}/image')
+def delete_product_image(
+    product_id: int,
+    company_id: int = Query(...),
+    current_user=Depends(get_current_user_hybrid),
+    db: Session = Depends(get_db),
+):
+    """Delete / clear a product's image. Staff only."""
+    item = db.query(MarketspareItem).filter(
+        MarketspareItem.id == product_id,
+        MarketspareItem.company_id == company_id,
+    ).first()
+    if not item:
+        raise HTTPException(status_code=404, detail='Product not found')
+
+    item.image_url = None
+    protected = set(item.override_fields or [])
+    protected.add('image_url')
+    item.override_fields = list(protected)
+    item.manually_overridden = len(protected) > 0
+
+    db.commit()
+    return {'success': True, 'message': 'Image deleted successfully'}
 
 
 @router.patch('/products/{product_id}/toggle')

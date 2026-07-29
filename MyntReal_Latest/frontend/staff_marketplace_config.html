@@ -54,8 +54,10 @@ body{background:var(--mnr-dark);color:var(--mnr-text);font-family:'Segoe UI',san
 .tab-content-pane{display:none;}
 .tab-content-pane.active{display:block;}
 /* Product images tab */
-.prod-img-thumb{width:52px;height:52px;object-fit:contain;border-radius:6px;background:#0f1729;border:1px solid var(--mnr-border);padding:2px;}
-.prod-img-placeholder{width:52px;height:52px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:#0f1729;border:1px dashed var(--mnr-border);color:var(--mnr-muted);font-size:0.65rem;}
+.prod-img-thumb{width:52px;height:52px;object-fit:contain;border-radius:6px;background:#0f1729;border:1px solid var(--mnr-border);padding:2px;transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;}
+.prod-img-placeholder{width:52px;height:52px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:#0f1729;border:1px dashed var(--mnr-border);color:var(--mnr-muted);font-size:0.65rem;transition: border-color 0.2s ease, background 0.2s ease;}
+td:hover .prod-img-thumb{transform:scale(1.15);box-shadow:0 4px 12px rgba(0,0,0,0.5);border-color:var(--mnr-accent);}
+td:hover .prod-img-placeholder{border-color:var(--mnr-accent);background:rgba(79,110,247,0.05);}
 .sku-pill{background:rgba(79,110,247,.15);color:#a5b4fc;font-family:monospace;font-size:0.72rem;padding:2px 7px;border-radius:4px;font-weight:600;}
 .company-badge{font-size:0.72rem;padding:2px 8px;border-radius:12px;font-weight:600;background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.2);}
 .edit-img-btn{background:rgba(79,110,247,.2);border:1px solid var(--mnr-accent);color:var(--mnr-accent);border-radius:5px;padding:3px 10px;font-size:0.75rem;cursor:pointer;font-weight:600;}
@@ -495,6 +497,72 @@ tr.row-inactive{opacity:.45;}
   </div>
 </div>
 
+<!-- Image Manager Modal -->
+<div class="modal fade" id="imageManagerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:550px;">
+    <div class="modal-content" style="background:#1e293b;border:1px solid var(--mnr-border);color:var(--mnr-text);border-radius:12px;">
+      <div class="modal-header" style="border-bottom:1px solid var(--mnr-border);padding:14px 20px;">
+        <h5 class="modal-title" style="font-weight:700;font-size:1.1rem;color:var(--mnr-text);">
+          <i class="fas fa-images me-2" style="color:var(--mnr-accent);"></i>Image Manager
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="font-size:0.8rem;"></button>
+      </div>
+      <div class="modal-body" style="padding:20px;">
+        <div style="background:rgba(15,23,42,0.4);border-radius:8px;padding:12px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.05);">
+          <div style="font-size:0.75rem;color:var(--mnr-muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:0.05em;">Product SKU &amp; Name</div>
+          <div id="mktImgManagerSku" style="font-weight:700;font-size:0.9rem;color:var(--mnr-accent);">—</div>
+          <div id="mktImgManagerName" style="font-size:0.82rem;color:var(--mnr-text);margin-top:2px;">—</div>
+        </div>
+
+        <div class="row g-3">
+          <!-- Left: Preview & Dimensions -->
+          <div class="col-6" style="text-align:center;border-right:1px solid rgba(255,255,255,0.08);padding-right:16px;">
+            <div class="modal-lbl mb-2" style="text-align:left;">Current / Available Image</div>
+            <div style="display:flex;align-items:center;justify-content:center;height:200px;background:#0f1729;border:1px solid var(--mnr-border);border-radius:8px;overflow:hidden;position:relative;">
+              <img id="mktImgManagerPreview" src="" alt="Product Preview" style="max-width:100%;max-height:100%;object-fit:contain;display:none;">
+              <div id="mktImgManagerPlaceholder" style="display:inline-flex;flex-direction:column;align-items:center;color:var(--mnr-muted);gap:8px;">
+                <i class="fas fa-image fa-2x"></i>
+                <span style="font-size:0.8rem;">No Image Loaded</span>
+              </div>
+            </div>
+            <div id="mktImgDimensions" style="font-size:0.75rem;font-weight:600;color:var(--mnr-gold);margin-top:8px;">
+              Dimensions: —
+            </div>
+          </div>
+
+          <!-- Right: Action Buttons and Upload Dropzone -->
+          <div class="col-6" style="display:flex;flex-direction:column;justify-content:center;padding-left:16px;gap:12px;">
+            <div class="modal-lbl">Upload or Edit Image</div>
+            
+            <div class="img-drop-zone" id="mktImgManagerDropZone" onclick="document.getElementById('mktImgManagerFileInput').click()" style="padding:16px;border-width:1.5px;margin-bottom:0;min-height:auto;flex-grow:1;display:flex;flex-direction:column;justify-content:center;align-items:center;">
+              <i class="fas fa-cloud-upload-alt fa-xl mb-1" style="color:var(--mnr-accent)"></i>
+              <div style="font-size:0.75rem;color:var(--mnr-muted);text-align:center;">Click/Drag new image</div>
+              <div style="font-size:0.65rem;color:var(--mnr-muted);margin-top:2px;">PNG, JPG, WEBP</div>
+            </div>
+            
+            <input type="file" id="mktImgManagerFileInput" accept="image/*" style="display:none;" onchange="previewManagerImg(this)">
+            <div id="mktImgManagerUploadStatus" style="font-size:0.72rem;text-align:center;word-break:break-all;"></div>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" id="mktImgManagerProdId">
+      <div class="modal-footer" style="border-top:1px solid var(--mnr-border);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;width:100%;">
+        <div>
+          <button type="button" id="mktImgManagerDeleteBtn" class="btn btn-sm" style="background:var(--mnr-red);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:0.8rem;" onclick="deleteManagerImage()">
+            <i class="fas fa-trash-alt me-1"></i>Delete Image
+          </button>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn btn-sm" style="background:#374151;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:0.8rem;" data-bs-dismiss="modal">Close</button>
+          <button type="button" id="mktImgManagerUploadBtn" class="btn btn-sm" style="background:var(--mnr-green);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:0.8rem;" onclick="uploadManagerImage()">
+            <i class="fas fa-upload me-1"></i>Upload &amp; Save
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast-stack" id="toastStack"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -927,7 +995,7 @@ function renderProdTable(products) {
     const poCountColor = poCount > 5 ? 'var(--mnr-green)' : poCount > 0 ? 'var(--mnr-accent)' : 'var(--mnr-muted)';
     return `<tr id="prod-row-${p.id}" class="${p.is_active === false ? 'row-inactive' : ''}">
       <td style="color:var(--mnr-muted);font-size:0.75rem;">${offset+i+1}</td>
-      <td>${imgHtml}<div style="text-align:center;margin-top:2px;">${imgBadge}</div></td>
+      <td style="cursor:pointer;" onclick="openImageManager(${JSON.stringify(p).replace(/"/g,'&quot;')})" title="Click to manage images and see dimensions">${imgHtml}<div style="text-align:center;margin-top:2px;">${imgBadge}</div></td>
       <td>
         <span class="sku-pill">${esc(p.sku)}</span>${overrideBadge}
       </td>
@@ -1242,6 +1310,166 @@ async function toggleProduct(id, checkbox) {
     toast('Toggle failed: ' + e.message, 'error');
   } finally {
     checkbox.disabled = false;
+  }
+}
+
+// ── Image Manager ───────────────────────────────────────────────────────────
+let imageManagerModal = null;
+let managerSelectedFile = null;
+
+function initImageManagerModal() {
+  if (!imageManagerModal) {
+    imageManagerModal = new bootstrap.Modal(document.getElementById('imageManagerModal'));
+    
+    // Add drag and drop to manager dropzone
+    const dz = document.getElementById('mktImgManagerDropZone');
+    if (dz) {
+      dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+      dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+      dz.addEventListener('drop', e => {
+        e.preventDefault(); dz.classList.remove('drag-over');
+        const f = e.dataTransfer.files[0];
+        if (f && f.type.startsWith('image/')) {
+          managerSelectedFile = f;
+          const inp = document.getElementById('mktImgManagerFileInput');
+          const dt = new DataTransfer(); dt.items.add(f); inp.files = dt.files;
+          previewManagerImg(inp);
+        }
+      });
+    }
+  }
+}
+
+function openImageManager(p) {
+  initImageManagerModal();
+  
+  document.getElementById('mktImgManagerProdId').value = p.id;
+  document.getElementById('mktImgManagerSku').textContent = p.sku || 'N/A';
+  document.getElementById('mktImgManagerName').textContent = p.name || 'N/A';
+  
+  managerSelectedFile = null;
+  document.getElementById('mktImgManagerFileInput').value = '';
+  document.getElementById('mktImgManagerUploadStatus').textContent = '';
+  
+  const src = imgSrc(p);
+  const prev = document.getElementById('mktImgManagerPreview');
+  const placeholder = document.getElementById('mktImgManagerPlaceholder');
+  const delBtn = document.getElementById('mktImgManagerDeleteBtn');
+  
+  if (src) {
+    prev.src = src + '?v=' + Date.now();
+    prev.style.display = 'block';
+    placeholder.style.display = 'none';
+    delBtn.style.display = '';
+    updateImageDimensions(src);
+  } else {
+    prev.style.display = 'none';
+    placeholder.style.display = 'inline-flex';
+    delBtn.style.display = 'none';
+    updateImageDimensions(null);
+  }
+  
+  imageManagerModal.show();
+}
+
+function updateImageDimensions(url) {
+  const dimEl = document.getElementById('mktImgDimensions');
+  if (!url) {
+    dimEl.textContent = 'Dimensions: —';
+    return;
+  }
+  dimEl.textContent = 'Dimensions: Loading…';
+  const img = new Image();
+  img.onload = function() {
+    dimEl.textContent = `Dimensions: ${this.naturalWidth} × ${this.naturalHeight} px`;
+  };
+  img.onerror = function() {
+    dimEl.textContent = 'Dimensions: Error loading image';
+  };
+  img.src = url;
+}
+
+function previewManagerImg(input) {
+  if (!input.files[0]) return;
+  managerSelectedFile = input.files[0];
+  const reader = new FileReader();
+  reader.onload = e => {
+    const prev = document.getElementById('mktImgManagerPreview');
+    prev.src = e.target.result;
+    prev.style.display = 'block';
+    document.getElementById('mktImgManagerPlaceholder').style.display = 'none';
+    document.getElementById('mktImgManagerUploadStatus').innerHTML = `<span style="color:var(--mnr-gold);">Ready: ${managerSelectedFile.name} (${(managerSelectedFile.size/1024).toFixed(0)} KB)</span>`;
+    updateImageDimensions(e.target.result);
+  };
+  reader.readAsDataURL(managerSelectedFile);
+}
+
+async function uploadManagerImage() {
+  if (!managerSelectedFile) { toast('Select or drop an image first', 'error'); return; }
+  const id = document.getElementById('mktImgManagerProdId').value;
+  const btn = document.getElementById('mktImgManagerUploadBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving…';
+  const status = document.getElementById('mktImgManagerUploadStatus');
+  status.innerHTML = '<span style="color:var(--mnr-accent);">Saving image…</span>';
+  
+  const fd = new FormData();
+  fd.append('file', managerSelectedFile);
+  try {
+    const r = await fetch(`/api/v1/marketplace/admin/products/${id}/image?company_id=${COMPANY_ID}`, {
+      method: 'POST', body: fd,
+    });
+    if (!r.ok) throw new Error('Upload failed ' + r.status);
+    const d = await r.json();
+    status.innerHTML = `<span style="color:var(--mnr-green);"><i class="fas fa-check-circle me-1"></i>Saved successfully</span>`;
+    toast('Image uploaded and saved', 'success');
+    
+    const prev = document.getElementById('mktImgManagerPreview');
+    prev.src = d.image_url + '?v=' + Date.now();
+    prev.style.display = 'block';
+    document.getElementById('mktImgManagerPlaceholder').style.display = 'none';
+    document.getElementById('mktImgManagerDeleteBtn').style.display = '';
+    updateImageDimensions(d.image_url);
+    
+    managerSelectedFile = null;
+    loadProducts();
+  } catch(e) {
+    status.innerHTML = `<span style="color:var(--mnr-red);">Save failed: ${e.message}</span>`;
+    toast('Save failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-upload me-1"></i>Upload &amp; Save';
+  }
+}
+
+async function deleteManagerImage() {
+  if (!confirm('Are you sure you want to delete this product image?')) return;
+  const id = document.getElementById('mktImgManagerProdId').value;
+  const btn = document.getElementById('mktImgManagerDeleteBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Deleting…';
+  
+  try {
+    const r = await fetch(`/api/v1/marketplace/admin/products/${id}/image?company_id=${COMPANY_ID}`, {
+      method: 'DELETE'
+    });
+    if (!r.ok) throw new Error('Delete failed ' + r.status);
+    toast('Image deleted successfully', 'success');
+    
+    const prev = document.getElementById('mktImgManagerPreview');
+    prev.style.display = 'none';
+    document.getElementById('mktImgManagerPlaceholder').style.display = 'inline-flex';
+    document.getElementById('mktImgDimensions').textContent = 'Dimensions: —';
+    document.getElementById('mktImgManagerDeleteBtn').style.display = 'none';
+    document.getElementById('mktImgManagerUploadStatus').textContent = '';
+    
+    managerSelectedFile = null;
+    loadProducts();
+  } catch(e) {
+    toast('Delete failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-trash-alt me-1"></i>Delete Image';
   }
 }
 
