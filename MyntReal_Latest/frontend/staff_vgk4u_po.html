@@ -1043,7 +1043,7 @@ async function loadPOs(page = 1) {
             ? `<button class="action-btn btn-dispatch me-1" onclick="viewAndDispatch(${po.id})" title="Dispatch"><i class="fas fa-truck"></i></button>`
             : ''}
           ${po.status !== 'cancelled'
-            ? `<button class="action-btn me-1" onclick="openPayment(${po.id},'${po.po_number}','${po.status}',${po.company_id||1})" title="${po.status==='completed'||po.status==='dispatched'?'View Payments':'Record / View Payments'}" style="background:${po.status==='completed'||po.status==='dispatched'?'#f0f9ff;color:#0369a1;border-color:#bae6fd':'#f0fdf4;color:#059669;border-color:#a7f3d0'};"><i class="fas fa-rupee-sign"></i></button>`
+            ? `<button class="action-btn me-1" onclick="openPayment(${po.id},'${po.po_number}','${po.status}',${po.company_id||1})" title="Record / View Payments" style="background:#f0fdf4;color:#059669;border-color:#a7f3d0;"><i class="fas fa-rupee-sign"></i></button>`
             : ''}
           ${po.status === 'dispatched' || po.status === 'partial_dispatch' || po.status === 'completed'
             ? `<button class="action-btn btn-invoice me-1" onclick="openInvoiceModal(${po.id})" title="Generate Invoice"><i class="fas fa-file-invoice"></i></button>`
@@ -1960,7 +1960,7 @@ async function saveAssignManager() {
 let _paymentPoId = null;
 let _paymentPoCompanyId = 1;
 let _paymentPoStatus = null;
-const _PM_READONLY_STATUSES = new Set(['dispatched','completed']);
+const _PM_READONLY_STATUSES = new Set(['cancelled']);
 const PM_MODE_LABELS = {cash:'Cash',upi:'UPI',neft:'NEFT',rtgs:'RTGS',cheque:'Cheque',card:'Card',dd:'DD',other:'Other'};
 const PM_IE_COLORS = {PENDING:'#f59e0b',CONFIRMED:'#059669',REJECTED:'#dc2626'};
 
