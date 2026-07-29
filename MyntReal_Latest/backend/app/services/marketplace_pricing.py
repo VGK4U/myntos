@@ -119,27 +119,27 @@ def calculate_price_breakdown(
         discount_pct = Decimal('0')
 
     if discount_pct > 0:
-        discount_amount = (dp * discount_pct).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        net_before_tax = dp - discount_amount
+        discount_amount = (display_mrp * discount_pct).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        net_before_tax = display_mrp - discount_amount
 
-        # Margin guard
+        # Margin guard: net price must not fall below wholesale bottom-line dp * (1 - floor)
         min_net = (dp * (1 - floor)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         if net_before_tax < min_net:
             margin_warning = f'Discount blocked — net price would breach {float(margin_floor_percent):.1f}% margin floor'
             discount_amount = Decimal('0')
-            net_before_tax = dp
+            net_before_tax = display_mrp
             discount_label = None
     else:
-        net_before_tax = dp
+        net_before_tax = display_mrp
 
     gst_amount = (net_before_tax * gst).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
     final_price = (net_before_tax + gst_amount).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     # Base (no-discount) final for display
-    base_gst = (dp * gst).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-    base_final = (dp + base_gst).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-    if base_final < dp:
-        base_final = dp
+    base_gst = (display_mrp * gst).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    base_final = (display_mrp + base_gst).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    if base_final < display_mrp:
+        base_final = display_mrp
 
     return {
         'dealer_price': float(dp),
