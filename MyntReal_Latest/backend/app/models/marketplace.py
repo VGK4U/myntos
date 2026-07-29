@@ -135,6 +135,7 @@ class MarketspareItem(Base):
     proc_with_tax  = Column(Numeric(12, 2), nullable=True)   # col 31 Proc. With Tax
     warranty_details = Column(Text, nullable=True)
     warranty_cost    = Column(Numeric(12, 2), nullable=True)
+    markup_percent   = Column(Numeric(5, 2), nullable=True)
     # Phase 3: Segment Layer — Mar 2026
     segment_id     = Column(Integer, ForeignKey('marketplace_segments.id'), nullable=True, index=True)
     source         = Column(String(20), nullable=False, default='sheet')  # 'sheet' | 'direct' | 'stock'
@@ -175,6 +176,7 @@ class MarketspareItem(Base):
             'proc_with_tax': float(self.proc_with_tax) if self.proc_with_tax is not None else None,
             'warranty_details': self.warranty_details or '',
             'warranty_cost': float(self.warranty_cost) if self.warranty_cost is not None else None,
+            'markup_percent': float(self.markup_percent) if self.markup_percent is not None else None,
             'segment_id': self.segment_id,
             'source': self.source or 'sheet',
             'stock_item_id': self.stock_item_id,

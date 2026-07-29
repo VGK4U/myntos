@@ -190,7 +190,11 @@ def enrich_product_with_pricing(
     segment_discount_rates: optional dict with mnr_pct/partner_pct/student_pct from segment.
     """
     cfg = category_config or {}
-    markup = _sku_markup(product.get('sku', ''))
+    product_markup = product.get('markup_percent')
+    if product_markup is not None:
+        markup = float(product_markup)
+    else:
+        markup = _sku_markup(product.get('sku', ''))
     product_gst = product.get('gst_percent')
     gst = float(product_gst) if product_gst is not None else float(cfg.get('gst_percent', 18))
     floor = float(cfg.get('margin_floor_percent', 20))

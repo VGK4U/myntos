@@ -274,7 +274,8 @@ tr.row-inactive{opacity:.45;}
               <th>SKU</th>
               <th>Product / Category</th>
               <th>Company</th>
-              <th>Dealer Price</th>
+              <th title="Dealer price from sheet (MNR sell target, excluding GST/tax)">Dealer Price (excl. Tax)</th>
+              <th title="Uplift percentage to calculate MRP = Dealer Price × (1 + Markup%)">Markup %</th>
               <th title="Available stock count from Google Sheet">Avail Qty</th>
               <th title="Qty in open Purchase Orders right now">Orders</th>
               <th title="Min Order Level — ZYPR auto-raised when stock falls below this">Min Level</th>
@@ -286,7 +287,7 @@ tr.row-inactive{opacity:.45;}
             </tr>
           </thead>
           <tbody id="prodTableBody">
-            <tr><td colspan="14" class="text-center py-4" style="color:var(--mnr-muted);"><i class="fas fa-spinner fa-spin me-2"></i>Loading products…</td></tr>
+            <tr><td colspan="15" class="text-center py-4" style="color:var(--mnr-muted);"><i class="fas fa-spinner fa-spin me-2"></i>Loading products…</td></tr>
           </tbody>
         </table>
       </div>
@@ -400,11 +401,15 @@ tr.row-inactive{opacity:.45;}
               </div>
             </div>
             <div class="row g-2 mb-3">
-              <div class="col-6">
+              <div class="col-4">
                 <div class="modal-lbl">Dealer Price (₹)</div>
                 <input type="number" class="modal-inp" id="editPrice" min="0" step="0.01">
               </div>
-              <div class="col-6">
+              <div class="col-4">
+                <div class="modal-lbl">Markup %</div>
+                <input type="number" class="modal-inp" id="editMarkup" min="0" max="100" step="0.5">
+              </div>
+              <div class="col-4">
                 <div class="modal-lbl">Available Qty</div>
                 <input type="number" class="modal-inp" id="editQty" min="0" step="1">
               </div>
@@ -836,7 +841,7 @@ function debounceLoad() {
 
 async function loadProducts() {
   const body = document.getElementById('prodTableBody');
-  body.innerHTML = '<tr><td colspan="12" class="text-center py-4" style="color:var(--mnr-muted);"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+  body.innerHTML = '<tr><td colspan="15" class="text-center py-4" style="color:var(--mnr-muted);"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
   const q = document.getElementById('prodSearch').value.trim();
   const company = document.getElementById('prodCompanyFilter').value;
   const cat = document.getElementById('prodCatFilter').value;
@@ -875,7 +880,7 @@ async function loadProducts() {
       });
     }
   } catch(e) {
-    body.innerHTML = `<tr><td colspan="12" class="text-center py-4" style="color:var(--mnr-red);">Error: ${e.message}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="15" class="text-center py-4" style="color:var(--mnr-red);">Error: ${e.message}</td></tr>`;
   }
 }
 
@@ -890,7 +895,7 @@ function imgSrc(p) {
 function renderProdTable(products) {
   const body = document.getElementById('prodTableBody');
   if (!products.length) {
-    body.innerHTML = '<tr><td colspan="14" class="text-center py-4" style="color:var(--mnr-muted);">No products found</td></tr>';
+    body.innerHTML = '<tr><td colspan="15" class="text-center py-4" style="color:var(--mnr-muted);">No products found</td></tr>';
     return;
   }
   const offset = (prodPage - 1) * PROD_PER_PAGE;
@@ -933,6 +938,15 @@ function renderProdTable(products) {
       </td>
       <td>${p.company_name ? `<span class="company-badge">${esc(p.company_name)}</span>` : '<span style="color:var(--mnr-muted);font-size:0.78rem;">—</span>'}</td>
       <td style="font-size:0.85rem;">₹${Number(p.dealer_price||0).toLocaleString('en-IN')}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <input type="number" min="0" max="100" step="0.5" value="${p.markup_percent || 0}"
+            style="width:58px;background:#0f1729;border:1px solid ${p.override_fields && p.override_fields.includes('markup_percent') ? 'var(--mnr-gold)' : 'var(--mnr-border)'};color:var(--mnr-text);border-radius:5px;padding:3px 6px;font-size:0.8rem;text-align:center;"
+            onchange="saveMarkupPercent(${p.id}, this.value, this)"
+            title="Markup percentage for pricing engine calculations">
+          <span style="font-size:0.72rem;color:var(--mnr-muted);">%</span>
+        </div>
+      </td>
       <td>
         <span style="font-size:0.9rem;font-weight:700;color:${availColor};">${p.available_qty||0}</span>
         ${availBadge}
@@ -989,6 +1003,7 @@ function openEditModal(p) {
   document.getElementById('editCat').value = p.category_name || '';
   document.getElementById('editCompany').value = p.company_name || '';
   document.getElementById('editPrice').value = p.dealer_price || 0;
+  document.getElementById('editMarkup').value = p.markup_percent != null ? p.markup_percent : '';
   document.getElementById('editQty').value = p.available_qty || 0;
   document.getElementById('editModel').value = p.model_compat || '';
   document.getElementById('editSpecs').value = p.specifications || '';
@@ -1037,10 +1052,12 @@ async function saveProduct() {
   const btn = document.getElementById('saveProdBtn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving…';
+  const markupInput = document.getElementById('editMarkup').value;
   const payload = {
     name: document.getElementById('editName').value.trim(),
     company_name: document.getElementById('editCompany').value.trim(),
     dealer_price: parseFloat(document.getElementById('editPrice').value) || 0,
+    markup_percent: markupInput === '' ? null : parseFloat(markupInput),
     available_qty: parseInt(document.getElementById('editQty').value) || 0,
     model_compat: document.getElementById('editModel').value.trim(),
     specifications: document.getElementById('editSpecs').value.trim(),
@@ -1079,6 +1096,28 @@ async function saveMinLevel(id, val, inputEl) {
   } catch(e) {
     inputEl.value = old;
     inputEl.style.borderColor = 'var(--mnr-red)';
+    toast('Save failed: ' + e.message, 'error');
+  }
+}
+
+async function saveMarkupPercent(id, val, inputEl) {
+  const old = inputEl.defaultValue;
+  inputEl.style.borderColor = 'var(--mnr-gold)';
+  try {
+    const r = await fetch(`/api/v1/marketplace/admin/products/${id}?company_id=${COMPANY_ID}`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ markup_percent: parseFloat(val) || 0 }),
+    });
+    if (!r.ok) throw new Error('Server error ' + r.status);
+    inputEl.defaultValue = val;
+    inputEl.style.borderColor = 'var(--mnr-green)';
+    setTimeout(() => { inputEl.style.borderColor = 'var(--mnr-border)'; }, 1500);
+    toast('Markup percent saved', 'success');
+  } catch(e) {
+    inputEl.value = old;
+    inputEl.style.borderColor = 'var(--mnr-red)';
+    setTimeout(() => { inputEl.style.borderColor = 'var(--mnr-border)'; }, 1500);
     toast('Save failed: ' + e.message, 'error');
   }
 }

@@ -986,8 +986,10 @@ def list_admin_products(
         .distinct().order_by(MarketspareItem.company_name).all()]
 
     products = []
+    from app.services.marketplace_pricing import _sku_markup
     for p in items:
         d = p.to_dict()
+        d['markup_percent'] = float(p.markup_percent) if p.markup_percent is not None else _sku_markup(p.sku)
         d['ordered_qty'] = ordered_qty_map.get(p.sku, 0)
         d['po_count'] = po_count_map.get(p.sku, 0)
         d['below_threshold'] = (
@@ -1023,7 +1025,16 @@ def update_admin_product(
     # Fields that can be edited — available_qty always sheet-authoritative so excluded
     editable = ['name', 'description', 'brand', 'model_compat', 'specifications',
                 'color', 'speciality', 'dealer_price', 'company_name',
-                'min_stock_threshold']
+                'min_stock_threshold', 'markup_percent']
+    
+    if 'markup_percent' in payload and payload['markup_percent'] is not None:
+        try:
+            val = float(payload['markup_percent'])
+            if val < 0 or val > 100:
+                raise HTTPException(status_code=400, detail='markup_percent must be between 0 and 100')
+        except ValueError:
+            raise HTTPException(status_code=400, detail='Invalid markup_percent value')
+
     protected = set(item.override_fields or [])
 
     for field in editable:
