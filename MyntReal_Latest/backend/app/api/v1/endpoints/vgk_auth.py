@@ -2566,7 +2566,7 @@ def vgk_submit_lead(
                     "partner_name": req.customer_name.strip(),
                     "phone": phone_clean,
                     "auto_password": auto_pwd,
-                    "login_url": "https://vgk4u.com/vgk/login",
+                    "login_url": "https://www.vgk4u.com/vgk/login",
                 }
             else:
                 vgk_account_data = {"created": False, "reason": "code_generation_failed"}

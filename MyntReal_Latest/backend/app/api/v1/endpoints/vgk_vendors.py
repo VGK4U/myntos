@@ -317,7 +317,7 @@ def get_vendor_detail(
         VGKVendorProductCategory.is_active == True
     ).order_by(VGKVendorProductCategory.display_order).all()
 
-    qr_url = f"https://vgk4u.com/v/{v.qr_token}"
+    qr_url = f"https://www.vgk4u.com/v/{v.qr_token}"
     qr_b64 = _generate_qr_base64(qr_url)
 
     return {
@@ -888,7 +888,7 @@ def get_vendor_qr(
     v = db.query(VGKVendor).filter(VGKVendor.id == vendor_id, VGKVendor.company_id == cid).first()
     if not v:
         raise HTTPException(status_code=404, detail="Vendor not found")
-    qr_url = f"https://vgk4u.com/v/{v.qr_token}"
+    qr_url = f"https://www.vgk4u.com/v/{v.qr_token}"
     return {"vendor_code": v.vendor_code, "vendor_name": v.vendor_name,
             "qr_url": qr_url, "qr_b64": _generate_qr_base64(qr_url)}
 
@@ -1261,7 +1261,7 @@ def vendor_me(
 ):
     token = _extract_vendor_token(request)
     vl, vendor = _get_vendor_auth(token, db)
-    qr_url = f"https://vgk4u.com/v/{vendor.qr_token}"
+    qr_url = f"https://www.vgk4u.com/v/{vendor.qr_token}"
     return {
         "id": vendor.id, "vendor_code": vendor.vendor_code,
         "vendor_name": vendor.vendor_name, "category_name": vendor.category_name,

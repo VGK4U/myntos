@@ -2295,9 +2295,9 @@ function loadFromTemplatePicker() {
       'name': 'Rahul Sharma', 'member_id': 'VGK07012345',
       'Password': 'Welcome@VGK1', 'password': 'Welcome@VGK1',
       'points balance': '500', 'points_balance': '500',
-      'login_url': 'https://vgk4u.com/vgk/login', 'otp': '123456',
+      'login_url': 'https://www.vgk4u.com/vgk/login', 'otp': '123456',
       '1': 'Rahul Sharma', '2': 'VGK07012345', '3': 'Welcome@VGK1',
-      '4': '500', '5': 'https://vgk4u.com/vgk/login',
+      '4': '500', '5': 'https://www.vgk4u.com/vgk/login',
     };
     const storedEx = Array.isArray(tpl.example_values) ? tpl.example_values : [];
     const rawMatches = (tpl.body_text || '').match(/\{\{([a-zA-Z_][a-zA-Z0-9_ ]*|\d+)\}\}/g) || [];
@@ -2693,7 +2693,7 @@ function copyBriefToBody() {
     'name': 'Rahul Sharma', 'member_id': 'VGK07012345',
     'Password': 'Welcome@VGK1', 'password': 'Welcome@VGK1',
     'points balance': '500', 'points_balance': '500',
-    'login_url': 'https://vgk4u.com/vgk/login',
+    'login_url': 'https://www.vgk4u.com/vgk/login',
     'otp': '123456', 'partner_phone': '+91 98765 43210',
     'ticket_id': 'TKT2001', 'status': 'In Progress',
   };
@@ -2795,11 +2795,11 @@ function updateMsBodyCount() {
       'name': 'Rahul Sharma', 'member_id': 'VGK07012345',
       'Password': 'Welcome@VGK1', 'password': 'Welcome@VGK1',
       'points balance': '500', 'points_balance': '500',
-      'login_url': 'https://vgk4u.com/vgk/login',
+      'login_url': 'https://www.vgk4u.com/vgk/login',
       'otp': '123456', 'partner_phone': '+91 98765 43210',
       'ticket_id': 'TKT2001', 'status': 'In Progress',
       '1': 'Rahul Sharma', '2': 'VGK07012345', '3': 'Welcome@VGK1',
-      '4': '500', '5': 'https://vgk4u.com/vgk/login',
+      '4': '500', '5': 'https://www.vgk4u.com/vgk/login',
     };
     const allVarMatches = val.match(/\{\{([a-zA-Z_][a-zA-Z0-9_ ]*|\d+)\}\}/g) || [];
     const seen = new Set(); const ordered = [];
@@ -2885,7 +2885,7 @@ async function runAIDraft() {
             if (s.includes('id')) return 'ID001';
             if (s.includes('point') || s.includes('balance') || s.includes('credit')) return '10,000';
             if (s.includes('bonus') || (s.includes('amount') && !s.includes('url'))) return '₹500';
-            if (s.includes('login') || s.includes('url') || s.includes('link')) return 'https://vgk4u.com/login';
+            if (s.includes('login') || s.includes('url') || s.includes('link')) return 'https://www.vgk4u.com/login';
             if (s.includes('date')) return '12 Apr 2026';
             if (s.includes('phone') || s.includes('mobile')) return '9876543210';
             if (s.includes('email')) return 'rahul@example.com';
@@ -3178,7 +3178,7 @@ const _BRAND_SIGS = {
   myntreal_solar:    { footer: 'Team Myntreal | HAR GHAR SOLAR | +91 8585852738',     url: 'https://myntreal.com/hgs.html',                phone: '+91 8585852738' },
   myntreal_training: { footer: 'Team Myntreal | EVOLUTION TRAINING | +91 8585852738', url: 'https://myntreal.com/hgs.html',                phone: '+91 8585852738' },
   myntreal_vgkcare:  { footer: 'Team Myntreal | VGK Care | +91 8585852738',           url: 'https://myntreal.com/realestate.html',         phone: '+91 8585852738' },
-  vgk4u:             { footer: 'Team VGK4U | vgk4u.com | +91 8585852738',             url: 'https://vgk4u.com',                            phone: '+91 8585852738' },
+  vgk4u:             { footer: 'Team VGK4U | vgk4u.com | +91 8585852738',             url: 'https://www.vgk4u.com',                            phone: '+91 8585852738' },
 };
 
 function applyBrandSignature(val) {
@@ -3386,9 +3386,9 @@ function retryMetaSubmit(templateId) {
     // Seed example values (same logic as loadFromTemplatePicker)
     const _retryEx = document.getElementById('msExamples');
     if (_retryEx) {
-      const _RD = {'1':'Rahul Sharma','2':'VGK07012345','3':'Welcome@VGK1','4':'500','5':'https://vgk4u.com/vgk/login',
+      const _RD = {'1':'Rahul Sharma','2':'VGK07012345','3':'Welcome@VGK1','4':'500','5':'https://www.vgk4u.com/vgk/login',
         'name':'Rahul Sharma','member_id':'VGK07012345','Password':'Welcome@VGK1','password':'Welcome@VGK1',
-        'points balance':'500','login_url':'https://vgk4u.com/vgk/login'};
+        'points balance':'500','login_url':'https://www.vgk4u.com/vgk/login'};
       const _storedEx = Array.isArray(tpl.example_values) ? tpl.example_values : [];
       const _rm = (tpl.body_text||'').match(/\{\{([a-zA-Z_][a-zA-Z0-9_ ]*|\d+)\}\}/g)||[];
       const _sk=new Set(),_ok=[];
@@ -3697,9 +3697,9 @@ function updateHeaderFields() {
 
 // ── Template variable defaults — single source of truth (mirrors backend WA_SEGMENT_DEFAULTS) ──
 const TPL_SEGMENT_DEFAULTS = {
-  vgk:          { '1':'Rahul Sharma','2':'VGK07012345','3':'https://vgk4u.com/vgk/login','4':'10,000',
-                  'name':'Rahul Sharma','member_id':'VGK07012345','login_url':'https://vgk4u.com/vgk/login','points_balance':'10,000' },
-  general:      { '1':'Rahul Sharma','2':'VGK07012345','3':'https://vgk4u.com/vgk/login','4':'10,000',
+  vgk:          { '1':'Rahul Sharma','2':'VGK07012345','3':'https://www.vgk4u.com/vgk/login','4':'10,000',
+                  'name':'Rahul Sharma','member_id':'VGK07012345','login_url':'https://www.vgk4u.com/vgk/login','points_balance':'10,000' },
+  general:      { '1':'Rahul Sharma','2':'VGK07012345','3':'https://www.vgk4u.com/vgk/login','4':'10,000',
                   'name':'Rahul Kumar','partner_phone':'+91 98765 43210','otp':'123456' },
   system:       { 'name':'Rahul Kumar','ticket_id':'TKT2001','status':'In Progress',
                   'po_number':'PO-2025-001','pending_count':'5','meetings':'3','1':'123456' },

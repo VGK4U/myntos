@@ -68,15 +68,15 @@ def _get_staff_id(user) -> Optional[int]:
 WA_SEGMENT_DEFAULTS: dict = {
     "vgk": {
         "1": "Rahul Sharma", "2": "VGK07012345",
-        "3": "Welcome@VGK1", "4": "500", "5": "https://vgk4u.com/vgk/login",
+        "3": "Welcome@VGK1", "4": "500", "5": "https://www.vgk4u.com/vgk/login",
         "name": "Rahul Sharma", "member_id": "VGK07012345",
         "Password": "Welcome@VGK1", "password": "Welcome@VGK1",
         "points balance": "500", "points_balance": "500",
-        "login_url": "https://vgk4u.com/vgk/login",
+        "login_url": "https://www.vgk4u.com/vgk/login",
     },
     "general": {
         "1": "Rahul Sharma", "2": "VGK07012345",
-        "3": "https://vgk4u.com/vgk/login", "4": "10,000",
+        "3": "https://www.vgk4u.com/vgk/login", "4": "10,000",
         "name": "Rahul Kumar", "partner_phone": "+91 98765 43210", "otp": "123456",
     },
     "system": {
@@ -722,7 +722,7 @@ Return ONLY valid JSON (no markdown, no extra text):
   "suggestions": "brief note for editor"
 }}
 
-IMPORTANT for example_values: provide REAL sample data — e.g. a person's name like "Rahul Kumar", a member ID like "VGK070001", a password like "Welcome@VGK1", a rupee amount like "₹500", a URL like "https://vgk4u.com/login". These are shown to Meta as proof the template works. Do NOT use placeholder descriptions like "Customer Name" — use actual realistic values."""
+IMPORTANT for example_values: provide REAL sample data — e.g. a person's name like "Rahul Kumar", a member ID like "VGK070001", a password like "Welcome@VGK1", a rupee amount like "₹500", a URL like "https://www.vgk4u.com/login". These are shown to Meta as proof the template works. Do NOT use placeholder descriptions like "Customer Name" — use actual realistic values."""
 
     gemini_url = (
         f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash"

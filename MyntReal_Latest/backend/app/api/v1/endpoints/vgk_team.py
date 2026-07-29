@@ -647,7 +647,7 @@ def create_vgk_member(
                 context={
                     "1": member.partner_name or "Member",
                     "2": member.partner_code,
-                    "3": "https://vgk4u.com/vgk/login",
+                    "3": "https://www.vgk4u.com/vgk/login",
                     "4": "10,000",
                 },
             )
@@ -3217,16 +3217,16 @@ class VGKCredWASendPayload(BaseModel):
 
 
 def _vgk_wa_build_message(name: str, code: str, points: float, password: Optional[str] = None) -> str:
-    ref     = f"https://vgk4u.com/vgk/login?tab=signup&ref={code}"
+    ref     = f"https://www.vgk4u.com/vgk/login?tab=signup&ref={code}"
     yt      = "https://www.youtube.com/@VGK4YOU"
-    fp      = "https://vgk4u.com/vgk/forgot-password"
+    fp      = "https://www.vgk4u.com/vgk/forgot-password"
     bal     = f"{int(points):,}" if points == int(points) else f"{points:,.1f}"
     pwd_str = (password or "").strip() or code   # DC-VGK-WA-PWD-001: use actual password, not default code
     return (
         f"🎉 *Congratulations {name}! Welcome to VGK4U!* 🎉\n\n"
         f"Your VGK4U Partner account is *active and ready* to earn! 🚀\n\n"
         f"🔐 *Login Credentials:*\n"
-        f"🌐 Portal: https://vgk4u.com/vgk/login\n"
+        f"🌐 Portal: https://www.vgk4u.com/vgk/login\n"
         f"👤 Username: {code}\n"
         f"🔒 Password: {pwd_str}\n"
         f"📌 Your VGK4U ID: {code}\n\n"
@@ -3235,7 +3235,7 @@ def _vgk_wa_build_message(name: str, code: str, points: float, password: Optiona
         f"⚡ Solar Solutions  |  🛵 Electric Vehicles\n"
         f"🛡 Insurance  |  🏡 Real Estate & more\n\n"
         f"🔗 *Your Referral Link — Share & Earn:*\n{ref}\n\n"
-        f"📖 *About VGK4U:* https://vgk4u.com/voffers\n\n"
+        f"📖 *About VGK4U:* https://www.vgk4u.com/voffers\n\n"
         f"🔑 *Forgot Password?*\n{fp}\n\n"
         f"▶️ *Training & Income Strategies:*\n"
         f"{yt}\n"
@@ -3321,7 +3321,7 @@ def send_vgk_member_credentials_wa(
         "name":      _name,
         "code":      _code,
         "points":    str(int(_points)),
-        "login_url": "https://vgk4u.com/vgk/login",
+        "login_url": "https://www.vgk4u.com/vgk/login",
     }
     if payload and payload.context:
         wa_context.update(payload.context)
@@ -3431,7 +3431,7 @@ def bulk_send_vgk_credentials_wa(
             "name":      _bname,
             "code":      _bcode,
             "points":    str(int(_bpoints)),
-            "login_url": "https://vgk4u.com/vgk/login",
+            "login_url": "https://www.vgk4u.com/vgk/login",
         }
         result = send_direct_whatsapp(db=db, phone=phone, message=msg, staff_id=current_user.id, template_id=template_id, context=bulk_ctx)
         if result.get("success"):

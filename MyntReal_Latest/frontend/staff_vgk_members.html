@@ -1030,7 +1030,7 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
 Your VGK4U Partner account has been created! 🚀
 
 🔐 Login Credentials:
-🌐 Portal: https://vgk4u.com/partner/login
+🌐 Portal: https://www.vgk4u.com/partner/login
 👤 Username: {{2}}
 🔒 Password: {{3}}
 📌 Your VGK4U ID: {{2}}
@@ -1044,7 +1044,7 @@ Use your points on:
 🏡 Real Estate & more VGK services
 
 🔗 Your Referral Link:
-https://vgk4u.com/join/{{2}}
+https://www.vgk4u.com/join/{{2}}
 
 ▶️ Learn how to earn & grow — watch our YouTube:
 https://www.youtube.com/@VGK4YOU
@@ -3783,7 +3783,7 @@ let _csData = {};
 
 function openCredShareModal({ name, code, phone, password }) {
   _csData = { name, code, phone, password };
-  const refLink = code ? `https://vgk4u.com/vgk/login?tab=signup&ref=${code}` : '—';
+  const refLink = code ? `https://www.vgk4u.com/vgk/login?tab=signup&ref=${code}` : '—';
   document.getElementById('cs-name').textContent = name || '—';
   document.getElementById('cs-code').textContent = code || '—';
   document.getElementById('cs-phone').textContent = phone || '—';
@@ -3801,14 +3801,14 @@ function closeCredShareModal() {
 function _buildWaMsg(name, code, pwd) {
   const yt       = 'https://www.youtube.com/@VGK4YOU';
   const codeStr  = (code || '').trim();
-  const ref      = codeStr ? `https://vgk4u.com/vgk/login?tab=signup&ref=${codeStr}` : 'https://vgk4u.com/vgk/login?tab=signup';
+  const ref      = codeStr ? `https://www.vgk4u.com/vgk/login?tab=signup&ref=${codeStr}` : 'https://www.vgk4u.com/vgk/login?tab=signup';
   const nameStr  = (name || '').trim() || 'Partner';
   const pwdStr   = (pwd  || codeStr || '').trim() || '[Password]';
   return (
     `🎉 *Congratulations ${nameStr} & Welcome to VGK4U!* 🎉\n\n` +
     `Your VGK4U Partner account has been created! 🚀\n\n` +
     `🔐 *Login Credentials:*\n` +
-    `🌐 Portal: https://vgk4u.com/vgk/login\n` +
+    `🌐 Portal: https://www.vgk4u.com/vgk/login\n` +
     `👤 Username: ${codeStr || '[VGK-ID]'}\n` +
     `🔒 Password: ${pwdStr}\n` +
     `📌 Your VGK4U ID: ${codeStr || '[VGK-ID]'}\n\n` +
@@ -3819,7 +3819,7 @@ function _buildWaMsg(name, code, pwd) {
     `🛡 Insurance\n` +
     `🏡 Real Estate & more VGK services\n\n` +
     `🔗 *Your Referral Link:*\n${ref}\n\n` +
-    `📖 *About VGK4U:* https://vgk4u.com/voffers\n\n` +
+    `📖 *About VGK4U:* https://www.vgk4u.com/voffers\n\n` +
     `▶️ *Learn how to earn & grow:*\n${yt}\n\n` +
     `📢 *Stay Connected — Join our WhatsApp Channels:*\n` +
     `💚 VGK4U: https://whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m\n` +
@@ -3864,8 +3864,8 @@ function sendVgkCredentialsWA() {
   const pwd = window._vgkResetPwd || code;
   const phone = resetMemberPhone || '';
 
-  const ref = code ? `https://vgk4u.com/vgk/login?tab=signup&ref=${code}` : 'https://vgk4u.com/vgk/login?tab=signup';
-  const shareText = `🎉 Congratulations ${name} & Welcome to VGK4U! 🎉\n\n🔐 Login Credentials:\n🌐 Portal: https://vgk4u.com/vgk/login\n👤 Username: ${code}\n🔒 Password: ${pwd}\n📌 Your VGK4U ID: ${code}\n\n🔗 Your Referral Link:\n${ref}\n\n📖 *About VGK4U:* https://vgk4u.com/voffers\n\nBest wishes from *Team VGK4U!* 🙏`;
+  const ref = code ? `https://www.vgk4u.com/vgk/login?tab=signup&ref=${code}` : 'https://www.vgk4u.com/vgk/login?tab=signup';
+  const shareText = `🎉 Congratulations ${name} & Welcome to VGK4U! 🎉\n\n🔐 Login Credentials:\n🌐 Portal: https://www.vgk4u.com/vgk/login\n👤 Username: ${code}\n🔒 Password: ${pwd}\n📌 Your VGK4U ID: ${code}\n\n🔗 Your Referral Link:\n${ref}\n\n📖 *About VGK4U:* https://www.vgk4u.com/voffers\n\nBest wishes from *Team VGK4U!* 🙏`;
 
   const clean = phone.replace(/\D/g, '');
   const num = clean ? (clean.startsWith('91') ? clean : '91' + clean) : '';
@@ -4085,9 +4085,9 @@ const _vgkMemberCache = {};
 const _vgkWAS = { memberId: null, name: '', code: '', phone: '', points: 0, mode: 'company', tpls: [], bodyTpl: '' };
 
 function _buildVgkCredMsg(name, code, points, password) {
-  const ref    = 'https://vgk4u.com/vgk/login?tab=signup&ref=' + (code || '');
+  const ref    = 'https://www.vgk4u.com/vgk/login?tab=signup&ref=' + (code || '');
   const yt     = 'https://www.youtube.com/@VGK4YOU';
-  const fp     = 'https://vgk4u.com/vgk/forgot-password';
+  const fp     = 'https://www.vgk4u.com/vgk/forgot-password';
   const bal    = parseFloat(points) || 0;
   const balStr = Number.isInteger(bal) ? bal.toLocaleString() : bal.toLocaleString(undefined, { maximumFractionDigits: 1 });
   const pwdStr = (password || '').trim() || '⚠️ [Enter password in the field above]';
@@ -4097,7 +4097,7 @@ function _buildVgkCredMsg(name, code, points, password) {
     'Your VGK4U Partner account is *active and ready* to earn! 🚀',
     '',
     '🔐 *Login Credentials:*',
-    '🌐 Portal: https://vgk4u.com/vgk/login',
+    '🌐 Portal: https://www.vgk4u.com/vgk/login',
     '👤 Username: ' + code,
     '🔒 Password: ' + pwdStr,
     '📌 Your VGK4U ID: ' + code,
@@ -4110,7 +4110,7 @@ function _buildVgkCredMsg(name, code, points, password) {
     '',
     '🔗 *Your Referral Link — Share & Earn:*\n' + ref,
     '',
-    '📖 *About VGK4U:* https://vgk4u.com/voffers',
+    '📖 *About VGK4U:* https://www.vgk4u.com/voffers',
     '',
     '🔑 *Forgot Password?*\n' + fp,
     '',
@@ -4261,7 +4261,7 @@ function vgkWATplChange() {
   const autoFill = {
     name: _vgkWAS.name, code: _vgkWAS.code,
     points: String(Math.floor(_vgkWAS.points)),
-    login_url: 'https://vgk4u.com/vgk/login',
+    login_url: 'https://www.vgk4u.com/vgk/login',
     '1': _vgkWAS.name, '2': _vgkWAS.code, '3': String(Math.floor(_vgkWAS.points)),
   };
 

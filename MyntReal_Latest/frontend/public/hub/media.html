@@ -448,7 +448,7 @@ function renderGallerySet(g) {
         ${g.description ? `<p style="font-size:13px;color:#6b7280;margin:0 0 2px">${escHtml(g.description)}</p>` : ''}
         <span style="font-size:11px;color:#9ca3af">${files.length} item${files.length !== 1 ? 's' : ''}</span>
       </div>
-      <button class="share-media-btn" title="Share gallery" onclick="shareMediaBtn(this)" data-share-id="${g.id}" data-share-type="gallery" data-share-title="${escHtml(g.title)}" data-share-url="https://vgk4u.com/hub/media#gallery-${g.id}" style="flex-shrink:0;margin-top:2px"><i class="fas fa-share"></i> Share</button>
+      <button class="share-media-btn" title="Share gallery" onclick="shareMediaBtn(this)" data-share-id="${g.id}" data-share-type="gallery" data-share-title="${escHtml(g.title)}" data-share-url="https://www.vgk4u.com/hub/media#gallery-${g.id}" style="flex-shrink:0;margin-top:2px"><i class="fas fa-share"></i> Share</button>
     </div>
     <div class="gallery-grid">${filesHtml}</div>
   </div>`;

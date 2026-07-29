@@ -2134,7 +2134,7 @@ class CRMLeadEditor {
         const phone   = (member.phone || (this.currentLead ? this.currentLead.phone : '') || '').replace(/\D/g, '');
         const pwd     = member.auto_password || null;
         const pts     = (member.points_balance || 0).toLocaleString('en-IN');
-        const ref     = 'https://vgk4u.com/vgk/login?tab=signup&ref=' + encodeURIComponent(code);
+        const ref     = 'https://www.vgk4u.com/vgk/login?tab=signup&ref=' + encodeURIComponent(code);
         const yt      = 'https://www.youtube.com/@VGK4YOU';
         const lead    = this.currentLead || {};
         const tcName  = lead.telecaller_name || 'Our Team';
@@ -2142,8 +2142,8 @@ class CRMLeadEditor {
         const regards = `— Team VGK4U | 📞 +91 858585 2738 | 🌐 vgk4u.com/hargharsolar${tcName && tcName !== 'Our Team' ? '\n👤 Your Advisor: ' + tcName + (tcCode ? ' (Ext: ' + tcCode + ')' : '') : ''}`;
 
         const _waChannels = `\n\n📢 *Stay Connected — Join our WhatsApp Channels:*\n💚 VGK4U: https://whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m\n🔵 Myntreal: https://whatsapp.com/channel/0029VbCmSCh2kNFiA0RsHZ2r\n☀️ Har Ghar Solar: https://whatsapp.com/channel/0029Vb7V0ImFCCoYg891FL3D`;
-        const _about    = `\n\n📖 *About VGK4U:* https://vgk4u.com/voffers`;
-        const _portal   = 'https://vgk4u.com/vgk/login';
+        const _about    = `\n\n📖 *About VGK4U:* https://www.vgk4u.com/voffers`;
+        const _portal   = 'https://www.vgk4u.com/vgk/login';
 
         const buildMsg = (lang) => {
             if (lang === 'hindi') {

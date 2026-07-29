@@ -1308,9 +1308,9 @@ let _trbAllTemplates = [];
 
 // Single source of truth: segment → variable key → default value
 const TRB_SEGMENT_DEFAULTS = {
-  vgk: { '1':'Rahul Sharma','2':'VGK07012345','3':'https://vgk4u.com/vgk/login','4':'10,000',
-         'name':'Rahul Sharma','member_id':'VGK07012345','login_url':'https://vgk4u.com/vgk/login','points_balance':'10,000' },
-  general: { '1':'Rahul Sharma','2':'VGK07012345','3':'https://vgk4u.com/vgk/login','4':'10,000',
+  vgk: { '1':'Rahul Sharma','2':'VGK07012345','3':'https://www.vgk4u.com/vgk/login','4':'10,000',
+         'name':'Rahul Sharma','member_id':'VGK07012345','login_url':'https://www.vgk4u.com/vgk/login','points_balance':'10,000' },
+  general: { '1':'Rahul Sharma','2':'VGK07012345','3':'https://www.vgk4u.com/vgk/login','4':'10,000',
               'name':'Rahul Kumar','partner_phone':'+91 98765 43210','otp':'123456' },
   system: { 'name':'Rahul Kumar','ticket_id':'TKT2001','status':'In Progress',
              'po_number':'PO-2025-001','pending_count':'5','meetings':'3','1':'123456' },
@@ -1376,8 +1376,8 @@ function _trbGetVarValue(varKey, idx, examples, segment) {
   // Contact data mapping
   const contactMap = {
     '1': contactName, 'name': contactName,
-    '2': '', 'member_id': '', 'login_url': 'https://vgk4u.com/vgk/login',
-    '3': 'https://vgk4u.com/vgk/login',
+    '2': '', 'member_id': '', 'login_url': 'https://www.vgk4u.com/vgk/login',
+    '3': 'https://www.vgk4u.com/vgk/login',
   };
   // 1st priority: contact data (non-empty)
   const fromContact = contactMap[varKey] || '';

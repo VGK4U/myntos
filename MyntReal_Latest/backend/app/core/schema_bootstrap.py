@@ -1395,13 +1395,13 @@ def bootstrap_wa_example_values_column():
     SEGMENT_DEFAULTS: dict = {
         "vgk": {
             "1": "Rahul Sharma", "2": "VGK07012345",
-            "3": "https://vgk4u.com/vgk/login", "4": "10,000",
+            "3": "https://www.vgk4u.com/vgk/login", "4": "10,000",
             "name": "Rahul Sharma", "member_id": "VGK07012345",
-            "login_url": "https://vgk4u.com/vgk/login", "points_balance": "10,000",
+            "login_url": "https://www.vgk4u.com/vgk/login", "points_balance": "10,000",
         },
         "general": {
             "1": "Rahul Sharma", "2": "VGK07012345",
-            "3": "https://vgk4u.com/vgk/login", "4": "10,000",
+            "3": "https://www.vgk4u.com/vgk/login", "4": "10,000",
             "name": "Rahul Kumar", "partner_phone": "+91 98765 43210",
             "otp": "123456",
         },
