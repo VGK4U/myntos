@@ -25,10 +25,14 @@ body{background:var(--mnr-dark);color:var(--mnr-text);font-family:'Segoe UI',san
 .sync-log-card{background:#0f1729;border:1px solid var(--mnr-border);border-radius:8px;padding:14px;margin-top:12px;font-size:0.82rem;}
 .sync-log-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:8px 0;border-bottom:1px solid var(--mnr-border);}
 .sync-log-row:last-child{border-bottom:none;}
-.cat-table td,.cat-table th{padding:10px 14px;vertical-align:middle;}
-.cat-table th{color:var(--mnr-muted);font-size:0.78rem;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--mnr-border);font-weight:600;}
-.cat-table td{font-size:0.88rem;border-bottom:1px solid rgba(42,58,92,.5);}
-.cat-table tr:hover td{background:rgba(79,110,247,.05);}
+.cat-table {
+  --bs-table-bg: transparent !important;
+  --bs-table-color: var(--mnr-text) !important;
+}
+.cat-table td,.cat-table th{padding:10px 14px;vertical-align:middle;background:transparent !important;color:inherit !important;}
+.cat-table th{color:var(--mnr-muted) !important;font-size:0.78rem;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--mnr-border) !important;font-weight:600;}
+.cat-table td{font-size:0.88rem;border-bottom:1px solid rgba(42,58,92,.5) !important;color:var(--mnr-text) !important;}
+.cat-table tr:hover td{background-color:rgba(79,110,247,.12) !important;color:#fff !important;}
 .inline-inp{background:#0f1729;border:1px solid var(--mnr-border);color:var(--mnr-text);border-radius:6px;padding:4px 8px;font-size:0.85rem;width:80px;text-align:right;}
 .inline-inp:focus{outline:none;border-color:var(--mnr-accent);}
 .save-row-btn{background:var(--mnr-accent);border:none;color:#fff;border-radius:5px;padding:4px 12px;font-size:0.78rem;cursor:pointer;font-weight:600;}
@@ -405,15 +409,31 @@ tr.row-inactive{opacity:.45;}
             <div class="row g-2 mb-3">
               <div class="col-4">
                 <div class="modal-lbl">Dealer Price (₹)</div>
-                <input type="number" class="modal-inp" id="editPrice" min="0" step="0.01">
+                <input type="number" class="modal-inp" id="editPrice" min="0" step="0.01" oninput="updateLiveCalculations()">
               </div>
               <div class="col-4">
                 <div class="modal-lbl">Markup %</div>
-                <input type="number" class="modal-inp" id="editMarkup" min="0" max="100" step="0.5">
+                <input type="number" class="modal-inp" id="editMarkup" min="0" max="100" step="0.5" oninput="updateLiveCalculations()">
               </div>
               <div class="col-4">
                 <div class="modal-lbl">Available Qty</div>
                 <input type="number" class="modal-inp" id="editQty" min="0" step="1">
+              </div>
+            </div>
+            <!-- Live Pricing Estimates (Calculated in real-time) -->
+            <div id="editLivePricingCard" style="background:rgba(79,110,247,.06);border:1px solid rgba(79,110,247,.2);border-radius:8px;padding:12px;margin-bottom:12px;">
+              <div style="font-size:0.75rem;font-weight:700;color:var(--mnr-accent);margin-bottom:6px;letter-spacing:.05em;">
+                <i class="fas fa-calculator me-2"></i>LIVE ESTIMATES (BASED ON INPUTS)
+              </div>
+              <div class="row g-2">
+                <div class="col-6">
+                  <div style="font-size:0.68rem;color:var(--mnr-muted);margin-bottom:3px;">MRP (excl. Tax)</div>
+                  <div id="editLiveMrp" style="font-size:0.9rem;font-weight:700;color:var(--mnr-text);">₹0.00</div>
+                </div>
+                <div class="col-6">
+                  <div style="font-size:0.68rem;color:var(--mnr-muted);margin-bottom:3px;">Customer Price (incl. Tax)</div>
+                  <div id="editLiveCustPrice" style="font-size:0.9rem;font-weight:700;color:var(--mnr-green);">₹0.00</div>
+                </div>
               </div>
             </div>
             <div class="mb-3">
@@ -1005,7 +1025,11 @@ function renderProdTable(products) {
         ${p.specifications ? `<div style="font-size:0.68rem;color:var(--mnr-muted);">${esc(p.specifications)}</div>` : ''}
       </td>
       <td>${p.company_name ? `<span class="company-badge">${esc(p.company_name)}</span>` : '<span style="color:var(--mnr-muted);font-size:0.78rem;">—</span>'}</td>
-      <td style="font-size:0.85rem;">₹${Number(p.dealer_price||0).toLocaleString('en-IN')}</td>
+      <td>
+        <div style="font-weight:600;font-size:0.85rem;" title="Dealer Cost (excl. Tax)">₹${Number(p.dealer_price||0).toLocaleString('en-IN')}</div>
+        <div style="font-size:0.7rem;color:var(--mnr-muted);margin-top:1px;" title="MRP = Dealer Price × (1 + Markup %)">MRP: ₹${Number(p.display_mrp||0).toLocaleString('en-IN')}</div>
+        <div style="font-size:0.68rem;color:var(--mnr-green);margin-top:1px;" title="Customer Price = Dealer Price + GST (without member discounts)">Cust: ₹${Number(p.base_final_price||0).toLocaleString('en-IN')}</div>
+      </td>
       <td>
         <div style="display:flex;align-items:center;gap:4px;">
           <input type="number" min="0" max="100" step="0.5" value="${p.markup_percent || 0}"
@@ -1064,6 +1088,26 @@ function renderProdTable(products) {
   }).join('');
 }
 
+let editModalGstPercent = 18;
+
+function updateLiveCalculations() {
+  const priceInput = document.getElementById('editPrice');
+  const markupInput = document.getElementById('editMarkup');
+  if (!priceInput || !markupInput) return;
+
+  const price = parseFloat(priceInput.value) || 0;
+  const markup = parseFloat(markupInput.value) || 0;
+  const gst = editModalGstPercent;
+
+  const mrp = price * (1 + markup / 100);
+  const custPrice = price * (1 + gst / 100);
+
+  const mrpEl = document.getElementById('editLiveMrp');
+  const custEl = document.getElementById('editLiveCustPrice');
+  if (mrpEl) mrpEl.textContent = '₹' + mrp.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+  if (custEl) custEl.textContent = '₹' + custPrice.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
 function openEditModal(p) {
   document.getElementById('editProdId').value = p.id;
   document.getElementById('editSku').value = p.sku || '';
@@ -1112,6 +1156,8 @@ function openEditModal(p) {
     prev.style.display = 'none';
     placeholder.style.display = 'inline-flex';
   }
+  editModalGstPercent = p.gst_percent != null ? p.gst_percent : 18;
+  updateLiveCalculations();
   editModal.show();
 }
 
@@ -1161,6 +1207,7 @@ async function saveMinLevel(id, val, inputEl) {
     inputEl.style.borderColor = 'var(--mnr-green)';
     setTimeout(() => { inputEl.style.borderColor = 'var(--mnr-border)'; }, 1500);
     toast('Min level saved', 'success');
+    loadProducts();
   } catch(e) {
     inputEl.value = old;
     inputEl.style.borderColor = 'var(--mnr-red)';
@@ -1172,16 +1219,18 @@ async function saveMarkupPercent(id, val, inputEl) {
   const old = inputEl.defaultValue;
   inputEl.style.borderColor = 'var(--mnr-gold)';
   try {
+    const markupVal = val === '' ? null : parseFloat(val);
     const r = await fetch(`/api/v1/marketplace/admin/products/${id}?company_id=${COMPANY_ID}`, {
       method: 'PUT',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ markup_percent: parseFloat(val) || 0 }),
+      body: JSON.stringify({ markup_percent: markupVal }),
     });
     if (!r.ok) throw new Error('Server error ' + r.status);
     inputEl.defaultValue = val;
     inputEl.style.borderColor = 'var(--mnr-green)';
     setTimeout(() => { inputEl.style.borderColor = 'var(--mnr-border)'; }, 1500);
     toast('Markup percent saved', 'success');
+    loadProducts();
   } catch(e) {
     inputEl.value = old;
     inputEl.style.borderColor = 'var(--mnr-red)';

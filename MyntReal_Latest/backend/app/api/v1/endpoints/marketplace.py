@@ -985,11 +985,13 @@ def list_admin_products(
         .filter(MarketspareItem.company_name != None)
         .distinct().order_by(MarketspareItem.company_name).all()]
 
+    category_configs = db.query(MarketplaceCategoryConfig).filter(MarketplaceCategoryConfig.company_id == company_id).all()
+    config_map = {c.category_name: c.to_dict() for c in category_configs}
+
     products = []
-    from app.services.marketplace_pricing import _sku_markup
     for p in items:
-        d = p.to_dict()
-        d['markup_percent'] = float(p.markup_percent) if p.markup_percent is not None else _sku_markup(p.sku)
+        cat_cfg = config_map.get(p.category_name)
+        d = enrich_product_with_pricing(p.to_dict(), cat_cfg)
         d['ordered_qty'] = ordered_qty_map.get(p.sku, 0)
         d['po_count'] = po_count_map.get(p.sku, 0)
         d['below_threshold'] = (
