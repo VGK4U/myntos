@@ -3305,3 +3305,28 @@ async def trigger_manual_income_calculation(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Income calculation failed: {str(e)}"
         )
+
+
+@router.post("/admin/sandbox/seed-test-data")
+async def seed_sandbox_test_data_endpoint(
+    db: Session = Depends(get_db)
+):
+    """
+    POST /api/v1/admin/sandbox/seed-test-data
+    Exposes community services sandbox seeding functionality.
+    """
+    try:
+        from app.services.sandbox_seeder import seed_sandbox_data
+        result = seed_sandbox_data(db)
+        return success_response(
+            message=result["message"],
+            data=result["data"]
+        )
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"❌ Sandbox test data seeding failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Sandbox test data seeding failed: {str(e)}"
+        )

@@ -8852,6 +8852,178 @@ a{background:#4f46e5;color:white;padding:12px 24px;border-radius:8px;text-decora
     if (!html.includes('rel="icon"') && !html.includes("rel='icon'")) {
       html = html.replace('</head>', '<link rel="icon" href="/favicon.ico" type="image/x-icon">\n</head>');
     }
+    
+    // 3. Inject flashy Community active services badges CSS and client-side injector
+    const activeBadgesCss = `
+<style id="hubActiveBadgesStyles">
+    #activeCommunitySevaBadgesHub {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .hub-active-badge {
+        position: relative;
+        text-decoration: none;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: #ffffff !important;
+        padding: 5px 12px;
+        border-radius: 30px;
+        overflow: hidden;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #ec4899 100%);
+        background-size: 200% 200%;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 0 10px rgba(168, 85, 247, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+        animation: hubGradientShift 4s ease infinite, hubPulseGlow 2s infinite alternate;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    
+    .hub-active-badge::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -150%;
+        width: 50%;
+        height: 100%;
+        background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+        transform: skewX(-20deg);
+        animation: hubShimmer 3s infinite;
+    }
+
+    .hub-active-badge.theme-eco {
+        background: linear-gradient(135deg, #059669 0%, #10b981 50%, #0d9488 100%);
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+        animation: hubGradientShift 4s ease infinite, hubPulseGlowEco 2s infinite alternate;
+    }
+
+    .hub-active-badge.theme-health {
+        background: linear-gradient(135deg, #dc2626 0%, #ef4444 50%, #f43f5e 100%);
+        box-shadow: 0 0 10px rgba(239, 68, 68, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+        animation: hubGradientShift 4s ease infinite, hubPulseGlowHealth 2s infinite alternate;
+    }
+    
+    .hub-active-badge:hover {
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 0 15px rgba(168, 85, 247, 0.8), 0 5px 15px rgba(0,0,0,0.2);
+        border-color: rgba(255,255,255,0.7);
+    }
+    
+    .hub-active-badge.theme-eco:hover {
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.8), 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .hub-active-badge.theme-health:hover {
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.8), 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .hub-badge-pulse-dot {
+        width: 6px;
+        height: 6px;
+        background-color: #10b981;
+        border-radius: 50%;
+        box-shadow: 0 0 0 rgba(16, 185, 129, 0.7);
+        animation: hubDotPulse 1.6s infinite;
+    }
+    
+    @keyframes hubGradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    
+    @keyframes hubPulseGlow {
+        0% { box-shadow: 0 0 6px rgba(168, 85, 247, 0.4); }
+        100% { box-shadow: 0 0 16px rgba(168, 85, 247, 0.8); }
+    }
+
+    @keyframes hubPulseGlowEco {
+        0% { box-shadow: 0 0 6px rgba(16, 185, 129, 0.4); }
+        100% { box-shadow: 0 0 16px rgba(16, 185, 129, 0.8); }
+    }
+
+    @keyframes hubPulseGlowHealth {
+        0% { box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
+        100% { box-shadow: 0 0 16px rgba(239, 68, 68, 0.8); }
+    }
+    
+    @keyframes hubShimmer {
+        0% { left: -150%; }
+        50% { left: 150%; }
+        100% { left: 150%; }
+    }
+    
+    @keyframes hubDotPulse {
+        0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    @media (max-width: 768px) {
+        #activeCommunitySevaBadgesHub {
+            margin-left: 8px;
+            gap: 4px;
+        }
+        .hub-active-badge {
+            padding: 3px 8px;
+            font-size: 9.5px;
+        }
+    }
+</style>
+`;
+    const activeBadgesScript = `
+<script id="hubActiveBadgesScript">
+(function() {
+    function initActiveBadges() {
+        const logoContainer = document.querySelector('.logo') || document.querySelector('.container.nav > div:first-child');
+        if (!logoContainer) return;
+        
+        let badgeWrap = document.getElementById('activeCommunitySevaBadgesHub');
+        if (!badgeWrap) {
+            badgeWrap = document.createElement('div');
+            badgeWrap.id = 'activeCommunitySevaBadgesHub';
+            logoContainer.parentNode.insertBefore(badgeWrap, logoContainer.nextSibling);
+        }
+        
+        fetch('/api/v1/community-services/public/active-headers')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.services && data.services.length > 0) {
+                    badgeWrap.innerHTML = data.services.map(s => {
+                        let themeClass = '';
+                        const desc = (s.service_name + ' ' + (s.description || '')).toLowerCase();
+                        if (desc.includes('solar') || desc.includes('eco') || desc.includes('green') || desc.includes('electric') || desc.includes('ev')) {
+                            themeClass = 'theme-eco';
+                        } else if (desc.includes('blood') || desc.includes('medical') || desc.includes('health') || desc.includes('social') || desc.includes('care')) {
+                            themeClass = 'theme-health';
+                        }
+                        
+                        return '<a href="/community-services/' + s.short_name + '" class="hub-active-badge ' + themeClass + '" title="' + s.service_name + '">' +
+                            '<span class="hub-badge-pulse-dot"></span>' +
+                            '<span>' + s.short_name + '</span>' +
+                            '</a>';
+                    }).join('');
+                }
+            })
+            .catch(err => console.error('Failed to load active community badges for hub:', err));
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initActiveBadges);
+    } else {
+        initActiveBadges();
+    }
+})();
+</script>
+`;
+    html = html.replace('</head>', activeBadgesCss + '</head>');
+    html = html.replace('</body>', activeBadgesScript + '</body>');
     return html;
   }
   // ── MYNTREAL HUB PUBLIC WEBSITE ──────────────────────────────────────────
@@ -19624,6 +19796,33 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.end(html);
     });
     return;
+  } else if (url.startsWith('/staff/accounts/community-services')) {
+    const filePath = path.join(__dirname, 'staff_accounts_community_services.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
+  } else if (url.startsWith('/staff/configuration/razorpay')) {
+    const filePath = path.join(__dirname, 'staff_configuration_razorpay.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
+  } else if (url.startsWith('/staff/configuration/a1top')) {
+    const filePath = path.join(__dirname, 'staff_configuration_a1top.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
   } else if (url.startsWith('/staff/accounts/estimations')) {
     const filePath = path.join(__dirname, 'staff_accounts_estimations.html');
     readFileWithRetry(filePath, (err, data) => {
@@ -29608,6 +29807,19 @@ async function processAction(id, action){
     const sharePath = path.join(__dirname, 'lead-share.html');
     readFileWithRetry(sharePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Share page not found'); return; }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
+    });
+
+  } else if (url.startsWith('/community-services/') || url === '/community-services' || url.startsWith('/community-services?')) {
+    // DC Protocol (Jul 2026): Public community services landing page — no auth required
+    const landingPath = path.join(__dirname, 'community_landing.html');
+    readFileWithRetry(landingPath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('Community page not found'); return; }
       res.writeHead(200, {
         'Content-Type': 'text/html',
         'Cache-Control': 'no-cache, no-store, must-revalidate',

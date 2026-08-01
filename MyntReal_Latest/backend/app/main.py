@@ -15906,26 +15906,32 @@ async def health_check():
     }
 
 # Mount static files for uploads (payment proofs, documents, etc.)
-UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
-if not os.path.exists(UPLOADS_DIR):
-    os.makedirs(UPLOADS_DIR, exist_ok=True)
-    logging.info(f"✅ Created uploads directory: {UPLOADS_DIR}")
+_WORKSPACE_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+MEDIA_BACKUP_DIR = os.path.join(_WORKSPACE_ROOT, "media_backup")
+if os.path.exists(MEDIA_BACKUP_DIR):
+    UPLOADS_DIR = MEDIA_BACKUP_DIR
+    logging.info(f"✅ Using media_backup directory as uploads: {UPLOADS_DIR}")
+else:
+    UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+    if not os.path.exists(UPLOADS_DIR):
+        os.makedirs(UPLOADS_DIR, exist_ok=True)
+        logging.info(f"✅ Created uploads directory: {UPLOADS_DIR}")
 
-app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
-logging.info(f"✅ Static files mounted: /uploads -> {UPLOADS_DIR}")
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR, follow_symlink=True), name="uploads")
+logging.info(f"✅ Static files mounted: /uploads -> {UPLOADS_DIR} (follow_symlink=True)")
 
 # DC Protocol: Fallback route for backward compatibility with old media paths
 # Redirects /feedback/* to /uploads/feedback/* for announcements media
 FEEDBACK_DIR = os.path.join(UPLOADS_DIR, "feedback")
 if os.path.exists(FEEDBACK_DIR):
-    app.mount("/feedback", StaticFiles(directory=FEEDBACK_DIR), name="feedback")
-    logging.info(f"✅ Feedback media fallback mounted: /feedback -> {FEEDBACK_DIR}")
+    app.mount("/feedback", StaticFiles(directory=FEEDBACK_DIR, follow_symlink=True), name="feedback")
+    logging.info(f"✅ Feedback media fallback mounted: /feedback -> {FEEDBACK_DIR} (follow_symlink=True)")
 
 # Mount static files for frontend assets (CSS, JS, images, etc.)
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "static")
 if os.path.exists(STATIC_DIR):
-    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-    logging.info(f"✅ Static files mounted: /static -> {STATIC_DIR}")
+    app.mount("/static", StaticFiles(directory=STATIC_DIR, follow_symlink=True), name="static")
+    logging.info(f"✅ Static files mounted: /static -> {STATIC_DIR} (follow_symlink=True)")
 else:
     logging.warning(f"⚠️ Static directory not found: {STATIC_DIR}")
 
@@ -19643,6 +19649,69 @@ try:
         except Exception: pass
 except Exception as _f2_outer:
     print(f"[DC-VCI-4000-FIX2] ⚠️ outer: {_f2_outer}", flush=True)
+
+# DC-SLAB-NISSI-LOOP-FIX (August 2026): Clean up circular slab bonus re-creation loop
+#   a) Identifies non-level-1 advances whose slab bonus was cancelled by L1 guards,
+#      but their slab_bonus_paid flags are still set to TRUE. Resets them to FALSE.
+#   b) Cancels the redundant duplicate slab bonus VCI entries that were auto-created
+#      by the FIX2 loop because of that TRUE flag.
+try:
+    _snf_key = 'dc_slab_nissi_loop_fix_20260801'
+    if _snf_key in _applied_keys:
+        print("[DC-SLAB-NISSI-LOOP-FIX] ⏭️ Already applied — skipping", flush=True)
+    else:
+        _snf_db = SessionLocal()
+        from sqlalchemy import text as _sn_tx
+        from datetime import datetime as _sn_dt
+        _sn_now = _sn_dt.now()
+        try:
+            # 1. Update vgk_solar_cibil_advances.slab_bonus_paid = FALSE for non-L1 advances
+            # whose slab bonus was cancelled.
+            _adv_reset = _snf_db.execute(_sn_tx("""
+                UPDATE vgk_solar_cibil_advances vsca
+                SET slab_bonus_paid   = FALSE,
+                    slab_bonus_amount = NULL,
+                    updated_at        = :now
+                FROM vgk_cash_income_entries vci
+                WHERE vci.source_lead_id = vsca.lead_id
+                  AND vci.partner_id     = vsca.partner_id
+                  AND vci.kind           = 'SLAB_BONUS'
+                  AND vci.status         = 'CANCELLED'
+                  AND COALESCE(vsca.level, 1) != 1
+                  AND vsca.slab_bonus_paid = TRUE
+            """), {'now': _sn_now})
+            print(f"[DC-SLAB-NISSI-LOOP-FIX] Advances reset to slab_bonus_paid=FALSE: {_adv_reset.rowcount}", flush=True)
+
+            # 2. Cancel the new redundant SLAB_BONUS entries that were created for non-L1 advances
+            _redundant_cancel = _snf_db.execute(_sn_tx("""
+                UPDATE vgk_cash_income_entries vci
+                SET status           = 'CANCELLED',
+                    cancelled_reason = 'DC-SLAB-NISSI-LOOP-FIX: redundant duplicate slab entry created by circular fix2 loop',
+                    updated_at       = :now
+                FROM vgk_solar_cibil_advances vsca
+                WHERE vsca.lead_id    = vci.source_lead_id
+                  AND vsca.partner_id = vci.partner_id
+                  AND vci.kind        = 'SLAB_BONUS'
+                  AND vci.status      = 'PENDING'
+                  AND COALESCE(vsca.level, 1) != 1
+            """), {'now': _sn_now})
+            print(f"[DC-SLAB-NISSI-LOOP-FIX] Redundant duplicate SLAB_BONUS entries cancelled: {_redundant_cancel.rowcount}", flush=True)
+
+            _snf_db.execute(
+                _sn_tx("INSERT INTO dc_migrations(key) VALUES(:k) ON CONFLICT(key) DO NOTHING"),
+                {"k": _snf_key}
+            )
+            _snf_db.commit()
+            print("[DC-SLAB-NISSI-LOOP-FIX] ✅ Complete", flush=True)
+        except Exception as _sn_e:
+            print(f"[DC-SLAB-NISSI-LOOP-FIX] ⚠️ {_sn_e}", flush=True)
+            try: _snf_db.rollback()
+            except Exception: pass
+        finally:
+            try: _snf_db.close()
+            except Exception: pass
+except Exception as _sn_outer:
+    print(f"[DC-SLAB-NISSI-LOOP-FIX] ⚠️ outer: {_sn_outer}", flush=True)
 
 # DC-PREMATURE-SOLAR-DRAFT-001 (Jul 2026): Cancel all COMMISSION DRAFTs created before the
 # solar pipeline reached 'completed' status, and reverse the wallet credits that were posted

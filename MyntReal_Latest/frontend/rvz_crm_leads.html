@@ -604,6 +604,16 @@
                                 <input type="hidden" id="leadAdiGuruId">
                                 <div id="leadAdiGuruSelected"></div>
                             </div>
+                            <div class="col-md-3" style="position:relative;">
+                                <label class="form-label">Community Member <span class="text-muted" style="font-size:11px">(Search)</span></label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="leadCommunitySearch" placeholder="Search community...">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="clearCommunitySearch()" title="Clear"><i class="fas fa-times"></i></button>
+                                </div>
+                                <input type="hidden" id="leadCommunityId">
+                                <div id="leadCommunityResults" class="list-group mt-1" style="max-height:150px;overflow-y:auto;display:none;position:absolute;z-index:1050;width:90%;"></div>
+                                <div id="leadCommunitySelected" class="mt-1"></div>
+                            </div>
                         </div>
 
                         <!-- Partner Attribution Block - DC Protocol Mar 2026 -->
@@ -1180,15 +1190,15 @@
                             <div class="detail-section">
                                 <h6><i class="fas fa-users me-2"></i>On Ground Team</h6>
                                 <div class="row g-2">
-                                    <div class="col-md-3">
+                                    <div class="col-md-2">
                                         <label class="form-label small text-muted mb-1">Ground Source</label>
                                         <p id="detailMnrHandler" class="mb-0">-</p>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-2">
                                         <label class="form-label small text-muted mb-1">Senior</label>
                                         <p id="detailGuru" class="mb-0">-</p>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-2">
                                         <label class="form-label small text-muted mb-1">Extended</label>
                                         <p id="detailZGuru" class="mb-0">-</p>
                                     </div>
@@ -1196,23 +1206,31 @@
                                         <label class="form-label small text-muted mb-1">On Ground Support</label>
                                         <p id="detailAdiGuru" class="mb-0">-</p>
                                     </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small text-muted mb-1">Community Member</label>
+                                        <p id="detailCommunityMember" class="mb-0">-</p>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="detail-section">
                                 <h6><i class="fas fa-users me-2"></i>Multi-Handler Assignment</h6>
                                 <div class="row g-2">
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <label class="form-label small text-muted mb-1">Tele Caller (Sales)</label>
                                         <div id="detailTelecallerSearch"></div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <label class="form-label small text-muted mb-1">Field Staff (Sales)</label>
                                         <div id="detailFieldStaffSearch"></div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <label class="form-label small text-muted mb-1">Partner</label>
                                         <div id="detailPartnerSearch"></div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small text-muted mb-1">Community Member</label>
+                                        <div id="detailCommunitySearch"></div>
                                     </div>
                                 </div>
                             </div>
@@ -2233,6 +2251,7 @@
             document.getElementById('leadDependsOnStaffId').value = '';
             document.getElementById('pincodeStatus').innerHTML = '';
             document.getElementById('inlineTaskSection').style.display = 'none';
+            clearCommunitySearch();
             document.getElementById('saveLeadBtn').disabled = false;
             document.getElementById('saveLeadBtn').innerHTML = '<i class="fas fa-save me-1"></i> Save Lead';
             document.getElementById('createTaskFromModalBtn').style.display = 'none';
@@ -2504,6 +2523,16 @@
                     } else {
                         document.getElementById('leadAdiGuruId').value = '';
                         document.getElementById('leadAdiGuruSelected').innerHTML = '';
+                    }
+
+                    if (lead.community_id) {
+                        document.getElementById('leadCommunityId').value = lead.community_id;
+                        document.getElementById('leadCommunitySelected').innerHTML =
+                            `<span class="badge bg-danger me-1"><i class="fas fa-users me-1"></i>${lead.community_name || 'Community ID: ' + lead.community_id}</span>
+                             <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="clearCommunitySearch()"><i class="fas fa-times"></i></button>`;
+                    } else {
+                        document.getElementById('leadCommunityId').value = '';
+                        document.getElementById('leadCommunitySelected').innerHTML = '';
                     }
 
                     // DC Protocol Mar 2026: Load Partner Attribution block
@@ -2807,6 +2836,63 @@
             document.getElementById('leadAdiGuruSelected').innerHTML = '';
         }
 
+        let communitySearchTimeout = null;
+        function initializeCommunitySearch() {
+            const communityInput = document.getElementById('leadCommunitySearch');
+            if (communityInput) {
+                communityInput.addEventListener('input', function() {
+                    clearTimeout(communitySearchTimeout);
+                    const q = this.value.trim();
+                    if (q.length < 2) {
+                        document.getElementById('leadCommunityResults').style.display = 'none';
+                        return;
+                    }
+                    communitySearchTimeout = setTimeout(() => searchCommunityMembers(q), 300);
+                });
+            }
+        }
+
+        async function searchCommunityMembers(query) {
+            try {
+                const r = await fetch(`/api/v1/community-services/admin/active-search?q=${encodeURIComponent(query)}`, { credentials: 'include' });
+                const data = await r.json();
+                const dropdown = document.getElementById('leadCommunityResults');
+                if (data.results && data.results.length > 0) {
+                    dropdown.innerHTML = data.results.map(member => {
+                        const _q = s => String(s || '').replace(/'/g, "\\'");
+                        return `
+                            <button type="button" class="list-group-item list-group-item-action py-2" onclick="selectCommunityMember('${member.id}', '${_q(member.display)}')">
+                                <strong>ID: ${member.id}</strong> - ${member.display}
+                            </button>`;
+                    }).join('');
+                    dropdown.style.display = 'block';
+                } else {
+                    dropdown.innerHTML = '<div class="list-group-item text-muted py-2">No community seva headers found</div>';
+                    dropdown.style.display = 'block';
+                }
+            } catch (e) { console.error('[COMMUNITY-SEARCH]', e); }
+        }
+
+        function selectCommunityMember(id, display) {
+            document.getElementById('leadCommunityId').value = id;
+            document.getElementById('leadCommunitySearch').value = '';
+            document.getElementById('leadCommunityResults').style.display = 'none';
+            document.getElementById('leadCommunitySelected').innerHTML = `
+                <span class="badge bg-danger p-2 mt-1">
+                    <i class="fas fa-users me-1"></i>${display}
+                </span>
+                <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1" onclick="clearCommunitySearch()"><i class="fas fa-times"></i></button>`;
+        }
+
+        function clearCommunitySearch() {
+            document.getElementById('leadCommunityId').value = '';
+            document.getElementById('leadCommunitySearch').value = '';
+            document.getElementById('leadCommunitySelected').innerHTML = '';
+            if (document.getElementById('leadCommunityResults')) {
+                document.getElementById('leadCommunityResults').style.display = 'none';
+            }
+        }
+
         function clearMnrSelection(fieldType) {
             if (fieldType === 'mnr_handler') clearMnrHandler();
             else if (fieldType === 'adi_guru') clearAdiGuru();
@@ -3096,7 +3182,8 @@
                 recent_comments: document.getElementById('leadRecentComments').value || null,
                 next_followup_date: nextFollowup ? new Date(nextFollowup).toISOString() : null,
                 depends_on_staff_id: document.getElementById('leadDependsOnStaffId').value || null,
-                description: document.getElementById('leadDescription').value || null
+                description: document.getElementById('leadDescription').value || null,
+                community_id: document.getElementById('leadCommunityId').value ? parseInt(document.getElementById('leadCommunityId').value) : null
             };
             
             // Add deal values if status is Won
@@ -4122,6 +4209,7 @@
         let detailTelecallerWidget = null;
         let detailFieldStaffWidget = null;
         let detailPartnerWidget = null;
+        let detailCommunityWidget = null;
         
         function toggleDealValueRow(status) {
             const dealRow = document.getElementById('dealValueRow');
@@ -4417,14 +4505,16 @@
             const telecallerContainer = document.getElementById('detailTelecallerSearch');
             const fieldStaffContainer = document.getElementById('detailFieldStaffSearch');
             const partnerContainer = document.getElementById('detailPartnerSearch');
+            const communityContainer = document.getElementById('detailCommunitySearch');
             
             if (telecallerContainer) telecallerContainer.innerHTML = '';
             if (fieldStaffContainer) fieldStaffContainer.innerHTML = '';
             if (partnerContainer) partnerContainer.innerHTML = '';
+            if (communityContainer) communityContainer.innerHTML = '';
             
             // Get slot-level permissions from API response (granular RBAC)
-            // editable_slots: { telecaller: bool, field_staff: bool, partner: bool, reason: string }
-            const slots = lead.editable_slots || { telecaller: false, field_staff: false, partner: false, reason: 'no_access' };
+            // editable_slots: { telecaller: bool, field_staff: bool, partner: bool, community: bool, reason: string }
+            const slots = lead.editable_slots || { telecaller: false, field_staff: false, partner: false, community: false, reason: 'no_access' };
             
             // Initialize Telecaller Search Widget (slot-level permission check)
             if (telecallerContainer && typeof CRMAssigneeSearch !== 'undefined') {
@@ -4491,6 +4581,28 @@
                     partnerContainer.innerHTML = `<div class="form-control form-control-sm bg-light text-muted" style="cursor: not-allowed;">${displayName}${displayCode}</div>`;
                 }
             }
+
+            // Initialize Community Search Widget (slot-level permission check)
+            if (communityContainer && typeof CRMAssigneeSearch !== 'undefined') {
+                if (slots.community) {
+                    detailCommunityWidget = new CRMAssigneeSearch({
+                        containerId: 'detailCommunitySearch',
+                        assigneeType: 'community',
+                        placeholder: 'Search community...',
+                        onSelect: (item) => saveDetailHandlerAssignment('community', item ? item.id : 0)
+                    });
+                    // Pre-populate if community is assigned
+                    if (lead.community_id) {
+                        const displayName = lead.community_name || `Community ID: ${lead.community_id}`;
+                        detailCommunityWidget.setValue(lead.community_id, displayName, lead.community_name || '');
+                    }
+                } else {
+                    // Read-only display when user lacks permission for this slot
+                    const displayName = lead.community_name || '-';
+                    const displayCode = lead.community_id ? ` (ID: ${lead.community_id})` : '';
+                    communityContainer.innerHTML = `<div class="form-control form-control-sm bg-light text-muted" style="cursor: not-allowed;">${displayName}${displayCode}</div>`;
+                }
+            }
         }
         
         async function saveDetailHandlerAssignment(type, handlerId) {
@@ -4504,6 +4616,8 @@
                 params += `&field_staff_id=${handlerId || 0}`;
             } else if (type === 'partner') {
                 params += `&associated_partner_id=${handlerId || 0}`;
+            } else if (type === 'community') {
+                params += `&community_id=${handlerId || 0}`;
             }
             
             try {
@@ -4512,12 +4626,37 @@
                 });
                 if (data && data.success) {
                     showToast('Handler assigned successfully', 'success');
+                    if (typeof loadLeads === 'function') {
+                        loadLeads(currentPage);
+                    }
+                    refreshLeadDetails();
                 } else {
                     showToast(data.detail || 'Failed to assign handler', 'error');
                 }
             } catch (e) {
                 console.error('[DC-CRM] Handler assignment error:', e);
                 showToast('Failed to assign handler', 'error');
+            }
+        }
+
+        async function refreshLeadDetails() {
+            if (!currentLeadId || !selectedLeadCompanyId) return;
+            try {
+                const url = `${API_BASE}/leads/${currentLeadId}?company_id=${selectedLeadCompanyId}`;
+                const response = await staffFetch(url);
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data.success) {
+                    const lead = data.data;
+                    const detailCommunityMember = document.getElementById('detailCommunityMember');
+                    if (detailCommunityMember) {
+                        detailCommunityMember.textContent = lead.community_name 
+                            ? `${lead.community_name} (ID: ${lead.community_id})` 
+                            : (lead.community_id ? `Community ID: ${lead.community_id}` : '-');
+                    }
+                }
+            } catch (e) {
+                console.error('[DC-CRM] Error refreshing lead details:', e);
             }
         }
         
@@ -4689,6 +4828,8 @@
         window.searchTaskAssignee = searchTaskAssignee;
         window.clearTaskAssignee = clearTaskAssignee;
         window.submitCreateTask = submitCreateTask;
+        window.clearCommunitySearch = clearCommunitySearch;
+        window.selectCommunityMember = selectCommunityMember;
         window.openAddTransactionModal = openAddTransactionModal;
         window.submitTransaction = submitTransaction;
         window.loadFinanceStatus = loadFinanceStatus;
@@ -4701,6 +4842,7 @@
 
             validateAuthAndInit();
             initializeMnrSearch();
+            initializeCommunitySearch();
             
             const inlineTaskTitleEl = document.getElementById('inlineTaskTitle');
             if (inlineTaskTitleEl) {

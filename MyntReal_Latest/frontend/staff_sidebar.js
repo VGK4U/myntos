@@ -744,7 +744,18 @@ const StaffSidebar = {
             if (section.items) {
                 for (const item of section.items) {
                     // DC Protocol: Match by route_path (reliable) instead of menu_code (format mismatch)
-                    const shouldInclude = isStaffDashboardSection || !hasRouteAccess || (allowedPaths && allowedPaths.has(item.route));
+                    let shouldInclude = isStaffDashboardSection || !hasRouteAccess || (allowedPaths && allowedPaths.has(item.route));
+                    
+                    // Access restriction: Razorpay & A1Top dashboards only for MR10001 and Accounts department
+                    if (item.route === '/staff/configuration/razorpay' || item.route === '/staff/configuration/a1top') {
+                        const empId = this.userData?.emp_code || this.userData?.employee_code || this.userData?.employee_id || '';
+                        const deptName = this.userData?.department_name || '';
+                        const isAllowed = (empId === 'MR10001') || (deptName.toLowerCase() === 'accounts');
+                        if (!isAllowed) {
+                            shouldInclude = false;
+                        }
+                    }
+
                     if (shouldInclude) {
                         sectionItems.push({
                             icon: item.icon || 'fas fa-circle',
@@ -763,7 +774,18 @@ const StaffSidebar = {
                     
                     for (const item of subSection.items || []) {
                         // DC Protocol: Match by route_path for subSection items too
-                        const shouldInclude = isStaffDashboardSection || !hasRouteAccess || (allowedPaths && allowedPaths.has(item.route));
+                        let shouldInclude = isStaffDashboardSection || !hasRouteAccess || (allowedPaths && allowedPaths.has(item.route));
+                        
+                        // Access restriction: Razorpay & A1Top dashboards only for MR10001 and Accounts department
+                        if (item.route === '/staff/configuration/razorpay' || item.route === '/staff/configuration/a1top') {
+                            const empId = this.userData?.emp_code || this.userData?.employee_code || this.userData?.employee_id || '';
+                            const deptName = this.userData?.department_name || '';
+                            const isAllowed = (empId === 'MR10001') || (deptName.toLowerCase() === 'accounts');
+                            if (!isAllowed) {
+                                shouldInclude = false;
+                            }
+                        }
+
                         if (shouldInclude) {
                             subItems.push({
                                 icon: item.icon || 'fas fa-circle',

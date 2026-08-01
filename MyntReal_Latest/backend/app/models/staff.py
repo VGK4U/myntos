@@ -2615,6 +2615,10 @@ DEFAULT_STAFF_MENUS = [
     {"menu_code": "VGK_PROMO_CODES", "menu_name": "VGK Promo Codes", "menu_category": "vgk_team", "menu_icon": "fas fa-tags", "route_path": "/staff/vgk/promo-codes", "display_order": 706},
     # DC-VGK-PARTNER-SYNC-001: VGK Admin sub-section for partner KYC review
     {"menu_code": "VGK_PARTNER_KYC_REVIEW", "menu_name": "Partner KYC Review", "menu_category": "vgk_team", "menu_icon": "fas fa-id-card-alt", "route_path": "/staff/vgk/partner-kyc-review", "display_order": 707, "is_default_visible": True, "is_default_accessible": True},
+    
+    # Razorpay and A1Top Executive configuration menus (August 2026)
+    {"menu_code": "staff_razorpay_dashboard", "menu_name": "Razorpay Executive", "menu_category": "configuration", "menu_icon": "fas fa-credit-card", "route_path": "/staff/configuration/razorpay", "display_order": 750, "is_default_visible": True, "is_default_accessible": True},
+    {"menu_code": "staff_a1top_dashboard", "menu_name": "A1Top Executive", "menu_category": "configuration", "menu_icon": "fas fa-mobile-alt", "route_path": "/staff/configuration/a1top", "display_order": 751, "is_default_visible": True, "is_default_accessible": True},
 
 ]
 

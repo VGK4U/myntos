@@ -321,6 +321,7 @@ class Bonanza(BaseModel):
     __tablename__ = 'bonanza'
     
     id = Column(Integer, primary_key=True)
+    bonanza_number = Column(String(50), nullable=True)
     name = Column(String(200), nullable=False)
     start_date = Column(DateTime, nullable=False)
     end_date = Column(DateTime, nullable=False)

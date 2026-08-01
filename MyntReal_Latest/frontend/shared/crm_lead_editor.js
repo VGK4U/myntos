@@ -231,6 +231,20 @@ class CRMLeadEditor {
                                 <div id="ule_fieldSupportRefResults" class="list-group mt-1" style="max-height:150px;overflow-y:auto;display:none;position:absolute;z-index:1060;width:calc(100% - 24px);"></div>
                                 <div id="ule_fieldSupportRefSelected" class="mt-1"></div>
                             </div>
+                            <!-- Community Member -->
+                            <div class="col-md-4" style="position:relative;">
+                                <label class="form-label">Community Member <span class="text-muted">(Search)</span></label>
+                                <div class="input-group mb-1">
+                                    <input type="text" class="form-control" id="ule_communitySearch" placeholder="Search community...">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="window.crmLeadEditor.clearCommunity()">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <input type="hidden" id="ule_communityId">
+                                <input type="hidden" id="ule_communityName">
+                                <div id="ule_communityResults" class="list-group mt-1" style="max-height:150px;overflow-y:auto;display:none;position:absolute;z-index:1060;width:calc(100% - 24px);"></div>
+                                <div id="ule_communitySelected" class="mt-1"></div>
+                            </div>
                             <!-- Technical (Staff only) -->
                             <div class="col-md-4">
                                 <label class="form-label">Technical <span class="text-muted">(Staff search)</span></label>
@@ -655,10 +669,11 @@ class CRMLeadEditor {
         this.bindSearchField('ule_fieldStaffSearch', 'staff', 'ule_fieldStaffResults');
         this.bindSearchField('ule_partnerSearch', 'partner', 'ule_partnerResults');
         this.bindSearchField('ule_taskAssigneeSearch', 'staff', 'ule_taskAssigneeResults');
+        this.bindSearchField('ule_communitySearch', 'community', 'ule_communityResults');
 
         document.addEventListener('click', (e) => {
             const searchContainers = ['ule_sourceRefResults', 'ule_fieldSupportRefResults', 'ule_technicalResults',
-                                      'ule_telecallerResults', 'ule_fieldStaffResults', 'ule_partnerResults', 'ule_taskAssigneeResults'];
+                                      'ule_telecallerResults', 'ule_fieldStaffResults', 'ule_partnerResults', 'ule_taskAssigneeResults', 'ule_communityResults'];
             searchContainers.forEach(id => {
                 const container = document.getElementById(id);
                 if (container && !container.contains(e.target) && !e.target.closest('.input-group')) {
@@ -975,6 +990,9 @@ class CRMLeadEditor {
                 case 'partner':
                     url = `${this.apiBasePath}/unified-my-leads/search-partner?q=${encodeURIComponent(query)}`;
                     break;
+                case 'community':
+                    url = `/api/v1/community-services/admin/active-search?q=${encodeURIComponent(query)}`;
+                    break;
                 default:
                     return;
             }
@@ -985,7 +1003,9 @@ class CRMLeadEditor {
             const resultsDiv = document.getElementById(resultsId);
             let items = [];
             
-            if (data.success && data.data) {
+            if (type === 'community') {
+                items = data.results || [];
+            } else if (data.success && data.data) {
                 items = Array.isArray(data.data) ? data.data : (data.data.employees || data.data.items || []);
             } else if (Array.isArray(data)) {
                 items = data;
@@ -993,6 +1013,17 @@ class CRMLeadEditor {
             
             if (items.length > 0) {
                 resultsDiv.innerHTML = items.map(item => {
+                    if (type === 'community') {
+                        const id = item.id;
+                        const display = item.display || '';
+                        return `
+                            <button type="button" class="list-group-item list-group-item-action py-2" 
+                                    onclick="window.crmLeadEditor.selectCommunityResult('${id}', '${display.replace(/'/g, "\\'")}')">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div><strong>ID: ${id}</strong> <span class="text-muted ms-1">${display}</span></div>
+                                </div>
+                            </button>`;
+                    }
                     const id = item.id || item.emp_code || item.code;
                     const name = item.name || item.full_name || '';
                     const code = item.code || item.emp_code || item.id || '';
@@ -1038,6 +1069,27 @@ class CRMLeadEditor {
             <span class="badge ${badgeClass} p-2">
                 <i class="fas fa-user me-1"></i>${code || id} - ${name}
             </span>`;
+    }
+
+    selectCommunityResult(id, display) {
+        document.getElementById('ule_communityId').value = id;
+        document.getElementById('ule_communityName').value = display;
+        document.getElementById('ule_communitySearch').value = '';
+        document.getElementById('ule_communityResults').style.display = 'none';
+        
+        document.getElementById('ule_communitySelected').innerHTML = `
+            <span class="badge bg-danger p-2">
+                <i class="fas fa-users me-1"></i>${display}
+            </span>`;
+    }
+    
+    clearCommunity() {
+        document.getElementById('ule_communityId').value = '';
+        document.getElementById('ule_communityName').value = '';
+        document.getElementById('ule_communitySearch').value = '';
+        document.getElementById('ule_communitySelected').innerHTML = '';
+        const res = document.getElementById('ule_communityResults');
+        if (res) res.style.display = 'none';
     }
     
     async fetchUpline(mnrId) {
@@ -1317,6 +1369,18 @@ class CRMLeadEditor {
             if (techIdEl) techIdEl.value = lead.technical_id;
             if (techSelEl) techSelEl.innerHTML = `<span class="badge bg-success p-2"><i class="fas fa-user me-1"></i>${lead.technical_code || lead.technical_id} — ${lead.technical_name || ''}</span>`;
         }
+
+        // Community Member
+        if (lead.community_id) {
+            const commIdEl = document.getElementById('ule_communityId');
+            const commNameEl = document.getElementById('ule_communityName');
+            const commSelEl = document.getElementById('ule_communitySelected');
+            if (commIdEl) commIdEl.value = lead.community_id;
+            if (commNameEl) commNameEl.value = lead.community_name || `Community ID: ${lead.community_id}`;
+            if (commSelEl) {
+                commSelEl.innerHTML = `<span class="badge bg-danger p-2"><i class="fas fa-users me-1"></i>${lead.community_name || 'Community ID: ' + lead.community_id}</span>`;
+            }
+        }
         
         if (lead.telecaller_id) {
             document.getElementById('ule_telecallerId').value = lead.telecaller_id;
@@ -1366,6 +1430,7 @@ class CRMLeadEditor {
          'ule_technicalId', 'ule_technicalSearch',
          'ule_telecallerId', 'ule_telecallerSearch',
          'ule_fieldStaffId', 'ule_fieldStaffSearch', 'ule_partnerId', 'ule_partnerSearch',
+         'ule_communityId', 'ule_communityName', 'ule_communitySearch',
          'ule_dealValueTotal', 'ule_dealValueReceived', 'ule_dealValueBalance',
          'ule_taskAssigneeId', 'ule_taskAssigneeSearch', 'ule_taskTitle', 'ule_taskDetails'
         ].forEach(id => {
@@ -1388,7 +1453,7 @@ class CRMLeadEditor {
 
         ['ule_sourceRefSelected', 'ule_fieldSupportRefSelected', 'ule_technicalSelected',
          'ule_telecallerSelected', 'ule_fieldStaffSelected', 'ule_partnerSelected', 'ule_taskAssigneeSelected',
-         'ule_guruSelected', 'ule_zGuruSelected', 'ule_coreSelected'
+         'ule_guruSelected', 'ule_zGuruSelected', 'ule_coreSelected', 'ule_communitySelected'
         ].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.innerHTML = '';
@@ -1795,7 +1860,8 @@ class CRMLeadEditor {
                 : null,
             telecaller_id: document.getElementById('ule_telecallerId').value ? parseInt(document.getElementById('ule_telecallerId').value) : null,
             field_staff_id: document.getElementById('ule_fieldStaffId').value ? parseInt(document.getElementById('ule_fieldStaffId').value) : null,
-            associated_partner_id: document.getElementById('ule_partnerId').value ? parseInt(document.getElementById('ule_partnerId').value) : null
+            associated_partner_id: document.getElementById('ule_partnerId').value ? parseInt(document.getElementById('ule_partnerId').value) : null,
+            community_id: document.getElementById('ule_communityId')?.value ? parseInt(document.getElementById('ule_communityId').value) : null
         };
         
         if (status === 'won') {

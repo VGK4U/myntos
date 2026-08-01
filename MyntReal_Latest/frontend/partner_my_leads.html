@@ -577,6 +577,16 @@
                                 <div id="addLeadSalesStaffResults" class="list-group mt-1" style="max-height: 150px; overflow-y: auto; display: none; position: absolute; z-index: 1050; width: calc(25% - 24px);"></div>
                                 <div id="addLeadSalesStaffSelected" class="mt-1"></div>
                             </div>
+                            <div class="col-md-3" style="position:relative;">
+                                <label class="form-label">Community Member <span class="text-muted small">(Search)</span></label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="addLeadCommunitySearch" placeholder="Search community...">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="clearAddLeadCommunity()"><i class="fas fa-times"></i></button>
+                                </div>
+                                <input type="hidden" id="addLeadCommunityId">
+                                <div id="addLeadCommunityResults" class="list-group mt-1" style="max-height:150px;overflow-y:auto;display:none;position:absolute;z-index:1050;width:90%;"></div>
+                                <div id="addLeadCommunitySelected" class="mt-1"></div>
+                            </div>
 
                             <!-- T005: VGK Share Model Card -->
                             <div class="col-12 mt-2">
@@ -1148,6 +1158,7 @@
             clearAddLeadMnr();
             clearAddLeadAdiGuru();
             clearAddLeadSalesStaff();
+            clearAddLeadCommunity();
             _resetShareModelCard();
             loadCompaniesForLead();
             modal.show();
@@ -1314,6 +1325,56 @@
             addLeadAdiGuruSearchTimeout = setTimeout(() => searchAddLeadAdiGuru(query), 300);
         });
 
+        let addLeadCommunitySearchTimeout = null;
+        document.getElementById('addLeadCommunitySearch').addEventListener('input', function() {
+            clearTimeout(addLeadCommunitySearchTimeout);
+            const query = this.value.trim();
+            if (query.length < 2) {
+                document.getElementById('addLeadCommunityResults').style.display = 'none';
+                return;
+            }
+            addLeadCommunitySearchTimeout = setTimeout(() => searchAddLeadCommunity(query), 300);
+        });
+
+        async function searchAddLeadCommunity(query) {
+            try {
+                const resp = await fetch(`/api/v1/community-services/admin/active-search?q=${encodeURIComponent(query)}`, getAuthFetchOptions());
+                const data = await resp.json();
+                const resultsDiv = document.getElementById('addLeadCommunityResults');
+                if (data.results && data.results.length > 0) {
+                    resultsDiv.innerHTML = data.results.map(r => {
+                        const _q = s => String(s || '').replace(/'/g, "\\'");
+                        return `<button type="button" class="list-group-item list-group-item-action py-2" onclick="selectAddLeadCommunity('${r.id}', '${_q(r.display)}')">
+                            <div><strong>ID: ${r.id}</strong> <span class="text-muted ms-1">${escapeHtml(r.display)}</span></div>
+                        </button>`;
+                    }).join('');
+                    resultsDiv.style.display = 'block';
+                } else {
+                    resultsDiv.innerHTML = '<div class="list-group-item text-muted py-2">No community seva headers found</div>';
+                    resultsDiv.style.display = 'block';
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        function selectAddLeadCommunity(id, display) {
+            document.getElementById('addLeadCommunityId').value = id;
+            document.getElementById('addLeadCommunitySearch').value = '';
+            document.getElementById('addLeadCommunityResults').style.display = 'none';
+            document.getElementById('addLeadCommunitySelected').innerHTML = `
+                <span class="badge bg-danger p-2 mt-1">
+                    <i class="fas fa-users me-1"></i>${display}
+                </span>`;
+        }
+
+        function clearAddLeadCommunity() {
+            document.getElementById('addLeadCommunityId').value = '';
+            document.getElementById('addLeadCommunitySearch').value = '';
+            document.getElementById('addLeadCommunitySelected').innerHTML = '';
+            if (document.getElementById('addLeadCommunityResults')) {
+                document.getElementById('addLeadCommunityResults').style.display = 'none';
+            }
+        }
+
         async function searchAddLeadAdiGuru(query) {
             try {
                 const response = await fetch(`/api/v1/crm/unified-my-leads/search-mnr?q=${encodeURIComponent(query)}`, getAuthFetchOptions());
@@ -1475,7 +1536,8 @@
                     source_ref_name: (document.getElementById('addLeadMnrSelected').querySelector('.badge')?.textContent?.trim().replace(/\s*\(.*\)\s*$/, '').trim()) || null,
                     field_support_ref_id: document.getElementById('addLeadAdiGuruId').value || null,
                     associated_partner_id: partnerInfo.partner_id || null,
-                    sales_staff_id: document.getElementById('addLeadSalesStaffId').value || null
+                    sales_staff_id: document.getElementById('addLeadSalesStaffId').value || null,
+                    community_id: document.getElementById('addLeadCommunityId').value ? parseInt(document.getElementById('addLeadCommunityId').value) : null
                 };
                 
                 const response = await fetch('/api/v1/crm/unified-my-leads', {

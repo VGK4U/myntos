@@ -164,6 +164,8 @@ class CRMLead(BaseModel):
     vgk_field_support_id = Column(Integer, ForeignKey('official_partners.id', ondelete='SET NULL'), nullable=True, index=True)
     # DC-VGK-BRAND-INCENTIVE-001 (Jun 2026): optional brand for brand-specific additional incentive
     solar_brand_id = Column(Integer, ForeignKey('vgk_incentive_brands.id', ondelete='SET NULL'), nullable=True, index=True)
+    community_id = Column(Integer, ForeignKey('community_registrations.id', ondelete='SET NULL'), nullable=True, index=True)
+
 
     # DC Protocol (Mar 2026): KYC / Document / Banking / Location fields
     aadhaar_number = Column(String(20), nullable=True)
@@ -352,6 +354,7 @@ class CRMLead(BaseModel):
             'last_contact_date': _si(self.last_contact_date),
             'next_followup_date': _si(self.next_followup_date),
             'depends_on_staff_id': self.depends_on_staff_id,
+            'community_id': self.community_id,
             'telecaller_id': self.telecaller_id,
             'field_staff_id': self.field_staff_id,
             'associated_partner_id': self.associated_partner_id,

@@ -233,6 +233,11 @@ api_router.include_router(vgk_gallery.router,     tags=["VGK Gallery"])
 from app.api.v1.endpoints import vgk_vendors
 api_router.include_router(vgk_vendors.router, tags=["VGK Vendor System"])
 
+# Community Services System (DC Protocol Mar 2026)
+from app.api.v1.endpoints import community_services
+api_router.include_router(community_services.router, prefix="/community-services", tags=["Community Services"])
+
+
 # Health check for API
 # WhatsApp Configuration Center (DC Protocol Mar 2026)
 api_router.include_router(whatsapp_config.router, prefix="/whatsapp-config", tags=["WhatsApp Config"])

@@ -139,6 +139,7 @@ def get_editable_handler_slots(lead, current_employee, db) -> dict:
         'telecaller': False,
         'field_staff': False,
         'partner': False,
+        'community': False,
         'reason': 'no_access'
     }
     
@@ -148,6 +149,7 @@ def get_editable_handler_slots(lead, current_employee, db) -> dict:
             'telecaller': True,
             'field_staff': True,
             'partner': True,
+            'community': True,
             'reason': 'admin'
         }
     
@@ -157,6 +159,7 @@ def get_editable_handler_slots(lead, current_employee, db) -> dict:
             'telecaller': True,
             'field_staff': True,
             'partner': True,
+            'community': True,
             'reason': 'primary_owner'
         }
 
@@ -168,6 +171,7 @@ def get_editable_handler_slots(lead, current_employee, db) -> dict:
             'telecaller': True,
             'field_staff': True,
             'partner': True,
+            'community': True,
             'reason': 'assigned_handler'
         }
 
@@ -197,6 +201,7 @@ def get_editable_handler_slots(lead, current_employee, db) -> dict:
             'telecaller': True,
             'field_staff': True,
             'partner': True,
+            'community': True,
             'reason': 'reporting_manager'
         }
     
@@ -333,6 +338,7 @@ class LeadCreate(BaseModel):
     handler_type: Optional[str] = "unassigned"
     handler_id: Optional[str] = None
     telecaller_id: Optional[int] = None
+    community_id: Optional[int] = None
     field_staff_id: Optional[int] = None
     associated_partner_id: Optional[int] = None
     vendor_id: Optional[int] = None
@@ -402,6 +408,7 @@ class LeadUpdate(BaseModel):
     handler_type: Optional[str] = None  # Legacy field for backward compatibility
     handler_id: Optional[str] = None  # Legacy field for backward compatibility
     telecaller_id: Optional[int] = None
+    community_id: Optional[int] = None
     field_staff_id: Optional[int] = None
     associated_partner_id: Optional[int] = None
     vendor_id: Optional[int] = None
@@ -7192,6 +7199,13 @@ def create_lead(
         if not partner:
             raise HTTPException(status_code=400, detail="Invalid partner")
         validated_partner_id = lead_data.associated_partner_id
+
+    validated_vendor_id = None
+    if lead_data.vendor_id:
+        vendor = db.query(VendorMaster).filter(VendorMaster.id == lead_data.vendor_id).first()
+        if not vendor:
+            raise HTTPException(status_code=400, detail="Invalid partner/vendor code")
+        validated_vendor_id = lead_data.vendor_id
     
     # DC-MNR-VGK-SOURCE-001: auto-derive source label from ground-source type when
     # the caller has not explicitly chosen a different source.
@@ -7298,14 +7312,23 @@ def create_lead(
         created_by_type='staff',
         created_by_id=current_employee.emp_code,
         primary_owner_type='staff',
-        primary_owner_id=current_employee.id
+        primary_owner_id=current_employee.id,
+        community_id=lead_data.community_id,
+        showroom_vgk_id=lead_data.showroom_vgk_id,
+        team_senior_partner_id=lead_data.team_senior_partner_id,
+        team_extended_partner_id=lead_data.team_extended_partner_id,
+        team_core_partner_id=lead_data.team_core_partner_id,
+        vendor_id=validated_vendor_id,
+        investment_capacity=lead_data.investment_capacity,
+        planning_to_start=lead_data.planning_to_start,
+        full_time_business=lead_data.full_time_business
     )
     
     # DC-INLINE-GURU-001 backend (CREATE): Auto-derive upline chain at lead creation time.
     # Mirrors the update-time derivation in the PUT handler so new leads are never missing core.
     _cr_src_type = lead_data.source_ref_type or ''
     _cr_src_id   = lead_data.source_ref_id
-    if _cr_src_type in ('vgk', 'vgk_partner', 'partner') and _cr_src_id:
+    if (new_lead.team_senior_partner_id is None and new_lead.team_extended_partner_id is None and new_lead.team_core_partner_id is None) and _cr_src_type in ('vgk', 'vgk_partner', 'partner') and _cr_src_id:
         try:
             _cr_gsp = db.query(OfficialPartner).filter(OfficialPartner.id == int(_cr_src_id)).first()
             if _cr_gsp and _cr_gsp.parent_partner_id:
@@ -7322,7 +7345,7 @@ def create_lead(
                 new_lead.team_senior_partner_id = None
                 new_lead.team_extended_partner_id = None
                 new_lead.team_core_partner_id = None
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, AttributeError):
             pass
 
     db.add(new_lead)
@@ -7580,6 +7603,15 @@ def get_lead(
                 if vgk_fs:
                     lead_dict['vgk_field_support_name'] = vgk_fs.partner_name
                     lead_dict['vgk_field_support_code'] = vgk_fs.partner_code
+        except Exception:
+            pass
+
+        try:
+            if getattr(lead, 'community_id', None):
+                from app.models.community_service import CommunityRegistration
+                comm = db.query(CommunityRegistration).filter(CommunityRegistration.id == lead.community_id).first()
+                if comm:
+                    lead_dict['community_name'] = f"{comm.primary_name} ({comm.service.short_name} - {comm.area})"
         except Exception:
             pass
 
@@ -8053,7 +8085,7 @@ def update_lead(
                     update_data['team_senior_partner_id'] = None
                     update_data['team_extended_partner_id'] = None
                     update_data['team_core_partner_id'] = None
-            except (ValueError, TypeError):
+            except (ValueError, TypeError, AttributeError):
                 pass
         elif _gsrc_type == 'mnr' and _gsrc_id:
             try:
@@ -8562,6 +8594,19 @@ def update_lead(
             print(f"[WA-AUTO] update_lead hook error: {_wa_ex}")
     # ─────────────────────────────────────────────────────────────────────────
 
+    # Community Services Seva Upline Deductions Hook
+    if getattr(lead, 'community_id', None):
+        _sps_val = (getattr(lead, 'solar_pipeline_status', '') or '').lower()
+        if _sps_val in {'subsidy_pending', 'completed'} or lead.status == 'completed':
+            try:
+                from app.services.vgk_commission import apply_community_seva_commission_and_deductions
+                apply_community_seva_commission_and_deductions(db, lead, None)
+                db.commit()
+            except Exception as _cse_err:
+                logger.warning(f"[COMMUNITY-SEVA] Hook failed for lead {lead.id} on update_lead: {_cse_err}")
+
+    # ─────────────────────────────────────────────────────────────────────────
+
     return {
         'success': True,
         'message': 'Lead updated successfully',
@@ -8813,11 +8858,12 @@ def assign_lead_handlers(
     telecaller_id: Optional[int] = Query(None, description="Tele Caller Staff ID"),
     field_staff_id: Optional[int] = Query(None, description="Field Staff ID"),
     associated_partner_id: Optional[int] = Query(None, description="Associated Partner ID"),
+    community_id: Optional[int] = Query(None, description="Community Member Registration ID"),
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
     """
-    Assign multiple handlers to a lead (Tele Caller, Field Staff, Associated Partner).
+    Assign multiple handlers to a lead (Tele Caller, Field Staff, Associated Partner, Community Member).
     DC Protocol: Staff handlers must belong to same company; Partner is cross-company.
     WVV Protocol: Requires staff authentication.
     
@@ -8860,9 +8906,15 @@ def assign_lead_handlers(
             status_code=403, 
             detail="You don't have permission to change the Partner assignment. Only the lead owner, reporting manager, or admin can modify this."
         )
+        
+    if community_id is not None and not editable_slots.get('community'):
+        raise HTTPException(
+            status_code=403, 
+            detail="You don't have permission to change the Community Member assignment. Only the lead owner, reporting manager, or admin can modify this."
+        )
     
     # Check that at least one slot is editable before proceeding
-    if not any([editable_slots['telecaller'], editable_slots['field_staff'], editable_slots['partner']]):
+    if not any([editable_slots['telecaller'], editable_slots['field_staff'], editable_slots['partner'], editable_slots.get('community', False)]):
         raise HTTPException(
             status_code=403, 
             detail="You don't have permission to modify any handler assignments for this lead."
@@ -8907,11 +8959,35 @@ def assign_lead_handlers(
                 raise HTTPException(status_code=400, detail="Invalid partner")
             lead.associated_partner_id = associated_partner_id
             changes.append(f"Partner assigned: {partner.partner_name}")
+
+    # Validate and assign community member
+    if community_id is not None:
+        if community_id == 0:
+            lead.community_id = None
+            changes.append("Community Member removed")
+        else:
+            from app.models.community_service import CommunityRegistration
+            comm = db.query(CommunityRegistration).filter(CommunityRegistration.id == community_id).first()
+            if not comm:
+                raise HTTPException(status_code=400, detail="Invalid community registration")
+            lead.community_id = community_id
+            changes.append(f"Community Member assigned: {comm.primary_name} ({comm.service.short_name} - {comm.area})")
     
     lead.updated_at = get_indian_time()
     lead.last_contact_date = lead.updated_at
     db.commit()
     db.refresh(lead)
+
+    # Community Services Seva Upline Deductions Hook
+    if getattr(lead, 'community_id', None) and community_id is not None and community_id != 0:
+        _sps_val = (getattr(lead, 'solar_pipeline_status', '') or '').lower()
+        if _sps_val in {'subsidy_pending', 'completed'} or lead.status == 'completed':
+            try:
+                from app.services.vgk_commission import apply_community_seva_commission_and_deductions
+                apply_community_seva_commission_and_deductions(db, lead, None)
+                db.commit()
+            except Exception as _cse_err:
+                logger.warning(f"[COMMUNITY-SEVA] Hook failed for lead {lead.id} on assign-handlers: {_cse_err}")
     
     return {
         'success': True,
@@ -11128,6 +11204,14 @@ def validate_transaction(
                     lead.first_payment_received_date = _fpr_date
                     logger.info(f'[DC-FIRST-PMT-001] Lead {lead.id}: first_payment_received_date set to {_fpr_date}')
 
+        # Hook for Community Services Seva Rules (Milestone / Full Payment Release Rules)
+        if lead and getattr(lead, 'community_id', None):
+            try:
+                from app.services.vgk_commission import apply_community_seva_commission_and_deductions
+                apply_community_seva_commission_and_deductions(db, lead, txn.id)
+            except Exception as _cse:
+                logger.warning(f"[COMMUNITY-SEVA] Hook failed for lead {lead.id} on validate_transaction: {_cse}")
+
         db.commit()
         db.refresh(txn)
         txn_dict = txn.to_dict()
@@ -11614,6 +11698,14 @@ def finance_review_transaction(
             lead.deal_value_balance = max(0, (lead.deal_value_total or 0) - lead.deal_value_received)
 
         income_entry = _auto_create_income_entry(db, txn, lead, current_employee.id)
+        # Hook for Community Services Seva Rules (Milestone / Full Payment Release Rules)
+        if lead and getattr(lead, 'community_id', None):
+            try:
+                from app.services.vgk_commission import apply_community_seva_commission_and_deductions
+                apply_community_seva_commission_and_deductions(db, lead, txn.id)
+            except Exception as _cse:
+                logger.warning(f"[COMMUNITY-SEVA] Hook failed for lead {lead.id} on finance_review_transaction: {_cse}")
+
         db.commit()
         db.refresh(txn)
         result = txn.to_dict()

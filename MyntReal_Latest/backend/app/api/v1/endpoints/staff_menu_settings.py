@@ -4586,7 +4586,7 @@ async def sync_sidebar_to_registry_legacy(
         'official-partners': ('BUSINESS PARTNERS', 13, ['/staff/partners/orders', '/staff/partners/pricing', '/staff/partners/approval', '/staff/partners/routing', '/staff/partners/fulfillment', '/staff/partners/dispatch', '/staff/partners/invoices', '/staff/partners/payments']),
         'internal': ('INTERNAL', 30, ['/staff/nda-versions', '/staff/nda-acceptance-audit', '/staff/nda-pending', '/staff/promoters', '/staff/promo-nda-editor', '/staff/promo-nda-audit', '/staff/internal-menu-access', '/rvz/terms-conditions-management', '/rvz/terms-versions', '/rvz/terms-editor', '/rvz/terms-audit', '/staff/mnr/terms-versions', '/staff/mnr/terms-editor', '/staff/mnr/terms-audit']),
         'nda-management': ('INTERNAL', 30, []),
-        'configuration': ('CONFIGURATION', 15, ['/staff/departments', '/staff/accounts/companies', '/staff/partners/master', '/staff/accounts/segments', '/staff/accounts/hsn', '/staff/signup-categories', '/rvz/menu-access-config', '/staff/sidebar-sync', '/staff/crm/ai-calling', '/staff/whatsapp-config']),
+        'configuration': ('CONFIGURATION', 15, ['/staff/departments', '/staff/accounts/companies', '/staff/partners/master', '/staff/accounts/segments', '/staff/accounts/hsn', '/staff/signup-categories', '/rvz/menu-access-config', '/staff/sidebar-sync', '/staff/crm/ai-calling', '/staff/whatsapp-config', '/staff/configuration/razorpay', '/staff/configuration/a1top']),
         'vgk4u': ('ZYNOVA', 16, ['/rvz/real-dreams/marketplace', '/rvz/real-dreams', '/rvz/real-dreams/partners', '/rvz/real-dreams/properties', '/staff/incentives/points', '/staff/incentives/approvals', '/staff/incentives/vgk4u', '/staff/vgk4u/real-estate', '/staff/vgk4u/insurance', '/staff/zynova', '/rvz/real-dreams-dashboard', '/rvz/real-dreams-partners', '/rvz/real-dreams-properties', '/real-dreams/marketplace', '/real-dreams/property', '/real-dreams/compare', '/staff/vgk4u/purchase-orders', '/staff/marketplace-config', '/staff/vgk4u/etc-students', '/staff/marketplace/codes-segments']),
         'mnr': ('MNR', 17, [
             # MNR Users subsection
@@ -4745,6 +4745,8 @@ async def sync_sidebar_to_registry_legacy(
         ('/staff/signup-categories', 'configuration', 'CONFIGURATION', 15),
         ('/staff/sidebar-sync', 'configuration', 'CONFIGURATION', 15),
         ('/rvz/menu-access', 'configuration', 'CONFIGURATION', 15),
+        ('/staff/configuration/razorpay', 'configuration', 'CONFIGURATION', 15),
+        ('/staff/configuration/a1top', 'configuration', 'CONFIGURATION', 15),
         ('/staff/performance-config', 'hr', 'HR', 22),
         ('/staff/crm/ai-calling', 'configuration', 'CONFIGURATION', 15),
         ('/staff/whatsapp-config', 'configuration', 'CONFIGURATION', 15),

@@ -81,6 +81,7 @@ def check_and_create_advance(db: Session, lead_id: int) -> dict:
         lead = db.execute(text("""
             SELECT id, company_id, associated_partner_id, team_senior_partner_id,
                    solar_pipeline_status, cibil_confirmed, cibil_score,
+                   source_ref_type, source_ref_id, mnr_handler_id,
                    status AS lead_status
             FROM crm_leads WHERE id = :lid
         """), {'lid': lead_id}).fetchone()
@@ -465,9 +466,7 @@ def release_dvr_advance(
             try:
                 from app.services.vgk_extra_commission import apply_extra_commission_if_active as _ec_first_pay
                 _lead_dvr_ec = db.execute(text(
-                    "SELECT id, associated_partner_id, team_senior_partner_id, "
-                    "team_extended_partner_id, team_core_partner_id, vgk_field_support_id, "
-                    "category_id, company_id FROM crm_leads WHERE id=:lid"
+                    "SELECT * FROM crm_leads WHERE id=:lid"
                 ), {'lid': lead_id}).fetchone()
                 if _lead_dvr_ec:
                     _ec_first_pay(db, _lead_dvr_ec, 'first_payment')
@@ -961,9 +960,7 @@ def release_advance(db: Session, lead_id: int, released_by_id: int, notes: str =
             try:
                 from app.services.vgk_extra_commission import apply_extra_commission_if_active as _ec_submitted
                 _lead_ec_row = db.execute(text(
-                    "SELECT id, associated_partner_id, team_senior_partner_id, "
-                    "team_extended_partner_id, team_core_partner_id, vgk_field_support_id, "
-                    "category_id, company_id FROM crm_leads WHERE id=:lid"
+                    "SELECT * FROM crm_leads WHERE id=:lid"
                 ), {'lid': lead_id}).fetchone()
                 if _lead_ec_row:
                     _ec_submitted(db, _lead_ec_row, 'file_submitted')

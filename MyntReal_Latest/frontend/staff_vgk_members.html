@@ -9,6 +9,7 @@
 <script src="/public/js/staff-token-manager.js"></script>
 <script src="/public/js/staff-fetch.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
@@ -189,6 +190,9 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
   </button>
   <button class="page-tab" id="tabBtnLeadView" onclick="switchTab('leadView')">
     <i class="fas fa-file-invoice"></i> Lead View
+  </button>
+  <button class="page-tab" id="tabBtnCommServices" onclick="switchTab('commServices')">
+    <i class="fas fa-handshake"></i> Community Services
   </button>
 </div>
 
@@ -593,12 +597,23 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
     </div>
     <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
       <i class="fas fa-ban"></i>
-      <select id="lvCancelFilter" title="Show or hide cancelled entries in the breakdown"
+      <select id="lvCancelFilter" onchange="loadLeadView(1)" title="Show or hide cancelled entries in the breakdown"
         style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:#fff;cursor:pointer">
         <option value="HIDE_CANCELLED">Hide Cancelled</option>
         <option value="">All (incl. Cancelled)</option>
         <option value="ONLY_CANCELLED">Only Cancelled</option>
       </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
+      <i class="fas fa-users-cog"></i>
+      <select id="lvCommunityServiceFilter" onchange="loadLeadView(1)" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:#fff;cursor:pointer">
+        <option value="">All Services (incl. Comm)</option>
+        <option value="COMMUNITY_ONLY">Any Community Service</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
+      <i class="fas fa-id-card"></i>
+      <input type="number" id="lvCommunityIdFilter" oninput="loadLeadView(1)" placeholder="Community ID" style="width:110px;padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none">
     </div>
   </div>
 
@@ -617,6 +632,72 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
   <div id="lvPagination" style="margin-top:14px;display:flex;justify-content:center;gap:6px;flex-wrap:wrap"></div>
 </div>
 <!-- /tabLeadView -->
+
+<!-- ── Community Services Tab ── -->
+<div id="tabCommServices" class="tab-panel">
+  <!-- Period quick-select -->
+  <div style="background:#fff;border-radius:12px;padding:12px 16px;box-shadow:0 1px 3px rgba(0,0,0,.07);margin-bottom:10px;display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+    <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-right:4px;flex-shrink:0"><i class="fas fa-calendar-check me-1"></i>Period:</span>
+    <button class="me-period-btn active" id="commP_overall"   onclick="_commPeriodClick('overall',this)">Overall</button>
+    <button class="me-period-btn" id="commP_today"     onclick="_commPeriodClick('today',this)">Today</button>
+    <button class="me-period-btn" id="commP_yesterday" onclick="_commPeriodClick('yesterday',this)">Yesterday</button>
+    <button class="me-period-btn" id="commP_week"      onclick="_commPeriodClick('week',this)">This Week</button>
+    <button class="me-period-btn" id="commP_month"     onclick="_commPeriodClick('month',this)">This Month</button>
+    <button class="me-period-btn" id="commP_fy"        onclick="_commPeriodClick('fy',this)">This FY</button>
+    <button class="me-period-btn" id="commP_custom"    onclick="_commPeriodClick('custom',this)" style="border-style:dashed">Custom Range</button>
+  </div>
+
+  <!-- Filter bar -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
+      <i class="fas fa-calendar-alt"></i>
+      <input type="date" id="commDateFrom" onchange="_commDateChange()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none">
+      <span>—</span>
+      <input type="date" id="commDateTo" onchange="_commDateChange()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none">
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
+      <i class="fas fa-layer-group"></i>
+      <select id="commStageFilter" onchange="loadCommServicesTab(1)" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:#fff;cursor:pointer">
+        <option value="">All Payment Stages</option>
+        <option value="DRAFT">Draft</option>
+        <option value="PENDING">Pending</option>
+        <option value="STAGE1_APPROVED">Stage 1 Approved</option>
+        <option value="RELEASED">Released</option>
+        <option value="PAID">Completed (Paid)</option>
+        <option value="CANCELLED">Cancelled</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
+      <i class="fas fa-ban"></i>
+      <select id="commCancelFilter" onchange="Object.keys(_meDetailCache).forEach(function(id){_filterCommDetail(+id)})"
+        title="Show or hide cancelled income entries in the breakdown"
+        style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:#fff;cursor:pointer">
+        <option value="HIDE_CANCELLED">Hide Cancelled</option>
+        <option value="">All (incl. Cancelled)</option>
+        <option value="ONLY_CANCELLED">Only Cancelled</option>
+      </select>
+    </div>
+    <button onclick="loadCommServicesTab(1)" style="padding:8px 18px;background:#7c3aed;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer"><i class="fas fa-search me-1"></i>Apply Filters</button>
+    <button onclick="_commResetFilters()" style="padding:8px 14px;background:#f3f4f6;color:#374151;border:none;border-radius:9px;font-size:13px;cursor:pointer">Reset All</button>
+    <button onclick="loadCommServicesTab(_commPage)" style="padding:8px 14px;background:#ede9fe;color:#7c3aed;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;margin-left:auto"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+  </div>
+
+  <!-- Summary KPI row -->
+  <div id="commKpiRow" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+
+  <!-- Main table -->
+  <div style="overflow-x:auto;background:#fff;border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:1100px" id="commTable">
+      <thead id="commHead"></thead>
+      <tbody id="commBody">
+        <tr><td colspan="16" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div id="commPagination" style="margin-top:14px;display:flex;justify-content:center;gap:6px;flex-wrap:wrap"></div>
+</div>
+<!-- /tabCommServices -->
+
 
 </div><!-- /content-area -->
 
@@ -1312,15 +1393,18 @@ function switchTab(tab) {
   document.getElementById('tabEarnings').classList.toggle('active', tab === 'earnings');
   document.getElementById('tabIncomeDash').classList.toggle('active', tab === 'incomeDash');
   document.getElementById('tabLeadView').classList.toggle('active', tab === 'leadView');
+  document.getElementById('tabCommServices').classList.toggle('active', tab === 'commServices');
   document.getElementById('tabBtnMembers').classList.toggle('active', tab === 'members');
   document.getElementById('tabBtnDashboard').classList.toggle('active', tab === 'dashboard');
   document.getElementById('tabBtnEarnings').classList.toggle('active', tab === 'earnings');
   document.getElementById('tabBtnIncomeDash').classList.toggle('active', tab === 'incomeDash');
   document.getElementById('tabBtnLeadView').classList.toggle('active', tab === 'leadView');
+  document.getElementById('tabBtnCommServices').classList.toggle('active', tab === 'commServices');
   if (tab === 'dashboard' && !_execDashLoaded) loadExecutiveDashboard();
   if (tab === 'earnings' && !_meLoaded) loadMemberEarnings(1);
   if (tab === 'incomeDash' && !_iedLoaded) { loadIedSegments(); loadIncomeDash(1); }
-  if (tab === 'leadView' && !_lvLoaded) { _lvLoadSegments(); loadLeadView(1); }
+  if (tab === 'leadView' && !_lvLoaded) { _lvLoadSegments(); _lvLoadCommunityServices(); loadLeadView(1); }
+  if (tab === 'commServices' && !_commLoaded) loadCommServicesTab(1);
 }
 
 // ── DC-VGK-MEMBER-EARN-001 v2: Member Wise Earnings tab ──────────────────────
@@ -1588,10 +1672,10 @@ function _iedSortClick(col){
 
 function _iedRenderHead(){
   const cols = [
-    {key:'',           label:'',              align:'center', w:'36px',  nosort:true},
+    {key:'',           label:'',              align:'center', w:'72px',  nosort:true},
     {key:'code',       label:'Code',          align:'left'},
     {key:'name',       label:'Name',          align:'left'},
-    {key:'',           label:'Reg By',        align:'left',   nosort:true},
+    {key:'',           label:'Reg By',        align:'left',   w:'90px', nosort:true},
     {key:'total_files',label:'Files',         align:'center', color:'#374151'},
     {key:'l0',         label:'L0 Bonus',      align:'right',  color:'#475569'},
     {key:'l1',         label:'L1 Source',     align:'right',  color:'#7c3aed'},
@@ -1691,6 +1775,7 @@ function _iedRenderKpis(rows, total){
 }
 
 function _iedRenderTable(rows){
+  window._iedCurrentRows = rows;
   const tbody = document.getElementById('iedBody');
   if(!rows.length){
     tbody.innerHTML='<tr><td colspan="15" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-chart-bar me-2"></i>No earners found with current filters</td></tr>';
@@ -1734,9 +1819,19 @@ function _iedRenderTable(rows){
     const dot = m.is_active
       ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:5px;flex-shrink:0"></span>'
       : '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ef4444;margin-right:5px;flex-shrink:0"></span>';
-    const regByHtml = m.registered_by_name
-      ? `${m.registered_by_name}${m.registered_by_emp_code?' <span style="font-family:monospace;color:#7c3aed;font-size:10px">(${m.registered_by_emp_code})</span>':''}`
-      : (m.registered_by_emp_code||'<span style="color:#d1d5db">—</span>');
+    const firstNm = (() => {
+      if (!m.registered_by_name) return '';
+      const parts = m.registered_by_name.trim().split(/\s+/);
+      const titles = ['mr', 'ms', 'mrs', 'dr', 'prof', 'shri', 'smt', 'mr.', 'ms.', 'mrs.', 'dr.'];
+      let f = parts[0];
+      if (titles.includes(f.toLowerCase()) && parts.length > 1) {
+        f = parts[1];
+      }
+      return f;
+    })();
+    const regByHtml = firstNm
+      ? `${firstNm}${m.registered_by_emp_code ? ` <span style="font-family:monospace;color:#7c3aed;font-size:9.5px">(${m.registered_by_emp_code})</span>` : ''}`
+      : (m.registered_by_emp_code || '<span style="color:#d1d5db">—</span>');
     const files = m.l1_files || 0;
     const l1 = Number(m.l1_source || 0);
     const l2 = Number(m.l2_senior || 0);
@@ -1749,11 +1844,14 @@ function _iedRenderTable(rows){
     const net = Math.round(gross * 0.9);
     return `<tr id="ied-row-${m.id}" style="border-bottom:1px solid #f3f4f6" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background=''">
       <td style="padding:8px;text-align:center">
-        <button onclick="toggleIedRow(${m.id})" id="ied-btn-${m.id}" style="width:26px;height:26px;border-radius:6px;border:1.5px solid #e5e7eb;background:#f9fafb;cursor:pointer;font-size:13px;font-weight:800;color:#7c3aed;display:inline-flex;align-items:center;justify-content:center" title="Expand income entries">${expanded?'−':'+'}</button>
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px">
+          <button onclick="toggleIedRow(${m.id})" id="ied-btn-${m.id}" style="width:26px;height:26px;border-radius:6px;border:1.5px solid #e5e7eb;background:#f9fafb;cursor:pointer;font-size:13px;font-weight:800;color:#7c3aed;display:inline-flex;align-items:center;justify-content:center" title="Expand income entries">${expanded?'−':'+'}</button>
+          <button onclick="generateMemberPoster(${m.id})" style="width:26px;height:26px;border-radius:6px;border:1.5px solid #d1fae5;background:#ecfdf5;cursor:pointer;font-size:12px;color:#059669;display:inline-flex;align-items:center;justify-content:center" title="Generate Achievement Poster"><i class="fas fa-image"></i></button>
+        </div>
       </td>
       <td style="padding:8px 12px"><strong style="color:#7c3aed;font-size:12px">${m.partner_code}</strong></td>
       <td style="padding:8px 12px"><div style="display:flex;align-items:center">${dot}<span style="font-size:12.5px;font-weight:600;color:#1f2937">${m.partner_name}</span></div></td>
-      <td style="padding:8px 12px;font-size:11px;color:#6b7280">${regByHtml}</td>
+      <td style="padding:8px;font-size:11px;color:#6b7280;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${m.registered_by_name || ''}">${regByHtml}</td>
       <td style="padding:8px 12px;text-align:center">
         ${files > 0 ? `<span style="font-weight:800;color:#374151">${files}</span>` : '<span style="color:#d1d5db">0</span>'}
       </td>
@@ -1805,14 +1903,9 @@ async function toggleIedRow(partnerId){
       detail.innerHTML='<p style="color:#9ca3af;font-size:12px;margin:0;padding:8px 0"><i class="fas fa-inbox me-1"></i>No income entries for this member.</p>';
       return;
     }
-    // Reuse the shared detail-cache + renderer (writes to me-detail-* then we copy)
+    // Reuse the shared detail-cache + renderer (renders directly based on active tab)
     _meDetailCache[partnerId] = d.data;
-    const tempDiv = document.createElement('div');
-    tempDiv.id = 'me-detail-' + partnerId;
-    document.body.appendChild(tempDiv);
     _renderMeDetailTable(partnerId);
-    detail.innerHTML = tempDiv.innerHTML;
-    document.body.removeChild(tempDiv);
   } catch(ex){
     detail.innerHTML = '<p style="color:#dc2626;font-size:12px;margin:0">Error: '+ex.message+'</p>';
   }
@@ -1913,15 +2006,31 @@ function _updateParentRowFromEntries(partnerId, rows, isIed){
 }
 
 function _renderMeDetailTable(partnerId){
-  let detail   = document.getElementById('me-detail-'+partnerId);
-  const _inIed = !detail;
-  if(_inIed) detail = document.getElementById('ied-detail-'+partnerId);
+  const isIedActive = document.getElementById('tabIncomeDash')?.classList.contains('active');
+  let detail = null;
+  if(isIedActive){
+    detail = document.querySelector('#tabIncomeDash #ied-detail-'+partnerId);
+  } else {
+    detail = document.querySelector('#tabEarnings #me-detail-'+partnerId);
+  }
+  if(!detail) detail = document.getElementById('me-detail-'+partnerId) || document.getElementById('ied-detail-'+partnerId);
   if(!detail) return;
+
   const allRows  = _meDetailCache[partnerId] || [];
-  const _perSearch  = (document.getElementById('me-det-search-'+partnerId)?.value||'').trim().toLowerCase();
+  
+  const searchInput = isIedActive 
+    ? document.querySelector('#tabIncomeDash #me-det-search-'+partnerId)
+    : document.querySelector('#tabEarnings #me-det-search-'+partnerId);
+  const _perSearch  = (searchInput?.value||'').trim().toLowerCase();
+
   const _globalCust = (document.getElementById('iedCustSearch')?.value||'').trim().toLowerCase();
   const searchTxt   = _perSearch || _globalCust;
-  const kindVal     = (document.getElementById('me-det-kind-'+partnerId)?.value||'').trim();
+
+  const kindSelect = isIedActive
+    ? document.querySelector('#tabIncomeDash #me-det-kind-'+partnerId)
+    : document.querySelector('#tabEarnings #me-det-kind-'+partnerId);
+  const kindVal     = (kindSelect?.value||'').trim();
+
   // DC-CANCELLED-FILTER-001: reads from global top-bar filter (moved from per-partner dropdown)
   const statusVal   = document.getElementById('iedCancelFilter')?.value ?? 'HIDE_CANCELLED';
 
@@ -2013,7 +2122,8 @@ function _renderMeDetailTable(partnerId){
         <tr style="background:#ede9fe;border-bottom:1px solid #ddd6fe">
           ${TH('Date')}
           ${TH('Submit Date')}
-          ${TH('Complete Date')}
+          ${TH('1st Txn Date')}
+          ${TH('Final Date')}
           ${TH('Entry #')}
           ${TH('Level / Type')}
           ${TH('Customer')}
@@ -2035,6 +2145,7 @@ function _renderMeDetailTable(partnerId){
         return `<tr style="border-bottom:1px solid #f3f4f6">
         <td style="padding:7px 10px;color:#6b7280;white-space:nowrap">${fmtDate(e.income_date)}</td>
         <td style="padding:7px 10px;color:#6b7280;white-space:nowrap">${e.submit_date?fmtDate(e.submit_date):'<span style="color:#d1d5db">—</span>'}</td>
+        <td style="padding:7px 10px;color:#6b7280;white-space:nowrap">${e.first_payment_received_date?fmtDate(e.first_payment_received_date):'<span style="color:#d1d5db">—</span>'}</td>
         <td style="padding:7px 10px;color:#059669;white-space:nowrap">${e.complete_date?fmtDate(e.complete_date):'<span style="color:#d1d5db">—</span>'}</td>
         <td style="padding:7px 10px;font-family:monospace;color:#1f2937;font-size:11px">${e.entry_number||'—'}</td>
         <td style="padding:7px 10px">${typeLbl(e.kind, e.level, e.level_label)}</td>
@@ -2049,11 +2160,11 @@ function _renderMeDetailTable(partnerId){
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:#b45309">${_pendSet.has(e.status)&&e.commission_amount>0?_meInr(e.net_payout>0?e.net_payout:e.commission_amount*0.9)+'<span style="font-size:9px;color:#d97706;margin-left:2px">'+(e.net_payout>0?'':'~')+'</span>':'<span style="color:#d1d5db">—</span>'}</td>
         <td style="padding:7px 10px;text-align:center"><span style="background:${sc(e.status)}20;color:${sc(e.status)};padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700">${e.status}</span></td>
       </tr>`;}).join('')
-      : '<tr><td colspan="15" style="padding:20px;text-align:center;color:#9ca3af;font-size:12px"><i class="fas fa-search me-1"></i>No entries match the filter.</td></tr>'}
+      : '<tr><td colspan="16" style="padding:20px;text-align:center;color:#9ca3af;font-size:12px"><i class="fas fa-search me-1"></i>No entries match the filter.</td></tr>'}
       </tbody>
       <tfoot>
         <tr style="background:#f0fdf4;font-weight:700;border-top:2px solid #bbf7d0">
-          <td colspan="8" style="padding:8px 10px;color:#374151;font-size:12px">TOTAL (${rows.length} entries)</td>
+          <td colspan="9" style="padding:8px 10px;color:#374151;font-size:12px">TOTAL (${rows.length} entries)</td>
           <td style="padding:8px 10px;text-align:right;color:#374151">${_meInr(totGross)}</td>
           <td style="padding:8px 10px;text-align:right;color:#d97706">${_meInr(rows.reduce((s,e)=>s+e.admin_charges,0))}</td>
           <td style="padding:8px 10px;text-align:right;color:#dc2626">${_meInr(rows.reduce((s,e)=>s+e.tds_amount,0))}</td>
@@ -2118,6 +2229,29 @@ async function _lvLoadSegments(){
   } catch(_){}
 }
 
+async function _lvLoadCommunityServices(){
+  try{
+    const r = await staffFetch('/api/v1/community-services/admin/services');
+    const d = await r.json();
+    if(d.success && Array.isArray(d.data)){
+      const sel = document.getElementById('lvCommunityServiceFilter');
+      if(!sel) return;
+      const cur = sel.value;
+      sel.innerHTML = `
+        <option value="">All Services (incl. Comm)</option>
+        <option value="COMMUNITY_ONLY">Any Community Service</option>
+      `;
+      d.data.forEach(s => {
+        const o = document.createElement('option');
+        o.value = s.id;
+        o.textContent = s.event_name || s.short_name || `Service #${s.id}`;
+        sel.appendChild(o);
+      });
+      if(cur) sel.value = cur;
+    }
+  } catch(_){}
+}
+
 function _lvResetFilters(){
   document.getElementById('lvSearch').value = '';
   document.getElementById('lvDateFrom').value = '';
@@ -2126,6 +2260,8 @@ function _lvResetFilters(){
   document.getElementById('lvSegmentFilter').value = '';
   document.getElementById('lvLevelFilter').value = '';
   document.getElementById('lvCancelFilter').value = 'HIDE_CANCELLED';
+  if(document.getElementById('lvCommunityServiceFilter')) document.getElementById('lvCommunityServiceFilter').value = '';
+  if(document.getElementById('lvCommunityIdFilter')) document.getElementById('lvCommunityIdFilter').value = '';
   document.querySelectorAll('#tabLeadView .me-period-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('lvP_overall').classList.add('active');
   _lvExpanded.clear();
@@ -2144,6 +2280,8 @@ async function loadLeadView(pg){
   const stage    = document.getElementById('lvStageFilter')?.value || '';
   const catId    = document.getElementById('lvSegmentFilter')?.value || '';
   const level    = document.getElementById('lvLevelFilter')?.value || '';
+  const commSvc  = document.getElementById('lvCommunityServiceFilter')?.value || '';
+  const commId   = document.getElementById('lvCommunityIdFilter')?.value || '';
 
   const params = new URLSearchParams({ page: _lvPage, page_size: 50, sort_by: 'gross', sort_dir: 'desc' });
   if(search)   params.set('search', search);
@@ -2152,6 +2290,12 @@ async function loadLeadView(pg){
   if(stage)    params.set('income_status', stage);
   if(catId)    params.set('category_id', catId);
   if(level !== '') params.set('level', level);
+  if(commId)   params.set('community_id', commId);
+  if(commSvc === 'COMMUNITY_ONLY') {
+    params.set('community_only', 'true');
+  } else if(commSvc) {
+    params.set('community_service_id', commSvc);
+  }
 
   let data;
   try{
@@ -2327,18 +2471,32 @@ function _lvDetailRowHtml(lid, entries){
 
   const lvlColors = {0:'#6b7280',1:'#6366f1',2:'#0891b2',3:'#059669',4:'#d97706',5:'#db2777',6:'#6366f1'};
 
+  const fmtDate = (ds) => {
+    if(!ds) return '—';
+    try{
+      const s = ds.length===10 ? ds : ds.substring(0,10);
+      const [y,m,day] = s.split('-');
+      return `${day}/${m}/${y}`;
+    } catch(x){ return ds.substring(0,10); }
+  };
+
   let rows = filtered.map(e=>{
     const lvl = e.level ?? '—';
     const lvlColor = lvlColors[lvl] || '#6b7280';
     const stColor  = _ME_STATUS_COLOR[e.status] || '#6b7280';
     const stLabel  = _ME_STATUS_LABEL[e.status] || e.status;
-    const kindBadge= (e.kind||'').replace(/_/g,' ');
+    const kindBadge= e.community_id ? (e.community_event_name || 'Community Service') : (e.kind||'').replace(/_/g,' ');
+    const commBadgeHtml = e.community_id ? `<span style="font-size:9.5px;padding:2px 6px;border-radius:6px;background:#0ea5e9;color:#fff;margin-left:3px;font-weight:600">Comm ID: ${e.community_id}</span>` : '';
     return `<tr style="border-bottom:1px solid #f0f0f0;background:#fafaf9">
       <td style="padding:8px 10px;text-align:center;font-size:11px;color:#9ca3af">${e.income_date||'—'}</td>
+      <td style="padding:8px 10px;font-size:11px;color:#6b7280;white-space:nowrap">${e.submit_date?fmtDate(e.submit_date):'<span style="color:#d1d5db">—</span>'}</td>
+      <td style="padding:8px 10px;font-size:11px;color:#6b7280;white-space:nowrap">${e.first_payment_received_date?fmtDate(e.first_payment_received_date):'<span style="color:#d1d5db">—</span>'}</td>
+      <td style="padding:8px 10px;font-size:11px;color:#059669;white-space:nowrap">${e.complete_date?fmtDate(e.complete_date):'<span style="color:#d1d5db">—</span>'}</td>
       <td style="padding:8px 10px;font-size:11px;color:#6b7280;font-family:monospace">${e.entry_number||'—'}</td>
       <td style="padding:8px 10px;text-align:center">
         <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${lvlColor}22;color:${lvlColor}">${_lvLvlLabel[lvl]||('L'+lvl)}</span>
-        <span style="font-size:10px;padding:2px 6px;border-radius:6px;background:#f3f4f6;color:#6b7280;margin-left:3px">${kindBadge}</span>
+        <span style="font-size:10px;padding:2px 6px;border-radius:6px;background:${e.community_id?'#e0f2fe':'#f3f4f6'};color:${e.community_id?'#0369a1':'#6b7280'};margin-left:3px;font-weight:${e.community_id?'700':'500'}">${kindBadge}</span>
+        ${commBadgeHtml}
       </td>
       <td style="padding:8px 10px">
         <span style="font-weight:700;color:#111827;font-size:12px">${e.partner_code||''}</span>
@@ -2356,6 +2514,9 @@ function _lvDetailRowHtml(lid, entries){
 
   const subHead = `<tr style="background:#f0f0fb;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">
     <td style="padding:6px 10px">Date</td>
+    <td style="padding:6px 10px">Submit Date</td>
+    <td style="padding:6px 10px">1st Txn Date</td>
+    <td style="padding:6px 10px">Final Date</td>
     <td style="padding:6px 10px">Entry #</td>
     <td style="padding:6px 10px">Level / Type</td>
     <td style="padding:6px 10px">Member</td>
@@ -2370,7 +2531,7 @@ function _lvDetailRowHtml(lid, entries){
     <table style="width:100%;border-collapse:collapse;font-size:12px">
       ${subHead}${rows}
       <tr style="background:#f0f0fb;font-weight:700">
-        <td colspan="4" style="padding:7px 10px;font-size:11px;color:#7c3aed">${filtered.length} entr${filtered.length===1?'y':'ies'}</td>
+        <td colspan="7" style="padding:7px 10px;font-size:11px;color:#7c3aed">${filtered.length} entr${filtered.length===1?'y':'ies'}</td>
         <td style="padding:7px 10px;text-align:right;color:#7c3aed">${_meInr(filtered.reduce((s,e)=>s+(e.commission_amount||0),0))}</td>
         <td colspan="2"></td>
         <td style="padding:7px 10px;text-align:right;color:#059669">${_meInr(filtered.reduce((s,e)=>s+(e.net_payout||0),0))}</td>
@@ -4576,6 +4737,827 @@ function updateAdvSearchBadge() {
   const badge = document.getElementById('advSearchBadge');
   if (badge) { badge.textContent = count; badge.style.display = count ? '' : 'none'; }
 }
+
+// ══════════════ POSTER GENERATION SYSTEM ══════════════
+async function generateMemberPoster(partnerId) {
+  const modal = document.getElementById('posterModal');
+  if(!modal) return;
+  modal.style.display = 'flex';
+  
+  const spinner = document.getElementById('posterSpinner');
+  spinner.style.display = 'flex';
+  
+  // Reset avatar / image elements
+  document.getElementById('prevImg').style.display = 'none';
+  document.getElementById('prevAvatar').style.display = 'none';
+  
+  try {
+    let m = (window._iedCurrentRows || []).find(x => x.id === partnerId) || (_vgkMemberCache || {})[partnerId];
+    if (!m) throw new Error('Member not found in current rows or cache');
+
+    // Fetch fresh member info from backend to bypass caching and local memory state
+    try {
+      const freshRes = await staffFetch(API + '/vgk/dashboard/member-earnings?search=' + encodeURIComponent(m.partner_code) + '&_cb=' + Date.now());
+      const freshData = await freshRes.json();
+      if (freshData.success && freshData.data && freshData.data.length) {
+        const found = freshData.data.find(x => x.id === partnerId);
+        if (found) {
+          m = found;
+        }
+      }
+    } catch(e) {
+      console.warn("Failed to fetch fresh member data, falling back to cached row:", e);
+    }
+    
+    document.getElementById('prevName').textContent = (m.partner_name || '').toUpperCase();
+    const initials = (m.partner_name || '').trim().split(/\s+/).map(p=>p[0]).join('').slice(0,2).toUpperCase();
+    const avatar = document.getElementById('prevAvatar');
+    avatar.textContent = initials;
+    
+    const photoPath = m.passport_photo || m.logo_path;
+    if (photoPath) {
+      const img = document.getElementById('prevImg');
+      img.src = '/uploads/' + photoPath;
+      img.onload = () => {
+        img.style.display = 'block';
+        avatar.style.display = 'none';
+      };
+      img.onerror = () => {
+        img.style.display = 'none';
+        avatar.style.display = 'flex';
+      };
+    } else {
+      avatar.style.display = 'flex';
+    }
+    
+    // Fetch full member income details matching filters to populate poster location and customer
+    const activeStage = (document.getElementById('iedStageFilter')?.value||'').trim();
+    const iedDf = (document.getElementById('iedDateFrom')?.value||'').trim();
+    const iedDt = (document.getElementById('iedDateTo')?.value||'').trim();
+    let detailUrl = API + '/vgk/dashboard/member-income-entries?partner_id=' + partnerId;
+    if(activeStage) detailUrl += '&status=' + encodeURIComponent(activeStage);
+    if(iedDf) detailUrl += '&date_from=' + encodeURIComponent(iedDf);
+    if(iedDt) detailUrl += '&date_to='   + encodeURIComponent(iedDt);
+    
+    const r = await staffFetch(detailUrl);
+    const d = await r.json();
+    const entries = (d.success && d.data) ? d.data : [];
+    window._currentEntries = entries;
+    
+    const activeFiles = entries.filter(e => e.level === 1 && e.status !== 'CANCELLED').length;
+    const gross = entries.filter(e => e.status !== 'CANCELLED').reduce((s, e) => s + (e.commission_amount || 0), 0);
+    
+    // Group entries by unique (source_lead_id, level) to sum potential overall earnings without double counting
+    const uniqueLeads = {};
+    entries.forEach(e => {
+      if (e.status !== 'CANCELLED') {
+        const leadId = e.source_lead_id || 0;
+        const lvl = e.level !== null && e.level !== undefined ? e.level : -1;
+        const key = `${leadId}_${lvl}`;
+        
+        if (lvl === 0 || lvl === -1 || !leadId) {
+          const uniqueKey = `bonus_${e.id}`;
+          uniqueLeads[uniqueKey] = e.potential_overall_earning || e.commission_amount || 0;
+        } else {
+          const val = e.potential_overall_earning || 0;
+          if (!uniqueLeads[key] || val > uniqueLeads[key]) {
+            uniqueLeads[key] = val;
+          }
+        }
+      }
+    });
+    
+    let potentialEarning = 0;
+    for (const key in uniqueLeads) {
+      potentialEarning += uniqueLeads[key];
+    }
+    
+    // Dynamic Filter-Based Today's Earning
+    let latestPaidDate = null;
+    entries.forEach(e => {
+      if (e.status === 'PAID' && e.income_date && e.income_date !== 'None') {
+        if (!latestPaidDate || e.income_date > latestPaidDate) {
+          latestPaidDate = e.income_date;
+        }
+      }
+    });
+    
+    const selectedDate = latestPaidDate || iedDt;
+    window._currentSelectedDate = selectedDate;
+
+    // Extract unique dates of non-cancelled entries
+    const paidDates = [];
+    entries.forEach(e => {
+      if (e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
+        if (!paidDates.includes(e.income_date)) {
+          paidDates.push(e.income_date);
+        }
+      }
+    });
+    // Sort dates descending
+    paidDates.sort((a,b) => b.localeCompare(a));
+    
+    // Populate the dropdown
+    const dateDropdown = document.getElementById('postPayoutDate');
+    if (dateDropdown) {
+      dateDropdown.innerHTML = '';
+      if (paidDates.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No earning dates';
+        dateDropdown.appendChild(opt);
+      } else {
+        paidDates.forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = d;
+          try {
+            const [yr, mn, dy] = d.split('-');
+            opt.textContent = `${dy}/${mn}/${yr}`;
+          } catch(err) {
+            opt.textContent = d;
+          }
+          dateDropdown.appendChild(opt);
+        });
+        if (selectedDate && paidDates.includes(selectedDate)) {
+          dateDropdown.value = selectedDate;
+        } else {
+          dateDropdown.selectedIndex = 0;
+          window._currentSelectedDate = dateDropdown.value;
+        }
+      }
+    }
+    
+    const seniorName = m.senior_name || '—';
+    const seniorEarning = m.senior_earning !== null && m.senior_earning !== undefined ? '₹' + _meFormatInr(m.senior_earning) + '/-' : '—';
+    
+    let customerName = '—';
+    let location = '—';
+    const targetEntries = entries.filter(e => e.status !== 'CANCELLED' && e.income_date === selectedDate);
+    if (targetEntries.length) {
+      customerName = targetEntries[0].client_name || '—';
+      location = targetEntries[0].location || '—';
+    } else if (entries.length) {
+      customerName = entries[0].client_name || '—';
+      location = entries[0].location || '—';
+    }
+    
+    document.getElementById('postTitle').value = 'SOLAR 1ST PAYMENT RELEASED';
+    document.getElementById('postSubtitle').value = 'BIG WEEK EXTRA BONUS';
+    document.getElementById('postHighlight').value = '₹0/-';
+    document.getElementById('postFiles').value = activeFiles + ' FILES';
+    document.getElementById('postOverall').value = (m.total_team_size || 0) + ' MEMBERS';
+    document.getElementById('postTeamBreakup').value = `L2: ${m.team_l2_count || 0} | L3: ${m.team_l3_count || 0} | L4: ${m.team_l4_count || 0}`;
+    document.getElementById('postPotential').value = '₹' + _meFormatInr(potentialEarning) + '/-';
+    document.getElementById('postCustomer').value = customerName;
+    document.getElementById('postLocation').value = location;
+    document.getElementById('postSeniorName').value = seniorName;
+    document.getElementById('postSeniorEarning').value = seniorEarning;
+    
+    // Set checkboxes default state to checked
+    document.getElementById('payTypeStage1').checked = true;
+    document.getElementById('payTypeStage2').checked = true;
+    document.getElementById('payTypeBonanza').checked = true;
+    document.getElementById('payTypeExtra').checked = true;
+    
+    recalculateTodayPayout();
+  } catch(err) {
+    alert('Failed to generate poster: ' + err.message);
+    closePosterModal();
+  } finally {
+    spinner.style.display = 'none';
+  }
+}
+
+function _meFormatInr(v) {
+  if (isNaN(v)) return v;
+  return new Intl.NumberFormat('en-IN').format(Math.round(v));
+}
+
+function recalculateTodayPayout() {
+  const showStage1 = document.getElementById('payTypeStage1').checked;
+  const showStage2 = document.getElementById('payTypeStage2').checked;
+  const showBonanza = document.getElementById('payTypeBonanza').checked;
+  const showExtra = document.getElementById('payTypeExtra').checked;
+  
+  const entries = window._currentEntries || [];
+  const selectedDate = window._currentSelectedDate;
+  
+  let stage1Amt = 0;
+  let stage2Amt = 0;
+  let bonanzaAmt = 0;
+  let extraAmt = 0;
+  
+  entries.forEach(e => {
+    if (e.status === 'PAID' && e.income_date === selectedDate) {
+      const amt = e.commission_amount || 0;
+      if (e.kind === 'ADVANCE' || e.kind === 'DVR_ADVANCE') {
+        stage1Amt += amt;
+      } else if (e.kind === 'COMMISSION' || e.kind === 'SENIOR_COMM') {
+        stage2Amt += amt;
+      } else if (e.kind === 'SLAB_BONUS') {
+        bonanzaAmt += amt;
+      } else if (e.kind === 'EXTRA_COMMISSION') {
+        extraAmt += amt;
+      }
+    }
+  });
+  
+  let breakupItems = [];
+  let total = 0;
+  
+  if (showStage1 && stage1Amt > 0) {
+    breakupItems.push(`Stage 1 Advance: ₹${_meFormatInr(stage1Amt)}/-`);
+    total += stage1Amt;
+  }
+  if (showStage2 && stage2Amt > 0) {
+    breakupItems.push(`Stage 2 Payout: ₹${_meFormatInr(stage2Amt)}/-`);
+    total += stage2Amt;
+  }
+  if (showBonanza && bonanzaAmt > 0) {
+    breakupItems.push(`Bonanza Bonus: ₹${_meFormatInr(bonanzaAmt)}/-`);
+    total += bonanzaAmt;
+  }
+  if (showExtra && extraAmt > 0) {
+    breakupItems.push(`Extra Comm: ₹${_meFormatInr(extraAmt)}/-`);
+    total += extraAmt;
+  }
+  
+  if (breakupItems.length === 0) {
+    breakupItems.push("No breakup items");
+  }
+  
+  document.getElementById('postTodayPayout').value = breakupItems.join(' | ');
+  document.getElementById('postTotalToday').value = '₹' + _meFormatInr(total) + '/-';
+  document.getElementById('postBonusDesc').value = 'Active breakups on ' + (selectedDate || '—');
+  document.getElementById('postHighlight').value = '₹' + _meFormatInr(total) + '/-';
+  
+  const prevToday = document.getElementById('prevTodayPayout');
+  prevToday.style.whiteSpace = 'pre-line';
+  prevToday.style.fontSize = '9px';
+  prevToday.style.lineHeight = '1.3';
+  prevToday.style.color = '#fde047';
+  prevToday.innerHTML = breakupItems.map(item => `<div style="margin-bottom:1px;font-weight:700">${item}</div>`).join('');
+  
+  document.getElementById('prevTotalToday').textContent = '₹' + _meFormatInr(total) + '/-';
+  document.getElementById('prevBonusDesc').textContent = 'Date: ' + (selectedDate || '—');
+  updatePoster();
+}
+
+function updatePoster() {
+  document.getElementById('prevTitle').textContent = '★ ' + document.getElementById('postTitle').value.toUpperCase() + ' ★';
+  document.getElementById('prevSubtitle').textContent = '★ ' + document.getElementById('postSubtitle').value.toUpperCase() + ' ★';
+  document.getElementById('prevHighlight').textContent = document.getElementById('postHighlight').value;
+  document.getElementById('prevFiles').textContent = document.getElementById('postFiles').value.toUpperCase();
+  
+  const manualToday = document.getElementById('postTodayPayout').value;
+  const prevToday = document.getElementById('prevTodayPayout');
+  if (manualToday.includes('|')) {
+    prevToday.innerHTML = manualToday.split('|').map(item => `<div style="margin-bottom:1px;font-weight:700">${item.trim()}</div>`).join('');
+  } else {
+    prevToday.textContent = manualToday;
+  }
+  
+  document.getElementById('prevBonusDesc').textContent = document.getElementById('postBonusDesc').value;
+  document.getElementById('prevTotalToday').textContent = document.getElementById('postTotalToday').value;
+  document.getElementById('prevOverall').textContent = document.getElementById('postOverall').value;
+  document.getElementById('prevTeamBreakup').textContent = document.getElementById('postTeamBreakup').value;
+  document.getElementById('prevPotential').textContent = document.getElementById('postPotential').value;
+  document.getElementById('prevCustomer').textContent = document.getElementById('postCustomer').value.toUpperCase();
+  document.getElementById('prevLocation').textContent = document.getElementById('postLocation').value.toUpperCase();
+  document.getElementById('prevSeniorName').textContent = document.getElementById('postSeniorName').value.toUpperCase();
+  document.getElementById('prevSeniorEarning').textContent = document.getElementById('postSeniorEarning').value;
+}
+
+function changePayoutDate() {
+  const dateDropdown = document.getElementById('postPayoutDate');
+  if (dateDropdown) {
+    window._currentSelectedDate = dateDropdown.value;
+    
+    const entries = window._currentEntries || [];
+    const targetEntries = entries.filter(e => e.status !== 'CANCELLED' && e.income_date === dateDropdown.value);
+    if (targetEntries.length) {
+      document.getElementById('postCustomer').value = targetEntries[0].client_name || '—';
+      document.getElementById('postLocation').value = targetEntries[0].location || '—';
+    }
+    
+    recalculateTodayPayout();
+  }
+}
+
+function closePosterModal() {
+  document.getElementById('posterModal').style.display = 'none';
+}
+
+function downloadPoster() {
+  const container = document.getElementById('posterCanvasWrapper');
+  const partnerName = document.getElementById('prevName').textContent.trim();
+  
+  html2canvas(container, {
+    useCORS: true,
+    scale: 2,
+    backgroundColor: null
+  }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = `${partnerName}_Achievement_Poster.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }).catch(err => {
+    alert('Failed to download image: ' + err.message);
+  });
+}
+
+// ── COMMUNITY SERVICES TAB SUPPORT ──
+let _commLoaded = false;
+let _commPage = 1;
+let _commPeriod = 'overall';
+let _commSortBy = 'name';
+let _commSortDir = 'asc';
+const _commExpanded = new Set();
+
+function _commPeriodClick(period, btn) {
+  _commPeriod = period;
+  document.querySelectorAll('#tabCommServices .me-period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const df = document.getElementById('commDateFrom');
+  const dt = document.getElementById('commDateTo');
+  if (period === 'custom') {
+    df.disabled = false;
+    dt.disabled = false;
+    return;
+  }
+  df.disabled = true;
+  dt.disabled = true;
+
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+
+  if (period === 'overall') {
+    df.value = '';
+    dt.value = '';
+  } else if (period === 'today') {
+    df.value = todayStr;
+    dt.value = todayStr;
+  } else if (period === 'yesterday') {
+    const yest = new Date();
+    yest.setDate(now.getDate() - 1);
+    const yestStr = yest.toISOString().split('T')[0];
+    df.value = yestStr;
+    dt.value = yestStr;
+  } else if (period === 'week') {
+    const day = now.getDay() || 7;
+    const mon = new Date(now);
+    mon.setDate(now.getDate() - day + 1);
+    df.value = mon.toISOString().split('T')[0];
+    dt.value = todayStr;
+  } else if (period === 'month') {
+    const first = new Date(now.getFullYear(), now.getMonth(), 1);
+    df.value = first.toISOString().split('T')[0];
+    dt.value = todayStr;
+  } else if (period === 'fy') {
+    const yr = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+    df.value = `${yr}-04-01`;
+    dt.value = todayStr;
+  }
+  loadCommServicesTab(1);
+}
+
+function _commDateChange() {
+  loadCommServicesTab(1);
+}
+
+function _commResetFilters() {
+  document.getElementById('commDateFrom').value = '';
+  document.getElementById('commDateTo').value = '';
+  document.getElementById('commStageFilter').value = '';
+  document.getElementById('commCancelFilter').value = 'HIDE_CANCELLED';
+  _commPeriodClick('overall', document.getElementById('commP_overall'));
+}
+
+function _commSortClick(col) {
+  if (_commSortBy === col) {
+    _commSortDir = _commSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _commSortBy = col;
+    _commSortDir = 'desc';
+  }
+  loadCommServicesTab(1);
+}
+
+function _commRenderHead() {
+  const cols = [
+    {key:'',           label:'',              align:'center', w:'72px',  nosort:true},
+    {key:'code',       label:'Code',          align:'left'},
+    {key:'name',       label:'Name',          align:'left'},
+    {key:'',           label:'Reg By',        align:'left',   w:'90px', nosort:true},
+    {key:'total_files',label:'Files',         align:'center', color:'#374151'},
+    {key:'l0',         label:'L0 Bonus',      align:'right',  color:'#475569'},
+    {key:'l1',         label:'L1 Source',     align:'right',  color:'#7c3aed'},
+    {key:'l2',         label:'L2 Senior',     align:'right',  color:'#1d4ed8'},
+    {key:'l3',         label:'L3 Extended',   align:'right',  color:'#0d9488'},
+    {key:'l4',         label:'L4 Core',       align:'right',  color:'#d97706'},
+    {key:'l5',         label:'L5 Support',    align:'right',  color:'#db2777'},
+    {key:'l6',         label:'L6 Showroom',   align:'right',  color:'#c026d3'},
+    {key:'gross',      label:'Gross Earned',  align:'right',  color:'#374151'},
+    {key:'net',        label:'Net Earning',   align:'right',  color:'#059669', nosort:true},
+    {key:'received',   label:'Released/Paid', align:'right',  color:'#059669'},
+    {key:'',           label:'Status',        align:'left',   nosort:true},
+  ];
+  const arrow = k => {
+    if(!k) return '';
+    if(_commSortBy !== k) return ' <span style="color:#d1d5db;font-size:9px">⇅</span>';
+    return _commSortDir === 'asc' ? ' <span style="color:#7c3aed;font-size:10px">↑</span>' : ' <span style="color:#7c3aed;font-size:10px">↓</span>';
+  };
+  document.getElementById('commHead').innerHTML = `<tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb">` +
+    cols.map(c=>`<th style="padding:10px ${c.w?'8':'12'}px;text-align:${c.align};font-size:11px;font-weight:700;text-transform:uppercase;color:${c.color||'#6b7280'};${c.w?'width:'+c.w+';':''}${!c.nosort&&c.key?'cursor:pointer;user-select:none;':''}white-space:nowrap"
+      ${!c.nosort&&c.key?'onclick="_commSortClick(\''+c.key+'\')"':''}>
+      ${c.label}${arrow(c.key)}
+    </th>`).join('') + `</tr>`;
+}
+
+async function loadCommServicesTab(pg = 1) {
+  _commPage = pg;
+  const dateFrom = (document.getElementById('commDateFrom')?.value || '').trim();
+  const dateTo = (document.getElementById('commDateTo')?.value || '').trim();
+  const stageFilter = (document.getElementById('commStageFilter')?.value || '').trim();
+
+  let url = API + '/vgk/dashboard/member-earnings?page=' + pg + '&page_size=50'
+    + '&sort_by=' + _commSortBy + '&sort_dir=' + _commSortDir
+    + '&partner_code=VGK07104281&community_only=true&earners_only=false';
+  
+  if (stageFilter) url += '&income_status=' + encodeURIComponent(stageFilter);
+  if (dateFrom) url += '&date_from=' + encodeURIComponent(dateFrom);
+  if (dateTo) url += '&date_to=' + encodeURIComponent(dateTo);
+
+  _commRenderHead();
+  document.getElementById('commBody').innerHTML = '<tr><td colspan="16" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+
+  try {
+    const r = await staffFetch(url);
+    const d = await r.json();
+    if (!d.success) {
+      showToast('Failed to load community services dashboard', 'error');
+      return;
+    }
+    _commLoaded = true;
+    _commRenderKpis(d.data, d.total);
+    _commRenderTable(d.data);
+    _commRenderPagination(d.total, pg, 50);
+  } catch (e) {
+    document.getElementById('commBody').innerHTML = '<tr><td colspan="16" style="text-align:center;padding:30px;color:#dc2626">Error: ' + e.message + '</td></tr>';
+  }
+}
+
+function _commRenderKpis(rows, total) {
+  const totGross = rows.reduce((s, r) => s + r.gross_earned, 0);
+  const totRcv = rows.reduce((s, r) => s + r.received, 0);
+  const totFiles = rows.reduce((s, r) => s + (r.total_files || 0), 0);
+  const totL1 = rows.reduce((s, r) => s + (r.l1_source || 0), 0);
+  const totL2 = rows.reduce((s, r) => s + (r.l2_senior || 0), 0);
+  const totL3 = rows.reduce((s, r) => s + (r.l3_extended || 0), 0);
+  const totL4 = rows.reduce((s, r) => s + (r.l4_core || 0), 0);
+  const totL5 = rows.reduce((s, r) => s + (r.l5_support || 0), 0);
+  const totNet = Math.round(totGross * 0.9);
+
+  const statAgg = {};
+  rows.forEach(r => {
+    Object.entries(r.income_by_status || {}).forEach(([st, v]) => {
+      if (!statAgg[st]) statAgg[st] = { count: 0, amount: 0 };
+      statAgg[st].count += v.count;
+      statAgg[st].amount += v.amount;
+    });
+  });
+  const _PEND = ['DRAFT', 'PENDING', 'STAGE1_APPROVED'];
+  const totPending = _PEND.reduce((s, st) => s + (statAgg[st]?.amount || 0), 0);
+
+  const kpis = [
+    { label: 'Total Members', val: total, color: '#7c3aed' },
+    { label: 'Total Files', val: totFiles, color: '#374151' },
+    { label: 'Gross Earned', val: _meInr(totGross), color: '#374151' },
+    { label: 'Net Earning', val: _meInr(totNet), color: '#059669' },
+    { label: 'Released/Paid', val: _meInr(totRcv), color: '#059669' },
+    { label: 'Pending', val: _meInr(totPending), color: '#d97706', border: '#fbbf24' },
+    { label: 'L1 Source', val: _meInr(totL1), color: '#7c3aed' },
+    { label: 'L2 Senior', val: _meInr(totL2), color: '#1d4ed8' },
+    { label: 'L3 Extended', val: _meInr(totL3), color: '#0d9488' },
+    { label: 'L4 Core', val: _meInr(totL4), color: '#d97706' },
+    { label: 'L5 Support', val: _meInr(totL5), color: '#db2777' },
+  ];
+
+  document.getElementById('commKpiRow').innerHTML = kpis.map(k => `
+    <div style="background:#fff;border-radius:10px;padding:10px 14px;box-shadow:0 1px 3px rgba(0,0,0,.08);min-width:120px;flex:1 0 auto;${k.border ? 'border:1.5px solid ' + k.border + ';background:#fffbeb;' : ''}">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#9ca3af;letter-spacing:.04em;margin-bottom:3px">${k.label}</div>
+      <div style="font-size:14px;font-weight:800;color:${k.color}">${k.val}</div>
+    </div>`).join('');
+}
+
+function _commRenderTable(rows) {
+  window._commCurrentRows = rows;
+  const tbody = document.getElementById('commBody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-chart-bar me-2"></i>No community service earners found</td></tr>';
+    return;
+  }
+
+  const tFiles = rows.reduce((s, r) => s + (r.l1_files || 0), 0);
+  const tL1 = rows.reduce((s, r) => s + (r.l1_source || 0), 0);
+  const tL2 = rows.reduce((s, r) => s + (r.l2_senior || 0), 0);
+  const tL3 = rows.reduce((s, r) => s + (r.l3_extended || 0), 0);
+  const tL4 = rows.reduce((s, r) => s + (r.l4_core || 0), 0);
+  const tL5 = rows.reduce((s, r) => s + (r.l5_support || 0), 0);
+  const tL0 = rows.reduce((s, r) => s + (r.l0_bonus || 0), 0);
+  const tGross = rows.reduce((s, r) => s + (r.gross_earned || 0), 0);
+  const tNet = Math.round(tGross * 0.9);
+  const tRcv = rows.reduce((s, r) => s + (r.received || 0), 0);
+
+  const totalsRow = `<tr style="background:#f0fdf4;border-bottom:2px solid #bbf7d0;position:sticky;top:0;z-index:1">
+    <td style="padding:8px;text-align:center"><span style="font-size:9px;font-weight:800;color:#059669;background:#dcfce7;padding:2px 5px;border-radius:4px;white-space:nowrap">TOTAL</span></td>
+    <td colspan="3" style="padding:8px 12px;font-size:11px;font-weight:700;color:#059669">${rows.length} member${rows.length !== 1 ? 's' : ''} (page)</td>
+    <td style="padding:8px 12px;text-align:center;font-weight:800;color:#374151">${tFiles || '—'}</td>
+    <td style="padding:8px 12px;text-align:right;font-weight:800;color:#475569">${tL0 > 0 ? _meInr(tL0) : '—'}</td>
+    <td style="padding:8px 12px;text-align:right;font-weight:800;color:#7c3aed">${tL1 > 0 ? _meInr(tL1) : '—'}</td>
+    <td style="padding:8px 12px;text-align:right;font-weight:800;color:#1d4ed8">${tL2 > 0 ? _meInr(tL2) : '—'}</td>
+    <td style="padding:8px 12px;text-align:right;font-weight:800;color:#0d9488">${tL3 > 0 ? _meInr(tL3) : '—'}</td>
+    <td style="padding:8px 12px;text-align:right;font-weight:800;color:#d97706">${tL4 > 0 ? _meInr(tL4) : '—'}</td>
+    <td style="padding:8px 12px;text-align:right;font-weight:800;color:#db2777">${tL5 > 0 ? _meInr(tL5) : '—'}</td>
+    <td style="padding:8px 12px;text-align:right;font-weight:800;color:#374151">${_meInr(tGross)}</td>
+    <td style="padding:8px 12px;text-align:right;font-weight:800;color:#059669">${_meInr(tNet)}</td>
+    <td style="padding:8px 12px;text-align:right;font-weight:800;color:#059669">${_meInr(tRcv)}</td>
+    <td style="padding:8px 12px"></td>
+  </tr>`;
+
+  tbody.innerHTML = totalsRow + rows.map(m => {
+    const statusPills = _ME_STATUS_ORDER.filter(st => m.income_by_status && m.income_by_status[st]).map(st => {
+      const v = m.income_by_status[st];
+      return `<span style="display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;background:${_ME_STATUS_COLOR[st]}20;color:${_ME_STATUS_COLOR[st]};margin:1px 2px;white-space:nowrap">${_ME_STATUS_LABEL[st]} ${v.count}/${_meInr(v.amount)}</span>`;
+    }).join('');
+    const expanded = _commExpanded.has(m.id);
+    const dot = m.is_active
+      ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:5px;flex-shrink:0"></span>'
+      : '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ef4444;margin-right:5px;flex-shrink:0"></span>';
+    
+    const regByHtml = m.registered_by_name
+      ? `${m.registered_by_name}${m.registered_by_emp_code ? ` <span style="font-family:monospace;color:#7c3aed;font-size:9.5px">(${m.registered_by_emp_code})</span>` : ''}`
+      : (m.registered_by_emp_code || '<span style="color:#d1d5db">—</span>');
+
+    const files = m.l1_files || 0;
+    const l1 = Number(m.l1_source || 0);
+    const l2 = Number(m.l2_senior || 0);
+    const l3 = Number(m.l3_extended || 0);
+    const l4 = Number(m.l4_core || 0);
+    const l5 = Number(m.l5_support || 0);
+    const l6 = Number(m.l6_showroom || 0);
+    const l0 = Number(m.l0_bonus || 0);
+    const gross = m.gross_earned || 0;
+    const net = Math.round(gross * 0.9);
+
+    return `<tr id="comm-row-${m.id}" style="border-bottom:1px solid #f3f4f6" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background=''">
+      <td style="padding:10px 8px;text-align:center">
+        <button id="comm-btn-${m.id}" onclick="toggleCommRow(${m.id})" style="width:24px;height:24px;border-radius:6px;border:1.5px solid #e5e7eb;background:#fff;color:#6b7280;font-weight:700;cursor:pointer;outline:none">${expanded ? '−' : '+'}</button>
+      </td>
+      <td style="padding:10px 12px;font-family:monospace;font-weight:700;color:#374151">${m.partner_code}</td>
+      <td style="padding:10px 12px;font-weight:700;color:#111827">
+        <div style="display:flex;align-items:center">${dot}<span>${m.partner_name}</span></div>
+      </td>
+      <td style="padding:10px 12px;color:#4b5563;font-size:11.5px">${regByHtml}</td>
+      <td style="padding:10px 12px;text-align:center;font-weight:700;color:#374151">${files || '—'}</td>
+      <td style="padding:10px 12px;text-align:right;color:#475569;font-weight:700">${l0 > 0 ? _meInr(l0) : '—'}</td>
+      <td style="padding:10px 12px;text-align:right;color:#7c3aed;font-weight:700">${l1 > 0 ? _meInr(l1) : '—'}</td>
+      <td style="padding:10px 12px;text-align:right;color:#1d4ed8;font-weight:700">${l2 > 0 ? _meInr(l2) : '—'}</td>
+      <td style="padding:10px 12px;text-align:right;color:#0d9488;font-weight:700">${l3 > 0 ? _meInr(l3) : '—'}</td>
+      <td style="padding:10px 12px;text-align:right;color:#d97706;font-weight:700">${l4 > 0 ? _meInr(l4) : '—'}</td>
+      <td style="padding:10px 12px;text-align:right;color:#db2777;font-weight:700">${l5 > 0 ? _meInr(l5) : '—'}</td>
+      <td style="padding:10px 12px;text-align:right;font-weight:800;color:#1f2937">${_meInr(gross)}</td>
+      <td style="padding:10px 12px;text-align:right;font-weight:800;color:#059669">${_meInr(net)}</td>
+      <td style="padding:10px 12px;text-align:right;font-weight:800;color:#059669">${_meInr(m.received || 0)}</td>
+      <td style="padding:10px 12px">${statusPills || '<span style="color:#d1d5db;font-size:11px">No entries</span>'}</td>
+    </tr>
+    <tr id="comm-expand-${m.id}" style="display:${expanded ? 'table-row' : 'none'};background:#fcfbfe">
+      <td colspan="16" style="padding:12px 24px;border-bottom:1px solid #e5e7eb">
+        <div id="comm-detail-${m.id}" style="padding-bottom:6px">
+          <span style="color:#9ca3af;font-size:12px"><i class="fas fa-spinner fa-spin me-1"></i>Loading entries…</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function _commRenderPagination(total, pg, pageSize) {
+  const pages = Math.ceil(total / pageSize) || 1;
+  const el = document.getElementById('commPagination');
+  if (pages <= 1) { el.innerHTML = ''; return; }
+  let html = '';
+  for (let i = 1; i <= pages; i++) {
+    html += `<button onclick="loadCommServicesTab(${i})" style="padding:6px 12px;border-radius:7px;border:1.5px solid ${i === pg ? '#7c3aed' : '#e5e7eb'};background:${i === pg ? '#7c3aed' : '#fff'};color:${i === pg ? '#fff' : '#374151'};font-weight:600;cursor:pointer;font-size:12px">${i}</button>`;
+  }
+  el.innerHTML = html;
+}
+
+async function toggleCommRow(partnerId) {
+  const expandRow = document.getElementById('comm-expand-' + partnerId);
+  const btn = document.getElementById('comm-btn-' + partnerId);
+  const detail = document.getElementById('comm-detail-' + partnerId);
+
+  if (_commExpanded.has(partnerId)) {
+    _commExpanded.delete(partnerId);
+    expandRow.style.display = 'none';
+    btn.textContent = '+';
+    return;
+  }
+
+  _commExpanded.add(partnerId);
+  expandRow.style.display = 'table-row';
+  btn.textContent = '−';
+  detail.innerHTML = '<span style="color:#9ca3af;font-size:12px"><i class="fas fa-spinner fa-spin me-1"></i>Loading entries…</span>';
+
+  try {
+    const activeStage = (document.getElementById('commStageFilter')?.value || '').trim();
+    const commDf = (document.getElementById('commDateFrom')?.value || '').trim();
+    const commDt = (document.getElementById('commDateTo')?.value || '').trim();
+
+    let detailUrl = API + '/vgk/dashboard/member-income-entries?partner_id=' + partnerId + '&community_only=true';
+    if (activeStage) detailUrl += '&status=' + encodeURIComponent(activeStage);
+    if (commDf) detailUrl += '&date_from=' + encodeURIComponent(commDf);
+    if (commDt) detailUrl += '&date_to=' + encodeURIComponent(commDt);
+
+    const r = await staffFetch(detailUrl);
+    const d = await r.json();
+    if (!d.success || !d.data || !d.data.length) {
+      detail.innerHTML = '<p style="color:#9ca3af;font-size:12px;margin:0;padding:8px 0"><i class="fas fa-inbox me-1"></i>No community service income entries for this member.</p>';
+      return;
+    }
+    _meDetailCache[partnerId] = d.data;
+    _renderCommDetailTable(partnerId);
+  } catch (ex) {
+    detail.innerHTML = '<p style="color:#dc2626;font-size:12px;margin:0">Error: ' + ex.message + '</p>';
+  }
+}
+
+function _filterCommDetail(partnerId) {
+  _renderCommDetailTable(partnerId);
+}
+
+function _renderCommDetailTable(partnerId) {
+  const detail = document.getElementById('comm-detail-' + partnerId);
+  if (!detail) return;
+
+  const allRows = _meDetailCache[partnerId] || [];
+  const searchInput = document.querySelector('#comm-detail-' + partnerId + ' #comm-det-search-' + partnerId);
+  const _perSearch = (searchInput?.value || '').trim().toLowerCase();
+
+  const kindSelect = document.querySelector('#comm-detail-' + partnerId + ' #comm-det-kind-' + partnerId);
+  const kindVal = (kindSelect?.value || '').trim();
+
+  const statusVal = document.getElementById('commCancelFilter')?.value ?? 'HIDE_CANCELLED';
+
+  let rows = allRows;
+  if (_perSearch) {
+    rows = rows.filter(e =>
+      (e.client_name || '').toLowerCase().includes(_perSearch) ||
+      (e.client_mobile || '').toLowerCase().includes(_perSearch)
+    );
+  }
+  if (kindVal) {
+    if (kindVal === 'ADVANCE') {
+      rows = rows.filter(e => e.kind === 'ADVANCE' || e.kind === 'DVR_ADVANCE');
+    } else {
+      const lv = parseInt(kindVal);
+      rows = rows.filter(e => e.kind !== 'ADVANCE' && e.level === lv);
+    }
+  }
+
+  if (statusVal === 'HIDE_CANCELLED') rows = rows.filter(e => e.status !== 'CANCELLED');
+  else if (statusVal === 'ONLY_CANCELLED') rows = rows.filter(e => e.status === 'CANCELLED');
+
+  const sc = (st) => _ME_STATUS_COLOR[st] || '#6b7280';
+  const fmtDate = (ds) => {
+    if (!ds) return '—';
+    try {
+      const s = ds.length === 10 ? ds : ds.substring(0, 10);
+      const [y, m, day] = s.split('-');
+      return `${day}/${m}/${y}`;
+    } catch (x) { return ds.substring(0, 10); }
+  };
+
+  const _lvlMeta = {
+    0: { lbl: 'Comm', bg: '#f1f5f9', c: '#475569' },
+    1: { lbl: 'Source', bg: '#ede9fe', c: '#7c3aed' },
+    2: { lbl: 'Senior', bg: '#eff6ff', c: '#1d4ed8' },
+    3: { lbl: 'Extended', bg: '#f0fdfa', c: '#0d9488' },
+    4: { lbl: 'Core', bg: '#fffbeb', c: '#d97706' },
+    5: { lbl: 'Support', bg: '#f9fafb', c: '#db2777' },
+    6: { lbl: 'Showroom', bg: '#fdf4ff', c: '#c026d3' },
+  };
+
+  const typeLbl = (kind, level, level_label) => {
+    if (kind === 'SLAB_BONUS') {
+      return `<span style="background:#fdf4ff;color:#7e22ce;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700"><i class="fas fa-star" style="font-size:8px;margin-right:2px"></i>Slab Bonus</span>`;
+    }
+    if (kind === 'ADVANCE' || kind === 'DVR_ADVANCE') {
+      const _aLbl = kind === 'DVR_ADVANCE' ? 'DVR Adv' : 'Solar Adv';
+      const _stg = kind === 'DVR_ADVANCE' ? ' <span style="opacity:.65;font-size:9px">St.2</span>' : ' <span style="opacity:.65;font-size:9px">St.1</span>';
+      const _lvl = (level && level > 0) ? ` <span style="opacity:.75">L${level}</span>` : '';
+      return `<span style="background:#fef3c7;color:#d97706;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">${_aLbl}${_stg}${_lvl}</span>`;
+    }
+    const m = _lvlMeta[level];
+    const name = (m && m.lbl) || level_label || 'Comm';
+    const bg = (m && m.bg) || '#f1f5f9';
+    const c = (m && m.c) || '#475569';
+    const lvlTag = (level && level > 0) ? ` <span style="opacity:.75">L${level}</span>` : '';
+    return `<span style="background:${bg};color:${c};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">${name}${lvlTag}</span>`;
+  };
+
+  const _pendSet = new Set(['DRAFT', 'PENDING', 'STAGE1_APPROVED']);
+  const totGross = rows.reduce((s, e) => s + e.commission_amount, 0);
+  const totNet = rows.reduce((s, e) => s + e.net_payout, 0);
+  const totGrossPending = rows.filter(e => _pendSet.has(e.status)).reduce((s, e) => s + e.commission_amount, 0);
+  const totNetPending = rows.filter(e => _pendSet.has(e.status)).reduce((s, e) => s + (e.net_payout > 0 ? e.net_payout : e.commission_amount * 0.9), 0);
+  const totalAll = allRows.length;
+
+  const TH = (txt, align = 'left', extra = '') =>
+    `<th style="padding:7px 10px;text-align:${align};color:#6b7280;font-weight:700;font-size:10.5px;text-transform:uppercase;${extra}">${txt}</th>`;
+
+  detail.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <span style="font-size:11.5px;font-weight:700;color:#7c3aed">
+        <i class="fas fa-list me-1"></i>Date-wise Community Income Breakdown — ${rows.length}${rows.length < totalAll ? ' of ' + totalAll : ''} entr${totalAll === 1 ? 'y' : 'ies'}
+      </span>
+      <input id="comm-det-search-${partnerId}" type="text" placeholder="Search customer name / mobile…"
+        value="${_perSearch}"
+        oninput="_filterCommDetail(${partnerId})"
+        style="padding:5px 10px;border:1.5px solid #e5e7eb;border-radius:7px;font-size:12px;width:210px;outline:none">
+      <select id="comm-det-kind-${partnerId}" onchange="_filterCommDetail(${partnerId})"
+        style="padding:5px 9px;border:1.5px solid #e5e7eb;border-radius:7px;font-size:12px;outline:none;background:#fff;cursor:pointer">
+        <option value="">All Levels</option>
+        <option value="1" ${kindVal === '1' ? 'selected' : ''}>Source (L1)</option>
+        <option value="2" ${kindVal === '2' ? 'selected' : ''}>Senior (L2)</option>
+        <option value="3" ${kindVal === '3' ? 'selected' : ''}>Extended (L3)</option>
+        <option value="4" ${kindVal === '4' ? 'selected' : ''}>Core (L4)</option>
+        <option value="5" ${kindVal === '5' ? 'selected' : ''}>Support (L5)</option>
+        <option value="6" ${kindVal === '6' ? 'selected' : ''}>Showroom (L6)</option>
+        <option value="ADVANCE" ${kindVal === 'ADVANCE' ? 'selected' : ''}>Solar Advance</option>
+      </select>
+    </div>
+    <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="background:#ede9fe;border-bottom:1px solid #ddd6fe">
+          ${TH('Date')}
+          ${TH('Submit Date')}
+          ${TH('1st Txn Date')}
+          ${TH('Final Date')}
+          ${TH('Entry #')}
+          ${TH('Level / Type')}
+          ${TH('Customer')}
+          ${TH('Commission Base ₹', 'right')}
+          ${TH('%', 'right')}
+          ${TH('Gross ₹', 'right')}
+          ${TH('Admin ₹', 'right')}
+          ${TH('TDS ₹', 'right')}
+          ${TH('Net ₹', 'right')}
+          ${TH('Gross Pending ₹', 'right', 'color:#d97706')}
+          ${TH('Net Pending ₹', 'right', 'color:#b45309')}
+          ${TH('Status', 'center')}
+        </tr>
+      </thead>
+      <tbody>
+      ${rows.length ? rows.map(e => {
+        return `<tr style="border-bottom:1px solid #f3f4f6">
+        <td style="padding:7px 10px;color:#6b7280;white-space:nowrap">${fmtDate(e.income_date)}</td>
+        <td style="padding:7px 10px;color:#6b7280;white-space:nowrap">${e.submit_date ? fmtDate(e.submit_date) : '<span style="color:#d1d5db">—</span>'}</td>
+        <td style="padding:7px 10px;color:#6b7280;white-space:nowrap">${e.first_payment_received_date ? fmtDate(e.first_payment_received_date) : '<span style="color:#d1d5db">—</span>'}</td>
+        <td style="padding:7px 10px;color:#059669;white-space:nowrap">${e.complete_date ? fmtDate(e.complete_date) : '<span style="color:#d1d5db">—</span>'}</td>
+        <td style="padding:7px 10px;font-family:monospace;color:#1f2937;font-size:11px">${e.entry_number || '—'}</td>
+        <td style="padding:7px 10px">${typeLbl(e.kind, e.level, e.level_label)}</td>
+        <td style="padding:7px 10px;color:#374151;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${e.client_name || ''}">${e.client_name || '<span style="color:#d1d5db">—</span>'}</td>
+        <td style="padding:7px 10px;text-align:right;color:#1e40af;font-weight:600">${e.deal_value > 0 ? _meInr(e.deal_value) : '—'}</td>
+        <td style="padding:7px 10px;text-align:right;color:#7c3aed;font-weight:700">${e.commission_pct > 0 ? e.commission_pct + '%' : '—'}</td>
+        <td style="padding:7px 10px;text-align:right;font-weight:700;color:#374151">${e.commission_amount > 0 ? _meInr(e.commission_amount) : '—'}</td>
+        <td style="padding:7px 10px;text-align:right;color:#d97706">${e.admin_charges > 0 ? _meInr(e.admin_charges) : '—'}</td>
+        <td style="padding:7px 10px;text-align:right;color:#dc2626">${e.tds_amount > 0 ? _meInr(e.tds_amount) : '—'}</td>
+        <td style="padding:7px 10px;text-align:right;font-weight:700;color:#059669">${e.net_payout > 0 ? _meInr(e.net_payout) : '—'}</td>
+        <td style="padding:7px 10px;text-align:right;font-weight:700;color:#d97706">${_pendSet.has(e.status) && e.commission_amount > 0 ? _meInr(e.commission_amount) : '<span style="color:#d1d5db">—</span>'}</td>
+        <td style="padding:7px 10px;text-align:right;font-weight:700;color:#b45309">${_pendSet.has(e.status) && e.commission_amount > 0 ? _meInr(e.net_payout > 0 ? e.net_payout : e.commission_amount * 0.9) + '<span style="font-size:9px;color:#d97706;margin-left:2px">' + (e.net_payout > 0 ? '' : '~') + '</span>' : '<span style="color:#d1d5db">—</span>'}</td>
+        <td style="padding:7px 10px;text-align:center"><span style="background:${sc(e.status)}20;color:${sc(e.status)};padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700">${e.status}</span></td>
+      </tr>`;
+      }).join('')
+      : '<tr><td colspan="16" style="padding:20px;text-align:center;color:#9ca3af;font-size:12px"><i class="fas fa-search me-1"></i>No entries match the filter.</td></tr>'}
+      </tbody>
+      <tfoot>
+        <tr style="background:#f0fdf4;font-weight:700;border-top:2px solid #bbf7d0">
+          <td colspan="9" style="padding:8px 10px;color:#374151;font-size:12px">TOTAL (${rows.length} entries)</td>
+          <td style="padding:8px 10px;text-align:right;color:#374151">${_meInr(totGross)}</td>
+          <td style="padding:8px 10px;text-align:right;color:#d97706">${_meInr(rows.reduce((s, e) => s + e.admin_charges, 0))}</td>
+          <td style="padding:8px 10px;text-align:right;color:#dc2626">${_meInr(rows.reduce((s, e) => s + e.tds_amount, 0))}</td>
+          <td style="padding:8px 10px;text-align:right;color:#059669">${_meInr(totNet)}</td>
+          <td style="padding:8px 10px;text-align:right;color:#d97706;background:#fffbeb">${totGrossPending > 0 ? _meInr(totGrossPending) : '—'}</td>
+          <td style="padding:8px 10px;text-align:right;color:#b45309;background:#fffbeb">${totNetPending > 0 ? _meInr(totNetPending) : '—'}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table></div>`;
+}
+
 </script>
 
 <!-- ═══════ ADVANCED SEARCH MODAL (DC-VGK-ADV-SEARCH-001) ═══════ -->
@@ -4695,6 +5677,274 @@ function updateAdvSearchBadge() {
     <button onclick="applyAdvSearch()" style="background:linear-gradient(135deg,#7c3aed,#4c1d95);color:white;border:none;border-radius:8px;padding:9px 22px;font-size:13px;font-weight:700;cursor:pointer"><i class="fas fa-search me-1"></i>Apply Filters</button>
   </div>
 </div>
+</div>
+
+<!-- Poster Modal (Generate & Download) -->
+<div id="posterModal" onclick="if(event.target===this)closePosterModal()" style="display:none;position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:16px;overflow-y:auto;box-sizing:border-box">
+  <div style="background:white;border-radius:16px;width:100%;max-width:1200px;box-shadow:0 20px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;max-height:90vh;overflow:hidden">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#10b981,#059669);padding:16px 24px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+      <div style="color:white">
+        <div style="font-size:16px;font-weight:800"><i class="fas fa-image me-2"></i>Generate Channel Partner Achievement Poster</div>
+        <div style="font-size:12px;opacity:.85;margin-top:2px">Customize information and generate a premium poster for sharing</div>
+      </div>
+      <button onclick="closePosterModal()" style="background:rgba(255,255,255,.2);border:none;border-radius:8px;color:white;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center"><i class="fas fa-times"></i></button>
+    </div>
+    
+    <!-- Body -->
+    <div style="display:flex;flex:1;overflow:hidden">
+      <!-- Left Pane: Controls -->
+      <div style="width:380px;background:#f9fafb;border-right:1px solid #e5e7eb;padding:20px;overflow-y:auto;box-sizing:border-box">
+        <h5 style="font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;margin-bottom:16px;border-bottom:2px solid #e5e7eb;padding-bottom:6px"><i class="fas fa-edit me-1" style="color:#059669"></i>Poster Details</h5>
+        
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px">POSTER TITLE</label>
+            <input type="text" id="postTitle" oninput="updatePoster()" style="width:100%;padding:8px 10px;font-size:12px;border:1.5px solid #d1d5db;border-radius:6px;outline:none" placeholder="e.g. SOLAR 1ST PAYMENT RELEASED">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px">POSTER SUBTITLE</label>
+            <input type="text" id="postSubtitle" oninput="updatePoster()" style="width:100%;padding:8px 10px;font-size:12px;border:1.5px solid #d1d5db;border-radius:6px;outline:none" placeholder="e.g. BIG WEEK EXTRA BONUS">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px">HIGHLIGHT VALUE (TODAY'S EARNING) (₹)</label>
+            <input type="text" id="postHighlight" oninput="updatePoster()" style="width:100%;padding:8px 10px;font-size:12px;border:1.5px solid #d1d5db;border-radius:6px;outline:none" placeholder="e.g. ₹1,000/-">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px">FILES COUNT</label>
+            <input type="text" id="postFiles" oninput="updatePoster()" style="width:100%;padding:8px 10px;font-size:12px;border:1.5px solid #d1d5db;border-radius:6px;outline:none" placeholder="e.g. 12 FILES">
+          </div>
+          <div style="border-top:1px solid #e5e7eb;margin-top:8px;padding-top:12px">
+            <h6 style="font-size:12px;font-weight:700;color:#111827;margin-bottom:8px">TODAY'S PAYOUT SECTION</h6>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">TODAY'S PAYOUT BREAKUP</label>
+                <input type="text" id="postTodayPayout" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. Stage 1 Advance: ₹1,500/-">
+              </div>
+              <div>
+                <label style="font-size:10px;font-weight:650;color:#374151;display:block;margin-bottom:4px">PAYMENT TYPES (BREAKUP OPTIONS)</label>
+                <div style="display:flex;flex-direction:column;gap:5px;background:#f3f4f6;padding:8px;border-radius:6px;border:1px solid #e5e7eb">
+                  <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
+                    <input type="checkbox" id="payTypeStage1" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Stage 1 Advance
+                  </label>
+                  <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
+                    <input type="checkbox" id="payTypeStage2" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Stage 2 Payout
+                  </label>
+                  <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
+                    <input type="checkbox" id="payTypeBonanza" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Bonanza
+                  </label>
+                  <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
+                    <input type="checkbox" id="payTypeExtra" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Extra Commission
+                  </label>
+                </div>
+              </div>
+              <div>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">LAST DATE (EARNING DATE)</label>
+                <select id="postPayoutDate" onchange="changePayoutDate()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px;background-color:white;outline:none"></select>
+              </div>
+              <div>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">BONUS DESCR &amp; AMOUNT</label>
+                <input type="text" id="postBonusDesc" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. Big Week Extra Bonus: ₹1,000/-">
+              </div>
+              <div>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">TOTAL TODAY PAYOUT (₹)</label>
+                <input type="text" id="postTotalToday" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. ₹2,500/-">
+              </div>
+            </div>
+          </div>
+          <div style="border-top:1px solid #e5e7eb;margin-top:8px;padding-top:12px">
+            <h6 style="font-size:12px;font-weight:700;color:#111827;margin-bottom:8px">TEAM &amp; POTENTIAL</h6>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">TOTAL TEAM SIZE</label>
+                <input type="text" id="postOverall" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. 8 MEMBERS">
+              </div>
+              <div>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">TEAM BREAKUP (L2, L3, L4)</label>
+                <input type="text" id="postTeamBreakup" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. L2: 6 | L3: 2 | L4: 0">
+              </div>
+              <div>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">POTENTIAL EARNING (₹)</label>
+                <input type="text" id="postPotential" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. ₹105,000/-">
+              </div>
+            </div>
+          </div>
+          <div style="border-top:1px solid #e5e7eb;margin-top:8px;padding-top:12px">
+            <h6 style="font-size:12px;font-weight:700;color:#111827;margin-bottom:8px">RECENT CUSTOMER &amp; LOCATION</h6>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">CUSTOMER NAME</label>
+                <input type="text" id="postCustomer" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. Gadi Madhu Mohan">
+              </div>
+              <div>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">LOCATION</label>
+                <input type="text" id="postLocation" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. Narsipatnam">
+              </div>
+            </div>
+          </div>
+          <div style="border-top:1px solid #e5e7eb;margin-top:8px;padding-top:12px">
+            <h6 style="font-size:12px;font-weight:700;color:#111827;margin-bottom:8px">SENIOR REFERRER DETAILS</h6>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">SENIOR NAME</label>
+                <input type="text" id="postSeniorName" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. NISSI ENTERPRISES">
+              </div>
+              <div>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">SENIOR EARNING (₹)</label>
+                <input type="text" id="postSeniorEarning" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. ₹9,000/-">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right Pane: Live Poster Preview -->
+      <div style="flex:1;background:#52525b;display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto;position:relative">
+        <div id="posterSpinner" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.6);z-index:10;align-items:center;justify-content:center;color:white;font-size:14px">
+          <div style="text-align:center"><i class="fas fa-circle-notch fa-spin fa-2x mb-2"></i><div>Analyzing and populating values…</div></div>
+        </div>
+        
+        <!-- Renderable Canvas Wrapper -->
+        <div id="posterCanvasWrapper" style="width:800px;height:600px;background:#ffffff;border:8px double #051229;border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,0.15);position:relative;padding:18px;box-sizing:border-box;color:#1e293b;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;user-select:none;flex-shrink:0">
+          
+          <!-- Decorative Inner Gold Border -->
+          <div style="position:absolute;inset:5px;border:1.5px dashed rgba(251,191,36,0.6);border-radius:8px;pointer-events:none;z-index:2"></div>
+          
+          <div style="display:flex;height:100%;gap:16px;position:relative;z-index:3">
+            <!-- Left Side: Member Payout Card -->
+            <div style="width:260px;background:#051229;border:2.5px solid #fbbf24;border-radius:12px;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;text-align:center;position:relative;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+              
+              <!-- Proud Winner Header Banner -->
+              <div style="background:linear-gradient(90deg,#fbbf24,#aa7c11,#fbbf24);color:#111827;font-size:10.5px;font-weight:900;letter-spacing:1.5px;padding:4px;border-radius:4px;text-transform:uppercase;margin-bottom:10px;box-shadow:0 3px 6px rgba(0,0,0,0.2)">PROUD WINNER</div>
+              
+              <!-- Profile Arch frame -->
+              <div style="width:140px;height:180px;border-top-left-radius:70px;border-top-right-radius:70px;border:3.5px solid #fbbf24;box-shadow:0 0 20px rgba(251,191,36,0.35);overflow:hidden;margin:0 auto 10px;background:#0b0f19;display:flex;align-items:center;justify-content:center;position:relative">
+                <img id="prevImg" src="" style="width:100%;height:100%;object-fit:cover;display:none" crossorigin="anonymous">
+                <div id="prevAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#3b82f6,#7c3aed);color:white;font-size:36px;font-weight:900">AB</div>
+              </div>
+              
+              <!-- Member Name Ribbon -->
+              <div id="prevName" style="font-size:12.5px;font-weight:800;color:white;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:12px;min-height:18px;white-space:normal;line-height:1.2;padding:0 4px">BANDI GANGARAJU</div>
+              
+              <!-- Today's Payout block -->
+              <div style="background:rgba(251,191,36,0.15);border:2px solid #fbbf24;border-radius:8px;padding:8px;margin-bottom:8px;text-align:left;box-shadow:0 0 15px rgba(251,191,36,0.3)">
+                <div style="font-size:9.5px;font-weight:950;color:#fbbf24;letter-spacing:1.2px;margin-bottom:5px;text-align:center;text-shadow:0 0 8px rgba(251,191,36,0.4)">★ TODAY'S PAYOUT ★</div>
+                <div id="prevTodayPayout" style="font-size:12.5px;font-weight:950;color:#ffffff;min-height:22px;text-align:center;line-height:1.2">₹1,500/-</div>
+                <div id="prevBonusDesc" style="font-size:8px;color:#fbbf24;margin-top:5px;opacity:0.95;text-align:center;font-weight:850">Big Week Extra Bonus: ₹1,000/-</div>
+              </div>
+              
+              <!-- Total Today Payout Badge -->
+              <div style="background:linear-gradient(135deg,#059669,#064e3b);border:1.5px solid #fbbf24;padding:6px;border-radius:6px;box-shadow:0 3px 8px rgba(0,0,0,0.3)">
+                <div style="font-size:7.5px;font-weight:800;color:#a7f3d0;letter-spacing:0.5px">TOTAL TODAY'S PAYOUT</div>
+                <div id="prevTotalToday" style="font-size:16px;font-weight:900;color:white;margin-top:1px">₹2,500/-</div>
+              </div>
+            </div>
+            
+            <!-- Right Side: Achievement Details -->
+            <div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:4px 0;box-sizing:border-box">
+              <!-- Brand Logos Row (with Solar House Image / Har Ghar Solar Logo) -->
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:0 8px">
+                <img src="/vgk4u-logo.png" style="height:50px;object-fit:contain" crossorigin="anonymous">
+                <img src="/public/myntreal-logo-trans.png" style="height:50px;object-fit:contain" crossorigin="anonymous">
+                <img src="/public/solar-logo-harghar-trans.png" style="height:58px;object-fit:contain" crossorigin="anonymous">
+              </div>
+              
+              <!-- Mega Headline and Subheadline -->
+              <div style="text-align:center">
+                <!-- Red Ribbon Title Block -->
+                <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px">
+                  <div style="background:linear-gradient(180deg, #990000, #dd0000);border:1.5px solid #fbbf24;border-radius:6px;padding:6px 16px;display:flex;align-items:center;gap:8px;box-shadow:0 3px 6px rgba(0,0,0,0.15)">
+                    <span style="color:#fbbf24;font-size:14px"><i class="fas fa-bullhorn"></i></span>
+                    <div id="prevTitle" style="font-size:16px;font-weight:900;color:#fbbf24;text-transform:uppercase;letter-spacing:1px">★ SOLAR 1ST PAYMENT RELEASED ★</div>
+                    <span style="color:#fbbf24;font-size:14px"><i class="fas fa-bullhorn"></i></span>
+                  </div>
+                </div>
+                
+                <!-- Gold Ribbon Subtitle Block -->
+                <div style="text-align:center;margin-bottom:8px">
+                  <div id="prevSubtitle" style="display:inline-block;background:linear-gradient(180deg, #fef08a, #fbbf24);border:1.5px solid #d97706;padding:4px 16px;border-radius:6px;font-size:10.5px;font-weight:900;letter-spacing:1px;color:#0f172a;text-transform:uppercase;box-shadow:0 2px 4px rgba(0,0,0,0.1)">★ BIG WEEK EXTRA BONUS ★</div>
+                </div>
+              </div>
+              
+              <!-- Large Highlight Value display (Marquee Gold Box) -->
+              <div style="display:flex;justify-content:center;margin:6px 0">
+                <div style="background:#fefcbf;border:3px solid #fbbf24;border-radius:12px;padding:8px 30px;text-align:center;box-shadow:0 4px 10px rgba(0,0,0,0.08);position:relative;min-width:260px">
+                  <div style="position:absolute;top:3px;left:3px;width:5px;height:5px;border-radius:50%;background:#ffffff;box-shadow:0 0 4px #fbbf24"></div>
+                  <div style="position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;background:#ffffff;box-shadow:0 0 4px #fbbf24"></div>
+                  <div style="position:absolute;bottom:3px;left:3px;width:5px;height:5px;border-radius:50%;background:#ffffff;box-shadow:0 0 4px #fbbf24"></div>
+                  <div style="position:absolute;bottom:3px;right:3px;width:5px;height:5px;border-radius:50%;background:#ffffff;box-shadow:0 0 4px #fbbf24"></div>
+                  
+                  <div id="prevHighlight" style="font-size:42px;font-weight:950;color:#dc2626;letter-spacing:-1px;line-height:1">₹1,000/-</div>
+                  <div style="font-size:9.5px;font-weight:900;color:#1e293b;letter-spacing:1.5px;margin-top:3px;text-transform:uppercase">TODAY'S EARNING</div>
+                </div>
+              </div>
+              
+              <!-- Cards Grid -->
+              <div style="display:flex;gap:10px;align-items:stretch">
+                <!-- 1. Files Badge -->
+                <div style="width:72px;background:#1e293b;border:1.5px solid #fbbf24;border-radius:10px;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:8px;box-sizing:border-box">
+                  <div style="background:#fbbf24;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#1e293b;box-shadow:0 2px 5px rgba(251,191,36,0.35)"><i class="fas fa-file-invoice" style="font-size:13px"></i></div>
+                  <div id="prevFiles" style="font-size:10px;font-weight:950;color:#ffffff;margin-top:6px;text-align:center;line-height:1.1;letter-spacing:0.3px">12 FILES</div>
+                </div>
+                
+                <!-- 2. Team Size and Breakup -->
+                <div style="flex:1;background:#ffffff;border:1.5px solid #fbbf24;border-radius:10px;padding:8px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between">
+                  <div style="font-size:8px;font-weight:850;color:#047857;letter-spacing:0.5px;text-transform:uppercase;text-align:center">TOTAL TEAM SIZE</div>
+                  <div style="background:#047857;border-radius:6px;padding:4px 2px;margin:4px 0;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
+                    <div id="prevOverall" style="font-size:15px;font-weight:950;color:#ffffff;line-height:1.2">8 MEMBERS</div>
+                  </div>
+                  <div style="background:#d1fae5;border-radius:4px;padding:3.5px;text-align:center;box-shadow:inset 0 1px 2px rgba(0,0,0,0.05)">
+                    <div id="prevTeamBreakup" style="font-size:9.5px;font-weight:850;color:#065f46;text-transform:uppercase;letter-spacing:0.1px">L2: 6 | L3: 2 | L4: 0</div>
+                  </div>
+                </div>
+
+                <!-- 3. Potential Earning -->
+                <div style="flex:1;background:#ffffff;border:1.5px solid #fca5a5;border-radius:10px;padding:8px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between">
+                  <div style="font-size:8px;font-weight:850;color:#b91c1c;letter-spacing:0.5px;text-transform:uppercase;text-align:center">POTENTIAL EARNING</div>
+                  <div style="background:#b91c1c;border-radius:6px;padding:4px 2px;margin:4px 0;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
+                    <div id="prevPotential" style="font-size:15px;font-weight:950;color:#ffffff;line-height:1.2">₹105,000/-</div>
+                  </div>
+                  <div style="background:#fee2e2;border-radius:4px;padding:3.5px;text-align:center;box-shadow:inset 0 1px 2px rgba(0,0,0,0.05)">
+                    <div style="font-size:8px;font-weight:850;color:#991b1b;text-transform:uppercase;letter-spacing:0.2px">TOTAL VALUATION</div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Footer border separator line -->
+              <div style="border-top:1.5px solid #cbd5e1;margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;align-items:center">
+                <!-- Customer info -->
+                <div style="display:flex;flex-direction:column;gap:1px;text-align:left;max-width:230px">
+                  <div style="font-size:9.5px;font-weight:800;color:#64748b;letter-spacing:0.5px">CUSTOMER NAME / LOCATION</div>
+                  <div id="prevCustomer" style="font-size:13px;font-weight:800;color:#0f172a;text-transform:uppercase;line-height:1.2">GADI MADHU MOHAN</div>
+                  <div id="prevLocation" style="font-size:11.5px;font-weight:700;color:#1e3a8a;text-transform:uppercase">NARSIPATNAM</div>
+                </div>
+                
+                <!-- Senior Referrer info -->
+                <div style="display:flex;flex-direction:column;gap:1px;text-align:right;max-width:230px">
+                  <div style="font-size:9.5px;font-weight:800;color:#64748b;letter-spacing:0.5px">SENIOR REFERRER / EARNING</div>
+                  <div id="prevSeniorName" style="font-size:13px;font-weight:800;color:#0f172a;text-transform:uppercase;line-height:1.2">NISSI ENTERPRISES</div>
+                  <div id="prevSeniorEarning" style="font-size:11.5px;font-weight:700;color:#1e3a8a;text-transform:uppercase">₹9,000/-</div>
+                </div>
+              </div>
+              
+              <!-- Disclaimer line -->
+              <div style="font-size:6.5px;font-weight:600;color:#64748b;text-align:center;margin-top:8px;letter-spacing:0.3px;opacity:0.8;text-transform:uppercase">
+                * Potential earning is based on final completion of projects and subject to company terms.
+              </div>
+              
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+    
+    <!-- Footer actions -->
+    <div style="background:#f3f4f6;padding:14px 24px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:10px;flex-shrink:0">
+      <button onclick="closePosterModal()" style="background:#fff;color:#374151;border:1.5px solid #d1d5db;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+      <button onclick="downloadPoster()" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;padding:9px 24px;font-size:13px;font-weight:700;cursor:pointer"><i class="fas fa-download me-1"></i>Download Image</button>
+    </div>
+  </div>
 </div>
 
 </body>

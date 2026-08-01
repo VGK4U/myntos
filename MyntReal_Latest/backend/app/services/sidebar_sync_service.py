@@ -273,6 +273,7 @@ SIDEBAR_ROUTE_MAPPING = {
     "/staff/accounts/hsn": {"section": "configuration", "order": 15},
     "/staff/marketplace/codes-segments": {"section": "marketplace", "order": 12, "parent": "accounts"},
     "/staff/settings": {"section": "configuration", "order": 15},
+    "/staff/accounts/community-services": {"section": "configuration", "order": 15},
     # DC_SAAS_CONSOLE_001: SaaS-level routes moved into the VGK SaaS section (supreme-only).
     "/staff/accounts/companies": {"section": "vgk-saas", "order": 13},
     "/staff/my-tenant": {"section": "vgk-saas", "order": 13},
@@ -477,6 +478,17 @@ def get_section_for_route(route_path: str) -> dict:
     return {"section": "staff-dashboard", "order": 2}
 
 REQUIRED_CANONICAL_ROUTES = [
+    {
+        "route_path": "/staff/accounts/community-services",
+        "section_id": "configuration",
+        "section_title": "CONFIGURATION",
+        "section_order": 15,
+        "subsection_title": None,
+        "is_submenu": False,
+        "parent_section": None,
+        "menu_name": "Community Services",
+        "menu_icon": "fas fa-hands-helping"
+    },
     {
         "route_path": "/staff/tasks/day-planner",
         "section_id": "task-management",

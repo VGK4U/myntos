@@ -34,7 +34,8 @@ class CRMAssigneeSearch {
             'telecaller': 'Search tele caller by name, code, or phone...',
             'field_staff': 'Search field staff by name, code, or phone...',
             'vendor': 'Search vendor by name or code...',
-            'partner': 'Search partner by name or code...'
+            'partner': 'Search partner by name or code...',
+            'community': 'Search community by name or area...'
         };
         return placeholders[this.assigneeType] || 'Search...';
     }
@@ -44,7 +45,8 @@ class CRMAssigneeSearch {
             'telecaller': 'Tele Caller',
             'field_staff': 'Field Staff',
             'vendor': 'Vendor',
-            'partner': 'Partner'
+            'partner': 'Partner',
+            'community': 'Community Member'
         };
         return labels[this.assigneeType] || 'Assignee';
     }
@@ -54,7 +56,8 @@ class CRMAssigneeSearch {
             'telecaller': 'fa-headset',
             'field_staff': 'fa-user-tie',
             'vendor': 'fa-building',
-            'partner': 'fa-handshake'
+            'partner': 'fa-handshake',
+            'community': 'fa-users'
         };
         return icons[this.assigneeType] || 'fa-user';
     }
@@ -192,6 +195,27 @@ class CRMAssigneeSearch {
     }
     
     async fetchResults(query) {
+        if (this.assigneeType === 'community') {
+            const url = `/api/v1/community-services/admin/active-search?q=${encodeURIComponent(query)}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            const data = await response.json();
+            return (data.results || []).map(r => ({
+                id: r.id,
+                name: r.display,
+                code: 'COMM',
+                type: 'community',
+                subtype: 'community'
+            }));
+        }
+        
         const companyId = this.getCompanyId();
         // Partners, telecallers, and field staff are global — company_id is not required for these types
         if (!companyId && this.assigneeType !== 'partner' && this.assigneeType !== 'telecaller' && this.assigneeType !== 'field_staff') {
@@ -289,7 +313,8 @@ class CRMAssigneeSearch {
             'telecaller': 'info',
             'field_staff': 'success',
             'vendor': 'warning',
-            'partner': 'primary'
+            'partner': 'primary',
+            'community': 'danger'
         };
         return colors[this.assigneeType] || 'primary';
     }

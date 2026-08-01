@@ -1065,6 +1065,16 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
             <div id="ef_fs_results" class="list-group mt-1" style="max-height:140px;overflow-y:auto;display:none;position:absolute;z-index:1060;width:100%;top:100%;left:0"></div>
             <div id="ef_fs_selected" class="mt-1"></div>
           </div>
+          <div class="form-group" style="position:relative">
+            <label>Community Member <span class="text-muted">(Search)</span></label>
+            <div class="input-group mb-1">
+              <input type="text" class="form-control" id="ef_community_search" placeholder="Search community..." oninput="efCommunitySearch()">
+              <button class="btn btn-outline-secondary btn-sm" type="button" onclick="efClearCommunity()"><i class="fas fa-times"></i></button>
+            </div>
+            <input type="hidden" id="ef_community_id">
+            <div id="ef_community_results" class="list-group mt-1" style="max-height:140px;overflow-y:auto;display:none;position:absolute;z-index:1060;width:100%;top:100%;left:0"></div>
+            <div id="ef_community_selected" class="mt-1"></div>
+          </div>
         </div>
         <div class="form-grid g3" style="margin-bottom:4px">
           <div class="form-group" style="position:relative">
@@ -3431,6 +3441,12 @@ function openEdit(leadId){
   if(_netSrcActive){efFetchGuru(_mnrVgkSrcId,true);}
   sv('ef_fs_type',l.field_support_ref_type||'');sv('ef_fs_id',l.field_support_ref_id||l.adi_guru_id||'');sv('ef_fs_name',l.field_support_ref_name||l.adi_guru_name||'');
   sv('ef_fs_search','');efRenderSelected('fs',l.field_support_ref_type||'',l.field_support_ref_id||l.adi_guru_id||'',l.field_support_ref_name||l.adi_guru_name||'');
+  sv('ef_community_id', l.community_id||''); sv('ef_community_search', '');
+  if (l.community_id) {
+    document.getElementById('ef_community_selected').innerHTML = `<span class="badge bg-danger p-2"><i class="fas fa-users me-1"></i>${l.community_name || 'Community ID: ' + l.community_id}</span>`;
+  } else {
+    document.getElementById('ef_community_selected').innerHTML = '';
+  }
   sv('ef_tele_id',l.telecaller_id||'');sv('ef_tele_search','');
   efRenderSelected('tele','staff',l.telecaller_id||'',l.telecaller_name||'');
   if(l.field_staff_id){sv('ef_showroom_id',l.field_staff_id);sv('ef_showroom_type','staff');}else if(l.showroom_vgk_id){sv('ef_showroom_id',l.showroom_vgk_id);sv('ef_showroom_type','partner');}else if(l.associated_partner_id){sv('ef_showroom_id',l.associated_partner_id);sv('ef_showroom_type','partner');}else{sv('ef_showroom_id','');sv('ef_showroom_type','');}sv('ef_showroom_search','');
@@ -3443,7 +3459,7 @@ function openEdit(leadId){
   efRenderSelected('tech1','staff',l.technical_staff1_id||'',l.technical_staff1_name||'');
   sv('ef_tech_id',l.technical_id||'');sv('ef_tech_search','');
   efRenderSelected('tech','staff',l.technical_id||'',l.technical_name||'');
-  document.getElementById('ef_src_results').style.display='none';document.getElementById('ef_guru_results').style.display='none';document.getElementById('ef_z_guru_results').style.display='none';document.getElementById('ef_core_results').style.display='none';document.getElementById('ef_fs_results').style.display='none';document.getElementById('ef_tele_results').style.display='none';document.getElementById('ef_showroom_results').style.display='none';document.getElementById('ef_support_staff_results').style.display='none';document.getElementById('ef_tech1_results').style.display='none';document.getElementById('ef_tech_results').style.display='none';
+  document.getElementById('ef_src_results').style.display='none';document.getElementById('ef_guru_results').style.display='none';document.getElementById('ef_z_guru_results').style.display='none';document.getElementById('ef_core_results').style.display='none';document.getElementById('ef_fs_results').style.display='none';document.getElementById('ef_tele_results').style.display='none';document.getElementById('ef_showroom_results').style.display='none';document.getElementById('ef_support_staff_results').style.display='none';document.getElementById('ef_tech1_results').style.display='none';document.getElementById('ef_tech_results').style.display='none';document.getElementById('ef_community_results').style.display='none';
   CRMHandlerConfirm.open('ef_confirm_section', 'ef_confirm_rows', l, HC_CONFIG_MASTER);
   CRMHandlerConfirm.loadAuditLog(l.id, 'ef_audit_log_rows');
   document.getElementById('saveError').style.display='none';
@@ -3838,6 +3854,7 @@ async function saveLead(){
     team_extended_partner_id:gv('ef_team_extended_pid')?parseInt(gv('ef_team_extended_pid'))||null:null,
     team_core_partner_id:gv('ef_core_partner_id')?parseInt(gv('ef_core_partner_id'))||null:null,
     core_name:gv('ef_core_name')||null,
+    community_id:gv('ef_community_id')?parseInt(gv('ef_community_id')):null,
     support_staff_id:gv('ef_support_staff_id')?parseInt(gv('ef_support_staff_id')):null,
     technical_staff1_id:gv('ef_tech1_id')?parseInt(gv('ef_tech1_id')):null,
     ...CRMHandlerConfirm.getValues(),
@@ -3860,6 +3877,55 @@ async function saveLead(){
 }
 
 // ── Network Assignment Helpers (inline edit modal) ─────────────────────────
+let _efCommunityTimer = null;
+function efCommunitySearch() {
+  clearTimeout(_efCommunityTimer);
+  _efCommunityTimer = setTimeout(async () => {
+    const q = (document.getElementById('ef_community_search')?.value || '').trim();
+    const resultsEl = document.getElementById('ef_community_results');
+    if (q.length < 2) {
+      resultsEl.style.display = 'none';
+      return;
+    }
+    resultsEl.innerHTML = '<a class="list-group-item list-group-item-action disabled small" style="padding:6px 10px">Searching…</a>';
+    resultsEl.style.display = 'block';
+    try {
+      const r = await staffFetch(`/api/v1/community-services/admin/active-search?q=${encodeURIComponent(q)}`);
+      const d = await r.json();
+      const items = d.results || [];
+      if (!items.length) {
+        resultsEl.innerHTML = '<a class="list-group-item list-group-item-action disabled small" style="padding:6px 10px;color:#6b7280">No results</a>';
+        return;
+      }
+      resultsEl.innerHTML = items.map(it => {
+        const _q = s => String(s || '').replace(/'/g, "\\'");
+        return `<a class="list-group-item list-group-item-action small" style="padding:5px 10px;cursor:pointer" onclick="efSelectCommunity('${it.id}', '${_q(it.display)}')"><strong>ID: ${it.id}</strong> — ${esc(it.display)}</a>`;
+      }).join('');
+    } catch(e) {
+      resultsEl.innerHTML = `<a class="list-group-item list-group-item-action disabled small text-danger" style="padding:6px 10px">Error: ${esc(e.message)}</a>`;
+    }
+  }, 320);
+}
+
+function efSelectCommunity(id, display) {
+  document.getElementById('ef_community_id').value = id;
+  document.getElementById('ef_community_search').value = '';
+  document.getElementById('ef_community_results').style.display = 'none';
+  document.getElementById('ef_community_selected').innerHTML = `
+    <span class="badge bg-danger p-2">
+      <i class="fas fa-users me-1"></i>${display}
+    </span>`;
+}
+
+function efClearCommunity() {
+  document.getElementById('ef_community_id').value = '';
+  document.getElementById('ef_community_search').value = '';
+  if (document.getElementById('ef_community_results')) {
+    document.getElementById('ef_community_results').style.display = 'none';
+  }
+  document.getElementById('ef_community_selected').innerHTML = '';
+}
+
 const _efTimers={};
 function efNetSearch(field){
   clearTimeout(_efTimers[field]);

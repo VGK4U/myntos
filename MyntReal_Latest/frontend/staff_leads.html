@@ -700,6 +700,15 @@
                                 <input type="hidden" id="leadAdiGuruType">
                                 <div id="leadAdiGuruSelected"></div>
                             </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Community Member / Leader</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="leadCommunitySearch" placeholder="Search approved community member..." autocomplete="off">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="clearCommunitySelection()" title="Clear"><i class="fas fa-times"></i></button>
+                                </div>
+                                <input type="hidden" id="leadCommunityId">
+                                <div id="leadCommunitySelected" class="mt-1" style="font-size:12px;color:#0ea5e9;font-weight:600"></div>
+                            </div>
                         </div>
 
                         <!-- Handler Support Confirmation — DC Protocol Apr 2026 -->
@@ -1352,15 +1361,15 @@
                             <div class="detail-section">
                                 <h6><i class="fas fa-users me-2"></i>On Ground Team</h6>
                                 <div class="row g-2">
-                                    <div class="col-md-3">
+                                    <div class="col-md-2">
                                         <label class="form-label small text-muted mb-1">Ground Source</label>
                                         <p id="detailMnrHandler" class="mb-0">-</p>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-2">
                                         <label class="form-label small text-muted mb-1">Senior</label>
                                         <p id="detailGuru" class="mb-0">-</p>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-2">
                                         <label class="form-label small text-muted mb-1">Extended</label>
                                         <p id="detailZGuru" class="mb-0">-</p>
                                     </div>
@@ -1368,23 +1377,31 @@
                                         <label class="form-label small text-muted mb-1">On Ground Support</label>
                                         <p id="detailAdiGuru" class="mb-0">-</p>
                                     </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small text-muted mb-1">Community Member</label>
+                                        <p id="detailCommunityMember" class="mb-0">-</p>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="detail-section">
                                 <h6><i class="fas fa-users me-2"></i>Multi-Handler Assignment</h6>
                                 <div class="row g-2">
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <label class="form-label small text-muted mb-1">Tele Caller (Sales)</label>
                                         <div id="detailTelecallerSearch"></div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <label class="form-label small text-muted mb-1">Field Staff (Sales)</label>
                                         <div id="detailFieldStaffSearch"></div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <label class="form-label small text-muted mb-1">Business Partner</label>
                                         <div id="detailPartnerSearch"></div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small text-muted mb-1">Community Member</label>
+                                        <div id="detailCommunitySearch"></div>
                                     </div>
                                 </div>
                             </div>
@@ -2811,6 +2828,7 @@
             
             // DC Protocol (Dec 31, 2025): Sync form company dropdown with header
             syncFormCompanyWithHeader();
+            clearCommunitySelection();
         }
         
         // Toggle revenue section based on status
@@ -3100,6 +3118,20 @@
                         document.getElementById('leadVgkFieldSupportSelected').textContent = '';
                     }
 
+                    if (lead.community_id) {
+                        document.getElementById('leadCommunityId').value = lead.community_id;
+                        const commName = lead.community_name || `Community ID: ${lead.community_id}`;
+                        document.getElementById('leadCommunitySelected').innerHTML = `
+                            <span class="badge bg-info text-white p-1 rounded">
+                                ID: ${lead.community_id} | ${commName}
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1 text-white" onclick="clearCommunitySelection()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </span>`;
+                    } else {
+                        clearCommunitySelection();
+                    }
+
                     document.getElementById('leadBudgetMin').value = lead.budget_min || '';
                     document.getElementById('leadBudgetMax').value = lead.budget_max || '';
                     document.getElementById('leadPincode').value = lead.pincode || '';
@@ -3190,6 +3222,7 @@
         // ========== MNR Handler Search & Upline Functions (DC Protocol) ==========
         let mnrSearchTimeout = null;
         let adiGuruSearchTimeout = null;
+        let communitySearchTimeout = null;
         
         function initializeMnrSearch() {
             const mnrInput = document.getElementById('leadMnrHandlerSearch');
@@ -3216,6 +3249,14 @@
             if (_zGuruInput) _zGuruInput.addEventListener('input', function() { clearTimeout(adiGuruSearchTimeout); adiGuruSearchTimeout = setTimeout(() => searchMnrUsers(this.value, 'z_guru'), 300); });
             const _coreInput = document.getElementById('leadCoreSearch');
             if (_coreInput) _coreInput.addEventListener('input', function() { clearTimeout(adiGuruSearchTimeout); adiGuruSearchTimeout = setTimeout(() => searchMnrUsers(this.value, 'core'), 300); });
+
+            const communityInput = document.getElementById('leadCommunitySearch');
+            if (communityInput) {
+                communityInput.addEventListener('input', function() {
+                    clearTimeout(communitySearchTimeout);
+                    communitySearchTimeout = setTimeout(() => searchCommunityMembers(this.value), 300);
+                });
+            }
         }
         
         async function searchMnrUsers(query, fieldType) {
@@ -3474,6 +3515,59 @@
             else if (fieldType === 'z_guru') clearLeadZGuru();
             else if (fieldType === 'core') clearLeadCore();
         }
+
+        async function searchCommunityMembers(query) {
+            if (!query || query.length < 2) return;
+            try {
+                const response = await fetch(`/api/v1/community-services/admin/active-search?q=${encodeURIComponent(query)}`, { credentials: 'include' });
+                const data = await response.json();
+                if (data.results) showCommunityDropdown(data.results);
+            } catch (e) { console.error('Community search error:', e); }
+        }
+
+        function showCommunityDropdown(results) {
+            const inputEl = document.getElementById('leadCommunitySearch');
+            document.getElementById('leadCommunitySearchDropdown')?.remove();
+            if (!results.length) return;
+            const dropdown = document.createElement('div');
+            dropdown.id = 'leadCommunitySearchDropdown';
+            dropdown.className = 'position-absolute bg-white border rounded shadow-sm w-100';
+            dropdown.style.cssText = 'z-index:1050;max-height:220px;overflow-y:auto;';
+            results.forEach(r => {
+                const item = document.createElement('div');
+                item.className = 'p-2 border-bottom';
+                item.style.cursor = 'pointer';
+                item.innerHTML = `<strong>${r.display}</strong>`;
+                item.onclick = () => selectCommunityMember(r);
+                dropdown.appendChild(item);
+            });
+            inputEl.parentNode.style.position = 'relative';
+            inputEl.parentNode.appendChild(dropdown);
+            setTimeout(() => {
+                document.addEventListener('click', function closeDD(e) {
+                    if (!dropdown.contains(e.target) && e.target !== inputEl) { dropdown.remove(); document.removeEventListener('click', closeDD); }
+                });
+            }, 100);
+        }
+
+        function selectCommunityMember(member) {
+            document.getElementById('leadCommunitySearchDropdown')?.remove();
+            document.getElementById('leadCommunityId').value = member.id;
+            document.getElementById('leadCommunitySearch').value = '';
+            document.getElementById('leadCommunitySelected').innerHTML = `
+                <span class="badge bg-info text-white p-1 rounded">
+                    ID: ${member.id} | ${member.display}
+                    <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1 text-white" onclick="clearCommunitySelection()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </span>`;
+        }
+
+        function clearCommunitySelection() {
+            document.getElementById('leadCommunityId').value = '';
+            document.getElementById('leadCommunitySearch').value = '';
+            document.getElementById('leadCommunitySelected').innerHTML = '';
+        }
         
         // ========== End MNR Handler Functions ==========
 
@@ -3683,6 +3777,7 @@
                 field_support_ref_name: (document.getElementById('leadAdiGuruSelected').querySelector('.badge')?.textContent?.trim().replace(/\s*\[.*?\]\s*$/, '').replace(/\s*\(.*\)\s*$/, '').trim()) || null,
                 is_vgk_program: document.getElementById('leadIsVgkProgram').checked,
                 vgk_field_support_id: document.getElementById('leadVgkFieldSupportId').value || null,
+                community_id: document.getElementById('leadCommunityId').value ? parseInt(document.getElementById('leadCommunityId').value) || null : null,
                 associated_partner_id: (typeof partnerSearch !== 'undefined' && partnerSearch) ? partnerSearch.getValue() : null,
                 budget_min: document.getElementById('leadBudgetMin').value !== '' ? parseFloat(document.getElementById('leadBudgetMin').value) : null,
                 budget_max: document.getElementById('leadBudgetMax').value !== '' ? parseFloat(document.getElementById('leadBudgetMax').value) : null,
@@ -4199,6 +4294,9 @@
                     document.getElementById('detailZGuru').textContent = lead.z_guru_name
                         ? `${lead.z_guru_name}${lead.z_guru_id ? ' (' + lead.z_guru_id + ')' : ''}` : (lead.z_guru_id || '-');
                     document.getElementById('detailAdiGuru').textContent = lead.field_support_ref_name ? `${lead.field_support_ref_name} (${lead.field_support_ref_id})` : (lead.adi_guru_name ? `${lead.adi_guru_name} (${lead.adi_guru_id})` : (lead.adi_guru_id || '-'));
+                    document.getElementById('detailCommunityMember').textContent = lead.community_name 
+                        ? `${lead.community_name} (ID: ${lead.community_id})` 
+                        : (lead.community_id ? `Community ID: ${lead.community_id}` : '-');
                     
                     // Initialize CRMAssigneeSearch widgets for multi-handler assignment
                     initDetailHandlerSearchWidgets(lead);
@@ -4961,6 +5059,7 @@
         let detailTelecallerWidget = null;
         let detailFieldStaffWidget = null;
         let detailPartnerWidget = null;
+        let detailCommunityWidget = null;
         
         function toggleDealValueRow(status) {
             const dealRow = document.getElementById('dealValueRow');
@@ -5235,14 +5334,16 @@
             const telecallerContainer = document.getElementById('detailTelecallerSearch');
             const fieldStaffContainer = document.getElementById('detailFieldStaffSearch');
             const partnerContainer = document.getElementById('detailPartnerSearch');
+            const communityContainer = document.getElementById('detailCommunitySearch');
             
             if (telecallerContainer) telecallerContainer.innerHTML = '';
             if (fieldStaffContainer) fieldStaffContainer.innerHTML = '';
             if (partnerContainer) partnerContainer.innerHTML = '';
+            if (communityContainer) communityContainer.innerHTML = '';
             
             // Get slot-level permissions from API response (granular RBAC)
-            // editable_slots: { telecaller: bool, field_staff: bool, partner: bool, reason: string }
-            const slots = lead.editable_slots || { telecaller: false, field_staff: false, partner: false, reason: 'no_access' };
+            // editable_slots: { telecaller: bool, field_staff: bool, partner: bool, community: bool, reason: string }
+            const slots = lead.editable_slots || { telecaller: false, field_staff: false, partner: false, community: false, reason: 'no_access' };
             
             // Initialize Telecaller Search Widget (slot-level permission check)
             if (telecallerContainer && typeof CRMAssigneeSearch !== 'undefined') {
@@ -5309,6 +5410,28 @@
                     partnerContainer.innerHTML = `<div class="form-control form-control-sm bg-light text-muted" style="cursor: not-allowed;">${displayName}${displayCode}</div>`;
                 }
             }
+
+            // Initialize Community Search Widget (slot-level permission check)
+            if (communityContainer && typeof CRMAssigneeSearch !== 'undefined') {
+                if (slots.community) {
+                    detailCommunityWidget = new CRMAssigneeSearch({
+                        containerId: 'detailCommunitySearch',
+                        assigneeType: 'community',
+                        placeholder: 'Search community...',
+                        onSelect: (item) => saveDetailHandlerAssignment('community', item ? item.id : 0)
+                    });
+                    // Pre-populate if community is assigned
+                    if (lead.community_id) {
+                        const displayName = lead.community_name || `Community ID: ${lead.community_id}`;
+                        detailCommunityWidget.setValue(lead.community_id, displayName, lead.community_name || '');
+                    }
+                } else {
+                    // Read-only display when user lacks permission for this slot
+                    const displayName = lead.community_name || '-';
+                    const displayCode = lead.community_id ? ` (ID: ${lead.community_id})` : '';
+                    communityContainer.innerHTML = `<div class="form-control form-control-sm bg-light text-muted" style="cursor: not-allowed;">${displayName}${displayCode}</div>`;
+                }
+            }
         }
         
         async function saveDetailHandlerAssignment(type, handlerId) {
@@ -5322,6 +5445,8 @@
                 params += `&field_staff_id=${handlerId || 0}`;
             } else if (type === 'partner') {
                 params += `&associated_partner_id=${handlerId || 0}`;
+            } else if (type === 'community') {
+                params += `&community_id=${handlerId || 0}`;
             }
             
             try {
@@ -5330,12 +5455,37 @@
                 });
                 if (data && data.success) {
                     showToast('Handler assigned successfully', 'success');
+                    if (typeof loadLeads === 'function') {
+                        loadLeads(currentPage);
+                    }
+                    refreshLeadDetails();
                 } else {
                     showToast(data.detail || 'Failed to assign handler', 'error');
                 }
             } catch (e) {
                 console.error('[DC-CRM] Handler assignment error:', e);
                 showToast('Failed to assign handler', 'error');
+            }
+        }
+
+        async function refreshLeadDetails() {
+            if (!currentLeadId || !selectedLeadCompanyId) return;
+            try {
+                const url = `${API_BASE}/leads/${currentLeadId}?company_id=${selectedLeadCompanyId}`;
+                const response = await staffFetch(url);
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data.success) {
+                    const lead = data.data;
+                    const detailCommunityMember = document.getElementById('detailCommunityMember');
+                    if (detailCommunityMember) {
+                        detailCommunityMember.textContent = lead.community_name 
+                            ? `${lead.community_name} (ID: ${lead.community_id})` 
+                            : (lead.community_id ? `Community ID: ${lead.community_id}` : '-');
+                    }
+                }
+            } catch (e) {
+                console.error('[DC-CRM] Error refreshing lead details:', e);
             }
         }
         

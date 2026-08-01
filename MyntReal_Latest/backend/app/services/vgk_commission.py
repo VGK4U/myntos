@@ -34,6 +34,7 @@ PAYOUT DEDUCTIONS (applied at release by vgk_cash_income service):
 """
 
 import logging
+from typing import Optional, Dict, Any, List
 from decimal import Decimal
 from datetime import datetime
 from sqlalchemy.orm import Session
@@ -328,6 +329,9 @@ def calculate_vgk_commissions(db: Session, lead_id: int, transaction_id: int, re
             ).first()
             make_entry(l5_partner, 5, config.level4_pct,
                        Decimal(str(config.level4_amt or 0)), getattr(config, 'level4_type', 'PCT') or 'PCT')
+
+        # Hook for Community Services Seva Rules (Milestone / Full Payment Release Rules)
+        apply_community_seva_commission_and_deductions(db, lead, transaction_id)
 
         db.commit()
         logger.info(f"[VGK-COMM] Commissions calculated for lead {lead_id}, txn {transaction_id}")
@@ -631,3 +635,118 @@ def activate_loyal_coupon_member(
         except Exception:
             pass
         return False
+
+
+def apply_community_seva_commission_and_deductions(db: Session, lead, transaction_id: Optional[int] = None):
+    """
+    DC Protocol - Community Services Seva Rules:
+    1. Seva Contribution Payout (VGK4U side): Released immediately on First Payment/Milestone Approval.
+    2. Member Earnings Deductions (Upline/Source side): Deducted on final completion / subsidy pending status.
+    """
+    if not lead or not getattr(lead, 'community_id', None):
+        return
+
+    # Check if a CommunityCommission already exists for this lead
+    from app.models.community_service import CommunityCommission
+    
+    comm_exists = db.query(CommunityCommission).filter(CommunityCommission.lead_id == lead.id).first()
+    if not comm_exists:
+        # Trigger Seva Contribution Payout immediately (First Payment/Milestone Approval)
+        from app.models.staff_accounts import VGKTeamCommissionConfig
+        config = db.query(VGKTeamCommissionConfig).filter(
+            VGKTeamCommissionConfig.category_id == lead.category_id,
+            VGKTeamCommissionConfig.is_active == True
+        ).first()
+        
+        # Fallbacks: L1: 1000, L2: 500, L5: 500
+        val_l1 = Decimal(str(config.comm_sev_deduction_l1_val)) if config else Decimal('1000.0')
+        val_l2 = Decimal(str(config.comm_sev_deduction_l2_val)) if config else Decimal('500.0')
+        val_l5 = Decimal(str(config.comm_sev_deduction_l5_val)) if config else Decimal('500.0')
+        total_seva = val_l1 + val_l2 + val_l5
+        
+        # Add commission record for the community registration
+        new_comm = CommunityCommission(
+            community_id=lead.community_id,
+            lead_id=lead.id,
+            amount=total_seva,
+            status='RELEASED',
+            payout_date=get_indian_time().replace(tzinfo=None),
+            created_at=get_indian_time().replace(tzinfo=None),
+            updated_at=get_indian_time().replace(tzinfo=None)
+        )
+        db.add(new_comm)
+        db.flush()
+        logger.info(f"[COMMUNITY-SEVA] Released Seva Contribution of {total_seva} to Community Registration {lead.community_id}")
+
+    # Check if FULL / FINAL PAYMENT is completed or lead reaches final completed / subsidy pending status
+    received = Decimal(str(lead.deal_value_received or 0))
+    total = Decimal(str(lead.deal_value_total or 0))
+    balance = Decimal(str(lead.deal_value_balance or 0))
+    
+    sps = (getattr(lead, 'solar_pipeline_status', '') or '').lower()
+    is_final_status = sps in {'subsidy_pending', 'completed'} or lead.status == 'completed'
+    
+    if (balance <= 0 and received >= total and total > 0) or is_final_status:
+        # Check if we already applied the deductions
+        from app.models.staff_accounts import VGKTeamIncomeEntry
+        deductions_exist = db.query(VGKTeamIncomeEntry).filter(
+            VGKTeamIncomeEntry.source_lead_id == lead.id,
+            VGKTeamIncomeEntry.notes.ilike('%Community Seva Deduction%')
+        ).first()
+        
+        if not deductions_exist:
+            # Apply member earnings deductions
+            from app.models.staff_accounts import VGKTeamCommissionConfig, OfficialPartner
+            
+            config = db.query(VGKTeamCommissionConfig).filter(
+                VGKTeamCommissionConfig.category_id == lead.category_id,
+                VGKTeamCommissionConfig.is_active == True
+            ).first()
+            
+            val_l1 = Decimal(str(config.comm_sev_deduction_l1_val)) if config else Decimal('1000.0')
+            val_l2 = Decimal(str(config.comm_sev_deduction_l2_val)) if config else Decimal('500.0')
+            val_l5 = Decimal(str(config.comm_sev_deduction_l5_val)) if config else Decimal('500.0')
+            
+            # Resolve members L1, L2, L5
+            l1_partner = None
+            if lead.primary_owner_type == 'partner' and lead.primary_owner_id:
+                l1_partner = db.query(OfficialPartner).filter(OfficialPartner.id == lead.primary_owner_id).first()
+            if not l1_partner and getattr(lead, 'associated_partner_id', None):
+                l1_partner = db.query(OfficialPartner).filter(OfficialPartner.id == lead.associated_partner_id).first()
+                
+            l2_partner = None
+            if l1_partner and l1_partner.parent_partner_id:
+                l2_partner = db.query(OfficialPartner).filter(OfficialPartner.id == l1_partner.parent_partner_id).first()
+                
+            l5_partner = None
+            if lead.vgk_field_support_id:
+                l5_partner = db.query(OfficialPartner).filter(OfficialPartner.id == lead.vgk_field_support_id).first()
+                
+            def make_deduction(partner, level, amt):
+                if not partner or amt <= 0 or not partner.is_active:
+                    return
+                entry_no = _next_vgk_entry_number(db, lead.company_id)
+                ded_entry = VGKTeamIncomeEntry(
+                    company_id=lead.company_id,
+                    entry_number=entry_no,
+                    partner_id=partner.id,
+                    source_lead_id=lead.id,
+                    source_transaction_id=transaction_id,
+                    category_id=lead.category_id,
+                    level=level,
+                    revenue_amount=Decimal('0'),
+                    commission_pct=Decimal('0'),
+                    commission_amount=-amt,
+                    bonus_amount=Decimal('0'),
+                    status='PENDING',
+                    notes=f"Community Seva Deduction (L{level}) for Lead #{lead.id}",
+                    created_at=get_indian_time().replace(tzinfo=None),
+                    updated_at=get_indian_time().replace(tzinfo=None)
+                )
+                db.add(ded_entry)
+                logger.info(f"[COMMUNITY-SEVA] Deducted {amt} from partner {partner.partner_code} (L{level})")
+                
+            make_deduction(l1_partner, 1, val_l1)
+            make_deduction(l2_partner, 2, val_l2)
+            make_deduction(l5_partner, 5, val_l5)
+

@@ -114,6 +114,8 @@ from app.models.vgk_vendor import (
     VGKVendorProductCategory, VGKVendorLogin, VGKVendorTransaction,
     VGKVendorMarketplaceProduct
 )
+from app.models.community_service import CommunityService, CommunityRegistration, CommunityCommission
+
 
 # Real Dreams - Real Estate Marketplace Models (DC Protocol Compliant - Dec 08, 2025)
 from app.models.real_dreams import (
@@ -444,4 +446,7 @@ __all__ = [
     
     # Recharge & Bill Payment System
     "RechargeTransaction",
+    "CommunityService",
+    "CommunityRegistration",
+    "CommunityCommission",
 ]

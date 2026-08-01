@@ -824,6 +824,8 @@ def bootstrap_whatsapp_config_schema():
             ("partner_created",          "New Partner Created",          "partner", "customer"),
             # VGK Member events
             ("vgk_member_created",       "New VGK Member Registered",    "vgk",     "customer"),
+            # Community Seva events
+            ("community_approved",       "Community Approved Credentials Notice", "vgk",     "customer"),
             # ETC Training events
             ("etc_enrolled",             "ETC Student Enrolled",         "etc",     "customer"),
             ("etc_completed",            "ETC Training Completed",       "etc",     "customer"),
@@ -992,6 +994,39 @@ def bootstrap_whatsapp_config_schema():
         _vgk_trig = db.query(WhatsAppAutoTrigger).filter_by(event_key="vgk_member_created").first()
         if _vgk_trig and not _vgk_trig.template_id:
             _vgk_trig.template_id = _vgk_welcome_tpl.id
+        db.commit()
+
+        # Seed community_approved welcome template
+        _comm_approved_tpl = db.query(WhatsAppTemplate).filter_by(slug="community_approved").first()
+        if not _comm_approved_tpl:
+            _comm_approved_tpl = WhatsAppTemplate(
+                slug="community_approved",
+                name="Community Approved Welcome",
+                segment="vgk",
+                template_type="text",
+                body_text=(
+                    "Congratulations *{{1}}*!\n\n"
+                    "Your Community Registration for VGK4U Seva Program has been approved.\n\n"
+                    "Your login credentials are:\n"
+                    "• *Partner Code:* {{2}}\n"
+                    "• *Password:* {{3}}\n\n"
+                    "👉 Login here: {{4}}\n\n"
+                    "*— VGK4U Team*"
+                ),
+                meta_template_name="community_approved",
+                meta_template_language="en",
+                is_meta_approved=False,
+                is_active=True,
+            )
+            db.add(_comm_approved_tpl)
+            db.flush()
+            logger.info("[WA-BOOTSTRAP] Seeded template: community_approved")
+
+        # Link community_approved trigger and force enable it
+        _comm_trig = db.query(WhatsAppAutoTrigger).filter_by(event_key="community_approved").first()
+        if _comm_trig:
+            _comm_trig.template_id = _comm_approved_tpl.id
+            _comm_trig.is_enabled = True
         db.commit()
 
         # ── Link lead_welcome triggers to their templates ──────────────────────

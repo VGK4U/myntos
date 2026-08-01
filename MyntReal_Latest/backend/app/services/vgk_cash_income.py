@@ -571,7 +571,11 @@ def reject_cash_income(db: Session, entry_id: int, company_id: int, rejected_by_
     return {'success': True, 'entry_number': entry.entry_number}
 
 
-def release_cash_income(db: Session, entry_id: int, company_id: int, released_by_id: int, notes: str = None) -> dict:
+def release_cash_income(
+    db: Session, entry_id: int, company_id: int,
+    released_by_id: int, notes: str = None,
+    force: bool = False,
+) -> dict:
     """
     Accounts staff releases a PENDING entry.
     Deducts 8% admin + 2% TDS from commission_amount.
@@ -595,7 +599,7 @@ def release_cash_income(db: Session, entry_id: int, company_id: int, released_by
     # ADVANCE / DVR_ADVANCE / BRAND_ADVANCE / SLAB_BONUS / ADJUSTMENT kinds are
     # exempt — they follow their own release rules.
     _ADVANCE_KINDS = {'ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'SLAB_BONUS', 'ADJUSTMENT'}
-    if (entry.kind or 'COMMISSION') not in _ADVANCE_KINDS and entry.source_lead_id:
+    if not force and (entry.kind or 'COMMISSION') not in _ADVANCE_KINDS and entry.source_lead_id:
         _lead_row = db.execute(
             text("SELECT category_id, solar_pipeline_status FROM crm_leads WHERE id=:lid"),
             {'lid': entry.source_lead_id}
@@ -1664,6 +1668,7 @@ def mark_paid_cash_income(
     cash_staff_id: int = None,
     utr: str = None,
     notes: str = None,
+    force: bool = False,
 ) -> dict:
     """RELEASED → PAID. Posts JV-D and stamps payment fields. Idempotent on PAID."""
     from app.models.vgk_cash_income import VGKCashIncomeEntry
@@ -1679,7 +1684,7 @@ def mark_paid_cash_income(
         return {'success': False, 'error': f'Entry is {entry.status}, expected RELEASED or STAGE1_APPROVED'}
 
     # DC-VGK-ADV-CAP-001: 50% advance cap — PAID advances ≤ floor(eligible_files × 0.5)
-    if entry.kind in ('ADVANCE', 'BRAND_ADVANCE'):
+    if not force and entry.kind in ('ADVANCE', 'BRAND_ADVANCE'):
         try:
             from app.services.vgk_advance_cap import can_mark_paid as _cap_check
             _cap_allowed, _cap_info = _cap_check(db, entry.partner_id, entry.company_id)

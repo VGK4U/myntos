@@ -6361,7 +6361,15 @@ class VGKTeamCommissionConfig(BaseModel):
     showroom_type = Column(String(6),       nullable=False, default='PCT')   # 'PCT' | 'AMOUNT'
     showroom_amt  = Column(Numeric(12, 2),  nullable=False, default=0)
 
+    comm_sev_deduction_l1_type = Column(String(6), nullable=False, default='AMOUNT')
+    comm_sev_deduction_l1_val  = Column(Numeric(12, 2), nullable=False, default=1000.0)
+    comm_sev_deduction_l2_type = Column(String(6), nullable=False, default='AMOUNT')
+    comm_sev_deduction_l2_val  = Column(Numeric(12, 2), nullable=False, default=500.0)
+    comm_sev_deduction_l5_type = Column(String(6), nullable=False, default='AMOUNT')
+    comm_sev_deduction_l5_val  = Column(Numeric(12, 2), nullable=False, default=500.0)
+
     created_at = Column(DateTime, default=get_indian_time, nullable=False)
+
     updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
 
     __table_args__ = (
@@ -6400,7 +6408,14 @@ class VGKTeamCommissionConfig(BaseModel):
             'showroom_pct':       float(self.showroom_pct or 0),
             'showroom_type':      self.showroom_type or 'PCT',
             'showroom_amt':       float(self.showroom_amt or 0),
+            'comm_sev_deduction_l1_type': self.comm_sev_deduction_l1_type or 'AMOUNT',
+            'comm_sev_deduction_l1_val':  float(self.comm_sev_deduction_l1_val or 0),
+            'comm_sev_deduction_l2_type': self.comm_sev_deduction_l2_type or 'AMOUNT',
+            'comm_sev_deduction_l2_val':  float(self.comm_sev_deduction_l2_val or 0),
+            'comm_sev_deduction_l5_type': self.comm_sev_deduction_l5_type or 'AMOUNT',
+            'comm_sev_deduction_l5_val':  float(self.comm_sev_deduction_l5_val or 0),
             'created_at': self.created_at.isoformat() if self.created_at else None,
+
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
 
@@ -6453,7 +6468,7 @@ class VGKTeamIncomeEntry(BaseModel):
             "status IN ('PENDING', 'CONFIRMED', 'CANCELLED', 'HOLD')",
             name='vgk_income_status_check'
         ),
-        CheckConstraint('level BETWEEN 0 AND 4', name='vgk_income_level_check'),
+        CheckConstraint('level BETWEEN 0 AND 5', name='vgk_income_level_check'),
         Index('idx_vgk_income_partner_status', 'company_id', 'partner_id', 'status'),
         Index('idx_vgk_income_lead', 'company_id', 'source_lead_id'),
     )

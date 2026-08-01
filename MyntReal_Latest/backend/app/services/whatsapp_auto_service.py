@@ -252,17 +252,33 @@ def _log_to_crm_note(db: Session, lead_id: int, message: str, event_key: str,
                      staff_id: Optional[int] = None, wamid: Optional[str] = None):
     """Append WhatsApp send as a note in crm_lead_notes (lead history)."""
     try:
-        from app.models.crm import CRMLeadNote
+        from app.models.crm import CRMLead, CRMLeadNote
+        lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
+        if not lead:
+            return
+            
         note_text = (
             f"📱 WhatsApp auto-message sent [{event_key}]\n"
             f"{message[:300]}{'...' if len(message) > 300 else ''}"
         )
         if wamid:
             note_text += f"\nDelivery ID: {wamid}"
+            
+        created_by_id = None
+        created_by_type = None
+        if staff_id:
+            from app.models.staff import StaffEmployee
+            staff = db.query(StaffEmployee).filter(StaffEmployee.id == staff_id).first()
+            if staff:
+                created_by_id = staff.emp_code
+                created_by_type = "staff"
+                
         note = CRMLeadNote(
+            company_id=lead.company_id,
             lead_id=lead_id,
             note=note_text,
-            created_by_staff_id=staff_id,
+            created_by_type=created_by_type,
+            created_by_id=created_by_id,
             created_at=datetime.utcnow(),
         )
         db.add(note)

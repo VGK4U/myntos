@@ -1206,7 +1206,18 @@
         }
 
         // Always show login portal selection first when arriving at /landing
-        document.addEventListener('DOMContentLoaded', function() { showLoginSelection(); });
+        document.addEventListener('DOMContentLoaded', function() {
+            showLoginSelection();
+            // Clear all portal tokens to prevent auto-login bypass (Security enforcement)
+            localStorage.removeItem('vgk_token');
+            localStorage.removeItem('vgk_partner');
+            localStorage.removeItem('vgk_active_tab');
+            localStorage.removeItem('staff_token');
+            localStorage.removeItem('partner_token');
+            localStorage.removeItem('partner_info');
+            localStorage.removeItem('token');
+            localStorage.removeItem('vendor_token');
+        });
 
         // Legacy: sessionStorage flag (kept for compatibility)
         if (sessionStorage.getItem('showLoginSelection') === 'true') {
@@ -1221,6 +1232,21 @@
         function navigateToLogin(type) {
             const loginUrls = { 'staff': '/staff/login', 'partner': '/partner/login', 'mnr': '/login', 'vgk': '/vgk/login', 'vendor': '/vendor/login' };
             const url = loginUrls[type];
+            if (type === 'vgk') {
+                localStorage.removeItem('vgk_token');
+                localStorage.removeItem('vgk_partner');
+                localStorage.removeItem('vgk_active_tab');
+            } else if (type === 'partner') {
+                localStorage.removeItem('partner_token');
+                localStorage.removeItem('partner_info');
+            } else if (type === 'staff') {
+                localStorage.removeItem('staff_token');
+            } else if (type === 'mnr') {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+            } else if (type === 'vendor') {
+                localStorage.removeItem('vendor_token');
+            }
             if (url) window.location.href = url;
         }
 

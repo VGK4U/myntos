@@ -180,10 +180,11 @@ input.edit-input { width: 80px; padding: 4px 8px; border: 1px solid #d1d5db; bor
       <th title="L4 CORE — Commission earned by the upliner of L3 (default 50% of L3)">L4 Core</th>
       <th title="L5 Support — Commission earned by the Field Support assigned per lead">L5 Support</th>
       <th title="L6 Showroom — Commission earned by the Showroom/Partner when showroom_vgk_id is set on a lead">Showroom/Partner</th>
+      <th>Community Seva Deduction</th>
       <th>Monthly Target (₹)</th><th>Bonus %</th><th>Markup %</th>
       <th>Status</th><th>Actions</th>
     </tr></thead>
-    <tbody id="configTable"><tr><td colspan="13" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr></tbody>
+    <tbody id="configTable"><tr><td colspan="14" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr></tbody>
   </table>
   </div>
 </div>
@@ -631,11 +632,95 @@ function fmtLevelShowroom(c) {
   if (type === 'AMOUNT') return `<span class="badge-amt">₹ ${Number(amt).toLocaleString('en-IN')}</span><div class="excl-tax-note">flat/deal</div>`;
   return `<span class="badge-pct">${pct}%</span><div class="excl-tax-note">of deal value</div>`;
 }
+
+function fmtSevaDeduction(c) {
+  if (!c) return '—';
+  const l1Type = c.comm_sev_deduction_l1_type || 'AMOUNT';
+  const l1Val  = c.comm_sev_deduction_l1_val  || 0;
+  const l2Type = c.comm_sev_deduction_l2_type || 'AMOUNT';
+  const l2Val  = c.comm_sev_deduction_l2_val  || 0;
+  const l5Type = c.comm_sev_deduction_l5_type || 'AMOUNT';
+  const l5Val  = c.comm_sev_deduction_l5_val  || 0;
+
+  const l1Str = l1Type === 'AMOUNT' ? `₹${Number(l1Val).toLocaleString('en-IN')}` : `${l1Val}%`;
+  const l2Str = l2Type === 'AMOUNT' ? `₹${Number(l2Val).toLocaleString('en-IN')}` : `${l2Val}%`;
+  const l5Str = l5Type === 'AMOUNT' ? `₹${Number(l5Val).toLocaleString('en-IN')}` : `${l5Val}%`;
+
+  let totalSevaStr = '';
+  if (l1Type === 'AMOUNT' && l2Type === 'AMOUNT' && l5Type === 'AMOUNT') {
+    const totalVal = Number(l1Val) + Number(l2Val) + Number(l5Val);
+    totalSevaStr = `₹${totalVal.toLocaleString('en-IN')}`;
+  } else {
+    totalSevaStr = `${l1Str} + ${l2Str} + ${l5Str}`;
+  }
+
+  return `<div style="font-size:11px;line-height:1.35;white-space:nowrap">
+    <div style="margin-bottom:4px;border-bottom:1px solid #e5e7eb;padding-bottom:2px">
+      <span class="badge-amt" style="background:#e0f2fe;color:#0369a1;font-weight:700">Seva Payout: ${totalSevaStr}</span>
+    </div>
+    <div style="font-size:10px;color:#4b5563">
+      L1: <strong style="color:#7c3aed">${l1Str}</strong> | 
+      L2: <strong style="color:#2563eb">${l2Str}</strong> | 
+      L5: <strong style="color:#059669">${l5Str}</strong>
+    </div>
+  </div>`;
+}
+
+function updateLiveTotalSeva(rk) {
+  let totalParts = [];
+  let flatTotal = 0;
+  let allFlat = true;
+
+  for (const lvl of [1, 2, 5]) {
+    const type = getLvlType(rk, `csl${lvl}`);
+    let val = 0;
+    if (type === 'PCT') {
+      val = parseFloat(document.getElementById(`ei-${rk}-csl${lvl}pct`)?.value || 0) || 0;
+      totalParts.push(`${val}%`);
+      allFlat = false;
+    } else {
+      val = parseFloat(document.getElementById(`ei-${rk}-csl${lvl}amt`)?.value || 0) || 0;
+      totalParts.push(`₹${val}`);
+      flatTotal += val;
+    }
+  }
+
+  const el = document.getElementById(`total-seva-edit-${rk}`);
+  if (el) {
+    if (allFlat) {
+      el.innerText = `Total Seva: ₹${flatTotal.toLocaleString('en-IN')}`;
+    } else {
+      el.innerText = `Total Seva: ${totalParts.join(' + ')}`;
+    }
+  }
+}
+
+function sevaEditHtml(catId, isPaid, lvl, c) {
+  const rk   = rowKey(catId, isPaid);
+  const type = (c && c[`comm_sev_deduction_l${lvl}_type`]) || 'AMOUNT';
+  const val  = (c && c[`comm_sev_deduction_l${lvl}_val`] !== undefined) ? c[`comm_sev_deduction_l${lvl}_val`] : 0;
+  const color = lvl === 1 ? '#7c3aed' : lvl === 2 ? '#2563eb' : '#059669';
+
+  return `<div class="edit-level-group mb-1" id="eg-${rk}-csl${lvl}">
+    <span style="font-size:10px;font-weight:700;color:${color};width:20px;display:inline-block">L${lvl}:</span>
+    <div class="type-toggle">
+      <button id="tt-${rk}-csl${lvl}-PCT"    onclick="setLvlType('${rk}','csl${lvl}','PCT')"    class="${type==='PCT'?'active-pct':''}">%</button>
+      <button id="tt-${rk}-csl${lvl}-AMOUNT" onclick="setLvlType('${rk}','csl${lvl}','AMOUNT')" class="${type==='AMOUNT'?'active-amt':''}">₹</button>
+    </div>
+    <div id="pct-wrap-${rk}-csl${lvl}" style="display:${type==='PCT'?'block':'none'}">
+      <input class="edit-input" style="width:65px" id="ei-${rk}-csl${lvl}pct" value="${val}" type="number" min="0" max="100" step="0.01" placeholder="%" oninput="updateLiveTotalSeva('${rk}')">
+    </div>
+    <div id="amt-wrap-${rk}-csl${lvl}" style="display:${type==='AMOUNT'?'block':'none'}">
+      <input class="edit-input" style="width:75px" id="ei-${rk}-csl${lvl}amt" value="${val}" type="number" min="0" step="1" placeholder="₹" oninput="updateLiveTotalSeva('${rk}')">
+    </div>
+  </div>`;
+}
+
 function rowKey(catId, isPaid) { return `${catId}_${isPaid ? 1 : 0}`; }
 
 function renderTable(data) {
   const tbody = document.getElementById('configTable');
-  if (!data.length) { tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:30px;color:#9ca3af">No categories found</td></tr>'; return; }
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:#9ca3af">No categories found</td></tr>'; return; }
   let html = '';
   data.forEach(row => {
     html += buildRow(row.category_id, row.category_name, false, row.config_registered, true);
@@ -653,7 +738,7 @@ function buildRow(catId, catName, isPaid, c, isFirstRow) {
   const catCell = isFirstRow ? `<td class="cat-name-cell" rowspan="2" style="min-width:120px">${catName}</td>` : '';
   const statusCell = c
     ? `<span class="${c.is_active ? 'badge-active' : 'badge-paused'}" onclick="toggleStatus(${catId},${isPaid},${!c.is_active})">
-        <i class="fas fa-circle" style="font-size:8px"></i>${c.is_active ? 'Active' : 'Paused'}
+         <i class="fas fa-circle" style="font-size:8px"></i>${c.is_active ? 'Active' : 'Paused'}
        </span>`
     : '<span class="badge-noconfig">No Config</span>';
   return `<tr class="${cls}" id="row-${rk}">
@@ -665,6 +750,7 @@ function buildRow(catId, catName, isPaid, c, isFirstRow) {
     <td class="val-field" data-field="l4core">${fmtLevelCore(c)}</td>
     <td class="val-field" data-field="l4">${fmtLevel(c,4)}</td>
     <td class="val-field" data-field="showroom">${fmtLevelShowroom(c)}</td>
+    <td class="val-field" data-field="comm_seva">${fmtSevaDeduction(c)}</td>
     <td class="val-field" data-field="monthly_target">${c ? '₹'+Number(c.monthly_target).toLocaleString('en-IN') : '—'}</td>
     <td class="val-field" data-field="bonus_pct">${c ? c.bonus_pct+'%' : '—'}</td>
     <td class="val-field" data-field="markup_pct">${c ? c.markup_pct+'%' : '—'}</td>
@@ -735,6 +821,9 @@ function setLvlType(rk, n, type) {
   document.getElementById(`amt-wrap-${rk}-${n}`).style.display = type === 'AMOUNT' ? 'block' : 'none';
   document.getElementById(`tt-${rk}-${n}-PCT`).className    = type === 'PCT'    ? 'active-pct' : '';
   document.getElementById(`tt-${rk}-${n}-AMOUNT`).className = type === 'AMOUNT' ? 'active-amt' : '';
+  if (typeof n === 'string' && n.startsWith('csl')) {
+    updateLiveTotalSeva(rk);
+  }
 }
 
 function startEdit(catId, isPaid) {
@@ -748,6 +837,12 @@ function startEdit(catId, isPaid) {
   tr.querySelector('[data-field="l4core"]').innerHTML = levelEditHtmlCore(catId, isPaid, c);
   tr.querySelector('[data-field="l4"]').innerHTML = levelEditHtml(catId, isPaid, 4, c);
   tr.querySelector('[data-field="showroom"]').innerHTML = levelEditHtmlShowroom(catId, isPaid, c);
+  tr.querySelector('[data-field="comm_seva"]').innerHTML = 
+    `<div style="margin-bottom:6px;"><span class="badge-amt" style="background:#e0f2fe;color:#0369a1;font-weight:700" id="total-seva-edit-${rk}">Total Seva: ₹0</span></div>` +
+    sevaEditHtml(catId, isPaid, 1, c) +
+    sevaEditHtml(catId, isPaid, 2, c) +
+    sevaEditHtml(catId, isPaid, 5, c);
+  updateLiveTotalSeva(rk);
   ['monthly_target','bonus_pct','markup_pct'].forEach(f => {
     const td  = tr.querySelector(`[data-field="${f}"]`);
     const val = (c && c[f] !== undefined) ? c[f] : 0;
@@ -788,6 +883,12 @@ async function saveEdit(catId, isPaid) {
     payload[`level${n}_pct`]  = parseFloat(document.getElementById(`ei-${rk}-l${n}pct`)?.value || 0) || 0;
     payload[`level${n}_amt`]  = parseFloat(document.getElementById(`ei-${rk}-l${n}amt`)?.value || 0) || 0;
   }
+  // Community Seva Deductions
+  for (const n of [1,2,5]) {
+    const type = getLvlType(rk, `csl${n}`);
+    payload[`comm_sev_deduction_l${n}_type`] = type;
+    payload[`comm_sev_deduction_l${n}_val`]  = parseFloat(document.getElementById(`ei-${rk}-csl${n}${type.toLowerCase() === 'pct' ? 'pct' : 'amt'}`)?.value || 0) || 0;
+  }
   for (const f of ['monthly_target','bonus_pct','markup_pct']) {
     const el = document.getElementById(`ei-${rk}-${f}`);
     if (!el) { showToast('Input not found', 'error'); return; }
@@ -816,6 +917,12 @@ async function toggleStatus(catId, isPaid, newStatus) {
     level4_core_pct: c.level4_core_pct||0, level4_core_type: c.level4_core_type||'PCT', level4_core_amt: c.level4_core_amt||0,
     level4_pct: c.level4_pct||0, level4_type: c.level4_type||'PCT', level4_amt: c.level4_amt||0,
     showroom_pct: c.showroom_pct||0, showroom_type: c.showroom_type||'PCT', showroom_amt: c.showroom_amt||0,
+    comm_sev_deduction_l1_type: c.comm_sev_deduction_l1_type || 'AMOUNT',
+    comm_sev_deduction_l1_val: c.comm_sev_deduction_l1_val || 0,
+    comm_sev_deduction_l2_type: c.comm_sev_deduction_l2_type || 'AMOUNT',
+    comm_sev_deduction_l2_val: c.comm_sev_deduction_l2_val || 0,
+    comm_sev_deduction_l5_type: c.comm_sev_deduction_l5_type || 'AMOUNT',
+    comm_sev_deduction_l5_val: c.comm_sev_deduction_l5_val || 0,
     monthly_target: c.monthly_target, bonus_pct: c.bonus_pct, markup_pct: c.markup_pct,
     is_active: newStatus
   };

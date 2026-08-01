@@ -819,9 +819,10 @@
         }
     })();
 
-    if (localStorage.getItem('vgk_token')) {
-        window.location.href = '/vgk/dashboard';
-    }
+    // Manually hitting the login page should clear tokens to force fresh login (Security constraint)
+    localStorage.removeItem('vgk_token');
+    localStorage.removeItem('vgk_partner');
+    localStorage.removeItem('vgk_active_tab');
 
     (function() {
         const _sp = new URLSearchParams(window.location.search);

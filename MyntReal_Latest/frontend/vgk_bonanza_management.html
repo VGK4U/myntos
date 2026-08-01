@@ -49,7 +49,7 @@ tbody tr { background: #ffffff !important; }
 .badge-draft { background: #f3f4f6; color: #6b7280; }
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 2000; align-items: center; justify-content: center; }
 .modal-overlay.open { display: flex; }
-.modal-box { background: white; border-radius: 14px; width: 520px; max-height: 90vh; overflow-y: auto; }
+.modal-box { background: white; border-radius: 14px; width: 680px; max-height: 90vh; overflow-y: auto; }
 .modal-header { padding: 18px 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
 .modal-header h4 { font-size: 15px; font-weight: 700; margin: 0; }
 .modal-body { padding: 20px; }
@@ -162,6 +162,7 @@ tbody tr { background: #ffffff !important; }
             <table>
                 <thead>
                     <tr>
+                        <th>Bonanza #</th>
                         <th>Campaign</th>
                         <th>Segment</th>
                         <th>Period</th>
@@ -176,7 +177,7 @@ tbody tr { background: #ffffff !important; }
                     <!-- closing tr duplicated above; keep below -->
                 </thead>
                 <tbody id="bonanzaTbody">
-                    <tr><td colspan="10" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>
+                    <tr><td colspan="11" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>
                 </tbody>
             </table>
         </div>
@@ -243,6 +244,10 @@ tbody tr { background: #ffffff !important; }
         <div class="modal-body">
             <input type="hidden" id="editBonanzaId">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="form-group" id="mBonanzaNumberGrp" style="grid-column:span 2; display:none">
+                    <label>Bonanza # / Campaign Code</label>
+                    <input class="form-control" id="mBonanzaNumber" readonly style="background:#f3f4f6 !important;color:#4b5563 !important;cursor:not-allowed">
+                </div>
                 <div class="form-group" style="grid-column:span 2">
                     <label>Campaign Name *</label>
                     <input class="form-control" id="mName" placeholder="e.g. VGK Solar Sprint Q1 2026">
@@ -434,12 +439,7 @@ tbody tr { background: #ffffff !important; }
                             <b style="color:#9ca3af">💳 First Payment</b>: fires <i>when</i> DVR / first-payment advance is released &nbsp;|&nbsp;
                             <b style="color:#9ca3af">✅ File Completed</b>: fires <i>when</i> lead is marked completed (all categories). Leave trigger blank to skip a level.
                         </div>
-                        <!-- Category Filter (shared across all trigger-capable types) -->
-                        <div style="margin-top:14px">
-                            <label style="font-size:12px;color:#6ee7b7;font-weight:600;display:block;margin-bottom:4px">Category Filter <span style="font-weight:400;color:#9ca3af">(all categories if none selected)</span></label>
-                            <select class="form-select" id="pltCategoryFilter" multiple style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12.5px;height:100px"></select>
-                            <div style="font-size:10.5px;color:#6b7280;margin-top:3px">Hold Ctrl / Cmd to select multiple. Leave blank = fires for all categories.</div>
-                        </div>
+
                         <div id="pltInfoNote" style="margin-top:10px;padding:8px 12px;background:rgba(5,150,105,.08);border-radius:6px;font-size:11px;color:#6ee7b7">
                             <i class="fas fa-info-circle me-1"></i>Each level fires at its own configured trigger. Same lead fires once per level per bonanza — counted independently across different bonanzas.
                         </div>
@@ -451,7 +451,7 @@ tbody tr { background: #ffffff !important; }
                     <div style="background:linear-gradient(135deg,#0c1022,#1d1330);border:1.5px solid #a78bfa;border-radius:12px;padding:16px 18px">
                         <div style="font-weight:700;font-size:13px;color:#c4b5fd;margin-bottom:4px"><i class="fas fa-tags me-2"></i>Brand-Specific Extra Commission Overrides</div>
                         <div style="font-size:11px;color:#9ca3af;margin-bottom:14px">Select brand and define custom trigger events and payout amounts. If a brand is enabled but has no custom settings, it will use global defaults (if set) or skip.</div>
-                        <div id="brandConfigContainer" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                        <div id="brandConfigContainer" style="display:grid;grid-template-columns:1fr;gap:12px">
                             <!-- JS will dynamically populate brand config boxes here -->
                         </div>
                     </div>
@@ -702,7 +702,7 @@ async function loadBonanzas() {
     const currentStatus = document.getElementById('filterCurrentStatus').value;
     const search = document.getElementById('filterSearch').value.trim().toLowerCase();
     const tbody = document.getElementById('bonanzaTbody');
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
     try {
         const r = await staffFetch(BONANZA_BASE + '/vgk/all-bonanzas');
         const d = await r.json();
@@ -719,7 +719,7 @@ async function loadBonanzas() {
         document.getElementById('statClaims').textContent = items.reduce((s,b) => s + (b.total_claims||0), 0);
 
         if (!items.length) {
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-inbox me-2"></i>No bonanzas found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-inbox me-2"></i>No bonanzas found</td></tr>';
             return;
         }
 
@@ -783,6 +783,7 @@ async function loadBonanzas() {
             }
 
             return `<tr>
+                <td><span style="font-family:monospace;font-weight:700;background:#e0f2fe;color:#0369a1;padding:3px 7px;border-radius:6px;font-size:11.5px">${escH(b.bonanza_number || '—')}</span></td>
                 <td><div style="font-weight:700;font-size:13px;color:#111">${escH(b.name)}</div><div style="font-size:11px;color:#9ca3af">Grace: ${b.grace_days ?? 15}d · Max: ${b.max_winners}</div></td>
                 <td><span style="background:#f5f3ff;color:#7c3aed;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700">${escH(b.segment_name||'All')}</span><div style="font-size:10px;color:#4b5563;margin-top:4px"><i class="fas fa-tag me-1" style="font-size:9px"></i>${escH(b.brand_names || (isBrandWise ? 'Brand Specific' : 'All Brands'))}</div></td>
                 <td style="font-size:12px;white-space:nowrap">${period}</td>
@@ -814,7 +815,7 @@ async function loadBonanzas() {
             </tr>`;
         }).join('');
     } catch(e) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:32px;color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>${escH(e.message)}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:32px;color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>${escH(e.message)}</td></tr>`;
     }
 }
 
@@ -901,7 +902,8 @@ function toggleRewardFields() {
     document.getElementById('mMaxWinnersGrp').style.display = hideAuto;
     const segId = document.getElementById('mSegment').value;
     const isSolar = ['6', '19', '36', '48'].includes(String(segId));
-    document.getElementById('mAdvanceCountBasisGrp').style.display = isSolar ? '' : 'none';
+    const showAdvanceBasis = isSolar && !isExtraComm && !isBrandWiseComm;
+    document.getElementById('mAdvanceCountBasisGrp').style.display = showAdvanceBasis ? '' : 'none';
     if (isSlabWise) updateSlabPreview();
 }
 
@@ -977,6 +979,7 @@ function _previewAndUploadBonanzaImage(file) {
 function openCreateModal() {
     document.getElementById('editBonanzaId').value = '';
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-trophy me-2" style="color:#7c3aed"></i>New VGK Bonanza';
+    document.getElementById('mBonanzaNumber').value = '';
     document.getElementById('mName').value = '';
     document.getElementById('mStartDate').value = '';
     document.getElementById('mEndDate').value = '';
@@ -1002,7 +1005,9 @@ function openCreateModal() {
         document.getElementById('pltL'+n+'Part').checked = false;
         document.getElementById('pltL'+n+'Note').value = '';
     });
-    Array.from(document.getElementById('pltCategoryFilter').options).forEach(o => o.selected = false);
+    document.getElementById('mBonanzaNumberGrp').style.display = 'none';
+    const pltCatEl = document.getElementById('pltCategoryFilter');
+    if (pltCatEl) Array.from(pltCatEl.options).forEach(o => o.selected = false);
     Array.from(document.getElementById('mBrand').options).forEach(o => o.selected = false);
     document.getElementById('modalError').style.display = 'none';
     window._pendingBonanzaImageFile = null;
@@ -1033,6 +1038,7 @@ function openEditModal(id) {
     if (!b) return;
     document.getElementById('editBonanzaId').value = id;
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit me-2" style="color:#7c3aed"></i>Edit Bonanza';
+    document.getElementById('mBonanzaNumber').value = b.bonanza_number || '';
     document.getElementById('mName').value = b.name || '';
     document.getElementById('mStartDate').value = _toLocalDatetimeValue(b.start_date);
     document.getElementById('mEndDate').value = _toLocalDatetimeValue(b.end_date);
@@ -1068,10 +1074,14 @@ function openEditModal(id) {
         document.getElementById('pltL'+n+'Part').checked = !!(typeof _cfg === 'object' ? _cfg.participate : _cfg);
         document.getElementById('pltL'+n+'Note').value = typeof _cfg === 'object' ? (_cfg.note || '') : '';
     });
-    Array.from(document.getElementById('pltCategoryFilter').options).forEach(o => {
-        const _oIds = o.value.split('|').map(Number);
-        o.selected = _oIds.some(id => _savedCatIds.has(id));
-    });
+    document.getElementById('mBonanzaNumberGrp').style.display = 'none';
+    const pltCatEl = document.getElementById('pltCategoryFilter');
+    if (pltCatEl) {
+        Array.from(pltCatEl.options).forEach(o => {
+            const _oIds = o.value.split('|').map(Number);
+            o.selected = _oIds.some(id => _savedCatIds.has(id));
+        });
+    }
     document.getElementById('modalError').style.display = 'none';
     window._pendingBonanzaImageFile = null;
     _setBonanzaImage(b.image_url || '');
@@ -1106,6 +1116,7 @@ async function saveBonanza() {
     const slabBase   = isSlabWise ? (parseFloat(document.getElementById('mSlabBaseRef').value) || null) : null;
     const _brandOpts = Array.from(document.getElementById('mBrand').selectedOptions).map(o => parseInt(o.value)).filter(n => !isNaN(n));
     const body = {
+        bonanza_number: document.getElementById('mBonanzaNumber').value.trim() || null,
         name: document.getElementById('mName').value.trim(),
         start_date: _toISO(document.getElementById('mStartDate').value),
         end_date: _toISO(document.getElementById('mEndDate').value),
@@ -1139,8 +1150,9 @@ async function saveBonanza() {
             body['ec_l'+n+'_trigger'] = document.getElementById('pltL'+n+'Trigger').value || null;
             body['ec_l'+n+'_amount']  = parseFloat(document.getElementById('pltL'+n+'Amt').value) || null;
         });
-        const _pltCats = Array.from(document.getElementById('pltCategoryFilter').selectedOptions)
-            .flatMap(o => o.value.split('|').map(v => parseInt(v)).filter(n => !isNaN(n)));
+        const pltCatEl = document.getElementById('pltCategoryFilter');
+        const _pltCats = pltCatEl ? Array.from(pltCatEl.selectedOptions)
+            .flatMap(o => o.value.split('|').map(v => parseInt(v)).filter(n => !isNaN(n))) : [];
         body.category_filter_ids = _pltCats.length > 0 ? _pltCats : null;
     }
     if (isExtraComm) {
@@ -1449,7 +1461,7 @@ function renderBrandConfigs(campaign = null) {
     container.innerHTML = html;
 
     if (selectedBrandIds.size === 0) {
-        container.innerHTML = '<div style="grid-column:span 2;text-align:center;padding:12px;color:#9ca3af;font-style:italic"><i class="fas fa-info-circle me-1"></i>Select one or more brands from the "Brand" dropdown above to configure overrides.</div>';
+        container.innerHTML = '<div style="text-align:center;padding:12px;color:#9ca3af;font-style:italic"><i class="fas fa-info-circle me-1"></i>Select one or more brands from the "Brand" dropdown above to configure overrides.</div>';
     }
 }
 
@@ -1874,8 +1886,10 @@ async function loadEcCategories() {
         });
         // DC-EC-PER-LEVEL-TRIGGER-001: populate unified category filter
         const sel = document.getElementById('pltCategoryFilter');
-        sel.innerHTML = '';
-        _buildOptions().forEach(o => sel.appendChild(o));
+        if (sel) {
+            sel.innerHTML = '';
+            _buildOptions().forEach(o => sel.appendChild(o));
+        }
     } catch (_) {}
 }
 
@@ -2064,13 +2078,17 @@ function mgmtRenderTracking(d) {
         // ── Tier-column layout: members = rows, tiers = column groups ────
         const memberMap = {};
         const baseOrder = [];
+        const isEc = g.tiers[0].reward_type === 'extra_commission' || g.tiers[0].reward_type === 'brand_wise_commission';
+        const ecLevels = g.tiers[0].ec_levels || [];
+
         g.tiers.forEach((tier, ti) => {
             (tier.members || []).forEach(m => {
                 if (!memberMap[m.partner_id]) {
                     memberMap[m.partner_id] = {
                         partner_id: m.partner_id, partner_name: m.partner_name,
                         partner_code: m.partner_code, claim_status: m.claim_status,
-                        tiers: {}, any_eligible: false
+                        tiers: {}, any_eligible: false,
+                        ec_stats: m.ec_stats || {levels: {}, total_earnings: 0.0}
                     };
                     if (ti === 0) baseOrder.push(m.partner_id);
                 }
@@ -2087,50 +2105,87 @@ function mgmtRenderTracking(d) {
             displayOrder = baseOrder.filter(pid => memberMap[pid].any_eligible);
         } else if (_mgmtTrackView === 'progress') {
             displayOrder = baseOrder.filter(pid =>
+                isEc ? (memberMap[pid].ec_stats.total_earnings > 0) :
                 Object.values(memberMap[pid].tiers).some(t => (t.achieved || 0) > 0 || (t.eligible || 0) > 0)
             );
         }
 
-        const tierColHeaders = g.tiers.map(tier => {
-            const lbl = tier.tier_label || `🏅 ${tier.award_name || 'Reward'} (${tier.target} deals)`;
-            return `<th colspan="3" style="text-align:center;border-left:1px solid #e5e7eb;white-space:nowrap">
-                <div style="color:#7c3aed;font-size:11px;font-weight:700">${escBonanzaH(lbl)}</div>
-                <div style="color:#6b7280;font-size:10px">${tier.eligible_count} eligible</div>
+        let tierColHeaders = '';
+        let tierSubHeaders = '';
+        let totalCols = 0;
+
+        if (isEc) {
+            tierColHeaders = ecLevels.map(lvl => {
+                return `<th style="text-align:center;border-left:1px solid #e5e7eb;white-space:nowrap;padding:10px 8px">
+                    <div style="color:#7c3aed;font-size:11px;font-weight:700">L${lvl.level}</div>
+                    <div style="color:#6b7280;font-size:10px">${lvl.trigger}</div>
+                </th>`;
+            }).join('') + `<th style="text-align:center;border-left:1px solid #e5e7eb;white-space:nowrap;padding:10px 8px">
+                <div style="color:#10b981;font-size:11px;font-weight:700">Earnings</div>
             </th>`;
-        }).join('');
-        const tierSubHeaders = g.tiers.map(() =>
-            `<th style="text-align:center;border-left:1px solid #e5e7eb">Elig</th><th style="text-align:center">Done</th><th style="text-align:center">Need</th>`
-        ).join('');
-        const totalCols = 2 + g.tiers.length * 3 + 1;
+            totalCols = 2 + ecLevels.length + 1 + 1;
+        } else {
+            tierColHeaders = g.tiers.map(tier => {
+                const lbl = tier.tier_label || `🏅 ${tier.award_name || 'Reward'} (${tier.target} deals)`;
+                return `<th colspan="3" style="text-align:center;border-left:1px solid #e5e7eb;white-space:nowrap">
+                    <div style="color:#7c3aed;font-size:11px;font-weight:700">${escBonanzaH(lbl)}</div>
+                    <div style="color:#6b7280;font-size:10px">${tier.eligible_count} eligible</div>
+                </th>`;
+            }).join('');
+            tierSubHeaders = g.tiers.map(() =>
+                `<th style="text-align:center;border-left:1px solid #e5e7eb">Elig</th><th style="text-align:center">Done</th><th style="text-align:center">Need</th>`
+            ).join('');
+            totalCols = 2 + g.tiers.length * 3 + 1;
+        }
 
         const memberRows = displayOrder.map((pid, idx) => {
             const md = memberMap[pid];
-            const tierCells = g.tiers.map(tier => {
-                const t = (md.tiers || {})[tier.row_key] || {};
-                const eligibleCount = t.eligible ?? 0;
-                const achievedCount = t.achieved ?? 0;
-                
-                let eligCell = '';
-                if (eligibleCount > 0) {
-                    eligCell = `<a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${tier.bonanza_id}" data-partner-id="${md.partner_id}" data-campaign-name="${escH(tier.name)}" data-partner-name="${escH(md.partner_name)}" data-only-triggered="false" style="color:#1e3a8a; font-weight:700; text-decoration:underline; font-size:13px">${eligibleCount}</a>`;
-                } else {
-                    eligCell = `<span style="color:#9ca3af">0</span>`;
-                }
+            let tierCells = '';
 
-                let doneCell = '';
-                if (achievedCount > 0) {
-                    doneCell = `<a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${tier.bonanza_id}" data-partner-id="${md.partner_id}" data-campaign-name="${escH(tier.name)}" data-partner-name="${escH(md.partner_name)}" data-only-triggered="true" style="color:${t.is_eligible ? '#059669' : '#7c3aed'}; font-weight:800; text-decoration:underline; font-size:13px">${achievedCount}</a>`;
-                    if (t.is_eligible) {
-                        doneCell += `&nbsp;<i class="fas fa-check-circle" style="color:#059669;font-size:10px"></i>`;
+            if (isEc) {
+                tierCells = ecLevels.map(lvl => {
+                    const stats = md.ec_stats || {levels: {}, total_earnings: 0.0};
+                    const lvData = stats.levels[String(lvl.level)] || {count: 0, earnings: 0.0};
+                    const cnt = lvData.count;
+                    if (cnt > 0) {
+                        return `<td style="text-align:center;border-left:1px solid #e5e7eb">
+                            <a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${g.bonanza_id}" data-partner-id="${md.partner_id}" data-campaign-name="${escH(g.name)}" data-partner-name="${escH(md.partner_name)}" data-level="${lvl.level}" style="color:#1e3a8a; font-weight:700; text-decoration:underline; font-size:13px">${cnt}</a>
+                        </td>`;
+                    } else {
+                        return `<td style="text-align:center;border-left:1px solid #e5e7eb;color:#9ca3af">0</td>`;
                     }
-                } else {
-                    doneCell = `<span style="font-weight:700;color:#9ca3af">0</span>`;
-                }
-                const needCell = (t.gap > 0)
-                    ? `<span style="color:#dc2626;font-weight:600">-${t.gap}</span>`
-                    : `<span style="color:#059669;font-weight:600">✓</span>`;
-                return `<td style="text-align:center;border-left:1px solid #e5e7eb">${eligCell}</td><td style="text-align:center">${doneCell}</td><td style="text-align:center">${needCell}</td>`;
-            }).join('');
+                }).join('') + `<td style="text-align:center;border-left:1px solid #e5e7eb;font-weight:700;color:#059669;font-size:13px">
+                    ₹${(md.ec_stats.total_earnings || 0).toLocaleString('en-IN')}
+                </td>`;
+            } else {
+                tierCells = g.tiers.map(tier => {
+                    const t = (md.tiers || {})[tier.row_key] || {};
+                    const eligibleCount = t.eligible ?? 0;
+                    const achievedCount = t.achieved ?? 0;
+                    
+                    let eligCell = '';
+                    if (eligibleCount > 0) {
+                        eligCell = `<a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${tier.bonanza_id}" data-partner-id="${md.partner_id}" data-campaign-name="${escH(tier.name)}" data-partner-name="${escH(md.partner_name)}" data-only-triggered="false" style="color:#1e3a8a; font-weight:700; text-decoration:underline; font-size:13px">${eligibleCount}</a>`;
+                    } else {
+                        eligCell = `<span style="color:#9ca3af">0</span>`;
+                    }
+
+                    let doneCell = '';
+                    if (achievedCount > 0) {
+                        doneCell = `<a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${tier.bonanza_id}" data-partner-id="${md.partner_id}" data-campaign-name="${escH(tier.name)}" data-partner-name="${escH(md.partner_name)}" data-only-triggered="true" style="color:${t.is_eligible ? '#059669' : '#7c3aed'}; font-weight:800; text-decoration:underline; font-size:13px">${achievedCount}</a>`;
+                        if (t.is_eligible) {
+                            doneCell += `&nbsp;<i class="fas fa-check-circle" style="color:#059669;font-size:10px"></i>`;
+                        }
+                    } else {
+                        doneCell = `<span style="font-weight:700;color:#9ca3af">0</span>`;
+                    }
+                    const needCell = (t.gap > 0)
+                        ? `<span style="color:#dc2626;font-weight:600">-${t.gap}</span>`
+                        : `<span style="color:#059669;font-weight:600">✓</span>`;
+                    return `<td style="text-align:center;border-left:1px solid #e5e7eb">${eligCell}</td><td style="text-align:center">${doneCell}</td><td style="text-align:center">${needCell}</td>`;
+                }).join('');
+            }
+
             const claimBadge = md.claim_status
                 ? `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(0,0,0,.06);color:${MGMT_CLAIM_COLORS[md.claim_status]||'#374151'}">${escBonanzaH(md.claim_status)}</span>`
                 : `<span style="color:#9ca3af;font-size:10px">—</span>`;
@@ -2140,17 +2195,102 @@ function mgmtRenderTracking(d) {
                 <td><div style="font-weight:700;font-size:13px;color:#111827">${escBonanzaH(md.partner_name)}</div>
                     <div style="font-size:11px;color:#6b7280">${escBonanzaH(md.partner_code)}</div></td>
                 ${tierCells}
-                <td>${claimBadge}</td>
+                ${isEc ? '' : `<td>${claimBadge}</td>`}
             </tr>`;
-        }).join('') || `<tr><td colspan="${totalCols}" style="text-align:center;padding:14px;color:#9ca3af">No members match</td></tr>`;
+        }).join('');
 
-        tableHtml = `<div style="overflow-x:auto"><table>
-            <thead>
-                <tr><th rowspan="2" style="width:28px">#</th><th rowspan="2">Member</th>${tierColHeaders}<th rowspan="2">Claim</th></tr>
-                <tr>${tierSubHeaders}</tr>
-            </thead>
-            <tbody>${memberRows}</tbody>
-        </table></div>`;
+        let overallTotalRowHtml = '';
+        if (isEc) {
+            const levelTotals = {};
+            ecLevels.forEach(lvl => { levelTotals[lvl.level] = 0; });
+            let overallEarningsTotal = 0;
+            displayOrder.forEach(pid => {
+                const md = memberMap[pid];
+                const stats = md.ec_stats || {levels: {}, total_earnings: 0.0};
+                ecLevels.forEach(lvl => {
+                    const lvData = stats.levels[String(lvl.level)] || {count: 0, earnings: 0.0};
+                    levelTotals[lvl.level] += lvData.count;
+                });
+                overallEarningsTotal += (stats.total_earnings || 0);
+            });
+            const overallLevelCells = ecLevels.map(lvl => {
+                const cnt = levelTotals[lvl.level];
+                if (cnt > 0) {
+                    return `<td style="text-align:center;border-left:1px solid #e5e7eb;background-color:#f9fafb">
+                        <a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${g.bonanza_id}" data-partner-id="" data-campaign-name="${escH(g.name)}" data-partner-name="Overall Total" data-level="${lvl.level}" style="color:#1e3a8a; font-weight:800; text-decoration:underline; font-size:13px">${cnt}</a>
+                    </td>`;
+                } else {
+                    return `<td style="text-align:center;border-left:1px solid #e5e7eb;color:#9ca3af;background-color:#f9fafb">0</td>`;
+                }
+            }).join('') + `<td style="text-align:center;border-left:1px solid #e5e7eb;font-weight:800;color:#059669;font-size:13px;background-color:#f9fafb">
+                ₹${overallEarningsTotal.toLocaleString('en-IN')}
+            </td>`;
+            
+            overallTotalRowHtml = `<tr style="background-color:#f3f4f6;border-bottom:2px solid #d1d5db">
+                <td style="width:28px;text-align:center;font-weight:800;color:#374151">Σ</td>
+                <td><div style="font-weight:800;font-size:13px;color:#111827">Overall Total</div></td>
+                ${overallLevelCells}
+            </tr>`;
+        } else {
+            const tierTotals = {};
+            g.tiers.forEach(tier => {
+                tierTotals[tier.row_key] = { eligible: 0, achieved: 0, gap: 0 };
+            });
+            displayOrder.forEach(pid => {
+                const md = memberMap[pid];
+                g.tiers.forEach(tier => {
+                    const t = (md.tiers || {})[tier.row_key] || {};
+                    tierTotals[tier.row_key].eligible += (t.eligible ?? 0);
+                    tierTotals[tier.row_key].achieved += (t.achieved ?? 0);
+                    tierTotals[tier.row_key].gap += (t.gap ?? 0);
+                });
+            });
+            const overallTierCells = g.tiers.map(tier => {
+                const totals = tierTotals[tier.row_key];
+                const eligCell = totals.eligible > 0
+                    ? `<a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${tier.bonanza_id}" data-partner-id="" data-campaign-name="${escH(tier.name)}" data-partner-name="Overall Total" data-only-triggered="false" style="color:#1e3a8a; font-weight:800; text-decoration:underline; font-size:13px">${totals.eligible}</a>`
+                    : `<span style="color:#9ca3af">0</span>`;
+                const doneCell = totals.achieved > 0
+                    ? `<a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${tier.bonanza_id}" data-partner-id="" data-campaign-name="${escH(tier.name)}" data-partner-name="Overall Total" data-only-triggered="true" style="color:#7c3aed; font-weight:800; text-decoration:underline; font-size:13px">${totals.achieved}</a>`
+                    : `<span style="font-weight:700;color:#9ca3af">0</span>`;
+                const needCell = totals.gap > 0
+                    ? `<span style="color:#dc2626;font-weight:700">-${totals.gap}</span>`
+                    : `<span style="color:#059669;font-weight:700">✓</span>`;
+                return `<td style="text-align:center;border-left:1px solid #e5e7eb;background-color:#f9fafb">${eligCell}</td>
+                        <td style="text-align:center;background-color:#f9fafb">${doneCell}</td>
+                        <td style="text-align:center;background-color:#f9fafb">${needCell}</td>`;
+            }).join('');
+            
+            overallTotalRowHtml = `<tr style="background-color:#f3f4f6;border-bottom:2px solid #d1d5db">
+                <td style="width:28px;text-align:center;font-weight:800;color:#374151">Σ</td>
+                <td><div style="font-weight:800;font-size:13px;color:#111827">Overall Total</div></td>
+                ${overallTierCells}
+                <td></td>
+            </tr>`;
+        }
+
+        const tbodyContent = overallTotalRowHtml + (memberRows || `<tr><td colspan="${totalCols}" style="text-align:center;padding:14px;color:#9ca3af">No members match</td></tr>`);
+
+        if (isEc) {
+            tableHtml = `<div style="overflow-x:auto"><table>
+                <thead>
+                    <tr>
+                        <th style="width:28px">#</th>
+                        <th>Member</th>
+                        ${tierColHeaders}
+                    </tr>
+                </thead>
+                <tbody>${tbodyContent}</tbody>
+            </table></div>`;
+        } else {
+            tableHtml = `<div style="overflow-x:auto"><table>
+                <thead>
+                    <tr><th rowspan="2" style="width:28px">#</th><th rowspan="2">Member</th>${tierColHeaders}<th rowspan="2">Claim</th></tr>
+                    <tr>${tierSubHeaders}</tr>
+                </thead>
+                <tbody>${tbodyContent}</tbody>
+            </table></div>`;
+        }
 
         const currStatus = getCampaignCurrentStatus(g.tiers[0]);
         let currStatusBadge = '';
@@ -2186,10 +2326,11 @@ function openTrackDetailsFromLink(el) {
     const campaignName = el.getAttribute('data-campaign-name');
     const partnerName = el.getAttribute('data-partner-name');
     const onlyTriggered = el.getAttribute('data-only-triggered') === 'true';
-    openTrackDetails(bid, pid, campaignName, partnerName, onlyTriggered);
+    const level = el.getAttribute('data-level');
+    openTrackDetails(bid, pid, campaignName, partnerName, onlyTriggered, level);
 }
 
-async function openTrackDetails(bonanzaId, partnerId, campaignName, partnerName, onlyTriggered = false) {
+async function openTrackDetails(bonanzaId, partnerId, campaignName, partnerName, onlyTriggered = false, level = null) {
     const modal = document.getElementById('mtrackDetailsModal');
     const tbody = document.getElementById('mtrackDetailsTbody');
     
@@ -2199,44 +2340,109 @@ async function openTrackDetails(bonanzaId, partnerId, campaignName, partnerName,
     document.getElementById('mtrackDetailsBasis').textContent = "Loading...";
     
     // Clear old rows
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:32px; color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading details…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:32px; color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading details…</td></tr>';
     
     // Open modal
     modal.classList.add('open');
     
     try {
-        const r = await staffFetch(`${BONANZA_BASE}/vgk/member-tracking/details?bonanza_id=${bonanzaId}&partner_id=${partnerId}&only_triggered=${onlyTriggered}`);
+        let url = `${BONANZA_BASE}/vgk/member-tracking/details?bonanza_id=${bonanzaId}&only_triggered=${onlyTriggered}`;
+        if (partnerId) url += `&partner_id=${partnerId}`;
+        if (level) url += `&level=${level}`;
+        
+        const r = await staffFetch(url);
         const d = await r.json();
         if (!r.ok) throw new Error(d.detail || d.message || 'Failed to load details');
         
         document.getElementById('mtrackDetailsBasis').textContent = d.bonanza?.basis || '—';
         
+        const thead = document.querySelector('#mtrackDetailsTable thead');
+        const isEc = d.bonanza?.reward_type === 'extra_commission' || d.bonanza?.reward_type === 'brand_wise_commission';
+        const isOverall = !partnerId;
+        const cols = isEc ? (isOverall ? 11 : 10) : (isOverall ? 10 : 9);
+        
+        if (isEc) {
+            thead.innerHTML = `
+                <tr style="background:#ede9fe; border-bottom:2px solid #ddd6fe">
+                    <th style="padding:10px; text-align:center">#</th>
+                    ${isOverall ? `<th style="padding:10px">Partner / Member</th>` : ''}
+                    <th style="padding:10px">Lead Name</th>
+                    <th style="padding:10px">Phone / Mobile</th>
+                    <th style="padding:10px">Submit Date</th>
+                    <th style="padding:10px">Payment Date</th>
+                    <th style="padding:10px">Status</th>
+                    <th style="padding:10px">Solar Stage</th>
+                    <th style="padding:10px">Brand</th>
+                    <th style="padding:10px">Level</th>
+                    <th style="padding:10px; text-align:right">Payout Amt</th>
+                </tr>
+            `;
+        } else {
+            thead.innerHTML = `
+                <tr style="background:#ede9fe; border-bottom:2px solid #ddd6fe">
+                    <th style="padding:10px; text-align:center">#</th>
+                    ${isOverall ? `<th style="padding:10px">Partner / Member</th>` : ''}
+                    <th style="padding:10px">Lead Name</th>
+                    <th style="padding:10px">Phone / Mobile</th>
+                    <th style="padding:10px">Submit Date</th>
+                    <th style="padding:10px">Payment Date</th>
+                    <th style="padding:10px">Status</th>
+                    <th style="padding:10px">Solar Stage</th>
+                    <th style="padding:10px">Brand</th>
+                    <th style="padding:10px; text-align:right">Deal Value</th>
+                </tr>
+            `;
+        }
+        
         const leads = d.leads || [];
         if (!leads.length) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px; color:#9ca3af"><i class="fas fa-inbox me-1"></i>No qualifying leads found</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align:center; padding:20px; color:#9ca3af"><i class="fas fa-inbox me-1"></i>No qualifying leads found</td></tr>`;
             return;
         }
         
         tbody.innerHTML = leads.map((l, i) => {
             const submitDate = l.submit_date ? fmtDate(l.submit_date) : '—';
             const paymentDate = l.payment_date ? fmtDate(l.payment_date) : '—';
-            const dealValue = l.deal_value > 0 ? '₹' + l.deal_value.toLocaleString('en-IN') : '—';
             
-            return `<tr style="border-bottom:1px solid #f1f5f9">
-                <td style="text-align:center; padding:10px; color:#64748b">${i + 1}</td>
-                <td style="padding:10px; font-weight:600; color:#1e293b">${escH(l.customer_name)}</td>
-                <td style="padding:10px; white-space:nowrap"><a href="tel:${escH(l.mobile)}" style="color:#2563eb; text-decoration:none; font-weight:600">${escH(l.mobile)}</a></td>
-                <td style="padding:10px">${submitDate}</td>
-                <td style="padding:10px">${paymentDate}</td>
-                <td style="padding:10px"><span class="badge" style="background:#f1f5f9; color:#475569">${escH(l.status)}</span></td>
-                <td style="padding:10px"><span style="color:#0891b2">${escH(l.solar_pipeline_status || '—')}</span></td>
-                <td style="padding:10px; color:#475569">${escH(l.brand_name || '—')}</td>
-                <td style="padding:10px; text-align:right; font-weight:600; color:#0f172a">${dealValue}</td>
-            </tr>`;
+            const partnerCell = isOverall
+                ? `<td style="padding:10px"><div style="font-weight:700;font-size:12px;color:#1e3a8a">${escH(l.partner_name || '—')}</div>
+                   <div style="font-size:10px;color:#6b7280">${escH(l.partner_code || '—')}</div></td>`
+                : '';
+            
+            if (isEc) {
+                const payoutVal = l.commission_amount > 0 ? '₹' + l.commission_amount.toLocaleString('en-IN') : '—';
+                return `<tr style="border-bottom:1px solid #f1f5f9">
+                    <td style="text-align:center; padding:10px; color:#64748b">${i + 1}</td>
+                    ${partnerCell}
+                    <td style="padding:10px; font-weight:600; color:#1e293b">${escH(l.customer_name)}</td>
+                    <td style="padding:10px; white-space:nowrap"><a href="tel:${escH(l.mobile)}" style="color:#2563eb; text-decoration:none; font-weight:600">${escH(l.mobile)}</a></td>
+                    <td style="padding:10px">${submitDate}</td>
+                    <td style="padding:10px">${paymentDate}</td>
+                    <td style="padding:10px"><span class="badge" style="background:#f1f5f9; color:#475569">${escH(l.status)}</span></td>
+                    <td style="padding:10px"><span style="color:#0891b2">${escH(l.solar_pipeline_status || '—')}</span></td>
+                    <td style="padding:10px; color:#475569">${escH(l.brand_name || '—')}</td>
+                    <td style="padding:10px"><span class="badge" style="background:#ddd6fe; color:#5b21b6; font-weight:700">L${l.level}</span></td>
+                    <td style="padding:10px; text-align:right; font-weight:700; color:#059669">${payoutVal}</td>
+                </tr>`;
+            } else {
+                const dealValue = l.deal_value > 0 ? '₹' + l.deal_value.toLocaleString('en-IN') : '—';
+                return `<tr style="border-bottom:1px solid #f1f5f9">
+                    <td style="text-align:center; padding:10px; color:#64748b">${i + 1}</td>
+                    ${partnerCell}
+                    <td style="padding:10px; font-weight:600; color:#1e293b">${escH(l.customer_name)}</td>
+                    <td style="padding:10px; white-space:nowrap"><a href="tel:${escH(l.mobile)}" style="color:#2563eb; text-decoration:none; font-weight:600">${escH(l.mobile)}</a></td>
+                    <td style="padding:10px">${submitDate}</td>
+                    <td style="padding:10px">${paymentDate}</td>
+                    <td style="padding:10px"><span class="badge" style="background:#f1f5f9; color:#475569">${escH(l.status)}</span></td>
+                    <td style="padding:10px"><span style="color:#0891b2">${escH(l.solar_pipeline_status || '—')}</span></td>
+                    <td style="padding:10px; color:#475569">${escH(l.brand_name || '—')}</td>
+                    <td style="padding:10px; text-align:right; font-weight:600; color:#0f172a">${dealValue}</td>
+                </tr>`;
+            }
         }).join('');
         
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:32px; color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>${escH(e.message)}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:32px; color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>${escH(e.message)}</td></tr>`;
     }
 }
 

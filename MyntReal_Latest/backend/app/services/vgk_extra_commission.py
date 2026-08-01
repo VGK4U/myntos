@@ -90,24 +90,6 @@ def apply_extra_commission_if_active(
         """)).fetchall()
 
         for _bz in _active:
-            # ── DUAL-STAGE ELIGIBILITY CHECK ────────────────────────────────
-            # Evaluate lead's eligibility date against campaign validity dates.
-            # Using campaign's advance_count_basis determines whether to check
-            # file submission date or first payment date.
-            basis = (getattr(_bz, 'advance_count_basis', None) or 'CIBIL').upper()
-            submit_dt = getattr(lead, 'submit_date', None)
-            first_pmt_dt = getattr(lead, 'first_payment_received_date', None)
-
-            if basis == 'DVR':
-                elig_date = first_pmt_dt
-            elif basis == 'BOTH':
-                elig_date = submit_dt if submit_dt else first_pmt_dt
-            else:  # CIBIL
-                elig_date = submit_dt
-
-            if hasattr(elig_date, 'date'):
-                elig_date = elig_date.date()
-
             grace = int(getattr(_bz, 'grace_days', 0) or 0)
             bz_start = _bz.start_date.date() if hasattr(_bz.start_date, 'date') else _bz.start_date
             bz_end = _bz.end_date.date() if hasattr(_bz.end_date, 'date') else _bz.end_date
@@ -115,8 +97,21 @@ def apply_extra_commission_if_active(
             from datetime import timedelta
             bz_end_with_grace = bz_end + timedelta(days=grace)
 
-            if not elig_date or not (bz_start <= elig_date <= bz_end_with_grace):
-                continue
+            def is_date_eligible(trig):
+                submit_dt = getattr(lead, 'submit_date', None)
+                first_pmt_dt = getattr(lead, 'first_payment_received_date', None)
+                
+                # Check date based on trigger type
+                if trig == 'first_payment':
+                    check_dt = first_pmt_dt
+                else:
+                    check_dt = submit_dt
+
+                if not check_dt:
+                    return False
+                if hasattr(check_dt, 'date'):
+                    check_dt = check_dt.date()
+                return bz_start <= check_dt <= bz_end_with_grace
 
             try:
                 _cat_rows = db.execute(text("""
@@ -151,6 +146,11 @@ def apply_extra_commission_if_active(
                         _eff_trig = _per_trig if _per_trig else _global_trigger
                         if _eff_trig != trigger_event:
                             continue
+
+                        # Validate date for this trigger event
+                        if not is_date_eligible(_eff_trig):
+                            continue
+
                         val = getattr(_brand_cfg, f'ec_l{lv}_amount', None)
                         if val and float(val) > 0:
                             level_amounts[lv] = Decimal(str(val))
@@ -171,6 +171,11 @@ def apply_extra_commission_if_active(
                         _eff_trig = _per_trig if _per_trig else _global_trigger
                         if _eff_trig != trigger_event:
                             continue
+
+                        # Validate date for this trigger event
+                        if not is_date_eligible(_eff_trig):
+                            continue
+
                         val = getattr(_bz, f'ec_l{lv}_amount', None)
                         if val and float(val) > 0:
                             level_amounts[lv] = Decimal(str(val))

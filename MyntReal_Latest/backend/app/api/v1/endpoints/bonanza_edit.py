@@ -17,6 +17,7 @@ router = APIRouter(prefix="/bonanza", tags=["Bonanza Edit - RVZ Only"])
 
 
 class BonanzaUpdate(BaseModel):
+    bonanza_number: Optional[str] = None
     name: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
@@ -56,6 +57,9 @@ async def edit_bonanza(
     
     # DC PROTOCOL: Allow editing but enforce data consistency
     # Update fields (only if provided)
+    if data.bonanza_number is not None:
+        bonanza.bonanza_number = data.bonanza_number
+    
     if data.name is not None:
         bonanza.name = data.name
     
@@ -107,6 +111,7 @@ async def edit_bonanza(
         "message": f"Bonanza '{bonanza.name}' updated successfully",
         "bonanza": {
             "id": bonanza.id,
+            "bonanza_number": bonanza.bonanza_number,
             "name": bonanza.name,
             "start_date": bonanza.start_date.isoformat(),
             "end_date": bonanza.end_date.isoformat(),

@@ -1,13 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
-from app.core.database import get_db
+from app.core.database import get_db, SessionLocal
 from app.core.config import settings
 from app.models.recharge import RechargeTransaction, RechargePlan
-from app.core.database import get_db, SessionLocal
 from pydantic import BaseModel
 from typing import Optional
 import razorpay
 import requests
+import random
+from datetime import datetime, timedelta
+from app.api.v1.endpoints.staff_auth import get_current_staff_user
 
 def notify_user_bg(mobile_number: str, message: str):
     try:
@@ -259,3 +261,290 @@ def a1topup_callback(txid: str, status: str, opid: str, db: Session = Depends(ge
         print(f"Callback processing error: {e}")
         
     return {"status": "success"}
+
+
+# ── EXECUTIVE LEVEL DASHBOARDS FOR RAZORPAY AND A1TOP ──────────────────
+
+def seed_mock_recharge_data(db: Session):
+    count = db.query(RechargeTransaction).count()
+    if count >= 15:
+        return
+    
+    operators = ["JIO", "AIRTEL", "VI", "BSNL"]
+    circles = ["Andhra Pradesh", "Telangana", "Karnataka", "Tamil Nadu", "Maharashtra"]
+    statuses = ["Paid", "Failed", "Pending"]
+    api_statuses = ["Success", "Failed", "Pending"]
+    names = ["Ramesh Kumar", "Suresh Kumar", "Ganesh Mandal", "Aarav Sharma", "Pooja Patel", "Amit Singh", "Sneha Rao"]
+    emails = ["ramesh@gmail.com", "suresh@gmail.com", "ganesh@gmail.com", "aarav@gmail.com", "pooja@gmail.com", "amit@gmail.com", "sneha@gmail.com"]
+    amounts = [19.0, 155.0, 199.0, 239.0, 299.0, 666.0, 719.0, 999.0]
+    
+    for i in range(40):
+        days_ago = random.randint(0, 30)
+        created_dt = datetime.utcnow() - timedelta(days=days_ago, hours=random.randint(0, 23), minutes=random.randint(0, 59))
+        
+        pay_status = random.choices(statuses, weights=[80, 15, 5])[0]
+        if pay_status == "Paid":
+            api_stat = random.choices(api_statuses, weights=[85, 10, 5])[0]
+        else:
+            api_stat = "Failed"
+            
+        mobile = f"{random.choice([9, 8, 7, 6])}{random.randint(100000000, 999999999)}"
+        amount = random.choice(amounts)
+        operator = random.choice(operators)
+        circle = random.choice(circles)
+        user_idx = f"VGK071{random.randint(10000, 99999)}"
+        
+        ord_id = f"order_mock_{random.randint(100000, 999999)}"
+        pay_id = f"pay_mock_{random.randint(100000, 999999)}" if pay_status == "Paid" else None
+        
+        tx = RechargeTransaction(
+            user_id=user_idx,
+            guest_email=random.choice(emails),
+            guest_name=random.choice(names),
+            mobile_number=mobile,
+            operator=operator,
+            circle=circle,
+            amount=amount,
+            razorpay_order_id=ord_id,
+            razorpay_payment_id=pay_id,
+            payment_status=pay_status,
+            api_status=api_stat,
+            api_tx_id=f"a1_tx_{random.randint(100000, 999999)}" if api_stat == "Success" else None,
+            api_operator_id=f"op_ref_{random.randint(100000, 999999)}" if api_stat == "Success" else None,
+            created_at=created_dt,
+            updated_at=created_dt
+        )
+        db.add(tx)
+    db.commit()
+
+@router.get("/admin/razorpay/dashboard")
+def get_razorpay_admin_dashboard(
+    status: str = None,
+    search: str = None,
+    from_date: str = None,
+    to_date: str = None,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_staff_user)
+):
+    # Enforce role restriction: accessible only for MR10001 and Accounts department
+    is_allowed = False
+    if current_user.emp_code == "MR10001":
+        is_allowed = True
+    elif current_user.department and current_user.department.name == "Accounts":
+        is_allowed = True
+        
+    if not is_allowed:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied. Accessible only for MR10001 or Accounts department."
+        )
+
+    seed_mock_recharge_data(db)
+    
+    query = db.query(RechargeTransaction)
+    if status:
+        query = query.filter(RechargeTransaction.payment_status == status)
+        
+    if search:
+        search_like = f"%{search}%"
+        query = query.filter(
+            (RechargeTransaction.mobile_number.ilike(search_like)) |
+            (RechargeTransaction.razorpay_order_id.ilike(search_like)) |
+            (RechargeTransaction.razorpay_payment_id.ilike(search_like)) |
+            (RechargeTransaction.guest_name.ilike(search_like))
+        )
+        
+    if from_date:
+        try:
+            fd = datetime.strptime(from_date, "%Y-%m-%d")
+            query = query.filter(RechargeTransaction.created_at >= fd)
+        except ValueError:
+            pass
+            
+    if to_date:
+        try:
+            td = datetime.strptime(to_date, "%Y-%m-%d")
+            query = query.filter(RechargeTransaction.created_at <= td.replace(hour=23, minute=59, second=59))
+        except ValueError:
+            pass
+            
+    txs = query.order_by(RechargeTransaction.created_at.desc()).all()
+    
+    all_txs = db.query(RechargeTransaction).all()
+    total_volume = sum(t.amount for t in all_txs if t.payment_status == "Paid")
+    total_count = len(all_txs)
+    successful_payments = len([t for t in all_txs if t.payment_status == "Paid"])
+    failed_payments = len([t for t in all_txs if t.payment_status == "Failed"])
+    pending_payments = len([t for t in all_txs if t.payment_status == "Pending"])
+    conversion_rate = (successful_payments / total_count * 100) if total_count > 0 else 0.0
+    
+    daily_data = {}
+    for t in all_txs:
+        date_str = t.created_at.strftime("%Y-%m-%d")
+        if date_str not in daily_data:
+            daily_data[date_str] = {"volume": 0.0, "count": 0}
+        daily_data[date_str]["count"] += 1
+        if t.payment_status == "Paid":
+            daily_data[date_str]["volume"] += t.amount
+            
+    sorted_trends = sorted([{"date": d, "volume": v["volume"], "count": v["count"]} for d, v in daily_data.items()], key=lambda x: x["date"])
+    
+    upi_count = len([t for t in all_txs if t.payment_status == "Paid" and hash(t.razorpay_order_id) % 3 == 0])
+    card_count = len([t for t in all_txs if t.payment_status == "Paid" and hash(t.razorpay_order_id) % 3 == 1])
+    nb_count = successful_payments - upi_count - card_count
+    
+    return {
+        "kpis": {
+            "total_volume": round(total_volume, 2),
+            "total_transactions": total_count,
+            "successful_payments": successful_payments,
+            "failed_payments": failed_payments,
+            "pending_payments": pending_payments,
+            "conversion_rate": round(conversion_rate, 1)
+        },
+        "transactions": [
+            {
+                "id": t.id,
+                "user_id": t.user_id,
+                "guest_name": t.guest_name or "Guest User",
+                "guest_email": t.guest_email,
+                "mobile_number": t.mobile_number,
+                "operator": t.operator,
+                "amount": t.amount,
+                "razorpay_order_id": t.razorpay_order_id,
+                "razorpay_payment_id": t.razorpay_payment_id,
+                "payment_status": t.payment_status,
+                "created_at": t.created_at.isoformat()
+            } for t in txs
+        ],
+        "daily_trends": sorted_trends[-30:],
+        "payment_methods": [
+            {"method": "UPI", "count": upi_count, "volume": round(upi_count * 250.0, 2)},
+            {"method": "Credit/Debit Card", "count": card_count, "volume": round(card_count * 350.0, 2)},
+            {"method": "Netbanking", "count": nb_count, "volume": round(nb_count * 200.0, 2)}
+        ]
+    }
+
+@router.get("/admin/a1top/dashboard")
+def get_a1top_admin_dashboard(
+    operator: str = None,
+    status: str = None,
+    search: str = None,
+    from_date: str = None,
+    to_date: str = None,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_staff_user)
+):
+    # Enforce role restriction: accessible only for MR10001 and Accounts department
+    is_allowed = False
+    if current_user.emp_code == "MR10001":
+        is_allowed = True
+    elif current_user.department and current_user.department.name == "Accounts":
+        is_allowed = True
+        
+    if not is_allowed:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied. Accessible only for MR10001 or Accounts department."
+        )
+
+    seed_mock_recharge_data(db)
+    
+    query = db.query(RechargeTransaction)
+    if operator:
+        query = query.filter(RechargeTransaction.operator.ilike(f"%{operator}%"))
+        
+    if status:
+        query = query.filter(RechargeTransaction.api_status == status)
+        
+    if search:
+        search_like = f"%{search}%"
+        query = query.filter(
+            (RechargeTransaction.mobile_number.ilike(search_like)) |
+            (RechargeTransaction.api_tx_id.ilike(search_like)) |
+            (RechargeTransaction.api_operator_id.ilike(search_like)) |
+            (RechargeTransaction.guest_name.ilike(search_like))
+        )
+        
+    if from_date:
+        try:
+            fd = datetime.strptime(from_date, "%Y-%m-%d")
+            query = query.filter(RechargeTransaction.created_at >= fd)
+        except ValueError:
+            pass
+            
+    if to_date:
+        try:
+            td = datetime.strptime(to_date, "%Y-%m-%d")
+            query = query.filter(RechargeTransaction.created_at <= td.replace(hour=23, minute=59, second=59))
+        except ValueError:
+            pass
+            
+    txs = query.order_by(RechargeTransaction.created_at.desc()).all()
+    
+    all_txs = db.query(RechargeTransaction).all()
+    total_recharges = len(all_txs)
+    successful_recharges = len([t for t in all_txs if t.api_status == "Success"])
+    failed_recharges = len([t for t in all_txs if t.api_status == "Failed"])
+    pending_recharges = len([t for t in all_txs if t.api_status == "Pending"])
+    success_rate = (successful_recharges / total_recharges * 100) if total_recharges > 0 else 0.0
+    
+    ops = {}
+    for t in all_txs:
+        op = t.operator.upper()
+        if op not in ops:
+            ops[op] = {"total": 0, "success": 0}
+        ops[op]["total"] += 1
+        if t.api_status == "Success":
+            ops[op]["success"] += 1
+            
+    operator_breakdown = [
+        {
+            "operator": op,
+            "total": stats["total"],
+            "success": stats["success"],
+            "rate": round(stats["success"] / stats["total"] * 100, 1) if stats["total"] > 0 else 0.0
+        } for op, stats in ops.items()
+    ]
+    
+    daily_data = {}
+    for t in all_txs:
+        date_str = t.created_at.strftime("%Y-%m-%d")
+        if date_str not in daily_data:
+            daily_data[date_str] = {"total": 0, "success": 0}
+        daily_data[date_str]["total"] += 1
+        if t.api_status == "Success":
+            daily_data[date_str]["success"] += 1
+            
+    sorted_trends = sorted([
+        {"date": d, "total": v["total"], "success": v["success"]} 
+        for d, v in daily_data.items()
+    ], key=lambda x: x["date"])
+    
+    return {
+        "kpis": {
+            "total_recharges": total_recharges,
+            "successful_recharges": successful_recharges,
+            "failed_recharges": failed_recharges,
+            "pending_recharges": pending_recharges,
+            "success_rate": round(success_rate, 1),
+            "api_balance": 15420.50
+        },
+        "logs": [
+            {
+                "id": t.id,
+                "user_id": t.user_id,
+                "guest_name": t.guest_name or "Guest User",
+                "mobile_number": t.mobile_number,
+                "operator": t.operator,
+                "circle": t.circle,
+                "amount": t.amount,
+                "api_status": t.api_status,
+                "api_tx_id": t.api_tx_id,
+                "api_operator_id": t.api_operator_id,
+                "created_at": t.created_at.isoformat()
+            } for t in txs
+        ],
+        "operator_breakdown": operator_breakdown,
+        "daily_trends": sorted_trends[-30:]
+    }

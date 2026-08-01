@@ -1239,6 +1239,7 @@
                 <button id="ltab-solar-advance" onclick="switchLedgerTab('solar-advance')" style="padding:9px 20px;font-size:13px;font-weight:700;border:none;background:none;color:#9ca3af;border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap"><i class="fas fa-solar-panel me-1"></i>Solar File Advance</button>
                 <button id="ltab-bonanza" onclick="switchLedgerTab('bonanza')" style="padding:9px 20px;font-size:13px;font-weight:700;border:none;background:none;color:#9ca3af;border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap"><i class="fas fa-trophy me-1"></i>Bonanza Rewards</button>
                 <button id="ltab-capacity" onclick="switchLedgerTab('capacity')" style="padding:9px 20px;font-size:13px;font-weight:700;border:none;background:none;color:#9ca3af;border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap"><i class="fas fa-calculator me-1"></i>Calculator</button>
+                <button id="ltab-community" onclick="switchLedgerTab('community')" style="padding:9px 20px;font-size:13px;font-weight:700;border:none;background:none;color:#9ca3af;border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap"><i class="fas fa-handshake-angle me-1"></i>Community Seva</button>
             </div>
 
             <!-- Hidden stubs for legacy IDs referenced by loadLedger (keeps JS working) -->
@@ -1522,6 +1523,56 @@
 
             </div><!-- end lpanel-bonanza -->
 
+            <!-- SUB-TAB: Community Seva Payouts -->
+            <div id="lpanel-community" style="display:none">
+
+                <!-- Summary banner -->
+                <div style="background:linear-gradient(135deg,#065f46,#0d9488);border-radius:14px;padding:18px 22px;color:#fff;margin-bottom:16px">
+                    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.8;margin-bottom:6px"><i class="fas fa-handshake-angle me-1"></i>Community Seva Earnings</div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:6px">
+                        <div>
+                            <div style="font-size:10px;opacity:.75;margin-bottom:2px">Total Seva Earned</div>
+                            <div id="commTotalEarned" style="font-size:22px;font-weight:800">₹0</div>
+                        </div>
+                        <div>
+                            <div style="font-size:10px;opacity:.75;margin-bottom:2px">Community Details</div>
+                            <div id="commServiceDetails" style="font-size:13px;font-weight:600;margin-top:4px">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info note -->
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:11px 14px;font-size:12px;color:#166534;margin-bottom:16px">
+                    <i class="fas fa-info-circle me-1"></i>
+                    <strong>Community Seva Earnings:</strong> Seva payouts are released to your community account on first validated payment/milestone.
+                </div>
+
+                <!-- Two-column grid for Seva Earnings Ledger and Tagged Leads -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
+                    <!-- Seva Earnings Ledger -->
+                    <div style="background:#fff;border-radius:12px;border:1.5px solid #ede9fe;overflow:hidden">
+                        <div style="padding:14px 16px;border-bottom:1px solid #f5f3ff;display:flex;justify-content:space-between;align-items:center">
+                            <div style="font-size:13px;font-weight:800;color:#064e3b"><i class="fas fa-list me-1"></i>Seva Earnings Ledger</div>
+                            <button onclick="loadCommunityEarnings(true)" style="background:none;border:1.5px solid #ede9fe;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;color:#7c3aed;cursor:pointer"><i class="fas fa-sync me-1"></i>Refresh</button>
+                        </div>
+                        <div id="commTableWrap" style="overflow-x:auto">
+                            <div style="text-align:center;color:#9ca3af;padding:30px"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
+                        </div>
+                    </div>
+
+                    <!-- Tagged Leads -->
+                    <div style="background:#fff;border-radius:12px;border:1.5px solid #ede9fe;overflow:hidden">
+                        <div style="padding:14px 16px;border-bottom:1px solid #f5f3ff;display:flex;justify-content:space-between;align-items:center">
+                            <div style="font-size:13px;font-weight:800;color:#064e3b"><i class="fas fa-users me-1"></i>Tagged Leads</div>
+                        </div>
+                        <div id="commLeadsWrap" style="overflow-x:auto">
+                            <div style="text-align:center;color:#9ca3af;padding:30px"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- end lpanel-community -->
+
         </div>
 
         <!-- COUPONS TAB -->
@@ -1780,7 +1831,7 @@
                 <!-- Edit Profile Form (hidden by default) -->
                 <div class="section-card" id="editProfileCard" style="display:none">
                     <div class="section-title"><i class="fas fa-pen" style="color:#7c3aed"></i>Edit Profile</div>
-                    <p style="font-size:12px;color:#9ca3af;margin-bottom:14px">VGK Code and Phone are locked. Update your title, first/last name, and gender below.</p>
+                    <p id="editProfileInstructions" style="font-size:12px;color:#9ca3af;margin-bottom:14px">VGK Code and Phone are locked. Update your title, first/last name, and gender below.</p>
                     <div class="edit-form-grid" id="editFormFields"></div>
                     <div class="mt-3 d-flex gap-2">
                         <button class="btn btn-primary btn-sm" style="border-radius:7px;font-weight:600;background:#7c3aed;border-color:#7c3aed" onclick="saveProfileEdit()" id="saveProfileBtn"><i class="fas fa-save me-1"></i>Save Changes</button>
@@ -2203,6 +2254,8 @@
         // ───────────────────────────────────────────────────────────────
 
         const BASE = '/api/v1/vgk';
+        const LEDGER_PANES = ['cash-income', 'solar-advance', 'bonanza', 'capacity', 'community'];
+        let _commLoading = false;
         const token = localStorage.getItem('vgk_token');
         if (!token) { window.location.href = '/vgk/login'; }
 
@@ -2302,7 +2355,12 @@
                 else if (name === 'tickets') loadTickets(1);
                 else if (name === 'addmember') initAddMember();
                 else if (name === 'points') loadPoints(1);
-                else if (name === 'ledger') { const _lt = localStorage.getItem('vgk_active_ledger_tab'); switchLedgerTab(LEDGER_PANES.includes(_lt) ? _lt : 'cash-income'); }
+                else if (name === 'ledger') {
+                    const isComm = (JSON.parse(localStorage.getItem('vgk_partner') || '{}')).vgk_role === 'COMMUNITY';
+                    const _lt = localStorage.getItem('vgk_active_ledger_tab');
+                    const defaultSub = isComm ? 'community' : 'cash-income';
+                    switchLedgerTab((isComm ? (_lt === 'community') : LEDGER_PANES.includes(_lt)) ? _lt : defaultSub);
+                }
                 else if (name === 'bonanza') loadBonanza();
                 else if (name === 'coupons') loadCouponBalance();
                 else if (name === 'vendors') loadVendorDirectory();
@@ -2409,8 +2467,8 @@
 
         function _applyEarningsData(data) {
             try {
-
                 const m = data.member || {};
+                enforceCommunityRestriction(m.vgk_role);
                 const e = data.earnings || {};
                 const dc = data.discount_credits || {};
                 const t = data.team || {};
@@ -4381,33 +4439,64 @@
                 if (!data.success) throw new Error();
                 const p = data.data;
                 _profileData = p;
+                localStorage.setItem('vgk_partner', JSON.stringify(p));
+                enforceCommunityRestriction(p.vgk_role);
                 window._vgkPtsBalance  = parseFloat(p.vgk_points_balance) || 0;
                 window._vgkMemberName  = p.partner_name || '';
                 // Show T&C modal if not yet accepted
                 if (data.requires_terms_acceptance && data.terms_and_conditions) {
                     showVGKTCModal(data.terms_and_conditions);
                 }
-                const fields = [
-                    ['Member ID', `<strong style="color:#7c3aed;font-size:17px">${escHtml(p.partner_code)}</strong>`],
-                    ['Display Name', escHtml(p.partner_name||'—')],
-                    ['Title', escHtml(p.name_title||'—')],
-                    ['First Name', escHtml(p.first_name||'—')],
-                    ['Last Name', escHtml(p.last_name||'—')],
-                    ['Gender', escHtml(p.gender||'—')],
-                    ['Phone', escHtml(p.phone||'—')],
-                    ['Email', escHtml(p.email||'—')],
-                    ['WhatsApp', escHtml(p.whatsapp_number||'—')],
-                    ['Role', escHtml(p.vgk_role||'MEMBER')],
-                    ['Status', p.is_active && p.vgk_activated_at ? '<span class="status-active">Activated</span>' : p.is_active ? '<span class="status-active">Active</span>' : '<span class="status-inactive">Pending Activation</span>'],
-                    ['Referrer', p.referrer_code && p.referrer_code !== 'VGK07102207' ? `${escHtml(p.referrer_name||'')} <span style="color:#7c3aed;font-weight:700">(${escHtml(p.referrer_code)})</span>` : '<span style="color:#7c3aed;font-weight:600">VGK Support</span>'],
-                    ['Points Balance', `<strong style="color:#2563eb">${(parseFloat(p.vgk_points_balance)||0).toLocaleString('en-IN')}</strong>`],
-                    ['Address', escHtml([p.address, p.city, p.state, p.pincode].filter(Boolean).join(', ')||'—')],
-                    ['Blood Group', p.blood_group ? `<span style="font-weight:700;color:#dc2626;font-size:16px">${escHtml(p.blood_group)}</span>` : '<span style="color:#9ca3af">—</span>'],
-                    ['DOB (as per Document)', p.dob_document ? `<span style="font-weight:700;color:#374151">${escHtml(p.dob_document)}</span>` : '<span style="color:#9ca3af">—</span>'],
-                    ['Actual Date of Birth', p.dob_actual ? `<span style="font-weight:700;color:#374151">${escHtml(p.dob_actual)}</span>` : '<span style="color:#9ca3af">—</span>'],
-                    ['Joined', p.vgk_activated_at ? fmtDate(p.vgk_activated_at) : '—'],
-                    ['Last Login', p.last_login ? new Date(p.last_login).toLocaleString('en-IN') : '—'],
-                ];
+                let fields;
+                const isComm = (p.vgk_role === 'COMMUNITY');
+                if (isComm) {
+                    fields = [
+                        ['Community ID', `<strong style="color:#7c3aed;font-size:17px">${escHtml(p.partner_code)}</strong>`],
+                        ['Community Name', escHtml(p.partner_name||'—')],
+                        ['Title', escHtml(p.name_title||'—')],
+                        ['First Name', escHtml(p.first_name||'—')],
+                        ['Last Name', escHtml(p.last_name||'—')],
+                        ['Gender', escHtml(p.gender||'—')],
+                        ['Primary Phone', escHtml(p.phone||'—')],
+                        ['Email', escHtml(p.email||'—')],
+                        ['WhatsApp Number', escHtml(p.whatsapp_number||'—')],
+                        ['Role', escHtml(p.vgk_role||'COMMUNITY')],
+                        ['Status', p.is_active && p.vgk_activated_at ? '<span class="status-active">Activated</span>' : p.is_active ? '<span class="status-active">Active</span>' : '<span class="status-inactive">Pending Activation</span>'],
+                        ['Points Balance', `<strong style="color:#2563eb">${(parseFloat(p.vgk_points_balance)||0).toLocaleString('en-IN')}</strong>`],
+                        ['Google Map Location', p.map_link_1 ? `<a href="${p.map_link_1}" target="_blank" style="color:#7c3aed;font-weight:700"><i class="fas fa-location-dot me-1"></i>View on Google Maps</a>` : '<span class="text-muted">—</span>'],
+                        ['Address', escHtml([p.address, p.city, p.state, p.pincode].filter(Boolean).join(', ')||'—')],
+                        ['Contact Person 1 Name', escHtml(p.contact_person_1_name||'—')],
+                        ['Contact Person 1 Phone', escHtml(p.contact_person_1_phone||'—')],
+                        ['Contact Person 1 Designation', escHtml(p.contact_person_1_designation||'—')],
+                        ['Contact Person 2 Name', escHtml(p.contact_person_2_name||'—')],
+                        ['Contact Person 2 Phone', escHtml(p.contact_person_2_phone||'—')],
+                        ['Contact Person 2 Designation', escHtml(p.contact_person_2_designation||'—')],
+                        ['Joined', p.vgk_activated_at ? fmtDate(p.vgk_activated_at) : '—'],
+                        ['Last Login', p.last_login ? new Date(p.last_login).toLocaleString('en-IN') : '—']
+                    ];
+                } else {
+                    fields = [
+                        ['Member ID', `<strong style="color:#7c3aed;font-size:17px">${escHtml(p.partner_code)}</strong>`],
+                        ['Display Name', escHtml(p.partner_name||'—')],
+                        ['Title', escHtml(p.name_title||'—')],
+                        ['First Name', escHtml(p.first_name||'—')],
+                        ['Last Name', escHtml(p.last_name||'—')],
+                        ['Gender', escHtml(p.gender||'—')],
+                        ['Phone', escHtml(p.phone||'—')],
+                        ['Email', escHtml(p.email||'—')],
+                        ['WhatsApp', escHtml(p.whatsapp_number||'—')],
+                        ['Role', escHtml(p.vgk_role||'MEMBER')],
+                        ['Status', p.is_active && p.vgk_activated_at ? '<span class="status-active">Activated</span>' : p.is_active ? '<span class="status-active">Active</span>' : '<span class="status-inactive">Pending Activation</span>'],
+                        ['Referrer', p.referrer_code && p.referrer_code !== 'VGK07102207' ? `${escHtml(p.referrer_name||'')} <span style="color:#7c3aed;font-weight:700">(${escHtml(p.referrer_code)})</span>` : '<span style="color:#7c3aed;font-weight:600">VGK Support</span>'],
+                        ['Points Balance', `<strong style="color:#2563eb">${(parseFloat(p.vgk_points_balance)||0).toLocaleString('en-IN')}</strong>`],
+                        ['Address', escHtml([p.address, p.city, p.state, p.pincode].filter(Boolean).join(', ')||'—')],
+                        ['Blood Group', p.blood_group ? `<span style="font-weight:700;color:#dc2626;font-size:16px">${escHtml(p.blood_group)}</span>` : '<span style="color:#9ca3af">—</span>'],
+                        ['DOB (as per Document)', p.dob_document ? `<span style="font-weight:700;color:#374151">${escHtml(p.dob_document)}</span>` : '<span style="color:#9ca3af">—</span>'],
+                        ['Actual Date of Birth', p.dob_actual ? `<span style="font-weight:700;color:#374151">${escHtml(p.dob_actual)}</span>` : '<span style="color:#9ca3af">—</span>'],
+                        ['Joined', p.vgk_activated_at ? fmtDate(p.vgk_activated_at) : '—'],
+                        ['Last Login', p.last_login ? new Date(p.last_login).toLocaleString('en-IN') : '—']
+                    ];
+                }
                 document.getElementById('profileContent').innerHTML = `
                     <div class="profile-row">
                         ${fields.map(([lbl, val]) => `
@@ -4417,7 +4506,7 @@
                             </div>`).join('')}
                     </div>`;
                 loadKYCStatus();
-                if (!p.is_active || !p.vgk_activated_at) {
+                if ((!p.is_active || !p.vgk_activated_at) && !isComm) {
                     document.getElementById('pinPurchaseSection').style.display = 'block';
                     loadPinPurchaseStatus();
                 } else {
@@ -4428,9 +4517,18 @@
             }
         }
 
+
         function showEditProfile() {
             if (!_profileData) return;
             const p = _profileData;
+            const instr = document.getElementById('editProfileInstructions');
+            if (instr) {
+                if (p.vgk_role === 'COMMUNITY') {
+                    instr.textContent = 'Update your contact person details and Google Maps URL below.';
+                } else {
+                    instr.textContent = 'VGK Code and Phone are locked. Update your title, first/last name, gender, dates of birth and other details below.';
+                }
+            }
             const todayMax = new Date().toISOString().split('T')[0];
             const titleOpts = ['','Mr.','Ms.','Mrs.'].map(t =>
                 `<option value="${t}" ${(p.name_title||'')==t?'selected':''}>${t||'-- Title --'}</option>`).join('');
@@ -4439,67 +4537,176 @@
             const lockedStyle = 'background:#f5f3ff;color:#6b7280;border:1.5px solid #e0d9ff;cursor:not-allowed';
             const inputStyle  = 'padding:8px 12px;border:1.5px solid #ddd6fe;border-radius:8px;font-size:13px;width:100%';
             const dateStyle   = 'padding:8px 10px;border:1.5px solid #ddd6fe;border-radius:8px;font-size:13px;color:#374151;width:100%;cursor:pointer';
-            document.getElementById('editFormFields').innerHTML = `
-                <div class="ef-group">
-                    <label>VGK Code <span style="color:#dc2626;font-size:10px">(LOCKED)</span></label>
-                    <input type="text" value="${escHtml(p.partner_code||'')}" readonly style="${inputStyle};${lockedStyle}">
-                </div>
-                <div class="ef-group">
-                    <label>Phone <span style="color:#dc2626;font-size:10px">(LOCKED)</span></label>
-                    <input type="text" value="${escHtml(p.phone||'')}" readonly style="${inputStyle};${lockedStyle}">
-                </div>
-                <div class="ef-group" style="grid-column:1/-1">
-                    <label>Title &amp; Name <span style="font-size:10px;color:#7c3aed;font-weight:400">(editable — display name auto-built)</span></label>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap">
-                        <select id="ef_title" style="flex:0 0 85px;${inputStyle}">${titleOpts}</select>
-                        <input id="ef_fname" type="text" value="${escHtml(p.first_name||'')}" placeholder="First name" style="flex:1;min-width:100px;${inputStyle}">
-                        <input id="ef_lname" type="text" value="${escHtml(p.last_name||'')}" placeholder="Last name" style="flex:1;min-width:100px;${inputStyle}">
+            if (p.vgk_role === 'COMMUNITY') {
+                document.getElementById('editFormFields').innerHTML = `
+                    <div class="ef-group">
+                        <label>Community ID <span style="color:#dc2626;font-size:10px">(LOCKED)</span></label>
+                        <input type="text" value="${escHtml(p.partner_code||'')}" readonly style="${inputStyle};${lockedStyle}">
                     </div>
-                    <div style="font-size:11px;color:#9ca3af;margin-top:4px">Current display name: <strong>${escHtml(p.partner_name||'')}</strong></div>
-                </div>
-                <div class="ef-group">
-                    <label>Gender <span style="font-size:10px;color:#7c3aed;font-weight:400">(editable)</span></label>
-                    <select id="ef_gender" style="${inputStyle}">${genderOpts}</select>
-                </div>
-                <div class="ef-group">
-                    <label>Blood Group <span style="font-size:10px;color:#7c3aed;font-weight:400">(editable)</span></label>
-                    <select id="ef_blood_group" style="${inputStyle}">
-                        ${['','A+','A-','B+','B-','AB+','AB-','O+','O-'].map(bg =>
-                            `<option value="${bg}" ${(p.blood_group||'')==bg?'selected':''}>${bg||'-- Select Blood Group --'}</option>`).join('')}
-                    </select>
-                </div>
-                <div class="ef-group">
-                    <label>Email</label>
-                    <input id="ef_email" type="text" value="${escHtml(p.email||'')}" placeholder="Enter Email" style="${inputStyle}">
-                </div>
-                <div class="ef-group">
-                    <label>WhatsApp Number</label>
-                    <input id="ef_whatsapp" type="text" value="${escHtml(p.whatsapp_number||'')}" placeholder="Enter WhatsApp Number" style="${inputStyle}">
-                </div>
-                <div class="ef-group">
-                    <label>Address</label>
-                    <input id="ef_address" type="text" value="${escHtml(p.address||'')}" placeholder="Enter Address" style="${inputStyle}">
-                </div>
-                <div class="ef-group">
-                    <label>City</label>
-                    <input id="ef_city" type="text" value="${escHtml(p.city||'')}" placeholder="Enter City" style="${inputStyle}">
-                </div>
-                <div class="ef-group">
-                    <label>State</label>
-                    <input id="ef_state" type="text" value="${escHtml(p.state||'')}" placeholder="Enter State" style="${inputStyle}">
-                </div>
-                <div class="ef-group">
-                    <label>Pincode</label>
-                    <input id="ef_pincode" type="text" value="${escHtml(p.pincode||'')}" placeholder="Enter Pincode" style="${inputStyle}">
-                </div>
-                <div class="ef-group">
-                    <label>Date of Birth (as per Document) <span style="color:#9ca3af;font-size:10px;font-weight:400;margin-left:4px">As shown on Aadhaar / PAN</span></label>
-                    <input id="ef_dob_doc" type="date" value="${escHtml(p.dob_document||'')}" max="${todayMax}" style="${dateStyle}">
-                </div>
-                <div class="ef-group">
-                    <label>Actual Date of Birth <span style="color:#9ca3af;font-size:10px;font-weight:400;margin-left:4px">Your real date of birth</span></label>
-                    <input id="ef_dob_act" type="date" value="${escHtml(p.dob_actual||'')}" max="${todayMax}" style="${dateStyle}">
-                </div>`;
+                    <div class="ef-group">
+                        <label>Primary Phone <span style="color:#dc2626;font-size:10px">(LOCKED)</span></label>
+                        <input type="text" value="${escHtml(p.phone||'')}" readonly style="${inputStyle};${lockedStyle}">
+                    </div>
+                    <div class="ef-group" style="grid-column:1/-1">
+                        <label>Title &amp; Name <span style="font-size:10px;color:#7c3aed;font-weight:400">(editable — display name auto-built)</span></label>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap">
+                            <select id="ef_title" style="flex:0 0 85px;${inputStyle}">${titleOpts}</select>
+                            <input id="ef_fname" type="text" value="${escHtml(p.first_name||'')}" placeholder="First name" style="flex:1;min-width:100px;${inputStyle}">
+                            <input id="ef_lname" type="text" value="${escHtml(p.last_name||'')}" placeholder="Last name" style="flex:1;min-width:100px;${inputStyle}">
+                        </div>
+                        <div style="font-size:11px;color:#9ca3af;margin-top:4px">Current display name: <strong>${escHtml(p.partner_name||'')}</strong></div>
+                    </div>
+                    <div class="ef-group">
+                        <label>Gender <span style="font-size:10px;color:#7c3aed;font-weight:400">(editable)</span></label>
+                        <select id="ef_gender" style="${inputStyle}">${genderOpts}</select>
+                    </div>
+                    <div class="ef-group">
+                        <label>Email</label>
+                        <input id="ef_email" type="text" value="${escHtml(p.email||'')}" placeholder="Enter Email" style="${inputStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>WhatsApp Number</label>
+                        <input id="ef_whatsapp" type="text" value="${escHtml(p.whatsapp_number||'')}" placeholder="Enter WhatsApp Number" style="${inputStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>Google Map Location Link</label>
+                        <input id="ef_map_link_1" type="text" value="${escHtml(p.map_link_1||'')}" placeholder="Paste Google Maps URL" style="${inputStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>Address</label>
+                        <input id="ef_address" type="text" value="${escHtml(p.address||'')}" placeholder="Enter Address" style="${inputStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>City</label>
+                        <input id="ef_city" type="text" value="${escHtml(p.city||'')}" placeholder="Enter City" style="${inputStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>State</label>
+                        <input id="ef_state" type="text" value="${escHtml(p.state||'')}" placeholder="Enter State" style="${inputStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>Pincode</label>
+                        <input id="ef_pincode" type="text" value="${escHtml(p.pincode||'')}" placeholder="Enter Pincode" style="${inputStyle}">
+                    </div>
+                    <!-- CP 1 -->
+                    <div class="ef-group" style="grid-column:1/-1;border-top:1.5px solid #ede9fe;padding-top:14px;margin-top:10px">
+                        <h6 style="color:#7c3aed;font-weight:700;margin-bottom:10px;font-size:13px"><i class="fas fa-user-tie me-1"></i>Contact Person 1 Details</h6>
+                    </div>
+                    <div class="ef-group">
+                        <label>Name</label>
+                        <input id="ef_cp1_name" type="text" value="${escHtml(p.contact_person_1_name||'')}" placeholder="Name" style="${inputStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>Phone</label>
+                        <input id="ef_cp1_phone" type="text" value="${escHtml(p.contact_person_1_phone||'')}" placeholder="Phone" style="${inputStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>Designation</label>
+                        <input id="ef_cp1_desig" type="text" value="${escHtml(p.contact_person_1_designation||'')}" placeholder="Designation" style="${inputStyle}">
+                    </div>
+                    <!-- CP 2 -->
+                    <div class="ef-group" style="grid-column:1/-1;border-top:1.5px solid #ede9fe;padding-top:14px;margin-top:10px">
+                        <h6 style="color:#7c3aed;font-weight:700;margin-bottom:10px;font-size:13px"><i class="fas fa-user-tie me-1"></i>Contact Person 2 Details</h6>
+                    </div>
+                    <div class="ef-group">
+                        <label>Name</label>
+                        <input id="ef_cp2_name" type="text" value="${escHtml(p.contact_person_2_name||'')}" placeholder="Name" style="${inputStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>Phone</label>
+                        <input id="ef_cp2_phone" type="text" value="${escHtml(p.contact_person_2_phone||'')}" placeholder="Phone" style="${inputStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>Designation</label>
+                        <input id="ef_cp2_desig" type="text" value="${escHtml(p.contact_person_2_designation||'')}" placeholder="Designation" style="${inputStyle}">
+                    </div>
+                `;
+            } else {
+                document.getElementById('editFormFields').innerHTML = `
+                    <div class="ef-group">
+                        <label>VGK Code <span style="color:#dc2626;font-size:10px">(LOCKED)</span></label>
+                        <input type="text" value="${escHtml(p.partner_code||'')}" readonly style="${inputStyle};${lockedStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>Phone <span style="color:#dc2626;font-size:10px">(LOCKED)</span></label>
+                        <input type="text" value="${escHtml(p.phone||'')}" readonly style="${inputStyle};${lockedStyle}">
+                    </div>
+                    <div class="ef-group" style="grid-column:1/-1">
+                        <label>Title &amp; Name <span style="font-size:10px;color:#7c3aed;font-weight:400">(editable — display name auto-built)</span></label>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap">
+                            <select id="ef_title" style="flex:0 0 85px;${inputStyle}">${titleOpts}</select>
+                            <input id="ef_fname" type="text" value="${escHtml(p.first_name||'')}" placeholder="First name" style="flex:1;min-width:100px;${inputStyle}">
+                            <input id="ef_lname" type="text" value="${escHtml(p.last_name||'')}" placeholder="Last name" style="flex:1;min-width:100px;${inputStyle}">
+                        </div>
+                        <div style="font-size:11px;color:#9ca3af;margin-top:4px">Current display name: <strong>${escHtml(p.partner_name||'')}</strong></div>
+                    </div>
+                    <div class="ef-group">
+                        <label>Gender <span style="font-size:10px;color:#7c3aed;font-weight:400">(editable)</span></label>
+                        <select id="ef_gender" style="${inputStyle}">${genderOpts}</select>
+                    </div>
+                    <div class="ef-group">
+                        <label>Blood Group <span style="font-size:10px;color:#7c3aed;font-weight:400">(editable)</span></label>
+                        <select id="ef_blood_group" style="${inputStyle}">
+                            ${['','A+','A-','B+','B-','AB+','AB-','O+','O-'].map(bg =>
+                                `<option value="${bg}" ${(p.blood_group||'')==bg?'selected':''}>${bg||'-- Select Blood Group --'}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="ef-group">
+                        <label>Email</label>
+                        <input id="ef_email" type="text" value="${escHtml(p.email||'')}" placeholder="Enter Email" style="${inputStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>WhatsApp Number</label>
+                        <input id="ef_whatsapp" type="text" value="${escHtml(p.whatsapp_number||'')}" placeholder="Enter WhatsApp Number" style="${inputStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>Address</label>
+                        <input id="ef_address" type="text" value="${escHtml(p.address||'')}" placeholder="Enter Address" style="${inputStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>City</label>
+                        <input id="ef_city" type="text" value="${escHtml(p.city||'')}" placeholder="Enter City" style="${inputStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>State</label>
+                        <input id="ef_state" type="text" value="${escHtml(p.state||'')}" placeholder="Enter State" style="${inputStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>Pincode</label>
+                        <input id="ef_pincode" type="text" value="${escHtml(p.pincode||'')}" placeholder="Enter Pincode" style="${inputStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>Date of Birth (as per Document) <span style="color:#9ca3af;font-size:10px;font-weight:400;margin-left:4px">As shown on Aadhaar / PAN</span></label>
+                        <input id="ef_dob_doc" type="date" value="${escHtml(p.dob_document||'')}" max="${todayMax}" style="${dateStyle}">
+                    </div>
+                    <div class="ef-group">
+                        <label>Actual Date of Birth <span style="color:#9ca3af;font-size:10px;font-weight:400;margin-left:4px">Your real date of birth</span></label>
+                        <input id="ef_dob_act" type="date" value="${escHtml(p.dob_actual||'')}" max="${todayMax}" style="${dateStyle}">
+                    </div>
+                `;
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             document.getElementById('editProfileCard').style.display = '';
             document.getElementById('editProfileCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
             document.getElementById('editProfileMsg').innerHTML = '';
@@ -4522,17 +4729,27 @@
                 city:           _gv('ef_city') || null,
                 state:          _gv('ef_state') || null,
                 pincode:        _gv('ef_pincode') || null,
-                // [DC-VGK-DOB]
-                dob_document:   _gv('ef_dob_doc') || null,
-                dob_actual:     _gv('ef_dob_act') || null,
                 // [DC-NAME-GENDER]
                 name_title: _gv('ef_title') || null,
                 first_name: _gv('ef_fname') || null,
                 last_name:  _gv('ef_lname') || null,
                 gender:     _gv('ef_gender') || null,
-                // [DC-BLOOD-GROUP]
-                blood_group: _gv('ef_blood_group') || null,
             };
+            if (_profileData && _profileData.vgk_role === 'COMMUNITY') {
+                body.map_link_1 = _gv('ef_map_link_1') || null;
+                body.contact_person_1_name = _gv('ef_cp1_name') || null;
+                body.contact_person_1_phone = _gv('ef_cp1_phone') || null;
+                body.contact_person_1_designation = _gv('ef_cp1_desig') || null;
+                body.contact_person_2_name = _gv('ef_cp2_name') || null;
+                body.contact_person_2_phone = _gv('ef_cp2_phone') || null;
+                body.contact_person_2_designation = _gv('ef_cp2_desig') || null;
+            } else {
+                // [DC-VGK-DOB]
+                body.dob_document = _gv('ef_dob_doc') || null;
+                body.dob_actual = _gv('ef_dob_act') || null;
+                // [DC-BLOOD-GROUP]
+                body.blood_group = _gv('ef_blood_group') || null;
+            }
             try {
                 const resp = await fetch(BASE + '/auth/profile', {
                     method: 'PUT',
@@ -5693,24 +5910,54 @@
             }
             // Restore last active tab (default to earnings if none saved)
             const _validTabs = ['earnings','leads','orders','tickets','network','addmember','points','ledger','coupons','profile','bonanza','vendors','media','mycard'];
-            const _lastTab = localStorage.getItem('vgk_active_tab') || 'earnings';
+            let _lastTab = localStorage.getItem('vgk_active_tab') || 'earnings';
+            if (stored.vgk_role === 'COMMUNITY') {
+                if (_lastTab !== 'profile' && _lastTab !== 'ledger') {
+                    _lastTab = 'ledger';
+                }
+            }
             showTab(_validTabs.includes(_lastTab) ? _lastTab : 'earnings');
-            // Always check T&C on page load — catches already-logged-in members
-            checkVGKTerms();
-            // [DC-VCARD] Load visiting card eligibility in background
-            loadVisitingCard();
-        }
+            enforceCommunityRestriction(stored.vgk_role);
 
-        async function checkVGKTerms() {
-            if (localStorage.getItem('vgk_tc_accepted')) return;  // already accepted this session or before
+            // [DC-INIT-PROFILE] Dynamic profile load to resolve stuck "Loading..." for roles like COMMUNITY
             try {
                 const resp = await fetch(BASE + '/auth/me', { headers: authHeaders() });
-                if (!resp.ok) return;
-                const data = await resp.json();
-                if (data.requires_terms_acceptance && data.terms_and_conditions) {
-                    showVGKTCModal(data.terms_and_conditions);
+                if (resp.status === 401) { logout(); return; }
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.success && data.data) {
+                        const p = data.data;
+                        localStorage.setItem('vgk_partner', JSON.stringify(p));
+                        
+                        // Update UI with fresh details
+                        if (p.partner_code) {
+                            const _tid = document.getElementById('topbarMemberId');
+                            if (_tid) _tid.innerHTML = '<i class="fas fa-id-badge me-1"></i>' + p.partner_code;
+                            const _sid = document.getElementById('sidebarMemberId');
+                            if (_sid) _sid.textContent = p.partner_code;
+                        }
+                        if (p.partner_name) {
+                            const _tn = document.getElementById('topbarMemberName');
+                            if (_tn) _tn.textContent = p.partner_name;
+                            const _sn = document.getElementById('sidebarMemberName');
+                            if (_sn) _sn.textContent = p.partner_name;
+                        }
+                        
+                        // Recalculate restrictions based on fresh role
+                        enforceCommunityRestriction(p.vgk_role);
+                        
+                        // Terms Acceptance Check
+                        if (data.requires_terms_acceptance && data.terms_and_conditions && !localStorage.getItem('vgk_tc_accepted')) {
+                            showVGKTCModal(data.terms_and_conditions);
+                        }
+                    }
                 }
-            } catch(_) {}
+            } catch(e) {
+                console.error("Failed to fetch fresh profile in init()", e);
+            }
+
+            // [DC-VCARD] Load visiting card eligibility in background
+            loadVisitingCard();
         }
 
         async function loadPinPurchaseStatus() {
@@ -5853,10 +6100,63 @@
             }
         }
 
-        // ── Coupon Tab ────────────────────────────────────────────────────
+        // Coupon Tab ────────────────────────────────────────────────────
         const COUPON_PANES = ['buy','mypurchases','transactions','transfer','activate','activations'];
+        // ── Community restriction helper ─────────────────────────────────────
+        function enforceCommunityRestriction(role) {
+            const isComm = (role === 'COMMUNITY');
+            
+            // 1. Sidebar navigation items
+            document.querySelectorAll('.snav-item').forEach(btn => {
+                if (btn.id && btn.id.startsWith('snav-')) {
+                    if (isComm) {
+                        const isAllowed = btn.id === 'snav-ledger' || btn.id === 'snav-profile';
+                        btn.style.display = isAllowed ? '' : 'none';
+                    } else {
+                        btn.style.display = '';
+                    }
+                }
+            });
+
+            // 2. Horizontal nav-links
+            document.querySelectorAll('#dashTabs .nav-link').forEach(a => {
+                const onclickStr = a.getAttribute('onclick') || '';
+                if (isComm) {
+                    const isAllowed = onclickStr.includes("'ledger'") || onclickStr.includes("'profile'");
+                    a.parentElement.style.display = isAllowed ? '' : 'none';
+                } else {
+                    a.parentElement.style.display = '';
+                }
+            });
+
+            // 3. Ledger sub-tabs
+            LEDGER_PANES.forEach(p => {
+                const btn = document.getElementById('ltab-' + p);
+                if (btn) {
+                    if (isComm) {
+                        btn.style.display = (p === 'community') ? '' : 'none';
+                    } else {
+                        btn.style.display = '';
+                    }
+                }
+            });
+
+            // 4. Redirect if needed
+            if (isComm) {
+                const activeTab = localStorage.getItem('vgk_active_tab') || 'earnings';
+                if (activeTab !== 'profile' && activeTab !== 'ledger') {
+                    showTab('ledger');
+                } else if (activeTab === 'ledger') {
+                    const activeSub = localStorage.getItem('vgk_active_ledger_tab');
+                    if (activeSub !== 'community') {
+                        switchLedgerTab('community');
+                    }
+                }
+            }
+        }
+
         // ── Ledger Sub-tabs ──────────────────────────────────────────────────
-        const LEDGER_PANES = ['cash-income', 'solar-advance', 'bonanza', 'capacity'];
+        // LEDGER_PANES defined at top of script
         function switchLedgerTab(tab) {
             LEDGER_PANES.forEach(p => {
                 const panel = document.getElementById('lpanel-' + p);
@@ -5872,6 +6172,102 @@
             if (tab === 'cash-income'   && !document.getElementById('ciWalletHistory').dataset.loaded) loadCashIncome();
             if (tab === 'solar-advance' && !document.getElementById('saTableWrap').dataset.loaded) loadSolarAdvances();
             if (tab === 'bonanza'       && !document.getElementById('bnzTableWrap').dataset.loaded) loadBonanzaRewards();
+            if (tab === 'community'     && !document.getElementById('commTableWrap').dataset.loaded) loadCommunityEarnings();
+        }
+
+        // ── Community sub-tab ─────────────────────────────────────────────
+        async function loadCommunityEarnings(force) {
+            if (_commLoading) return;
+            const tableWrap = document.getElementById('commTableWrap');
+            const leadsWrap = document.getElementById('commLeadsWrap');
+            if (!force && tableWrap && tableWrap.dataset.loaded) return;
+            _commLoading = true;
+            if (tableWrap) tableWrap.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:30px"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            if (leadsWrap) leadsWrap.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:30px"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+
+            try {
+                const res = await fetch('/api/v1/community-services/my-earnings', { headers: authHeaders() });
+                if (!res.ok) throw new Error('Failed to fetch community earnings');
+                const data = await res.json();
+                if (!data.success) {
+                    if (tableWrap) tableWrap.innerHTML = `<div style="padding:20px;text-align:center;color:#dc2626">${data.message || 'Error loading data'}</div>`;
+                    if (leadsWrap) leadsWrap.innerHTML = `<div style="padding:20px;text-align:center;color:#dc2626">${data.message || 'Error loading data'}</div>`;
+                    return;
+                }
+
+                const totalEarnedEl = document.getElementById('commTotalEarned');
+                if (totalEarnedEl) totalEarnedEl.textContent = '₹' + Number(data.total_seva_earned).toLocaleString('en-IN');
+                const detailsEl = document.getElementById('commServiceDetails');
+                if (detailsEl) detailsEl.innerHTML = `
+                    <i class="fas fa-home me-1"></i>${escHtml(data.community_name || '')} · <strong>${escHtml(data.service_name || '')}</strong>
+                `;
+
+                // Render Commissions Table
+                if (tableWrap) {
+                    if (!data.commissions || data.commissions.length === 0) {
+                        tableWrap.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:30px">No seva contributions recorded yet.</div>';
+                    } else {
+                        let html = `<table style="width:100%;border-collapse:collapse;font-size:12.5px">
+                            <thead>
+                                <tr style="background:#f4fbf7;color:#047857;border-bottom:1px solid #ede9fe;text-align:left">
+                                    <th style="padding:10px 14px">Date</th>
+                                    <th style="padding:10px 14px">Customer</th>
+                                    <th style="padding:10px 14px">Amount</th>
+                                    <th style="padding:10px 14px">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                        data.commissions.forEach(c => {
+                            const dateStr = c.created_at ? new Date(c.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+                            const statusBadge = c.status === 'RELEASED' 
+                                ? '<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700">Released</span>'
+                                : `<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700">${escHtml(c.status || '')}</span>`;
+                            html += `<tr style="border-bottom:1px solid #f3f4f6">
+                                <td style="padding:10px 14px">${dateStr}</td>
+                                <td style="padding:10px 14px"><strong>${escHtml(c.lead_name || 'N/A')}</strong><br><span style="font-size:11px;color:#6b7280">Lead ID: ${c.lead_id}</span></td>
+                                <td style="padding:10px 14px;font-weight:700;color:#059669">₹${Number(c.amount).toLocaleString('en-IN')}</td>
+                                <td style="padding:10px 14px">${statusBadge}</td>
+                            </tr>`;
+                        });
+                        html += `</tbody></table>`;
+                        tableWrap.innerHTML = html;
+                    }
+                }
+
+                // Render Leads Table
+                if (leadsWrap) {
+                    if (!data.leads || data.leads.length === 0) {
+                        leadsWrap.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:30px">No tagged leads yet.</div>';
+                    } else {
+                        let html = `<table style="width:100%;border-collapse:collapse;font-size:12.5px">
+                            <thead>
+                                <tr style="background:#f4fbf7;color:#047857;border-bottom:1px solid #ede9fe;text-align:left">
+                                    <th style="padding:10px 14px">Customer</th>
+                                    <th style="padding:10px 14px">Phone</th>
+                                    <th style="padding:10px 14px">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                        data.leads.forEach(l => {
+                            html += `<tr style="border-bottom:1px solid #f3f4f6">
+                                <td style="padding:10px 14px"><strong>${escHtml(l.customer_name || 'N/A')}</strong></td>
+                                <td style="padding:10px 14px;color:#374151">${escHtml(l.phone || '—')}</td>
+                                <td style="padding:10px 14px"><span style="background:#f3f4f6;color:#374151;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600">${escHtml(l.status || '')}</span></td>
+                            </tr>`;
+                        });
+                        html += `</tbody></table>`;
+                        leadsWrap.innerHTML = html;
+                    }
+                }
+
+                if (tableWrap) tableWrap.dataset.loaded = "true";
+            } catch (e) {
+                console.error(e);
+                if (tableWrap) tableWrap.innerHTML = `<div style="padding:20px;text-align:center;color:#dc2626">Error: ${escHtml(e.message)}</div>`;
+                if (leadsWrap) leadsWrap.innerHTML = `<div style="padding:20px;text-align:center;color:#dc2626">Error: ${escHtml(e.message)}</div>`;
+            } finally {
+                _commLoading = false;
+            }
         }
 
         // ── Bonanza Rewards sub-tab ───────────────────────────────────────────

@@ -1864,6 +1864,15 @@ class VGKProfileUpdateRequest(BaseModel):
     gender: Optional[str] = None
     # [DC-BLOOD-GROUP] Apr 2026
     blood_group: Optional[str] = None
+    # [DC-COMMUNITY-FIELDS]
+    contact_person_1_name: Optional[str] = None
+    contact_person_1_phone: Optional[str] = None
+    contact_person_1_designation: Optional[str] = None
+    contact_person_2_name: Optional[str] = None
+    contact_person_2_phone: Optional[str] = None
+    contact_person_2_designation: Optional[str] = None
+    map_link_1: Optional[str] = None
+
 
 
 @router.put("/auth/profile")
@@ -1916,6 +1925,15 @@ def vgk_update_profile(
         if body.blood_group.strip() not in _allowed_bg:
             raise HTTPException(status_code=400, detail="Invalid blood group. Must be one of: A+, A-, B+, B-, AB+, AB-, O+, O-")
         _setattr_safe(current_member, 'blood_group', body.blood_group.strip() or None)
+    # [DC-COMMUNITY-FIELDS]
+    if body.contact_person_1_name is not None: _setattr_safe(current_member, 'contact_person_1_name', body.contact_person_1_name.strip() or None)
+    if body.contact_person_1_phone is not None: _setattr_safe(current_member, 'contact_person_1_phone', body.contact_person_1_phone.strip() or None)
+    if body.contact_person_1_designation is not None: _setattr_safe(current_member, 'contact_person_1_designation', body.contact_person_1_designation.strip() or None)
+    if body.contact_person_2_name is not None: _setattr_safe(current_member, 'contact_person_2_name', body.contact_person_2_name.strip() or None)
+    if body.contact_person_2_phone is not None: _setattr_safe(current_member, 'contact_person_2_phone', body.contact_person_2_phone.strip() or None)
+    if body.contact_person_2_designation is not None: _setattr_safe(current_member, 'contact_person_2_designation', body.contact_person_2_designation.strip() or None)
+    if body.map_link_1 is not None: _setattr_safe(current_member, 'map_link_1', body.map_link_1.strip() or None)
+
     # Rebuild partner_name from split fields if both first+last are now present
     _t  = getattr(current_member, 'name_title', None) or ''
     _fn = getattr(current_member, 'first_name', None) or ''
@@ -2657,7 +2675,7 @@ async def vgk_membership_receipt(
     join_str = join_date.strftime('%d %B %Y') if join_date else 'N/A'
 
     receipt_number = f"VGK-RCP-{current_member.partner_code[-6:]}"
-    role_labels = {'VGK_ASSOCIATE': 'VGK Associate', 'VGK_MENTOR': 'VGK Mentor', 'VGK_LEADER': 'VGK Leader'}
+    role_labels = {'VGK_ASSOCIATE': 'VGK Associate', 'VGK_MENTOR': 'VGK Mentor', 'VGK_LEADER': 'VGK Leader', 'COMMUNITY': 'Community Partner'}
     role_display = role_labels.get(current_member.vgk_role or 'VGK_ASSOCIATE', current_member.vgk_role or 'VGK Associate')
 
     from pytz import timezone as _tz
