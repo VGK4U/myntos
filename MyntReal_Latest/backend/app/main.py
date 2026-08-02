@@ -6272,6 +6272,23 @@ def _startup_worker():
     else:
         print("[DC-ETC-CONFIRM-001] ⏭️ ETC confirmation columns — already applied", flush=True)
 
+    # DC-ETC-VGK-COLS: vgk_id/vgk_status columns on etc_students (Aug 2026)
+    _evg_sqls = [
+        "ALTER TABLE etc_students ADD COLUMN IF NOT EXISTS vgk_id VARCHAR(50) DEFAULT NULL",
+        "ALTER TABLE etc_students ADD COLUMN IF NOT EXISTS vgk_status VARCHAR(50) DEFAULT 'Pending'",
+    ]
+    if 'DC-ETC-VGK-COLS-20260802' not in _applied_keys:
+        try:
+            with engine.begin() as _c:
+                for _sql in _evg_sqls:
+                     _c.execute(text(_sql))
+            _mig_done('DC-ETC-VGK-COLS-20260802')
+            print(f"[DC-ETC-VGK-COLS] ✅ ETC vgk_id/vgk_status columns ensured ({len(_evg_sqls)}/{len(_evg_sqls)})", flush=True)
+        except Exception as _ee:
+            print(f"[DC-ETC-VGK-COLS] ⚠️ {_ee}", flush=True)
+    else:
+        print("[DC-ETC-VGK-COLS] ⏭️ ETC vgk_id/vgk_status columns — already applied", flush=True)
+
     # DC-BILLING-COUPON: coupon columns on service_ticket_billing (Mar 2026)
     _bc_sqls = [
         "ALTER TABLE service_ticket_billing ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(50)",
