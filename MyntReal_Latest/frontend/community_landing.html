@@ -2232,7 +2232,17 @@
     </footer>
 
     <script>
-        const shortName = window.location.pathname.split('/').pop();
+        const urlParams = new URLSearchParams(window.location.search);
+        let shortName = urlParams.get('seva') || urlParams.get('service') || urlParams.get('short_name');
+        if (!shortName) {
+            const pathPart = window.location.pathname.split('/').pop();
+            if (pathPart && pathPart !== 'community_landing.html' && pathPart !== 'community_landing') {
+                shortName = pathPart.replace('.html', '');
+            }
+        }
+        if (!shortName) {
+            shortName = 'ganesh'; // fallback
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             loadServiceDetails();
@@ -2645,6 +2655,7 @@
             const input = document.getElementById(input_id);
             const hidden = document.getElementById(hidden_id);
             const results = document.getElementById(results_id);
+            if (!input || !hidden || !results) return;
             let debounceTimer;
 
             input.addEventListener('input', () => {
