@@ -688,6 +688,7 @@
         .widescreen-gallery-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            grid-auto-flow: dense;
             gap: 16px;
             margin-top: 48px;
         }
@@ -700,6 +701,20 @@
             border: 1px solid var(--border);
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             transition: all 0.3s;
+        }
+        
+        .widescreen-gallery-card.square {
+            aspect-ratio: 1 / 1;
+            height: auto;
+        }
+        .widescreen-gallery-card.story {
+            aspect-ratio: 9 / 16;
+            height: auto;
+            grid-row: span 2;
+        }
+        .widescreen-gallery-card.banner {
+            aspect-ratio: 16 / 9;
+            height: auto;
         }
 
         .widescreen-gallery-card img {
@@ -2407,12 +2422,14 @@
                     galleryGrid.innerHTML = '';
                     const displayImages = (s.banner_images || []).filter(img => img);
                     const displayTitles = settings.banner_titles || [];
+                    const displaySizes = settings.banner_sizes || [];
 
                     if (displayImages.length > 0) {
                         displayImages.forEach((img, idx) => {
                             const titleText = displayTitles[idx] || '';
+                            const sizeClass = displaySizes[idx] || 'banner';
                             galleryGrid.innerHTML += `
-                                <div class="widescreen-gallery-card">
+                                <div class="widescreen-gallery-card ${sizeClass}">
                                     <img src="/storage/${img}" alt="${titleText || 'Campaign Showcase'}">
                                     ${titleText ? `<div class="gallery-card-title">${titleText}</div>` : ''}
                                 </div>`;
