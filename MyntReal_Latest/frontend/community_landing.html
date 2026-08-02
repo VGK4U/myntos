@@ -2328,9 +2328,14 @@
                         theme = 'eco';
                     }
                 }
-                document.body.className = theme;
+                
+                const isFestive = theme.toLowerCase().includes('festive');
+                const isEco = theme.toLowerCase().includes('eco') || theme.toLowerCase().includes('solar') || theme.toLowerCase().includes('green');
+                const isCustom = theme.toLowerCase().includes('custom');
+                
+                document.body.className = isFestive ? 'festive' : (isEco ? 'eco' : 'health');
 
-                if (theme === 'custom') {
+                if (isCustom) {
                     const primary = settings.primary_color || '#10b981';
                     const accent = settings.accent_color || '#fbbf24';
                     const bg = settings.bg_color || '#ffffff';
@@ -2484,12 +2489,12 @@
                             "https://images.unsplash.com/photo-1466611653911-95081537e5b7?auto=format&fit=crop&w=400&q=80",
                             "https://images.unsplash.com/photo-1558449028-b53a39d100fc?auto=format&fit=crop&w=400&q=80",
                             "https://images.unsplash.com/photo-1569003339405-ea396a5a8a90?auto=format&fit=crop&w=400&q=80",
-                            "https://images.unsplash.com/photo-1532601124523-30b2c5dc4048?auto=format&fit=crop&w=400&q=80",
+                            "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=400&q=80",
                             "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&w=400&q=80",
                             "https://images.unsplash.com/photo-1592833159155-c62df1b65634?auto=format&fit=crop&w=400&q=80",
                             "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=400&q=80"
                         ];
-                        if (theme === 'festive') {
+                        if (isFestive) {
                             fallbacks = [
                                 "https://images.unsplash.com/photo-1608976451670-38827fa6654b?auto=format&fit=crop&w=400&q=80", // Lord Ganesha
                                 "https://images.unsplash.com/photo-1624314138470-5af729618c33?auto=format&fit=crop&w=400&q=80", // Diya lights
@@ -2529,7 +2534,7 @@
                 }
 
                 // Festive badges & icon injections
-                if (theme === 'festive') {
+                if (isFestive) {
                     const badge = document.getElementById('heroBadge');
                     if (badge) {
                         badge.innerHTML = `<i class="fas fa-om me-1"></i> Ganesh Green Seva`;
@@ -2552,7 +2557,7 @@
                 // Hero Backdrop fallback
                 const heroBackdrop = document.getElementById('heroBackdrop');
                 if (heroBackdrop) {
-                    if (theme === 'festive') {
+                    if (isFestive) {
                         // Blend Lord Ganesha, solar panels, and a warm overlay gradient
                         heroBackdrop.style.backgroundImage = `
                             linear-gradient(to bottom, rgba(15, 23, 42, 0.45), rgba(15, 23, 42, 0.85)),
@@ -2565,7 +2570,7 @@
                     } else {
                         if (s.banner_images && s.banner_images.length > 0) {
                             heroBackdrop.style.backgroundImage = `url('/storage/${s.banner_images[0]}')`;
-                        } else if (theme === 'eco') {
+                        } else if (isEco) {
                             heroBackdrop.style.backgroundImage = `url('https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1600&q=80')`;
                         } else {
                             heroBackdrop.style.backgroundImage = `url('https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1600&q=80')`;
@@ -2579,7 +2584,7 @@
                     if (s.banner_images && s.banner_images.length > 1) {
                         splitImagePanel.style.backgroundImage = `url('/storage/${s.banner_images[1]}')`;
                     } else {
-                        if (theme === 'festive') {
+                        if (isFestive) {
                             splitImagePanel.style.backgroundImage = `url('https://images.unsplash.com/photo-1567591391293-f9a99c77e128?auto=format&fit=crop&w=800&q=80')`;
                         } else {
                             splitImagePanel.style.backgroundImage = `url('https://images.unsplash.com/photo-1466611653911-95081537e5b7?auto=format&fit=crop&w=800&q=80')`;
@@ -2590,7 +2595,7 @@
                 // Update benefits cards background images dynamically based on theme
                 const benefitCards = document.querySelectorAll('#section-benefits .benefit-card-large');
                 if (benefitCards.length >= 4) {
-                    if (theme === 'festive') {
+                    if (isFestive) {
                         // Card 1: For Customers (Solar + Festive)
                         benefitCards[0].style.backgroundImage = `
                             linear-gradient(to bottom, rgba(15, 23, 42, 0.25), rgba(15, 23, 42, 0.9)),
@@ -2611,7 +2616,7 @@
                             linear-gradient(to bottom, rgba(15, 23, 42, 0.25), rgba(15, 23, 42, 0.9)),
                             url('https://images.unsplash.com/photo-1567591370504-80142b28f1c1?auto=format&fit=crop&w=600&q=80')
                         `;
-                    } else if (theme === 'eco') {
+                    } else if (isEco) {
                         benefitCards[0].style.backgroundImage = `linear-gradient(to bottom, rgba(11, 15, 25, 0.25), rgba(11, 15, 25, 0.9)), url('https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=600&q=80')`;
                         benefitCards[1].style.backgroundImage = `linear-gradient(to bottom, rgba(11, 15, 25, 0.25), rgba(11, 15, 25, 0.9)), url('https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=600&q=80')`;
                         benefitCards[2].style.backgroundImage = `linear-gradient(to bottom, rgba(11, 15, 25, 0.25), rgba(11, 15, 25, 0.9)), url('https://images.unsplash.com/photo-1466611653911-95081537e5b7?auto=format&fit=crop&w=600&q=80')`;
