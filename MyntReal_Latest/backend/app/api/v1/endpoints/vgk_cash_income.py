@@ -1322,6 +1322,8 @@ def unified_action(
                 bypass=bool(bypass),
             )
             if not inner.get('success'):
+                if inner.get('error') == 'CAPPED_WARNING':
+                    return inner
                 raise HTTPException(status_code=400, detail=inner.get('error', 'Mark-paid failed'))
             if skipped_states:
                 entry.skip_reason = (entry.skip_reason or '') + ' | ' + '; '.join(skipped_states)

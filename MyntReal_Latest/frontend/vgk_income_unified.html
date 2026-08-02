@@ -1168,7 +1168,7 @@ async function submitAct(){
     let d = await r.json();
     
     if (!r.ok || !d.success) {
-      if (d.error === 'CAPPED_WARNING' || d.capped_warning) {
+      if (d.error === 'CAPPED_WARNING' || d.capped_warning || d.detail === 'CAPPED_WARNING') {
         const remain = 3 - (d.bypass_count || 0);
         const confirmMsg = `50% advance cap reached.\n${remain} skip(s) available.\n\nDo you want to proceed and skip the cap, or hold?`;
         if (confirm(confirmMsg)) {
