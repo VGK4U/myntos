@@ -8867,12 +8867,12 @@ a{background:#4f46e5;color:white;padding:12px 24px;border-radius:8px;text-decora
     .hub-active-badge {
         position: relative;
         text-decoration: none;
-        font-size: 11px;
+        font-size: 13px;
         font-weight: 800;
         letter-spacing: 0.5px;
         text-transform: uppercase;
         color: #ffffff !important;
-        padding: 5px 12px;
+        padding: 6px 15px;
         border-radius: 30px;
         overflow: hidden;
         display: inline-flex;
@@ -8972,8 +8972,8 @@ a{background:#4f46e5;color:white;padding:12px 24px;border-radius:8px;text-decora
             gap: 4px;
         }
         .hub-active-badge {
-            padding: 3px 8px;
-            font-size: 9.5px;
+            padding: 4px 10px;
+            font-size: 11px;
         }
     }
 </style>
