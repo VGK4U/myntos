@@ -4848,7 +4848,7 @@ async function generateMemberPoster(partnerId) {
     // Dynamic Filter-Based Today's Earning
     let latestPaidDate = null;
     entries.forEach(e => {
-      if (e.status === 'PAID' && e.income_date && e.income_date !== 'None') {
+      if ((e.status === 'PAID' || e.status === 'RELEASED') && e.income_date && e.income_date !== 'None') {
         if (!latestPaidDate || e.income_date > latestPaidDate) {
           latestPaidDate = e.income_date;
         }
@@ -4925,7 +4925,7 @@ async function generateMemberPoster(partnerId) {
     document.getElementById('postCustomer').value = customerName;
     document.getElementById('postLocation').value = location;
     document.getElementById('postSeniorName').value = seniorName;
-    const paidL1Count = entries.filter(e => e.level === 1 && e.status === 'PAID' && e.income_date === selectedDate).length;
+    const paidL1Count = entries.filter(e => e.level === 1 && (e.status === 'PAID' || e.status === 'RELEASED') && e.income_date === selectedDate).length;
     document.getElementById('postSeniorToday').value = '₹' + _meFormatInr(paidL1Count * 500) + '/-';
     document.getElementById('postSeniorEarning').value = seniorEarning;
     
@@ -4989,7 +4989,7 @@ function recalculateTodayPayout() {
   let extraAmt = 0;
   
   entries.forEach(e => {
-    if (e.status === 'PAID' && e.income_date === selectedDate) {
+    if ((e.status === 'PAID' || e.status === 'RELEASED') && e.income_date === selectedDate) {
       const amt = e.commission_amount || 0;
       if (e.kind === 'ADVANCE' || e.kind === 'DVR_ADVANCE') {
         stage1Amt += amt;
