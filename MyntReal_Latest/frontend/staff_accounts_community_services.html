@@ -1042,6 +1042,14 @@
             renderBannerPreview();
         }
 
+        function formatBytes(bytes) {
+            if (bytes === 0 || !bytes) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
         function renderBannerPreview() {
             const preview = document.getElementById('bannerPreview');
             preview.innerHTML = '';
@@ -1052,10 +1060,17 @@
                 div.style.width = '100px';
                 const imgUrl = URL.createObjectURL(file);
                 const titleVal = file.title || '';
+                const sizeVal = file.display_size || 'banner';
                 div.innerHTML = `
                     <img src="${imgUrl}" style="width: 90px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color);">
                     <button type="button" class="btn btn-danger position-absolute top-0 end-0 p-0" style="width:18px;height:18px;font-size:10px;line-height:1;border-radius:50%" onclick="removeBanner(${idx})">×</button>
-                    <input type="text" placeholder="Image Title" class="form-control form-control-sm mt-1 banner-title-input" style="font-size: 9px; padding: 2px;" data-idx="${idx}" value="${escapeHtml(titleVal)}" onchange="selectedBanners[${idx}].title = this.value">
+                    <input type="text" placeholder="Image Title" class="form-control form-control-sm mt-1 banner-title-input" style="font-size: 9px; padding: 2px; height: 20px;" data-idx="${idx}" value="${escapeHtml(titleVal)}" onchange="selectedBanners[${idx}].title = this.value">
+                    <select class="form-select form-select-sm mt-1 banner-size-select" style="font-size: 9px; padding: 2px; height: 20px;" onchange="selectedBanners[${idx}].display_size = this.value">
+                        <option value="banner" ${sizeVal === 'banner' ? 'selected' : ''}>Banner (16:9)</option>
+                        <option value="square" ${sizeVal === 'square' ? 'selected' : ''}>Square (1:1)</option>
+                        <option value="story" ${sizeVal === 'story' ? 'selected' : ''}>Story (9:16)</option>
+                    </select>
+                    <div style="font-size: 8px; color: #6c757d; margin-top: 2px; font-weight: bold;">${formatBytes(file.size)}</div>
                 `;
                 preview.appendChild(div);
             });
@@ -1090,7 +1105,8 @@
                 benefits_partners: document.getElementById('create_opt_benefits_partners').value,
                 campaign_rules: document.getElementById('create_opt_campaign_rules').value,
                 youtube_video_url: document.getElementById('create_opt_youtube_video_url').value,
-                banner_titles: selectedBanners.map(f => f.title || '')
+                banner_titles: selectedBanners.map(f => f.title || ''),
+                banner_sizes: selectedBanners.map(f => f.display_size || 'banner')
             };
             formData.append('settings', JSON.stringify(settings));
 
@@ -1289,6 +1305,7 @@
         let editSelectedBanners = [];
         let editRetainedBanners = [];
         let editRetainedTitles = [];
+        let editRetainedSizes = [];
 
         window.openEditServiceModal = function(s) {
             document.getElementById('edit_service_id').value = s.id;
@@ -1329,6 +1346,10 @@
             while (editRetainedTitles.length < editRetainedBanners.length) {
                 editRetainedTitles.push('');
             }
+            editRetainedSizes = (settings && settings.banner_sizes) || [];
+            while (editRetainedSizes.length < editRetainedBanners.length) {
+                editRetainedSizes.push('banner');
+            }
             renderExistingBanners();
 
             editSelectedBanners = [];
@@ -1349,10 +1370,16 @@
                 div.style.margin = '10px 5px';
                 div.style.width = '100px';
                 const titleVal = editRetainedTitles[idx] || '';
+                const sizeVal = editRetainedSizes[idx] || 'banner';
                 div.innerHTML = `
                     <img src="/storage/${b}" style="width: 90px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color);">
                     <button type="button" class="btn btn-danger position-absolute top-0 end-0 p-0" style="width:18px;height:18px;font-size:10px;line-height:1;border-radius:50%" onclick="removeRetainedBanner(${idx})">×</button>
-                    <input type="text" placeholder="Image Title" class="form-control form-control-sm mt-1 edit-retained-banner-title-input" style="font-size: 9px; padding: 2px;" data-idx="${idx}" value="${escapeHtml(titleVal)}" onchange="editRetainedTitles[${idx}] = this.value">
+                    <input type="text" placeholder="Image Title" class="form-control form-control-sm mt-1 edit-retained-banner-title-input" style="font-size: 9px; padding: 2px; height: 20px;" data-idx="${idx}" value="${escapeHtml(titleVal)}" onchange="editRetainedTitles[${idx}] = this.value">
+                    <select class="form-select form-select-sm mt-1 edit-retained-banner-size-select" style="font-size: 9px; padding: 2px; height: 20px;" onchange="editRetainedSizes[${idx}] = this.value">
+                        <option value="banner" ${sizeVal === 'banner' ? 'selected' : ''}>Banner (16:9)</option>
+                        <option value="square" ${sizeVal === 'square' ? 'selected' : ''}>Square (1:1)</option>
+                        <option value="story" ${sizeVal === 'story' ? 'selected' : ''}>Story (9:16)</option>
+                    </select>
                 `;
                 container.appendChild(div);
             });
@@ -1360,6 +1387,7 @@
         window.removeRetainedBanner = function(idx) {
             editRetainedBanners.splice(idx, 1);
             editRetainedTitles.splice(idx, 1);
+            editRetainedSizes.splice(idx, 1);
             renderExistingBanners();
         };
 
@@ -1386,10 +1414,17 @@
                 div.style.width = '100px';
                 const imgUrl = URL.createObjectURL(file);
                 const titleVal = file.title || '';
+                const sizeVal = file.display_size || 'banner';
                 div.innerHTML = `
                     <img src="${imgUrl}" style="width: 90px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color);">
                     <button type="button" class="btn btn-danger position-absolute top-0 end-0 p-0" style="width:18px;height:18px;font-size:10px;line-height:1;border-radius:50%" onclick="removeEditBanner(${idx})">×</button>
-                    <input type="text" placeholder="Image Title" class="form-control form-control-sm mt-1 edit-banner-title-input" style="font-size: 9px; padding: 2px;" data-idx="${idx}" value="${escapeHtml(titleVal)}" onchange="editSelectedBanners[${idx}].title = this.value">
+                    <input type="text" placeholder="Image Title" class="form-control form-control-sm mt-1 edit-banner-title-input" style="font-size: 9px; padding: 2px; height: 20px;" data-idx="${idx}" value="${escapeHtml(titleVal)}" onchange="editSelectedBanners[${idx}].title = this.value">
+                    <select class="form-select form-select-sm mt-1 edit-banner-size-select" style="font-size: 9px; padding: 2px; height: 20px;" onchange="editSelectedBanners[${idx}].display_size = this.value">
+                        <option value="banner" ${sizeVal === 'banner' ? 'selected' : ''}>Banner (16:9)</option>
+                        <option value="square" ${sizeVal === 'square' ? 'selected' : ''}>Square (1:1)</option>
+                        <option value="story" ${sizeVal === 'story' ? 'selected' : ''}>Story (9:16)</option>
+                    </select>
+                    <div style="font-size: 8px; color: #6c757d; margin-top: 2px; font-weight: bold;">${formatBytes(file.size)}</div>
                 `;
                 preview.appendChild(div);
             });
@@ -1429,7 +1464,8 @@
                 benefits_partners: document.getElementById('edit_opt_benefits_partners').value,
                 campaign_rules: document.getElementById('edit_opt_campaign_rules').value,
                 youtube_video_url: document.getElementById('edit_opt_youtube_video_url').value,
-                banner_titles: [...editRetainedTitles, ...editSelectedBanners.map(f => f.title || '')]
+                banner_titles: [...editRetainedTitles, ...editSelectedBanners.map(f => f.title || '')],
+                banner_sizes: [...editRetainedSizes, ...editSelectedBanners.map(f => f.display_size || 'banner')]
             };
             formData.append('settings', JSON.stringify(settings));
 
