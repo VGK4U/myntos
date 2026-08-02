@@ -652,6 +652,47 @@
                                 </div>
                             </div>
 
+                            <!-- Page Theme & Color Styling overrides -->
+                            <div class="accordion mb-3" id="createThemeAccordion">
+                              <div class="accordion-item">
+                                <h2 class="accordion-header" id="c_headingTheme">
+                                  <button class="accordion-button collapsed fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#c_collapseTheme" aria-expanded="false" aria-controls="c_collapseTheme">
+                                    <i class="fas fa-palette text-success me-2"></i>Page Theme &amp; Color Styling Settings
+                                  </button>
+                                </h2>
+                                <div id="c_collapseTheme" class="accordion-collapse collapse" aria-labelledby="c_headingTheme" data-bs-parent="#createThemeAccordion">
+                                  <div class="accordion-body bg-light">
+                                    <div class="row g-2 mb-2">
+                                      <div class="col-md-6">
+                                        <label class="form-label small fw-bold">Color Theme Preset</label>
+                                        <select class="form-select form-select-sm" id="create_opt_color_theme" onchange="toggleCreateCustomColors()">
+                                          <option value="auto">Auto-classify (Default)</option>
+                                          <option value="festive">Festive Gold &amp; Red</option>
+                                          <option value="eco">Eco Green &amp; Fresh</option>
+                                          <option value="health">Health Blue &amp; Clean</option>
+                                          <option value="custom">Custom Color Theme...</option>
+                                        </select>
+                                      </div>
+                                    </div>
+                                    <div id="create_custom_colors_wrap" style="display:none" class="row g-2">
+                                      <div class="col-md-4">
+                                        <label class="form-label small fw-bold">Primary Color</label>
+                                        <input type="color" class="form-control form-control-sm" id="create_opt_primary_color" value="#10b981" style="height:32px;cursor:pointer">
+                                      </div>
+                                      <div class="col-md-4">
+                                        <label class="form-label small fw-bold">Accent Color</label>
+                                        <input type="color" class="form-control form-control-sm" id="create_opt_accent_color" value="#fbbf24" style="height:32px;cursor:pointer">
+                                      </div>
+                                      <div class="col-md-4">
+                                        <label class="form-label small fw-bold">Background Color</label>
+                                        <input type="color" class="form-control form-control-sm" id="create_opt_bg_color" value="#ffffff" style="height:32px;cursor:pointer">
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
                             <!-- Section Overrides Accordion -->
                             <div class="accordion mb-3" id="createSectionManagerAccordion">
                               <div class="accordion-item">
@@ -1106,7 +1147,11 @@
                 campaign_rules: document.getElementById('create_opt_campaign_rules').value,
                 youtube_video_url: document.getElementById('create_opt_youtube_video_url').value,
                 banner_titles: selectedBanners.map(f => f.title || ''),
-                banner_sizes: selectedBanners.map(f => f.display_size || 'banner')
+                banner_sizes: selectedBanners.map(f => f.display_size || 'banner'),
+                color_theme: document.getElementById('create_opt_color_theme').value,
+                primary_color: document.getElementById('create_opt_primary_color').value,
+                accent_color: document.getElementById('create_opt_accent_color').value,
+                bg_color: document.getElementById('create_opt_bg_color').value
             };
             formData.append('settings', JSON.stringify(settings));
 
@@ -1333,6 +1378,11 @@
             document.getElementById('edit_opt_campaign_rules').value = settings.campaign_rules || '';
             
             document.getElementById('edit_opt_youtube_video_url').value = settings.youtube_video_url || '';
+            document.getElementById('edit_opt_color_theme').value = settings.color_theme || 'auto';
+            document.getElementById('edit_opt_primary_color').value = settings.primary_color || '#10b981';
+            document.getElementById('edit_opt_accent_color').value = settings.accent_color || '#fbbf24';
+            document.getElementById('edit_opt_bg_color').value = settings.bg_color || '#ffffff';
+            toggleEditCustomColors();
             
             // Checkboxes
             const verts = s.applicable_verticals || [];
@@ -1437,6 +1487,16 @@
             document.getElementById('create_service_ai_prompt').value = "Create a cinematic, image-first promotional microsite inspired by the campaign posters. Treat the posters as the primary design language and the PDF only as the source of campaign content. The final website should look like an award-winning marketing campaign, not a registration portal.";
         };
 
+        window.toggleCreateCustomColors = function() {
+            const theme = document.getElementById('create_opt_color_theme').value;
+            document.getElementById('create_custom_colors_wrap').style.display = (theme === 'custom') ? 'flex' : 'none';
+        };
+
+        window.toggleEditCustomColors = function() {
+            const theme = document.getElementById('edit_opt_color_theme').value;
+            document.getElementById('edit_custom_colors_wrap').style.display = (theme === 'custom') ? 'flex' : 'none';
+        };
+
         window.handleSaveService = async function(e) {
             e.preventDefault();
             const id = document.getElementById('edit_service_id').value;
@@ -1465,7 +1525,11 @@
                 campaign_rules: document.getElementById('edit_opt_campaign_rules').value,
                 youtube_video_url: document.getElementById('edit_opt_youtube_video_url').value,
                 banner_titles: [...editRetainedTitles, ...editSelectedBanners.map(f => f.title || '')],
-                banner_sizes: [...editRetainedSizes, ...editSelectedBanners.map(f => f.display_size || 'banner')]
+                banner_sizes: [...editRetainedSizes, ...editSelectedBanners.map(f => f.display_size || 'banner')],
+                color_theme: document.getElementById('edit_opt_color_theme').value,
+                primary_color: document.getElementById('edit_opt_primary_color').value,
+                accent_color: document.getElementById('edit_opt_accent_color').value,
+                bg_color: document.getElementById('edit_opt_bg_color').value
             };
             formData.append('settings', JSON.stringify(settings));
 
@@ -1803,6 +1867,47 @@
                   <button type="button" class="btn btn-outline-secondary btn-sm" onclick="populateGaneshTemplate()">
                     <i class="fas fa-magic me-1"></i>Ganesh Template
                   </button>
+                </div>
+              </div>
+
+              <!-- Page Theme & Color Styling overrides -->
+              <div class="accordion mb-3" id="editThemeAccordion">
+                <div class="accordion-item">
+                  <h2 class="accordion-header" id="e_headingTheme">
+                    <button class="accordion-button collapsed fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#e_collapseTheme" aria-expanded="false" aria-controls="e_collapseTheme">
+                      <i class="fas fa-palette text-success me-2"></i>Page Theme &amp; Color Styling Settings
+                    </button>
+                  </h2>
+                  <div id="e_collapseTheme" class="accordion-collapse collapse" aria-labelledby="e_headingTheme" data-bs-parent="#editThemeAccordion">
+                    <div class="accordion-body bg-light">
+                      <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                          <label class="form-label small fw-bold">Color Theme Preset</label>
+                          <select class="form-select form-select-sm" id="edit_opt_color_theme" onchange="toggleEditCustomColors()">
+                            <option value="auto">Auto-classify (Default)</option>
+                            <option value="festive">Festive Gold &amp; Red</option>
+                            <option value="eco">Eco Green &amp; Fresh</option>
+                            <option value="health">Health Blue &amp; Clean</option>
+                            <option value="custom">Custom Color Theme...</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div id="edit_custom_colors_wrap" style="display:none" class="row g-2">
+                        <div class="col-md-4">
+                          <label class="form-label small fw-bold">Primary Color</label>
+                          <input type="color" class="form-control form-control-sm" id="edit_opt_primary_color" value="#10b981" style="height:32px;cursor:pointer">
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label small fw-bold">Accent Color</label>
+                          <input type="color" class="form-control form-control-sm" id="edit_opt_accent_color" value="#fbbf24" style="height:32px;cursor:pointer">
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label small fw-bold">Background Color</label>
+                          <input type="color" class="form-control form-control-sm" id="edit_opt_bg_color" value="#ffffff" style="height:32px;cursor:pointer">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 

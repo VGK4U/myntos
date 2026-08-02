@@ -2316,14 +2316,33 @@
                 const settings = s.settings || {};
 
                 // Theme classification
-                const textToScan = (s.service_name + ' ' + s.short_name + ' ' + (s.ai_prompt || '') + ' ' + (s.description || '')).toLowerCase();
-                let theme = 'health';
-                if (textToScan.includes('ganesh') || textToScan.includes('puja') || textToScan.includes('festival') || textToScan.includes('utsav')) {
-                    theme = 'festive';
-                } else if (textToScan.includes('solar') || textToScan.includes('green') || textToScan.includes('eco')) {
-                    theme = 'eco';
+                let theme = settings.color_theme || 'auto';
+                if (theme === 'auto') {
+                    const textToScan = (s.service_name + ' ' + s.short_name + ' ' + (s.ai_prompt || '') + ' ' + (s.description || '')).toLowerCase();
+                    theme = 'health';
+                    if (textToScan.includes('ganesh') || textToScan.includes('puja') || textToScan.includes('festival') || textToScan.includes('utsav')) {
+                        theme = 'festive';
+                    } else if (textToScan.includes('solar') || textToScan.includes('green') || textToScan.includes('eco')) {
+                        theme = 'eco';
+                    }
                 }
                 document.body.className = theme;
+
+                if (theme === 'custom') {
+                    const primary = settings.primary_color || '#10b981';
+                    const accent = settings.accent_color || '#fbbf24';
+                    const bg = settings.bg_color || '#ffffff';
+                    
+                    document.documentElement.style.setProperty('--primary', primary);
+                    document.documentElement.style.setProperty('--primary-rgb', hexToRgb(primary));
+                    document.documentElement.style.setProperty('--accent', accent);
+                    document.documentElement.style.setProperty('--bg', bg);
+                }
+
+                function hexToRgb(hex) {
+                    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
+                    return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '16, 185, 129';
+                }
 
                 document.getElementById('formServiceId').value = s.id;
                 document.getElementById('heroTitle').textContent = settings.custom_title || s.service_name;
