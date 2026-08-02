@@ -243,6 +243,17 @@ class MNRApp {
       return;
     }
 
+    // Suppress warning on desktop computers/laptops
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+      || (window.matchMedia && window.matchMedia('(max-width: 1024px)').matches && ('ontouchstart' in window || navigator.maxTouchPoints > 0));
+
+    if (!isMobileDevice) {
+      const warning = document.querySelector('.landscape-warning') as HTMLElement | null;
+      if (warning) warning.style.display = 'none';
+      console.log('[DC_APP] Desktop platform detected — landscape warning suppressed');
+      return;
+    }
+
     // Web/PWA only: use Screen Orientation API → matchMedia → pixel ratio (layered fallback).
     // DC_ORIENT_FIX_002: innerWidth/innerHeight alone is unreliable on budget Android WebViews
     // during the first ~500ms of load — some phones report swapped or zero dimensions.
