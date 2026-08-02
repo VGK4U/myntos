@@ -1921,7 +1921,7 @@
     <!-- SECTION 8: Video Section -->
     <section id="section-video" class="cinematic-section video-section">
         <div class="video-container-wrapper">
-            <h2 class="section-heading text-center">Promotional Showcase</h2>
+            <h2 class="section-heading text-center">About this Campaign</h2>
             <p class="section-subtitle text-center" style="margin-bottom:30px; opacity:0.8;">Watch our green campaign introductory film</p>
             
             <div class="cinematic-video-card">
@@ -2501,10 +2501,32 @@
                         parsedRules = calloutP.textContent.trim();
                     }
 
-                    // Update Section 2 Campaign Story content dynamically
-                    const storyContent = tempDiv.innerText.replace(/\s+/g, ' ').substring(0, 450) + '...';
-                    if (storyContent && storyContent.length > 50) {
-                        document.getElementById('storyParagraph').textContent = storyContent.replace(/\[PASS\].*|\[FAIL\].*/gi, '');
+                    // Update Section 2 Campaign Story content dynamically (removing code and styles)
+                    tempDiv.querySelectorAll('style, script, table, .step-icon, .badge').forEach(el => el.remove());
+                    
+                    let storyText = '';
+                    const paragraphs = tempDiv.querySelectorAll('p');
+                    if (paragraphs.length > 0) {
+                        const texts = [];
+                        paragraphs.forEach(p => {
+                            const txt = p.textContent.trim();
+                            // Skip styling rules or metadata templates
+                            if (txt && !txt.includes('L1, L2') && !txt.includes('[PASS]') && !txt.includes('rgba(') && !txt.includes('{') && !txt.includes('}')) {
+                                texts.push(txt);
+                            }
+                        });
+                        storyText = texts.slice(0, 3).join('\n\n');
+                    }
+                    
+                    if (!storyText) {
+                        storyText = tempDiv.innerText.replace(/\s+/g, ' ').trim();
+                    }
+                    
+                    // Strip leftover CSS block text or template markers
+                    storyText = storyText.replace(/\{[^\}]*\}/g, '').replace(/\[PASS\].*|\[FAIL\].*/gi, '').trim();
+                    
+                    if (storyText && storyText.length > 40) {
+                        document.getElementById('storyParagraph').textContent = storyText.substring(0, 600) + (storyText.length > 600 ? '...' : '');
                     }
                 }
                 document.getElementById('heroTagline').textContent = settings.custom_tagline || extractedTagline || "Join the campaign and receive automated contributions.";
@@ -2624,18 +2646,18 @@
                     }
                 }
 
-                // Section 8: YouTube Embed video
+                // Section 8: YouTube Embed video (Show preview directly)
                 const ytUrl = settings.youtube_video_url;
                 if (ytUrl) {
-                    const playBtn = document.querySelector('#section-video .play-btn-circle');
-                    if (playBtn) {
-                        playBtn.onclick = function() {
-                            document.querySelector('#section-video .video-cover-backdrop').style.display = 'none';
-                            const frame = document.getElementById('mockVideoFrame');
+                    const embedUrl = getYoutubeEmbedUrl(ytUrl);
+                    if (embedUrl) {
+                        const backdrop = document.querySelector('#section-video .video-cover-backdrop');
+                        if (backdrop) backdrop.style.display = 'none';
+                        const frame = document.getElementById('mockVideoFrame');
+                        if (frame) {
                             frame.style.display = 'flex';
-                            const embedUrl = getYoutubeEmbedUrl(ytUrl);
-                            frame.innerHTML = `<iframe src="${embedUrl}?autoplay=1" style="position: absolute; top:0; left:0; width:100%; height:100%; border:0;" allowfullscreen></iframe>`;
-                        };
+                            frame.innerHTML = `<iframe src="${embedUrl}" style="position: absolute; top:0; left:0; width:100%; height:100%; border:0;" allowfullscreen></iframe>`;
+                        }
                     }
                 }
 
