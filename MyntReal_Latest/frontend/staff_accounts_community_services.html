@@ -971,7 +971,8 @@
                             ` : '<span class="text-muted">—</span>'}
                         </td>
                         <td>
-                            <div class="fw-bold">${escapeHtml(r.primary_name)}</div>
+                            <div class="fw-bold">${escapeHtml(r.association_name || 'N/A')}</div>
+                            <div class="text-muted fs-7">Rep: ${escapeHtml(r.primary_name)}</div>
                             <div class="text-muted fs-7"><i class="fas fa-phone me-1"></i>${r.primary_phone_1}</div>
                         </td>
                         <td><span class="badge bg-secondary">${escapeHtml(r.service_name || 'N/A')}</span></td>
@@ -1303,6 +1304,7 @@
 
         window.openEditRegistrationModal = function(r) {
             document.getElementById('edit_reg_id').value = r.id;
+            document.getElementById('edit_association_name').value = r.association_name || '';
             document.getElementById('edit_primary_name').value = r.primary_name || '';
             document.getElementById('edit_primary_phone_1').value = r.primary_phone_1 || '';
             document.getElementById('edit_primary_phone_2').value = r.primary_phone_2 || '';
@@ -1328,11 +1330,12 @@
             e.preventDefault();
             const id = document.getElementById('edit_reg_id').value;
             const payload = {
+                association_name: document.getElementById('edit_association_name').value,
                 primary_name: document.getElementById('edit_primary_name').value,
                 primary_phone_1: document.getElementById('edit_primary_phone_1').value,
                 primary_phone_2: document.getElementById('edit_primary_phone_2').value || null,
-                secondary_name: document.getElementById('edit_secondary_name').value || null,
-                secondary_phone_1: document.getElementById('edit_secondary_phone_1').value || null,
+                secondary_name: document.getElementById('edit_secondary_name').value,
+                secondary_phone_1: document.getElementById('edit_secondary_phone_1').value,
                 secondary_phone_2: document.getElementById('edit_secondary_phone_2').value || null,
                 area: document.getElementById('edit_area').value,
                 pin_code: document.getElementById('edit_pin_code').value,
@@ -1767,6 +1770,10 @@
             <input type="hidden" id="edit_reg_id">
             <div class="modal-body">
               <div class="row g-3">
+                <div class="col-md-12">
+                  <label class="form-label fw-bold">Association / Community Name *</label>
+                  <input type="text" class="form-control" id="edit_association_name" required>
+                </div>
                 <div class="col-md-6">
                   <label class="form-label fw-bold">Primary Representative Name *</label>
                   <input type="text" class="form-control" id="edit_primary_name" required>
@@ -1780,15 +1787,15 @@
                   <input type="tel" class="form-control" id="edit_primary_phone_2" pattern="[6-9][0-9]{9}">
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label fw-bold">Secondary Representative Name</label>
-                  <input type="text" class="form-control" id="edit_secondary_name">
+                  <label class="form-label fw-bold">Alternate Representative Name *</label>
+                  <input type="text" class="form-control" id="edit_secondary_name" required>
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label fw-bold">Secondary Mobile 1</label>
-                  <input type="tel" class="form-control" id="edit_secondary_phone_1" pattern="[6-9][0-9]{9}">
+                  <label class="form-label fw-bold">Alternate Mobile 1 *</label>
+                  <input type="tel" class="form-control" id="edit_secondary_phone_1" pattern="[6-9][0-9]{9}" required>
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label fw-bold">Secondary Mobile 2</label>
+                  <label class="form-label fw-bold">Alternate Mobile 2</label>
                   <input type="tel" class="form-control" id="edit_secondary_phone_2" pattern="[6-9][0-9]{9}">
                 </div>
                 <hr class="my-3">

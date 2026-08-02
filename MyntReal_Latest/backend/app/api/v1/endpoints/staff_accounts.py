@@ -7892,18 +7892,25 @@ async def get_employee_fund_balance(
         if not emp:
             return JSONResponse(status_code=404, content={"success": False, "detail": "Employee not found"})
 
-        last_ledger = db.query(EmployeeFundLedger).filter(
-            EmployeeFundLedger.employee_id == employee_id
-        ).order_by(EmployeeFundLedger.id.desc()).first()
+        q_last = db.query(EmployeeFundLedger).filter(EmployeeFundLedger.employee_id == employee_id)
+        if company_id:
+            q_last = q_last.filter(EmployeeFundLedger.company_id == company_id)
+        last_ledger = q_last.order_by(EmployeeFundLedger.id.desc()).first()
         available_balance = float(last_ledger.balance) if last_ledger else 0.0
 
-        total_credits = db.query(_func.coalesce(_func.sum(EmployeeFundLedger.credit_amount), 0)).filter(
+        q_credits = db.query(_func.coalesce(_func.sum(EmployeeFundLedger.credit_amount), 0)).filter(
             EmployeeFundLedger.employee_id == employee_id
-        ).scalar() or 0
+        )
+        if company_id:
+            q_credits = q_credits.filter(EmployeeFundLedger.company_id == company_id)
+        total_credits = q_credits.scalar() or 0
 
-        total_debits = db.query(_func.coalesce(_func.sum(EmployeeFundLedger.debit_amount), 0)).filter(
+        q_debits = db.query(_func.coalesce(_func.sum(EmployeeFundLedger.debit_amount), 0)).filter(
             EmployeeFundLedger.employee_id == employee_id
-        ).scalar() or 0
+        )
+        if company_id:
+            q_debits = q_debits.filter(EmployeeFundLedger.company_id == company_id)
+        total_debits = q_debits.scalar() or 0
 
         from app.models.staff_accounts import ExpenseEntry as _EE, FundAllocation as _FA
         from sqlalchemy import or_ as _or2
@@ -7930,10 +7937,13 @@ async def get_employee_fund_balance(
         emp_name = f"{getattr(emp, 'first_name', '')} {getattr(emp, 'last_name', '')}".strip()
 
         # DC_OB_PREFILL_001: Fetch existing opening balance entry so UI can pre-fill it
-        ob_entry = db.query(EmployeeFundLedger).filter(
+        q_ob = db.query(EmployeeFundLedger).filter(
             EmployeeFundLedger.employee_id == employee_id,
             EmployeeFundLedger.entry_type == 'OPENING_BALANCE'
-        ).first()
+        )
+        if company_id:
+            q_ob = q_ob.filter(EmployeeFundLedger.company_id == company_id)
+        ob_entry = q_ob.first()
         opening_balance_amount = float(ob_entry.credit_amount) if ob_entry else None
 
         return JSONResponse(content={
@@ -8009,6 +8019,7 @@ async def create_fund_transfer_endpoint(
     company_id: int = Body(..., embed=False),
     amount: float = Body(..., embed=False),
     purpose: Optional[str] = Body(None, embed=False),
+    category_id: Optional[int] = Body(None, embed=False),
     payment_mode: Optional[str] = Body(None, embed=False),
     payment_reference: Optional[str] = Body(None, embed=False),
     transfer_date: Optional[str] = Body(None, embed=False),
@@ -8051,6 +8062,7 @@ async def create_fund_transfer_endpoint(
             transfer_date=txn_date,
             amount=amt,
             purpose=purpose,
+            category_id=category_id,
             payment_mode=payment_mode,
             payment_reference=payment_reference,
             status='CONFIRMED',
@@ -8062,7 +8074,8 @@ async def create_fund_transfer_endpoint(
 
         # Debit sender ledger
         last_from = db.query(EmployeeFundLedger).filter(
-            EmployeeFundLedger.employee_id == from_employee_id
+            EmployeeFundLedger.employee_id == from_employee_id,
+            EmployeeFundLedger.company_id == company_id
         ).order_by(EmployeeFundLedger.id.desc()).first()
         from_balance = _Dec(str(last_from.balance)) if last_from else _Dec('0')
         from_entry = EmployeeFundLedger(
@@ -8084,7 +8097,8 @@ async def create_fund_transfer_endpoint(
 
         # Credit recipient ledger
         last_to = db.query(EmployeeFundLedger).filter(
-            EmployeeFundLedger.employee_id == to_employee_id
+            EmployeeFundLedger.employee_id == to_employee_id,
+            EmployeeFundLedger.company_id == company_id
         ).order_by(EmployeeFundLedger.id.desc()).first()
         to_balance = _Dec(str(last_to.balance)) if last_to else _Dec('0')
         to_entry = EmployeeFundLedger(

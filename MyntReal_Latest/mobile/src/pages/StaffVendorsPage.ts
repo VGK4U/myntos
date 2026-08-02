@@ -69,8 +69,8 @@ export class StaffVendorsPage {
   }
 
   async render(): Promise<void> {
-    const token = authService.getToken();
-    if (!token) return;
+    const authState = authService.getAuthState();
+    if (!authState.isLoggedIn) return;
 
     this.container.innerHTML = `
       <div style="min-height:100vh;background:#0f172a;color:#f8fafc;font-family:'Inter',sans-serif;">
@@ -268,17 +268,16 @@ export class StaffVendorsPage {
   }
 
   async loadVendors(): Promise<void> {
-    const token = authService.getToken();
     const listEl = document.getElementById('vendorList');
     if (!listEl) return;
     try {
-      const resp = await apiService.get('/api/v1/accounts/vendors?limit=500', token || '');
-      if (resp.ok) {
-        const data = await resp.json();
+      const resp = await apiService.get<any>('/api/v1/accounts/vendors?limit=500');
+      if (resp.success && resp.data) {
+        const data = resp.data;
         this.vendors = Array.isArray(data) ? data : (data.vendors || data.items || []);
         this.applyFilters();
       } else {
-        listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">Failed to load vendors</div>';
+        listEl.innerHTML = `<div style="text-align:center;padding:40px;color:#ef4444;">Failed to load vendors: ${resp.error || ''}</div>`;
       }
     } catch (e) {
       listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">Network error</div>';
@@ -387,18 +386,16 @@ export class StaffVendorsPage {
   }
 
   async submitCreate(): Promise<void> {
-    const token = authService.getToken();
     const data = this.collectFormData();
     if (!data) return;
     try {
-      const resp = await apiService.post('/api/v1/accounts/vendors', data, token || '');
-      const json = await resp.json().catch(() => ({}));
-      if (resp.ok && json.success !== false) {
+      const resp = await apiService.post<any>('/api/v1/accounts/vendors', data);
+      if (resp.success) {
         alert('Vendor created successfully');
         this.closeCreateModal();
         await this.loadVendors();
       } else {
-        alert(json.detail?.message || json.detail || json.message || 'Failed to create vendor');
+        alert(resp.error || 'Failed to create vendor');
       }
     } catch (e) {
       console.error('Create vendor error:', e);
@@ -407,18 +404,16 @@ export class StaffVendorsPage {
   }
 
   async submitEdit(id: number): Promise<void> {
-    const token = authService.getToken();
     const data = this.collectFormData();
     if (!data) return;
     try {
-      const resp = await apiService.put(`/api/v1/accounts/vendors/${id}`, data, token || '');
-      const json = await resp.json().catch(() => ({}));
-      if (resp.ok && json.success !== false) {
+      const resp = await apiService.put<any>(`/api/v1/accounts/vendors/${id}`, data);
+      if (resp.success) {
         alert('Vendor updated successfully');
         this.closeModal();
         await this.loadVendors();
       } else {
-        alert(json.detail?.message || json.detail || json.message || 'Failed to update vendor');
+        alert(resp.error || 'Failed to update vendor');
       }
     } catch (e) {
       console.error('Update vendor error:', e);
@@ -427,16 +422,14 @@ export class StaffVendorsPage {
   }
 
   async toggleActive(id: number, newState: boolean): Promise<void> {
-    const token = authService.getToken();
     if (!confirm(`${newState ? 'Activate' : 'Deactivate'} this vendor?`)) return;
     try {
-      const resp = await apiService.put(`/api/v1/accounts/vendors/${id}`, { is_active: newState }, token || '');
-      const json = await resp.json().catch(() => ({}));
-      if (resp.ok && json.success !== false) {
+      const resp = await apiService.put<any>(`/api/v1/accounts/vendors/${id}`, { is_active: newState });
+      if (resp.success) {
         this.closeModal();
         await this.loadVendors();
       } else {
-        alert(json.detail?.message || json.detail || json.message || 'Failed to update vendor');
+        alert(resp.error || 'Failed to update vendor');
       }
     } catch (e) {
       alert('Network error');

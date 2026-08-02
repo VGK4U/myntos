@@ -51,6 +51,10 @@ interface Lead {
   guru_name?: string | null;
   z_guru_id?: string | null;
   z_guru_name?: string | null;
+  support_staff_name?: string;
+  technical_staff1_name?: string;
+  technical_name?: string;
+  associated_partner_id?: number | null;
   submit_date?: string | null;  // DC-SUBMIT-DATE-001
   complete_date?: string | null;  // DC-COMPLETE-DATE-001
   first_payment_received_date?: string | null;

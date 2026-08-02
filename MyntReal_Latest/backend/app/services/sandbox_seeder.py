@@ -175,6 +175,7 @@ def seed_sandbox_data(db: Session):
     if not reg:
         reg = CommunityRegistration(
             community_service_id=service.id,
+            association_name="Test Seva Association",
             primary_name="Test Seva Mandapam 2026",
             primary_phone_1="9999990001",
             area="Test Sandbox Area",

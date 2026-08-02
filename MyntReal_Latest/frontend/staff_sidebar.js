@@ -87,6 +87,7 @@ const StaffSidebar = {
     // Allowed menus from /my-menus API (Zero-Default Access Policy)
     allowedMenuPaths: null,  // Set of allowed route_path values
     allowedMenuCodes: null,  // DC Protocol (Jan 22, 2026): Set of allowed menu_code values
+    rawMenus: null,          // Raw menu items returned from API
     SUPREME_STAFF_TYPES: ["VGK4U_SUPREME", "RVZ_SUPREME", "VGK4U", "VGK4U Supreme", "VGK4U_EA"],
     zeroAccessMessage: null, // Message to show when no access granted
     // DC Protocol (Jan 12, 2026): REMOVED ALL HARDCODED MENU CONFIG
@@ -411,6 +412,7 @@ const StaffSidebar = {
                         // Build set of allowed route paths (unified across companies)
                         this.allowedMenuPaths = new Set(data.menus.map(m => m.route_path).filter(p => p));
                         this.allowedMenuCodes = new Set(data.menus.map(m => m.menu_code).filter(c => c));
+                        this.rawMenus = data.menus || [];
                         this.menuRoutesForVGK = data.menus.filter(m => m.route_path && m.label).map(m => ({ label: m.label, route: m.route_path }));
                         console.log('[DC-SIDEBAR] Unified menus loaded:', this.allowedMenuPaths.size, '(unified_mode:', data.unified_mode, ')');
                         console.log('[DC-SIDEBAR] Debug: First 10 allowed paths:', Array.from(this.allowedMenuPaths).slice(0, 10));
@@ -441,6 +443,7 @@ const StaffSidebar = {
                     } else {
                         this.allowedMenuPaths = new Set(data.menus.map(m => m.route_path).filter(p => p));
                         this.allowedMenuCodes = new Set(data.menus.map(m => m.menu_code).filter(c => c));
+                        this.rawMenus = data.menus || [];
                         this.menuRoutesForVGK = data.menus.filter(m => m.route_path && m.label).map(m => ({ label: m.label, route: m.route_path }));
                     }
                 } else {
@@ -735,6 +738,21 @@ const StaffSidebar = {
         const allowedPaths = this.allowedMenuPaths;
         const hasRouteAccess = allowedPaths && allowedPaths instanceof Set && allowedPaths.size > 0;
         
+        let expenseInDashboard = false;
+        if (this.rawMenus) {
+            const expMenu = this.rawMenus.find(m => m.route_path === '/staff/accounts/expense-entries');
+            if (expMenu && (expMenu.sidebar_section === 'staff-dashboard' || expMenu.menu_category === 'STAFF DASHBOARD')) {
+                expenseInDashboard = true;
+            }
+        }
+        if (!expenseInDashboard && this.userData && hasRouteAccess && allowedPaths.has('/staff/accounts/expense-entries')) {
+            const deptName = (this.userData.department_name || '').toLowerCase();
+            const isAccounts = deptName.includes('account') || deptName === 'act';
+            if (!isAccounts) {
+                expenseInDashboard = true;
+            }
+        }
+        
         for (const section of menuMaster) {
             const sectionItems = [];
             const sectionSubSections = [];
@@ -765,6 +783,16 @@ const StaffSidebar = {
                         });
                     }
                 }
+                if (isStaffDashboardSection && expenseInDashboard) {
+                    if (!sectionItems.some(i => i.href === '/staff/accounts/expense-entries')) {
+                        sectionItems.push({
+                            icon: 'fas fa-receipt',
+                            label: 'Expense Entries',
+                            href: '/staff/accounts/expense-entries',
+                            menu_code: 'EXPENSE_ENTRIES'
+                        });
+                    }
+                }
             }
             
             // Process subSections (for ACCOUNTS, ZYNOVA, MNR, MNR USER SIDEBAR)
@@ -773,6 +801,9 @@ const StaffSidebar = {
                     const subItems = [];
                     
                     for (const item of subSection.items || []) {
+                        if (expenseInDashboard && (item.route === '/staff/accounts/expense-entries' || item.route === '/staff/accounts/expense-entries/')) {
+                            continue;
+                        }
                         // DC Protocol: Match by route_path for subSection items too
                         let shouldInclude = isStaffDashboardSection || !hasRouteAccess || (allowedPaths && allowedPaths.has(item.route));
                         

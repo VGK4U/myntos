@@ -16318,7 +16318,8 @@ async def get_ground_source_weekly_report(
         base = db.query(CRMLead).filter(
             CRMLead.company_id == current_employee.base_company_id, _src_notnull)
     if category:
-        base = base.filter(CRMLead.category == category)
+        base = base.join(SignupCategory, CRMLead.category_id == SignupCategory.id)
+        base = base.filter(SignupCategory.name == category)
 
     if gs_type_filter and gs_type_filter != 'all':
         _PART = {'partner', 'vgk_partner', 'vgk'}

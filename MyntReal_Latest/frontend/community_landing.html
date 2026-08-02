@@ -1978,6 +1978,15 @@
                     <input type="hidden" name="community_service_id" id="formServiceId">
                     
                     <div class="form-grid">
+                        <!-- Association Details -->
+                        <div class="form-group">
+                            <label>Association / Community Name <span>*</span></label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-users"></i>
+                                <input type="text" name="association_name" placeholder="Name of Seva Samithi, Society or Association" required>
+                            </div>
+                        </div>
+
                         <!-- Primary Contact -->
                         <div class="form-group">
                             <label>Primary Contact Name <span>*</span></label>
@@ -2004,29 +2013,29 @@
                             </div>
                         </div>
 
-                        <!-- Secondary Contact -->
+                        <!-- Secondary / Alternate Contact -->
                         <div style="font-size:12.5px;font-weight:800;color:var(--primary);margin-top:10px;border-bottom:1.5px solid rgba(255,255,255,0.08);padding-bottom:4px">
-                            Secondary Contact Person (Optional)
+                            Alternate Contact Person (Mandatory)
                         </div>
 
                         <div class="form-group">
-                            <label>Secondary Representative Name</label>
+                            <label>Alternate Representative Name <span>*</span></label>
                             <div class="input-wrapper">
                                 <i class="fas fa-user-tag"></i>
-                                <input type="text" name="secondary_name" placeholder="Full name of alternate contact">
+                                <input type="text" name="secondary_name" placeholder="Full name of alternate contact" required>
                             </div>
                         </div>
 
                         <div class="form-grid-2 form-grid">
                             <div class="form-group">
-                                <label>Secondary Mobile 1</label>
+                                <label>Alternate Mobile 1 <span>*</span></label>
                                 <div class="input-wrapper">
                                     <i class="fas fa-phone"></i>
-                                    <input type="tel" name="secondary_phone_1" placeholder="10-digit mobile" pattern="[6-9][0-9]{9}">
+                                    <input type="tel" name="secondary_phone_1" placeholder="10-digit mobile" pattern="[6-9][0-9]{9}" required>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label>Secondary Mobile 2</label>
+                                <label>Alternate Mobile 2</label>
                                 <div class="input-wrapper">
                                     <i class="fas fa-phone"></i>
                                     <input type="tel" name="secondary_phone_2" placeholder="10-digit mobile" pattern="[6-9][0-9]{9}">
@@ -3001,6 +3010,7 @@
                     }
                     
                     // Setup WhatsApp Share Link
+                    const associationName = document.querySelector('input[name="association_name"]').value;
                     const orgName = document.querySelector('input[name="primary_name"]').value;
                     const areaName = document.querySelector('input[name="area"]').value;
                     
@@ -3008,7 +3018,8 @@
                         `*VGK4U Community Registration Submitted!*\n\n` +
                         `Hello Mentor, I have registered my community for the Seva project:\n` +
                         `• *Project:* ${document.getElementById('heroTitle').textContent}\n` +
-                        `• *Organisation:* ${orgName}\n` +
+                        `• *Association Name:* ${associationName}\n` +
+                        `• *Representative:* ${orgName}\n` +
                         `• *Area:* ${areaName}\n` +
                         `• *Ref ID:* ${json.registration_id}\n\n` +
                         `*Community Login Credentials (Pending Activation):*\n` +

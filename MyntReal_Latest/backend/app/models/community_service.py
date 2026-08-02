@@ -36,6 +36,7 @@ class CommunityRegistration(BaseModel):
     community_service_id = Column(Integer, ForeignKey('community_services.id', ondelete='CASCADE'), nullable=False)
     submission_date = Column(DateTime, default=get_indian_time, nullable=False)
     
+    association_name = Column(String(200), nullable=True)
     primary_name = Column(String(200), nullable=False)
     primary_phone_1 = Column(String(20), nullable=False)
     primary_phone_2 = Column(String(20), nullable=True)

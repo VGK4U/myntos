@@ -2609,16 +2609,22 @@
         }
 
         // Close drilldown on overlay click
-        document.getElementById('drilldownModal').addEventListener('click', function(e) {
-            if (e.target === this) closeDrilldown();
+        document.addEventListener('DOMContentLoaded', function() {
+            const ddModal = document.getElementById('drilldownModal');
+            if (ddModal) {
+                ddModal.addEventListener('click', function(e) {
+                    if (e.target === this) closeDrilldown();
+                });
+            }
         });
 
         // ========== TRANSFER MODAL ==========
         let transferEmployees = [];
 
         async function openTransferModal() {
-            // DC_TRANSFER_EMP_001: Always reload — use accounts-aware endpoint
-            transferEmployees = [];
+            // Open modal immediately to keep UI highly responsive
+            document.getElementById('transferModal').classList.add('active');
+
             // Reset form
             document.getElementById('transferCompany').value = '';
             document.getElementById('transferFrom').innerHTML = '<option value="">Select Employee</option>';
@@ -2631,11 +2637,31 @@
             document.getElementById('transferSubCat').value = '';
             document.getElementById('transferSubCat').disabled = true;
 
+            // DC_TRANSFER_EMP_001: Prepopulate with current user from localStorage
+            transferEmployees = [];
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            if (userData.id) {
+                transferEmployees.push({
+                    id: parseInt(userData.id),
+                    full_name: (userData.full_name || userData.name || 'Me') + ' (Me)',
+                    emp_code: userData.emp_code || ''
+                });
+            }
+
+            // Populate initially with the current user
+            _populateTransferDropdowns();
+
             try {
                 const r = await staffFetch(API_BASE + '/expense-behalf-employees');
                 if (r.ok) {
                     const d = await r.json();
-                    transferEmployees = d.employees || [];
+                    const list = d.employees || [];
+                    // Merge while avoiding duplicates
+                    list.forEach(function(e) {
+                        if (parseInt(e.id) !== parseInt(userData.id)) {
+                            transferEmployees.push(e);
+                        }
+                    });
                 }
             } catch (e) {
                 console.error('Error fetching transfer employees:', e);
@@ -2649,16 +2675,16 @@
             }
 
             try {
-                // Load category picker
-                await ExpCatPicker.init(
+                // Load category picker asynchronously
+                ExpCatPicker.init(
                     document.getElementById('transferMainCat'),
                     document.getElementById('transferSubCat')
-                );
+                ).catch(function(e) {
+                    console.error('Error initializing category picker:', e);
+                });
             } catch (e) {
                 console.error('Error initializing category picker:', e);
             }
-
-            document.getElementById('transferModal').classList.add('active');
         }
 
         function onTransferCatCreated(newCatId, mode) {

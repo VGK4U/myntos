@@ -79,11 +79,12 @@ def get_public_service_details(short_name: str, db: Session = Depends(get_db)):
 @router.post("/public/register")
 async def register_community(
     community_service_id: int = Form(...),
+    association_name: str = Form(...),
     primary_name: str = Form(...),
     primary_phone_1: str = Form(...),
     primary_phone_2: Optional[str] = Form(None),
-    secondary_name: Optional[str] = Form(None),
-    secondary_phone_1: Optional[str] = Form(None),
+    secondary_name: str = Form(...),
+    secondary_phone_1: str = Form(...),
     secondary_phone_2: Optional[str] = Form(None),
     area: str = Form(...),
     pin_code: str = Form(...),
@@ -106,6 +107,7 @@ async def register_community(
     # Create the registration record
     reg = CommunityRegistration(
         community_service_id=community_service_id,
+        association_name=association_name,
         primary_name=primary_name,
         primary_phone_1=primary_phone_1,
         primary_phone_2=primary_phone_2,
@@ -1242,6 +1244,7 @@ def search_active_communities(q: str = "", db: Session = Depends(get_db), curren
     ).filter(
         CommunityRegistration.status == 'APPROVED',
         or_(
+            CommunityRegistration.association_name.ilike(f"%{query}%"),
             CommunityRegistration.primary_name.ilike(f"%{query}%"),
             CommunityRegistration.area.ilike(f"%{query}%"),
             CommunityRegistration.district.ilike(f"%{query}%"),
@@ -1256,7 +1259,7 @@ def search_active_communities(q: str = "", db: Session = Depends(get_db), curren
         "results": [
             {
                 "id": r.id,
-                "display": f"{r.primary_name} ({r.service.short_name} - {r.area}) [{r.user_partner.partner_code if r.user_partner else 'No Login'}]"
+                "display": f"{r.association_name or 'N/A'} - {r.primary_name} ({r.service.short_name} - {r.area}) [{r.user_partner.partner_code if r.user_partner else 'No Login'}]"
             } for r in regs
         ]
     }

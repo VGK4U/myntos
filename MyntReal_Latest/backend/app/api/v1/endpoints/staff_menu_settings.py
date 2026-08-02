@@ -3546,6 +3546,33 @@ async def get_my_menus(
     """
     employee_id = current_user.id
     
+    # Determine if the current employee belongs to the Accounts department
+    is_accounts_dept = False
+    try:
+        from app.models.staff import StaffDepartment, StaffEmployeeDepartment
+        # Check primary department
+        primary_dept_name = None
+        if current_user.department_id:
+            p_dept = db.query(StaffDepartment.name).filter(StaffDepartment.id == current_user.department_id).first()
+            if p_dept:
+                primary_dept_name = p_dept[0]
+        
+        # Check all departments (primary + additional)
+        all_dept_names = []
+        if primary_dept_name:
+            all_dept_names.append(primary_dept_name.lower())
+            
+        additional_depts = db.query(StaffDepartment.name).join(
+            StaffEmployeeDepartment, StaffDepartment.id == StaffEmployeeDepartment.department_id
+        ).filter(StaffEmployeeDepartment.employee_id == employee_id).all()
+        for ad in additional_depts:
+            if ad[0]:
+                all_dept_names.append(ad[0].lower())
+                
+        is_accounts_dept = any('act' == name or 'account' in name for name in all_dept_names)
+    except Exception as e:
+        logger.warning(f"[DC-MY-MENUS-DEPT-CHECK] Error checking accounts department: {e}")
+    
     # AUTO-SYNC: Create missing settings for default-visible menus BEFORE querying
     # DC Protocol: Only syncs for companies the employee has access to (base_company_id / data_companies)
     # This maintains data segregation - employee only gets defaults for their authorized companies
@@ -3597,6 +3624,14 @@ async def get_my_menus(
                 "can_view": True,
                 "can_edit": True
             }
+            if menu.menu_code in ('sfms_expense_entries', 'staff_accounts_expense_entries'):
+                if not is_accounts_dept:
+                    menu_dict["sidebar_section"] = "staff-dashboard"
+                    menu_dict["sidebar_section_title"] = "STAFF DASHBOARD"
+                    menu_dict["sidebar_section_order"] = 2
+                    menu_dict["menu_category"] = "STAFF DASHBOARD"
+                    menu_dict["parent_section"] = None
+                    menu_dict["is_submenu"] = False
             menu_list.append(menu_dict)
             if menu.route_path:
                 all_route_paths.add(menu.route_path)
@@ -3760,7 +3795,8 @@ async def get_my_menus(
         'staff_manager_review', 'REVIEW_DASHBOARD',
         'staff_my_lead_incentives', 'STAFF_MY_LEAD_INCENTIVES',
         'staff_my_reimbursements', 'MY_REIMBURSEMENT_CLAIMS', 'staff_reimbursements',
-        'staff_reimbursement_approvals', 'REIMBURSEMENT_APPROVALS', 'reimbursement_approvals'
+        'staff_reimbursement_approvals', 'REIMBURSEMENT_APPROVALS', 'reimbursement_approvals',
+        'staff_accounts_expense_entries', 'sfms_expense_entries'
     }
     granted_menu_codes.update(_STAFF_DASHBOARD_AUTO_CODES)
     logger.info(f"[DC-MY-MENUS] Resolved {len(granted_menu_codes)} unique menu_codes from {len(employee_settings)} settings")
@@ -3872,7 +3908,8 @@ async def get_my_menus(
         '/staff/manager-review',
         '/staff/my-lead-incentives',
         '/staff/accounts/my-reimbursements',
-        '/staff/accounts/reimbursement-approvals'
+        '/staff/accounts/reimbursement-approvals',
+        '/staff/accounts/expense-entries'
     }
     existing_routes = {m.route_path for m in all_menus if m.route_path}
     missing_sd_routes = _STAFF_DASHBOARD_ROUTES - existing_routes
@@ -3935,6 +3972,15 @@ async def get_my_menus(
             "can_edit": perms.get('can_edit', False),
             "cascade_granted": menu in cascaded_menus
         }
+        if menu.menu_code in ('sfms_expense_entries', 'staff_accounts_expense_entries'):
+            menu_dict["can_edit"] = True
+            if not is_accounts_dept:
+                menu_dict["sidebar_section"] = "staff-dashboard"
+                menu_dict["sidebar_section_title"] = "STAFF DASHBOARD"
+                menu_dict["sidebar_section_order"] = 2
+                menu_dict["menu_category"] = "STAFF DASHBOARD"
+                menu_dict["parent_section"] = None
+                menu_dict["is_submenu"] = False
         menu_list.append(menu_dict)
         if menu.route_path:
             all_route_paths.add(menu.route_path)

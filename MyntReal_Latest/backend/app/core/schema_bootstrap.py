@@ -2232,6 +2232,7 @@ def run_schema_bootstrap():
     bootstrap_company_royalty_points()
     bootstrap_vgk_company_payouts()
     bootstrap_partner_cap_bypass()
+    bootstrap_community_association_name()
 
     # DC_CAPITAL_ACCOUNT_REGISTRY_001: Ensure Capital Account is in staff_menu_registry
     try:
@@ -2454,3 +2455,22 @@ def bootstrap_partner_cap_bypass():
             _db.close()
     except Exception as e:
         logger.warning(f"[DC-VGK-ADV-CAP-BYPASS-001] Non-fatal: {e}")
+
+
+def bootstrap_community_association_name():
+    """
+    DC-COMMUNITY-ASSOCIATION-NAME-001: Add association_name column to community_registrations.
+    """
+    try:
+        _db = SessionLocal()
+        try:
+            _db.execute(text("""
+                ALTER TABLE community_registrations
+                ADD COLUMN IF NOT EXISTS association_name VARCHAR(200) NULL
+            """))
+            _db.commit()
+            logger.info("[DC-COMMUNITY-ASSOCIATION-NAME-001] ✅ association_name added to community_registrations")
+        finally:
+            _db.close()
+    except Exception as e:
+        logger.warning(f"[DC-COMMUNITY-ASSOCIATION-NAME-001] Non-fatal: {e}")
