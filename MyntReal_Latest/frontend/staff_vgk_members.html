@@ -4777,7 +4777,6 @@ async function generateMemberPoster(partnerId) {
     const photoPath = m.passport_photo || m.logo_path;
     if (photoPath) {
       const img = document.getElementById('prevImg');
-      img.src = '/uploads/' + photoPath;
       img.onload = () => {
         img.style.display = 'block';
         avatar.style.display = 'none';
@@ -4786,6 +4785,7 @@ async function generateMemberPoster(partnerId) {
         img.style.display = 'none';
         avatar.style.display = 'flex';
       };
+      img.src = '/uploads/' + photoPath;
     } else {
       avatar.style.display = 'flex';
     }
@@ -4924,7 +4924,6 @@ async function generateMemberPoster(partnerId) {
     const seniorAvatar = document.getElementById('prevSeniorAvatar');
     if (seniorImg) {
       if (m.senior_photo) {
-        seniorImg.src = '/uploads/' + m.senior_photo;
         seniorImg.onload = () => {
           seniorImg.style.display = 'block';
           seniorAvatar.style.display = 'none';
@@ -4934,6 +4933,7 @@ async function generateMemberPoster(partnerId) {
           seniorAvatar.style.display = 'flex';
           seniorAvatar.textContent = (m.senior_name || 'SR').trim().split(/\s+/).map(p=>p[0]).join('').slice(0,2).toUpperCase();
         };
+        seniorImg.src = '/uploads/' + m.senior_photo;
       } else {
         seniorImg.style.display = 'none';
         seniorAvatar.style.display = 'flex';
