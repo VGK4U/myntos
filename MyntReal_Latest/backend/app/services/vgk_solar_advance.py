@@ -78,13 +78,9 @@ def check_and_create_advance(db: Session, lead_id: int) -> dict:
     Returns: {'created': bool, 'entry_numbers': list|None, 'reason': str}
     """
     try:
-        lead = db.execute(text("""
-            SELECT id, company_id, associated_partner_id, team_senior_partner_id,
-                   solar_pipeline_status, cibil_confirmed, cibil_score,
-                   source_ref_type, source_ref_id, mnr_handler_id,
-                   status AS lead_status
-            FROM crm_leads WHERE id = :lid
-        """), {'lid': lead_id}).fetchone()
+        db.flush()
+        from app.models.crm import CRMLead
+        lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
 
         if not lead:
             return {'created': False, 'reason': 'Lead not found'}
@@ -169,6 +165,8 @@ def check_and_create_advance(db: Session, lead_id: int) -> dict:
                 f'lead {lead_id}, partner {partner_id}, stage={pipeline}, CIBIL={score}'
             )
 
+            # DC-VGK-PARTNER-SYNC-001: Auto-release on eligibility (non-blocking)
+            # L1: apply slab bonus; L2: no slab bonus
             # DC-VGK-PARTNER-SYNC-001: Auto-release on eligibility (non-blocking)
             # L1: apply slab bonus; L2: no slab bonus
             try:

@@ -115,6 +115,11 @@ from app.models.vgk_vendor import (
     VGKVendorMarketplaceProduct
 )
 from app.models.community_service import CommunityService, CommunityRegistration, CommunityCommission
+from app.models.crm import (
+    CRMLead, CRMLeadFollowUp, CRMLeadNote, CRMLeadAssignment,
+    CRMLeadSource, CRMLeadDeal, CRMLeadTransaction, CRMLeadAuditLog
+)
+
 
 
 # Real Dreams - Real Estate Marketplace Models (DC Protocol Compliant - Dec 08, 2025)
@@ -449,4 +454,14 @@ __all__ = [
     "CommunityService",
     "CommunityRegistration",
     "CommunityCommission",
+    
+    # CRM Models
+    "CRMLead",
+    "CRMLeadFollowUp",
+    "CRMLeadNote",
+    "CRMLeadAssignment",
+    "CRMLeadSource",
+    "CRMLeadDeal",
+    "CRMLeadTransaction",
+    "CRMLeadAuditLog",
 ]
