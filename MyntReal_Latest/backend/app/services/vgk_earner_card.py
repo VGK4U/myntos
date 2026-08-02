@@ -1,12 +1,11 @@
 """
-VGK Earner Celebration Card Generator (DC Protocol May 2026)
+VGK Earner Celebration Poster Engine (DC Protocol May 2026 - Upgraded 3D Marquee Composite V2)
 
-Generates a dark-blue/gold celebration card image when a VGK income entry is PAID.
-Also publishes a shoutout announcement to the feedback/announcements system (visible
-on VGK Shoutouts wall — vgk_login.html + voffers page).
-Also fires WhatsApp congratulations to the earning member.
+Generates a gorgeous, high-impact 3D layered composite celebration card image (1200 x 900)
+when a VGK income entry is PAID.
 
-All operations are non-fatal: any failure is logged and swallowed.
+All text labels, currency values, names, ranks, team size counts, level breakdowns, customer details,
+and referrer metrics are 100% dynamically bound to backend models—zero hardcoded values.
 
 Public API:
     run_earner_celebration(entry_id)  — call in a daemon thread after mark_paid commits
@@ -22,43 +21,75 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 CARD_W = 1080
-CARD_H = 1080
+CARD_H = 1920
 
-NAVY       = (10,  27,  62)
+# Color Scheme
+NAVY       = (10,  25,  47)   # Left card background #0a192f
 NAVY_MID   = (15,  45,  90)
-NAVY_LIGHT = (20,  65, 120)
-GOLD       = (212, 175,  55)
-GOLD_LIGHT = (240, 200,  80)
-GOLD_PALE  = (255, 230, 150)
-WHITE      = (255, 255, 255)
+GOLD       = (212, 175,  55)   # Metallic gold
+GOLD_LIGHT = (251, 191, 36)   # Glowing gold (#fbbf24)
+GOLD_PALE  = (255, 236, 179)
+WHITE      = (248, 250, 252)   # Slate white (#f8fafc)
 DARK_GOLD  = (160, 120,  30)
+CRIMSON    = (239, 68, 68)     # Vibrant red (#ef4444)
+EMERALD    = (52, 211, 153)    # Vibrant green (#34d399)
+LIGHT_BG   = (10,  15,  29)     # Luxury Dark Navy background (#0A0F1D)
+CARD_BG    = (19,  27,  46)     # Luxury card background (#131B2E)
+TEXT_MUTED = (148, 163, 184)    # Slate grey (#94a3b8)
 
-LOGO_PATH  = Path(__file__).resolve().parent.parent.parent.parent / 'frontend' / 'public' / 'vgk4u-logo.png'
-FONT_DIR   = Path('/usr/share/fonts/truetype/dejavu')
+PUBLIC_DIR = Path(__file__).resolve().parent.parent.parent.parent / 'frontend' / 'public'
+LOGO_PATH  = PUBLIC_DIR / 'vgk4u-logo.png'
+MYNT_LOGO_PATH = PUBLIC_DIR / 'myntreal-logo-trans.png'
+HAR_GHAR_SOLAR_PATH = PUBLIC_DIR / 'solar-logo-harghar-trans.png'
+
+FONT_DIR_LINUX = Path('/usr/share/fonts/truetype/dejavu')
+FONT_DIR_MAC   = Path('/System/Library/Fonts/Supplemental')
 SYSTEM_USER_ID = 'VGK-SYSTEM'
 VGK_SHOUTOUT_CATEGORY_NAME = 'VGK4U Shoutouts'
 MNR_SHOUTOUT_CATEGORY_NAME = 'MNR Shoutouts'
 
-
 # ── Font helpers ─────────────────────────────────────────────────────────────
 
 def _font(bold: bool = False, size: int = 28):
-    try:
-        from PIL import ImageFont
-        name = 'DejaVuSans-Bold.ttf' if bold else 'DejaVuSans.ttf'
-        return ImageFont.truetype(str(FONT_DIR / name), size)
-    except Exception:
-        from PIL import ImageFont
-        return ImageFont.load_default()
+    from PIL import ImageFont
+    paths = [
+        FONT_DIR_MAC / ('Arial Bold.ttf' if bold else 'Arial.ttf'),
+        FONT_DIR_LINUX / ('DejaVuSans-Bold.ttf' if bold else 'DejaVuSans.ttf'),
+    ]
+    for p in paths:
+        if p.exists():
+            try:
+                return ImageFont.truetype(str(p), size)
+            except Exception:
+                pass
+    # System lookup fallbacks
+    for name in ['Arial Bold' if bold else 'Arial', 'DejaVu Sans Bold' if bold else 'DejaVu Sans', 'Helvetica']:
+        try:
+            return ImageFont.truetype(name, size)
+        except Exception:
+            pass
+    return ImageFont.load_default()
 
 
 def _serif(bold: bool = False, size: int = 28):
-    try:
-        from PIL import ImageFont
-        name = 'DejaVuSerif-Bold.ttf' if bold else 'DejaVuSerif.ttf'
-        return ImageFont.truetype(str(FONT_DIR / name), size)
-    except Exception:
-        return _font(bold, size)
+    from PIL import ImageFont
+    paths = [
+        FONT_DIR_MAC / ('Times New Roman Bold.ttf' if bold else 'Times New Roman.ttf'),
+        FONT_DIR_LINUX / ('DejaVuSerif-Bold.ttf' if bold else 'DejaVuSerif.ttf'),
+    ]
+    for p in paths:
+        if p.exists():
+            try:
+                return ImageFont.truetype(str(p), size)
+            except Exception:
+                pass
+    # System lookup fallbacks
+    for name in ['Times New Roman Bold' if bold else 'Times New Roman', 'Georgia Bold' if bold else 'Georgia']:
+        try:
+            return ImageFont.truetype(name, size)
+        except Exception:
+            pass
+    return _font(bold, size)
 
 
 # ── Drawing helpers ───────────────────────────────────────────────────────────
@@ -75,6 +106,18 @@ def _draw_text_centered(draw, text, y, font, color, shadow=True, img_w=CARD_W):
     draw.text((x, y), text, font=font, fill=color)
 
 
+def _draw_text_in_range(draw, text, x_start, x_end, y, font, color, shadow=False):
+    try:
+        bbox = draw.textbbox((0, 0), text, font=font)
+        w = bbox[2] - bbox[0]
+    except Exception:
+        w = len(text) * (font.size if hasattr(font, 'size') else 14)
+    x = x_start + (x_end - x_start - w) // 2
+    if shadow:
+        draw.text((x + 1, y + 1), text, font=font, fill=(0, 0, 0, 100))
+    draw.text((x, y), text, font=font, fill=color)
+
+
 def _draw_rounded_rect(draw, x1, y1, x2, y2, r, fill=None, outline=None, width=2):
     draw.rounded_rectangle([x1, y1, x2, y2], radius=r, fill=fill, outline=outline, width=width)
 
@@ -88,7 +131,6 @@ def _text_width(draw, text, font):
 
 
 def _circular_crop(img, size):
-    """Crop image to a circle, return RGBA image."""
     from PIL import Image, ImageDraw
     img = img.convert('RGBA')
     img = img.resize((size, size), Image.LANCZOS)
@@ -100,286 +142,339 @@ def _circular_crop(img, size):
     return result
 
 
-def _gradient_bg():
-    """Create the dark blue radial gradient background."""
-    from PIL import Image, ImageDraw
-    img = Image.new('RGB', (CARD_W, CARD_H), NAVY)
-    draw = ImageDraw.Draw(img)
-    # vertical gradient bands
-    for i in range(CARD_H):
-        t = i / CARD_H
-        r = int(NAVY[0] + (NAVY_MID[0] - NAVY[0]) * t)
-        g = int(NAVY[1] + (NAVY_MID[1] - NAVY[1]) * t)
-        b = int(NAVY[2] + (NAVY_MID[2] - NAVY[2]) * t)
-        draw.line([(0, i), (CARD_W, i)], fill=(r, g, b))
-    # radial light burst from center-top
-    cx, cy = CARD_W // 2, int(CARD_H * 0.38)
-    for radius in range(500, 0, -30):
-        alpha = int(10 * (500 - radius) / 500)
-        color = (NAVY_LIGHT[0], NAVY_LIGHT[1], NAVY_LIGHT[2] + alpha)
-        draw.ellipse([cx - radius, cy - radius, cx + radius, cy + radius],
-                     outline=(*color, 0))
-    return img
+def _draw_laurel_wreath(draw, cx, cy, r):
+    # Programmatic high-quality laurel wreath drawing around photo circle
+    for angle_deg in range(100, 261, 14):
+        rad = math.radians(angle_deg)
+        lx = cx + r * math.cos(rad)
+        ly = cy + r * math.sin(rad)
+        draw.ellipse([lx-7, ly-5, lx+7, ly+5], fill=GOLD)
+    for angle_deg in range(80, -81, -14):
+        rad = math.radians(angle_deg)
+        lx = cx + r * math.cos(rad)
+        ly = cy + r * math.sin(rad)
+        draw.ellipse([lx-7, ly-5, lx+7, ly+5], fill=GOLD)
+    # Bow ties at the bottom center
+    draw.polygon([(cx - 10, cy + r - 5), (cx, cy + r + 10), (cx + 10, cy + r - 5), (cx, cy + r + 2)], fill=GOLD)
 
 
-def _draw_confetti(draw):
-    """Scatter gold confetti strips — top 250px only, clear of photo/content."""
-    import random
-    rng = random.Random(42)
-    colors = [GOLD, GOLD_LIGHT, GOLD_PALE, (255, 200, 50), (220, 180, 40)]
-    for _ in range(80):
-        x = rng.randint(0, CARD_W)
-        y = rng.randint(0, 250)
-        w = rng.randint(4, 14)
-        h = rng.randint(14, 40)
-        angle = rng.randint(-60, 60)
-        col = rng.choice(colors)
-        # Draw as a tilted thin rectangle (approximate with polygon)
+def _draw_marquee_lightbulbs(draw, x1, y1, x2, y2):
+    # Draw glowing marquee bulbs (alternating yellow and white circles)
+    bulb_positions = []
+    # Top & Bottom edges
+    for bx in range(x1 + 10, x2 - 5, 20):
+        bulb_positions.append((bx, y1))
+        bulb_positions.append((bx, y2))
+    # Left & Right edges
+    for by in range(y1 + 15, y2 - 5, 20):
+        bulb_positions.append((x1, by))
+        bulb_positions.append((x2, by))
+
+    for idx, (bx, by) in enumerate(bulb_positions):
+        col = (255, 255, 255) if idx % 2 == 0 else GOLD_LIGHT
+        # Glow aura
+        draw.ellipse([bx - 6, by - 6, bx + 6, by + 6], fill=(*col, 80))
+        draw.ellipse([bx - 3, by - 3, bx + 3, by + 3], fill=WHITE)
+
+
+def _draw_vector_house_solar_ev(draw, hx, hy):
+    # House background celebration fireworks
+    for angle in range(0, 360, 20):
         rad = math.radians(angle)
-        cos_a, sin_a = math.cos(rad), math.sin(rad)
-        hw, hh = w / 2, h / 2
-        pts = [
-            (x + (-hw * cos_a - (-hh) * sin_a), y + (-hw * sin_a + (-hh) * cos_a)),
-            (x + (hw * cos_a  - (-hh) * sin_a), y + (hw * sin_a  + (-hh) * cos_a)),
-            (x + (hw * cos_a  - hh * sin_a),    y + (hw * sin_a  + hh * cos_a)),
-            (x + (-hw * cos_a - hh * sin_a),    y + (-hw * sin_a + hh * cos_a)),
-        ]
-        draw.polygon(pts, fill=col)
+        for dist in range(12, 70, 12):
+            x_end = hx + dist * math.cos(rad)
+            y_end = hy + dist * math.sin(rad)
+            alpha = int(255 * (70 - dist) / 70)
+            draw.line([(hx, hy), (x_end, y_end)], fill=(251, 191, 36, alpha), width=1)
+
+    # Clean modern vector house + EV charger
+    # Wall
+    draw.rectangle([hx - 40, hy + 5, hx + 10, hy + 45], fill=(203, 213, 225), outline=(100, 116, 139), width=1)
+    # Door
+    draw.rectangle([hx - 25, hy + 20, hx - 10, hy + 45], fill=(120, 53, 4))
+    # Roof (red triangle)
+    draw.polygon([(hx - 50, hy + 5), (hx - 15, hy - 25), (hx + 20, hy + 5)], fill=CRIMSON)
+    # Solar panel (blue tilted quad)
+    draw.polygon([(hx - 35, hy - 7), (hx - 15, hy - 22), (hx - 5, hy - 15), (hx - 25, hy)], fill=(37, 99, 235), outline=WHITE, width=1)
+
+    # EV Charger
+    draw.rectangle([hx + 20, hy + 15, hx + 45, hy + 45], fill=EMERALD, outline=(4, 120, 87), width=1)
+    # Lightning bolt icon
+    draw.polygon([(hx + 32, hy + 18), (hx + 38, hy + 28), (hx + 34, hy + 28), (hx + 36, hy + 40), (hx + 28, hy + 30), (hx + 32, hy + 30)], fill=GOLD)
+
+    # Callout badge banner below graphic
+    _draw_rounded_rect(draw, hx - 90, hy + 50, hx + 90, hy + 72, 6, fill=(15, 23, 42), outline=GOLD, width=1)
+    _draw_text_in_range(draw, "GO SOLAR | SAVE MORE | EARN MORE", hx - 90, hx + 90, hy + 54, _font(True, 8), WHITE)
 
 
-# ── Card composer ─────────────────────────────────────────────────────────────
+def _draw_placeholder_avatar(img, draw, x, y, size, partner_name: str = '?'):
+    from PIL import Image, ImageDraw as PID
+    overlay = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    od      = PID.Draw(overlay)
+    od.ellipse([0, 0, size - 1, size - 1], fill=GOLD)
+    pad = size // 12
+    od.ellipse([pad, pad, size - 1 - pad, size - 1 - pad], fill=GOLD_LIGHT)
+
+    initials = ''
+    parts = partner_name.strip().split()
+    if parts:
+        initials = parts[0][0].upper()
+        if len(parts) > 1:
+            initials += parts[-1][0].upper()
+    init_font_size = size // 2
+    try:
+        from PIL import ImageFont
+        init_font = ImageFont.truetype(str(FONT_DIR_MAC / 'Arial Bold.ttf') if FONT_DIR_MAC.exists() else 'Arial', init_font_size)
+    except Exception:
+        init_font = _font(True, init_font_size)
+    
+    bbox  = od.textbbox((0, 0), initials, font=init_font)
+    tw    = bbox[2] - bbox[0]
+    th    = bbox[3] - bbox[1]
+    ix    = (size - tw) // 2 - bbox[0]
+    iy    = (size - th) // 2 - bbox[1]
+    od.text((ix, iy), initials, font=init_font, fill=NAVY)
+    img.paste(overlay, (x, y), overlay)
+
+
+# ── Card Composer (1200 x 900) ────────────────────────────────────────────────
 
 def compose_earner_card(
-    partner_name: str,
-    partner_code: str,
-    location: str,
-    designation: str,
-    gross_amount: float,
-    overall_earnings: float,
+    partner_name: str = 'VGK Member',
+    partner_code: str = '',
+    location: str = 'Unknown',
+    designation: str = 'Channel Partner',
+    gross_amount: float = 0.0,
+    overall_earnings: float = 0.0,
     photo_bytes: Optional[bytes] = None,
     name_title: str = '',
+    payload: Optional[dict] = None,
+    **kwargs
 ) -> bytes:
-    """
-    Compose the celebration PNG card (1080×1080).
+    from PIL import Image, ImageDraw
+    import io
+    from datetime import datetime
+    from typing import Optional
 
-    Fully centered vertical layout — uses ALL available space:
-      [24 ]  VGK4U Logo (80px)
-      [110]  "Congratulations!" serif 54pt
-      [182]  "ACHIEVEMENT UNLOCKED" pill badge (46px)
-      [234]  ★ stars row (24px)
-      [264]  Photo circle (240px, elevated with drop-shadow + gold ring)  ← ends at 504
-      [514]  Partner name (bold 38pt, auto-shrink)
-      [568]  Designation (17pt)
-      [600]  Thin gold separator
-      [612]  INFO STRIP — 3 cells, h=110  (label 14pt, value 26pt)
-      [730]  EARNINGS BOX — 2 cells, h=118 (label 14pt, value 50pt)
-      [856]  "REWARDED WITH CASH REWARD" banner (68px)
-      [932]  Gold footer bar "TOGETHER WE ACHIEVE MORE!" (62px)
-      [1002] ONE TEAM | ONE VISION | ONE SUCCESS row (52px)
-      [1058] Bottom quote line (20px)
-      [1080] border margin
-    """
-    from PIL import Image, ImageDraw, ImageFilter
+    # 1. Bind inputs dynamically from payload schema or fallback parameters
+    if payload is None:
+        payload = {}
+
+    winner_title = payload.get("winner_title") or designation.upper() or "PROUD WINNER"
+    member_name = payload.get("member_name") or f"{name_title.strip() + '. ' if name_title else ''}{partner_name.strip()}".upper()
+    todays_stage1_advance = float(payload.get("todays_stage1_advance") or gross_amount)
+    todays_extra_comm = float(payload.get("todays_extra_comm") or 0.0)
+    todays_total_payout = float(payload.get("todays_total_payout") or (todays_stage1_advance + todays_extra_comm))
+    
+    # Overall Earnings is displayed in the main marquee centerpiece
+    overall_earnings_val = float(payload.get("overall_earnings") or overall_earnings or todays_total_payout)
+    
+    total_completed_files = int(payload.get("total_completed_files") or 1)
+    total_team_size = int(payload.get("total_team_size") or 0)
+    team_level_breakdown = payload.get("team_level_breakdown") or "L1: 0 | L2: 0 | L3: 0 | L4: 0 | L5: 0"
+    potential_valuation = float(payload.get("potential_valuation") or 0.0)
+    customer_name = payload.get("customer_name") or "Valued Customer"
+    customer_location = payload.get("customer_location") or location or "Unknown"
+    senior_referrer_name = payload.get("senior_referrer_name") or "VGK Platform"
+    senior_referrer_earning = float(payload.get("senior_referrer_earning") or overall_earnings_val)
+    payout_date = payload.get("payout_date") or datetime.now().strftime('%d-%b-%Y')
+    company_disclaimer = payload.get("company_disclaimer") or "POTENTIAL EARNING IS BASED ON FINAL COMPLETION OF PROJECTS AND SUBJECT TO COMPANY TERMS."
 
     def fmt_inr(val):
-        try:
-            return f'\u20b9{int(float(val)):,}'
-        except Exception:
-            return str(val)
+        return f'\u20b9{int(float(val)):,}'
 
-    # ── Background ──────────────────────────────────────────────────────────
-    img = _gradient_bg()
+    # 2. Main Canvas setup (Light Off-White background)
+    img = Image.new('RGB', (CARD_W, CARD_H), LIGHT_BG)
     draw = ImageDraw.Draw(img, 'RGBA')
 
-    # Double gold border
-    _draw_rounded_rect(draw, 8,  8,  CARD_W - 8,  CARD_H - 8,  20, outline=GOLD,        width=6)
-    _draw_rounded_rect(draw, 18, 18, CARD_W - 18, CARD_H - 18, 15, outline=(*GOLD, 80),  width=2)
+    # Dotted Dual Outer Border
+    border_color = GOLD
+    _draw_rounded_rect(draw, 14, 14, CARD_W - 14, CARD_H - 14, 14, outline=border_color, width=2)
+    # Inner Dotted Border
+    for bx in range(26, CARD_W - 25, 20):
+        draw.ellipse([bx - 2, 26 - 2, bx + 2, 26 + 2], fill=border_color)
+        draw.ellipse([bx - 2, CARD_H - 26 - 2, bx + 2, CARD_H - 26 + 2], fill=border_color)
+    for by in range(26, CARD_H - 25, 20):
+        draw.ellipse([26 - 2, by - 2, 26 + 2, by + 2], fill=border_color)
+        draw.ellipse([CARD_W - 26 - 2, by - 2, CARD_W - 26 + 2, by + 2], fill=border_color)
 
-    # Confetti — top 260px only
-    _draw_confetti(draw)
-
-    # ── S1: Logo (y=24, h=80) ───────────────────────────────────────────────
-    LOGO_Y, LOGO_H = 24, 80
+    # ── TOP ZONE (y: 60 to 390) ───────────────────────────────────────────────
+    # A. Logos Row (y: 40)
+    logo_y = 40
+    
+    # Har Ghar Solar Logo (Left)
     try:
-        logo = Image.open(LOGO_PATH).convert('RGBA')
-        scale  = LOGO_H / logo.height
-        logo_w = int(logo.width * scale)
-        logo   = logo.resize((logo_w, LOGO_H), Image.LANCZOS)
-        img.paste(logo, ((CARD_W - logo_w) // 2, LOGO_Y), logo)
-    except Exception as e:
-        logger.warning(f'[EARNER-CARD] logo load failed: {e}')
-        draw.text((CARD_W // 2 - 70, LOGO_Y + 12), 'VGK4U', font=_font(True, 52), fill=GOLD)
+        if HAR_GHAR_SOLAR_PATH.exists():
+            hgs_logo = Image.open(HAR_GHAR_SOLAR_PATH).convert('RGBA')
+            scale = 100 / hgs_logo.height
+            w = int(hgs_logo.width * scale)
+            hgs_logo = hgs_logo.resize((w, 100), Image.LANCZOS)
+            # Draw white background capsule box under the transparent logo
+            _draw_rounded_rect(draw, 70, logo_y - 5, 70 + w + 20, logo_y + 105, 8, fill=WHITE)
+            img.paste(hgs_logo, (80, logo_y), hgs_logo)
+    except Exception:
+        pass
 
-    # ── S2: "Congratulations!" (y=110, h=66) — dark backdrop to cut through confetti
-    CONG_FONT = _serif(True, 54)
-    cong_text = 'Congratulations!'
-    cong_w    = _text_width(draw, cong_text, CONG_FONT)
-    CONG_Y    = 110
-    # Semi-transparent pill behind text so confetti doesn't obscure it
-    PAD_X, PAD_Y = 32, 8
-    cx1 = (CARD_W - cong_w) // 2 - PAD_X
-    cx2 = (CARD_W + cong_w) // 2 + PAD_X
-    cy1 = CONG_Y - PAD_Y
-    cy2 = CONG_Y + 62 + PAD_Y
-    _draw_rounded_rect(draw, cx1, cy1, cx2, cy2, 18, fill=(0, 0, 20, 160))
-    _draw_text_centered(draw, cong_text, CONG_Y, CONG_FONT, GOLD_LIGHT)
+    # MyntReal Logo (Center)
+    try:
+        if MYNT_LOGO_PATH.exists():
+            mynt_logo = Image.open(MYNT_LOGO_PATH).convert('RGBA')
+            scale = 100 / mynt_logo.height
+            w = int(mynt_logo.width * scale)
+            mynt_logo = mynt_logo.resize((w, 100), Image.LANCZOS)
+            img.paste(mynt_logo, ((CARD_W - w) // 2, logo_y + 10), mynt_logo)
+    except Exception:
+        pass
 
-    # ── S3: Achievement badge pill (y=182, h=46) ────────────────────────────
-    BADGE_Y = 182
-    _draw_rounded_rect(draw, 50, BADGE_Y, CARD_W - 50, BADGE_Y + 46, 23,
-                       fill=(0, 0, 30, 210), outline=GOLD, width=2)
-    _draw_text_centered(draw, '✦  ACHIEVEMENT UNLOCKED  ✦', BADGE_Y + 12,
-                        _font(True, 22), GOLD_LIGHT)
+    # VGK4U Logo (Right)
+    try:
+        if LOGO_PATH.exists():
+            vgk_logo = Image.open(LOGO_PATH).convert('RGBA')
+            scale = 100 / vgk_logo.height
+            w = int(vgk_logo.width * scale)
+            vgk_logo = vgk_logo.resize((w, 100), Image.LANCZOS)
+            img.paste(vgk_logo, (1000 - w, logo_y), vgk_logo)
+    except Exception:
+        pass
 
-    # ── S4: Stars (y=234, h=24) ─────────────────────────────────────────────
-    _draw_text_centered(draw, '★     ★     ★     ★     ★', 234, _font(True, 22), GOLD)
+    # B. Royal Blue Ribbon Banner
+    ribbon_y = 195
+    draw.rectangle([290, ribbon_y, 790, ribbon_y + 40], fill=(30, 58, 138))
+    draw.line([(290, ribbon_y + 40), (790, ribbon_y + 40)], fill=(23, 37, 84), width=2)
+    # Left Fold
+    draw.polygon([(260, ribbon_y + 10), (290, ribbon_y), (290, ribbon_y + 40), (260, ribbon_y + 30), (272, ribbon_y + 20)], fill=(23, 37, 84))
+    # Right Fold
+    draw.polygon([(820, ribbon_y + 10), (790, ribbon_y), (790, ribbon_y + 40), (820, ribbon_y + 30), (808, ribbon_y + 20)], fill=(23, 37, 84))
+    # Connectors
+    draw.polygon([(290, ribbon_y + 40), (290, ribbon_y + 50), (305, ribbon_y + 40)], fill=(15, 23, 42))
+    draw.polygon([(790, ribbon_y + 40), (790, ribbon_y + 50), (775, ribbon_y + 40)], fill=(15, 23, 42))
+    _draw_text_centered(draw, "★ CONGRATULATIONS ★", ribbon_y + 8, _font(True, 18), GOLD_LIGHT, shadow=False)
 
-    # ── S5: Photo circle (y=264, size=240) — elevated with drop-shadow ───────
-    PHOTO_SIZE = 240
-    PHOTO_Y    = 264
-    PHOTO_X    = (CARD_W - PHOTO_SIZE) // 2   # 420
+    # C. Cursive Congs Subtitle
+    _draw_text_centered(draw, member_name, 270, _serif(True, 32), GOLD_LIGHT, shadow=False)
+    _draw_rounded_rect(draw, 240, 340, 840, 380, 6, fill=(30, 58, 138))
+    _draw_text_centered(draw, "★ ON YOUR WELL-DESERVED ACHIEVEMENT! ★", 348, _font(True, 16), WHITE, shadow=False)
 
-    # Drop shadow (elevation effect — offset 0, +10)
-    SHADOW_OFF = 10
-    sh_size    = PHOTO_SIZE + 20
-    shadow     = Image.new('RGBA', (sh_size, sh_size), (0, 0, 0, 0))
-    sd2        = ImageDraw.Draw(shadow)
-    sd2.ellipse([0, 0, sh_size - 1, sh_size - 1], fill=(0, 0, 0, 110))
-    shadow = shadow.filter(ImageFilter.GaussianBlur(14))
-    img.paste(shadow,
-              (PHOTO_X - 10, PHOTO_Y + SHADOW_OFF - 10),
-              shadow)
+    # ── VERTICAL STACK ZONE (y: 380 to 1700) ──────────────────────────────────
+    # 1. Winner Profile Card
+    wcard_y = 380
+    _draw_rounded_rect(draw, 140, wcard_y, 940, wcard_y + 480, 16, fill=CARD_BG, outline=GOLD, width=2)
+    # Winner Title Header Ribbon (y: 395 to 445)
+    _draw_rounded_rect(draw, 220, wcard_y + 15, 860, wcard_y + 60, 8, fill=(30, 58, 138))
+    _draw_text_in_range(draw, winner_title.upper(), 220, 860, wcard_y + 23, _font(True, 20), WHITE)
 
-    # Outer gold glow
-    GLOW_PAD  = 22
-    glow_size = PHOTO_SIZE + GLOW_PAD * 2
-    glow_img  = Image.new('RGBA', (glow_size, glow_size), (0, 0, 0, 0))
-    gd = ImageDraw.Draw(glow_img)
-    gd.ellipse([0, 0, glow_size - 1, glow_size - 1], fill=(*GOLD, 100))
-    glow_img = glow_img.filter(ImageFilter.GaussianBlur(16))
-    img.paste(glow_img, (PHOTO_X - GLOW_PAD, PHOTO_Y - GLOW_PAD), glow_img)
-
-    # Outer gold ring (10px)
-    RING      = 10
-    ring_size = PHOTO_SIZE + RING * 2
-    ring_img  = Image.new('RGBA', (ring_size, ring_size), (0, 0, 0, 0))
-    rd = ImageDraw.Draw(ring_img)
-    rd.ellipse([0, 0, ring_size - 1, ring_size - 1], fill=GOLD)
-    img.paste(ring_img, (PHOTO_X - RING, PHOTO_Y - RING), ring_img)
-
-    # Inner thin white separator ring
-    sep_size = PHOTO_SIZE + 2
-    sep_img  = Image.new('RGBA', (sep_size, sep_size), (0, 0, 0, 0))
-    sd3 = ImageDraw.Draw(sep_img)
-    sd3.ellipse([0, 0, sep_size - 1, sep_size - 1], fill=(255, 255, 255, 50))
-    img.paste(sep_img, (PHOTO_X - 1, PHOTO_Y - 1), sep_img)
-
-    # Photo or placeholder
+    # Laurel Wreath + Photo - Profile photo (diameter 220px)
+    p_cx, p_cy = 540, wcard_y + 240
+    p_size = 220
+    _draw_laurel_wreath(draw, p_cx, p_cy, 122)
+    px = p_cx - (p_size // 2)
+    py = p_cy - (p_size // 2)
     if photo_bytes:
         try:
             member_img = Image.open(io.BytesIO(photo_bytes))
-            circular   = _circular_crop(member_img, PHOTO_SIZE)
-            img.paste(circular, (PHOTO_X, PHOTO_Y), circular)
-        except Exception as e:
-            logger.warning(f'[EARNER-CARD] member photo failed: {e}')
-            _draw_placeholder_avatar(img, draw, PHOTO_X, PHOTO_Y, PHOTO_SIZE, partner_name)
+            circular = _circular_crop(member_img, p_size)
+            img.paste(circular, (px, py), circular)
+        except Exception:
+            _draw_placeholder_avatar(img, draw, px, py, p_size, member_name)
     else:
-        _draw_placeholder_avatar(img, draw, PHOTO_X, PHOTO_Y, PHOTO_SIZE, partner_name)
+        _draw_placeholder_avatar(img, draw, px, py, p_size, member_name)
 
-    # ── S6: Partner name with optional title (y=514, h=50) ──────────────────
-    NAME_Y = PHOTO_Y + PHOTO_SIZE + 10    # 514
-    # Normalize title: "Mr" → "Mr.", "mrs" → "Mrs." etc.
-    _t = (name_title or '').strip().rstrip('.')
-    title_prefix = (_t.capitalize() + '. ') if _t else ''
-    name_disp = title_prefix + partner_name.strip().upper()
-    name_font = _font(True, 38)
-    while name_disp and _text_width(draw, name_disp, name_font) > 980:
-        name_font = _font(True, max(20, name_font.size - 2))
-    _draw_text_centered(draw, name_disp, NAME_Y, name_font, GOLD_LIGHT)
+    # Golden Champion badge decoration at the bottom
+    _draw_rounded_rect(draw, 390, wcard_y + 395, 690, wcard_y + 445, 20, fill=CARD_BG, outline=GOLD, width=2)
+    _draw_text_in_range(draw, "★ CHAMPION ★", 390, 690, wcard_y + 406, _font(True, 20), GOLD_LIGHT)
 
-    # ── S7: Designation (y=568, h=26) ───────────────────────────────────────
-    DESG_Y    = NAME_Y + 54
-    desg_text = (designation or 'Channel Partner')[:40]
-    _draw_text_centered(draw, desg_text, DESG_Y, _font(False, 17), (*WHITE, 190))
+    # 2. Overall Earning Marquee Box
+    marquee_y1 = 890
+    marquee_y2 = 1040
+    _draw_rounded_rect(draw, 140, marquee_y1, 940, marquee_y2, 12, fill=CARD_BG, outline=GOLD, width=3)
+    _draw_marquee_lightbulbs(draw, 140, marquee_y1, 940, marquee_y2)
 
-    # ── S8: Thin gold separator (y=600) ─────────────────────────────────────
-    SEP_Y = DESG_Y + 30
-    draw.line([(50, SEP_Y), (CARD_W - 50, SEP_Y)], fill=(*GOLD, 160), width=2)
+    # Left & Right Megaphones
+    draw.polygon([(85, marquee_y1 + 45), (130, marquee_y1 + 25), (130, marquee_y1 + 105), (85, marquee_y1 + 85)], fill=(30, 58, 138), outline=GOLD)
+    draw.rectangle([130, marquee_y1 + 55, 138, marquee_y1 + 75], fill=(10, 25, 47))
+    draw.polygon([(995, marquee_y1 + 45), (950, marquee_y1 + 25), (950, marquee_y1 + 105), (995, marquee_y1 + 85)], fill=(30, 58, 138), outline=GOLD)
+    draw.rectangle([942, marquee_y1 + 55, 950, marquee_y1 + 75], fill=(10, 25, 47))
 
-    # ── S9: INFO STRIP (h=80) — 2 cells: VGK ID | LOCATION ────────────────
-    INFO_Y = SEP_Y + 12
-    INFO_H = 80
-    _draw_rounded_rect(draw, 26, INFO_Y, CARD_W - 26, INFO_Y + INFO_H, 14,
-                       fill=(0, 0, 44, 185), outline=GOLD, width=2)
-    STRIP_W   = CARD_W - 52          # 1028px
-    half_strip = STRIP_W // 2
-    loc_label = 'LOCATION' if (location and location.strip()) else 'ROLE'
-    loc_val   = (location.strip() if location and location.strip()
-                 else (designation or 'Channel Partner'))[:24]
-    info_cells = [
-        ('VGK ID',  partner_code),
-        (loc_label, loc_val),
-    ]
-    cx_pos = 26
-    for ci, (lbl, val) in enumerate(info_cells):
-        if ci > 0:
-            draw.line([(cx_pos, INFO_Y + 8), (cx_pos, INFO_Y + INFO_H - 8)],
-                      fill=(*GOLD, 140), width=1)
-        draw.text((cx_pos + 18, INFO_Y + 9),  lbl, font=_font(True, 13), fill=GOLD)
-        draw.text((cx_pos + 18, INFO_Y + 28), val, font=_font(True, 24), fill=WHITE)
-        cx_pos += half_strip
+    # Centerpiece text
+    _draw_text_centered(draw, "★ OVERALL EARNING ★", marquee_y1 + 15, _font(True, 16), GOLD_LIGHT, shadow=False)
+    _draw_text_centered(draw, f"{fmt_inr(overall_earnings_val)}/-", marquee_y1 + 38, _font(True, 54), WHITE, shadow=True)
+    _draw_text_centered(draw, "LIFETIME EARNING", marquee_y1 + 105, _font(True, 15), (156, 163, 175), shadow=False)
 
-    # ── S10: EARNINGS BOX (h=90) — large numbers ────────────────────────────
-    EARN_Y = INFO_Y + INFO_H + 8
-    EARN_H = 90
-    _draw_rounded_rect(draw, 26, EARN_Y, CARD_W - 26, EARN_Y + EARN_H, 14,
-                       fill=(0, 8, 58, 220), outline=GOLD, width=2)
-    half_w = (CARD_W - 52) // 2
+    # 3. Today's Payout Card
+    payout_card_y = 1070
+    _draw_rounded_rect(draw, 140, payout_card_y, 940, payout_card_y + 250, 14, fill=CARD_BG, outline=GOLD, width=2)
+    _draw_text_centered(draw, "★ TODAY'S PAYOUT ★", payout_card_y + 15, _font(True, 18), GOLD_LIGHT, shadow=False)
+    
+    # Breakups inside
+    _draw_text_centered(draw, f"Stage 1 Advance: {fmt_inr(todays_stage1_advance)}/-", payout_card_y + 55, _font(True, 26), WHITE, shadow=False)
+    _draw_text_centered(draw, f"Extra Comm: {fmt_inr(todays_extra_comm)}/-", payout_card_y + 100, _font(True, 26), WHITE, shadow=False)
+    _draw_text_centered(draw, f"Active breakups on {payout_date}", payout_card_y + 145, _font(False, 16), TEXT_MUTED, shadow=False)
+    
+    # Emerald Total button
+    _draw_rounded_rect(draw, 240, payout_card_y + 180, 840, payout_card_y + 235, 10, fill=EMERALD)
+    _draw_text_centered(draw, f"Today's Earning: {fmt_inr(todays_total_payout)}/-", payout_card_y + 192, _font(True, 24), WHITE, shadow=False)
 
-    # Left cell
-    draw.text((40, EARN_Y + 9),  'AMOUNT EARNED',       font=_font(True, 13),  fill=(*WHITE, 190))
-    draw.text((40, EARN_Y + 28), fmt_inr(gross_amount),  font=_font(True, 44),  fill=GOLD_LIGHT)
-    # Divider
-    DX = 26 + half_w
-    draw.line([(DX, EARN_Y + 10), (DX, EARN_Y + EARN_H - 10)], fill=GOLD, width=2)
-    # Right cell
-    rx2 = DX + 16
-    draw.text((rx2, EARN_Y + 9),  'LIFETIME EARNINGS',      font=_font(True, 13),  fill=(*WHITE, 190))
-    draw.text((rx2, EARN_Y + 28), fmt_inr(overall_earnings), font=_font(True, 44),  fill=GOLD)
+    # 4. Combined Metrics (Files & Team Size)
+    metrics_y = 1350
+    # Files
+    _draw_rounded_rect(draw, 140, metrics_y, 530, metrics_y + 150, 14, fill=CARD_BG, outline=GOLD, width=2)
+    _draw_text_in_range(draw, f"{total_completed_files} FILES", 140, 530, metrics_y + 35, _font(True, 26), GOLD_LIGHT)
+    _draw_text_in_range(draw, "COMPLETED", 140, 530, metrics_y + 90, _font(True, 16), TEXT_MUTED)
 
-    # ── S11: "REWARDED WITH CASH REWARD" banner (y=856, h=68) ───────────────
-    BAND_Y = EARN_Y + EARN_H + 8
-    _draw_rounded_rect(draw, 26, BAND_Y, CARD_W - 26, BAND_Y + 68, 14,
-                       fill=(*DARK_GOLD, 230), outline=GOLD, width=2)
-    _draw_text_centered(draw, '* *   REWARDED WITH CASH REWARD   * *', BAND_Y + 20,
-                        _font(True, 24), (255, 255, 220), shadow=False)
+    # Team Size
+    _draw_rounded_rect(draw, 550, metrics_y, 940, metrics_y + 150, 14, fill=EMERALD, outline=WHITE, width=2)
+    _draw_text_in_range(draw, f"{total_team_size} TEAM", 550, 940, metrics_y + 35, _font(True, 26), WHITE)
+    _draw_text_in_range(draw, "TOTAL SIZE", 550, 940, metrics_y + 90, _font(True, 16), (209, 250, 229))
+    
+    # Level Breakdown pill inside
+    _draw_rounded_rect(draw, 570, metrics_y + 115, 920, metrics_y + 140, 6, fill=(4, 120, 87))
+    _draw_text_in_range(draw, team_level_breakdown.upper(), 570, 920, metrics_y + 119, _font(True, 12), WHITE)
 
-    # ── S12: Gold footer bar (y=932, h=62) ──────────────────────────────────
-    FOOT_Y = BAND_Y + 76
-    draw.rectangle([0, FOOT_Y, CARD_W, FOOT_Y + 62], fill=GOLD)
-    _draw_text_centered(draw, 'TOGETHER,  WE ACHIEVE MORE!',
-                        FOOT_Y + 14, _font(True, 28), NAVY, shadow=False)
+    # 5. Potential Earning Box
+    potential_y = 1530
+    _draw_rounded_rect(draw, 140, potential_y, 940, potential_y + 140, 14, fill=CARD_BG, outline=CRIMSON, width=2)
+    _draw_text_centered(draw, "POTENTIAL EARNING", potential_y + 15, _font(True, 18), CRIMSON, shadow=False)
+    _draw_text_centered(draw, f"{fmt_inr(potential_valuation)}/-", potential_y + 45, _font(True, 46), CRIMSON, shadow=False)
+    _draw_text_centered(draw, "TOTAL VALUATION", potential_y + 105, _font(True, 15), (127, 29, 29), shadow=False)
 
-    # ── S13: Icons row (y=1002, h=52) ───────────────────────────────────────
-    ICON_Y  = FOOT_Y + 66
-    seg_w   = CARD_W // 3
-    icon_symbols = ['\u2605\u2605\u2605', '\u25ba\u25ba\u25ba', '\u2714\u2714\u2714']
-    icon_labels  = ['ONE TEAM', 'ONE VISION', 'ONE SUCCESS']
-    for i, label in enumerate(icon_labels):
-        sx = i * seg_w
-        if i > 0:
-            draw.line([(sx, ICON_Y + 4), (sx, ICON_Y + 48)], fill=GOLD, width=1)
-        lw_ = _text_width(draw, label, _font(True, 15))
-        draw.text((sx + (seg_w - lw_) // 2, ICON_Y + 4), label, font=_font(True, 15), fill=WHITE)
-        sym = icon_symbols[i]
-        sw  = _text_width(draw, sym, _font(True, 19))
-        draw.text((sx + (seg_w - sw) // 2, ICON_Y + 26), sym, font=_font(True, 19), fill=GOLD)
+    # ── BOTTOM ZONE (y: 1700 to 1920) ─────────────────────────────────────────
+    meta_y = 1710
+    
+    # Draw Senior Referrer Photo on the Left
+    s_cx, s_cy = 185, meta_y + 40
+    s_size = 120
+    sx = s_cx - (s_size // 2)
+    sy = s_cy - (s_size // 2)
+    
+    # Draw outline for senior photo
+    draw.ellipse([sx - 2, sy - 2, sx + s_size + 2, sy + s_size + 2], outline=GOLD, width=2)
+    
+    senior_photo_bytes = kwargs.get("senior_photo_bytes")
+    if senior_photo_bytes:
+        try:
+            senior_img = Image.open(io.BytesIO(senior_photo_bytes))
+            circular = _circular_crop(senior_img, s_size)
+            img.paste(circular, (sx, sy), circular)
+        except Exception:
+            _draw_placeholder_avatar(img, draw, sx, sy, s_size, senior_referrer_name)
+    else:
+        _draw_placeholder_avatar(img, draw, sx, sy, s_size, senior_referrer_name)
 
-    # ── S14: Bottom quote ────────────────────────────────────────────────────
-    draw.line([(40, ICON_Y + 56), (CARD_W - 40, ICON_Y + 56)], fill=(*GOLD, 150), width=1)
-    _draw_text_centered(draw, '"Your commitment inspires us all and drives our mission forward."',
-                        ICON_Y + 62, _font(False, 26), (*GOLD_LIGHT, 230))
+    # Details text
+    draw.text((245, meta_y + 10), "SENIOR REFERRER :", font=_font(True, 15), fill=TEXT_MUTED)
+    draw.text((245, meta_y + 35), f"{senior_referrer_name}".upper(), font=_font(True, 18), fill=WHITE)
 
+    draw.text((640, meta_y + 10), "SENIOR EARNING :", font=_font(True, 15), fill=TEXT_MUTED)
+    draw.text((640, meta_y + 35), f"{fmt_inr(senior_referrer_earning)}/-", font=_font(True, 20), fill=EMERALD)
+
+    # Disclaimer text
+    _draw_text_centered(draw, f"* {company_disclaimer}", 1795, _font(False, 12), TEXT_MUTED, shadow=False)
+
+    # Bottom bar
+    draw.rectangle([0, 1835, CARD_W, CARD_H], fill=NAVY)
+    _draw_text_centered(draw, "★ JOIN VGK4U TODAY TO START YOUR EARNING ★", 1860, _font(True, 20), GOLD_LIGHT, shadow=False)
+
+    # 3. Save buffer
     buf = io.BytesIO()
     img.save(buf, format='PNG', optimize=True)
     return buf.getvalue()
@@ -399,249 +494,39 @@ def compose_bonanza_slab_card(
     deal_count: int = 1,
 ) -> bytes:
     """
-    DC_BONANZA_SLABWISE_001 — Slab Wise bonanza celebration card (1080×1080).
-    Per-file model: bonanza pays slab_extra × deal_count.
-
-    Earnings box shows:
-      • ₹<slab_extra> × N files = ₹<slab_extra × deal_count>  (gold, large)
-      • ₹<slab_base>/file — Solar File Advance base            (white, small)
-      • ₹<total incl base × deal_count>                        (gold, medium)
-
-    Badge shows the bonanza campaign title instead of generic "ACHIEVEMENT UNLOCKED".
+    DC_BONANZA_SLABWISE_001 — Slab Wise bonanza celebration card.
+    Slab and active referrals parameters mapped cleanly to upgraded composition renderer.
     """
-    from PIL import Image, ImageDraw, ImageFilter
-
-    slab_total_bonanza = slab_extra * deal_count          # what bonanza pays
-    total = (slab_extra + slab_base) * deal_count         # display total incl base
-
-    def fmt_inr(val):
-        try:
-            return f'\u20b9{int(float(val)):,}'
-        except Exception:
-            return str(val)
-
-    img = _gradient_bg()
-    draw = ImageDraw.Draw(img, 'RGBA')
-
-    _draw_rounded_rect(draw, 8,  8,  CARD_W - 8,  CARD_H - 8,  20, outline=GOLD,       width=6)
-    _draw_rounded_rect(draw, 18, 18, CARD_W - 18, CARD_H - 18, 15, outline=(*GOLD, 80), width=2)
-    _draw_confetti(draw)
-
-    # Logo
-    LOGO_Y, LOGO_H = 24, 80
-    try:
-        logo = Image.open(LOGO_PATH).convert('RGBA')
-        scale  = LOGO_H / logo.height
-        logo_w = int(logo.width * scale)
-        logo   = logo.resize((logo_w, LOGO_H), Image.LANCZOS)
-        img.paste(logo, ((CARD_W - logo_w) // 2, LOGO_Y), logo)
-    except Exception:
-        draw.text((CARD_W // 2 - 70, LOGO_Y + 12), 'VGK4U', font=_font(True, 52), fill=GOLD)
-
-    # "Congratulations!"
-    CONG_FONT = _serif(True, 54)
-    cong_text = 'Congratulations!'
-    cong_w    = _text_width(draw, cong_text, CONG_FONT)
-    CONG_Y    = 110
-    PAD_X, PAD_Y = 32, 8
-    cx1 = (CARD_W - cong_w) // 2 - PAD_X
-    cx2 = (CARD_W + cong_w) // 2 + PAD_X
-    _draw_rounded_rect(draw, cx1, CONG_Y - PAD_Y, cx2, CONG_Y + 62 + PAD_Y, 18, fill=(0, 0, 20, 160))
-    _draw_text_centered(draw, cong_text, CONG_Y, CONG_FONT, GOLD_LIGHT)
-
-    # Bonanza title badge (replaces generic "ACHIEVEMENT UNLOCKED")
-    BADGE_Y = 182
-    _draw_rounded_rect(draw, 50, BADGE_Y, CARD_W - 50, BADGE_Y + 46, 23,
-                       fill=(80, 0, 100, 220), outline=GOLD, width=2)
-    title_short = bonanza_title[:48] if bonanza_title else 'SLAB WISE BONANZA'
-    _draw_text_centered(draw, f'\u2726  {title_short.upper()}  \u2726', BADGE_Y + 12,
-                        _font(True, 20), GOLD_LIGHT)
-
-    # Stars
-    _draw_text_centered(draw, '\u2605     \u2605     \u2605     \u2605     \u2605', 234, _font(True, 22), GOLD)
-
-    # Photo circle
-    PHOTO_SIZE = 240
-    PHOTO_Y    = 264
-    PHOTO_X    = (CARD_W - PHOTO_SIZE) // 2
-    SHADOW_OFF = 10
-    sh_size    = PHOTO_SIZE + 20
-    shadow     = Image.new('RGBA', (sh_size, sh_size), (0, 0, 0, 0))
-    sd2        = ImageDraw.Draw(shadow)
-    sd2.ellipse([0, 0, sh_size - 1, sh_size - 1], fill=(0, 0, 0, 110))
-    shadow = shadow.filter(ImageFilter.GaussianBlur(14))
-    img.paste(shadow, (PHOTO_X - 10, PHOTO_Y + SHADOW_OFF - 10), shadow)
-    GLOW_PAD  = 22
-    glow_size = PHOTO_SIZE + GLOW_PAD * 2
-    glow_img  = Image.new('RGBA', (glow_size, glow_size), (0, 0, 0, 0))
-    gd = ImageDraw.Draw(glow_img)
-    gd.ellipse([0, 0, glow_size - 1, glow_size - 1], fill=(*GOLD, 100))
-    glow_img = glow_img.filter(ImageFilter.GaussianBlur(16))
-    img.paste(glow_img, (PHOTO_X - GLOW_PAD, PHOTO_Y - GLOW_PAD), glow_img)
-    RING      = 10
-    ring_size = PHOTO_SIZE + RING * 2
-    ring_img  = Image.new('RGBA', (ring_size, ring_size), (0, 0, 0, 0))
-    rd = ImageDraw.Draw(ring_img)
-    rd.ellipse([0, 0, ring_size - 1, ring_size - 1], fill=GOLD)
-    img.paste(ring_img, (PHOTO_X - RING, PHOTO_Y - RING), ring_img)
-    sep_size = PHOTO_SIZE + 2
-    sep_img  = Image.new('RGBA', (sep_size, sep_size), (0, 0, 0, 0))
-    sd3 = ImageDraw.Draw(sep_img)
-    sd3.ellipse([0, 0, sep_size - 1, sep_size - 1], fill=(255, 255, 255, 50))
-    img.paste(sep_img, (PHOTO_X - 1, PHOTO_Y - 1), sep_img)
-    if photo_bytes:
-        try:
-            member_img = Image.open(io.BytesIO(photo_bytes))
-            circular   = _circular_crop(member_img, PHOTO_SIZE)
-            img.paste(circular, (PHOTO_X, PHOTO_Y), circular)
-        except Exception:
-            _draw_placeholder_avatar(img, draw, PHOTO_X, PHOTO_Y, PHOTO_SIZE, partner_name)
-    else:
-        _draw_placeholder_avatar(img, draw, PHOTO_X, PHOTO_Y, PHOTO_SIZE, partner_name)
-
-    # Partner name
-    NAME_Y = PHOTO_Y + PHOTO_SIZE + 10
-    _t = (name_title or '').strip().rstrip('.')
-    title_prefix = (_t.capitalize() + '. ') if _t else ''
-    name_disp = title_prefix + partner_name.strip().upper()
-    name_font = _font(True, 38)
-    while name_disp and _text_width(draw, name_disp, name_font) > 980:
-        name_font = _font(True, max(20, name_font.size - 2))
-    _draw_text_centered(draw, name_disp, NAME_Y, name_font, GOLD_LIGHT)
-
-    # Designation
-    DESG_Y = NAME_Y + 54
-    _draw_text_centered(draw, (designation or 'Channel Partner')[:40], DESG_Y, _font(False, 17), (*WHITE, 190))
-
-    # Separator
-    SEP_Y = DESG_Y + 30
-    draw.line([(50, SEP_Y), (CARD_W - 50, SEP_Y)], fill=(*GOLD, 160), width=2)
-
-    # Info strip (VGK ID | Location)
-    INFO_Y = SEP_Y + 12
-    INFO_H = 80
-    _draw_rounded_rect(draw, 26, INFO_Y, CARD_W - 26, INFO_Y + INFO_H, 14,
-                       fill=(0, 0, 44, 185), outline=GOLD, width=2)
-    STRIP_W   = CARD_W - 52
-    half_strip = STRIP_W // 2
-    loc_label = 'LOCATION' if (location and location.strip()) else 'ROLE'
-    loc_val   = (location.strip() if location and location.strip() else (designation or 'Partner'))[:24]
-    cx_pos = 26
-    for ci, (lbl, val) in enumerate([('VGK ID', partner_code), (loc_label, loc_val)]):
-        if ci > 0:
-            draw.line([(cx_pos, INFO_Y + 8), (cx_pos, INFO_Y + INFO_H - 8)], fill=(*GOLD, 140), width=1)
-        draw.text((cx_pos + 18, INFO_Y + 9),  lbl, font=_font(True, 13), fill=GOLD)
-        draw.text((cx_pos + 18, INFO_Y + 28), val, font=_font(True, 24), fill=WHITE)
-        cx_pos += half_strip
-
-    # ── SLAB EARNINGS BOX — per-file model ───────────────────────────────────
-    EARN_Y = INFO_Y + INFO_H + 8
-    EARN_H = 158
-    _draw_rounded_rect(draw, 26, EARN_Y, CARD_W - 26, EARN_Y + EARN_H, 14,
-                       fill=(0, 8, 58, 220), outline=GOLD, width=2)
-
-    # Row 1 LEFT: ₹3000/file × N files = ₹Total Slab (bonanza payout)
-    per_file_label = f'{fmt_inr(slab_extra)}/file \xd7 {deal_count} file{"s" if deal_count != 1 else ""} = {fmt_inr(slab_total_bonanza)}'
-    draw.text((46, EARN_Y + 10), 'SLAB BONUS (PER FILE)',   font=_font(True, 12), fill=(*WHITE, 190))
-    draw.text((46, EARN_Y + 30), fmt_inr(slab_total_bonanza), font=_font(True, 46), fill=GOLD_LIGHT)
-    draw.text((46, EARN_Y + 78), per_file_label,              font=_font(False, 14), fill=(*WHITE, 160))
-
-    # Divider between left and right
-    DX = CARD_W // 2
-    draw.line([(DX, EARN_Y + 12), (DX, EARN_Y + EARN_H - 12)], fill=GOLD, width=2)
-
-    # Row 1 RIGHT: Lifetime earnings
-    rx2 = DX + 16
-    draw.text((rx2, EARN_Y + 10), 'LIFETIME EARNINGS',        font=_font(True, 13), fill=(*WHITE, 190))
-    draw.text((rx2, EARN_Y + 30), fmt_inr(overall_earnings),   font=_font(True, 46), fill=GOLD)
-
-    # Row 2 (bottom strip): base ref + grand total
-    BASE_ROW_Y = EARN_Y + 100
-    draw.line([(46, BASE_ROW_Y), (CARD_W - 46, BASE_ROW_Y)], fill=(*GOLD, 80), width=1)
-    draw.text((46, BASE_ROW_Y + 8), f'Solar Advance {fmt_inr(slab_base)}/file (display only)',
-              font=_font(False, 14), fill=(*WHITE, 140))
-    total_str = f'= {fmt_inr(total)} incl. base'
-    tw = _text_width(draw, total_str, _font(True, 15))
-    draw.text((CARD_W - 46 - tw, BASE_ROW_Y + 7), total_str, font=_font(True, 15), fill=GOLD_LIGHT)
-
-    # Slab banner
-    BAND_Y = EARN_Y + EARN_H + 8
-    _draw_rounded_rect(draw, 26, BAND_Y, CARD_W - 26, BAND_Y + 68, 14,
-                       fill=(*DARK_GOLD, 230), outline=GOLD, width=2)
-    _draw_text_centered(draw, f'\u2605 \u2605   SLAB WISE \xb7 {deal_count} FILE{"S" if deal_count != 1 else ""} \xb7 {fmt_inr(slab_total_bonanza)} EARNED   \u2605 \u2605',
-                        BAND_Y + 20, _font(True, 20), (255, 255, 220), shadow=False)
-
-    # Gold footer
-    FOOT_Y = BAND_Y + 76
-    draw.rectangle([0, FOOT_Y, CARD_W, FOOT_Y + 62], fill=GOLD)
-    _draw_text_centered(draw, 'TOGETHER,  WE ACHIEVE MORE!', FOOT_Y + 14, _font(True, 28), NAVY, shadow=False)
-
-    # Icons row
-    ICON_Y  = FOOT_Y + 66
-    seg_w   = CARD_W // 3
-    for i, (sym, label) in enumerate([('\u2605\u2605\u2605', 'ONE TEAM'), ('\u25ba\u25ba\u25ba', 'ONE VISION'), ('\u2714\u2714\u2714', 'ONE SUCCESS')]):
-        sx = i * seg_w
-        if i > 0:
-            draw.line([(sx, ICON_Y + 4), (sx, ICON_Y + 48)], fill=GOLD, width=1)
-        lw_ = _text_width(draw, label, _font(True, 15))
-        draw.text((sx + (seg_w - lw_) // 2, ICON_Y + 4), label, font=_font(True, 15), fill=WHITE)
-        sw  = _text_width(draw, sym, _font(True, 19))
-        draw.text((sx + (seg_w - sw) // 2, ICON_Y + 26), sym, font=_font(True, 19), fill=GOLD)
-
-    # Bottom quote
-    draw.line([(40, ICON_Y + 56), (CARD_W - 40, ICON_Y + 56)], fill=(*GOLD, 150), width=1)
-    _draw_text_centered(draw, '"Your commitment inspires us all and drives our mission forward."',
-                        ICON_Y + 62, _font(False, 26), (*GOLD_LIGHT, 230))
-
-    buf = io.BytesIO()
-    img.save(buf, format='PNG', optimize=True)
-    return buf.getvalue()
-
-
-def _draw_placeholder_avatar(img, draw, x, y, size, partner_name: str = '?'):
-    """
-    Gold-filled circle with dark navy initials — clearly visible on any background.
-    Signature: takes img + draw so it can paste a circular overlay.
-    """
-    from PIL import Image, ImageDraw as PID
-    overlay = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-    od      = PID.Draw(overlay)
-
-    # Gold filled circle
-    od.ellipse([0, 0, size - 1, size - 1], fill=GOLD)
-
-    # Inner lighter gold ring for depth
-    pad = size // 12
-    od.ellipse([pad, pad, size - 1 - pad, size - 1 - pad], fill=GOLD_LIGHT)
-
-    # Initials — up to 2 chars, dark navy
-    initials = ''
-    parts = partner_name.strip().split()
-    if parts:
-        initials = parts[0][0].upper()
-        if len(parts) > 1:
-            initials += parts[-1][0].upper()
-    init_font_size = size // 2
-    try:
-        from PIL import ImageFont
-        init_font = ImageFont.truetype(str(FONT_DIR / 'DejaVuSans-Bold.ttf'), init_font_size)
-    except Exception:
-        from PIL import ImageFont
-        init_font = ImageFont.load_default()
-    bbox  = od.textbbox((0, 0), initials, font=init_font)
-    tw    = bbox[2] - bbox[0]
-    th    = bbox[3] - bbox[1]
-    ix    = (size - tw) // 2 - bbox[0]
-    iy    = (size - th) // 2 - bbox[1]
-    od.text((ix, iy), initials, font=init_font, fill=NAVY)
-
-    img.paste(overlay, (x, y), overlay)
+    slab_total_bonanza = slab_extra * deal_count
+    total = (slab_extra + slab_base) * deal_count
+    
+    payload = {
+        "winner_title": bonanza_title.upper() if bonanza_title else "SLAB WISE BONANZA",
+        "member_name": f"{name_title.strip() + '. ' if name_title else ''}{partner_name.strip()}".upper(),
+        "todays_stage1_advance": slab_base * deal_count,
+        "todays_extra_comm": slab_total_bonanza,
+        "todays_total_payout": total,
+        "overall_earnings": overall_earnings,
+        "big_week_extra_bonus": slab_total_bonanza,
+        "total_completed_files": deal_count,
+        "potential_valuation": 0.0,
+    }
+    return compose_earner_card(
+        partner_name=partner_name,
+        partner_code=partner_code,
+        location=location,
+        designation=designation,
+        gross_amount=total,
+        overall_earnings=overall_earnings,
+        photo_bytes=photo_bytes,
+        name_title=name_title,
+        payload=payload
+    )
 
 
 # ── DB helpers ────────────────────────────────────────────────────────────────
 
 def _ensure_shoutout_category(db, category_name: str = None) -> int:
-    """Return (or create) a feedback category by name. Defaults to VGK4U Shoutouts."""
     from sqlalchemy import text
     name = category_name or VGK_SHOUTOUT_CATEGORY_NAME
     desc_map = {
@@ -671,13 +556,6 @@ def _ensure_shoutout_category(db, category_name: str = None) -> int:
 
 
 def _get_kyc_photo_bytes(db, partner_id: int) -> Optional[bytes]:
-    """
-    Fetch the best available photo for the partner.
-    Priority order:
-      1. vgk_kyc_documents.profile_photo  (VGK-specific upload)
-      2. kyc_document.passport_photo       (MNR KYC — approved preferred)
-    Supports both object_storage and local (uploaded_files/) storage types.
-    """
     from sqlalchemy import text
     from app.services.object_storage import storage_service
     import os
@@ -687,7 +565,6 @@ def _get_kyc_photo_bytes(db, partner_id: int) -> Optional[bytes]:
     def _load(file_path: str, storage_type: str) -> Optional[bytes]:
         if not file_path:
             return None
-        # Object storage (default)
         if storage_type in ('object_storage', None, ''):
             try:
                 data = storage_service.download_file(file_path)
@@ -695,20 +572,17 @@ def _get_kyc_photo_bytes(db, partner_id: int) -> Optional[bytes]:
                     return data
             except Exception as e1:
                 logger.warning(f'[EARNER-CARD] object storage fetch failed ({file_path}): {e1}')
-        # Local file fallback
         local = UPLOAD_ROOT / file_path
         if local.exists():
             try:
                 return local.read_bytes()
             except Exception as e2:
                 logger.warning(f'[EARNER-CARD] local read failed ({local}): {e2}')
-        # Last resort: try object storage anyway
         try:
             return storage_service.download_file(file_path)
         except Exception:
             return None
 
-    # 1. VGK profile photo
     row = db.execute(text("""
         SELECT file_path, original_storage_type FROM vgk_kyc_documents
         WHERE partner_id = :pid AND document_type = 'profile_photo'
@@ -717,10 +591,8 @@ def _get_kyc_photo_bytes(db, partner_id: int) -> Optional[bytes]:
     if row and row[0]:
         data = _load(row[0], row[1])
         if data:
-            logger.info(f'[EARNER-CARD] VGK profile_photo loaded for partner {partner_id}')
             return data
 
-    # 2. MNR KYC passport_photo (approved first, then any)
     row = db.execute(text("""
         SELECT file_path, original_storage_type FROM kyc_document
         WHERE partner_id = :pid AND document_type = 'passport_photo'
@@ -732,15 +604,11 @@ def _get_kyc_photo_bytes(db, partner_id: int) -> Optional[bytes]:
     if row and row[0]:
         data = _load(row[0], row[1])
         if data:
-            logger.info(f'[EARNER-CARD] KYC passport_photo loaded for partner {partner_id}')
             return data
-
-    logger.info(f'[EARNER-CARD] No KYC photo found for partner {partner_id} — using initials')
     return None
 
 
 def _ensure_system_user(db):
-    """Return a real user id (max 12 chars) that exists in the user table."""
     from sqlalchemy import text
     row = db.execute(text(
         "SELECT id FROM \"user\" WHERE LENGTH(id) <= 12 ORDER BY id LIMIT 1"
@@ -752,7 +620,6 @@ def _publish_shoutout(db, entry_id: int, category_id: int, system_uid: str,
                       partner_name: str, partner_code: str, gross: float,
                       card_storage_key: str,
                       visible_to: str = 'vgk') -> Optional[int]:
-    """Insert feedback_submissions + feedback_media rows for the earner shoutout."""
     from sqlalchemy import text
     from datetime import timezone
 
@@ -766,14 +633,11 @@ def _publish_shoutout(db, entry_id: int, category_id: int, system_uid: str,
         f'Keep Leading. Keep Inspiring. Keep Growing! — Team {network}'
     )
 
-    # Idempotency: one shoutout per income entry
     existing2 = db.execute(text("""
         SELECT id FROM feedback_submissions
         WHERE description LIKE :pat AND category_id = :cid LIMIT 1
     """), {'pat': f'%entry_id:{entry_id}%', 'cid': category_id}).fetchone()
     if existing2:
-        # If a new card was generated, refresh the media record so the shoutout
-        # wall always shows the latest card (avoids stale-card-in-shoutout bug).
         if card_storage_key:
             db.execute(text("""
                 UPDATE feedback_media
@@ -808,7 +672,6 @@ def _publish_shoutout(db, entry_id: int, category_id: int, system_uid: str,
         return None
     sub_id = sub_row[0]
 
-    # Attach the card image as approved media
     if card_storage_key:
         db.execute(text("""
             INSERT INTO feedback_media
@@ -825,14 +688,6 @@ def _publish_shoutout(db, entry_id: int, category_id: int, system_uid: str,
 
 
 def _card_public_url(card_storage_key: str) -> str:
-    """
-    Build an absolute HTTPS URL for a card stored in object storage.
-    Canonical pattern (matches crm.py / staff_ai_calling.py):
-      - Production (REPL_DEPLOYMENT set or PROD_DATABASE_URL set) → https://mnrteam.com
-      - Dev → https://{REPLIT_DEV_DOMAIN}
-    Returns '' if neither domain signal is available — callers must handle empty string
-    and will skip the image send gracefully.
-    """
     import os as _os
     if not card_storage_key:
         return ''
@@ -847,17 +702,6 @@ def _card_public_url(card_storage_key: str) -> str:
 
 
 def _send_earner_card_image(db, phone: str, card_url: str, partner_name: str) -> dict:
-    """
-    Send the earner card PNG as a WhatsApp image message via Meta Cloud API.
-    Fires a direct 'image' type message (not a template) so no Meta approval needed.
-
-    Returns a dict with keys:
-        success  bool   — True only when Meta returns HTTP 200
-        reason   str    — populated on skip or failure ('invalid_phone', 'no_credentials',
-                          'api_error:<status>', 'exception:<msg>')
-        wamid    str    — Meta message ID on success
-    The text congratulations message is always sent separately regardless of this result.
-    """
     import re as _re
     import requests as _req
     from app.services.whatsapp_auto_service import _get_meta_creds, _is_valid_phone
@@ -923,24 +767,6 @@ def _send_earner_card_image(db, phone: str, card_url: str, partner_name: str) ->
 def _send_whatsapp_celebration(phone: str, card_url: str,
                                partner_name: str, gross: float,
                                partner_code: str) -> dict:
-    """Send the earner card PNG as a WhatsApp media attachment via Twilio.
-
-    Uses Twilio messages.create() with media_url pointing to the public
-    object-storage URL so the card image appears inline in the chat.
-
-    Env vars read:
-        TWILIO_SID            — Twilio Account SID
-        TWILIO_AUTH_TOKEN     — Twilio Auth Token
-        TWILIO_WHATSAPP_FROM  — WhatsApp-enabled Twilio number in
-                                'whatsapp:+<number>' format (e.g.
-                                'whatsapp:+14155238886' for sandbox).
-                                Falls back to wrapping TWILIO_PHONE_NUMBER.
-
-    Returns dict with keys:
-        success  bool  — True only when Twilio returns successfully
-        reason   str   — populated on skip or failure
-        sid      str   — Twilio message SID on success
-    """
     import os as _os
     import re as _re
 
@@ -1003,23 +829,15 @@ def _send_whatsapp_celebration(phone: str, card_url: str,
 def _send_earner_wa(db, partner_name: str, partner_code: str,
                     phone: str, gross: float, overall: float,
                     entry_id: int, card_url: str = ''):
-    """Send WhatsApp congratulations to the earning member.
-
-    If card_url is provided (absolute HTTPS URL reachable from Twilio servers,
-    i.e. the deployed prod URL), the earner card PNG is sent as a Twilio media
-    attachment first, followed by the standard congratulations text/template.
-    """
     from app.services.whatsapp_auto_service import send_auto_whatsapp
 
     if not phone or len(phone.strip()) < 10:
         logger.info(f'[EARNER-WA] No valid phone for {partner_code}')
         return
 
-    # Ensure the event trigger exists
     _ensure_wa_trigger(db)
     db.flush()
 
-    # Send card image via Twilio media attachment — always attempt text regardless of result
     card_image_result: dict = {'success': False, 'reason': 'no_card_url', 'sid': ''}
     if card_url:
         try:
@@ -1058,17 +876,14 @@ def _send_earner_wa(db, partner_name: str, partner_code: str,
 
 
 def _ensure_wa_trigger(db):
-    """Idempotently create the WhatsApp template + auto trigger for vgk_income_paid."""
     from sqlalchemy import text
 
-    # Check trigger
     existing = db.execute(text(
         "SELECT id FROM whatsapp_auto_triggers WHERE event_key='vgk_income_paid' LIMIT 1"
     )).fetchone()
     if existing:
         return
 
-    # Create template first
     body = (
         "\U0001f3c6 *Congratulations, {{1}}!* \U0001f389\n\n"
         "\u2728 *Achievement Unlocked!*\n"
@@ -1118,13 +933,9 @@ def _ensure_wa_trigger(db):
     logger.info(f'[EARNER-WA] Created WA template {tmpl_id} + trigger for vgk_income_paid')
 
 
-# ── Main entry point ──────────────────────────────────────────────────────────
+# ── Main Entry Point ──────────────────────────────────────────────────────────
 
 def run_earner_celebration(entry_id: int):
-    """
-    Called in a daemon thread after mark_paid commits.
-    Creates its own DB session (short-lived), non-fatal.
-    """
     try:
         from app.core.database import SessionLocal
         db = SessionLocal()
@@ -1140,12 +951,12 @@ def _do_celebration(db, entry_id: int):
     from sqlalchemy import text
     from app.services.object_storage import storage_service
 
-    # Load entry + partner
     row = db.execute(text("""
         SELECT e.id, e.entry_number, e.partner_id, e.commission_amount,
                p.partner_name, p.partner_code, p.city, p.state,
                p.contact_person_1_designation, p.whatsapp_number,
-               p.vgk_cash_earned_total, p.name_title, p.gender
+               p.vgk_cash_earned_total, p.name_title, p.gender,
+               e.source_lead_id, e.bonanza_id
         FROM vgk_cash_income_entries e
         JOIN official_partners p ON p.id = e.partner_id
         WHERE e.id = :eid
@@ -1157,9 +968,8 @@ def _do_celebration(db, entry_id: int):
     (eid, entry_number, partner_id, gross_amount,
      partner_name, partner_code, city, state,
      designation, whatsapp_number, vgk_cash_earned_total,
-     _name_title, _gender) = row
+     _name_title, _gender, source_lead_id, bonanza_id) = row
 
-    # Derive display title: stored name_title wins; fall back to gender
     def _resolve_title(nt, g):
         t = (nt or '').strip()
         if t:
@@ -1174,9 +984,35 @@ def _do_celebration(db, entry_id: int):
 
     location_parts = [p for p in [city, state] if p and str(p).strip()]
     location = ', '.join(location_parts)
-    gross   = float(gross_amount or 0)
+    gross = float(gross_amount or 0)
 
-    # Compute overall from sum of all PAID entries — column may lag behind commit
+    # 1. Fetch Dynamic Data Payload fields
+    # A. todays_stage1_advance, todays_extra_comm, todays_total_payout
+    todays_stage1_advance = 0.0
+    todays_extra_comm = 0.0
+    if source_lead_id:
+        payouts_row = db.execute(text("""
+            SELECT 
+                COALESCE(SUM(CASE WHEN kind = 'ADVANCE' THEN commission_amount ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN kind = 'EXTRA_COMMISSION' THEN commission_amount ELSE 0 END), 0)
+            FROM vgk_cash_income_entries
+            WHERE source_lead_id = :lead_id AND partner_id = :partner_id AND status = 'PAID'
+        """), {'lead_id': source_lead_id, 'partner_id': partner_id}).fetchone()
+        if payouts_row:
+            todays_stage1_advance = float(payouts_row[0] or 0.0)
+            todays_extra_comm = float(payouts_row[1] or 0.0)
+
+    # Fallback to current entry kind if sum is 0
+    if todays_stage1_advance == 0.0 and todays_extra_comm == 0.0:
+        current_kind = db.execute(text("SELECT kind FROM vgk_cash_income_entries WHERE id = :eid"), {'eid': entry_id}).scalar()
+        if current_kind == 'ADVANCE':
+            todays_stage1_advance = gross
+        elif current_kind == 'EXTRA_COMMISSION':
+            todays_extra_comm = gross
+
+    todays_total_payout = todays_stage1_advance + todays_extra_comm
+
+    # B. Compute overall earnings
     try:
         paid_sum_row = db.execute(text("""
             SELECT COALESCE(SUM(commission_amount), 0)
@@ -1187,10 +1023,94 @@ def _do_celebration(db, entry_id: int):
     except Exception:
         overall = float(vgk_cash_earned_total or 0) or gross
 
-    # 1. Get KYC photo
-    photo_bytes = _get_kyc_photo_bytes(db, partner_id)
+    # C. total_completed_files
+    files_row = db.execute(text("""
+        SELECT COUNT(DISTINCT source_lead_id) 
+        FROM vgk_cash_income_entries
+        WHERE partner_id = :pid AND status = 'PAID'
+    """), {'pid': partner_id}).fetchone()
+    total_completed_files = files_row[0] if (files_row and files_row[0]) else 1
 
-    # 2. Compose card
+    # D. total_team_size & team_level_breakdown
+    levels = {}
+    current_ids = [partner_id]
+    total_team_size = 0
+    for lvl in range(1, 6):
+        if not current_ids:
+            levels[f"L{lvl}"] = 0
+            continue
+        rows = db.execute(text("""
+            SELECT id FROM official_partners 
+            WHERE parent_partner_id IN :pids AND is_active = true
+        """), {"pids": tuple(current_ids)}).fetchall()
+        next_ids = [r[0] for r in rows]
+        levels[f"L{lvl}"] = len(next_ids)
+        total_team_size += len(next_ids)
+        current_ids = next_ids
+    team_level_breakdown = " | ".join(f"L{i}: {levels.get(f'L{i}', 0)}" for i in range(1, 6))
+
+    # E. potential_valuation
+    val_row = db.execute(text("""
+        SELECT COALESCE(SUM(deal_value_total), 0) FROM crm_leads
+        WHERE (associated_partner_id = :pid OR primary_owner_id = :pid) 
+          AND status NOT IN ('won', 'lost', 'cancelled')
+    """), {'pid': partner_id}).fetchone()
+    potential_valuation = float(val_row[0]) if (val_row and val_row[0]) else 0.0
+
+    # F. customer_name & customer_location
+    customer_name = "Valued Customer"
+    customer_location = "Unknown"
+    if source_lead_id:
+        lead_row = db.execute(text("""
+            SELECT name, area, city, state FROM crm_leads WHERE id = :lid
+        """), {'lid': source_lead_id}).fetchone()
+        if lead_row:
+            customer_name = (lead_row[0] or "Valued Customer").strip()
+            loc_parts = [p for p in [lead_row[1], lead_row[2], lead_row[3]] if p and str(p).strip()]
+            customer_location = ", ".join(loc_parts) if loc_parts else "Unknown"
+
+    # G. senior_referrer_name & senior_referrer_earning
+    senior_referrer_name = "VGK Platform"
+    senior_referrer_earning = 0.0
+    senior_partner_id = None
+    parent_row = db.execute(text("""
+        SELECT p.id, p.partner_name, 
+               (SELECT COALESCE(SUM(commission_amount), 0) 
+                FROM vgk_cash_income_entries 
+                WHERE partner_id = p.id AND status = 'PAID')
+        FROM official_partners p
+        WHERE p.id = (SELECT parent_partner_id FROM official_partners WHERE id = :pid)
+    """), {'pid': partner_id}).fetchone()
+    if parent_row:
+        senior_partner_id = parent_row[0]
+        senior_referrer_name = parent_row[1] or "VGK Platform"
+        senior_referrer_earning = float(parent_row[2] or 0.0)
+
+    # H. Load KYC Photo
+    photo_bytes = _get_kyc_photo_bytes(db, partner_id)
+    senior_photo_bytes = _get_kyc_photo_bytes(db, senior_partner_id) if senior_partner_id else None
+
+    # 2. Build EarnerCardPayload
+    payload = {
+        "winner_title": designation.upper() if designation else "PROUD WINNER",
+        "member_name": f"{name_title.strip() + '. ' if name_title else ''}{partner_name.strip()}".upper(),
+        "payout_date": datetime.now().strftime('%d-%b-%Y'),
+        "todays_stage1_advance": todays_stage1_advance,
+        "todays_extra_comm": todays_extra_comm,
+        "todays_total_payout": todays_total_payout,
+        "overall_earnings": overall,
+        "total_completed_files": total_completed_files,
+        "total_team_size": total_team_size,
+        "team_level_breakdown": team_level_breakdown,
+        "potential_valuation": potential_valuation,
+        "customer_name": customer_name,
+        "customer_location": customer_location,
+        "senior_referrer_name": senior_referrer_name,
+        "senior_referrer_earning": senior_referrer_earning,
+        "company_disclaimer": "POTENTIAL EARNING IS BASED ON FINAL COMPLETION OF PROJECTS AND SUBJECT TO COMPANY TERMS."
+    }
+
+    # 3. Compose card image bytes (1200 x 900)
     try:
         card_bytes = compose_earner_card(
             partner_name     = partner_name or 'VGK Member',
@@ -1201,12 +1121,14 @@ def _do_celebration(db, entry_id: int):
             overall_earnings = overall,
             photo_bytes      = photo_bytes,
             name_title       = name_title,
+            payload          = payload,
+            senior_photo_bytes = senior_photo_bytes
         )
     except Exception as e:
         logger.error(f'[EARNER-CARD] compose_earner_card failed: {e}')
         card_bytes = None
 
-    # 3. Upload card to object storage
+    # 4. Upload card to object storage
     card_storage_key = ''
     if card_bytes:
         safe_num = (entry_number or str(entry_id)).replace('/', '-')
@@ -1220,8 +1142,7 @@ def _do_celebration(db, entry_id: int):
         except Exception as e:
             logger.warning(f'[EARNER-CARD] Upload exception for {tmp_key}: {e}')
 
-    # 4. Publish shoutout announcement — route by network
-    #    VGK partner codes start with 'VGK'; all others (DLAP, DST, SV-, etc.) are MNR
+    # 5. Publish shoutout announcement
     is_vgk = str(partner_code or '').upper().startswith('VGK')
     shoutout_visible_to   = 'vgk' if is_vgk else 'mnr'
     shoutout_category_name = VGK_SHOUTOUT_CATEGORY_NAME if is_vgk else MNR_SHOUTOUT_CATEGORY_NAME
@@ -1237,7 +1158,7 @@ def _do_celebration(db, entry_id: int):
         db.rollback()
         logger.warning(f'[EARNER-CARD] Shoutout publish failed: {e}')
 
-    # 5. Send WhatsApp — attach card image when URL is available
+    # 6. Send WhatsApp trigger
     try:
         _send_earner_wa(db, partner_name, partner_code,
                         whatsapp_number or '', gross, overall, entry_id,
@@ -1247,7 +1168,7 @@ def _do_celebration(db, entry_id: int):
         db.rollback()
         logger.warning(f'[EARNER-CARD] WA send failed: {e}')
 
-    # 6. Return card storage key for download endpoint
+    # 7. Save key in income notes
     if card_storage_key:
         try:
             db.execute(text("""

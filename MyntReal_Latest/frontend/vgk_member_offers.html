@@ -3322,9 +3322,426 @@ function _vgkFitText(ctx, text, maxW) {
     while (t.length > 1 && ctx.measureText(t + '\u2026').width > maxW) t = t.slice(0, -1);
     return t + '\u2026';
 }
-async function _vgkDownloadCreative(imgUrl, name, mobile, desig) {
+async function _vgkDownloadCreative(imgUrl, name, mobile, desig, payload = null) {
+    if (payload) {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1200;
+            canvas.height = 900;
+            const ctx = canvas.getContext('2d');
+
+            // Draw off-white background
+            ctx.fillStyle = '#FAF9F6';
+            ctx.fillRect(0, 0, 1200, 900);
+
+            // Helper drawing functions
+            function _drawRoundedRect(c, x1, y1, x2, y2, r, fill, outline, width) {
+                c.beginPath();
+                c.moveTo(x1 + r, y1);
+                c.lineTo(x2 - r, y1);
+                c.quadraticCurveTo(x2, y1, x2, y1 + r);
+                c.lineTo(x2, y2 - r);
+                c.quadraticCurveTo(x2, y2, x2 - r, y2);
+                c.lineTo(x1 + r, y2);
+                c.quadraticCurveTo(x1, y2, x1, y2 - r);
+                c.lineTo(x1, y1 + r);
+                c.quadraticCurveTo(x1, y1, x1 + r, y1);
+                c.closePath();
+                if (fill) {
+                    c.fillStyle = fill;
+                    c.fill();
+                }
+                if (outline) {
+                    c.strokeStyle = outline;
+                    c.lineWidth = width || 2;
+                    c.stroke();
+                }
+            }
+
+            function _drawTextCentered(c, text, y, font, color, shadow) {
+                c.font = font;
+                c.textAlign = 'center';
+                c.textBaseline = 'top';
+                if (shadow) {
+                    c.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    c.fillText(text, 600 + 2, y + 2);
+                }
+                c.fillStyle = color;
+                c.fillText(text, 600, y);
+            }
+
+            function _drawTextInRange(c, text, x_start, x_end, y, font, color, shadow) {
+                c.font = font;
+                c.textAlign = 'center';
+                c.textBaseline = 'top';
+                const cx = x_start + (x_end - x_start) / 2;
+                if (shadow) {
+                    c.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                    c.fillText(text, cx + 1, y + 1);
+                }
+                c.fillStyle = color;
+                c.fillText(text, cx, y);
+            }
+
+            function _drawLaurelWreath(c, cx, cy, r) {
+                c.fillStyle = '#d4af37'; // GOLD
+                for (let angle_deg = 100; angle_deg <= 260; angle_deg += 14) {
+                    let rad = angle_deg * Math.PI / 180;
+                    let lx = cx + r * Math.cos(rad);
+                    let ly = cy + r * Math.sin(rad);
+                    c.beginPath();
+                    c.ellipse(lx, ly, 7, 5, rad, 0, 2 * Math.PI);
+                    c.fill();
+                }
+                for (let angle_deg = 80; angle_deg >= -80; angle_deg -= 14) {
+                    let rad = angle_deg * Math.PI / 180;
+                    let lx = cx + r * Math.cos(rad);
+                    let ly = cy + r * Math.sin(rad);
+                    c.beginPath();
+                    c.ellipse(lx, ly, 7, 5, rad, 0, 2 * Math.PI);
+                    c.fill();
+                }
+                // Bow ties
+                c.beginPath();
+                c.moveTo(cx - 10, cy + r - 5);
+                c.lineTo(cx, cy + r + 10);
+                c.lineTo(cx + 10, cy + r - 5);
+                c.lineTo(cx, cy + r + 2);
+                c.closePath();
+                c.fill();
+            }
+
+            function _drawMarqueeLightbulbs(c, x1, y1, x2, y2) {
+                const bulb_positions = [];
+                for (let bx = x1 + 10; bx <= x2 - 5; bx += 20) {
+                    bulb_positions.push([bx, y1]);
+                    bulb_positions.push([bx, y2]);
+                }
+                for (let by = y1 + 15; by <= y2 - 5; by += 20) {
+                    bulb_positions.push([x1, by]);
+                    bulb_positions.push([x2, by]);
+                }
+                bulb_positions.forEach(([bx, by], idx) => {
+                    const col = (idx % 2 === 0) ? '#ffffff' : '#fadb5e';
+                    c.fillStyle = col;
+                    c.beginPath();
+                    c.arc(bx, by, 3.5, 0, 2 * Math.PI);
+                    c.fill();
+                });
+            }
+
+            function _drawVectorHouseSolarEv(c, hx, hy) {
+                // Fireworks
+                for (let angle = 0; angle < 360; angle += 20) {
+                    let rad = angle * Math.PI / 180;
+                    for (let dist = 12; dist < 70; dist += 12) {
+                        let x_end = hx + dist * Math.cos(rad);
+                        let y_end = hy + dist * Math.sin(rad);
+                        let alpha = (70 - dist) / 70;
+                        c.strokeStyle = `rgba(251, 191, 36, ${alpha})`;
+                        c.lineWidth = 1;
+                        c.beginPath();
+                        c.moveTo(hx, hy);
+                        c.lineTo(x_end, y_end);
+                        c.stroke();
+                    }
+                }
+                // House Wall
+                c.fillStyle = '#cbd5e1';
+                c.strokeStyle = '#64748b';
+                c.lineWidth = 1;
+                c.fillRect(hx - 40, hy + 5, 50, 40);
+                c.strokeRect(hx - 40, hy + 5, 50, 40);
+                
+                // Door
+                c.fillStyle = '#78350f';
+                c.fillRect(hx - 25, hy + 20, 15, 25);
+                
+                // Roof
+                c.fillStyle = '#b91c1c';
+                c.beginPath();
+                c.moveTo(hx - 50, hy + 5);
+                c.lineTo(hx - 15, hy - 25);
+                c.lineTo(hx + 20, hy + 5);
+                c.closePath();
+                c.fill();
+                
+                // Solar Panel
+                c.fillStyle = '#2563eb';
+                c.strokeStyle = '#ffffff';
+                c.lineWidth = 1;
+                c.beginPath();
+                c.moveTo(hx - 35, hy - 7);
+                c.lineTo(hx - 15, hy - 22);
+                c.lineTo(hx - 5, hy - 15);
+                c.lineTo(hx - 25, hy);
+                c.closePath();
+                c.fill();
+                c.stroke();
+                
+                // EV Charger
+                c.fillStyle = '#10b981';
+                c.strokeStyle = '#047857';
+                c.fillRect(hx + 20, hy + 15, 25, 30);
+                c.strokeRect(hx + 20, hy + 15, 25, 30);
+                
+                // Lightning bolt
+                c.fillStyle = '#d4af37';
+                c.beginPath();
+                c.moveTo(hx + 32, hy + 18);
+                c.lineTo(hx + 38, hy + 28);
+                c.lineTo(hx + 34, hy + 28);
+                c.lineTo(hx + 36, hy + 40);
+                c.lineTo(hx + 28, hy + 30);
+                c.lineTo(hx + 32, hy + 30);
+                c.closePath();
+                c.fill();
+
+                // Callout badge
+                _drawRoundedRect(c, hx - 90, hy + 50, hx + 90, hy + 72, 6, '#0f172a', '#d4af37', 1);
+                _drawTextInRange(c, "GO SOLAR | SAVE MORE | EARN MORE", hx - 90, hx + 90, hy + 55, "bold 8px sans-serif", "#ffffff");
+            }
+
+            // Fetch profile picture if any
+            let photoBmp = null;
+            if (payload.profile_image_url) {
+                try {
+                    const photoResp = await fetch(payload.profile_image_url, { cache: 'force-cache' });
+                    if (photoResp.ok) {
+                        const photoBlob = await photoResp.blob();
+                        photoBmp = await createImageBitmap(photoBlob);
+                    }
+                } catch(e) {
+                    console.warn("Profile photo fetch failed", e);
+                }
+            }
+
+            // Draw outer border (gold)
+            _drawRoundedRect(ctx, 14, 14, 1186, 886, 14, null, '#d4af37', 2);
+
+            // Dotted inner border
+            ctx.fillStyle = '#d4af37';
+            for (let bx = 26; bx <= 1174; bx += 20) {
+                ctx.beginPath(); ctx.arc(bx, 26, 2, 0, 2*Math.PI); ctx.fill();
+                ctx.beginPath(); ctx.arc(bx, 874, 2, 0, 2*Math.PI); ctx.fill();
+            }
+            for (let by = 26; by <= 874; by += 20) {
+                ctx.beginPath(); ctx.arc(26, by, 2, 0, 2*Math.PI); ctx.fill();
+                ctx.beginPath(); ctx.arc(1174, by, 2, 0, 2*Math.PI); ctx.fill();
+            }
+
+            // Top logos (Draw texts)
+            ctx.fillStyle = '#0a192f';
+            ctx.font = 'bold 28px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('VGK4U', 50, 70);
+
+            ctx.fillStyle = '#10b981';
+            ctx.font = 'bold 28px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('MyntReal', 600, 70);
+
+            // Top-Right Graphic: Solar House + EV charger + fireworks
+            _drawVectorHouseSolarEv(ctx, 1050, 50);
+
+            // Header 1: Crimson Ribbon Banner - Title always CONGRATULATIONS
+            const ribbon_y = 105;
+            ctx.fillStyle = '#b91c1c';
+            ctx.fillRect(340, ribbon_y, 520, 28);
+            ctx.strokeStyle = '#7f1d1d';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(340, ribbon_y + 28);
+            ctx.lineTo(860, ribbon_y + 28);
+            ctx.stroke();
+
+            // Left tail
+            ctx.fillStyle = '#991b1b';
+            ctx.beginPath();
+            ctx.moveTo(320, ribbon_y + 8);
+            ctx.lineTo(340, ribbon_y);
+            ctx.lineTo(340, ribbon_y + 28);
+            ctx.lineTo(320, ribbon_y + 20);
+            ctx.lineTo(328, ribbon_y + 14);
+            ctx.closePath();
+            ctx.fill();
+
+            // Right tail
+            ctx.beginPath();
+            ctx.moveTo(880, ribbon_y + 8);
+            ctx.lineTo(860, ribbon_y);
+            ctx.lineTo(860, ribbon_y + 28);
+            ctx.lineTo(880, ribbon_y + 20);
+            ctx.lineTo(872, ribbon_y + 14);
+            ctx.closePath();
+            ctx.fill();
+
+            // Folds connectors
+            ctx.fillStyle = '#450a0a';
+            ctx.beginPath();
+            ctx.moveTo(340, ribbon_y + 28);
+            ctx.lineTo(340, ribbon_y + 36);
+            ctx.lineTo(350, ribbon_y + 28);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(860, ribbon_y + 28);
+            ctx.lineTo(860, ribbon_y + 36);
+            ctx.lineTo(850, ribbon_y + 28);
+            ctx.closePath();
+            ctx.fill();
+
+            _drawTextCentered(ctx, "★ CONGRATULATIONS ★", ribbon_y + 7, "bold 13px sans-serif", "#ffffff");
+
+            // Header 2: Marquee Billboard - Shows OVERALL EARNING
+            const mq_y1 = 142, mq_y2 = 236;
+            _drawRoundedRect(ctx, 360, mq_y1, 840, mq_y2, 10, '#0a192f', '#d4af37', 3);
+            _drawMarqueeLightbulbs(ctx, 360, mq_y1, 840, mq_y2);
+
+            // Left Megaphone
+            ctx.fillStyle = '#b91c1c';
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(325, 165); ctx.lineTo(352, 155); ctx.lineTo(352, 215); ctx.lineTo(325, 205);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#0a192f';
+            ctx.fillRect(352, 180, 6, 10);
+
+            // Right Megaphone
+            ctx.fillStyle = '#b91c1c';
+            ctx.beginPath();
+            ctx.moveTo(875, 165); ctx.lineTo(848, 155); ctx.lineTo(848, 215); ctx.lineTo(875, 205);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#0a192f';
+            ctx.fillRect(842, 180, 6, 10);
+
+            // Marquee Content
+            _drawTextCentered(ctx, "★ OVERALL EARNING ★", mq_y1 + 12, "bold 10px sans-serif", "#fadb5e");
+            _drawTextCentered(ctx, `₹${parseInt(payload.overall_earnings || payload.todays_total_payout || 0).toLocaleString('en-IN')}/-`, mq_y1 + 25, "bold 40px sans-serif", "#ffffff", true);
+            _drawTextCentered(ctx, "LIFETIME EARNING", mq_y1 + 75, "bold 10px sans-serif", "#9ca3af");
+
+            // Header 3 - Poster Subtitle always dynamic member name
+            _drawTextCentered(ctx, payload.member_name || name, 248, "bold italic 24px Georgia", "#b91c1c");
+            _drawRoundedRect(ctx, 340, 280, 860, 308, 6, '#1e3a8a');
+            _drawTextCentered(ctx, "★ ON YOUR WELL-DESERVED ACHIEVEMENT! ★", 286, "bold 12px sans-serif", "#ffffff");
+
+            // --- Columns Architecture ---
+            const col_y = 322;
+            const col_h = 445;
+
+            // Left Column (Increased width to 640px: x: 40 to 680)
+            _drawRoundedRect(ctx, 40, col_y, 680, col_y + col_h, 16, '#0a192f', '#d4af37', 2);
+            _drawRoundedRect(ctx, 120, col_y + 12, 600, col_y + 42, 8, '#1d4ed8');
+            _drawTextInRange(ctx, (payload.winner_title || desig || "PROUD WINNER").toUpperCase(), 120, 600, col_y + 19, "bold 13px sans-serif", "#ffffff");
+
+            // Laurel wreath + photo - Larger photo (diameter 220px)
+            const p_cx = 360, p_cy = col_y + 170, p_size = 220;
+            _drawLaurelWreath(ctx, p_cx, p_cy, 122);
+
+            // Draw Photo
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(p_cx, p_cy, p_size / 2, 0, 2 * Math.PI);
+            ctx.closePath();
+            ctx.clip();
+            if (photoBmp) {
+                ctx.drawImage(photoBmp, p_cx - p_size / 2, p_cy - p_size / 2, p_size, p_size);
+            } else {
+                ctx.fillStyle = '#d4af37';
+                ctx.fill();
+                ctx.fillStyle = '#0a192f';
+                ctx.font = 'bold 60px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const initials = (payload.member_name || name || "?").split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
+                ctx.fillText(initials, p_cx, p_cy);
+            }
+            ctx.restore();
+
+            // Champion Badge at bottom of left column
+            _drawRoundedRect(ctx, 260, col_y + 345, 460, col_y + 375, 15, '#0f172a', '#d4af37', 2);
+            _drawTextInRange(ctx, "★ CHAMPION ★", 260, 460, col_y + 352, "bold 13px sans-serif", "#fadb5e");
+
+            // Right Column (Reduced width to 440px: x: 720 to 1160)
+            const rx1 = 720, rx2 = 1160;
+            
+            // Box 1: Today's Payout & Breakdown (y: 322 to 512, h: 190)
+            _drawRoundedRect(ctx, rx1, col_y, rx2, col_y + 190, 14, '#ffffff', '#d4af37', 2);
+            _drawRoundedRect(ctx, rx1 + 20, col_y + 10, rx2 - 20, col_y + 36, 6, '#b91c1c');
+            _drawTextInRange(ctx, "★ TODAY'S PAYOUT ★", rx1 + 20, rx2 - 20, col_y + 14, "bold 11px sans-serif", "#ffffff");
+            _drawTextInRange(ctx, `Stage 1 Advance: ₹${parseInt(payload.todays_stage1_advance).toLocaleString('en-IN')}/-`, rx1, rx2, col_y + 48, "bold 17px sans-serif", "#0a192f");
+            _drawTextInRange(ctx, `Extra Comm: ₹${parseInt(payload.todays_extra_comm).toLocaleString('en-IN')}/-`, rx1, rx2, col_y + 78, "bold 17px sans-serif", "#0a192f");
+            _drawTextInRange(ctx, `Active breakups on ${payload.payout_date}`, rx1, rx2, col_y + 108, "11px sans-serif", "#64748b");
+            _drawRoundedRect(ctx, rx1 + 20, col_y + 135, rx2 - 20, col_y + 175, 10, '#10b981');
+            _drawTextInRange(ctx, `TOTAL: ₹${parseInt(payload.todays_total_payout).toLocaleString('en-IN')}/-`, rx1 + 20, rx2 - 20, col_y + 146, "bold 15px sans-serif", "#ffffff");
+
+            // Box 2: Files Count & Team Size Combined (y: 527 to 642, h: 115)
+            _drawRoundedRect(ctx, rx1, col_y + 205, rx2, col_y + 320, 14, '#ffffff', '#d4af37', 2);
+            _drawRoundedRect(ctx, rx1 + 15, col_y + 215, rx1 + 195, col_y + 265, 8, '#0a192f');
+            _drawTextInRange(ctx, `${payload.total_completed_files} FILES`, rx1 + 15, rx1 + 195, col_y + 226, "bold 16px sans-serif", "#fadb5e");
+            _drawTextInRange(ctx, "COMPLETED", rx1 + 15, rx1 + 195, col_y + 270, "bold 9px sans-serif", "#64748b");
+
+            _drawRoundedRect(ctx, rx1 + 215, col_y + 215, rx2 - 15, col_y + 265, 8, '#10b981');
+            _drawTextInRange(ctx, `${payload.total_team_size} TEAM`, rx1 + 215, rx2 - 15, col_y + 226, "bold 16px sans-serif", "#ffffff");
+            _drawTextInRange(ctx, "TOTAL SIZE", rx1 + 215, rx2 - 15, col_y + 270, "bold 9px sans-serif", "#64748b");
+
+            _drawRoundedRect(ctx, rx1 + 15, col_y + 285, rx2 - 15, col_y + 310, 6, '#f3f4f6');
+            _drawTextInRange(ctx, payload.team_level_breakdown, rx1 + 15, rx2 - 15, col_y + 292, "bold 10px sans-serif", "#4b5563");
+
+            // Box 3: Potential Earning (y: 657 to 767, h: 110)
+            _drawRoundedRect(ctx, rx1, col_y + 335, rx2, col_y + 445, 14, '#fee2e2', '#b91c1c', 2);
+            _drawTextInRange(ctx, "POTENTIAL EARNING", rx1, rx2, col_y + 342, "bold 13px sans-serif", "#b91c1c");
+            _drawTextInRange(ctx, `₹${parseInt(payload.potential_valuation).toLocaleString('en-IN')}/-`, rx1, rx2, col_y + 364, "bold 32px sans-serif", "#b91c1c");
+            _drawTextInRange(ctx, "TOTAL VALUATION", rx1, rx2, col_y + 414, "bold 11px sans-serif", "#7f1d1d");
+
+            // Footer Zone
+            const meta_y = 778;
+            ctx.fillStyle = '#64748b'; ctx.font = "bold 11px sans-serif"; ctx.textAlign = 'left';
+            ctx.fillText("CUSTOMER :", 60, meta_y);
+            ctx.fillStyle = '#0a192f'; ctx.font = "bold 13px sans-serif";
+            ctx.fillText(`${payload.customer_name} (${payload.customer_location})`, 140, meta_y);
+
+            ctx.fillStyle = '#64748b'; ctx.font = "bold 11px sans-serif";
+            ctx.fillText("SENIOR REFERRER :", 640, meta_y);
+            ctx.fillStyle = '#0a192f'; ctx.font = "bold 13px sans-serif";
+            ctx.fillText(`${payload.senior_referrer_name} (₹${parseInt(payload.senior_referrer_earning).toLocaleString('en-IN')}/-)`, 775, meta_y);
+
+            // 4 icons
+            const badges = ["FOCUS TODAY", "MORE FILES", "WIN MORE", "BETTER FUTURE"];
+            badges.forEach((b_lbl, i) => {
+                const bx = 76 + i * 276;
+                _drawRoundedRect(ctx, bx, 808, bx + 196, 832, 6, '#d4af37');
+                _drawTextInRange(ctx, b_lbl, bx, bx + 196, 815, "bold 10px sans-serif", "#0a192f");
+            });
+
+            // Disclaimer
+            _drawTextCentered(ctx, `* ${payload.company_disclaimer}`, 846, "8px sans-serif", "#64748b");
+
+            // Bottom bar
+            ctx.fillStyle = '#0a192f';
+            ctx.fillRect(0, 866, 1200, 34);
+            _drawTextCentered(ctx, "★ JOIN VGK4U TODAY TO START YOUR EARNING ★", 875, "bold 13px sans-serif", "#fadb5e");
+
+            canvas.toBlob(function(blobOut) {
+                var a = document.createElement('a');
+                a.href = URL.createObjectURL(blobOut);
+                a.download = 'VGK4U_Celebration_' + (payload.member_name || 'promo').replace(/\s+/g, '_') + '.png';
+                a.click();
+                setTimeout(function() { URL.revokeObjectURL(a.href); }, 5000);
+            }, 'image/png');
+
+        } catch(err) {
+            console.error('[DC-CELEB-DL-ERR]', err);
+            alert('Failed to generate celebration poster. Falling back to default download.');
+        }
+        return;
+    }
+
     try {
-        // Fetch main image + MyntReal logo in parallel
         const [resp, logoResp] = await Promise.all([
             fetch(imgUrl, { cache: 'force-cache' }),
             fetch('/assets/logos/myntreal_logo_transparent.png', { cache: 'force-cache' }).catch(function() { return null; })
@@ -3345,36 +3762,30 @@ async function _vgkDownloadCreative(imgUrl, name, mobile, desig) {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(bmp, 0, 0);
 
-        // ── Footer base: white ────────────────────────────────────────
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, H, W, FOOT);
 
-        // Top accent: 5px navy + 3px gold
         ctx.fillStyle = '#1e1b4b';
         ctx.fillRect(0, H, W, 5);
         ctx.fillStyle = '#d4a017';
         ctx.fillRect(0, H + 5, W, 3);
 
-        // Gold border: left, right, bottom
         const BRD = 2;
         ctx.fillStyle = '#d4a017';
         ctx.fillRect(0, H, BRD, FOOT);
         ctx.fillRect(W - BRD, H, BRD, FOOT);
         ctx.fillRect(0, H + FOOT - BRD, W, BRD);
 
-        // Vertical divider at 60% width
         const divX = Math.round(W * 0.60);
         ctx.fillStyle = '#d4a017';
         ctx.fillRect(divX, H + 8, 1, FOOT - 16);
 
-        // ── Left block: "CONTACT : Name" inline + Phone ───────────────
         const leftMax = divX - PAD * 2 - BRD;
         ctx.textBaseline = 'alphabetic';
         ctx.textAlign = 'left';
 
         const nameY = H + 52;
 
-        // "CONTACT : " prefix in medium gray, then Name in bold navy — same baseline
         var labelFont = '600 ' + Math.max(10, fB - 2) + 'px sans-serif';
         ctx.font = labelFont;
         ctx.fillStyle = '#6b7280';
@@ -3387,7 +3798,6 @@ async function _vgkDownloadCreative(imgUrl, name, mobile, desig) {
         var nameAvail = leftMax - labelW;
         ctx.fillText(_vgkFitText(ctx, name || '', nameAvail), PAD + BRD + labelW, nameY);
 
-        // Phone — 44px below, only if present
         var hasMobile = !!(mobile && mobile.trim());
         if (hasMobile) {
             ctx.fillStyle = '#374151';
@@ -3395,14 +3805,12 @@ async function _vgkDownloadCreative(imgUrl, name, mobile, desig) {
             ctx.fillText('\u260E  ' + mobile.trim(), PAD + BRD, nameY + 44);
         }
 
-        // Designation — purple
         if (desig) {
             ctx.fillStyle = '#6d28d9';
             ctx.font = '700 ' + (fB - 2) + 'px sans-serif';
             ctx.fillText(_vgkFitText(ctx, desig, leftMax), PAD + BRD, nameY + (hasMobile ? 72 : 34));
         }
 
-        // ── Right block: MyntReal logo + vgk4u.com ───────────────────
         const rightW  = W - divX - BRD;
         const rightCX = divX + rightW / 2;
         const logoMaxW = rightW - PAD * 2;

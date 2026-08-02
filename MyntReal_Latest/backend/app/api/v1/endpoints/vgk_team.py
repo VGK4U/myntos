@@ -4121,23 +4121,26 @@ def member_earnings_dashboard(
         except Exception:
             pass
 
-    # Bulk: passport_photo from kyc_document table for member KYC photos (DC-VGK-KYC-PHOTO-001)
+    # Bulk: Parent partner IDs
+    parent_ids = list({m.parent_partner_id for m in members if m.parent_partner_id})
+    
+    # Bulk: passport_photo from kyc_document table for member and parent KYC photos
     passport_photo_map: dict = {}
-    if member_ids:
+    all_photo_ids = list(set(member_ids + parent_ids))
+    if all_photo_ids:
         try:
             photo_rows = db.execute(text(
                 "SELECT DISTINCT ON (partner_id) partner_id, file_path "
                 "FROM kyc_document "
                 "WHERE partner_id = ANY(:ids) AND document_type = 'passport_photo' AND is_current_version = true "
                 "ORDER BY partner_id, uploaded_at DESC"
-            ), {"ids": member_ids}).fetchall()
+            ), {"ids": all_photo_ids}).fetchall()
             passport_photo_map = {int(r[0]): r[1] for r in photo_rows}
         except Exception:
             pass
 
     # Bulk: Parent partner info (Senior name and earnings) (DC-VGK-SENIOR-INFO-001)
     parent_map: dict = {}
-    parent_ids = list({m.parent_partner_id for m in members if m.parent_partner_id})
     if parent_ids:
         try:
             p_rows = db.execute(text(
@@ -4157,7 +4160,8 @@ def member_earnings_dashboard(
                 info = p_info.get(pid, {})
                 parent_map[pid] = {
                     "partner_name": info.get("name"),
-                    "gross_earned": p_earnings.get(pid, 0.0)
+                    "gross_earned": p_earnings.get(pid, 0.0),
+                    "passport_photo": passport_photo_map.get(pid)
                 }
         except Exception:
             pass
@@ -4206,6 +4210,7 @@ def member_earnings_dashboard(
             "passport_photo":         passport_photo_map.get(m.id),
             "senior_name":            senior_info.get("partner_name"),
             "senior_earning":         senior_info.get("gross_earned"),
+            "senior_photo":           senior_info.get("passport_photo"),
             "registered_by_emp_code": m.registered_by_emp_code,
             "registered_by_name":     emp_name_map.get(m.registered_by_emp_code),
             "points_credited":        pts_credited,
