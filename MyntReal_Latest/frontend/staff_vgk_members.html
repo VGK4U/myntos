@@ -4929,6 +4929,10 @@ async function generateMemberPoster(partnerId) {
     const paidL1Count = entries.filter(e => e.level === 1 && (e.status === 'PAID' || e.status === 'RELEASED') && e.income_date === selectedDate).length;
     document.getElementById('postSeniorToday').value = '₹' + _meFormatInr(paidL1Count * 500) + '/-';
     document.getElementById('postSeniorEarning').value = seniorEarning;
+    const postSeniorPot = document.getElementById('postSeniorPotential');
+    if (postSeniorPot) {
+      postSeniorPot.value = '₹' + _meFormatInr(activeFiles * 500) + '/-';
+    }
     
     // Set checkboxes default state to checked
     document.getElementById('payTypeStage1').checked = true;
@@ -5241,11 +5245,16 @@ function shareOnWhatsApp() {
   const seniorOverall = document.getElementById('prevSeniorEarning').textContent.trim();
   const seniorToday = document.getElementById('prevSeniorToday').textContent.trim();
 
+  const partnerPotential = document.getElementById('prevPotential').textContent.trim();
+  const seniorPotentialInput = document.getElementById('postSeniorPotential');
+  const seniorPotential = seniorPotentialInput ? seniorPotentialInput.value.trim() : '₹0/-';
+
   let text = `🎉 *CONGRATULATIONS!* 🎉\n\n`;
   text += `🌟 *Member Achievement:* 🌟\n`;
   text += `👤 *Name:* ${partnerName}\n`;
   text += `💰 *Today's Earning:* ${partnerToday}\n`;
   text += `📈 *Overall Earning:* ${partnerOverall}\n`;
+  text += `🔮 *Potential Earning:* ${partnerPotential}\n`;
 
   // Only add Senior details if a valid senior referrer exists (not empty/dash/none)
   if (seniorName && seniorName !== '—' && seniorName !== 'NONE') {
@@ -5254,6 +5263,7 @@ function shareOnWhatsApp() {
     text += `👤 *Name:* ${seniorName}\n`;
     text += `💰 *Today's Earning:* ${seniorToday}\n`;
     text += `📈 *Overall Earning:* ${seniorOverall}\n`;
+    text += `🔮 *Potential Earning:* ${seniorPotential}\n`;
   }
 
   text += `\n🚀 Keep up the fantastic work! 🚀\n`;
@@ -6109,6 +6119,10 @@ function _renderCommDetailTable(partnerId) {
               <div>
                 <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">SENIOR EARNING (₹)</label>
                 <input type="text" id="postSeniorEarning" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. ₹9,000/-">
+              </div>
+              <div>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">SENIOR POTENTIAL EARNING (₹)</label>
+                <input type="text" id="postSeniorPotential" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. ₹5,000/-">
               </div>
               <div style="margin-top:4px">
                 <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
