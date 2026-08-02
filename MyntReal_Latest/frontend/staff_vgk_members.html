@@ -4804,14 +4804,8 @@ async function generateMemberPoster(partnerId) {
       avatar.style.display = 'flex';
     }
     
-    // Fetch full member income details matching filters to populate poster location and customer
-    const activeStage = (document.getElementById('iedStageFilter')?.value||'').trim();
-    const iedDf = (document.getElementById('iedDateFrom')?.value||'').trim();
-    const iedDt = (document.getElementById('iedDateTo')?.value||'').trim();
+    // Fetch full member income details (unfiltered) to populate poster stats, location and customer
     let detailUrl = API + '/vgk/dashboard/member-income-entries?partner_id=' + partnerId;
-    if(activeStage) detailUrl += '&status=' + encodeURIComponent(activeStage);
-    if(iedDf) detailUrl += '&date_from=' + encodeURIComponent(iedDf);
-    if(iedDt) detailUrl += '&date_to='   + encodeURIComponent(iedDt);
     
     const r = await staffFetch(detailUrl);
     const d = await r.json();
@@ -4833,7 +4827,7 @@ async function generateMemberPoster(partnerId) {
           const uniqueKey = `bonus_${e.id}`;
           uniqueLeads[uniqueKey] = e.potential_overall_earning || e.commission_amount || 0;
         } else {
-          const val = e.potential_overall_earning || 0;
+          const val = e.potential_overall_earning || e.commission_amount || 0;
           if (!uniqueLeads[key] || val > uniqueLeads[key]) {
             uniqueLeads[key] = val;
           }
