@@ -96,6 +96,17 @@ const MENU_MASTER: MenuSection[] = [
     ]
   },
   {
+    section_code: "ACCOUNTS_EARNINGS",
+    section_label: "FINANCE & EARNINGS",
+    order: 7.5,
+    items: [
+      { menu_code: "EXPENSE_ENTRIES", label: "Expense Entries", route: "staff-expense-entries" },
+      { menu_code: "MY_EARNINGS", label: "My Earnings", route: "staff-my-earnings" },
+      { menu_code: "MY_PAYOUTS", label: "My Payouts", route: "staff-my-payouts" },
+      { menu_code: "VENDORS", label: "Vendors Master", route: "staff-vendors" }
+    ]
+  },
+  {
     section_code: "SERVICE_TICKETS",
     section_label: "SERVICE TICKETS",
     order: 8,

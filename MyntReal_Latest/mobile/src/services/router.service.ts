@@ -179,7 +179,10 @@ export type PageRoute =
   | 'staff-my-payouts'
   | 'staff-my-lead-incentives'
   // Accounts
-  | 'staff-vendors';
+  | 'staff-vendors'
+  // Custom Web Views
+  | 'staff-expense-entries'
+  | 'staff-my-earnings';
 
 interface RouteConfig {
   id: PageRoute;
@@ -207,6 +210,8 @@ class RouterService {
     'timesheet': { id: 'timesheet', title: 'Timesheet', icon: 'calendar', showInTabs: false, portal: 'staff' },
     'leaves': { id: 'leaves', title: 'Leaves', icon: 'calendar-x', showInTabs: false, portal: 'staff' },
     'reimbursements': { id: 'reimbursements', title: 'Reimbursements', icon: 'credit-card', showInTabs: false, portal: 'staff' },
+    'staff-expense-entries': { id: 'staff-expense-entries', title: 'Expense Entries', icon: 'credit-card', showInTabs: false, portal: 'staff' },
+    'staff-my-earnings': { id: 'staff-my-earnings', title: 'My Earnings', icon: 'trending-up', showInTabs: false, portal: 'staff' },
     'kras': { id: 'kras', title: 'KRAs', icon: 'target', showInTabs: false, portal: 'staff' },
     'tasks': { id: 'tasks', title: 'Tasks', icon: 'check-square', showInTabs: false, portal: 'staff' },
     'tickets': { id: 'tickets', title: 'Support', icon: 'help-circle', showInTabs: false, portal: 'staff' },

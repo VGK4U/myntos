@@ -43,6 +43,8 @@ import { StaffMyPayoutsPage } from './pages/StaffMyPayoutsPage';
 import { AutoDialerPage } from './pages/AutoDialerPage';
 import { CallHistoryPage } from './pages/CallHistoryPage';
 import { OperatorCallsPage } from './pages/OperatorCallsPage';
+import { StaffExpenseEntriesPage } from './pages/StaffExpenseEntriesPage';
+import { StaffMyEarningsPage } from './pages/StaffMyEarningsPage';
 import { callSyncService } from './services/call-sync.service';
 import { gpsService } from './services/gps.service';
 // New Staff Dashboard Section Pages
@@ -740,6 +742,12 @@ class MNRApp {
       // Accounts Section
       case 'staff-vendors':
         page = new StaffVendorsPage(this.pageContainer);
+        break;
+      case 'staff-expense-entries':
+        page = new StaffExpenseEntriesPage(this.pageContainer);
+        break;
+      case 'staff-my-earnings':
+        page = new StaffMyEarningsPage(this.pageContainer);
         break;
       
       // New Tasks Section Pages
