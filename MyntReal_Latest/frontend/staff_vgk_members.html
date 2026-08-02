@@ -4744,9 +4744,9 @@ function getUploadsBaseUrl() {
   const port = window.location.port;
   const protocol = window.location.protocol;
   if ((host === 'localhost' || host === '127.0.0.1') && port && port !== '8000') {
-    return protocol + '//' + host + ':8000/uploads/';
+    return protocol + '//' + host + ':8000/storage/';
   }
-  return '/uploads/';
+  return '/storage/';
 }
 async function generateMemberPoster(partnerId) {
   const modal = document.getElementById('posterModal');
@@ -4916,7 +4916,8 @@ async function generateMemberPoster(partnerId) {
     
     document.getElementById('postTitle').value = 'CONGRATULATIONS';
     document.getElementById('postSubtitle').value = m.partner_name || '';
-    document.getElementById('postHighlight').value = '₹' + _meFormatInr(gross) + '/-';
+    const overallVal = m.received !== undefined && m.received !== null ? m.received : (m.gross_earned || 0);
+    document.getElementById('postHighlight').value = '₹' + _meFormatInr(overallVal) + '/-';
     document.getElementById('postFiles').value = activeFiles + ' FILES';
     document.getElementById('postOverall').value = (m.total_team_size || 0) + ' MEMBERS';
     document.getElementById('postTeamBreakup').value = `L2: ${m.team_l2_count || 0} | L3: ${m.team_l3_count || 0} | L4: ${m.team_l4_count || 0}`;
@@ -4924,6 +4925,8 @@ async function generateMemberPoster(partnerId) {
     document.getElementById('postCustomer').value = customerName;
     document.getElementById('postLocation').value = location;
     document.getElementById('postSeniorName').value = seniorName;
+    const paidL1Count = entries.filter(e => e.level === 1 && e.status === 'PAID' && e.income_date === selectedDate).length;
+    document.getElementById('postSeniorToday').value = '₹' + _meFormatInr(paidL1Count * 500) + '/-';
     document.getElementById('postSeniorEarning').value = seniorEarning;
     
     // Set checkboxes default state to checked
@@ -5064,6 +5067,7 @@ function updatePoster() {
   const prevLoc = document.getElementById('prevLocation');
   if (prevLoc) prevLoc.textContent = document.getElementById('postLocation').value.toUpperCase();
   document.getElementById('prevSeniorName').textContent = document.getElementById('postSeniorName').value.toUpperCase();
+  document.getElementById('prevSeniorToday').textContent = document.getElementById('postSeniorToday').value;
   document.getElementById('prevSeniorEarning').textContent = document.getElementById('postSeniorEarning').value;
   
   const showSenior = document.getElementById('postShowSenior').checked;
@@ -6016,6 +6020,10 @@ function _renderCommDetailTable(partnerId) {
                 <input type="text" id="postSeniorName" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. NISSI ENTERPRISES">
               </div>
               <div>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">SENIOR TODAY'S EARNING (₹)</label>
+                <input type="text" id="postSeniorToday" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. ₹1,000/-">
+              </div>
+              <div>
                 <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">SENIOR EARNING (₹)</label>
                 <input type="text" id="postSeniorEarning" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. ₹9,000/-">
               </div>
@@ -6090,11 +6098,11 @@ function _renderCommDetailTable(partnerId) {
 
           <!-- TOP ZONE (Header Zone - Brand and Ribbon) -->
           <div style="position:relative;z-index:3;display:flex;flex-direction:column;gap:6px;margin-top:2px">
-            <!-- Brand Logos Row -->
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px">
-              <img src="/vgk4u-logo.png" style="height:46px;object-fit:contain" crossorigin="anonymous">
-              <img src="/public/myntreal-logo-trans.png" style="height:46px;object-fit:contain" crossorigin="anonymous">
-              <div style="background:#ffffff;border-radius:6px;padding:1px 3px;height:54px;display:flex;align-items:center;justify-content:center;box-sizing:border-box"><img src="/public/solar-logo-harghar-trans.png" style="height:100%;object-fit:contain" crossorigin="anonymous"></div>
+            <!-- Brand Logos Row with unified complete white background -->
+            <div style="background:#ffffff;border-radius:6px;padding:4px 12px;height:58px;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box;box-shadow:0 2px 4px rgba(0,0,0,0.1)">
+              <div style="height:38px;display:flex;align-items:center"><img src="/vgk4u-logo.png" style="height:100%;object-fit:contain" crossorigin="anonymous"></div>
+              <div style="height:38px;display:flex;align-items:center"><img src="/public/myntreal-logo-trans.png" style="height:100%;object-fit:contain" crossorigin="anonymous"></div>
+              <div style="height:48px;display:flex;align-items:center;justify-content:center"><img src="/public/solar-logo-harghar-trans.png" style="height:100%;transform:scale(1.22);transform-origin:center;object-fit:contain" crossorigin="anonymous"></div>
             </div>
 
             <!-- Title & Subtitle Block -->
@@ -6180,26 +6188,32 @@ function _renderCommDetailTable(partnerId) {
           <!-- BOTTOM ZONE (Footer Zone - Full Width) -->
           <div style="position:relative;z-index:3;display:flex;flex-direction:column;gap:3px;margin-bottom:1px">
             <!-- Footer border separator line -->
-            <div id="prevSeniorRow" style="border-top:1.5px solid rgba(251,191,36,0.3);padding-top:3px;display:flex;align-items:center;gap:10px">
+            <div id="prevSeniorRow" style="border-top:1.5px solid rgba(251,191,36,0.3);padding-top:4px;display:flex;align-items:center;gap:12px">
               
-              <!-- Senior Referrer Photo Frame -->
-              <div style="width:65px;height:65px;border-radius:50%;border:2px solid var(--poster-accent);box-shadow:0 0 6px rgba(251,191,36,0.3);overflow:hidden;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0">
+              <!-- Senior Referrer Photo Frame (Enlarged and overlapping separator) -->
+              <div style="width:78px;height:78px;border-radius:50%;border:2.5px solid var(--poster-accent);box-shadow:0 0 8px rgba(251,191,36,0.4);overflow:hidden;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;margin-top:-20px;z-index:10">
                 <img id="prevSeniorImg" src="" style="width:100%;height:100%;object-fit:cover;display:none">
-                <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#3b82f6,#7c3aed);color:white;font-size:18px;font-weight:900">SR</div>
+                <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#3b82f6,#7c3aed);color:white;font-size:22px;font-weight:900">SR</div>
               </div>
 
               <!-- Senior Referrer Details Row -->
-              <div style="display:flex;flex:1;justify-content:space-between;align-items:center">
+              <div style="display:flex;flex:1;justify-content:space-between;align-items:center;gap:6px">
                 <!-- Name Block -->
-                <div style="display:flex;flex-direction:column;text-align:left">
-                  <div style="font-size:7.5px;font-weight:850;color:var(--poster-text);opacity:0.85;letter-spacing:0.3px">SENIOR REFERRER</div>
-                  <div id="prevSeniorName" style="font-size:11px;font-weight:900;color:var(--poster-text);text-transform:uppercase;line-height:1.2">—</div>
+                <div style="display:flex;flex-direction:column;text-align:left;flex:1.2">
+                  <div style="font-size:7px;font-weight:850;color:var(--poster-text);opacity:0.85;letter-spacing:0.2px">SENIOR REFERRER</div>
+                  <div id="prevSeniorName" style="font-size:10px;font-weight:900;color:var(--poster-text);text-transform:uppercase;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
                 </div>
                 
-                <!-- Earnings Block -->
-                <div style="display:flex;flex-direction:column;text-align:right">
-                  <div style="font-size:7.5px;font-weight:850;color:var(--poster-text);opacity:0.85;letter-spacing:0.3px">SENIOR EARNING</div>
-                  <div id="prevSeniorEarning" style="font-size:11px;font-weight:900;color:#34d399;text-transform:uppercase;line-height:1.2">—</div>
+                <!-- Today's Earning Block -->
+                <div style="display:flex;flex-direction:column;text-align:center;flex:0.9">
+                  <div style="font-size:7px;font-weight:850;color:var(--poster-text);opacity:0.85;letter-spacing:0.2px">TODAY'S EARNING</div>
+                  <div id="prevSeniorToday" style="font-size:11.5px;font-weight:950;color:var(--poster-accent);text-transform:uppercase;line-height:1.2">₹0/-</div>
+                </div>
+                
+                <!-- Overall Earnings Block -->
+                <div style="display:flex;flex-direction:column;text-align:right;flex:1.1">
+                  <div style="font-size:7px;font-weight:850;color:var(--poster-text);opacity:0.85;letter-spacing:0.2px">OVERALL EARNING</div>
+                  <div id="prevSeniorEarning" style="font-size:13.5px;font-weight:950;color:#34d399;text-transform:uppercase;line-height:1.2">—</div>
                 </div>
               </div>
 

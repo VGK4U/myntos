@@ -7281,8 +7281,12 @@ def create_lead(
         z_guru_id=lead_data.z_guru_id,
         adi_guru_id=lead_data.adi_guru_id,
         guru_name=lead_data.guru_name,
-        z_guru_name=lead_data.z_guru_name,
-        is_vgk_program=lead_data.is_vgk_program or False,
+        is_vgk_program=lead_data.is_vgk_program or (
+            db.query(OfficialPartner).filter(
+                OfficialPartner.id == validated_partner_id,
+                OfficialPartner.category == 'VGK_TEAM'
+            ).first() is not None if validated_partner_id else False
+        ),
         vgk_field_support_id=lead_data.vgk_field_support_id,
         solar_brand_id=lead_data.solar_brand_id,
         source_ref_type=lead_data.source_ref_type,
@@ -8040,6 +8044,20 @@ def update_lead(
                 update_data['associated_partner_id'] = int(src_id)
         except (ValueError, TypeError):
             pass
+
+    # Auto-detect and force is_vgk_program=True if partner category is VGK_TEAM
+    _assoc_part_id = update_data.get('associated_partner_id') or lead.associated_partner_id
+    if _assoc_part_id:
+        try:
+            _is_vgk_partner = db.query(OfficialPartner).filter(
+                OfficialPartner.id == _assoc_part_id,
+                OfficialPartner.category == 'VGK_TEAM'
+            ).first()
+            if _is_vgk_partner:
+                update_data['is_vgk_program'] = True
+        except Exception:
+            pass
+
     # DC-VGK-PARTNER-SYNC-001: accept 'vgk_partner' (page-local modal) and 'partner' (unified)
     fs_type = update_data.get('field_support_ref_type')
     fs_id = update_data.get('field_support_ref_id')
@@ -8292,8 +8310,8 @@ def update_lead(
     #   Case 2 — retroactive partner set: lead already completed but associated_partner_id
     #             was just assigned (e.g. Team Assignment SOURCE saved after completion)
     _income_trigger = (
-        (lead.status == 'completed' and _pre_commit_status != 'completed') or
-        (lead.status == 'completed' and 'associated_partner_id' in update_data and lead.associated_partner_id)
+        (lead.status in ('won', 'completed') and _pre_commit_status not in ('won', 'completed')) or
+        (lead.status in ('won', 'completed') and 'associated_partner_id' in update_data and lead.associated_partner_id)
     )
     if _income_trigger and lead.associated_partner_id:
         try:
@@ -8337,7 +8355,7 @@ def update_lead(
     _retrigger_hit = _RETRIGGER_FIELDS & set(update_data.keys())
     _sps_now = (getattr(lead, 'solar_pipeline_status', '') or '').lower()
     _income_eligible = (
-        lead.status == 'completed'
+        lead.status in ('won', 'completed')
         or _sps_now in {'balance_received', 'subsidy_pending', 'completed'}
     )
     if (

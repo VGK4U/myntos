@@ -20058,6 +20058,13 @@ async def serve_storage_file(request: Request, file_path: str):
         local_path = local_storage_root / file_path
         if local_path.exists() and local_path.is_file():
             file_data = local_path.read_bytes()
+        else:
+            try:
+                uploads_path = Path(UPLOADS_DIR) / file_path
+                if uploads_path.exists() and uploads_path.is_file():
+                    file_data = uploads_path.read_bytes()
+            except Exception:
+                pass
 
     if file_data is None:
         raise HTTPException(status_code=404, detail="File not found")

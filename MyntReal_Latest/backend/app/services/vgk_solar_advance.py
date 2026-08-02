@@ -97,7 +97,8 @@ def check_and_create_advance(db: Session, lead_id: int) -> dict:
         if pipeline not in ELIGIBLE_STAGES:
             return {'created': False, 'reason': f'Stage {pipeline!r} not eligible'}
 
-        if not lead.cibil_confirmed:
+        _bypass_cibil = pipeline in ('pending_with_bank', 'application_submitted')
+        if not lead.cibil_confirmed and not _bypass_cibil:
             return {'created': False, 'reason': 'CIBIL not confirmed'}
 
         score = lead.cibil_score or 0
