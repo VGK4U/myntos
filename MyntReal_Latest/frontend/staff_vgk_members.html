@@ -5075,6 +5075,10 @@ function updatePoster() {
   document.getElementById('prevSeniorName').textContent = document.getElementById('postSeniorName').value.toUpperCase();
   document.getElementById('prevSeniorToday').textContent = document.getElementById('postSeniorToday').value;
   document.getElementById('prevSeniorEarning').textContent = document.getElementById('postSeniorEarning').value;
+  const prevSeniorPot = document.getElementById('prevSeniorPotential');
+  if (prevSeniorPot) {
+    prevSeniorPot.textContent = document.getElementById('postSeniorPotential').value;
+  }
   
   const showSenior = document.getElementById('postShowSenior').checked;
   const prevSeniorRow = document.getElementById('prevSeniorRow');
@@ -5246,8 +5250,8 @@ function shareOnWhatsApp() {
   const seniorToday = document.getElementById('prevSeniorToday').textContent.trim();
 
   const partnerPotential = document.getElementById('prevPotential').textContent.trim();
-  const seniorPotentialInput = document.getElementById('postSeniorPotential');
-  const seniorPotential = seniorPotentialInput ? seniorPotentialInput.value.trim() : '₹0/-';
+  const prevSeniorPot = document.getElementById('prevSeniorPotential');
+  const seniorPotential = prevSeniorPot ? prevSeniorPot.textContent.trim() : '₹0/-';
 
   let text = `🎉 *CONGRATULATIONS!* 🎉\n\n`;
   text += `🌟 *Member Achievement:* 🌟\n`;
@@ -6296,21 +6300,27 @@ function _renderCommDetailTable(partnerId) {
               <!-- Senior Referrer Details Row -->
               <div style="display:flex;flex:1;justify-content:space-between;align-items:center;gap:6px">
                 <!-- Name Block -->
-                <div style="display:flex;flex-direction:column;text-align:left;flex:1.2">
+                <div style="display:flex;flex-direction:column;text-align:left;flex:1.1">
                   <div style="font-size:7px;font-weight:850;color:var(--poster-text);opacity:0.85;letter-spacing:0.2px">SENIOR REFERRER</div>
-                  <div id="prevSeniorName" style="font-size:10px;font-weight:900;color:var(--poster-text);text-transform:uppercase;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
+                  <div id="prevSeniorName" style="font-size:9.5px;font-weight:900;color:var(--poster-text);text-transform:uppercase;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
                 </div>
                 
                 <!-- Today's Earning Block -->
-                <div style="display:flex;flex-direction:column;text-align:center;flex:0.9">
+                <div style="display:flex;flex-direction:column;text-align:center;flex:0.8">
                   <div style="font-size:7px;font-weight:850;color:var(--poster-text);opacity:0.85;letter-spacing:0.2px">TODAY'S EARNING</div>
-                  <div id="prevSeniorToday" style="font-size:11.5px;font-weight:950;color:var(--poster-accent);text-transform:uppercase;line-height:1.2">₹0/-</div>
+                  <div id="prevSeniorToday" style="font-size:10.5px;font-weight:950;color:var(--poster-accent);text-transform:uppercase;line-height:1.2">₹0/-</div>
                 </div>
                 
                 <!-- Overall Earnings Block -->
-                <div style="display:flex;flex-direction:column;text-align:right;flex:1.1">
+                <div style="display:flex;flex-direction:column;text-align:center;flex:0.9">
                   <div style="font-size:7px;font-weight:850;color:var(--poster-text);opacity:0.85;letter-spacing:0.2px">OVERALL EARNING</div>
-                  <div id="prevSeniorEarning" style="font-size:13.5px;font-weight:950;color:#34d399;text-transform:uppercase;line-height:1.2">—</div>
+                  <div id="prevSeniorEarning" style="font-size:10.5px;font-weight:950;color:#34d399;text-transform:uppercase;line-height:1.2">—</div>
+                </div>
+
+                <!-- Potential Earnings Block -->
+                <div style="display:flex;flex-direction:column;text-align:right;flex:1.1">
+                  <div style="font-size:7px;font-weight:850;color:var(--poster-text);opacity:0.85;letter-spacing:0.2px">POTENTIAL EARNING</div>
+                  <div id="prevSeniorPotential" style="font-size:10.5px;font-weight:950;color:#fb923c;text-transform:uppercase;line-height:1.2">₹0/-</div>
                 </div>
               </div>
 
