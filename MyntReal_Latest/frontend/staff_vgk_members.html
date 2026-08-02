@@ -5257,18 +5257,11 @@ function shareOnWhatsApp() {
   const prevSeniorPot = document.getElementById('prevSeniorPotential');
   const seniorPotential = prevSeniorPot ? prevSeniorPot.textContent.trim() : '₹0/-';
 
-  const partnerFiles = document.getElementById('prevFiles').textContent.trim();
-  const partnerTeam = document.getElementById('prevOverall').textContent.trim();
-  const partnerBreakdown = document.getElementById('prevTeamBreakup').textContent.trim();
-
   let text = `🎉 *CONGRATULATIONS!* 🎉\n\n`;
   text += `🌟 *Member Achievement:* 🌟\n`;
   text += `👤 *Name:* ${partnerName}\n`;
   text += `💰 *Today's Earning:* ${partnerToday}\n`;
   text += `📈 *Overall Earning:* ${partnerOverall}\n`;
-  text += `📁 *Completed Files:* ${partnerFiles}\n`;
-  text += `👥 *Team Members:* ${partnerTeam}\n`;
-  text += `📊 *Team Breakdown:* ${partnerBreakdown}\n`;
   text += `🔮 *Potential Valuation:* ${partnerPotential}\n`;
 
   // Only add Senior details if a valid senior referrer exists (not empty/dash/none)
