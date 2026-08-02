@@ -4932,12 +4932,12 @@ async function generateMemberPoster(partnerId) {
         seniorImg.onerror = () => {
           seniorImg.style.display = 'none';
           seniorAvatar.style.display = 'flex';
-          seniorAvatar.textContent = (m.senior_name || 'SR').trim().split(/\\s+/).map(p=>p[0]).join('').slice(0,2).toUpperCase();
+          seniorAvatar.textContent = (m.senior_name || 'SR').trim().split(/\s+/).map(p=>p[0]).join('').slice(0,2).toUpperCase();
         };
       } else {
         seniorImg.style.display = 'none';
         seniorAvatar.style.display = 'flex';
-        seniorAvatar.textContent = (m.senior_name || 'SR').trim().split(/\\s+/).map(p=>p[0]).join('').slice(0,2).toUpperCase();
+        seniorAvatar.textContent = (m.senior_name || 'SR').trim().split(/\s+/).map(p=>p[0]).join('').slice(0,2).toUpperCase();
       }
     }
     
@@ -6167,9 +6167,9 @@ function _renderCommDetailTable(partnerId) {
             <div id="prevSeniorRow" style="border-top:1.5px solid rgba(251,191,36,0.3);padding-top:3px;display:flex;align-items:center;gap:10px">
               
               <!-- Senior Referrer Photo Frame -->
-              <div style="width:50px;height:50px;border-radius:50%;border:1.5px solid var(--poster-accent);box-shadow:0 0 4px rgba(251,191,36,0.25);overflow:hidden;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0">
+              <div style="width:65px;height:65px;border-radius:50%;border:2px solid var(--poster-accent);box-shadow:0 0 6px rgba(251,191,36,0.3);overflow:hidden;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0">
                 <img id="prevSeniorImg" src="" style="width:100%;height:100%;object-fit:cover;display:none" crossorigin="anonymous">
-                <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#3b82f6,#7c3aed);color:white;font-size:12px;font-weight:900">SR</div>
+                <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#3b82f6,#7c3aed);color:white;font-size:18px;font-weight:900">SR</div>
               </div>
 
               <!-- Senior Referrer Details Row -->
