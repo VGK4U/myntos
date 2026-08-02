@@ -10,7 +10,7 @@
  * This ensures mobile-in-browser always matches web data.
  */
 
-const PRODUCTION_DOMAIN = 'mnrteam.com';
+const PRODUCTION_DOMAIN = 'www.vgk4u.com';
 const DEVELOPMENT_DOMAIN = '5305e65f-c4f9-487a-b990-7fdd5e743de1-00-2fjho41r6u5wb.worf.replit.dev';
 
 function isDevMode(): boolean {
