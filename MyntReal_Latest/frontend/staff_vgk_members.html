@@ -5257,12 +5257,19 @@ function shareOnWhatsApp() {
   const prevSeniorPot = document.getElementById('prevSeniorPotential');
   const seniorPotential = prevSeniorPot ? prevSeniorPot.textContent.trim() : '₹0/-';
 
+  const partnerFiles = document.getElementById('prevFiles').textContent.trim();
+  const partnerTeam = document.getElementById('prevOverall').textContent.trim();
+  const partnerBreakdown = document.getElementById('prevTeamBreakup').textContent.trim();
+
   let text = `🎉 *CONGRATULATIONS!* 🎉\n\n`;
   text += `🌟 *Member Achievement:* 🌟\n`;
   text += `👤 *Name:* ${partnerName}\n`;
   text += `💰 *Today's Earning:* ${partnerToday}\n`;
   text += `📈 *Overall Earning:* ${partnerOverall}\n`;
-  text += `🔮 *Potential Earning:* ${partnerPotential}\n`;
+  text += `📁 *Completed Files:* ${partnerFiles}\n`;
+  text += `👥 *Team Members:* ${partnerTeam}\n`;
+  text += `📊 *Team Breakdown:* ${partnerBreakdown}\n`;
+  text += `🔮 *Potential Valuation:* ${partnerPotential}\n`;
 
   // Only add Senior details if a valid senior referrer exists (not empty/dash/none)
   if (seniorName && seniorName !== '—' && seniorName !== 'NONE') {
@@ -5280,14 +5287,14 @@ function shareOnWhatsApp() {
   // Open the window immediately to bypass browser popup blockers
   const shareWindow = window.open('', '_blank');
   if (shareWindow) {
-    shareWindow.document.write('<html><head><title>Loading WhatsApp...</title><style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f3f4f6;color:#374151;} .loader{border:4px solid #e5e7eb;border-top:4px solid #25d366;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin-bottom:16px;} @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style></head><body><div style="text-align:center"><div class="loader" style="margin:0 auto 16px;"></div><div>Preparing your WhatsApp share... Please wait.</div></div></body></html>');
+    shareWindow.document.write('<html><head><title>Loading WhatsApp...</title><style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f3f4f6;color:#374151;} .loader{border:4px solid #e5e7eb;border-top:4px solid #25d366;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin-bottom:16px;} @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style></head><body><div style="text-align:center"><div class="loader" style="margin:0 auto 16px;"></div><div>Preparing your WhatsApp share & download... Please wait.</div></div></body></html>');
   }
 
   const spinner = document.getElementById('posterSpinner');
   if (spinner) {
     spinner.style.display = 'flex';
     const spText = spinner.querySelector('div div');
-    if (spText) spText.textContent = 'Preparing WhatsApp share...';
+    if (spText) spText.textContent = 'Preparing WhatsApp share & download...';
   }
 
   html2canvas(container, {
@@ -5296,6 +5303,16 @@ function shareOnWhatsApp() {
     backgroundColor: null
   }).then(canvas => {
     if (spinner) spinner.style.display = 'none';
+    
+    // Automatically trigger image download
+    try {
+      const link = document.createElement('a');
+      link.download = `${partnerName.replace(/\s+/g, '_')}_Achievement_Poster.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (downloadErr) {
+      console.error('Auto download failed:', downloadErr);
+    }
     
     canvas.toBlob(async (blob) => {
       if (!blob) {
@@ -5310,7 +5327,7 @@ function shareOnWhatsApp() {
           await navigator.clipboard.write([
             new ClipboardItem({ 'image/png': blob })
           ]);
-          alert('Poster image copied to clipboard! You can paste (Cmd+V / Ctrl+V) the image directly inside the WhatsApp chat.');
+          alert('Poster image downloaded and copied to clipboard! You can paste (Cmd+V / Ctrl+V) the image directly inside the WhatsApp chat.');
         }
       } catch (err) {
         console.warn('Clipboard write failed:', err);
