@@ -403,8 +403,10 @@
 
         .split-image-panel {
             flex: 0 0 55%;
-            background-size: cover;
+            background-size: contain;
+            background-repeat: no-repeat;
             background-position: center;
+            background-color: #0f172a;
             position: relative;
         }
 
@@ -1590,6 +1592,55 @@
             color: #10b981;
             margin-bottom: 12px;
         }
+        /* ── Lightbox Modal Styles ────────────────────────────── */
+        .lightbox-modal {
+            display: none;
+            position: fixed;
+            z-index: 99999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(11, 15, 25, 0.95);
+            backdrop-filter: blur(8px);
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+        .lightbox-content {
+            max-width: 90%;
+            max-height: 85%;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            border: 2px solid rgba(255,255,255,0.1);
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        .lightbox-modal.active .lightbox-content {
+            transform: scale(1);
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 24px;
+            right: 32px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.2s;
+            z-index: 100000;
+        }
+        .lightbox-close:hover {
+            color: var(--primary);
+        }
+        .lightbox-caption {
+            position: absolute;
+            bottom: 24px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -2329,6 +2380,9 @@
                 if (!json.success) throw new Error(json.message);
                 const s = json.data;
                 const settings = s.settings || {};
+                
+                // Store the loaded video URL globally
+                window._campaignVideoUrl = settings.youtube_video_url || '';
 
                 // Theme classification
                 let theme = settings.color_theme || 'auto';
@@ -2487,8 +2541,9 @@
 
                         const titleText = displayTitles[idx] || '';
                         const sizeClass = displaySizes[idx] || 'banner';
+                        const safeTitle = titleText.replace(/'/g, "\\'");
                         galleryGrid.innerHTML += `
-                            <div class="widescreen-gallery-card ${sizeClass}">
+                            <div class="widescreen-gallery-card ${sizeClass}" onclick="openLightbox('/storage/${img}', '${safeTitle}')" style="cursor:pointer">
                                 <img src="/storage/${img}" alt="${titleText || 'Campaign Showcase'}">
                                 ${titleText ? `<div class="gallery-card-title">${titleText}</div>` : ''}
                             </div>`;
@@ -2529,7 +2584,8 @@
                         }
                         let idx = 0;
                         while (galleryGrid.children.length < 12) {
-                            galleryGrid.innerHTML += `<div class="widescreen-gallery-card"><img src="${fallbacks[idx % fallbacks.length]}" alt="Thematic Showcase"></div>`;
+                            const fallbackUrl = fallbacks[idx % fallbacks.length];
+                            galleryGrid.innerHTML += `<div class="widescreen-gallery-card" onclick="openLightbox('${fallbackUrl}', 'Thematic Showcase')" style="cursor:pointer"><img src="${fallbackUrl}" alt="Thematic Showcase"></div>`;
                             idx++;
                         }
                     }
@@ -2764,14 +2820,47 @@
             }
         }
 
+        window._campaignVideoUrl = '';
+
         function playMockVideo() {
             document.querySelector('.video-cover-backdrop').style.display = 'none';
             const frame = document.getElementById('mockVideoFrame');
             frame.style.display = 'flex';
+            
+            const ytUrl = window._campaignVideoUrl || '';
+            const embedUrl = getYoutubeEmbedUrl(ytUrl);
+            
             setTimeout(() => {
-                frame.innerHTML = `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="border:none"></iframe>`;
-            }, 1000);
+                if (embedUrl) {
+                    frame.innerHTML = `<iframe src="${embedUrl}?autoplay=1" style="position: absolute; top:0; left:0; width:100%; height:100%; border:0;" allowfullscreen></iframe>`;
+                } else {
+                    frame.innerHTML = `<div style="color:#fff;text-align:center;padding:40px;display:flex;align-items:center;justify-content:center;width:100%;height:100%"><i class="fas fa-circle-info fa-2x mb-2 text-warning"></i><div>No Promotional Video Available</div></div>`;
+                }
+            }, 500);
         }
+
+        // Lightbox Functions
+        window.openLightbox = function(src, alt) {
+            const lightbox = document.getElementById('galleryLightbox');
+            const img = document.getElementById('lightboxImage');
+            const caption = document.getElementById('lightboxCaption');
+            if (lightbox && img && caption) {
+                img.src = src;
+                caption.textContent = alt || '';
+                lightbox.style.display = 'flex';
+                setTimeout(() => lightbox.classList.add('active'), 10);
+            }
+        };
+
+        window.closeLightbox = function(e) {
+            if (e.target.id === 'galleryLightbox' || e.target.classList.contains('lightbox-close')) {
+                const lightbox = document.getElementById('galleryLightbox');
+                if (lightbox) {
+                    lightbox.classList.remove('active');
+                    setTimeout(() => lightbox.style.display = 'none', 300);
+                }
+            }
+        };
 
         // Testimonial Carousel Auto Rotation
         let activeTestimonial = 0;
@@ -2997,5 +3086,11 @@
             document.getElementById('rechargeSuccessWrap').style.display = 'block';
         }
     </script>
+    <!-- Image Lightbox Modal -->
+    <div id="galleryLightbox" class="lightbox-modal" onclick="closeLightbox(event)">
+        <span class="lightbox-close" onclick="closeLightbox(event)">&times;</span>
+        <img class="lightbox-content" id="lightboxImage">
+        <div id="lightboxCaption" class="lightbox-caption"></div>
+    </div>
 </body>
 </html>
