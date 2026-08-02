@@ -1096,22 +1096,38 @@
             preview.innerHTML = '';
             selectedBanners.forEach((file, idx) => {
                 const div = document.createElement('div');
-                div.className = 'position-relative d-inline-block text-center';
+                div.className = 'position-relative d-inline-block text-center bg-white p-2 border rounded shadow-sm';
                 div.style.margin = '10px 5px';
-                div.style.width = '100px';
+                div.style.width = '140px';
                 const imgUrl = URL.createObjectURL(file);
                 const titleVal = file.title || '';
                 const sizeVal = file.display_size || 'banner';
+                const sectionVal = file.section_target || 'gallery';
                 div.innerHTML = `
-                    <img src="${imgUrl}" style="width: 90px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color);">
-                    <button type="button" class="btn btn-danger position-absolute top-0 end-0 p-0" style="width:18px;height:18px;font-size:10px;line-height:1;border-radius:50%" onclick="removeBanner(${idx})">×</button>
-                    <input type="text" placeholder="Image Title" class="form-control form-control-sm mt-1 banner-title-input" style="font-size: 9px; padding: 2px; height: 20px;" data-idx="${idx}" value="${escapeHtml(titleVal)}" onchange="selectedBanners[${idx}].title = this.value">
-                    <select class="form-select form-select-sm mt-1 banner-size-select" style="font-size: 9px; padding: 2px; height: 20px;" onchange="selectedBanners[${idx}].display_size = this.value">
-                        <option value="banner" ${sizeVal === 'banner' ? 'selected' : ''}>Banner (16:9 - 1920x1080)</option>
-                        <option value="square" ${sizeVal === 'square' ? 'selected' : ''}>Square (1:1 - 1000x1000)</option>
-                        <option value="story" ${sizeVal === 'story' ? 'selected' : ''}>Story (9:16 - 1080x1920)</option>
-                    </select>
-                    <div style="font-size: 8px; color: #6c757d; margin-top: 2px; font-weight: bold;">${formatBytes(file.size)}</div>
+                    <div style="width: 124px; height: 80px; overflow: hidden; border-radius: 4px; border: 1px solid var(--border-color); margin: 0 auto; background: #eee;">
+                        <img src="${imgUrl}" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <button type="button" class="btn btn-danger position-absolute top-0 end-0 p-0" style="width:20px;height:20px;font-size:12px;line-height:1;border-radius:50%;margin:2px;" onclick="removeBanner(${idx})">×</button>
+                    
+                    <div class="mt-2 d-flex flex-column gap-1">
+                        <input type="text" placeholder="Image Title" class="form-control form-control-sm banner-title-input" style="font-size: 9px; padding: 2px; height: 20px;" data-idx="${idx}" value="${escapeHtml(titleVal)}" onchange="selectedBanners[${idx}].title = this.value">
+                        
+                        <div style="font-size: 8px; color: #6c757d; font-weight: 700; text-align: left; margin-left: 2px; margin-top: 2px;">LAYOUT SIZE:</div>
+                        <select class="form-select form-select-sm banner-size-select" style="font-size: 9px; padding: 1px 3px; height: 20px; border-radius: 3px;" onchange="selectedBanners[${idx}].display_size = this.value">
+                            <option value="banner" ${sizeVal === 'banner' ? 'selected' : ''}>Banner (16:9)</option>
+                            <option value="square" ${sizeVal === 'square' ? 'selected' : ''}>Square (1:1)</option>
+                            <option value="story" ${sizeVal === 'story' ? 'selected' : ''}>Story (9:16)</option>
+                        </select>
+                        
+                        <div style="font-size: 8px; color: #6c757d; font-weight: 700; text-align: left; margin-left: 2px; margin-top: 2px;">TARGET SECTION:</div>
+                        <select class="form-select form-select-sm banner-section-select" style="font-size: 9px; padding: 1px 3px; height: 20px; border-radius: 3px;" onchange="selectedBanners[${idx}].section_target = this.value">
+                            <option value="gallery" ${sectionVal === 'gallery' ? 'selected' : ''}>Gallery Grid</option>
+                            <option value="hero" ${sectionVal === 'hero' ? 'selected' : ''}>Hero Background</option>
+                            <option value="video" ${sectionVal === 'video' ? 'selected' : ''}>Video Cover Photo</option>
+                        </select>
+                        
+                        <div style="font-size: 8px; color: #6c757d; margin-top: 2px; font-weight: bold;">${formatBytes(file.size)}</div>
+                    </div>
                 `;
                 preview.appendChild(div);
             });
@@ -1151,7 +1167,8 @@
                 color_theme: document.getElementById('create_opt_color_theme').value,
                 primary_color: document.getElementById('create_opt_primary_color').value,
                 accent_color: document.getElementById('create_opt_accent_color').value,
-                bg_color: document.getElementById('create_opt_bg_color').value
+                bg_color: document.getElementById('create_opt_bg_color').value,
+                banner_sections: selectedBanners.map(f => f.section_target || 'gallery')
             };
             formData.append('settings', JSON.stringify(settings));
 
@@ -1351,6 +1368,7 @@
         let editRetainedBanners = [];
         let editRetainedTitles = [];
         let editRetainedSizes = [];
+        let editRetainedSections = [];
 
         window.openEditServiceModal = function(s) {
             document.getElementById('edit_service_id').value = s.id;
@@ -1400,6 +1418,10 @@
             while (editRetainedSizes.length < editRetainedBanners.length) {
                 editRetainedSizes.push('banner');
             }
+            editRetainedSections = (settings && settings.banner_sections) || [];
+            while (editRetainedSections.length < editRetainedBanners.length) {
+                editRetainedSections.push('gallery');
+            }
             renderExistingBanners();
 
             editSelectedBanners = [];
@@ -1416,20 +1438,35 @@
             container.innerHTML = '';
             editRetainedBanners.forEach((b, idx) => {
                 const div = document.createElement('div');
-                div.className = 'position-relative d-inline-block text-center';
+                div.className = 'position-relative d-inline-block text-center bg-white p-2 border rounded shadow-sm';
                 div.style.margin = '10px 5px';
-                div.style.width = '100px';
+                div.style.width = '140px';
                 const titleVal = editRetainedTitles[idx] || '';
                 const sizeVal = editRetainedSizes[idx] || 'banner';
+                const sectionVal = editRetainedSections[idx] || 'gallery';
                 div.innerHTML = `
-                    <img src="/storage/${b}" style="width: 90px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color);">
-                    <button type="button" class="btn btn-danger position-absolute top-0 end-0 p-0" style="width:18px;height:18px;font-size:10px;line-height:1;border-radius:50%" onclick="removeRetainedBanner(${idx})">×</button>
-                    <input type="text" placeholder="Image Title" class="form-control form-control-sm mt-1 edit-retained-banner-title-input" style="font-size: 9px; padding: 2px; height: 20px;" data-idx="${idx}" value="${escapeHtml(titleVal)}" onchange="editRetainedTitles[${idx}] = this.value">
-                    <select class="form-select form-select-sm mt-1 edit-retained-banner-size-select" style="font-size: 9px; padding: 2px; height: 20px;" onchange="editRetainedSizes[${idx}] = this.value">
-                        <option value="banner" ${sizeVal === 'banner' ? 'selected' : ''}>Banner (16:9 - 1920x1080)</option>
-                        <option value="square" ${sizeVal === 'square' ? 'selected' : ''}>Square (1:1 - 1000x1000)</option>
-                        <option value="story" ${sizeVal === 'story' ? 'selected' : ''}>Story (9:16 - 1080x1920)</option>
-                    </select>
+                    <div style="width: 124px; height: 80px; overflow: hidden; border-radius: 4px; border: 1px solid var(--border-color); margin: 0 auto; background: #eee;">
+                        <img src="/storage/${b}" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <button type="button" class="btn btn-danger position-absolute top-0 end-0 p-0" style="width:20px;height:20px;font-size:12px;line-height:1;border-radius:50%;margin:2px;" onclick="removeRetainedBanner(${idx})">×</button>
+                    
+                    <div class="mt-2 d-flex flex-column gap-1">
+                        <input type="text" placeholder="Image Title" class="form-control form-control-sm edit-retained-banner-title-input" style="font-size: 9px; padding: 2px; height: 20px;" data-idx="${idx}" value="${escapeHtml(titleVal)}" onchange="editRetainedTitles[${idx}] = this.value">
+                        
+                        <div style="font-size: 8px; color: #6c757d; font-weight: 700; text-align: left; margin-left: 2px; margin-top: 2px;">LAYOUT SIZE:</div>
+                        <select class="form-select form-select-sm edit-retained-banner-size-select" style="font-size: 9px; padding: 1px 3px; height: 20px; border-radius: 3px;" onchange="editRetainedSizes[idx] = this.value">
+                            <option value="banner" ${sizeVal === 'banner' ? 'selected' : ''}>Banner (16:9)</option>
+                            <option value="square" ${sizeVal === 'square' ? 'selected' : ''}>Square (1:1)</option>
+                            <option value="story" ${sizeVal === 'story' ? 'selected' : ''}>Story (9:16)</option>
+                        </select>
+                        
+                        <div style="font-size: 8px; color: #6c757d; font-weight: 700; text-align: left; margin-left: 2px; margin-top: 2px;">TARGET SECTION:</div>
+                        <select class="form-select form-select-sm edit-retained-banner-section-select" style="font-size: 9px; padding: 1px 3px; height: 20px; border-radius: 3px;" onchange="editRetainedSections[idx] = this.value">
+                            <option value="gallery" ${sectionVal === 'gallery' ? 'selected' : ''}>Gallery Grid</option>
+                            <option value="hero" ${sectionVal === 'hero' ? 'selected' : ''}>Hero Background</option>
+                            <option value="video" ${sectionVal === 'video' ? 'selected' : ''}>Video Cover Photo</option>
+                        </select>
+                    </div>
                 `;
                 container.appendChild(div);
             });
@@ -1438,6 +1475,7 @@
             editRetainedBanners.splice(idx, 1);
             editRetainedTitles.splice(idx, 1);
             editRetainedSizes.splice(idx, 1);
+            editRetainedSections.splice(idx, 1);
             renderExistingBanners();
         };
 
@@ -1459,22 +1497,38 @@
             preview.innerHTML = '';
             editSelectedBanners.forEach((file, idx) => {
                 const div = document.createElement('div');
-                div.className = 'position-relative d-inline-block text-center';
+                div.className = 'position-relative d-inline-block text-center bg-white p-2 border rounded shadow-sm';
                 div.style.margin = '10px 5px';
-                div.style.width = '100px';
+                div.style.width = '140px';
                 const imgUrl = URL.createObjectURL(file);
                 const titleVal = file.title || '';
                 const sizeVal = file.display_size || 'banner';
+                const sectionVal = file.section_target || 'gallery';
                 div.innerHTML = `
-                    <img src="${imgUrl}" style="width: 90px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color);">
-                    <button type="button" class="btn btn-danger position-absolute top-0 end-0 p-0" style="width:18px;height:18px;font-size:10px;line-height:1;border-radius:50%" onclick="removeEditBanner(${idx})">×</button>
-                    <input type="text" placeholder="Image Title" class="form-control form-control-sm mt-1 edit-banner-title-input" style="font-size: 9px; padding: 2px; height: 20px;" data-idx="${idx}" value="${escapeHtml(titleVal)}" onchange="editSelectedBanners[${idx}].title = this.value">
-                    <select class="form-select form-select-sm mt-1 edit-banner-size-select" style="font-size: 9px; padding: 2px; height: 20px;" onchange="editSelectedBanners[${idx}].display_size = this.value">
-                        <option value="banner" ${sizeVal === 'banner' ? 'selected' : ''}>Banner (16:9 - 1920x1080)</option>
-                        <option value="square" ${sizeVal === 'square' ? 'selected' : ''}>Square (1:1 - 1000x1000)</option>
-                        <option value="story" ${sizeVal === 'story' ? 'selected' : ''}>Story (9:16 - 1080x1920)</option>
-                    </select>
-                    <div style="font-size: 8px; color: #6c757d; margin-top: 2px; font-weight: bold;">${formatBytes(file.size)}</div>
+                    <div style="width: 124px; height: 80px; overflow: hidden; border-radius: 4px; border: 1px solid var(--border-color); margin: 0 auto; background: #eee;">
+                        <img src="${imgUrl}" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <button type="button" class="btn btn-danger position-absolute top-0 end-0 p-0" style="width:20px;height:20px;font-size:12px;line-height:1;border-radius:50%;margin:2px;" onclick="removeEditBanner(${idx})">×</button>
+                    
+                    <div class="mt-2 d-flex flex-column gap-1">
+                        <input type="text" placeholder="Image Title" class="form-control form-control-sm edit-banner-title-input" style="font-size: 9px; padding: 2px; height: 20px;" data-idx="${idx}" value="${escapeHtml(titleVal)}" onchange="editSelectedBanners[${idx}].title = this.value">
+                        
+                        <div style="font-size: 8px; color: #6c757d; font-weight: 700; text-align: left; margin-left: 2px; margin-top: 2px;">LAYOUT SIZE:</div>
+                        <select class="form-select form-select-sm edit-banner-size-select" style="font-size: 9px; padding: 1px 3px; height: 20px; border-radius: 3px;" onchange="editSelectedBanners[${idx}].display_size = this.value">
+                            <option value="banner" ${sizeVal === 'banner' ? 'selected' : ''}>Banner (16:9)</option>
+                            <option value="square" ${sizeVal === 'square' ? 'selected' : ''}>Square (1:1)</option>
+                            <option value="story" ${sizeVal === 'story' ? 'selected' : ''}>Story (9:16)</option>
+                        </select>
+                        
+                        <div style="font-size: 8px; color: #6c757d; font-weight: 700; text-align: left; margin-left: 2px; margin-top: 2px;">TARGET SECTION:</div>
+                        <select class="form-select form-select-sm edit-banner-section-select" style="font-size: 9px; padding: 1px 3px; height: 20px; border-radius: 3px;" onchange="editSelectedBanners[${idx}].section_target = this.value">
+                            <option value="gallery" ${sectionVal === 'gallery' ? 'selected' : ''}>Gallery Grid</option>
+                            <option value="hero" ${sectionVal === 'hero' ? 'selected' : ''}>Hero Background</option>
+                            <option value="video" ${sectionVal === 'video' ? 'selected' : ''}>Video Cover Photo</option>
+                        </select>
+                        
+                        <div style="font-size: 8px; color: #6c757d; margin-top: 2px; font-weight: bold;">${formatBytes(file.size)}</div>
+                    </div>
                 `;
                 preview.appendChild(div);
             });
@@ -1529,7 +1583,8 @@
                 color_theme: document.getElementById('edit_opt_color_theme').value,
                 primary_color: document.getElementById('edit_opt_primary_color').value,
                 accent_color: document.getElementById('edit_opt_accent_color').value,
-                bg_color: document.getElementById('edit_opt_bg_color').value
+                bg_color: document.getElementById('edit_opt_bg_color').value,
+                banner_sections: [...editRetainedSections, ...editSelectedBanners.map(f => f.section_target || 'gallery')]
             };
             formData.append('settings', JSON.stringify(settings));
 
