@@ -4163,7 +4163,7 @@ def member_earnings_dashboard(
                     "partner_name": info.get("name"),
                     "gross_earned": p_earnings.get(pid, 0.0),
                     "passport_photo": passport_photo_map.get(pid),
-                    "potential_earned": get_partner_potential_earning(db, pid, exclude_l1=True)
+                    "potential_earned": get_partner_potential_earning(db, pid, exclude_l1=False)
                 }
         except Exception:
             pass
