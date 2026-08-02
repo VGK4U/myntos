@@ -8878,7 +8878,8 @@ a{background:#4f46e5;color:white;padding:12px 24px;border-radius:8px;text-decora
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        background: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #ec4899 100%);
+        background-color: #7c3aed !important;
+        background: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #ec4899 100%) !important;
         background-size: 200% 200%;
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-shadow: 0 0 10px rgba(168, 85, 247, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.3);
@@ -8899,13 +8900,15 @@ a{background:#4f46e5;color:white;padding:12px 24px;border-radius:8px;text-decora
     }
 
     .hub-active-badge.theme-eco {
-        background: linear-gradient(135deg, #059669 0%, #10b981 50%, #0d9488 100%);
+        background-color: #059669 !important;
+        background: linear-gradient(135deg, #059669 0%, #10b981 50%, #0d9488 100%) !important;
         box-shadow: 0 0 10px rgba(16, 185, 129, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.3);
         animation: hubGradientShift 4s ease infinite, hubPulseGlowEco 2s infinite alternate;
     }
 
     .hub-active-badge.theme-health {
-        background: linear-gradient(135deg, #dc2626 0%, #ef4444 50%, #f43f5e 100%);
+        background-color: #dc2626 !important;
+        background: linear-gradient(135deg, #dc2626 0%, #ef4444 50%, #f43f5e 100%) !important;
         box-shadow: 0 0 10px rgba(239, 68, 68, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.3);
         animation: hubGradientShift 4s ease infinite, hubPulseGlowHealth 2s infinite alternate;
     }
