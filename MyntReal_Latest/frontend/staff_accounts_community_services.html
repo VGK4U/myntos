@@ -634,6 +634,12 @@
                             <div class="mb-3">
                                 <label class="form-label">Upload Banners / Media (Drag-drop or choose)</label>
                                 <input type="file" class="form-control" id="bannerFiles" multiple onchange="handleBannerFiles(event)">
+                                <small class="text-muted d-block mt-1">
+                                    Recommended Dimensions:
+                                    <span class="badge bg-secondary me-1">Banner (16:9): 1920x1080 px</span>
+                                    <span class="badge bg-secondary me-1">Square (1:1): 1000x1000 px</span>
+                                    <span class="badge bg-secondary">Story (9:16): 1080x1920 px</span>
+                                </small>
                                 <div class="upload-preview-wrap d-flex flex-wrap gap-2 mt-2" id="bannerPreview"></div>
                             </div>
 
@@ -665,13 +671,7 @@
                                     <div class="row g-2 mb-2">
                                       <div class="col-md-6">
                                         <label class="form-label small fw-bold">Color Theme Preset</label>
-                                        <select class="form-select form-select-sm" id="create_opt_color_theme" onchange="toggleCreateCustomColors()">
-                                          <option value="auto">Auto-classify (Default)</option>
-                                          <option value="festive">Festive Gold &amp; Red</option>
-                                          <option value="eco">Eco Green &amp; Fresh</option>
-                                          <option value="health">Health Blue &amp; Clean</option>
-                                          <option value="custom">Custom Color Theme...</option>
-                                        </select>
+                                        <input type="text" class="form-control form-control-sm" id="create_opt_color_theme" oninput="toggleCreateCustomColors()" placeholder="e.g. festive, eco, health, or custom">
                                       </div>
                                     </div>
                                     <div id="create_custom_colors_wrap" style="display:none" class="row g-2">
@@ -1107,9 +1107,9 @@
                     <button type="button" class="btn btn-danger position-absolute top-0 end-0 p-0" style="width:18px;height:18px;font-size:10px;line-height:1;border-radius:50%" onclick="removeBanner(${idx})">×</button>
                     <input type="text" placeholder="Image Title" class="form-control form-control-sm mt-1 banner-title-input" style="font-size: 9px; padding: 2px; height: 20px;" data-idx="${idx}" value="${escapeHtml(titleVal)}" onchange="selectedBanners[${idx}].title = this.value">
                     <select class="form-select form-select-sm mt-1 banner-size-select" style="font-size: 9px; padding: 2px; height: 20px;" onchange="selectedBanners[${idx}].display_size = this.value">
-                        <option value="banner" ${sizeVal === 'banner' ? 'selected' : ''}>Banner (16:9)</option>
-                        <option value="square" ${sizeVal === 'square' ? 'selected' : ''}>Square (1:1)</option>
-                        <option value="story" ${sizeVal === 'story' ? 'selected' : ''}>Story (9:16)</option>
+                        <option value="banner" ${sizeVal === 'banner' ? 'selected' : ''}>Banner (16:9 - 1920x1080)</option>
+                        <option value="square" ${sizeVal === 'square' ? 'selected' : ''}>Square (1:1 - 1000x1000)</option>
+                        <option value="story" ${sizeVal === 'story' ? 'selected' : ''}>Story (9:16 - 1080x1920)</option>
                     </select>
                     <div style="font-size: 8px; color: #6c757d; margin-top: 2px; font-weight: bold;">${formatBytes(file.size)}</div>
                 `;
@@ -1426,9 +1426,9 @@
                     <button type="button" class="btn btn-danger position-absolute top-0 end-0 p-0" style="width:18px;height:18px;font-size:10px;line-height:1;border-radius:50%" onclick="removeRetainedBanner(${idx})">×</button>
                     <input type="text" placeholder="Image Title" class="form-control form-control-sm mt-1 edit-retained-banner-title-input" style="font-size: 9px; padding: 2px; height: 20px;" data-idx="${idx}" value="${escapeHtml(titleVal)}" onchange="editRetainedTitles[${idx}] = this.value">
                     <select class="form-select form-select-sm mt-1 edit-retained-banner-size-select" style="font-size: 9px; padding: 2px; height: 20px;" onchange="editRetainedSizes[${idx}] = this.value">
-                        <option value="banner" ${sizeVal === 'banner' ? 'selected' : ''}>Banner (16:9)</option>
-                        <option value="square" ${sizeVal === 'square' ? 'selected' : ''}>Square (1:1)</option>
-                        <option value="story" ${sizeVal === 'story' ? 'selected' : ''}>Story (9:16)</option>
+                        <option value="banner" ${sizeVal === 'banner' ? 'selected' : ''}>Banner (16:9 - 1920x1080)</option>
+                        <option value="square" ${sizeVal === 'square' ? 'selected' : ''}>Square (1:1 - 1000x1000)</option>
+                        <option value="story" ${sizeVal === 'story' ? 'selected' : ''}>Story (9:16 - 1080x1920)</option>
                     </select>
                 `;
                 container.appendChild(div);
@@ -1470,9 +1470,9 @@
                     <button type="button" class="btn btn-danger position-absolute top-0 end-0 p-0" style="width:18px;height:18px;font-size:10px;line-height:1;border-radius:50%" onclick="removeEditBanner(${idx})">×</button>
                     <input type="text" placeholder="Image Title" class="form-control form-control-sm mt-1 edit-banner-title-input" style="font-size: 9px; padding: 2px; height: 20px;" data-idx="${idx}" value="${escapeHtml(titleVal)}" onchange="editSelectedBanners[${idx}].title = this.value">
                     <select class="form-select form-select-sm mt-1 edit-banner-size-select" style="font-size: 9px; padding: 2px; height: 20px;" onchange="editSelectedBanners[${idx}].display_size = this.value">
-                        <option value="banner" ${sizeVal === 'banner' ? 'selected' : ''}>Banner (16:9)</option>
-                        <option value="square" ${sizeVal === 'square' ? 'selected' : ''}>Square (1:1)</option>
-                        <option value="story" ${sizeVal === 'story' ? 'selected' : ''}>Story (9:16)</option>
+                        <option value="banner" ${sizeVal === 'banner' ? 'selected' : ''}>Banner (16:9 - 1920x1080)</option>
+                        <option value="square" ${sizeVal === 'square' ? 'selected' : ''}>Square (1:1 - 1000x1000)</option>
+                        <option value="story" ${sizeVal === 'story' ? 'selected' : ''}>Story (9:16 - 1080x1920)</option>
                     </select>
                     <div style="font-size: 8px; color: #6c757d; margin-top: 2px; font-weight: bold;">${formatBytes(file.size)}</div>
                 `;
@@ -1847,6 +1847,12 @@
               <div class="mb-3">
                 <label class="form-label fw-bold">Upload New Banners / Media</label>
                 <input type="file" class="form-control" id="editBannerFiles" multiple onchange="handleEditBannerFiles(event)">
+                <small class="text-muted d-block mt-1">
+                    Recommended Dimensions:
+                    <span class="badge bg-secondary me-1">Banner (16:9): 1920x1080 px</span>
+                    <span class="badge bg-secondary me-1">Square (1:1): 1000x1000 px</span>
+                    <span class="badge bg-secondary">Story (9:16): 1080x1920 px</span>
+                </small>
                 <div class="upload-preview-wrap d-flex flex-wrap gap-2 mt-2" id="editBannerPreview"></div>
               </div>
 
@@ -1883,13 +1889,7 @@
                       <div class="row g-2 mb-2">
                         <div class="col-md-6">
                           <label class="form-label small fw-bold">Color Theme Preset</label>
-                          <select class="form-select form-select-sm" id="edit_opt_color_theme" onchange="toggleEditCustomColors()">
-                            <option value="auto">Auto-classify (Default)</option>
-                            <option value="festive">Festive Gold &amp; Red</option>
-                            <option value="eco">Eco Green &amp; Fresh</option>
-                            <option value="health">Health Blue &amp; Clean</option>
-                            <option value="custom">Custom Color Theme...</option>
-                          </select>
+                          <input type="text" class="form-control form-control-sm" id="edit_opt_color_theme" oninput="toggleEditCustomColors()" placeholder="e.g. festive, eco, health, or custom">
                         </div>
                       </div>
                       <div id="edit_custom_colors_wrap" style="display:none" class="row g-2">
