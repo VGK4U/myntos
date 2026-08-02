@@ -1262,8 +1262,12 @@ class MNRApp {
 
 (window as any).routerService = routerService;
 
-document.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    new MNRApp();
+  });
+} else {
   new MNRApp();
-});
+}
 
 export { MNRApp };
