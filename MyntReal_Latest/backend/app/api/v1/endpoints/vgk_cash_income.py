@@ -1242,11 +1242,29 @@ def unified_action(
 
             # For non-ADVANCE/non-SLAB_BONUS entries coming from PENDING: apply admin/TDS/wallet deduction now
             # ADVANCE and SLAB_BONUS pre-compute wallet at creation; no deduction needed here.
-            if entry.kind not in ('ADVANCE', 'SLAB_BONUS') and entry.status == 'PENDING':
+            if entry.kind not in ('ADVANCE', 'SLAB_BONUS', 'DVR_ADVANCE') and entry.status == 'PENDING':
                 inner_rel = release_cash_income(db, entry_id, entry.company_id, current_employee.id, notes)
                 if not inner_rel.get('success'):
                     raise HTTPException(status_code=400, detail=inner_rel.get('error', 'Wallet deduction at Stage1 failed'))
                 post_jv_release(db, entry, current_employee.id)
+                db.flush(); db.refresh(entry)
+            elif entry.kind in ('ADVANCE', 'DVR_ADVANCE') and entry.status == 'PENDING':
+                if entry.kind == 'ADVANCE':
+                    from app.services.vgk_solar_advance import release_advance as _rel_adv
+                    inner_rel = _rel_adv(
+                        db=db, lead_id=entry.source_lead_id,
+                        released_by_id=current_employee.id,
+                        notes=notes, _level=entry.level
+                    )
+                else:
+                    from app.services.vgk_solar_advance import release_dvr_advance as _rel_dvr
+                    inner_rel = _rel_dvr(
+                        db=db, lead_id=entry.source_lead_id,
+                        partner_id=entry.partner_id, level=entry.level,
+                        released_by_id=current_employee.id, notes=notes
+                    )
+                if not inner_rel.get('success'):
+                    raise HTTPException(status_code=400, detail=inner_rel.get('error', 'Advance release failed'))
                 db.flush(); db.refresh(entry)
 
             _now = _get_ist()

@@ -1957,6 +1957,7 @@ def record_solar_advance_as_income_row(
         net_payout        = amount - (amount * (ADMIN_CHARGE_PCT + TDS_PCT) / Decimal('100')).quantize(Decimal('0.01')),
         confirmed_by_id   = released_by_id,
         confirmed_at      = _get_ist(),
+        income_date       = _get_ist().date(),
         notes             = _notes,
     )
     db.add(entry)
@@ -2131,6 +2132,7 @@ def record_dvr_advance_as_income_row(
         net_payout              = advance_base - (advance_base * (ADMIN_CHARGE_PCT + TDS_PCT) / Decimal('100')).quantize(Decimal('0.01')),
         confirmed_by_id         = released_by_id,
         confirmed_at            = _get_ist(),
+        income_date             = _get_ist().date(),
         notes                   = _notes,
     )
     db.add(entry)

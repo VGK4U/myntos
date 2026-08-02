@@ -165,35 +165,20 @@ def check_and_create_advance(db: Session, lead_id: int) -> dict:
                 f'lead {lead_id}, partner {partner_id}, stage={pipeline}, CIBIL={score}'
             )
 
-            # DC-VGK-PARTNER-SYNC-001: Auto-release on eligibility (non-blocking)
-            # L1: apply slab bonus; L2: no slab bonus
-            # DC-VGK-PARTNER-SYNC-001: Auto-release on eligibility (non-blocking)
-            # L1: apply slab bonus; L2: no slab bonus
+            # Mirror the advance into vgk_cash_income_entries as PENDING
             try:
-                rel = release_advance(
-                    db=db, lead_id=lead_id,
-                    released_by_id=None,
-                    notes='Auto-released on eligibility (system)',
-                    _level=level,
-                )
-                if rel.get('success'):
-                    logger.info(
-                        f'[VGK-SOLAR-ADV] Auto-RELEASED L{level} {entry_number} '
-                        f'₹{rel.get("wallet_before")} → ₹{rel.get("wallet_after")}'
-                    )
-                else:
-                    logger.warning(
-                        f'[VGK-SOLAR-ADV] Auto-release L{level} {entry_number} failed: '
-                        f'{rel.get("error")}'
-                    )
-            except Exception as _ar:
-                logger.warning(
-                    f'[VGK-SOLAR-ADV] Auto-release exception L{level} {entry_number}: {_ar}'
-                )
-                try:
-                    db.rollback()
-                except Exception:
-                    pass
+                # Fetch the newly created advance row to pass to mirroring
+                adv_row = db.execute(text(
+                    "SELECT id, entry_number, partner_id, lead_id, advance_amount, company_id, COALESCE(level,1) AS level "
+                    "FROM vgk_solar_cibil_advances WHERE entry_number = :en"
+                ), {'en': entry_number}).fetchone()
+                
+                if adv_row:
+                    from app.services.vgk_cash_income import record_solar_advance_as_income_row
+                    record_solar_advance_as_income_row(db, adv_row, released_by_id=None)
+                    db.commit()
+            except Exception as _mr_e:
+                logger.warning(f'[VGK-SOLAR-ADV] Auto-mirror PENDING L{level} failed: {_mr_e}')
 
             created_numbers.append(entry_number)
 
@@ -310,25 +295,20 @@ def check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
                 f'lead {lead_id} partner {partner_id} DVR=₹{float(dvr)}'
             )
 
+            # Mirror the DVR advance into vgk_cash_income_entries as PENDING
             try:
-                rel = release_dvr_advance(
-                    db=db, lead_id=lead_id, partner_id=partner_id, level=level,
-                    released_by_id=None,
-                    notes='Auto-released on DVR confirmation (DC-SOLAR-DVR-ADV-20260701-001)',
-                )
-                if rel.get('success'):
-                    logger.info(
-                        f'[DVR-ADV] Auto-RELEASED L{level} {entry_number} '
-                        f'₹{rel.get("amount_released")}'
-                    )
-                else:
-                    logger.warning(f'[DVR-ADV] Auto-release L{level} {entry_number} failed: {rel.get("error")}')
-            except Exception as _ar:
-                logger.warning(f'[DVR-ADV] Auto-release exception L{level} {entry_number}: {_ar}')
-                try:
-                    db.rollback()
-                except Exception:
-                    pass
+                # Fetch the newly created advance row to pass to mirroring
+                adv_row = db.execute(text(
+                    "SELECT id, entry_number, partner_id, lead_id, advance_amount, company_id, COALESCE(level,1) AS level "
+                    "FROM vgk_solar_cibil_advances WHERE entry_number = :en"
+                ), {'en': entry_number}).fetchone()
+                
+                if adv_row:
+                    from app.services.vgk_cash_income import record_dvr_advance_as_income_row
+                    record_dvr_advance_as_income_row(db, adv_row, released_by_id=None)
+                    db.commit()
+            except Exception as _mr_e:
+                logger.warning(f'[DVR-ADV] Auto-mirror PENDING DVR L{level} failed: {_mr_e}')
 
             created_numbers.append(entry_number)
 
