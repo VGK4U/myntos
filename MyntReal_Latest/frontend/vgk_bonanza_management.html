@@ -667,6 +667,35 @@ tbody tr { background: #ffffff !important; }
         </div>
     </div>
 </div>
+
+<!-- Modal for marking a tier as completed -->
+<div class="modal-overlay" id="mCompleteTierModal">
+    <div class="modal-box" style="max-width: 400px; width: 95%;">
+        <div class="modal-header" style="background:linear-gradient(135deg,#1e3a5f,#0f2440); color:#fff">
+            <h4 style="margin: 0;"><i class="fas fa-check-circle text-success me-2"></i>Mark Tier Complete</h4>
+            <button onclick="closeCompleteTierModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#fff">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 20px;">
+            <input type="hidden" id="completeTierBonanzaId">
+            <input type="hidden" id="completeTierPartnerId">
+            <input type="hidden" id="completeTierNum">
+            
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight:700;font-size:12px;color:#4b5563;display:block;margin-bottom:6px">COMPLETION DATE</label>
+                <input type="date" id="completeTierDate" class="form-control" style="width: 100%; border: 1.5px solid #d1d5db; border-radius: 8px; padding: 8px 12px;">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight:700;font-size:12px;color:#4b5563;display:block;margin-bottom:6px">NOTES / REFERENCE (OPTIONAL)</label>
+                <textarea id="completeTierNotes" class="form-control" placeholder="Add any details, receipt nos, etc..." style="width: 100%; border: 1.5px solid #d1d5db; border-radius: 8px; padding: 8px 12px; height: 60px; resize: none;"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 15px 20px; border-top: 1px solid #e5e7eb;">
+            <button class="btn-secondary-vgk" onclick="closeCompleteTierModal()">Cancel</button>
+            <button class="btn-filter apply" onclick="saveCompleteTier()">Save</button>
+        </div>
+    </div>
+</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/staff_sidebar.js"></script>
@@ -2179,9 +2208,23 @@ function mgmtRenderTracking(d) {
                     } else {
                         doneCell = `<span style="font-weight:700;color:#9ca3af">0</span>`;
                     }
-                    const needCell = (t.gap > 0)
-                        ? `<span style="color:#dc2626;font-weight:600">-${t.gap}</span>`
-                        : `<span style="color:#059669;font-weight:600">✓</span>`;
+                    const isCompleted = t.claim_status === 'Paid' || t.claim_status === 'Delivered';
+                    let needCell = '';
+                    if (isCompleted) {
+                        const formattedDate = t.completed_date ? fmtDate(t.completed_date) : '';
+                        needCell = `<div style="text-align:center">
+                            <span style="background-color:#dcfce7;color:#15803d;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;display:inline-block" title="Completed date">Completed</span>
+                            <div style="font-size:10px;color:#6b7280;margin-top:2px">${formattedDate}</div>
+                            <a href="javascript:void(0)" onclick="openCompleteTierModal(${tier.bonanza_id}, ${md.partner_id}, ${tier.tier_num}, '${t.completed_date || ''}')" style="font-size:10px;color:#2563eb;text-decoration:underline;display:block;margin-top:2px">Edit Date</a>
+                        </div>`;
+                    } else if (t.gap > 0) {
+                        needCell = `<span style="color:#dc2626;font-weight:600">-${t.gap}</span>`;
+                    } else {
+                        needCell = `<div style="text-align:center">
+                            <span style="background-color:#dcfce7;color:#15803d;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;display:inline-block;margin-bottom:4px">Eligible</span>
+                            <button onclick="openCompleteTierModal(${tier.bonanza_id}, ${md.partner_id}, ${tier.tier_num}, '')" class="btn-filter apply" style="padding:2px 8px;font-size:10.5px;display:block;margin:auto;width:auto;height:auto;line-height:normal">Mark Complete</button>
+                        </div>`;
+                    }
                     return `<td style="text-align:center;border-left:1px solid #e5e7eb">${eligCell}</td><td style="text-align:center">${doneCell}</td><td style="text-align:center">${needCell}</td>`;
                 }).join('');
             }
@@ -2319,6 +2362,65 @@ function mgmtRenderTracking(d) {
     _applyMgmtBtnState(_mgmtTrackView);
 }
 // ── End DC-VGK-MEMBER-TRACKING-002 ───────────────────────────────────────────
+
+function openCompleteTierModal(bonanzaId, partnerId, tierNum, currentDate) {
+    document.getElementById('completeTierBonanzaId').value = bonanzaId;
+    document.getElementById('completeTierPartnerId').value = partnerId;
+    document.getElementById('completeTierNum').value = tierNum;
+    
+    const dateInput = document.getElementById('completeTierDate');
+    if (currentDate) {
+        dateInput.value = currentDate;
+    } else {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+    
+    document.getElementById('completeTierNotes').value = '';
+    document.getElementById('mCompleteTierModal').classList.add('open');
+}
+
+function closeCompleteTierModal() {
+    document.getElementById('mCompleteTierModal').classList.remove('open');
+}
+
+async function saveCompleteTier() {
+    const bonanzaId = document.getElementById('completeTierBonanzaId').value;
+    const partnerId = document.getElementById('completeTierPartnerId').value;
+    const tierNum = document.getElementById('completeTierNum').value;
+    const completedDate = document.getElementById('completeTierDate').value;
+    const notes = document.getElementById('completeTierNotes').value;
+    
+    if (!completedDate) {
+        alert("Please select a completion date");
+        return;
+    }
+    
+    try {
+        const r = await staffFetch(BONANZA_BASE + '/vgk/member-tracking/complete-tier', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                bonanza_id: parseInt(bonanzaId),
+                partner_id: parseInt(partnerId),
+                tier_num: parseInt(tierNum),
+                completed_date: completedDate,
+                notes: notes
+            })
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || d.message || 'Failed to save');
+        
+        closeCompleteTierModal();
+        alert("Successfully updated tier completion status!");
+        mgmtLoadTracking(); // Reload the table
+    } catch(e) {
+        alert("Error saving: " + e.message);
+    }
+}
 
 function openTrackDetailsFromLink(el) {
     const bid = el.getAttribute('data-bonanza-id');

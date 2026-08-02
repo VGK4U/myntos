@@ -4312,6 +4312,77 @@ def list_vgk_pending_payments(
     return {"success": True, "total": len(result), "claims": result, "stage": stage}
 
 
+class CompleteTierRequest(BaseModel):
+    bonanza_id: int
+    partner_id: int
+    tier_num: int
+    completed_date: str
+    notes: Optional[str] = None
+
+
+@router.post("/vgk/member-tracking/complete-tier")
+def vgk_complete_tier(
+    data: CompleteTierRequest,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user_hybrid)
+):
+    """
+    Mark a specific bonanza tier/slab as completed for a VGK member.
+    """
+    from app.models.bonanza import BonanzaProgress
+    from app.models.staff import StaffEmployee
+    from datetime import datetime as _dt
+    
+    if not isinstance(current_user, StaffEmployee):
+        raise HTTPException(status_code=403, detail="Staff access required")
+        
+    bz = db.query(Bonanza).filter(Bonanza.id == data.bonanza_id).first()
+    if not bz:
+        raise HTTPException(status_code=404, detail="Bonanza campaign not found")
+        
+    # Check if there is an existing claim record for this tier/slab
+    # We use claim_level = tier_num to represent the tier (1-indexed)
+    progress = db.query(BonanzaProgress).filter(
+        BonanzaProgress.bonanza_id == data.bonanza_id,
+        BonanzaProgress.partner_id == data.partner_id,
+        BonanzaProgress.claim_level == data.tier_num
+    ).first()
+    
+    completed_dt = _dt.strptime(data.completed_date, "%Y-%m-%d")
+    
+    is_monetary = bool(bz.is_monetary or bz.reward_type == 'slab_wise')
+    success_status = 'Paid' if is_monetary else 'Delivered'
+    
+    if progress:
+        progress.processed_status = success_status
+        progress.achieved_date = completed_dt
+        progress.reward_given_date = completed_dt
+        progress.processed_date = completed_dt
+        progress.reward_given = True
+        progress.processed_by = getattr(current_user, 'emp_code', None) or str(current_user.id)
+        if data.notes:
+            progress.admin_notes = data.notes
+    else:
+        progress = BonanzaProgress(
+            bonanza_id=data.bonanza_id,
+            partner_id=data.partner_id,
+            claim_level=data.tier_num,
+            current_progress=bz.target_requirement,
+            achievement_status='Achieved',
+            achieved_date=completed_dt,
+            reward_given_date=completed_dt,
+            processed_date=completed_dt,
+            processed_status=success_status,
+            reward_given=True,
+            processed_by=getattr(current_user, 'emp_code', None) or str(current_user.id),
+            admin_notes=data.notes
+        )
+        db.add(progress)
+        
+    db.commit()
+    return {"success": True, "message": f"Successfully completed Tier {data.tier_num} for partner!"}
+
+
 class VGKClaimStatusUpdate(BaseModel):
     status: str
     notes: Optional[str] = None
@@ -4943,13 +5014,34 @@ async def get_member_bonanza_slabs(
         BonanzaSlab.bonanza_id == bonanza_id,
         BonanzaSlab.is_active == True
     ).order_by(BonanzaSlab.slab_order.asc(), BonanzaSlab.id.asc()).all()
+
+    # Query completed progress rows for this bonanza
+    from app.models.bonanza import BonanzaProgress
+    progs = db.query(BonanzaProgress).filter(
+        BonanzaProgress.bonanza_id == bonanza_id,
+        BonanzaProgress.partner_id == current_user.id
+    ).all()
+    
+    prog_map = {p.claim_level: p for p in progs if p.claim_level}
+
+    slabs_list = []
+    for i, s in enumerate(slabs, start=2):
+        p = prog_map.get(i)
+        completed = p.processed_status in ('Paid', 'Delivered') if p else False
+        completed_date = (p.processed_date or p.achieved_date or p.reward_given_date).isoformat() if (p and (p.processed_date or p.achieved_date or p.reward_given_date)) else None
+        
+        d = s.to_dict()
+        d["completed"] = completed
+        d["completed_date"] = completed_date
+        slabs_list.append(d)
+
     return {
         "success": True,
         "bonanza_id": bonanza_id,
         "bonanza_name": bonanza.name,
         "criteria_type": bonanza.criteria_type,
-        "slabs": [s.to_dict() for s in slabs],
-        "has_slabs": len(slabs) > 0
+        "slabs": slabs_list,
+        "has_slabs": len(slabs_list) > 0
     }
 
 
@@ -5404,12 +5496,13 @@ def vgk_member_tracking(
                         eligible_map[pid] = int(r[1])
                         achieved_map[pid] = int(r[2])
 
-        # Claim statuses (bonanza level — no slab-level claim tracking)
+        # Claim statuses (bonanza level + slab-level claim tracking via claim_level)
         claim_rows = db.execute(text("""
-            SELECT partner_id, processed_status FROM bonanza_progress
+            SELECT partner_id, COALESCE(claim_level, 1) as claim_level, processed_status, achieved_date, reward_given_date 
+            FROM bonanza_progress
             WHERE bonanza_id = :bid AND partner_id = ANY(:pids)
         """), {'bid': bz.id, 'pids': partner_ids}).fetchall()
-        claim_map = {r[0]: r[1] for r in claim_rows}
+        claim_map = {(r[0], r[1]): (r[2], r[3] or r[4]) for r in claim_rows}
 
         # ── Tiers: base + slabs ───────────────────────────────────────────────
         slab_rows = db.execute(text("""
@@ -5451,6 +5544,11 @@ def vgk_member_tracking(
                     elig_count += 1
                     all_eligible_set.add(pid)
                 
+                # Fetch claim details for this specific tier_num (claim_level)
+                claim_info = claim_map.get((pid, t["tier_num"]), (None, None))
+                claim_status = claim_info[0]
+                completed_date = claim_info[1].strftime("%Y-%m-%d") if claim_info[1] else None
+
                 member_payload = {
                     "partner_id":   pid,
                     "partner_name": partner_map[pid]["name"],
@@ -5459,7 +5557,8 @@ def vgk_member_tracking(
                     "achieved":     achieved,
                     "gap":          gap,
                     "is_eligible":  is_elig,
-                    "claim_status": claim_map.get(pid),
+                    "claim_status": claim_status,
+                    "completed_date": completed_date,
                 }
                 if bz.reward_type in ('extra_commission', 'brand_wise_commission'):
                     member_payload["ec_stats"] = ec_stats_map.get(pid, {"levels": {}, "total_earnings": 0.0})

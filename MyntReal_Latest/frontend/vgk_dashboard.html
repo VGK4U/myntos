@@ -5840,16 +5840,22 @@
                 const tierColors = { cash:'#059669', bonus:'#2563eb', award:'#d97706', gift:'#7c3aed' };
                 slabsDiv.innerHTML = '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:4px">' +
                     slabs.map(s => {
-                        const achieved = progress >= s.target_from && (s.target_to == null || progress <= s.target_to);
-                        const passed = progress > (s.target_to || 999999);
+                        const completed = s.completed || false;
+                        const achieved = completed || (progress >= s.target_from && (s.target_to == null || progress <= s.target_to));
+                        const passed = !completed && progress > (s.target_to || 999999);
                         const clr = tierColors[s.reward_type] || '#7c3aed';
                         const rangeStr = s.target_from + (s.target_to != null ? ' – ' + s.target_to : '+');
                         const rewardStr = s.is_monetary ? '₹' + (s.reward_amount||0).toLocaleString('en-IN') : s.award_name || 'Award';
                         const rewardHtml = s.is_monetary ? `<span style="font-weight:800;color:${clr}">${rewardStr}</span>` : `<span style="background:#dcfce7;color:#15803d;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:800;margin-right:4px">FREE</span><span style="color:#15803d;font-weight:700">${escHtml(rewardStr)}</span>`;
-                        const statusBadge = passed
-                            ? '<span style="background:#d1fae5;color:#065f46;border-radius:8px;padding:2px 7px;font-size:10px;font-weight:700;margin-left:6px"><i class="fas fa-check me-1"></i>Passed</span>'
-                            : (achieved ? `<span style="background:${clr};color:#fff;border-radius:8px;padding:2px 7px;font-size:10px;font-weight:700;margin-left:6px"><i class="fas fa-star me-1"></i>Current</span>` : '');
-                        return `<div style="display:flex;align-items:center;justify-content:space-between;border:1.5px solid ${achieved||passed?clr+'66':'#e5e7eb'};border-radius:9px;padding:8px 12px;background:${achieved?clr+'0f':passed?'#f0fdf4':'white'}">
+                        let statusBadge = '';
+                        if (completed) {
+                            statusBadge = `<span style="background:#059669;color:#fff;border-radius:8px;padding:2px 7px;font-size:10px;font-weight:700;margin-left:6px"><i class="fas fa-check-circle me-1"></i>Completed ${s.completed_date ? fmtDate(s.completed_date) : ''}</span>`;
+                        } else if (passed) {
+                            statusBadge = '<span style="background:#d1fae5;color:#065f46;border-radius:8px;padding:2px 7px;font-size:10px;font-weight:700;margin-left:6px"><i class="fas fa-check me-1"></i>Passed</span>';
+                        } else if (achieved) {
+                            statusBadge = `<span style="background:${clr};color:#fff;border-radius:8px;padding:2px 7px;font-size:10px;font-weight:700;margin-left:6px"><i class="fas fa-star me-1"></i>Current</span>`;
+                        }
+                        return `<div style="display:flex;align-items:center;justify-content:space-between;border:1.5px solid ${achieved||passed?clr+'66':'#e5e7eb'};border-radius:9px;padding:8px 12px;background:${completed?'#f0fdf4':(achieved?clr+'0f':passed?'#f0fdf4':'white')}">
                             <div>
                                 <span style="font-size:12px;font-weight:700;color:${achieved||passed?clr:'#374151'}">${escHtml(s.slab_label)}</span>
                                 ${statusBadge}
