@@ -1169,8 +1169,19 @@ async function submitAct(){
     
     if (!r.ok || !d.success) {
       if (d.error === 'CAPPED_WARNING' || d.capped_warning || d.detail === 'CAPPED_WARNING') {
+        const cap = d.cap_info || {};
         const remain = 3 - (d.bypass_count || 0);
-        const confirmMsg = `50% advance cap reached.\n${remain} skip(s) available.\n\nDo you want to proceed and skip the cap, or hold?`;
+        const confirmMsg = `⚠️ 50% ADVANCE CAP REACHED (On Hold Reason)
+--------------------------------------------------
+• Total Submitted Files: ${cap.eligible_files || 0}
+• 50% Cap Limit: ${cap.cap_limit || 0}
+• Already Advanced (Paid/Released): ${cap.paid_advances || 0}
+
+Since already-advanced files (${cap.paid_advances || 0}) exceed the 50% cap (${cap.cap_limit || 0}), new advances are put on hold.
+
+Skip times remaining: ${remain} skip(s) available.
+
+Do you want to PROCEED (skip the cap and mark as paid) or HOLD?`;
         if (confirm(confirmMsg)) {
           body.bypass = true;
           r = await fetch(`/api/v1/vgk/staff/vgk/cash-income/unified-action?company_id=${entryCo}`, {
