@@ -4742,8 +4742,9 @@ function updateAdvSearchBadge() {
 function getUploadsBaseUrl() {
   const host = window.location.hostname;
   const port = window.location.port;
+  const protocol = window.location.protocol;
   if ((host === 'localhost' || host === '127.0.0.1') && port && port !== '8000') {
-    return 'http://' + host + ':8000/uploads/';
+    return protocol + '//' + host + ':8000/uploads/';
   }
   return '/uploads/';
 }
@@ -4760,7 +4761,7 @@ async function generateMemberPoster(partnerId) {
   document.getElementById('prevAvatar').style.display = 'none';
   
   try {
-    let m = (window._iedCurrentRows || []).find(x => x.id === partnerId) || (_vgkMemberCache || {})[partnerId];
+    let m = (window._iedCurrentRows || []).find(x => String(x.id) === String(partnerId)) || (_vgkMemberCache || {})[partnerId];
     if (!m) throw new Error('Member not found in current rows or cache');
 
     // Fetch fresh member info from backend to bypass caching and local memory state
@@ -4768,7 +4769,7 @@ async function generateMemberPoster(partnerId) {
       const freshRes = await staffFetch(API + '/vgk/dashboard/member-earnings?search=' + encodeURIComponent(m.partner_code) + '&_cb=' + Date.now());
       const freshData = await freshRes.json();
       if (freshData.success && freshData.data && freshData.data.length) {
-        const found = freshData.data.find(x => x.id === partnerId);
+        const found = freshData.data.find(x => String(x.id) === String(partnerId));
         if (found) {
           m = found;
         }
@@ -4776,6 +4777,7 @@ async function generateMemberPoster(partnerId) {
     } catch(e) {
       console.warn("Failed to fetch fresh member data, falling back to cached row:", e);
     }
+    console.log("[Poster Debug] Selected member object:", m);
     
     document.getElementById('prevName').textContent = (m.partner_name || '').toUpperCase();
     const initials = (m.partner_name || '').trim().split(/\s+/).map(p=>p[0]).join('').slice(0,2).toUpperCase();
@@ -4786,15 +4788,18 @@ async function generateMemberPoster(partnerId) {
     if (photoPath) {
       const img = document.getElementById('prevImg');
       img.onload = () => {
+        console.log("[Poster Debug] Main photo loaded successfully:", img.src);
         img.style.display = 'block';
         avatar.style.display = 'none';
       };
-      img.onerror = () => {
+      img.onerror = (err) => {
+        console.error("[Poster Debug] Main photo failed to load:", img.src, err);
         img.style.display = 'none';
         avatar.style.display = 'flex';
       };
-      img.src = getUploadsBaseUrl() + photoPath;
+      img.src = getUploadsBaseUrl() + photoPath + '?t=' + Date.now();
     } else {
+      console.log("[Poster Debug] No main photo path found. Displaying initials.");
       avatar.style.display = 'flex';
     }
     
@@ -4933,16 +4938,19 @@ async function generateMemberPoster(partnerId) {
     if (seniorImg) {
       if (m.senior_photo) {
         seniorImg.onload = () => {
+          console.log("[Poster Debug] Senior photo loaded successfully:", seniorImg.src);
           seniorImg.style.display = 'block';
           seniorAvatar.style.display = 'none';
         };
-        seniorImg.onerror = () => {
+        seniorImg.onerror = (err) => {
+          console.error("[Poster Debug] Senior photo failed to load:", seniorImg.src, err);
           seniorImg.style.display = 'none';
           seniorAvatar.style.display = 'flex';
           seniorAvatar.textContent = (m.senior_name || 'SR').trim().split(/\s+/).map(p=>p[0]).join('').slice(0,2).toUpperCase();
         };
-        seniorImg.src = getUploadsBaseUrl() + m.senior_photo;
+        seniorImg.src = getUploadsBaseUrl() + m.senior_photo + '?t=' + Date.now();
       } else {
+        console.log("[Poster Debug] No senior photo path found. Displaying initials.");
         seniorImg.style.display = 'none';
         seniorAvatar.style.display = 'flex';
         seniorAvatar.textContent = (m.senior_name || 'SR').trim().split(/\s+/).map(p=>p[0]).join('').slice(0,2).toUpperCase();
