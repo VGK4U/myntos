@@ -4156,12 +4156,14 @@ def member_earnings_dashboard(
             ), {"ids": parent_ids}).fetchall()
             p_earnings = {r[0]: float(r[1]) for r in p_inc_rows}
             
+            from app.services.vgk_earner_card import get_partner_potential_earning
             for pid in parent_ids:
                 info = p_info.get(pid, {})
                 parent_map[pid] = {
                     "partner_name": info.get("name"),
                     "gross_earned": p_earnings.get(pid, 0.0),
-                    "passport_photo": passport_photo_map.get(pid)
+                    "passport_photo": passport_photo_map.get(pid),
+                    "potential_earned": get_partner_potential_earning(db, pid, exclude_l1=True)
                 }
         except Exception:
             pass
@@ -4210,6 +4212,7 @@ def member_earnings_dashboard(
             "passport_photo":         passport_photo_map.get(m.id),
             "senior_name":            senior_info.get("partner_name"),
             "senior_earning":         senior_info.get("gross_earned"),
+            "senior_potential_earned": senior_info.get("potential_earned"),
             "senior_photo":           senior_info.get("passport_photo"),
             "registered_by_emp_code": m.registered_by_emp_code,
             "registered_by_name":     emp_name_map.get(m.registered_by_emp_code),

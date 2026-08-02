@@ -4931,7 +4931,11 @@ async function generateMemberPoster(partnerId) {
     document.getElementById('postSeniorEarning').value = seniorEarning;
     const postSeniorPot = document.getElementById('postSeniorPotential');
     if (postSeniorPot) {
-      postSeniorPot.value = '₹' + _meFormatInr(activeFiles * 500) + '/-';
+      if (m.senior_potential_earned !== null && m.senior_potential_earned !== undefined) {
+        postSeniorPot.value = '₹' + _meFormatInr(m.senior_potential_earned) + '/-';
+      } else {
+        postSeniorPot.value = '₹' + _meFormatInr(activeFiles * 500) + '/-';
+      }
     }
     
     // Set checkboxes default state to checked

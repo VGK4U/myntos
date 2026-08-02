@@ -947,7 +947,7 @@ def run_earner_celebration(entry_id: int):
         logger.error(f'[EARNER-CARD] run_earner_celebration failed for entry {entry_id}: {e}')
 
 
-def get_partner_potential_earning(db, partner_id: int) -> float:
+def get_partner_potential_earning(db, partner_id: int, exclude_l1: bool = False) -> float:
     from sqlalchemy import text
     from app.models.staff_accounts import VGKTeamCommissionConfig
     
@@ -973,6 +973,9 @@ def get_partner_potential_earning(db, partner_id: int) -> float:
         commission_pct = float(r.commission_pct or 0.0)
         kind = r.kind or "COMMISSION"
         lvl_int = r.level
+        
+        if exclude_l1 and lvl_int == 1:
+            continue
         
         # Calculate commission base
         commission_base = 0.0
