@@ -5230,6 +5230,7 @@ function sharePoster() {
 }
 
 function shareOnWhatsApp() {
+  const container = document.getElementById('posterCanvasWrapper');
   const partnerName = document.getElementById('prevSubtitle').textContent.trim();
   const partnerOverall = document.getElementById('prevHighlight').textContent.trim();
   const partnerToday = document.getElementById('prevTotalToday').textContent.trim();
@@ -5256,8 +5257,45 @@ function shareOnWhatsApp() {
   text += `\n🚀 Keep up the fantastic work! 🚀\n`;
   text += `vgk4u.myntreal.com`;
 
-  const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-  window.open(url, '_blank');
+  const spinner = document.getElementById('posterSpinner');
+  if (spinner) {
+    spinner.style.display = 'flex';
+    const spText = spinner.querySelector('div div');
+    if (spText) spText.textContent = 'Preparing WhatsApp share...';
+  }
+
+  html2canvas(container, {
+    useCORS: true,
+    scale: 2,
+    backgroundColor: null
+  }).then(canvas => {
+    if (spinner) spinner.style.display = 'none';
+    
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        alert('Failed to generate sharing image.');
+        return;
+      }
+
+      // Try to write image to clipboard so the user can easily paste it
+      try {
+        if (navigator.clipboard && window.ClipboardItem) {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+          ]);
+          alert('Poster image copied to clipboard! You can paste (Cmd+V / Ctrl+V) the image directly inside the WhatsApp chat.');
+        }
+      } catch (err) {
+        console.warn('Clipboard write failed:', err);
+      }
+
+      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+    }, 'image/png');
+  }).catch(err => {
+    if (spinner) spinner.style.display = 'none';
+    alert('Failed to generate sharing image: ' + err.message);
+  });
 }
 
 function showCustomShareDialog(canvas, name, payout) {
