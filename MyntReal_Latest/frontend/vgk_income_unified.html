@@ -1160,13 +1160,38 @@ async function submitAct(){
   document.getElementById('goBtn').disabled = true;
   try {
     const entryCo = (CURRENT && CURRENT.row && CURRENT.row.company_id) ? CURRENT.row.company_id : CO;
-    const r = await fetch(`/api/v1/vgk/staff/vgk/cash-income/unified-action?company_id=${entryCo}`, {
+    let r = await fetch(`/api/v1/vgk/staff/vgk/cash-income/unified-action?company_id=${entryCo}`, {
       method: 'POST',
       headers: { 'Authorization':'Bearer '+TOK, 'Content-Type':'application/json' },
       body: JSON.stringify(body),
     });
-    const d = await r.json();
-    if(!r.ok || !d.success){ throw new Error(d.detail || d.error || 'Action failed'); }
+    let d = await r.json();
+    
+    if (!r.ok || !d.success) {
+      if (d.error === 'CAPPED_WARNING' || d.capped_warning) {
+        const remain = 3 - (d.bypass_count || 0);
+        const confirmMsg = `50% advance cap reached.\n${remain} skip(s) available.\n\nDo you want to proceed and skip the cap, or hold?`;
+        if (confirm(confirmMsg)) {
+          body.bypass = true;
+          r = await fetch(`/api/v1/vgk/staff/vgk/cash-income/unified-action?company_id=${entryCo}`, {
+            method: 'POST',
+            headers: { 'Authorization':'Bearer '+TOK, 'Content-Type':'application/json' },
+            body: JSON.stringify(body),
+          });
+          d = await r.json();
+          if (!r.ok || !d.success) {
+            throw new Error(d.detail || d.error || 'Action failed after bypass');
+          }
+        } else {
+          // User chose to Hold
+          document.getElementById('goBtn').disabled = false;
+          return;
+        }
+      } else {
+        throw new Error(d.detail || d.error || 'Action failed');
+      }
+    }
+    
     let msg = `${action.toUpperCase()} OK on ${CURRENT.row.entry_number}`;
     if((d.skipped_states||[]).length){ msg += ` (skip-level: ${d.skipped_states.join(' → ')})`; }
     toast(msg, 'success');

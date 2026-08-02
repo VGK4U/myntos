@@ -1160,6 +1160,7 @@ def unified_action(
     bank_ledger_id: Optional[int] = Body(None, embed=True),
     cash_staff_id: Optional[int] = Body(None, embed=True),
     payment_utr: Optional[str] = Body(None, embed=True),
+    bypass: Optional[bool] = Body(None, embed=True),
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user),
 ):
@@ -1318,6 +1319,7 @@ def unified_action(
                 cash_staff_id=cash_staff_id,
                 utr=payment_utr,
                 notes=notes,
+                bypass=bool(bypass),
             )
             if not inner.get('success'):
                 raise HTTPException(status_code=400, detail=inner.get('error', 'Mark-paid failed'))

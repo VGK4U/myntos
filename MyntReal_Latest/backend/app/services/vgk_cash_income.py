@@ -1669,6 +1669,7 @@ def mark_paid_cash_income(
     utr: str = None,
     notes: str = None,
     force: bool = False,
+    bypass: bool = False,
 ) -> dict:
     """RELEASED → PAID. Posts JV-D and stamps payment fields. Idempotent on PAID."""
     from app.models.vgk_cash_income import VGKCashIncomeEntry
@@ -1698,6 +1699,16 @@ def mark_paid_cash_income(
                         f"(cap: {_cap_info['cap_limit']}). "
                         f"Wait for more files to progress before paying next advance."
                     ),
+                    'cap_info': _cap_info,
+                }
+            
+            # Capped but bypass count < 3: check if client explicitly sent bypass=True
+            if _cap_info.get('is_capped') and not bypass:
+                return {
+                    'success': False,
+                    'capped_warning': True,
+                    'bypass_count': _cap_info.get('bypass_count', 0),
+                    'error': 'CAPPED_WARNING',
                     'cap_info': _cap_info,
                 }
         except Exception as _cap_e:
