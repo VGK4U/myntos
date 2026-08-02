@@ -1299,6 +1299,39 @@
             border-color: rgba(71, 85, 105, 0.4);
         }
 
+        /* ── Header Home Button ── */
+        .header-home-btn {
+            background: transparent;
+            color: #cbd5e1 !important;
+            font-size: 12.5px;
+            font-weight: 700;
+            padding: 8px 16px;
+            border-radius: 20px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .header-home-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        body.festive .header-home-btn {
+            color: #475569 !important;
+            border-color: rgba(71, 85, 105, 0.2);
+        }
+
+        body.festive .header-home-btn:hover {
+            background: rgba(71, 85, 105, 0.05);
+            color: #0f172a !important;
+            border-color: rgba(71, 85, 105, 0.4);
+        }
+
         /* ── Location Picker Modal Styles ── */
         .location-picker-modal {
             display: none;
@@ -1661,7 +1694,7 @@
         </div>
         <div style="display:flex;align-items:center;gap:12px">
             <div id="headerLiveCounterContainer"></div>
-            <a href="/" class="header-home-btn" style="color: #ffffff; font-size: 12.5px; font-weight: 600; text-decoration: none; padding: 6px 12px; border-radius: 6px; display: flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.15); transition: background 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='none'">
+            <a href="/" class="header-home-btn">
                 <i class="fas fa-home"></i>Home
             </a>
             <a href="/vgk/login" class="header-signin-btn">
