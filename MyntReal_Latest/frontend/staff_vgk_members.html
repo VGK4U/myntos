@@ -4739,6 +4739,14 @@ function updateAdvSearchBadge() {
 }
 
 // ══════════════ POSTER GENERATION SYSTEM ══════════════
+function getUploadsBaseUrl() {
+  const host = window.location.hostname;
+  const port = window.location.port;
+  if ((host === 'localhost' || host === '127.0.0.1') && port && port !== '8000') {
+    return 'http://' + host + ':8000/uploads/';
+  }
+  return '/uploads/';
+}
 async function generateMemberPoster(partnerId) {
   const modal = document.getElementById('posterModal');
   if(!modal) return;
@@ -4785,7 +4793,7 @@ async function generateMemberPoster(partnerId) {
         img.style.display = 'none';
         avatar.style.display = 'flex';
       };
-      img.src = '/uploads/' + photoPath;
+      img.src = getUploadsBaseUrl() + photoPath;
     } else {
       avatar.style.display = 'flex';
     }
@@ -4933,7 +4941,7 @@ async function generateMemberPoster(partnerId) {
           seniorAvatar.style.display = 'flex';
           seniorAvatar.textContent = (m.senior_name || 'SR').trim().split(/\s+/).map(p=>p[0]).join('').slice(0,2).toUpperCase();
         };
-        seniorImg.src = '/uploads/' + m.senior_photo;
+        seniorImg.src = getUploadsBaseUrl() + m.senior_photo;
       } else {
         seniorImg.style.display = 'none';
         seniorAvatar.style.display = 'flex';
