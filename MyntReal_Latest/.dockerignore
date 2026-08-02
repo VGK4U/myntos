@@ -75,3 +75,5 @@ backend/storage/
 *.dump
 pgsql/
 pgsql16/
+/postgres_data/
+/mobile/
