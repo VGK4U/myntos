@@ -600,6 +600,9 @@ def _count_first_dvr_income_for_bonanza(db: Session, partner_id: int, bonanza) -
           AND ie.lead_id IS NOT NULL
           AND ie.income_date >= :start
           AND ie.income_date <= :end + INTERVAL '1 day' * :grace
+          AND cl.submit_date IS NOT NULL
+          AND cl.submit_date >= CAST(:start AS DATE)
+          AND cl.submit_date <= CAST(:end AS DATE)
     """), {
         'pid': partner_id,
         'start': bonanza.start_date,
@@ -647,6 +650,9 @@ def _count_first_pmt_for_bonanza(db: Session, partner_id: int, bonanza) -> int:
                           AND cl.source_ref_id ~ '^[0-9]+$'
                      THEN cl.source_ref_id::int END
               ) = :pid
+          AND cl.submit_date IS NOT NULL
+          AND cl.submit_date >= CAST(:start AS DATE)
+          AND cl.submit_date <= CAST(:end AS DATE)
           AND cl.first_payment_received_date IS NOT NULL
           AND cl.first_payment_received_date >= CAST(:start AS DATE)
           AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
@@ -726,6 +732,8 @@ def _count_solar_advances_for_bonanza(db: Session, partner_id: int, bonanza, bas
         WHERE a.partner_id = :pid
           AND a.status IN ('RELEASED','PENDING')
           AND {null_guard}
+          AND cl.submit_date >= CAST(:start AS DATE)
+          AND cl.submit_date <= CAST(:end AS DATE)
           AND {eff_date_sql} >= CAST(:start AS DATE)
           AND {eff_date_sql} <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
           {kind_filter}
@@ -5334,6 +5342,9 @@ def vgk_member_tracking(
                   AND ie.lead_id IS NOT NULL
                   AND ie.income_date >= :start
                   AND ie.income_date <= :end + INTERVAL '1 day' * :grace
+                  AND cl.submit_date IS NOT NULL
+                  AND cl.submit_date >= CAST(:start AS DATE)
+                  AND cl.submit_date <= CAST(:end AS DATE)
                 GROUP BY cl.associated_partner_id
             """), {'pids': partner_ids, 'start': bz.start_date,
                    'end': bz.end_date, 'grace': grace}).fetchall()
@@ -5394,8 +5405,8 @@ def vgk_member_tracking(
                     params['brand_ids'] = brand_ids
 
                 if is_brand_bonanza:
-                    # Brand Bonanza: Eligible = submitted in campaign range OR received payment in campaign range + grace.
-                    # Done = (submitted in campaign range AND received payment at any time) OR received payment in campaign range + grace.
+                    # Brand Bonanza: Eligible = submitted in campaign range.
+                    # Done = submitted in campaign range AND received payment in campaign range + grace.
                     count_rows = db.execute(text(f"""
                         SELECT COALESCE(
                             cl.associated_partner_id,
@@ -5404,16 +5415,17 @@ def vgk_member_tracking(
                                       AND cl.source_ref_id ~ '^[0-9]+$'
                                  THEN cl.source_ref_id::int END
                         ) AS partner_id,
-                        COUNT(DISTINCT CASE WHEN (
-                            (cl.submit_date IS NOT NULL AND cl.submit_date >= CAST(:start AS DATE) AND cl.submit_date <= CAST(:end AS DATE))
-                            OR
-                            (cl.first_payment_received_date IS NOT NULL AND cl.first_payment_received_date >= CAST(:start AS DATE) AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL))
-                        ) THEN cl.id END) AS eligible_count,
-                        COUNT(DISTINCT CASE WHEN (
-                            (cl.submit_date IS NOT NULL AND cl.submit_date >= CAST(:start AS DATE) AND cl.submit_date <= CAST(:end AS DATE) AND cl.first_payment_received_date IS NOT NULL)
-                            OR
-                            (cl.first_payment_received_date IS NOT NULL AND cl.first_payment_received_date >= CAST(:start AS DATE) AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL))
-                        ) THEN cl.id END) AS done_count
+                        COUNT(DISTINCT CASE WHEN cl.submit_date IS NOT NULL 
+                                             AND cl.submit_date >= CAST(:start AS DATE) 
+                                             AND cl.submit_date <= CAST(:end AS DATE) 
+                                       THEN cl.id END) AS eligible_count,
+                        COUNT(DISTINCT CASE WHEN cl.submit_date IS NOT NULL 
+                                             AND cl.submit_date >= CAST(:start AS DATE) 
+                                             AND cl.submit_date <= CAST(:end AS DATE) 
+                                             AND cl.first_payment_received_date IS NOT NULL 
+                                             AND cl.first_payment_received_date >= CAST(:start AS DATE) 
+                                             AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
+                                       THEN cl.id END) AS done_count
                         FROM crm_leads cl
                         WHERE COALESCE(
                             cl.associated_partner_id,
@@ -5431,7 +5443,7 @@ def vgk_member_tracking(
                         achieved_map[r[0]] = int(r[2])
                 else:
                     # Standard Solar: Eligible = submitted in campaign range.
-                    # Done = first payment received in campaign range + grace days (regardless of submit date).
+                    # Done = submitted in campaign range AND first payment received in campaign range + grace days.
                     count_rows = db.execute(text(f"""
                         SELECT COALESCE(
                             cl.associated_partner_id,
@@ -5443,7 +5455,10 @@ def vgk_member_tracking(
                         COUNT(DISTINCT CASE WHEN cl.submit_date IS NOT NULL 
                                              AND cl.submit_date >= CAST(:start AS DATE)
                                              AND cl.submit_date <= CAST(:end AS DATE) THEN cl.id END) AS eligible_count,
-                        COUNT(DISTINCT CASE WHEN cl.first_payment_received_date IS NOT NULL 
+                        COUNT(DISTINCT CASE WHEN cl.submit_date IS NOT NULL 
+                                             AND cl.submit_date >= CAST(:start AS DATE)
+                                             AND cl.submit_date <= CAST(:end AS DATE)
+                                             AND cl.first_payment_received_date IS NOT NULL 
                                              AND cl.first_payment_received_date >= CAST(:start AS DATE)
                                              AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL) THEN cl.id END) AS done_count
                         FROM crm_leads cl
@@ -5716,6 +5731,9 @@ def vgk_member_tracking_details(
                   AND ie.lead_id IS NOT NULL
                   AND ie.income_date >= :start
                   AND ie.income_date <= :end + INTERVAL '1 day' * :grace
+                  AND cl.submit_date IS NOT NULL
+                  AND cl.submit_date >= CAST(:start AS DATE)
+                  AND cl.submit_date <= CAST(:end AS DATE)
             """
             params = {'start': bz.start_date, 'end': bz.end_date, 'grace': grace}
             if partner_id:
@@ -5793,24 +5811,26 @@ def vgk_member_tracking_details(
             if is_brand_bonanza:
                 if only_triggered:
                     where_clause = """
-                        AND (
-                            (cl.submit_date IS NOT NULL AND cl.submit_date >= CAST(:start AS DATE) AND cl.submit_date <= CAST(:end AS DATE) AND cl.first_payment_received_date IS NOT NULL)
-                            OR
-                            (cl.first_payment_received_date IS NOT NULL AND cl.first_payment_received_date >= CAST(:start AS DATE) AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL))
-                        )
+                        AND cl.submit_date IS NOT NULL
+                        AND cl.submit_date >= CAST(:start AS DATE)
+                        AND cl.submit_date <= CAST(:end AS DATE)
+                        AND cl.first_payment_received_date IS NOT NULL
+                        AND cl.first_payment_received_date >= CAST(:start AS DATE)
+                        AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
                     """
                 else:
                     where_clause = """
-                        AND (
-                            (cl.submit_date IS NOT NULL AND cl.submit_date >= CAST(:start AS DATE) AND cl.submit_date <= CAST(:end AS DATE))
-                            OR
-                            (cl.first_payment_received_date IS NOT NULL AND cl.first_payment_received_date >= CAST(:start AS DATE) AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL))
-                        )
+                        AND cl.submit_date IS NOT NULL
+                        AND cl.submit_date >= CAST(:start AS DATE)
+                        AND cl.submit_date <= CAST(:end AS DATE)
                     """
                 order_col = "sort_date"
             else:
                 if only_triggered:
                     where_clause = """
+                        AND cl.submit_date IS NOT NULL
+                        AND cl.submit_date >= CAST(:start AS DATE)
+                        AND cl.submit_date <= CAST(:end AS DATE)
                         AND cl.first_payment_received_date IS NOT NULL
                         AND cl.first_payment_received_date >= CAST(:start AS DATE)
                         AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
