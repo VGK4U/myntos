@@ -2480,6 +2480,7 @@
                     }
 
                     // Only render images in the generic gallery grid that are NOT reserved for hero or video covers (or are specifically tagged for gallery)
+                    let renderedCount = 0;
                     displayImages.forEach((img, idx) => {
                         const targetSection = displaySections[idx] || 'gallery';
                         if (targetSection !== 'gallery') return; // skip hero and video targets
@@ -2491,8 +2492,11 @@
                                 <img src="/storage/${img}" alt="${titleText || 'Campaign Showcase'}">
                                 ${titleText ? `<div class="gallery-card-title">${titleText}</div>` : ''}
                             </div>`;
+                        renderedCount++;
                     });
-                    } else {
+
+                    // If no gallery-specific images are rendered, load the fallback grid
+                    if (renderedCount === 0) {
                         let fallbacks = [
                             "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=400&q=80",
                             "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=400&q=80",
