@@ -2231,6 +2231,7 @@ def run_schema_bootstrap():
     bootstrap_spare_vendor_optional()
     bootstrap_company_royalty_points()
     bootstrap_vgk_company_payouts()
+    bootstrap_partner_cap_bypass()
 
     # DC_CAPITAL_ACCOUNT_REGISTRY_001: Ensure Capital Account is in staff_menu_registry
     try:
@@ -2433,3 +2434,23 @@ def run_schema_bootstrap():
         logger.warning(f"[DC_VOID_FIELDS_20260618] Non-fatal: {_void_err}")
 
     logger.info("[SCHEMA BOOTSTRAP] ✅ Schema bootstrap complete")
+
+
+def bootstrap_partner_cap_bypass():
+    """
+    DC-VGK-ADV-CAP-BYPASS-001: Add advance_cap_bypass_count column to official_partners.
+    Allows staff to bypass the 50% cap up to 3 times per partner.
+    """
+    try:
+        _db = SessionLocal()
+        try:
+            _db.execute(text("""
+                ALTER TABLE official_partners
+                ADD COLUMN IF NOT EXISTS advance_cap_bypass_count INTEGER DEFAULT 0
+            """))
+            _db.commit()
+            logger.info("[DC-VGK-ADV-CAP-BYPASS-001] ✅ advance_cap_bypass_count added to official_partners")
+        finally:
+            _db.close()
+    except Exception as e:
+        logger.warning(f"[DC-VGK-ADV-CAP-BYPASS-001] Non-fatal: {e}")

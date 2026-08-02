@@ -104,5 +104,23 @@ def can_mark_paid(db: Session, partner_id: int, company_id: int) -> tuple:
     info = get_cap_status(db, partner_id, company_id)
     if info.get('error'):
         return (True, info)
-    allowed = not info['is_capped']
+    
+    # DC-VGK-ADV-CAP-BYPASS-001: check the partner's bypass count
+    from app.models.staff_accounts import OfficialPartner
+    partner = db.query(OfficialPartner).filter(OfficialPartner.id == partner_id).first()
+    bypass_count = getattr(partner, 'advance_cap_bypass_count', 0) or 0
+    
+    info['bypass_count'] = bypass_count
+    
+    if info['is_capped']:
+        # Cap is reached, but we allow bypass up to 3 times
+        if bypass_count < 3:
+            info['bypass_allowed'] = True
+            allowed = True
+        else:
+            info['bypass_allowed'] = False
+            allowed = False
+    else:
+        allowed = True
+        
     return (allowed, info)

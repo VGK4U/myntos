@@ -1692,7 +1692,8 @@ def mark_paid_cash_income(
                 return {
                     'success': False,
                     'error': (
-                        f"50% advance cap reached: {_cap_info['paid_advances']} of "
+                        f"50% advance cap reached (bypass limit of 3 exceeded): "
+                        f"{_cap_info['paid_advances']} of "
                         f"{_cap_info['eligible_files']} eligible files already advanced "
                         f"(cap: {_cap_info['cap_limit']}). "
                         f"Wait for more files to progress before paying next advance."
@@ -1733,6 +1734,19 @@ def mark_paid_cash_income(
             from app.models.staff_accounts import OfficialPartner as _OP
             _partner = db.query(_OP).filter(_OP.id == entry.partner_id).with_for_update().first()
             if _partner is not None:
+                # DC-VGK-ADV-CAP-BYPASS-001: increment bypass count if we bypassed the 50% advance cap
+                if entry.kind == 'ADVANCE':
+                    try:
+                        from app.services.vgk_advance_cap import get_cap_status
+                        _cap_status = get_cap_status(db, _partner.id, entry.company_id)
+                        if _cap_status.get('is_capped'):
+                            _partner.advance_cap_bypass_count = (getattr(_partner, 'advance_cap_bypass_count', 0) or 0) + 1
+                            logger.info(
+                                f"[VGK-ADV-CAP-BYPASS] Incrementing bypass count for partner {_partner.id} "
+                                f"to {_partner.advance_cap_bypass_count}"
+                            )
+                    except Exception as _by_err:
+                        logger.warning(f"[VGK-ADV-CAP-BYPASS] Failed to increment bypass count: {_by_err}")
 
                 # DC_VGK_FIX_STALE_POINTS_20260615: Guard — purge any surviving stale INCOME_EARNED
                 # debit rows created by old release_advance() code (reference_type='VGK_SOLAR_ADV').

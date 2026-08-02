@@ -2948,6 +2948,7 @@ class OfficialPartner(BaseModel):
     # Commission rules: L1 (self) and L2 (support) earn; L3 and L4 are excluded.
     # Counted as +1 in all team/leg counts for awards and bonanza (is_active=True applies normally).
     is_loyal_coupon = Column(Boolean, default=False, nullable=False)
+    advance_cap_bypass_count = Column(Integer, nullable=True, default=0)
 
     # DC Protocol Mar 2026: Paid activation flag (₹4,999 PIN payment).
     # True = member has paid ₹4,999 activation → earns 25,000 points, unlocks full 4-level commission cascade and 3% EV Spares discount.
