@@ -4151,7 +4151,7 @@ def member_earnings_dashboard(
             p_inc_rows = db.execute(text(
                 "SELECT e.partner_id, COALESCE(SUM(e.commission_amount),0) AS gross "
                 "FROM vgk_cash_income_entries e "
-                "WHERE e.partner_id = ANY(:ids) AND e.status != 'CANCELLED' "
+                "WHERE e.partner_id = ANY(:ids) AND e.status != 'CANCELLED' AND e.level != 1 "
                 "GROUP BY e.partner_id"
             ), {"ids": parent_ids}).fetchall()
             p_earnings = {r[0]: float(r[1]) for r in p_inc_rows}

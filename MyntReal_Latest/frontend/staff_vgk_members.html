@@ -4812,7 +4812,13 @@ async function generateMemberPoster(partnerId) {
     const entries = (d.success && d.data) ? d.data : [];
     window._currentEntries = entries;
     
-    const activeFiles = entries.filter(e => e.level === 1 && e.status !== 'CANCELLED').length;
+    const uniqueL1Leads = new Set();
+    entries.forEach(e => {
+      if (e.level === 1 && e.status !== 'CANCELLED' && e.source_lead_id) {
+        uniqueL1Leads.add(e.source_lead_id);
+      }
+    });
+    const activeFiles = uniqueL1Leads.size;
     const gross = entries.filter(e => e.status !== 'CANCELLED').reduce((s, e) => s + (e.commission_amount || 0), 0);
     
     // Group entries by unique (source_lead_id, level) to sum potential overall earnings without double counting

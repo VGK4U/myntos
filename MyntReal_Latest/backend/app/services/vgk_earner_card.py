@@ -1077,7 +1077,7 @@ def _do_celebration(db, entry_id: int):
         SELECT p.id, p.partner_name, 
                (SELECT COALESCE(SUM(commission_amount), 0) 
                 FROM vgk_cash_income_entries 
-                WHERE partner_id = p.id AND status = 'PAID')
+                WHERE partner_id = p.id AND status = 'PAID' AND level != 1)
         FROM official_partners p
         WHERE p.id = (SELECT parent_partner_id FROM official_partners WHERE id = :pid)
     """), {'pid': partner_id}).fetchone()
