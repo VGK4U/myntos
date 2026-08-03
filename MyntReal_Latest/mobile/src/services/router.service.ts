@@ -150,6 +150,19 @@ export type PageRoute =
   | 'vgk-coupon-progress'
   | 'vgk-coupon-transfer'
   | 'vgk-income-unified'
+  | 'vgk-daywise-income'
+  | 'vgk-income-types'
+  | 'vgk-direct-summary'
+  | 'vgk-matching-summary'
+  | 'vgk-guru-summary'
+  | 'vgk-ved-summary'
+  | 'vgk-ev-benefits'
+  | 'vgk-ev-discount'
+  | 'vgk-franchise-earnings'
+  | 'vgk-insurance'
+  | 'vgk-training'
+  | 'vgk-coupon-benefits'
+  | 'vgk-my-submissions'
   // Zynova Portal Routes
   | 'zynova-real-estate'
   | 'zynova-insurance'
@@ -186,7 +199,7 @@ interface RouteConfig {
   icon: string;
   showInTabs: boolean;
   tabOrder?: number;
-  portal?: 'staff' | 'mnr' | 'partner';
+  portal?: PortalType;
 }
 
 class RouterService {
@@ -327,28 +340,38 @@ class RouterService {
     'mnr-franchise-earnings': { id: 'mnr-franchise-earnings', title: 'Franchise Earnings', icon: 'dollar-sign', showInTabs: false, portal: 'mnr' },
     'mnr-bonanza': { id: 'mnr-bonanza', title: 'Bonanza Awards', icon: 'gift', showInTabs: false, portal: 'mnr' },
 
-    // VGK4U Routes (Phase A1 — read-only foundation, audit task #35 follow-up)
-    // NOTE: VGKBirthdays consumes /banners/admin/birthdays/* (staff-only auth),
-    //       so its portal is 'staff'. VGKTopEarners uses get_current_user_hybrid
-    //       (any authenticated user) and ships under the MNR portal.
-    'vgk-birthdays': { id: 'vgk-birthdays', title: 'VGK4U Birthdays', icon: 'cake', showInTabs: false, portal: 'staff' },
-    'vgk-top-earners': { id: 'vgk-top-earners', title: 'VGK4U Top Earners', icon: 'trophy', showInTabs: false, portal: 'mnr' },
-    'vgk-awards': { id: 'vgk-awards', title: 'VGK4U Awards', icon: 'award', showInTabs: false, portal: 'staff' },
-    'vgk-my-registrations': { id: 'vgk-my-registrations', title: 'My VGK Registrations', icon: 'user-check', showInTabs: false, portal: 'staff' },
-    'vgk-bonanza-rewards': { id: 'vgk-bonanza-rewards', title: 'Bonanza Cash Rewards', icon: 'trophy', showInTabs: false, portal: 'mnr' },
-    'vgk-points-balance': { id: 'vgk-points-balance', title: 'VGK Points Balance', icon: 'star', showInTabs: false, portal: 'mnr' },
-    'vgk-member-hub': { id: 'vgk-member-hub', title: 'VGK4U Member Hub', icon: 'grid', showInTabs: false, portal: 'mnr' },
-    'vgk-settings': { id: 'vgk-settings', title: 'Notification Settings', icon: 'settings', showInTabs: false, portal: 'mnr' },
-    'vgk-bank-details': { id: 'vgk-bank-details', title: 'Bank Details', icon: 'credit-card', showInTabs: false, portal: 'mnr' },
-    'vgk-profile-edit': { id: 'vgk-profile-edit', title: 'Edit Profile', icon: 'edit', showInTabs: false, portal: 'mnr' },
-    'vgk-kyc': { id: 'vgk-kyc', title: 'KYC Documents', icon: 'file-text', showInTabs: false, portal: 'mnr' },
-    'vgk-feedback': { id: 'vgk-feedback', title: 'Submit Feedback', icon: 'message-circle', showInTabs: false, portal: 'mnr' },
-    'vgk-announcements': { id: 'vgk-announcements', title: 'Create Announcement', icon: 'bullhorn', showInTabs: false, portal: 'mnr' },
-    'vgk-my-announcements': { id: 'vgk-my-announcements', title: 'My Announcements', icon: 'list', showInTabs: false, portal: 'mnr' },
-    'vgk-coupon-activate': { id: 'vgk-coupon-activate', title: 'Activate Coupon', icon: 'zap', showInTabs: false, portal: 'mnr' },
-    'vgk-coupon-progress': { id: 'vgk-coupon-progress', title: 'Coupon Progress', icon: 'bar-chart-2', showInTabs: false, portal: 'mnr' },
-    'vgk-coupon-transfer': { id: 'vgk-coupon-transfer', title: 'Transfer Coupons', icon: 'send', showInTabs: false, portal: 'mnr' },
-    'vgk-income-unified': { id: 'vgk-income-unified', title: 'VGK Income — Unified', icon: 'trending-up', showInTabs: false, portal: 'staff' },
+    // VGK4U Routes
+    'vgk-birthdays': { id: 'vgk-birthdays', title: 'VGK4U Birthdays', icon: 'cake', showInTabs: false, portal: 'vgk' },
+    'vgk-top-earners': { id: 'vgk-top-earners', title: 'VGK4U Top Earners', icon: 'trophy', showInTabs: false, portal: 'vgk' },
+    'vgk-awards': { id: 'vgk-awards', title: 'VGK4U Awards', icon: 'award', showInTabs: false, portal: 'vgk' },
+    'vgk-my-registrations': { id: 'vgk-my-registrations', title: 'My VGK Registrations', icon: 'user-check', showInTabs: false, portal: 'vgk' },
+    'vgk-bonanza-rewards': { id: 'vgk-bonanza-rewards', title: 'Bonanza Cash Rewards', icon: 'trophy', showInTabs: false, portal: 'vgk' },
+    'vgk-points-balance': { id: 'vgk-points-balance', title: 'VGK Points Balance', icon: 'star', showInTabs: false, portal: 'vgk' },
+    'vgk-member-hub': { id: 'vgk-member-hub', title: 'VGK4U Member Hub', icon: 'grid', showInTabs: false, portal: 'vgk' },
+    'vgk-settings': { id: 'vgk-settings', title: 'Notification Settings', icon: 'settings', showInTabs: false, portal: 'vgk' },
+    'vgk-bank-details': { id: 'vgk-bank-details', title: 'Bank Details', icon: 'credit-card', showInTabs: false, portal: 'vgk' },
+    'vgk-profile-edit': { id: 'vgk-profile-edit', title: 'Edit Profile', icon: 'edit', showInTabs: false, portal: 'vgk' },
+    'vgk-kyc': { id: 'vgk-kyc', title: 'KYC Documents', icon: 'file-text', showInTabs: false, portal: 'vgk' },
+    'vgk-feedback': { id: 'vgk-feedback', title: 'Submit Feedback', icon: 'message-circle', showInTabs: false, portal: 'vgk' },
+    'vgk-announcements': { id: 'vgk-announcements', title: 'Create Announcement', icon: 'bullhorn', showInTabs: false, portal: 'vgk' },
+    'vgk-my-announcements': { id: 'vgk-my-announcements', title: 'My Announcements', icon: 'list', showInTabs: false, portal: 'vgk' },
+    'vgk-coupon-activate': { id: 'vgk-coupon-activate', title: 'Activate Coupon', icon: 'zap', showInTabs: false, portal: 'vgk' },
+    'vgk-coupon-progress': { id: 'vgk-coupon-progress', title: 'Coupon Progress', icon: 'bar-chart-2', showInTabs: false, portal: 'vgk' },
+    'vgk-coupon-transfer': { id: 'vgk-coupon-transfer', title: 'Transfer Coupons', icon: 'send', showInTabs: false, portal: 'vgk' },
+    'vgk-income-unified': { id: 'vgk-income-unified', title: 'VGK Income — Unified', icon: 'trending-up', showInTabs: false, portal: 'vgk' },
+    'vgk-daywise-income': { id: 'vgk-daywise-income', title: 'Daywise Income', icon: 'calendar', showInTabs: false, portal: 'vgk' },
+    'vgk-income-types': { id: 'vgk-income-types', title: 'Income Types', icon: 'bar-chart-2', showInTabs: false, portal: 'vgk' },
+    'vgk-direct-summary': { id: 'vgk-direct-summary', title: 'Direct (L1)', icon: 'list', showInTabs: false, portal: 'vgk' },
+    'vgk-matching-summary': { id: 'vgk-matching-summary', title: 'Matching (L2)', icon: 'list', showInTabs: false, portal: 'vgk' },
+    'vgk-guru-summary': { id: 'vgk-guru-summary', title: 'Senior (L3)', icon: 'list', showInTabs: false, portal: 'vgk' },
+    'vgk-ved-summary': { id: 'vgk-ved-summary', title: 'VED (L5)', icon: 'list', showInTabs: false, portal: 'vgk' },
+    'vgk-ev-benefits': { id: 'vgk-ev-benefits', title: 'EV Benefits', icon: 'zap', showInTabs: false, portal: 'vgk' },
+    'vgk-ev-discount': { id: 'vgk-ev-discount', title: 'EV Discount', icon: 'gift', showInTabs: false, portal: 'vgk' },
+    'vgk-franchise-earnings': { id: 'vgk-franchise-earnings', title: 'Franchise Earnings', icon: 'home', showInTabs: false, portal: 'vgk' },
+    'vgk-insurance': { id: 'vgk-insurance', title: 'Insurance', icon: 'shield', showInTabs: false, portal: 'vgk' },
+    'vgk-training': { id: 'vgk-training', title: 'Training', icon: 'book-open', showInTabs: false, portal: 'vgk' },
+    'vgk-coupon-benefits': { id: 'vgk-coupon-benefits', title: 'Coupon Benefits', icon: 'percent', showInTabs: false, portal: 'vgk' },
+    'vgk-my-submissions': { id: 'vgk-my-submissions', title: 'My Submissions', icon: 'file-text', showInTabs: false, portal: 'vgk' },
 
 
 

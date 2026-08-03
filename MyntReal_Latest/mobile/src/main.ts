@@ -142,6 +142,19 @@ import { MNRSettings } from './pages/mnr/MNRSettings';
 // VGK4U Member Portal Pages (Phase A1 read-only foundation — audit #35 follow-up)
 import { VGKBirthdays } from './pages/vgk/VGKBirthdays';
 import { VGKMemberHubPage } from './pages/vgk/VGKMemberHub';
+import { VGKCouponBenefitsPage } from './pages/vgk/VGKCouponBenefits';
+import { VGKDaywiseIncomePage } from './pages/vgk/VGKDaywiseIncome';
+import { VGKDirectSummaryPage } from './pages/vgk/VGKDirectSummary';
+import { VGKEvBenefitsPage } from './pages/vgk/VGKEvBenefits';
+import { VGKEvDiscountPage } from './pages/vgk/VGKEvDiscount';
+import { VGKFranchiseEarningsPage } from './pages/vgk/VGKFranchiseEarnings';
+import { VGKGuruSummaryPage } from './pages/vgk/VGKGuruSummary';
+import { VGKIncomeTypesPage } from './pages/vgk/VGKIncomeTypes';
+import { VGKInsurancePage } from './pages/vgk/VGKInsurance';
+import { VGKMatchingSummaryPage } from './pages/vgk/VGKMatchingSummary';
+import { VGKMySubmissionsPage } from './pages/vgk/VGKMySubmissions';
+import { VGKTrainingPage } from './pages/vgk/VGKTraining';
+import { VGKVedSummaryPage } from './pages/vgk/VGKVedSummary';
 import { VGKTopEarners } from './pages/vgk/VGKTopEarners';
 import { VGKAwards } from './pages/vgk/VGKAwards';
 import { VGKMyRegistrations } from './pages/vgk/VGKMyRegistrations';
@@ -1034,6 +1047,45 @@ class MNRApp {
         break;
       case 'vgk-income-unified':
         page = new VGKIncomeUnified(this.pageContainer);
+        break;
+      case 'vgk-daywise-income':
+        page = new VGKDaywiseIncomePage(this.pageContainer);
+        break;
+      case 'vgk-income-types':
+        page = new VGKIncomeTypesPage(this.pageContainer);
+        break;
+      case 'vgk-direct-summary':
+        page = new VGKDirectSummaryPage(this.pageContainer);
+        break;
+      case 'vgk-matching-summary':
+        page = new VGKMatchingSummaryPage(this.pageContainer);
+        break;
+      case 'vgk-guru-summary':
+        page = new VGKGuruSummaryPage(this.pageContainer);
+        break;
+      case 'vgk-ved-summary':
+        page = new VGKVedSummaryPage(this.pageContainer);
+        break;
+      case 'vgk-ev-benefits':
+        page = new VGKEvBenefitsPage(this.pageContainer);
+        break;
+      case 'vgk-ev-discount':
+        page = new VGKEvDiscountPage(this.pageContainer);
+        break;
+      case 'vgk-franchise-earnings':
+        page = new VGKFranchiseEarningsPage(this.pageContainer);
+        break;
+      case 'vgk-insurance':
+        page = new VGKInsurancePage(this.pageContainer);
+        break;
+      case 'vgk-training':
+        page = new VGKTrainingPage(this.pageContainer);
+        break;
+      case 'vgk-coupon-benefits':
+        page = new VGKCouponBenefitsPage(this.pageContainer);
+        break;
+      case 'vgk-my-submissions':
+        page = new VGKMySubmissionsPage(this.pageContainer);
         break;
 
       // Zynova Portal Pages

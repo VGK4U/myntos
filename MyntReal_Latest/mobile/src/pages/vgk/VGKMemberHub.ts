@@ -10,8 +10,24 @@ import { PageHeader } from '../../components/PageHeader';
 import { routerService } from '../../services/router.service';
 
 const NATIVE_ROUTES: Record<string, string> = {
-  'bonanza-rewards':  'vgk-bonanza-rewards',
-  'points-balance':   'vgk-points-balance',
+  'birthdays':          'vgk-birthdays',
+  'top-earners':        'vgk-top-earners',
+  'awards':             'vgk-awards',
+  'daywise-income':     'vgk-daywise-income',
+  'income-types':       'vgk-income-types',
+  'direct-summary':     'vgk-direct-summary',
+  'matching-summary':   'vgk-matching-summary',
+  'guru-summary':       'vgk-guru-summary',
+  'ved-summary':        'vgk-ved-summary',
+  'ev-benefits':        'vgk-ev-benefits',
+  'ev-discount':        'vgk-ev-discount',
+  'franchise-earnings': 'vgk-franchise-earnings',
+  'insurance':          'vgk-insurance',
+  'training':           'vgk-training',
+  'coupon-benefits':    'vgk-coupon-benefits',
+  'my-submissions':     'vgk-my-submissions',
+  'bonanza-rewards':    'vgk-bonanza-rewards',
+  'points-balance':     'vgk-points-balance',
 };
 
 interface ParityModule {

@@ -8,6 +8,7 @@
  * and WVV verification logic without duplicating UI.
  */
 import { PageHeader } from '../../components/PageHeader';
+  import { APP_CONFIG } from '../../config/app.config';
 
 export class VGKCouponTransferPage {
   private container: HTMLElement;
@@ -38,7 +39,7 @@ export class VGKCouponTransferPage {
         </div>
         <iframe
           id="vgk4u-coupon-transfer-frame"
-          src="/vgk/coupon-transfer"
+          src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/coupon-transfer"
           style="width:100%;height:calc(100vh - 200px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
           loading="lazy"
           title="Transfer Coupons (VGK4U)"

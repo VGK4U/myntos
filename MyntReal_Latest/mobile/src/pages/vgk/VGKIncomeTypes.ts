@@ -9,6 +9,7 @@
    */
 
   import { PageHeader } from '../../components/PageHeader';
+  import { APP_CONFIG } from '../../config/app.config';
 
   export class VGKIncomeTypesPage {
   private container: HTMLElement;
@@ -41,7 +42,7 @@
           </div>
           <iframe
             id="vgk4u-income-types-frame"
-            src="/vgk/income-types"
+            src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/income-types"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="Income Types (VGK4U)"
