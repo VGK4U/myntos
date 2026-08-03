@@ -2040,7 +2040,9 @@ def get_incentive_achievements(
             bonus_applied = False
             final_company = company_base
             final_direct  = direct_base
-            if target_met and cfg['bonus_trigger'] and company_target_val >= cfg['bonus_trigger'] \
+            target_base = emp_min_target if emp_min_target > 0 else _INC_DEFAULT_TARGET
+            bonus_trigger_threshold = float(cfg['bonus_trigger']) * target_base if cfg['bonus_trigger'] else None
+            if target_met and bonus_trigger_threshold and company_target_val >= bonus_trigger_threshold \
                     and (company_base + direct_base) > 0:
                 final_company = company_base * cfg['bonus_mul']
                 final_direct  = direct_base  * cfg['bonus_mul']

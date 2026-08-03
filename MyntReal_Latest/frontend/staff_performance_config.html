@@ -426,6 +426,9 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
       </div>
       <div style="display:flex;align-items:flex-end;gap:8px;">
         <button class="btn-apply" onclick="applyIncentiveFilters()"><i class="fa fa-play me-1"></i>Apply</button>
+        <button onclick="exportIncentiveImage()" style="padding:8px 16px;background:#059669;color:#fff;border:none;border-radius:6px;font-size:0.84rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;height:35px;">
+          <i class="fa fa-share-alt me-1"></i>Share Plan
+        </button>
       </div>
       <div id="inc-admin-add-btn" style="display:none;margin-left:auto;align-self:flex-end;">
         <div style="display:flex;gap:8px;">
@@ -455,7 +458,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
               <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Company Leads</th>
               <th style="padding:10px 12px;text-align:center;font-weight:700;color:#059669;">Direct Work</th>
               <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Type</th>
-              <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Bonus Trigger</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Bonus Trigger (x Min)</th>
               <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Multiplier</th>
               <th id="inc-admin-col" style="padding:10px 12px;text-align:center;display:none;">Actions</th>
             </tr>
@@ -586,8 +589,8 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
           <input id="inc-edit-rate-dw" type="number" class="filter-sel" style="width:100%;border-color:#059669;" min="0" step="any" placeholder="0">
         </div>
         <div>
-          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Bonus Trigger (optional)</label>
-          <input id="inc-edit-bonus-trig" type="number" class="filter-sel" style="width:100%;" min="0" step="any" placeholder="Leave blank for none">
+          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Bonus Trigger (multiple of min target, optional)</label>
+          <input id="inc-edit-bonus-trig" type="number" class="filter-sel" style="width:100%;" min="0" step="any" placeholder="e.g., 1.5 for 1.5x target">
         </div>
         <div>
           <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Bonus Multiplier</label>
@@ -1732,7 +1735,7 @@ function renderIncConfigTable(rows) {
     const rateNo    = r.incentive_rate_without_support ?? r.rate_no_support ?? 0;
     const rateWi    = r.incentive_rate_with_support    ?? r.rate_with_support ?? 0;
     const rateDw    = r.incentive_rate_direct_work ?? 0;
-    const bonusTrig = r.bonus_trigger_value != null ? fmtNum(r.bonus_trigger_value) : '—';
+    const bonusTrig = r.bonus_trigger_value != null ? `${fmtNum(r.bonus_trigger_value)}x` : '—';
     const bonusMul  = r.bonus_multiplier   != null ? `×${r.bonus_multiplier}` : '—';
     const actionCell = isAdmin
       ? `<td style="text-align:center;padding:8px 12px;">
@@ -2321,6 +2324,160 @@ function toggleAchDetail(detailId, rowEl) {
   }
   if (rowEl) rowEl.style.background = isOpen ? '' : '#faf5ff';
 }
+
+window.exportIncentiveImage = function() {
+  const rows = _incConfigRows || [];
+  if (!rows.length) {
+    toast('No config rows available to export', 'error');
+    return;
+  }
+  
+  const monthSel = document.getElementById('filter-month');
+  const monthName = monthSel.options[monthSel.selectedIndex].text;
+  const year = document.getElementById('filter-year').value;
+  
+  const compSel = document.getElementById('filter-company');
+  const companyName = compSel ? compSel.options[compSel.selectedIndex].text : 'All Companies';
+  
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  const width = 1200;
+  const headerHeight = 120;
+  const rowHeight = 45;
+  const footerHeight = 70;
+  const tableTop = headerHeight + 35;
+  const tableHeight = (rows.length + 1) * rowHeight;
+  const height = tableTop + tableHeight + footerHeight + 20;
+  
+  canvas.width = width;
+  canvas.height = height;
+  
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, width, height);
+  
+  const grad = ctx.createLinearGradient(0, 0, width, headerHeight);
+  grad.addColorStop(0, '#4c1d95');
+  grad.addColorStop(1, '#065f46');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, width, headerHeight);
+  
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 28px sans-serif';
+  ctx.fillText('MYNTREAL INCENTIVE SCHEME DETAILS', 40, 55);
+  
+  ctx.fillStyle = '#cbd5e1';
+  ctx.font = '16px sans-serif';
+  ctx.fillText(`Period: ${monthName} ${year}   |   Company scope: ${companyName}`, 40, 90);
+  
+  const colWidths = [220, 140, 110, 130, 110, 120, 150, 100];
+  const colAlign = ['left', 'center', 'center', 'center', 'center', 'center', 'center', 'center'];
+  const headers = ['Category', 'Min Target', 'Self Source', 'Company Leads', 'Direct Work', 'Rate Type', 'Bonus Trigger', 'Multiplier'];
+  const startX = 40;
+  
+  ctx.fillStyle = '#f1f5f9';
+  ctx.fillRect(startX, tableTop, width - 80, rowHeight);
+  
+  ctx.fillStyle = '#334155';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textBaseline = 'middle';
+  
+  let curX = startX;
+  headers.forEach((h, i) => {
+    const w = colWidths[i];
+    const align = colAlign[i];
+    ctx.textAlign = align;
+    let textX = curX;
+    if (align === 'center') textX += w / 2;
+    else if (align === 'right') textX += w;
+    else textX += 15;
+    
+    ctx.fillText(h, textX, tableTop + rowHeight / 2);
+    curX += w;
+  });
+  
+  rows.forEach((r, rowIdx) => {
+    const y = tableTop + (rowIdx + 1) * rowHeight;
+    
+    ctx.fillStyle = rowIdx % 2 === 0 ? '#ffffff' : '#f8fafc';
+    ctx.fillRect(startX, y, width - 80, rowHeight);
+    
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(startX, y + rowHeight);
+    ctx.lineTo(width - 40, y + rowHeight);
+    ctx.stroke();
+    
+    const slug = r.category_slug || r.category || '';
+    const label = r.category_label || INC_CATEGORY_LABELS[slug] || slug;
+    const unitLabel = r.min_target_unit === 'amount' ? '₹' : (INC_CATEGORY_UNIT_LABELS[slug] || 'units');
+    const typeLabel = r.incentive_type === 'percentage' ? '%' : `₹/${INC_CATEGORY_UNIT_LABELS[slug] || 'unit'}`;
+    const rateNo    = r.incentive_rate_without_support ?? r.rate_no_support ?? 0;
+    const rateWi    = r.incentive_rate_with_support    ?? r.rate_with_support ?? 0;
+    const rateDw    = r.incentive_rate_direct_work ?? 0;
+    
+    const bonusTrigVal = r.bonus_trigger_value;
+    const bonusTrig = bonusTrigVal != null ? `${bonusTrigVal}x min target` : '—';
+    const bonusMul  = r.bonus_multiplier != null ? `×${r.bonus_multiplier}` : '—';
+    
+    const vals = [
+      label,
+      `${r.min_target_value.toLocaleString('en-IN')} ${unitLabel}`,
+      `${rateNo.toLocaleString('en-IN')}${typeLabel}`,
+      `${rateWi.toLocaleString('en-IN')}${typeLabel}`,
+      `${rateDw.toLocaleString('en-IN')}${typeLabel}`,
+      r.incentive_type === 'percentage' ? 'Percentage' : 'Fixed/Unit',
+      bonusTrig,
+      bonusMul
+    ];
+    
+    let x = startX;
+    vals.forEach((val, i) => {
+      const w = colWidths[i];
+      const align = colAlign[i];
+      ctx.textAlign = align;
+      let textX = x;
+      if (align === 'center') textX += w / 2;
+      else if (align === 'right') textX += w;
+      else textX += 15;
+      
+      if (i === 0) {
+        ctx.fillStyle = '#4c1d95';
+        ctx.font = 'bold 14px sans-serif';
+      } else if (i === 4) {
+        ctx.fillStyle = '#059669';
+        ctx.font = 'bold 13px sans-serif';
+      } else {
+        ctx.fillStyle = '#475569';
+        ctx.font = '13px sans-serif';
+      }
+      
+      ctx.fillText(val, textX, y + rowHeight / 2);
+      x += w;
+    });
+  });
+  
+  ctx.strokeStyle = '#cbd5e1';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(startX, tableTop, width - 80, tableHeight);
+  
+  ctx.fillStyle = '#475569';
+  ctx.font = '12px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('* Min target applies to the employee\'s target (volume/amount).', 40, tableTop + tableHeight + 25);
+  ctx.fillText('* Bonus triggers if company + direct volume reaches the specified multiple of the employee target.', 40, tableTop + tableHeight + 45);
+  
+  ctx.textAlign = 'right';
+  ctx.fillText('Generated on VGK4U Platform', width - 40, tableTop + tableHeight + 25);
+  ctx.fillText(new Date().toLocaleDateString('en-IN', {day:'numeric', month:'long', year:'numeric'}), width - 40, tableTop + tableHeight + 45);
+  
+  const link = document.createElement('a');
+  link.download = `Incentive_Plan_${monthName}_${year}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  toast('Incentive plan image generated & downloaded!', 'success');
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();

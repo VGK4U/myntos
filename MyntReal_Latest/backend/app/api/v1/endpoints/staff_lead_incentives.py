@@ -449,8 +449,8 @@ def my_earning_capacity(
 
         company_tgt = (company_count + direct_count) if unit == "count" \
                       else (company_amount + direct_amount)
-        bonus_applied = False
-        if target_met and cfg["bonus_trigger"] and company_tgt >= cfg["bonus_trigger"] \
+        bonus_trigger_threshold = float(cfg["bonus_trigger"]) * float(cfg["min_target_value"]) if cfg["bonus_trigger"] else None
+        if target_met and bonus_trigger_threshold and company_tgt >= bonus_trigger_threshold \
                 and (company_base + direct_base) > 0:
             company_base *= cfg["bonus_multiplier"]
             direct_base  *= cfg["bonus_multiplier"]
