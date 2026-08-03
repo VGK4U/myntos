@@ -5,7 +5,7 @@ import { resolve } from 'path';
 // Replit web server: base='/mobile/' (default, no env var needed)
 // Codemagic APK build: VITE_BASE_URL='/' — assets must be at root inside APK WebView.
 // Without this, dist/index.html has src="/mobile/assets/..." which 404s in the APK.
-const viteBase = process.env.VITE_BASE_URL || '/mobile/';
+const viteBase = process.env.VITE_BASE_URL || './';
 
 export default defineConfig({
   root: '.',
