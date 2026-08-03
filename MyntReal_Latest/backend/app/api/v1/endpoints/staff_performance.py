@@ -1322,7 +1322,7 @@ def get_incentive_config(
 ):
     if month and year:
         _ensure_default_service_configs(db, company_id, month, year)
-    where = ["company_id = :co"]
+    where = ["company_id = :co", "is_active = TRUE"]
     params: dict = {"co": company_id}
     if month:
         where.append("month = :mo"); params["mo"] = month
@@ -1403,7 +1403,7 @@ def delete_incentive_config(
 ):
     if not _is_vgk_or_ea(me) and 'leadership' not in (me.role.role_name or '').lower():
         raise HTTPException(status_code=403, detail="Admin access required")
-    db.execute(text("DELETE FROM staff_incentive_config WHERE id=:rid"), {'rid': row_id})
+    db.execute(text("UPDATE staff_incentive_config SET is_active = FALSE WHERE id=:rid"), {'rid': row_id})
     db.commit()
     return {'success': True}
 
@@ -1428,16 +1428,16 @@ def copy_incentive_month(
     if next_month > 12:
         next_month = 1
         next_year += 1
-    # Check for existing rows in target month
+    # Check for existing active rows in target month
     if all_companies:
         existing = db.execute(text(
             "SELECT COUNT(*) FROM staff_incentive_config "
-            "WHERE month=:mo AND year=:yr"
+            "WHERE month=:mo AND year=:yr AND is_active=true"
         ), {'mo': next_month, 'yr': next_year}).scalar()
     else:
         existing = db.execute(text(
             "SELECT COUNT(*) FROM staff_incentive_config "
-            "WHERE company_id=:co AND month=:mo AND year=:yr"
+            "WHERE company_id=:co AND month=:mo AND year=:yr AND is_active=true"
         ), {'co': company_id, 'mo': next_month, 'yr': next_year}).scalar()
     if existing:
         scope = "All companies" if all_companies else f"Company {company_id}"
