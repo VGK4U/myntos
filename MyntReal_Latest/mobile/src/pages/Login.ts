@@ -63,6 +63,10 @@ export class LoginPage {
   async init(): Promise<void> {
     await portalService.init();
     this.selectedPortal = portalService.getPortal();
+    if (this.selectedPortal === 'mnr') {
+      this.selectedPortal = 'staff';
+      await portalService.setPortal('staff');
+    }
     
     const biometric = await authService.checkBiometricAvailability();
     this.hasBiometric = biometric.available;
@@ -766,17 +770,13 @@ export class LoginPage {
           ${this.getPortalLogo('staff')}
           <span>MyntReal</span>
         </button>
-        <button class="portal-tab ${this.selectedPortal === 'mnr' ? 'active' : ''}" data-portal="mnr">
-          ${this.getPortalLogo('mnr')}
-          <span>MNR</span>
+        <button class="portal-tab ${this.selectedPortal === 'vgk' ? 'active' : ''}" data-portal="vgk">
+          ${this.getPortalLogo('vgk')}
+          <span>VGK4U</span>
         </button>
         <button class="portal-tab ${this.selectedPortal === 'partner' ? 'active' : ''}" data-portal="partner">
           ${this.getPortalLogo('partner')}
           <span>Partner</span>
-        </button>
-        <button class="portal-tab ${this.selectedPortal === 'vgk' ? 'active' : ''}" data-portal="vgk">
-          ${this.getPortalLogo('vgk')}
-          <span>VGK4U</span>
         </button>
       </div>
 
