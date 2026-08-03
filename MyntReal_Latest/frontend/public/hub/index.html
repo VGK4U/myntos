@@ -1250,6 +1250,7 @@ document.getElementById('hubRechargeForm').addEventListener('submit', async func
         btn.disabled = false;
     }
 });
+</script>
 
 <!-- Homepage Promotion Popup Modal -->
 <div id="promoPopupModal" class="promo-popup-overlay" style="display: none;">
@@ -1392,8 +1393,7 @@ function closePromoPopup() {
 }
 
 // Fetch active homepage popup promotion on load
-document.addEventListener('DOMContentLoaded', () => {
-    // Check if the user has already seen this promotion in the current session
+function initPromoPopup() {
     fetch('/api/v1/community-services/public/homepage-popup')
         .then(r => r.json())
         .then(data => {
@@ -1406,7 +1406,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         })
         .catch(err => console.error('Failed to load promo popup:', err));
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPromoPopup);
+} else {
+    initPromoPopup();
+}
 
 // Update close function to also store dismissal in sessionStorage
 const originalClosePromoPopup = closePromoPopup;
