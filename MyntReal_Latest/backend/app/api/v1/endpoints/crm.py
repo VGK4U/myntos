@@ -11276,12 +11276,28 @@ def validate_transaction(
 
         # DC_STAFF_LEAD_INCV_001 (Apr 2026): Staff lead incentive trigger (field_staff_id)
         staff_incentive_result = None
-        if lead and getattr(lead, 'field_staff_id', None):
+        target_staff_id = getattr(lead, 'field_staff_id', None)
+        
+        # If no direct field support/staff is assigned, check if lead is linked to community registered by staff (no VGK member)
+        if not target_staff_id and lead and getattr(lead, 'community_id', None):
+            try:
+                from app.models.community_service import CommunityRegistration
+                comm = db.query(CommunityRegistration).filter(CommunityRegistration.id == lead.community_id).first()
+                if comm and comm.referral_type == 'staff' and not comm.ref1_member_id and comm.referral_code:
+                    from app.models.staff import StaffEmployee
+                    referring_staff = db.query(StaffEmployee).filter(StaffEmployee.emp_code == comm.referral_code).first()
+                    if referring_staff:
+                        target_staff_id = referring_staff.id
+            except Exception as e:
+                logger.warning("[DC-STAFF-INCV] Error finding community referral staff: %s", e)
+
+        if lead and target_staff_id:
             try:
                 from app.services.staff_lead_incentive_service import trigger_staff_lead_incentive
                 staff_incentive_result = trigger_staff_lead_incentive(
                     db=db, lead=lead, transaction=txn,
-                    company_id=company_id, validated_by_id=current_employee.id
+                    company_id=company_id, validated_by_id=current_employee.id,
+                    override_employee_id=target_staff_id
                 )
                 db.commit()
             except Exception as _sie:

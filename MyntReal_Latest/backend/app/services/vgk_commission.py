@@ -664,6 +664,13 @@ def apply_community_seva_commission_and_deductions(db: Session, lead, transactio
         val_l5 = Decimal(str(config.comm_sev_deduction_l5_val)) if config else Decimal('500.0')
         total_seva = val_l1 + val_l2 + val_l5
         
+        # If community got registered using influencer id, add 1000 Rupees Extra on the default one
+        from app.models.community_service import CommunityRegistration
+        comm = db.query(CommunityRegistration).filter(CommunityRegistration.id == lead.community_id).first()
+        if comm and comm.referral_type == 'influencer':
+            total_seva += Decimal('1000.0')
+            logger.info(f"[COMMUNITY-SEVA] Community registered by Influencer {comm.referral_code}. Added 1000 Rupees Extra. Total Seva: {total_seva}")
+        
         # Add commission record for the community registration
         new_comm = CommunityCommission(
             community_id=lead.community_id,

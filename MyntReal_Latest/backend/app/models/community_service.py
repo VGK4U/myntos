@@ -53,6 +53,9 @@ class CommunityRegistration(BaseModel):
     ref1_member_id = Column(Integer, ForeignKey('official_partners.id', ondelete='SET NULL'), nullable=True)
     ref2_member_id = Column(Integer, ForeignKey('official_partners.id', ondelete='SET NULL'), nullable=True)
     
+    referral_type = Column(String(50), default='direct', nullable=True)
+    referral_code = Column(String(100), nullable=True)
+    
     kyc_uploads = Column(JSONB, nullable=True, default=list)  # Aadhaar, PAN uploads
     status = Column(String(20), default='PENDING', nullable=False)  # PENDING, APPROVED, REJECTED
     user_id = Column(Integer, ForeignKey('official_partners.id', ondelete='SET NULL'), nullable=True)  # Associated partner login credentials

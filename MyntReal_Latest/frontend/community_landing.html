@@ -2087,24 +2087,15 @@
                             Referrals (Official VGK Channel Partners)
                         </div>
 
-                        <div class="form-grid-2 form-grid">
-                            <div class="form-group">
-                                <label>Referral CP 1</label>
-                                <div class="input-wrapper">
-                                    <i class="fas fa-user-group"></i>
-                                    <input type="text" id="ref1Input" placeholder="Type CP Name / Code" autocomplete="off">
-                                    <input type="hidden" name="ref1_member_id" id="ref1_member_id">
-                                    <div class="typeahead-results" id="ref1Results"></div>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>Referral CP 2</label>
-                                <div class="input-wrapper">
-                                    <i class="fas fa-user-group"></i>
-                                    <input type="text" id="ref2Input" placeholder="Type CP Name / Code" autocomplete="off">
-                                    <input type="hidden" name="ref2_member_id" id="ref2_member_id">
-                                    <div class="typeahead-results" id="ref2Results"></div>
-                                </div>
+                        <div class="form-group">
+                            <label>Referral CP 1</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-user-group"></i>
+                                <input type="text" id="ref1Input" placeholder="Type Name, Code or Phone (Staff, VGK Member, Influencer)" autocomplete="off">
+                                <input type="hidden" name="ref1_member_id" id="ref1_member_id">
+                                <input type="hidden" name="referral_type" id="referral_type" value="direct">
+                                <input type="hidden" name="referral_code" id="referral_code">
+                                <div class="typeahead-results" id="ref1Results"></div>
                             </div>
                         </div>
 
@@ -2341,7 +2332,6 @@
             loadServiceDetails();
             initFormConstraints();
             initTypeahead('ref1Input', 'ref1_member_id', 'ref1Results');
-            initTypeahead('ref2Input', 'ref2_member_id', 'ref2Results');
             
             // Load campaign banner and live counter dynamically in top header
             fetch('/api/v1/community-services/public/active-headers')
@@ -2782,10 +2772,15 @@
             if (!input || !hidden || !results) return;
             let debounceTimer;
 
+            const referralType = document.getElementById('referral_type');
+            const referralCode = document.getElementById('referral_code');
+
             input.addEventListener('input', () => {
                 clearTimeout(debounceTimer);
                 const query = input.value.trim();
                 hidden.value = ''; // reset selection
+                if (referralType) referralType.value = 'direct';
+                if (referralCode) referralCode.value = '';
                 
                 if (query.length < 2) {
                     results.style.display = 'none';
@@ -2803,17 +2798,20 @@
                             json.data.forEach(m => {
                                 const item = document.createElement('div');
                                 item.className = 'typeahead-item';
-                                item.textContent = `${m.partner_name} (${m.partner_code} - ${m.phone})`;
+                                const typeLabel = m.type === 'staff' ? 'Staff' : (m.type === 'influencer' ? 'Influencer' : 'VGK Member');
+                                item.textContent = `${m.partner_name} (${m.partner_code} - ${typeLabel})`;
                                 item.onclick = () => {
                                     input.value = `${m.partner_name} (${m.partner_code})`;
-                                    hidden.value = m.id;
+                                    hidden.value = m.id || '';
+                                    if (referralType) referralType.value = m.type || 'direct';
+                                    if (referralCode) referralCode.value = m.partner_code || '';
                                     results.style.display = 'none';
                                 };
                                 results.appendChild(item);
                             });
                             results.style.display = 'block';
                         } else {
-                            results.innerHTML = '<div style="padding:10px;font-size:12px;color:var(--text-muted)">No active VGK members found</div>';
+                            results.innerHTML = '<div style="padding:10px;font-size:12px;color:var(--text-muted)">No active members found</div>';
                             results.style.display = 'block';
                         }
                     } catch (e) {

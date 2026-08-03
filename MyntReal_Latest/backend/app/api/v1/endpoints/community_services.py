@@ -93,6 +93,8 @@ async def register_community(
     google_location: Optional[str] = Form(None),
     ref1_member_id: Optional[int] = Form(None),
     ref2_member_id: Optional[int] = Form(None),
+    referral_type: Optional[str] = Form(None),
+    referral_code: Optional[str] = Form(None),
     aadhar_first_front: Optional[UploadFile] = File(None),
     aadhar_first_back: Optional[UploadFile] = File(None),
     aadhar_second_front: Optional[UploadFile] = File(None),
@@ -121,6 +123,8 @@ async def register_community(
         google_location=google_location,
         ref1_member_id=ref1_member_id,
         ref2_member_id=ref2_member_id,
+        referral_type=referral_type or 'direct',
+        referral_code=referral_code,
         kyc_uploads=[],
         status='PENDING',
         created_at=get_indian_time(),
@@ -152,6 +156,8 @@ async def register_community(
         category='VGK_TEAM',
         is_active=False, # Inactive upon initial signup
         vgk_role='COMMUNITY',
+        parent_partner_id=ref1_member_id if referral_type == 'vgk_member' else None,
+        registered_by_emp_code=referral_code if referral_type == 'staff' else None,
         vgk_points_balance=Decimal('0'),
         password_hash=password_hash,
         created_at=get_indian_time(),
@@ -1101,8 +1107,33 @@ def list_registrations_admin(db: Session = Depends(get_db), current_user: StaffE
         d = r.to_dict()
         d['kyc_documents'] = r.kyc_uploads or []
         d['service_name'] = r.service.service_name if r.service else 'Unknown'
-        d['ref1_name'] = r.ref1_member.partner_name if r.ref1_member else None
-        d['ref1_code'] = r.ref1_member.partner_code if r.ref1_member else None
+        
+        # Initialize defaults from relationship
+        ref1_name = r.ref1_member.partner_name if r.ref1_member else None
+        ref1_code = r.ref1_member.partner_code if r.ref1_member else None
+        
+        # Resolve staff/influencer names if not resolved yet
+        if not ref1_name and r.referral_type and r.referral_code:
+            if r.referral_type == 'staff':
+                from app.models.staff import StaffEmployee
+                emp = db.query(StaffEmployee).filter(StaffEmployee.emp_code == r.referral_code).first()
+                if emp:
+                    ref1_name = emp.full_name
+                    ref1_code = emp.emp_code
+            elif r.referral_type == 'influencer':
+                from app.models.promo import PromoInfluencer
+                inf = db.query(PromoInfluencer).filter(PromoInfluencer.referral_code == r.referral_code).first()
+                if inf:
+                    ref1_name = inf.name
+                    ref1_code = inf.referral_code
+            elif r.referral_type == 'vgk_member':
+                partner = db.query(OfficialPartner).filter(OfficialPartner.partner_code == r.referral_code).first()
+                if partner:
+                    ref1_name = partner.partner_name
+                    ref1_code = partner.partner_code
+                    
+        d['ref1_name'] = ref1_name
+        d['ref1_code'] = ref1_code or r.referral_code
         d['ref2_name'] = r.ref2_member.partner_name if r.ref2_member else None
         d['ref2_code'] = r.ref2_member.partner_code if r.ref2_member else None
         d['user_partner_code'] = r.user_partner.partner_code if r.user_partner else None
@@ -1138,6 +1169,8 @@ def approve_registration_endpoint(reg_id: int, db: Session = Depends(get_db), cu
         partner.is_active = True
         partner.password_hash = password_hash
         partner_code = partner.partner_code
+        partner.parent_partner_id = reg.ref1_member_id if reg.referral_type == 'vgk_member' else None
+        partner.registered_by_emp_code = reg.referral_code if reg.referral_type == 'staff' else None
         db.commit()
     else:
         # Create new partner (fallback)
@@ -1153,6 +1186,8 @@ def approve_registration_endpoint(reg_id: int, db: Session = Depends(get_db), cu
             category='VGK_TEAM',
             is_active=True,
             vgk_role='COMMUNITY',
+            parent_partner_id=reg.ref1_member_id if reg.referral_type == 'vgk_member' else None,
+            registered_by_emp_code=reg.referral_code if reg.referral_type == 'staff' else None,
             vgk_points_balance=Decimal('0'),
             password_hash=password_hash,
             created_at=get_indian_time(),
@@ -1226,6 +1261,24 @@ def update_registration_fields(
     for k, v in payload.items():
         if hasattr(reg, k):
             setattr(reg, k, v)
+
+    # Sync referral details to the associated OfficialPartner if approved/login exists
+    if reg.user_id:
+        partner = db.query(OfficialPartner).filter(OfficialPartner.id == reg.user_id).first()
+        if partner:
+            ref_type = payload.get('referral_type', reg.referral_type)
+            ref_code = payload.get('referral_code', reg.referral_code)
+            ref1_id = payload.get('ref1_member_id', reg.ref1_member_id)
+            if ref_type == 'vgk_member':
+                partner.parent_partner_id = ref1_id
+                partner.registered_by_emp_code = None
+            elif ref_type in ('staff', 'influencer'):
+                partner.parent_partner_id = None
+                partner.registered_by_emp_code = ref_code
+            else:
+                partner.parent_partner_id = None
+                partner.registered_by_emp_code = None
+
     reg.updated_at = get_indian_time()
     db.commit()
     db.refresh(reg)

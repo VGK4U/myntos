@@ -981,8 +981,9 @@
                             <div class="text-muted fs-7">${escapeHtml(r.district)}, ${escapeHtml(r.state)} (${r.pin_code})</div>
                         </td>
                         <td>
-                            <div class="fs-7 text-primary fw-bold">Ref 1: CP #${r.ref1_member_id || '—'}</div>
-                            <div class="fs-7 text-secondary fw-bold">Ref 2: CP #${r.ref2_member_id || '—'}</div>
+                            <div class="fs-7 text-primary fw-bold">${r.referral_type ? r.referral_type.toUpperCase().replace('_', ' ') : 'DIRECT'}</div>
+                            <div class="text-muted fs-7">${r.ref1_name ? escapeHtml(r.ref1_name) : '—'}</div>
+                            <div class="text-secondary fs-7 fw-bold" style="font-family:monospace">${r.ref1_code ? escapeHtml(r.ref1_code) : (r.ref1_member_id ? 'CP #' + r.ref1_member_id : '—')}</div>
                         </td>
                         <td>${docsHtml}</td>
                         <td>
@@ -1316,8 +1317,9 @@
             document.getElementById('edit_district').value = r.district || '';
             document.getElementById('edit_state').value = r.state || '';
             document.getElementById('edit_google_location').value = r.google_location || '';
+            document.getElementById('edit_referral_type').value = r.referral_type || 'direct';
+            document.getElementById('edit_referral_code').value = r.referral_code || '';
             document.getElementById('edit_ref1_member_id').value = r.ref1_member_id || '';
-            document.getElementById('edit_ref2_member_id').value = r.ref2_member_id || '';
             document.getElementById('edit_status').value = r.status || 'PENDING';
 
             if (!editRegModalObj) {
@@ -1342,8 +1344,10 @@
                 district: document.getElementById('edit_district').value,
                 state: document.getElementById('edit_state').value,
                 google_location: document.getElementById('edit_google_location').value || null,
+                referral_type: document.getElementById('edit_referral_type').value || 'direct',
+                referral_code: document.getElementById('edit_referral_code').value || null,
                 ref1_member_id: parseInt(document.getElementById('edit_ref1_member_id').value) || null,
-                ref2_member_id: parseInt(document.getElementById('edit_ref2_member_id').value) || null,
+                ref2_member_id: null,
                 status: document.getElementById('edit_status').value
             };
 
@@ -1825,13 +1829,22 @@
                   <input type="text" class="form-control" id="edit_google_location" placeholder="e.g., https://maps.app.goo.gl/...">
                 </div>
                 <hr class="my-3">
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Referral CP 1 ID (OfficialPartner ID)</label>
-                  <input type="number" class="form-control" id="edit_ref1_member_id">
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">Referral Type</label>
+                  <select class="form-select text-dark" id="edit_referral_type">
+                    <option value="direct">Direct</option>
+                    <option value="vgk_member">VGK Member</option>
+                    <option value="staff">Staff</option>
+                    <option value="influencer">Influencer</option>
+                  </select>
                 </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Referral CP 2 ID (OfficialPartner ID)</label>
-                  <input type="number" class="form-control" id="edit_ref2_member_id">
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">Referral Code</label>
+                  <input type="text" class="form-control" id="edit_referral_code" placeholder="e.g., AKSHAR39">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">Referral CP 1 ID (OfficialPartner ID)</label>
+                  <input type="number" class="form-control" id="edit_ref1_member_id" placeholder="Optional for staff/influencer">
                 </div>
                 <div class="col-md-6">
                   <label class="form-label fw-bold">KYC / Registration Status *</label>

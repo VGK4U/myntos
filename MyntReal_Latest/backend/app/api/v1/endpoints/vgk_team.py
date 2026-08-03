@@ -193,30 +193,100 @@ def search_vgk_members(
     active_only: bool = Query(True, description="True = active members only (default). False = include inactive."),
     db: Session = Depends(get_db)
 ):
-    """Search VGK members — used by CRM dropdowns (active_only=True default) and upline change (active_only=False)."""
-    query = db.query(OfficialPartner).filter(OfficialPartner.category == 'VGK_TEAM')
+    """Search VGK members, staff, and influencers — used by CRM dropdowns and signup referrals."""
+    results_list = []
+    seen_codes = set()
+    term = f"%{q.strip()}%" if q.strip() else ""
+
+    # 1. Query OfficialPartner (VGK Members)
+    query_partners = db.query(OfficialPartner).filter(OfficialPartner.category == 'VGK_TEAM')
     if active_only:
-        query = query.filter(OfficialPartner.is_active == True)
-    if q.strip():
-        term = f"%{q.strip()}%"
-        query = query.filter(or_(
+        query_partners = query_partners.filter(OfficialPartner.is_active == True)
+    if term:
+        query_partners = query_partners.filter(or_(
             OfficialPartner.partner_name.ilike(term),
             OfficialPartner.phone.ilike(term),
             OfficialPartner.partner_code.ilike(term)
         ))
-    members = query.order_by(OfficialPartner.partner_name).limit(30).all()
+    partners = query_partners.order_by(OfficialPartner.partner_name).limit(30).all()
+    
+    for m in partners:
+        code = (m.partner_code or '').strip().upper()
+        seen_codes.add(code)
+        
+        # Determine type
+        m_type = 'vgk_member'
+        if m.vgk_role in ('MENTOR', 'VGK_MENTOR'):
+            m_type = 'staff'
+            
+        results_list.append({
+            "id": m.id,
+            "partner_name": m.partner_name,
+            "phone": m.phone,
+            "partner_code": m.partner_code,
+            "is_active": m.is_active,
+            "type": m_type
+        })
+
+    # 2. Query StaffEmployee
+    query_staff = db.query(StaffEmployee)
+    if active_only:
+        query_staff = query_staff.filter(StaffEmployee.status.ilike('active'))
+    if term:
+        query_staff = query_staff.filter(or_(
+            StaffEmployee.full_name.ilike(term),
+            StaffEmployee.phone.ilike(term),
+            StaffEmployee.emp_code.ilike(term)
+        ))
+    staff_members = query_staff.order_by(StaffEmployee.full_name).limit(30).all()
+    
+    for s in staff_members:
+        code = (s.emp_code or '').strip().upper()
+        if code in seen_codes:
+            continue
+        seen_codes.add(code)
+        results_list.append({
+            "id": None,
+            "partner_name": s.full_name,
+            "phone": s.phone,
+            "partner_code": s.emp_code,
+            "is_active": (s.status.lower() == 'active'),
+            "type": 'staff'
+        })
+
+    # 3. Query PromoInfluencer
+    try:
+        from app.models.promo import PromoInfluencer
+        query_inf = db.query(PromoInfluencer)
+        if active_only:
+            query_inf = query_inf.filter(PromoInfluencer.status.ilike('active'))
+        if term:
+            query_inf = query_inf.filter(or_(
+                PromoInfluencer.name.ilike(term),
+                PromoInfluencer.phone.ilike(term),
+                PromoInfluencer.referral_code.ilike(term)
+            ))
+        influencers = query_inf.order_by(PromoInfluencer.name).limit(30).all()
+        
+        for inf in influencers:
+            code = (inf.referral_code or '').strip().upper()
+            if code in seen_codes:
+                continue
+            seen_codes.add(code)
+            results_list.append({
+                "id": None,
+                "partner_name": inf.name,
+                "phone": inf.phone,
+                "partner_code": inf.referral_code,
+                "is_active": (inf.status.lower() == 'active'),
+                "type": 'influencer'
+            })
+    except Exception as e:
+        logger.warning(f"Error searching influencers in search_vgk_members: {e}")
+
     return {
         "success": True,
-        "data": [
-            {
-                "id": m.id,
-                "partner_name": m.partner_name,
-                "phone": m.phone,
-                "partner_code": m.partner_code,
-                "is_active": m.is_active,
-            }
-            for m in members
-        ]
+        "data": results_list[:50]
     }
 
 
@@ -417,10 +487,28 @@ def list_vgk_members(
         return 'none'
 
     items = []
+    # Fetch community registrations for these members to resolve registration_source and registered_by fallbacks
+    from app.models.community_service import CommunityRegistration
+    comm_rows = db.query(CommunityRegistration).filter(CommunityRegistration.user_id.in_(member_ids)).all() if member_ids else []
+    comm_map = {c.user_id: c for c in comm_rows}
+
+    # Pre-fetch parent partner roles and promo influencer records for quick lookup
+    parent_ids = list({m.parent_partner_id for m in members if m.parent_partner_id})
+    parent_map = {}
+    parent_codes = []
+    if parent_ids:
+        parents = db.query(OfficialPartner).filter(OfficialPartner.id.in_(parent_ids)).all()
+        parent_map = {p.id: p for p in parents}
+        parent_codes = [p.partner_code for p in parents if p.partner_code]
+    
+    from app.models.promo import PromoInfluencer
+    inf_rows = db.query(PromoInfluencer).filter(PromoInfluencer.vgk_member_id.in_(parent_codes)).all() if parent_codes else []
+    influencer_codes = {i.vgk_member_id for i in inf_rows}
+
     for m in members:
         d = m.to_dict()
         if m.parent_partner_id:
-            ref = db.query(OfficialPartner).filter(OfficialPartner.id == m.parent_partner_id).first()
+            ref = parent_map.get(m.parent_partner_id)
             d['referrer_name'] = ref.partner_name if ref else None
             d['referrer_code'] = ref.partner_code if ref else None
         else:
@@ -429,13 +517,36 @@ def list_vgk_members(
         balance = float(m.vgk_points_balance or 0)
         d['points_utilised'] = pts_debit_map.get(m.id, 0.0)
         d['confirmed_income_total'] = income_map.get(m.id, 0.0)
-        phone = (m.phone or m.whatsapp_number or '').strip()
-        if phone in crm_source_map:
-            d['registration_source'] = crm_source_map[phone]
+        
+        # Resolve registration_source dynamically
+        reg = comm_map.get(m.id)
+        if reg and reg.referral_type:
+            d['registration_source'] = reg.referral_type
         elif m.parent_partner_id:
-            d['registration_source'] = 'Reference'
+            ref = parent_map.get(m.parent_partner_id)
+            if ref:
+                if ref.partner_code in influencer_codes:
+                    d['registration_source'] = 'influencer'
+                elif ref.vgk_role in ('MENTOR', 'VGK_MENTOR'):
+                    d['registration_source'] = 'staff'
+                else:
+                    d['registration_source'] = 'vgk_member'
+            else:
+                d['registration_source'] = 'vgk_member'
         else:
-            d['registration_source'] = 'Signup'
+            phone = (m.phone or m.whatsapp_number or '').strip()
+            crm_src = None
+            if phone in crm_source_map:
+                crm_src = crm_source_map[phone]
+            if crm_src:
+                d['registration_source'] = crm_src
+            else:
+                d['registration_source'] = 'direct'
+
+        # Resolve registered_by_emp_code fallback from community registration
+        if not d.get('registered_by_emp_code') and reg:
+            d['registered_by_emp_code'] = reg.referral_code
+
         d['wa_message_count'] = wa_count_map.get(phone, 0)
         # DC_CP_CARD_001: attach designation + computed metrics
         c_used = coupon_map.get(m.id, 0)
@@ -474,19 +585,41 @@ def list_vgk_members(
         _start = (page - 1) * page_size
         items  = items[_start: _start + page_size]
 
-    # [DC-VGK-STAFF-REG-001] Batch resolve registered_by_name from staff_employees
-    _emp_codes = list({d.get('registered_by_emp_code') for d in items if d.get('registered_by_emp_code')})
-    _emp_name_map: dict = {}
-    if _emp_codes:
+    # Batch resolve registered_by_name from staff, promo_influencers, and official_partners
+    emp_codes = list({d.get('registered_by_emp_code') for d in items if d.get('registered_by_emp_code')})
+    name_map = {}
+    if emp_codes:
+        # Check StaffEmployee
         try:
-            _emp_rows = db.execute(text(
+            staff_rows = db.execute(text(
                 "SELECT emp_code, full_name FROM staff_employees WHERE emp_code = ANY(:codes)"
-            ), {"codes": _emp_codes}).fetchall()
-            _emp_name_map = {r[0]: r[1] for r in _emp_rows}
+            ), {"codes": emp_codes}).fetchall()
+            for r in staff_rows:
+                name_map[r[0]] = r[1]
         except Exception:
             pass
+        # Check PromoInfluencer
+        try:
+            inf_rows = db.execute(text(
+                "SELECT referral_code, name FROM promo_influencers WHERE referral_code = ANY(:codes)"
+            ), {"codes": emp_codes}).fetchall()
+            for r in inf_rows:
+                name_map[r[0]] = r[1]
+        except Exception:
+            pass
+        # Check OfficialPartner
+        try:
+            partner_rows = db.execute(text(
+                "SELECT partner_code, partner_name FROM official_partners WHERE partner_code = ANY(:codes)"
+            ), {"codes": emp_codes}).fetchall()
+            for r in partner_rows:
+                name_map[r[0]] = r[1]
+        except Exception:
+            pass
+
     for d in items:
-        d['registered_by_name'] = _emp_name_map.get(d.get('registered_by_emp_code'), None)
+        code = d.get('registered_by_emp_code')
+        d['registered_by_name'] = name_map.get(code, None)
 
     return {"success": True, "total": total, "page": page, "page_size": page_size, "data": items}
 
@@ -735,23 +868,37 @@ def get_vgk_member(
 
     # Registration source
     try:
-        phone = (member.phone or member.whatsapp_number or '').strip()
-        if phone:
-            crm_src = db.execute(text(
-                "SELECT source FROM crm_leads WHERE phone = :ph OR alternate_phone = :ph ORDER BY id DESC LIMIT 1"
-            ), {"ph": phone}).scalar()
+        from app.models.community_service import CommunityRegistration
+        reg = db.query(CommunityRegistration).filter(CommunityRegistration.user_id == member.id).first()
+        if reg and reg.referral_type:
+            d['registration_source'] = reg.referral_type
+        elif member.parent_partner_id:
+            parent = db.query(OfficialPartner).filter(OfficialPartner.id == member.parent_partner_id).first()
+            if parent:
+                from app.models.promo import PromoInfluencer
+                is_inf = db.query(PromoInfluencer).filter(PromoInfluencer.vgk_member_id == parent.partner_code).first()
+                if is_inf:
+                    d['registration_source'] = 'influencer'
+                elif parent.vgk_role in ('MENTOR', 'VGK_MENTOR'):
+                    d['registration_source'] = 'staff'
+                else:
+                    d['registration_source'] = 'vgk_member'
+            else:
+                d['registration_source'] = 'vgk_member'
+        else:
+            phone = (member.phone or member.whatsapp_number or '').strip()
+            crm_src = None
+            if phone:
+                crm_src = db.execute(text(
+                    "SELECT source FROM crm_leads WHERE phone = :ph OR alternate_phone = :ph ORDER BY id DESC LIMIT 1"
+                ), {"ph": phone}).scalar()
             if crm_src:
                 d['registration_source'] = crm_src
-            elif member.parent_partner_id:
-                d['registration_source'] = 'Reference'
             else:
-                d['registration_source'] = 'Signup'
-        elif member.parent_partner_id:
-            d['registration_source'] = 'Reference'
-        else:
-            d['registration_source'] = 'Signup'
-    except Exception:
-        d['registration_source'] = None
+                d['registration_source'] = 'direct'
+    except Exception as e:
+        logger.warning(f"Error resolving registration_source in get_vgk_member: {e}")
+        d['registration_source'] = 'direct'
 
     # DC-VGK-CRM-LINK-001: Phone-based CRM registration lookup (no schema change needed)
     d['crm_registration'] = None
@@ -783,17 +930,34 @@ def get_vgk_member(
     except Exception as _crm_err:
         logger.warning(f"[DC-VGK-CRM-LINK-001] CRM lookup failed (non-fatal): {_crm_err}")
 
-    # DC-VGK-STAFF-REG-001: resolve registered_by staff name for side panel display
+    # DC-VGK-STAFF-REG-001: resolve registered_by staff/upline name for side panel display
     try:
-        emp_code = member.registered_by_emp_code
+        from app.models.community_service import CommunityRegistration
+        reg = db.query(CommunityRegistration).filter(CommunityRegistration.user_id == member.id).first()
+        emp_code = member.registered_by_emp_code or (reg.referral_code if reg else None)
+        d['registered_by_emp_code'] = emp_code
         if emp_code:
-            reg_staff = db.query(StaffEmployee).filter(
-                StaffEmployee.emp_code == emp_code
-            ).first()
-            d['registered_by_name'] = reg_staff.full_name if reg_staff else None
+            # Check staff
+            reg_staff = db.query(StaffEmployee).filter(StaffEmployee.emp_code == emp_code).first()
+            if reg_staff:
+                d['registered_by_name'] = reg_staff.full_name
+            else:
+                # Check influencer
+                from app.models.promo import PromoInfluencer
+                reg_inf = db.query(PromoInfluencer).filter(PromoInfluencer.referral_code == emp_code).first()
+                if reg_inf:
+                    d['registered_by_name'] = reg_inf.name
+                else:
+                    # Check partner
+                    reg_partner = db.query(OfficialPartner).filter(OfficialPartner.partner_code == emp_code).first()
+                    if reg_partner:
+                        d['registered_by_name'] = reg_partner.partner_name
+                    else:
+                        d['registered_by_name'] = None
         else:
             d['registered_by_name'] = None
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Error resolving registered_by in get_vgk_member: {e}")
         d['registered_by_name'] = None
 
     return {"success": True, "data": d}
