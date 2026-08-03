@@ -462,7 +462,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
           <thead>
             <tr style="background:#f8f7ff;border-bottom:2px solid #e0d7ff;">
               <th style="padding:10px 12px;text-align:left;font-weight:700;color:#4c1d95;">Category</th>
-              <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Source</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Self</th>
               <th style="padding:10px 12px;text-align:center;font-weight:700;color:#059669;">Direct</th>
               <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Company</th>
               <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Type</th>
@@ -2280,8 +2280,8 @@ function renderAchievements(rows) {
             <thead>
               <tr style="background:#e0e7ff;color:#3730a3;">
                 <th style="padding:5px 10px;text-align:left;">Category</th>
-                <th style="padding:5px 10px;text-align:center;color:#7c3aed;">Source Leads<br><span style="font-size:0.68rem;font-weight:400;opacity:0.75">flat rate</span></th>
-                <th style="padding:5px 10px;text-align:center;color:#7c3aed;">Source ₹</th>
+                <th style="padding:5px 10px;text-align:center;color:#7c3aed;">Self Leads<br><span style="font-size:0.68rem;font-weight:400;opacity:0.75">flat rate</span></th>
+                <th style="padding:5px 10px;text-align:center;color:#7c3aed;">Self ₹</th>
                 <th style="padding:5px 10px;text-align:center;color:#059669;">Direct Leads<br><span style="font-size:0.68rem;font-weight:400;opacity:0.75">no MNR/VGK4U ID</span></th>
                 <th style="padding:5px 10px;text-align:center;color:#059669;">Direct ₹</th>
                 <th style="padding:5px 10px;text-align:center;color:#0891b2;">Company Leads<br><span style="font-size:0.68rem;font-weight:400;opacity:0.75">has MNR/VGK4U ID</span></th>
@@ -2434,7 +2434,7 @@ window.exportIncentiveImage = function() {
   
   const colWidths = [240, 130, 130, 150, 140, 170, 140];
   const colAlign = ['left', 'center', 'center', 'center', 'center', 'center', 'center'];
-  const headers = ['Category', 'Source', 'Direct', 'Company', 'Rate Type', 'Bonus Trigger', 'Multiplier'];
+  const headers = ['Category', 'Self', 'Direct', 'Company', 'Rate Type', 'Bonus Trigger', 'Multiplier'];
   const startX = 40;
   
   ctx.fillStyle = '#f1f5f9';
