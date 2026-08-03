@@ -1678,9 +1678,23 @@ def get_incentive_achievements(
                            AND l.z_guru_id IS NULL
                            AND l.adi_guru_id IS NULL
                            AND (l.mnr_handler_id IS NULL OR l.mnr_handler_id = '')
-                           AND l.associated_partner_id IS NULL
+                           AND (
+                               l.associated_partner_id IS NULL
+                               OR (
+                                   l.associated_partner_id IS NOT NULL
+                                   AND se_reg.id = l.telecaller_id
+                                   AND (
+                                       SELECT COUNT(DISTINCT vci.partner_id)
+                                       FROM vgk_cash_income_entries vci
+                                       WHERE vci.source_lead_id = l.id
+                                         AND vci.status NOT IN ('CANCELLED')
+                                   ) = 1
+                               )
+                           )
                        ) THEN TRUE ELSE FALSE END                                       AS is_direct_work
                 FROM crm_leads l
+                LEFT JOIN official_partners op ON op.id = l.associated_partner_id
+                LEFT JOIN staff_employees se_reg ON se_reg.emp_code = op.registered_by_emp_code
                 WHERE {_comp_where}
                   {_co_clause} AND l.telecaller_id IS NOT NULL
                 UNION ALL
@@ -1702,9 +1716,23 @@ def get_incentive_achievements(
                            AND l.z_guru_id IS NULL
                            AND l.adi_guru_id IS NULL
                            AND (l.mnr_handler_id IS NULL OR l.mnr_handler_id = '')
-                           AND l.associated_partner_id IS NULL
+                           AND (
+                               l.associated_partner_id IS NULL
+                               OR (
+                                   l.associated_partner_id IS NOT NULL
+                                   AND se_reg.id = l.field_staff_id
+                                   AND (
+                                       SELECT COUNT(DISTINCT vci.partner_id)
+                                       FROM vgk_cash_income_entries vci
+                                       WHERE vci.source_lead_id = l.id
+                                         AND vci.status NOT IN ('CANCELLED')
+                                   ) = 1
+                               )
+                           )
                        ) THEN TRUE ELSE FALSE END                                       AS is_direct_work
                 FROM crm_leads l
+                LEFT JOIN official_partners op ON op.id = l.associated_partner_id
+                LEFT JOIN staff_employees se_reg ON se_reg.emp_code = op.registered_by_emp_code
                 WHERE {_comp_where}
                   {_co_clause} AND l.field_staff_id IS NOT NULL
             ) raw
@@ -2323,13 +2351,27 @@ def incentive_achievements_drilldown(
                         AND l.z_guru_id IS NULL
                         AND l.adi_guru_id IS NULL
                         AND (l.mnr_handler_id IS NULL OR l.mnr_handler_id = '')
-                        AND l.associated_partner_id IS NULL
+                        AND (
+                            l.associated_partner_id IS NULL
+                            OR (
+                                l.associated_partner_id IS NOT NULL
+                                AND se_reg.id::TEXT = :emp_id
+                                AND (
+                                    SELECT COUNT(DISTINCT vci.partner_id)
+                                    FROM vgk_cash_income_entries vci
+                                    WHERE vci.source_lead_id = l.id
+                                      AND vci.status NOT IN ('CANCELLED')
+                                ) = 1
+                            )
+                        )
                     ) THEN TRUE ELSE FALSE END AS is_direct,
                     ARRAY_REMOVE(ARRAY[
                         CASE WHEN l.telecaller_id::text = :emp_id   THEN 'Telecaller'  END,
                         CASE WHEN l.field_staff_id::text = :emp_id  THEN 'Field Staff' END
                     ], NULL) AS roles
                 FROM crm_leads l
+                LEFT JOIN official_partners op ON op.id = l.associated_partner_id
+                LEFT JOIN staff_employees se_reg ON se_reg.emp_code = op.registered_by_emp_code
                 JOIN signup_categories sc ON sc.id = l.category_id
                 WHERE l.category_id = ANY(:cat_ids)
                   AND {_etc_comp}
@@ -2526,7 +2568,19 @@ def incentive_achievements_drilldown(
                         AND l.z_guru_id IS NULL
                         AND l.adi_guru_id IS NULL
                         AND (l.mnr_handler_id IS NULL OR l.mnr_handler_id = '')
-                        AND l.associated_partner_id IS NULL
+                        AND (
+                            l.associated_partner_id IS NULL
+                            OR (
+                                l.associated_partner_id IS NOT NULL
+                                AND se_reg.id::TEXT = :emp_id
+                                AND (
+                                    SELECT COUNT(DISTINCT vci.partner_id)
+                                    FROM vgk_cash_income_entries vci
+                                    WHERE vci.source_lead_id = l.id
+                                      AND vci.status NOT IN ('CANCELLED')
+                                ) = 1
+                            )
+                        )
                     ) THEN TRUE ELSE FALSE END AS is_direct,
                     ARRAY_REMOVE(ARRAY[
                         CASE WHEN l.telecaller_id::text = :emp_id   THEN 'Telecaller'  END,
@@ -2548,6 +2602,8 @@ def incentive_achievements_drilldown(
                           END < :df
                     ) THEN TRUE ELSE FALSE END) AS has_prior_b2b
                 FROM crm_leads l
+                LEFT JOIN official_partners op ON op.id = l.associated_partner_id
+                LEFT JOIN staff_employees se_reg ON se_reg.emp_code = op.registered_by_emp_code
                 JOIN signup_categories sc ON sc.id = l.category_id
                 WHERE l.category_id = ANY(:cat_ids)
                   AND {_comp_where}
