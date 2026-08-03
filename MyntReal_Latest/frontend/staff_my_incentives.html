@@ -235,8 +235,8 @@
                                     <th>Category</th>
                                     <th class="text-center" title="Your personal min target set by HR — total leads (self+company+direct) must reach this before incentive is paid">My Target</th>
                                     <th class="text-center" title="Rate when you source the lead yourself">Self Source</th>
-                                    <th class="text-center" title="Rate when lead has MNR or VGK4U reference ID linked">Company Leads</th>
                                     <th class="text-center" title="Rate for direct work (no MNR/VGK4U ID linked, not self-sourced)">Direct Work</th>
+                                    <th class="text-center" title="Rate when lead has MNR or VGK4U reference ID linked">Company Leads</th>
                                     <th class="text-center">Achieved</th>
                                     <th class="text-end">Earned ₹</th>
                                     <th class="text-center">Type</th>
@@ -490,10 +490,10 @@
                                         <th style="min-width:120px">Category</th>
                                         <th class="text-center">Self Leads<br><small style="font-weight:400;color:#6b7280;font-size:10px">flat rate, no bonus</small></th>
                                         <th class="text-right text-end" style="color:#7c3aed">Self ₹</th>
-                                        <th class="text-center">Company Leads<br><small style="font-weight:400;color:#6b7280;font-size:10px">has MNR/VGK4U ID · bonus eligible</small></th>
-                                        <th class="text-right text-end" style="color:#0891b2">Company ₹</th>
                                         <th class="text-center">Direct Work<br><small style="font-weight:400;color:#6b7280;font-size:10px">no MNR/VGK4U ID</small></th>
                                         <th class="text-right text-end" style="color:#7c3aed">Direct ₹</th>
+                                        <th class="text-center">Company Leads<br><small style="font-weight:400;color:#6b7280;font-size:10px">has MNR/VGK4U ID · bonus eligible</small></th>
+                                        <th class="text-right text-end" style="color:#0891b2">Company ₹</th>
                                         <th class="text-center">Target / Eligibility</th>
                                         <th class="text-center">Bonus</th>
                                         <th class="text-right text-end fw-bold">Total ₹</th>
@@ -817,8 +817,8 @@
                         <td class="fw-semibold">${c.category_name}</td>
                         <td class="text-center cap-mytgt" style="color:#6b7280" title="Your personal target (updated from live data)">${cfgTgt}</td>
                         <td class="text-center fw-semibold text-success">${fmtRate(c.rate_no_support, c.incentive_type, c.category_slug)}</td>
-                        <td class="text-center fw-semibold" style="color:#0369a1">${fmtRate(c.rate_with_support, c.incentive_type, c.category_slug)}</td>
                         <td class="text-center fw-semibold" style="color:#7c3aed">${dwDisp}</td>
+                        <td class="text-center fw-semibold" style="color:#0369a1">${fmtRate(c.rate_with_support, c.incentive_type, c.category_slug)}</td>
                         <td class="text-center cap-ach" style="color:#374151">—</td>
                         <td class="text-end fw-semibold cap-earn" style="color:#1f2937">—</td>
                         <td class="text-center">${fmtType(c.incentive_type)}</td>
@@ -835,7 +835,7 @@
         const MNTH_NAMES = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
         const fmtLive  = n => '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
         const fmtLiveS = n => '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
-        const CAP_UNIT = { training:'students', solar:'deals', ev_b2c:'deals', ev_b2b:'deals', ev_b2b_new:'deals', ev_b2b_existing:'deals', insurance:'₹', real_estate:'₹' };
+        const CAP_UNIT = { training:'students', solar:'deals', ev_b2c:'deals', ev_b2b:'deals', ev_b2b_new:'deals', ev_b2b_existing:'deals', insurance:'₹', real_estate:'₹', service_spares:'₹', service_revenue:'₹' };
 
         async function loadLiveMonth(){
             const month = parseInt(monthSel.value);
@@ -981,12 +981,14 @@
         const LIVE_CAT_LABEL = {
             training:'ETC Students', solar:'Solar', ev_b2c:'B2C',
             ev_b2b:'B2B', ev_b2b_new:'B2B (New)', ev_b2b_existing:'B2B (Exist.)',
-            insurance:'Insurance', real_estate:'Real Estate'
+            insurance:'Insurance', real_estate:'Real Estate',
+            service_spares:'Service Spares', service_revenue:'Service Revenue'
         };
         const LIVE_CAT_UNIT = {
             training:'students', solar:'deals', ev_b2c:'deals',
             ev_b2b:'deals', ev_b2b_new:'deals', ev_b2b_existing:'deals',
-            insurance:'₹', real_estate:'₹'
+            insurance:'₹', real_estate:'₹',
+            service_spares:'₹', service_revenue:'₹'
         };
 
         function fmtLiveAch(n){ return '₹' + Number(n || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
@@ -1025,7 +1027,7 @@
                     return;
                 }
 
-                const catOrder = ['training','solar','ev_b2c','ev_b2b_new','ev_b2b_existing','ev_b2b','insurance','real_estate'];
+                const catOrder = ['training','solar','ev_b2c','ev_b2b_new','ev_b2b_existing','ev_b2b','insurance','real_estate','service_spares','service_revenue'];
                 const sorted = catOrder.map(s => activeCats.find(c => c.slug === s)).filter(Boolean);
 
                 tbody.innerHTML = sorted.map(c => {
@@ -1050,10 +1052,10 @@
                         <td class="fw-semibold">${LIVE_CAT_LABEL[c.slug] || c.slug}</td>
                         <td class="text-center" style="color:#7c3aed">${selfDisp}</td>
                         <td class="text-end fw-semibold" style="color:#7c3aed">${selfInc}</td>
-                        <td class="text-center" style="color:#0891b2">${compDisp}</td>
-                        <td class="text-end fw-semibold" style="color:#0891b2">${compInc}</td>
                         <td class="text-center" style="color:#7c3aed">${directDisp}</td>
                         <td class="text-end fw-semibold" style="color:#7c3aed">${directInc}</td>
+                        <td class="text-center" style="color:#0891b2">${compDisp}</td>
+                        <td class="text-end fw-semibold" style="color:#0891b2">${compInc}</td>
                         <td class="text-center">${tgtDisp}</td>
                         <td class="text-center">${bonusDisp}</td>
                         <td class="text-end fw-bold" style="color:#1f2937">${fmtLiveAch(c.incentive_earned)}</td>
