@@ -1,4 +1,5 @@
 import { PageHeader } from '../components/PageHeader';
+import { APP_CONFIG } from '../config/app.config';
 
 export class StaffExpenseEntriesPage {
   private container: HTMLElement;
@@ -17,13 +18,14 @@ export class StaffExpenseEntriesPage {
   }
 
   async render(): Promise<string> {
+    const srcUrl = `${APP_CONFIG.MEDIA_BASE_URL}/staff/accounts/expense-entries`;
     return `
       <div style="background:#f3f4f6;min-height:100vh;padding-bottom:80px">
         ${PageHeader.render({ title: 'Expense Entries', showBack: true })}
         <div style="padding:12px;min-height:calc(100vh - 120px)">
           <iframe
             id="staff-expense-frame"
-            src="/staff/accounts/expense-entries"
+            src="${srcUrl}"
             style="width:100%;height:calc(100vh - 140px);border:0;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)"
             loading="lazy"
             title="Expense Entries"
