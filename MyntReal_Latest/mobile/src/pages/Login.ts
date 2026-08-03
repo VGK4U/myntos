@@ -691,22 +691,22 @@ export class LoginPage {
 
   private getPortalLogo(portal: PortalType): string {
     if (portal === 'mnr') {
-      return `<img src="/assets/mnr-logo.png" alt="MNR" class="portal-logo">`;
+      return `<img src="assets/mnr-logo.png" alt="MNR" class="portal-logo">`;
     }
     if (portal === 'vgk') {
-      return `<img src="/assets/vgk4u-logo.png" alt="VGK4U" class="portal-logo">`;
+      return `<img src="assets/vgk4u-logo.png" alt="VGK4U" class="portal-logo">`;
     }
-    return `<img src="/assets/myntreal-logo.png" alt="MyntReal" class="portal-logo">`;
+    return `<img src="assets/myntreal-logo.png" alt="MyntReal" class="portal-logo">`;
   }
 
   private getHeaderLogo(): string {
     if (this.activeTab === 'announcements' || this.selectedPortal === 'mnr') {
-      return `<img src="/assets/mnr-logo.png" alt="MNR" class="header-logo" style="width: 80px; height: 80px; object-fit: contain;">`;
+      return `<img src="assets/mnr-logo.png" alt="MNR" class="header-logo" style="width: 80px; height: 80px; object-fit: contain;">`;
     }
     if (this.selectedPortal === 'vgk') {
-      return `<img src="/assets/vgk4u-logo.png" alt="VGK4U" class="header-logo" style="width: 80px; height: 80px; object-fit: contain;">`;
+      return `<img src="assets/vgk4u-logo.png" alt="VGK4U" class="header-logo" style="width: 80px; height: 80px; object-fit: contain;">`;
     }
-    return `<img src="/assets/myntreal-logo.png" alt="MyntReal" class="header-logo" style="width: 80px; height: 80px; object-fit: contain;">`;
+    return `<img src="assets/myntreal-logo.png" alt="MyntReal" class="header-logo" style="width: 80px; height: 80px; object-fit: contain;">`;
   }
 
   private getHeaderTitle(): string {
