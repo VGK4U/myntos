@@ -1988,6 +1988,31 @@ def get_incentive_achievements(
                 _inc_target_map[_eit_eid] = {}
             _inc_target_map[_eit_eid][_eit_slug] = float(_eit_mt if _eit_mt is not None else _INC_DEFAULT_TARGET)
 
+    # Bulk query KRA status for all employees in this period
+    emp_kra_pct_map = {}
+    if _all_emp_int_ids:
+        d_from = date_from.date()
+        d_to = date_to.date()
+        kra_rows = db.execute(text("""
+            SELECT employee_id::TEXT, 
+                   COUNT(id) as total,
+                   SUM(CASE WHEN completion_status = 'completed' THEN 1 ELSE 0 END) as completed
+            FROM staff_kra_daily_instances
+            WHERE instance_date BETWEEN :df AND :dt
+              AND completion_status NOT IN ('na', 'skipped')
+              AND employee_id = ANY(:eids)
+            GROUP BY employee_id
+        """), {'df': d_from, 'dt': d_to, 'eids': _all_emp_int_ids}).fetchall()
+        for _eid, _tot, _done in kra_rows:
+            _tot_val = int(_tot or 0)
+            _done_val = int(_done or 0)
+            _pct_val = (_done_val / _tot_val * 100.0) if _tot_val > 0 else 100.0
+            emp_kra_pct_map[_eid] = {
+                'total': _tot_val,
+                'completed': _done_val,
+                'pct': round(_pct_val, 1)
+            }
+
     def _calc_employee(emp_id: str, slug_data: dict) -> dict:
         emp_info = emp_map.get(str(emp_id), {'emp_code': emp_id, 'name': emp_id, 'dept_id': None})
         cat_results = []
@@ -2073,10 +2098,24 @@ def get_incentive_achievements(
                 'bonus_multiplier': cfg['bonus_mul'] if bonus_applied else None,
                 'incentive_earned': round(final_incentive, 2),
             })
+        kra_info = emp_kra_pct_map.get(str(emp_id), {'total': 0, 'completed': 0, 'pct': 100.0})
+        kra_total = kra_info['total']
+        kra_completed = kra_info['completed']
+        kra_pct = kra_info['pct']
+        
+        # Apply 50% penalty if KRA < 80% and employee actually had KRA assignments
+        kra_penalty_applied = (kra_total > 0 and kra_pct < 80.0)
+        final_incentive_earned = total_earned * 0.5 if kra_penalty_applied else total_earned
+
         return {
             'employee_id': emp_id, 'emp_code': emp_info['emp_code'], 'name': emp_info['name'],
             'dept_id': emp_info['dept_id'], 'categories': cat_results,
-            'total_incentive_earned': round(total_earned, 2),
+            'raw_total_incentive': round(total_earned, 2),
+            'kra_total': kra_total,
+            'kra_completed': kra_completed,
+            'kra_percentage': kra_pct,
+            'kra_penalty_applied': kra_penalty_applied,
+            'total_incentive_earned': round(final_incentive_earned, 2),
         }
 
     results = [_calc_employee(eid, sd) for eid, sd in emp_data.items()]

@@ -442,6 +442,15 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
       </div>
     </div>
 
+    <!-- KRA Compliance Notice Banner -->
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin-bottom:18px;display:flex;align-items:flex-start;gap:12px;font-size:0.84rem;color:#92400e;">
+      <i class="fa fa-exclamation-triangle" style="font-size:1.15rem;margin-top:2px;color:#d97706;"></i>
+      <div>
+        <h5 style="margin:0 0 4px;font-weight:700;color:#92400e;font-size:0.88rem;">⚠️ KRA Compliance Rule</h5>
+        Employees must achieve at least <b>80% KRA Compliance</b> on their active assigned tasks for the month to receive <b>100%</b> of their earned incentives. If compliance falls below 80%, a <b>50% penalty</b> will be applied to their total monthly incentive payout.
+      </div>
+    </div>
+
     <!-- Incentive Rates Config Table -->
     <div class="card-box" style="margin-bottom:18px;">
       <div class="card-hdr">
@@ -453,9 +462,9 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
           <thead>
             <tr style="background:#f8f7ff;border-bottom:2px solid #e0d7ff;">
               <th style="padding:10px 12px;text-align:left;font-weight:700;color:#4c1d95;">Category</th>
-              <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Self Source</th>
-              <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Company Leads</th>
-              <th style="padding:10px 12px;text-align:center;font-weight:700;color:#059669;">Direct Work</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Source</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;color:#059669;">Direct</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Company</th>
               <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Type</th>
               <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Bonus Trigger (x Min)</th>
               <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Multiplier</th>
@@ -526,11 +535,12 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
               <th style="padding:9px 12px;text-align:center;">Insurance</th>
               <th style="padding:9px 12px;text-align:center;">Spares</th>
               <th style="padding:9px 12px;text-align:center;">Service Rev</th>
+              <th style="padding:9px 12px;text-align:center;">KRA Status</th>
               <th style="padding:9px 12px;text-align:right;font-weight:700;color:#92400e;">Total Earned</th>
             </tr>
           </thead>
           <tbody id="inc-ach-body">
-            <tr><td colspan="10" style="text-align:center;padding:24px;color:#9ca3af;"><div class="loading-ring"></div></td></tr>
+            <tr><td colspan="11" style="text-align:center;padding:24px;color:#9ca3af;"><div class="loading-ring"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -1745,8 +1755,8 @@ function renderIncConfigTable(rows) {
     return `<tr style="border-bottom:1px solid #f3f0ff;">
       <td style="padding:9px 12px;font-weight:600;color:#4c1d95;">${escHtml(label)}</td>
       <td style="padding:9px 12px;text-align:center;">${fmtNum(rateNo)} ${typeLabel}</td>
-      <td style="padding:9px 12px;text-align:center;">${fmtNum(rateWi)} ${typeLabel}</td>
       <td style="padding:9px 12px;text-align:center;color:#059669;font-weight:600;">${fmtNum(rateDw)} ${typeLabel}</td>
+      <td style="padding:9px 12px;text-align:center;">${fmtNum(rateWi)} ${typeLabel}</td>
       <td style="padding:9px 12px;text-align:center;">${escHtml(r.incentive_type === 'percentage' ? 'Percentage' : 'Fixed/Unit')}</td>
       <td style="padding:9px 12px;text-align:center;">${bonusTrig}</td>
       <td style="padding:9px 12px;text-align:center;">${bonusMul}</td>
@@ -2086,7 +2096,7 @@ async function loadAchievements() {
 function renderAchievements(rows) {
   const body = document.getElementById('inc-ach-body');
   if (!rows.length) {
-    body.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:32px;color:#9ca3af;"><i class="fa fa-inbox fa-2x mb-2 d-block"></i>No achievement data found for this period.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:32px;color:#9ca3af;"><i class="fa fa-inbox fa-2x mb-2 d-block"></i>No achievement data found for this period.</td></tr>`;
     return;
   }
   const UNIT = { training:'students', solar:'deals', ev_b2c:'deals', ev_b2b:'deals', ev_b2b_new:'deals', ev_b2b_existing:'deals', insurance:'₹', real_estate:'₹', service_spares:'₹', service_revenue:'₹' };
@@ -2127,7 +2137,26 @@ function renderAchievements(rows) {
       </td>`;
     }).join('');
 
-    const total   = emp.total_incentive_earned != null ? '₹' + fmtNum(emp.total_incentive_earned) : '—';
+    // KRA Status column
+    let kraStatusCell = '';
+    if (!emp.kra_total) {
+      kraStatusCell = `<td style="padding:8px 12px;text-align:center;color:#6b7280;font-weight:600;">—</td>`;
+    } else {
+      const kraColor = emp.kra_percentage >= 80 ? '#059669' : '#dc2626';
+      const kraLabel = emp.kra_percentage >= 80 ? 'Met (100%)' : 'Under 80% (50% Pen.)';
+      kraStatusCell = `<td style="padding:8px 12px;text-align:center;">
+        <div style="font-weight:700;font-size:0.85rem;color:${kraColor};">${emp.kra_percentage}%</div>
+        <div style="font-size:0.7rem;color:${kraColor};font-weight:600;">${kraLabel}</div>
+        <div style="font-size:0.65rem;color:#9ca3af;">(${emp.kra_completed}/${emp.kra_total} tasks)</div>
+      </td>`;
+    }
+
+    const total = emp.total_incentive_earned != null ? '₹' + fmtNum(emp.total_incentive_earned) : '—';
+    const totalDisplay = emp.kra_penalty_applied && emp.raw_total_incentive != null
+      ? `<div style="color:#dc2626;font-weight:800;">${total}</div>
+         <div style="font-size:0.72rem;color:#9ca3af;text-decoration:line-through;font-weight:normal;">₹${fmtNum(emp.raw_total_incentive)}</div>`
+      : `<span style="color:#92400e;">${total}</span>`;
+
     const empName = escHtml(emp.name || emp.emp_code || '');
     const empCode = emp.emp_code && emp.name ? `<div style="font-size:0.72rem;color:#9ca3af;">${escHtml(emp.emp_code)}</div>` : '';
 
@@ -2139,7 +2168,7 @@ function renderAchievements(rows) {
     const detailRows = activeCats.map(cat => {
       const a = achMap[cat];
       const unit = UNIT[cat] || '';
-      // Self leads column
+      // Self leads column (Source)
       const selfCount = a.self_count || 0;
       const selfAmt   = a.self_amount || 0;
       const selfDisp  = selfCount > 0 || selfAmt > 0
@@ -2157,7 +2186,7 @@ function renderAchievements(rows) {
       const coInc = a.company_incentive_base > 0
         ? `<span style="color:#0891b2;font-weight:600;">₹${fmtNum(a.company_incentive_base)}</span>`
         : '<span style="color:#d1d5db;">—</span>';
-      // Direct Work column
+      // Direct Work column (Direct)
       const dwCount = a.direct_count || 0;
       const dwAmt   = a.direct_amount || 0;
       const dwDisp  = dwCount > 0 || dwAmt > 0
@@ -2183,10 +2212,10 @@ function renderAchievements(rows) {
         <td style="padding:5px 10px;font-weight:600;color:#374151;">${CAT_LABEL[cat]||cat}</td>
         <td style="padding:5px 10px;text-align:center;color:#7c3aed;">${selfDisp}</td>
         <td style="padding:5px 10px;text-align:center;">${selfInc}</td>
-        <td style="padding:5px 10px;text-align:center;color:#0891b2;">${coDisp}</td>
-        <td style="padding:5px 10px;text-align:center;">${coInc}</td>
         <td style="padding:5px 10px;text-align:center;color:#059669;">${dwDisp}</td>
         <td style="padding:5px 10px;text-align:center;">${dwInc}</td>
+        <td style="padding:5px 10px;text-align:center;color:#0891b2;">${coDisp}</td>
+        <td style="padding:5px 10px;text-align:center;">${coInc}</td>
         <td style="padding:5px 10px;text-align:center;">${bonusDisp}</td>
         <td style="padding:5px 10px;text-align:center;font-size:0.72rem;">
           <div style="color:#6b7280;">Tgt: <b>${fmtNum(minTgt)}</b> | Got: <b>${fmtNum(achVal)}</b></div>
@@ -2200,6 +2229,39 @@ function renderAchievements(rows) {
       ? `<tr><td colspan="10" style="padding:10px;text-align:center;color:#9ca3af;font-style:italic;">No activity this period</td></tr>`
       : '';
 
+    // Build KRA compliance banner for the detail breakdown
+    let kraBanner = '';
+    if (emp.kra_total > 0) {
+      if (emp.kra_penalty_applied) {
+        kraBanner = `<div style="display:flex;justify-content:space-between;align-items:center;background:#fee2e2;border:1px solid #fecaca;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:0.8rem;">
+          <div style="font-weight:600;color:#991b1b;">
+            <i class="fa fa-exclamation-triangle me-1"></i>KRA Performance: <b>${emp.kra_percentage}%</b> (${emp.kra_completed}/${emp.kra_total} tasks completed)
+          </div>
+          <div style="color:#b91c1c;font-weight:700;">
+            ⚠️ 50% Penalty Applied (KRA < 80%)
+          </div>
+        </div>`;
+      } else {
+        kraBanner = `<div style="display:flex;justify-content:space-between;align-items:center;background:#d1fae5;border:1px solid #a7f3d0;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:0.8rem;">
+          <div style="font-weight:600;color:#065f46;">
+            <i class="fa fa-check-circle me-1"></i>KRA Performance: <b>${emp.kra_percentage}%</b> (${emp.kra_completed}/${emp.kra_total} tasks completed)
+          </div>
+          <div style="color:#047857;font-weight:700;">
+            ✅ 100% Incentive Eligible (KRA >= 80%)
+          </div>
+        </div>`;
+      }
+    } else {
+      kraBanner = `<div style="display:flex;justify-content:space-between;align-items:center;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:0.8rem;">
+        <div style="font-weight:600;color:#475569;">
+          <i class="fa fa-info-circle me-1"></i>KRA Performance: Not Tracked (No tasks assigned)
+        </div>
+        <div style="color:#047857;font-weight:700;">
+          ✅ 100% Incentive Eligible
+        </div>
+      </div>`;
+    }
+
     html += `<tr style="border-bottom:1px solid #fef3c7;cursor:pointer;" onclick="toggleAchDetail('${detailId}', this)">
       <td style="padding:8px 12px;">
         <span id="toggle-${detailId}" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#7c3aed;color:#fff;font-size:12px;font-weight:700;margin-right:7px;cursor:pointer;flex-shrink:0;">+</span>
@@ -2207,21 +2269,23 @@ function renderAchievements(rows) {
         ${empCode}
       </td>
       ${catCells}
-      <td style="padding:8px 12px;text-align:right;font-weight:700;color:#92400e;font-size:0.88rem;">${total}</td>
+      ${kraStatusCell}
+      <td style="padding:8px 12px;text-align:right;font-weight:700;font-size:0.88rem;">${totalDisplay}</td>
     </tr>
     <tr id="${detailId}" style="display:none;">
-      <td colspan="9" style="padding:0;background:#f8fafc;border-bottom:2px solid #e0e7ff;">
+      <td colspan="11" style="padding:0;background:#f8fafc;border-bottom:2px solid #e0e7ff;">
         <div style="padding:10px 16px 12px 36px;">
+          ${kraBanner}
           <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
             <thead>
               <tr style="background:#e0e7ff;color:#3730a3;">
                 <th style="padding:5px 10px;text-align:left;">Category</th>
-                <th style="padding:5px 10px;text-align:center;color:#7c3aed;">Self Leads<br><span style="font-size:0.68rem;font-weight:400;opacity:0.75">flat rate</span></th>
-                <th style="padding:5px 10px;text-align:center;color:#7c3aed;">Self ₹</th>
+                <th style="padding:5px 10px;text-align:center;color:#7c3aed;">Source Leads<br><span style="font-size:0.68rem;font-weight:400;opacity:0.75">flat rate</span></th>
+                <th style="padding:5px 10px;text-align:center;color:#7c3aed;">Source ₹</th>
+                <th style="padding:5px 10px;text-align:center;color:#059669;">Direct Leads<br><span style="font-size:0.68rem;font-weight:400;opacity:0.75">no MNR/VGK4U ID</span></th>
+                <th style="padding:5px 10px;text-align:center;color:#059669;">Direct ₹</th>
                 <th style="padding:5px 10px;text-align:center;color:#0891b2;">Company Leads<br><span style="font-size:0.68rem;font-weight:400;opacity:0.75">has MNR/VGK4U ID</span></th>
                 <th style="padding:5px 10px;text-align:center;color:#0891b2;">Company ₹</th>
-                <th style="padding:5px 10px;text-align:center;color:#059669;">Direct Work<br><span style="font-size:0.68rem;font-weight:400;opacity:0.75">no MNR/VGK4U ID</span></th>
-                <th style="padding:5px 10px;text-align:center;color:#059669;">Direct ₹</th>
                 <th style="padding:5px 10px;text-align:center;">Bonus</th>
                 <th style="padding:5px 10px;text-align:center;">Target / Eligibility</th>
                 <th style="padding:5px 10px;text-align:right;">Final Incentive</th>
@@ -2343,7 +2407,7 @@ window.exportIncentiveImage = function() {
   const width = 1200;
   const headerHeight = 120;
   const rowHeight = 45;
-  const footerHeight = 70;
+  const footerHeight = 90;
   const tableTop = headerHeight + 35;
   const tableHeight = (rows.length + 1) * rowHeight;
   const height = tableTop + tableHeight + footerHeight + 20;
@@ -2368,9 +2432,9 @@ window.exportIncentiveImage = function() {
   ctx.font = '16px sans-serif';
   ctx.fillText(`Period: ${monthName} ${year}   |   Company scope: ${companyName}`, 40, 90);
   
-  const colWidths = [240, 130, 150, 130, 150, 180, 140];
+  const colWidths = [240, 130, 130, 150, 140, 170, 140];
   const colAlign = ['left', 'center', 'center', 'center', 'center', 'center', 'center'];
-  const headers = ['Category', 'Self Source', 'Company Leads', 'Direct Work', 'Rate Type', 'Bonus Trigger', 'Multiplier'];
+  const headers = ['Category', 'Source', 'Direct', 'Company', 'Rate Type', 'Bonus Trigger', 'Multiplier'];
   const startX = 40;
   
   ctx.fillStyle = '#f1f5f9';
@@ -2422,8 +2486,8 @@ window.exportIncentiveImage = function() {
     const vals = [
       label,
       `${rateNo.toLocaleString('en-IN')}${typeLabel}`,
-      `${rateWi.toLocaleString('en-IN')}${typeLabel}`,
       `${rateDw.toLocaleString('en-IN')}${typeLabel}`,
+      `${rateWi.toLocaleString('en-IN')}${typeLabel}`,
       r.incentive_type === 'percentage' ? 'Percentage' : 'Fixed/Unit',
       bonusTrig,
       bonusMul
@@ -2442,7 +2506,7 @@ window.exportIncentiveImage = function() {
       if (i === 0) {
         ctx.fillStyle = '#4c1d95';
         ctx.font = 'bold 14px sans-serif';
-      } else if (i === 3) {
+      } else if (i === 2) {
         ctx.fillStyle = '#059669';
         ctx.font = 'bold 13px sans-serif';
       } else {
@@ -2464,6 +2528,7 @@ window.exportIncentiveImage = function() {
   ctx.textAlign = 'left';
   ctx.fillText('* Min target applies to the employee\'s target (volume/amount).', 40, tableTop + tableHeight + 25);
   ctx.fillText('* Bonus triggers if company + direct volume reaches the specified multiple of the employee target.', 40, tableTop + tableHeight + 45);
+  ctx.fillText('* KRA Compliance: Employees must maintain >= 80% daily KRA compliance. Under 80% triggers a 50% penalty on total earned incentive.', 40, tableTop + tableHeight + 65);
   
   ctx.textAlign = 'right';
   ctx.fillText('Generated on VGK4U Platform', width - 40, tableTop + tableHeight + 25);
