@@ -42,8 +42,8 @@ def setup_secondary_password(
     #     )
     
     # Verify current password
-    from werkzeug.security import check_password_hash
-    if not check_password_hash(current_user.password, data.current_password):
+    from app.core.security import SecurityManager
+    if not SecurityManager.verify_password(data.current_password, current_user.password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Current password is incorrect'

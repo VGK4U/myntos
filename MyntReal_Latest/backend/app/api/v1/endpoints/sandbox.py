@@ -109,7 +109,7 @@ async def sandbox_login(
             detail="Invalid credentials. Please check your login ID and password."
         )
     
-    if not check_password_hash(account.password_hash, data.password):
+    if not _SM_SBX.verify_password(data.password, account.password_hash):
         access_log = SandboxAccessLog(
             access_mode=data.mode,
             account_type=account.account_type,

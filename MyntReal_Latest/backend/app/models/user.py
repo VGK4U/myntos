@@ -304,10 +304,10 @@ class User(BaseModel):
     
     def check_secondary_password(self, password: str) -> bool:
         """Check if provided secondary password matches stored hash"""
-        from werkzeug.security import check_password_hash
+        from app.core.security import SecurityManager as _SM
         if not self.secondary_password:
             return False
-        return check_password_hash(self.secondary_password, password)
+        return _SM.verify_password(password, self.secondary_password)
     
     def has_secondary_password(self) -> bool:
         """Check if user has a secondary password set"""

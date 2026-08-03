@@ -322,18 +322,7 @@ class SecurityManager:
             return None
         
         stored_password = str(getattr(user, 'password', ''))
-        
-        try:
-            werkzeug_result = check_password_hash(stored_password, password)
-        except Exception:
-            werkzeug_result = False
-        
-        try:
-            bcrypt_result = pwd_context.verify(password, stored_password)
-        except Exception:
-            bcrypt_result = False
-        
-        password_valid = werkzeug_result or bcrypt_result
+        password_valid = SecurityManager.verify_password(password, stored_password)
         
         if not password_valid:
             from datetime import datetime
