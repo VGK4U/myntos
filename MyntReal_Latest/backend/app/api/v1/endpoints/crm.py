@@ -12100,15 +12100,14 @@ async def get_unified_my_leads(
     
     if segment == 'my':
         if is_staff_user:
-            # Staff user: Check telecaller_id, field_staff_id, or primary_owner (staff type)
-            # Note: telecaller_id, field_staff_id, primary_owner_id are Integer
-            # created_by_id is VARCHAR, so use string comparison
-            # DC Protocol (Mar 2026): Also include truly unassigned sheet leads so all staff can see and claim them.
+            # Staff user: Check telecaller_id, field_staff_id, support_staff_id, technical_staff1_id, technical_id, or primary_owner/creator (staff type)
             query = query.filter(
                 or_(
                     CRMLead.telecaller_id == user_id,
                     CRMLead.field_staff_id == user_id,
                     CRMLead.support_staff_id == user_id,
+                    CRMLead.technical_staff1_id == user_id,
+                    CRMLead.technical_id == user_id,
                     and_(
                         CRMLead.primary_owner_type == 'staff',
                         CRMLead.primary_owner_id == user_id
@@ -12127,11 +12126,15 @@ async def get_unified_my_leads(
                 )
             )
         elif is_partner_user:
-            # DC Protocol (Apr 2026): Partner user — leads tagged to this partner OR created by partner app
-            # DC Protocol (Apr 2026 Fix): Also include showroom/walk-in leads tagged via source_ref_type='partner'
+            # Partner user: Check associated_partner_id, vgk_field_support_id, showroom_vgk_id, senior/extended/core partner overrides, or primary owner/creator (partner type)
             query = query.filter(
                 or_(
                     CRMLead.associated_partner_id == user_id,
+                    CRMLead.vgk_field_support_id == user_id,
+                    CRMLead.showroom_vgk_id == user_id,
+                    CRMLead.team_senior_partner_id == user_id,
+                    CRMLead.team_extended_partner_id == user_id,
+                    CRMLead.team_core_partner_id == user_id,
                     and_(
                         CRMLead.created_by_type == 'partner',
                         CRMLead.created_by_id == user_id_str
@@ -12139,6 +12142,10 @@ async def get_unified_my_leads(
                     and_(
                         CRMLead.source_ref_type.in_(('partner', 'vgk_partner')),
                         CRMLead.source_ref_id == user_id_str
+                    ),
+                    and_(
+                        CRMLead.primary_owner_type == 'partner',
+                        CRMLead.primary_owner_id == user_id
                     )
                 )
             )
@@ -12267,7 +12274,9 @@ async def get_unified_my_leads(
             query = query.filter(
                 or_(
                     CRMLead.field_staff_id == user_id,
-                    CRMLead.support_staff_id == user_id
+                    CRMLead.support_staff_id == user_id,
+                    CRMLead.technical_staff1_id == user_id,
+                    CRMLead.technical_id == user_id
                 )
             )
         elif handler_role == 'partner':
@@ -12294,6 +12303,8 @@ async def get_unified_my_leads(
                     CRMLead.telecaller_id == user_id,
                     CRMLead.field_staff_id == user_id,
                     CRMLead.support_staff_id == user_id,
+                    CRMLead.technical_staff1_id == user_id,
+                    CRMLead.technical_id == user_id,
                     CRMLead.associated_partner_id == user_id,
                     CRMLead.vendor_id == user_id,
                     and_(
@@ -12389,6 +12400,8 @@ async def get_unified_my_leads(
         else:
             query = query.filter(CRMLead.id == -1)
     if search:
+        from app.models.staff import StaffEmployee
+        from app.models.official_partners import OfficialPartner
         _st = f'%{search}%'
         _sc = [
             CRMLead.name.ilike(_st),
@@ -12405,6 +12418,30 @@ async def get_unified_my_leads(
         _id_s = search.lstrip('#').strip()
         if _id_s.isdigit():
             _sc.append(CRMLead.id == int(_id_s))
+            
+        # Match staff employee names
+        _matching_staff_ids = [r[0] for r in db.query(StaffEmployee.id).filter(StaffEmployee.full_name.ilike(_st)).all()]
+        if _matching_staff_ids:
+            _sc.extend([
+                CRMLead.telecaller_id.in_(_matching_staff_ids),
+                CRMLead.field_staff_id.in_(_matching_staff_ids),
+                CRMLead.support_staff_id.in_(_matching_staff_ids),
+                CRMLead.technical_staff1_id.in_(_matching_staff_ids),
+                CRMLead.technical_id.in_(_matching_staff_ids)
+            ])
+            
+        # Match official partner names
+        _matching_partner_ids = [r[0] for r in db.query(OfficialPartner.id).filter(OfficialPartner.partner_name.ilike(_st)).all()]
+        if _matching_partner_ids:
+            _sc.extend([
+                CRMLead.associated_partner_id.in_(_matching_partner_ids),
+                CRMLead.vgk_field_support_id.in_(_matching_partner_ids),
+                CRMLead.showroom_vgk_id.in_(_matching_partner_ids),
+                CRMLead.team_senior_partner_id.in_(_matching_partner_ids),
+                CRMLead.team_extended_partner_id.in_(_matching_partner_ids),
+                CRMLead.team_core_partner_id.in_(_matching_partner_ids)
+            ])
+            
         _mnr_uid_s = [str(u.id) for u in db.query(User.id).filter(User.name.ilike(_st)).all()]
         if _mnr_uid_s:
             _sc.append(CRMLead.mnr_handler_id.in_(_mnr_uid_s))
