@@ -3796,7 +3796,9 @@ async def get_my_menus(
         'staff_my_lead_incentives', 'STAFF_MY_LEAD_INCENTIVES',
         'staff_my_reimbursements', 'MY_REIMBURSEMENT_CLAIMS', 'staff_reimbursements',
         'staff_reimbursement_approvals', 'REIMBURSEMENT_APPROVALS', 'reimbursement_approvals',
-        'staff_accounts_expense_entries', 'sfms_expense_entries'
+        'staff_accounts_expense_entries', 'sfms_expense_entries',
+        'staff_my_leads', 'staff_leads',
+        'staff_my_attendance', 'staff_attendance_sheet', 'staff_attendance_reports'
     }
     granted_menu_codes.update(_STAFF_DASHBOARD_AUTO_CODES)
     logger.info(f"[DC-MY-MENUS] Resolved {len(granted_menu_codes)} unique menu_codes from {len(employee_settings)} settings")
@@ -3909,7 +3911,12 @@ async def get_my_menus(
         '/staff/my-lead-incentives',
         '/staff/accounts/my-reimbursements',
         '/staff/accounts/reimbursement-approvals',
-        '/staff/accounts/expense-entries'
+        '/staff/accounts/expense-entries',
+        '/staff/my-leads',
+        '/staff/leads',
+        '/staff/my-attendance',
+        '/staff/attendance-sheet',
+        '/staff/attendance-reports'
     }
     existing_routes = {m.route_path for m in all_menus if m.route_path}
     missing_sd_routes = _STAFF_DASHBOARD_ROUTES - existing_routes
@@ -3930,10 +3937,11 @@ async def get_my_menus(
             'staff_dashboard_main',
             'staff_leads', 'staff_my_leads',
             'staff_ev_spares_leads', 'staff_ev_b2b_leads', 'staff_solar_leads',
-            'staff_insurance_leads', 'staff_etc_leads', 'staff_real_dreams_leads', 'staff_ev_b2c_leads'
+            'staff_insurance_leads', 'staff_etc_leads', 'staff_real_dreams_leads', 'staff_ev_b2c_leads',
+            'staff_my_attendance', 'staff_attendance_sheet', 'staff_attendance_reports'
         }
         all_menus = [m for m in all_menus if m.menu_code in allowed_codes]
-        logger.info(f"[DC-FREELANCER-ACCESS] Restricted menus for freelancer {current_user.emp_code} to only leads.")
+        logger.info(f"[DC-FREELANCER-ACCESS] Restricted menus for freelancer {current_user.emp_code} to only leads and attendance.")
 
     # DC Protocol: Internal section role-based filtering
     # 'internal' section is ONLY for VGK Mentor (vgk4u) and EA (ea) roles
