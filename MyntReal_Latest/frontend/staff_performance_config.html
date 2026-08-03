@@ -1830,7 +1830,7 @@ function closeIncModal() {
 // ── Incentive Employee Targets (DC-INCENTIVE-EMP-TARGETS-001) ──────────────────
 let _incEmpTargets = {};   // { emp_id: { category_slug: {id, min_target} } }
 let _incEmpTgtEmps = [];   // [{id, name, emp_code}]
-const ACH_CATS_ORDERED = ['training','solar','ev_b2c','ev_b2b_new','ev_b2b_existing','insurance'];
+const ACH_CATS_ORDERED = ['training','solar','ev_b2c','ev_b2b_new','ev_b2b_existing','insurance','service_spares','service_revenue'];
 
 async function loadIncEmpTargets() {
   const month  = document.getElementById('inc-month').value;
