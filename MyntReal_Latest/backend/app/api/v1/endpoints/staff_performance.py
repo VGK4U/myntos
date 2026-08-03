@@ -1678,21 +1678,7 @@ def get_incentive_achievements(
                            AND l.z_guru_id IS NULL
                            AND l.adi_guru_id IS NULL
                            AND (l.mnr_handler_id IS NULL OR l.mnr_handler_id = '')
-                           AND (
-                               l.associated_partner_id IS NULL
-                               OR (
-                                   -- DC-DIRECT-WORK-VGK-001 (Jun 2026): VGK lead where all active
-                                   -- VCI entries share the same partner (no diverse upline chain).
-                                   -- Staff handled it as direct work despite VGK partner assignment.
-                                   l.associated_partner_id IS NOT NULL
-                                   AND (
-                                       SELECT COUNT(DISTINCT vci.partner_id)
-                                       FROM vgk_cash_income_entries vci
-                                       WHERE vci.source_lead_id = l.id
-                                         AND vci.status NOT IN ('CANCELLED')
-                                   ) = 1
-                               )
-                            )
+                           AND l.associated_partner_id IS NULL
                        ) THEN TRUE ELSE FALSE END                                       AS is_direct_work
                 FROM crm_leads l
                 WHERE {_comp_where}
@@ -1716,20 +1702,7 @@ def get_incentive_achievements(
                            AND l.z_guru_id IS NULL
                            AND l.adi_guru_id IS NULL
                            AND (l.mnr_handler_id IS NULL OR l.mnr_handler_id = '')
-                           AND (
-                               l.associated_partner_id IS NULL
-                               OR (
-                                   -- DC-DIRECT-WORK-VGK-001 (Jun 2026): VGK lead where all active
-                                   -- VCI entries share the same partner (no diverse upline chain).
-                                   l.associated_partner_id IS NOT NULL
-                                   AND (
-                                       SELECT COUNT(DISTINCT vci.partner_id)
-                                       FROM vgk_cash_income_entries vci
-                                       WHERE vci.source_lead_id = l.id
-                                         AND vci.status NOT IN ('CANCELLED')
-                                   ) = 1
-                               )
-                           )
+                           AND l.associated_partner_id IS NULL
                        ) THEN TRUE ELSE FALSE END                                       AS is_direct_work
                 FROM crm_leads l
                 WHERE {_comp_where}
@@ -1748,7 +1721,7 @@ def get_incentive_achievements(
     if not all_companies:
         params_lead['co'] = company_id
     if employee_id:
-        params_lead['eid'] = employee_id
+        params_lead['eid'] = str(employee_id)
 
     lead_rows = db.execute(lead_q, params_lead).fetchall()
 
@@ -2350,18 +2323,7 @@ def incentive_achievements_drilldown(
                         AND l.z_guru_id IS NULL
                         AND l.adi_guru_id IS NULL
                         AND (l.mnr_handler_id IS NULL OR l.mnr_handler_id = '')
-                        AND (
-                            l.associated_partner_id IS NULL
-                            OR (
-                                l.associated_partner_id IS NOT NULL
-                                AND (
-                                    SELECT COUNT(DISTINCT vci.partner_id)
-                                    FROM vgk_cash_income_entries vci
-                                    WHERE vci.source_lead_id = l.id
-                                      AND vci.status NOT IN ('CANCELLED')
-                                ) = 1
-                            )
-                        )
+                        AND l.associated_partner_id IS NULL
                     ) THEN TRUE ELSE FALSE END AS is_direct,
                     ARRAY_REMOVE(ARRAY[
                         CASE WHEN l.telecaller_id::text = :emp_id   THEN 'Telecaller'  END,
@@ -2564,18 +2526,7 @@ def incentive_achievements_drilldown(
                         AND l.z_guru_id IS NULL
                         AND l.adi_guru_id IS NULL
                         AND (l.mnr_handler_id IS NULL OR l.mnr_handler_id = '')
-                        AND (
-                            l.associated_partner_id IS NULL
-                            OR (
-                                l.associated_partner_id IS NOT NULL
-                                AND (
-                                    SELECT COUNT(DISTINCT vci.partner_id)
-                                    FROM vgk_cash_income_entries vci
-                                    WHERE vci.source_lead_id = l.id
-                                      AND vci.status NOT IN ('CANCELLED')
-                                ) = 1
-                            )
-                        )
+                        AND l.associated_partner_id IS NULL
                     ) THEN TRUE ELSE FALSE END AS is_direct,
                     ARRAY_REMOVE(ARRAY[
                         CASE WHEN l.telecaller_id::text = :emp_id   THEN 'Telecaller'  END,
