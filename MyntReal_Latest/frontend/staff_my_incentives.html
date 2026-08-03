@@ -194,6 +194,23 @@
                 </div>
             </div>
 
+            <!-- KRA Status Card -->
+            <div class="card border-0 mb-3" id="kraStatusCard" style="display:none; border-radius:12px; background:rgb(243 244 246); box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);">
+                <div class="card-body p-3">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge rounded-pill px-3 py-2" id="kraComplianceBadge" style="background:#e0f2fe; color:#0369a1; font-weight:700; font-size:0.85rem;">
+                                KRA Compliance: <span id="kraComplianceVal">0%</span>
+                            </span>
+                            <div id="kraStatusText" class="small fw-semibold text-muted"></div>
+                        </div>
+                        <div class="small" style="max-width:550px; color:#4b5563;">
+                            🚀 <span class="fw-bold text-dark">Boost Your Payout:</span> Keep your active KRA compliance above <span class="fw-bold text-success">80%</span> to unlock <span class="fw-bold" style="color:#7c3aed">100% of your achieved incentives</span>! (Currently earning <span id="kraCurrentRate" class="fw-bold text-primary">100%</span> of achieved value).
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Summary Cards (payout history totals) -->
             <div class="summary-cards" id="summaryCards">
                 <div class="summary-card" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)">
@@ -476,6 +493,23 @@
                         <div class="text-end">
                             <div style="font-size:0.78rem;opacity:0.85;">Month</div>
                             <div id="liveAchMonthLabel" style="font-size:1rem;font-weight:600;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KRA Status Card (Achievements) -->
+                <div class="card border-0 mb-3" id="kraStatusCardAch" style="display:none; border-radius:12px; background:rgb(243 244 246); box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge rounded-pill px-3 py-2" id="kraComplianceBadgeAch" style="background:#e0f2fe; color:#0369a1; font-weight:700; font-size:0.85rem;">
+                                    KRA Compliance: <span id="kraComplianceValAch">0%</span>
+                                </span>
+                                <div id="kraStatusTextAch" class="small fw-semibold text-muted"></div>
+                            </div>
+                            <div class="small" style="max-width:550px; color:#4b5563;">
+                                🚀 <span class="fw-bold text-dark">Boost Your Payout:</span> Keep your active KRA compliance above <span class="fw-bold text-success">80%</span> to unlock <span class="fw-bold" style="color:#7c3aed">100% of your achieved incentives</span>! (Currently earning <span id="kraCurrentRateAch" class="fw-bold text-primary">100%</span> of achieved value).
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -767,6 +801,37 @@
             return null;
         }
 
+        function updateKraCard(emp, cardId, badgeId, valId, textId, rateId) {
+            const card  = document.getElementById(cardId);
+            const badge = document.getElementById(badgeId);
+            const valEl = document.getElementById(valId);
+            const txtEl = document.getElementById(textId);
+            const rateEl = document.getElementById(rateId);
+            if (!card) return;
+
+            const hasKra = emp.kra_total > 0;
+            const pct = emp.kra_percentage !== undefined ? emp.kra_percentage : 100;
+            const penalty = emp.kra_penalty_applied;
+
+            valEl.textContent = hasKra ? `${pct}%` : 'N/A';
+            if (penalty) {
+                badge.style.background = '#fee2e2';
+                badge.style.color = '#b91c1c';
+                txtEl.innerHTML = `<span style="color:#ef4444;"><i class="fas fa-exclamation-triangle me-1"></i>Active KRA target not met (below 80%)</span>`;
+                rateEl.textContent = '50%';
+                rateEl.style.color = '#ef4444';
+            } else {
+                badge.style.background = '#d1fae5';
+                badge.style.color = '#065f46';
+                txtEl.innerHTML = hasKra 
+                    ? `<span style="color:#059669;"><i class="fas fa-check-circle me-1"></i>Active goals met! (80%+)</span>`
+                    : `<span style="color:#6b7280;"><i class="fas fa-info-circle me-1"></i>No active goals</span>`;
+                rateEl.textContent = '100%';
+                rateEl.style.color = '#10b981';
+            }
+            card.style.display = '';
+        }
+
         // Calculate estimated incentive for one lead row
         function calcLeadIncentive(ld){
             const slug = leadCatSlug(ld.category_name);
@@ -843,10 +908,22 @@
             const banner = document.getElementById('liveMonthBanner');
             try{
                 const r = await staffFetch(`${API}/performance/my-incentive-achievements?month=${month}&year=${year}`);
-                if(!r.ok){ banner.style.display='none'; return; }
+                if(!r.ok){ 
+                    banner.style.display='none'; 
+                    document.getElementById('kraStatusCard').style.display='none';
+                    return; 
+                }
                 const d = await r.json();
                 const emp = (d.data||[])[0];
-                if(!emp){ banner.style.display='none'; _clearCapacityOverlay(); return; }
+                if(!emp){ 
+                    banner.style.display='none'; 
+                    document.getElementById('kraStatusCard').style.display='none';
+                    _clearCapacityOverlay(); 
+                    return; 
+                }
+
+                // Update KRA card dynamically
+                updateKraCard(emp, 'kraStatusCard', 'kraComplianceBadge', 'kraComplianceVal', 'kraStatusText', 'kraCurrentRate');
 
                 // Always update target cells — independent of whether earnings exist
                 (emp.categories||[]).forEach(c => {
@@ -1008,13 +1085,22 @@
             const MNTH = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
             try {
                 const r = await staffFetch(`${API}/performance/my-incentive-achievements?month=${month}&year=${year}`);
-                if(!r.ok){ tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:#ef4444"><i class="fas fa-exclamation-circle me-1"></i>Could not load achievements</td></tr>'; return; }
+                if(!r.ok){ 
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:#ef4444"><i class="fas fa-exclamation-circle me-1"></i>Could not load achievements</td></tr>'; 
+                    document.getElementById('kraStatusCardAch').style.display = 'none';
+                    return; 
+                }
                 const d = await r.json();
                 const emp = (d.data || [])[0];
                 if(!emp){
                     tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-inbox fa-2x mb-2 d-block"></i>No incentive data for this period</td></tr>';
+                    document.getElementById('kraStatusCardAch').style.display = 'none';
                     return;
                 }
+
+                // Update KRA card dynamically
+                updateKraCard(emp, 'kraStatusCardAch', 'kraComplianceBadgeAch', 'kraComplianceValAch', 'kraStatusTextAch', 'kraCurrentRateAch');
+
                 const cats = emp.categories || [];
                 const activeCats = cats.filter(c => c.self_count > 0 || c.company_count > 0 || c.direct_count > 0 || c.achieved_count > 0);
 
