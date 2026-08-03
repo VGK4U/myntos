@@ -1988,6 +1988,18 @@ def get_incentive_achievements(
                 _inc_target_map[_eit_eid] = {}
             _inc_target_map[_eit_eid][_eit_slug] = float(_eit_mt if _eit_mt is not None else _INC_DEFAULT_TARGET)
 
+    # Bulk query salaries for default target calculation fallbacks
+    emp_salary_map = {}
+    if _all_emp_int_ids:
+        sal_rows = db.execute(text("""
+            SELECT DISTINCT ON (employee_id) employee_id, ctc_monthly 
+            FROM staff_payroll_profile 
+            WHERE is_active = true AND employee_id = ANY(:eids)
+            ORDER BY employee_id, effective_from DESC, id DESC
+        """), {'eids': _all_emp_int_ids}).fetchall()
+        for _eid, _ctc in sal_rows:
+            emp_salary_map[str(_eid)] = float(_ctc or 0)
+
     # Bulk query KRA status for all employees in this period
     emp_kra_pct_map = {}
     if _all_emp_int_ids:
@@ -2038,7 +2050,16 @@ def get_incentive_achievements(
             # DC-INCENTIVE-EMP-TARGETS-001: Per-employee min target gate.
             # Total (self+company+direct) must meet emp_min_target before ANY incentive is paid.
             # If emp_min_target = 0 → pay from deal 1. Default = 2.
-            emp_min_target = _inc_target_map.get(str(emp_id), {}).get(slug, _INC_DEFAULT_TARGET)
+            emp_min_target = _inc_target_map.get(str(emp_id), {}).get(slug, None)
+            if emp_min_target is None:
+                if slug in ('service_spares', 'service_revenue'):
+                    ctc = emp_salary_map.get(str(emp_id), 0.0)
+                    if ctc > 0:
+                        emp_min_target = 2.0 * ctc if emp_info['dept_id'] == 14 else 1.0 * ctc
+                    else:
+                        emp_min_target = 50000.0
+                else:
+                    emp_min_target = _INC_DEFAULT_TARGET
             total_gate_val = total_count if cfg['min_target_unit'] == 'count' else total_amount
             target_met = (emp_min_target == 0) or (total_gate_val >= emp_min_target)
             gap = max(0.0, emp_min_target - total_gate_val) if emp_min_target > 0 else 0.0
@@ -3045,13 +3066,27 @@ def get_incentive_employee_targets(
     all_companies = (company_id == 0)
     # Build employee query — skip company filter when "All Companies" selected
     emp_q = (
-        "SELECT id, COALESCE(full_name, emp_code) AS name, emp_code "
+        "SELECT id, COALESCE(full_name, emp_code) AS name, emp_code, department_id "
         "FROM staff_employees WHERE status='active'"
         + ("" if all_companies else " AND base_company_id=:cid")
         + " ORDER BY full_name, emp_code"
     )
     emp_params: dict = {} if all_companies else {'cid': company_id}
     emps = db.execute(text(emp_q), emp_params).fetchall()
+    
+    _all_emp_int_ids = [int(r[0]) for r in emps]
+
+    # Load salaries in bulk
+    emp_salary_map = {}
+    if _all_emp_int_ids:
+        sal_rows = db.execute(text("""
+            SELECT DISTINCT ON (employee_id) employee_id, ctc_monthly 
+            FROM staff_payroll_profile 
+            WHERE is_active = true AND employee_id = ANY(:eids)
+            ORDER BY employee_id, effective_from DESC, id DESC
+        """), {'eids': _all_emp_int_ids}).fetchall()
+        for _eid, _ctc in sal_rows:
+            emp_salary_map[int(_eid)] = float(_ctc or 0)
 
     # Load saved targets — skip company filter when all companies
     tgt_q = (
@@ -3065,11 +3100,44 @@ def get_incentive_employee_targets(
         tgt_params['cid'] = company_id
     tgts = db.execute(text(tgt_q), tgt_params).fetchall()
 
+    saved_tgt_map = {}
+    for tid, eid, slug, val in tgts:
+        saved_tgt_map[(int(eid), slug)] = (int(tid), float(val or 0))
+
+    CATEGORIES = ['training', 'solar', 'ev_b2c', 'ev_b2b_new', 'ev_b2b_existing', 'insurance', 'service_spares', 'service_revenue']
+    final_targets = []
+    for r in emps:
+        emp_id = int(r[0])
+        dept_id = r[3]
+        for cat in CATEGORIES:
+            if (emp_id, cat) in saved_tgt_map:
+                tid, val = saved_tgt_map[(emp_id, cat)]
+                final_targets.append({
+                    'id': tid,
+                    'employee_id': emp_id,
+                    'category_slug': cat,
+                    'min_target': val
+                })
+            else:
+                if cat in ('service_spares', 'service_revenue'):
+                    ctc = emp_salary_map.get(emp_id, 0.0)
+                    if ctc > 0:
+                        val = 2.0 * ctc if dept_id == 14 else 1.0 * ctc
+                    else:
+                        val = 50000.0
+                else:
+                    val = 2.0
+                final_targets.append({
+                    'id': None,
+                    'employee_id': emp_id,
+                    'category_slug': cat,
+                    'min_target': val
+                })
+
     return {
         'success': True,
         'employees': [{'id': r[0], 'name': r[1], 'emp_code': r[2]} for r in emps],
-        'targets':   [{'id': t[0], 'employee_id': t[1], 'category_slug': t[2],
-                        'min_target': float(t[3] or 2)} for t in tgts],
+        'targets':   final_targets,
     }
 
 
