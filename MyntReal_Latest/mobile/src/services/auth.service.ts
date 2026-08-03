@@ -7,6 +7,7 @@
 import { NativeBiometric, BiometryType } from 'capacitor-native-biometric';
 import { Preferences } from '@capacitor/preferences';
 import { apiService } from './api.service';
+import { PortalType } from './portal.service';
 import { mobileScheduler, authLifecycle } from '../runtime';
 
 const SCHEDULER_SESSION_ID = 'auth-session-monitor';
@@ -119,7 +120,7 @@ class AuthService {
     }
   }
 
-  async hasStoredCredentials(portal?: 'staff' | 'mnr' | 'partner'): Promise<boolean> {
+  async hasStoredCredentials(portal?: PortalType): Promise<boolean> {
     try {
       const { value } = await Preferences.get({ key: BIOMETRIC_CREDENTIALS_BY_PORTAL });
       if (!value) return false;
@@ -133,11 +134,11 @@ class AuthService {
     }
   }
 
-  async hasStoredCredentialsForPortal(portal: 'staff' | 'mnr' | 'partner'): Promise<boolean> {
+  async hasStoredCredentialsForPortal(portal: PortalType): Promise<boolean> {
     return this.hasStoredCredentials(portal);
   }
 
-  async saveCredentialsForBiometric(userId: string, password: string, portal: 'staff' | 'mnr' | 'partner' = 'staff'): Promise<boolean> {
+  async saveCredentialsForBiometric(userId: string, password: string, portal: PortalType = 'staff'): Promise<boolean> {
     try {
       // DC Protocol: Store credentials per portal for multi-login biometric support
       const { value } = await Preferences.get({ key: BIOMETRIC_CREDENTIALS_BY_PORTAL });
@@ -167,7 +168,7 @@ class AuthService {
     }
   }
 
-  async getStoredCredentialsForPortal(portal: 'staff' | 'mnr' | 'partner'): Promise<{ userId: string; password: string } | null> {
+  async getStoredCredentialsForPortal(portal: PortalType): Promise<{ userId: string; password: string } | null> {
     try {
       const { value } = await Preferences.get({ key: BIOMETRIC_CREDENTIALS_BY_PORTAL });
       if (!value) return null;
@@ -178,7 +179,7 @@ class AuthService {
     }
   }
 
-  async loginWithBiometricForPortal(portal: 'staff' | 'mnr' | 'partner'): Promise<{ success: boolean; error?: string }> {
+  async loginWithBiometricForPortal(portal: PortalType): Promise<{ success: boolean; error?: string }> {
     try {
       // DC Protocol: Portal-specific biometric login
       // Verify biometric - throws on failure, returns void on success
@@ -220,13 +221,13 @@ class AuthService {
   async loginWithBiometric(): Promise<{ success: boolean; error?: string }> {
     // Legacy method - uses last used portal
     const { value: portalValue } = await Preferences.get({ key: BIOMETRIC_PORTAL_KEY });
-    const portal = (portalValue === 'mnr' || portalValue === 'partner' || portalValue === 'staff') 
-      ? portalValue as 'staff' | 'mnr' | 'partner' 
+    const portal = (portalValue === 'mnr' || portalValue === 'partner' || portalValue === 'staff' || portalValue === 'vgk') 
+      ? portalValue as PortalType 
       : 'staff';
     return this.loginWithBiometricForPortal(portal);
   }
 
-  async loginWithPassword(userId: string, password: string, portal: 'staff' | 'mnr' | 'partner' = 'staff'): Promise<{ success: boolean; error?: string }> {
+  async loginWithPassword(userId: string, password: string, portal: PortalType = 'staff'): Promise<{ success: boolean; error?: string }> {
     try {
       let response;
       
@@ -236,6 +237,9 @@ class AuthService {
           break;
         case 'partner':
           response = await apiService.partnerLogin(userId, password);
+          break;
+        case 'vgk':
+          response = await apiService.vgkLogin(userId, password);
           break;
         default:
           response = await apiService.staffLogin(userId, password);
@@ -444,13 +448,13 @@ class AuthService {
     this.silentReAuthInProgress = true;
     try {
       const portal = this.authState.user?.portal || 'staff';
-      const creds = await this.getStoredCredentialsForPortal(portal as 'staff' | 'mnr' | 'partner');
+      const creds = await this.getStoredCredentialsForPortal(portal as PortalType);
       if (!creds) {
         console.log('[DC_AUTH] No stored credentials for silent re-auth');
         return false;
       }
       console.log('[DC_AUTH] Attempting silent re-auth for portal:', portal);
-      const result = await this.loginWithPassword(creds.userId, creds.password, portal as 'staff' | 'mnr' | 'partner');
+      const result = await this.loginWithPassword(creds.userId, creds.password, portal as PortalType);
       if (result.success) {
         console.log('[DC_AUTH] Silent re-auth successful');
         this.silentReAuthFailCount = 0;

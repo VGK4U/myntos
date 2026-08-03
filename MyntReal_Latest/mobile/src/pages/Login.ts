@@ -689,12 +689,18 @@ export class LoginPage {
     if (portal === 'mnr') {
       return `<img src="/assets/mnr-logo.png" alt="MNR" class="portal-logo">`;
     }
+    if (portal === 'vgk') {
+      return `<img src="/assets/vgk4u-logo.png" alt="VGK4U" class="portal-logo">`;
+    }
     return `<img src="/assets/myntreal-logo.png" alt="MyntReal" class="portal-logo">`;
   }
 
   private getHeaderLogo(): string {
     if (this.activeTab === 'announcements' || this.selectedPortal === 'mnr') {
       return `<img src="/assets/mnr-logo.png" alt="MNR" class="header-logo" style="width: 80px; height: 80px; object-fit: contain;">`;
+    }
+    if (this.selectedPortal === 'vgk') {
+      return `<img src="/assets/vgk4u-logo.png" alt="VGK4U" class="header-logo" style="width: 80px; height: 80px; object-fit: contain;">`;
     }
     return `<img src="/assets/myntreal-logo.png" alt="MyntReal" class="header-logo" style="width: 80px; height: 80px; object-fit: contain;">`;
   }
@@ -705,6 +711,9 @@ export class LoginPage {
     }
     if (this.selectedPortal === 'mnr') {
       return 'MNR Business Access';
+    }
+    if (this.selectedPortal === 'vgk') {
+      return 'VGK4U Member System';
     }
     return 'MyntReal';
   }
@@ -764,6 +773,10 @@ export class LoginPage {
         <button class="portal-tab ${this.selectedPortal === 'partner' ? 'active' : ''}" data-portal="partner">
           ${this.getPortalLogo('partner')}
           <span>Partner</span>
+        </button>
+        <button class="portal-tab ${this.selectedPortal === 'vgk' ? 'active' : ''}" data-portal="vgk">
+          ${this.getPortalLogo('vgk')}
+          <span>VGK4U</span>
         </button>
       </div>
 

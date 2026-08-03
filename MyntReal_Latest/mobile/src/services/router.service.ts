@@ -1,8 +1,4 @@
-/**
- * Router Service - Mobile App Navigation
- * DC Protocol: DC_MOBILE_ROUTER_001
- * Handles page navigation with bottom tab support for all portals
- */
+import { PortalType } from './portal.service';
 
 export type PageRoute = 
   // Staff Portal Routes
@@ -438,13 +434,16 @@ class RouterService {
     this.listeners.forEach(cb => cb(this.currentRoute));
   }
 
-  reset(portal: 'staff' | 'mnr' | 'partner' = 'staff'): void {
+  reset(portal: PortalType = 'staff'): void {
     switch (portal) {
       case 'mnr':
         this.currentRoute = 'mnr-dashboard';
         break;
       case 'partner':
         this.currentRoute = 'partner-dashboard';
+        break;
+      case 'vgk':
+        this.currentRoute = 'vgk-member-hub';
         break;
       default:
         this.currentRoute = 'dashboard';

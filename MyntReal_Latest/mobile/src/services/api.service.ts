@@ -367,6 +367,11 @@ class ApiService {
     return this.post('/partner/auth/login', { partner_code: partnerCode, password });
   }
 
+  // VGK Authentication
+  async vgkLogin(identifier: string, password: string): Promise<ApiResponse<any>> {
+    return this.post('/vgk/auth/login', { identifier, password });
+  }
+
   // Format base64 to data URL (DC_PHOTO_VALIDATION_001)
   // Preserves existing data:image/* prefixes, only adds prefix if missing
   private formatBase64ForUpload(base64: string): string {

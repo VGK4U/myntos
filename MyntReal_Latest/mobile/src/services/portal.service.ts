@@ -6,7 +6,7 @@
 
 import { Preferences } from '@capacitor/preferences';
 
-export type PortalType = 'staff' | 'mnr' | 'partner';
+export type PortalType = 'staff' | 'mnr' | 'partner' | 'vgk';
 
 interface PortalConfig {
   id: PortalType;
@@ -48,13 +48,22 @@ class PortalService {
       idLabel: 'Partner ID',
       idPlaceholder: 'E.G., PT10001',
       icon: 'handshake'
+    },
+    vgk: {
+      id: 'vgk',
+      name: 'VGK4U Member',
+      loginEndpoint: '/vgk/auth/login',
+      apiPrefix: '/vgk',
+      idLabel: 'Member ID / Phone',
+      idPlaceholder: 'E.G., VGK10001',
+      icon: 'shield'
     }
   };
 
   async init(): Promise<void> {
     // DC_BRIDGE_READY_001: Read from localStorage first (synchronous, never hangs).
     const localVal = localStorage.getItem('current_portal');
-    if (localVal && (localVal === 'staff' || localVal === 'mnr' || localVal === 'partner')) {
+    if (localVal && (localVal === 'staff' || localVal === 'mnr' || localVal === 'partner' || localVal === 'vgk')) {
       this.currentPortal = localVal as PortalType;
       // Sync Preferences in background
       Preferences.get({ key: 'current_portal' }).then(({ value }) => {
@@ -68,7 +77,7 @@ class PortalService {
         Preferences.get({ key: 'current_portal' }),
         new Promise<{ value: null }>(r => setTimeout(() => r({ value: null }), 3000))
       ]);
-      if (result.value && (result.value === 'staff' || result.value === 'mnr' || result.value === 'partner')) {
+      if (result.value && (result.value === 'staff' || result.value === 'mnr' || result.value === 'partner' || result.value === 'vgk')) {
         this.currentPortal = result.value as PortalType;
         localStorage.setItem('current_portal', result.value);
       }

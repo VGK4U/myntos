@@ -141,6 +141,7 @@ import { MNRCouponProgress } from './pages/mnr/MNRCouponProgress';
 import { MNRSettings } from './pages/mnr/MNRSettings';
 // VGK4U Member Portal Pages (Phase A1 read-only foundation — audit #35 follow-up)
 import { VGKBirthdays } from './pages/vgk/VGKBirthdays';
+import { VGKMemberHubPage } from './pages/vgk/VGKMemberHub';
 import { VGKTopEarners } from './pages/vgk/VGKTopEarners';
 import { VGKAwards } from './pages/vgk/VGKAwards';
 import { VGKMyRegistrations } from './pages/vgk/VGKMyRegistrations';
@@ -880,9 +881,8 @@ class MNRApp {
         page = new MNRAwards(this.pageContainer);
         break;
       case 'vgk-member-hub':
-        // Member Hub removed — redirect to dashboard
-        routerService.navigate('dashboard');
-        return;
+        page = new VGKMemberHubPage(this.pageContainer);
+        break;
       case 'mnr-referrals':
       case 'mnr-team':
         page = new MNRReferrals(this.pageContainer);
