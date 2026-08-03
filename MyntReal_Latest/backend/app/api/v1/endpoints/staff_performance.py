@@ -1348,6 +1348,12 @@ def create_incentive_config(
     if not _is_vgk_or_ea(me) and 'leadership' not in (me.role.role_name or '').lower():
         raise HTTPException(status_code=403, detail="Admin access required")
     try:
+        # Delete any existing soft-deleted row with the same unique columns to prevent constraint conflict
+        db.execute(text("""
+            DELETE FROM staff_incentive_config 
+            WHERE company_id=:co AND month=:mo AND year=:yr AND category_slug=:slug AND is_active=false
+        """), dict(co=payload.company_id, mo=payload.month, yr=payload.year, slug=payload.category_slug))
+
         row = db.execute(text("""
             INSERT INTO staff_incentive_config
                 (company_id, month, year, category_slug, category_label, min_target_value, min_target_unit,
@@ -1445,6 +1451,19 @@ def copy_incentive_month(
                 'message': f'{scope}: config already exists for {_c.month_abbr[next_month]} {next_year}. '
                            f'Delete existing rows first to overwrite.',
                 'target_month': next_month, 'target_year': next_year}
+
+    # Delete any inactive rows in target month first to avoid unique constraint conflicts
+    if all_companies:
+        db.execute(text(
+            "DELETE FROM staff_incentive_config "
+            "WHERE month=:mo AND year=:yr AND is_active=false"
+        ), {'mo': next_month, 'yr': next_year})
+    else:
+        db.execute(text(
+            "DELETE FROM staff_incentive_config "
+            "WHERE company_id=:co AND month=:mo AND year=:yr AND is_active=false"
+        ), {'co': company_id, 'mo': next_month, 'yr': next_year})
+
     # Copy rows — preserve each row's own company_id when copying all companies
     if all_companies:
         result = db.execute(text("""
