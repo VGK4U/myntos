@@ -60,6 +60,43 @@ def get_active_headers(db: Session = Depends(get_db)):
         "display_registered_label": display_label
     }
 
+@router.get("/public/homepage-popup")
+def get_active_homepage_popup(db: Session = Depends(get_db)):
+    """
+    Get the active homepage popup banner configuration.
+    """
+    today = get_indian_time().date()
+    # Query all active services
+    active_services = db.query(CommunityService).filter(
+        CommunityService.status == 'ACTIVE'
+    ).all()
+    
+    for s in active_services:
+        settings_dict = s.settings or {}
+        show_popup = settings_dict.get('show_homepage_popup')
+        popup_image = settings_dict.get('homepage_popup_image')
+        till_date_str = settings_dict.get('homepage_popup_till_date')
+        
+        if show_popup in (True, 'yes', 'true') and popup_image and till_date_str:
+            try:
+                till_date = datetime.strptime(till_date_str, "%Y-%m-%d").date()
+                if today <= till_date:
+                    return {
+                        "success": True,
+                        "has_popup": True,
+                        "image_url": popup_image,
+                        "short_name": s.short_name,
+                        "service_name": s.service_name,
+                        "till_date": till_date_str
+                    }
+            except Exception:
+                continue
+                
+    return {
+        "success": True,
+        "has_popup": False
+    }
+
 @router.get("/public/services/{short_name}")
 def get_public_service_details(short_name: str, db: Session = Depends(get_db)):
     """
@@ -871,6 +908,7 @@ async def create_service_admin(
     settings: Optional[str] = Form(None),
     files: List[UploadFile] = File(None),
     project_document: Optional[UploadFile] = File(None),
+    homepage_popup_banner: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(get_current_staff_user)
 ):
@@ -940,6 +978,22 @@ async def create_service_admin(
         except Exception as de:
             print(f"Doc upload error: {de}")
 
+    if homepage_popup_banner and homepage_popup_banner.filename:
+        try:
+            popup_upload_res = await UniversalUploadService.handle_upload(
+                file=homepage_popup_banner,
+                table_name="community_services",
+                record_id=service.id,
+                uploaded_by_id=current_user.id,
+                uploaded_by_type="staff",
+                storage_dir="community_popup_banners",
+                db=db
+            )
+            if popup_upload_res.get("file_path"):
+                settings_dict['homepage_popup_image'] = popup_upload_res["file_path"]
+        except Exception as e:
+            print(f"Popup banner upload error: {e}")
+
     service.settings = settings_dict
     db.commit()
 
@@ -973,6 +1027,7 @@ async def edit_service_admin(
     settings: Optional[str] = Form(None),
     files: List[UploadFile] = File(None),
     project_document: Optional[UploadFile] = File(None),
+    homepage_popup_banner: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(get_current_staff_user)
 ):
@@ -1040,6 +1095,26 @@ async def edit_service_admin(
         if existing_doc_text:
             doc_text = existing_doc_text
             settings_dict['extracted_doc_text'] = existing_doc_text
+
+    # Preserve existing homepage popup image if not overwritten by a new upload
+    if service.settings and 'homepage_popup_image' in service.settings and 'homepage_popup_image' not in settings_dict:
+        settings_dict['homepage_popup_image'] = service.settings['homepage_popup_image']
+
+    if homepage_popup_banner and homepage_popup_banner.filename:
+        try:
+            popup_upload_res = await UniversalUploadService.handle_upload(
+                file=homepage_popup_banner,
+                table_name="community_services",
+                record_id=service.id,
+                uploaded_by_id=current_user.id,
+                uploaded_by_type="staff",
+                storage_dir="community_popup_banners",
+                db=db
+            )
+            if popup_upload_res.get("file_path"):
+                settings_dict['homepage_popup_image'] = popup_upload_res["file_path"]
+        except Exception as e:
+            print(f"Popup banner upload error: {e}")
 
     service.service_name = service_name
     service.short_name = short_name

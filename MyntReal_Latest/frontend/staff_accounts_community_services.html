@@ -658,6 +658,30 @@
                                 </div>
                             </div>
 
+                            <!-- Home Page Popup Banner Settings -->
+                            <div class="mb-3 border p-3 rounded bg-light">
+                                <label class="form-label fw-bold d-block">Show Home Page Popup Banner?</label>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="create_show_homepage_popup" id="create_popup_yes" value="yes" onchange="toggleCreatePopupFields()">
+                                    <label class="form-check-label" for="create_popup_yes">Yes</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="create_show_homepage_popup" id="create_popup_no" value="no" checked onchange="toggleCreatePopupFields()">
+                                    <label class="form-check-label" for="create_popup_no">No</label>
+                                </div>
+
+                                <div id="create_popup_fields" style="display:none" class="mt-3 row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Upload Popup Image</label>
+                                        <input type="file" class="form-control" id="createPopupImageFile" accept="image/*">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Show Popup Till Date *</label>
+                                        <input type="date" class="form-control" id="create_popup_till_date">
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Page Theme & Color Styling overrides -->
                             <div class="accordion mb-3" id="createThemeAccordion">
                               <div class="accordion-item">
@@ -1170,7 +1194,9 @@
                 primary_color: document.getElementById('create_opt_primary_color').value,
                 accent_color: document.getElementById('create_opt_accent_color').value,
                 bg_color: document.getElementById('create_opt_bg_color').value,
-                banner_sections: selectedBanners.map(f => f.section_target || 'gallery')
+                banner_sections: selectedBanners.map(f => f.section_target || 'gallery'),
+                show_homepage_popup: document.getElementById('create_popup_yes').checked ? 'yes' : 'no',
+                homepage_popup_till_date: document.getElementById('create_popup_till_date').value || null
             };
             formData.append('settings', JSON.stringify(settings));
 
@@ -1183,6 +1209,12 @@
             const docInput = document.getElementById('projectDocFile');
             if (docInput && docInput.files[0]) {
                 formData.append('project_document', docInput.files[0]);
+            }
+
+            // Append homepage popup image if uploaded
+            const popupInput = document.getElementById('createPopupImageFile');
+            if (popupInput && popupInput.files[0]) {
+                formData.append('homepage_popup_banner', popupInput.files[0]);
             }
 
             try {
@@ -1408,6 +1440,22 @@
             document.getElementById('edit_opt_accent_color').value = settings.accent_color || '#fbbf24';
             document.getElementById('edit_opt_bg_color').value = settings.bg_color || '#ffffff';
             toggleEditCustomColors();
+
+            // Popup settings
+            const isPopup = settings.show_homepage_popup === true || settings.show_homepage_popup === 'yes';
+            document.getElementById('edit_popup_yes').checked = isPopup;
+            document.getElementById('edit_popup_no').checked = !isPopup;
+            document.getElementById('edit_popup_till_date').value = settings.homepage_popup_till_date || '';
+            
+            const existingPopupImg = document.getElementById('edit_existing_popup_img');
+            const existingPopupPreview = document.getElementById('edit_existing_popup_preview');
+            if (settings.homepage_popup_image) {
+                existingPopupImg.src = settings.homepage_popup_image;
+                existingPopupPreview.style.display = 'block';
+            } else {
+                existingPopupPreview.style.display = 'none';
+            }
+            toggleEditPopupFields();
             
             // Checkboxes
             const verts = s.applicable_verticals || [];
@@ -1548,6 +1596,16 @@
             document.getElementById('create_service_ai_prompt').value = "Create a cinematic, image-first promotional microsite inspired by the campaign posters. Treat the posters as the primary design language and the PDF only as the source of campaign content. The final website should look like an award-winning marketing campaign, not a registration portal.";
         };
 
+        window.toggleCreatePopupFields = function() {
+            const isYes = document.getElementById('create_popup_yes').checked;
+            document.getElementById('create_popup_fields').style.display = isYes ? 'flex' : 'none';
+        };
+
+        window.toggleEditPopupFields = function() {
+            const isYes = document.getElementById('edit_popup_yes').checked;
+            document.getElementById('edit_popup_fields').style.display = isYes ? 'flex' : 'none';
+        };
+
         window.toggleCreateCustomColors = function() {
             const theme = document.getElementById('create_opt_color_theme').value;
             document.getElementById('create_custom_colors_wrap').style.display = (theme === 'custom') ? 'flex' : 'none';
@@ -1591,7 +1649,9 @@
                 primary_color: document.getElementById('edit_opt_primary_color').value,
                 accent_color: document.getElementById('edit_opt_accent_color').value,
                 bg_color: document.getElementById('edit_opt_bg_color').value,
-                banner_sections: [...editRetainedSections, ...editSelectedBanners.map(f => f.section_target || 'gallery')]
+                banner_sections: [...editRetainedSections, ...editSelectedBanners.map(f => f.section_target || 'gallery')],
+                show_homepage_popup: document.getElementById('edit_popup_yes').checked ? 'yes' : 'no',
+                homepage_popup_till_date: document.getElementById('edit_popup_till_date').value || null
             };
             formData.append('settings', JSON.stringify(settings));
 
@@ -1610,6 +1670,12 @@
             const editDocFile = document.getElementById('editProjectDocFile').files[0];
             if (editDocFile) {
                 formData.append('project_document', editDocFile);
+            }
+
+            // Append edit homepage popup image if uploaded
+            const editPopupFile = document.getElementById('editPopupImageFile').files[0];
+            if (editPopupFile) {
+                formData.append('homepage_popup_banner', editPopupFile);
             }
 
             try {
@@ -1948,6 +2014,34 @@
                   <button type="button" class="btn btn-outline-secondary btn-sm" onclick="populateGaneshTemplate()">
                     <i class="fas fa-magic me-1"></i>Ganesh Template
                   </button>
+                </div>
+              </div>
+
+              <!-- Home Page Popup Banner Settings -->
+              <div class="mb-3 border p-3 rounded bg-light">
+                <label class="form-label fw-bold d-block">Show Home Page Popup Banner?</label>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="edit_show_homepage_popup" id="edit_popup_yes" value="yes" onchange="toggleEditPopupFields()">
+                  <label class="form-check-label" for="edit_popup_yes">Yes</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="edit_show_homepage_popup" id="edit_popup_no" value="no" checked onchange="toggleEditPopupFields()">
+                  <label class="form-check-label" for="edit_popup_no">No</label>
+                </div>
+
+                <div id="edit_popup_fields" style="display:none" class="mt-3 row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold">Upload Popup Image</label>
+                    <input type="file" class="form-control" id="editPopupImageFile" accept="image/*">
+                    <div id="edit_existing_popup_preview" class="mt-2" style="display:none">
+                      <span class="d-block small text-muted">Current Popup Image:</span>
+                      <img id="edit_existing_popup_img" src="" style="max-height: 100px; border: 1px solid #ccc; border-radius: 4px;" class="mt-1">
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold">Show Popup Till Date *</label>
+                    <input type="date" class="form-control" id="edit_popup_till_date">
+                  </div>
                 </div>
               </div>
 
