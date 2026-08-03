@@ -205,7 +205,7 @@
                             <div id="kraStatusText" class="small fw-semibold text-muted"></div>
                         </div>
                         <div class="small" style="max-width:550px; color:#4b5563;">
-                            🚀 <span class="fw-bold text-dark">Boost Your Payout:</span> Keep your active KRA compliance above <span class="fw-bold text-success">80%</span> to unlock <span class="fw-bold" style="color:#7c3aed">100% of your achieved incentives</span>! (Currently earning <span id="kraCurrentRate" class="fw-bold text-primary">100%</span> of achieved value).
+                            🚀 <span class="fw-bold text-dark">Boost Your Payout:</span> Keep your active KRA compliance above <span class="fw-bold text-success">80%</span> to unlock <span class="fw-bold" style="color:#7c3aed">120% of your achieved incentives</span>! (Currently earning <span id="kraCurrentRate" class="fw-bold text-primary">100%</span> of achieved value).
                         </div>
                     </div>
                 </div>
@@ -508,7 +508,7 @@
                                 <div id="kraStatusTextAch" class="small fw-semibold text-muted"></div>
                             </div>
                             <div class="small" style="max-width:550px; color:#4b5563;">
-                                🚀 <span class="fw-bold text-dark">Boost Your Payout:</span> Keep your active KRA compliance above <span class="fw-bold text-success">80%</span> to unlock <span class="fw-bold" style="color:#7c3aed">100% of your achieved incentives</span>! (Currently earning <span id="kraCurrentRateAch" class="fw-bold text-primary">100%</span> of achieved value).
+                                🚀 <span class="fw-bold text-dark">Boost Your Payout:</span> Keep your active KRA compliance above <span class="fw-bold text-success">80%</span> to unlock <span class="fw-bold" style="color:#7c3aed">120% of your achieved incentives</span>! (Currently earning <span id="kraCurrentRateAch" class="fw-bold text-primary">100%</span> of achieved value).
                             </div>
                         </div>
                     </div>
@@ -811,23 +811,27 @@
 
             const hasKra = emp.kra_total > 0;
             const pct = emp.kra_percentage !== undefined ? emp.kra_percentage : 100;
-            const penalty = emp.kra_penalty_applied;
+            const mult = emp.kra_multiplier !== undefined ? emp.kra_multiplier : (hasKra ? (pct >= 80 ? 1.2 : 0.5) : 1.0);
 
             valEl.textContent = hasKra ? `${pct}%` : 'N/A';
-            if (penalty) {
+            if (mult < 1.0) {
                 badge.style.background = '#fee2e2';
                 badge.style.color = '#b91c1c';
                 txtEl.innerHTML = `<span style="color:#ef4444;"><i class="fas fa-exclamation-triangle me-1"></i>Active KRA target not met (below 80%)</span>`;
                 rateEl.textContent = '50%';
                 rateEl.style.color = '#ef4444';
-            } else {
+            } else if (mult > 1.0) {
                 badge.style.background = '#d1fae5';
                 badge.style.color = '#065f46';
-                txtEl.innerHTML = hasKra 
-                    ? `<span style="color:#059669;"><i class="fas fa-check-circle me-1"></i>Active goals met! (80%+)</span>`
-                    : `<span style="color:#6b7280;"><i class="fas fa-info-circle me-1"></i>No active goals</span>`;
-                rateEl.textContent = '100%';
+                txtEl.innerHTML = `<span style="color:#059669;"><i class="fas fa-check-circle me-1"></i>Active goals met! (80%+)</span>`;
+                rateEl.textContent = '120%';
                 rateEl.style.color = '#10b981';
+            } else {
+                badge.style.background = '#f3f4f6';
+                badge.style.color = '#374151';
+                txtEl.innerHTML = `<span style="color:#6b7280;"><i class="fas fa-info-circle me-1"></i>No active goals</span>`;
+                rateEl.textContent = '100%';
+                rateEl.style.color = '#6b7280';
             }
             card.style.display = '';
         }
