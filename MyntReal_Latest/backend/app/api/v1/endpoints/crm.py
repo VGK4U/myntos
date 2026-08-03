@@ -12108,6 +12108,7 @@ async def get_unified_my_leads(
                 or_(
                     CRMLead.telecaller_id == user_id,
                     CRMLead.field_staff_id == user_id,
+                    CRMLead.support_staff_id == user_id,
                     and_(
                         CRMLead.primary_owner_type == 'staff',
                         CRMLead.primary_owner_id == user_id
@@ -12263,7 +12264,12 @@ async def get_unified_my_leads(
         if handler_role == 'telecaller':
             query = query.filter(CRMLead.telecaller_id == user_id)
         elif handler_role == 'field_staff':
-            query = query.filter(CRMLead.field_staff_id == user_id)
+            query = query.filter(
+                or_(
+                    CRMLead.field_staff_id == user_id,
+                    CRMLead.support_staff_id == user_id
+                )
+            )
         elif handler_role == 'partner':
             # For partner, find leads where partner is assigned
             # Staff can view partner leads they created or manage via primary ownership
@@ -12287,6 +12293,7 @@ async def get_unified_my_leads(
                 or_(
                     CRMLead.telecaller_id == user_id,
                     CRMLead.field_staff_id == user_id,
+                    CRMLead.support_staff_id == user_id,
                     CRMLead.associated_partner_id == user_id,
                     CRMLead.vendor_id == user_id,
                     and_(
