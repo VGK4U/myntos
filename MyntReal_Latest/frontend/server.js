@@ -8110,8 +8110,20 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Redirect to enforce trailing slash for relative asset resolution
+  if (url === '/mobile') {
+    res.writeHead(302, { 'Location': '/mobile/' });
+    res.end();
+    return;
+  }
+  if (url.startsWith('/mobile?')) {
+    res.writeHead(302, { 'Location': '/mobile/' + url.substring(7) });
+    res.end();
+    return;
+  }
+
   // Serve mobile app (Capacitor PWA)
-  if (url === '/mobile' || url === '/mobile/' || url.startsWith('/mobile?') || url.startsWith('/mobile/?')) {
+  if (url === '/mobile/' || url.startsWith('/mobile/?')) {
     const filePath = path.join(__dirname, 'public', 'mobile', 'index.html');
     fs.readFile(filePath, (err, data) => {
       if (err) {
