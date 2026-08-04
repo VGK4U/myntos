@@ -2125,9 +2125,20 @@ def get_incentive_achievements(
         kra_completed = kra_info['completed']
         kra_pct = kra_info['pct']
         
-        # Apply 50% penalty if KRA < 80% and employee actually had KRA assignments
+        # Determine KRA multiplier:
+        #   KRA >= 80%: 120% multiplier (1.2)
+        #   KRA < 80%: 50% multiplier (0.5)
+        #   No KRA tasks: 100% multiplier (1.0)
+        if kra_total > 0:
+            if kra_pct >= 80.0:
+                kra_multiplier = 1.2
+            else:
+                kra_multiplier = 0.5
+        else:
+            kra_multiplier = 1.0
+            
         kra_penalty_applied = (kra_total > 0 and kra_pct < 80.0)
-        final_incentive_earned = total_earned * 0.5 if kra_penalty_applied else total_earned
+        final_incentive_earned = total_earned * kra_multiplier
 
         return {
             'employee_id': emp_id, 'emp_code': emp_info['emp_code'], 'name': emp_info['name'],
@@ -2137,6 +2148,7 @@ def get_incentive_achievements(
             'kra_completed': kra_completed,
             'kra_percentage': kra_pct,
             'kra_penalty_applied': kra_penalty_applied,
+            'kra_multiplier': kra_multiplier,
             'total_incentive_earned': round(final_incentive_earned, 2),
         }
 
