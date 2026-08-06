@@ -10,7 +10,7 @@ March 2026
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, case, text
-from typing import Optional
+from typing import Optional, Union
 from datetime import datetime, date, timedelta
 import calendar
 import pytz
@@ -2177,16 +2177,16 @@ def get_incentive_achievements(
 
 @router.get("/incentive-achievements/drilldown", summary="Source leads/students for a given employee+category+period")
 def incentive_achievements_drilldown(
-    month:       int            = Query(...),
+    month:       Union[int, str] = Query(...),
     year:        int            = Query(...),
-    employee_id: str            = Query(...),
+    employee_id: Optional[str]  = Query(None),
     category_slug: str          = Query(...),
     company_id:  Optional[int]  = Query(None),
     db:          Session        = Depends(get_db),
     me:          StaffEmployee  = Depends(get_current_staff_user),
 ):
     """Returns the actual leads/students that were counted for a specific
-    employee + category + month, so users can verify the calculation."""
+    employee + category + month(s), so users can verify the calculation."""
     import calendar as _cal
     from datetime import date as _date_cls
 
@@ -2196,18 +2196,34 @@ def incentive_achievements_drilldown(
         except:
             return "0"
 
-    all_companies = not company_id or company_id == 0
-    _last_day = _cal.monthrange(year, month)[1]
-    date_from = datetime(year, month, 1)
-    date_to   = datetime(year, month, _last_day, 23, 59, 59)
-    df_d = _date_cls(year, month, 1)
-    dt_d = _date_cls(year, month, _last_day)
+    # Parse months list (supports single int 7, str "7", "7,8,9", "all", "0")
+    months_list = []
+    m_str = str(month).strip().lower()
+    if m_str in ('all', '0', '', 'none'):
+        months_list = list(range(1, 13))
+    else:
+        for p in m_str.split(','):
+            p = p.strip()
+            if p.isdigit() and 1 <= int(p) <= 12:
+                months_list.append(int(p))
+    if not months_list:
+        months_list = [datetime.now().month]
 
-    # Resolve employee
+    min_m = min(months_list)
+    max_m = max(months_list)
+    all_companies = not company_id or company_id == 0
+    _last_day = _cal.monthrange(year, max_m)[1]
+    date_from = datetime(year, min_m, 1)
+    date_to   = datetime(year, max_m, _last_day, 23, 59, 59)
+    df_d = _date_cls(year, min_m, 1)
+    dt_d = _date_cls(year, max_m, _last_day)
+
+    # Resolve employee ID (default to logged-in user me.id if not provided)
+    target_emp_id = employee_id if (employee_id and str(employee_id).strip() and str(employee_id).strip() not in ('null', 'undefined')) else str(me.id)
     emp_row = db.execute(text(
         "SELECT id, emp_code, COALESCE(full_name, emp_code) AS name "
         "FROM staff_employees WHERE id = :eid"
-    ), {'eid': int(employee_id)}).fetchone()
+    ), {'eid': int(target_emp_id)}).fetchone()
     if not emp_row:
         return {'success': False, 'data': [], 'message': 'Employee not found'}
     emp_db_id, emp_code, emp_name = emp_row
