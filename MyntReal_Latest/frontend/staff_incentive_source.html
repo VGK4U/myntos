@@ -191,10 +191,6 @@ function onCategoryChange() {
   window.history.replaceState({}, '', newUrl);
   loadData();
 }
-  const newUrl = window.location.pathname + '?' + params.toString();
-  window.history.replaceState({}, '', newUrl);
-  loadData();
-}
 
 function renderTable(d) {
   const rows = d.data || [];
@@ -333,7 +329,11 @@ function renderTable(d) {
   `;
 }
 
-window.addEventListener('DOMContentLoaded', loadData);
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', loadData);
+} else {
+  loadData();
+}
 </script>
 </body>
 </html>
