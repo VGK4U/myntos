@@ -221,29 +221,7 @@
                 </div>
             </div>
 
-            <!-- Summary Cards (payout history totals) -->
-            <div class="summary-cards" id="summaryCards">
-                <div class="summary-card" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)">
-                    <div><i class="fas fa-wallet fa-lg opacity-75"></i></div>
-                    <div class="sc-amount" id="summaryTotal">₹0</div>
-                    <div class="sc-label">Total Earned</div>
-                </div>
-                <div class="summary-card" style="background:linear-gradient(135deg,#f7971e 0%,#ffd200 100%)">
-                    <div><i class="fas fa-clock fa-lg opacity-75"></i></div>
-                    <div class="sc-amount" id="summaryPending">₹0</div>
-                    <div class="sc-label">Pending</div>
-                </div>
-                <div class="summary-card" style="background:linear-gradient(135deg,#11998e 0%,#38ef7d 100%)">
-                    <div><i class="fas fa-check-circle fa-lg opacity-75"></i></div>
-                    <div class="sc-amount" id="summaryCleared">₹0</div>
-                    <div class="sc-label">Cleared</div>
-                </div>
-                <div class="summary-card" style="background:linear-gradient(135deg,#4facfe 0%,#00f2fe 100%)">
-                    <div><i class="fas fa-list-ol fa-lg opacity-75"></i></div>
-                    <div class="sc-amount" id="summaryCount">0</div>
-                    <div class="sc-label">Entries</div>
-                </div>
-            </div>
+
 
             <!-- Incentive Config Rate Card -->
             <div class="card mb-3" id="capacityCard" style="display:none">
@@ -790,10 +768,10 @@
                 if(!d.success){ emptyEl.classList.remove('d-none'); return; }
 
                 const s = d.summary;
-                document.getElementById('summaryTotal').textContent   = fmt(s.total_earned);
-                document.getElementById('summaryPending').textContent = fmt(s.total_pending);
-                document.getElementById('summaryCleared').textContent = fmt(s.total_cleared);
-                document.getElementById('summaryCount').textContent   = s.entry_count;
+                const elTot = document.getElementById('summaryTotal'); if(elTot) elTot.textContent = fmt(s.total_earned);
+                const elPen = document.getElementById('summaryPending'); if(elPen) elPen.textContent = fmt(s.total_pending);
+                const elClr = document.getElementById('summaryCleared'); if(elClr) elClr.textContent = fmt(s.total_cleared);
+                const elCnt = document.getElementById('summaryCount'); if(elCnt) elCnt.textContent = s.entry_count;
 
                 if(!d.months || !d.months.length){ emptyEl.classList.remove('d-none'); return; }
 
