@@ -893,10 +893,42 @@
 
     function renderCompanyBreakdown(darData, balData) {
         if (!balData) return;
-        
+
         const dates = (darData && darData.business_dates_label && darData.business_dates_label.length)
             ? darData.business_dates_label
-            : ['Today', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7', 'Day 8', 'Day 9', 'Day 10'];
+            : ['Tue 28-Jul', 'Wed 29-Jul', 'Thu 30-Jul', 'Fri 31-Jul', 'Sat 01-Aug', 'Sun 02-Aug', 'Mon 03-Aug', 'Tue 04-Aug', 'Wed 05-Aug', 'Thu 06-Aug'];
+
+        // Reverse dates to match Tab 1 (newest leftmost -> oldest rightmost)
+        const datesDesc = dates.slice().reverse();
+
+        // Build account daily values map from DAR Asset section rows
+        const darAssetRows = {};
+        if (darData && darData.sections) {
+            darData.sections.forEach(sec => {
+                if ((sec.title || '').toLowerCase().includes('balance sheet')) {
+                    (sec.rows || []).forEach(r => {
+                        darAssetRows[r.label] = r.values ? r.values.slice().reverse() : [];
+                    });
+                }
+            });
+        }
+
+        // Helper to match DAR asset row for an account
+        function getAccountDailyVals(acct, catType) {
+            const aName = (acct.account_name || '').toLowerCase();
+            const bDetail = (acct.bank_detail || '').toLowerCase();
+            
+            // Search darAssetRows by label match
+            for (const [lbl, vals] of Object.entries(darAssetRows)) {
+                const lLower = lbl.toLowerCase();
+                if (catType === 'cash' && lLower.includes('cash')) return vals;
+                if (catType === 'bank' && (lLower.includes(aName) || (bDetail && lLower.includes(bDetail)))) return vals;
+            }
+
+            // Fallback: point-in-time running balance
+            const rBal = parseFloat(acct.running_balance || 0);
+            return new Array(datesDesc.length).fill(rBal);
+        }
 
         const sections = [
             { key: 'overall', title: '1. OVERALL — Net Change & Running Balance', bg: 'linear-gradient(90deg,#1e40af 0%,#3b82f6 100%)', totalVal: balData.grand_total ? balData.grand_total.running_balance : 0 },
@@ -904,7 +936,7 @@
             { key: 'out',     title: '3. OUT — Total Cash + Bank + UPI Outflows',    bg: 'linear-gradient(90deg,#b91c1c 0%,#ef4444 100%)', totalVal: balData.grand_total ? balData.grand_total.period_out : 0 },
         ];
 
-        const allRows = [
+        const allAccounts = [
             ...(balData.banks || []).map(r => ({ ...r, cat_type: 'bank' })),
             ...(balData.upi || []).map(r => ({ ...r, cat_type: 'upi' })),
             ...(balData.cash || []).map(r => ({ ...r, cat_type: 'cash' }))
@@ -913,16 +945,43 @@
         let html = '';
 
         sections.forEach(sec => {
+            // Group accounts by company
             const coMap = {};
-            allRows.forEach(r => {
-                const cName = r.company_name || 'Other Company';
+            allAccounts.forEach(acct => {
+                const cName = acct.company_name || 'Other Company';
                 if (!coMap[cName]) {
-                    coMap[cName] = { name: cName, bank: [], upi: [], cash: [], overall: 0, in: 0, out: 0 };
+                    coMap[cName] = { name: cName, bank: [], upi: [], cash: [] };
                 }
-                coMap[cName][r.cat_type].push(r);
-                coMap[cName].in += parseFloat(r.period_in || 0);
-                coMap[cName].out += parseFloat(r.period_out || 0);
-                coMap[cName].overall += parseFloat(r.running_balance || 0);
+                const dailyVals = getAccountDailyVals(acct, acct.cat_type);
+                
+                // Compute section-specific daily array
+                let secDaily = [];
+                if (sec.key === 'overall') {
+                    secDaily = dailyVals.slice();
+                } else if (sec.key === 'in') {
+                    const periodIn = parseFloat(acct.period_in || 0);
+                    secDaily = dailyVals.map((v, i) => {
+                        if (i < dailyVals.length - 1) {
+                            const diff = v - dailyVals[i + 1];
+                            return diff > 0 ? diff : 0;
+                        }
+                        return periodIn / datesDesc.length;
+                    });
+                } else { // out
+                    const periodOut = parseFloat(acct.period_out || 0);
+                    secDaily = dailyVals.map((v, i) => {
+                        if (i < dailyVals.length - 1) {
+                            const diff = dailyVals[i + 1] - v;
+                            return diff > 0 ? diff : 0;
+                        }
+                        return periodOut / datesDesc.length;
+                    });
+                }
+
+                coMap[cName][acct.cat_type].push({
+                    ...acct,
+                    dailyVals: secDaily
+                });
             });
 
             html += `<div class="bal-section mb-4">
@@ -931,35 +990,57 @@
                     <div style="margin-left:auto; font-weight:800; font-size:15px; color:white;">Total: ${_fmtBal(sec.totalVal)}</div>
                 </div>
                 <div style="overflow-x:auto;">
-                <table class="bal-tbl">
+                <table class="dar" style="width:100%;">
                     <thead>
                         <tr>
-                            <th style="min-width:260px;">Company / Category / Account</th>
-                            ${dates.map(d => `<th class="num">${d}</th>`).join('')}
-                            <th class="num" style="font-weight:800;">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
+                            <th class="label" style="min-width:260px;">Company / Category / Account</th>`;
+            
+            datesDesc.forEach((dlbl, idx) => {
+                const isEnd = (idx === 0);
+                const cc = (Math.floor(idx / 5) % 2 === 0) ? 'col-band-a' : 'col-band-b';
+                html += `<th class="value-head ${cc}${isEnd ? ' period-end' : ''}">${dlbl}</th>`;
+                if (idx < datesDesc.length - 1) {
+                    html += `<th class="delta-head ${cc}">Δ</th>`;
+                }
+            });
+            html += `<th class="num" style="font-weight:800;">Total</th></tr></thead><tbody>`;
 
             let coIdx = 0;
             Object.values(coMap).forEach(co => {
                 coIdx++;
                 const coClass = `co_${sec.key}_${coIdx}`;
-                const valKey = sec.key === 'in' ? 'in' : (sec.key === 'out' ? 'out' : 'overall');
-                const coVal = co[valKey];
-                const valCls = coVal > 0 ? 'pos' : (coVal < 0 ? 'neg' : '');
+                
+                // Aggregate company daily values
+                const coDaily = new Array(datesDesc.length).fill(0);
+                ['bank', 'upi', 'cash'].forEach(ct => {
+                    co[ct].forEach(a => {
+                        a.dailyVals.forEach((v, i) => coDaily[i] += v);
+                    });
+                });
+                const coTotal = coDaily[0] || 0;
 
+                // Parent Company Row (Level 1)
                 html += `<tr class="co-parent-row" style="background:#f1f5f9; font-weight:700; border-top:2px solid #cbd5e1;">
-                    <td>
+                    <td class="label">
                         <button type="button" class="btn btn-sm btn-light border py-0 px-1.5 me-1.5 align-middle toggle-btn" onclick="toggleBreakdownRow('${coClass}', this)" data-child-class="${coClass}" style="border-radius:4px; background:#fff;">
                             <i class="fas fa-plus text-primary" style="font-size:10px;"></i>
                         </button>
                         <span class="bal-co-badge" style="font-size:11px; padding:3px 10px;">${co.name}</span>
-                    </td>
-                    ${dates.map(() => `<td class="num ${valCls}" style="opacity:0.85;">${_fmtBal(coVal / dates.length)}</td>`).join('')}
-                    <td class="num ${valCls}" style="font-weight:800; font-size:13px;">${_fmtBal(coVal)}</td>
-                </tr>`;
+                    </td>`;
 
+                coDaily.forEach((v, idx) => {
+                    const isEnd = (idx === 0);
+                    const cc = (Math.floor(idx / 5) % 2 === 0) ? 'col-band-a' : 'col-band-b';
+                    html += `<td class="value ${cc}${isEnd ? ' period-end' : ''}" style="font-weight:700;">${fmtNum(v)}</td>`;
+                    if (idx < coDaily.length - 1) {
+                        const olderVal = coDaily[idx + 1];
+                        const dc = deltaClass(olderVal, v, true);
+                        html += `<td class="delta ${dc} ${cc}">${fmtDelta(olderVal, v)}</td>`;
+                    }
+                });
+                html += `<td class="num" style="font-weight:800; font-size:13px;">${fmtNum(coTotal)}</td></tr>`;
+
+                // Categories (Level 2: Banks, UPI, Cash)
                 const cats = [
                     { type: 'bank', label: 'Banks', icon: 'fa-university', color: '#1d4ed8', list: co.bank },
                     { type: 'upi',  label: 'UPI / Digital Wallets', icon: 'fa-mobile-alt', color: '#7c3aed', list: co.upi },
@@ -969,35 +1050,58 @@
                 cats.forEach(cat => {
                     if (!cat.list.length) return;
                     const catClass = `${coClass}_cat_${cat.type}`;
-                    const catVal = cat.list.reduce((sum, r) => sum + (sec.key==='in'?parseFloat(r.period_in||0):(sec.key==='out'?parseFloat(r.period_out||0):parseFloat(r.running_balance||0))), 0);
-                    const catValCls = catVal > 0 ? 'pos' : (catVal < 0 ? 'neg' : '');
+                    
+                    const catDaily = new Array(datesDesc.length).fill(0);
+                    cat.list.forEach(a => {
+                        a.dailyVals.forEach((v, i) => catDaily[i] += v);
+                    });
+                    const catTotal = catDaily[0] || 0;
 
                     html += `<tr class="${coClass} cat-row" style="display:none; background:#f8fafc; font-weight:600;">
-                        <td style="padding-left:28px;">
+                        <td class="label" style="padding-left:28px;">
                             <button type="button" class="btn btn-sm btn-light border py-0 px-1.5 me-1.5 align-middle sub-toggle-btn" onclick="toggleBreakdownRow('${catClass}', this)" data-sub-class="${catClass}" style="border-radius:4px; background:#fff;">
                                 <i class="fas fa-plus text-primary" style="font-size:9px;"></i>
                             </button>
                             <i class="fas ${cat.icon} me-1.5" style="color:${cat.color}; font-size:11px;"></i>
                             <span style="color:#334155;">${cat.label}</span>
                             <small class="text-muted ms-1">(${cat.list.length})</small>
-                        </td>
-                        ${dates.map(() => `<td class="num ${catValCls}" style="opacity:0.85;">${_fmtBal(catVal / dates.length)}</td>`).join('')}
-                        <td class="num ${catValCls}" style="font-weight:700;">${_fmtBal(catVal)}</td>
-                    </tr>`;
+                        </td>`;
 
+                    catDaily.forEach((v, idx) => {
+                        const isEnd = (idx === 0);
+                        const cc = (Math.floor(idx / 5) % 2 === 0) ? 'col-band-a' : 'col-band-b';
+                        html += `<td class="value ${cc}${isEnd ? ' period-end' : ''}">${fmtNum(v)}</td>`;
+                        if (idx < catDaily.length - 1) {
+                            const olderVal = catDaily[idx + 1];
+                            const dc = deltaClass(olderVal, v, true);
+                            html += `<td class="delta ${dc} ${cc}">${fmtDelta(olderVal, v)}</td>`;
+                        }
+                    });
+                    html += `<td class="num" style="font-weight:700;">${fmtNum(catTotal)}</td></tr>`;
+
+                    // Accounts (Level 3: Individual accounts)
                     cat.list.forEach(acct => {
-                        const acctVal = sec.key === 'in' ? parseFloat(acct.period_in||0) : (sec.key === 'out' ? parseFloat(acct.period_out||0) : parseFloat(acct.running_balance||0));
-                        const acctValCls = acctVal > 0 ? 'pos' : (acctVal < 0 ? 'neg' : '');
+                        const aDaily = acct.dailyVals;
+                        const aTotal = aDaily[0] || 0;
                         const detail = acct.bank_detail ? ` <small class="text-muted">(${acct.bank_detail})</small>` : '';
 
                         html += `<tr class="${coClass} ${catClass} acct-row" style="display:none; background:#ffffff;">
-                            <td style="padding-left:54px;">
+                            <td class="label" style="padding-left:54px;">
                                 <i class="fas fa-level-up-alt fa-rotate-90 text-muted me-1.5" style="font-size:10px;"></i>
                                 <span style="font-weight:500; color:#475569;">${acct.account_name}</span>${detail}
-                            </td>
-                            ${dates.map(() => `<td class="num ${acctValCls}">${_fmtBal(acctVal / dates.length)}</td>`).join('')}
-                            <td class="num ${acctValCls}">${_fmtBal(acctVal)}</td>
-                        </tr>`;
+                            </td>`;
+
+                        aDaily.forEach((v, idx) => {
+                            const isEnd = (idx === 0);
+                            const cc = (Math.floor(idx / 5) % 2 === 0) ? 'col-band-a' : 'col-band-b';
+                            html += `<td class="value ${cc}${isEnd ? ' period-end' : ''}">${fmtNum(v)}</td>`;
+                            if (idx < aDaily.length - 1) {
+                                const olderVal = aDaily[idx + 1];
+                                const dc = deltaClass(olderVal, v, true);
+                                html += `<td class="delta ${dc} ${cc}">${fmtDelta(olderVal, v)}</td>`;
+                            }
+                        });
+                        html += `<td class="num">${fmtNum(aTotal)}</td></tr>`;
                     });
                 });
             });
