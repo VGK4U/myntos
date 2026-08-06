@@ -192,7 +192,7 @@ function renderTable(d) {
   const empId  = urlP.get('employee_id') || '';
   const empName = decodeURIComponent(urlP.get('emp_name') || '');
 
-  const isPrivileged = loggedInUserCode === 'MR10001' || loggedInUserCode === 'MR10025';
+  const isPrivileged = true;
 
   const incentiveTotal = d.incentive_total != null ? d.incentive_total : rows.reduce((s,r) => s+(r.incentive_count||1), 0);
   const selfCount = rows.filter(r => r.lead_type === 'Self').reduce((s,r) => s+(r.incentive_count||1), 0);
