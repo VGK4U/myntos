@@ -12638,7 +12638,10 @@ class PurchaseInvoiceUploadService:
         _courier_total = _d(upload.courier_amount) + _courier_gst
         _transport_total = _d(upload.transport_amount) + _transport_gst
         _gross = _taxable + _tax + _courier_total + _transport_total
-        _round_off = Decimal(str(round(float(_gross)))) - _gross
+        if 'round_off' in data and data['round_off'] is not None:
+            _round_off = Decimal(str(data['round_off']))
+        else:
+            _round_off = Decimal(str(round(float(_gross)))) - _gross
         _grand_total = _gross + _round_off
 
         upload.taxable_amount = _taxable.quantize(Decimal('0.01'))

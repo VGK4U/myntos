@@ -689,9 +689,12 @@
                         <span>Transport GST:</span>
                         <span id="summaryTransportGstAmt">0.00</span>
                     </div>
-                    <div class="gst-row" id="roundOffRow" style="display:none;">
+                    <div class="gst-row" id="roundOffRow" style="display: flex; align-items: center; justify-content: space-between;">
                         <span>Round Off:</span>
-                        <span id="summaryRoundOff">0.00</span>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <input type="number" id="reviewRoundOff" step="0.01" placeholder="0.00" oninput="calculateTotals()" style="width: 100px; text-align: right; font-size: 13px; font-weight: 700; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;" title="Manually edit or enter round off amount">
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1.5" onclick="autoCalcRoundOff()" title="Auto-calculate standard Round Off" style="font-size: 11px; line-height: 1.4;">Auto</button>
+                        </div>
                     </div>
                     <div class="gst-row total">
                         <span>Grand Total:</span>
@@ -2616,18 +2619,13 @@
                     renderLineItems(selectedInvoice.line_items || [], selectedInvoice.extracted_data?.matching_status);
                     calculateTotals();
 
-                    // Show round_off from saved invoice if present
-                    const _piRoundOff = selectedInvoice.round_off || 0;
-                    const _piRoundOffRow = document.getElementById('roundOffRow');
-                    const _piRoundOffEl = document.getElementById('summaryRoundOff');
-                    if (_piRoundOffRow && _piRoundOffEl) {
-                        if (Math.abs(_piRoundOff) > 0.001) {
-                            _piRoundOffEl.textContent = formatCurrency(_piRoundOff);
-                            _piRoundOffRow.style.display = 'flex';
-                        } else {
-                            _piRoundOffRow.style.display = 'none';
-                        }
+                    // Set manual round_off value from saved invoice
+                    const _piRoundOff = selectedInvoice.round_off != null ? selectedInvoice.round_off : 0;
+                    const _piRoundOffEl = document.getElementById('reviewRoundOff');
+                    if (_piRoundOffEl) {
+                        _piRoundOffEl.value = parseFloat(_piRoundOff).toFixed(2);
                     }
+                    calculateTotals();
                     
                     document.getElementById('reviewModal').classList.add('active');
                     // DC_NARR_001: Load narration history for this invoice in review modal
@@ -3389,7 +3387,7 @@
                 totalTax += parseFloat(row.querySelector('.tax-amount').value) || 0;
             });
 
-            // DC_GRAND_TOTAL_FIX: include courier/transport charges + their GST
+            // DC_GRAND_TOTAL_FIX: include courier/transport charges + their GST + manual round_off
             const courierAmt = parseFloat(document.getElementById('reviewCourierAmount').value) || 0;
             const courierGstRate = parseFloat(document.getElementById('reviewCourierGstRate').value) || 0;
             const courierGst = parseFloat((courierAmt * courierGstRate / 100).toFixed(2));
@@ -3397,7 +3395,10 @@
             const transportGstRate = parseFloat(document.getElementById('reviewTransportGstRate').value) || 0;
             const transportGst = parseFloat((transportAmt * transportGstRate / 100).toFixed(2));
 
-            const grandTotal = taxable + totalTax + courierAmt + courierGst + transportAmt + transportGst;
+            const roundOffInput = document.getElementById('reviewRoundOff');
+            const roundOffVal = roundOffInput ? (parseFloat(roundOffInput.value) || 0) : 0;
+
+            const grandTotal = taxable + totalTax + courierAmt + courierGst + transportAmt + transportGst + roundOffVal;
             
             const isIgst = selectedInvoice && selectedInvoice.is_igst;
             
@@ -3470,6 +3471,7 @@
                 vendor_invoice_date: invoiceDate,
                 due_date: document.getElementById('reviewDueDate').value || null,
                 review_notes: document.getElementById('reviewNotes').value,
+                round_off: parseFloat(document.getElementById('reviewRoundOff').value) || 0,
                 courier_amount: parseFloat(document.getElementById('reviewCourierAmount').value) || 0,
                 courier_hsn_code: document.getElementById('reviewCourierHsnCode').value || null,
                 courier_hsn_id: parseInt(document.getElementById('reviewCourierHsnId').value) || null,
