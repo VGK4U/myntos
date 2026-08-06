@@ -129,6 +129,11 @@
             <!-- Filters row -->
             <div class="d-flex align-items-center justify-content-end flex-wrap gap-2 mb-4">
                 <div class="d-flex align-items-center gap-2">
+                    <div id="earningsTeamWrap" style="display:none;">
+                        <select class="year-select" id="earningsTeamSelect" onchange="loadLiveMonth()" style="min-width:180px;font-weight:600;color:#374151;border-color:#6366f1;">
+                            <option value="">My Own Earnings (Self)</option>
+                        </select>
+                    </div>
                     <label class="small text-muted fw-semibold mb-0">Month</label>
                     <select class="year-select" id="monthSelect" onchange="onMonthChange()"></select>
                     <label class="small text-muted fw-semibold mb-0 ms-1">Year</label>
@@ -1016,9 +1021,12 @@
         async function loadLiveMonth(){
             const month = parseInt(monthSel.value);
             const year  = parseInt(yearSel.value);
+            const teamEmpId = document.getElementById('earningsTeamSelect')?.value || '';
             const banner = document.getElementById('liveMonthBanner');
             try{
-                const r = await staffFetch(`${API}/performance/my-incentive-achievements?month=${month}&year=${year}`);
+                let reqUrl = `${API}/performance/my-incentive-achievements?month=${month}&year=${year}`;
+                if (teamEmpId) reqUrl += `&employee_id=${teamEmpId}`;
+                const r = await staffFetch(reqUrl);
                 if(!r.ok){ 
                     banner.style.display='none'; 
                     document.getElementById('kraStatusCard').style.display='none';
@@ -1056,26 +1064,23 @@
                     }
                 });
 
-                // Banner + Achieved/Earned overlay only when there are actual earnings
-                if(!(emp.total_incentive_earned > 0)){
-                    banner.style.display='none';
-                    _clearCapacityOverlay();
-                    return;
+                // Banner
+                if(emp.total_incentive_earned > 0){
+                    document.getElementById('liveMonthLabel').textContent = MNTH_NAMES[month] + ' ' + year;
+                    document.getElementById('liveBannerTotal').textContent = fmtLive(emp.total_incentive_earned);
+                    let totalSelf=0, totalCo=0;
+                    (emp.categories||[]).forEach(c => {
+                        totalSelf += (c.self_incentive||0);
+                        totalCo   += (c.company_incentive_base||0) + (c.bonus_applied ? Math.max(0, c.incentive_earned - (c.self_incentive||0) - (c.company_incentive_base||0)) : 0);
+                    });
+                    document.getElementById('liveBannerSelf').textContent    = fmtLiveS(totalSelf);
+                    document.getElementById('liveBannerCompany').textContent = fmtLiveS(totalCo);
+                    banner.style.display = '';
+                } else {
+                    banner.style.display = 'none';
                 }
 
-                // Banner
-                document.getElementById('liveMonthLabel').textContent = MNTH_NAMES[month] + ' ' + year;
-                document.getElementById('liveBannerTotal').textContent = fmtLive(emp.total_incentive_earned);
-                let totalSelf=0, totalCo=0;
-                (emp.categories||[]).forEach(c => {
-                    totalSelf += (c.self_incentive||0);
-                    totalCo   += (c.company_incentive_base||0) + (c.bonus_applied ? Math.max(0, c.incentive_earned - (c.self_incentive||0) - (c.company_incentive_base||0)) : 0);
-                });
-                document.getElementById('liveBannerSelf').textContent    = fmtLiveS(totalSelf);
-                document.getElementById('liveBannerCompany').textContent = fmtLiveS(totalCo);
-                banner.style.display = '';
-
-                // Rate card overlay — Achieved + Earned columns
+                // Rate card overlay — Achieved + Earned columns (Always render interactive drilldown links!)
                 (emp.categories||[]).forEach(c => {
                     const row = document.querySelector(`#capacityBody tr[data-cap-slug="${c.slug}"]`);
                     if(!row) return;
@@ -1085,17 +1090,28 @@
                         ? '₹' + Number(c.achieved_amount||0).toLocaleString('en-IN')
                         : count + ' ' + unit;
                     const earned = c.incentive_earned || 0;
-                    const hasMet = count > 0 || (c.achieved_amount||0) > 0;
+                    const hasMet = count > 0 || (c.achieved_amount||0) > 0 || earned > 0;
                     const achCell  = row.querySelector('.cap-ach');
                     const earnCell = row.querySelector('.cap-earn');
+
+                    const targetEmpId = teamEmpId || (emp.employee_id || emp.id);
+                    const targetEmpName = encodeURIComponent(emp.name || emp.emp_code || '');
+                    const catLbl = encodeURIComponent(c.category_name || LIVE_CAT_LABEL[c.slug] || c.slug);
+                    const drillUrl = `/staff/incentive-source?employee_id=${targetEmpId}&category_slug=${c.slug}&month=${month}&year=${year}&emp_name=${targetEmpName}&cat_label=${catLbl}`;
+
+                    const makeDrill = (htmlContent) => {
+                        return `<a href="${drillUrl}" target="_blank" onclick="window.open('${drillUrl}','_blank');return false;" title="Click to open Source Verification deal breakdown" style="color:inherit;font-weight:700;text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer;"><i class="fas fa-search-plus me-1" style="font-size:10px;opacity:0.85;color:#4f46e5;"></i>${htmlContent}</a>`;
+                    };
+
                     if(achCell){
-                        achCell.innerHTML = hasMet
+                        const rawAch = hasMet
                             ? `<span style="color:#059669;font-weight:700">${achTxt} <i class="fas fa-check-circle text-success" style="font-size:10px"></i></span>`
                             : `<span style="color:#374151">${achTxt}</span>`;
+                        achCell.innerHTML = makeDrill(rawAch);
                     }
                     if(earnCell){
-                        earnCell.textContent = earned > 0 ? fmtLive(earned) : '₹0.00';
-                        earnCell.style.color = earned > 0 ? '#059669' : '#1f2937';
+                        const rawEarn = earned > 0 ? fmtLive(earned) : '₹0.00';
+                        earnCell.innerHTML = makeDrill(`<span style="color:${earned > 0 ? '#059669' : '#1f2937'};font-weight:700">${rawEarn}</span>`);
                     }
                 });
             } catch(e){ banner.style.display='none'; console.warn('[MyIncv] Live month error:', e); }
@@ -1105,8 +1121,8 @@
             document.querySelectorAll('#capacityBody tr[data-cap-slug]').forEach(row => {
                 const achCell  = row.querySelector('.cap-ach');
                 const earnCell = row.querySelector('.cap-earn');
-                if(achCell)  achCell.innerHTML  = '<span style="color:#374151">0</span>';
-                if(earnCell) earnCell.textContent = '₹0.00';
+                if(achCell)  achCell.innerHTML  = '<span style="color:#9ca3af">0</span>';
+                if(earnCell) earnCell.innerHTML = '<span style="color:#9ca3af">₹0.00</span>';
             });
         }
 
@@ -1175,15 +1191,23 @@
             // Check if user is a manager or admin with team members
             staffFetch(`${API}/performance/my-team-members`).then(r => r.ok ? r.json() : null).then(d => {
                 if (d && d.success && (d.is_manager || (d.team_members && d.team_members.length))) {
-                    const teamSel = document.getElementById('liveAchTeamSelect');
-                    if (teamSel && d.team_members && d.team_members.length) {
+                    const teamSel1 = document.getElementById('liveAchTeamSelect');
+                    const teamSel2 = document.getElementById('earningsTeamSelect');
+                    if (d.team_members && d.team_members.length) {
                         d.team_members.forEach(m => {
-                            const opt = document.createElement('option');
-                            opt.value = m.id;
-                            opt.textContent = `${m.full_name} (${m.emp_code})`;
-                            teamSel.appendChild(opt);
+                            if (teamSel1) {
+                                const opt = document.createElement('option');
+                                opt.value = m.id; opt.textContent = `${m.full_name} (${m.emp_code})`;
+                                teamSel1.appendChild(opt);
+                            }
+                            if (teamSel2) {
+                                const opt = document.createElement('option');
+                                opt.value = m.id; opt.textContent = `${m.full_name} (${m.emp_code})`;
+                                teamSel2.appendChild(opt);
+                            }
                         });
-                        document.getElementById('liveAchTeamWrap').style.display = '';
+                        if (document.getElementById('liveAchTeamWrap')) document.getElementById('liveAchTeamWrap').style.display = '';
+                        if (document.getElementById('earningsTeamWrap')) document.getElementById('earningsTeamWrap').style.display = '';
                     }
                 }
             }).catch(e => console.warn('[LiveAchTeamInit]', e));
