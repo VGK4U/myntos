@@ -151,8 +151,8 @@
             const canApprove = run.status === 'PENDING' || run.status === 'CALCULATED' || run.status === 'VALIDATED';
 
             const totalDays = parseInt(run.eligible_days || 0);
-            const paidDays = parseInt(run.days_present || run.days_worked || 0);
-            const nonPaidDays = Math.max(0, totalDays - paidDays);
+            const paidDays = parseInt(run.days_present !== undefined && run.days_present !== null ? run.days_present : (run.days_worked || 0));
+            const nonPaidDays = parseInt(run.lop_days !== undefined && run.lop_days !== null ? run.lop_days : Math.max(0, totalDays - paidDays));
             const grossPay = parseFloat(run.ctc_monthly || 0);
 
             return `
@@ -171,18 +171,33 @@
                     <td class="fw-bold text-success">₹${netPay.toLocaleString('en-IN')}</td>
                     <td><span class="badge ${statusBadges[run.status] || 'bg-secondary'}">${run.status}</span></td>
                     <td>
+                        ${!run.sfms_posted && run.status !== 'PAID' ? `
+                            <button class="btn btn-sm btn-outline-warning me-1" onclick="recalculateRun(${run.id})" title="Re-run calculation with latest attendance">
+                                <i class="fas fa-sync-alt me-1"></i> Re-run
+                            </button>
+                        ` : ''}
                         ${canApprove ? `
-                            <button class="btn btn-sm btn-success" onclick="approveRun(${run.id})">
+                            <button class="btn btn-sm btn-success me-1" onclick="approveRun(${run.id})">
                                 <i class="fas fa-check"></i> Approve
                             </button>
                             <button class="btn btn-sm btn-danger" onclick="rejectRun(${run.id})">
                                 <i class="fas fa-times"></i> Reject
                             </button>
+                        ` : (run.status === 'APPROVED' ? `
+                            ${run.sfms_posted ? `
+                                <span class="badge bg-success" title="Posted Ref: ${run.sfms_reference || 'SFMS'}">
+                                    <i class="fas fa-check-double me-1"></i> Posted to SFMS
+                                </span>
+                            ` : `
+                                <button class="btn btn-sm btn-primary" onclick="postRunToSfms(${run.id})">
+                                    <i class="fas fa-file-invoice-dollar me-1"></i> Post to SFMS
+                                </button>
+                            `}
                         ` : `
                             <button class="btn btn-sm btn-outline-primary" onclick="viewRun(${run.id})">
                                 <i class="fas fa-eye"></i>
                             </button>
-                        `}
+                        `)}
                     </td>
                 </tr>
             `;
@@ -320,6 +335,42 @@
             } else {
                 const data = await response.json();
                 alert('Error: ' + (data.detail || 'Failed to reject'));
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    };
+
+    window.recalculateRun = async function(id) {
+        if (!confirm('Re-run payroll calculation for this employee using latest approved attendance?')) return;
+        try {
+            const response = await fetchWithAuth(`${API_BASE}/staff/payroll/runs/${id}/recalculate`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+            if (response.ok && data.success) {
+                alert('Payroll run recalculated successfully with latest attendance!');
+                loadApprovals();
+            } else {
+                alert('Error: ' + (data.detail || data.message || 'Failed to recalculate'));
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    };
+
+    window.postRunToSfms = async function(id) {
+        if (!confirm('Post this approved payroll run to SFMS General Ledger?')) return;
+        try {
+            const response = await fetchWithAuth(`${API_BASE}/staff/payroll/runs/${id}/post-sfms`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+            if (response.ok && data.success) {
+                alert('Successfully posted payroll run to SFMS! Reference: ' + (data.sfms_reference || 'SAL-' + id));
+                loadApprovals();
+            } else {
+                alert('Error: ' + (data.detail || data.message || 'Failed to post to SFMS'));
             }
         } catch (error) {
             alert('Error: ' + error.message);

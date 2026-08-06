@@ -98,11 +98,13 @@ class PayrollAccountingService:
         Note: Transaction management is handled by the calling API endpoint.
         This method does NOT commit - caller must commit after all updates.
         """
-        if run.sfms_posted:
+        sfms_posted = getattr(run, 'sfms_posted', False)
+        sfms_ref = getattr(run, 'sfms_reference', None)
+        if sfms_posted:
             return {
                 'success': True,
                 'already_posted': True,
-                'sfms_reference': run.sfms_reference,
+                'sfms_reference': sfms_ref,
                 'message': 'Already posted to SFMS'
             }
         
@@ -127,11 +129,12 @@ class PayrollAccountingService:
             }
         
         import calendar
-        month_name = calendar.month_name[cycle.month]
-        year = cycle.year
-        period_desc = f"{month_name} {year}"
+        c_month = getattr(cycle, 'cycle_month', getattr(cycle, 'month', 1))
+        c_year = getattr(cycle, 'cycle_year', getattr(cycle, 'year', 2026))
+        month_name = calendar.month_name[c_month]
+        period_desc = f"{month_name} {c_year}"
         
-        sfms_reference = f"SAL-{run.company_id}-{year}{cycle.month:02d}-{run.employee_id}"
+        sfms_reference = f"SAL-{run.company_id}-{c_year}{c_month:02d}-{run.employee_id}"
         
         existing_expense = self.db.query(ExpenseEntry).filter(
             ExpenseEntry.entry_number == sfms_reference,
@@ -139,10 +142,8 @@ class PayrollAccountingService:
         ).first()
         
         if existing_expense:
-            run.sfms_posted = True
-            run.sfms_reference = sfms_reference
-            run.sfms_posted_at = get_indian_time()
-            run.sfms_posted_by = posted_by_id
+            if hasattr(run, 'sfms_posted'): run.sfms_posted = True
+            if hasattr(run, 'sfms_reference'): run.sfms_reference = sfms_reference
             return {
                 'success': True,
                 'already_exists': True,
@@ -151,9 +152,9 @@ class PayrollAccountingService:
                 'message': 'SFMS entries already exist'
             }
         
-        ctc_cost = run.ctc_cost or (
-            (run.gross_pay or Decimal('0')) + 
-            (run.employer_contributions or Decimal('0'))
+        ctc_cost = getattr(run, 'ctc_cost', None) or (
+            (getattr(run, 'gross_salary', Decimal('0')) or Decimal('0')) + 
+            (getattr(run, 'employer_contributions', Decimal('0')) or Decimal('0'))
         )
         
         expense_entry = self._create_salary_expense_entry(
@@ -176,10 +177,8 @@ class PayrollAccountingService:
             created_by_id=posted_by_id
         )
         
-        run.sfms_posted = True
-        run.sfms_reference = sfms_reference
-        run.sfms_posted_at = get_indian_time()
-        run.sfms_posted_by = posted_by_id
+        if hasattr(run, 'sfms_posted'): run.sfms_posted = True
+        if hasattr(run, 'sfms_reference'): run.sfms_reference = sfms_reference
         
         audit = StaffPayrollAuditLog(
             company_id=run.company_id,
@@ -191,10 +190,10 @@ class PayrollAccountingService:
                 'expense_entry_id': expense_entry.id,
                 'ledger_entries_created': len(ledger_entries),
                 'ctc_cost': float(ctc_cost) if ctc_cost else 0,
-                'net_pay': float(run.net_pay) if run.net_pay else 0,
+                'net_pay': float(getattr(run, 'net_salary', 0) or 0),
                 'accounting_breakdown': {
                     'salary_expense_dr': float(ctc_cost) if ctc_cost else 0,
-                    'salary_payable_cr': float(run.net_pay) if run.net_pay else 0,
+                    'salary_payable_cr': float(getattr(run, 'net_salary', 0) or 0),
                     'pf_employee_cr': float(run.pf_employee or 0),
                     'pf_employer_cr': float(run.pf_employer or 0),
                     'esi_employee_cr': float(run.esi_employee or 0),
@@ -219,7 +218,7 @@ class PayrollAccountingService:
                 'debit_salary_expense': float(ctc_cost) if ctc_cost else 0,
                 'credit_total': float(ctc_cost) if ctc_cost else 0,
                 'credits': {
-                    'salary_payable': float(run.net_pay) if run.net_pay else 0,
+                    'salary_payable': float(getattr(run, 'net_salary', 0) or 0),
                     'pf_employee': float(run.pf_employee or 0),
                     'pf_employer': float(run.pf_employer or 0),
                     'esi_employee': float(run.esi_employee or 0),
@@ -247,21 +246,8 @@ class PayrollAccountingService:
         
         Salary Expense = CTC Cost = Gross Pay + Employer Contributions
         """
-        salary_category = self.db.query(ExpenseMainCategory).filter(
-            ExpenseMainCategory.category_code == EXPENSE_CATEGORY_SALARY,
-            ExpenseMainCategory.company_id == run.company_id
-        ).first()
-        
-        if not salary_category:
-            salary_category = self.db.query(ExpenseMainCategory).filter(
-                ExpenseMainCategory.category_code == EXPENSE_CATEGORY_SALARY
-            ).first()
-        
-        salary_subcategory = None
-        if salary_category:
-            salary_subcategory = self.db.query(ExpenseSubCategory).filter(
-                ExpenseSubCategory.main_category_id == salary_category.id
-            ).first()
+        salary_category = self._ensure_salary_category_exists(run.company_id)
+        salary_subcategory = self._ensure_salary_subcategory_exists(salary_category.id)
         
         expense_metadata = {
             'payroll_run_id': run.id,
@@ -282,15 +268,15 @@ class PayrollAccountingService:
                 'basic': float(run.basic_amount or 0),
                 'hra': float(run.hra_amount or 0),
                 'special_allowance': float(run.special_allowance or 0),
-                'other_allowances': float(run.other_allowances or 0),
-                'gross_pay': float(run.gross_pay or 0)
+                'other_allowances': 0,
+                'gross_pay': float(getattr(run, 'gross_salary', 0) or 0)
             },
             'deductions': {
                 'pf_employee': float(run.pf_employee or 0),
                 'esi_employee': float(run.esi_employee or 0),
                 'pt': float(run.pt_amount or 0),
                 'tds': float(run.tds_amount or 0),
-                'other_deductions': float(run.other_deductions or 0),
+                'other_deductions': 0,
                 'total_deductions': float(run.total_deductions or 0)
             },
             'employer_contributions': {
@@ -299,8 +285,8 @@ class PayrollAccountingService:
                 'total': float(run.employer_contributions or 0)
             },
             'summary': {
-                'gross_pay': float(run.gross_pay or 0),
-                'net_pay': float(run.net_pay or 0),
+                'gross_pay': float(getattr(run, 'gross_salary', 0) or 0),
+                'net_pay': float(getattr(run, 'net_salary', 0) or 0),
                 'ctc_cost': float(ctc_cost or 0)
             }
         }
@@ -316,7 +302,7 @@ class PayrollAccountingService:
             company_id=run.company_id,
             main_category_id=salary_category.id,
             sub_category_id=salary_subcategory.id,
-            expense_date=cycle.pay_date or get_indian_time().date(),
+            expense_date=getattr(cycle, 'payment_date', None) or getattr(cycle, 'pay_date', None) or get_indian_time().date(),
             amount=ctc_cost,
             payment_mode='NEFT',
             vendor_name=employee.full_name or f"{employee.first_name} {employee.last_name}",
@@ -359,7 +345,7 @@ class PayrollAccountingService:
             company_id=run.company_id,
             main_category_id=salary_category.id,
             sub_category_id=salary_subcategory.id,
-            expense_date=cycle.pay_date or get_indian_time().date(),
+            expense_date=getattr(cycle, 'payment_date', None) or getattr(cycle, 'pay_date', None) or get_indian_time().date(),
             amount=ctc_cost,
             payment_mode='NEFT',
             vendor_name=employee.full_name or f"{employee.first_name} {employee.last_name}",
@@ -383,27 +369,20 @@ class PayrollAccountingService:
     def _ensure_salary_category_exists(self, company_id: int) -> ExpenseMainCategory:
         """Ensure SALARY main category exists, create if not."""
         category = self.db.query(ExpenseMainCategory).filter(
-            ExpenseMainCategory.category_code == 'SALARY',
-            ExpenseMainCategory.company_id == company_id
+            ExpenseMainCategory.name == 'Salary & Wages'
         ).first()
         
         if not category:
-            category = self.db.query(ExpenseMainCategory).filter(
-                ExpenseMainCategory.category_code == 'SALARY'
-            ).first()
-        
-        if not category:
             category = ExpenseMainCategory(
-                company_id=company_id,
-                category_code='SALARY',
-                category_name='Salary & Wages',
+                name='Salary & Wages',
                 description='Employee salary and wages expense',
-                gl_code='SAL001',
-                is_active=True
+                is_direct_expense=True,
+                is_active=True,
+                created_by_id='SYSTEM'
             )
             self.db.add(category)
             self.db.flush()
-            logger.info(f"[DC-PAYROLL-SFMS] Created SALARY main category for company {company_id}")
+            logger.info(f"[DC-PAYROLL-SFMS] Created Salary & Wages main category")
         
         return category
     
@@ -416,15 +395,14 @@ class PayrollAccountingService:
         if not subcategory:
             subcategory = ExpenseSubCategory(
                 main_category_id=main_category_id,
-                sub_category_code='SALARY_REGULAR',
-                sub_category_name='Regular Salary',
+                name='Regular Salary',
                 description='Regular monthly salary payments',
-                gl_code='SAL001-01',
-                is_active=True
+                is_active=True,
+                created_by_id='SYSTEM'
             )
             self.db.add(subcategory)
             self.db.flush()
-            logger.info(f"[DC-PAYROLL-SFMS] Created SALARY subcategory for category {main_category_id}")
+            logger.info(f"[DC-PAYROLL-SFMS] Created Regular Salary subcategory for category {main_category_id}")
         
         return subcategory
     
@@ -456,14 +434,15 @@ class PayrollAccountingService:
         emp_code = employee.emp_code or str(employee.id)
         transaction_date = get_indian_time().date()
         
-        if run.net_pay and run.net_pay > 0:
+        net_salary = getattr(run, 'net_salary', Decimal('0'))
+        if net_salary and net_salary > 0:
             entry = self._create_single_ledger_entry(
                 run=run,
                 party_type='EMPLOYEE',
                 party_id=employee.id,
                 party_name=f"{emp_name} ({emp_code})",
                 entry_type='CREDIT',
-                amount=run.net_pay,
+                amount=net_salary,
                 reference_number=sfms_reference,
                 narration=f"Salary Payable - {emp_name} - {period_desc}",
                 payable_type='SALARY',

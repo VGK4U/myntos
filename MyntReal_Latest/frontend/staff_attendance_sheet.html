@@ -216,7 +216,6 @@
         }
 
         thead {
-            background: #f9fafb !important;
             position: sticky !important;
             top: 0 !important;
             z-index: 20 !important;
@@ -229,172 +228,75 @@
             color: #374151;
             border-bottom: 2px solid #e5e7eb;
             white-space: nowrap;
-            background: #f9fafb !important;
+            background: #f8fafc;
             position: sticky !important;
             top: 0 !important;
             z-index: 15 !important;
         }
 
-        /* DC Protocol (Jan 07, 2026): TABLE-SPECIFIC STICKY COLUMNS */
+        /* DC Protocol: TABLE-SPECIFIC STICKY COLUMNS & DESIGN SYSTEM */
         /* ============================================================ */
         
-        /* TABLE 1: HOURS SUMMARY TABLE (8 columns) */
-        /* Columns: Department(140px), Employee(180px), Pending, Submitted, Approved, Rejected, Total, Eligible */
-        .hours-summary-table {
-            table-layout: auto;
+        /* HEADER STICKY CORNER CELLS (High z-index to stay above body & horizontal scroll) */
+        .hours-summary-table thead th:nth-child(1),
+        .attendance-details-table thead th:nth-child(1) {
+            position: sticky !important;
+            top: 0 !important;
+            left: 0 !important;
+            z-index: 30 !important;
+            background: #f8fafc !important;
+            min-width: 140px;
+            max-width: 140px;
         }
-        /* Department column - sticky at left: 0 */
-        .hours-summary-table thead th:first-child,
-        .hours-summary-table tbody td:first-child {
+        
+        .hours-summary-table thead th:nth-child(2),
+        .attendance-details-table thead th:nth-child(2) {
+            position: sticky !important;
+            top: 0 !important;
+            left: 140px !important;
+            z-index: 30 !important;
+            background: #f8fafc !important;
+            min-width: 180px;
+            max-width: 180px;
+            box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.12);
+        }
+
+        /* BODY STICKY COLUMNS (Department & Employee Name) */
+        .hours-summary-table tbody td:nth-child(1),
+        .attendance-details-table tbody td:nth-child(1) {
             position: sticky !important;
             left: 0 !important;
             z-index: 12 !important;
-            background: #f9fafb !important;
-            min-width: 140px;
-        }
-        .hours-summary-table tbody td:first-child {
             background: #fff !important;
+            min-width: 140px;
+            max-width: 140px;
         }
-        /* Employee column - sticky at left: 140px */
-        .hours-summary-table thead th:nth-child(2),
-        .hours-summary-table tbody td:nth-child(2) {
+
+        .hours-summary-table tbody td:nth-child(2),
+        .attendance-details-table tbody td:nth-child(2) {
             position: sticky !important;
             left: 140px !important;
             z-index: 12 !important;
-            background: #f9fafb !important;
+            background: #fff !important;
             min-width: 180px;
-        }
-        .hours-summary-table tbody td:nth-child(2) {
-            background: #fff !important;
-        }
-        .hours-summary-table tbody tr:hover td:first-child,
-        .hours-summary-table tbody tr:hover td:nth-child(2) {
-            background: #f9fafb !important;
-        }
-        
-        /* TABLE 2: ATTENDANCE DETAILS TABLE (9 + date columns) */
-        /* Columns: Department(130px), Employee(160px), Leaves(65px), Absences(65px), Half Days(65px), Present(65px), Holidays(65px), Weekends(65px), Net Days(75px), [dates...] */
-        /* Cumulative offsets: 0, 130, 290, 355, 420, 485, 550, 615, 680 */
-        .attendance-details-table {
-            table-layout: auto;
-        }
-        /* Column 1: Department - sticky at left: 0 */
-        .attendance-details-table thead th:nth-child(1),
-        .attendance-details-table tbody td:nth-child(1) {
-            position: sticky !important;
-            left: 0 !important;
-            z-index: 12 !important;
-            background: #f9fafb !important;
-            min-width: 130px;
-            max-width: 130px;
-        }
-        .attendance-details-table tbody td:nth-child(1) {
-            background: #fff !important;
-        }
-        /* Column 2: Employee - sticky at left: 130px */
-        .attendance-details-table thead th:nth-child(2),
-        .attendance-details-table tbody td:nth-child(2) {
-            position: sticky !important;
-            left: 130px !important;
-            z-index: 12 !important;
-            background: #f9fafb !important;
-            min-width: 160px;
             max-width: 180px;
             white-space: normal;
+            box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.12);
         }
-        .attendance-details-table tbody td:nth-child(2) {
-            background: #fff !important;
-        }
-        /* Column 3: Leaves - sticky at left: 290px */
-        .attendance-details-table thead th:nth-child(3),
-        .attendance-details-table tbody td:nth-child(3) {
-            position: sticky !important;
-            left: 290px !important;
-            z-index: 12 !important;
-            background: #f3e8ff !important;
-            min-width: 65px;
-            max-width: 65px;
-        }
-        /* Column 4: Absences - sticky at left: 355px */
-        .attendance-details-table thead th:nth-child(4),
-        .attendance-details-table tbody td:nth-child(4) {
-            position: sticky !important;
-            left: 355px !important;
-            z-index: 12 !important;
-            background: #fee2e2 !important;
-            min-width: 65px;
-            max-width: 65px;
-        }
-        /* Column 5: Half Days - sticky at left: 420px */
-        .attendance-details-table thead th:nth-child(5),
-        .attendance-details-table tbody td:nth-child(5) {
-            position: sticky !important;
-            left: 420px !important;
-            z-index: 12 !important;
-            background: #fed7aa !important;
-            min-width: 65px;
-            max-width: 65px;
-        }
-        /* Column 6: Present - sticky at left: 485px */
-        .attendance-details-table thead th:nth-child(6),
-        .attendance-details-table tbody td:nth-child(6) {
-            position: sticky !important;
-            left: 485px !important;
-            z-index: 12 !important;
-            background: #dcfce7 !important;
-            min-width: 65px;
-            max-width: 65px;
-        }
-        /* Column 7: Holidays - sticky at left: 550px */
-        .attendance-details-table thead th:nth-child(7),
-        .attendance-details-table tbody td:nth-child(7) {
-            position: sticky !important;
-            left: 550px !important;
-            z-index: 12 !important;
-            background: #dbeafe !important;
-            min-width: 65px;
-            max-width: 65px;
-        }
-        /* Column 8: Weekends - sticky at left: 615px */
-        .attendance-details-table thead th:nth-child(8),
-        .attendance-details-table tbody td:nth-child(8) {
-            position: sticky !important;
-            left: 615px !important;
-            z-index: 12 !important;
-            background: #e5e7eb !important;
-            min-width: 65px;
-            max-width: 65px;
-        }
-        /* Column 9: Net Days - sticky at left: 680px */
-        .attendance-details-table thead th:nth-child(9),
-        .attendance-details-table tbody td:nth-child(9) {
-            position: sticky !important;
-            left: 680px !important;
-            z-index: 12 !important;
-            background: #ecfdf5 !important;
-            min-width: 75px;
-            max-width: 75px;
-            font-weight: 700;
-        }
-        /* Hover states for all sticky columns */
+
+        .hours-summary-table tbody tr:hover td:nth-child(1),
+        .hours-summary-table tbody tr:hover td:nth-child(2),
         .attendance-details-table tbody tr:hover td:nth-child(1),
-        .attendance-details-table tbody tr:hover td:nth-child(2),
-        .attendance-details-table tbody tr:hover td:nth-child(3),
-        .attendance-details-table tbody tr:hover td:nth-child(4),
-        .attendance-details-table tbody tr:hover td:nth-child(5),
-        .attendance-details-table tbody tr:hover td:nth-child(6),
-        .attendance-details-table tbody tr:hover td:nth-child(7),
-        .attendance-details-table tbody tr:hover td:nth-child(8),
-        .attendance-details-table tbody tr:hover td:nth-child(9) {
-            filter: brightness(0.95);
+        .attendance-details-table tbody tr:hover td:nth-child(2) {
+            background: #f1f5f9 !important;
         }
         
-        /* Category columns - for backward compatibility */
+        /* Category columns */
         .attendance-details-table .category-col {
             text-align: center;
         }
         
-        /* Net Days column styling - for backward compatibility */
+        /* Net Days column styling */
         .attendance-details-table .net-days-col {
             text-align: center;
             font-weight: 700;
@@ -408,78 +310,27 @@
             text-align: center;
         }
 
-        /* Totals row styling - all 9 columns sticky for Table 2 */
+        /* TOTALS ROW STICKY COLUMNS (Column 1 & Column 2 only) */
         .totals-row td {
             font-weight: 700;
             background: #f3f4f6 !important;
         }
-        /* Sticky positioning for totals row columns 1-9 (Table 2: Attendance Details) */
+        
+        .hours-summary-table .totals-row td:nth-child(1),
         .attendance-details-table .totals-row td:nth-child(1) {
             position: sticky !important;
             left: 0 !important;
             z-index: 12 !important;
             background: #f3f4f6 !important;
         }
+        
+        .hours-summary-table .totals-row td:nth-child(2),
         .attendance-details-table .totals-row td:nth-child(2) {
-            position: sticky !important;
-            left: 130px !important;
-            z-index: 12 !important;
-            background: #f3f4f6 !important;
-        }
-        .attendance-details-table .totals-row td:nth-child(3) {
-            position: sticky !important;
-            left: 290px !important;
-            z-index: 12 !important;
-            background: #f3e8ff !important;
-        }
-        .attendance-details-table .totals-row td:nth-child(4) {
-            position: sticky !important;
-            left: 355px !important;
-            z-index: 12 !important;
-            background: #fee2e2 !important;
-        }
-        .attendance-details-table .totals-row td:nth-child(5) {
-            position: sticky !important;
-            left: 420px !important;
-            z-index: 12 !important;
-            background: #fed7aa !important;
-        }
-        .attendance-details-table .totals-row td:nth-child(6) {
-            position: sticky !important;
-            left: 485px !important;
-            z-index: 12 !important;
-            background: #dcfce7 !important;
-        }
-        .attendance-details-table .totals-row td:nth-child(7) {
-            position: sticky !important;
-            left: 550px !important;
-            z-index: 12 !important;
-            background: #dbeafe !important;
-        }
-        .attendance-details-table .totals-row td:nth-child(8) {
-            position: sticky !important;
-            left: 615px !important;
-            z-index: 12 !important;
-            background: #e5e7eb !important;
-        }
-        .attendance-details-table .totals-row td:nth-child(9) {
-            position: sticky !important;
-            left: 680px !important;
-            z-index: 12 !important;
-            background: #ecfdf5 !important;
-        }
-        /* Table 1 (Hours Summary) totals - only 2 columns sticky */
-        .hours-summary-table .totals-row td:nth-child(1) {
-            position: sticky !important;
-            left: 0 !important;
-            z-index: 12 !important;
-            background: #f3f4f6 !important;
-        }
-        .hours-summary-table .totals-row td:nth-child(2) {
             position: sticky !important;
             left: 140px !important;
             z-index: 12 !important;
             background: #f3f4f6 !important;
+            box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.12);
         }
 
         td {
@@ -1001,8 +852,16 @@
                 <i class="fas fa-filter me-2"></i>Filters & Date Selection
             </h6>
 
-            <!-- DC Protocol: Filter row for Department and Manager -->
+            <!-- DC Protocol: Filter row for Department, Manager, and Status -->
             <div class="filter-row" id="advancedFilterRow">
+                <div class="filter-group">
+                    <label>Employee Status</label>
+                    <select id="statusFilter" onchange="applyFilters()" style="min-width: 150px; font-weight: 600;">
+                        <option value="active" selected>Active Only</option>
+                        <option value="inactive">Inactive Only</option>
+                        <option value="all">All Employees</option>
+                    </select>
+                </div>
                 <div class="filter-group">
                     <label>Manager</label>
                     <select id="managerFilter" onchange="applyFilters()">
@@ -1466,7 +1325,7 @@
             }
         }
 
-        // DC Protocol (Dec 04, 2025): Initialize employee filter for managers in Attendance Records tab
+        // DC Protocol: Initialize employee filter for managers in Attendance Records tab with all staff members
         async function initializeAttendanceRecordsFilter(currentUserId) {
             const filterSection = document.getElementById('attendanceRecordsFilterSection');
             
@@ -1477,7 +1336,7 @@
             if (!teamMemberSearch) {
                 teamMemberSearch = new TeamMemberSearch({
                     containerId: 'teamMemberSearchContainer',
-                    placeholder: 'Search team member...',
+                    placeholder: 'Search staff member (name, emp code e.g. MR10001)...',
                     compactMode: true,
                     onSelect: (member) => { onAttendanceRecordsFilterChange(); },
                     onClear: () => { onAttendanceRecordsFilterChange(); }
@@ -1485,18 +1344,21 @@
             }
             
             try {
-                const response = await staffFetch(`/api/v1/crm/my-downline`);
+                const statusVal = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : 'active';
+                const response = await staffFetch(`${API_BASE}/employee/${currentUserId}/monthly-history?months_count=1&emp_status=${statusVal}`);
                 if (!response.ok) {
-                    console.warn('[Attendance-Sheet] Failed to load team members');
+                    console.warn('[Attendance-Sheet] Failed to load staff members list');
                     return;
                 }
                 const data = await response.json();
-                if (data.success) {
-                    teamMemberSearch.setMembers(data.self, data.data || []);
+                if (data.downline_team && data.downline_team.length > 0) {
+                    const selfMember = data.downline_team.find(m => m.is_self) || data.downline_team[0];
+                    const otherMembers = data.downline_team.filter(m => !m.is_self);
+                    teamMemberSearch.setMembers(selfMember, otherMembers);
                 }
             } catch (error) {
                 if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
-                console.error('Error loading team members for filter:', error);
+                console.error('Error loading staff members for filter:', error);
             }
         }
 
@@ -1518,162 +1380,215 @@
             }
         }
 
-        // DC Compliance: Load attendance records (own or selected employee for managers)
-        // Dec 04, 2025: Enhanced to support manager viewing team member records
-        // Dec 07, 2025: DC_UNIVERSAL_FILTER_001 - Integrated with universal filter pattern
+        // DC Compliance: Load attendance records (month-wise expandable breakdown for self & team)
         async function loadAttendanceRecords(selectedEmployeeId = null) {
             const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
             const currentUserId = userData.employee_id || userData.id;
-            const fromDateVal = document.getElementById('fromDate').value;
             
-            // DC_UNIVERSAL_FILTER_001: Get filter values from universal filter or fallback
             const filters = buildFilterPayload();
-            
-            // Determine which employee's data to load
-            // Priority: selectedEmployeeId (direct param) > universal filter employee_id > current user
-            let targetEmpId = selectedEmployeeId;
-            if (!targetEmpId && filters.employee_id) {
-                targetEmpId = filters.employee_id;
-            }
-            if (!targetEmpId) {
-                targetEmpId = currentUserId;
-            }
+            let targetEmpId = selectedEmployeeId || filters.employee_id || currentUserId;
+            if (!targetEmpId) targetEmpId = 28;
 
-            if (!targetEmpId || !fromDateVal) {
-                console.error('DC ERROR: Missing employee ID or date');
-                return;
+            const tableWrapper = document.querySelector('#attendance-records-pane .table-wrapper');
+            const summarySection = document.getElementById('attendanceRecordsSummary');
+            if (summarySection) summarySection.style.display = 'none';
+
+            if (tableWrapper) {
+                tableWrapper.innerHTML = `
+                    <div id="mhLoadingRecords" style="text-align:center; padding:50px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+                        <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem;"></div>
+                        <p class="mt-2 text-muted fw-bold">Loading month-wise attendance summary & day breakdown...</p>
+                    </div>
+                `;
             }
 
             try {
-                const monthYear = fromDateVal.substring(0, 7); // YYYY-MM format
-                
-                // Build URL with optional filter params
-                let url = `${API_BASE}/employee/${targetEmpId}/marked-data/${monthYear}`;
-                const params = [];
-                if (filters.department_id) params.push(`department_id=${filters.department_id}`);
-                if (filters.staff_type) params.push(`staff_type=${filters.staff_type}`);
-                if (params.length > 0) url += `?${params.join('&')}`;
-                
-                const response = await staffFetch(url);
+                const statusVal = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : 'active';
+                const response = await staffFetch(`${API_BASE}/employee/${targetEmpId}/monthly-history?months_count=6&emp_status=${statusVal}`);
 
                 if (!response.ok) {
                     throw new Error(`API Error: ${response.status}`);
                 }
 
                 const data = await response.json();
-                renderAttendanceRecordsTable(data, selectedEmployeeId !== null || filters.employee_id !== null);
+                renderMonthlyAttendancePane(data, tableWrapper);
             } catch (error) {
                 if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
                 console.error('Error loading attendance records:', error);
-                document.getElementById('attendanceRecordsTableBody').innerHTML = `
-                    <tr>
-                        <td colspan="9" style="text-align: center; padding: 20px; color: #ef4444;">
-                            <i class="fas fa-exclamation-circle"></i> Error loading attendance data
-                        </td>
-                    </tr>
-                `;
+                if (tableWrapper) {
+                    tableWrapper.innerHTML = `
+                        <div class="alert alert-danger m-3" style="border-radius: 10px;">
+                            <i class="fas fa-exclamation-circle me-2"></i>Error loading attendance records: ${error.message}
+                        </div>
+                    `;
+                }
             }
         }
 
-        // DC Compliance: Render attendance records table
-        // Dec 04, 2025: Fixed field mapping to match backend response (records, status, approval_status)
-        // Dec 04, 2025: Added Login Time, Logout Time, Total Hours columns
-        function renderAttendanceRecordsTable(data, isViewingOther = false) {
-            const tbody = document.getElementById('attendanceRecordsTableBody');
-            
-            // DC Protocol: Backend returns 'records' array, not 'attendance_records'
-            if (!data || !data.records || data.records.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="9" style="text-align: center; padding: 40px; color: #6b7280;">
-                            <i class="fas fa-inbox"></i> No attendance records found for this month
-                        </td>
-                    </tr>
+        function renderMonthlyAttendancePane(data, container) {
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (!data.months || data.months.length === 0) {
+                container.innerHTML = `
+                    <div style="padding: 40px; text-align: center; color: #6b7280; background: white; border-radius: 12px;">
+                        <i class="fas fa-inbox fa-3x mb-3 text-muted"></i>
+                        <h5>No monthly attendance records found</h5>
+                    </div>
                 `;
                 return;
             }
 
-            // DC Protocol: Map backend field names correctly
-            // Backend: status (marked), approval_status (approved), login_time, logout_time, total_hours
-            let totalLoggedHours = 0, totalMarkedHours = 0, totalApprovedHours = 0;
-            
-            // DC Protocol (Jan 01, 2026): Helper to parse HH:MM format to decimal hours
-            function parseHoursToDecimal(hoursStr) {
-                if (!hoursStr) return 0;
-                // Handle already numeric values
-                if (typeof hoursStr === 'number') return hoursStr;
-                // Handle HH:MM format (e.g., "08:30" -> 8.5)
-                if (typeof hoursStr === 'string' && hoursStr.includes(':')) {
-                    const parts = hoursStr.split(':');
-                    const hours = parseInt(parts[0]) || 0;
-                    const minutes = parseInt(parts[1]) || 0;
-                    return hours + (minutes / 60);
-                }
-                return parseFloat(hoursStr) || 0;
-            }
-            
-            const rows = data.records.map(record => {
-                const statusClass = (record.status || 'pending').toLowerCase().replace('_', '-');
-                const approvalClass = (record.approval_status || 'pending').toLowerCase().replace('_', '-');
-                const rowStyle = isViewingOther ? 'background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b;' : '';
-                
-                // Calculate totals (handle HH:MM format for total_hours)
-                const loggedHrs = parseHoursToDecimal(record.total_hours);
-                const markedHrs = parseFloat(record.marked_hours) || 0;
-                const approvedHrs = parseFloat(record.approved_hours) || 0;
-                totalLoggedHours += loggedHrs;
-                totalMarkedHours += markedHrs;
-                totalApprovedHours += approvedHrs;
-                
-                return `
-                <tr style="${rowStyle}">
-                    <td>${new Date(record.date).toLocaleDateString('en-IN')}</td>
-                    <td>${new Date(record.date).toLocaleDateString('en-IN', { weekday: 'short' })}</td>
-                    <td style="text-align: center; color: #059669; font-weight: 500;">${record.login_time || '<span style="color: #9ca3af;">-</span>'}</td>
-                    <td style="text-align: center; color: #dc2626; font-weight: 500;">${record.logout_time || '<span style="color: #9ca3af;">-</span>'}</td>
-                    <td style="text-align: center; font-weight: 600; color: #0284c7;">${record.total_hours || '<span style="color: #9ca3af;">-</span>'}</td>
-                    <td><span class="status-badge ${statusClass}">${record.status || '-'}</span></td>
-                    <td style="text-align: center; font-weight: 600;">${record.marked_hours || 0} hrs</td>
-                    <td><span class="status-badge ${approvalClass}">${record.approval_status || '-'}</span></td>
-                    <td style="text-align: center; font-weight: 600;">${record.approved_hours !== null ? record.approved_hours : '-'} hrs</td>
-                </tr>
-            `}).join('');
-
-            // DC Protocol (Jan 01, 2026): Add totals row at bottom
-            const totalsRow = `
-                <tr class="totals-row" style="font-weight: 700; background: #f3f4f6;">
-                    <td colspan="4" style="text-align: left;">MONTHLY TOTAL (${data.records.length} days)</td>
-                    <td style="text-align: center; color: #0284c7;">${totalLoggedHours.toFixed(2)} hrs</td>
-                    <td style="text-align: center;">-</td>
-                    <td style="text-align: center; color: #059669;">${totalMarkedHours.toFixed(2)} hrs</td>
-                    <td style="text-align: center;">-</td>
-                    <td style="text-align: center; color: #059669; background: #ecfdf5;">${totalApprovedHours.toFixed(2)} hrs</td>
-                </tr>
+            // Employee Banner
+            const banner = document.createElement('div');
+            banner.className = 'card mb-3';
+            banner.style.padding = '14px 20px';
+            banner.style.background = 'linear-gradient(90deg, #1e293b 0%, #334155 100%)';
+            banner.style.color = 'white';
+            banner.style.borderRadius = '10px';
+            banner.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Employee Attendance Summary</span>
+                        <h5 style="margin: 0; font-weight: 700; color: white;">${data.employee_name} <small style="font-size: 13px; opacity: 0.8;">(${data.employee_code})</small></h5>
+                    </div>
+                    <div>
+                        <span class="badge bg-primary" style="font-size: 12px; padding: 6px 12px; border-radius: 6px;">Department: ${data.department || 'N/A'}</span>
+                    </div>
+                </div>
             `;
+            container.appendChild(banner);
 
-            tbody.innerHTML = rows + totalsRow;
-            
-            // DC Protocol: Update summary if available
-            if (data.summary) {
-                const summarySection = document.getElementById('attendanceRecordsSummary');
-                const summaryBody = document.getElementById('attendanceRecordsSummaryBody');
-                if (summarySection && summaryBody) {
-                    summarySection.style.display = 'block';
-                    summaryBody.innerHTML = `
-                        <tr>
-                            <td style="font-weight: 600;">Total Marked Hours</td>
-                            <td style="text-align: center; font-weight: 600;">${data.summary.total_marked_hours || 0} hrs</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: 600;">Total Approved Hours</td>
-                            <td style="text-align: center; font-weight: 600;">${data.summary.total_approved_hours || 0} hrs</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: 600;">Total Net Days</td>
-                            <td style="text-align: center; font-weight: 600;">${data.summary.total_net_days || 0}</td>
-                        </tr>
-                    `;
-                }
+            // Month Cards (Latest month first)
+            data.months.forEach((m, idx) => {
+                const card = document.createElement('div');
+                card.className = 'card mb-3';
+                card.style.borderRadius = '12px';
+                card.style.overflow = 'hidden';
+                card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
+
+                const isExpanded = idx === 0; // Latest month expanded by default
+                const monthId = `pane-month-acc-${m.month_key}`;
+                const s = m.summary;
+
+                card.innerHTML = `
+                    <div class="card-header" style="background: #f8fafc; padding: 14px 20px; cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #e2e8f0;" onclick="togglePaneMonthAccordion('${monthId}')">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <button type="button" class="btn btn-sm btn-light border" style="width: 30px; height: 30px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #0284c7;" id="btn-${monthId}">
+                                <i class="fas ${isExpanded ? 'fa-minus' : 'fa-plus'}"></i>
+                            </button>
+                            <h5 style="margin: 0; font-weight: 700; font-size: 16px; color: #0f172a;">
+                                <i class="fas fa-calendar-alt text-primary me-2"></i>${m.month_label}
+                            </h5>
+                        </div>
+                        
+                        <!-- Month Header Summary Metrics Badges -->
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px;">
+                            <span class="badge" style="background: #dcfce7; color: #166534; padding: 6px 10px; font-size: 11px;">Present: <strong>${s.present}</strong></span>
+                            <span class="badge" style="background: #f3e8ff; color: #6b21a8; padding: 6px 10px; font-size: 11px;">Leaves: <strong>${s.leaves}</strong></span>
+                            <span class="badge" style="background: #fee2e2; color: #991b1b; padding: 6px 10px; font-size: 11px;">Absences: <strong>${s.absences}</strong></span>
+                            <span class="badge" style="background: #fef3c7; color: #92400e; padding: 6px 10px; font-size: 11px;">Half Days: <strong>${s.half_days}</strong></span>
+                            <span class="badge" style="background: #e0f2fe; color: #075985; padding: 6px 10px; font-size: 11px;">Holidays: <strong>${s.holidays}</strong></span>
+                            <span class="badge" style="background: #f1f5f9; color: #475569; padding: 6px 10px; font-size: 11px;">Weekends: <strong>${s.weekends}</strong></span>
+                            <span class="badge" style="background: #1e293b; color: white; padding: 6px 10px; font-size: 11px;">Net Days: <strong>${s.net_days}</strong></span>
+                            <span class="badge" style="background: #ffedd5; color: #c2410c; padding: 6px 10px; font-size: 11px;">Exc. Days: <strong>${s.exc_days}</strong></span>
+                            <span class="badge" style="background: #0284c7; color: white; padding: 6px 10px; font-size: 11px;">Eligible Days: <strong>${s.eligible_days}</strong></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Expanded Month Day-wise Breakdown Table -->
+                    <div id="${monthId}" style="display: ${isExpanded ? 'block' : 'none'}; padding: 0;">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped mb-0" style="font-size: 13px;">
+                                <thead style="background: #f1f5f9;">
+                                    <tr>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155;">Date</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155;">Login Time</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155;">Logout Time</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155;">Total Hours</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155;">Marked Status</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155; text-align: right;">Marked Hours</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155;">Approved Status</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155; text-align: right;">Approved Hours / Exception</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155;">Timesheet Logged Time</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155;">Approved Time / Approver</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${m.days.map(d => {
+                                        const statusBadgeClass = d.marked_status === 'present' ? 'bg-success' :
+                                                                d.marked_status === 'absent' ? 'bg-danger' :
+                                                                d.marked_status === 'half_day' ? 'bg-warning text-dark' : 'bg-secondary';
+                                        
+                                        const excBadge = (d.exception_hours !== null && d.exception_hours !== undefined && d.exception_bypass_type)
+                                            ? `<br><span class="badge" style="background:#ffedd5; color:#c2410c; font-size:10px; padding:3px 6px; font-weight:600;" title="${d.exception_reason || d.exception_bypass_type}"><i class="fas fa-shield-alt me-1"></i>Exc: ${Number(d.exception_hours).toFixed(2)} hrs</span>`
+                                            : '';
+                                        
+                                        return `
+                                            <tr>
+                                                <td style="padding: 10px 14px; font-weight: 600; white-space: nowrap;">
+                                                    ${d.formatted_date} <small class="text-muted">(${d.day_name})</small>
+                                                </td>
+                                                <td style="padding: 10px 14px; white-space: nowrap;">
+                                                    <i class="fas fa-sign-in-alt text-success me-1"></i>${d.login_time || '<span class="text-muted">-</span>'}
+                                                </td>
+                                                <td style="padding: 10px 14px; white-space: nowrap;">
+                                                    <i class="fas fa-sign-out-alt text-danger me-1"></i>${d.logout_time || '<span class="text-muted">-</span>'}
+                                                </td>
+                                                <td style="padding: 10px 14px; font-weight: 600; color: #0284c7; white-space: nowrap;">
+                                                    ${d.total_hours || '<span class="text-muted">-</span>'}
+                                                </td>
+                                                <td style="padding: 10px 14px;">
+                                                    <span class="badge ${statusBadgeClass}" style="text-transform: uppercase; font-size: 11px;">
+                                                        ${d.marked_status ? d.marked_status.replace('_', ' ') : 'UNMARKED'}
+                                                    </span>
+                                                </td>
+                                                <td style="padding: 10px 14px; text-align: right; font-weight: 600;">
+                                                    ${d.marked_hours ? d.marked_hours.toFixed(2) + ' hrs' : '0.00 hrs'}
+                                                </td>
+                                                <td style="padding: 10px 14px;">
+                                                    ${
+                                                        d.approved_status === 'approved' ? '<span class="badge" style="background: #dcfce7; color: #166534; font-weight: 700; border: 1px solid #bbf7d0; text-transform: uppercase; padding: 4px 8px;">APPROVED</span>' :
+                                                        d.approved_status === 'rejected' ? '<span class="badge" style="background: #fee2e2; color: #991b1b; font-weight: 700; border: 1px solid #fecaca; text-transform: uppercase; padding: 4px 8px;">REJECTED</span>' :
+                                                        d.approved_status === 'pending' ? '<span class="badge" style="background: #fef3c7; color: #92400e; font-weight: 700; border: 1px solid #fde68a; text-transform: uppercase; padding: 4px 8px;">PENDING</span>' :
+                                                        '<span class="badge" style="background: #f1f5f9; color: #475569; font-weight: 600; text-transform: uppercase; padding: 4px 8px;">UNMARKED</span>'
+                                                    }
+                                                </td>
+                                                <td style="padding: 10px 14px; text-align: right; font-weight: 600; color: #166534;">
+                                                    ${d.approved_hours !== null && d.approved_hours !== undefined ? Number(d.approved_hours).toFixed(2) + ' hrs' : '<span class="text-muted">-</span>'}
+                                                    ${excBadge}
+                                                </td>
+                                                <td style="padding: 10px 14px; white-space: nowrap;">
+                                                    <span style="color: #16a34a; font-weight: 600;">${d.timesheet_hours ? d.timesheet_hours.toFixed(2) + ' hrs' : '0.00 hrs'}</span>
+                                                    <br><small class="text-muted">${d.timesheet_updated_time || 'No Entry'}</small>
+                                                </td>
+                                                <td style="padding: 10px 14px; white-space: nowrap;">
+                                                    ${d.approved_time ? `<div><i class="fas fa-check-circle text-success me-1"></i>${d.approved_time}</div>` : '<span class="text-muted">Not Approved Yet</span>'}
+                                                    ${d.approved_by_name ? `<small class="text-muted">By: ${d.approved_by_name}</small>` : ''}
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function togglePaneMonthAccordion(monthId) {
+            const body = document.getElementById(monthId);
+            const btn = document.getElementById('btn-' + monthId);
+            if (!body) return;
+
+            if (body.style.display === 'none') {
+                body.style.display = 'block';
+                if (btn) btn.innerHTML = '<i class="fas fa-minus"></i>';
+            } else {
+                body.style.display = 'none';
+                if (btn) btn.innerHTML = '<i class="fas fa-plus"></i>';
             }
         }
 
@@ -1693,9 +1608,10 @@
 
             try {
                 const monthYear = fromDateVal.substring(0, 7);
+                const statusVal = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : 'active';
                 
-                // DC Protocol (Dec 04, 2025): Use new bulk-marking format endpoint
-                const url = `${API_BASE}/manager/team-monthly/${managerId}/${monthYear}`;
+                // DC Protocol (Dec 04, 2025): Use new bulk-marking format endpoint with emp_status filter
+                const url = `${API_BASE}/manager/team-monthly/${managerId}/${monthYear}?emp_status=${statusVal}`;
                 
                 const response = await staffFetch(url);
 
@@ -2308,8 +2224,8 @@ Generated: ${new Date().toLocaleString('en-IN')}
 
         // ==================== MARKING MODAL & FUNCTIONALITY ====================
 
-        function openMarkingModal(employeeId, dateStr, currentHours) {
-            window.markingData = { employeeId, dateStr, currentHours };
+        function openMarkingModal(employeeId, dateStr, dateData) {
+            window.markingData = { employeeId, dateStr, dateData };
             
             // Find employee name
             const emp = allEmployees.find(e => e.employee_id === employeeId);
@@ -2317,7 +2233,21 @@ Generated: ${new Date().toLocaleString('en-IN')}
             const dateObj = new Date(dateStr);
             
             document.getElementById('markingEmployeeName').textContent = empName;
-            document.getElementById('markingDate').textContent = dateObj.toLocaleDateString('en-IN');
+            document.getElementById('markingDate').textContent = dateObj.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+            
+            // Populate Punch (Login/Logout) and Timesheet Entry details
+            const loginTime = dateData && dateData.login_time ? dateData.login_time : 'No Punch';
+            const logoutTime = dateData && dateData.logout_time ? dateData.logout_time : 'No Punch';
+            const clockHours = dateData && dateData.clock_hours ? dateData.clock_hours : (dateData && dateData.worked_minutes ? (dateData.worked_minutes/60).toFixed(2) + ' hrs' : 'N/A');
+            const tsHours = (dateData && dateData.timesheet_hours !== undefined && dateData.timesheet_hours !== null) ? Number(dateData.timesheet_hours).toFixed(2) + ' hrs' : ((dateData && dateData.employee_actual_hours !== undefined && dateData.employee_actual_hours !== null) ? Number(dateData.employee_actual_hours).toFixed(2) + ' hrs' : '0.00 hrs');
+            
+            document.getElementById('markingLoginTime').textContent = loginTime;
+            document.getElementById('markingLogoutTime').textContent = logoutTime;
+            document.getElementById('markingClockHours').textContent = clockHours;
+            document.getElementById('markingTimesheetHours').textContent = tsHours;
+            
+            document.getElementById('attendanceStatus').value = '';
+            document.getElementById('markingNotes').value = '';
             
             // Show modal
             const modal = new bootstrap.Modal(document.getElementById('markingModal'));
@@ -2644,9 +2574,9 @@ Generated: ${new Date().toLocaleString('en-IN')}
         }
         
         function handleCellClick(employeeId, dateStr, dateData) {
-            if (!dateData) {
-                // No marking exists - open marking modal
-                openMarkingModal(employeeId, dateStr, 0);
+            if (!dateData || dateData.status === 'unmarked' || !dateData.sheet_id) {
+                // No marking exists - open marking modal with punch & timesheet info
+                openMarkingModal(employeeId, dateStr, dateData);
             } else if (dateData.status === 'pending') {
                 // Pending approval - open approval modal with reconciliation data
                 openApprovalModal(
@@ -2699,6 +2629,14 @@ Generated: ${new Date().toLocaleString('en-IN')}
             document.getElementById('cellEditCurrentHours').textContent = `${dateData.approved_hours || dateData.marked_hours} hours`;
             document.getElementById('cellEditApprovalStatus').textContent = dateData.status.toUpperCase();
             document.getElementById('cellEditApprovalStatus').style.color = dateData.status === 'approved' ? '#059669' : '#dc2626';
+            
+            // Set cell edit punch & timesheet info if present
+            if (document.getElementById('cellEditLoginTime')) {
+                document.getElementById('cellEditLoginTime').textContent = dateData.login_time || 'No Punch';
+                document.getElementById('cellEditLogoutTime').textContent = dateData.logout_time || 'No Punch';
+                document.getElementById('cellEditClockHours').textContent = dateData.clock_hours || 'N/A';
+                document.getElementById('cellEditTimesheetHours').textContent = (dateData.timesheet_hours !== undefined && dateData.timesheet_hours !== null) ? Number(dateData.timesheet_hours).toFixed(2) + ' hrs' : '0.00 hrs';
+            }
             
             document.getElementById('cellEditNewStatus').value = '';
             document.getElementById('cellEditReason').value = '';
@@ -2760,14 +2698,42 @@ Generated: ${new Date().toLocaleString('en-IN')}
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div style="margin-bottom: 20px;">
-                        <p style="margin: 0; color: #6b7280; font-size: 12px;">Employee</p>
-                        <p style="margin: 0; font-weight: 600; font-size: 16px;" id="markingEmployeeName">-</p>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 16px; padding: 12px 16px; background: #f3f4f6; border-radius: 8px;">
+                        <div>
+                            <p style="margin: 0; color: #6b7280; font-size: 12px;">Employee</p>
+                            <p style="margin: 0; font-weight: 600; font-size: 15px;" id="markingEmployeeName">-</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <p style="margin: 0; color: #6b7280; font-size: 12px;">Date</p>
+                            <p style="margin: 0; font-weight: 600; font-size: 14px;" id="markingDate">-</p>
+                        </div>
                     </div>
-                    <div style="margin-bottom: 20px;">
-                        <p style="margin: 0; color: #6b7280; font-size: 12px;">Date</p>
-                        <p style="margin: 0; font-weight: 600; font-size: 16px;" id="markingDate">-</p>
+
+                    <!-- Punch & Timesheet Entry Details Panel -->
+                    <div style="margin-bottom: 20px; padding: 14px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px;">
+                        <h6 style="margin: 0 0 10px 0; font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="fas fa-clock text-primary me-2"></i>Punch & Timesheet Details
+                        </h6>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 13px;">
+                            <div style="background: white; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <span style="color: #64748b; font-size: 11px; display: block;">Login Time</span>
+                                <strong id="markingLoginTime" style="color: #0f172a;">-</strong>
+                            </div>
+                            <div style="background: white; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <span style="color: #64748b; font-size: 11px; display: block;">Logout Time</span>
+                                <strong id="markingLogoutTime" style="color: #0f172a;">-</strong>
+                            </div>
+                            <div style="background: white; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <span style="color: #64748b; font-size: 11px; display: block;">Clock Duration</span>
+                                <strong id="markingClockHours" style="color: #0284c7;">-</strong>
+                            </div>
+                            <div style="background: white; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <span style="color: #64748b; font-size: 11px; display: block;">Timesheet Entry Duration</span>
+                                <strong id="markingTimesheetHours" style="color: #16a34a;">-</strong>
+                            </div>
+                        </div>
                     </div>
+
                     <div style="margin-bottom: 20px;">
                         <label style="font-weight: 600; display: block; margin-bottom: 8px;">Attendance Status *</label>
                         <select id="attendanceStatus" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px;">
@@ -2840,6 +2806,31 @@ Generated: ${new Date().toLocaleString('en-IN')}
                         <p style="margin: 8px 0 0 0; font-size: 12px;">
                             Approval: <strong id="cellEditApprovalStatus" style="text-transform: uppercase;">-</strong>
                         </p>
+                    </div>
+
+                    <!-- Punch & Timesheet Entry Details Panel -->
+                    <div style="margin-bottom: 20px; padding: 14px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px;">
+                        <h6 style="margin: 0 0 10px 0; font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="fas fa-clock text-primary me-2"></i>Punch & Timesheet Details
+                        </h6>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 13px;">
+                            <div style="background: white; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <span style="color: #64748b; font-size: 11px; display: block;">Login Time</span>
+                                <strong id="cellEditLoginTime" style="color: #0f172a;">-</strong>
+                            </div>
+                            <div style="background: white; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <span style="color: #64748b; font-size: 11px; display: block;">Logout Time</span>
+                                <strong id="cellEditLogoutTime" style="color: #0f172a;">-</strong>
+                            </div>
+                            <div style="background: white; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <span style="color: #64748b; font-size: 11px; display: block;">Clock Duration</span>
+                                <strong id="cellEditClockHours" style="color: #0284c7;">-</strong>
+                            </div>
+                            <div style="background: white; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <span style="color: #64748b; font-size: 11px; display: block;">Timesheet Entry Duration</span>
+                                <strong id="cellEditTimesheetHours" style="color: #16a34a;">-</strong>
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- New Status Selection -->

@@ -159,6 +159,9 @@
             <button class="page-tab-btn active" id="tab-dashboard" onclick="switchTab('dashboard')">
                 <i class="fas fa-chart-bar"></i> Attendance Dashboard
             </button>
+            <button class="page-tab-btn" id="tab-monthlyhistory" onclick="switchTab('monthlyhistory')">
+                <i class="fas fa-calendar-alt"></i> Month-wise Attendance Summary
+            </button>
             <button class="page-tab-btn" id="tab-exceptions" onclick="switchTab('exceptions')" style="display:none;">
                 <i class="fas fa-shield-alt"></i> Exception Approvals
             </button>
@@ -512,6 +515,44 @@
             </div>
         </div><!-- /#tabContent-timereport -->
 
+        <!-- ══ TAB 4: Month-wise Attendance Summary (Self & Downline Team) ══ -->
+        <div class="page-tab-content" id="tabContent-monthlyhistory" style="padding-top: 24px;">
+            <!-- Filter bar for Month-wise Summary -->
+            <div class="tr-filter-bar" style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                <div class="tr-filter-group" style="flex: 2; min-width: 280px;">
+                    <label style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: .5px;">
+                        <i class="fas fa-users text-primary me-1"></i>Select Employee / Downline Team
+                    </label>
+                    <select id="mhStaffSelect" onchange="loadMonthlyHistory()" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 600; font-size: 14px; background: #f8fafc;">
+                        <option value="">Loading Downline Team...</option>
+                    </select>
+                </div>
+                <div class="tr-filter-group" style="flex: 1; min-width: 160px;">
+                    <label style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: .5px;">
+                        <i class="fas fa-calendar text-primary me-1"></i>Time Horizon
+                    </label>
+                    <select id="mhMonthsCount" onchange="loadMonthlyHistory()" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background: #f8fafc;">
+                        <option value="3">Past 3 Months</option>
+                        <option value="6" selected>Past 6 Months</option>
+                        <option value="12">Past 12 Months</option>
+                    </select>
+                </div>
+                <div class="tr-action-row" style="align-self: flex-end;">
+                    <button class="btn btn-primary btn-sm" onclick="loadMonthlyHistory()" style="padding: 9px 20px; border-radius: 8px; font-weight: 600;">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh Summary
+                    </button>
+                </div>
+            </div>
+
+            <!-- Monthly History Accordions -->
+            <div id="mhLoading" style="display:none; text-align:center; padding:50px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+                <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem;"></div>
+                <p class="mt-2 text-muted fw-bold">Loading month-wise summary and day-by-day details...</p>
+            </div>
+            
+            <div id="mhContainer"></div>
+        </div>
+
     </div><!-- /.content-area -->
     </div><!-- /.main-content -->
 
@@ -554,7 +595,9 @@
         let trStaffLoaded = false;
         let trAllRows     = [];   // full data for client-side export
 
-        // ── Tab switching ──────────────────────────────
+        // ── DC-MONTHLY-HISTORY: State & Tab switching ─────
+        let mhLoaded = false;
+
         function switchTab(tab) {
             document.querySelectorAll('.page-tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.page-tab-content').forEach(c => c.classList.remove('active'));
@@ -569,8 +612,11 @@
                 trStaffLoaded = true;
                 loadTRStaff();
                 trSetDefaultDates();
-                // show empty placeholder
                 document.getElementById('trEmpty').style.display = '';
+            }
+            if (tab === 'monthlyhistory' && !mhLoaded) {
+                mhLoaded = true;
+                loadMonthlyHistory();
             }
         }
 
@@ -614,6 +660,229 @@
                 });
             } catch (e) {
                 if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+            }
+        }
+
+        // ── DC-MONTHLY-HISTORY: Fetch & render month-wise summary + day breakdown ──
+        async function loadMonthlyHistory() {
+            const loading = document.getElementById('mhLoading');
+            const container = document.getElementById('mhContainer');
+            if (loading) loading.style.display = 'block';
+            if (container) container.style.display = 'none';
+
+            try {
+                const user = JSON.parse(localStorage.getItem('staff_user') || '{}');
+                const selfId = user.id || user.employee_id;
+                
+                const staffSel = document.getElementById('mhStaffSelect');
+                let targetId = staffSel ? staffSel.value : null;
+                if (!targetId && selfId) targetId = selfId;
+                if (!targetId) targetId = 28;
+
+                const monthsCount = document.getElementById('mhMonthsCount') ? document.getElementById('mhMonthsCount').value : 6;
+
+                const response = await staffFetch(`${API_BASE}/staff/attendance-sheet/employee/${targetId}/monthly-history?months_count=${monthsCount}`);
+                if (!response.ok) {
+                    throw new Error(`Failed to load monthly history: ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (loading) loading.style.display = 'none';
+                
+                // Populate downline team select if not already populated
+                if (staffSel && (staffSel.options.length <= 1 || staffSel.getAttribute('data-loaded') !== 'true')) {
+                    staffSel.innerHTML = '';
+                    (data.downline_team || []).forEach(emp => {
+                        const opt = document.createElement('option');
+                        opt.value = emp.id;
+                        opt.textContent = emp.name;
+                        if (emp.id == targetId) opt.selected = true;
+                        staffSel.appendChild(opt);
+                    });
+                    staffSel.setAttribute('data-loaded', 'true');
+                }
+
+                renderMonthlyHistory(data);
+                if (container) container.style.display = 'block';
+            } catch (err) {
+                console.error('Error loading monthly history:', err);
+                if (loading) loading.style.display = 'none';
+                if (container) {
+                    container.style.display = 'block';
+                    container.innerHTML = `
+                        <div class="alert alert-danger" style="border-radius: 10px;">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Error loading month-wise summary: ${err.message}
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        function renderMonthlyHistory(data) {
+            const container = document.getElementById('mhContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (!data.months || data.months.length === 0) {
+                container.innerHTML = `
+                    <div class="card" style="padding: 40px; text-align: center; color: #6b7280; border-radius: 12px;">
+                        <i class="fas fa-inbox fa-3x mb-3 text-muted"></i>
+                        <h5>No monthly attendance records found</h5>
+                    </div>
+                `;
+                return;
+            }
+
+            // Subtitle banner with employee name
+            const banner = document.createElement('div');
+            banner.className = 'card mb-3';
+            banner.style.padding = '14px 20px';
+            banner.style.background = 'linear-gradient(90deg, #1e293b 0%, #334155 100%)';
+            banner.style.color = 'white';
+            banner.style.borderRadius = '10px';
+            banner.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Employee Attendance Summary</span>
+                        <h5 style="margin: 0; font-weight: 700; color: white;">${data.employee_name} <small style="font-size: 13px; opacity: 0.8;">(${data.employee_code})</small></h5>
+                    </div>
+                    <div>
+                        <span class="badge bg-primary" style="font-size: 12px; padding: 6px 12px; border-radius: 6px;">Department: ${data.department || 'N/A'}</span>
+                    </div>
+                </div>
+            `;
+            container.appendChild(banner);
+
+            // Render Month Cards (Latest month first)
+            data.months.forEach((m, idx) => {
+                const card = document.createElement('div');
+                card.className = 'card mb-3';
+                card.style.borderRadius = '12px';
+                card.style.overflow = 'hidden';
+                card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
+
+                const isExpanded = idx === 0; // Latest month expanded by default, others collapsed
+                const monthId = `month-acc-${m.month_key}`;
+                const s = m.summary;
+
+                card.innerHTML = `
+                    <div class="card-header" style="background: #f8fafc; padding: 14px 20px; cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #e2e8f0;" onclick="toggleMonthAccordion('${monthId}')">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <button type="button" class="btn btn-sm btn-light border" style="width: 30px; height: 30px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #0284c7;" id="btn-${monthId}">
+                                <i class="fas ${isExpanded ? 'fa-minus' : 'fa-plus'}"></i>
+                            </button>
+                            <h5 style="margin: 0; font-weight: 700; font-size: 16px; color: #0f172a;">
+                                <i class="fas fa-calendar-alt text-primary me-2"></i>${m.month_label}
+                            </h5>
+                        </div>
+                        
+                        <!-- Month Header Summary Metrics Badges -->
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px;">
+                            <span class="badge" style="background: #dcfce7; color: #166534; padding: 6px 10px; font-size: 11px;">Present: <strong>${s.present}</strong></span>
+                            <span class="badge" style="background: #f3e8ff; color: #6b21a8; padding: 6px 10px; font-size: 11px;">Leaves: <strong>${s.leaves}</strong></span>
+                            <span class="badge" style="background: #fee2e2; color: #991b1b; padding: 6px 10px; font-size: 11px;">Absences: <strong>${s.absences}</strong></span>
+                            <span class="badge" style="background: #fef3c7; color: #92400e; padding: 6px 10px; font-size: 11px;">Half Days: <strong>${s.half_days}</strong></span>
+                            <span class="badge" style="background: #e0f2fe; color: #075985; padding: 6px 10px; font-size: 11px;">Holidays: <strong>${s.holidays}</strong></span>
+                            <span class="badge" style="background: #f1f5f9; color: #475569; padding: 6px 10px; font-size: 11px;">Weekends: <strong>${s.weekends}</strong></span>
+                            <span class="badge" style="background: #1e293b; color: white; padding: 6px 10px; font-size: 11px;">Net Days: <strong>${s.net_days}</strong></span>
+                            <span class="badge" style="background: #ffedd5; color: #c2410c; padding: 6px 10px; font-size: 11px;">Exc. Days: <strong>${s.exc_days}</strong></span>
+                            <span class="badge" style="background: #0284c7; color: white; padding: 6px 10px; font-size: 11px;">Eligible Days: <strong>${s.eligible_days}</strong></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Expanded Month Day-wise Breakdown Table -->
+                    <div id="${monthId}" style="display: ${isExpanded ? 'block' : 'none'}; padding: 0;">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped mb-0" style="font-size: 13px;">
+                                <thead style="background: #f1f5f9;">
+                                    <tr>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155;">Date</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155;">Login Time</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155;">Logout Time</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155;">Total Hours</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155;">Marked Status</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155; text-align: right;">Marked Hours</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155;">Approved Status</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155; text-align: right;">Approved Hours / Exception</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155;">Timesheet Logged Time</th>
+                                        <th style="padding: 10px 14px; font-weight: 700; color: #334155;">Approved Time / Approver</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${m.days.map(d => {
+                                        const statusBadgeClass = d.marked_status === 'present' ? 'bg-success' :
+                                                                d.marked_status === 'absent' ? 'bg-danger' :
+                                                                d.marked_status === 'half_day' ? 'bg-warning text-dark' : 'bg-secondary';
+                                        
+                                        const excBadge = (d.exception_hours !== null && d.exception_hours !== undefined && d.exception_bypass_type)
+                                             ? `<br><span class="badge" style="background:#ffedd5; color:#c2410c; font-size:10px; padding:3px 6px; font-weight:600;" title="${d.exception_reason || d.exception_bypass_type}"><i class="fas fa-shield-alt me-1"></i>Exc: ${Number(d.exception_hours).toFixed(2)} hrs</span>`
+                                             : '';
+                                        
+                                        return `
+                                            <tr>
+                                                <td style="padding: 10px 14px; font-weight: 600; white-space: nowrap;">
+                                                    ${d.formatted_date} <small class="text-muted">(${d.day_name})</small>
+                                                </td>
+                                                <td style="padding: 10px 14px; white-space: nowrap;">
+                                                    <i class="fas fa-sign-in-alt text-success me-1"></i>${d.login_time || '<span class="text-muted">-</span>'}
+                                                </td>
+                                                <td style="padding: 10px 14px; white-space: nowrap;">
+                                                    <i class="fas fa-sign-out-alt text-danger me-1"></i>${d.logout_time || '<span class="text-muted">-</span>'}
+                                                </td>
+                                                <td style="padding: 10px 14px; font-weight: 600; color: #0284c7; white-space: nowrap;">
+                                                    ${d.total_hours || '<span class="text-muted">-</span>'}
+                                                </td>
+                                                <td style="padding: 10px 14px;">
+                                                    <span class="badge ${statusBadgeClass}" style="text-transform: uppercase; font-size: 11px;">
+                                                        ${d.marked_status ? d.marked_status.replace('_', ' ') : 'UNMARKED'}
+                                                    </span>
+                                                </td>
+                                                <td style="padding: 10px 14px; text-align: right; font-weight: 600;">
+                                                    ${d.marked_hours ? d.marked_hours.toFixed(2) + ' hrs' : '0.00 hrs'}
+                                                </td>
+                                                <td style="padding: 10px 14px;">
+                                                    ${
+                                                        d.approved_status === 'approved' ? '<span class="badge" style="background: #dcfce7; color: #166534; font-weight: 700; border: 1px solid #bbf7d0; text-transform: uppercase; padding: 4px 8px;">APPROVED</span>' :
+                                                        d.approved_status === 'rejected' ? '<span class="badge" style="background: #fee2e2; color: #991b1b; font-weight: 700; border: 1px solid #fecaca; text-transform: uppercase; padding: 4px 8px;">REJECTED</span>' :
+                                                        d.approved_status === 'pending' ? '<span class="badge" style="background: #fef3c7; color: #92400e; font-weight: 700; border: 1px solid #fde68a; text-transform: uppercase; padding: 4px 8px;">PENDING</span>' :
+                                                        '<span class="badge" style="background: #f1f5f9; color: #475569; font-weight: 600; text-transform: uppercase; padding: 4px 8px;">UNMARKED</span>'
+                                                    }
+                                                </td>
+                                                <td style="padding: 10px 14px; text-align: right; font-weight: 600; color: #166534;">
+                                                    ${d.approved_hours !== null && d.approved_hours !== undefined ? Number(d.approved_hours).toFixed(2) + ' hrs' : '<span class="text-muted">-</span>'}
+                                                    ${excBadge}
+                                                </td>
+                                                <td style="padding: 10px 14px; white-space: nowrap;">
+                                                    <span style="color: #16a34a; font-weight: 600;">${d.timesheet_hours ? d.timesheet_hours.toFixed(2) + ' hrs' : '0.00 hrs'}</span>
+                                                    <br><small class="text-muted">${d.timesheet_updated_time || 'No Entry'}</small>
+                                                </td>
+                                                <td style="padding: 10px 14px; white-space: nowrap;">
+                                                    ${d.approved_time ? `<div><i class="fas fa-check-circle text-success me-1"></i>${d.approved_time}</div>` : '<span class="text-muted">Not Approved Yet</span>'}
+                                                    ${d.approved_by_name ? `<small class="text-muted">By: ${d.approved_by_name}</small>` : ''}
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function toggleMonthAccordion(monthId) {
+            const body = document.getElementById(monthId);
+            const btn = document.getElementById('btn-' + monthId);
+            if (!body) return;
+
+            if (body.style.display === 'none') {
+                body.style.display = 'block';
+                if (btn) btn.innerHTML = '<i class="fas fa-minus"></i>';
+            } else {
+                body.style.display = 'none';
+                if (btn) btn.innerHTML = '<i class="fas fa-plus"></i>';
             }
         }
 
@@ -900,6 +1169,7 @@
             }
 
             await loadReports();
+            loadMonthlyHistory();
         });
 
         // ── Dashboard tab logic (unchanged) ───────────

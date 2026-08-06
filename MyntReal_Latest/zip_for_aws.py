@@ -49,6 +49,16 @@ def main():
             env_config_content = '\n'.join(env_config_lines) + '\n'
             zipf.writestr('.ebextensions/01_env.config', env_config_content)
             print(f"Successfully injected secure environment variables from {env_path} into the ZIP.")
+        
+        health_config_content = """option_settings:
+  aws:elasticbeanstalk:application:
+    Application Healthcheck URL: "/health"
+  aws:elasticbeanstalk:environment:process:default:
+    HealthCheckPath: "/health"
+    MatcherHTTPCode: "200,301,302,307"
+"""
+        zipf.writestr('.ebextensions/02_healthcheck.config', health_config_content)
+        print("Successfully injected .ebextensions/02_healthcheck.config into the ZIP.")
 
     print(f"Successfully created {zip_name} (Size: {os.path.getsize(zip_name) / (1024*1024):.2f} MB)")
 

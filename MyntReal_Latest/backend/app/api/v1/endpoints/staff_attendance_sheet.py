@@ -16,7 +16,7 @@ Created: Dec 01, 2025
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, func, desc
+from sqlalchemy import and_, func, desc, or_
 from typing import Optional, List
 from datetime import datetime, date, timedelta
 from decimal import Decimal
@@ -77,6 +77,46 @@ router = APIRouter()
 def get_indian_date():
     ist = pytz.timezone('Asia/Kolkata')
     return datetime.now(ist).date()
+
+
+def build_employee_status_filters(emp_status: str = "active", start_date: date = None, end_date: date = None):
+    """
+    DC Protocol: Build employee status filter for attendance endpoints.
+    - emp_status == 'active': Only active employees (joined on or before end_date, not exited before start_date)
+    - emp_status == 'inactive': Only inactive/resigned/deactivated employees
+    - emp_status == 'all': All employees regardless of status
+    """
+    filters = []
+    
+    # Date of joining filter: employee must have joined on or before target range end_date
+    if end_date:
+        filters.append(StaffEmployee.date_of_joining <= end_date)
+        
+    status_lower = func.lower(func.coalesce(StaffEmployee.status, 'active'))
+    inactive_statuses = ['inactive', 'terminated', 'resigned', 'exited', 'deactivated', 'paused']
+    
+    if emp_status == 'inactive':
+        if start_date:
+            filters.append(or_(
+                status_lower.in_(inactive_statuses),
+                and_(
+                    StaffEmployee.last_working_date.isnot(None),
+                    StaffEmployee.last_working_date < start_date
+                )
+            ))
+        else:
+            filters.append(status_lower.in_(inactive_statuses))
+    elif emp_status == 'all':
+        pass
+    else:  # 'active' (default)
+        filters.append(status_lower.not_in(inactive_statuses))
+        if start_date:
+            filters.append(or_(
+                StaffEmployee.last_working_date.is_(None),
+                StaffEmployee.last_working_date >= start_date
+            ))
+        
+    return filters
 
 
 # ==================== SCHEMAS ====================
@@ -395,6 +435,29 @@ def approve_attendance(
         tolerance = Decimal('0.5')
         if abs(sheet.approved_hours - sheet.marked_hours) > tolerance:
             sheet.reconciliation_status = ReconciliationStatus.MANUAL_OVERRIDE
+            
+    # DC Protocol (Jan 2026): Automatically record exception for true mismatch override if not created via bypass
+    if not exception_record and (is_mismatch or sheet.reconciliation_status == ReconciliationStatus.MANUAL_OVERRIDE):
+        _cid = sheet.company_id or (current_user.base_company_id if hasattr(current_user, 'base_company_id') and current_user.base_company_id else 1)
+        reason = data.approval_reason or "Hours mismatch approval override"
+        exception_record = StaffAttendanceException(
+            company_id=_cid,
+            attendance_sheet_id=sheet.id,
+            employee_id=sheet.employee_id,
+            date=sheet.date,
+            bypass_type=ExceptionBypassType.MISMATCH_OVERRIDE,
+            exception_reason=reason,
+            approver_id=current_user.id,
+            approver_role=current_user.role.role_code if (current_user.role and hasattr(current_user.role, 'role_code')) else 'ea',
+            approved_hours=data.approved_hours,
+            reconciliation_snapshot={
+                "marked_hours": float(sheet.marked_hours),
+                "approved_hours": float(data.approved_hours),
+                "timesheet_hours": float(sheet.employee_actual_hours) if sheet.employee_actual_hours is not None else None,
+                "reconciliation_status": sheet.reconciliation_status.value if hasattr(sheet.reconciliation_status, 'value') else str(sheet.reconciliation_status)
+            }
+        )
+        db.add(exception_record)
     
     # Audit log with status change tracking
     fields_changed = ["approved_hours", "approval_status"]
@@ -730,21 +793,13 @@ def get_monthly_attendance(
     team_id: Optional[int] = Query(None),
     from_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD) - overrides month start"),
     to_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD) - overrides month end"),
+    emp_status: Optional[str] = Query("active", description="Filter by status: active, inactive, or all"),
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
     """
     Get monthly attendance data with all dates as columns.
-    Supports optional from_date/to_date for custom date ranges.
-    
-    Returns: {
-        dates: [2025-12-01, 2025-12-02, ...],
-        employees: [
-            {id, name, dept, marked_hrs[day1], approved_hrs[day1], net_days[day1], ...},
-            ...
-        ],
-        totals: {marked_hrs_total, approved_hrs_total, net_days_total}
-    }
+    Supports optional from_date/to_date for custom date ranges and emp_status filter.
     """
     
     try:
@@ -754,8 +809,6 @@ def get_monthly_attendance(
     except:
         raise HTTPException(status_code=400, detail="Invalid month format (use YYYY-MM)")
     
-    # DC Protocol (Jan 07, 2026): Support custom date range
-    # Build date range - use from_date/to_date if provided, otherwise default to month
     if from_date:
         try:
             start_date = date.fromisoformat(from_date)
@@ -779,8 +832,12 @@ def get_monthly_attendance(
     if end_date < start_date:
         raise HTTPException(status_code=400, detail="to_date cannot be before from_date")
     
-    # Get employees (filter by manager/dept/team if provided)
+    # DC_ACTIVE_EMP_ONLY: Filter active/inactive employees for target month
+    emp_filters = build_employee_status_filters(emp_status or "active", start_date, end_date)
     emp_query = db.query(StaffEmployee)
+    if emp_filters:
+        emp_query = emp_query.filter(and_(*emp_filters))
+        
     if manager_id:
         emp_query = emp_query.filter_by(manager_id=manager_id)
     if department_id:
@@ -1099,19 +1156,13 @@ def get_manager_team_data(
     month_year: str,
     filter_employee_id: Optional[int] = Query(None, description="Filter by specific employee ID"),
     filter_employee_name: Optional[str] = Query(None, description="Filter by employee name (partial match)"),
+    emp_status: Optional[str] = Query("active", description="Filter by status: active, inactive, or all"),
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
     """
     Get team attendance data for manager dashboard
-    Dec 04, 2025: Enhanced to return per-day records with employee filters
-    - Returns individual daily records (not just aggregated)
-    - Supports filtering by employee ID or name
-    - Includes login/logout/total hours for each record
     """
-    
-    # Manager can only view their own team
-    # DC Protocol: Menu-based access control - any authenticated staff has full access
     if current_user.id != manager_id and not hasattr(current_user, 'emp_code'):
         raise HTTPException(status_code=403, detail="Access denied")
     
@@ -1129,13 +1180,17 @@ def get_manager_team_data(
     else:
         end_date = date(year, month + 1, 1) - timedelta(days=1)
     
-    # DC Protocol (Dec 04, 2025): Get team members using recursive downline
     manager = db.query(StaffEmployee).filter(StaffEmployee.id == manager_id).first()
     if not manager:
         raise HTTPException(status_code=404, detail="Manager not found")
     
     team_ids = get_team_member_ids(manager, db, StaffEmployee)
-    team_members_query = db.query(StaffEmployee).filter(StaffEmployee.id.in_(team_ids))
+    all_team_ids = list(set([manager_id] + list(team_ids)))
+    
+    emp_filters = build_employee_status_filters(emp_status or "active", start_date, end_date)
+    team_members_query = db.query(StaffEmployee).filter(StaffEmployee.id.in_(all_team_ids))
+    if emp_filters:
+        team_members_query = team_members_query.filter(and_(*emp_filters))
     
     # DC Protocol (Dec 04, 2025): Apply optional employee filters
     if filter_employee_id:
@@ -1257,28 +1312,28 @@ def get_manager_team_data(
 def get_manager_team_monthly(
     manager_id: int,
     month_year: str,
+    emp_status: Optional[str] = Query("active", description="Filter by status: active, inactive, or all"),
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
     """
     DC Protocol (Dec 04, 2025): Team Attendance - Downline Team tab
     Returns same format as /monthly endpoint but scoped to manager's downline
-    
-    Key Features:
-    - VIEW ONLY: No edit/approval access
-    - Self First: First row is always the logged-in manager
-    - Department-wise: Team members sorted by department after self
-    - Same format as Bulk Marking for consistency
-    
-    Returns: {
-        dates: [2025-12-01, 2025-12-02, ...],
-        employees: [self, ...team_members_by_department],
-        totals: {total_marked_hours, total_approved_hours, total_net_days}
-    }
     """
-    
-    # Authorization: Manager can only view their own team
-    # DC Protocol: Menu-based access control - any authenticated staff has full access
+    def format_time(dt):
+        if dt is None:
+            return None
+        return dt.strftime("%I:%M %p")
+
+    def format_worked_hours(minutes):
+        if minutes is None or minutes == 0:
+            return None
+        hours = minutes // 60
+        mins = minutes % 60
+        if mins == 0:
+            return f"{hours}h"
+        return f"{hours}h {mins}m"
+
     if current_user.id != manager_id and not hasattr(current_user, 'emp_code'):
         raise HTTPException(status_code=403, detail="Access denied")
     
@@ -1296,20 +1351,28 @@ def get_manager_team_monthly(
     else:
         end_date = date(year, month + 1, 1) - timedelta(days=1)
     
-    # DC Protocol: Get manager's accessible employees (self + recursive downline)
     manager = db.query(StaffEmployee).filter(StaffEmployee.id == manager_id).first()
     if not manager:
         raise HTTPException(status_code=404, detail="Manager not found")
 
-    # DC-SCOPE-001: Super-admin (MR10001 or hierarchy_level >= 90) sees ALL employees
     _req_code = (current_user.emp_code or '').upper()
     _req_level = current_user.role.hierarchy_level if current_user.role else 0
     _is_super_admin = _req_code == 'MR10001' or _req_level >= 90
+
+    emp_filters = build_employee_status_filters(emp_status or "active", start_date, end_date)
+
     if _is_super_admin:
-        team_members_list = db.query(StaffEmployee).all()
+        query = db.query(StaffEmployee)
+        if emp_filters:
+            query = query.filter(and_(*emp_filters))
+        team_members_list = query.all()
     else:
         team_ids = get_team_member_ids(manager, db, StaffEmployee)
-        team_members_list = db.query(StaffEmployee).filter(StaffEmployee.id.in_(team_ids)).all()
+        all_team_ids = list(set([manager_id] + list(team_ids)))
+        query = db.query(StaffEmployee).filter(StaffEmployee.id.in_(all_team_ids))
+        if emp_filters:
+            query = query.filter(and_(*emp_filters))
+        team_members_list = query.all()
 
     def sort_key(emp):
         dept_name = emp.department.name if emp.department else "ZZZ"
@@ -1333,6 +1396,15 @@ def get_manager_team_monthly(
             StaffTimesheetEntry.date <= end_date,
             StaffTimesheetEntry.employee_id.in_([e.id for e in employees]),
             StaffTimesheetEntry.status == 'submitted'
+        )
+    ).all()
+    
+    # Get punch data (clock-in/clock-out) for all employees in date range
+    punch_data = db.query(StaffAttendance).filter(
+        and_(
+            StaffAttendance.date >= start_date,
+            StaffAttendance.date <= end_date,
+            StaffAttendance.employee_id.in_([e.id for e in employees])
         )
     ).all()
     
@@ -1393,7 +1465,6 @@ def get_manager_team_monthly(
         eligible_days = approved_hours / Decimal(8) if approved_hours > 0 else Decimal(0)
         
         # Calculate attendance category counts
-        # DC Protocol (Jan 07, 2026): Count leave days by net_days, not marked_hours
         leaves_days = Decimal(0)
         absences_count = 0
         half_days_count = 0
@@ -1404,7 +1475,6 @@ def get_manager_team_monthly(
         for att in emp_attendance:
             if att.attendance_status in [AttendanceStatus.SICK_LEAVE, AttendanceStatus.APPROVED_LEAVE, 
                                          AttendanceStatus.CASUAL_LEAVE, AttendanceStatus.UNPAID_LEAVE]:
-                # Count leave days using net_days (1.0 for full day, 0.5 for half day)
                 leaves_days += att.net_days if att.net_days else Decimal('1')
             elif att.attendance_status == AttendanceStatus.ABSENT:
                 absences_count += 1
@@ -1450,6 +1520,15 @@ def get_manager_team_monthly(
         for date_str in date_list:
             curr_date = date.fromisoformat(date_str)
             att = next((a for a in attendance_data if a.employee_id == emp.id and a.date == curr_date), None)
+            punch = next((p for p in punch_data if p.employee_id == emp.id and p.date == curr_date), None)
+            
+            ts_list = [t for t in emp_timesheet if t.employee_id == emp.id and t.date == curr_date]
+            ts_minutes = sum(t.billable_minutes for t in ts_list if t.billable_minutes)
+            ts_hours = float(ts_minutes / 60) if ts_minutes > 0 else 0.0
+            
+            login_time = format_time(punch.clock_in) if punch else None
+            logout_time = format_time(punch.clock_out) if punch else None
+            clock_hours = format_worked_hours(punch.worked_minutes) if punch else None
             
             if att:
                 row["dates"][date_str] = {
@@ -1459,14 +1538,32 @@ def get_manager_team_monthly(
                     "net_days": float(att.net_days),
                     "status": att.approval_status.value,
                     "attendance_status": att.attendance_status.value,
-                    "reconciliation_status": att.reconciliation_status.value
+                    "reconciliation_status": att.reconciliation_status.value,
+                    "login_time": login_time,
+                    "logout_time": logout_time,
+                    "clock_hours": clock_hours,
+                    "timesheet_hours": ts_hours,
+                    "employee_actual_hours": float(att.employee_actual_hours) if att.employee_actual_hours is not None else ts_hours
                 }
                 total_marked += att.marked_hours
                 if att.approved_hours:
                     total_approved += att.approved_hours
                     total_net_days += att.net_days
             else:
-                row["dates"][date_str] = None
+                row["dates"][date_str] = {
+                    "sheet_id": None,
+                    "marked_hours": 0.0,
+                    "approved_hours": None,
+                    "net_days": 0.0,
+                    "status": "unmarked",
+                    "attendance_status": None,
+                    "reconciliation_status": "no_entry" if ts_hours == 0 else "matched",
+                    "login_time": login_time,
+                    "logout_time": logout_time,
+                    "clock_hours": clock_hours,
+                    "timesheet_hours": ts_hours,
+                    "employee_actual_hours": ts_hours
+                }
         
         employee_rows.append(row)
     
@@ -1675,38 +1772,44 @@ def get_attendance_exceptions(
     # Base query - apply company filter unless cross-company viewer
     if _cross_company:
         query = db.query(StaffAttendanceException)
-    else:
+    elif hasattr(current_user, 'base_company_id') and current_user.base_company_id:
         query = db.query(StaffAttendanceException).filter(
             StaffAttendanceException.company_id == current_user.base_company_id
         )
+    else:
+        query = db.query(StaffAttendanceException)
     
-    # Apply date range filter
-    if from_date:
-        query = query.filter(StaffAttendanceException.date >= from_date)
-    if to_date:
-        query = query.filter(StaffAttendanceException.date <= to_date)
-    
-    # Apply employee filter
-    if employee_id:
-        query = query.filter(StaffAttendanceException.employee_id == employee_id)
-    
-    # Apply department filter (join with employee)
-    if department_id:
+    # Helper to clean Query parameter objects
+    def _clean_param(val):
+        if val is None or hasattr(val, 'default'):
+            return None
+        return val
+
+    v_from = _clean_param(from_date)
+    v_to = _clean_param(to_date)
+    v_emp = _clean_param(employee_id)
+    v_dept = _clean_param(department_id)
+    v_appr = _clean_param(approver_id)
+    v_btype = _clean_param(bypass_type)
+
+    if v_from:
+        query = query.filter(StaffAttendanceException.date >= v_from)
+    if v_to:
+        query = query.filter(StaffAttendanceException.date <= v_to)
+    if v_emp:
+        query = query.filter(StaffAttendanceException.employee_id == v_emp)
+    if v_dept:
         query = query.join(
             StaffEmployee, StaffAttendanceException.employee_id == StaffEmployee.id
-        ).filter(StaffEmployee.department_id == department_id)
-    
-    # Apply approver filter
-    if approver_id:
-        query = query.filter(StaffAttendanceException.approver_id == approver_id)
-    
-    # Apply bypass type filter
-    if bypass_type:
+        ).filter(StaffEmployee.department_id == v_dept)
+    if v_appr:
+        query = query.filter(StaffAttendanceException.approver_id == v_appr)
+    if v_btype:
         try:
-            bypass_enum = ExceptionBypassType(bypass_type)
+            bypass_enum = ExceptionBypassType(v_btype)
             query = query.filter(StaffAttendanceException.bypass_type == bypass_enum)
         except ValueError:
-            pass  # Invalid bypass type, ignore filter
+            pass
     
     # Get total count before pagination
     total_count = query.count()
@@ -1936,4 +2039,240 @@ def get_time_report(
             "per_page":    per_page,
             "total_pages": max(1, (total_count + per_page - 1) // per_page),
         }
+    }
+
+
+# ==================== MONTHLY HISTORY & DOWNLINE TEAM EXPANDABLE BREAKDOWN ====================
+
+@router.get("/employee/{employee_id}/monthly-history", summary="Get month-wise attendance summary and day-wise details for self or downline team")
+def get_employee_monthly_history(
+    employee_id: int,
+    months_count: int = Query(6, ge=1, le=24, description="Number of past months to retrieve"),
+    emp_status: Optional[str] = Query("active", description="Filter by employee status"),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get month-by-month attendance summary and day-wise details for self or downline team member
+    DC Protocol (Aug 2026): Supports expandable month view with latest month at top
+    """
+    _req_code = (current_user.emp_code or '').upper()
+    _req_level = current_user.role.hierarchy_level if current_user.role else 0
+    _is_super = _req_code == 'MR10001' or _req_level >= 90
+    
+    if current_user.id != employee_id and not _is_super:
+        team_ids = get_team_member_ids(current_user, db, StaffEmployee)
+        if employee_id not in team_ids:
+            raise HTTPException(status_code=403, detail="Access denied: Employee not in your downline team")
+
+    target_emp = db.query(StaffEmployee).filter(StaffEmployee.id == employee_id).first()
+    if not target_emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    # Downline team dropdown list for filter selection (Includes all staff employees so Yaswanth, Subhash, etc. can search & view any staff record including MR10001)
+    downline_emps = db.query(StaffEmployee).order_by(StaffEmployee.full_name).all()
+    downline_team = [
+        {
+            "id": e.id,
+            "name": f"{e.full_name or 'Employee '+str(e.id)} ({e.emp_code or 'EMP'+str(e.id)})" + (" - YOU" if e.id == current_user.id else ""),
+            "code": e.emp_code or f"EMP{e.id}",
+            "emp_code": e.emp_code or f"EMP{e.id}",
+            "full_name": e.full_name or f"Employee {e.id}",
+            "is_self": e.id == current_user.id,
+            "department": e.department.name if e.department else "Unassigned"
+        }
+        for e in downline_emps
+    ]
+
+    today = date.today()
+    curr_y, curr_m = today.year, today.month
+    
+    month_ranges = []
+    for i in range(months_count):
+        m = curr_m - i
+        y = curr_y
+        while m <= 0:
+            m += 12
+            y -= 1
+        
+        s_date = date(y, m, 1)
+        if m == 12:
+            e_date = date(y + 1, 1, 1) - timedelta(days=1)
+        else:
+            e_date = date(y, m + 1, 1) - timedelta(days=1)
+            
+        m_str = f"{y:04d}-{m:02d}"
+        m_label = s_date.strftime("%B %Y")
+        month_ranges.append({
+            "month_key": m_str,
+            "month_label": m_label,
+            "start_date": s_date,
+            "end_date": e_date
+        })
+
+    def format_time(dt):
+        if dt is None:
+            return None
+        return dt.strftime("%I:%M %p")
+
+    def format_worked_hours(minutes):
+        if minutes is None or minutes == 0:
+            return None
+        hours = minutes // 60
+        mins = minutes % 60
+        if mins == 0:
+            return f"{hours}h"
+        return f"{hours}h {mins}m"
+
+    def format_dt(dt):
+        if not dt:
+            return None
+        return dt.strftime("%d %b %Y, %I:%M %p")
+
+    monthly_history = []
+    
+    for m_info in month_ranges:
+        s_date = m_info["start_date"]
+        e_date = m_info["end_date"]
+        
+        attendance_data = db.query(StaffAttendanceSheet).filter(
+            and_(
+                StaffAttendanceSheet.employee_id == employee_id,
+                StaffAttendanceSheet.date >= s_date,
+                StaffAttendanceSheet.date <= e_date
+            )
+        ).order_by(StaffAttendanceSheet.date).all()
+        
+        punch_data = db.query(StaffAttendance).filter(
+            and_(
+                StaffAttendance.employee_id == employee_id,
+                StaffAttendance.date >= s_date,
+                StaffAttendance.date <= e_date
+            )
+        ).all()
+        
+        timesheet_data = db.query(StaffTimesheetEntry).filter(
+            and_(
+                StaffTimesheetEntry.date >= s_date,
+                StaffTimesheetEntry.date <= e_date,
+                StaffTimesheetEntry.employee_id == employee_id
+            )
+        ).all()
+        
+        exception_data = db.query(StaffAttendanceException).filter(
+            and_(
+                StaffAttendanceException.employee_id == employee_id,
+                StaffAttendanceException.date >= s_date,
+                StaffAttendanceException.date <= e_date,
+                StaffAttendanceException.bypass_type.in_([ExceptionBypassType.NO_TIMESHEET, ExceptionBypassType.MISMATCH_OVERRIDE])
+            )
+        ).all()
+        
+        approver_ids = {att.approved_by_id for att in attendance_data if att.approved_by_id}
+        approvers_map = {}
+        if approver_ids:
+            approver_objs = db.query(StaffEmployee).filter(StaffEmployee.id.in_(list(approver_ids))).all()
+            approvers_map = {a.id: a.full_name for a in approver_objs}
+            
+        present_cnt = sum(1 for s in attendance_data if s.attendance_status == AttendanceStatus.PRESENT)
+        leaves_cnt = sum(float(s.net_days or 1) for s in attendance_data if s.attendance_status in [
+            AttendanceStatus.SICK_LEAVE, AttendanceStatus.APPROVED_LEAVE, 
+            AttendanceStatus.CASUAL_LEAVE, AttendanceStatus.UNPAID_LEAVE
+        ])
+        absent_cnt = sum(1 for s in attendance_data if s.attendance_status == AttendanceStatus.ABSENT)
+        half_cnt = sum(1 for s in attendance_data if s.attendance_status == AttendanceStatus.HALF_DAY)
+        holiday_cnt = sum(1 for s in attendance_data if s.attendance_status == AttendanceStatus.HOLIDAY)
+        weekend_cnt = sum(1 for s in attendance_data if s.attendance_status == AttendanceStatus.WEEKEND)
+        net_days = sum(float(s.net_days or 0) for s in attendance_data if s.approval_status == ApprovalStatus.APPROVED)
+        
+        # DC Protocol (Aug 2026): Unique exception dates count in month (not log record count)
+        exc_days = len(set(x.date for x in exception_data))
+        
+        approved_hrs = sum(float(s.approved_hours or 0) for s in attendance_data if s.approval_status == ApprovalStatus.APPROVED)
+        eligible_days = round(approved_hrs / 8.0, 2)
+        
+        days_list = []
+        # DC Protocol (Aug 2026): Cap current month listing at today; generate in DESCENDING order
+        eff_end_date = min(e_date, today) if s_date <= today else e_date
+        
+        curr_d = eff_end_date
+        while curr_d >= s_date:
+            day_d = curr_d
+            att = next((a for a in attendance_data if a.date == day_d), None)
+            punch = next((p for p in punch_data if p.date == day_d), None)
+            ts_list = [t for t in timesheet_data if t.date == day_d]
+            exc = next((x for x in exception_data if x.date == day_d), None)
+            
+            ts_mins = sum(t.billable_minutes for t in ts_list if t.billable_minutes)
+            ts_hours = float(ts_mins / 60) if ts_mins > 0 else 0.0
+            
+            latest_ts_updated = max([t.created_at for t in ts_list if t.created_at], default=None) if ts_list else None
+            
+            if att:
+                days_list.append({
+                    "date": day_d.isoformat(),
+                    "formatted_date": day_d.strftime("%d/%m/%Y"),
+                    "day_name": day_d.strftime("%a"),
+                    "login_time": format_time(punch.clock_in) if punch else None,
+                    "logout_time": format_time(punch.clock_out) if punch else None,
+                    "total_hours": format_worked_hours(punch.worked_minutes) if punch else None,
+                    "marked_status": att.attendance_status.value if att.attendance_status else None,
+                    "marked_hours": float(att.marked_hours),
+                    "approved_status": att.approval_status.value if att.approval_status else "pending",
+                    "approved_hours": float(att.approved_hours) if att.approved_hours is not None else None,
+                    "timesheet_hours": ts_hours,
+                    "timesheet_updated_time": format_dt(latest_ts_updated) if latest_ts_updated else ("Logged" if ts_list else "No Entry"),
+                    "approved_time": format_dt(att.approved_at) if att.approved_at else None,
+                    "approved_by_name": approvers_map.get(att.approved_by_id) if att.approved_by_id else None,
+                    "exception_hours": float(exc.approved_hours) if (exc and exc.approved_hours is not None) else None,
+                    "exception_bypass_type": exc.bypass_type.value if (exc and exc.bypass_type) else None,
+                    "exception_reason": exc.exception_reason if exc else None
+                })
+            else:
+                days_list.append({
+                    "date": day_d.isoformat(),
+                    "formatted_date": day_d.strftime("%d/%m/%Y"),
+                    "day_name": day_d.strftime("%a"),
+                    "login_time": format_time(punch.clock_in) if punch else None,
+                    "logout_time": format_time(punch.clock_out) if punch else None,
+                    "total_hours": format_worked_hours(punch.worked_minutes) if punch else None,
+                    "marked_status": "unmarked",
+                    "marked_hours": 0.0,
+                    "approved_status": "unmarked",
+                    "approved_hours": None,
+                    "timesheet_hours": ts_hours,
+                    "timesheet_updated_time": format_dt(latest_ts_updated) if latest_ts_updated else ("Logged" if ts_list else "No Entry"),
+                    "approved_time": None,
+                    "approved_by_name": None,
+                    "exception_hours": float(exc.approved_hours) if (exc and exc.approved_hours is not None) else None,
+                    "exception_bypass_type": exc.bypass_type.value if (exc and exc.bypass_type) else None,
+                    "exception_reason": exc.exception_reason if exc else None
+                })
+            curr_d -= timedelta(days=1)
+                
+        monthly_history.append({
+            "month_key": m_info["month_key"],
+            "month_label": m_info["month_label"],
+            "summary": {
+                "present": present_cnt,
+                "leaves": leaves_cnt,
+                "absences": absent_cnt,
+                "half_days": half_cnt,
+                "holidays": holiday_cnt,
+                "weekends": weekend_cnt,
+                "net_days": net_days,
+                "exc_days": exc_days,
+                "eligible_days": eligible_days
+            },
+            "days": days_list
+        })
+        
+    return {
+        "success": True,
+        "employee_id": target_emp.id,
+        "employee_name": target_emp.full_name,
+        "employee_code": target_emp.emp_code or f"EMP{target_emp.id}",
+        "department": target_emp.department.name if target_emp.department else "Unassigned",
+        "downline_team": downline_team,
+        "months": monthly_history
     }

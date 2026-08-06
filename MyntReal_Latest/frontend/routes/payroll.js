@@ -199,10 +199,11 @@ function createPayrollPage(page) {
                   <th>Deductions</th>
                   <th>Net Pay</th>
                   <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody id="runsBody">
-                <tr><td colspan="8" class="text-center">Loading...</td></tr>
+                <tr><td colspan="9" class="text-center">Loading...</td></tr>
               </tbody>
             </table>
           </div>

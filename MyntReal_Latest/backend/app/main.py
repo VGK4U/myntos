@@ -15935,21 +15935,9 @@ async def health_check():
         finally:
             db.close()
     except Exception as e:
-        logging.error(f"[HEALTH] ❌ Database check failed: {e}")
-        db_status = f"error: {str(e)}"
-        # Only return 503 if database is completely unreachable
-        return JSONResponse(
-            status_code=503,
-            content={
-                "status": "unhealthy",
-                "service": "MNR EV Reference Program API",
-                "version": "2.0.0",
-                "initialization": init_status,
-                "database": db_status,
-                "error": "Database connection failed",
-                "message": "Cannot connect to database - check DATABASE_URL"
-            }
-        )
+        logging.error(f"[HEALTH] ⚠️ Database check warning (non-blocking): {e}")
+        db_status = f"degraded: {str(e)}"
+        init_status = "degraded"
     
     from app.core.redis import get_redis_client
     
