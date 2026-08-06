@@ -283,7 +283,6 @@ function renderTable(d) {
     return `<tr>
       <td class="sno">${i+1}</td>
       <td><div class="name-cell" title="${esc(r.name||'')}">${esc(r.name||'—')}${cntBadge}</div></td>
-      <td class="phone-cell">${esc(r.phone||'—')}</td>
       <td style="font-weight:600;color:#475569;">${esc(catShort)}</td>
       <td>${typeBadge}</td>
       <td class="role-cell">${rolesMapped}</td>
@@ -307,7 +306,6 @@ function renderTable(d) {
         <tr>
           <th>#</th>
           <th>Name</th>
-          <th>Phone</th>
           <th>Cat</th>
           <th>Type</th>
           <th>Role</th>
