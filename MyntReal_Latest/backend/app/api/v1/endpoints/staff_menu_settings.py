@@ -3707,9 +3707,12 @@ async def get_my_menus(
         for _rkey, _rcodes in _ROLE_AUTO_GRANT_MENUS.items():
             if _rkey in _role_lower:
                 _dept_auto_codes.update(_rcodes)
-        # MR10001 specific grant
-        if (current_user.emp_code or '').upper() == 'MR10001':
-            _dept_auto_codes.add('staff_my_lead_incentives')
+        # DC-ALL-STAFF-LEAD-INCENTIVES-001: Universal self-service menus for every staff employee
+        _dept_auto_codes.add('staff_my_lead_incentives')
+        _dept_auto_codes.add('staff_my_kyc')
+        _dept_auto_codes.add('staff_change_password')
+        _dept_auto_codes.add('staff_dashboard')
+        _dept_auto_codes.add('staff_profile')
         if _dept_auto_codes:
             logger.info(f"[DC-ROLE-AUTO-GRANT] Employee {employee_id} ({current_user.emp_code}) role/emp auto-granted menus: {_dept_auto_codes}")
     except Exception as _re:

@@ -16,7 +16,7 @@ import pytz
 logger = logging.getLogger(__name__)
 
 from app.core.database import get_db
-from app.core.security import get_current_user, get_current_user_hybrid, get_current_admin_user, get_current_super_admin_user, get_banner_creator_user, get_banner_creator_user_hybrid
+from app.core.security import get_current_user, get_current_user_hybrid, get_current_user_hybrid_with_partner, get_current_admin_user, get_current_super_admin_user, get_banner_creator_user, get_banner_creator_user_hybrid
 from app.core.audience_resolver import normalize_audience, audience_label, VGK_TEAM_CATEGORY, is_vgk4u_enabled  # DC_AUDIENCE_001 (audit #35 follow-up)
 from app.models.user import User
 from app.models.staff import StaffEmployee
@@ -66,7 +66,7 @@ async def get_top_performers(
     exclude_skipped: bool = True,
     audience: Optional[str] = Query(None, regex="^(mnr|vgk4u|both)$"),  # DC_AUDIENCE_001 — 'mnr' | 'vgk4u' | 'both' (default mnr/None for byte-identical pre-A1 behaviour)
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_hybrid)
+    current_user = Depends(get_current_user_hybrid_with_partner)
 ):
     """
     Get top earners for banner display based on LATEST earning day.
@@ -727,7 +727,7 @@ async def get_dashboard_banner_data(
 async def get_birthday_banner(
     exclude_skipped: bool = True,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_hybrid)
+    current_user = Depends(get_current_user_hybrid_with_partner)
 ):
     """
     Get today's birthday banner with rotating message and birthday users

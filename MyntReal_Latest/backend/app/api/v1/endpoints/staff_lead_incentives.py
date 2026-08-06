@@ -228,6 +228,14 @@ def my_earning_capacity(
             ORDER BY year DESC, month DESC, category_slug
         """)).fetchall()
 
+    # Query per-employee min target overrides for logged-in employee
+    emp_tgts = db.execute(text("""
+        SELECT category_slug, min_target
+        FROM staff_incentive_employee_targets
+        WHERE employee_id = :eid AND month = :mo AND year = :yr
+    """), {"eid": me.id, "mo": today.month, "yr": today.year}).fetchall()
+    emp_tgt_map = {r[0]: float(r[1]) for r in emp_tgts if r[1] is not None} if emp_tgts else {}
+
     # Build config map keyed by slug
     # Indices: 0=slug,1=label,2=min_tgt_val,3=min_tgt_unit,4=rate_no,5=rate_wi,
     #          6=rate_dw,7=itype,8=bonus_trigger,9=bonus_mul
@@ -238,9 +246,10 @@ def my_earning_capacity(
         if slug in seen:
             continue
         seen.add(slug)
+        eff_min_target = emp_tgt_map.get(slug, float(r[2] or 0))
         cfg_map[slug] = {
             "category_name":    r[1] or slug,
-            "min_target_value": float(r[2] or 0),
+            "min_target_value": eff_min_target,
             "min_target_unit":  r[3] or "count",
             "rate_no_support":  float(r[4] or 0),
             "rate_with_support": float(r[5] or 0),

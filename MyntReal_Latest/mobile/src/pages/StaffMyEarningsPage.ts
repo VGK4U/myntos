@@ -18,7 +18,7 @@ export class StaffMyEarningsPage {
   }
 
   async render(): Promise<string> {
-    const srcUrl = `${APP_CONFIG.MEDIA_BASE_URL}/staff/my-lead-incentives`;
+    const srcUrl = `${APP_CONFIG.MEDIA_BASE_URL}/staff/my-lead-incentives?embed=true&token=${encodeURIComponent(localStorage.getItem("auth_token") || "")}`;
     return `
       <div style="background:#f3f4f6;min-height:100vh;padding-bottom:80px">
         ${PageHeader.render({ title: 'My Earnings', showBack: true })}

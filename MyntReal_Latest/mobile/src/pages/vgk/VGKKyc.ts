@@ -39,7 +39,7 @@ export class VGKKycPage {
         </div>
         <iframe
           id="vgk4u-kyc-frame"
-          src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/kyc"
+          src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/kyc?token=${encodeURIComponent(localStorage.getItem("auth_token") || "")}"
           style="width:100%;height:calc(100vh - 200px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
           loading="lazy"
           title="KYC Documents (VGK4U)"

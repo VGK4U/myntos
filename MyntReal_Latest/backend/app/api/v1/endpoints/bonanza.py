@@ -648,11 +648,9 @@ def _count_first_pmt_for_bonanza(db: Session, partner_id: int, bonanza) -> int:
                 CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
                           AND cl.source_ref_id IS NOT NULL
                           AND cl.source_ref_id ~ '^[0-9]+$'
-                     THEN cl.source_ref_id::int END
+                     THEN cl.source_ref_id::int END,
+                (SELECT a.partner_id FROM vgk_solar_cibil_advances a WHERE a.lead_id = cl.id AND a.level = 1 AND a.kind = 'ADVANCE' LIMIT 1)
               ) = :pid
-          AND cl.submit_date IS NOT NULL
-          AND cl.submit_date >= CAST(:start AS DATE)
-          AND cl.submit_date <= CAST(:end AS DATE)
           AND cl.first_payment_received_date IS NOT NULL
           AND cl.first_payment_received_date >= CAST(:start AS DATE)
           AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
@@ -5405,24 +5403,22 @@ def vgk_member_tracking(
                     params['brand_ids'] = brand_ids
 
                 if is_brand_bonanza:
-                    # Brand Bonanza: Eligible = submitted in campaign range.
-                    # Done = submitted in campaign range AND received payment in campaign range + grace.
+                    # Brand Bonanza: Eligible = first payment received in campaign range.
+                    # Done = first payment received in campaign range + grace.
                     count_rows = db.execute(text(f"""
                         SELECT COALESCE(
                             cl.associated_partner_id,
                             CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
                                       AND cl.source_ref_id IS NOT NULL
                                       AND cl.source_ref_id ~ '^[0-9]+$'
-                                 THEN cl.source_ref_id::int END
+                                 THEN cl.source_ref_id::int END,
+                            (SELECT a.partner_id FROM vgk_solar_cibil_advances a WHERE a.lead_id = cl.id AND a.level = 1 AND a.kind = 'ADVANCE' LIMIT 1)
                         ) AS partner_id,
-                        COUNT(DISTINCT CASE WHEN cl.submit_date IS NOT NULL 
-                                             AND cl.submit_date >= CAST(:start AS DATE) 
-                                             AND cl.submit_date <= CAST(:end AS DATE) 
+                        COUNT(DISTINCT CASE WHEN cl.first_payment_received_date IS NOT NULL 
+                                             AND cl.first_payment_received_date >= CAST(:start AS DATE) 
+                                             AND cl.first_payment_received_date <= CAST(:end AS DATE) 
                                        THEN cl.id END) AS eligible_count,
-                        COUNT(DISTINCT CASE WHEN cl.submit_date IS NOT NULL 
-                                             AND cl.submit_date >= CAST(:start AS DATE) 
-                                             AND cl.submit_date <= CAST(:end AS DATE) 
-                                             AND cl.first_payment_received_date IS NOT NULL 
+                        COUNT(DISTINCT CASE WHEN cl.first_payment_received_date IS NOT NULL 
                                              AND cl.first_payment_received_date >= CAST(:start AS DATE) 
                                              AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
                                        THEN cl.id END) AS done_count
@@ -5432,7 +5428,8 @@ def vgk_member_tracking(
                             CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
                                       AND cl.source_ref_id IS NOT NULL
                                       AND cl.source_ref_id ~ '^[0-9]+$'
-                                 THEN cl.source_ref_id::int END
+                                 THEN cl.source_ref_id::int END,
+                            (SELECT a.partner_id FROM vgk_solar_cibil_advances a WHERE a.lead_id = cl.id AND a.level = 1 AND a.kind = 'ADVANCE' LIMIT 1)
                         ) = ANY(:pids)
                           {seg_clause}
                           {brand_clause}
@@ -5442,23 +5439,21 @@ def vgk_member_tracking(
                         eligible_map[r[0]] = int(r[1])
                         achieved_map[r[0]] = int(r[2])
                 else:
-                    # Standard Solar: Eligible = submitted in campaign range.
-                    # Done = submitted in campaign range AND first payment received in campaign range + grace days.
+                    # Standard Solar: Eligible = first payment received in campaign range.
+                    # Done = first payment received in campaign range + grace days.
                     count_rows = db.execute(text(f"""
                         SELECT COALESCE(
                             cl.associated_partner_id,
                             CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
                                       AND cl.source_ref_id IS NOT NULL
                                       AND cl.source_ref_id ~ '^[0-9]+$'
-                                 THEN cl.source_ref_id::int END
+                                 THEN cl.source_ref_id::int END,
+                            (SELECT a.partner_id FROM vgk_solar_cibil_advances a WHERE a.lead_id = cl.id AND a.level = 1 AND a.kind = 'ADVANCE' LIMIT 1)
                         ) AS partner_id,
-                        COUNT(DISTINCT CASE WHEN cl.submit_date IS NOT NULL 
-                                             AND cl.submit_date >= CAST(:start AS DATE)
-                                             AND cl.submit_date <= CAST(:end AS DATE) THEN cl.id END) AS eligible_count,
-                        COUNT(DISTINCT CASE WHEN cl.submit_date IS NOT NULL 
-                                             AND cl.submit_date >= CAST(:start AS DATE)
-                                             AND cl.submit_date <= CAST(:end AS DATE)
-                                             AND cl.first_payment_received_date IS NOT NULL 
+                        COUNT(DISTINCT CASE WHEN cl.first_payment_received_date IS NOT NULL 
+                                             AND cl.first_payment_received_date >= CAST(:start AS DATE)
+                                             AND cl.first_payment_received_date <= CAST(:end AS DATE) THEN cl.id END) AS eligible_count,
+                        COUNT(DISTINCT CASE WHEN cl.first_payment_received_date IS NOT NULL 
                                              AND cl.first_payment_received_date >= CAST(:start AS DATE)
                                              AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL) THEN cl.id END) AS done_count
                         FROM crm_leads cl
@@ -5467,7 +5462,8 @@ def vgk_member_tracking(
                             CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
                                       AND cl.source_ref_id IS NOT NULL
                                       AND cl.source_ref_id ~ '^[0-9]+$'
-                                 THEN cl.source_ref_id::int END
+                                 THEN cl.source_ref_id::int END,
+                            (SELECT a.partner_id FROM vgk_solar_cibil_advances a WHERE a.lead_id = cl.id AND a.level = 1 AND a.kind = 'ADVANCE' LIMIT 1)
                         ) = ANY(:pids)
                           {seg_clause}
                         GROUP BY partner_id
@@ -5811,26 +5807,20 @@ def vgk_member_tracking_details(
             if is_brand_bonanza:
                 if only_triggered:
                     where_clause = """
-                        AND cl.submit_date IS NOT NULL
-                        AND cl.submit_date >= CAST(:start AS DATE)
-                        AND cl.submit_date <= CAST(:end AS DATE)
                         AND cl.first_payment_received_date IS NOT NULL
                         AND cl.first_payment_received_date >= CAST(:start AS DATE)
                         AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
                     """
                 else:
                     where_clause = """
-                        AND cl.submit_date IS NOT NULL
-                        AND cl.submit_date >= CAST(:start AS DATE)
-                        AND cl.submit_date <= CAST(:end AS DATE)
+                        AND cl.first_payment_received_date IS NOT NULL
+                        AND cl.first_payment_received_date >= CAST(:start AS DATE)
+                        AND cl.first_payment_received_date <= CAST(:end AS DATE)
                     """
                 order_col = "sort_date"
             else:
                 if only_triggered:
                     where_clause = """
-                        AND cl.submit_date IS NOT NULL
-                        AND cl.submit_date >= CAST(:start AS DATE)
-                        AND cl.submit_date <= CAST(:end AS DATE)
                         AND cl.first_payment_received_date IS NOT NULL
                         AND cl.first_payment_received_date >= CAST(:start AS DATE)
                         AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
@@ -5838,11 +5828,11 @@ def vgk_member_tracking_details(
                     order_col = "cl.first_payment_received_date"
                 else:
                     where_clause = """
-                        AND cl.submit_date IS NOT NULL
-                        AND cl.submit_date >= CAST(:start AS DATE)
-                        AND cl.submit_date <= CAST(:end AS DATE)
+                        AND cl.first_payment_received_date IS NOT NULL
+                        AND cl.first_payment_received_date >= CAST(:start AS DATE)
+                        AND cl.first_payment_received_date <= CAST(:end AS DATE)
                     """
-                    order_col = "cl.submit_date"
+                    order_col = "cl.first_payment_received_date"
                 
             query_str = f"""
                 SELECT DISTINCT cl.id, cl.name, cl.phone, cl.submit_date, cl.first_payment_received_date, 
@@ -5872,6 +5862,10 @@ def vgk_member_tracking_details(
                         AND cl.source_ref_id IS NOT NULL
                         AND cl.source_ref_id ~ '^[0-9]+$'
                         AND cl.source_ref_id::int = :pid
+                    )
+                    OR EXISTS (
+                        SELECT 1 FROM vgk_solar_cibil_advances a 
+                        WHERE a.lead_id = cl.id AND a.level = 1 AND a.kind = 'ADVANCE' AND a.partner_id = :pid
                     )
                 )"""
                 params['pid'] = partner_id

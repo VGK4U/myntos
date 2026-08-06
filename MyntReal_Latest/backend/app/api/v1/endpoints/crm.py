@@ -8202,7 +8202,12 @@ def update_lead(
     
     # DC_SOLAR_STAGE_DATE_001: stamp when pipeline stage changes so table can sort by it
     if 'solar_pipeline_status' in update_data:
-        lead.solar_pipeline_status_updated_at = get_indian_time()
+        now_dt = get_indian_time()
+        lead.solar_pipeline_status_updated_at = now_dt
+        # DC-SUBMIT-DATE-AUTO-001: Auto-populate submit_date if moving to a bank/submitted stage and submit_date is currently NULL
+        _stg = (update_data.get('solar_pipeline_status') or '').lower()
+        if _stg in ('pending_with_bank', 'with_bank', 'app_submitted', 'bank', 'installation_pending', 'net_meter_pending', 'balance_pending', 'completed') and not lead.submit_date:
+            lead.submit_date = now_dt.date()
 
     # DC_CIBIL_ADVANCE_001: allow cibil_confirmed / cibil_score through update_data
     # (fields are on the model — setattr above handles write; hooks fire after commit)

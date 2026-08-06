@@ -256,27 +256,29 @@
             background: #1e3a5f !important;
             color: #fff;
         }
-        .exec-sc-1 { position: sticky; left: 0;     z-index: 2; }
-        .exec-sc-2 { position: sticky; left: 50px;  z-index: 2; }
-        .exec-sc-3 { position: sticky; left: 210px; z-index: 2; }
-        .exec-sc-4 { position: sticky; left: 300px; z-index: 2; }
-        .exec-sc-5 { position: sticky; left: 380px; z-index: 2; box-shadow: 3px 0 5px -2px rgba(0,0,0,0.15); }
-        #execTable thead th.exec-sc-1,
-        #execTable thead th.exec-sc-2,
-        #execTable thead th.exec-sc-3,
-        #execTable thead th.exec-sc-4,
-        #execTable thead th.exec-sc-5 { z-index: 5; }
-        #execTable thead th.exec-sc-5 { background: #162d4a !important; border-left: 2px solid #f59e0b; }
-        #execTable tbody tr td.exec-sc-1,
-        #execTable tbody tr td.exec-sc-2,
-        #execTable tbody tr td.exec-sc-3,
-        #execTable tbody tr td.exec-sc-4 { background: #ffffff; }
-        #execTable tbody tr td.exec-sc-5 { background: #fffbeb; border-left: 2px solid #fcd34d; }
-        #execTable tbody tr:hover td.exec-sc-1,
-        #execTable tbody tr:hover td.exec-sc-2,
-        #execTable tbody tr:hover td.exec-sc-3,
-        #execTable tbody tr:hover td.exec-sc-4 { background: #f9fafb; }
-        #execTable tbody tr:hover td.exec-sc-5 { background: #fef3c7; }
+        @media (min-width: 768px) {
+            .exec-sc-1 { position: sticky; left: 0;     z-index: 2; }
+            .exec-sc-2 { position: sticky; left: 50px;  z-index: 2; }
+            .exec-sc-3 { position: sticky; left: 210px; z-index: 2; }
+            .exec-sc-4 { position: sticky; left: 300px; z-index: 2; }
+            .exec-sc-5 { position: sticky; left: 380px; z-index: 2; box-shadow: 3px 0 5px -2px rgba(0,0,0,0.15); }
+            #execTable thead th.exec-sc-1,
+            #execTable thead th.exec-sc-2,
+            #execTable thead th.exec-sc-3,
+            #execTable thead th.exec-sc-4,
+            #execTable thead th.exec-sc-5 { z-index: 5; }
+            #execTable thead th.exec-sc-5 { background: #162d4a !important; border-left: 2px solid #f59e0b; }
+            #execTable tbody tr td.exec-sc-1,
+            #execTable tbody tr td.exec-sc-2,
+            #execTable tbody tr td.exec-sc-3,
+            #execTable tbody tr td.exec-sc-4 { background: #ffffff; }
+            #execTable tbody tr td.exec-sc-5 { background: #fffbeb; border-left: 2px solid #fcd34d; }
+            #execTable tbody tr:hover td.exec-sc-1,
+            #execTable tbody tr:hover td.exec-sc-2,
+            #execTable tbody tr:hover td.exec-sc-3,
+            #execTable tbody tr:hover td.exec-sc-4 { background: #f9fafb; }
+            #execTable tbody tr:hover td.exec-sc-5 { background: #fef3c7; }
+        }
         .exec-table-wrapper { max-height: 74vh; overflow-y: auto; overflow-x: auto; }
         
         .status-badge {
@@ -502,6 +504,11 @@
             <li class="nav-item">
                 <button class="nav-link" data-tab="my_team" onclick="switchTab('my_team')">
                     <i class="fas fa-users"></i> My Team
+                </button>
+            </li>
+            <li class="nav-item" id="qBonusTabLi" style="display:none;">
+                <button class="nav-link" data-tab="quarterly_bonus" onclick="switchTab('quarterly_bonus')">
+                    <i class="fas fa-hand-holding-usd"></i> Quarterly Bonus
                 </button>
             </li>
         </ul>
@@ -2123,6 +2130,109 @@
         </div>
         <!-- ═══════════════ END MY TEAM PANEL ═══════════════ -->
 
+        <!-- ═══════════════ QUARTERLY BONUS PANEL ═══════════════ -->
+        <div id="quarterlyBonusPanel" style="display:none;margin-top:12px;">
+            <div style="background:#fff;border-radius:14px;padding:16px 20px;margin-bottom:12px;box-shadow:0 1px 6px rgba(0,0,0,0.07);">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+                    <div>
+                        <span style="font-weight:700;font-size:15px;color:#1e3a5f;"><i class="fas fa-hand-holding-usd me-1" style="color:#10b981;"></i>Quarterly Bonus Calculator</span>
+                        <span id="qbEligibilityBadge" style="margin-left:8px;font-size:11px;font-weight:700;border-radius:20px;padding:2px 10px;"></span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <label style="font-size:12px;font-weight:600;color:#4b5563;margin-bottom:0;">Period:</label>
+                        <select id="qbPeriodSelect" class="form-select form-select-sm" style="width:180px;font-size:12px;" onchange="loadQuarterlyBonus()"></select>
+                        <button class="btn btn-sm btn-outline-primary" onclick="loadQuarterlyBonus()" title="Refresh"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                </div>
+
+                <div id="qbNotEligibleAlert" style="display:none;" class="alert alert-warning py-2 px-3 small mb-3">
+                    <i class="fas fa-exclamation-triangle me-1"></i> You are not currently marked as eligible for the Quarterly Bonus. Please contact HR or Management.
+                </div>
+
+                <!-- Rules and Terms Card -->
+                <div style="background:#f5f3ff; border:1px solid #ddd6fe; border-radius:12px; padding:12px 16px; margin-bottom:16px; color:#5b21b6;">
+                    <div style="font-weight:700; font-size:13px; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                        <i class="fas fa-gift text-purple-600"></i> Quarterly Bonus Structure & Incentives Terms
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; font-size:11.5px; opacity:0.9;">
+                        <div style="display:flex; align-items:flex-start; gap:6px;">
+                            <i class="fas fa-check-circle text-purple-500" style="margin-top:2px;"></i>
+                            <span><strong>Base Payout:</strong> Earn ₹150 base payout per completed solar file.</span>
+                        </div>
+                        <div style="display:flex; align-items:flex-start; gap:6px;">
+                            <i class="fas fa-rocket text-purple-500" style="margin-top:2px;"></i>
+                            <span><strong>High Performance Multiplier:</strong> Achieve 1.2x (120%) payout rate when KRA + Activity average is ≥ 80%.</span>
+                        </div>
+                        <div style="display:flex; align-items:flex-start; gap:6px;">
+                            <i class="fas fa-shield-alt text-purple-500" style="margin-top:2px;"></i>
+                            <span><strong>Low Performance Multiplier:</strong> Guaranteed 0.5x (50%) payout rate even if combined average is below 80%.</span>
+                        </div>
+                        <div style="display:flex; align-items:flex-start; gap:6px;">
+                            <i class="fas fa-bullseye text-purple-500" style="margin-top:2px;"></i>
+                            <span><strong>Eligibility Target:</strong> Meet the minimum file count target for the period to unlock bonus payouts.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats summary cards -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;" id="qbStatsGrid">
+                    <!-- Payout card -->
+                    <div style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border-radius:12px;padding:12px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+                        <div style="font-size:11px;text-transform:uppercase;opacity:0.9;font-weight:600;">Estimated Payout</div>
+                        <div style="font-size:20px;font-weight:800;margin-top:4px;" id="qbEstimatedPayout">₹0</div>
+                        <div style="font-size:10px;opacity:0.85;margin-top:2px;" id="qbMultiplierInfo">-</div>
+                    </div>
+                    <!-- Completed Files -->
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;text-align:center;">
+                        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;">Completed Files</div>
+                        <div style="font-size:20px;font-weight:800;color:#1e3a5f;margin-top:4px;" id="qbCompletedFiles">0</div>
+                        <div style="font-size:10px;color:#6b7280;margin-top:2px;" id="qbTargetInfo">Target: 0</div>
+                    </div>
+                    <!-- KRA Score -->
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;text-align:center;">
+                        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;">KRA Score</div>
+                        <div style="font-size:20px;font-weight:800;color:#2563eb;margin-top:4px;" id="qbKraScore">0%</div>
+                        <div style="font-size:10px;color:#6b7280;margin-top:2px;">Approved KRA instance rate</div>
+                    </div>
+                    <!-- Activity Score -->
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;text-align:center;">
+                        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;">Activity Score</div>
+                        <div style="font-size:20px;font-weight:800;color:#7c3aed;margin-top:4px;" id="qbActivityScore">0%</div>
+                        <div style="font-size:10px;color:#6b7280;margin-top:2px;">Time Ledger completion rate</div>
+                    </div>
+                    <!-- Combined Avg -->
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;text-align:center;">
+                        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;">Combined Average</div>
+                        <div style="font-size:20px;font-weight:800;color:#1e293b;margin-top:4px;" id="qbCombinedScore">0%</div>
+                        <div style="font-size:10px;color:#6b7280;margin-top:2px;" id="qbThresholdStatus">Threshold: 80%</div>
+                    </div>
+                </div>
+
+                <!-- Leads list -->
+                <div style="margin-top:16px;">
+                    <div style="font-weight:700;font-size:13px;color:#374151;margin-bottom:8px;"><i class="fas fa-list me-1" style="color:#6366f1;"></i>Completed Solar Files Breakdown</div>
+                    <div class="table-responsive">
+                        <table class="data-table" style="font-size:12.5px;">
+                            <thead>
+                                <tr>
+                                    <th>Client Name</th>
+                                    <th>Phone</th>
+                                    <th>Deal Value (₹)</th>
+                                    <th>Completion Date</th>
+                                    <th>Base Eligible Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="qbTableBody">
+                                <tr>
+                                    <td colspan="5" style="text-align:center;color:#9ca3af;padding:20px;">No completed files found in this period</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="/staff_sidebar.js?v=20260602c"></script>
@@ -2208,6 +2318,13 @@
                     } else if (_emp.role_code?.includes('leadership') || _emp.role_code?.includes('manager')) {
                         roleEl.className = 'user-info-role role-badge-leadership';
                     }
+                }
+
+                // Quarterly Bonus Tab Visibility Check
+                const isEligible = _emp.is_quarterly_bonus_eligible || _isKeyLeader || _rc.includes('manager') || _rc.includes('admin');
+                const qbTab = document.getElementById('qBonusTabLi');
+                if (qbTab) {
+                    qbTab.style.display = isEligible ? 'block' : 'none';
                 }
             } catch (error) {
                 console.error('Error loading user info:', error);
@@ -4776,6 +4893,9 @@
 
             // Hide my team panel unless we're on it
             if (myTeamPanel) myTeamPanel.style.display = 'none';
+            // Hide quarterly bonus panel unless we're on it
+            const qbPanel = document.getElementById('quarterlyBonusPanel');
+            if (qbPanel) qbPanel.style.display = 'none';
             // Hide executive panel unless we're on it
             if (execContent) execContent.classList.add('hidden');
 
@@ -4805,6 +4925,16 @@
                 document.getElementById('teamOverviewContent').classList.add('hidden');
                 if (myTeamPanel) myTeamPanel.style.display = '';
                 if (!_mtLastLoaded) loadMyTeamSummary();
+                return;
+            }
+
+            if (tab === 'quarterly_bonus') {
+                dayProgressPanel.style.display = 'none';
+                filterBar.style.display = 'none';
+                progressContent.classList.add('hidden');
+                document.getElementById('teamOverviewContent').classList.add('hidden');
+                if (qbPanel) qbPanel.style.display = '';
+                loadQuarterlyBonus();
                 return;
             }
 
@@ -7432,6 +7562,132 @@
             };
 
             new bootstrap.Modal(document.getElementById('dayEndReportModal')).show();
+        }
+
+        async function loadQuarterlyBonus(periodId = null) {
+            const selectEl = document.getElementById('qbPeriodSelect');
+            const targetPeriodId = periodId || (selectEl ? selectEl.value : null);
+
+            let url = '/api/v1/staff/performance/quarterly-bonus';
+            const params = [];
+            if (targetPeriodId) params.push(`period_id=${targetPeriodId}`);
+            
+            const empFilter = document.getElementById('employeeFilter');
+            if (empFilter && empFilter.value && empFilter.value !== 'all_team') {
+                params.push(`employee_id=${empFilter.value}`);
+            }
+            
+            if (params.length > 0) {
+                url += '?' + params.join('&');
+            }
+
+            try {
+                const resp = await staffFetch(url);
+                if (!resp.ok) {
+                    console.error('Failed to fetch quarterly bonus details');
+                    return;
+                }
+                const data = await resp.json();
+                
+                if (selectEl && selectEl.options.length === 0 && data.periods) {
+                    selectEl.innerHTML = data.periods.map(p => 
+                        `<option value="${p.id}">${p.period_name}</option>`
+                    ).join('');
+                }
+                if (selectEl) {
+                    selectEl.value = data.period.id;
+                }
+
+                const badge = document.getElementById('qbEligibilityBadge');
+                const alertEl = document.getElementById('qbNotEligibleAlert');
+                if (badge) {
+                    if (data.eligible) {
+                        badge.textContent = 'Eligible';
+                        badge.className = '';
+                        badge.style.background = '#d1fae5';
+                        badge.style.color = '#065f46';
+                        if (alertEl) alertEl.style.display = 'none';
+                    } else {
+                        badge.textContent = 'Not Eligible';
+                        badge.className = '';
+                        badge.style.background = '#fee2e2';
+                        badge.style.color = '#991b1b';
+                        if (alertEl) alertEl.style.display = 'block';
+                    }
+                }
+
+                if (!data.stats) {
+                    document.getElementById('qbTableBody').innerHTML = `
+                        <tr>
+                            <td colspan="5" style="text-align:center;color:#9ca3af;padding:20px;">No active bonus stats for this period</td>
+                        </tr>`;
+                    return;
+                }
+
+                const stats = data.stats;
+                const period = data.period;
+
+                const payEl = document.getElementById('qbEstimatedPayout');
+                if (payEl) payEl.textContent = '₹' + Math.round(stats.estimated_payout).toLocaleString('en-IN');
+
+                const multEl = document.getElementById('qbMultiplierInfo');
+                if (multEl) {
+                    if (stats.target_met) {
+                        multEl.textContent = `Multiplier: ${Math.round(stats.multiplier * 100)}% (₹${Math.round(period.base_bonus_per_file * stats.multiplier)}/file)`;
+                    } else {
+                        multEl.textContent = `Target not met (Base: ₹${period.base_bonus_per_file}/file)`;
+                    }
+                }
+
+                const compEl = document.getElementById('qbCompletedFiles');
+                if (compEl) compEl.textContent = stats.completed_files;
+
+                const targetEl = document.getElementById('qbTargetInfo');
+                if (targetEl) targetEl.textContent = `Target: ${stats.target_files} completed files (₹${period.base_bonus_per_file}/file base)`;
+
+                const kraEl = document.getElementById('qbKraScore');
+                if (kraEl) kraEl.textContent = stats.kra_score + '%';
+
+                const actEl = document.getElementById('qbActivityScore');
+                if (actEl) actEl.textContent = stats.activity_score + '%';
+
+                const combEl = document.getElementById('qbCombinedScore');
+                if (combEl) combEl.textContent = stats.combined_score + '%';
+
+                const threshEl = document.getElementById('qbThresholdStatus');
+                if (threshEl) {
+                    threshEl.textContent = `Threshold: ${period.kra_activity_threshold}%`;
+                    if (stats.combined_score >= period.kra_activity_threshold) {
+                        threshEl.style.color = '#10b981';
+                        threshEl.innerHTML = `Threshold: ${period.kra_activity_threshold}% <i class="fas fa-check-circle ms-1"></i>`;
+                    } else {
+                        threshEl.style.color = '#ef4444';
+                        threshEl.innerHTML = `Threshold: ${period.kra_activity_threshold}% <i class="fas fa-times-circle ms-1"></i>`;
+                    }
+                }
+
+                const tbody = document.getElementById('qbTableBody');
+                if (tbody) {
+                    if (stats.leads && stats.leads.length > 0) {
+                        tbody.innerHTML = stats.leads.map(lead => `
+                            <tr>
+                                <td><span style="font-weight:600;color:#1e3a5f;">${lead.name}</span></td>
+                                <td>${lead.phone || '—'}</td>
+                                <td>₹${Math.round(lead.deal_value).toLocaleString('en-IN')}</td>
+                                <td>${lead.completed_at ? lead.completed_at.split('T')[0] : '—'}</td>
+                                <td>₹${period.base_bonus_per_file}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="5" style="text-align:center;color:#9ca3af;padding:20px;">No completed files found in this period</td>
+                            </tr>`;
+                    }
+                }
+            } catch (err) {
+                console.error('Error loading quarterly bonus details:', err);
+            }
         }
 
     </script>

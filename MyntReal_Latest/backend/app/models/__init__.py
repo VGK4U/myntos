@@ -156,6 +156,7 @@ from app.models.marketplace import MarketspareItem, MarketplaceSyncLog, Marketpl
 
 # Recharge & Bill Payment System (A1Topup + Razorpay)
 from app.models.recharge import RechargeTransaction
+from app.models.staff_bonus_config import StaffQuarterlyBonusConfig
 
 # Staff Payroll System Models (DC Protocol Compliant - Jan 07, 2026)
 from app.models.staff_payroll import (
@@ -451,6 +452,7 @@ __all__ = [
     
     # Recharge & Bill Payment System
     "RechargeTransaction",
+    "StaffQuarterlyBonusConfig",
     "CommunityService",
     "CommunityRegistration",
     "CommunityCommission",

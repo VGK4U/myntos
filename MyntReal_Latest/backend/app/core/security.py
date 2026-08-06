@@ -618,15 +618,20 @@ async def get_current_user_hybrid_with_partner(
     import logging
     logger = logging.getLogger(__name__)
     
-    # Try partner token from Authorization header first
+    # Try partner token from Authorization header or session cookies
     auth_header = request.headers.get("Authorization")
+    token = None
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
+    else:
+        token = request.cookies.get("session_token") or request.cookies.get("session")
+        
+    if token:
         try:
             payload = SecurityManager.verify_token(token)
             if payload and payload.get("sub"):
                 # Check if this is a partner token
-                if payload.get("user_type") == "partner" or payload.get("partner_code"):
+                if payload.get("user_type") in ("partner", "vgk_member") or payload.get("partner_code"):
                     partner = None
                     partner_id = payload.get("sub") or payload.get("partner_id")
                     partner_code = payload.get("partner_code")

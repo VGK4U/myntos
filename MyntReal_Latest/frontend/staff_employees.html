@@ -712,6 +712,20 @@
                                 </small>
                             </div>
                             
+                            <!-- Quarterly Bonus Eligibility -->
+                            <div class="col-12 mt-3" id="quarterlyBonusSection">
+                                <hr class="my-2">
+                                <div class="form-check form-switch d-flex align-items-center gap-2">
+                                    <input class="form-check-input" type="checkbox" id="quarterlyBonusEligible" role="switch">
+                                    <label class="form-check-label" for="quarterlyBonusEligible">
+                                        <i class="fas fa-hand-holding-usd me-1"></i><strong>Quarterly Bonus Eligible</strong>
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-1">
+                                    When enabled, this employee will be eligible to participate in the dynamic Quarterly Bonus structure based on completed solar files.
+                                </small>
+                            </div>
+                            
                             <!-- DC Protocol (Mar 2026): Team Tag Assignment -->
                             <div class="col-12 mt-3" id="teamTagSection">
                                 <hr class="my-2">
@@ -1966,6 +1980,7 @@
             document.getElementById('staffType').disabled = false;  // DC: Enable for new employees
             document.getElementById('freelancerAccessMode').value = 'default';
             document.getElementById('freelancerAccessContainer').style.display = 'none';
+            document.getElementById('quarterlyBonusEligible').checked = false;
             document.getElementById('reportingManagerId').value = '';
             document.getElementById('baseCompanyId').value = '';  // DC Protocol (Dec 15, 2025)
             
@@ -2064,6 +2079,7 @@
             document.getElementById('probationExtensionCount').value = emp.probation_extension_count || 0;
             document.getElementById('probationNotes').value = emp.probation_notes || '';
             document.getElementById('callTrackingEnabled').checked = emp.call_tracking_enabled || false;
+            document.getElementById('quarterlyBonusEligible').checked = emp.is_quarterly_bonus_eligible || false;
             document.getElementById('teamTag').value = emp.team_tag || '';
             
             // DC Protocol (Dec 15, 2025): Load companies and set employee's current selections
@@ -2148,6 +2164,7 @@
                 confirmation_date: document.getElementById('confirmationDate').value || null,
                 probation_notes: document.getElementById('probationNotes').value || null,
                 call_tracking_enabled: document.getElementById('callTrackingEnabled').checked,
+                is_quarterly_bonus_eligible: document.getElementById('quarterlyBonusEligible').checked,
                 team_tag: document.getElementById('teamTag').value || null,
                 // [DC-PARTNER-CONTACTS-001] Linked partner showroom for dual portal login
                 linked_partner_id: document.getElementById('linkedPartnerId').value ? parseInt(document.getElementById('linkedPartnerId').value) : null,

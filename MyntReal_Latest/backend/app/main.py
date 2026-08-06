@@ -3975,6 +3975,89 @@ def fix_marketplace_image_urls():
         print(f"[DC-IMG-FIX] Could not fix marketplace image URLs: {e}", flush=True)
 
 
+def add_quarterly_bonus_migration():
+    """
+    DC Protocol Aug 2026: Add quarterly bonus tables and columns.
+    Creates staff_quarterly_bonus_configs table and adds is_quarterly_bonus_eligible column to staff_employees.
+    Pre-sets default eligible employees (MR10016, MR10025, MR10018).
+    Seeds default configurations:
+      - Aug-Sep 2026: target 50
+      - Q4 2026: target 100
+    """
+    from sqlalchemy import text
+    try:
+        with engine.connect() as conn:
+            # 1. Create table staff_quarterly_bonus_configs
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS staff_quarterly_bonus_configs (
+                    id SERIAL PRIMARY KEY,
+                    period_name VARCHAR(64) UNIQUE NOT NULL,
+                    start_date DATE NOT NULL,
+                    end_date DATE NOT NULL,
+                    min_target_files INTEGER NOT NULL DEFAULT 50,
+                    base_bonus_per_file NUMERIC(10, 2) NOT NULL DEFAULT 150.00,
+                    high_performance_multiplier NUMERIC(5, 2) NOT NULL DEFAULT 1.20,
+                    low_performance_multiplier NUMERIC(5, 2) NOT NULL DEFAULT 0.50,
+                    kra_activity_threshold_pct NUMERIC(5, 2) NOT NULL DEFAULT 80.00,
+                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_staff_qbonus_cfg_dates ON staff_quarterly_bonus_configs(start_date, end_date)"))
+            
+            # 2. Add is_quarterly_bonus_eligible to staff_employees
+            try:
+                exists = conn.execute(text(
+                    "SELECT 1 FROM information_schema.columns "
+                    "WHERE table_name='staff_employees' AND column_name='is_quarterly_bonus_eligible'"
+                )).fetchone()
+                if not exists:
+                    conn.execute(text("ALTER TABLE staff_employees ADD COLUMN is_quarterly_bonus_eligible BOOLEAN NOT NULL DEFAULT FALSE"))
+                    print("[DC-QBONUS] Added is_quarterly_bonus_eligible column to staff_employees", flush=True)
+            except Exception as ce:
+                print(f"[DC-QBONUS] Column check/add failed: {ce}", flush=True)
+            
+            # 3. Seed default configurations
+            exists_cfg1 = conn.execute(text(
+                "SELECT 1 FROM staff_quarterly_bonus_configs WHERE period_name='Aug-Sep 2026'"
+            )).fetchone()
+            if not exists_cfg1:
+                conn.execute(text("""
+                    INSERT INTO staff_quarterly_bonus_configs 
+                        (period_name, start_date, end_date, min_target_files, base_bonus_per_file, 
+                         high_performance_multiplier, low_performance_multiplier, kra_activity_threshold_pct, is_active)
+                    VALUES 
+                        ('Aug-Sep 2026', '2026-08-01', '2026-09-30', 50, 150.00, 1.20, 0.50, 80.00, TRUE)
+                """))
+                print("[DC-QBONUS] Seeded Aug-Sep 2026 bonus configuration", flush=True)
+
+            exists_cfg2 = conn.execute(text(
+                "SELECT 1 FROM staff_quarterly_bonus_configs WHERE period_name='Q4 2026'"
+            )).fetchone()
+            if not exists_cfg2:
+                conn.execute(text("""
+                    INSERT INTO staff_quarterly_bonus_configs 
+                        (period_name, start_date, end_date, min_target_files, base_bonus_per_file, 
+                         high_performance_multiplier, low_performance_multiplier, kra_activity_threshold_pct, is_active)
+                    VALUES 
+                        ('Q4 2026', '2026-10-01', '2026-12-31', 100, 150.00, 1.20, 0.50, 80.00, TRUE)
+                """))
+                print("[DC-QBONUS] Seeded Q4 2026 bonus configuration", flush=True)
+
+            # 4. Seed default eligible employees (MR10016, MR10025, MR10018)
+            conn.execute(text("""
+                UPDATE staff_employees 
+                SET is_quarterly_bonus_eligible = TRUE 
+                WHERE emp_code IN ('MR10016', 'MR10025', 'MR10018')
+            """))
+            print("[DC-QBONUS] Seeded default quarterly bonus eligible employees", flush=True)
+            
+            conn.commit()
+    except Exception as e:
+        print(f"[DC-QBONUS] Migration failed: {e}", flush=True)
+
+
 def create_promo_tables():
     """DC Protocol Apr 2026: Promoter/Influencer Referral System tables. Additive only."""
     from sqlalchemy import text
@@ -4538,6 +4621,7 @@ def _startup_worker():
     _safe_run(add_network_assignment_columns)
     _safe_run(migrate_legacy_wallet_balances)
     _safe_run(create_promo_tables)
+    _safe_run(add_quarterly_bonus_migration)
     _safe_run(create_vgk_promo_tables)
     _safe_run(fix_vgk_promo_reason_code)
     _safe_run(add_cp_designation_schema)
@@ -15921,6 +16005,18 @@ async def health_check():
         "schema": schema_status,
         "missing_columns": missing_columns if missing_columns else None
     }
+
+
+@app.get("/mobile.apk", include_in_schema=False)
+@app.get("/download/mobile.apk", include_in_schema=False)
+@app.get("/download-app", include_in_schema=False)
+@app.get("/download/apk", include_in_schema=False)
+@app.get("/MyntReal.apk", include_in_schema=False)
+@app.get("/public/MyntReal.apk", include_in_schema=False)
+@app.get("/api/v1/app/download", include_in_schema=False)
+async def redirect_mobile_apk():
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="https://www.vgk4u.com/mobile.apk", status_code=302)
 
 # Mount static files for uploads (payment proofs, documents, etc.)
 _WORKSPACE_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

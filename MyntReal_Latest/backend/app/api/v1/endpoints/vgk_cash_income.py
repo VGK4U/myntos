@@ -940,22 +940,27 @@ def unified_list(
     elif hasattr(_dept_raw, 'name'):
         _dept_raw = _dept_raw.name
     dept = str(_dept_raw or '').lower()
-    can_sales    = is_super or 'sales' in dept or 'crm' in dept
-    can_accounts = is_super or 'account' in dept or 'finance' in dept
-    can_pay      = is_super or 'finance' in dept or 'bank' in dept or 'account' in dept
+    _role_raw = getattr(current_employee, 'role_code', '') or ''
+    role = str(_role_raw or '').lower()
+    _emp_code = (getattr(current_employee, 'emp_code', '') or '').strip()
+
+    is_privileged = is_super or _emp_code in ('MR10001', 'MR10025') or role in ('key_leadership', 'ea', 'executive_admin', 'admin', 'vgk4u')
+    can_sales    = is_privileged or 'sales' in dept or 'crm' in dept
+    can_accounts = is_privileged or 'account' in dept or 'finance' in dept or 'store' in dept
+    can_pay      = is_privileged or 'finance' in dept or 'bank' in dept or 'account' in dept or 'store' in dept
 
     def _actions_for(e):
         # DC-NO-RELEASE-001: Release button removed. All income flows PENDING->Stage1->Stage2(Paid).
         acts = []
-        if e.status == 'DRAFT' and (can_sales or is_super):
+        if e.status == 'DRAFT' and (can_sales or is_privileged):
             acts += ['confirm', 'reject']
-        if e.status in ('PENDING', 'RELEASED') and (can_accounts or is_super):
+        if e.status in ('PENDING', 'RELEASED') and (can_accounts or is_privileged):
             # RELEASED kept as backward-compat alias for PENDING (DB entries pre-migration)
             acts += ['stage1_approve', 'reject']
         # DC-VGK-STAGE1-001: Stage 1 is MANDATORY for ALL users — no skip, even for super staff.
-        if e.status == 'STAGE1_APPROVED' and (can_pay or is_super):
+        if e.status == 'STAGE1_APPROVED' and (can_pay or is_privileged):
             acts += ['mark_paid', 'reject']
-        if is_super:
+        if is_privileged:
             acts = list(dict.fromkeys(acts))
             valid = {
                 'DRAFT':          ['confirm', 'stage1_approve', 'reject'],

@@ -883,7 +883,7 @@ def initiate_wallet_withdrawal(
 # Wallet behaviour unchanged. Ledger always posted in parallel.
 
 SUPER_STAFF_TYPES = {'VGK4U', 'VGK4U Supreme', 'VGK4U_EA', 'VGK4U_SUPREME'}
-SUPER_EMP_CODES   = {'MR10001'}
+SUPER_EMP_CODES   = {'MR10001', 'MR10025'}
 
 
 def is_super_skip_user(staff) -> bool:
@@ -892,7 +892,9 @@ def is_super_skip_user(staff) -> bool:
         return False
     st = (getattr(staff, 'staff_type', '') or '').strip()
     ec = (getattr(staff, 'emp_code', '') or '').strip()
-    return st in SUPER_STAFF_TYPES or ec in SUPER_EMP_CODES
+    rc = (getattr(staff, 'role_code', '') or '').strip().lower()
+    return st in SUPER_STAFF_TYPES or ec in SUPER_EMP_CODES or rc in ('key_leadership', 'ea', 'executive_admin')
+
 
 
 def _next_voucher_number(db: Session, company_id: int) -> str:

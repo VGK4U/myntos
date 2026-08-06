@@ -4046,7 +4046,7 @@ class ExpenseMainCategoryService:
     @staticmethod
     def get_main_category(db: Session, category_id: int, employee: StaffEmployee) -> ExpenseMainCategory:
         """Get a main category by ID"""
-        validate_accounts_access(employee)
+        validate_accounts_read_access(employee)
         
         category = db.query(ExpenseMainCategory).filter(
             ExpenseMainCategory.id == category_id
@@ -4068,7 +4068,7 @@ class ExpenseMainCategoryService:
         search: Optional[str] = None
     ) -> Tuple[List[ExpenseMainCategory], int]:
         """List main categories with optional sub-categories"""
-        validate_accounts_access(employee)
+        validate_accounts_read_access(employee)
         
         query = db.query(ExpenseMainCategory)
         
@@ -4250,7 +4250,7 @@ class ExpenseSubCategoryService:
     @staticmethod
     def get_sub_category(db: Session, sub_category_id: int, employee: StaffEmployee) -> ExpenseSubCategory:
         """Get a sub category by ID"""
-        validate_accounts_access(employee)
+        validate_accounts_read_access(employee)
         
         sub_cat = db.query(ExpenseSubCategory).filter(
             ExpenseSubCategory.id == sub_category_id
@@ -4272,7 +4272,7 @@ class ExpenseSubCategoryService:
         search: Optional[str] = None
     ) -> Tuple[List[ExpenseSubCategory], int]:
         """List sub categories with filtering"""
-        validate_accounts_access(employee)
+        validate_accounts_read_access(employee)
         
         query = db.query(ExpenseSubCategory)
         

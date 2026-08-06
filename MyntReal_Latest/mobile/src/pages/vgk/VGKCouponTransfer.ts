@@ -39,7 +39,7 @@ export class VGKCouponTransferPage {
         </div>
         <iframe
           id="vgk4u-coupon-transfer-frame"
-          src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/coupon-transfer"
+          src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/coupon-transfer?token=${encodeURIComponent(localStorage.getItem("auth_token") || "")}"
           style="width:100%;height:calc(100vh - 200px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
           loading="lazy"
           title="Transfer Coupons (VGK4U)"

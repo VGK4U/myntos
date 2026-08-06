@@ -1524,6 +1524,11 @@ def get_incentive_achievements(
     """
     import calendar as _cal
 
+    if employee_id is not None and not isinstance(employee_id, (str, int)):
+        employee_id = None
+    elif employee_id == '':
+        employee_id = None
+
     all_companies = not company_id or company_id == 0
     cfg_company_id = 1 if all_companies else company_id
 
@@ -1949,29 +1954,39 @@ def get_incentive_achievements(
     if show_all or (not employee_id and not emp_ids_from_leads):
         # Fetch ALL active staff employees (filtered by company if specified)
         all_emp_q = (
-            "SELECT id, emp_code, COALESCE(full_name, emp_code) as name, department_id "
-            "FROM staff_employees WHERE status = 'active'"
-            + (" AND base_company_id = :co" if not all_companies else "")
-            + " ORDER BY full_name, emp_code"
+            "SELECT e.id, e.emp_code, COALESCE(e.full_name, e.emp_code) as name, e.department_id, "
+            "COALESCE(d.name, 'Unassigned') as department_name "
+            "FROM staff_employees e "
+            "LEFT JOIN staff_departments d ON d.id = e.department_id "
+            "WHERE e.status = 'active'"
+            + (" AND e.base_company_id = :co" if not all_companies else "")
+            + " ORDER BY e.full_name, e.emp_code"
         )
         all_emp_params: dict = {}
         if not all_companies:
             all_emp_params['co'] = company_id
         all_emps = db.execute(text(all_emp_q), all_emp_params).fetchall()
-        emp_map = {str(r[0]): {'emp_code': r[1], 'name': r[2], 'dept_id': r[3]} for r in all_emps}
+        emp_map = {str(r[0]): {'emp_code': r[1], 'name': r[2], 'dept_id': r[3], 'department': r[4]} for r in all_emps}
         # Ensure every employee exists in emp_data (with empty slug data)
         for eid in emp_map:
             if eid not in emp_data:
                 emp_data[eid] = {}
     else:
-        # Only resolve names for employees found in lead data
-        int_ids = [int(x) for x in emp_ids_from_leads if str(x).isdigit()]
+        # Resolve names for employees found in lead data AND requested employee_id if specified
+        requested_eid_int = [int(employee_id)] if (employee_id and str(employee_id).isdigit()) else []
+        int_ids = list(set([int(x) for x in emp_ids_from_leads if str(x).isdigit()] + requested_eid_int))
         if int_ids:
             emps = db.execute(text(
-                "SELECT id, emp_code, COALESCE(full_name, emp_code) as name, department_id "
-                "FROM staff_employees WHERE id = ANY(:ids)"
+                "SELECT e.id, e.emp_code, COALESCE(e.full_name, e.emp_code) as name, e.department_id, "
+                "COALESCE(d.name, 'Unassigned') as department_name "
+                "FROM staff_employees e "
+                "LEFT JOIN staff_departments d ON d.id = e.department_id "
+                "WHERE e.id = ANY(:ids)"
             ), {'ids': int_ids}).fetchall()
-            emp_map = {str(r[0]): {'emp_code': r[1], 'name': r[2], 'dept_id': r[3]} for r in emps}
+            emp_map = {str(r[0]): {'emp_code': r[1], 'name': r[2], 'dept_id': r[3], 'department': r[4]} for r in emps}
+            for eid in emp_map:
+                if eid not in emp_data:
+                    emp_data[eid] = {}
 
     # DC-INCENTIVE-EMP-TARGETS-001: Load per-employee incentive min-targets for this month.
     # Keyed as {emp_id_str: {category_slug: min_target_float}}. Default = 2.0 when not set.
@@ -2142,7 +2157,8 @@ def get_incentive_achievements(
 
         return {
             'employee_id': emp_id, 'emp_code': emp_info['emp_code'], 'name': emp_info['name'],
-            'dept_id': emp_info['dept_id'], 'categories': cat_results,
+            'dept_id': emp_info['dept_id'], 'department': emp_info.get('department', 'Unassigned'),
+            'categories': cat_results,
             'raw_total_incentive': round(total_earned, 2),
             'kra_total': kra_total,
             'kra_completed': kra_completed,
@@ -3085,10 +3101,13 @@ def get_incentive_employee_targets(
     all_companies = (company_id == 0)
     # Build employee query — skip company filter when "All Companies" selected
     emp_q = (
-        "SELECT id, COALESCE(full_name, emp_code) AS name, emp_code, department_id "
-        "FROM staff_employees WHERE status='active'"
-        + ("" if all_companies else " AND base_company_id=:cid")
-        + " ORDER BY full_name, emp_code"
+        "SELECT e.id, COALESCE(e.full_name, e.emp_code) AS name, e.emp_code, e.department_id, "
+        "COALESCE(d.name, 'Unassigned') AS department_name "
+        "FROM staff_employees e "
+        "LEFT JOIN staff_departments d ON d.id = e.department_id "
+        "WHERE e.status='active'"
+        + ("" if all_companies else " AND e.base_company_id=:cid")
+        + " ORDER BY e.full_name, e.emp_code"
     )
     emp_params: dict = {} if all_companies else {'cid': company_id}
     emps = db.execute(text(emp_q), emp_params).fetchall()
@@ -3155,7 +3174,7 @@ def get_incentive_employee_targets(
 
     return {
         'success': True,
-        'employees': [{'id': r[0], 'name': r[1], 'emp_code': r[2]} for r in emps],
+        'employees': [{'id': r[0], 'name': r[1], 'emp_code': r[2], 'department_id': r[3], 'department': r[4]} for r in emps],
         'targets':   final_targets,
     }
 

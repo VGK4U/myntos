@@ -198,6 +198,9 @@ class StaffEmployee(Base):
     # If True, staff's call history will be synced and tracked
     # If False, call log sync is skipped for this employee
     call_tracking_enabled = Column(Boolean, default=False, nullable=False, index=True)
+    
+    # Quarterly Bonus Eligibility
+    is_quarterly_bonus_eligible = Column(Boolean, default=False, nullable=False)
 
     # DC Protocol (Mar 2026): Team Tag — groups employee into Team A/B/C for compliance and reporting
     # Values: team_a, team_b, team_c, None (unassigned)
@@ -329,6 +332,7 @@ class StaffEmployee(Base):
             "probation_extension_count": self.probation_extension_count,
             "probation_notes": self.probation_notes,
             "call_tracking_enabled": self.call_tracking_enabled,
+            "is_quarterly_bonus_eligible": getattr(self, 'is_quarterly_bonus_eligible', False),
             "team_tag": self.team_tag,
             # [DC-PARTNER-CONTACTS-001] Linked partner showroom for dual portal login
             "linked_partner_id": getattr(self, 'linked_partner_id', None),

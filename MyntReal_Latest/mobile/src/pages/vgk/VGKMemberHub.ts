@@ -8,6 +8,8 @@
 
 import { PageHeader } from '../../components/PageHeader';
 import { routerService } from '../../services/router.service';
+import { authService } from '../../services/auth.service';
+import { APP_CONFIG } from '../../config/app.config';
 
 const NATIVE_ROUTES: Record<string, string> = {
   'birthdays':          'vgk-birthdays',
@@ -66,68 +68,123 @@ export class VGKMemberHubPage {
   }
 
   async init(): Promise<void> {
-    this.container.innerHTML = await this.render();
-    await this.afterRender();
+    const params = routerService.getRouteParams();
+    const activeTab = params.tab || 'earnings';
+    
+    const tabTitles: Record<string, string> = {
+      earnings: 'VGK4U Member Hub',
+      profile: 'Profile',
+      mycard: 'My Card & Progress',
+      addmember: 'Add Channel Partner',
+      coupons: 'Coupons',
+      network: 'Team',
+      points: 'Points Balance',
+      ledger: 'My Earnings',
+      leads: 'My Leads',
+      tickets: 'Service Tickets',
+      bonanza: 'Bonanza Rewards',
+      vendors: 'Vendor Shops',
+      media: 'Media Hub',
+      orders: 'Orders'
+    };
+    const title = tabTitles[activeTab] || 'VGK4U Member Hub';
+
+    const authState = authService.getAuthState();
+    const user = authState.user || {};
+    const name = user.name || user.partner_name || 'Member';
+    const code = user.partner_code || '';
+    const subtitle = code ? `${name} (${code})` : name;
+
+    const iframe = document.getElementById('vgk4u-dashboard-frame') as HTMLIFrameElement;
+    if (iframe && iframe.contentWindow) {
+      // Iframe already exists! Just switch the tab inside it and update header titles
+      iframe.contentWindow.postMessage({ type: 'vgk_switch_tab', tab: activeTab }, '*');
+      
+      const titleEl = document.querySelector('.header-title');
+      if (titleEl) titleEl.textContent = title;
+      
+      const subtitleEl = document.querySelector('.header-subtitle');
+      if (subtitleEl) subtitleEl.textContent = subtitle;
+      
+      localStorage.setItem('vgk_active_tab', activeTab);
+    } else {
+      // First load: render full page layout
+      this.container.innerHTML = await this.render();
+      await this.afterRender();
+    }
   }
 
   async render(): Promise<string> {
-    const cards = MODULES.map(m => `
-      <div class="vgk4u-card" data-slug="${m.slug}" style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid ${m.color};border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer">
-        <div style="font-size:24px;width:34px;text-align:center">${m.icon}</div>
-        <div style="flex:1;font-weight:700;color:#0f172a;font-size:14px">${m.label}</div>
-        <div style="color:#94a3b8">›</div>
-      </div>
-    `).join('');
+    const authState = authService.getAuthState();
+    const user = authState.user || {};
+    const name = user.name || user.partner_name || 'Member';
+    const code = user.partner_code || '';
+    const subtitle = code ? `${name} (${code})` : name;
+
+    const params = routerService.getRouteParams();
+    const activeTab = params.tab || 'earnings';
+    
+    const tabTitles: Record<string, string> = {
+      earnings: 'VGK4U Member Hub',
+      profile: 'Profile',
+      mycard: 'My Card & Progress',
+      addmember: 'Add Channel Partner',
+      coupons: 'Coupons',
+      network: 'Team',
+      points: 'Points Balance',
+      ledger: 'My Earnings',
+      leads: 'My Leads',
+      tickets: 'Service Tickets',
+      bonanza: 'Bonanza Rewards',
+      vendors: 'Vendor Shops',
+      media: 'Media Hub',
+      orders: 'Orders'
+    };
+    const title = tabTitles[activeTab] || 'VGK4U Member Hub';
 
     return `
-      ${PageHeader.render({ title: 'VGK4U Member Hub', showBack: true })}
-      <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
-        <div style="background:#e0f2fe;border:1px solid #bae6fd;border-radius:10px;padding:10px 12px;font-size:12px;color:#0c4a6e;margin-bottom:14px">
-          <strong>Phase 1 · Read-Only.</strong> All data is fetched via the existing endpoints with <code>?audience=vgk4u</code>.
-        </div>
-
-        <!-- DC Protocol AI_KB_COMPANY_001 — Mobile parity: verified registration block -->
-        <div style="background:#f0f4ff;border:1.5px solid #c7d7fd;border-radius:12px;padding:14px 12px;margin-bottom:14px">
-          <div style="font-size:13px;font-weight:700;color:#1e3a8a;margin-bottom:10px;display:flex;align-items:center;gap:6px">
-            🏛️ Mynt Real LLP — Verified Registrations
-          </div>
-          <div style="display:flex;flex-direction:column;gap:6px">
-            <div style="background:#fff;border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
-              <span style="font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.05em">MCA (LLPIN)</span>
-              <span style="font-size:13px;font-weight:700;color:#111827">ACT-5518 · Active</span>
-            </div>
-            <div style="background:#fff;border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
-              <span style="font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.05em">GSTIN</span>
-              <span style="font-size:13px;font-weight:700;color:#111827">37ACFM9S86Q1Z0</span>
-            </div>
-            <div style="background:#fff;border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
-              <span style="font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.05em">ISO</span>
-              <span style="font-size:13px;font-weight:700;color:#111827">9001:2015 · E20260346985</span>
-            </div>
-          </div>
-          <div style="font-size:10px;color:#6b7280;margin-top:8px;text-align:center">
-            Verify: mca.gov.in (ACT-5518) · gst.gov.in (37ACFM9S86Q1Z0)
-          </div>
-        </div>
-
-        ${cards}
+      ${PageHeader.render({ title, showBack: false, showLogout: true, subtitle, showMenu: true })}
+      <div style="background:#f6f9fc;min-height:calc(100vh - 64px)">
+        <iframe
+          id="vgk4u-dashboard-frame"
+          src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/dashboard?embed=true&tab=${activeTab}&token=${encodeURIComponent(localStorage.getItem("auth_token") || "")}"
+          style="width:100%;height:calc(100vh - 64px);border:0;background:#f6f9fc;"
+          loading="lazy"
+          title="VGK4U Dashboard"
+        ></iframe>
       </div>
     `;
   }
 
   async afterRender(): Promise<void> {
-    document.querySelectorAll<HTMLElement>('.vgk4u-card').forEach(el => {
-      el.addEventListener('click', () => {
-        const slug = el.getAttribute('data-slug');
-        if (!slug) return;
-        const nativeRoute = NATIVE_ROUTES[slug];
-        if (nativeRoute) {
-          routerService.navigate(nativeRoute as Parameters<typeof routerService.navigate>[0]);
-        } else {
-          window.location.href = `/vgk/${slug}`;
-        }
-      });
-    });
+    const authState = authService.getAuthState();
+    const user = authState.user || {};
+    const name = user.name || user.partner_name || 'Member';
+    const code = user.partner_code || '';
+    const subtitle = code ? `${name} (${code})` : name;
+
+    const params = routerService.getRouteParams();
+    const activeTab = params.tab || 'earnings';
+    
+    const tabTitles: Record<string, string> = {
+      earnings: 'VGK4U Member Hub',
+      profile: 'Profile',
+      mycard: 'My Card & Progress',
+      addmember: 'Add Channel Partner',
+      coupons: 'Coupons',
+      network: 'Team',
+      points: 'Points Balance',
+      ledger: 'My Earnings',
+      leads: 'My Leads',
+      tickets: 'Service Tickets',
+      bonanza: 'Bonanza Rewards',
+      vendors: 'Vendor Shops',
+      media: 'Media Hub',
+      orders: 'Orders'
+    };
+    const title = tabTitles[activeTab] || 'VGK4U Member Hub';
+
+    PageHeader.attachListeners({ title, showBack: false, showLogout: true, subtitle, showMenu: true });
   }
 }
 

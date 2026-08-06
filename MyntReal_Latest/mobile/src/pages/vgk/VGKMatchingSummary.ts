@@ -42,7 +42,7 @@
           </div>
           <iframe
             id="vgk4u-matching-summary-frame"
-            src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/matching-summary"
+            src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/matching-summary?token=${encodeURIComponent(localStorage.getItem("auth_token") || "")}"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="Matching (L2) (VGK4U)"

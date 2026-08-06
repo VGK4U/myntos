@@ -1,9 +1,95 @@
 import { routerService, PageRoute } from '../services/router.service';
+import { portalService } from '../services/portal.service';
+import { authService } from '../services/auth.service';
+import { apiService } from '../services/api.service';
+
+const ROUTE_PATH_MAP: Record<string, string> = {
+  '/staff/dashboard': 'dashboard',
+  '/staff/my-attendance': 'attendance',
+  '/staff/my-leaves': 'leaves',
+  '/staff/leave-approvals': 'staff-leave-approvals',
+  '/staff/attendance-records': 'team-attendance',
+  '/staff/attendance-sheet': 'staff-attendance-sheet',
+  '/staff/attendance-reports': 'staff-attendance-reports',
+  '/staff/attendance-exceptions': 'staff-attendance-exceptions',
+  '/staff/attendance-computation': 'staff-attendance-computation',
+  
+  '/staff/tasks/assigned-by-me': 'tasks-assigned',
+  '/staff/tasks/assigned-by-me-v2': 'tasks-assigned',
+  '/staff/tasks/assigned-to-me': 'tasks-received',
+  '/staff/tasks/team-activities': 'staff-team-activities',
+  '/staff/tasks/task-tracker': 'staff-task-tracker',
+  '/staff/tasks/task-reviews': 'staff-task-reviews',
+  '/staff/task-review': 'staff-task-reviews',
+  
+  '/staff/my-kras': 'kras',
+  '/staff/kra-templates': 'staff-kra-templates',
+  '/staff/kra-tracking-sheet': 'staff-kra-tracking',
+  '/staff/kra-review': 'staff-kra-review',
+  
+  '/staff/my-timesheet': 'timesheet',
+  '/staff/timesheet-approval': 'staff-timesheet-approval',
+  
+  '/staff/my-journeys': 'journeys',
+  '/staff/team-journeys': 'team-journeys',
+  '/staff/all-journeys': 'staff-all-journeys',
+  '/staff/vgk4u-journeys': 'staff-vgk4u-journeys',
+  
+  '/staff/my-reimbursement-claims': 'reimbursements',
+  '/staff/reimbursement-approvals': 'staff-reimbursement-approvals',
+  '/staff/accounts/my-reimbursements': 'reimbursements',
+  '/staff/accounts/reimbursement-approvals': 'staff-reimbursement-approvals',
+  '/staff/accounts/expense-entries': 'staff-expense-entries',
+  
+  '/staff/my-earnings': 'staff-my-earnings',
+  '/staff/payroll-profile': 'staff-payroll-profile',
+  '/staff/salary-slips': 'staff-salary-slips',
+  
+  '/staff/my-leads': 'staff-my-leads',
+  '/staff/leads': 'staff-leads',
+  '/staff/team-leads': 'staff-team-leads',
+  '/staff/lead-sources': 'staff-lead-sources',
+  
+  '/staff/call-tracking': 'staff-call-tracking',
+  '/staff/vendors': 'staff-vendors',
+  '/staff/zynova-real-estate': 'staff-zynova-real-estate',
+  '/staff/zynova': 'staff-zynova',
+  '/staff/zynova-insurance': 'staff-zynova-insurance',
+  '/staff/settings': 'settings',
+  '/staff/change-password': 'change-password',
+  '/staff/employees': 'staff-employees',
+  '/staff/training-videos': 'staff-training-videos',
+  '/staff/employee-directory': 'staff-directory',
+  '/staff/kyc-approvals': 'staff-kyc-approvals',
+  '/staff/manager-review': 'staff-review',
+  '/staff/auto-dialer': 'auto-dialer',
+  '/staff/call-history': 'call-history',
+  '/staff/operator-calls': 'operator-calls',
+  '/staff/day-planner': 'day-planner',
+  '/staff/tasks/day-planner': 'day-planner',
+  '/staff/service': 'staff-service',
+  '/staff/crm': 'staff-crm',
+  '/staff/crm/dashboard': 'staff-crm',
+  '/staff/crm/team-leads': 'staff-team-leads',
+  '/staff/crm/lead-sources': 'staff-lead-sources',
+  '/staff/call-management': 'staff-call-tracking',
+  '/staff/dialer': 'auto-dialer',
+  '/staff/tasks/tracker': 'staff-task-tracker',
+  '/staff/service-tickets/dashboard': 'staff-service',
+  '/staff/service-tickets/performance': 'staff-service-performance',
+  '/staff/service-tickets/procurement': 'staff-service-procurement',
+  '/staff/service-tickets/procurement-queue': 'staff-service-procurement-queue',
+  '/staff/service-tickets/raise': 'staff-tickets',
+  '/staff/service-tickets/reports': 'staff-service-reports',
+  '/staff/service-tickets/queue': 'staff-service-queue',
+  '/staff/service-center-revenue': 'staff-service-revenue',
+};
 
 interface MenuItem {
   menu_code: string;
   label: string;
   route: string;
+  tab?: string;
 }
 
 interface SubSection {
@@ -25,6 +111,23 @@ const TOP_MENU_ITEMS: MenuItem[] = [
   { menu_code: "HOME", label: "Home", route: "dashboard" },
   { menu_code: "PROGRESS_DASHBOARD", label: "Progress Dashboard", route: "progress" },
   { menu_code: "DAY_PLANNER", label: "Day Planner", route: "day-planner" }
+];
+
+const VGK_TOP_MENU_ITEMS: MenuItem[] = [
+  { menu_code: "VGK_DASHBOARD", label: `<i class="fas fa-home" style="margin-right: 8px; width: 18px; text-align: center;"></i> Dashboard`, route: "vgk-member-hub", tab: "earnings" },
+  { menu_code: "VGK_PROFILE", label: `<i class="fas fa-user" style="margin-right: 8px; width: 18px; text-align: center;"></i> Profile`, route: "vgk-member-hub", tab: "profile" },
+  { menu_code: "VGK_MYCARD", label: `<i class="fas fa-id-card" style="margin-right: 8px; width: 18px; text-align: center;"></i> My Card &amp; Progress`, route: "vgk-member-hub", tab: "mycard" },
+  { menu_code: "VGK_ADDMEMBER", label: `<i class="fas fa-user-plus" style="margin-right: 8px; width: 18px; text-align: center;"></i> Add Channel Partner`, route: "vgk-member-hub", tab: "addmember" },
+  { menu_code: "VGK_COUPONS", label: `<i class="fas fa-ticket-alt" style="margin-right: 8px; width: 18px; text-align: center;"></i> Coupons`, route: "vgk-member-hub", tab: "coupons" },
+  { menu_code: "VGK_NETWORK", label: `<i class="fas fa-sitemap" style="margin-right: 8px; width: 18px; text-align: center;"></i> Team`, route: "vgk-member-hub", tab: "network" },
+  { menu_code: "VGK_POINTS", label: `<i class="fas fa-coins" style="margin-right: 8px; width: 18px; text-align: center;"></i> Points Balance`, route: "vgk-member-hub", tab: "points" },
+  { menu_code: "VGK_LEDGER", label: `<i class="fas fa-rupee-sign" style="margin-right: 8px; width: 18px; text-align: center;"></i> My Earnings`, route: "vgk-member-hub", tab: "ledger" },
+  { menu_code: "VGK_LEADS", label: `<i class="fas fa-user-tag" style="margin-right: 8px; width: 18px; text-align: center;"></i> My Leads`, route: "vgk-member-hub", tab: "leads" },
+  { menu_code: "VGK_TICKETS", label: `<i class="fas fa-tools" style="margin-right: 8px; width: 18px; text-align: center;"></i> Service Tickets`, route: "vgk-member-hub", tab: "tickets" },
+  { menu_code: "VGK_BONANZA", label: `<i class="fas fa-trophy" style="margin-right: 8px; width: 18px; text-align: center;"></i> Bonanza Rewards`, route: "vgk-member-hub", tab: "bonanza" },
+  { menu_code: "VGK_VENDORS", label: `<i class="fas fa-store" style="margin-right: 8px; width: 18px; text-align: center;"></i> Vendor Shops`, route: "vgk-member-hub", tab: "vendors" },
+  { menu_code: "VGK_MEDIA", label: `<i class="fas fa-photo-video" style="margin-right: 8px; width: 18px; text-align: center;"></i> Media Hub`, route: "vgk-member-hub", tab: "media" },
+  { menu_code: "VGK_ORDERS", label: `<i class="fas fa-box" style="margin-right: 8px; width: 18px; text-align: center;"></i> Orders`, route: "vgk-member-hub", tab: "orders" }
 ];
 
 const MENU_MASTER: MenuSection[] = [
@@ -98,76 +201,54 @@ const MENU_MASTER: MenuSection[] = [
   {
     section_code: "ACCOUNTS_EARNINGS",
     section_label: "FINANCE & EARNINGS",
-    order: 7.5,
-    items: [
-      { menu_code: "EXPENSE_ENTRIES", label: "Expense Entries", route: "staff-expense-entries" },
-      { menu_code: "MY_EARNINGS", label: "My Earnings", route: "staff-my-earnings" },
-      { menu_code: "MY_PAYOUTS", label: "My Payouts", route: "staff-my-payouts" },
-      { menu_code: "VENDORS", label: "Vendors Master", route: "staff-vendors" }
-    ]
-  },
-  {
-    section_code: "SERVICE_TICKETS",
-    section_label: "SERVICE TICKETS",
     order: 8,
     items: [
-      { menu_code: "ST_SERVICE_QUEUE", label: "Service Queue", route: "staff-service-queue" },
-      { menu_code: "ST_DASHBOARD", label: "Dashboard", route: "staff-service" },
-      { menu_code: "ST_PERFORMANCE", label: "Performance", route: "staff-service-performance" },
-      { menu_code: "ST_PROCUREMENT", label: "Procurement", route: "staff-service-procurement" },
-      { menu_code: "ST_PROCUREMENT_QUEUE", label: "Procurement Queue", route: "staff-service-procurement-queue" },
-      { menu_code: "ST_RAISE_TICKET", label: "Raise Ticket", route: "staff-tickets" },
-      { menu_code: "ST_REPORTS", label: "Reports", route: "staff-service-reports" },
-      { menu_code: "ST_SERVICE_CENTER_REVENUE", label: "Service Center Revenue", route: "staff-service-revenue" }
+      { menu_code: "MY_EARNINGS", label: "My Earnings", route: "staff-my-incentives" },
+      { menu_code: "PAYROLL_PROFILE", label: "Payroll Profile", route: "staff-payroll-profile" },
+      { menu_code: "SALARY_SLIPS", label: "Salary Slips", route: "staff-salary-slips" }
     ]
   },
   {
-    section_code: "CRM",
+    section_code: "CRM_MODULE",
     section_label: "CRM & LEADS",
     order: 9,
     items: [
-      { menu_code: "CRM_DASHBOARD", label: "CRM Dashboard", route: "staff-crm" },
-      { menu_code: "MY_LEADS", label: "My Leads", route: "staff-leads" },
-      { menu_code: "TEAM_LEADS", label: "Team Leads", route: "staff-team-leads" },
-      { menu_code: "LEAD_SOURCES", label: "Lead Sources", route: "staff-lead-sources" },
-      { menu_code: "CALL_TRACKING_DASHBOARD", label: "Call Tracking", route: "staff-call-tracking" },
-      { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "auto-dialer" },
-      { menu_code: "OPERATOR_CALLS", label: "Operator Calls", route: "operator-calls" }
+      { menu_code: "MY_LEADS", label: "My Leads", route: "staff-my-leads" },
+      { menu_code: "LEADS_MASTER", label: "Leads Master", route: "staff-leads" },
+      { menu_code: "TEAM_LEADS", label: "Team Leads", route: "staff-team-leads" }
     ]
   },
   {
-    section_code: "LOCATION_TRACKING",
-    section_label: "LOCATION TRACKING",
+    section_code: "OPERATIONS",
+    section_label: "OPERATIONS",
     order: 10,
     items: [
-      { menu_code: "LOCATION_HISTORY", label: "My Location History", route: "location-history" },
-      { menu_code: "TEAM_LIVE_TRACKER", label: "Team Live Tracker", route: "staff-team-live-tracker" },
-      { menu_code: "ALL_LOCATION_TRACKER", label: "All Locations", route: "staff-all-location-tracker" }
-    ]
-  },
-  {
-    section_code: "OTHER",
-    section_label: "OTHER",
-    order: 11,
-    items: [
-      { menu_code: "ANNOUNCEMENTS", label: "Announcements", route: "announcements" },
-      { menu_code: "TRAINING_VIDEOS", label: "Training Videos", route: "staff-training-videos" },
-      { menu_code: "MY_KYC", label: "My KYC", route: "staff-kyc" },
-      { menu_code: "KYC_APPROVALS", label: "KYC Approvals", route: "staff-kyc-approvals" },
+      { menu_code: "CALL_TRACKING", label: "Call Tracking", route: "staff-call-tracking" },
+      { menu_code: "VENDORS", label: "Vendors", route: "staff-vendors" },
+      { menu_code: "ZYN", label: "Zynova Real Estate", route: "zynova-real-estate" },
       { menu_code: "ZYNOVA", label: "VGK4U", route: "staff-zynova" },
-      { menu_code: "SETTINGS", label: "Settings", route: "settings" }
+      { menu_code: "ZYN_INSURANCE", label: "Zynova Insurance", route: "zynova-insurance" }
     ]
   }
 ];
+
+const VGK_MENU_MASTER: MenuSection[] = [];
 
 export class SideDrawer {
   private container: HTMLElement | null = null;
   private overlay: HTMLElement | null = null;
   private isOpen = false;
   private expandedSections: Set<string> = new Set();
+  private staffMenuTree: any[] | null = null;
+  private isStaffMenuLoaded = false;
 
   constructor() {
     this.createElements();
+    
+    window.addEventListener('logout', () => {
+      this.staffMenuTree = null;
+      this.isStaffMenuLoaded = false;
+    });
   }
 
   private createElements(): void {
@@ -185,6 +266,44 @@ export class SideDrawer {
   }
 
   private render(): string {
+    const portal = portalService.getPortal();
+    const isVgk = portal === 'vgk';
+    
+    let topItems = TOP_MENU_ITEMS;
+    if (isVgk) {
+      topItems = VGK_TOP_MENU_ITEMS;
+    } else if (portal === 'staff') {
+      const authState = authService.getAuthState();
+      const user = authState.user || {};
+      const roleCode = (user.role_code || user.role?.role_code || '').toString().toLowerCase().trim();
+      const roleName = (user.role_name || user.role?.role_name || '').toString().toUpperCase().trim();
+      const staffType = (user.staff_type || '').toString().toUpperCase().trim();
+      
+      const showOverview = (
+        ['vgk4u', 'vgk4u_supreme', 'key_leadership', 'ea', 'executive_admin'].includes(roleCode) ||
+        roleCode.includes('vgk') ||
+        ['VGK4U', 'VGK4U SUPREME', 'VGK MENTOR', 'KEY LEADERSHIP', 'EA', 'EXECUTIVE ADMIN'].includes(roleName) ||
+        roleName.includes('VGK') ||
+        ['VGK4U', 'VGK4U SUPREME'].includes(staffType)
+      );
+
+      const isRestrictedFreelancer = user.staff_type === 'FREELANCER' && user.freelancer_access_mode === 'only_leads';
+
+      if (isRestrictedFreelancer) {
+        topItems = [];
+      } else {
+        topItems = [
+          { menu_code: "PROGRESS", label: `<i class="fas fa-chart-line" style="margin-right: 8px; width: 18px; text-align: center;"></i> Progress`, route: "progress" },
+          ...(showOverview ? [{ menu_code: "OVERVIEW", label: `<i class="fas fa-th" style="margin-right: 8px; width: 18px; text-align: center;"></i> Overview`, route: "dashboard" }] : []),
+          { menu_code: "TASK_PLANNER", label: `<i class="fas fa-calendar-day" style="margin-right: 8px; width: 18px; text-align: center;"></i> Task Planner`, route: "day-planner" },
+          { menu_code: "KRA_STATUS", label: `<i class="fas fa-chart-bar" style="margin-right: 8px; width: 18px; text-align: center;"></i> KRA Status`, route: "kras" },
+          { menu_code: "TIME_SHEET", label: `<i class="fas fa-clock" style="margin-right: 8px; width: 18px; text-align: center;"></i> Time Sheet`, route: "timesheet" }
+        ];
+      }
+    }
+
+    const menuMaster = isVgk ? VGK_MENU_MASTER : (portal === 'staff' ? this.getStaffMenuMaster() : MENU_MASTER);
+
     return `
       <div class="drawer-header">
         <div class="drawer-logo">
@@ -200,14 +319,23 @@ export class SideDrawer {
       <div class="drawer-content">
         <!-- Top menu items (Home, Progress) without section header -->
         <div class="top-menu-items">
-          ${TOP_MENU_ITEMS.map(item => `
-            <div class="menu-item top-item" data-route="${item.route}">
+          ${topItems.map(item => `
+            <div class="menu-item top-item" data-route="${item.route}" ${item.tab ? `data-tab="${item.tab}"` : ''}>
               <span class="menu-label">${item.label}</span>
             </div>
           `).join('')}
         </div>
         <!-- Section menus -->
-        ${MENU_MASTER.map(section => this.renderSection(section)).join('')}
+        ${menuMaster.map(section => this.renderSection(section)).join('')}
+        
+        ${isVgk ? `
+          <div class="drawer-divider" style="height: 1px; background: rgba(255,255,255,0.1); margin: 12px 16px;"></div>
+          <div class="menu-item top-item logout-item" id="drawerLogout" style="color: #ef4444; cursor: pointer; display: flex; align-items: center; padding: 12px 24px;">
+            <span class="menu-label" style="display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 1rem;">
+              <i class="fas fa-sign-out-alt" style="width: 18px; text-align: center;"></i> Logout
+            </span>
+          </div>
+        ` : ''}
       </div>
     `;
   }
@@ -287,9 +415,22 @@ export class SideDrawer {
     this.container.querySelectorAll('[data-route]').forEach(el => {
       el.addEventListener('click', () => {
         const route = (el as HTMLElement).dataset.route!;
-        routerService.navigate(route as PageRoute);
+        const tab = (el as HTMLElement).dataset.tab;
+        
+        if (tab) {
+          routerService.navigate(route as PageRoute, { tab });
+        } else {
+          routerService.navigate(route as PageRoute);
+        }
         this.close();
       });
+    });
+
+    document.getElementById('drawerLogout')?.addEventListener('click', async () => {
+      this.close();
+      if (confirm('Are you sure you want to logout?')) {
+        await authService.logout();
+      }
     });
   }
 
@@ -308,12 +449,102 @@ export class SideDrawer {
     this.attachEventListeners();
   }
 
+  private async loadStaffMenus(): Promise<void> {
+    if (this.isStaffMenuLoaded) return;
+    try {
+      const response = await apiService.get<any>('/staff/menu-settings/my-menus?unified=true');
+      if (response.success && response.data && response.data.sidebar_tree) {
+        this.staffMenuTree = response.data.sidebar_tree;
+        this.isStaffMenuLoaded = true;
+        this.updateUI();
+      }
+    } catch (e) {
+      console.error('Failed to load dynamic staff menus:', e);
+    }
+  }
+
+  private getStaffMenuMaster(): MenuSection[] {
+    if (!this.staffMenuTree) {
+      return MENU_MASTER;
+    }
+
+    const sections: MenuSection[] = [];
+    for (const sec of this.staffMenuTree) {
+      if (sec.id === 'progress' || sec.section_id === 'progress' || (sec.title || '').toUpperCase() === 'PROGRESS') {
+        continue;
+      }
+      const items: MenuItem[] = [];
+      const subSections: SubSection[] = [];
+
+      // Add items from direct section.items
+      if (sec.items) {
+        for (const item of sec.items) {
+          const route = ROUTE_PATH_MAP[item.route_path];
+          if (route) {
+            const iconHtml = item.menu_icon ? `<i class="${item.menu_icon}" style="margin-right: 8px; width: 18px; text-align: center;"></i>` : '';
+            items.push({
+              menu_code: item.menu_code,
+              label: `${iconHtml}${item.menu_name}`,
+              route: route
+            });
+          }
+        }
+      }
+
+      // Add subSections
+      if (sec.subSections) {
+        for (const sub of sec.subSections) {
+          const subItems: MenuItem[] = [];
+          if (sub.items) {
+            for (const item of sub.items) {
+              const route = ROUTE_PATH_MAP[item.route_path];
+              if (route) {
+                const iconHtml = item.menu_icon ? `<i class="${item.menu_icon}" style="margin-right: 8px; width: 18px; text-align: center;"></i>` : '';
+                subItems.push({
+                  menu_code: item.menu_code,
+                  label: `${iconHtml}${item.menu_name}`,
+                  route: route
+                });
+              }
+            }
+          }
+          if (subItems.length > 0) {
+            subSections.push({
+              sub_section_code: sub.id || sub.section_id || 'sub',
+              sub_section_label: sub.title || 'Subsection',
+              items: subItems
+            });
+          }
+        }
+      }
+
+      if (items.length > 0 || subSections.length > 0) {
+        sections.push({
+          section_code: sec.id || sec.section_id || 'other',
+          section_label: sec.title || 'Other',
+          order: sec.order || 999,
+          items: items.length > 0 ? items : undefined,
+          subSections: subSections.length > 0 ? subSections : undefined
+        });
+      }
+    }
+
+    sections.sort((a, b) => a.order - b.order);
+    return sections;
+  }
+
   open(): void {
     if (this.isOpen) return;
+    this.updateUI();
     this.isOpen = true;
     this.container?.classList.add('open');
     this.overlay?.classList.add('visible');
     document.body.style.overflow = 'hidden';
+
+    const portal = portalService.getPortal();
+    if (portal === 'staff') {
+      this.loadStaffMenus();
+    }
   }
 
   close(): void {

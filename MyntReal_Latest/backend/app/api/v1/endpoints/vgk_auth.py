@@ -66,11 +66,18 @@ class VGKLoginResponse(BaseModel):
 
 
 def get_current_vgk_member(request: Request, db: Session = Depends(get_db)) -> OfficialPartner:
+    token = None
     auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid authorization header",
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+    else:
+        session_token = request.cookies.get("session_token") or request.cookies.get("session")
+        if session_token:
+            token = session_token
+
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing or invalid authorization credentials",
                             headers={"WWW-Authenticate": "Bearer"})
-    token = auth_header.split(" ")[1]
     try:
         from jose import jwt, JWTError
         from jose.exceptions import ExpiredSignatureError

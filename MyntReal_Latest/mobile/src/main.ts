@@ -14,6 +14,7 @@ import { apiService } from './services/api.service';
 import { portalService } from './services/portal.service';
 import { routerService, PageRoute } from './services/router.service';
 import { LoginPage } from './pages/Login';
+import { PageHeader } from './components/PageHeader';
 // Staff Portal Pages
 import { DashboardPage } from './pages/Dashboard';
 import { ProgressPage } from './pages/ProgressPage';
@@ -588,6 +589,7 @@ class MNRApp {
     
     const authState = authService.getAuthState();
     const portal = authState.user?.portal || 'staff';
+    portalService.setPortal(portal).catch(() => {});
     routerService.reset(portal);
     
     const savedRoute = localStorage.getItem('mnr_pre_expiry_route') as PageRoute | null
@@ -1158,6 +1160,24 @@ class MNRApp {
     try {
       await page.init();
       this.currentPageInstance = page;
+
+      // Automatically attach header listeners for PageHeader if it is rendered
+      if (document.getElementById('backBtn') || document.getElementById('logoutBtn') || document.getElementById('hamburgerBtn')) {
+        const portal = portalService.getPortal();
+        const authState = authService.getAuthState();
+        const user = authState.user || {};
+        const name = user.name || user.partner_name || '';
+        const code = user.partner_code || '';
+        const subtitle = portal === 'vgk' && (name || code) ? (code ? `${name} (${code})` : name) : '';
+        
+        PageHeader.attachListeners({
+          title: '', // Not needed for listener attachment
+          showBack: !!document.getElementById('backBtn'),
+          showLogout: !!document.getElementById('logoutBtn') || (portal === 'vgk'),
+          showMenu: !!document.getElementById('hamburgerBtn'),
+          subtitle
+        });
+      }
     } catch (error: any) {
       console.error(`[MNRApp] Page init failed for route "${route}":`, error);
       const isAuthError = error?.status === 401 || error?.message?.includes('401') || apiService.isSessionExpired();

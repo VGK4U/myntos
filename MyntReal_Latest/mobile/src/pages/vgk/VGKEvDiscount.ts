@@ -42,7 +42,7 @@
           </div>
           <iframe
             id="vgk4u-ev-discount-frame"
-            src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/ev-discount"
+            src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/ev-discount?token=${encodeURIComponent(localStorage.getItem("auth_token") || "")}"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="EV Discount (VGK4U)"

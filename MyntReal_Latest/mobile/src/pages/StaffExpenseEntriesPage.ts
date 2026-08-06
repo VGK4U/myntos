@@ -18,7 +18,7 @@ export class StaffExpenseEntriesPage {
   }
 
   async render(): Promise<string> {
-    const srcUrl = `${APP_CONFIG.MEDIA_BASE_URL}/staff/accounts/expense-entries`;
+    const srcUrl = `${APP_CONFIG.MEDIA_BASE_URL}/staff/accounts/expense-entries?embed=true&token=${encodeURIComponent(localStorage.getItem("auth_token") || "")}`;
     return `
       <div style="background:#f3f4f6;min-height:100vh;padding-bottom:80px">
         ${PageHeader.render({ title: 'Expense Entries', showBack: true })}

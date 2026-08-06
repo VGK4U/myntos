@@ -262,10 +262,10 @@ class AuthService {
         await apiService.setCompanyId(companyId);
       }
 
-      // Normalize user data with common fields for Partner portal
+      // Normalize user data with common fields for Partner and VGK portals
       let normalizedUser = { ...userData, portal, company_id: companyId };
-      if (portal === 'partner' && response.data.partner) {
-        // Partner-specific: ensure name field is set from partner_name
+      if ((portal === 'partner' || portal === 'vgk') && response.data.partner) {
+        // Partner/VGK-specific: ensure name field is set from partner_name
         normalizedUser.name = response.data.partner.partner_name;
         normalizedUser.partner_id = response.data.partner.id;
         normalizedUser.partner_code = response.data.partner.partner_code;
@@ -329,6 +329,7 @@ class AuthService {
       tokenExpiresAt: 0
     };
     await this.saveAuthState();
+    window.dispatchEvent(new CustomEvent('logout'));
   }
 
   updateActivity(): void {

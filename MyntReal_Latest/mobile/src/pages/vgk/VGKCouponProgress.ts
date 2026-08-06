@@ -39,7 +39,7 @@ export class VGKCouponProgressPage {
         </div>
         <iframe
           id="vgk4u-coupon-progress-frame"
-          src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/coupon-progress"
+          src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/coupon-progress?token=${encodeURIComponent(localStorage.getItem("auth_token") || "")}"
           style="width:100%;height:calc(100vh - 200px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
           loading="lazy"
           title="Coupon Progress (VGK4U)"

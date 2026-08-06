@@ -6,6 +6,20 @@
  * Updated: Jan 09, 2026 - Standardized to Progress page light theme header
  */
 
+// DC Protocol: Token extraction from query params for mobile app iframe embed support
+(function() {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlToken = urlParams.get('token') || urlParams.get('staff_token');
+        if (urlToken) {
+            localStorage.setItem('staff_token', urlToken);
+            document.cookie = `staff_token=${urlToken}; path=/; max-age=86400; SameSite=Lax`;
+        }
+    } catch (e) {
+        console.error('[StaffHeader] Token extraction error:', e);
+    }
+})();
+
 // DC Protocol Apr 2026: Changed from `const StaffHeader` to window assignment to prevent
 // "Identifier already declared" SyntaxError when this file is loaded more than once
 // (server.js template injects it AND the page HTML includes it explicitly).
@@ -525,10 +539,50 @@ window.StaffHeader = window.StaffHeader || {
                 70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
                 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
             }
+            
+            /* ── Embed/App Mode overrides to hide header and sidebar ── */
+            body.embed-mode {
+                background: #f3f4f6 !important;
+            }
+            body.embed-mode .top-header {
+                display: none !important;
+            }
+            body.embed-mode #staffSidebar {
+                display: none !important;
+            }
+            body.embed-mode .sidebar-backdrop {
+                display: none !important;
+            }
+            body.embed-mode .main-content {
+                margin-left: 0 !important;
+                padding-top: 0 !important;
+                padding: 10px !important;
+                width: 100% !important;
+            }
+            body.embed-mode .content-area {
+                padding: 10px !important;
+                margin-top: 0 !important;
+            }
+            body.embed-mode #vgk-assistant-bubble,
+            body.embed-mode .vgk-assistant-widget {
+                display: none !important;
+            }
         </style>
     `,
 
     init: function() {
+        // Detect iframe or embed parameters to apply embed-mode
+        if (window.location.search.includes('embed=true') || window.location.search.includes('app=true') || window.self !== window.top) {
+            const addEmbedModeClass = () => {
+                if (document.body) {
+                    document.body.classList.add('embed-mode');
+                } else {
+                    setTimeout(addEmbedModeClass, 10);
+                }
+            };
+            addEmbedModeClass();
+        }
+        
         if (!document.getElementById('staffHeaderStyles')) {
             document.head.insertAdjacentHTML('beforeend', this.headerStyles);
         }

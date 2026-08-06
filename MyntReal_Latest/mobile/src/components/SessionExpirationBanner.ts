@@ -20,10 +20,17 @@ class SessionExpirationBanner {
 
     this.unsubscribe = apiService.onSessionExpired((endpoint) => {
       console.log('[SessionBanner] Session expired detected, endpoint:', endpoint);
-      this.show();
+      if (authService.getAuthState().isLoggedIn) {
+        this.show();
+      }
     });
 
     this.checkInterval = setInterval(() => {
+      const authState = authService.getAuthState();
+      if (!authState.isLoggedIn) {
+        if (this.isShowing) this.hide();
+        return;
+      }
       const trackingStatus = gpsService.getTrackingStatus();
       if (trackingStatus.isSessionExpired && !this.isShowing) {
         this.show();
@@ -46,6 +53,7 @@ class SessionExpirationBanner {
   }
 
   show(): void {
+    if (!authService.getAuthState().isLoggedIn) return;
     if (this.isShowing) return;
     if (document.getElementById('globalSessionBanner')) return;
 

@@ -2338,16 +2338,26 @@ def _calculate_incomes_with_date(target_date: date, is_manual: bool = False, tri
         job_id = 'midnight_income_calculation'
         job_name = 'Income Calculation'
     
-    scheduler_log = SchedulerLog(
-        job_id=job_id,
-        job_name=job_name,
-        scheduled_date=scheduled_date,
-        triggered_at=get_indian_time(),
-        income_triggered="Yes",
-        overall_status="Running"
-    )
-    db.add(scheduler_log)
-    db.commit()
+    from sqlalchemy.exc import IntegrityError as _IntegrityError
+    try:
+        scheduler_log = SchedulerLog(
+            job_id=job_id,
+            job_name=job_name,
+            scheduled_date=scheduled_date,
+            triggered_at=get_indian_time(),
+            income_triggered="Yes",
+            overall_status="Running"
+        )
+        db.add(scheduler_log)
+        db.commit()
+    except _IntegrityError:
+        logger.info(
+            f"⏭️  trigger_daily_income_distribution: job already running/completed today "
+            f"(job_id: {job_id}) — skipping gracefully"
+        )
+        db.rollback()
+        db.close()
+        return
     
     total_incomes = 0
     users_set = set()
@@ -3036,16 +3046,26 @@ def auto_approve_stuck_income():
     db = SessionLocal()
     scheduled_date = get_indian_time().replace(hour=6, minute=30, second=0, microsecond=0)
     
-    scheduler_log = SchedulerLog(
-        job_id='auto_approve_stuck_income',
-        job_name='Auto-Approve Stuck Income',
-        scheduled_date=scheduled_date,
-        triggered_at=get_indian_time(),
-        income_triggered="N/A",
-        overall_status="Running"
-    )
-    db.add(scheduler_log)
-    db.commit()
+    from sqlalchemy.exc import IntegrityError as _IntegrityError
+    try:
+        scheduler_log = SchedulerLog(
+            job_id='auto_approve_stuck_income',
+            job_name='Auto-Approve Stuck Income',
+            scheduled_date=scheduled_date,
+            triggered_at=get_indian_time(),
+            income_triggered="N/A",
+            overall_status="Running"
+        )
+        db.add(scheduler_log)
+        db.commit()
+    except _IntegrityError:
+        logger.info(
+            f"⏭️  auto_approve_stuck_income: job already running/completed today "
+            f"— skipping gracefully"
+        )
+        db.rollback()
+        db.close()
+        return
     
     logger.warning(f"🔓 Auto-approve stuck income triggered (Log ID: {scheduler_log.id})")
     try:

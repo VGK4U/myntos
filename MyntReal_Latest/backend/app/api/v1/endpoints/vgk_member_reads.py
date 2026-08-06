@@ -41,7 +41,7 @@ from sqlalchemy import desc, func, text as sa_text
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import get_current_user_hybrid
+from app.core.security import get_current_user_hybrid_with_partner
 from app.core.audience_resolver import (
     Audience, normalize_audience, audience_label,
     resolve_company_id_from_user,
@@ -121,7 +121,7 @@ vgk_router       = APIRouter(prefix="/vgk",       tags=["VGK4U Member Reads — 
 def get_my_awards(
     audience: Optional[str] = Query(None, description="mnr|vgk4u|both (default mnr)"),
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_hybrid),
+    current_user = Depends(get_current_user_hybrid_with_partner),
 ):
     aud = _aud(audience)
     _guard_vgk4u_access(current_user, aud)
@@ -198,7 +198,7 @@ def get_my_awards(
 def income_summary(
     audience: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_hybrid),
+    current_user = Depends(get_current_user_hybrid_with_partner),
 ):
     aud = _aud(audience)
     _guard_vgk4u_access(current_user, aud)
@@ -248,7 +248,7 @@ def income_daywise(
     audience: Optional[str] = Query(None),
     days: int = 30,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_hybrid),
+    current_user = Depends(get_current_user_hybrid_with_partner),
 ):
     aud = _aud(audience)
     _guard_vgk4u_access(current_user, aud)
@@ -306,7 +306,7 @@ def income_by_level(
     audience: Optional[str] = Query(None),
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_hybrid),
+    current_user = Depends(get_current_user_hybrid_with_partner),
 ):
     aud = _aud(audience)
     _guard_vgk4u_access(current_user, aud)
@@ -392,7 +392,7 @@ def income_by_level(
 def ev_benefits(
     audience: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_hybrid),
+    current_user = Depends(get_current_user_hybrid_with_partner),
 ):
     aud = _aud(audience)
     _guard_vgk4u_access(current_user, aud)
@@ -490,7 +490,7 @@ def ev_benefits(
 def franchise_earnings(
     audience: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_hybrid),
+    current_user = Depends(get_current_user_hybrid_with_partner),
 ):
     aud = _aud(audience)
     _guard_vgk4u_access(current_user, aud)
@@ -578,7 +578,7 @@ def franchise_earnings(
 def insurance_earnings(
     audience: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_hybrid),
+    current_user = Depends(get_current_user_hybrid_with_partner),
 ):
     aud = _aud(audience)
     _guard_vgk4u_access(current_user, aud)
@@ -671,7 +671,7 @@ def insurance_earnings(
 def training_my_courses(
     audience: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_hybrid),
+    current_user = Depends(get_current_user_hybrid_with_partner),
 ):
     aud = _aud(audience)
     _guard_vgk4u_access(current_user, aud)
@@ -765,7 +765,7 @@ def vgk_coupon_ledger(
     audience: Optional[str] = Query(None),
     limit: int = 200,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_hybrid),
+    current_user = Depends(get_current_user_hybrid_with_partner),
 ):
     aud = _aud(audience)
     _guard_vgk4u_access(current_user, aud)
@@ -832,7 +832,7 @@ def vgk_coupon_ledger(
 def vgk_my_submissions(
     audience: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_hybrid),
+    current_user = Depends(get_current_user_hybrid_with_partner),
 ):
     aud = _aud(audience)
     _guard_vgk4u_access(current_user, aud)

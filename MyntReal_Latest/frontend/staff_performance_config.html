@@ -241,6 +241,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
     <button class="tab-btn active" id="tabbtn-targets" onclick="switchTab('targets')"><i class="fa fa-bullseye me-2"></i>Employee Targets</button>
     <button class="tab-btn" id="tabbtn-report" onclick="switchTab('report')"><i class="fa fa-table me-2"></i>Performance Report</button>
     <button class="tab-btn" id="tabbtn-incentive" onclick="switchTab('incentive')" style="display:none;"><i class="fa fa-gift me-2"></i>Incentive Config</button>
+    <button class="tab-btn" id="tabbtn-quarterly-bonus" onclick="switchTab('quarterly-bonus')" style="display:none;"><i class="fa fa-gem me-2"></i>Quarterly Bonus Config</button>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════ -->
@@ -494,6 +495,27 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
           </button>
         </div>
       </div>
+      <!-- Filters bar for Min Targets table -->
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 16px;background:#f8fafc;border-bottom:1px solid #e2e8f0;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:6px;position:relative;">
+          <label style="font-size:0.78rem;font-weight:600;color:#6b7280;white-space:nowrap;">Department:</label>
+          <div class="dept-dd-wrapper" style="position:relative;min-width:180px;">
+            <button type="button" class="dept-dd-btn" id="inc-tgt-dept-btn" onclick="toggleDeptMenu('inc-tgt')"
+                    style="width:100%;text-align:left;background:#fff;border:1px solid #d1d5db;border-radius:6px;padding:4px 8px;font-size:0.8rem;color:#374151;display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
+              <span id="inc-tgt-dept-label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">All Departments</span>
+              <i class="fa fa-chevron-down" style="font-size:0.7rem;color:#6b7280;margin-left:6px;"></i>
+            </button>
+            <div class="dept-dd-menu" id="inc-tgt-dept-menu"
+                 style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:1050;max-height:220px;overflow-y:auto;padding:6px;margin-top:2px;">
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label style="font-size:0.78rem;font-weight:600;color:#6b7280;white-space:nowrap;">Search:</label>
+          <input type="text" id="inc-tgt-search-filter" placeholder="Search name or emp code..." class="filter-sel" style="min-width:200px;font-size:0.8rem;padding:4px 8px;" oninput="renderIncEmpTargets()">
+        </div>
+        <span id="inc-tgt-count-badge" style="font-size:0.78rem;color:#6b7280;margin-left:auto;font-weight:600;"></span>
+      </div>
       <div style="overflow-x:auto;margin-top:8px;">
         <table style="width:100%;border-collapse:collapse;font-size:0.82rem;" id="inc-emp-tgt-table">
           <thead id="inc-emp-tgt-thead">
@@ -509,12 +531,28 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
       <div class="card-hdr" style="flex-wrap:wrap;gap:8px;">
         <h6 style="margin:0;"><i class="fa fa-trophy me-2" style="color:#d97706;"></i>Live Achievement &amp; Earnings</h6>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto;">
+          <div style="display:flex;align-items:center;gap:6px;position:relative;">
+            <label style="font-size:0.78rem;font-weight:600;color:#6b7280;white-space:nowrap;">Department:</label>
+            <div class="dept-dd-wrapper" style="position:relative;min-width:180px;">
+              <button type="button" class="dept-dd-btn" id="ach-dept-btn" onclick="toggleDeptMenu('ach')"
+                      style="width:100%;text-align:left;background:#fff;border:1px solid #d1d5db;border-radius:6px;padding:4px 8px;font-size:0.8rem;color:#374151;display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
+                <span id="ach-dept-label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">All Departments</span>
+                <i class="fa fa-chevron-down" style="font-size:0.7rem;color:#6b7280;margin-left:6px;"></i>
+              </button>
+              <div class="dept-dd-menu" id="ach-dept-menu"
+                   style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:1050;max-height:220px;overflow-y:auto;padding:6px;margin-top:2px;">
+              </div>
+            </div>
+          </div>
           <div style="display:flex;align-items:center;gap:6px;">
-            <label style="font-size:0.78rem;font-weight:600;color:#6b7280;white-space:nowrap;">Employee</label>
-            <select id="ach-emp-filter" class="filter-sel" style="min-width:180px;font-size:0.8rem;"
-                    onchange="loadAchievements()">
+            <label style="font-size:0.78rem;font-weight:600;color:#6b7280;white-space:nowrap;">Employee:</label>
+            <select id="ach-emp-filter" class="filter-sel" style="min-width:180px;font-size:0.8rem;" onchange="loadAchievements()">
               <option value="">All Employees</option>
             </select>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <label style="font-size:0.78rem;font-weight:600;color:#6b7280;white-space:nowrap;">Search:</label>
+            <input type="text" id="ach-search-filter" placeholder="Search name or code..." class="filter-sel" style="min-width:160px;font-size:0.8rem;padding:4px 8px;" oninput="filterAndRenderAchievements()">
           </div>
           <button onclick="loadAchievements()" style="padding:5px 14px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;">
             <i class="fa fa-sync me-1"></i>Refresh
@@ -527,6 +565,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
           <thead>
             <tr style="background:#fffbeb;border-bottom:2px solid #fde68a;">
               <th style="padding:9px 12px;text-align:left;">Employee</th>
+              <th style="padding:9px 12px;text-align:center;">Department</th>
               <th style="padding:9px 12px;text-align:center;">ETC Students</th>
               <th style="padding:9px 12px;text-align:center;">Solar</th>
               <th style="padding:9px 12px;text-align:center;">B2C</th>
@@ -540,7 +579,41 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
             </tr>
           </thead>
           <tbody id="inc-ach-body">
-            <tr><td colspan="11" style="text-align:center;padding:24px;color:#9ca3af;"><div class="loading-ring"></div></td></tr>
+            <tr><td colspan="12" style="text-align:center;padding:24px;color:#9ca3af;"><div class="loading-ring"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: Quarterly Bonus Config -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div id="tab-quarterly-bonus" class="tab-pane">
+    <div class="card-box">
+      <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <h6 style="margin:0;"><i class="fa fa-gem me-2" style="color:#8b5cf6;"></i>Quarterly Bonus Config &amp; Rates</h6>
+        <button onclick="openBonusModal()" style="padding:6px 14px;background:#6366f1;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;">
+          <i class="fa fa-plus me-1"></i>Add Config Period
+        </button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;" id="bonus-config-table">
+          <thead>
+            <tr style="background:#f5f3ff;border-bottom:2px solid #ddd6fe;">
+              <th style="padding:9px 12px;text-align:left;">Period Name</th>
+              <th style="padding:9px 12px;text-align:center;">Start Date</th>
+              <th style="padding:9px 12px;text-align:center;">End Date</th>
+              <th style="padding:9px 12px;text-align:center;">Min Target (Files)</th>
+              <th style="padding:9px 12px;text-align:right;">Base Payout (₹)</th>
+              <th style="padding:9px 12px;text-align:center;">Met Multiplier</th>
+              <th style="padding:9px 12px;text-align:center;">Unmet Multiplier</th>
+              <th style="padding:9px 12px;text-align:center;">KRA/Activity Threshold</th>
+              <th style="padding:9px 12px;text-align:center;">Status</th>
+              <th style="padding:9px 12px;text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="bonus-config-body">
+            <tr><td colspan="10" style="text-align:center;padding:24px;color:#9ca3af;">Loading configurations...</td></tr>
           </tbody>
         </table>
       </div>
@@ -549,6 +622,67 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
 
 </div><!-- /main-content -->
 </div><!-- /outer main-content -->
+
+<!-- Quarterly Bonus Edit Modal -->
+<div class="modal-ov" id="bonus-modal" onclick="if(event.target===this)closeBonusModal()">
+  <div class="modal-bx" style="max-width:500px;width:95%;">
+    <div class="modal-head">
+      <h5 id="bonus-modal-title">Edit Bonus Configuration</h5>
+      <button class="modal-close" onclick="closeBonusModal()"><i class="fa fa-times"></i></button>
+    </div>
+    <div class="modal-bd" style="padding:20px;">
+      <input type="hidden" id="bonus-edit-id">
+      <div style="margin-bottom:12px;">
+        <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Period Name</label>
+        <input type="text" id="bonus-edit-period-name" placeholder="e.g. Aug-Sep 2026, Q4 2026" class="filter-sel" style="width:100%;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Start Date</label>
+          <input type="date" id="bonus-edit-start-date" class="filter-sel" style="width:100%;">
+        </div>
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">End Date</label>
+          <input type="date" id="bonus-edit-end-date" class="filter-sel" style="width:100%;">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Min Target (Files)</label>
+          <input type="number" id="bonus-edit-min-target" value="50" class="filter-sel" style="width:100%;">
+        </div>
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Base Bonus per File (₹)</label>
+          <input type="number" id="bonus-edit-base-bonus" value="150" class="filter-sel" style="width:100%;">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">High Multiplier (Met)</label>
+          <input type="number" step="0.01" id="bonus-edit-high-mult" value="1.20" class="filter-sel" style="width:100%;">
+        </div>
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Low Multiplier (Unmet)</label>
+          <input type="number" step="0.01" id="bonus-edit-low-mult" value="0.50" class="filter-sel" style="width:100%;">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;align-items:center;">
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">KRA/Activity Threshold (%)</label>
+          <input type="number" step="0.1" id="bonus-edit-threshold" value="80" class="filter-sel" style="width:100%;">
+        </div>
+        <div style="margin-top:20px;display:flex;align-items:center;gap:6px;">
+          <input type="checkbox" id="bonus-edit-active" checked style="width:18px;height:18px;cursor:pointer;">
+          <label for="bonus-edit-active" style="font-size:0.82rem;font-weight:600;cursor:pointer;">Is Active Period</label>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;border-top:1px solid #e5e7eb;padding-top:14px;">
+        <button class="filter-btn" style="background:#e5e7eb;color:#374151;border:none;" onclick="closeBonusModal()">Cancel</button>
+        <button class="filter-btn" style="background:#6366f1;color:#fff;border:none;" onclick="saveBonusConfig()">Save Period</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Incentive Edit Modal -->
 <div class="modal-ov" id="inc-modal" onclick="if(event.target===this)closeIncModal()">
@@ -663,7 +797,7 @@ function toast(msg, type = 'info', dur = 4000) {
 let _incAccessLevel = 'denied'; // 'admin' | 'read' | 'denied'
 
 function switchTab(tab) {
-  ['targets', 'report', 'incentive'].forEach(t => {
+  ['targets', 'report', 'incentive', 'quarterly-bonus'].forEach(t => {
     const btn = document.getElementById('tabbtn-' + t);
     const pane = document.getElementById('tab-' + t);
     if (btn) btn.classList.toggle('active', t === tab);
@@ -680,6 +814,9 @@ function switchTab(tab) {
       if (!achLoaded) loadAchievements();
       loadIncEmpTargets();
     }
+  }
+  if (tab === 'quarterly-bonus') {
+    loadQuarterlyBonusConfigs();
   }
 }
 
@@ -735,6 +872,7 @@ async function checkAccess() {
       document.getElementById('tabbtn-targets').style.display = '';
       document.getElementById('tabbtn-report').style.display = '';
       document.getElementById('tabbtn-incentive').style.display = '';
+      document.getElementById('tabbtn-quarterly-bonus').style.display = '';
       document.getElementById('main-content').style.display = '';
       document.getElementById('access-denied-msg').style.display = 'none';
       // Admin sees Add button + action column in incentive tab
@@ -743,7 +881,7 @@ async function checkAccess() {
       if (addBtn) addBtn.style.display = '';
       if (adminCol) adminCol.style.display = '';
       // Restore tab from URL hash (so refresh stays on same tab)
-      const _validTabs = ['targets', 'report', 'incentive'];
+      const _validTabs = ['targets', 'report', 'incentive', 'quarterly-bonus'];
       const _hashTab = (window.location.hash || '').replace('#', '').toLowerCase();
       const _startTab = _validTabs.includes(_hashTab) ? _hashTab : 'targets';
       switchTab(_startTab);
@@ -1829,8 +1967,95 @@ function closeIncModal() {
 
 // ── Incentive Employee Targets (DC-INCENTIVE-EMP-TARGETS-001) ──────────────────
 let _incEmpTargets = {};   // { emp_id: { category_slug: {id, min_target} } }
-let _incEmpTgtEmps = [];   // [{id, name, emp_code}]
+let _incEmpTgtEmps = [];   // [{id, name, emp_code, department}]
 const ACH_CATS_ORDERED = ['training','solar','ev_b2c','ev_b2b_new','ev_b2b_existing','insurance','service_spares','service_revenue'];
+
+// ── Multi-select Department Dropdown Helpers ─────────────────────────────────
+function toggleDeptMenu(prefix) {
+  const menu = document.getElementById(`${prefix}-dept-menu`);
+  if (!menu) return;
+  const isShown = menu.style.display === 'block';
+  document.querySelectorAll('.dept-dd-menu').forEach(m => m.style.display = 'none');
+  menu.style.display = isShown ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.dept-dd-wrapper')) {
+    document.querySelectorAll('.dept-dd-menu').forEach(m => m.style.display = 'none');
+  }
+});
+
+function populateMultiSelectDeptMenu(prefix, depts) {
+  const menu = document.getElementById(`${prefix}-dept-menu`);
+  if (!menu) return;
+
+  let html = `
+    <label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:0.78rem;cursor:pointer;border-bottom:1px solid #f1f5f9;font-weight:600;color:#374151;user-select:none;">
+      <input type="checkbox" id="${prefix}-dept-all" checked onchange="toggleSelectAllDepts('${prefix}', this)">
+      <span>Select All (${depts.length})</span>
+    </label>
+  `;
+
+  depts.forEach(dept => {
+    html += `
+      <label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:0.78rem;cursor:pointer;color:#374151;user-select:none;">
+        <input type="checkbox" class="${prefix}-dept-cb" value="${escHtml(dept)}" checked onchange="onDeptCbChange('${prefix}')">
+        <span>${escHtml(dept)}</span>
+      </label>
+    `;
+  });
+
+  menu.innerHTML = html;
+  updateDeptLabel(prefix, depts.length);
+}
+
+function toggleSelectAllDepts(prefix, allCb) {
+  const cbs = document.querySelectorAll(`.${prefix}-dept-cb`);
+  cbs.forEach(cb => cb.checked = allCb.checked);
+  onDeptCbChange(prefix);
+}
+
+function onDeptCbChange(prefix) {
+  const cbs = Array.from(document.querySelectorAll(`.${prefix}-dept-cb`));
+  const checked = cbs.filter(cb => cb.checked);
+  const allCb = document.getElementById(`${prefix}-dept-all`);
+  if (allCb) allCb.checked = (checked.length === cbs.length);
+
+  updateDeptLabel(prefix, cbs.length);
+
+  if (prefix === 'inc-tgt') {
+    renderIncEmpTargets();
+  } else if (prefix === 'ach') {
+    filterAndRenderAchievements();
+  }
+}
+
+function updateDeptLabel(prefix, totalCount) {
+  const label = document.getElementById(`${prefix}-dept-label`);
+  if (!label) return;
+  const cbs = Array.from(document.querySelectorAll(`.${prefix}-dept-cb`));
+  const checked = cbs.filter(cb => cb.checked).map(cb => cb.value);
+
+  if (checked.length === 0) {
+    label.textContent = 'None Selected';
+    label.style.color = '#ef4444';
+  } else if (checked.length === cbs.length) {
+    label.textContent = 'All Departments';
+    label.style.color = '#374151';
+  } else if (checked.length === 1) {
+    label.textContent = checked[0];
+    label.style.color = '#374151';
+  } else {
+    label.textContent = `${checked[0]}, +${checked.length - 1} more`;
+    label.style.color = '#374151';
+  }
+}
+
+function getSelectedDepts(prefix) {
+  const cbs = Array.from(document.querySelectorAll(`.${prefix}-dept-cb`));
+  if (!cbs.length) return null;
+  return cbs.filter(cb => cb.checked).map(cb => cb.value.toLowerCase());
+}
 
 async function loadIncEmpTargets() {
   const month  = document.getElementById('inc-month').value;
@@ -1853,6 +2078,11 @@ async function loadIncEmpTargets() {
       if (!_incEmpTargets[row.employee_id]) _incEmpTargets[row.employee_id] = {};
       _incEmpTargets[row.employee_id][row.category_slug] = { id: row.id, min_target: row.min_target };
     });
+
+    // Populate multi-select department menu
+    const depts = Array.from(new Set(_incEmpTgtEmps.map(e => e.department || 'Unassigned'))).sort();
+    populateMultiSelectDeptMenu('inc-tgt', depts);
+
     renderIncEmpTargets();
   } catch(e) {
     thead.innerHTML = `<tr><th colspan="20" style="text-align:center;padding:16px;color:#ef4444;">${escHtml(e.message)}</th></tr>`;
@@ -1863,19 +2093,36 @@ async function loadIncEmpTargets() {
 function renderIncEmpTargets() {
   const thead = document.getElementById('inc-emp-tgt-thead');
   const tbody = document.getElementById('inc-emp-tgt-tbody');
+  const countBadge = document.getElementById('inc-tgt-count-badge');
   const slugLabels = { training:'Training', solar:'Solar', ev_b2c:'EV B2C', ev_b2b_new:'EV B2B New', ev_b2b_existing:'EV B2B Existing', insurance:'Insurance', service_spares:'Service Spares', service_revenue:'Service Revenue' };
-  // Header
+  
+  // Header with Department column
   let hCols = '<th style="padding:7px 10px;text-align:left;font-weight:700;background:#f8f7ff;color:#374151;border-bottom:2px solid #e0d7ff;white-space:nowrap;">Employee</th>';
+  hCols += '<th style="padding:7px 10px;text-align:center;font-weight:700;background:#f8f7ff;color:#374151;border-bottom:2px solid #e0d7ff;white-space:nowrap;">Department</th>';
   ACH_CATS_ORDERED.forEach(slug => {
     hCols += `<th style="padding:7px 10px;text-align:center;font-weight:700;background:#f8f7ff;color:#059669;border-bottom:2px solid #e0d7ff;font-size:0.78rem;white-space:nowrap;">${slugLabels[slug]||slug}</th>`;
   });
   thead.innerHTML = `<tr>${hCols}</tr>`;
+
+  // Filtering by selected department checkboxes and search
+  const selectedDepts = getSelectedDepts('inc-tgt');
+  const qVal = (document.getElementById('inc-tgt-search-filter')?.value || '').toLowerCase().trim();
+
+  const filtered = _incEmpTgtEmps.filter(emp => {
+    const empDept = (emp.department || 'Unassigned').toLowerCase();
+    const matchDept = !selectedDepts || selectedDepts.includes(empDept);
+    const matchSearch = !qVal || (emp.name || '').toLowerCase().includes(qVal) || (emp.emp_code || '').toLowerCase().includes(qVal);
+    return matchDept && matchSearch;
+  });
+
+  if (countBadge) countBadge.textContent = `${filtered.length} of ${_incEmpTgtEmps.length} employee(s)`;
+
   // Body
-  if (!_incEmpTgtEmps.length) {
-    tbody.innerHTML = `<tr><td colspan="${1+ACH_CATS_ORDERED.length}" style="text-align:center;padding:16px;color:#9ca3af;">No employees found</td></tr>`;
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="${2+ACH_CATS_ORDERED.length}" style="text-align:center;padding:16px;color:#9ca3af;">No matching employees found</td></tr>`;
     return;
   }
-  tbody.innerHTML = _incEmpTgtEmps.map(emp => {
+  tbody.innerHTML = filtered.map(emp => {
     const empData = _incEmpTargets[emp.id] || {};
     const slugCells = ACH_CATS_ORDERED.map(slug => {
       const tgt = empData[slug] ? empData[slug].min_target : 2;
@@ -1889,6 +2136,7 @@ function renderIncEmpTargets() {
     }).join('');
     return `<tr style="border-bottom:1px solid #f3f4f6;">
       <td style="padding:5px 10px;font-weight:600;color:#374151;white-space:nowrap;font-size:0.82rem;">${escHtml(emp.name)}<br><span style="color:#9ca3af;font-size:0.72rem;font-weight:400;">${escHtml(emp.emp_code||'')}</span></td>
+      <td style="padding:5px 10px;text-align:center;white-space:nowrap;font-size:0.8rem;"><span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:0.75rem;padding:4px 8px;border-radius:4px;font-weight:600;">${escHtml(emp.department||'Unassigned')}</span></td>
       ${slugCells}
     </tr>`;
   }).join('');
@@ -2054,7 +2302,7 @@ async function loadAchievements() {
   const body    = document.getElementById('inc-ach-body');
   const info    = document.getElementById('inc-ach-info');
 
-  body.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:24px;"><div class="loading-ring"></div></td></tr>`;
+  body.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:24px;"><div class="loading-ring"></div></td></tr>`;
   info.style.display = 'none';
 
   try {
@@ -2065,6 +2313,7 @@ async function loadAchievements() {
     if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Failed to load achievements'); }
     const d = await r.json();
     const employees = d.data || [];
+    window._rawAchRows = employees;
 
     // Populate employee filter dropdown (only on first load — All Employees call)
     if (!empId) {
@@ -2080,7 +2329,11 @@ async function loadAchievements() {
       if (current) sel.value = current;
     }
 
-    renderAchievements(employees);
+    // Populate multi-select department menu for Achievements
+    const depts = Array.from(new Set(employees.map(e => e.department || 'Unassigned'))).sort();
+    populateMultiSelectDeptMenu('ach', depts);
+
+    filterAndRenderAchievements();
     body._achLoaded = true;
 
     const MONTHS = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -2088,15 +2341,30 @@ async function loadAchievements() {
     info.textContent = `${MONTHS[parseInt(month)] || ''} ${year} · ${empLabel}`;
     info.style.display = '';
   } catch(e) {
-    body.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:24px;color:#ef4444;">${escHtml(e.message)}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:24px;color:#ef4444;">${escHtml(e.message)}</td></tr>`;
     toast(e.message, 'error');
   }
+}
+
+function filterAndRenderAchievements() {
+  const rows = window._rawAchRows || [];
+  const selectedDepts = getSelectedDepts('ach');
+  const qVal = (document.getElementById('ach-search-filter')?.value || '').toLowerCase().trim();
+
+  const filtered = rows.filter(emp => {
+    const empDept = (emp.department || 'Unassigned').toLowerCase();
+    const matchDept = !selectedDepts || selectedDepts.includes(empDept);
+    const matchSearch = !qVal || (emp.name || '').toLowerCase().includes(qVal) || (emp.emp_code || '').toLowerCase().includes(qVal);
+    return matchDept && matchSearch;
+  });
+
+  renderAchievements(filtered);
 }
 
 function renderAchievements(rows) {
   const body = document.getElementById('inc-ach-body');
   if (!rows.length) {
-    body.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:32px;color:#9ca3af;"><i class="fa fa-inbox fa-2x mb-2 d-block"></i>No achievement data found for this period.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:32px;color:#9ca3af;"><i class="fa fa-inbox fa-2x mb-2 d-block"></i>No matching achievement data found.</td></tr>`;
     return;
   }
   const UNIT = { training:'students', solar:'deals', ev_b2c:'deals', ev_b2b:'deals', ev_b2b_new:'deals', ev_b2b_existing:'deals', insurance:'₹', real_estate:'₹', service_spares:'₹', service_revenue:'₹' };
@@ -2268,12 +2536,13 @@ function renderAchievements(rows) {
         <span style="font-weight:600;font-size:0.83rem;">${empName}</span>
         ${empCode}
       </td>
+      <td style="padding:8px 12px;text-align:center;white-space:nowrap;font-size:0.8rem;"><span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:0.75rem;padding:4px 8px;border-radius:4px;font-weight:600;">${escHtml(emp.department||'Unassigned')}</span></td>
       ${catCells}
       ${kraStatusCell}
       <td style="padding:8px 12px;text-align:right;font-weight:700;font-size:0.88rem;">${totalDisplay}</td>
     </tr>
     <tr id="${detailId}" style="display:none;">
-      <td colspan="11" style="padding:0;background:#f8fafc;border-bottom:2px solid #e0e7ff;">
+      <td colspan="12" style="padding:0;background:#f8fafc;border-bottom:2px solid #e0e7ff;">
         <div style="padding:10px 16px 12px 36px;">
           ${kraBanner}
           <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
@@ -2540,6 +2809,135 @@ window.exportIncentiveImage = function() {
   link.click();
   toast('Incentive plan image generated & downloaded!', 'success');
 };
+
+// ── Quarterly Bonus Configuration ─────────────────────────────────────────────
+let bonusConfigs = [];
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+async function loadQuarterlyBonusConfigs() {
+  const tbody = document.getElementById('bonus-config-body');
+  tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:24px;color:#6b7280;"><div class="loading-ring"></div></td></tr>`;
+  try {
+    const r = await fetch(`${API}/staff/performance/quarterly-bonus/config`, { headers: authHdr() });
+    if (!r.ok) throw new Error('Failed to fetch configurations');
+    const d = await r.json();
+    bonusConfigs = d.configs || [];
+    renderBonusConfigs();
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:24px;color:#ef4444;"><i class="fa fa-exclamation-triangle me-2"></i>${e.message}</td></tr>`;
+  }
+}
+
+function renderBonusConfigs() {
+  const tbody = document.getElementById('bonus-config-body');
+  if (bonusConfigs.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:30px;color:#9ca3af;">No quarterly bonus config periods found.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = bonusConfigs.map(c => `
+    <tr style="border-bottom:1px solid #f3f4f6; transition: background 0.15s;" onmouseover="this.style.background='#fbfbfe'" onmouseout="this.style.background=''">
+      <td style="padding:10px 12px;font-weight:600;color:#374151;">${escapeHtml(c.period_name)}</td>
+      <td style="padding:10px 12px;text-align:center;color:#4b5563;">${c.start_date}</td>
+      <td style="padding:10px 12px;text-align:center;color:#4b5563;">${c.end_date}</td>
+      <td style="padding:10px 12px;text-align:center;font-weight:700;color:#111827;">${c.min_target_files}</td>
+      <td style="padding:10px 12px;text-align:right;font-weight:600;color:#059669;">₹${c.base_bonus_per_file.toFixed(2)}</td>
+      <td style="padding:10px 12px;text-align:center;font-weight:600;color:#2563eb;">x${c.high_performance_multiplier.toFixed(2)}</td>
+      <td style="padding:10px 12px;text-align:center;font-weight:600;color:#dc2626;">x${c.low_performance_multiplier.toFixed(2)}</td>
+      <td style="padding:10px 12px;text-align:center;color:#4b5563;">${c.kra_activity_threshold_pct}%</td>
+      <td style="padding:10px 12px;text-align:center;">
+        <span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:0.75rem;font-weight:600;${c.is_active ? 'background:#d1fae5;color:#065f46;' : 'background:#f3f4f6;color:#374151;'}">
+          ${c.is_active ? 'Active' : 'Inactive'}
+        </span>
+      </td>
+      <td style="padding:10px 12px;text-align:center;">
+        <button onclick="editBonusConfig(${c.id})" class="btn-action-edit" style="padding:4px 10px;background:#e0e7ff;color:#4338ca;border:none;border-radius:4px;font-size:0.75rem;font-weight:600;cursor:pointer;margin-right:4px;">
+          <i class="fa fa-edit me-1"></i>Edit
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openBonusModal() {
+  document.getElementById('bonus-modal-title').textContent = 'Add Quarterly Bonus Config Period';
+  document.getElementById('bonus-edit-id').value = '';
+  document.getElementById('bonus-edit-period-name').value = '';
+  document.getElementById('bonus-edit-start-date').value = '';
+  document.getElementById('bonus-edit-end-date').value = '';
+  document.getElementById('bonus-edit-min-target').value = 50;
+  document.getElementById('bonus-edit-base-bonus').value = 150;
+  document.getElementById('bonus-edit-high-mult').value = 1.20;
+  document.getElementById('bonus-edit-low-mult').value = 0.50;
+  document.getElementById('bonus-edit-threshold').value = 80.0;
+  document.getElementById('bonus-edit-active').checked = true;
+  document.getElementById('bonus-modal').style.display = 'flex';
+}
+
+function editBonusConfig(id) {
+  const c = bonusConfigs.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('bonus-modal-title').textContent = 'Edit Quarterly Bonus Config';
+  document.getElementById('bonus-edit-id').value = c.id;
+  document.getElementById('bonus-edit-period-name').value = c.period_name;
+  document.getElementById('bonus-edit-start-date').value = c.start_date;
+  document.getElementById('bonus-edit-end-date').value = c.end_date;
+  document.getElementById('bonus-edit-min-target').value = c.min_target_files;
+  document.getElementById('bonus-edit-base-bonus').value = c.base_bonus_per_file;
+  document.getElementById('bonus-edit-high-mult').value = c.high_performance_multiplier;
+  document.getElementById('bonus-edit-low-mult').value = c.low_performance_multiplier;
+  document.getElementById('bonus-edit-threshold').value = c.kra_activity_threshold_pct;
+  document.getElementById('bonus-edit-active').checked = c.is_active;
+  document.getElementById('bonus-modal').style.display = 'flex';
+}
+
+function closeBonusModal() {
+  document.getElementById('bonus-modal').style.display = 'none';
+}
+
+async function saveBonusConfig() {
+  const id = document.getElementById('bonus-edit-id').value;
+  const payload = {
+    period_name: document.getElementById('bonus-edit-period-name').value.trim(),
+    start_date: document.getElementById('bonus-edit-start-date').value,
+    end_date: document.getElementById('bonus-edit-end-date').value,
+    min_target_files: parseInt(document.getElementById('bonus-edit-min-target').value) || 0,
+    base_bonus_per_file: parseFloat(document.getElementById('bonus-edit-base-bonus').value) || 0,
+    high_performance_multiplier: parseFloat(document.getElementById('bonus-edit-high-mult').value) || 0,
+    low_performance_multiplier: parseFloat(document.getElementById('bonus-edit-low-mult').value) || 0,
+    kra_activity_threshold_pct: parseFloat(document.getElementById('bonus-edit-threshold').value) || 0,
+    is_active: document.getElementById('bonus-edit-active').checked
+  };
+  if (id) payload.id = parseInt(id);
+
+  if (!payload.period_name || !payload.start_date || !payload.end_date) {
+    alert('Please fill out Period Name, Start Date, and End Date.');
+    return;
+  }
+
+  try {
+    const r = await fetch(`${API}/staff/performance/quarterly-bonus/config`, {
+      method: 'POST',
+      headers: { ...authHdr(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Failed to save configuration');
+    closeBonusModal();
+    loadQuarterlyBonusConfigs();
+    toast('Quarterly bonus configuration saved successfully!', 'success');
+  } catch(e) {
+    alert(e.message);
+  }
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();

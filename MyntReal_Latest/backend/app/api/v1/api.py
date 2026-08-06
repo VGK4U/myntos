@@ -44,6 +44,7 @@ from app.api.v1.endpoints import (
     whatsapp_config,
     operator_calls,
     promo,
+    staff_bonus,
 )
 
 # Scaffold routers are mounted in main.py at ROOT level to match Flask routing
@@ -156,6 +157,7 @@ api_router.include_router(staff_work_intervals.router, prefix="/staff/intervals"
 api_router.include_router(staff_journeys.router, prefix="/staff/journeys", tags=["Staff Journey Tracking & Reimbursement"])
 api_router.include_router(staff_timesheet.router, prefix="/staff/timesheet", tags=["Staff Timesheet Entry & Approval"])
 api_router.include_router(staff_snapshot.router, prefix="/staff", tags=["Staff Operations Snapshot"])
+api_router.include_router(staff_bonus.router, prefix="/staff", tags=["Staff Quarterly Bonus"])
 
 # Staff Financial Management System (DC_SFMS_001 - Dec 06, 2025)
 api_router.include_router(staff_accounts.router, tags=["Staff Financial Management - Accounts"])

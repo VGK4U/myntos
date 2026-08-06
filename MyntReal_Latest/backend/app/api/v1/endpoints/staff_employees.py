@@ -108,6 +108,9 @@ class EmployeeCreateRequest(BaseModel):
     
     # DC Protocol (Feb 2026): Call Tracking Enabled
     call_tracking_enabled: bool = False  # If True, quality test call tracking is enabled for this employee
+    
+    # Quarterly Bonus Eligibility
+    is_quarterly_bonus_eligible: bool = False
 
     # DC Protocol (Mar 2026): Team Tag — Team A/B/C grouping for compliance reporting
     team_tag: Optional[str] = None  # team_a, team_b, team_c, or None
@@ -188,6 +191,9 @@ class EmployeeUpdateRequest(BaseModel):
     
     # DC Protocol (Feb 2026): Call Tracking Enabled
     call_tracking_enabled: Optional[bool] = None  # If True, quality test call tracking is enabled
+    
+    # Quarterly Bonus Eligibility
+    is_quarterly_bonus_eligible: Optional[bool] = None
 
     # DC Protocol (Mar 2026): Team Tag — Team A/B/C grouping for compliance reporting
     team_tag: Optional[str] = None  # team_a, team_b, team_c, or None (clears tag)
@@ -967,6 +973,7 @@ async def create_employee(
         data_companies=validated_data_companies,  # DC Protocol (Dec 15, 2025): Data companies
         is_experienced=data.is_experienced,  # DC Protocol (Jan 2026): Is Experienced flag
         call_tracking_enabled=data.call_tracking_enabled,  # DC Protocol (Feb 2026): Call tracking
+        is_quarterly_bonus_eligible=data.is_quarterly_bonus_eligible,
         team_tag=data.team_tag,  # DC Protocol (Mar 2026): Team A/B/C tag
         freelancer_access_mode=data.freelancer_access_mode,  # DC Protocol (Jul 2026): Freelancer access mode
         password_hash=SecurityManager.get_password_hash(emp_code),  # Default password = emp_code
@@ -1260,6 +1267,9 @@ async def update_employee(
     
     if data.call_tracking_enabled is not None:
         employee.call_tracking_enabled = data.call_tracking_enabled
+        
+    if data.is_quarterly_bonus_eligible is not None:
+        employee.is_quarterly_bonus_eligible = data.is_quarterly_bonus_eligible
 
     # DC Protocol (Mar 2026): Handle team tag update
     if data.team_tag is not None:

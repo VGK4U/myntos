@@ -4771,6 +4771,26 @@ async function checkStaffMenuAccess(staffToken, requestedRoute, userData = null)
     // Step 4: Normalize route for lookup
     const normalizedRoute = requestedRoute.toLowerCase().split('?')[0];
 
+    // Step 4c: Universal Staff Self-Service Routes (accessible by ALL active staff members)
+    const UNIVERSAL_STAFF_ROUTES = [
+      '/staff/dashboard',
+      '/staff/my-lead-incentives',
+      '/staff/my-payouts',
+      '/staff/my-earnings',
+      '/staff/my-kyc',
+      '/staff/change-password',
+      '/staff/profile',
+      '/staff/my-attendance',
+      '/staff/my-leaves',
+      '/staff/my-timesheet',
+      '/staff/my-kras',
+      '/staff/my-journeys',
+      '/staff/my-location-history'
+    ];
+    if (UNIVERSAL_STAFF_ROUTES.includes(normalizedRoute)) {
+      return { allowed: true, reason: 'UNIVERSAL_STAFF_SELF_SERVICE_BYPASS' };
+    }
+
     // Step 4b: Find menu_code for this route from Menu Master
     const menuItem = menuMasterFindByRoute(normalizedRoute);
     if (!menuItem) {
@@ -7494,11 +7514,151 @@ function hasStaffMnrAccess(cookies) {
   return true;
 }
 
+const VGK_TOKEN_PROPAGATION_SCRIPT = `
+<script>
+(function() {
+  try {
+    // 1. Resolve token from URL or localStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    let token = urlParams.get('token');
+    if (token) {
+        localStorage.setItem('vgk_token', token);
+        localStorage.setItem('vgkAuthToken', token);
+        localStorage.setItem('authToken', token);
+    } else {
+        token = localStorage.getItem('vgk_token') || localStorage.getItem('vgkAuthToken') || localStorage.getItem('authToken');
+    }
+
+    // 2. Override window.fetch to automatically inject Authorization header for API calls
+    const originalFetch = window.fetch;
+    window.fetch = function(input, init) {
+        init = init || {};
+        init.headers = init.headers || {};
+        
+        // Resolve URL string
+        const url = typeof input === 'string' ? input : (input instanceof Request ? input.url : '');
+        
+        // If it's an API call, inject Authorization header if not already present
+        if (url && (url.startsWith('/api/v1/') || url.includes('/api/v1/'))) {
+            if (token) {
+                if (init.headers instanceof Headers) {
+                    if (!init.headers.has('Authorization')) {
+                        init.headers.set('Authorization', 'Bearer ' + token);
+                    }
+                } else if (Array.isArray(init.headers)) {
+                    const hasAuth = init.headers.some(h => h[0].toLowerCase() === 'authorization');
+                    if (!hasAuth) {
+                        init.headers.push(['Authorization', 'Bearer ' + token]);
+                    }
+                } else {
+                    const hasAuth = Object.keys(init.headers).some(k => k.toLowerCase() === 'authorization');
+                    if (!hasAuth) {
+                        init.headers['Authorization'] = 'Bearer ' + token;
+                    }
+                }
+            }
+        }
+        
+        return originalFetch.call(this, input, init);
+    };
+
+    // 3. Propagate token to all link hrefs starting with /vgk/ to preserve session during page navigations
+    function propagateToken() {
+        if (!token) return;
+        const links = document.querySelectorAll('a');
+        links.forEach(link => {
+            const href = link.getAttribute('href');
+            if (href && (href.startsWith('/vgk/') || href.includes('/vgk/')) && !href.includes('token=')) {
+                // Ensure it's not a login page
+                if (href.includes('/vgk/login')) return;
+                
+                // Parse original URL
+                const urlParts = href.split('?');
+                const path = urlParts[0];
+                const search = urlParts[1] || '';
+                
+                // Reconstruct with token
+                const params = new URLSearchParams(search);
+                params.set('token', token);
+                link.setAttribute('href', path + '?' + params.toString());
+            }
+        });
+    }
+
+    // Run propagation immediately and when DOM is loaded / mutated
+    propagateToken();
+    window.addEventListener('DOMContentLoaded', propagateToken);
+    
+    const observer = new MutationObserver(propagateToken);
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  } catch (e) {
+    console.error('[VGK_TOKEN_PROPAGATION] Script execution error:', e);
+  }
+})();
+</script>
+`;
+
 const server = http.createServer(async (req, res) => {
   // DC Protocol: Global error handler wrapper for production stability
   try {
   const url = req.url;
+  console.log(`[REQ] ${req.method} ${url}`);
   const urlParts = new URL(url, `http://${getSafeHost(req)}`);
+
+  // APK Mobile Download Link Redirect
+  const reqPathLower = urlParts.pathname.toLowerCase();
+  if (reqPathLower === '/mobile.apk' || reqPathLower === '/download/mobile.apk' || reqPathLower === '/download-app' || reqPathLower === '/download/apk' || reqPathLower === '/myntreal.apk' || reqPathLower === '/public/myntreal.apk' || reqPathLower === '/app.apk') {
+    res.writeHead(302, { 'Location': 'https://www.vgk4u.com/mobile.apk' });
+    res.end();
+    return;
+  }
+
+  // DC Protocol (Aug 2026): Enforce session/cookie creation from token query param
+  // for mobile PWA iframes loading /vgk/* templates.
+  if (urlParts.pathname.startsWith('/vgk/') && urlParts.searchParams.has('token')) {
+    const queryToken = urlParts.searchParams.get('token');
+    
+    // Clean token from redirect target
+    const cleanSearch = urlParts.search.replace(/([\?&])token=[^&]*&?/, '$1').replace(/[\?&]$/, '');
+    const targetUrl = urlParts.pathname + cleanSearch;
+    
+    try {
+      const response = await fetch(BACKEND_URL_SERVER + '/api/v1/vgk/auth/me', {
+        headers: { 'Authorization': 'Bearer ' + queryToken }
+      });
+      if (response.ok) {
+        activeSessions.add(queryToken);
+        req.validatedVgkToken = queryToken;
+        const profileData = await response.json();
+        const userData = profileData.data || profileData.employee || profileData.user || profileData.partner || profileData;
+        if (userData && userData.id) {
+          sessionRoleCache.set(queryToken, {
+            userId: userData.id,
+            authLevel: userData.user_type || userData.category || 'User'
+          });
+        }
+        
+        // Write session_token cookie (omit HttpOnly so client JS fallback can read it)
+        res.setHeader('Set-Cookie', `session_token=${queryToken}; Path=/; SameSite=Lax`);
+        
+        const isVgkRoute = urlParts.pathname.startsWith('/vgk/');
+        if (urlParts.searchParams.get('embed') !== 'true' && !isVgkRoute) {
+          res.writeHead(302, {
+            'Location': targetUrl
+          });
+          res.end();
+          console.log(`[DC_MOBILE_IFRAME_SESSION] session_token set for user ${userData.id || 'unknown'}. Redirecting to ${targetUrl}`);
+          return;
+        } else {
+          console.log(`[DC_MOBILE_IFRAME_SESSION] session_token set for user ${userData.id || 'unknown'}. Serving directly (embed or VGK route).`);
+        }
+      } else {
+        console.warn(`[DC_MOBILE_IFRAME_SESSION] Auth check returned ${response.status} for token: ${queryToken.substring(0, 10)}...`);
+      }
+    } catch (err) {
+      console.error('[DC_MOBILE_IFRAME_SESSION] Error validating query token:', err);
+    }
+  }
 
   // API Proxy - Forward /api/v1/* requests to backend on port 8000
   // Serve favicon.ico from public directory
@@ -8456,12 +8616,12 @@ const server = http.createServer(async (req, res) => {
   const cookies = cookie.parse(req.headers.cookie || '');
   // SECURITY: Only read session from HttpOnly cookies, NEVER from URL parameters
   // This prevents session hijacking via URL sharing between browsers
-  let sessionToken = cookies.session_token || cookies.session || '';
+  let sessionToken = req.validatedVgkToken || cookies.session_token || cookies.session || '';
   const staffToken = cookies.staff_token || '';
   const partnerToken = cookies.partner_token || '';
   const rvzSessionToken = cookies.rvzSessionToken || '';
   // Session validation: If token exists but not in memory, validate with backend
-  let isLoggedIn = sessionToken && activeSessions.has(sessionToken);
+  let isLoggedIn = (sessionToken && activeSessions.has(sessionToken)) || (req.validatedVgkToken ? true : false);
   let isStaffLoggedIn = staffToken && activeSessions.has(staffToken);
   let isPartnerLoggedIn = partnerToken && activeSessions.has(partnerToken);
   // Extract user type from session for RVZ TEXT option visibility
@@ -8516,6 +8676,45 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // DC Protocol: VGK member session auto-restore from JWT cookie
+  let isVgkMemberToken = false;
+  if (sessionToken) {
+    try {
+      const parts = sessionToken.split('.');
+      if (parts.length === 3) {
+        const payloadJson = Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+        const payload = JSON.parse(payloadJson);
+        if (payload.user_type === 'vgk_member') {
+          isVgkMemberToken = true;
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (sessionToken && !isLoggedIn && isVgkMemberToken && !url.startsWith('/vgk/login') && !url.startsWith('/api/')) {
+    try {
+      const response = await fetch(BACKEND_URL_SERVER + '/api/v1/vgk/auth/me', {
+        headers: { 'Authorization': 'Bearer ' + sessionToken }
+      });
+      if (response.ok) {
+        activeSessions.add(sessionToken);
+        isLoggedIn = true;
+        const profileData = await response.json();
+        const userData = profileData.employee || profileData.user || profileData.partner || profileData;
+        if (userData && userData.id) {
+          sessionRoleCache.set(sessionToken, {
+            userId: userData.id,
+            authLevel: userData.user_type || userData.category || 'User'
+          });
+          console.log(`✅ VGK Session restored for ${userData.id || 'unknown'}`);
+        }
+      }
+    } catch (err) {
+      const isConnRefused = err && err.cause && err.cause.code === 'ECONNREFUSED';
+      if (!isConnRefused) console.error('VGK session auto-restore error:', err);
+    }
+  }
+
   // DC Protocol (Dec 31, 2025): PRIORITY FIX - Auto-restore MNR sessions BEFORE staff promotion
   // This ensures MNR users see their own leads on /user/my-leads even after server restart
   // Must run before staff token promotion to prevent staff session from overriding MNR session
@@ -8523,7 +8722,7 @@ const server = http.createServer(async (req, res) => {
   let mnrSessionRestored = false;
   
   let mnrBackendStarting = false;
-  if (sessionToken && !isLoggedIn && !url.startsWith('/login') && !url.startsWith('/api/auth/login')) {
+  if (sessionToken && !isLoggedIn && !isVgkMemberToken && !url.startsWith('/login') && !url.startsWith('/api/auth/login')) {
     try {
       const profileResponse = await fetch(BACKEND_URL_SERVER + '/api/v1/auth/me', {
         headers: { 'Authorization': 'Bearer ' + sessionToken }
@@ -8870,12 +9069,23 @@ a{background:#4f46e5;color:white;padding:12px 24px;border-radius:8px;text-decora
     // 3. Inject flashy Community active services badges CSS and client-side injector
     const activeBadgesCss = `
 <style id="hubActiveBadgesStyles">
+    html, body {
+        overflow-x: hidden !important;
+        width: 100% !important;
+    }
+    
+    .logo {
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        flex-wrap: nowrap !important;
+    }
+    
     #activeCommunitySevaBadgesHub {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        margin-left: 15px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
     }
     
     .hub-active-badge {
@@ -8899,6 +9109,7 @@ a{background:#4f46e5;color:white;padding:12px 24px;border-radius:8px;text-decora
         box-shadow: 0 0 10px rgba(168, 85, 247, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.3);
         animation: hubGradientShift 4s ease infinite, hubPulseGlow 2s infinite alternate;
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        white-space: nowrap;
     }
     
     .hub-active-badge::before {
@@ -8993,6 +9204,23 @@ a{background:#4f46e5;color:white;padding:12px 24px;border-radius:8px;text-decora
             font-size: 11px;
         }
     }
+    
+    @media (max-width: 480px) {
+        .logo {
+            gap: 6px !important;
+        }
+        .site-logo, .hub-site-logo {
+            height: clamp(34px, 10vw, 42px) !important;
+        }
+        #activeCommunitySevaBadgesHub {
+            margin-left: 6px !important;
+            gap: 3px !important;
+        }
+        .hub-active-badge {
+            padding: 3px 8px !important;
+            font-size: 10px !important;
+        }
+    }
 </style>
 `;
     const activeBadgesScript = `
@@ -9006,7 +9234,7 @@ a{background:#4f46e5;color:white;padding:12px 24px;border-radius:8px;text-decora
         if (!badgeWrap) {
             badgeWrap = document.createElement('div');
             badgeWrap.id = 'activeCommunitySevaBadgesHub';
-            logoContainer.parentNode.insertBefore(badgeWrap, logoContainer.nextSibling);
+            logoContainer.appendChild(badgeWrap);
         }
         
         fetch('/api/v1/community-services/public/active-headers')
@@ -19075,6 +19303,14 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Member Offers page not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`);
+      
+      const headTagMatch = html.match(/<head[^>]*>/i);
+      if (headTagMatch) {
+        html = html.replace(headTagMatch[0], headTagMatch[0] + VGK_TOKEN_PROPAGATION_SCRIPT);
+      } else {
+        html = VGK_TOKEN_PROPAGATION_SCRIPT + html;
+      }
+
       res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
@@ -19133,10 +19369,18 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     }
     const m = url.match(/^\/vgk\/([a-z\-]+)/);
     const slug = m ? m[1].replace(/-/g, '_') : '';
-    const filePath = path.join(__dirname, `vgk_member_${slug}.html`);
+        const filePath = path.join(__dirname, `vgk_member_${slug}.html`);
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end(`VGK4U member page (${slug}) not found`); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`);
+      
+      const headTagMatch = html.match(/<head[^>]*>/i);
+      if (headTagMatch) {
+        html = html.replace(headTagMatch[0], headTagMatch[0] + VGK_TOKEN_PROPAGATION_SCRIPT);
+      } else {
+        html = VGK_TOKEN_PROPAGATION_SCRIPT + html;
+      }
+
       res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
@@ -19148,6 +19392,14 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       let html = data
         .replace(/\?v=\d+/g, `?v=${BUILD_ID}`)
         .replace('__VGK_BUILD_ID__', String(BUILD_ID));
+
+      const headTagMatch = html.match(/<head[^>]*>/i);
+      if (headTagMatch) {
+        html = html.replace(headTagMatch[0], headTagMatch[0] + VGK_TOKEN_PROPAGATION_SCRIPT);
+      } else {
+        html = VGK_TOKEN_PROPAGATION_SCRIPT + html;
+      }
+
       res.writeHead(200, {
         'Content-Type': 'text/html',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -19189,6 +19441,14 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Vendor Directory not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`);
+      
+      const headTagMatch = html.match(/<head[^>]*>/i);
+      if (headTagMatch) {
+        html = html.replace(headTagMatch[0], headTagMatch[0] + VGK_TOKEN_PROPAGATION_SCRIPT);
+      } else {
+        html = VGK_TOKEN_PROPAGATION_SCRIPT + html;
+      }
+
       res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
@@ -20531,6 +20791,16 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
   // ── DC_CAREERS_001: HR Module Routes (Apr 2026) ──────────────────────────
   } else if (url.startsWith('/staff/hr/job-postings')) {
     const filePath = path.join(__dirname, 'staff_hr_job_postings.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
+
+  } else if (url.startsWith('/staff/performance-config')) {
+    const filePath = path.join(__dirname, 'staff_performance_config.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);

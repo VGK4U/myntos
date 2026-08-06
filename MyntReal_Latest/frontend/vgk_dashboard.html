@@ -490,11 +490,26 @@
         .topbar-bell:hover { background: #f3f4f6; }
         .topbar-logout-icon { background: none; border: none; cursor: pointer; padding: 7px; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: #ef4444; transition: background .15s; }
         .topbar-logout-icon:hover { background: #fee2e2; }
+        
+        /* ── PWA Embed Mode Overrides ── */
+        body.embed-mode { background: #f6f9fc !important; }
+        body.embed-mode .topbar { display: none !important; }
+        body.embed-mode .sidebar-panel { display: none !important; }
+        body.embed-mode .sidebar-overlay { display: none !important; }
+        body.embed-mode .tab-nav { display: none !important; }
+        body.embed-mode .main-area { padding-top: 0 !important; max-height: 100vh !important; height: 100vh !important; }
+        body.embed-mode .main-content { padding: 10px !important; margin-top: 0 !important; }
+        body.embed-mode .container-fluid { padding: 0 !important; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/public/js/vgk-card-shared.js?v=20260508v"></script>
 </head>
 <body>
+    <script>
+      if (window.location.search.includes('embed=true') || window.location.search.includes('app=true')) {
+        document.body.classList.add('embed-mode');
+      }
+    </script>
 
     <!-- Left Sidebar Overlay -->
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
@@ -2256,7 +2271,21 @@
         const BASE = '/api/v1/vgk';
         const LEDGER_PANES = ['cash-income', 'solar-advance', 'bonanza', 'capacity', 'community'];
         let _commLoading = false;
-        const token = localStorage.getItem('vgk_token');
+        
+        let token = localStorage.getItem('vgk_token');
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryToken = urlParams.get('token');
+        if (queryToken) {
+            localStorage.setItem('vgk_token', queryToken);
+            token = queryToken;
+        }
+        if (!token) {
+            const match = document.cookie.match(/session_token=([^;]+)/);
+            if (match) {
+                token = match[1];
+                localStorage.setItem('vgk_token', token);
+            }
+        }
         if (!token) { window.location.href = '/vgk/login'; }
 
         function authHeaders() {
@@ -3223,6 +3252,9 @@
             if (!evt.data || typeof evt.data !== 'object') return;
             if (evt.data.type === 'vgk_ticket_success' || evt.data.type === 'vgk_ticket_close') {
                 closeRaiseTicketIframe();
+            }
+            if (evt.data.type === 'vgk_switch_tab' && evt.data.tab) {
+                showTab(evt.data.tab);
             }
         });
 
@@ -5916,7 +5948,9 @@
             }
             // Restore last active tab (default to earnings if none saved)
             const _validTabs = ['earnings','leads','orders','tickets','network','addmember','points','ledger','coupons','profile','bonanza','vendors','media','mycard'];
-            let _lastTab = localStorage.getItem('vgk_active_tab') || 'earnings';
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryTab = urlParams.get('tab');
+            let _lastTab = queryTab || localStorage.getItem('vgk_active_tab') || 'earnings';
             if (stored.vgk_role === 'COMMUNITY') {
                 if (_lastTab !== 'profile' && _lastTab !== 'ledger') {
                     _lastTab = 'ledger';

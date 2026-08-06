@@ -118,6 +118,9 @@
                 <button class="page-tab-btn" id="tabLiveAch" onclick="switchTab('liveAch')">
                     <i class="fas fa-trophy me-1"></i>Live Achievement
                 </button>
+                <button class="page-tab-btn" id="tabQuarterlyBonus" onclick="switchTab('quarterlyBonus')" style="display:none;">
+                    <i class="fas fa-coins me-1"></i>Quarterly Bonus
+                </button>
             </div>
 
             <!-- ══ EARNINGS PANEL ══ -->
@@ -549,6 +552,105 @@
                     Target must be met (self+company+direct total) before any incentive is paid.
                 </div>
             </div><!-- /liveAchPanel -->
+
+            <!-- ══ QUARTERLY BONUS PANEL ══ -->
+            <div id="quarterlyBonusPanel" style="display:none">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                    <div>
+                        <div class="fw-bold text-dark"><i class="fas fa-coins text-warning me-2"></i>My Quarterly Bonus Earning</div>
+                        <small class="text-muted">Calculated quarterly: based on completed solar files and performance modifiers</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <select class="year-select" id="qbPeriodSelect" onchange="loadQuarterlyBonus()"></select>
+                        <button class="btn btn-sm btn-outline-primary" onclick="loadQuarterlyBonus()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+                    </div>
+                </div>
+
+                <div id="qbNotEligibleAlert" style="display:none;" class="alert alert-warning py-2 px-3 small mb-3">
+                    <i class="fas fa-exclamation-triangle me-1"></i> You are not currently marked as eligible for the Quarterly Bonus. Please contact HR or Management.
+                </div>
+
+                <!-- Rules and Terms Card -->
+                <div style="background:#f5f3ff; border:1px solid #ddd6fe; border-radius:12px; padding:12px 16px; margin-bottom:16px; color:#5b21b6;">
+                    <div style="font-weight:700; font-size:13px; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                        <i class="fas fa-gift text-purple-600"></i> Quarterly Bonus Structure & Incentives Terms
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; font-size:11.5px; opacity:0.9;">
+                        <div style="display:flex; align-items:flex-start; gap:6px;">
+                            <i class="fas fa-check-circle text-purple-500" style="margin-top:2px;"></i>
+                            <span><strong>Base Payout:</strong> Earn ₹150 base payout per completed solar file.</span>
+                        </div>
+                        <div style="display:flex; align-items:flex-start; gap:6px;">
+                            <i class="fas fa-rocket text-purple-500" style="margin-top:2px;"></i>
+                            <span><strong>High Performance Multiplier:</strong> Achieve 1.2x (120%) payout rate when KRA + Activity average is ≥ 80%.</span>
+                        </div>
+                        <div style="display:flex; align-items:flex-start; gap:6px;">
+                            <i class="fas fa-shield-alt text-purple-500" style="margin-top:2px;"></i>
+                            <span><strong>Low Performance Multiplier:</strong> Guaranteed 0.5x (50%) payout rate even if combined average is below 80%.</span>
+                        </div>
+                        <div style="display:flex; align-items:flex-start; gap:6px;">
+                            <i class="fas fa-bullseye text-purple-500" style="margin-top:2px;"></i>
+                            <span><strong>Eligibility Target:</strong> Meet the minimum file count target for the period to unlock bonus payouts.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats summary cards -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;" id="qbStatsGrid">
+                    <!-- Payout card -->
+                    <div style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border-radius:12px;padding:12px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+                        <div style="font-size:11px;text-transform:uppercase;opacity:0.9;font-weight:600;">Estimated Earning</div>
+                        <div style="font-size:20px;font-weight:800;margin-top:4px;" id="qbEstimatedPayout">₹0</div>
+                        <div style="font-size:10px;opacity:0.85;margin-top:2px;" id="qbMultiplierInfo">-</div>
+                    </div>
+                    <!-- Completed Files -->
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;text-align:center;">
+                        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;">Completed Files</div>
+                        <div style="font-size:20px;font-weight:800;color:#1e3a5f;margin-top:4px;" id="qbCompletedFiles">0</div>
+                        <div style="font-size:10px;color:#6b7280;margin-top:2px;" id="qbTargetInfo">Target: 0</div>
+                    </div>
+                    <!-- KRA Score -->
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;text-align:center;">
+                        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;">KRA Score</div>
+                        <div style="font-size:20px;font-weight:800;color:#2563eb;margin-top:4px;" id="qbKraScore">0%</div>
+                        <div style="font-size:10px;color:#6b7280;margin-top:2px;">Approved KRA instance rate</div>
+                    </div>
+                    <!-- Activity Score -->
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;text-align:center;">
+                        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;">Activity Score</div>
+                        <div style="font-size:20px;font-weight:800;color:#7c3aed;margin-top:4px;" id="qbActivityScore">0%</div>
+                        <div style="font-size:10px;color:#6b7280;margin-top:2px;">Time Ledger completion rate</div>
+                    </div>
+                    <!-- Combined Avg -->
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;text-align:center;">
+                        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;">Combined Average</div>
+                        <div style="font-size:20px;font-weight:800;color:#1e293b;margin-top:4px;" id="qbCombinedScore">0%</div>
+                        <div style="font-size:10px;color:#6b7280;margin-top:2px;" id="qbThresholdStatus">Threshold: 80%</div>
+                    </div>
+                </div>
+
+                <!-- Leads list -->
+                <div class="card mt-3">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="inc-table" id="qbTable">
+                                <thead>
+                                    <tr>
+                                        <th>Client Name</th>
+                                        <th>Phone</th>
+                                        <th>Deal Value (₹)</th>
+                                        <th>Completion Date</th>
+                                        <th>Base Eligible Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="qbTableBody">
+                                    <tr><td colspan="5" class="text-center text-muted py-4">No completed files found in this period</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- /quarterlyBonusPanel -->
 
         </div><!-- /content-area -->
     </div><!-- /main-content -->
@@ -1017,14 +1119,17 @@
             const isLeads       = (tab === 'leads');
             const isPerformance = (tab === 'performance');
             const isLiveAch     = (tab === 'liveAch');
+            const isQuarterlyBonus = (tab === 'quarterlyBonus');
             document.getElementById('earningsPanel').style.display    = isEarnings    ? '' : 'none';
             document.getElementById('leadsPanel').style.display       = isLeads       ? '' : 'none';
             document.getElementById('performancePanel').style.display = isPerformance ? '' : 'none';
             document.getElementById('liveAchPanel').style.display     = isLiveAch     ? '' : 'none';
+            document.getElementById('quarterlyBonusPanel').style.display = isQuarterlyBonus ? '' : 'none';
             document.getElementById('tabEarnings').classList.toggle('active',    isEarnings);
             document.getElementById('tabLeads').classList.toggle('active',       isLeads);
             document.getElementById('tabPerformance').classList.toggle('active', isPerformance);
             document.getElementById('tabLiveAch').classList.toggle('active',     isLiveAch);
+            document.getElementById('tabQuarterlyBonus').classList.toggle('active', isQuarterlyBonus);
             if(isLeads){
                 if(!catsLoaded){ catsLoaded = true; loadLeadsCategories(); }
                 if(!leadsLoaded){ loadSourcingLeads(1); }
@@ -1036,6 +1141,9 @@
             if(isLiveAch && !liveAchLoaded){
                 liveAchLoaded = true;
                 loadLiveAch();
+            }
+            if(isQuarterlyBonus){
+                loadQuarterlyBonus();
             }
         };
 
@@ -1106,19 +1214,20 @@
                 updateKraCard(emp, 'kraStatusCardAch', 'kraComplianceBadgeAch', 'kraComplianceValAch', 'kraStatusTextAch', 'kraCurrentRateAch');
 
                 const cats = emp.categories || [];
-                const activeCats = cats.filter(c => c.self_count > 0 || c.company_count > 0 || c.direct_count > 0 || c.achieved_count > 0);
 
                 document.getElementById('liveAchTotal').textContent   = fmtLiveAch(emp.total_incentive_earned);
                 document.getElementById('liveAchMonthLabel').textContent = MNTH[+month] + ' ' + year;
                 document.getElementById('liveAchBanner').style.display = '';
 
-                if(!activeCats.length){
-                    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-inbox fa-2x mb-2 d-block"></i>No activity recorded for this period</td></tr>';
+                if(!cats.length){
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-inbox fa-2x mb-2 d-block"></i>No incentive configuration found for this period</td></tr>';
                     return;
                 }
 
                 const catOrder = ['training','solar','ev_b2c','ev_b2b_new','ev_b2b_existing','ev_b2b','insurance','real_estate','service_spares','service_revenue'];
-                const sorted = catOrder.map(s => activeCats.find(c => c.slug === s)).filter(Boolean);
+                const sorted = catOrder.map(s => cats.find(c => c.slug === s)).filter(Boolean);
+                // Include any categories not in catOrder
+                cats.forEach(c => { if(!sorted.includes(c)) sorted.push(c); });
 
                 tbody.innerHTML = sorted.map(c => {
                     const selfDisp    = fmtAchCount(c.self_count,    c.self_amount,    c.slug);
@@ -1472,6 +1581,111 @@
             }
         }
 
+        async function loadQuarterlyBonus(periodId = null) {
+            const selectEl = document.getElementById('qbPeriodSelect');
+            const targetPeriodId = periodId || (selectEl ? selectEl.value : null);
+
+            let url = '/api/v1/staff/performance/quarterly-bonus';
+            if (targetPeriodId) {
+                url += `?period_id=${targetPeriodId}`;
+            }
+
+            try {
+                const resp = await staffFetch(url);
+                if (!resp.ok) {
+                    console.error('Failed to fetch quarterly bonus details');
+                    return;
+                }
+                const data = await resp.json();
+                
+                if (selectEl && selectEl.options.length === 0 && data.periods) {
+                    selectEl.innerHTML = data.periods.map(p => 
+                        `<option value="${p.id}">${p.period_name}</option>`
+                    ).join('');
+                }
+                if (selectEl) {
+                    selectEl.value = data.period.id;
+                }
+
+                const alertEl = document.getElementById('qbNotEligibleAlert');
+                if (alertEl) {
+                    alertEl.style.display = data.eligible ? 'none' : 'block';
+                }
+
+                if (!data.stats) {
+                    document.getElementById('qbTableBody').innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">No active bonus stats for this period</td>
+                        </tr>`;
+                    return;
+                }
+
+                const stats = data.stats;
+                const period = data.period;
+
+                const payEl = document.getElementById('qbEstimatedPayout');
+                if (payEl) payEl.textContent = '₹' + Math.round(stats.estimated_payout).toLocaleString('en-IN');
+
+                const multEl = document.getElementById('qbMultiplierInfo');
+                if (multEl) {
+                    if (stats.target_met) {
+                        multEl.textContent = `Multiplier: ${Math.round(stats.multiplier * 100)}% (₹${Math.round(period.base_bonus_per_file * stats.multiplier)}/file)`;
+                    } else {
+                        multEl.textContent = `Target not met (Base: ₹${period.base_bonus_per_file}/file)`;
+                    }
+                }
+
+                const compEl = document.getElementById('qbCompletedFiles');
+                if (compEl) compEl.textContent = stats.completed_files;
+
+                const targetEl = document.getElementById('qbTargetInfo');
+                if (targetEl) targetEl.textContent = `Target: ${stats.target_files} completed files (₹${period.base_bonus_per_file}/file base)`;
+
+                const kraEl = document.getElementById('qbKraScore');
+                if (kraEl) kraEl.textContent = stats.kra_score + '%';
+
+                const actEl = document.getElementById('qbActivityScore');
+                if (actEl) actEl.textContent = stats.activity_score + '%';
+
+                const combEl = document.getElementById('qbCombinedScore');
+                if (combEl) combEl.textContent = stats.combined_score + '%';
+
+                const threshEl = document.getElementById('qbThresholdStatus');
+                if (threshEl) {
+                    threshEl.textContent = `Threshold: ${period.kra_activity_threshold}%`;
+                    if (stats.combined_score >= period.kra_activity_threshold) {
+                        threshEl.style.color = '#10b981';
+                        threshEl.innerHTML = `Threshold: ${period.kra_activity_threshold}% <i class="fas fa-check-circle ms-1"></i>`;
+                    } else {
+                        threshEl.style.color = '#ef4444';
+                        threshEl.innerHTML = `Threshold: ${period.kra_activity_threshold}% <i class="fas fa-times-circle ms-1"></i>`;
+                    }
+                }
+
+                const tbody = document.getElementById('qbTableBody');
+                if (tbody) {
+                    if (stats.leads && stats.leads.length > 0) {
+                        tbody.innerHTML = stats.leads.map(lead => `
+                            <tr>
+                                <td><span class="fw-semibold text-dark">${lead.name}</span></td>
+                                <td>${lead.phone || '—'}</td>
+                                <td>₹${Math.round(lead.deal_value).toLocaleString('en-IN')}</td>
+                                <td>${lead.completed_at ? lead.completed_at.split('T')[0] : '—'}</td>
+                                <td>₹${period.base_bonus_per_file}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">No completed files found in this period</td>
+                            </tr>`;
+                    }
+                }
+            } catch (err) {
+                console.error('Error loading quarterly bonus details:', err);
+            }
+        }
+
         window._initMyIncentives = async function(){
             await StaffSidebar.init();
             StaffHeader.inject('My Lead Incentives', 'fas fa-hand-holding-usd');
@@ -1491,6 +1705,25 @@
             loadEarnings();
             loadCapacity();
             loadLiveMonth();
+
+            // Quarterly Bonus Eligibility Check
+            try {
+                const resp = await staffFetch('/api/v1/staff/auth/me');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const emp = data.employee || data;
+                    const rc = (emp.role_code || '').toLowerCase().trim();
+                    const isKeyLeader = ['vgk4u', 'vgk4u_supreme', 'key_leadership', 'ea', 'executive_admin'].includes(rc) || rc.includes('vgk4u');
+                    const isEligible = emp.is_quarterly_bonus_eligible || isKeyLeader || rc.includes('manager') || rc.includes('admin');
+                    
+                    const qbTab = document.getElementById('tabQuarterlyBonus');
+                    if (qbTab) {
+                        qbTab.style.display = isEligible ? '' : 'none';
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching user info for quarterly bonus check:', err);
+            }
         };
 
         document.addEventListener('DOMContentLoaded', window._initMyIncentives);

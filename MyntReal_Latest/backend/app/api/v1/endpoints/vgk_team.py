@@ -20,6 +20,7 @@ from app.core.database import get_db
 from app.models.staff_accounts import OfficialPartner, VGKTeamCommissionConfig, VGKTeamIncomeEntry, VGKPINPurchaseRequest, VGKPointsLedger, VGKUplineChangeLog
 from app.models.signup_category import SignupCategory
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
+from app.core.security import get_current_user_hybrid_with_partner
 from app.models.staff import StaffEmployee
 
 router = APIRouter()
@@ -507,6 +508,7 @@ def list_vgk_members(
 
     for m in members:
         d = m.to_dict()
+        phone = (m.phone or m.whatsapp_number or '').strip()
         if m.parent_partner_id:
             ref = parent_map.get(m.parent_partner_id)
             d['referrer_name'] = ref.partner_name if ref else None
@@ -534,7 +536,6 @@ def list_vgk_members(
             else:
                 d['registration_source'] = 'vgk_member'
         else:
-            phone = (m.phone or m.whatsapp_number or '').strip()
             crm_src = None
             if phone in crm_source_map:
                 crm_src = crm_source_map[phone]
@@ -5040,18 +5041,37 @@ def my_vgk_registrations(
     is_active: Optional[bool] = Query(None),
     sort_by: Optional[str] = Query("registered", description="registered|name|code"),
     sort_dir: Optional[str] = Query("desc", description="asc|desc"),
-    current_user: StaffEmployee = Depends(get_current_staff_user),
+    current_user = Depends(get_current_user_hybrid_with_partner),
     db: Session = Depends(get_db)
 ):
-    """Return VGK members registered by the calling staff employee."""
-    emp_code = (getattr(current_user, 'emp_code', '') or '').strip().upper()
-    if not emp_code:
-        return {"success": True, "total": 0, "page": page, "page_size": page_size, "data": []}
+    """Return VGK members registered by the calling staff employee or referring partner."""
+    from app.models.staff import StaffEmployee
+    from app.models.staff_accounts import OfficialPartner
 
-    query = db.query(OfficialPartner).filter(
-        OfficialPartner.category == 'VGK_TEAM',
-        OfficialPartner.registered_by_emp_code == emp_code
-    )
+    if isinstance(current_user, OfficialPartner):
+        query = db.query(OfficialPartner).filter(
+            OfficialPartner.category == 'VGK_TEAM',
+            OfficialPartner.parent_partner_id == current_user.id
+        )
+        this_month_count = db.query(OfficialPartner).filter(
+            OfficialPartner.category == 'VGK_TEAM',
+            OfficialPartner.parent_partner_id == current_user.id,
+            OfficialPartner.created_at >= text("date_trunc('month', now())")
+        ).count()
+    else:
+        emp_code = (getattr(current_user, 'emp_code', '') or '').strip().upper()
+        if not emp_code:
+            return {"success": True, "total": 0, "page": page, "page_size": page_size, "data": []}
+        query = db.query(OfficialPartner).filter(
+            OfficialPartner.category == 'VGK_TEAM',
+            OfficialPartner.registered_by_emp_code == emp_code
+        )
+        this_month_count = db.query(OfficialPartner).filter(
+            OfficialPartner.category == 'VGK_TEAM',
+            OfficialPartner.registered_by_emp_code == emp_code,
+            OfficialPartner.created_at >= text("date_trunc('month', now())")
+        ).count()
+
     if is_active is not None:
         query = query.filter(OfficialPartner.is_active == is_active)
 
@@ -5064,12 +5084,6 @@ def my_vgk_registrations(
 
     total   = query.count()
     members = query.order_by(_order).offset((page - 1) * page_size).limit(page_size).all()
-
-    this_month_count = db.query(OfficialPartner).filter(
-        OfficialPartner.category == 'VGK_TEAM',
-        OfficialPartner.registered_by_emp_code == emp_code,
-        OfficialPartner.created_at >= text("date_trunc('month', now())")
-    ).count()
 
     return {
         "success": True,
