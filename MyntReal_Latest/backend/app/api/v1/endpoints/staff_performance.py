@@ -2761,27 +2761,64 @@ def incentive_achievements_drilldown(
     }
 
 
-@router.get("/performance/my-incentive-achievements", summary="Current employee's live incentive achievement")
+@router.get("/performance/my-incentive-achievements", summary="Current employee's or team member's live incentive achievement")
 def my_incentive_achievements(
     month: int = Query(...),
     year:  int = Query(...),
+    employee_id: Optional[str] = Query(None),
     db:    Session = Depends(get_db),
     me:    StaffEmployee = Depends(get_current_staff_user),
 ):
-    """Returns live incentive achievement breakdown for the currently logged-in employee.
-    Uses all companies scope so telecaller/handler/field roles across companies are captured.
-    DC-LIVE-ACH-SELF-001: show_all=False so only this employee is in d.data → d.data[0] is
-    always the logged-in employee (or empty list when no leads exist).
-    """
+    """Returns live incentive achievement breakdown for the currently logged-in employee (or requested team member if manager/admin)."""
+    target_emp_id = str(me.id)
+    if employee_id and str(employee_id).strip() and str(employee_id) != str(me.id):
+        req_id = int(employee_id)
+        if _is_vgk_or_ea(me) or _is_admin_or_manager(me):
+            target_emp_id = str(req_id)
+        else:
+            downline_ids = [r[0] for r in db.execute(text(
+                "SELECT id FROM staff_employees WHERE reporting_manager_id = :mid OR reporting_to = :mcode"
+            ), {'mid': me.id, 'mcode': me.emp_code or ''}).fetchall()]
+            if req_id in downline_ids:
+                target_emp_id = str(req_id)
+
     return get_incentive_achievements(
         company_id=None,
         month=month,
         year=year,
-        employee_id=str(me.id),
+        employee_id=target_emp_id,
         show_all=False,
         db=db,
         me=me,
     )
+
+
+@router.get("/performance/my-team-members", summary="Get list of team members reporting to current employee")
+def get_my_team_members(
+    db: Session = Depends(get_db),
+    me: StaffEmployee = Depends(get_current_staff_user),
+):
+    """Returns list of employees reporting to the current employee for team filter dropdown."""
+    is_admin = _is_vgk_or_ea(me) or _is_admin_or_manager(me)
+    if is_admin:
+        rows = db.execute(text(
+            "SELECT id, emp_code, COALESCE(full_name, emp_code) AS full_name "
+            "FROM staff_employees WHERE status = 'ACTIVE' AND id != :mid ORDER BY full_name"
+        ), {'mid': me.id}).fetchall()
+    else:
+        rows = db.execute(text(
+            "SELECT id, emp_code, COALESCE(full_name, emp_code) AS full_name "
+            "FROM staff_employees WHERE status = 'ACTIVE' AND (reporting_manager_id = :mid OR reporting_to = :mcode) AND id != :mid "
+            "ORDER BY full_name"
+        ), {'mid': me.id, 'mcode': me.emp_code or ''}).fetchall()
+
+    team_list = [{'id': r[0], 'emp_code': r[1], 'full_name': r[2]} for r in rows]
+    return {
+        'success': True,
+        'is_manager': is_admin or len(team_list) > 0,
+        'is_admin': is_admin,
+        'team_members': team_list
+    }
 
 
 # ── Payout Management Endpoints ────────────────────────────────────────────────

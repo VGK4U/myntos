@@ -480,6 +480,11 @@
                         <small class="text-muted">Real-time calculation: Self leads earn flat rate · Company leads earn company rate + bonus eligibility</small>
                     </div>
                     <div class="d-flex align-items-center gap-2">
+                        <div id="liveAchTeamWrap" style="display:none;">
+                            <select class="year-select" id="liveAchTeamSelect" onchange="loadLiveAch()" style="min-width:180px;font-weight:600;color:#374151;border-color:#6366f1;">
+                                <option value="">My Own Earnings (Self)</option>
+                            </select>
+                        </div>
                         <select class="year-select" id="liveAchMonth"></select>
                         <select class="year-select" id="liveAchYear"></select>
                         <button class="btn btn-sm btn-outline-primary" onclick="loadLiveAch()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
@@ -1147,7 +1152,8 @@
             }
         };
 
-        // ── Live Achievement tab — init dropdowns ─────────────────────────────
+        // ── Live Achievement tab — init dropdowns & team filter ─────────────────────────────
+        let teamMembersLoaded = false;
         (function initLiveAch(){
             const mSel = document.getElementById('liveAchMonth');
             const ySel = document.getElementById('liveAchYear');
@@ -1165,6 +1171,22 @@
                 if(y === curYear) o.selected = true;
                 ySel.appendChild(o);
             }
+
+            // Check if user is a manager or admin with team members
+            staffFetch(`${API}/performance/my-team-members`).then(r => r.ok ? r.json() : null).then(d => {
+                if (d && d.success && (d.is_manager || (d.team_members && d.team_members.length))) {
+                    const teamSel = document.getElementById('liveAchTeamSelect');
+                    if (teamSel && d.team_members && d.team_members.length) {
+                        d.team_members.forEach(m => {
+                            const opt = document.createElement('option');
+                            opt.value = m.id;
+                            opt.textContent = `${m.full_name} (${m.emp_code})`;
+                            teamSel.appendChild(opt);
+                        });
+                        document.getElementById('liveAchTeamWrap').style.display = '';
+                    }
+                }
+            }).catch(e => console.warn('[LiveAchTeamInit]', e));
         })();
 
         const LIVE_CAT_LABEL = {
@@ -1191,12 +1213,15 @@
         window.loadLiveAch = async function(){
             const month = document.getElementById('liveAchMonth').value;
             const year  = document.getElementById('liveAchYear').value;
+            const teamEmpId = document.getElementById('liveAchTeamSelect')?.value || '';
             const tbody = document.getElementById('liveAchBody');
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading…</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading…</td></tr>';
             document.getElementById('liveAchBanner').style.display = 'none';
             const MNTH = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
             try {
-                const r = await staffFetch(`${API}/performance/my-incentive-achievements?month=${month}&year=${year}`);
+                let reqUrl = `${API}/performance/my-incentive-achievements?month=${month}&year=${year}`;
+                if (teamEmpId) reqUrl += `&employee_id=${teamEmpId}`;
+                const r = await staffFetch(reqUrl);
                 if(!r.ok){ 
                     tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:#ef4444"><i class="fas fa-exclamation-circle me-1"></i>Could not load achievements</td></tr>'; 
                     document.getElementById('kraStatusCardAch').style.display = 'none';
@@ -1229,10 +1254,25 @@
                 // Include any categories not in catOrder
                 cats.forEach(c => { if(!sorted.includes(c)) sorted.push(c); });
 
+                const makeDrillLink = (dispHtml, countVal, amtVal, slug) => {
+                    const hasDeals = (countVal > 0 || amtVal > 0);
+                    if (!hasDeals) return dispHtml;
+                    const targetEmpId = teamEmpId || (emp.employee_id || emp.id);
+                    const targetEmpName = encodeURIComponent(emp.name || emp.emp_code || '');
+                    const catLbl = encodeURIComponent(LIVE_CAT_LABEL[slug] || slug);
+                    const drillUrl = `/staff/incentive-source?employee_id=${targetEmpId}&category_slug=${slug}&month=${month}&year=${year}&emp_name=${targetEmpName}&cat_label=${catLbl}`;
+                    return `<a href="${drillUrl}" target="_blank" onclick="window.open('${drillUrl}','_blank');return false;" title="Click to view Source Verification deal details" style="color:inherit;font-weight:700;text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer;"><i class="fas fa-search-plus me-1" style="font-size:10px;opacity:0.8;color:#4f46e5;"></i>${dispHtml}</a>`;
+                };
+
                 tbody.innerHTML = sorted.map(c => {
-                    const selfDisp    = fmtAchCount(c.self_count,    c.self_amount,    c.slug);
-                    const compDisp    = fmtAchCount(c.company_count, c.company_amount, c.slug);
-                    const directDisp  = fmtAchCount(c.direct_count||0, c.direct_amount||0, c.slug);
+                    const rawSelfDisp   = fmtAchCount(c.self_count,    c.self_amount,    c.slug);
+                    const rawCompDisp   = fmtAchCount(c.company_count, c.company_amount, c.slug);
+                    const rawDirectDisp = fmtAchCount(c.direct_count||0, c.direct_amount||0, c.slug);
+
+                    const selfDisp    = makeDrillLink(rawSelfDisp, c.self_count, c.self_amount, c.slug);
+                    const compDisp    = makeDrillLink(rawCompDisp, c.company_count, c.company_amount, c.slug);
+                    const directDisp  = makeDrillLink(rawDirectDisp, c.direct_count||0, c.direct_amount||0, c.slug);
+
                     const selfInc     = c.self_incentive > 0    ? fmtLiveAch(c.self_incentive)    : '<span style="color:#d1d5db">—</span>';
                     const compInc     = c.company_incentive_base > 0 ? fmtLiveAch(c.company_incentive_base) : '<span style="color:#d1d5db">—</span>';
                     const directInc   = (c.direct_incentive_base||0) > 0 ? fmtLiveAch(c.direct_incentive_base) : '<span style="color:#d1d5db">—</span>';
@@ -1247,6 +1287,8 @@
                         tgtDisp = `<span style="color:#ef4444;font-size:11px"><i class="fas fa-lock me-1"></i>Need ${c.gap} more</span>`;
                     }
                     const rowStyle    = c.bonus_applied ? 'background:rgba(254,243,199,0.35)' : '';
+                    const totalEarnedDisp = makeDrillLink(fmtLiveAch(c.incentive_earned), (c.self_count||0)+(c.company_count||0)+(c.direct_count||0), c.incentive_earned, c.slug);
+
                     return `<tr style="${rowStyle}">
                         <td class="fw-semibold">${LIVE_CAT_LABEL[c.slug] || c.slug}</td>
                         <td class="text-center" style="color:#7c3aed">${selfDisp}</td>
@@ -1257,7 +1299,7 @@
                         <td class="text-end fw-semibold" style="color:#0891b2">${compInc}</td>
                         <td class="text-center">${tgtDisp}</td>
                         <td class="text-center">${bonusDisp}</td>
-                        <td class="text-end fw-bold" style="color:#1f2937">${fmtLiveAch(c.incentive_earned)}</td>
+                        <td class="text-end fw-bold" style="color:#1f2937">${totalEarnedDisp}</td>
                     </tr>`;
                 }).join('') + `<tr style="background:#f3f4f6;border-top:2px solid #e5e7eb">
                     <td colspan="9" class="fw-bold text-end" style="padding:10px 12px">Total Incentive Earned</td>

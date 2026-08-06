@@ -533,8 +533,9 @@
                     const count   = (c.self_count||0) + (c.company_count||0);
                     const achDisp = unit === '₹' ? fmtS(c.achieved_amount) : count + ' ' + unit;
                     const bonus   = c.bonus_applied ? ` <span style="font-size:0.65rem;background:#f59e0b;color:#fff;padding:1px 5px;border-radius:3px;vertical-align:middle;">×${c.bonus_multiplier} BONUS</span>` : '';
-                    return `<div class="earn-cat${c.bonus_applied?' has-bonus':''}">
-                        <div class="earn-cat-name">${CAT[c.slug]||c.slug}</div>
+                    const drillUrl = `/staff/incentive-source?employee_id=${emp.employee_id || emp.id}&category_slug=${c.slug}&month=${month}&year=${year}&emp_name=${encodeURIComponent(emp.name||emp.emp_code||'')}`;
+                    return `<div class="earn-cat${c.bonus_applied?' has-bonus':''}" onclick="window.open('${drillUrl}','_blank')" style="cursor:pointer;" title="Click to view Source Verification deal details">
+                        <div class="earn-cat-name">${CAT[c.slug]||c.slug} <i class="fas fa-search-plus" style="font-size:9px;opacity:0.75;color:#6366f1;"></i></div>
                         <div class="earn-cat-amt">${fmt(c.incentive_earned)}${bonus}</div>
                         <div class="earn-cat-detail">${achDisp} achieved</div>
                     </div>`;
