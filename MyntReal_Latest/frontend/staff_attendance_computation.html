@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Computation - MyntReal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+        }
+        .main-content {
+            margin-left: 260px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            transition: margin-left 0.3s ease;
+            padding: 88px 24px 32px;
+        }
+        @media (max-width: 767px) {
+            .main-content { margin-left: 0; padding: 76px 14px 24px; }
+        }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        .kpi-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            border-left: 4px solid #0284c7;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            transition: transform 0.15s ease;
+        }
+        .kpi-card:hover { transform: translateY(-2px); }
+        .kpi-title { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+        .kpi-val { font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 4px; }
+        .kpi-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+        .filter-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            margin-bottom: 20px;
+        }
+
+        .table-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+        .tbl-custom {
+            width: 100%;
+            margin: 0;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .tbl-custom th {
+            background: #f8fafc;
+            padding: 12px 16px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #475569;
+            border-bottom: 2px solid #e2e8f0;
+            text-transform: uppercase;
+        }
+        .tbl-custom td {
+            padding: 14px 16px;
+            font-size: 13px;
+            color: #334155;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .status-full { background: #d1fae5; color: #047857; }
+        .status-half { background: #fef3c7; color: #b45309; }
+        .status-absent { background: #fee2e2; color: #b91c1c; }
+        .status-ot { background: #ede9fe; color: #6d28d9; }
+    </style>
+</head>
+<body>
+    <div class="main-content">
+        <!-- Filter Section -->
+        <div class="filter-card">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label font-weight-bold style-sm text-secondary" style="font-size:12px; font-weight:700;">Employee</label>
+                    <select id="empSelect" class="form-select form-select-sm" style="border-radius:8px;">
+                        <option value="">Loading employees...</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label style-sm text-secondary" style="font-size:12px; font-weight:700;">From Date</label>
+                    <input type="date" id="fromDate" class="form-control form-control-sm" style="border-radius:8px;">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label style-sm text-secondary" style="font-size:12px; font-weight:700;">To Date</label>
+                    <input type="date" id="toDate" class="form-control form-control-sm" style="border-radius:8px;">
+                </div>
+                <div class="col-md-3">
+                    <button id="btnFetch" class="btn btn-primary btn-sm w-100 style-btn" onclick="loadComputation()" style="border-radius:8px; font-weight:600; padding:7px 16px;">
+                        <i class="fas fa-filter me-1.5"></i> Compute Attendance
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Cards Grid -->
+        <div class="kpi-grid">
+            <div class="kpi-card" style="border-left-color: #0284c7;">
+                <div class="kpi-title">Total Days</div>
+                <div class="kpi-val" id="kpiTotalDays">0</div>
+                <div class="kpi-sub">In selected period</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: #10b981;">
+                <div class="kpi-title">Full Days</div>
+                <div class="kpi-val" style="color:#047857;" id="kpiFullDays">0</div>
+                <div class="kpi-sub">Worked full shift</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: #f59e0b;">
+                <div class="kpi-title">Half Days</div>
+                <div class="kpi-val" style="color:#b45309;" id="kpiHalfDays">0</div>
+                <div class="kpi-sub">Partial hours worked</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: #ef4444;">
+                <div class="kpi-title">Absent Days</div>
+                <div class="kpi-val" style="color:#b91c1c;" id="kpiAbsentDays">0</div>
+                <div class="kpi-sub">Below minimum hours</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: #7c3aed;">
+                <div class="kpi-title">Overtime (OT) Days</div>
+                <div class="kpi-val" style="color:#6d28d9;" id="kpiOtDays">0</div>
+                <div class="kpi-sub">Extra hours logged</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: #0d9488;">
+                <div class="kpi-title">Total Work Hours</div>
+                <div class="kpi-val" style="color:#0f766e;" id="kpiTotalWorkHours">0h</div>
+                <div class="kpi-sub" id="kpiOtHoursSub">0h OT included</div>
+            </div>
+        </div>
+
+        <!-- Table Card -->
+        <div class="table-card">
+            <div style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                <h6 style="margin:0; font-weight:700; color:#1e293b;"><i class="fas fa-list-alt me-2 text-primary"></i>Computed Attendance Logs</h6>
+                <span id="recordCountBadge" class="badge bg-light text-dark border px-2.5 py-1.5" style="font-size:11px;">0 logs</span>
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="tbl-custom">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Clock In</th>
+                            <th>Clock Out</th>
+                            <th class="text-center">Break</th>
+                            <th class="text-end">Worked Hrs</th>
+                            <th class="text-center">Computed Status</th>
+                            <th class="text-end">OT Hours</th>
+                            <th>Rules Applied</th>
+                        </tr>
+                    </thead>
+                    <tbody id="computationBody">
+                        <tr><td colspan="8" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-2"></i>Loading computation...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/staff_header.js?v=20260503a"></script>
+    <script>
+    (function() {
+        'use strict';
+        let currentUserId = null;
+
+        async function initPage() {
+            try { if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init(); } catch (e) { console.error('Sidebar init failed:', e); }
+            try {
+                if (typeof StaffHeader !== 'undefined') { StaffHeader.inject('Attendance Computation', 'fas fa-calculator'); StaffHeader.init(); }
+                if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            } catch (e) { console.error('Header init failed:', e); }
+
+            // Default dates: 1st of month to today
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            document.getElementById('fromDate').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('toDate').value = today.toISOString().split('T')[0];
+
+            await loadEmployees();
+            await loadComputation();
+        }
+
+        async function loadEmployees() {
+            try {
+                const meRes = await staffFetchJson('/api/v1/staff/auth/me');
+                if (meRes) {
+                    currentUserId = meRes.id;
+                }
+                const empRes = await staffFetchJson('/api/v1/staff/attendance/team-employees');
+                const sel = document.getElementById('empSelect');
+                sel.innerHTML = '';
+
+                let emps = (empRes && empRes.data) ? empRes.data : [];
+                if (!emps.length && meRes) {
+                    emps = [{ id: meRes.id, full_name: meRes.full_name || meRes.name, emp_code: meRes.emp_code }];
+                }
+
+                emps.forEach(emp => {
+                    const opt = document.createElement('option');
+                    opt.value = emp.id;
+                    opt.textContent = `${emp.full_name || emp.name} (${emp.emp_code || ('ID:' + emp.id)})`;
+                    if (emp.id === currentUserId) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Failed to load employees:', e);
+            }
+        }
+
+        async function loadComputation() {
+            const body = document.getElementById('computationBody');
+            body.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-2"></i>Computing attendance data…</td></tr>';
+
+            try {
+                const empId = document.getElementById('empSelect').value || currentUserId;
+                const fromDate = document.getElementById('fromDate').value;
+                const toDate = document.getElementById('toDate').value;
+
+                let url = `/api/v1/staff/attendance/computation?`;
+                if (fromDate) url += `from_date=${fromDate}&`;
+                if (toDate) url += `to_date=${toDate}&`;
+                if (empId) url += `employee_id=${empId}`;
+
+                const res = await staffFetchJson(url);
+                if (!res || res.success === false) {
+                    throw new Error(res?.message || 'Failed to fetch computation report');
+                }
+
+                renderComputation(res);
+            } catch (e) {
+                body.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4"><i class="fas fa-exclamation-triangle me-2"></i>Error: ${e.message}</td></tr>`;
+            }
+        }
+        window.loadComputation = loadComputation;
+
+        function renderComputation(res) {
+            const summary = res.summary || {};
+            const results = res.results || [];
+
+            document.getElementById('kpiTotalDays').textContent = summary.total_days || 0;
+            document.getElementById('kpiFullDays').textContent = summary.full_days || summary.present_days || 0;
+            document.getElementById('kpiHalfDays').textContent = summary.half_days || 0;
+            document.getElementById('kpiAbsentDays').textContent = summary.absent_days || 0;
+            document.getElementById('kpiOtDays').textContent = summary.ot_days || 0;
+            document.getElementById('kpiTotalWorkHours').textContent = (summary.total_work_hours || 0).toFixed(1) + 'h';
+            document.getElementById('kpiOtHoursSub').textContent = (summary.total_ot_hours || 0).toFixed(1) + 'h OT included';
+            document.getElementById('recordCountBadge').textContent = `${results.length} logs`;
+
+            const body = document.getElementById('computationBody');
+            if (!results.length) {
+                body.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><i class="fas fa-info-circle me-2"></i>No attendance logs found for the selected period.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            results.forEach(r => {
+                const comp = r.computation || {};
+                const status = (comp.status || r.status || 'UNKNOWN').toUpperCase();
+                let badgeCls = 'status-full';
+                if (status.includes('ABSENT')) badgeCls = 'status-absent';
+                else if (status.includes('HALF')) badgeCls = 'status-half';
+                else if (status.includes('OVERTIME') || (comp.ot_hours > 0)) badgeCls = 'status-ot';
+
+                const workHrs = (r.total_hours !== undefined ? r.total_hours : (r.worked_minutes ? r.worked_minutes/60 : 0)).toFixed(2);
+                const otHrs = (comp.ot_hours || 0).toFixed(2);
+
+                html += `<tr>
+                    <td style="font-weight:700; color:#1e293b;">${r.date || '—'}</td>
+                    <td>${r.clock_in ? r.clock_in.substring(11, 16) : '—'}</td>
+                    <td>${r.clock_out ? r.clock_out.substring(11, 16) : '—'}</td>
+                    <td class="text-center">${r.break_minutes || 0}m</td>
+                    <td class="text-end" style="font-weight:700; color:#0f172a;">${workHrs} hrs</td>
+                    <td class="text-center"><span class="status-badge ${badgeCls}">${status}</span></td>
+                    <td class="text-end" style="font-weight:700; color:${otHrs > 0 ? '#6d28d9' : '#94a3b8'};">${otHrs > 0 ? '+' + otHrs + ' hrs' : '0.00'}</td>
+                    <td style="font-size:11px; color:#64748b;">${comp.rule_applied || comp.notes || 'Standard shift calculation'}</td>
+                </tr>`;
+            });
+
+            body.innerHTML = html;
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initPage);
+        } else {
+            initPage();
+        }
+    })();
+    </script>
+</body>
+</html>
