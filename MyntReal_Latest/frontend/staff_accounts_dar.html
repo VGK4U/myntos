@@ -528,18 +528,24 @@
         document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b.dataset.period === currentPeriod));
         if (currentPeriod === 'CUSTOM') document.getElementById('customRange').classList.add('show');
         document.querySelectorAll('.dar-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === currentTab));
-        const pf = document.getElementById('periodFilterBar');
-        const dc = document.querySelector('.dar-card');
-        const bc = document.getElementById('balanceDashContent');
-        if (currentTab === 'balance') {
-            if (dc) dc.style.display = 'none';
-            if (pf) pf.style.display = 'none';
-            if (bc) bc.style.display = 'block';
-        } else {
-            if (pf) pf.style.display = (currentTab === 'comparison') ? 'none' : '';
-        }
+        const pf  = document.getElementById('periodFilterBar');
+        const dc  = document.querySelector('.dar-card');
+        const bc  = document.getElementById('balanceDashContent');
+        const cbc = document.getElementById('companyBreakdownContent');
+
+        if (dc) dc.style.display = (currentTab === 'daily' || currentTab === 'comparison') ? '' : 'none';
+        if (bc) bc.style.display = (currentTab === 'balance') ? 'block' : 'none';
+        if (cbc) cbc.style.display = (currentTab === 'company_breakdown') ? 'block' : 'none';
+        if (pf) pf.style.display = (currentTab === 'comparison' || currentTab === 'balance') ? 'none' : '';
+
         await initUniversalFilter();
-        if (currentTab === 'balance') loadBalanceDash(); else loadDAR();
+        if (currentTab === 'balance') {
+            loadBalanceDash();
+        } else if (currentTab === 'company_breakdown') {
+            loadCompanyBreakdown();
+        } else {
+            loadDAR();
+        }
     }
 
     if (document.readyState === 'loading') {
@@ -854,22 +860,33 @@
 
     async function loadCompanyBreakdown() {
         const out = document.getElementById('companyBreakdownOutput');
+        if (!out) return;
         out.innerHTML = '<div class="bal-loading"><i class="fas fa-spinner fa-spin me-2"></i>Loading Company Breakdown…</div>';
         try {
-            const coId = currentCompanyId || 0;
-            const periodParam = currentPeriod === 'CUSTOM' ? `period=CUSTOM&date_from=${document.getElementById('dateFrom').value}&date_to=${document.getElementById('dateTo').value}` : `period=${currentPeriod}`;
+            const coId = currentCompanyId || (universalFilter && universalFilter.state && universalFilter.state.selectedCompany) || 0;
+            currentCompanyId = coId;
+            const periodParam = currentPeriod === 'CUSTOM' ? `period=CUSTOM&date_from=${document.getElementById('dateFrom')?.value || ''}&date_to=${document.getElementById('dateTo')?.value || ''}` : `period=${currentPeriod}`;
             const darUrl = `/api/v1/staff/accounts/dar?mode=daily&${periodParam}${coId ? '&company_id=' + coId : ''}`;
             const balUrl = `/api/v1/staff/accounts/balance-dashboard?period=OVERALL${coId ? '&company_id=' + coId : ''}`;
 
             const [darRes, balRes] = await Promise.all([
-                staffFetchJson(darUrl).catch(() => ({ success: false })),
-                staffFetchJson(balUrl).catch(() => ({ success: false }))
+                staffFetchJson(darUrl).catch(e => { console.warn('[darUrl err]', e); return null; }),
+                staffFetchJson(balUrl).catch(e => { console.warn('[balUrl err]', e); return null; })
             ]);
 
-            renderCompanyBreakdown(darRes?.data || {}, balRes?.success ? balRes : lastBalData || {});
+            const darObj = (darRes && darRes.data) ? darRes.data : (darRes || {});
+            let balObj = (balRes && (balRes.grand_total || balRes.banks)) ? balRes : lastBalData;
+
+            if (!balObj) {
+                const retryBal = await staffFetchJson(`/api/v1/staff/accounts/balance-dashboard?period=OVERALL`);
+                if (retryBal) balObj = retryBal;
+            }
+
+            renderCompanyBreakdown(darObj, balObj);
         } catch (e) {
+            console.error('[CompanyBreakdown err]', e);
             document.getElementById('companyBreakdownOutput').innerHTML =
-                `<div class="bal-empty"><i class="fas fa-exclamation-triangle me-2" style="color:#f59e0b;"></i>${e.message}</div>`;
+                `<div class="bal-empty"><i class="fas fa-exclamation-triangle me-2" style="color:#f59e0b;"></i>${e.message || e}</div>`;
         }
     }
     window.loadCompanyBreakdown = loadCompanyBreakdown;
