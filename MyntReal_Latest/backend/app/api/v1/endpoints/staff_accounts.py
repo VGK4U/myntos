@@ -7226,13 +7226,13 @@ async def get_expense_consolidated(
         fa = fa_map.get(emp.id)
         ex = exp_map.get(emp.id)
         ir = ie_map.get(emp.id)
-        if fa is None and ex is None and ir is None:
+        sent = ft_sent_map.get(emp.id, 0.0)
+        received = ft_recv_map.get(emp.id, 0.0)
+        if fa is None and ex is None and ir is None and sent == 0 and received == 0:
             continue  # skip employees with zero data across all cash flows
         # DC_CONSO_TRANSFER_001: fund_balance = allocated + received_transfers - sent_transfers - approved_expenses
         total_allocated = float(fa.total_allocated or 0) if fa else 0
         approved_amount = float(ex.approved_amount or 0) if ex else 0
-        sent = ft_sent_map.get(emp.id, 0.0)
-        received = ft_recv_map.get(emp.id, 0.0)
         fund_balance = total_allocated + received - sent - approved_amount
         cash_received = float(ir.total_received or 0) if ir else 0
         cash_receipt_count = int(ir.receipt_count or 0) if ir else 0

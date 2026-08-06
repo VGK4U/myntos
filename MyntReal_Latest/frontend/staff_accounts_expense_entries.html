@@ -361,6 +361,7 @@
                                         <th>Date</th>
                                         <th>Company</th>
                                         <th>Category</th>
+                                        <th>Paid To</th>
                                         <th>Ledger Cat</th>
                                         <th>Description</th>
                                         <th>Amount</th>
@@ -459,7 +460,7 @@
                             <table class="data-table">
                                 <thead><tr>
                                     <th>ID</th><th>Date</th><th>Employee</th><th>Company</th>
-                                    <th>Category</th><th>Description</th><th style="text-align:right;">Amount (₹)</th>
+                                    <th>Category</th><th>Paid To</th><th>Description</th><th style="text-align:right;">Amount (₹)</th>
                                     <th>Status</th><th>Actions</th>
                                 </tr></thead>
                                 <tbody id="teamExpenseTable"></tbody>
@@ -958,17 +959,22 @@
                 document.getElementById('tsTotalAmt').textContent  = '₹' + Number(_approvedAmt).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:0});
 
                 const tbody = document.getElementById('teamExpenseTable');
-                tbody.innerHTML = entries.map(e => `<tr>
-                    <td class="mono" style="color:#6366f1;">#${e.id}</td>
-                    <td style="white-space:nowrap;">${e.expense_date || '—'}</td>
-                    <td style="font-weight:600;">${e.created_by_name || e.employee_name || '—'}</td>
-                    <td>${e.company_name || '—'}</td>
-                    <td>${e.category_name || e.main_category_name || '—'}</td>
-                    <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(e.description||'').replace(/"/g,'')}">${e.description || '—'}</td>
-                    <td style="text-align:right;font-weight:700;">${fmt(e.amount)}</td>
-                    <td>${statusBadge(e.status)}</td>
-                    <td style="white-space:nowrap;">${getActionButtons(e)}</td>
-                </tr>`).join('');
+                tbody.innerHTML = entries.map(e => {
+                    const descText = e.narration || e.description || e.notes || e.purpose || '—';
+                    const paidToText = e.vendor_name || e.paid_to || '—';
+                    return `<tr>
+                        <td class="mono" style="color:#6366f1;">#${e.id}</td>
+                        <td style="white-space:nowrap;">${e.expense_date || '—'}</td>
+                        <td style="font-weight:600;">${e.created_by_name || e.employee_name || '—'}</td>
+                        <td>${e.company_name || '—'}</td>
+                        <td>${e.category_name || e.main_category_name || '—'}</td>
+                        <td style="font-weight:500;">${paidToText}</td>
+                        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${descText.replace(/"/g,'&quot;')}">${descText}</td>
+                        <td style="text-align:right;font-weight:700;">${fmt(e.amount)}</td>
+                        <td>${statusBadge(e.status)}</td>
+                        <td style="white-space:nowrap;">${getActionButtons(e)}</td>
+                    </tr>`;
+                }).join('');
                 document.getElementById('teamTableContainer').style.display = '';
                 renderTeamPagination();
                 // DC-IE-DEST-FILTER-001: Show income receipts section if filtering by a specific employee
@@ -1305,13 +1311,16 @@
                 const ledgerCatLabel = exp.bank_ledger_category
                     ? `<span class="badge-cat">${exp.bank_ledger_category === 'CUSTOM' ? (exp.custom_category_name || 'CUSTOM') : exp.bank_ledger_category}</span>`
                     : '<span style="color:#9ca3af;font-size:11px;">—</span>';
+                const descText = exp.narration || exp.description || exp.notes || exp.purpose || '-';
+                const paidToText = exp.vendor_name || exp.paid_to || '-';
                 return `<tr>
                     <td><code>${exp.id}</code></td>
                     <td>${formatDate(exp.expense_date)}</td>
                     <td>${exp.company_name || '-'}</td>
                     <td>${exp.category_name || '-'}</td>
+                    <td style="font-weight:500;">${paidToText}</td>
                     <td>${ledgerCatLabel}</td>
-                    <td>${truncate(exp.narration || exp.description, 30)}${returnBadge}</td>
+                    <td title="${descText.replace(/"/g,'&quot;')}">${truncate(descText, 30)}${returnBadge}</td>
                     <td class="amount negative">₹${formatCurrency(exp.amount)}</td>
                     <td>${statusLabel}</td>
                     <td>${exp.tally_status ? '<span class="badge-status badge-' + exp.tally_status.toLowerCase() + '">' + exp.tally_status.replace('_', ' ') + '</span>' : '<span style="color:#9ca3af;font-size:11px;">—</span>'}</td>
