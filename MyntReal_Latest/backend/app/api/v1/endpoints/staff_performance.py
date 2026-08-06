@@ -2764,11 +2764,11 @@ def incentive_achievements_drilldown(
             effective_mul = cfg['bonus_mul'] if (bonus_applied and ltype in ('Company', 'Direct')) else 1.0
             effective_rate = base_rate * effective_mul
             
-            rec_val = float(r.get('deal_value_received') or 0.0)
+            conf_val = float(r.get('confirmed_value') or 0.0)
             cnt_val = int(r.get('incentive_count') or 1)
             
             if cfg['itype'] == 'percentage':
-                calc_inc = (rec_val * effective_rate) / 100.0
+                calc_inc = (conf_val * effective_rate) / 100.0
                 r['incentive_pct'] = f"{effective_rate:g}%" + (f" (×{cfg['bonus_mul']:g} Bonus)" if effective_mul > 1.0 else "")
             else:
                 calc_inc = effective_rate * cnt_val
