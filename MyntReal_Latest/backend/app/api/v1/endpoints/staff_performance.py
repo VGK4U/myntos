@@ -2758,17 +2758,23 @@ def incentive_achievements_drilldown(
         if not target_met:
             r['incentive_amount'] = 0.0
             r['incentive_pct'] = '—'
-        elif bonus_applied and r['lead_type'] in ('Company', 'Direct'):
+        else:
             ltype = r['lead_type']
-            rate = cfg['rate_dw'] if ltype == 'Direct' else cfg['rate_wi']
-            new_rate = rate * cfg['bonus_mul']
+            base_rate = cfg['rate_no'] if ltype == 'Self' else (cfg['rate_dw'] if ltype == 'Direct' else cfg['rate_wi'])
+            effective_mul = cfg['bonus_mul'] if (bonus_applied and ltype in ('Company', 'Direct')) else 1.0
+            effective_rate = base_rate * effective_mul
+            
+            rec_val = float(r.get('deal_value_received') or 0.0)
+            cnt_val = int(r.get('incentive_count') or 1)
             
             if cfg['itype'] == 'percentage':
-                r['incentive_pct'] = f"{new_rate:g}% (×{cfg['bonus_mul']:g} Bonus)"
+                calc_inc = (rec_val * effective_rate) / 100.0
+                r['incentive_pct'] = f"{effective_rate:g}%" + (f" (×{cfg['bonus_mul']:g} Bonus)" if effective_mul > 1.0 else "")
             else:
-                r['incentive_pct'] = f"₹{fmtNum(new_rate)}/unit (×{cfg['bonus_mul']:g} Bonus)"
+                calc_inc = effective_rate * cnt_val
+                r['incentive_pct'] = f"₹{fmtNum(effective_rate)}/unit" + (f" (×{cfg['bonus_mul']:g} Bonus)" if effective_mul > 1.0 else "")
                 
-            r['incentive_amount'] = round(r['incentive_amount'] * cfg['bonus_mul'], 2)
+            r['incentive_amount'] = round(calc_inc, 2)
 
     incentive_total = sum(r.get('incentive_count', 1) for r in results)
     return {
