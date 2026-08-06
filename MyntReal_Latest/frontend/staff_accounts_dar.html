@@ -594,26 +594,107 @@
         return s;
     }
 
-    function _balTableRows(rows, isUnexpectedNeg) {
-        if (!rows.length) return '<tr><td colspan="7" class="bal-empty">No accounts found</td></tr>';
-        return _balSort(rows).map(r => {
-            const negBal = r.running_balance < 0 && isUnexpectedNeg;
-            const balCls = r.running_balance < 0 ? 'neg-bal' : (r.running_balance > 0 ? 'pos' : '');
-            const netCls = r.net_change > 0 ? 'pos' : (r.net_change < 0 ? 'neg' : '');
-            const detail = r.bank_detail ? `<div class="bal-bank-detail"><i class="fas fa-university" style="font-size:9px;margin-right:3px;"></i>${r.bank_detail}</div>` : '';
-            return `<tr class="${negBal ? 'neg-row' : ''}">
-                <td><span class="bal-co-badge">${r.company_name}</span></td>
-                <td><div style="font-weight:600;">${r.account_name}</div>${detail}</td>
-                <td class="num pos">${_fmtBal(r.period_in)}</td>
-                <td class="num neg">${_fmtBal(r.period_out)}</td>
-                <td class="num ${netCls}">${_fmtBal(r.net_change, true)}</td>
-                <td class="num ${balCls}" title="Running balance as of period end">${_fmtBal(r.running_balance)}</td>
-                <td style="color:#9ca3af;font-size:11px;white-space:nowrap;">${r.last_txn_date || '—'}</td>
+    function toggleCoGroup(grpId, btn) {
+        const rows = document.querySelectorAll('.' + grpId);
+        let isOpening = false;
+        rows.forEach(r => {
+            if (r.style.display === 'none') {
+                r.style.display = 'table-row';
+                isOpening = true;
+            } else {
+                r.style.display = 'none';
+            }
+        });
+        if (btn) {
+            btn.innerHTML = isOpening ? '<i class="fas fa-minus text-danger" style="font-size:10px;"></i>' : '<i class="fas fa-plus text-primary" style="font-size:10px;"></i>';
+        }
+    }
+    window.toggleCoGroup = toggleCoGroup;
+
+    function _balTableRows(rows, secKey, isUnexpectedNeg) {
+        if (!rows || !rows.length) return '<tr><td colspan="7" class="bal-empty">No accounts found</td></tr>';
+        
+        // 1. Group accounts by company_name
+        const groups = {};
+        rows.forEach(r => {
+            const cName = r.company_name || 'Other Company';
+            if (!groups[cName]) {
+                groups[cName] = {
+                    company_name: cName,
+                    accounts: [],
+                    period_in: 0.0,
+                    period_out: 0.0,
+                    net_change: 0.0,
+                    running_balance: 0.0,
+                    last_txn_date: ''
+                };
+            }
+            groups[cName].accounts.push(r);
+            groups[cName].period_in += parseFloat(r.period_in || 0);
+            groups[cName].period_out += parseFloat(r.period_out || 0);
+            groups[cName].net_change += parseFloat(r.net_change || 0);
+            groups[cName].running_balance += parseFloat(r.running_balance || 0);
+            if (r.last_txn_date && (!groups[cName].last_txn_date || r.last_txn_date > groups[cName].last_txn_date)) {
+                groups[cName].last_txn_date = r.last_txn_date;
+            }
+        });
+
+        // 2. Render each company group with expandable accounts
+        let outHtml = '';
+        let grpIdx = 0;
+
+        Object.values(groups).forEach(grp => {
+            grpIdx++;
+            const grpId = `cogrp_${secKey}_${grpIdx}`;
+            const negBal = grp.running_balance < 0 && isUnexpectedNeg;
+            const balCls = grp.running_balance < 0 ? 'neg-bal' : (grp.running_balance > 0 ? 'pos' : '');
+            const netCls = grp.net_change > 0 ? 'pos' : (grp.net_change < 0 ? 'neg' : '');
+
+            // Parent Company Summary Row
+            outHtml += `<tr class="co-parent-row ${negBal ? 'neg-row' : ''}" style="background:#f8fafc; font-weight:700; border-top:2px solid #e2e8f0;">
+                <td>
+                    <button type="button" class="btn btn-sm btn-light border py-0 px-1.5 me-1.5 align-middle" onclick="toggleCoGroup('${grpId}', this)" title="Click to expand/collapse accounts" style="border-radius:4px; line-height:1.2; background:#fff;">
+                        <i class="fas fa-plus text-primary" style="font-size:10px;"></i>
+                    </button>
+                    <span class="bal-co-badge" style="font-size:11px; padding:3px 10px;">${grp.company_name}</span>
+                </td>
+                <td>
+                    <div style="font-weight:700; color:#1e293b; cursor:pointer; display:inline-block;" onclick="toggleCoGroup('${grpId}', this.parentElement.previousElementSibling.querySelector('button'))">
+                        ${grp.company_name}
+                        <span style="font-size:11px; font-weight:600; color:#64748b; margin-left:6px;">(${grp.accounts.length} account${grp.accounts.length > 1 ? 's' : ''})</span>
+                    </div>
+                </td>
+                <td class="num pos">${_fmtBal(grp.period_in)}</td>
+                <td class="num neg">${_fmtBal(grp.period_out)}</td>
+                <td class="num ${netCls}">${_fmtBal(grp.net_change, true)}</td>
+                <td class="num ${balCls}" style="font-weight:800; font-size:13px;" title="Company total balance">${_fmtBal(grp.running_balance)}</td>
+                <td style="color:#64748b; font-size:11px; white-space:nowrap;">${grp.last_txn_date || '—'}</td>
             </tr>`;
-        }).join('');
+
+            // Child Account Rows
+            const sortedAccts = _balSort(grp.accounts);
+            sortedAccts.forEach(r => {
+                const childNegBal = r.running_balance < 0 && isUnexpectedNeg;
+                const childBalCls = r.running_balance < 0 ? 'neg-bal' : (r.running_balance > 0 ? 'pos' : '');
+                const childNetCls = r.net_change > 0 ? 'pos' : (r.net_change < 0 ? 'neg' : '');
+                const detail = r.bank_detail ? `<div class="bal-bank-detail"><i class="fas fa-university" style="font-size:9px;margin-right:3px;"></i>${r.bank_detail}</div>` : '';
+
+                outHtml += `<tr class="${grpId} ${childNegBal ? 'neg-row' : ''}" style="display:none; background:#ffffff;">
+                    <td style="padding-left:36px;"><i class="fas fa-level-up-alt fa-rotate-90 text-muted me-1" style="font-size:10px;"></i></td>
+                    <td><div style="font-weight:600; color:#334155;">${r.account_name}</div>${detail}</td>
+                    <td class="num pos">${_fmtBal(r.period_in)}</td>
+                    <td class="num neg">${_fmtBal(r.period_out)}</td>
+                    <td class="num ${childNetCls}">${_fmtBal(r.net_change, true)}</td>
+                    <td class="num ${childBalCls}" title="Running balance">${_fmtBal(r.running_balance)}</td>
+                    <td style="color:#9ca3af; font-size:11px; white-space:nowrap;">${r.last_txn_date || '—'}</td>
+                </tr>`;
+            });
+        });
+
+        return outHtml;
     }
 
-    function _balSectionHtml(title, icon, iconBg, rows, totals, isUnexpectedNeg) {
+    function _balSectionHtml(secKey, title, icon, iconBg, rows, totals, isUnexpectedNeg) {
         if (!rows.length) return '';
         const th = `<div class="bal-section-hdr">
             <div class="bal-icon" style="background:${iconBg};">${icon}</div>
@@ -636,7 +717,7 @@
                 <th class="num">Balance</th>
                 <th>Last Txn</th>
             </tr></thead>
-            <tbody>${_balTableRows(rows, isUnexpectedNeg)}</tbody>
+            <tbody>${_balTableRows(rows, secKey, isUnexpectedNeg)}</tbody>
         </table></div>`;
         return `<div class="bal-section">${th}</div>`;
     }
@@ -656,16 +737,66 @@
             <div class="bal-grand-col"><small>Balance</small><strong>${_fmtBal(g.running_balance)}</strong></div>
         </div>`;
 
+        const catTotalsCards = `<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:16px;">
+            <div style="background:white; border-radius:10px; border-left:4px solid #1d4ed8; padding:14px 18px; box-shadow:0 1px 3px rgba(0,0,0,.08);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">Bank Accounts Total</span>
+                    <div style="width:28px; height:28px; border-radius:6px; background:#dbeafe; display:flex; align-items:center; justify-content:center; color:#1d4ed8;"><i class="fas fa-university" style="font-size:13px;"></i></div>
+                </div>
+                <div style="font-size:18px; font-weight:800; color:#1e293b; margin-top:4px;">${_fmtBal(data.bank_totals.running_balance)}</div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:6px; color:#64748b;">
+                    <span>In: <b style="color:#059669;">${_fmtBal(data.bank_totals.period_in)}</b></span>
+                    <span>Out: <b style="color:#dc2626;">${_fmtBal(data.bank_totals.period_out)}</b></span>
+                </div>
+            </div>
+
+            <div style="background:white; border-radius:10px; border-left:4px solid #7c3aed; padding:14px 18px; box-shadow:0 1px 3px rgba(0,0,0,.08);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">Digital / UPI Wallets Total</span>
+                    <div style="width:28px; height:28px; border-radius:6px; background:#ede9fe; display:flex; align-items:center; justify-content:center; color:#7c3aed;"><i class="fas fa-mobile-alt" style="font-size:13px;"></i></div>
+                </div>
+                <div style="font-size:18px; font-weight:800; color:#1e293b; margin-top:4px;">${_fmtBal(data.upi_totals ? data.upi_totals.running_balance : 0)}</div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:6px; color:#64748b;">
+                    <span>In: <b style="color:#059669;">${_fmtBal(data.upi_totals ? data.upi_totals.period_in : 0)}</b></span>
+                    <span>Out: <b style="color:#dc2626;">${_fmtBal(data.upi_totals ? data.upi_totals.period_out : 0)}</b></span>
+                </div>
+            </div>
+
+            <div style="background:white; border-radius:10px; border-left:4px solid #059669; padding:14px 18px; box-shadow:0 1px 3px rgba(0,0,0,.08);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">Cash Holders Total</span>
+                    <div style="width:28px; height:28px; border-radius:6px; background:#d1fae5; display:flex; align-items:center; justify-content:center; color:#059669;"><i class="fas fa-hand-holding-usd" style="font-size:13px;"></i></div>
+                </div>
+                <div style="font-size:18px; font-weight:800; color:#1e293b; margin-top:4px;">${_fmtBal(data.cash_totals.running_balance)}</div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:6px; color:#64748b;">
+                    <span>In: <b style="color:#059669;">${_fmtBal(data.cash_totals.period_in)}</b></span>
+                    <span>Out: <b style="color:#dc2626;">${_fmtBal(data.cash_totals.period_out)}</b></span>
+                </div>
+            </div>
+
+            <div style="background:white; border-radius:10px; border-left:4px solid #d97706; padding:14px 18px; box-shadow:0 1px 3px rgba(0,0,0,.08);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">All Companies Combined</span>
+                    <div style="width:28px; height:28px; border-radius:6px; background:#fef3c7; display:flex; align-items:center; justify-content:center; color:#d97706;"><i class="fas fa-wallet" style="font-size:13px;"></i></div>
+                </div>
+                <div style="font-size:18px; font-weight:800; color:#1e293b; margin-top:4px;">${_fmtBal(g.running_balance)}</div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:6px; color:#64748b;">
+                    <span>In: <b style="color:#059669;">${_fmtBal(g.period_in)}</b></span>
+                    <span>Out: <b style="color:#dc2626;">${_fmtBal(g.period_out)}</b></span>
+                </div>
+            </div>
+        </div>`;
+
         const banksHtml = _balSectionHtml(
-            'Banks', '<i class="fas fa-university" style="color:#1d4ed8;"></i>', '#dbeafe',
+            'banks', 'Banks', '<i class="fas fa-university" style="color:#1d4ed8;"></i>', '#dbeafe',
             data.banks, data.bank_totals, false   // overdraft banks = flagged but allowed
         );
         const upiHtml = data.upi && data.upi.length ? _balSectionHtml(
-            'UPI / Digital Wallets', '<i class="fas fa-mobile-alt" style="color:#7c3aed;"></i>', '#ede9fe',
+            'upi', 'UPI / Digital Wallets', '<i class="fas fa-mobile-alt" style="color:#7c3aed;"></i>', '#ede9fe',
             data.upi, data.upi_totals, true    // UPI going negative = unexpected
         ) : '';
         const cashHtml = _balSectionHtml(
-            'Cash Holders', '<i class="fas fa-hand-holding-usd" style="color:#059669;"></i>', '#d1fae5',
+            'cash', 'Cash Holders', '<i class="fas fa-hand-holding-usd" style="color:#059669;"></i>', '#d1fae5',
             data.cash, data.cash_totals, true   // cash negative = always unexpected
         );
 
@@ -679,7 +810,7 @@
             </div>
         </div>`;
 
-        document.getElementById('balanceDashOutput').innerHTML = grandHtml + banksHtml + upiHtml + cashHtml + recvHtml;
+        document.getElementById('balanceDashOutput').innerHTML = grandHtml + catTotalsCards + banksHtml + upiHtml + cashHtml + recvHtml;
     }
     window.renderBalanceDash = renderBalanceDash;
 })();
