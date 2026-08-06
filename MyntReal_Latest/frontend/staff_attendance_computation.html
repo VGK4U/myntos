@@ -8,6 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="/public/js/staff-token-manager.js"></script>
     <script src="/public/js/staff-fetch.js"></script>
+    <script src="/staff_header.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -21,14 +22,18 @@
             flex-direction: column;
             min-height: 100vh;
             transition: margin-left 0.3s ease;
-            padding: 88px 24px 32px;
+            padding-top: 88px;
         }
         @media (max-width: 767px) {
-            .main-content { margin-left: 0; padding: 76px 14px 24px; }
+            .main-content { margin-left: 0; }
+        }
+        .content-area {
+            flex: 1;
+            padding: 24px;
         }
         .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
             gap: 14px;
             margin-bottom: 20px;
         }
@@ -97,96 +102,101 @@
     </style>
 </head>
 <body>
+    <nav id="staffSidebar"></nav>
+
     <div class="main-content">
-        <!-- Filter Section -->
-        <div class="filter-card">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-3">
-                    <label class="form-label font-weight-bold style-sm text-secondary" style="font-size:12px; font-weight:700;">Employee</label>
-                    <select id="empSelect" class="form-select form-select-sm" style="border-radius:8px;">
-                        <option value="">Loading employees...</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label style-sm text-secondary" style="font-size:12px; font-weight:700;">From Date</label>
-                    <input type="date" id="fromDate" class="form-control form-control-sm" style="border-radius:8px;">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label style-sm text-secondary" style="font-size:12px; font-weight:700;">To Date</label>
-                    <input type="date" id="toDate" class="form-control form-control-sm" style="border-radius:8px;">
-                </div>
-                <div class="col-md-3">
-                    <button id="btnFetch" class="btn btn-primary btn-sm w-100 style-btn" onclick="loadComputation()" style="border-radius:8px; font-weight:600; padding:7px 16px;">
-                        <i class="fas fa-filter me-1.5"></i> Compute Attendance
-                    </button>
-                </div>
-            </div>
-        </div>
+        <div id="headerContainer"></div>
 
-        <!-- KPI Cards Grid -->
-        <div class="kpi-grid">
-            <div class="kpi-card" style="border-left-color: #0284c7;">
-                <div class="kpi-title">Total Days</div>
-                <div class="kpi-val" id="kpiTotalDays">0</div>
-                <div class="kpi-sub">In selected period</div>
+        <div class="content-area">
+            <!-- Filter Section -->
+            <div class="filter-card">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label font-weight-bold style-sm text-secondary" style="font-size:12px; font-weight:700;">Employee</label>
+                        <select id="empSelect" class="form-select form-select-sm" style="border-radius:8px;">
+                            <option value="">Loading employees...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label style-sm text-secondary" style="font-size:12px; font-weight:700;">From Date</label>
+                        <input type="date" id="fromDate" class="form-control form-control-sm" style="border-radius:8px;">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label style-sm text-secondary" style="font-size:12px; font-weight:700;">To Date</label>
+                        <input type="date" id="toDate" class="form-control form-control-sm" style="border-radius:8px;">
+                    </div>
+                    <div class="col-md-3">
+                        <button id="btnFetch" class="btn btn-primary btn-sm w-100 style-btn" onclick="loadComputation()" style="border-radius:8px; font-weight:600; padding:7px 16px;">
+                            <i class="fas fa-filter me-1.5"></i> Compute Attendance
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div class="kpi-card" style="border-left-color: #10b981;">
-                <div class="kpi-title">Full Days</div>
-                <div class="kpi-val" style="color:#047857;" id="kpiFullDays">0</div>
-                <div class="kpi-sub">Worked full shift</div>
-            </div>
-            <div class="kpi-card" style="border-left-color: #f59e0b;">
-                <div class="kpi-title">Half Days</div>
-                <div class="kpi-val" style="color:#b45309;" id="kpiHalfDays">0</div>
-                <div class="kpi-sub">Partial hours worked</div>
-            </div>
-            <div class="kpi-card" style="border-left-color: #ef4444;">
-                <div class="kpi-title">Absent Days</div>
-                <div class="kpi-val" style="color:#b91c1c;" id="kpiAbsentDays">0</div>
-                <div class="kpi-sub">Below minimum hours</div>
-            </div>
-            <div class="kpi-card" style="border-left-color: #7c3aed;">
-                <div class="kpi-title">Overtime (OT) Days</div>
-                <div class="kpi-val" style="color:#6d28d9;" id="kpiOtDays">0</div>
-                <div class="kpi-sub">Extra hours logged</div>
-            </div>
-            <div class="kpi-card" style="border-left-color: #0d9488;">
-                <div class="kpi-title">Total Work Hours</div>
-                <div class="kpi-val" style="color:#0f766e;" id="kpiTotalWorkHours">0h</div>
-                <div class="kpi-sub" id="kpiOtHoursSub">0h OT included</div>
-            </div>
-        </div>
 
-        <!-- Table Card -->
-        <div class="table-card">
-            <div style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
-                <h6 style="margin:0; font-weight:700; color:#1e293b;"><i class="fas fa-list-alt me-2 text-primary"></i>Computed Attendance Logs</h6>
-                <span id="recordCountBadge" class="badge bg-light text-dark border px-2.5 py-1.5" style="font-size:11px;">0 logs</span>
+            <!-- KPI Cards Grid -->
+            <div class="kpi-grid">
+                <div class="kpi-card" style="border-left-color: #0284c7;">
+                    <div class="kpi-title">Total Days</div>
+                    <div class="kpi-val" id="kpiTotalDays">0</div>
+                    <div class="kpi-sub">In selected period</div>
+                </div>
+                <div class="kpi-card" style="border-left-color: #10b981;">
+                    <div class="kpi-title">Full Days</div>
+                    <div class="kpi-val" style="color:#047857;" id="kpiFullDays">0</div>
+                    <div class="kpi-sub">Worked full shift</div>
+                </div>
+                <div class="kpi-card" style="border-left-color: #f59e0b;">
+                    <div class="kpi-title">Half Days</div>
+                    <div class="kpi-val" style="color:#b45309;" id="kpiHalfDays">0</div>
+                    <div class="kpi-sub">Partial hours worked</div>
+                </div>
+                <div class="kpi-card" style="border-left-color: #ef4444;">
+                    <div class="kpi-title">Absent Days</div>
+                    <div class="kpi-val" style="color:#b91c1c;" id="kpiAbsentDays">0</div>
+                    <div class="kpi-sub">Below minimum hours</div>
+                </div>
+                <div class="kpi-card" style="border-left-color: #7c3aed;">
+                    <div class="kpi-title">Overtime (OT) Days</div>
+                    <div class="kpi-val" style="color:#6d28d9;" id="kpiOtDays">0</div>
+                    <div class="kpi-sub">Extra hours logged</div>
+                </div>
+                <div class="kpi-card" style="border-left-color: #0d9488;">
+                    <div class="kpi-title">Total Work Hours</div>
+                    <div class="kpi-val" style="color:#0f766e;" id="kpiTotalWorkHours">0h</div>
+                    <div class="kpi-sub" id="kpiOtHoursSub">0h OT included</div>
+                </div>
             </div>
-            <div style="overflow-x: auto;">
-                <table class="tbl-custom">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Clock In</th>
-                            <th>Clock Out</th>
-                            <th class="text-center">Break</th>
-                            <th class="text-end">Worked Hrs</th>
-                            <th class="text-center">Computed Status</th>
-                            <th class="text-end">OT Hours</th>
-                            <th>Rules Applied</th>
-                        </tr>
-                    </thead>
-                    <tbody id="computationBody">
-                        <tr><td colspan="8" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-2"></i>Loading computation...</td></tr>
-                    </tbody>
-                </table>
+
+            <!-- Table Card -->
+            <div class="table-card">
+                <div style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                    <h6 style="margin:0; font-weight:700; color:#1e293b;"><i class="fas fa-list-alt me-2 text-primary"></i>Computed Attendance Logs</h6>
+                    <span id="recordCountBadge" class="badge bg-light text-dark border px-2.5 py-1.5" style="font-size:11px;">0 logs</span>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="tbl-custom">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Clock In</th>
+                                <th>Clock Out</th>
+                                <th class="text-center">Break</th>
+                                <th class="text-end">Worked Hrs</th>
+                                <th class="text-center">Computed Status</th>
+                                <th class="text-end">OT Hours</th>
+                                <th>Rules Applied</th>
+                            </tr>
+                        </thead>
+                        <tbody id="computationBody">
+                            <tr><td colspan="8" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-2"></i>Loading computation...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="/staff_sidebar.js?v=20260602c"></script>
-    <script src="/staff_header.js?v=20260503a"></script>
     <script>
     (function() {
         'use strict';
@@ -195,7 +205,10 @@
         async function initPage() {
             try { if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init(); } catch (e) { console.error('Sidebar init failed:', e); }
             try {
-                if (typeof StaffHeader !== 'undefined') { StaffHeader.inject('Attendance Computation', 'fas fa-calculator'); StaffHeader.init(); }
+                if (typeof StaffHeader !== 'undefined') {
+                    StaffHeader.inject('Attendance Computation', 'fas fa-calculator');
+                    StaffHeader.init();
+                }
                 if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
             } catch (e) { console.error('Header init failed:', e); }
 
@@ -252,7 +265,7 @@
 
                 const res = await staffFetchJson(url);
                 if (!res || res.success === false) {
-                    throw new Error(res?.message || 'Failed to fetch computation report');
+                    throw new Error(res?.message || res?.detail || 'Failed to fetch computation report');
                 }
 
                 renderComputation(res);

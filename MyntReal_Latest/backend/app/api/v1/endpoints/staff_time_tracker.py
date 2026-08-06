@@ -3820,3 +3820,21 @@ async def resubmit_activity_entry(
     db.commit()
     
     return {"success": True, "data": entry.to_dict(), "message": "Activity entry resubmitted for approval"}
+
+# DC_COMPUTATION_ALIAS: Route alias for /api/v1/staff/attendance/computation
+@router.get("/computation", summary="Get attendance computation for date range")
+async def get_attendance_computation_alias(
+    from_date: Optional[date] = Query(None),
+    to_date: Optional[date] = Query(None),
+    employee_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    from app.api.v1.endpoints.staff_timesheet import get_attendance_computation
+    return await get_attendance_computation(
+        from_date=from_date,
+        to_date=to_date,
+        employee_id=employee_id,
+        db=db,
+        current_user=current_user
+    )
