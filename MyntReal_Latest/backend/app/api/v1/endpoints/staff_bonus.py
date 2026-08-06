@@ -19,11 +19,15 @@ logger = logging.getLogger(__name__)
 def _is_admin_or_manager(emp: StaffEmployee) -> bool:
     rc = (emp.role.role_code or '').lower() if emp.role else ''
     rn = (emp.role.role_name or '').lower() if emp.role else ''
-    ec = emp.emp_code or ''
+    st = (getattr(emp, 'staff_type', '') or '').lower()
+    dept = (emp.department.name or '').lower() if emp.department else ''
+    ec = (emp.emp_code or '')
     return (
-        ec == 'MR10001' or
-        rc in ('vgk4u', 'vgk4u_supreme', 'manager', 'admin') or
-        rn in ('ea', 'executive assistant', 'vgk4u supreme', 'manager', 'admin')
+        ec in ('MR10001', 'MR10025') or
+        rc in ('vgk4u', 'vgk4u_supreme', 'accounts', 'finance', 'key_leadership', 'executive_admin', 'manager', 'admin') or
+        any(x in rn for x in ('ea', 'executive assistant', 'vgk4u supreme', 'accounts', 'finance', 'key leadership', 'executive admin', 'manager', 'admin')) or
+        any(x in st for x in ('ea', 'vgk4u', 'vgk4u_supreme', 'accounts', 'finance', 'executive_admin')) or
+        'accounts' in dept or 'finance' in dept or 'procurement' in dept
     )
 
 @router.get("/performance/quarterly-bonus", summary="Get Quarterly Bonus stats and calculations")

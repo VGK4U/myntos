@@ -55,12 +55,14 @@ def _is_vgk_or_ea(emp: StaffEmployee) -> bool:
     rc = (emp.role.role_code or '').lower() if emp.role else ''
     rn = (emp.role.role_name or '').lower() if emp.role else ''
     st = (getattr(emp, 'staff_type', '') or '').lower()
+    dept = (emp.department.name or '').lower() if emp.department else ''
     ec = (emp.emp_code or '')
     return (
-        ec == 'MR10001' or
-        rc in ('vgk4u', 'vgk4u_supreme') or
-        rn in ('ea', 'executive assistant', 'vgk4u supreme') or
-        st in ('ea', 'vgk4u', 'vgk4u_supreme')
+        ec in ('MR10001', 'MR10025') or
+        rc in ('vgk4u', 'vgk4u_supreme', 'accounts', 'finance', 'key_leadership', 'executive_admin') or
+        any(x in rn for x in ('ea', 'executive assistant', 'vgk4u supreme', 'accounts', 'finance', 'key leadership', 'executive admin')) or
+        any(x in st for x in ('ea', 'vgk4u', 'vgk4u_supreme', 'accounts', 'finance', 'executive_admin')) or
+        'accounts' in dept or 'finance' in dept or 'procurement' in dept
     )
 
 
