@@ -7773,6 +7773,61 @@ async def expense_tally_action_endpoint(
         return handle_accounts_error(e)
 
 
+@router.post("/expense-entries/upload-receipt")
+async def upload_expense_receipt_endpoint(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Universal receipt / bill upload endpoint for expense entries.
+    WVV / DC Protocol: Auto-compresses images to low file size and returns storage URL.
+    """
+    from app.services.universal_upload_service import UniversalUploadService
+    try:
+        result = await UniversalUploadService.handle_upload(
+            file=file,
+            table_name='expense_entries',
+            record_id=0,
+            uploaded_by_id=current_user.id,
+            uploaded_by_type='staff',
+            storage_dir='expense_receipts',
+            db=db,
+            segment_key='expense_bill',
+            entity_type='staff',
+            uploader_code=current_user.emp_code or f"S{current_user.id}"
+        )
+        url = result.get('url') or result.get('file_path') or result.get('storage_path') or ''
+        return {
+            'success': True,
+            'file_path': url,
+            'url': url,
+            'size': result.get('size', 0)
+        }
+    except Exception as e:
+        logger.warning(f"[EXPENSE_RECEIPT_UPLOAD] UniversalUploadService fallback: {e}")
+        try:
+            from app.services.object_storage import storage_service
+            file_bytes = await file.read()
+            if file.content_type and file.content_type.startswith('image/'):
+                try:
+                    import io
+                    from PIL import Image
+                    img = Image.open(io.BytesIO(file_bytes))
+                    if img.mode != 'RGB':
+                        img = img.convert('RGB')
+                    img.thumbnail((1200, 1200))
+                    out_io = io.BytesIO()
+                    img.save(out_io, format='JPEG', quality=75, optimize=True)
+                    file_bytes = out_io.getvalue()
+                except Exception as c_err:
+                    logger.warning(f"PIL compression error: {c_err}")
+            rel_path, url = storage_service.save_file(file_bytes, file.filename, 'expense_receipts')
+            return {'success': True, 'file_path': url, 'url': url}
+        except Exception as fb_err:
+            return handle_accounts_error(fb_err)
+
+
 # ==================== FUND LEDGER ENDPOINTS ====================
 
 @router.post("/fund-ledger/opening-balance")

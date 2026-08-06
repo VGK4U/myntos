@@ -650,12 +650,12 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Vendor / Party (Optional) <span id="vendorCrDrBadge"></span></label>
-                        <input type="text" id="formVendorSearch" placeholder="Type to search vendor..." style="margin-bottom:6px;width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                        <label>Paid To / Vendor / Party (Optional) <span id="vendorCrDrBadge"></span></label>
+                        <input type="text" id="formVendorSearch" placeholder="Type payee name (e.g. Malla Santhosh) or search vendor..." style="margin-bottom:6px;width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
                         <select id="formVendor" onchange="updateVendorCrDr()">
-                            <option value="">No Vendor</option>
+                            <option value="">No Vendor (Direct Payee)</option>
                         </select>
-                        <small style="color:#6b7280;font-size:11px;">Selecting a vendor = <span class="cr-badge">CR</span> (payable created on approval)</small>
+                        <small style="color:#6b7280;font-size:11px;">Type any person/vendor name above or pick a registered party. Selecting a vendor = <span class="cr-badge">CR</span> (payable created on approval)</small>
                     </div>
                     <div class="form-group">
                         <label>Bank Ledger Category</label>
@@ -696,6 +696,15 @@
                     <div class="form-group">
                         <label>Reference / Invoice Number</label>
                         <input type="text" id="formReference" placeholder="Optional reference number">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-file-invoice me-1" style="color:#0284c7;"></i>Payment Receipt / Invoice Upload (Optional)</label>
+                        <input type="file" id="formBillFile" accept="image/*,.pdf" style="font-size:12.5px;width:100%;padding:6px;border:1px solid #d1d5db;border-radius:6px;" onchange="handleReceiptFileSelect(event)">
+                        <input type="hidden" id="formBillPath">
+                        <small id="receiptUploadStatus" style="display:none;margin-top:4px;font-size:11.5px;font-weight:600;"></small>
+                        <div id="receiptPreviewContainer" style="display:none;margin-top:6px;">
+                            <img id="receiptPreviewImg" src="" style="max-height:90px;border-radius:6px;border:1px solid #cbd5e1;object-fit:cover;">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer;">
@@ -1376,6 +1385,10 @@
                 }
             }
 
+            if (exp.bill_path) {
+                buttons += ` <button class="btn-action" style="background:#e0f2fe;color:#0284c7;" onclick="viewReceipt('${exp.bill_path}')" title="View Payment Receipt / Invoice"><i class="fas fa-file-invoice"></i></button>`;
+            }
+
             return buttons;
         }
         
@@ -1707,12 +1720,142 @@
             document.getElementById('approveModal').classList.add('active');
         }
         
-        function openRejectModal(exp) {
-            selectedExpense = exp;
-            document.getElementById('rejectExpenseId').textContent = exp.id;
-            document.getElementById('rejectAmount').textContent = formatCurrency(exp.amount);
-            document.getElementById('rejectReason').value = '';
-            document.getElementById('rejectModal').classList.add('active');
+        function openCreateModal() {
+            document.getElementById('createForm').reset();
+            document.getElementById('formDate').valueAsDate = new Date();
+            document.getElementById('fundAllocationInfo').style.display = 'none';
+            document.getElementById('bankAccountGroup').style.display = 'none';
+            document.getElementById('customCategoryGroup').style.display = 'none';
+            document.getElementById('vendorCrDrBadge').innerHTML = '';
+            // Reset receipt upload elements
+            const billFile = document.getElementById('formBillFile');
+            if (billFile) billFile.value = '';
+            const billPath = document.getElementById('formBillPath');
+            if (billPath) billPath.value = '';
+            const uploadSt = document.getElementById('receiptUploadStatus');
+            if (uploadSt) { uploadSt.style.display = 'none'; uploadSt.innerHTML = ''; }
+            const prevContainer = document.getElementById('receiptPreviewContainer');
+            if (prevContainer) prevContainer.style.display = 'none';
+            const prevImg = document.getElementById('receiptPreviewImg');
+            if (prevImg) prevImg.src = '';
+
+            // DC-RETURN-001: reset return toggle (guarded — elements not present on this page)
+            const isReturnEl = document.getElementById('formIsReturn');
+            if (isReturnEl) isReturnEl.checked = false;
+            const returnRefGroupEl = document.getElementById('expReturnRefGroup');
+            if (returnRefGroupEl) returnRefGroupEl.style.display = 'none';
+            // DC_EXP_BEHALF_001: Show employee selector for privileged users / managers with direct reports
+            document.getElementById('formEmployeeGroup').style.display = _canCreateOnBehalf ? 'block' : 'none';
+            // Reset type-to-search state
+            const empSearch = document.getElementById('formEmpSearch');
+            if (empSearch) { empSearch.value = ''; filterEmpDropdown(''); }
+            // Reset fund allocation to current user's allocations (form.reset resets formEmployee to "Myself")
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            loadFundAllocations(userData.id);
+            document.getElementById('createModal').classList.add('active');
+        }
+
+        async function handleReceiptFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const statusEl = document.getElementById('receiptUploadStatus');
+            const previewContainer = document.getElementById('receiptPreviewContainer');
+            const previewImg = document.getElementById('receiptPreviewImg');
+            const billPathInput = document.getElementById('formBillPath');
+
+            if (statusEl) {
+                statusEl.style.display = 'block';
+                statusEl.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Compressing & uploading...';
+                statusEl.style.color = '#3b82f6';
+            }
+
+            try {
+                let fileToUpload = file;
+                if (file.type && file.type.startsWith('image/')) {
+                    fileToUpload = await compressImageFile(file, 1200, 1200, 0.75);
+                }
+
+                const formData = new FormData();
+                formData.append('file', fileToUpload);
+
+                const token = localStorage.getItem('auth_token') || '';
+                const resp = await fetch(`${API_BASE}/expense-entries/upload-receipt`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: formData
+                });
+
+                const resData = await resp.json();
+                if (!resp.ok || !resData.success) {
+                    throw new Error(resData.detail || resData.message || 'Upload failed');
+                }
+
+                const uploadedUrl = resData.file_path || resData.url;
+                billPathInput.value = uploadedUrl;
+
+                if (statusEl) {
+                    const kb = (fileToUpload.size / 1024).toFixed(1);
+                    statusEl.innerHTML = '<i class="fas fa-check-circle me-1"></i>Receipt uploaded & compressed (' + kb + ' KB)';
+                    statusEl.style.color = '#059669';
+                }
+
+                if (previewContainer && previewImg && (uploadedUrl.match(/\.(jpg|jpeg|png|webp|gif)$/i) || file.type.startsWith('image/'))) {
+                    previewImg.src = uploadedUrl;
+                    previewContainer.style.display = 'block';
+                }
+            } catch (err) {
+                console.error('Receipt upload failed:', err);
+                if (statusEl) {
+                    statusEl.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Upload failed: ' + err.message;
+                    statusEl.style.color = '#dc2626';
+                }
+            }
+        }
+
+        function compressImageFile(file, maxWidth, maxHeight, quality) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > maxWidth || height > maxHeight) {
+                            if (width > height) {
+                                height = Math.round((height * maxWidth) / width);
+                                width = maxWidth;
+                            } else {
+                                width = Math.round((width * maxHeight) / height);
+                                height = maxHeight;
+                            }
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        canvas.toBlob((blob) => {
+                            if (!blob) { resolve(file); return; }
+                            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            });
+                            resolve(compressedFile);
+                        }, 'image/jpeg', quality);
+                    };
+                    img.onerror = () => resolve(file);
+                    img.src = e.target.result;
+                };
+                reader.onerror = () => resolve(file);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function viewReceipt(url) {
+            if (!url) return;
+            window.open(url, '_blank');
         }
         
         function closeModal(modalId) {
@@ -1725,6 +1868,15 @@
             const bankLedgerCat = document.getElementById('formBankLedgerCategory').value;
             const bankAccountId = document.getElementById('formBankAccount').value;
             const onBehalfId = document.getElementById('formEmployee').value;
+            const vendorIdVal = document.getElementById('formVendor').value;
+            const vendorSearchVal = (document.getElementById('formVendorSearch').value || '').trim();
+            let vendorNameVal = vendorSearchVal;
+            if (!vendorNameVal && vendorIdVal) {
+                const sel = document.getElementById('formVendor');
+                vendorNameVal = sel.options[sel.selectedIndex]?.text || '';
+            }
+            const billPathVal = document.getElementById('formBillPath')?.value || null;
+
             return {
                 company_id: parseInt(document.getElementById('formCompany').value),
                 expense_date: document.getElementById('formDate').value,
@@ -1734,8 +1886,10 @@
                 narration: document.getElementById('formDescription').value,
                 payment_mode: document.getElementById('formPaymentMode').value,
                 fund_allocation_id: fundAllocId ? parseInt(fundAllocId) : null,
-                vendor_id: document.getElementById('formVendor').value ? parseInt(document.getElementById('formVendor').value) : null,
+                vendor_id: vendorIdVal ? parseInt(vendorIdVal) : null,
+                vendor_name: vendorNameVal || null,
                 bill_number: document.getElementById('formReference').value || null,
+                bill_path: billPathVal,
                 bank_ledger_category: bankLedgerCat || null,
                 custom_category_name: bankLedgerCat === 'CUSTOM' ? (document.getElementById('formCustomCategory').value || null) : null,
                 bank_account_id: bankAccountId ? parseInt(bankAccountId) : null,
@@ -2029,13 +2183,24 @@
                     </div>
 
                     <!-- Vendor / Bill -->
-                    ${(e.vendor_name || e.bill_number) ? `
+                    ${(e.vendor_name || e.paid_to || e.bill_number) ? `
                     <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:0 16px;margin-bottom:14px;">
-                        ${row('Vendor', e.vendor_name)}
+                        ${row('Paid To / Vendor', e.vendor_name || e.paid_to)}
                         ${row('Vendor Contact', e.vendor_contact)}
                         ${row('Bill Number', e.bill_number)}
                         ${row('Bill Date', e.bill_date)}
                         ${row('Bill Remarks', e.bill_remarks)}
+                    </div>` : ''}
+
+                    <!-- Receipt Attachment -->
+                    ${e.bill_path ? `
+                    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px 16px;margin-bottom:14px;">
+                        <div style="font-size:11px;font-weight:700;color:#0284c7;text-transform:uppercase;margin-bottom:8px;"><i class="fas fa-file-invoice me-1"></i>Payment Receipt / Invoice</div>
+                        ${(e.bill_path.match(/\.(jpg|jpeg|png|webp|gif)$/i) || e.bill_path.startsWith('data:image/')) ? `
+                            <img src="${e.bill_path}" style="max-width:100%;max-height:220px;border-radius:8px;border:1px solid #cbd5e1;object-fit:contain;cursor:pointer;" onclick="window.open('${e.bill_path}','_blank')" title="Click to open full size">
+                        ` : `
+                            <a href="${e.bill_path}" target="_blank" class="btn btn-sm btn-outline-primary" style="font-size:12px;"><i class="fas fa-external-link-alt me-1"></i>Open Uploaded Document</a>
+                        `}
                     </div>` : ''}
 
                     <!-- Payment details -->
