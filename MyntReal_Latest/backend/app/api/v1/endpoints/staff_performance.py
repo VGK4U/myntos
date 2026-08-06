@@ -2731,8 +2731,11 @@ def incentive_achievements_drilldown(
         company_target_val = stats['company_count'] + stats['direct_count'] if cfg['min_target_unit'] == 'count' \
                              else stats['company_amount'] + stats['direct_amount']
         
+        target_base = emp_min_target if emp_min_target > 0 else _INC_DEFAULT_TARGET
+        bonus_trigger_threshold = float(cfg['bonus_trigger']) * target_base if cfg.get('bonus_trigger') else None
+
         bonus_applied = False
-        if target_met and cfg.get('bonus_trigger') is not None and company_target_val >= cfg['bonus_trigger']:
+        if target_met and bonus_trigger_threshold and company_target_val >= bonus_trigger_threshold:
             bonus_applied = True
             
         # Recalculate cell-level values
