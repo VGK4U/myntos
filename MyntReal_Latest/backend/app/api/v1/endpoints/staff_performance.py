@@ -2420,7 +2420,7 @@ def incentive_achievements_drilldown(
                 # ETC crm leads are always Company unless is_direct is True
                 final_ltype = 'Direct' if r[10] else 'Company'
                 rate = cfg['rate_dw'] if r[10] else cfg['rate_wi']
-                base_val = float(r[4]) if r[4] else 0.0
+                base_val = float(r[5]) if r[5] else 0.0
                 incentive_amount = (base_val * rate) / 100.0 if cfg['itype'] == 'percentage' else rate
                 results.append({
                     'id': r[0], 'name': r[1], 'phone': r[2], 'source': r[3],
@@ -2661,7 +2661,7 @@ def incentive_achievements_drilldown(
                 else:
                     rate = cfg['rate_dw']
 
-                base_val = float(r[4]) if r[4] else 0.0
+                base_val = float(r[5]) if r[5] else 0.0
                 incentive_amount = (base_val * rate) / 100.0 if cfg['itype'] == 'percentage' else rate
                 results.append({
                     'id': r[0], 'name': r[1], 'phone': r[2], 'source': r[3],
@@ -2697,7 +2697,7 @@ def incentive_achievements_drilldown(
         
         ltype = r['lead_type']
         cnt = r.get('incentive_count', 1)
-        val = r['confirmed_value']
+        val = r['deal_value_received']
         
         if ltype == 'Self':
             slug_stats[s]['self_count'] += cnt
@@ -2745,9 +2745,9 @@ def incentive_achievements_drilldown(
             new_rate = rate * cfg['bonus_mul']
             
             if cfg['itype'] == 'percentage':
-                r['incentive_pct'] = f"{new_rate}%"
+                r['incentive_pct'] = f"{new_rate:g}% (×{cfg['bonus_mul']:g} Bonus)"
             else:
-                r['incentive_pct'] = f"₹{fmtNum(new_rate)}/unit"
+                r['incentive_pct'] = f"₹{fmtNum(new_rate)}/unit (×{cfg['bonus_mul']:g} Bonus)"
                 
             r['incentive_amount'] = round(r['incentive_amount'] * cfg['bonus_mul'], 2)
 
