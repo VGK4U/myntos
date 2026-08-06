@@ -7233,11 +7233,20 @@ async def get_expense_consolidated(
         # DC_CONSO_TRANSFER_001: fund_balance = allocated + received_transfers - sent_transfers - approved_expenses
         total_allocated = float(fa.total_allocated or 0) if fa else 0
         approved_amount = float(ex.approved_amount or 0) if ex else 0
-        fund_balance = total_allocated + received - sent - approved_amount
-        cash_received = float(ir.total_received or 0) if ir else 0
+        cust_cash_received = float(ir.total_received or 0) if ir else 0
         cash_receipt_count = int(ir.receipt_count or 0) if ir else 0
-        # cash_balance = cash received from customers - approved expenses (field staff ledger)
-        cash_balance = cash_received - approved_amount
+
+        # DC_CONSO_TRANSFER_002: Total non-salary cash/funds received by employee
+        # Includes Customer Cash Receipts + Fund Allocations + Staff Transfers Received
+        total_cash_inflow = cust_cash_received + total_allocated + received
+
+        # Net cash balance holding with employee right now:
+        # Total Cash/Funds Received - Transfers Sent to Others - Approved Expenses
+        cash_balance = total_cash_inflow - sent - approved_amount
+
+        # Fund balance: allocated balance + received transfers - sent transfers - approved expenses
+        fund_balance = total_allocated + received - sent - approved_amount
+
         rows.append({
             "employee_id": emp.id,
             "emp_code": emp.emp_code,
@@ -7249,7 +7258,8 @@ async def get_expense_consolidated(
             "fund_transferred_in": received,
             "fund_balance": fund_balance,
             "fund_used": float(fa.total_expensed or 0) if fa else 0,
-            "cash_received": cash_received,
+            "cash_received": total_cash_inflow,
+            "cust_cash_received": cust_cash_received,
             "cash_receipt_count": cash_receipt_count,
             "cash_balance": cash_balance,
             "total_expenses": int(ex.total_count or 0) if ex else 0,
