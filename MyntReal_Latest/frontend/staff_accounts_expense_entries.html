@@ -957,15 +957,35 @@
                     const cls = { DRAFT: 'warning', SUBMITTED: 'info', APPROVED: 'success', REJECTED: 'danger' }[s] || 'secondary';
                     return `<span class="badge bg-${cls}">${s}</span>`;
                 };
-                // DC_TEAM_STATS_001: update team stat cards
+                // DC_TEAM_STATS_001: update team stat cards with count AND monetary values
                 const _ts = d.summary || {};
-                document.getElementById('tsDraft').textContent     = _ts.draft_count     ?? entries.filter(e=>e.status==='DRAFT').length;
-                document.getElementById('tsSubmitted').textContent = _ts.submitted_count ?? entries.filter(e=>e.status==='SUBMITTED').length;
-                document.getElementById('tsApproved').textContent  = _ts.approved_count  ?? entries.filter(e=>e.status==='APPROVED').length;
-                document.getElementById('tsRejected').textContent  = _ts.rejected_count  ?? entries.filter(e=>e.status==='REJECTED').length;
-                document.getElementById('tsTotal').textContent     = d.total || entries.length;
-                const _approvedAmt = _ts.total_approved_amount ?? entries.filter(e=>e.status==='APPROVED').reduce((s,e2)=>s+parseFloat(e2.amount||0),0);
-                document.getElementById('tsTotalAmt').textContent  = '₹' + Number(_approvedAmt).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:0});
+                const fmtCardAmt = n => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                const renderTeamCardVal = (cnt, amt) => `
+                    <div style="font-size:20px;font-weight:800;line-height:1.1;">${cnt || 0}</div>
+                    <div style="font-size:12px;font-weight:700;margin-top:3px;opacity:0.95;">${fmtCardAmt(amt)}</div>
+                `;
+
+                const draftCnt = _ts.draft_count ?? entries.filter(e=>e.status==='DRAFT').length;
+                const draftAmt = _ts.draft_amount ?? entries.filter(e=>e.status==='DRAFT').reduce((s,e2)=>s+parseFloat(e2.amount||0),0);
+
+                const subCnt = _ts.submitted_count ?? entries.filter(e=>e.status==='SUBMITTED').length;
+                const subAmt = _ts.submitted_amount ?? entries.filter(e=>e.status==='SUBMITTED').reduce((s,e2)=>s+parseFloat(e2.amount||0),0);
+
+                const appCnt = _ts.approved_count ?? entries.filter(e=>e.status==='APPROVED').length;
+                const appAmt = _ts.total_approved_amount ?? entries.filter(e=>e.status==='APPROVED').reduce((s,e2)=>s+parseFloat(e2.amount||0),0);
+
+                const rejCnt = _ts.rejected_count ?? entries.filter(e=>e.status==='REJECTED').length;
+                const rejAmt = _ts.rejected_amount ?? entries.filter(e=>e.status==='REJECTED').reduce((s,e2)=>s+parseFloat(e2.amount||0),0);
+
+                const totCnt = d.total || entries.length;
+                const totAmt = _ts.total_amount ?? entries.reduce((s,e2)=>s+parseFloat(e2.amount||0),0);
+
+                document.getElementById('tsDraft').innerHTML     = renderTeamCardVal(draftCnt, draftAmt);
+                document.getElementById('tsSubmitted').innerHTML = renderTeamCardVal(subCnt, subAmt);
+                document.getElementById('tsApproved').innerHTML  = renderTeamCardVal(appCnt, appAmt);
+                document.getElementById('tsRejected').innerHTML  = renderTeamCardVal(rejCnt, rejAmt);
+                document.getElementById('tsTotal').innerHTML     = renderTeamCardVal(totCnt, totAmt);
+                document.getElementById('tsTotalAmt').innerHTML  = renderTeamCardVal(appCnt, appAmt);
 
                 const tbody = document.getElementById('teamExpenseTable');
                 tbody.innerHTML = entries.map(e => {
@@ -1399,12 +1419,21 @@
         
         function updateSummary(summary) {
             if (!summary) return;
-            document.getElementById('draftCount').textContent = summary.draft_count || 0;
-            document.getElementById('submittedCount').textContent = summary.submitted_count || 0;
-            document.getElementById('approvedCount').textContent = summary.approved_count || 0;
-            document.getElementById('rejectedCount').textContent = summary.rejected_count || 0;
-            document.getElementById('paidCount').textContent = summary.paid_count || 0;
-            document.getElementById('totalAmount').textContent = '₹' + formatCurrency(summary.total_approved_amount);
+            const fmtAmt = n => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            const renderCardVal = (cnt, amt) => `
+                <div style="font-size:22px;font-weight:800;line-height:1.1;">${cnt || 0}</div>
+                <div style="font-size:12px;font-weight:700;margin-top:3px;opacity:0.95;">${fmtAmt(amt)}</div>
+            `;
+
+            document.getElementById('draftCount').innerHTML     = renderCardVal(summary.draft_count, summary.draft_amount);
+            document.getElementById('submittedCount').innerHTML = renderCardVal(summary.submitted_count, summary.submitted_amount);
+            document.getElementById('approvedCount').innerHTML  = renderCardVal(summary.approved_count, summary.total_approved_amount);
+            document.getElementById('rejectedCount').innerHTML  = renderCardVal(summary.rejected_count, summary.rejected_amount);
+            document.getElementById('paidCount').innerHTML      = renderCardVal(summary.paid_count, summary.total_paid_amount);
+            
+            const totalCount = (summary.draft_count||0) + (summary.submitted_count||0) + (summary.approved_count||0) + (summary.rejected_count||0);
+            const totalAmt = (summary.total_amount != null) ? summary.total_amount : ((summary.draft_amount||0) + (summary.submitted_amount||0) + (summary.total_approved_amount||0) + (summary.rejected_amount||0));
+            document.getElementById('totalAmount').innerHTML    = renderCardVal(totalCount, totalAmt);
         }
         
         function renderPagination() {
@@ -1589,19 +1618,23 @@
                 // Stats bar
                 const statsEl = document.getElementById('consoStats');
                 statsEl.style.display = 'grid';
+                const totExpAmt = (T.draft_amount||0) + (T.submitted_amount||0) + (T.approved_amount||0) + (T.rejected_amount||0);
                 statsEl.innerHTML = [
-                    ['Employees', rows.length],
-                    ['Total Allocated', fmt(T.fund_allocated)],
-                    ['Total Balance',   fmt(T.fund_balance)],
-                    ['Cash Received (IN)', fmt(T.cash_received)],
-                    ['Cash Balance',    fmt(T.cash_balance)],
-                    ['Total Expenses',  T.total_expenses],
-                    ['Approved',        T.approved_count + ' · ' + fmt(T.approved_amount)],
-                    ['Paid',            T.paid_count + ' · ' + fmt(T.paid_amount)],
-                    ['Pending Review',  T.submitted_count + ' · ' + fmt(T.submitted_amount)],
-                ].map(([lbl, val]) =>
+                    ['Employees', rows.length, ''],
+                    ['Total Allocated', fmt(T.fund_allocated), ''],
+                    ['Total Balance',   fmt(T.fund_balance), ''],
+                    ['Cash Received (IN)', fmt(T.cash_received), ''],
+                    ['Cash Balance',    fmt(T.cash_balance), ''],
+                    ['Total Expenses',  T.total_expenses, fmt(totExpAmt)],
+                    ['Drafts',          T.draft_count, fmt(T.draft_amount)],
+                    ['Pending Review',  T.submitted_count, fmt(T.submitted_amount)],
+                    ['Approved',        T.approved_count, fmt(T.approved_amount)],
+                    ['Rejected',        T.rejected_count, fmt(T.rejected_amount)],
+                    ['Paid',            T.paid_count, fmt(T.paid_amount)],
+                ].map(([lbl, val, subVal]) =>
                     `<div style="text-align:center;padding:6px 0;">
                         <div style="font-size:16px;font-weight:700;">${val}</div>
+                        ${subVal ? `<div style="font-size:11px;font-weight:700;color:#2563eb;margin-top:1px;">${subVal}</div>` : ''}
                         <div style="font-size:10px;opacity:.75;margin-top:2px;">${lbl}</div>
                     </div>`
                 ).join('');

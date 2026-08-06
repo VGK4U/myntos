@@ -7990,7 +7990,11 @@ def list_expense_entries(
         _func.sum(_case((ExpenseEntry.status == 'APPROVED', 1), else_=0)).label('approved_count'),
         _func.sum(_case((ExpenseEntry.status == 'REJECTED', 1), else_=0)).label('rejected_count'),
         _func.sum(_case((ExpenseEntry.is_paid == True, 1), else_=0)).label('paid_count'),
+        _func.sum(ExpenseEntry.amount).label('total_amount'),
+        _func.sum(_case((ExpenseEntry.status == 'DRAFT', ExpenseEntry.amount), else_=0)).label('draft_amount'),
+        _func.sum(_case((ExpenseEntry.status == 'SUBMITTED', ExpenseEntry.amount), else_=0)).label('submitted_amount'),
         _func.sum(_case((ExpenseEntry.status == 'APPROVED', ExpenseEntry.amount), else_=0)).label('total_approved_amount'),
+        _func.sum(_case((ExpenseEntry.status == 'REJECTED', ExpenseEntry.amount), else_=0)).label('rejected_amount'),
         _func.sum(_case((ExpenseEntry.is_paid == True, ExpenseEntry.amount), else_=0)).label('total_paid_amount'),
     ).first()
 
@@ -8000,7 +8004,12 @@ def list_expense_entries(
         'approved_count': int(summary_row.approved_count or 0),
         'rejected_count': int(summary_row.rejected_count or 0),
         'paid_count': int(summary_row.paid_count or 0),
+        'total_amount': float(summary_row.total_amount or 0),
+        'draft_amount': float(summary_row.draft_amount or 0),
+        'submitted_amount': float(summary_row.submitted_amount or 0),
         'total_approved_amount': float(summary_row.total_approved_amount or 0),
+        'rejected_amount': float(summary_row.rejected_amount or 0),
+        'paid_amount': float(summary_row.total_paid_amount or 0),
         'total_paid_amount': float(summary_row.total_paid_amount or 0),
     }
 
