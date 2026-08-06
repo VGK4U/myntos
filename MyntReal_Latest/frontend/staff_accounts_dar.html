@@ -858,10 +858,19 @@
     }
     window.toggleBreakdownRow = toggleBreakdownRow;
 
+    let lastDarData = null; // cached last DAR response
+
     async function loadCompanyBreakdown() {
         const out = document.getElementById('companyBreakdownOutput');
         if (!out) return;
-        out.innerHTML = '<div class="bal-loading"><i class="fas fa-spinner fa-spin me-2"></i>Loading Company Breakdown…</div>';
+
+        // INSTANT RENDERING: Render cached memory data immediately if available
+        if (lastBalData) {
+            renderCompanyBreakdown(lastDarData || {}, lastBalData);
+        } else {
+            out.innerHTML = '<div class="bal-loading"><i class="fas fa-spinner fa-spin me-2"></i>Loading Company Breakdown…</div>';
+        }
+
         try {
             const coId = currentCompanyId || (universalFilter && universalFilter.state && universalFilter.state.selectedCompany) || 0;
             currentCompanyId = coId;
@@ -877,16 +886,18 @@
             const darObj = (darRes && darRes.data) ? darRes.data : (darRes || {});
             let balObj = (balRes && (balRes.grand_total || balRes.banks)) ? balRes : lastBalData;
 
-            if (!balObj) {
-                const retryBal = await staffFetchJson(`/api/v1/staff/accounts/balance-dashboard?period=OVERALL`);
-                if (retryBal) balObj = retryBal;
-            }
+            if (darObj) lastDarData = darObj;
+            if (balObj) lastBalData = balObj;
 
-            renderCompanyBreakdown(darObj, balObj);
+            if (balObj) {
+                renderCompanyBreakdown(darObj, balObj);
+            }
         } catch (e) {
             console.error('[CompanyBreakdown err]', e);
-            document.getElementById('companyBreakdownOutput').innerHTML =
-                `<div class="bal-empty"><i class="fas fa-exclamation-triangle me-2" style="color:#f59e0b;"></i>${e.message || e}</div>`;
+            if (!lastBalData) {
+                document.getElementById('companyBreakdownOutput').innerHTML =
+                    `<div class="bal-empty"><i class="fas fa-exclamation-triangle me-2" style="color:#f59e0b;"></i>${e.message || e}</div>`;
+            }
         }
     }
     window.loadCompanyBreakdown = loadCompanyBreakdown;

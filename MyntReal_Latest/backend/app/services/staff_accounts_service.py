@@ -22538,26 +22538,28 @@ def _dar_batch_bs_data(db, cid: int, snaps):
     return out
 
 
+import time as _time
+_DAR_CACHE = {}  # key -> (timestamp, result)
+_DAR_CACHE_TTL = 60  # seconds
+
 def get_dar_report(db, employee, company_id: int, period: str = 'TODAY',
                    date_from=None, date_to=None, mode: str = 'daily'):
+    emp_id = getattr(employee, 'id', 0)
+    cache_key = f"dar_{emp_id}_{company_id}_{period}_{date_from}_{date_to}_{mode}"
+    now = _time.time()
+    if cache_key in _DAR_CACHE:
+        ts, cached_res = _DAR_CACHE[cache_key]
+        if now - ts < _DAR_CACHE_TTL:
+            return cached_res
+
+    res = _get_dar_report_uncached(db, employee, company_id, period, date_from, date_to, mode)
+    _DAR_CACHE[cache_key] = (now, res)
+    return res
+
+def _get_dar_report_uncached(db, employee, company_id: int, period: str = 'TODAY',
+                             date_from=None, date_to=None, mode: str = 'daily'):
     """
     DAR — Daily Activity Report. DC_DAR_001 (Task #50, May 2026).
-
-    Returns a 10-business-day snapshot grid (calendar weekdays ending at/before
-    the requested period end). Each section row exposes 10 values (one per
-    business day, ascending). The frontend renders deltas between adjacent
-    columns and colours them green/red by `good_direction`.
-
-    Composition per snapshot date:
-      - P&L sections          → cumulative FY-to-date via get_consolidated_pl_report
-      - Balance Sheet sections → point-in-time via get_consolidated_balance_sheet_report
-      - Sales / Purchases     → invoices with that calendar date (CONFIRMED + Pending)
-      - Service tickets       → tickets created on that calendar date, by status
-      - Operational pulse     → cash+bank, A/R, A/P, stock (snapshot) +
-                                leads created (day) + staff present (day)
-
-    Single-company at a time per Task #50 brief — pass company_id != 0 to scope.
-    Read-only — never writes. RBAC via is_accounts_allowed_employee.
     """
     if not is_accounts_allowed_employee(employee):
         raise HTTPException(status_code=403, detail="Access denied")
