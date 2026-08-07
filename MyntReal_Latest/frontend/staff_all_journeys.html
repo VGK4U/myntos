@@ -632,6 +632,28 @@
         // DC_JOURNEY_ADDRESS_001: Enhanced showJourneyModal with playback, addresses, and timestamp-based stop detection
         let playbackTrackPoints = [];
         
+        async function fetchRoadRouteGeometry(coords) {
+            if (!coords || coords.length < 2) return coords;
+            try {
+                let sampledCoords = coords;
+                if (coords.length > 25) {
+                    const step = Math.ceil(coords.length / 25);
+                    sampledCoords = coords.filter((_, i) => i === 0 || i === coords.length - 1 || i % step === 0);
+                }
+                const waypointsStr = sampledCoords.map(c => `${c[1]},${c[0]}`).join(';');
+                const url = `https://router.project-osrm.org/route/v1/driving/${waypointsStr}?overview=full&geometries=geojson`;
+                const res = await fetch(url);
+                if (!res.ok) return coords;
+                const data = await res.json();
+                if (data.code === 'Ok' && data.routes && data.routes[0] && data.routes[0].geometry) {
+                    return data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                }
+            } catch (e) {
+                console.warn('[OSRM] Road snapping fallback to raw GPS:', e);
+            }
+            return coords;
+        }
+
         function showJourneyModal(journey, coordinates, trackPoints = []) {
             stopPlayback();
             
@@ -725,10 +747,22 @@
                 
                 if (coordinates && coordinates.length > 0) {
                     // Faded background polyline showing full route
-                    L.polyline(coordinates, { color: 'rgba(255,255,255,0.3)', weight: 2, dashArray: '5, 10' }).addTo(map);
+                    const fullRoutePolyline = L.polyline(coordinates, { color: 'rgba(255,255,255,0.4)', weight: 3, dashArray: '5, 10' }).addTo(map);
                     
                     // Progressive playback polyline
                     playbackPolyline = L.polyline([], { color: '#00d09c', weight: 4 }).addTo(map);
+
+                    // DC: Road snapping - Fetch actual road route geometry via OSRM
+                    fetchRoadRouteGeometry(coordinates).then(roadCoords => {
+                        if (roadCoords && roadCoords.length > 1) {
+                            playbackCoordinates = roadCoords;
+                            fullRoutePolyline.setLatLngs(roadCoords);
+                            document.getElementById('playbackSlider').max = Math.max(roadCoords.length - 1, 1);
+                            document.getElementById('playbackProgress').textContent = `1 / ${roadCoords.length} points`;
+                            const newBounds = L.latLngBounds(roadCoords);
+                            map.fitBounds(newBounds, { padding: [30, 30] });
+                        }
+                    });
                     
                     // Start marker - DC: Added className to remove default Leaflet styling
                     L.marker(coordinates[0], {
