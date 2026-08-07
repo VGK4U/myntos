@@ -268,6 +268,8 @@ SIDEBAR_ROUTE_MAPPING = {
     "/staff/departments": {"section": "configuration", "order": 15},
     "/staff/partners/master": {"section": "configuration", "order": 15},
     "/staff/accounts/segments": {"section": "configuration", "order": 15},
+    "/staff/crm/ai-calling": {"section": "configuration", "order": 15},
+    "/staff/crm/ai-segments": {"section": "configuration", "order": 15},
     "/staff/accounts/expense-categories": {"section": "configuration", "order": 15},
     "/staff/accounts/pricing": {"section": "configuration", "order": 15},
     "/staff/accounts/hsn": {"section": "configuration", "order": 15},

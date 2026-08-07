@@ -2200,6 +2200,9 @@ async def get_menu_settings_matrix(
     if current_user.staff_type not in allowed_staff_types and hierarchy_level < 85:
         raise HTTPException(status_code=403, detail="Access denied to menu settings configuration")
     
+    if not company_id:
+        company_id = current_user.base_company_id or 4
+
     # DC Protocol (Dec 22, 2025): In all_companies mode, ensure menu parity first
     # This ensures all menu_codes from all companies exist in the filter company
     if all_companies:
