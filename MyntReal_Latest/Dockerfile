@@ -17,8 +17,8 @@ COPY backend/requirements.txt backend/requirements.txt
 COPY frontend/package.json frontend/package.json
 COPY frontend/package-lock.json frontend/package-lock.json
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r backend/requirements.txt
+# Install Python dependencies with pre-compiled wheels
+RUN pip install --no-cache-dir --prefer-binary -r backend/requirements.txt
 
 # Install Node.js production dependencies
 RUN cd frontend && npm install --production --no-audit --no-fund
