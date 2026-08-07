@@ -1428,39 +1428,49 @@ function renderTrendTable(containerId, rows){
   const trPipeSubPct = trSub>0 ? ((trPipe/trSub)*100).toFixed(1) : '0.0';
   const trCompSubPct = trSub>0 ? ((trComp/trSub)*100).toFixed(1) : '0.0';
 
+  const pt = containerId === 'dashMonthly' ? 'monthly' : 'weekly';
+  const totClickFn = (metric, colName, val) => {
+    if (!val || val <= 0) return '—';
+    return `<span style="cursor:pointer; text-decoration:underline; text-decoration-color:rgba(255,255,255,0.4)" onclick="openTrendDrillDown('${pt}', 'TOTAL', '${metric}', 'TOTAL: ${colName}')">${fmtNum(val)}</span>`;
+  };
+  const totClickValFn = (metric, colName, val) => {
+    if (!val || val <= 0) return '—';
+    return `<span style="cursor:pointer; text-decoration:underline; text-decoration-color:rgba(255,255,255,0.4); white-space:nowrap" onclick="openTrendDrillDown('${pt}', 'TOTAL', '${metric}', 'TOTAL: ${colName}')">₹${fmtVal(val)}</span>`;
+  };
+
   const trtotStyle='background:#1e3a5f;color:white;border-bottom:2px solid #0f2744';
   const trtotCell='text-align:center;padding:6px 5px;font-weight:700;font-size:11px;white-space:nowrap;border:1px solid #1e3b68';
   const trtotRow=`<tr style="${trtotStyle}">
     <td style="text-align:left;font-weight:800;white-space:nowrap;font-size:11px;padding:6px 8px;border:1px solid #1e3b68">TOTAL</td>
-    <td style="${trtotCell}">${fmtNum(trTot)}</td>
+    <td style="${trtotCell}">${totClickFn('total', 'Overall Leads', trTot)}</td>
     
     <!-- WON VS SUBMITTED TOTALS -->
-    <td style="${trtotCell};background:#0f5132;color:#d1e7dd">${fmtNum(trWon)}</td>
-    <td style="${trtotCell};background:#0f5132;color:#d1e7dd">${fmtNum(trSub)}</td>
+    <td style="${trtotCell};background:#0f5132;color:#d1e7dd">${totClickFn('won', 'Won (Status)', trWon)}</td>
+    <td style="${trtotCell};background:#0f5132;color:#d1e7dd">${totClickFn('submitted', 'Submitted (Stage)', trSub)}</td>
     <td style="${trtotCell};background:#0f5132;color:#d1e7dd">${trSubWonPct}%</td>
-    <td style="${trtotCell};background:#0f5132;color:#d1e7dd">${trSubVal>0?'₹'+fmtVal(trSubVal):'—'}</td>
+    <td style="${trtotCell};background:#0f5132;color:#d1e7dd">${totClickValFn('submitted', 'Submitted Value', trSubVal)}</td>
     <td style="${trtotCell};background:#0f5132;color:#d1e7dd">—</td>
     
     <!-- PIPELINE TOTALS -->
-    <td style="${trtotCell};background:#084298;color:#cfe2ff">${fmtNum(trPipe)}</td>
+    <td style="${trtotCell};background:#084298;color:#cfe2ff">${totClickFn('pipeline', 'Pipeline (Excl. Dead)', trPipe)}</td>
     <td style="${trtotCell};background:#084298;color:#cfe2ff">${trPipeSubPct}%</td>
-    <td style="${trtotCell};background:#084298;color:#cfe2ff">${trPipeVal>0?'₹'+fmtVal(trPipeVal):'—'}</td>
+    <td style="${trtotCell};background:#084298;color:#cfe2ff">${totClickValFn('pipeline', 'Pipeline Value', trPipeVal)}</td>
     <td style="${trtotCell};background:#084298;color:#cfe2ff">—</td>
-    <td style="${trtotCell};background:#084298;color:#cfe2ff">${fmtNum(trAtBank)}</td>
-    <td style="${trtotCell};background:#084298;color:#cfe2ff">${fmtNum(trEbChange)}</td>
+    <td style="${trtotCell};background:#084298;color:#cfe2ff">${totClickFn('at_bank', 'At Bank', trAtBank)}</td>
+    <td style="${trtotCell};background:#084298;color:#cfe2ff">${totClickFn('eb_change', 'EB Change', trEbChange)}</td>
     
     <!-- COMPLETED TOTALS -->
-    <td style="${trtotCell};background:#432874;color:#e8def8">${fmtNum(trInst)}</td>
-    <td style="${trtotCell};background:#432874;color:#e8def8">${fmtNum(trComp)}</td>
+    <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('installed', 'Installed (By Inst. Date)', trInst)}</td>
+    <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('completed', 'Completed', trComp)}</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">${trCompSubPct}%</td>
-    <td style="${trtotCell};background:#432874;color:#e8def8">${trCompVal>0?'₹'+fmtVal(trCompVal):'—'}</td>
+    <td style="${trtotCell};background:#432874;color:#e8def8">${totClickValFn('completed', 'Completed Value', trCompVal)}</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">—</td>
     
     <!-- IN PROGRESS TOTALS -->
-    <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${fmtNum(trInProg)}</td>
-    <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${fmtNum(trInstPend)}</td>
-    <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${fmtNum(trBalPend)}</td>
-    <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${trInProgVal>0?'₹'+fmtVal(trInProgVal):'—'}</td>
+    <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${totClickFn('in_progress', 'In Progress (Inst->Subsidy)', trInProg)}</td>
+    <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${totClickFn('inst_pending', 'Installation Pending', trInstPend)}</td>
+    <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${totClickFn('bal_pending', 'Balance Pending', trBalPend)}</td>
+    <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${totClickValFn('in_progress', 'In Progress Value', trInProgVal)}</td>
   </tr>`;
 
   el.innerHTML=`

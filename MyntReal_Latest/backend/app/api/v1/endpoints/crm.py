@@ -6925,7 +6925,9 @@ def exec_trend_leads(
     # Determine period start/end dates
     start_dt = None
     end_dt = None
-    if period_type == 'monthly':
+    if label and label.strip().upper() in {'TOTAL', 'OVERALL', 'ALL TIME', 'ALL_TIME'}:
+        pass  # Overall total query — no date boundary filter
+    elif period_type == 'monthly':
         try:
             dt = datetime.strptime(label, "%b %Y")
             start_dt = _date(dt.year, dt.month, 1)
@@ -6974,15 +6976,22 @@ def exec_trend_leads(
             _sa_cast(CRMLead.actual_close_date, _sa_Date),
             _trend_date_expr
         )
-        base = base.filter(_won_ok, _won_dt_expr >= start_dt, _won_dt_expr <= end_dt)
+        base = base.filter(_won_ok)
+        if start_dt and end_dt:
+            base = base.filter(_won_dt_expr >= start_dt, _won_dt_expr <= end_dt)
     elif metric == 'installed':
-        base = base.filter(CRMLead.installation_date.isnot(None), CRMLead.installation_date >= start_dt, CRMLead.installation_date <= end_dt)
+        base = base.filter(CRMLead.installation_date.isnot(None))
+        if start_dt and end_dt:
+            base = base.filter(CRMLead.installation_date >= start_dt, CRMLead.installation_date <= end_dt)
     elif metric == 'completed':
         _comp_dt_expr = _sa_func.coalesce(CRMLead.complete_date, _trend_date_expr)
-        base = base.filter(_completed_cond, _comp_dt_expr >= start_dt, _comp_dt_expr <= end_dt)
+        base = base.filter(_completed_cond)
+        if start_dt and end_dt:
+            base = base.filter(_comp_dt_expr >= start_dt, _comp_dt_expr <= end_dt)
     else:
         # Default trend date bucketing
-        base = base.filter(_trend_date_expr >= start_dt, _trend_date_expr <= end_dt)
+        if start_dt and end_dt:
+            base = base.filter(_trend_date_expr >= start_dt, _trend_date_expr <= end_dt)
         if metric == 'submitted':
             base = base.filter(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(['cancelled', 'not_interested']))
         elif metric == 'pipeline':
