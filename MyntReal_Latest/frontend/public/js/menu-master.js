@@ -569,12 +569,6 @@ const MENU_MASTER = [
       }
     ]
   },
-  // ─── HR (DC_CAREERS_001 — Apr 2026) ───────────────────────────────────
-  {
-    section_code: "HR",
-    section_label: "HR",
-    sidebar_section: "hr",
-    order: 22,
   // ─── VGK SAAS (Last Section) ──────────────────────────────────────────
   {
     section_code: "VGK_SAAS",
