@@ -7604,6 +7604,7 @@ const server = http.createServer(async (req, res) => {
   const url = req.url;
   console.log(`[REQ] ${req.method} ${url}`);
   const urlParts = new URL(url, `http://${getSafeHost(req)}`);
+  const reqPathLower = (urlParts.pathname || '').toLowerCase();
 
   const userAgent = (req.headers['user-agent'] || '').toLowerCase();
   const isElbHealthChecker = userAgent.includes('elb-healthchecker') || userAgent.includes('healthcheck');
