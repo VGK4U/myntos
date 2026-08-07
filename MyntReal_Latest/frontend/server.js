@@ -30189,8 +30189,18 @@ server.on('upgrade', (req, socket, head) => {
   socket.on('error', () => { backendSocket.destroy(); });
 });
 
-// DC Protocol (Mar 2026): server.listen() FIRST so port 5000 opens immediately (health check passes).
-// HTML preloading runs async in background AFTER port is bound — never blocks deployment startup.
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    const nextPort = (err.port || port) + 1;
+    console.log(`⚠️ Port ${err.port || port} occupied, retrying on http://${hostname}:${nextPort}/...`);
+    setTimeout(() => {
+      server.listen(nextPort, hostname);
+    }, 500);
+  } else {
+    console.error('❌ Server error:', err);
+  }
+});
+
 server.listen(port, hostname, () => {
   console.log(`🔑 Build ID: ${Date.now()}`);
   console.log(`✅ Static server running at http://${hostname}:${port}/`);
