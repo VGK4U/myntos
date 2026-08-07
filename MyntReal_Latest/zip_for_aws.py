@@ -13,7 +13,12 @@ def main():
     ignore_patterns = []
     if os.path.exists('.dockerignore'):
         with open('.dockerignore', 'r') as f:
-            ignore_patterns = f.read().splitlines()
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    if line.startswith('/'):
+                        line = line[1:]
+                    ignore_patterns.append(line)
     
     # Add zip file itself to ignore
     ignore_patterns.append(zip_name)
@@ -56,6 +61,12 @@ def main():
   aws:elasticbeanstalk:environment:process:default:
     HealthCheckPath: "/health"
     MatcherHTTPCode: "200,301,302,307"
+    Port: "5000"
+    Protocol: "HTTP"
+    HealthCheckTimeout: "5"
+    HealthCheckInterval: "15"
+    HealthyThresholdCount: "2"
+    UnhealthyThresholdCount: "5"
 """
         zipf.writestr('.ebextensions/02_healthcheck.config', health_config_content)
         print("Successfully injected .ebextensions/02_healthcheck.config into the ZIP.")

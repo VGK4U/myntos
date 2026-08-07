@@ -208,13 +208,14 @@ def check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
     Separate from and additive to the Stage-1 CIBIL advance (kind='ADVANCE').
     Kind = 'DVR_ADVANCE'. Idempotent per (lead, partner, level). Non-blocking.
     """
-    DVR_L1_AMOUNT  = Decimal('500.00')
-    DVR_L2_AMOUNT  = Decimal('1000.00')
+    DVR_L1_AMOUNT = Decimal('1000.00')
+    DVR_L2_AMOUNT = Decimal('500.00')
+    DVR_L5_AMOUNT = Decimal('1000.00')
 
     try:
         lead = db.execute(text("""
             SELECT id, company_id, category_id, associated_partner_id,
-                   vgk_field_support_id, deal_value_received, first_dvr_confirmed_at
+                   team_senior_partner_id, vgk_field_support_id, deal_value_received, first_dvr_confirmed_at
             FROM crm_leads WHERE id = :lid
         """), {'lid': lead_id}).fetchone()
 
@@ -250,13 +251,12 @@ def check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
 
         if hasattr(first_dvr_at, 'tzinfo') and first_dvr_at.tzinfo is not None:
             first_dvr_at = first_dvr_at.replace(tzinfo=None)
-        # DC-SOLAR-SPEC-20260710: removed the 2026-07-01 hard cutoff — spec has no such
-        # gate; Stage-2 advance applies to any lead reaching first-payment-received.
 
         tiers = [(1, lead.associated_partner_id, DVR_L1_AMOUNT)]
+        if lead.team_senior_partner_id:
+            tiers.append((2, lead.team_senior_partner_id, DVR_L2_AMOUNT))
         if lead.vgk_field_support_id:
-            # DC-DVR-L5-001: field support partner earns at level 5 (Support), not level 2
-            tiers.append((5, lead.vgk_field_support_id, DVR_L2_AMOUNT))
+            tiers.append((5, lead.vgk_field_support_id, DVR_L5_AMOUNT))
 
         created_numbers = []
 

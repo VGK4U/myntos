@@ -24,8 +24,7 @@ if [ -z "$SECRET_KEY" ]; then
 fi
 
 if [ -z "$DATABASE_URL" ] && [ -z "$PROD_DATABASE_URL" ]; then
-    echo "Error: No DATABASE_URL or PROD_DATABASE_URL found"
-    exit 1
+    echo "Warning: No DATABASE_URL or PROD_DATABASE_URL found in environment, falling back to application config"
 else
     echo "Database URL configured"
 fi

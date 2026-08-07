@@ -182,6 +182,9 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
   <button class="page-tab" id="tabBtnDashboard" onclick="switchTab('dashboard')">
     <i class="fas fa-chart-line"></i> Executive Dashboard
   </button>
+  <button class="page-tab" id="tabBtnTopPartnersTab" onclick="switchTab('topPartnersTab')">
+    <i class="fas fa-trophy" style="color:#d97706"></i> Top Partners Leaderboard
+  </button>
   <button class="page-tab" id="tabBtnEarnings" onclick="switchTab('earnings')">
     <i class="fas fa-coins"></i> Member Wise Earnings
   </button>
@@ -221,9 +224,25 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
       <option value="official_partner">Official Partner</option>
     </select>
   </div>
+  <div class="fgroup"><label>Category / Segment</label>
+    <select class="form-select" id="categoryFilter" style="min-width:150px" onchange="loadMembers(1)">
+      <option value="">All Categories</option>
+      <option value="Solar">Solar</option>
+      <option value="EV B2B">EV B2B</option>
+      <option value="EV B2C">EV B2C</option>
+      <option value="EV Spares">EV Spares</option>
+      <option value="Insurance">Insurance</option>
+      <option value="Real Dreams">Real Estate (Real Dreams)</option>
+      <option value="ETC Training">ETC Training</option>
+    </select>
+  </div>
   <div class="fgroup">
     <label>Registered By</label>
     <input class="form-control" id="regByFilter" placeholder="Name or emp code…" style="min-width:130px" onkeydown="if(event.key==='Enter')loadMembers(1)">
+  </div>
+  <div class="fgroup">
+    <label>Referred By</label>
+    <input class="form-control" id="referrerFilter" placeholder="Referrer name or code…" style="min-width:140px" onkeydown="if(event.key==='Enter')loadMembers(1)">
   </div>
   <div class="fgroup">
     <label>Reg Month</label>
@@ -307,6 +326,19 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
       <span style="color:#6b7280;font-size:12px;font-weight:700">→</span>
       <input type="date" id="execDateTo"   style="font-size:12px;border:1.5px solid #e5e7eb;border-radius:8px;padding:5px 9px;outline:none;background:#fff;color:#374151" onchange="execCustomDateChanged()">
       <button onclick="applyExecCustomRange()" id="execApplyBtn" style="padding:5px 12px;background:#7c3aed;color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;opacity:.5" disabled><i class="fas fa-check me-1"></i>Apply</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280;margin-left:8px">
+      <span>Category:</span>
+      <select id="execCategory" onchange="loadExecutiveDashboard()" style="padding:5px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:#fff">
+        <option value="">All Categories</option>
+        <option value="Solar">Solar</option>
+        <option value="EV B2B">EV B2B</option>
+        <option value="EV B2C">EV B2C</option>
+        <option value="EV Spares">EV Spares</option>
+        <option value="Insurance">Insurance</option>
+        <option value="Real Dreams">Real Estate (Real Dreams)</option>
+        <option value="ETC Training">ETC Training</option>
+      </select>
     </div>
     <button onclick="loadExecutiveDashboard()" style="background:#ede9fe;color:#7c3aed;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:auto"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
   </div>
@@ -413,6 +445,20 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
         <option value="BALANCE_RECEIVED_PLUS">Balance Received +</option>
       </select>
     </div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
+      <i class="fas fa-th-large"></i>
+      <span>Category:</span>
+      <select id="meCategory" onchange="loadMemberEarnings(1)" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:#fff;cursor:pointer">
+        <option value="">All Categories</option>
+        <option value="Solar">Solar</option>
+        <option value="EV B2B">EV B2B</option>
+        <option value="EV B2C">EV B2C</option>
+        <option value="EV Spares">EV Spares</option>
+        <option value="Insurance">Insurance</option>
+        <option value="Real Dreams">Real Estate (Real Dreams)</option>
+        <option value="ETC Training">ETC Training</option>
+      </select>
+    </div>
   </div>
 
   <!-- Summary KPI row -->
@@ -430,6 +476,153 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
   <div id="mePagination" style="margin-top:14px;display:flex;justify-content:center;gap:6px;flex-wrap:wrap"></div>
 </div>
 <!-- /tabEarnings -->
+
+<!-- ── DC-VGK-TOP-PARTNERS-TAB-001: Top Partners Leaderboard Tab ── -->
+<div id="tabTopPartnersTab" class="tab-panel">
+
+  <!-- Unified filter bar -->
+  <div style="background:#fff;border-radius:12px;padding:14px 18px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:14px">
+    <!-- Period row -->
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;margin-right:2px"><i class="fas fa-calendar-alt me-1" style="color:#d97706"></i>Period:</span>
+      <button class="me-period-btn active" id="tpt_overall"   onclick="_tptPeriodClick('overall',this)">Overall</button>
+      <button class="me-period-btn"        id="tpt_today"     onclick="_tptPeriodClick('today',this)">Today</button>
+      <button class="me-period-btn"        id="tpt_yesterday" onclick="_tptPeriodClick('yesterday',this)">Yesterday</button>
+      <button class="me-period-btn"        id="tpt_week"      onclick="_tptPeriodClick('this_week',this)">This Week</button>
+      <button class="me-period-btn"        id="tpt_last_week" onclick="_tptPeriodClick('last_week',this)">Last Week</button>
+      <button class="me-period-btn"        id="tpt_month"     onclick="_tptPeriodClick('this_month',this)">This Month</button>
+      <button class="me-period-btn"        id="tpt_last_month"onclick="_tptPeriodClick('last_month',this)">Last Month</button>
+      <button class="me-period-btn"        id="tpt_fy"        onclick="_tptPeriodClick('this_fy',this)">This FY</button>
+      <button class="me-period-btn"        id="tpt_custom"    onclick="_tptPeriodClick('custom',this)" style="border-color:#d97706;color:#d97706"><i class="fas fa-sliders-h me-1"></i>Custom Date</button>
+    </div>
+
+    <!-- Filter input controls -->
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div id="tptCustomDates" style="display:none;align-items:center;gap:6px">
+        <input type="date" id="tptDateFrom" onchange="_tptReload()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none">
+        <span style="color:#6b7280;font-size:12px;font-weight:700">→</span>
+        <input type="date" id="tptDateTo"   onchange="_tptReload()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none">
+      </div>
+
+      <div style="display:flex;align-items:center;gap:6px">
+        <input type="text" id="tptSearch" placeholder="Search partner name or code…" oninput="_tptDebounceSearch()" onkeydown="if(event.key==='Enter')_tptReload()" style="padding:7px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12.5px;width:210px;outline:none">
+      </div>
+
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
+        <span>Company:</span>
+        <select id="tptCompany" onchange="_tptReload()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:#fff">
+          <option value="">All Companies</option>
+          <option value="4">MyntReal (Co1)</option>
+          <option value="1">Company 2</option>
+          <option value="2">Company 3</option>
+          <option value="3">Company 4</option>
+        </select>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
+        <span>Category:</span>
+        <select id="tptCategory" onchange="_tptReload()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:#fff">
+          <option value="">All Categories</option>
+          <option value="Solar">Solar</option>
+          <option value="EV B2B">EV B2B</option>
+          <option value="EV B2C">EV B2C</option>
+          <option value="EV Spares">EV Spares</option>
+          <option value="Insurance">Insurance</option>
+          <option value="Real Dreams">Real Estate (Real Dreams)</option>
+          <option value="ETC Training">ETC Training</option>
+        </select>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
+        <span>Reg By Staff:</span>
+        <input type="text" id="tptRegBy" placeholder="Emp Code (e.g. MR10001)" onchange="_tptReload()" onkeydown="if(event.key==='Enter')_tptReload()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;width:150px;outline:none;text-transform:uppercase">
+      </div>
+
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
+        <span>Referred By:</span>
+        <input type="text" id="tptReferredBy" placeholder="Referrer name or code…" onchange="_tptReload()" onkeydown="if(event.key==='Enter')_tptReload()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;width:160px;outline:none">
+      </div>
+
+      <button onclick="_tptReload()" style="padding:7px 16px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer"><i class="fas fa-search me-1"></i>Apply</button>
+      <button onclick="_tptReset()" style="padding:7px 14px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:12.5px;cursor:pointer">Reset</button>
+      <button onclick="_tptExportCsv()" style="padding:7px 14px;background:#ecfdf5;color:#059669;border:1px solid #6ee7b7;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;margin-left:auto"><i class="fas fa-file-excel me-1"></i>Export CSV</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div id="tptKpiGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px"></div>
+
+  <!-- Full Leaderboard Table -->
+  <div style="overflow-x:auto;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px" id="tptTable">
+      <thead>
+        <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb">
+          <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:700;color:#6b7280;width:50px">#</th>
+          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;cursor:pointer" onclick="_tptSort('code')">CODE ↕</th>
+          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;cursor:pointer" onclick="_tptSort('name')">PARTNER ↕</th>
+          <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:700;color:#7c3aed;background:#f5f3ff;cursor:pointer" onclick="_tptSort('team_added')" title="Team members registered under this partner">TEAM ADDED ↕</th>
+          <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:700;color:#1d4ed8;background:#eff6ff;cursor:pointer" onclick="_tptSort('total_leads')">TOTAL LEADS ↕</th>
+
+          <!-- Submits group -->
+          <th colspan="3" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#c2410c;background:#fff7ed;border-left:1px solid #fed7aa;border-right:1px solid #fed7aa">
+            <i class="fas fa-paper-plane me-1"></i>SUBMITS / APPLICATIONS
+          </th>
+
+          <!-- Won group -->
+          <th colspan="3" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#15803d;background:#f0fdf4;border-right:1px solid #bbf7d0">
+            <i class="fas fa-trophy me-1"></i>WON
+          </th>
+
+          <!-- 1st Payments group -->
+          <th colspan="3" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#0369a1;background:#f0f9ff;border-right:1px solid #bae6fd">
+            <i class="fas fa-hand-holding-usd me-1"></i>1st PAYMENTS RELEASED
+          </th>
+
+          <!-- Completed group -->
+          <th colspan="3" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#1d4ed8;background:#eff6ff;border-right:1px solid #bfdbfe">
+            <i class="fas fa-check-circle me-1"></i>COMPLETED
+          </th>
+
+          <!-- Lost group -->
+          <th colspan="3" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#b91c1c;background:#fef2f2;border-right:1px solid #fecaca">
+            <i class="fas fa-times-circle me-1"></i>LOST / CANCELLED
+          </th>
+
+          <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:800;color:#15803d;background:#f0fdf4;cursor:pointer" onclick="_tptSort('win_rate')">OVERALL WIN RATE ↕</th>
+        </tr>
+        <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;font-size:10px">
+          <th colspan="5"></th>
+          <!-- Submits subheaders -->
+          <th style="padding:6px;text-align:center;background:#fff7ed;color:#9a3412;cursor:pointer" onclick="_tptSort('submits_count')">COUNT ↕</th>
+          <th style="padding:6px;text-align:right;background:#fff7ed;color:#9a3412;cursor:pointer" onclick="_tptSort('submits_val')">VALUE ↕</th>
+          <th style="padding:6px;text-align:center;background:#fff7ed;color:#9a3412">%</th>
+          <!-- Won subheaders -->
+          <th style="padding:6px;text-align:center;background:#f0fdf4;color:#166534;cursor:pointer" onclick="_tptSort('won_count')">COUNT ↕</th>
+          <th style="padding:6px;text-align:right;background:#f0fdf4;color:#166534;cursor:pointer" onclick="_tptSort('won_val')">VALUE ↕</th>
+          <th style="padding:6px;text-align:center;background:#f0fdf4;color:#166534">%</th>
+          <!-- 1st Payments subheaders -->
+          <th style="padding:6px;text-align:center;background:#f0f9ff;color:#075985;cursor:pointer" onclick="_tptSort('dvr_count')">COUNT ↕</th>
+          <th style="padding:6px;text-align:right;background:#f0f9ff;color:#075985;cursor:pointer" onclick="_tptSort('dvr_val')">VALUE ↕</th>
+          <th style="padding:6px;text-align:center;background:#f0f9ff;color:#075985">%</th>
+          <!-- Completed subheaders -->
+          <th style="padding:6px;text-align:center;background:#eff6ff;color:#1e40af;cursor:pointer" onclick="_tptSort('completed_count')">COUNT ↕</th>
+          <th style="padding:6px;text-align:right;background:#eff6ff;color:#1e40af;cursor:pointer" onclick="_tptSort('completed_val')">VALUE ↕</th>
+          <th style="padding:6px;text-align:center;background:#eff6ff;color:#1e40af">%</th>
+          <!-- Lost subheaders -->
+          <th style="padding:6px;text-align:center;background:#fef2f2;color:#991b1b;cursor:pointer" onclick="_tptSort('lost_count')">COUNT ↕</th>
+          <th style="padding:6px;text-align:right;background:#fef2f2;color:#991b1b;cursor:pointer" onclick="_tptSort('lost_val')">VALUE ↕</th>
+          <th style="padding:6px;text-align:center;background:#fef2f2;color:#991b1b">%</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tptBody">
+        <tr><td colspan="21" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading Leaderboard Data…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div id="tptPagination" style="margin-top:14px;display:flex;justify-content:center;gap:6px;flex-wrap:wrap"></div>
+</div>
+<!-- /tabTopPartnersTab -->
 
 <!-- ── Income Dashboard Tab (DC-VGK-EARN-DASH-001) ── -->
 <div id="tabIncomeDash" class="tab-panel">
@@ -1343,8 +1536,12 @@ function resetFilters() {
   document.getElementById('statusFilter').value = '';
   const desigEl = document.getElementById('designationFilter');
   if (desigEl) desigEl.value = '';
+  const catEl = document.getElementById('categoryFilter');
+  if (catEl) catEl.value = '';
   const regByEl = document.getElementById('regByFilter');
   if (regByEl) regByEl.value = '';
+  const refEl = document.getElementById('referrerFilter');
+  if (refEl) refEl.value = '';
   const rmEl = document.getElementById('regMonthFilter');
   if (rmEl) rmEl.value = '';
   _regPeriod = '';
@@ -1388,23 +1585,276 @@ let _meDebTimer = null;
 function debounceME(){ clearTimeout(_meDebTimer); _meDebTimer = setTimeout(()=>loadMemberEarnings(1), 400); }
 
 function switchTab(tab) {
+  const isTpt = tab === 'topPartnersTab';
   document.getElementById('tabMembers').classList.toggle('active', tab === 'members');
   document.getElementById('tabDashboard').classList.toggle('active', tab === 'dashboard');
+  document.getElementById('tabTopPartnersTab').classList.toggle('active', isTpt);
   document.getElementById('tabEarnings').classList.toggle('active', tab === 'earnings');
   document.getElementById('tabIncomeDash').classList.toggle('active', tab === 'incomeDash');
   document.getElementById('tabLeadView').classList.toggle('active', tab === 'leadView');
   document.getElementById('tabCommServices').classList.toggle('active', tab === 'commServices');
   document.getElementById('tabBtnMembers').classList.toggle('active', tab === 'members');
   document.getElementById('tabBtnDashboard').classList.toggle('active', tab === 'dashboard');
+  document.getElementById('tabBtnTopPartnersTab').classList.toggle('active', isTpt);
   document.getElementById('tabBtnEarnings').classList.toggle('active', tab === 'earnings');
   document.getElementById('tabBtnIncomeDash').classList.toggle('active', tab === 'incomeDash');
   document.getElementById('tabBtnLeadView').classList.toggle('active', tab === 'leadView');
   document.getElementById('tabBtnCommServices').classList.toggle('active', tab === 'commServices');
   if (tab === 'dashboard' && !_execDashLoaded) loadExecutiveDashboard();
+  if (isTpt && !_tptLoaded) loadTopPartnersTable(1);
   if (tab === 'earnings' && !_meLoaded) loadMemberEarnings(1);
   if (tab === 'incomeDash' && !_iedLoaded) { loadIedSegments(); loadIncomeDash(1); }
   if (tab === 'leadView' && !_lvLoaded) { _lvLoadSegments(); _lvLoadCommunityServices(); loadLeadView(1); }
   if (tab === 'commServices' && !_commLoaded) loadCommServicesTab(1);
+}
+
+// ── DC-VGK-TOP-PARTNERS-TAB-001: Top Partners Leaderboard Tab Controller ──
+let _tptLoaded = false;
+let _tptPeriod = 'overall';
+let _tptSortBy = 'total_leads';
+let _tptSortDir = 'desc';
+let _tptPage = 1;
+let _tptSearchTimer = null;
+
+function _tptDebounceSearch() {
+  clearTimeout(_tptSearchTimer);
+  _tptSearchTimer = setTimeout(() => loadTopPartnersTable(1), 400);
+}
+
+function _tptPeriodClick(period, btn) {
+  _tptPeriod = period;
+  document.querySelectorAll('#tabTopPartnersTab .me-period-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  
+  const customDiv = document.getElementById('tptCustomDates');
+  if (customDiv) {
+    customDiv.style.display = (period === 'custom') ? 'flex' : 'none';
+  }
+  if (period !== 'custom') {
+    loadTopPartnersTable(1);
+  }
+}
+
+function _tptSort(column) {
+  if (_tptSortBy === column) {
+    _tptSortDir = (_tptSortDir === 'desc') ? 'asc' : 'desc';
+  } else {
+    _tptSortBy = column;
+    _tptSortDir = 'desc';
+  }
+  loadTopPartnersTable(1);
+}
+
+function _tptReset() {
+  _tptPeriod = 'overall';
+  _tptSortBy = 'total_leads';
+  _tptSortDir = 'desc';
+  if (document.getElementById('tptSearch')) document.getElementById('tptSearch').value = '';
+  if (document.getElementById('tptCompany')) document.getElementById('tptCompany').value = '';
+  if (document.getElementById('tptCategory')) document.getElementById('tptCategory').value = '';
+  if (document.getElementById('tptRegBy')) document.getElementById('tptRegBy').value = '';
+  if (document.getElementById('tptReferredBy')) document.getElementById('tptReferredBy').value = '';
+  if (document.getElementById('tptDateFrom')) document.getElementById('tptDateFrom').value = '';
+  if (document.getElementById('tptDateTo')) document.getElementById('tptDateTo').value = '';
+  document.querySelectorAll('#tabTopPartnersTab .me-period-btn').forEach(b => b.classList.remove('active'));
+  if (document.getElementById('tpt_overall')) document.getElementById('tpt_overall').classList.add('active');
+  if (document.getElementById('tptCustomDates')) document.getElementById('tptCustomDates').style.display = 'none';
+  loadTopPartnersTable(1);
+}
+
+function _tptReload() {
+  loadTopPartnersTable(1);
+}
+
+async function loadTopPartnersTable(page = 1) {
+  _tptPage = page;
+  const body = document.getElementById('tptBody');
+  if (!body) return;
+  
+  body.innerHTML = `<tr><td colspan="21" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading Leaderboard Data…</td></tr>`;
+
+  const search = document.getElementById('tptSearch')?.value?.trim() || '';
+  const companyId = document.getElementById('tptCompany')?.value || '';
+  const categoryId = document.getElementById('tptCategory')?.value || '';
+  const regBy = document.getElementById('tptRegBy')?.value?.trim() || '';
+  const referredBy = document.getElementById('tptReferredBy')?.value?.trim() || '';
+  const dateFrom = document.getElementById('tptDateFrom')?.value || '';
+  const dateTo = document.getElementById('tptDateTo')?.value || '';
+
+  let url = `/api/v1/vgk/dashboard/top-partners-table?period=${encodeURIComponent(_tptPeriod)}&page=${page}&limit=50&sort_by=${_tptSortBy}&sort_dir=${_tptSortDir}`;
+  if (search) url += `&search=${encodeURIComponent(search)}`;
+  if (companyId) url += `&company_id=${companyId}`;
+  if (categoryId) url += `&category_id=${encodeURIComponent(categoryId)}`;
+  if (regBy) url += `&reg_by=${encodeURIComponent(regBy)}`;
+  if (referredBy) url += `&referred_by=${encodeURIComponent(referredBy)}`;
+  if (_tptPeriod === 'custom' && dateFrom && dateTo) {
+    url += `&date_from=${dateFrom}&date_to=${dateTo}`;
+  }
+
+  try {
+    const res = await staffFetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const data = json.data || {};
+    const partners = data.partners || [];
+    _tptLoaded = true;
+
+    // Render KPI Cards
+    _renderTptKpis(partners, data.total_count || 0);
+
+    if (partners.length === 0) {
+      body.innerHTML = `<tr><td colspan="21" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-inbox me-2"></i>No partner performance data found for the selected filters.</td></tr>`;
+      document.getElementById('tptPagination').innerHTML = '';
+      return;
+    }
+
+    const inr = n => '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
+
+    body.innerHTML = partners.map(p => {
+      const rankBadge = p.rank <= 3 
+        ? `<span style="background:${p.rank===1?'#fef3c7':(p.rank===2?'#f1f5f9':'#ffedd5')};color:${p.rank===1?'#d97706':(p.rank===2?'#475569':'#c2410c')};padding:2px 8px;border-radius:12px;font-weight:800">🥇 ${p.rank}</span>`
+        : `<span style="color:#6b7280;font-weight:700">#${p.rank}</span>`;
+
+      return `<tr style="border-bottom:1px solid #f3f4f6;transition:background .15s" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background=''">
+        <td style="padding:10px 12px;text-align:center">${rankBadge}</td>
+        <td style="padding:10px 12px;font-weight:700;color:#7c3aed"><a href="javascript:void(0)" onclick="_openPartnerDrawer(${p.id})" style="color:#7c3aed;text-decoration:none">${p.code}</a></td>
+        <td style="padding:10px 12px;font-weight:700;color:#111827">${p.name}</td>
+        <td style="padding:10px 12px;text-align:center;font-weight:800;color:#7c3aed;background:#f5f3ff">${p.team_added > 0 ? `<span style="background:#ede9fe;padding:2px 8px;border-radius:10px">${p.team_added}</span>` : '0'}</td>
+        <td style="padding:10px 12px;text-align:center;font-weight:800;color:#1d4ed8;background:#eff6ff">${p.total_leads}</td>
+
+        <!-- Submits -->
+        <td style="padding:10px 8px;text-align:center;font-weight:700;color:#c2410c;background:#fff7ed;border-left:1px solid #ffedd5">${p.submits_count}</td>
+        <td style="padding:10px 8px;text-align:right;font-weight:600;color:#9a3412;background:#fff7ed">${p.submits_val > 0 ? inr(p.submits_val) : '—'}</td>
+        <td style="padding:10px 8px;text-align:center;font-size:11px;color:#c2410c;background:#fff7ed;border-right:1px solid #ffedd5">${p.submits_pct}%</td>
+
+        <!-- Won -->
+        <td style="padding:10px 8px;text-align:center;font-weight:800;color:#15803d;background:#f0fdf4">${p.won_count}</td>
+        <td style="padding:10px 8px;text-align:right;font-weight:700;color:#166534;background:#f0fdf4">${p.won_val > 0 ? inr(p.won_val) : '—'}</td>
+        <td style="padding:10px 8px;text-align:center;font-size:11px;font-weight:700;color:#15803d;background:#f0fdf4;border-right:1px solid #dcfce7">${p.won_pct}%</td>
+
+        <!-- 1st Payments -->
+        <td style="padding:10px 8px;text-align:center;font-weight:700;color:#0369a1;background:#f0f9ff">${p.dvr_count}</td>
+        <td style="padding:10px 8px;text-align:right;font-weight:600;color:#075985;background:#f0f9ff">${p.dvr_val > 0 ? inr(p.dvr_val) : '—'}</td>
+        <td style="padding:10px 8px;text-align:center;font-size:11px;color:#0369a1;background:#f0f9ff;border-right:1px solid #e0f2fe">${p.dvr_pct}%</td>
+
+        <!-- Completed -->
+        <td style="padding:10px 8px;text-align:center;font-weight:800;color:#1d4ed8;background:#eff6ff">${p.completed_count}</td>
+        <td style="padding:10px 8px;text-align:right;font-weight:700;color:#1e40af;background:#eff6ff">${p.completed_val > 0 ? inr(p.completed_val) : '—'}</td>
+        <td style="padding:10px 8px;text-align:center;font-size:11px;font-weight:700;color:#1d4ed8;background:#eff6ff;border-right:1px solid #dbeafe">${p.completed_pct}%</td>
+
+        <!-- Lost -->
+        <td style="padding:10px 8px;text-align:center;font-weight:600;color:#b91c1c;background:#fef2f2">${p.lost_count}</td>
+        <td style="padding:10px 8px;text-align:right;font-weight:500;color:#991b1b;background:#fef2f2">${p.lost_val > 0 ? inr(p.lost_val) : '—'}</td>
+        <td style="padding:10px 8px;text-align:center;font-size:11px;color:#b91c1c;background:#fef2f2;border-right:1px solid #fee2e2">${p.lost_pct}%</td>
+
+        <!-- Win Rate -->
+        <td style="padding:10px 12px;text-align:center;background:#f0fdf4">
+          <span style="background:#d1fae5;color:#065f46;padding:3px 10px;border-radius:12px;font-weight:800;font-size:12px">${p.win_rate}%</span>
+        </td>
+      </tr>`;
+    }).join('');
+
+    _renderTptPagination(data.total_pages || 1, page);
+
+  } catch (err) {
+    console.error('[TPT_LOAD_ERR]', err);
+    body.innerHTML = `<tr><td colspan="21" style="text-align:center;padding:40px;color:#ef4444"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load leaderboard data: ${err.message}</td></tr>`;
+  }
+}
+
+function _renderTptKpis(partners, totalCount) {
+  const container = document.getElementById('tptKpiGrid');
+  if (!container) return;
+
+  const totalLeads = partners.reduce((sum, p) => sum + p.total_leads, 0);
+  const totalWonVal = partners.reduce((sum, p) => sum + p.won_val, 0);
+  const totalCompVal = partners.reduce((sum, p) => sum + p.completed_val, 0);
+  const avgWinRate = partners.length > 0 ? (partners.reduce((sum, p) => sum + p.win_rate, 0) / partners.length).toFixed(1) : 0;
+  const inr = n => '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
+
+  container.innerHTML = `
+    <div style="background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
+      <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase">Top Partners</div>
+      <div style="font-size:22px;font-weight:800;color:#7c3aed">${totalCount}</div>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
+      <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase">Total Leads</div>
+      <div style="font-size:22px;font-weight:800;color:#1d4ed8">${totalLeads}</div>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
+      <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase">Won Value</div>
+      <div style="font-size:22px;font-weight:800;color:#059669">${inr(totalWonVal)}</div>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
+      <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase">Completed Value</div>
+      <div style="font-size:22px;font-weight:800;color:#0d9488">${inr(totalCompVal)}</div>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
+      <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase">Avg Win Rate</div>
+      <div style="font-size:22px;font-weight:800;color:#d97706">${avgWinRate}%</div>
+    </div>
+  `;
+}
+
+function _renderTptPagination(totalPages, currentPage) {
+  const container = document.getElementById('tptPagination');
+  if (!container) return;
+  if (totalPages <= 1) { container.innerHTML = ''; return; }
+
+  let html = '';
+  if (currentPage > 1) {
+    html += `<button class="page-btn" onclick="loadTopPartnersTable(${currentPage - 1})">← Prev</button>`;
+  }
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === currentPage) {
+      html += `<button class="page-btn active">${i}</button>`;
+    } else if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+      html += `<button class="page-btn" onclick="loadTopPartnersTable(${i})">${i}</button>`;
+    }
+  }
+  if (currentPage < totalPages) {
+    html += `<button class="page-btn" onclick="loadTopPartnersTable(${currentPage + 1})">Next →</button>`;
+  }
+  container.innerHTML = html;
+}
+
+function _tptExportCsv() {
+  const search = document.getElementById('tptSearch')?.value?.trim() || '';
+  const companyId = document.getElementById('tptCompany')?.value || '';
+  const categoryId = document.getElementById('tptCategory')?.value || '';
+  const regBy = document.getElementById('tptRegBy')?.value?.trim() || '';
+  const referredBy = document.getElementById('tptReferredBy')?.value?.trim() || '';
+  const dateFrom = document.getElementById('tptDateFrom')?.value || '';
+  const dateTo = document.getElementById('tptDateTo')?.value || '';
+
+  let url = `/api/v1/vgk/dashboard/top-partners-table?period=${encodeURIComponent(_tptPeriod)}&page=1&limit=500&sort_by=${_tptSortBy}&sort_dir=${_tptSortDir}`;
+  if (search) url += `&search=${encodeURIComponent(search)}`;
+  if (companyId) url += `&company_id=${companyId}`;
+  if (categoryId) url += `&category_id=${encodeURIComponent(categoryId)}`;
+  if (regBy) url += `&reg_by=${encodeURIComponent(regBy)}`;
+  if (referredBy) url += `&referred_by=${encodeURIComponent(referredBy)}`;
+  if (_tptPeriod === 'custom' && dateFrom && dateTo) {
+    url += `&date_from=${dateFrom}&date_to=${dateTo}`;
+  }
+
+  staffFetch(url)
+    .then(r => r.json())
+    .then(json => {
+      const partners = (json.data || {}).partners || [];
+      if (partners.length === 0) { alert('No data available to export.'); return; }
+
+      let csv = 'Rank,Code,Partner,Team Added,Total Leads,Submits Count,Submits Value,Submits %,1st Payment Count,1st Payment Value,1st Payment %,Won Count,Won Value,Won %,Completed Count,Completed Value,Completed %,Lost Count,Lost Value,Lost %,Overall Win Rate %\n';
+      partners.forEach(p => {
+        csv += `"${p.rank}","${p.code}","${p.name.replace(/"/g, '""')}","${p.team_added}","${p.total_leads}","${p.submits_count}","${p.submits_val}","${p.submits_pct}","${p.dvr_count}","${p.dvr_val}","${p.dvr_pct}","${p.won_count}","${p.won_val}","${p.won_pct}","${p.completed_count}","${p.completed_val}","${p.completed_pct}","${p.lost_count}","${p.lost_val}","${p.lost_pct}","${p.win_rate}"\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Top_Partners_Leaderboard_${_tptPeriod}_${new Date().toISOString().slice(0,10)}.csv`;
+      link.click();
+    })
+    .catch(err => alert('Failed to export CSV: ' + err.message));
 }
 
 // ── DC-VGK-MEMBER-EARN-001 v2: Member Wise Earnings tab ──────────────────────
@@ -1478,6 +1928,7 @@ async function loadMemberEarnings(pg=1){
   const regBy       = (document.getElementById('meRegBy')?.value||'').trim().toUpperCase();
   const earnOnly    = document.getElementById('meEarnersOnly')?.checked !== false;
   const stageFilter = (document.getElementById('meStageFilter')?.value||'').trim();
+  const categoryId  = (document.getElementById('meCategory')?.value||'').trim();
 
   let url = API + '/vgk/dashboard/member-earnings?page='+pg+'&page_size=50'
     + '&sort_by='+_meSortBy+'&sort_dir='+_meSortDir
@@ -2608,6 +3059,8 @@ function _execApiParams() {
   if (_execPeriod === 'custom' && _execDateFrom && _execDateTo) {
     qs += '&date_from=' + _execDateFrom + '&date_to=' + _execDateTo;
   }
+  const cat = document.getElementById('execCategory')?.value || '';
+  if (cat) qs += '&category_id=' + encodeURIComponent(cat);
   return qs;
 }
 
@@ -2875,10 +3328,12 @@ async function loadMembers(page = 1) {
   const search = document.getElementById('searchInput').value.trim();
   const status = document.getElementById('statusFilter').value;
   const desigFilter = document.getElementById('designationFilter').value;
+  const categoryFilter = (document.getElementById('categoryFilter')?.value || '').trim();
   let url = API + '/vgk/members?page=' + page + '&page_size=25';
   if (search) url += '&search=' + encodeURIComponent(search);
   if (status !== '') url += '&is_active=' + status;
   if (desigFilter) url += '&designation_tier=' + encodeURIComponent(desigFilter);
+  if (categoryFilter) url += '&category_id=' + encodeURIComponent(categoryFilter);
   if (_regPeriod) url += '&reg_period=' + encodeURIComponent(_regPeriod);
   // DC-VGK-EXEC-DASH-001: month filter → convert to reg_from / reg_to
   if (_regMonth) {
@@ -2889,6 +3344,8 @@ async function loadMembers(page = 1) {
   if (_sortBy) url += '&sort_by=' + encodeURIComponent(_sortBy) + '&sort_dir=' + _sortDir;
   const regByFilter = (document.getElementById('regByFilter')?.value || '').trim().toUpperCase();
   if (regByFilter) url += '&registered_by_emp_code=' + encodeURIComponent(regByFilter);
+  const referrerFilter = (document.getElementById('referrerFilter')?.value || '').trim();
+  if (referrerFilter) url += '&referred_by=' + encodeURIComponent(referrerFilter);
   const tbody = document.getElementById('membersTable');
   tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
   try {

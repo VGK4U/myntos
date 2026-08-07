@@ -44,10 +44,39 @@ router = APIRouter()
 
 IST = pytz.timezone('Asia/Kolkata')
 
-TWILIO_SID   = os.environ.get("TWILIO_SID", "")
-TWILIO_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
-TWILIO_FROM  = os.environ.get("TWILIO_PHONE_NUMBER", "")
-OPENAI_KEY   = os.environ.get("OPENAI_API_KEY", "")
+from dotenv import load_dotenv
+
+def _reload_env():
+    env_paths = [
+        os.path.join(os.path.dirname(__file__), "../../../.env"),
+        os.path.join(os.path.dirname(__file__), "../../../../.env"),
+        os.path.join(os.getcwd(), ".env"),
+        os.path.join(os.getcwd(), "backend/.env")
+    ]
+    for p in env_paths:
+        if os.path.exists(p):
+            load_dotenv(os.path.abspath(p), override=True)
+
+def _get_twilio_sid():
+    _reload_env()
+    return os.environ.get("TWILIO_SID", "")
+
+def _get_twilio_token():
+    _reload_env()
+    return os.environ.get("TWILIO_AUTH_TOKEN", "")
+
+def _get_twilio_from():
+    _reload_env()
+    return os.environ.get("TWILIO_PHONE_NUMBER", "")
+
+def _get_openai_key():
+    _reload_env()
+    return os.environ.get("OPENAI_API_KEY", "")
+
+TWILIO_SID   = _get_twilio_sid()
+TWILIO_TOKEN = _get_twilio_token()
+TWILIO_FROM  = _get_twilio_from()
+OPENAI_KEY   = _get_openai_key()
 
 AI_AUDIO_DIR = os.environ.get("AI_AUDIO_DIR", "/tmp/ai_audio")
 os.makedirs(AI_AUDIO_DIR, exist_ok=True)
@@ -2812,10 +2841,15 @@ def make_test_call(
     if not phone.startswith("+"):
         phone = "+91" + phone.lstrip("0")
 
-    if not TWILIO_SID or not TWILIO_TOKEN or not TWILIO_FROM:
-        raise HTTPException(status_code=503, detail="Twilio credentials not configured")
-    if not OPENAI_KEY:
-        raise HTTPException(status_code=503, detail="OpenAI API key not configured")
+    twilio_sid = _get_twilio_sid()
+    twilio_token = _get_twilio_token()
+    twilio_from = _get_twilio_from()
+    openai_key = _get_openai_key()
+
+    if not twilio_sid or not twilio_token or not twilio_from:
+        raise HTTPException(status_code=503, detail="Twilio credentials not configured in .env")
+    if not openai_key:
+        raise HTTPException(status_code=503, detail="OpenAI API key not configured in .env")
 
     log_result = db.execute(text("""
         INSERT INTO ai_call_logs
@@ -2842,13 +2876,13 @@ def make_test_call(
 
     try:
         from twilio.rest import Client as TwilioClient
-        tc = TwilioClient(TWILIO_SID, TWILIO_TOKEN)
+        tc = TwilioClient(twilio_sid, twilio_token)
         recording_url = (
             f"{webhook_base}/api/v1/staff/ai-calling/webhook/recording?log_id={log_id}"
         )
         call = tc.calls.create(
             to=phone,
-            from_=TWILIO_FROM,
+            from_=twilio_from,
             url=incoming_url,
             status_callback=status_url,
             status_callback_event=["completed", "failed", "busy", "no-answer"],
@@ -2883,6 +2917,16 @@ def make_test_call(
         code_match = _re.search(r'\b(2\d{4})\b', clean)
         twilio_code = code_match.group(1) if code_match else ""
 
+        # ── 401 / Authentication Failure ──
+        if "401" in cl or "authenticate" in cl or twilio_code == "20003":
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Twilio Authentication Failed (HTTP 401): The TWILIO_SID or TWILIO_AUTH_TOKEN in your .env file "
+                    "is invalid, expired, or has been rotated. Please update TWILIO_SID and TWILIO_AUTH_TOKEN in .env "
+                    "with valid credentials from your Twilio Console (Account -> API Keys & Tokens)."
+                )
+            )
         # ── Geographic permissions (most common India calling failure) ──
         if twilio_code in ("21215", "21217") or "permission" in cl or "geo" in cl or "not enabled" in cl or "international" in cl:
             raise HTTPException(
@@ -2908,13 +2952,13 @@ def make_test_call(
         if "do-not-originate" in cl or "dno" in cl or twilio_code == "21212":
             raise HTTPException(
                 status_code=400,
-                detail=f"Twilio DNO: {TWILIO_FROM} is blocked by carriers as a caller ID. Update TWILIO_PHONE_NUMBER with a different verified number."
+                detail=f"Twilio DNO: {twilio_from} is blocked by carriers as a caller ID. Update TWILIO_PHONE_NUMBER with a different verified number."
             )
         # ── Invalid From number ──
         if twilio_code in ("21201", "21210") or ("not a valid" in cl and "from" in cl):
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid Twilio 'From' number {TWILIO_FROM} (code {twilio_code}). Verify it is active in your Twilio console."
+                detail=f"Invalid Twilio 'From' number {twilio_from} (code {twilio_code}). Verify it is active in your Twilio console."
             )
         # ── Pass-through: show the real Twilio error ──
         raise HTTPException(status_code=400, detail=f"Twilio error: {clean}")

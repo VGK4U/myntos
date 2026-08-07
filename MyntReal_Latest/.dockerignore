@@ -70,10 +70,15 @@ mobile/node_modules/
 frontend/storage/
 backend/storage/
 
-# Exclude massive backup files and local DBs
+# Exclude massive backup files, binaries and local DBs
 *.zip
 *.dump
+*.apk
+*.app
 pgsql/
 pgsql16/
-/postgres_data/
-/mobile/
+postgres_data/
+mobile/
+frontend/public/catalog/*.pdf
+frontend/public/*.apk
+frontend/public/*.app

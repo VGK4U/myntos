@@ -10,7 +10,7 @@ const path = require('path');
 const cookie = require('cookie');
 
 const hostname = '0.0.0.0';
-let port = process.env.PORT || 3000;
+let port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
 
 const LEGAL_DISCLAIMER_HTML = `<style>@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@400&display=swap');body{padding-bottom:40px!important;}.legal-disc-bar{position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#0d1117;border-top:1px solid rgba(255,255,255,.15);padding:6px 0;overflow:hidden;white-space:nowrap;}.legal-disc-track{display:inline-block;white-space:nowrap;animation:legalScroll 60s linear infinite;will-change:transform;}.legal-disc-track:hover{animation-play-state:paused;}.legal-disc-text{display:inline;white-space:nowrap;font-size:0.8rem;font-weight:500;color:rgba(255,255,255,.82);font-family:'Noto Sans Telugu','Noto Sans',system-ui,sans-serif;padding-right:8rem;}.legal-disc-badge{display:inline-block;font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#f59e0b;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);border-radius:3px;padding:1px 5px;margin-right:.6rem;vertical-align:middle;}.legal-disc-sep{display:inline-block;width:1px;height:10px;background:rgba(255,165,0,.4);margin:0 2.5rem;vertical-align:middle;}@keyframes legalScroll{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}</style><div class="legal-disc-bar" role="complementary" aria-label="Legal Disclaimer"><div class="legal-disc-track"><span class="legal-disc-text"><span class="legal-disc-badge">Please Note</span> MNR operates as a product facilitation and promotional rewards platform for EV and solar solutions, Insurance and Real Estate etc. Participation does not constitute an investment, deposit, or money circulation scheme. No income or profit is guaranteed. Reward points and recognitions are promotional in nature and subject to program terms, eligibility criteria, and verification processes. <span class="legal-disc-sep"></span> MNR EV మరియు సోలార్ పరిష్కారాలు, బీమా, స్థిరాస్తి వ్యాపారం లాంటి మరెన్నో ఫెసిలిటేషన్ మరియు ప్రమోషనల్ రివార్డ్స్ ప్లాట్‌ఫారమ్‌గా పనిచేస్తుంది. ఇందులో పాల్గొనడం ఇన్వెస్ట్‌మెంట్, డిపాజిట్ లేదా మనీ సర్క్యులేషన్ స్కీమ్ కాదని స్పష్టంగా తెలియజేస్తున్నాం. ఆదాయం లేదా లాభానికి ఎలాంటి హామీ లేదు. రివార్డ్ పాయింట్లు మరియు గుర్తింపులు ప్రమోషనల్ స్వభావం కలిగినవి మరియు ప్రోగ్రామ్ నిబంధనలు, అర్హత ప్రమాణాలు మరియు ధృవీకరణకు లోబడి ఉంటాయి.</span></div></div>`;
 
@@ -7605,12 +7605,51 @@ const server = http.createServer(async (req, res) => {
   console.log(`[REQ] ${req.method} ${url}`);
   const urlParts = new URL(url, `http://${getSafeHost(req)}`);
 
-  // APK Mobile Download Link Redirect
-  const reqPathLower = urlParts.pathname.toLowerCase();
-  if (reqPathLower === '/mobile.apk' || reqPathLower === '/download/mobile.apk' || reqPathLower === '/download-app' || reqPathLower === '/download/apk' || reqPathLower === '/myntreal.apk' || reqPathLower === '/public/myntreal.apk' || reqPathLower === '/app.apk') {
-    res.writeHead(302, { 'Location': 'https://www.vgk4u.com/mobile.apk' });
-    res.end();
+  const userAgent = (req.headers['user-agent'] || '').toLowerCase();
+  const isElbHealthChecker = userAgent.includes('elb-healthchecker') || userAgent.includes('healthcheck');
+  // AWS ELB / Load Balancer Health Check Endpoint
+  if (isElbHealthChecker || reqPathLower === '/health' || reqPathLower === '/healthz' || reqPathLower === '/api/health' || reqPathLower === '/ping') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok', service: 'frontend', timestamp: new Date().toISOString() }));
     return;
+  }
+
+  // Direct APK / Mobile App Download Handling (Fixes 302 infinite loop and 404s)
+  const isApkDownload = [
+    '/mobile.app', '/mobile.apk', '/download/mobile.app', '/download/mobile.apk',
+    '/download-app', '/download/apk', '/myntreal.apk', '/public/myntreal.apk',
+    '/app.apk', '/app.app', '/download/app'
+  ].includes(reqPathLower);
+
+  if (isApkDownload) {
+    const apkCandidates = [
+      path.join(__dirname, 'public', 'mobile.apk'),
+      path.join(__dirname, 'public', 'MyntReal.apk'),
+      path.join(__dirname, 'public', 'mobile.app'),
+      path.join(__dirname, '../mobile/android/app/build/outputs/apk/debug/MyntReal-1.0-02-Aug-2026.apk')
+    ];
+    let selectedApk = null;
+    for (const p of apkCandidates) {
+      if (fs.existsSync(p)) {
+        selectedApk = p;
+        break;
+      }
+    }
+    if (selectedApk) {
+      const stat = fs.statSync(selectedApk);
+      res.writeHead(200, {
+        'Content-Type': 'application/vnd.android.package-archive',
+        'Content-Length': stat.size,
+        'Content-Disposition': 'attachment; filename="MyntReal.apk"',
+        'Cache-Control': 'public, max-age=86400'
+      });
+      fs.createReadStream(selectedApk).pipe(res);
+      return;
+    } else {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('APK file not found on server');
+      return;
+    }
   }
 
   // DC Protocol (Aug 2026): Enforce session/cookie creation from token query param
@@ -30224,20 +30263,22 @@ server.listen(port, hostname, () => {
   // DC_CACHE_WATCHER: Start watching HTML files for changes so edits are served without server restart
   setupHtmlCacheWatcher();
 
-  // Secondary listener on port 5001 for backwards compatibility with browser tabs on 5001
-  if (boundPort !== 5001) {
-    try {
-      const secServer = http.createServer(server.listeners('request')[0]);
-      secServer.on('error', (e) => {
-        if (e.code !== 'EADDRINUSE') console.error('Secondary server error:', e.message);
-      });
-      secServer.listen(5001, hostname, () => {
-        console.log(`✅ Secondary static server running at http://${hostname}:5001/`);
-      });
-    } catch (e) {
-      /* ignore */
+  // Secondary listeners on ports 3000 and 5001 for backwards compatibility
+  [3000, 5001].forEach((altPort) => {
+    if (boundPort !== altPort) {
+      try {
+        const secServer = http.createServer(server.listeners('request')[0]);
+        secServer.on('error', (e) => {
+          if (e.code !== 'EADDRINUSE') console.error(`Secondary server (${altPort}) error:`, e.message);
+        });
+        secServer.listen(altPort, hostname, () => {
+          console.log(`✅ Secondary static server running at http://${hostname}:${altPort}/`);
+        });
+      } catch (e) {
+        /* ignore */
+      }
     }
-  }
+  });
 });
 
 module.exports = server;

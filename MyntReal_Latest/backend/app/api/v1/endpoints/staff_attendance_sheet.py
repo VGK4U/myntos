@@ -834,7 +834,9 @@ def get_monthly_attendance(
     
     # DC_ACTIVE_EMP_ONLY: Filter active/inactive employees for target month
     emp_filters = build_employee_status_filters(emp_status or "active", start_date, end_date)
-    emp_query = db.query(StaffEmployee)
+    emp_query = db.query(StaffEmployee).filter(
+        func.upper(func.coalesce(StaffEmployee.emp_code, '')) != 'MR10001'
+    )
     if emp_filters:
         emp_query = emp_query.filter(and_(*emp_filters))
         
@@ -1188,7 +1190,10 @@ def get_manager_team_data(
     all_team_ids = list(set([manager_id] + list(team_ids)))
     
     emp_filters = build_employee_status_filters(emp_status or "active", start_date, end_date)
-    team_members_query = db.query(StaffEmployee).filter(StaffEmployee.id.in_(all_team_ids))
+    team_members_query = db.query(StaffEmployee).filter(
+        StaffEmployee.id.in_(all_team_ids),
+        func.upper(func.coalesce(StaffEmployee.emp_code, '')) != 'MR10001'
+    )
     if emp_filters:
         team_members_query = team_members_query.filter(and_(*emp_filters))
     
@@ -1362,14 +1367,19 @@ def get_manager_team_monthly(
     emp_filters = build_employee_status_filters(emp_status or "active", start_date, end_date)
 
     if _is_super_admin:
-        query = db.query(StaffEmployee)
+        query = db.query(StaffEmployee).filter(
+            func.upper(func.coalesce(StaffEmployee.emp_code, '')) != 'MR10001'
+        )
         if emp_filters:
             query = query.filter(and_(*emp_filters))
         team_members_list = query.all()
     else:
         team_ids = get_team_member_ids(manager, db, StaffEmployee)
         all_team_ids = list(set([manager_id] + list(team_ids)))
-        query = db.query(StaffEmployee).filter(StaffEmployee.id.in_(all_team_ids))
+        query = db.query(StaffEmployee).filter(
+            StaffEmployee.id.in_(all_team_ids),
+            func.upper(func.coalesce(StaffEmployee.emp_code, '')) != 'MR10001'
+        )
         if emp_filters:
             query = query.filter(and_(*emp_filters))
         team_members_list = query.all()
@@ -2069,8 +2079,9 @@ def get_employee_monthly_history(
     if not target_emp:
         raise HTTPException(status_code=404, detail="Employee not found")
 
-    # Downline team dropdown list for filter selection (Includes all staff employees so Yaswanth, Subhash, etc. can search & view any staff record including MR10001)
-    downline_emps = db.query(StaffEmployee).order_by(StaffEmployee.full_name).all()
+    downline_emps = db.query(StaffEmployee).filter(
+        func.upper(func.coalesce(StaffEmployee.emp_code, '')) != 'MR10001'
+    ).order_by(StaffEmployee.full_name).all()
     downline_team = [
         {
             "id": e.id,

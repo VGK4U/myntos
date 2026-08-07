@@ -15996,15 +15996,30 @@ async def health_check():
 
 
 @app.get("/mobile.apk", include_in_schema=False)
+@app.get("/mobile.app", include_in_schema=False)
 @app.get("/download/mobile.apk", include_in_schema=False)
+@app.get("/download/mobile.app", include_in_schema=False)
 @app.get("/download-app", include_in_schema=False)
 @app.get("/download/apk", include_in_schema=False)
 @app.get("/MyntReal.apk", include_in_schema=False)
 @app.get("/public/MyntReal.apk", include_in_schema=False)
 @app.get("/api/v1/app/download", include_in_schema=False)
-async def redirect_mobile_apk():
-    from fastapi.responses import RedirectResponse
-    return RedirectResponse(url="https://www.vgk4u.com/mobile.apk", status_code=302)
+async def serve_mobile_apk():
+    from fastapi.responses import FileResponse
+    _workspace_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    apk_paths = [
+        os.path.join(_workspace_root, "frontend", "public", "MyntReal.apk"),
+        os.path.join(_workspace_root, "frontend", "public", "mobile.apk"),
+        os.path.join(_workspace_root, "mobile", "android", "app", "build", "outputs", "apk", "debug", "MyntReal-1.0-02-Aug-2026.apk")
+    ]
+    for apk_file in apk_paths:
+        if os.path.exists(apk_file):
+            return FileResponse(
+                path=apk_file,
+                filename="MyntReal.apk",
+                media_type="application/vnd.android.package-archive"
+            )
+    raise HTTPException(status_code=404, detail="APK file not found")
 
 # Mount static files for uploads (payment proofs, documents, etc.)
 _WORKSPACE_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

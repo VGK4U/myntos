@@ -305,6 +305,8 @@ def list_vgk_members(
     designation_tier: Optional[str] = Query(None, description="none|channel_partner|sr_channel_partner|official_partner"),
     # [DC-VGK-STAFF-REG-001] Filter by registering staff emp code
     registered_by_emp_code: Optional[str] = Query(None, description="Filter by registering staff emp code"),
+    referred_by: Optional[str] = Query(None, description="Filter by referrer partner name or code"),
+    category_id: Optional[str] = Query(None, description="Category ID or Category Name e.g. Solar, EV"),
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
@@ -320,6 +322,32 @@ def list_vgk_members(
             OfficialPartner.whatsapp_number.ilike(term),
             OfficialPartner.partner_code.ilike(term)
         ))
+    if category_id:
+        if str(category_id).isdigit():
+            query = query.filter(OfficialPartner.id.in_(
+                db.query(CRMLead.associated_partner_id).filter(CRMLead.category_id == int(category_id)).subquery()
+            ))
+        else:
+            cat_ids = [r[0] for r in db.execute(text("SELECT id FROM signup_categories WHERE name ILIKE :cname"), {"cname": f"%{category_id.strip()}%"}).fetchall()]
+            if cat_ids:
+                query = query.filter(OfficialPartner.id.in_(
+                    db.query(CRMLead.associated_partner_id).filter(CRMLead.category_id.in_(cat_ids)).subquery()
+                ))
+            else:
+                query = query.filter(OfficialPartner.id == -1)
+    if referred_by:
+        _ref_term = f"%{referred_by.strip()}%"
+        try:
+            _ref_matched = db.execute(text(
+                "SELECT id FROM official_partners WHERE partner_name ILIKE :term OR partner_code ILIKE :term"
+            ), {"term": _ref_term}).fetchall()
+            _ref_ids = [r[0] for r in _ref_matched]
+        except Exception:
+            _ref_ids = []
+        if _ref_ids:
+            query = query.filter(OfficialPartner.parent_partner_id.in_(_ref_ids))
+        else:
+            query = query.filter(OfficialPartner.parent_partner_id == -1)
     # [DC-VGK-STAFF-REG-001] Filter by registering staff emp_code OR full_name
     if registered_by_emp_code:
         _rbq = registered_by_emp_code.strip()
@@ -3855,6 +3883,7 @@ def vgk_executive_dashboard(
     period:    str           = Query("overall", description="overall|today|yesterday|week|mtd|custom"),
     date_from: Optional[str] = Query(None, description="ISO date YYYY-MM-DD for custom period"),
     date_to:   Optional[str] = Query(None, description="ISO date YYYY-MM-DD for custom period"),
+    category_id: Optional[str] = Query(None),
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
@@ -5216,6 +5245,224 @@ def vgk_top_partners_filtered(
             "period":     period,
             "prev_label": prev_label,
             "partners":   current_partners,
+        }
+    }
+
+
+# ── DC-VGK-TOP-PARTNERS-TAB-001: Comprehensive Top Partners Leaderboard Endpoint ──
+@router.get("/dashboard/top-partners-table")
+def vgk_top_partners_leaderboard_table(
+    period: str = Query("overall", description="overall|today|yesterday|this_week|last_week|this_month|last_month|this_fy|custom"),
+    date_from: Optional[str] = Query(None, description="ISO date YYYY-MM-DD for custom period"),
+    date_to: Optional[str] = Query(None, description="ISO date YYYY-MM-DD for custom period"),
+    company_id: Optional[int] = Query(None),
+    category_id: Optional[str] = Query(None, description="Category ID or Category Name e.g. Solar, EV"),
+    search: Optional[str] = Query(None),
+    reg_by: Optional[str] = Query(None),
+    referred_by: Optional[str] = Query(None),
+    sort_by: str = Query("total_leads"),
+    sort_dir: str = Query("desc"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=500),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Detailed Leaderboard for Top Partners by Leads with full stage metrics (Submits, DVR/1st Payment, Won, Completed, Lost),
+    date presets (Today, Yesterday, This/Last Week, This/Last Month, This FY, Custom), filters, sorting, and pagination.
+    """
+    from datetime import date, timedelta
+    today = date.today()
+
+    def _get_dates(p: str):
+        if p == "today":
+            return today, today
+        if p == "yesterday":
+            y = today - timedelta(days=1)
+            return y, y
+        if p in ("this_week", "week"):
+            mon = today - timedelta(days=today.weekday())
+            return mon, today
+        if p == "last_week":
+            mon = today - timedelta(days=today.weekday() + 7)
+            sun = mon + timedelta(days=6)
+            return mon, sun
+        if p in ("this_month", "month", "mtd"):
+            return today.replace(day=1), today
+        if p == "last_month":
+            first_this = today.replace(day=1)
+            last_prev = first_this - timedelta(days=1)
+            first_prev = last_prev.replace(day=1)
+            return first_prev, last_prev
+        if p == "this_fy":
+            fy_start_year = today.year if today.month >= 4 else today.year - 1
+            return date(fy_start_year, 4, 1), today
+        if p == "custom" and date_from and date_to:
+            try:
+                return date.fromisoformat(date_from), date.fromisoformat(date_to)
+            except Exception:
+                pass
+        return None, None
+
+    f_from, f_to = _get_dates(period)
+
+    where_clauses = ["op.category = 'VGK_TEAM'"]
+    params: dict = {}
+
+    if f_from and f_to:
+        params["from_d"] = f_from.isoformat()
+        params["to_d_end"] = f"{f_to.isoformat()}T23:59:59"
+        where_clauses.append("""(
+            (cl.created_at >= :from_d AND cl.created_at <= :to_d_end)
+            OR (cl.first_payment_received_date >= CAST(:from_d AS date) AND cl.first_payment_received_date <= CAST(:to_d_end AS date))
+        )""")
+        dvr_filter = """
+            WHERE (cl.first_payment_received_date >= CAST(:from_d AS date) AND cl.first_payment_received_date <= CAST(:to_d_end AS date))
+        """
+    else:
+        dvr_filter = """
+            WHERE (cl.first_payment_received_date IS NOT NULL OR cl.deal_value_received > 0)
+        """
+
+    if company_id:
+        where_clauses.append("cl.company_id = :cid")
+        params["cid"] = company_id
+
+    if category_id:
+        if str(category_id).isdigit():
+            where_clauses.append("cl.category_id = :catid")
+            params["catid"] = int(category_id)
+        else:
+            where_clauses.append("cl.category_id IN (SELECT id FROM signup_categories WHERE name ILIKE :cat_name)")
+            params["cat_name"] = f"%{str(category_id).strip()}%"
+
+    if search:
+        where_clauses.append("(op.partner_name ILIKE :srch OR op.partner_code ILIKE :srch)")
+        params["srch"] = f"%{search.strip()}%"
+
+    if reg_by:
+        where_clauses.append("UPPER(se.emp_code) = :reg_by")
+        params["reg_by"] = reg_by.strip().upper()
+
+    where_sql = " AND ".join(where_clauses)
+    join_staff = "LEFT JOIN staff_employees se ON se.id = op.registered_by_staff_id" if reg_by else ""
+
+    query_sql = f"""
+        SELECT op.id,
+               op.partner_name,
+               op.partner_code,
+               (SELECT COUNT(*) FROM official_partners sub WHERE sub.parent_partner_id = op.id) AS team_added,
+               COUNT(cl.id) AS total_leads,
+               COUNT(*) FILTER (WHERE cl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change') OR cl.status IN ('submitted', 'application_submitted')) AS submits_count,
+               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change') OR cl.status IN ('submitted', 'application_submitted')), 0) AS submits_val,
+               COUNT(*) FILTER ({dvr_filter}) AS dvr_count,
+               COALESCE(SUM(
+                   CASE 
+                       WHEN cl.deal_value_received > 0 THEN cl.deal_value_received
+                       WHEN EXISTS (SELECT 1 FROM crm_lead_transactions tx WHERE tx.lead_id = cl.id) 
+                            THEN (SELECT COALESCE(SUM(amount), 0) FROM crm_lead_transactions tx WHERE tx.lead_id = cl.id)
+                       WHEN cl.first_payment_received_date IS NOT NULL THEN cl.deal_value_total
+                       ELSE 0
+                   END
+               ) FILTER ({dvr_filter}), 0) AS dvr_val,
+               COUNT(*) FILTER (WHERE cl.status = 'won' OR cl.solar_pipeline_status IN ('balance_received', 'subsidy_pending')) AS won_count,
+               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.status = 'won' OR cl.solar_pipeline_status IN ('balance_received', 'subsidy_pending')), 0) AS won_val,
+               COUNT(*) FILTER (WHERE cl.status IN ('completed', 'subsidy_pending') OR cl.solar_pipeline_status IN ('completed', 'subsidy_pending', 'subsidy_received', 'net_meter_done')) AS completed_count,
+               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.status IN ('completed', 'subsidy_pending') OR cl.solar_pipeline_status IN ('completed', 'subsidy_pending', 'subsidy_received', 'net_meter_done')), 0) AS completed_val,
+               COUNT(*) FILTER (WHERE cl.status IN ('lost', 'cancelled', 'rejected') OR cl.solar_pipeline_status IN ('loan_rejected', 'not_interested', 'cancelled')) AS lost_count,
+               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.status IN ('lost', 'cancelled', 'rejected') OR cl.solar_pipeline_status IN ('loan_rejected', 'not_interested', 'cancelled')), 0) AS lost_val
+        FROM crm_leads cl
+        JOIN official_partners op ON op.id = cl.associated_partner_id
+        {join_staff}
+        WHERE {where_sql}
+        GROUP BY op.id, op.partner_name, op.partner_code
+    """
+
+    try:
+        raw_rows = db.execute(text(query_sql), params).fetchall()
+    except Exception as e:
+        print("[TPT_SQL_ERR]", e)
+        raw_rows = []
+
+    partners = []
+    for r in raw_rows:
+        tm_added = int(r[3] or 0)
+        tot = int(r[4] or 0)
+        sub_c = int(r[5] or 0)
+        sub_v = float(r[6] or 0)
+        dvr_c = int(r[7] or 0)
+        dvr_v = float(r[8] or 0)
+        won_c = int(r[9] or 0)
+        won_v = float(r[10] or 0)
+        comp_c = int(r[11] or 0)
+        comp_v = float(r[12] or 0)
+        lost_c = int(r[13] or 0)
+        lost_v = float(r[14] or 0)
+
+        sub_pct = round((sub_c / tot * 100), 1) if tot > 0 else 0.0
+        dvr_pct = round((dvr_c / tot * 100), 1) if tot > 0 else 0.0
+        won_pct = round((won_c / tot * 100), 1) if tot > 0 else 0.0
+        comp_pct = round((comp_c / tot * 100), 1) if tot > 0 else 0.0
+        lost_pct = round((lost_c / tot * 100), 1) if tot > 0 else 0.0
+        win_rate = round(((won_c + comp_c) / tot * 100), 1) if tot > 0 else 0.0
+
+        partners.append({
+            "id": int(r[0]),
+            "name": r[1] or "Unknown Partner",
+            "code": r[2] or f"VGK{r[0]}",
+            "team_added": tm_added,
+            "total_leads": tot,
+            "submits_count": sub_c, "submits_val": sub_v, "submits_pct": sub_pct,
+            "dvr_count": dvr_c, "dvr_val": dvr_v, "dvr_pct": dvr_pct,
+            "won_count": won_c, "won_val": won_v, "won_pct": won_pct,
+            "completed_count": comp_c, "completed_val": comp_v, "completed_pct": comp_pct,
+            "lost_count": lost_c, "lost_val": lost_v, "lost_pct": lost_pct,
+            "win_rate": win_rate
+        })
+
+    # Sort
+    reverse = (sort_dir.lower() != "asc")
+    sort_key_map = {
+        "code": lambda x: x["code"].lower(),
+        "name": lambda x: x["name"].lower(),
+        "partner_name": lambda x: x["name"].lower(),
+        "team_added": lambda x: x["team_added"],
+        "total_leads": lambda x: x["total_leads"],
+        "submits_count": lambda x: x["submits_count"],
+        "submits_val": lambda x: x["submits_val"],
+        "dvr_count": lambda x: x["dvr_count"],
+        "dvr_val": lambda x: x["dvr_val"],
+        "won_count": lambda x: x["won_count"],
+        "won_val": lambda x: x["won_val"],
+        "completed_count": lambda x: x["completed_count"],
+        "completed_val": lambda x: x["completed_val"],
+        "lost_count": lambda x: x["lost_count"],
+        "lost_val": lambda x: x["lost_val"],
+        "win_rate": lambda x: x["win_rate"],
+    }
+    key_func = sort_key_map.get(sort_by, lambda x: x["total_leads"])
+    partners.sort(key=key_func, reverse=reverse)
+
+    total_count = len(partners)
+    start_idx = (page - 1) * limit
+    end_idx = start_idx + limit
+    paginated_partners = partners[start_idx:end_idx]
+
+    # Assign rank
+    for idx, p in enumerate(paginated_partners, start=start_idx + 1):
+        p["rank"] = idx
+
+    return {
+        "success": True,
+        "data": {
+            "period": period,
+            "date_from": f_from.isoformat() if f_from else None,
+            "date_to": f_to.isoformat() if f_to else None,
+            "total_count": total_count,
+            "page": page,
+            "limit": limit,
+            "total_pages": (total_count + limit - 1) // limit if limit > 0 else 1,
+            "partners": paginated_partners
         }
     }
 
