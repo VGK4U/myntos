@@ -100,25 +100,14 @@ const MENU_MASTER = [
     ]
   },
   {
-    section_code: "JOURNEY_TRACKING",
-    section_label: "JOURNEY TRACKING",
+    section_code: "FIELD_LOCATION_TRACKING",
+    section_label: "FIELD & LOCATION TRACKING",
     order: 7,
     items: [
-      { menu_code: "MY_JOURNEYS", label: "My Journeys", route: "/staff/my-journeys", audience: ["STAFF"] },
-      { menu_code: "TEAM_JOURNEYS", label: "Team Journeys", route: "/staff/team-journeys", audience: ["STAFF"] },
-      { menu_code: "ALL_JOURNEYS", label: "All Journeys", route: "/staff/all-journeys", audience: ["STAFF"] },
-      { menu_code: "VGK4U_JOURNEYS", label: "VGK4U Journeys", route: "/staff/vgk4u-journeys", audience: ["STAFF"] }
-    ]
-  },
-  {
-    section_code: "LOCATION_TRACKING",
-    section_label: "LOCATION TRACKING",
-    order: 8,
-    items: [
-      { menu_code: "MY_LOCATION_HISTORY", label: "My Location History", route: "/staff/my-location-history", audience: ["STAFF"] },
-      { menu_code: "TEAM_LOCATION_TRACKER", label: "Team Location Tracker", route: "/staff/team-location-tracker", audience: ["STAFF"] },
-      { menu_code: "ALL_LOCATION_TRACKER", label: "All Location Tracker", route: "/staff/all-location-tracker", audience: ["STAFF"] },
-      { menu_code: "TEAM_LIVE_TRACKER", label: "Team Live Tracker", route: "/staff/team-live-tracker", audience: ["STAFF"] }
+      { menu_code: "MY_MOBILITY_JOURNEYS", label: "My Mobility & Journeys", route: "/staff/my-journeys", audience: ["STAFF"] },
+      { menu_code: "TEAM_LIVE_MAP", label: "Team Live Map", route: "/staff/team-live-tracker", audience: ["STAFF"] },
+      { menu_code: "TEAM_JOURNEYS_CLAIMS", label: "Team Journeys & Claims", route: "/staff/team-journeys", audience: ["STAFF"] },
+      { menu_code: "ALL_MOBILITY_LOG", label: "All Mobility & Location Log", route: "/staff/all-location-tracker", audience: ["STAFF"] }
     ]
   },
   {
