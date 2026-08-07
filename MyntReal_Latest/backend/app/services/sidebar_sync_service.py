@@ -280,7 +280,7 @@ SIDEBAR_ROUTE_MAPPING = {
     "/staff/b2b-clients": {"section": "vgk-saas", "order": 13},
     "/staff/signup-categories": {"section": "vgk-saas", "order": 13},
     "/staff/lead-sync": {"section": "vgk-saas", "order": 13},
-    "/rvz/menu-access-config": {"section": "vgk-saas", "order": 13},
+    "/rvz/menu-access-config": {"section": "configuration", "order": 15},
     "/staff/page-registry": {"section": "vgk-saas", "order": 13},
     "/staff/sidebar-sync": {"section": "vgk-saas", "order": 13},
     "/staff/audit-logs": {"section": "vgk-saas", "order": 13},
