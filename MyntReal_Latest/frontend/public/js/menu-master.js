@@ -269,50 +269,28 @@ const MENU_MASTER = [
     ]
   },
   {
-    section_code: "MNR",
-    section_label: "MNR Admin",
+    section_code: "MNR_USER_SIDEBAR",
+    section_label: "MNR",
     order: 16,
-    items: [
-      { menu_code: "MNR_INCOME_UNIFIED", label: "Income Management", route: "/staff/mnr/income-unified", audience: ["STAFF"] },
-      { menu_code: "MNR_AWARDS_MANAGEMENT", label: "Awards Management", route: "/staff/mnr/awards-management", audience: ["STAFF"] },
-      { menu_code: "MNR_PROCUREMENT_QUEUE", label: "Procurement Queue", route: "/staff/mnr/procurement-queue", audience: ["STAFF"] },
-      { menu_code: "MNR_KYC_MANAGEMENT", label: "KYC Management", route: "/staff/mnr/kyc-management", audience: ["STAFF"] },
-      { menu_code: "MNR_USER_DELIVERABLES", label: "User Deliverables", route: "/staff/incentives/points", audience: ["STAFF"] },
-      { menu_code: "MNR_ALL_USERS", label: "All Users", route: "/staff/mnr/users", audience: ["STAFF"] },
-      { menu_code: "MNR_FINANCIAL_STATEMENT", label: "Financial Statement", route: "/staff/mnr/financial-statement", audience: ["VGK4U"] }
-    ],
     subSections: [
       {
-        sub_section_code: "MNR_USERS",
-        sub_section_label: "Users (17.1)",
+        sub_section_code: "MNR_ADMIN_SUBMENU",
+        sub_section_label: "MNR Admin",
         items: [
+          { menu_code: "MNR_INCOME_UNIFIED", label: "Income Management", route: "/staff/mnr/income-unified", audience: ["STAFF"] },
+          { menu_code: "MNR_AWARDS_MANAGEMENT", label: "Awards Management", route: "/staff/mnr/awards-management", audience: ["STAFF"] },
+          { menu_code: "MNR_PROCUREMENT_QUEUE", label: "Procurement Queue", route: "/staff/mnr/procurement-queue", audience: ["STAFF"] },
+          { menu_code: "MNR_KYC_MANAGEMENT", label: "KYC Management", route: "/staff/mnr/kyc-management", audience: ["STAFF"] },
+          { menu_code: "MNR_USER_DELIVERABLES", label: "User Deliverables", route: "/staff/incentives/points", audience: ["STAFF"] },
           { menu_code: "MNR_ALL_USERS", label: "All Users", route: "/staff/mnr/users", audience: ["STAFF"] },
           { menu_code: "MNR_USER_ACTIVATION_CONTROL", label: "User Activation Control", route: "/staff/mnr/user-activation-control", audience: ["STAFF"] },
           { menu_code: "MNR_BIRTHDAY_DETAILS", label: "Birthday Details", route: "/staff/mnr/birthdays", audience: ["STAFF"] },
-          { menu_code: "MNR_FIELD_ALLOWANCES", label: "Allowances", route: "/staff/mnr/field-allowances", audience: ["STAFF"] }
-        ]
-      },
-      {
-        sub_section_code: "MNR_AWARDS",
-        sub_section_label: "Awards (17.2)",
-        items: [
+          { menu_code: "MNR_FIELD_ALLOWANCES", label: "Allowances", route: "/staff/mnr/field-allowances", audience: ["STAFF"] },
           { menu_code: "MNR_AWARDS_CONFIGURATION", label: "Awards Configuration", route: "/staff/mnr/award-management", audience: ["STAFF"] },
-          { menu_code: "MNR_BONANZA_MANAGEMENT", label: "Bonanza Management", route: "/staff/mnr/bonanza-management", audience: ["STAFF"] }
-        ]
-      },
-      {
-        sub_section_code: "MNR_WITHDRAWALS",
-        sub_section_label: "Withdrawals (17.3)",
-        items: [
+          { menu_code: "MNR_BONANZA_MANAGEMENT", label: "Bonanza Management", route: "/staff/mnr/bonanza-management", audience: ["STAFF"] },
           { menu_code: "MNR_WITHDRAWAL_SUPREME", label: "Withdrawal Supreme", route: "/staff/mnr/withdrawal-supreme", audience: ["STAFF"] },
           { menu_code: "MNR_WITHDRAWAL_APPROVALS", label: "Withdrawal Approvals", route: "/staff/mnr/withdrawal/approvals", audience: ["STAFF"] },
-          { menu_code: "MNR_WITHDRAWAL_HISTORY", label: "Withdrawal History", route: "/staff/mnr/withdrawal/history", audience: ["STAFF"] }
-        ]
-      },
-      {
-        sub_section_code: "MNR_FINANCE_COMPLIANCE",
-        sub_section_label: "Finance & Compliance (17.4)",
-        items: [
+          { menu_code: "MNR_WITHDRAWAL_HISTORY", label: "Withdrawal History", route: "/staff/mnr/withdrawal/history", audience: ["STAFF"] },
           { menu_code: "MNR_FINANCE_SUPREME", label: "Finance Supreme", route: "/staff/mnr/finance-supreme", audience: ["STAFF"] },
           { menu_code: "MNR_FINANCIAL_STATEMENT", label: "Financial Statement", route: "/staff/mnr/financial-statement", audience: ["STAFF"] },
           { menu_code: "MNR_COMPLIANCE_DASHBOARD", label: "Compliance Dashboard", route: "/staff/mnr/compliance", audience: ["STAFF"] },
@@ -321,34 +299,16 @@ const MENU_MASTER = [
           { menu_code: "MNR_PAYOUT_DETAILS", label: "Payout Details", route: "/staff/mnr/payout-details", audience: ["STAFF"] },
           { menu_code: "MNR_EXPENSE_DETAILS", label: "Expense Details", route: "/staff/mnr/expense-details", audience: ["STAFF"] },
           { menu_code: "MNR_EXPENSE_MANAGEMENT", label: "Expense Management", route: "/staff/mnr/expenses-management", audience: ["STAFF"] },
-          { menu_code: "MNR_EXPENSE_OVERVIEW", label: "Expense Overview", route: "/staff/mnr/expense-overview", audience: ["STAFF"] }
-        ]
-      },
-      {
-        sub_section_code: "MNR_ANNOUNCEMENTS",
-        sub_section_label: "Announcements (17.5)",
-        items: [
+          { menu_code: "MNR_EXPENSE_OVERVIEW", label: "Expense Overview", route: "/staff/mnr/expense-overview", audience: ["STAFF"] },
           { menu_code: "MNR_PENDING_ANNOUNCEMENTS", label: "Pending Announcements", route: "/staff/mnr/feedback/pending", audience: ["STAFF"] },
           { menu_code: "MNR_BANNERS_MANAGEMENT", label: "Banners Management", route: "/staff/mnr/banners-management", audience: ["STAFF"] },
-          { menu_code: "MNR_BANNER_ANALYTICS", label: "Banner Analytics", route: "/staff/mnr/banner-analytics", audience: ["STAFF"] }
-        ]
-      },
-      {
-        sub_section_code: "MNR_PINS_APPROVALS",
-        sub_section_label: "PINs & Approvals (17.6)",
-        items: [
+          { menu_code: "MNR_BANNER_ANALYTICS", label: "Banner Analytics", route: "/staff/mnr/banner-analytics", audience: ["STAFF"] },
           { menu_code: "MNR_PIN_APPROVALS", label: "PIN Approvals", route: "/staff/mnr/pin-approvals", audience: ["STAFF"] },
           { menu_code: "MNR_COUPON_STATUS", label: "Coupon Status", route: "/staff/mnr/coupon-status", audience: ["STAFF"] },
           { menu_code: "MNR_ALL_PINS", label: "All PINs", route: "/staff/mnr/pins", audience: ["STAFF"] },
           { menu_code: "MNR_CHANGE_USER_PASSWORD", label: "Change User Password", route: "/staff/mnr/change-user-password", audience: ["STAFF"] },
           { menu_code: "MNR_RVZ_PASSWORD_CHANGE", label: "RVZ Password Change", route: "/staff/mnr/password-change", audience: ["STAFF"] },
-          { menu_code: "MNR_SECONDARY_PASSWORD_SETUP", label: "Secondary Password Setup", route: "/staff/mnr/secondary-password-setup", audience: ["STAFF"] }
-        ]
-      },
-      {
-        sub_section_code: "MNR_SYSTEM_CONFIG",
-        sub_section_label: "System Config (17.7)",
-        items: [
+          { menu_code: "MNR_SECONDARY_PASSWORD_SETUP", label: "Secondary Password Setup", route: "/staff/mnr/secondary-password-setup", audience: ["STAFF"] },
           { menu_code: "MNR_SYSTEM_CONTROLS", label: "System Controls", route: "/staff/mnr/system-controls", audience: ["STAFF"] },
           { menu_code: "MNR_RATE_CONFIGURATION", label: "Rate Configuration", route: "/staff/mnr/rate-configuration", audience: ["STAFF"] },
           { menu_code: "MNR_DAILY_CEILING", label: "Daily Ceiling", route: "/staff/mnr/daily-ceiling", audience: ["STAFF"] },
@@ -356,13 +316,6 @@ const MENU_MASTER = [
           { menu_code: "MNR_PRODUCTION_RESET_STATUS", label: "Production Reset Status", route: "/staff/mnr/production-reset-status", audience: ["STAFF"] }
         ]
       },
-    ]
-  },
-  {
-    section_code: "MNR_USER_SIDEBAR",
-    section_label: "MNR",
-    order: 17,
-    subSections: [
       {
         sub_section_code: "MNR_USER_AUDIT",
         sub_section_label: "Audit Log (18.0)",
