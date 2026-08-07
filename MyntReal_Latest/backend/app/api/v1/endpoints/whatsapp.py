@@ -556,12 +556,33 @@ async def meta_webhook_status_canonical(request: Request, db: Session = Depends(
                 ml.last_updated       = datetime.utcnow()
                 if mapped == "delivered":
                     ml.delivered_at = datetime.utcnow()
+                elif mapped == "read":
+                    ml.read_at = datetime.utcnow()
+                    if not ml.delivered_at:
+                        ml.delivered_at = datetime.utcnow()
                 elif mapped == "failed":
                     ml.failed_at = datetime.utcnow()
                     errs = su.get("errors", [])
                     if errs:
                         ml.error_code    = str(errs[0].get("code", ""))
                         ml.error_message = errs[0].get("message", "")
+                
+                # Also update WhatsAppCampaignLog if matching wamid
+                try:
+                    from app.models.whatsapp import WhatsAppCampaignLog
+                    c_log = db.query(WhatsAppCampaignLog).filter(WhatsAppCampaignLog.wamid == wamid).first()
+                    if c_log:
+                        c_log.status = mapped
+                        if mapped == "delivered":
+                            c_log.delivered_at = datetime.utcnow()
+                        elif mapped == "read":
+                            c_log.read_at = datetime.utcnow()
+                            if not c_log.delivered_at:
+                                c_log.delivered_at = datetime.utcnow()
+                        elif mapped == "failed":
+                            c_log.failed_at = datetime.utcnow()
+                except Exception as _ce:
+                    pass
                 print(f"[WA-WEBHOOK] 📨 {wamid} → {mapped}")
 
             # ── 2. Incoming messages ────────────────────────────────────────

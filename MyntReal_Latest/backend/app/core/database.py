@@ -278,6 +278,11 @@ def run_pending_migrations():
             "migrate": "ALTER TABLE staff_attendance ADD COLUMN last_battery_pct INTEGER"
         },
         {
+            "name": "message_log.read_at",
+            "check": "SELECT column_name FROM information_schema.columns WHERE table_name='message_log' AND column_name='read_at'",
+            "migrate": "ALTER TABLE message_log ADD COLUMN read_at TIMESTAMP"
+        },
+        {
             "name": "dynamic_bonanza_reward.criteria_type",
             "check": "SELECT column_name FROM information_schema.columns WHERE table_name='dynamic_bonanza_reward' AND column_name='criteria_type'",
             "migrate": "ALTER TABLE dynamic_bonanza_reward ADD COLUMN criteria_type VARCHAR(30) NOT NULL DEFAULT 'achievement_count'"

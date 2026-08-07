@@ -69,6 +69,7 @@ class MessageLog(Base):
     # Timestamps
     sent_at = Column(DateTime, default=datetime.utcnow)
     delivered_at = Column(DateTime)
+    read_at = Column(DateTime, nullable=True)
     failed_at = Column(DateTime)
     last_status_update = Column(DateTime, default=datetime.utcnow)
     

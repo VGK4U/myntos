@@ -378,12 +378,14 @@ textarea.tpl-body{min-height:100px;resize:vertical;font-family:'Courier New',mon
               <th>Message Preview</th>
               <th>Type</th>
               <th>Status</th>
+              <th>Delivered</th>
+              <th>Read</th>
               <th>Sent By</th>
               <th>WA ID</th>
               <th>Error</th>
             </tr></thead>
             <tbody id="msgTbody">
-              <tr><td colspan="9" class="no-data"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+              <tr><td colspan="11" class="no-data"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1558,7 +1560,11 @@ function fmtTime(ts) {
 }
 
 function statusBadge(s) {
-  s = s || 'unknown';
+  s = (s || 'unknown').toLowerCase();
+  if (s === 'read') return `<span class="s-badge" style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;font-weight:700"><i class="fas fa-check-double me-1"></i>Read</span>`;
+  if (s === 'delivered') return `<span class="s-badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;font-weight:700"><i class="fas fa-check-double me-1"></i>Delivered</span>`;
+  if (s === 'sent') return `<span class="s-badge" style="background:#f0fdf4;color:#059669;border:1px solid #a7f3d0;font-weight:600"><i class="fas fa-check me-1"></i>Sent</span>`;
+  if (s === 'failed') return `<span class="s-badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-weight:700"><i class="fas fa-exclamation-circle me-1"></i>Failed</span>`;
   return `<span class="s-badge s-${esc(s)}">${esc(s.charAt(0).toUpperCase()+s.slice(1))}</span>`;
 }
 
@@ -2031,7 +2037,7 @@ async function loadMessages(resetOffset=true) {
     const countEl = document.getElementById('msgTotalCount');
     if (countEl) countEl.textContent = `${total.toLocaleString()} messages`;
     if (!msgs.length) {
-      tbody.innerHTML = `<tr><td colspan="9" class="no-data"><i class="fas fa-inbox"></i><br>No messages found</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="11" class="no-data"><i class="fas fa-inbox"></i><br>No messages found</td></tr>`;
       document.getElementById('msgPager').innerHTML = '';
       return;
     }
@@ -2042,6 +2048,23 @@ async function loadMessages(resetOffset=true) {
         : m.sender_type==='auto'
         ? `<span style="font-size:9px;background:#f3f4f6;color:#6b7280;padding:1px 5px;border-radius:4px">AUTO</span>`
         : `<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px">${esc(m.sender_type||'SYS').toUpperCase()}</span>`;
+
+      const st = (m.current_status || '').toLowerCase();
+      const isDelivered = m.delivered_at || ['delivered', 'read'].includes(st);
+      const isRead = m.read_at || st === 'read';
+
+      const deliveredCell = isDelivered
+        ? `<span style="font-size:10px;font-weight:700;color:#059669;background:#f0fdf4;padding:2px 7px;border-radius:10px;white-space:nowrap" title="${m.delivered_at ? fmtTime(m.delivered_at) : 'Delivered'}"><i class="fas fa-check-double me-1"></i>Delivered</span>`
+        : st === 'failed'
+        ? `<span style="font-size:10px;font-weight:700;color:#dc2626;background:#fef2f2;padding:2px 7px;border-radius:10px;white-space:nowrap"><i class="fas fa-times me-1"></i>Failed</span>`
+        : `<span style="font-size:10px;color:#9ca3af;background:#f3f4f6;padding:2px 7px;border-radius:10px;white-space:nowrap"><i class="fas fa-clock me-1"></i>Pending</span>`;
+
+      const readCell = isRead
+        ? `<span style="font-size:10px;font-weight:700;color:#2563eb;background:#eff6ff;padding:2px 7px;border-radius:10px;white-space:nowrap" title="${m.read_at ? fmtTime(m.read_at) : 'Read'}"><i class="fas fa-eye me-1"></i>Read</span>`
+        : st === 'failed'
+        ? `<span style="font-size:10px;color:#d1d5db">—</span>`
+        : `<span style="font-size:10px;color:#6b7280;background:#f9fafb;padding:2px 7px;border-radius:10px;white-space:nowrap">Unread</span>`;
+
       return `<tr>
         <td style="white-space:nowrap;font-size:10.5px">${fmtTime(m.sent_at)}</td>
         <td style="font-weight:600">${esc(m.mobile_number||'—')}</td>
@@ -2049,6 +2072,8 @@ async function loadMessages(resetOffset=true) {
         <td style="font-size:10.5px;color:#6b7280;max-width:200px" title="${esc(m.message_body||'')}">${esc(preview||'—')}</td>
         <td style="font-size:10px;color:#6b7280">${esc(m.message_type||'—')}</td>
         <td>${statusBadge(m.current_status)}</td>
+        <td>${deliveredCell}</td>
+        <td>${readCell}</td>
         <td style="font-size:10.5px">${esc(m.sent_by_name||'System')} ${senderBadge}</td>
         <td style="font-size:9.5px;color:#9ca3af;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(m.wamid||'')}">${esc((m.wamid||'').slice(0,20)||'—')}</td>
         <td style="font-size:10px;color:#dc2626">${esc(m.error_message||'')}</td>
@@ -2064,7 +2089,7 @@ async function loadMessages(resetOffset=true) {
       ${hasNext ? `<button class="btn-outline-wa btn-sm-wa" onclick="_msgOffset+=${_msgLimit};loadMessages(false)">Next <i class="fas fa-chevron-right"></i></button>` : ''}
     `;
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="9" class="no-data" style="color:#dc2626"><i class="fas fa-exclamation-triangle"></i> Failed to load</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" class="no-data" style="color:#dc2626"><i class="fas fa-exclamation-triangle"></i> Failed to load</td></tr>`;
     console.error(e);
   }
 }
