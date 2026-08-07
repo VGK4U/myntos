@@ -73,11 +73,6 @@ backend/storage/
 # Exclude massive backup files, binaries and local DBs
 *.zip
 *.dump
-*.apk
-*.app
-*.pdf
-*.mp4
-*.mov
 pgsql/
 pgsql16/
 postgres_data/
@@ -88,5 +83,3 @@ frontend/playwright-report/
 frontend/test-results/
 frontend/tests/
 frontend/public/catalog/*.pdf
-frontend/public/*.apk
-frontend/public/*.app
