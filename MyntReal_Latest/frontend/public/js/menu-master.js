@@ -26,9 +26,39 @@ const MENU_MASTER = [
     ]
   },
   {
+    section_code: "HR",
+    section_label: "HR",
+    order: 2,
+    subSections: [
+      {
+        sub_section_code: "HR_ATTENDANCE",
+        sub_section_label: "Attendance",
+        items: [
+          { menu_code: "IN_OUT_TIME", label: "In/Out Time", route: "/staff/my-attendance", audience: ["STAFF"] },
+          { menu_code: "MY_LEAVES", label: "My Leaves", route: "/staff/my-leaves", audience: ["STAFF"] },
+          { menu_code: "LEAVE_APPROVALS", label: "Leave Approvals", route: "/staff/leave-approvals", audience: ["STAFF"] },
+          { menu_code: "IN_OUT_RECORDS_ADMIN", label: "In/Out Records - Admin", route: "/staff/team-attendance", audience: ["STAFF"] },
+          { menu_code: "ATTENDANCE_RECORDS", label: "Attendance Records", route: "/staff/attendance-sheet", audience: ["STAFF"] },
+          { menu_code: "ATTENDANCE_DASHBOARD", label: "Attendance Dashboard", route: "/staff/attendance-reports", audience: ["STAFF"] },
+          { menu_code: "EXCEPTION_APPROVALS", label: "Exception Approvals", route: "/staff/attendance-exceptions", audience: ["STAFF"] },
+          { menu_code: "ATTENDANCE_COMPUTATION", label: "Attendance Computation", route: "/staff/attendance-computation", audience: ["STAFF"] }
+        ]
+      },
+      {
+        sub_section_code: "HR_CAREERS",
+        sub_section_label: "Recruitment & Performance",
+        items: [
+          { menu_code: "PERFORMANCE_CONFIG", label: "Performance Config", route: "/staff/performance-config", audience: ["STAFF"] },
+          { menu_code: "HR_JOB_POSTINGS", label: "Job Postings", route: "/staff/hr/job-postings", icon: "fas fa-briefcase", audience: ["STAFF"] },
+          { menu_code: "HR_CANDIDATES", label: "Candidates", route: "/staff/hr/candidates", icon: "fas fa-user-tie", audience: ["STAFF"] }
+        ]
+      }
+    ]
+  },
+  {
     section_code: "STAFF_DASHBOARD",
     section_label: "STAFF DASHBOARD",
-    order: 2,
+    order: 3,
     items: [
       { menu_code: "DASHBOARD", label: "Dashboard", route: "/staff/dashboard", audience: ["STAFF"] },
       { menu_code: "EMPLOYEES", label: "Employees", route: "/staff/employees", audience: ["STAFF"] },
@@ -41,21 +71,6 @@ const MENU_MASTER = [
       { menu_code: "STAFF_MY_LEAD_INCENTIVES", label: "My Earnings", route: "/staff/my-lead-incentives", audience: ["STAFF"] },
       { menu_code: "MY_REIMBURSEMENT_CLAIMS", label: "My Reimbursement Claims", route: "/staff/accounts/my-reimbursements", audience: ["STAFF"] },
       { menu_code: "REIMBURSEMENT_APPROVALS", label: "Reimbursement Approvals", route: "/staff/accounts/reimbursement-approvals", audience: ["STAFF"] }
-    ]
-  },
-  {
-    section_code: "ATTENDANCE",
-    section_label: "ATTENDANCE",
-    order: 3,
-    items: [
-      { menu_code: "IN_OUT_TIME", label: "In/Out Time", route: "/staff/my-attendance", audience: ["STAFF"] },
-      { menu_code: "MY_LEAVES", label: "My Leaves", route: "/staff/my-leaves", audience: ["STAFF"] },
-      { menu_code: "LEAVE_APPROVALS", label: "Leave Approvals", route: "/staff/leave-approvals", audience: ["STAFF"] },
-      { menu_code: "IN_OUT_RECORDS_ADMIN", label: "In/Out Records - Admin", route: "/staff/team-attendance", audience: ["STAFF"] },
-      { menu_code: "ATTENDANCE_RECORDS", label: "Attendance Records", route: "/staff/attendance-sheet", audience: ["STAFF"] },
-      { menu_code: "ATTENDANCE_DASHBOARD", label: "Attendance Dashboard", route: "/staff/attendance-reports", audience: ["STAFF"] },
-      { menu_code: "EXCEPTION_APPROVALS", label: "Exception Approvals", route: "/staff/attendance-exceptions", audience: ["STAFF"] },
-      { menu_code: "ATTENDANCE_COMPUTATION", label: "Attendance Computation", route: "/staff/attendance-computation", audience: ["STAFF"] }
     ]
   },
   {
@@ -227,25 +242,7 @@ const MENU_MASTER = [
       { menu_code: "PARTNER_STOCK", label: "Partner Stock", route: "/staff/partners/stock", audience: ["STAFF"] }
     ]
   },
-  // DC_SAAS_CONSOLE_001 (May 2026): VGK SaaS — supreme-only consolidated SaaS controls
-  {
-    section_code: "VGK_SAAS",
-    section_label: "VGK4U SAAS",
-    order: 13,
-    items: [
-      { menu_code: "VGK_SAAS_ALL_TENANTS", label: "All Tenants", route: "/staff/my-tenant", icon: "fas fa-layer-group", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_TENANT_ONBOARDING", label: "Tenant Onboarding", route: "/staff/accounts/companies", icon: "fas fa-building-circle-arrow-right", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_PLATFORM_CLIENTS", label: "Platform Clients (B2B)", route: "/staff/b2b-clients", icon: "fas fa-handshake", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_PUBLIC_SIGNUP_PREVIEW", label: "Public Signup Preview", route: "/b2b-signup", icon: "fas fa-eye", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_SIGNUP_CATEGORIES", label: "Signup Categories", route: "/staff/signup-categories", icon: "fas fa-tags", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_LEAD_SYNC", label: "Lead Sync", route: "/staff/lead-sync", icon: "fas fa-arrows-rotate", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_MENU_ACCESS", label: "Menu Access Control", route: "/rvz/menu-access-config", icon: "fas fa-shield-halved", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_PAGE_REGISTRY", label: "Page Registry Manager", route: "/staff/page-registry", icon: "fas fa-sitemap", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_SIDEBAR_SYNC", label: "Sidebar Sync", route: "/staff/sidebar-sync", icon: "fas fa-rotate", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_PLATFORM_SETUP_GUIDE", label: "Platform Setup Guide", route: "/staff/day-planner-guide#sec-platform-setup", icon: "fas fa-book-open", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_AUDIT_LOGS", label: "Audit Logs (SaaS)", route: "/staff/audit-logs", icon: "fas fa-clipboard-list", audience: ["VGK4U"] }
-    ]
-  },
+
   {
     section_code: "CONFIGURATION",
     section_label: "CONFIGURATION",
@@ -578,12 +575,25 @@ const MENU_MASTER = [
     section_label: "HR",
     sidebar_section: "hr",
     order: 22,
+  // ─── VGK SAAS (Last Section) ──────────────────────────────────────────
+  {
+    section_code: "VGK_SAAS",
+    section_label: "VGK4U SAAS",
+    order: 99,
     items: [
-      { menu_code: "PERFORMANCE_CONFIG", label: "Performance Config", route: "/staff/performance-config", audience: ["STAFF"] },
-      { menu_code: "HR_JOB_POSTINGS", label: "Job Postings", route: "/staff/hr/job-postings", icon: "fas fa-briefcase", audience: ["STAFF"] },
-      { menu_code: "HR_CANDIDATES",   label: "Candidates",   route: "/staff/hr/candidates",   icon: "fas fa-user-tie",  audience: ["STAFF"] }
+      { menu_code: "VGK_SAAS_ALL_TENANTS", label: "All Tenants", route: "/staff/my-tenant", icon: "fas fa-layer-group", audience: ["VGK4U"] },
+      { menu_code: "VGK_SAAS_TENANT_ONBOARDING", label: "Tenant Onboarding", route: "/staff/accounts/companies", icon: "fas fa-building-circle-arrow-right", audience: ["VGK4U"] },
+      { menu_code: "VGK_SAAS_PLATFORM_CLIENTS", label: "Platform Clients (B2B)", route: "/staff/b2b-clients", icon: "fas fa-handshake", audience: ["VGK4U"] },
+      { menu_code: "VGK_SAAS_PUBLIC_SIGNUP_PREVIEW", label: "Public Signup Preview", route: "/b2b-signup", icon: "fas fa-eye", audience: ["VGK4U"] },
+      { menu_code: "VGK_SAAS_SIGNUP_CATEGORIES", label: "Signup Categories", route: "/staff/signup-categories", icon: "fas fa-tags", audience: ["VGK4U"] },
+      { menu_code: "VGK_SAAS_LEAD_SYNC", label: "Lead Sync", route: "/staff/lead-sync", icon: "fas fa-arrows-rotate", audience: ["VGK4U"] },
+      { menu_code: "VGK_SAAS_MENU_ACCESS", label: "Menu Access Control", route: "/rvz/menu-access-config", icon: "fas fa-shield-halved", audience: ["VGK4U"] },
+      { menu_code: "VGK_SAAS_PAGE_REGISTRY", label: "Page Registry Manager", route: "/staff/page-registry", icon: "fas fa-sitemap", audience: ["VGK4U"] },
+      { menu_code: "VGK_SAAS_SIDEBAR_SYNC", label: "Sidebar Sync", route: "/staff/sidebar-sync", icon: "fas fa-rotate", audience: ["VGK4U"] },
+      { menu_code: "VGK_SAAS_PLATFORM_SETUP_GUIDE", label: "Platform Setup Guide", route: "/staff/day-planner-guide#sec-platform-setup", icon: "fas fa-book-open", audience: ["VGK4U"] },
+      { menu_code: "VGK_SAAS_AUDIT_LOGS", label: "Audit Logs (SaaS)", route: "/staff/audit-logs", icon: "fas fa-clipboard-list", audience: ["VGK4U"] }
     ]
-  },
+  }
 ];
 
 /**
