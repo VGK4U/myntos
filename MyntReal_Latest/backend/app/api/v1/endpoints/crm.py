@@ -6772,15 +6772,20 @@ def exec_handler_leads(
     # Bulk enrich user names and staff employee names for ground support and telecaller
     from app.models.user import User as _User
     from app.models.staff import StaffEmployee as _SE
-    _mnr_ids = list({l.mnr_handler_id for l in _leads if l.mnr_handler_id})
-    _tc_ids = list({l.telecaller_id for l in _leads if l.telecaller_id})
+    _mnr_str_ids = list({str(l.mnr_handler_id) for l in _leads if l.mnr_handler_id})
+    _tc_str_ids = list({str(l.telecaller_id) for l in _leads if l.telecaller_id})
     _unmap = {}
-    _all_ids = list(set(_mnr_ids + _tc_ids))
-    if _all_ids:
-        for u in db.query(_User).filter(_User.id.in_(_all_ids)).all():
+    _all_str_ids = list(set(_mnr_str_ids + _tc_str_ids))
+    if _all_str_ids:
+        for u in db.query(_User).filter(_User.id.in_(_all_str_ids)).all():
+            _unmap[str(u.id)] = u.name or u.id
             _unmap[u.id] = u.name or u.id
-        for e in db.query(_SE).filter(_SE.id.in_(_all_ids)).all():
-            _unmap[e.id] = e.full_name or getattr(e, 'name', None) or e.emp_code or f"MR{e.id}"
+        _all_int_ids = [int(x) for x in _all_str_ids if str(x).isdigit()]
+        if _all_int_ids:
+            for e in db.query(_SE).filter(_SE.id.in_(_all_int_ids)).all():
+                _emp_n = e.full_name or getattr(e, 'name', None) or e.emp_code or f"MR{e.id}"
+                _unmap[str(e.id)] = _emp_n
+                _unmap[e.id] = _emp_n
 
     # Bulk enrich: earliest transaction date per lead (DC-FIRST-PMT-003)
     _txmap = {}
@@ -7050,15 +7055,20 @@ def exec_trend_leads(
     # Bulk enrich user names and staff employee names for ground support and telecaller
     from app.models.user import User as _User
     from app.models.staff import StaffEmployee as _SE
-    _mnr_ids = list({l.mnr_handler_id for l in _leads if l.mnr_handler_id})
-    _tc_ids = list({l.telecaller_id for l in _leads if l.telecaller_id})
+    _mnr_str_ids = list({str(l.mnr_handler_id) for l in _leads if l.mnr_handler_id})
+    _tc_str_ids = list({str(l.telecaller_id) for l in _leads if l.telecaller_id})
     _unmap = {}
-    _all_ids = list(set(_mnr_ids + _tc_ids))
-    if _all_ids:
-        for u in db.query(_User).filter(_User.id.in_(_all_ids)).all():
+    _all_str_ids = list(set(_mnr_str_ids + _tc_str_ids))
+    if _all_str_ids:
+        for u in db.query(_User).filter(_User.id.in_(_all_str_ids)).all():
+            _unmap[str(u.id)] = u.name or u.id
             _unmap[u.id] = u.name or u.id
-        for e in db.query(_SE).filter(_SE.id.in_(_all_ids)).all():
-            _unmap[e.id] = e.full_name or getattr(e, 'name', None) or e.emp_code or f"MR{e.id}"
+        _all_int_ids = [int(x) for x in _all_str_ids if str(x).isdigit()]
+        if _all_int_ids:
+            for e in db.query(_SE).filter(_SE.id.in_(_all_int_ids)).all():
+                _emp_n = e.full_name or getattr(e, 'name', None) or e.emp_code or f"MR{e.id}"
+                _unmap[str(e.id)] = _emp_n
+                _unmap[e.id] = _emp_n
 
     # Bulk enrich: earliest transaction date per lead (DC-FIRST-PMT-003)
     _txmap = {}
