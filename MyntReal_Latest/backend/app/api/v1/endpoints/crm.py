@@ -6826,6 +6826,8 @@ def exec_handler_leads(
             'state': l.state or '—',
             'pincode': l.pincode or '—',
             'google_maps_link': l.google_maps_link or None,
+            'solar_pipeline_status_updated_at': l.solar_pipeline_status_updated_at.isoformat() if getattr(l, 'solar_pipeline_status_updated_at', None) else None,
+            'updated_at': l.updated_at.isoformat() if getattr(l, 'updated_at', None) else None,
             'latest_note': _nmap.get(l.id),
         } for l in _leads],
     }
@@ -7092,6 +7094,8 @@ def exec_trend_leads(
             'state': l.state or '—',
             'pincode': l.pincode or '—',
             'google_maps_link': l.google_maps_link or None,
+            'solar_pipeline_status_updated_at': l.solar_pipeline_status_updated_at.isoformat() if getattr(l, 'solar_pipeline_status_updated_at', None) else None,
+            'updated_at': l.updated_at.isoformat() if getattr(l, 'updated_at', None) else None,
             'latest_note': _nmap.get(l.id),
         } for l in _leads],
     }

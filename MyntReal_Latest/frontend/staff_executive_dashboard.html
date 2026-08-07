@@ -1641,10 +1641,10 @@ function _edFmtDtTime(iso){
   try{const d=new Date(iso);return d.toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});}catch{return iso;}
 }
 
-// DC-EXEC-DD-SORT-001: Days helper
+// DC-EXEC-DD-SORT-001: Days helper (days in current stage till today)
 function _edComputeDays(l){
   const today=new Date(); today.setHours(0,0,0,0);
-  const raw=l.submit_date||l.created_at;
+  const raw=l.solar_pipeline_status_updated_at || l.updated_at || l.submit_date || l.created_at;
   if(!raw) return null;
   const d=new Date(raw.slice(0,10)); d.setHours(0,0,0,0);
   return isNaN(d.getTime())?null:Math.max(0,Math.floor((today-d)/86400000));
@@ -1730,10 +1730,11 @@ function _edRenderLeadsTrend(leads) {
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Area</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">City / District</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#ea4335;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Google Maps</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#0284c7;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Ground Source</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Lead Date</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">1st Pmt Date</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Install Date</th>
-      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#4b5563;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center">Days</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#4b5563;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center" title="Days in current stage till today">Stage Days</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#0891b2;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Solar Stage</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#059669;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Bank</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#047857;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Branch</th>
@@ -1744,14 +1745,14 @@ function _edRenderLeadsTrend(leads) {
 
   let tbodyHtml = '';
   if (!leads.length) {
-    tbodyHtml = '<tr><td colspan="15" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
+    tbodyHtml = '<tr><td colspan="16" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
   } else {
     tbodyHtml = leads.map((l, i) => {
       const days = _edComputeDays(l);
       const daysCell = days === null ? `<td style="text-align:center;padding:5px 6px;font-size:10px;color:#d1d5db">—</td>` : (() => {
         const col = days <= 7 ? '#059669' : days <= 30 ? '#d97706' : days <= 60 ? '#ea580c' : '#dc2626';
         const bg = days <= 7 ? '#f0fdf4' : days <= 30 ? '#fffbeb' : days <= 60 ? '#fff7ed' : '#fef2f2';
-        return `<td style="text-align:center;padding:5px 6px;white-space:nowrap"><span style="display:inline-block;min-width:32px;padding:2px 7px;border-radius:10px;background:${bg};color:${col};font-size:11px;font-weight:700">${days}</span></td>`;
+        return `<td style="text-align:center;padding:5px 6px;white-space:nowrap" title="${days} days in current stage till today"><span style="display:inline-block;min-width:32px;padding:2px 7px;border-radius:10px;background:${bg};color:${col};font-size:11px;font-weight:700">${days}d</span></td>`;
       })();
 
       const phoneDisplay = l.phone_raw || l.phone || '—';
@@ -1760,6 +1761,7 @@ function _edRenderLeadsTrend(leads) {
       const areaVal = l.area || l.address || '—';
       const cityDistVal = [l.city, l.state].filter(p => p && p !== '—').join(', ') || '—';
       const mapsCell = _edBuildMapsCell(l);
+      const gSourceVal = l.ground_source || '—';
 
       return `
         <tr class="ed-lead-row" style="cursor:pointer" onclick="_edSelectLead(${l.id},${l.company_id},'${esc(l.name)}','${esc(l.phone_raw||'')}',this)">
@@ -1769,6 +1771,7 @@ function _edRenderLeadsTrend(leads) {
           <td style="font-size:10px;color:#334155;white-space:nowrap;padding:5px 6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(areaVal)}">${esc(areaVal)}</td>
           <td style="font-size:10px;color:#334155;white-space:nowrap;padding:5px 6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(cityDistVal)}">${esc(cityDistVal)}</td>
           ${mapsCell}
+          <td style="font-size:10px;color:#0284c7;white-space:nowrap;padding:5px 6px;max-width:120px;overflow:hidden;text-overflow:ellipsis" title="${esc(gSourceVal)}">${esc(gSourceVal)}</td>
           <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.created_at)}</td>
           <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.first_payment_received_date)}</td>
           <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.installation_date)}</td>
@@ -1795,12 +1798,13 @@ function _edRenderLeadsHandler(leads) {
       <th style="padding:6px 6px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;text-align:center;border-bottom:1px solid #e5e7eb;white-space:nowrap">#</th>
       <th data-sk="created_at" onclick="_edSortLeads('created_at')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Date of Lead<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th data-sk="submit_date" onclick="_edSortLeads('submit_date')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Submit Date<span class="ed-si" style="color:#1e3a5f"> ▼</span></th>
-      <th data-sk="_days" onclick="_edSortLeads('_days')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#4b5563;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center">Days<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th data-sk="_days" onclick="_edSortLeads('_days')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#4b5563;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center" title="Days in current stage till today">Stage Days<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th data-sk="name" onclick="_edSortLeads('name')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Name<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Phone</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Area</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">City / District</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#ea4335;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Google Maps</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#0284c7;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Ground Source</th>
       <th data-sk="status" onclick="_edSortLeads('status')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Status<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th data-sk="solar_pipeline_status" onclick="_edSortLeads('solar_pipeline_status')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#0891b2;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Solar Stage<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th data-sk="loan_bank" onclick="_edSortLeads('loan_bank')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#059669;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Bank<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
@@ -1813,7 +1817,7 @@ function _edRenderLeadsHandler(leads) {
 
   let tbodyHtml = '';
   if (!leads.length) {
-    tbodyHtml = '<tr><td colspan="16" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
+    tbodyHtml = '<tr><td colspan="17" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
   } else {
     tbodyHtml = leads.map((l, i) => {
       const stCol = _STATUS_COL[l.status] || '#6b7280';
@@ -1824,11 +1828,12 @@ function _edRenderLeadsHandler(leads) {
       const daysCell = days === null ? `<td style="text-align:center;padding:5px 6px;font-size:10px;color:#d1d5db">—</td>` : (() => {
         const col = days <= 7 ? '#059669' : days <= 30 ? '#d97706' : days <= 60 ? '#ea580c' : '#dc2626';
         const bg = days <= 7 ? '#f0fdf4' : days <= 30 ? '#fffbeb' : days <= 60 ? '#fff7ed' : '#fef2f2';
-        return `<td style="text-align:center;padding:5px 6px;white-space:nowrap" title="Days since Submit Date"><span style="display:inline-block;min-width:32px;padding:2px 7px;border-radius:10px;background:${bg};color:${col};font-size:11px;font-weight:700">${days}d</span></td>`;
+        return `<td style="text-align:center;padding:5px 6px;white-space:nowrap" title="${days} days in current stage till today"><span style="display:inline-block;min-width:32px;padding:2px 7px;border-radius:10px;background:${bg};color:${col};font-size:11px;font-weight:700">${days}d</span></td>`;
       })();
       const areaVal = l.area || l.address || '—';
       const cityDistVal = [l.city, l.state].filter(p => p && p !== '—').join(', ') || '—';
       const mapsCell = _edBuildMapsCell(l);
+      const gSourceVal = l.ground_source || '—';
 
       return `
         <tr class="ed-lead-row" style="cursor:pointer" onclick="_edSelectLead(${l.id},${l.company_id},'${esc(l.name)}','${esc(l.phone_raw||'')}',this)">
@@ -1841,6 +1846,7 @@ function _edRenderLeadsHandler(leads) {
           <td style="font-size:10px;color:#334155;white-space:nowrap;padding:5px 6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(areaVal)}">${esc(areaVal)}</td>
           <td style="font-size:10px;color:#334155;white-space:nowrap;padding:5px 6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(cityDistVal)}">${esc(cityDistVal)}</td>
           ${mapsCell}
+          <td style="font-size:10px;color:#0284c7;white-space:nowrap;padding:5px 6px;max-width:120px;overflow:hidden;text-overflow:ellipsis" title="${esc(gSourceVal)}">${esc(gSourceVal)}</td>
           <td style="padding:5px 6px"><span style="font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:8px;background:${stCol}22;color:${stCol};white-space:nowrap">${esc(l.status)}</span></td>
           <td style="font-size:10px;color:#0891b2;white-space:nowrap;padding:5px 6px">${esc(solLbl)}</td>
           <td style="font-size:10px;color:#059669;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(l.loan_bank || '—')}</td>
