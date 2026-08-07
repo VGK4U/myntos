@@ -1370,6 +1370,8 @@
         }
         
         // DC Protocol (Dec 05, 2025): Playback control functions for WVV compliance
+        let playbackAnimFrame = null;
+        
         function togglePlayback() {
             if (isPlaying) {
                 stopPlayback();
@@ -1387,8 +1389,8 @@
             isPlaying = true;
             document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
             
-            const speed = parseInt(document.getElementById('playbackSpeed').value);
-            const interval = Math.max(50, 200 / speed);
+            const speed = parseInt(document.getElementById('playbackSpeed').value) || 1;
+            const interval = Math.max(150, 800 / speed);
             
             playbackInterval = setInterval(() => {
                 if (playbackIndex >= playbackCoordinates.length - 1) {
@@ -1397,13 +1399,17 @@
                 }
                 
                 playbackIndex++;
-                updatePlaybackPosition();
+                updatePlaybackPosition(true);
             }, interval);
         }
         
         function stopPlayback() {
             isPlaying = false;
-            isAnimating = false;  // DC: Reset animation lock
+            isAnimating = false;
+            if (playbackAnimFrame) {
+                cancelAnimationFrame(playbackAnimFrame);
+                playbackAnimFrame = null;
+            }
             if (playbackInterval) {
                 clearInterval(playbackInterval);
                 playbackInterval = null;
@@ -1415,53 +1421,63 @@
         function resetPlayback() {
             stopPlayback();
             playbackIndex = 0;
-            updatePlaybackPosition();
+            updatePlaybackPosition(false);
         }
         
         function seekPlayback(value) {
             playbackIndex = parseInt(value);
-            updatePlaybackPosition();
+            updatePlaybackPosition(false);
         }
         
-        // DC Protocol (Jan 13, 2026): Enhanced with smooth animation
         function updatePlaybackPosition(animate = true) {
             if (!playbackCoordinates.length) return;
             
             const coord = playbackCoordinates[playbackIndex];
+            const speed = parseInt(document.getElementById('playbackSpeed').value) || 1;
+            const animDuration = Math.max(100, (800 / speed) * 0.85);
             
-            // DC: Smooth animation for marker movement
             if (playbackMarker && coord) {
                 if (animate && isPlaying && playbackIndex > 0) {
-                    animateMarkerTo(playbackMarker, coord);
+                    animateMarkerTo(playbackMarker, coord, animDuration);
                 } else {
+                    if (playbackAnimFrame) {
+                        cancelAnimationFrame(playbackAnimFrame);
+                        playbackAnimFrame = null;
+                    }
                     playbackMarker.setLatLng(coord);
                 }
             }
             
-            // DC: Progressive polyline drawing
             if (playbackPolyline) {
                 playbackPolyline.setLatLngs(playbackCoordinates.slice(0, playbackIndex + 1));
             }
             
-            // Update UI elements
             document.getElementById('playbackSlider').value = playbackIndex;
             document.getElementById('playbackProgress').textContent = `${playbackIndex + 1} / ${playbackCoordinates.length} points`;
             
-            // Calculate time based on progress - DC: Use journey data instead of parsing UI
-            const progress = playbackIndex / Math.max(playbackCoordinates.length - 1, 1);
-            const totalMins = currentJourneyData?.total_duration_minutes || 0;
-            const currentMins = totalMins * progress;
-            document.getElementById('playbackTime').textContent = formatDuration(isNaN(currentMins) ? 0 : currentMins);
+            const currentPt = playbackTrackPoints[playbackIndex];
+            if (currentPt && (currentPt.recorded_at || currentPt.timestamp)) {
+                const dt = new Date(currentPt.recorded_at || currentPt.timestamp);
+                if (!isNaN(dt.getTime())) {
+                    document.getElementById('playbackTime').textContent = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                }
+            } else {
+                const progress = playbackIndex / Math.max(playbackCoordinates.length - 1, 1);
+                const totalMins = currentJourneyData?.total_duration_minutes || 0;
+                const currentMins = totalMins * progress;
+                document.getElementById('playbackTime').textContent = formatDuration(isNaN(currentMins) ? 0 : currentMins);
+            }
             
-            // DC: Smooth map panning (disabled during animation to avoid jitter)
-            if (map && coord && !isAnimating) {
-                map.panTo(coord, { animate: true, duration: 0.3 });
+            if (map && coord) {
+                map.panTo(coord, { animate: true, duration: 0.2 });
             }
         }
         
-        // DC Protocol (Jan 13, 2026): Smooth marker animation using requestAnimationFrame
-        function animateMarkerTo(marker, targetCoord, duration = 150) {
-            if (isAnimating) return;
+        function animateMarkerTo(marker, targetCoord, duration = 200) {
+            if (playbackAnimFrame) {
+                cancelAnimationFrame(playbackAnimFrame);
+                playbackAnimFrame = null;
+            }
             
             const startLatLng = marker.getLatLng();
             const startLat = startLatLng.lat;
@@ -1475,24 +1491,23 @@
             function animate(currentTime) {
                 const elapsed = currentTime - startTime;
                 const progress = Math.min(elapsed / duration, 1);
-                
-                // Ease-out cubic for smooth deceleration
-                const eased = 1 - Math.pow(1 - progress, 3);
+                const eased = 1 - Math.pow(1 - progress, 2);
                 
                 const lat = startLat + (targetLat - startLat) * eased;
                 const lng = startLng + (targetLng - startLng) * eased;
                 
                 marker.setLatLng([lat, lng]);
                 
-                if (progress < 1 && isPlaying) {
-                    requestAnimationFrame(animate);
+                if (progress < 1) {
+                    playbackAnimFrame = requestAnimationFrame(animate);
                 } else {
                     isAnimating = false;
-                    marker.setLatLng(targetCoord);  // Ensure final position
+                    playbackAnimFrame = null;
+                    marker.setLatLng(targetCoord);
                 }
             }
             
-            requestAnimationFrame(animate);
+            playbackAnimFrame = requestAnimationFrame(animate);
         }
         
         async function approveJourney(action) {
