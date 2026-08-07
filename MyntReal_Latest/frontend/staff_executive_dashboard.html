@@ -1731,6 +1731,8 @@ function _edRenderLeadsTrend(leads) {
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">City / District</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#ea4335;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Google Maps</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#0284c7;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Ground Source</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#059669;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Ground Support</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Telecaller</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Lead Date</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">1st Pmt Date</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Install Date</th>
@@ -1745,7 +1747,7 @@ function _edRenderLeadsTrend(leads) {
 
   let tbodyHtml = '';
   if (!leads.length) {
-    tbodyHtml = '<tr><td colspan="16" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
+    tbodyHtml = '<tr><td colspan="18" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
   } else {
     tbodyHtml = leads.map((l, i) => {
       const days = _edComputeDays(l);
@@ -1762,6 +1764,8 @@ function _edRenderLeadsTrend(leads) {
       const cityDistVal = [l.city, l.state].filter(p => p && p !== '—').join(', ') || '—';
       const mapsCell = _edBuildMapsCell(l);
       const gSourceVal = l.ground_source || '—';
+      const gSupportVal = l.ground_support || '—';
+      const tcVal = l.telecaller_name || '—';
 
       return `
         <tr class="ed-lead-row" style="cursor:pointer" onclick="_edSelectLead(${l.id},${l.company_id},'${esc(l.name)}','${esc(l.phone_raw||'')}',this)">
@@ -1772,6 +1776,8 @@ function _edRenderLeadsTrend(leads) {
           <td style="font-size:10px;color:#334155;white-space:nowrap;padding:5px 6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(cityDistVal)}">${esc(cityDistVal)}</td>
           ${mapsCell}
           <td style="font-size:10px;color:#0284c7;white-space:nowrap;padding:5px 6px;max-width:120px;overflow:hidden;text-overflow:ellipsis" title="${esc(gSourceVal)}">${esc(gSourceVal)}</td>
+          <td style="font-size:10px;color:#059669;white-space:nowrap;padding:5px 6px;max-width:120px;overflow:hidden;text-overflow:ellipsis" title="${esc(gSupportVal)}">${esc(gSupportVal)}</td>
+          <td style="font-size:10px;color:#7c3aed;white-space:nowrap;padding:5px 6px;max-width:120px;overflow:hidden;text-overflow:ellipsis" title="${esc(tcVal)}">${esc(tcVal)}</td>
           <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.created_at)}</td>
           <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.first_payment_received_date)}</td>
           <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.installation_date)}</td>
@@ -1805,6 +1811,8 @@ function _edRenderLeadsHandler(leads) {
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">City / District</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#ea4335;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Google Maps</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#0284c7;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Ground Source</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#059669;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Ground Support</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Telecaller</th>
       <th data-sk="status" onclick="_edSortLeads('status')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Status<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th data-sk="solar_pipeline_status" onclick="_edSortLeads('solar_pipeline_status')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#0891b2;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Solar Stage<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th data-sk="loan_bank" onclick="_edSortLeads('loan_bank')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#059669;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Bank<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
@@ -1817,7 +1825,7 @@ function _edRenderLeadsHandler(leads) {
 
   let tbodyHtml = '';
   if (!leads.length) {
-    tbodyHtml = '<tr><td colspan="17" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
+    tbodyHtml = '<tr><td colspan="19" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
   } else {
     tbodyHtml = leads.map((l, i) => {
       const stCol = _STATUS_COL[l.status] || '#6b7280';
@@ -1834,6 +1842,8 @@ function _edRenderLeadsHandler(leads) {
       const cityDistVal = [l.city, l.state].filter(p => p && p !== '—').join(', ') || '—';
       const mapsCell = _edBuildMapsCell(l);
       const gSourceVal = l.ground_source || '—';
+      const gSupportVal = l.ground_support || '—';
+      const tcVal = l.telecaller_name || '—';
 
       return `
         <tr class="ed-lead-row" style="cursor:pointer" onclick="_edSelectLead(${l.id},${l.company_id},'${esc(l.name)}','${esc(l.phone_raw||'')}',this)">
@@ -1847,6 +1857,8 @@ function _edRenderLeadsHandler(leads) {
           <td style="font-size:10px;color:#334155;white-space:nowrap;padding:5px 6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(cityDistVal)}">${esc(cityDistVal)}</td>
           ${mapsCell}
           <td style="font-size:10px;color:#0284c7;white-space:nowrap;padding:5px 6px;max-width:120px;overflow:hidden;text-overflow:ellipsis" title="${esc(gSourceVal)}">${esc(gSourceVal)}</td>
+          <td style="font-size:10px;color:#059669;white-space:nowrap;padding:5px 6px;max-width:120px;overflow:hidden;text-overflow:ellipsis" title="${esc(gSupportVal)}">${esc(gSupportVal)}</td>
+          <td style="font-size:10px;color:#7c3aed;white-space:nowrap;padding:5px 6px;max-width:120px;overflow:hidden;text-overflow:ellipsis" title="${esc(tcVal)}">${esc(tcVal)}</td>
           <td style="padding:5px 6px"><span style="font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:8px;background:${stCol}22;color:${stCol};white-space:nowrap">${esc(l.status)}</span></td>
           <td style="font-size:10px;color:#0891b2;white-space:nowrap;padding:5px 6px">${esc(solLbl)}</td>
           <td style="font-size:10px;color:#059669;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(l.loan_bank || '—')}</td>

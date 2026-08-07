@@ -6769,13 +6769,18 @@ def exec_handler_leads(
                 'at': n.created_at.isoformat() if n.created_at else None,
             }
 
-    # Bulk enrich user names for ground support
+    # Bulk enrich user names and staff employee names for ground support and telecaller
     from app.models.user import User as _User
-    _uids = list({l.mnr_handler_id for l in _leads if l.mnr_handler_id})
+    from app.models.staff_employee import StaffEmployee as _SE
+    _mnr_ids = list({l.mnr_handler_id for l in _leads if l.mnr_handler_id})
+    _tc_ids = list({l.telecaller_id for l in _leads if l.telecaller_id})
     _unmap = {}
-    if _uids:
-        for u in db.query(_User).filter(_User.id.in_(_uids)).all():
+    _all_ids = list(set(_mnr_ids + _tc_ids))
+    if _all_ids:
+        for u in db.query(_User).filter(_User.id.in_(_all_ids)).all():
             _unmap[u.id] = u.name or u.id
+        for e in db.query(_SE).filter(_SE.id.in_(_all_ids)).all():
+            _unmap[e.id] = e.full_name or getattr(e, 'name', None) or e.emp_code or f"MR{e.id}"
 
     # Bulk enrich: earliest transaction date per lead (DC-FIRST-PMT-003)
     _txmap = {}
@@ -6812,6 +6817,7 @@ def exec_handler_leads(
             'source': l.source or '—',
             'ground_source': l.source_ref_name or '—',
             'ground_support': _unmap.get(l.mnr_handler_id, l.mnr_handler_id) if l.mnr_handler_id else '—',
+            'telecaller_name': _unmap.get(l.telecaller_id, l.telecaller_id) if l.telecaller_id else '—',
             'status': l.status or '—',
             'solar_pipeline_status': l.solar_pipeline_status,
             'category_name': _cmap.get(l.category_id) if l.category_id else None,
@@ -7039,12 +7045,18 @@ def exec_trend_leads(
                 'at': n.created_at.isoformat() if n.created_at else None,
             }
 
-    # Bulk enrich user names for ground support
-    _uids = list({l.mnr_handler_id for l in _leads if l.mnr_handler_id})
+    # Bulk enrich user names and staff employee names for ground support and telecaller
+    from app.models.user import User as _User
+    from app.models.staff_employee import StaffEmployee as _SE
+    _mnr_ids = list({l.mnr_handler_id for l in _leads if l.mnr_handler_id})
+    _tc_ids = list({l.telecaller_id for l in _leads if l.telecaller_id})
     _unmap = {}
-    if _uids:
-        for u in db.query(_User).filter(_User.id.in_(_uids)).all():
+    _all_ids = list(set(_mnr_ids + _tc_ids))
+    if _all_ids:
+        for u in db.query(_User).filter(_User.id.in_(_all_ids)).all():
             _unmap[u.id] = u.name or u.id
+        for e in db.query(_SE).filter(_SE.id.in_(_all_ids)).all():
+            _unmap[e.id] = e.full_name or getattr(e, 'name', None) or e.emp_code or f"MR{e.id}"
 
     # Bulk enrich: earliest transaction date per lead (DC-FIRST-PMT-003)
     _txmap = {}
@@ -7080,6 +7092,7 @@ def exec_trend_leads(
             'source': l.source or '—',
             'ground_source': l.source_ref_name or '—',
             'ground_support': _unmap.get(l.mnr_handler_id, l.mnr_handler_id) if l.mnr_handler_id else '—',
+            'telecaller_name': _unmap.get(l.telecaller_id, l.telecaller_id) if l.telecaller_id else '—',
             'status': l.status or '—',
             'solar_pipeline_status': l.solar_pipeline_status,
             'category_name': _cmap.get(l.category_id) if l.category_id else None,
