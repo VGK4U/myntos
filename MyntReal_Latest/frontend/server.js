@@ -19971,7 +19971,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.end(html);
     });
     return;
-  } else if (url.startsWith('/staff/all-journeys')) {
+  } else if (url.startsWith('/staff/all-journeys') || url.startsWith('/staff/all-location-tracker') || url.startsWith('/staff/all-location-history')) {
     const filePath = path.join(__dirname, 'staff_all_journeys.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
