@@ -1740,6 +1740,7 @@ function _edRenderLeadsTrend(leads) {
       <th style="padding:6px 6px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;text-align:center;border-bottom:1px solid #e5e7eb;white-space:nowrap">#</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Lead Name</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Contact</th>
+      <th data-sk="brand_name" onclick="_edSortLeads('brand_name')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Brand<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Area</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">City / District</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#ea4335;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Google Maps</th>
@@ -1749,7 +1750,7 @@ function _edRenderLeadsTrend(leads) {
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Lead Date</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">1st Pmt Date</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Install Date</th>
-      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#4b5563;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center" title="Days in current stage till today">Stage Days</th>
+      <th data-sk="_days" onclick="_edSortLeads('_days')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#4b5563;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center" title="Days in current stage till today">Stage Days<span class="ed-si" style="color:#1e3a5f"> ▼</span></th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#0891b2;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Solar Stage</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#059669;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Bank</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#047857;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Branch</th>
@@ -1760,7 +1761,7 @@ function _edRenderLeadsTrend(leads) {
 
   let tbodyHtml = '';
   if (!leads.length) {
-    tbodyHtml = '<tr><td colspan="18" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
+    tbodyHtml = '<tr><td colspan="19" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
   } else {
     tbodyHtml = leads.map((l, i) => {
       const days = _edComputeDays(l);
@@ -1779,12 +1780,14 @@ function _edRenderLeadsTrend(leads) {
       const gSourceVal = l.ground_source || '—';
       const gSupportVal = l.ground_support || '—';
       const tcVal = l.telecaller_name || '—';
+      const brandVal = l.brand_name || '—';
 
       return `
         <tr class="ed-lead-row" style="cursor:pointer" onclick="_edSelectLead(${l.id},${l.company_id},'${esc(l.name)}','${esc(l.phone_raw||'')}',this)">
           <td style="text-align:center;font-size:10px;color:#9ca3af;padding:5px 6px">${i+1}</td>
           <td style="font-weight:600;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 6px">${esc(l.name)}</td>
           <td style="font-size:10.5px;padding:5px 6px;white-space:nowrap"><a href="tel:${esc(l.phone_raw||'')}" style="color:#2563eb;text-decoration:none;font-weight:600">${esc(phoneDisplay)}</a></td>
+          <td style="font-size:10px;color:#7c3aed;white-space:nowrap;padding:5px 6px;max-width:100px;overflow:hidden;text-overflow:ellipsis" title="${esc(brandVal)}">${esc(brandVal)}</td>
           <td style="font-size:10px;color:#334155;white-space:nowrap;padding:5px 6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(areaVal)}">${esc(areaVal)}</td>
           <td style="font-size:10px;color:#334155;white-space:nowrap;padding:5px 6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(cityDistVal)}">${esc(cityDistVal)}</td>
           ${mapsCell}
@@ -1806,6 +1809,7 @@ function _edRenderLeadsTrend(leads) {
   }
 
   table.innerHTML = `<thead>${theadHtml}</thead><tbody id="edLeadListBody">${tbodyHtml}</tbody>`;
+  _edUpdateSortUI();
 }
 
 function _edRenderLeadsHandler(leads) {
@@ -1816,10 +1820,11 @@ function _edRenderLeadsHandler(leads) {
     <tr style="background:#f8fafc">
       <th style="padding:6px 6px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;text-align:center;border-bottom:1px solid #e5e7eb;white-space:nowrap">#</th>
       <th data-sk="created_at" onclick="_edSortLeads('created_at')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Date of Lead<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
-      <th data-sk="submit_date" onclick="_edSortLeads('submit_date')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Submit Date<span class="ed-si" style="color:#1e3a5f"> ▼</span></th>
-      <th data-sk="_days" onclick="_edSortLeads('_days')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#4b5563;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center" title="Days in current stage till today">Stage Days<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th data-sk="submit_date" onclick="_edSortLeads('submit_date')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Submit Date<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th data-sk="_days" onclick="_edSortLeads('_days')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#4b5563;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center" title="Days in current stage till today">Stage Days<span class="ed-si" style="color:#1e3a5f"> ▼</span></th>
       <th data-sk="name" onclick="_edSortLeads('name')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Name<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Phone</th>
+      <th data-sk="brand_name" onclick="_edSortLeads('brand_name')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Brand<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Area</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">City / District</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#ea4335;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Google Maps</th>
@@ -1830,7 +1835,6 @@ function _edRenderLeadsHandler(leads) {
       <th data-sk="solar_pipeline_status" onclick="_edSortLeads('solar_pipeline_status')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#0891b2;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Solar Stage<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th data-sk="loan_bank" onclick="_edSortLeads('loan_bank')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#059669;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Bank<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#047857;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Branch</th>
-      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Brand</th>
       <th data-sk="deal_value_total" onclick="_edSortLeads('deal_value_total')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#1d4ed8;text-transform:uppercase;border-bottom:1px solid #e5e7eb;text-align:right;white-space:nowrap">Deal Value<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Latest Note</th>
     </tr>
@@ -1857,6 +1861,7 @@ function _edRenderLeadsHandler(leads) {
       const gSourceVal = l.ground_source || '—';
       const gSupportVal = l.ground_support || '—';
       const tcVal = l.telecaller_name || '—';
+      const brandVal = l.brand_name || '—';
 
       return `
         <tr class="ed-lead-row" style="cursor:pointer" onclick="_edSelectLead(${l.id},${l.company_id},'${esc(l.name)}','${esc(l.phone_raw||'')}',this)">
@@ -1866,6 +1871,7 @@ function _edRenderLeadsHandler(leads) {
           ${daysCell}
           <td style="font-weight:600;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 6px">${esc(l.name)}</td>
           <td style="font-size:10.5px;font-family:monospace;padding:5px 6px">${esc(l.phone_raw||l.phone||'—')}</td>
+          <td style="font-size:10px;color:#7c3aed;white-space:nowrap;padding:5px 6px;max-width:100px;overflow:hidden;text-overflow:ellipsis" title="${esc(brandVal)}">${esc(brandVal)}</td>
           <td style="font-size:10px;color:#334155;white-space:nowrap;padding:5px 6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(areaVal)}">${esc(areaVal)}</td>
           <td style="font-size:10px;color:#334155;white-space:nowrap;padding:5px 6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(cityDistVal)}">${esc(cityDistVal)}</td>
           ${mapsCell}
@@ -1876,7 +1882,6 @@ function _edRenderLeadsHandler(leads) {
           <td style="font-size:10px;color:#0891b2;white-space:nowrap;padding:5px 6px">${esc(solLbl)}</td>
           <td style="font-size:10px;color:#059669;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(l.loan_bank || '—')}</td>
           <td style="font-size:10px;color:#047857;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(l.bank_branch || '—')}</td>
-          <td style="font-size:10px;color:#7c3aed;white-space:nowrap;padding:5px 6px;max-width:100px;overflow:hidden;text-overflow:ellipsis">${esc(l.brand_name || '—')}</td>
           <td style="font-size:10px;font-weight:600;color:#1d4ed8;white-space:nowrap;text-align:right;padding:5px 6px">${dv}</td>
           <td style="max-width:180px;padding:5px 6px">${latNote}</td>
         </tr>
@@ -1938,7 +1943,7 @@ async function openExecDrillDown(tr){
   cnt.textContent='';
   if(panel) panel.style.display='none';
   _edCurrentLead=null;
-  _edLeadsData=[]; _edSortBy='submit_date'; _edSortDir='desc';
+  _edLeadsData=[]; _edSortBy='_days'; _edSortDir='desc';
   ov.style.display='flex';
   // Build params: reuse all current dashboard filters + handler-specific ones
   const base=buildParams();
@@ -1953,7 +1958,7 @@ async function openExecDrillDown(tr){
     _edLeadsData=d.data||[];
     const total=d.total||0;
     cnt.textContent=`${fmtNum(total)} lead${total!==1?'s':''} (showing ${_edLeadsData.length})`;
-    _edLeadsData.sort((a,b)=>{const va=a.submit_date||a.created_at||'';const vb=b.submit_date||b.created_at||'';return vb.localeCompare(va);});
+    _edLeadsData.sort((a,b)=>{const va=_edComputeDays(a)??-1;const vb=_edComputeDays(b)??-1;return vb-va;});
     _edRenderLeads(_edLeadsData);
   }catch(e){
     body.innerHTML=`<tr><td colspan="13" style="text-align:center;padding:20px;color:#dc2626"><i class="fas fa-exclamation-circle me-1"></i>${esc(e.message)}</td></tr>`;
@@ -1974,7 +1979,7 @@ async function openTrendDrillDown(periodType, label, metric, columnName) {
   cnt.textContent='';
   if(panel) panel.style.display='none';
   _edCurrentLead=null;
-  _edLeadsData=[]; _edSortBy='submit_date'; _edSortDir='desc';
+  _edLeadsData=[]; _edSortBy='_days'; _edSortDir='desc';
   ov.style.display='flex';
 
   const base=buildParams();
@@ -2028,7 +2033,7 @@ async function openTrendDrillDown(periodType, label, metric, columnName) {
     
     cnt.innerHTML = `${extraPill}<span style="display:inline-block; background:rgba(16,185,129,0.08); color:#10b981; padding:2px 8px; border-radius:12px; font-weight:600; font-size:11px"><i class="fas fa-users me-1"></i>${total} lead${total!==1?'s':''}</span>`;
     
-    _edLeadsData.sort((a,b)=>{const va=a.submit_date||a.created_at||'';const vb=b.submit_date||b.created_at||'';return vb.localeCompare(va);});
+    _edLeadsData.sort((a,b)=>{const va=_edComputeDays(a)??-1;const vb=_edComputeDays(b)??-1;return vb-va;});
     _edRenderLeads(_edLeadsData);
   }catch(e){
     body.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:20px;color:#dc2626"><i class="fas fa-exclamation-circle me-1"></i>${esc(e.message)}</td></tr>`;
