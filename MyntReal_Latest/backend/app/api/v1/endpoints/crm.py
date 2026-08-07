@@ -6771,7 +6771,7 @@ def exec_handler_leads(
 
     # Bulk enrich user names and staff employee names for ground support and telecaller
     from app.models.user import User as _User
-    from app.models.staff_employee import StaffEmployee as _SE
+    from app.models.staff import StaffEmployee as _SE
     _mnr_ids = list({l.mnr_handler_id for l in _leads if l.mnr_handler_id})
     _tc_ids = list({l.telecaller_id for l in _leads if l.telecaller_id})
     _unmap = {}
@@ -7049,7 +7049,7 @@ def exec_trend_leads(
 
     # Bulk enrich user names and staff employee names for ground support and telecaller
     from app.models.user import User as _User
-    from app.models.staff_employee import StaffEmployee as _SE
+    from app.models.staff import StaffEmployee as _SE
     _mnr_ids = list({l.mnr_handler_id for l in _leads if l.mnr_handler_id})
     _tc_ids = list({l.telecaller_id for l in _leads if l.telecaller_id})
     _unmap = {}
