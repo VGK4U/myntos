@@ -71,6 +71,13 @@ def main():
         zipf.writestr('.ebextensions/02_healthcheck.config', health_config_content)
         print("Successfully injected .ebextensions/02_healthcheck.config into the ZIP.")
 
+        timeout_config_content = """option_settings:
+  aws:elasticbeanstalk:command:
+    Timeout: "1800"
+"""
+        zipf.writestr('.ebextensions/03_timeout.config', timeout_config_content)
+        print("Successfully injected .ebextensions/03_timeout.config into the ZIP.")
+
     print(f"Successfully created {zip_name} (Size: {os.path.getsize(zip_name) / (1024*1024):.2f} MB)")
 
 if __name__ == '__main__':
