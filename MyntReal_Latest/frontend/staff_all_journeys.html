@@ -634,6 +634,16 @@
         
         function showJourneyModal(journey, coordinates, trackPoints = []) {
             stopPlayback();
+            
+            if (trackPoints && trackPoints.length > 0) {
+                trackPoints.sort((a, b) => {
+                    const tA = new Date(a.timestamp || a.recorded_at || a.created_at || 0).getTime();
+                    const tB = new Date(b.timestamp || b.recorded_at || b.created_at || 0).getTime();
+                    return tA - tB;
+                });
+                coordinates = trackPoints.map(tp => [tp.latitude || tp.lat, tp.longitude || tp.lng]);
+            }
+            
             playbackCoordinates = coordinates || [];
             playbackTrackPoints = trackPoints || [];
             playbackIndex = 0;
