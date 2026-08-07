@@ -472,6 +472,27 @@ const MENU_MASTER = [
         items: [
           { menu_code: "VGK_WALLET_WITHDRAWALS", label: "Wallet & Withdrawals", route: "/staff/vgk/wallet", audience: ["STAFF"] }
         ]
+      },
+      {
+        sub_section_code: "ZY_PROPERTY_WORKINGS",
+        sub_section_label: "ZY Property Workings (16.1)",
+        items: [
+          { menu_code: "PROPERTY_MARKETPLACE", label: "Property Marketplace", route: "/rvz/real-dreams/marketplace", audience: ["STAFF"] },
+          { menu_code: "PROPERTY_AMENITIES", label: "Property Amenities", route: "/rvz/real-dreams", audience: ["STAFF"] },
+          { menu_code: "PARTNER_PROFILES", label: "Partner Profiles", route: "/rvz/real-dreams/partners", audience: ["STAFF"] },
+          { menu_code: "PROPERTY_HANDLER", label: "Property Handler", route: "/rvz/real-dreams/properties", audience: ["STAFF"] },
+          { menu_code: "REAL_DREAMS_DASHBOARD", label: "Real Dreams Dashboard", route: "/rvz/real-dreams-dashboard", audience: ["STAFF"] }
+        ]
+      },
+      {
+        sub_section_code: "ZY_MEMBER_EARNINGS",
+        sub_section_label: "ZY Member Earnings (16.2)",
+        items: [
+          { menu_code: "INCENTIVE_APPROVALS", label: "Incentive Approvals", route: "/staff/incentives/approvals", audience: ["STAFF"] },
+          { menu_code: "ALL_VGK4U_MEMBERS", label: "All VGK4U Members", route: "/staff/incentives/vgk4u", audience: ["STAFF"] },
+          { menu_code: "VGK_REAL_DREAMS", label: "VGK Real Dreams (ZR)", route: "/staff/vgk4u/real-estate", audience: ["STAFF"] },
+          { menu_code: "VGK_CARE", label: "VGK Care (ZC)", route: "/staff/vgk4u/insurance", audience: ["STAFF"] }
+        ]
       }
     ]
   },
@@ -547,36 +568,6 @@ const MENU_MASTER = [
           { menu_code: "RVZ_TERMS_AUDIT", label: "T&C Audit", route: "/rvz/terms-audit", icon: "fas fa-history", audience: ["STAFF"] },
           { menu_code: "RVZ_TERMS_CONDITIONS_AUDIT", label: "Conditions Audit", route: "/rvz/terms-conditions-audit", icon: "fas fa-list-check", audience: ["STAFF"] },
           { menu_code: "RVZ_TERMS_ACCEPTANCE", label: "T&C Acceptance", route: "/rvz/terms-acceptance", icon: "fas fa-check-circle", audience: ["STAFF"] }
-        ]
-      }
-    ]
-  },
-
-  // ─── VGK4U ────────────────────────────────────────────────────────────
-  {
-    section_code: "VGK4U",
-    section_label: "VGK4U",
-    order: 21,
-    subSections: [
-      {
-        sub_section_code: "ZY_PROPERTY_WORKINGS",
-        sub_section_label: "ZY Property Workings (16.1)",
-        items: [
-          { menu_code: "PROPERTY_MARKETPLACE", label: "Property Marketplace", route: "/rvz/real-dreams/marketplace", audience: ["STAFF"] },
-          { menu_code: "PROPERTY_AMENITIES", label: "Property Amenities", route: "/rvz/real-dreams", audience: ["STAFF"] },
-          { menu_code: "PARTNER_PROFILES", label: "Partner Profiles", route: "/rvz/real-dreams/partners", audience: ["STAFF"] },
-          { menu_code: "PROPERTY_HANDLER", label: "Property Handler", route: "/rvz/real-dreams/properties", audience: ["STAFF"] },
-          { menu_code: "REAL_DREAMS_DASHBOARD", label: "Real Dreams Dashboard", route: "/rvz/real-dreams-dashboard", audience: ["STAFF"] }
-        ]
-      },
-      {
-        sub_section_code: "ZY_MEMBER_EARNINGS",
-        sub_section_label: "ZY Member Earnings (16.2)",
-        items: [
-          { menu_code: "INCENTIVE_APPROVALS", label: "Incentive Approvals", route: "/staff/incentives/approvals", audience: ["STAFF"] },
-          { menu_code: "ALL_VGK4U_MEMBERS", label: "All VGK4U Members", route: "/staff/incentives/vgk4u", audience: ["STAFF"] },
-          { menu_code: "VGK_REAL_DREAMS", label: "VGK Real Dreams (ZR)", route: "/staff/vgk4u/real-estate", audience: ["STAFF"] },
-          { menu_code: "VGK_CARE", label: "VGK Care (ZC)", route: "/staff/vgk4u/insurance", audience: ["STAFF"] }
         ]
       }
     ]
