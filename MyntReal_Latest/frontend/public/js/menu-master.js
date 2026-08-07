@@ -258,6 +258,7 @@ const MENU_MASTER = [
       { menu_code: "staff_razorpay_dashboard", label: "Razorpay Executive", route: "/staff/configuration/razorpay", audience: ["STAFF"] },
       { menu_code: "staff_a1top_dashboard", label: "A1Top Executive", route: "/staff/configuration/a1top", audience: ["STAFF"] },
       { menu_code: "AI_CALLING", label: "AI Calling", route: "/staff/crm/ai-calling", audience: ["STAFF"] },
+      { menu_code: "VGK_SAAS_MENU_ACCESS", label: "Menu Access Control", route: "/rvz/menu-access-config", icon: "fas fa-key", audience: ["STAFF", "VGK4U"] },
       { menu_code: "WA_CONFIG", label: "WhatsApp Center", route: "/staff/whatsapp-config", icon: "fab fa-whatsapp", audience: ["STAFF"] },
       { menu_code: "SOLAR_VENDORS", label: "Solar Vendors", route: "/staff/solar-vendors", icon: "fas fa-solar-panel", audience: ["STAFF"] },
       { menu_code: "VGK_MEDIA_MANAGER", label: "Media Manager", route: "/staff/vgk/media", icon: "fas fa-globe", audience: ["STAFF"] },
