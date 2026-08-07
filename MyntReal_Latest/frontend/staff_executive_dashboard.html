@@ -1650,6 +1650,64 @@ function _edUpdateSortUI(){
 
 let _edIsTrendDrillDown = false;
 
+function _edBuildMapsCell(l) {
+  const rawMapsUrl = l.google_maps_link;
+  const locParts = [l.area, l.city, l.state, l.pincode].filter(p => p && p !== '—');
+  const searchLoc = locParts.join(', ');
+  const mapsUrl = rawMapsUrl || (searchLoc ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchLoc)}` : null);
+
+  if (!mapsUrl) {
+    return `<td style="font-size:10px;color:#d1d5db;white-space:nowrap;padding:5px 6px;text-align:center">—</td>`;
+  }
+
+  return `
+    <td style="font-size:10px;white-space:nowrap;padding:5px 6px" onclick="event.stopPropagation()">
+      <div style="display:inline-flex;align-items:center;gap:4px">
+        <a href="${esc(mapsUrl)}" target="_blank" rel="noopener noreferrer" style="padding:2px 7px;font-size:10px;background:#ea4335;color:#fff;border-radius:4px;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:3px;box-shadow:0 1px 2px rgba(0,0,0,0.1)" title="Open in Google Maps">
+          <i class="fas fa-map-marker-alt"></i> Maps
+        </a>
+        <button onclick="_edCopyMapsUrl('${esc(mapsUrl)}', this)" style="padding:2px 6px;font-size:10px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:4px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:2px" title="Copy Maps Link">
+          <i class="far fa-copy"></i> Copy
+        </button>
+      </div>
+    </td>`;
+}
+
+function _edCopyMapsUrl(url, btn) {
+  const copyText = (str) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(str);
+    }
+    return new Promise((resolve, reject) => {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = str;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        resolve();
+      } catch(e) { reject(e); }
+    });
+  };
+
+  copyText(url).then(() => {
+    const origHtml = btn.innerHTML;
+    btn.innerHTML = `<i class="fas fa-check" style="color:#059669"></i> Copied`;
+    btn.style.background = '#dcfce7';
+    btn.style.color = '#166534';
+    btn.style.borderColor = '#86efac';
+    setTimeout(() => {
+      btn.innerHTML = origHtml;
+      btn.style.background = '#f3f4f6';
+      btn.style.color = '#374151';
+      btn.style.borderColor = '#d1d5db';
+    }, 1800);
+  });
+}
+
 function _edRenderLeadsTrend(leads) {
   const table = document.getElementById('edModalTable');
   if (!table) return;
@@ -1659,6 +1717,9 @@ function _edRenderLeadsTrend(leads) {
       <th style="padding:6px 6px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;text-align:center;border-bottom:1px solid #e5e7eb;white-space:nowrap">#</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Lead Name</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Contact</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Area</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">City / District</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#ea4335;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Google Maps</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Lead Date</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">1st Pmt Date</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Install Date</th>
@@ -1673,7 +1734,7 @@ function _edRenderLeadsTrend(leads) {
 
   let tbodyHtml = '';
   if (!leads.length) {
-    tbodyHtml = '<tr><td colspan="12" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
+    tbodyHtml = '<tr><td colspan="15" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
   } else {
     tbodyHtml = leads.map((l, i) => {
       const days = _edComputeDays(l);
@@ -1686,12 +1747,18 @@ function _edRenderLeadsTrend(leads) {
       const phoneDisplay = l.phone_raw || l.phone || '—';
       const solarStageLabel = l.solar_pipeline_status ? (_SOL_LABEL[l.solar_pipeline_status] || l.solar_pipeline_status) : '—';
       const balPend = (l.balance_pending || (l.deal_value_total - (l.deal_value_received||0))) > 0 ? '₹' + fmtVal(l.balance_pending || (l.deal_value_total - (l.deal_value_received||0))) : '—';
+      const areaVal = l.area || l.address || '—';
+      const cityDistVal = [l.city, l.state].filter(p => p && p !== '—').join(', ') || '—';
+      const mapsCell = _edBuildMapsCell(l);
 
       return `
         <tr class="ed-lead-row" style="cursor:pointer" onclick="_edSelectLead(${l.id},${l.company_id},'${esc(l.name)}','${esc(l.phone_raw||'')}',this)">
           <td style="text-align:center;font-size:10px;color:#9ca3af;padding:5px 6px">${i+1}</td>
           <td style="font-weight:600;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 6px">${esc(l.name)}</td>
           <td style="font-size:10.5px;padding:5px 6px;white-space:nowrap"><a href="tel:${esc(l.phone_raw||'')}" style="color:#2563eb;text-decoration:none;font-weight:600">${esc(phoneDisplay)}</a></td>
+          <td style="font-size:10px;color:#334155;white-space:nowrap;padding:5px 6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(areaVal)}">${esc(areaVal)}</td>
+          <td style="font-size:10px;color:#334155;white-space:nowrap;padding:5px 6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(cityDistVal)}">${esc(cityDistVal)}</td>
+          ${mapsCell}
           <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.created_at)}</td>
           <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.first_payment_received_date)}</td>
           <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.installation_date)}</td>
@@ -1719,21 +1786,24 @@ function _edRenderLeadsHandler(leads) {
       <th data-sk="created_at" onclick="_edSortLeads('created_at')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Date of Lead<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th data-sk="submit_date" onclick="_edSortLeads('submit_date')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Submit Date<span class="ed-si" style="color:#1e3a5f"> ▼</span></th>
       <th data-sk="_days" onclick="_edSortLeads('_days')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#4b5563;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center">Days<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
-      <th data-sk="name" onclick="_edSortLeads('name')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Name<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
-      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Phone</th>
-      <th data-sk="status" onclick="_edSortLeads('status')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Status<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th data-sk="name" onclick="_edSortLeads('name')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Name<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Phone</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Area</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">City / District</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#ea4335;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Google Maps</th>
+      <th data-sk="status" onclick="_edSortLeads('status')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Status<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th data-sk="solar_pipeline_status" onclick="_edSortLeads('solar_pipeline_status')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#0891b2;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Solar Stage<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th data-sk="loan_bank" onclick="_edSortLeads('loan_bank')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#059669;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Bank<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#047857;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Branch</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Brand</th>
       <th data-sk="deal_value_total" onclick="_edSortLeads('deal_value_total')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#1d4ed8;text-transform:uppercase;border-bottom:1px solid #e5e7eb;text-align:right;white-space:nowrap">Deal Value<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
-      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Latest Note</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Latest Note</th>
     </tr>
   `;
 
   let tbodyHtml = '';
   if (!leads.length) {
-    tbodyHtml = '<tr><td colspan="13" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
+    tbodyHtml = '<tr><td colspan="16" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
   } else {
     tbodyHtml = leads.map((l, i) => {
       const stCol = _STATUS_COL[l.status] || '#6b7280';
@@ -1746,6 +1816,9 @@ function _edRenderLeadsHandler(leads) {
         const bg = days <= 7 ? '#f0fdf4' : days <= 30 ? '#fffbeb' : days <= 60 ? '#fff7ed' : '#fef2f2';
         return `<td style="text-align:center;padding:5px 6px;white-space:nowrap" title="Days since Submit Date"><span style="display:inline-block;min-width:32px;padding:2px 7px;border-radius:10px;background:${bg};color:${col};font-size:11px;font-weight:700">${days}d</span></td>`;
       })();
+      const areaVal = l.area || l.address || '—';
+      const cityDistVal = [l.city, l.state].filter(p => p && p !== '—').join(', ') || '—';
+      const mapsCell = _edBuildMapsCell(l);
 
       return `
         <tr class="ed-lead-row" style="cursor:pointer" onclick="_edSelectLead(${l.id},${l.company_id},'${esc(l.name)}','${esc(l.phone_raw||'')}',this)">
@@ -1755,6 +1828,9 @@ function _edRenderLeadsHandler(leads) {
           ${daysCell}
           <td style="font-weight:600;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 6px">${esc(l.name)}</td>
           <td style="font-size:10.5px;font-family:monospace;padding:5px 6px">${esc(l.phone_raw||l.phone||'—')}</td>
+          <td style="font-size:10px;color:#334155;white-space:nowrap;padding:5px 6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(areaVal)}">${esc(areaVal)}</td>
+          <td style="font-size:10px;color:#334155;white-space:nowrap;padding:5px 6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(cityDistVal)}">${esc(cityDistVal)}</td>
+          ${mapsCell}
           <td style="padding:5px 6px"><span style="font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:8px;background:${stCol}22;color:${stCol};white-space:nowrap">${esc(l.status)}</span></td>
           <td style="font-size:10px;color:#0891b2;white-space:nowrap;padding:5px 6px">${esc(solLbl)}</td>
           <td style="font-size:10px;color:#059669;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(l.loan_bank || '—')}</td>
@@ -2031,7 +2107,7 @@ async function _edToggleCallHist(){
     </div>
     <!-- Lead list table -->
     <div id="edLeadTableWrap" style="overflow-x:auto;overflow-y:auto;flex:1;min-height:180px;max-height:340px;border-bottom:2px solid #e5e7eb">
-      <table id="edModalTable" style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:900px">
+      <table id="edModalTable" style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:1400px">
         <thead>
           <tr style="background:#f8fafc">
             <th style="padding:6px 6px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;text-align:center;border-bottom:1px solid #e5e7eb;white-space:nowrap">#</th>

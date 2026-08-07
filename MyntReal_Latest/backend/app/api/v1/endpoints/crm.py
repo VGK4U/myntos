@@ -6821,6 +6821,11 @@ def exec_handler_leads(
             'deal_value_total': float(l.deal_value_total or 0),
             'deal_value_received': float(l.deal_value_received or 0),
             'balance_pending': float(l.deal_value_balance or 0),
+            'area': l.area or l.address or '—',
+            'city': l.city or '—',
+            'state': l.state or '—',
+            'pincode': l.pincode or '—',
+            'google_maps_link': l.google_maps_link or None,
             'latest_note': _nmap.get(l.id),
         } for l in _leads],
     }
@@ -7073,6 +7078,11 @@ def exec_trend_leads(
             'deal_value_total': float(l.deal_value_total or 0),
             'deal_value_received': float(l.deal_value_received or 0),
             'balance_pending': float(l.deal_value_balance or 0),
+            'area': l.area or l.address or '—',
+            'city': l.city or '—',
+            'state': l.state or '—',
+            'pincode': l.pincode or '—',
+            'google_maps_link': l.google_maps_link or None,
             'latest_note': _nmap.get(l.id),
         } for l in _leads],
     }
