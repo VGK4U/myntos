@@ -16,8 +16,17 @@
   <script src="/public/js/mnr-map-modal.js"></script>
   <style>
     *{box-sizing:border-box}
-    body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f3f4f6;min-height:100vh;margin:0;padding-top:60px}
-    .content-area{padding:16px;max-width:1800px;margin:0 auto}
+    body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f3f4f6;min-height:100vh;margin:0}
+    
+    /* Layout & Sidebar positioning */
+    #staffSidebar{position:fixed;top:0;left:0;bottom:0;width:260px;z-index:1040}
+    .main-content{margin-left:260px;min-height:100vh;transition:margin-left 0.3s ease;padding-top:60px}
+    body.sidebar-collapsed .main-content{margin-left:70px}
+    @media (max-width:768px){
+      .main-content{margin-left:0 !important;padding-top:60px}
+    }
+
+    .content-area{padding:16px;max-width:100%;margin:0 auto}
     
     .page-banner{background:linear-gradient(135deg,#1e3a5f,#0f2240);border-radius:10px;padding:14px 20px;margin-bottom:14px;color:white;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
     .page-banner h1{font-size:17px;font-weight:700;margin:0;display:flex;align-items:center;gap:8px}
@@ -32,12 +41,40 @@
     .filter-label{font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px}
     .form-select-sm, .form-control-sm{font-size:11.5px;border-radius:6px;border:1px solid #d1d5db;height:32px}
 
-    /* Left-to-Right Scrollable Table Container */
-    .table-wrap{background:white;border-radius:8px;border:1px solid #e5e7eb;overflow-x:auto;-webkit-overflow-scrolling:touch;box-shadow:0 1px 3px rgba(0,0,0,0.08);margin-bottom:15px}
-    table.bank-table{width:100%;border-collapse:collapse;font-size:11px;min-width:1750px}
-    table.bank-table th{background:#1e3a5f;color:white;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:9px 12px;white-space:nowrap;border-bottom:1px solid #0f2240;user-select:none}
+    /* Prominent Left-to-Right Horizontal Scrollbar Container */
+    .table-wrap{
+      background:white;
+      border-radius:8px;
+      border:1px solid #cbd5e1;
+      overflow-x:auto !important;
+      -webkit-overflow-scrolling:touch;
+      box-shadow:0 2px 6px rgba(0,0,0,0.08);
+      margin-bottom:20px;
+      width:100%;
+    }
+    
+    /* Always Visible Horizontal Scrollbar Styling */
+    .table-wrap::-webkit-scrollbar{
+      height:14px !important;
+      display:block !important;
+    }
+    .table-wrap::-webkit-scrollbar-track{
+      background:#e2e8f0;
+      border-radius:8px;
+    }
+    .table-wrap::-webkit-scrollbar-thumb{
+      background:#1e3a5f;
+      border-radius:8px;
+      border:3px solid #e2e8f0;
+    }
+    .table-wrap::-webkit-scrollbar-thumb:hover{
+      background:#0f2240;
+    }
+
+    table.bank-table{width:100%;border-collapse:collapse;font-size:11px;min-width:2200px}
+    table.bank-table th{background:#1e3a5f;color:white;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:10px 14px;white-space:nowrap;border-bottom:1px solid #0f2240;user-select:none}
     table.bank-table th:hover{background:#0f2240;cursor:pointer}
-    table.bank-table td{padding:9px 12px;border-bottom:1px solid #f0f0f0;vertical-align:middle;white-space:nowrap;color:#1f2937}
+    table.bank-table td{padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;white-space:nowrap;color:#1f2937}
     table.bank-table tr:hover td{background:#f0f6ff}
 
     .badge-manager{background:#059669;color:white;padding:5px 12px;border-radius:20px;font-weight:700;font-size:11px}
@@ -57,7 +94,7 @@
 </head>
 <body>
   <nav id="staffSidebar"></nav>
-  <div class="main-content">
+  <div class="main-content" id="mainContent">
     <div id="headerContainer"></div>
     <div class="content-area">
 
@@ -125,26 +162,26 @@
         </div>
       </div>
 
-      <!-- Left-to-Right Scrollable Desktop Data Table -->
+      <!-- Prominent Left-to-Right Scrollable Desktop Data Table (min-width: 2200px) -->
       <div class="d-none d-md-block table-wrap">
         <table class="bank-table">
           <thead>
             <tr>
-              <th style="width:30px;text-align:center" onclick="sortTableByHeader('id')"># <span id="sicon_id" class="sort-icon">⇅</span></th>
-              <th style="color:#fbbf24" onclick="sortTableByHeader('ground_source_name')">Ground Source <span id="sicon_ground_source_name" class="sort-icon active">▲</span></th>
-              <th style="color:#38bdf8;text-align:center" onclick="sortTableByHeader('stage_days')">Stage Days <span id="sicon_stage_days" class="sort-icon">⇅</span></th>
-              <th style="color:#34d399" onclick="sortTableByHeader('bank_name')">Bank Name <span id="sicon_bank_name" class="sort-icon">⇅</span></th>
-              <th style="color:#a7f3d0" onclick="sortTableByHeader('bank_branch')">Branch <span id="sicon_bank_branch" class="sort-icon">⇅</span></th>
-              <th style="color:#ffffff" onclick="sortTableByHeader('customer_name')">Lead Name <span id="sicon_customer_name" class="sort-icon">⇅</span></th>
-              <th onclick="sortTableByHeader('phone_number')">Contact <span id="sicon_phone_number" class="sort-icon">⇅</span></th>
-              <th style="color:#60a5fa" onclick="sortTableByHeader('stage')">Stage <span id="sicon_stage" class="sort-icon">⇅</span></th>
-              <th style="color:#c084fc" onclick="sortTableByHeader('brand_name')">Brand <span id="sicon_brand_name" class="sort-icon">⇅</span></th>
-              <th onclick="sortTableByHeader('area')">Area <span id="sicon_area" class="sort-icon">⇅</span></th>
-              <th onclick="sortTableByHeader('city_district')">City / District <span id="sicon_city_district" class="sort-icon">⇅</span></th>
-              <th style="color:#f87171;cursor:default">Google Maps</th>
-              <th style="color:#38bdf8" onclick="sortTableByHeader('telecaller_name')">Telecaller <span id="sicon_telecaller_name" class="sort-icon">⇅</span></th>
-              <th style="color:#818cf8" onclick="sortTableByHeader('field_staff_name')">Field Staff <span id="sicon_field_staff_name" class="sort-icon">⇅</span></th>
-              <th style="text-align:right" onclick="sortTableByHeader('deal_value')">Deal Value <span id="sicon_deal_value" class="sort-icon">⇅</span></th>
+              <th style="width:40px;text-align:center" onclick="sortTableByHeader('id')"># <span id="sicon_id" class="sort-icon">⇅</span></th>
+              <th style="color:#fbbf24;min-width:200px" onclick="sortTableByHeader('ground_source_name')">Ground Source <span id="sicon_ground_source_name" class="sort-icon active">▲</span></th>
+              <th style="color:#38bdf8;text-align:center;min-width:120px" onclick="sortTableByHeader('stage_days')">Stage Days <span id="sicon_stage_days" class="sort-icon">⇅</span></th>
+              <th style="color:#34d399;min-width:180px" onclick="sortTableByHeader('bank_name')">Bank Name <span id="sicon_bank_name" class="sort-icon">⇅</span></th>
+              <th style="color:#a7f3d0;min-width:180px" onclick="sortTableByHeader('bank_branch')">Branch <span id="sicon_bank_branch" class="sort-icon">⇅</span></th>
+              <th style="color:#ffffff;min-width:220px" onclick="sortTableByHeader('customer_name')">Lead Name <span id="sicon_customer_name" class="sort-icon">⇅</span></th>
+              <th style="min-width:140px" onclick="sortTableByHeader('phone_number')">Contact <span id="sicon_phone_number" class="sort-icon">⇅</span></th>
+              <th style="color:#60a5fa;min-width:110px" onclick="sortTableByHeader('stage')">Stage <span id="sicon_stage" class="sort-icon">⇅</span></th>
+              <th style="color:#c084fc;min-width:130px" onclick="sortTableByHeader('brand_name')">Brand <span id="sicon_brand_name" class="sort-icon">⇅</span></th>
+              <th style="min-width:140px" onclick="sortTableByHeader('area')">Area <span id="sicon_area" class="sort-icon">⇅</span></th>
+              <th style="min-width:180px" onclick="sortTableByHeader('city_district')">City / District <span id="sicon_city_district" class="sort-icon">⇅</span></th>
+              <th style="color:#f87171;cursor:default;min-width:110px">Google Maps</th>
+              <th style="color:#38bdf8;min-width:200px" onclick="sortTableByHeader('telecaller_name')">Telecaller <span id="sicon_telecaller_name" class="sort-icon">⇅</span></th>
+              <th style="color:#818cf8;min-width:200px" onclick="sortTableByHeader('field_staff_name')">Field Staff <span id="sicon_field_staff_name" class="sort-icon">⇅</span></th>
+              <th style="text-align:right;min-width:140px" onclick="sortTableByHeader('deal_value')">Deal Value <span id="sicon_deal_value" class="sort-icon">⇅</span></th>
             </tr>
           </thead>
           <tbody id="bankTableBody">
