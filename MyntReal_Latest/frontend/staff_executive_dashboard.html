@@ -1423,6 +1423,7 @@ function renderTrendTable(containerId, rows){
   const trInProg = rows.reduce((s,r)=>s+(r.in_progress||0), 0);
   const trInstPend = rows.reduce((s,r)=>s+(r.inst_pending||0), 0);
   const trBalPend = rows.reduce((s,r)=>s+(r.bal_pending||0), 0);
+  const trSubPend = rows.reduce((s,r)=>s+(r.subsidy_pending||0), 0);
   const trInProgVal = rows.reduce((s,r)=>s+(r.inprog_value||0), 0);
 
   const trSubWonPct = trWon>0 ? ((trSub/trWon)*100).toFixed(1) : '0.0';
@@ -1461,7 +1462,10 @@ function renderTrendTable(containerId, rows){
     <td style="${trtotCell};background:#084298;color:#cfe2ff">${totClickFn('eb_change', 'EB Change', trEbChange)}</td>
     
     <!-- COMPLETED TOTALS -->
+    <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('inst_pending', 'Installation Pending', trInstPend)}</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('installed', 'Installed (By Inst. Date)', trInst)}</td>
+    <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('bal_pending', 'Balance Pending', trBalPend)}</td>
+    <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('subsidy_pending', 'Subsidy Pending', trSubPend)}</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('completed', 'Completed', trComp)}</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">${trCompSubPct}%</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">${totClickValFn('completed', 'Completed Value', trCompVal)}</td>
@@ -1469,8 +1473,6 @@ function renderTrendTable(containerId, rows){
     
     <!-- IN PROGRESS TOTALS -->
     <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${totClickFn('in_progress', 'In Progress (Inst->Subsidy)', trInProg)}</td>
-    <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${totClickFn('inst_pending', 'Installation Pending', trInstPend)}</td>
-    <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${totClickFn('bal_pending', 'Balance Pending', trBalPend)}</td>
     <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${totClickValFn('in_progress', 'In Progress Value', trInProgVal)}</td>
   </tr>`;
 
@@ -1483,8 +1485,8 @@ function renderTrendTable(containerId, rows){
           <th rowspan="2" style="text-align:center;vertical-align:middle;padding:6px 5px;border:1px solid #cbd5e1;font-weight:700">Overall Leads</th>
           <th colspan="5" style="text-align:center;background:rgba(16, 185, 129, 0.08);color:#047857;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">WON VS SUBMITTED</th>
           <th colspan="6" style="text-align:center;background:rgba(59, 130, 246, 0.08);color:#1d4ed8;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">PIPELINE</th>
-          <th colspan="5" style="text-align:center;background:rgba(99, 102, 241, 0.08);color:#4f46e5;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">COMPLETED</th>
-          <th colspan="4" style="text-align:center;background:rgba(249, 115, 22, 0.08);color:#c2410c;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">IN PROGRESS</th>
+          <th colspan="8" style="text-align:center;background:rgba(99, 102, 241, 0.08);color:#4f46e5;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">PROGRESS</th>
+          <th colspan="2" style="text-align:center;background:rgba(249, 115, 22, 0.08);color:#c2410c;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">IN PROGRESS</th>
         </tr>
         <tr style="background:#f8fafc">
           <!-- WON VS SUBMITTED columns -->
@@ -1503,7 +1505,10 @@ function renderTrendTable(containerId, rows){
           <th style="color:#1d4ed8;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">EB<br>CHANGE</th>
 
           <!-- COMPLETED columns -->
+          <th style="color:#ea580c;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">INST.<br>PENDING</th>
           <th style="color:#6366f1;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">INSTALLED<br>(BY INST. DATE)</th>
+          <th style="color:#ea580c;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">BAL.<br>PENDING</th>
+          <th style="color:#8b5cf6;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">SUBSIDY<br>PENDING</th>
           <th style="color:#4f46e5;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">COMPLETED</th>
           <th style="color:#8b5cf6;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">COMP/<br>SUB%</th>
           <th style="color:#6366f1;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">COMP<br>VALUE</th>
@@ -1511,8 +1516,6 @@ function renderTrendTable(containerId, rows){
 
           <!-- IN PROGRESS columns -->
           <th style="color:#f97316;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">IN PROGRESS<br>(INST→SUBSIDY)</th>
-          <th style="color:#ea580c;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">INST.<br>PENDING</th>
-          <th style="color:#ea580c;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">BAL.<br>PENDING</th>
           <th style="color:#ea580c;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">INPROG<br>VALUE</th>
         </tr>
       </thead>
@@ -1532,6 +1535,7 @@ function renderTrendTable(containerId, rows){
           const inProg = r.in_progress || 0;
           const instPend = r.inst_pending || 0;
           const balPend = r.bal_pending || 0;
+          const subPend = r.subsidy_pending || 0;
           const inProgVal = r.inprog_value || 0;
 
           const subWonPct = won > 0 ? ((sub / won) * 100).toFixed(1) : '—';
@@ -1576,7 +1580,10 @@ function renderTrendTable(containerId, rows){
             <td style="${cellStyle} font-weight:600; color:#1d4ed8">${clickFn('eb_change', 'EB Change', ebChange)}</td>
 
             <!-- COMPLETED -->
+            <td style="${cellStyle} font-weight:600; color:#ea580c">${clickFn('inst_pending', 'Installation Pending', instPend)}</td>
             <td style="${cellStyle} font-weight:700; color:#6366f1">${clickFn('installed', 'Installed (By Inst. Date)', inst)}</td>
+            <td style="${cellStyle} font-weight:600; color:#ea580c">${clickFn('bal_pending', 'Balance Pending', balPend)}</td>
+            <td style="${cellStyle} font-weight:600; color:#8b5cf6">${clickFn('subsidy_pending', 'Subsidy Pending', subPend)}</td>
             <td style="${cellStyle} font-weight:700; color:#4f46e5">${clickFn('completed', 'Completed', comp)}</td>
             <td style="${cellStyle} font-weight:700; color:#7c3aed">${compSubPct !== '—' ? compSubPct + '%' : '—'}</td>
             <td style="${cellStyle} font-weight:700; color:#6366f1; white-space:nowrap">${clickValFn('completed', 'Completed Value', compVal)}</td>
@@ -1584,8 +1591,6 @@ function renderTrendTable(containerId, rows){
 
             <!-- IN PROGRESS -->
             <td style="${cellStyle} font-weight:700; color:#f97316">${clickFn('in_progress', 'In Progress (Inst->Subsidy)', inProg)}</td>
-            <td style="${cellStyle} font-weight:600; color:#ea580c">${clickFn('inst_pending', 'Installation Pending', instPend)}</td>
-            <td style="${cellStyle} font-weight:600; color:#ea580c">${clickFn('bal_pending', 'Balance Pending', balPend)}</td>
             <td style="${cellStyle} font-weight:700; color:#f97316; white-space:nowrap">${clickValFn('in_progress', 'In Progress Value', inProgVal)}</td>
           </tr>`;
         }).join('')}

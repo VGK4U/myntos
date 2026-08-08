@@ -7615,6 +7615,18 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // System Architecture View Route (/ach, /arch, /architecture)
+  if (reqPathLower === '/ach' || reqPathLower === '/arch' || reqPathLower === '/architecture' || reqPathLower === '/staff/architecture') {
+    const filePath = path.join(__dirname, 'architecture_view.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.toString().replace(/\?v=\d+/g, `?v=${BUILD_ID}`);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
+  }
+
   // Direct APK / Mobile App Download Handling (Fixes 302 infinite loop and 404s)
   const isApkDownload = [
     '/mobile.app', '/mobile.apk', '/download/mobile.app', '/download/mobile.apk',
@@ -18969,6 +18981,15 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.toLowerCase() === '/mnruserguide' || url.toLowerCase().startsWith('/mnruserguide?')) {
     const filePath = path.join(__dirname, 'mnr_user_guide.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
+  } else if (url.toLowerCase() === '/ach' || url.toLowerCase().startsWith('/ach?') || url.toLowerCase() === '/arch' || url.toLowerCase().startsWith('/arch?') || url.toLowerCase() === '/architecture' || url.toLowerCase().startsWith('/architecture?') || url.toLowerCase() === '/staff/architecture' || url.toLowerCase().startsWith('/staff/architecture?')) {
+    const filePath = path.join(__dirname, 'architecture_view.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`);
