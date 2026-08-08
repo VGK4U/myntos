@@ -5392,8 +5392,8 @@ async function generateMemberPoster(partnerId) {
     document.getElementById('postCustomer').value = customerName;
     document.getElementById('postLocation').value = location;
     document.getElementById('postSeniorName').value = seniorName;
-    const paidL1Count = entries.filter(e => e.level === 1 && (e.status === 'PAID' || e.status === 'RELEASED') && e.income_date === selectedDate).length;
-    document.getElementById('postSeniorToday').value = '₹' + _meFormatInr(paidL1Count * 500) + '/-';
+    const activeL1Count = entries.filter(e => e.level === 1 && e.status !== 'CANCELLED' && e.income_date === window._currentSelectedDate).length;
+    document.getElementById('postSeniorToday').value = '₹' + _meFormatInr(activeL1Count * 500) + '/-';
     document.getElementById('postSeniorEarning').value = seniorEarning;
     const postSeniorPot = document.getElementById('postSeniorPotential');
     if (postSeniorPot) {
@@ -5469,14 +5469,16 @@ function recalculateTodayPayout() {
       const amt = e.commission_amount || 0;
       if (e.kind === 'ADVANCE' || e.kind === 'DVR_ADVANCE') {
         stage1Amt += amt;
-      } else if (e.kind === 'COMMISSION' || e.kind === 'SENIOR_COMM') {
+      } else if (e.kind === 'COMMISSION' || e.kind === 'SENIOR_COMM' || e.level === 2) {
         stage2Amt += amt;
       } else if (e.kind === 'SLAB_BONUS') {
         bonanzaAmt += amt;
       } else if (e.kind === 'EXTRA_COMMISSION') {
         extraAmt += amt;
-      } else {
+      } else if (e.level === 1) {
         stage1Amt += amt;
+      } else {
+        stage2Amt += amt;
       }
     }
   });
