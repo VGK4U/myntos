@@ -3723,6 +3723,28 @@ async def get_my_menus(
         if current_user.department_id in (1, 13) or _emp_code_upper.startswith(('MN', 'MR')) or _staff_type_upper in ('MN_STAFF', 'MYNTREAL'):
             _dept_auto_codes.add('MNR_BANK_WISE_LEADS')
 
+        # DC Protocol Aug 2026: Team A (Sales & Core Lead Handlers) auto-grant
+        # Any employee assigned to Team A automatically receives full visibility to all Sales & CRM menus
+        _team_tag_lower = (current_user.team_tag or '').lower()
+        if _team_tag_lower == 'team_a':
+            _dept_auto_codes.update([
+                'staff_solar_leads',
+                'mnr_solar_leads',
+                'staff_crm_solar_leads',
+                'MNR_BANK_WISE_LEADS',
+                'staff_bank_wise_leads',
+                'staff_auto_dialer',
+                'staff_dialer',
+                'staff_leads_master',
+                'staff_my_leads',
+                'staff_team_leads',
+                'staff_lead_overview',
+                'staff_crm_dashboard',
+                'staff_vgk_members',
+                'vgk_members',
+                'VGK_TEAM_MEMBERS'
+            ])
+
         # DC Protocol Aug 2026: Explicit menu grants for MN10009 and MN10008
         if _emp_code_upper == 'MN10009':
             _dept_auto_codes.update(['VGK_TEAM_MEMBERS', 'staff_solar_leads', 'mnr_solar_leads', 'MNR_BANK_WISE_LEADS'])
