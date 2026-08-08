@@ -16,7 +16,7 @@
   <style>
     *{box-sizing:border-box}
     body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f3f4f6;min-height:100vh;margin:0;padding-top:60px}
-    .content-area{padding:16px;max-width:1600px;margin:0 auto}
+    .content-area{padding:16px;max-width:1650px;margin:0 auto}
     
     .page-banner{background:linear-gradient(135deg,#1e3a5f,#0f2240);border-radius:10px;padding:14px 20px;margin-bottom:14px;color:white;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
     .page-banner h1{font-size:17px;font-weight:700;margin:0;display:flex;align-items:center;gap:8px}
@@ -32,7 +32,7 @@
     .form-select-sm, .form-control-sm{font-size:11.5px;border-radius:6px;border:1px solid #d1d5db;height:32px}
 
     .table-wrap{background:white;border-radius:8px;border:1px solid #e5e7eb;overflow-x:auto;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
-    table.bank-table{width:100%;border-collapse:collapse;font-size:11px;min-width:1300px}
+    table.bank-table{width:100%;border-collapse:collapse;font-size:11px;min-width:1400px}
     table.bank-table th{background:#1e3a5f;color:white;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:8px 10px;white-space:nowrap;border-bottom:1px solid #0f2240}
     table.bank-table td{padding:8px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle;white-space:nowrap;color:#1f2937}
     table.bank-table tr:hover td{background:#f0f6ff}
@@ -59,7 +59,7 @@
       <div class="page-banner">
         <div>
           <h1><i class="fas fa-university"></i> Bank Wise Files & Pipeline Sorter</h1>
-          <p>Track all solar leads under bank stage, sorted by Ground Source & Stage Days duration (Descending)</p>
+          <p>Sorted by Ground Source (1st) & Stage Days Descending (2nd)</p>
         </div>
         <div id="accessBadgeContainer">
           <span class="badge-staff"><i class="fas fa-user-shield me-1"></i>Checking Access Rights...</span>
@@ -98,9 +98,9 @@
           <div class="col-md-3">
             <div class="filter-label">Sort By</div>
             <select id="sortSelect" class="form-select form-select-sm" onchange="loadBankLeads()">
-              <option value="stage_days_desc">Stage Days (Highest to Lowest) ▼</option>
-              <option value="stage_days_asc">Stage Days (Lowest to Highest) ▲</option>
-              <option value="member">Ground Source (A - Z)</option>
+              <option value="stage_days_desc">1st Ground Source, 2nd Stage Days (Desc) ▼</option>
+              <option value="stage_days_only">Stage Days Only (Highest to Lowest)</option>
+              <option value="stage_days_asc">Stage Days Only (Lowest to Highest)</option>
               <option value="bank">Bank Name (A - Z)</option>
               <option value="deal_value">Deal Value (Highest to Lowest)</option>
               <option value="customer_name">Customer Name (A - Z)</option>
@@ -119,7 +119,7 @@
         </div>
       </div>
 
-      <!-- Desktop Data Table (1st Col: Ground Source, 2nd Col: Stage Days) -->
+      <!-- Desktop Data Table (1st Col: Ground Source, 2nd Col: Stage Days, 3rd Col: Bank Name, 4th Col: Branch) -->
       <div class="d-none d-md-block table-wrap">
         <table class="bank-table">
           <thead>
@@ -127,6 +127,8 @@
               <th style="width:30px;text-align:center">#</th>
               <th style="color:#fbbf24">Ground Source</th>
               <th style="color:#38bdf8;text-align:center">Stage Days ▼</th>
+              <th style="color:#34d399">Bank Name</th>
+              <th style="color:#a7f3d0">Branch</th>
               <th style="color:#ffffff">Lead Name</th>
               <th>Contact</th>
               <th style="color:#60a5fa">Stage</th>
@@ -136,12 +138,11 @@
               <th style="color:#f87171">Google Maps</th>
               <th>Telecaller</th>
               <th>Field Staff</th>
-              <th style="color:#34d399">Bank & Branch</th>
               <th style="text-align:right">Deal Value</th>
             </tr>
           </thead>
           <tbody id="bankTableBody">
-            <tr><td colspan="14" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading Bank Files...</td></tr>
+            <tr><td colspan="15" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading Bank Files...</td></tr>
           </tbody>
         </table>
       </div>
@@ -195,11 +196,11 @@
           renderDesktopTable(data.leads);
           renderMobileCards(data.leads);
         } else {
-          document.getElementById('bankTableBody').innerHTML = `<tr><td colspan="14" class="text-center text-danger py-4">Failed to load bank files.</td></tr>`;
+          document.getElementById('bankTableBody').innerHTML = `<tr><td colspan="15" class="text-center text-danger py-4">Failed to load bank files.</td></tr>`;
         }
       } catch (err) {
         console.error("Error fetching bank leads:", err);
-        document.getElementById('bankTableBody').innerHTML = `<tr><td colspan="14" class="text-center text-danger py-4">Error loading bank files. Please refresh.</td></tr>`;
+        document.getElementById('bankTableBody').innerHTML = `<tr><td colspan="15" class="text-center text-danger py-4">Error loading bank files. Please refresh.</td></tr>`;
       }
     }
 
@@ -263,7 +264,7 @@
     function renderDesktopTable(leads) {
       const tbody = document.getElementById('bankTableBody');
       if (!leads || leads.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="14" class="text-center text-muted py-4">No bank files match current filter criteria.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="15" class="text-center text-muted py-4">No bank files match current filter criteria.</td></tr>`;
         return;
       }
 
@@ -279,6 +280,8 @@
           <td style="text-align:center;color:#9ca3af;font-weight:600">${idx + 1}</td>
           <td style="font-weight:700;color:#d97706">${esc(l.ground_source_name)}</td>
           <td style="text-align:center"><span class="days-badge ${dayClass}">${l.stage_days} Days</span></td>
+          <td><strong style="color:#059669">${esc(l.bank_name)}</strong></td>
+          <td><small class="text-muted">${esc(l.bank_branch)}</small></td>
           <td style="font-weight:600;color:#1e293b">${esc(l.customer_name)}</td>
           <td><a href="tel:${esc(l.phone_number)}" style="color:#2563eb;text-decoration:none;font-weight:600"><i class="fas fa-phone-alt me-1"></i>${esc(l.phone_number)}</a></td>
           <td><span style="display:inline-block;padding:2px 8px;border-radius:12px;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;font-size:10px;font-weight:700">At Bank</span></td>
@@ -290,7 +293,6 @@
           </td>
           <td style="color:#475569">${esc(l.telecaller_name)}</td>
           <td style="color:#475569">${esc(l.field_staff_name)}</td>
-          <td><strong style="color:#059669">${esc(l.bank_name)}</strong><br><small class="text-muted">${esc(l.bank_branch)}</small></td>
           <td style="text-align:right;font-weight:700;color:#047857">${valText}</td>
         </tr>`;
       });
@@ -324,7 +326,7 @@
 
           <div class="row g-2 mb-2 small">
             <div class="col-6">
-              <span class="text-muted">Bank:</span> <strong style="color:#059669">${esc(l.bank_name)}</strong>
+              <span class="text-muted">Bank:</span> <strong style="color:#059669">${esc(l.bank_name)} (${esc(l.bank_branch)})</strong>
             </div>
             <div class="col-6 text-end">
               <span class="text-muted">Value:</span> <strong style="color:#047857">${valText}</strong>

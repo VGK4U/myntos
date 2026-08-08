@@ -3340,20 +3340,23 @@ def get_bank_wise_leads(
         })
         
     # Sort leads based on sort_by query parameter
-    if sort_by == 'stage_days_desc':
+    if sort_by in ('stage_days_desc', 'member_days_desc', 'default'):
+        # Primary: Ground Source (A-Z), Secondary: Stage Days (Highest to Lowest)
+        processed_leads.sort(key=lambda x: (x['ground_source_name'].lower(), -x['stage_days']))
+    elif sort_by == 'stage_days_only':
         processed_leads.sort(key=lambda x: x['stage_days'], reverse=True)
     elif sort_by == 'stage_days_asc':
         processed_leads.sort(key=lambda x: x['stage_days'])
     elif sort_by == 'member':
-        processed_leads.sort(key=lambda x: x['ground_source_name'].lower())
+        processed_leads.sort(key=lambda x: (x['ground_source_name'].lower(), -x['stage_days']))
     elif sort_by == 'bank':
-        processed_leads.sort(key=lambda x: x['bank_name'].lower())
+        processed_leads.sort(key=lambda x: (x['bank_name'].lower(), -x['stage_days']))
     elif sort_by == 'deal_value':
         processed_leads.sort(key=lambda x: x['deal_value'], reverse=True)
     elif sort_by == 'customer_name':
         processed_leads.sort(key=lambda x: x['customer_name'].lower())
     else:
-        processed_leads.sort(key=lambda x: x['stage_days'], reverse=True)
+        processed_leads.sort(key=lambda x: (x['ground_source_name'].lower(), -x['stage_days']))
         
     # Format bank summary list
     bank_summary = [
