@@ -3187,6 +3187,9 @@ def get_bank_wise_leads(
     sort_by: Optional[str] = Query("stage_days_desc", description="stage_days_desc, stage_days_asc, member, bank, deal_value, customer_name"),
     search: Optional[str] = Query(None, description="Search by customer name, phone, district, branch"),
     member_filter: Optional[str] = Query(None, description="Filter by Ground Source or Handler member name"),
+    telecaller_filter: Optional[str] = Query(None, description="Filter by Telecaller Name"),
+    ground_support_filter: Optional[str] = Query(None, description="Filter by Ground Support / Field Staff Name"),
+    uport_staff_filter: Optional[str] = Query(None, description="Filter by Up-port / Handler Staff Name"),
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
@@ -3210,15 +3213,30 @@ def get_bank_wise_leads(
     MANAGER_NAMES = ['raju', 'bhoolakshmi', 'yaswanth', 'jagan', 'jagannadh']
     MANAGER_CODES = ['MR10001', 'ADMIN', 'VGK4U']
     
-    is_manager = (
-        is_admin or
-        is_leader or
-        emp_code in MANAGER_CODES or
-        any(m_name in emp_name for m_name in MANAGER_NAMES) or
-        (getattr(current_employee, 'role', '') or '').upper() in ['ADMIN', 'MANAGER', 'DIRECTOR', 'EXECUTIVE']
+    dept_id = getattr(current_employee, 'department_id', None)
+    dept_obj = getattr(current_employee, 'department', None)
+    dept_name = (getattr(dept_obj, 'name', '') or '').lower() if dept_obj else ''
+    designation = (getattr(current_employee, 'designation', '') or '').lower()
+    
+    is_sales_or_leadership = (
+        dept_id in [1, 13] or
+        any(k in dept_name for k in ['sales', 'management', 'leadership']) or
+        any(k in designation for k in ['sales', 'telecaller', 'executive'])
     )
     
-    # Query all leads in At Bank / pending_with_bank stage
+    role_obj = getattr(current_employee, 'role', None)
+    role_str = (getattr(role_obj, 'role_code', '') or getattr(role_obj, 'role_name', '') or (role_obj if isinstance(role_obj, str) else '') or '').upper()
+
+    # Manager / Full View Access: Key Leadership (dept 1), Sales (dept 13), MR10001, MN10003
+    is_manager = False
+    if dept_id in (1, 13) or emp_code in ('MR10001', 'MN10003') or 'sales' in dept_name or 'management' in dept_name:
+        is_manager = True
+    elif getattr(current_employee, 'staff_type', None) in ('VGK4U', 'VGK4U Supreme'):
+        is_manager = True
+    elif getattr(current_employee, 'role', None) and getattr(current_employee.role, 'role_code', '') in ('key_leadership', 'sales', 'ea', 'supreme'):
+        is_manager = True
+        
+    # 2. Base Query for Bank Files (pipeline status contains 'bank' or 'At Bank')
     query = db.query(CRMLead).filter(
         or_(
             CRMLead.solar_pipeline_status.ilike('%bank%'),
@@ -3234,13 +3252,13 @@ def get_bank_wise_leads(
         
     # Non-manager restricted access filter
     if not is_manager:
+        emp_id_str = str(emp_id)
         query = query.filter(
             or_(
-                CRMLead.handler_id == emp_id,
-                CRMLead.mnr_handler_id == emp_id,
+                CRMLead.handler_id == emp_id_str,
                 CRMLead.telecaller_id == emp_id,
                 CRMLead.field_staff_id == emp_id,
-                CRMLead.created_by_id == emp_id
+                CRMLead.created_by_id == emp_id_str
             )
         )
         
@@ -3282,13 +3300,22 @@ def get_bank_wise_leads(
     leads = query.all()
     now_dt = datetime.now()
     
-    # Pre-fetch staff employee map for telecaller and field staff resolution
-    staff_map = {s.id: s.full_name for s in db.query(StaffEmployee.id, StaffEmployee.full_name).all()}
+    # Pre-fetch staff employee map for telecaller, field staff, and handler resolution
+    staff_map = {}
+    for s in db.query(StaffEmployee.id, StaffEmployee.emp_code, StaffEmployee.full_name).all():
+        staff_map[s.id] = s.full_name
+        staff_map[str(s.id)] = s.full_name
+        if s.emp_code:
+            staff_map[s.emp_code.upper()] = s.full_name
+            staff_map[s.emp_code.lower()] = s.full_name
     
     # Process leads and calculate Stage Days dynamically
     processed_leads = []
     bank_counts = {}
     member_set = set()
+    telecaller_set = set()
+    ground_support_set = set()
+    uport_staff_set = set()
     total_deal_value = 0.0
     
     for lead in leads:
@@ -3323,9 +3350,20 @@ def get_bank_wise_leads(
         g_source = lead.source_ref_name or lead.guru_name or lead.source_details or 'Direct'
         member_set.add(g_source)
         
-        # Resolve Telecaller and Field Staff names
+        # Resolve Telecaller, Ground Support (Field Staff), and Up-port Staff names
         tc_name = staff_map.get(lead.telecaller_id) or getattr(lead, 'telecaller_supported', None) or '—'
         fs_name = staff_map.get(lead.field_staff_id) or getattr(lead, 'field_support_ref_name', None) or '—'
+        
+        # Up-port Staff resolution (handler_id or created_by_id or assigned staff)
+        u_name = '—'
+        if lead.handler_id:
+            u_name = staff_map.get(lead.handler_id) or staff_map.get(str(lead.handler_id)) or str(lead.handler_id)
+        elif lead.created_by_id:
+            u_name = staff_map.get(lead.created_by_id) or staff_map.get(str(lead.created_by_id)) or str(lead.created_by_id)
+            
+        if tc_name and tc_name != '—': telecaller_set.add(tc_name)
+        if fs_name and fs_name != '—': ground_support_set.add(fs_name)
+        if u_name and u_name != '—': uport_staff_set.add(u_name)
         
         processed_leads.append({
             'id': lead.id,
@@ -3338,7 +3376,9 @@ def get_bank_wise_leads(
             'stage_updated_at': s_date_dt.isoformat() if s_date_dt else None,
             'ground_source_name': g_source,
             'telecaller_name': tc_name,
+            'ground_support_name': fs_name,
             'field_staff_name': fs_name,
+            'uport_staff_name': u_name,
             'brand_name': getattr(lead, 'brand_name', None) or '—',
             'area': lead.area or '—',
             'city_district': f"{lead.city or ''}, {lead.state or ''}".strip(', ') or '—',
@@ -3347,6 +3387,21 @@ def get_bank_wise_leads(
             'remarks': getattr(lead, 'description', '') or '',
             'google_maps_url': lead.google_maps_link or f"https://www.google.com/maps/search/?api=1&query={lead.name}+{lead.city}"
         })
+
+    # Apply Telecaller Filter
+    if telecaller_filter and telecaller_filter.strip() and not telecaller_filter.strip().lower().startswith('all'):
+        clean_tc = telecaller_filter.strip()
+        processed_leads = [l for l in processed_leads if clean_tc.lower() in l['telecaller_name'].lower()]
+
+    # Apply Ground Support Filter
+    if ground_support_filter and ground_support_filter.strip() and not ground_support_filter.strip().lower().startswith('all'):
+        clean_gs = ground_support_filter.strip()
+        processed_leads = [l for l in processed_leads if clean_gs.lower() in l['ground_support_name'].lower()]
+
+    # Apply Up-port Staff Filter
+    if uport_staff_filter and uport_staff_filter.strip() and not uport_staff_filter.strip().lower().startswith('all'):
+        clean_up = uport_staff_filter.strip()
+        processed_leads = [l for l in processed_leads if clean_up.lower() in l['uport_staff_name'].lower()]
         
     # Sort leads based on sort_by query parameter
     if sort_by in ('stage_days_desc', 'member_days_desc', 'default'):
@@ -3385,6 +3440,9 @@ def get_bank_wise_leads(
         'total_bank_deal_value': total_deal_value,
         'bank_summary': bank_summary,
         'unique_members': sorted(list(member_set)),
+        'unique_telecallers': sorted(list(telecaller_set)),
+        'unique_ground_supports': sorted(list(ground_support_set)),
+        'unique_uport_staff': sorted(list(uport_staff_set)),
         'leads': processed_leads
     }
 

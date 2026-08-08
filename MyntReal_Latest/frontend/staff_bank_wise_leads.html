@@ -167,32 +167,55 @@
             <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Name, Phone, District, Branch..." onkeyup="loadBankLeads()">
           </div>
         </div>
+
+        <!-- Row 2: Secondary Role Filters -->
+        <div class="row g-2 mt-1">
+          <div class="col-md-4">
+            <div class="filter-label"><i class="fas fa-headset text-info me-1"></i>Tele Caller</div>
+            <select id="telecallerSelect" class="form-select form-select-sm" onchange="loadBankLeads()">
+              <option value="ALL">All Tele Callers</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <div class="filter-label"><i class="fas fa-user-gear text-emerald me-1" style="color:#10b981"></i>Ground Support Staff</div>
+            <select id="groundSupportSelect" class="form-select form-select-sm" onchange="loadBankLeads()">
+              <option value="ALL">All Ground Support Staff</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <div class="filter-label"><i class="fas fa-user-tie text-purple me-1" style="color:#a855f7"></i>Up-port Staff</div>
+            <select id="uportStaffSelect" class="form-select form-select-sm" onchange="loadBankLeads()">
+              <option value="ALL">All Up-port Staff</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <!-- Prominent Left-to-Right Scrollable Desktop Data Table (min-width: 2200px) -->
+      <!-- Prominent Left-to-Right Scrollable Desktop Data Table (min-width: 2400px) -->
       <div class="d-none d-md-block table-wrap">
         <table class="bank-table">
           <thead>
             <tr>
               <th style="width:40px;text-align:center" onclick="sortTableByHeader('id')"># <span id="sicon_id" class="sort-icon">⇅</span></th>
-              <th style="color:#fbbf24;min-width:200px" onclick="sortTableByHeader('ground_source_name')">Ground Source <span id="sicon_ground_source_name" class="sort-icon active">▲</span></th>
-              <th style="color:#38bdf8;text-align:center;min-width:120px" onclick="sortTableByHeader('stage_days')">Stage Days <span id="sicon_stage_days" class="sort-icon">⇅</span></th>
-              <th style="color:#34d399;min-width:180px" onclick="sortTableByHeader('bank_name')">Bank Name <span id="sicon_bank_name" class="sort-icon">⇅</span></th>
-              <th style="color:#a7f3d0;min-width:180px" onclick="sortTableByHeader('bank_branch')">Branch <span id="sicon_bank_branch" class="sort-icon">⇅</span></th>
-              <th style="color:#ffffff;min-width:220px" onclick="sortTableByHeader('customer_name')">Lead Name <span id="sicon_customer_name" class="sort-icon">⇅</span></th>
-              <th style="min-width:140px" onclick="sortTableByHeader('phone_number')">Contact <span id="sicon_phone_number" class="sort-icon">⇅</span></th>
-              <th style="color:#38bdf8;min-width:200px" onclick="sortTableByHeader('telecaller_name')">Telecaller <span id="sicon_telecaller_name" class="sort-icon">⇅</span></th>
-              <th style="color:#60a5fa;min-width:110px" onclick="sortTableByHeader('stage')">Stage <span id="sicon_stage" class="sort-icon">⇅</span></th>
-              <th style="color:#c084fc;min-width:130px" onclick="sortTableByHeader('brand_name')">Brand <span id="sicon_brand_name" class="sort-icon">⇅</span></th>
-              <th style="min-width:140px" onclick="sortTableByHeader('area')">Area <span id="sicon_area" class="sort-icon">⇅</span></th>
-              <th style="min-width:180px" onclick="sortTableByHeader('city_district')">City / District <span id="sicon_city_district" class="sort-icon">⇅</span></th>
+              <th style="color:#fbbf24;min-width:180px" onclick="sortTableByHeader('ground_source_name')">Ground Source <span id="sicon_ground_source_name" class="sort-icon active">▲</span></th>
+              <th style="color:#34d399;min-width:180px" onclick="sortTableByHeader('ground_support_name')"><i class="fas fa-user-gear me-1"></i>Ground Support <span id="sicon_ground_support_name" class="sort-icon">⇅</span></th>
+              <th style="color:#38bdf8;text-align:center;min-width:110px" onclick="sortTableByHeader('stage_days')">Stage Days <span id="sicon_stage_days" class="sort-icon">⇅</span></th>
+              <th style="color:#34d399;min-width:160px" onclick="sortTableByHeader('bank_name')">Bank Name <span id="sicon_bank_name" class="sort-icon">⇅</span></th>
+              <th style="color:#a7f3d0;min-width:160px" onclick="sortTableByHeader('bank_branch')">Branch <span id="sicon_bank_branch" class="sort-icon">⇅</span></th>
+              <th style="color:#ffffff;min-width:200px" onclick="sortTableByHeader('customer_name')">Lead Name <span id="sicon_customer_name" class="sort-icon">⇅</span></th>
+              <th style="min-width:130px" onclick="sortTableByHeader('phone_number')">Contact <span id="sicon_phone_number" class="sort-icon">⇅</span></th>
+              <th style="color:#38bdf8;min-width:180px" onclick="sortTableByHeader('telecaller_name')">Telecaller <span id="sicon_telecaller_name" class="sort-icon">⇅</span></th>
+              <th style="color:#c084fc;min-width:180px" onclick="sortTableByHeader('uport_staff_name')"><i class="fas fa-user-tie me-1"></i>Up-port Staff <span id="sicon_uport_staff_name" class="sort-icon">⇅</span></th>
+              <th style="color:#60a5fa;min-width:100px" onclick="sortTableByHeader('stage')">Stage <span id="sicon_stage" class="sort-icon">⇅</span></th>
+              <th style="color:#c084fc;min-width:120px" onclick="sortTableByHeader('brand_name')">Brand <span id="sicon_brand_name" class="sort-icon">⇅</span></th>
+              <th style="min-width:130px" onclick="sortTableByHeader('area')">Area <span id="sicon_area" class="sort-icon">⇅</span></th>
+              <th style="min-width:160px" onclick="sortTableByHeader('city_district')">City / District <span id="sicon_city_district" class="sort-icon">⇅</span></th>
               <th style="color:#f87171;cursor:default;min-width:110px">Google Maps</th>
-              <th style="color:#818cf8;min-width:200px" onclick="sortTableByHeader('field_staff_name')">Field Staff <span id="sicon_field_staff_name" class="sort-icon">⇅</span></th>
-              <th style="text-align:right;min-width:140px" onclick="sortTableByHeader('deal_value')">Deal Value <span id="sicon_deal_value" class="sort-icon">⇅</span></th>
+              <th style="text-align:right;min-width:130px" onclick="sortTableByHeader('deal_value')">Deal Value <span id="sicon_deal_value" class="sort-icon">⇅</span></th>
             </tr>
           </thead>
           <tbody id="bankTableBody">
-            <tr><td colspan="15" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading Bank Files...</td></tr>
+            <tr><td colspan="16" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading Bank Files...</td></tr>
           </tbody>
         </table>
       </div>
@@ -227,6 +250,9 @@
             const bank = document.getElementById('bankSelect').value;
             const sortBy = document.getElementById('sortSelect').value;
             const member = document.getElementById('memberSelect').value;
+            const telecaller = document.getElementById('telecallerSelect').value;
+            const groundSupport = document.getElementById('groundSupportSelect').value;
+            const uportStaff = document.getElementById('uportStaffSelect').value;
             const search = document.getElementById('searchInput').value;
 
             const queryParams = new URLSearchParams({
@@ -235,6 +261,9 @@
 
             if (bank && bank !== 'ALL') queryParams.append('bank_name', bank);
             if (member && member !== 'ALL') queryParams.append('member_filter', member);
+            if (telecaller && telecaller !== 'ALL') queryParams.append('telecaller_filter', telecaller);
+            if (groundSupport && groundSupport !== 'ALL') queryParams.append('ground_support_filter', groundSupport);
+            if (uportStaff && uportStaff !== 'ALL') queryParams.append('uport_staff_filter', uportStaff);
             if (search && search.trim() !== '') queryParams.append('search', search.trim());
 
             try {
@@ -248,14 +277,17 @@
                     renderMetrics(data);
                     populateBankDropdown(data.bank_summary, bank);
                     populateMemberDropdown(data.unique_members, member);
+                    populateTelecallerDropdown(data.unique_telecallers, telecaller);
+                    populateGroundSupportDropdown(data.unique_ground_supports, groundSupport);
+                    populateUportStaffDropdown(data.unique_uport_staff, uportStaff);
                     renderDesktopTable(globalBankLeads);
                     renderMobileCards(globalBankLeads);
                 } else {
-                    document.getElementById('bankTableBody').innerHTML = `<tr><td colspan="15" class="text-center text-danger py-4">Failed to load bank files.</td></tr>`;
+                    document.getElementById('bankTableBody').innerHTML = `<tr><td colspan="16" class="text-center text-danger py-4">Failed to load bank files.</td></tr>`;
                 }
             } catch (err) {
                 console.error("Error fetching bank leads:", err);
-                document.getElementById('bankTableBody').innerHTML = `<tr><td colspan="15" class="text-center text-danger py-4">Error loading bank files. Please refresh.</td></tr>`;
+                document.getElementById('bankTableBody').innerHTML = `<tr><td colspan="16" class="text-center text-danger py-4">Error loading bank files. Please refresh.</td></tr>`;
             }
         }
 
@@ -307,9 +339,9 @@
         function renderAccessBadge(isManager, user) {
             const container = document.getElementById('accessBadgeContainer');
             if (isManager) {
-                container.innerHTML = `<span class="badge-manager"><i class="fas fa-crown me-1"></i>Manager Access (${user.name}) — Full View</span>`;
+                container.innerHTML = `<span class="badge-manager"><i class="fas fa-crown me-1"></i>Sales & Leadership Access (${user.name}) — Full View</span>`;
             } else {
-                container.innerHTML = `<span class="badge-staff"><i class="fas fa-user-check me-1"></i>Staff Access (${user.name}) — Assigned Files</span>`;
+                container.innerHTML = `<span class="badge-staff"><i class="fas fa-user-check me-1"></i>Restricted View (${user.name}) — Assigned Files Only</span>`;
             }
         }
 
@@ -356,6 +388,42 @@
             sel.innerHTML = html;
         }
 
+        function populateTelecallerDropdown(telecallers, currentSelected) {
+            const sel = document.getElementById('telecallerSelect');
+            let html = `<option value="ALL">All Tele Callers</option>`;
+            if (telecallers) {
+                telecallers.forEach(t => {
+                    const selected = (t === currentSelected) ? 'selected' : '';
+                    html += `<option value="${t}" ${selected}>${t}</option>`;
+                });
+            }
+            sel.innerHTML = html;
+        }
+
+        function populateGroundSupportDropdown(supports, currentSelected) {
+            const sel = document.getElementById('groundSupportSelect');
+            let html = `<option value="ALL">All Ground Support Staff</option>`;
+            if (supports) {
+                supports.forEach(s => {
+                    const selected = (s === currentSelected) ? 'selected' : '';
+                    html += `<option value="${s}" ${selected}>${s}</option>`;
+                });
+            }
+            sel.innerHTML = html;
+        }
+
+        function populateUportStaffDropdown(uports, currentSelected) {
+            const sel = document.getElementById('uportStaffSelect');
+            let html = `<option value="ALL">All Up-port Staff</option>`;
+            if (uports) {
+                uports.forEach(u => {
+                    const selected = (u === currentSelected) ? 'selected' : '';
+                    html += `<option value="${u}" ${selected}>${u}</option>`;
+                });
+            }
+            sel.innerHTML = html;
+        }
+
         function esc(str) {
             if (!str) return '—';
             return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -364,7 +432,7 @@
         function renderDesktopTable(leads) {
             const tbody = document.getElementById('bankTableBody');
             if (!leads || leads.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="15" class="text-center text-muted py-4">No bank files match current filter criteria.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="16" class="text-center text-muted py-4">No bank files match current filter criteria.</td></tr>`;
                 return;
             }
 
@@ -375,16 +443,20 @@
                 else if (l.stage_days >= 30) dayClass = 'days-mid';
 
                 const valText = l.deal_value ? `₹${(l.deal_value / 100000).toFixed(2)}L` : '—';
+                const gsStaffName = l.ground_support_name || l.field_staff_name || '—';
+                const upStaffName = l.uport_staff_name || '—';
 
                 html += `<tr>
                     <td style="text-align:center;color:#9ca3af;font-weight:600">${idx + 1}</td>
                     <td style="font-weight:700;color:#d97706">${esc(l.ground_source_name)}</td>
+                    <td style="color:#059669;font-weight:600"><i class="fas fa-user-gear me-1"></i>${esc(gsStaffName)}</td>
                     <td style="text-align:center"><span class="days-badge ${dayClass}">${l.stage_days} Days</span></td>
                     <td><strong style="color:#059669">${esc(l.bank_name)}</strong></td>
                     <td><small class="text-muted">${esc(l.bank_branch)}</small></td>
                     <td style="font-weight:600;color:#1e293b">${esc(l.customer_name)}</td>
                     <td><a href="tel:${esc(l.phone_number)}" style="color:#2563eb;text-decoration:none;font-weight:600"><i class="fas fa-phone-alt me-1"></i>${esc(l.phone_number)}</a></td>
                     <td style="color:#0284c7;font-weight:600">${esc(l.telecaller_name)}</td>
+                    <td style="color:#7c3aed;font-weight:600"><i class="fas fa-user-tie me-1"></i>${esc(upStaffName)}</td>
                     <td><span style="display:inline-block;padding:2px 8px;border-radius:12px;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;font-size:10px;font-weight:700">At Bank</span></td>
                     <td style="color:#7c3aed">${esc(l.brand_name || '—')}</td>
                     <td style="color:#475569">${esc(l.area || '—')}</td>
@@ -392,7 +464,6 @@
                     <td>
                         <a href="${l.google_maps_url}" target="_blank" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:10px;font-weight:600"><i class="fas fa-map-marker-alt"></i> Maps</a>
                     </td>
-                    <td style="color:#4f46e5;font-weight:600">${esc(l.field_staff_name)}</td>
                     <td style="text-align:right;font-weight:700;color:#047857">${valText}</td>
                 </tr>`;
             });
@@ -413,6 +484,8 @@
                 else if (l.stage_days >= 30) dayClass = 'days-mid';
 
                 const valText = l.deal_value ? `₹${(l.deal_value / 100000).toFixed(2)}L` : '—';
+                const gsStaffName = l.ground_support_name || l.field_staff_name || '—';
+                const upStaffName = l.uport_staff_name || '—';
 
                 html += `<div class="mobile-card">
                     <div class="d-flex justify-content-between align-items-start mb-2">
@@ -435,7 +508,10 @@
                             <span class="text-muted">TC:</span> <strong style="color:#0284c7">${esc(l.telecaller_name)}</strong>
                         </div>
                         <div class="col-6 text-end">
-                            <span class="text-muted">FS:</span> <strong style="color:#4f46e5">${esc(l.field_staff_name)}</strong>
+                            <span class="text-muted">GS:</span> <strong style="color:#059669">${esc(gsStaffName)}</strong>
+                        </div>
+                        <div class="col-12">
+                            <span class="text-muted">Up-port:</span> <strong style="color:#7c3aed">${esc(upStaffName)}</strong>
                         </div>
                     </div>
 
