@@ -3182,7 +3182,7 @@ def get_my_leads(
 
 @router.get("/bank-wise-leads")
 def get_bank_wise_leads(
-    company_id: Optional[int] = Query(1, description="Company ID"),
+    company_id: Optional[int] = Query(None, description="Company ID (Optional - leave empty for all companies)"),
     bank_name: Optional[str] = Query(None, description="Filter by specific bank name"),
     sort_by: Optional[str] = Query("stage_days_desc", description="stage_days_desc, stage_days_asc, member, bank, deal_value, customer_name"),
     search: Optional[str] = Query(None, description="Search by customer name, phone, district, branch"),
@@ -3198,6 +3198,7 @@ def get_bank_wise_leads(
     
     Other staff members can ONLY view files assigned to them as telecaller, field staff, or ground source.
     """
+    from datetime import date as _date_cls
     staff_type = (current_employee.staff_type or '').upper()
     emp_code = (getattr(current_employee, 'emp_code', '') or '').upper()
     emp_name = (getattr(current_employee, 'full_name', '') or '').lower()
@@ -3217,28 +3218,29 @@ def get_bank_wise_leads(
         (getattr(current_employee, 'role', '') or '').upper() in ['ADMIN', 'MANAGER', 'DIRECTOR', 'EXECUTIVE']
     )
     
-    # Query all leads in At Bank stage
+    # Query all leads in At Bank / pending_with_bank stage
     query = db.query(CRMLead).filter(
         or_(
             CRMLead.solar_pipeline_status.ilike('%bank%'),
             CRMLead.status.ilike('%bank%'),
             CRMLead.solar_pipeline_status == 'At Bank',
-            CRMLead.solar_pipeline_status == 'AT_BANK'
+            CRMLead.solar_pipeline_status == 'AT_BANK',
+            CRMLead.solar_pipeline_status == 'pending_with_bank'
         )
     )
     
-    if company_id:
+    if company_id is not None:
         query = query.filter(CRMLead.company_id == company_id)
         
     # Non-manager restricted access filter
     if not is_manager:
         query = query.filter(
             or_(
-                CRMLead.handler_staff_id == emp_id,
-                CRMLead.created_by_staff_id == emp_id,
-                CRMLead.telecaller_name.ilike(f"%{current_employee.full_name}%"),
-                CRMLead.field_staff_name.ilike(f"%{current_employee.full_name}%"),
-                CRMLead.ground_source_name.ilike(f"%{current_employee.full_name}%")
+                CRMLead.handler_id == emp_id,
+                CRMLead.mnr_handler_id == emp_id,
+                CRMLead.telecaller_id == emp_id,
+                CRMLead.field_staff_id == emp_id,
+                CRMLead.created_by_id == emp_id
             )
         )
         
@@ -3247,12 +3249,14 @@ def get_bank_wise_leads(
         s_term = f"%{search}%"
         query = query.filter(
             or_(
-                CRMLead.customer_name.ilike(s_term),
-                CRMLead.phone_number.ilike(s_term),
-                CRMLead.district.ilike(s_term),
+                CRMLead.name.ilike(s_term),
+                CRMLead.phone.ilike(s_term),
+                CRMLead.city.ilike(s_term),
+                CRMLead.state.ilike(s_term),
                 CRMLead.loan_bank.ilike(s_term),
                 CRMLead.bank_branch.ilike(s_term),
-                CRMLead.ground_source_name.ilike(s_term)
+                CRMLead.source_ref_name.ilike(s_term),
+                CRMLead.guru_name.ilike(s_term)
             )
         )
         
@@ -3268,10 +3272,8 @@ def get_bank_wise_leads(
         m_term = f"%{member_filter}%"
         query = query.filter(
             or_(
-                CRMLead.ground_source_name.ilike(m_term),
-                CRMLead.telecaller_name.ilike(m_term),
-                CRMLead.field_staff_name.ilike(m_term),
-                CRMLead.senior_handler_name.ilike(m_term)
+                CRMLead.source_ref_name.ilike(m_term),
+                CRMLead.guru_name.ilike(m_term)
             )
         )
         
@@ -3292,12 +3294,18 @@ def get_bank_wise_leads(
             
         # Determine stage date (solar_pipeline_status_updated_at -> submit_date -> created_at)
         s_date = lead.solar_pipeline_status_updated_at or lead.submit_date or lead.created_at
-        s_date_ist = _to_ist_naive(s_date)
-        stage_days = (now_dt - s_date_ist).days if s_date_ist else 0
+        if isinstance(s_date, datetime):
+            s_date_dt = s_date
+        elif isinstance(s_date, _date_cls):
+            s_date_dt = datetime.combine(s_date, datetime.min.time())
+        else:
+            s_date_dt = None
+            
+        stage_days = (now_dt - s_date_dt).days if s_date_dt else 0
         if stage_days < 0:
             stage_days = 0
             
-        deal_val = float(lead.deal_value or lead.calculated_deal_value or 0.0)
+        deal_val = float(lead.deal_value_total or lead.deal_value or 0.0)
         total_deal_value += deal_val
         
         # Bank Summary aggregations
@@ -3307,27 +3315,28 @@ def get_bank_wise_leads(
         bank_counts[b_name]['deal_value'] += deal_val
         
         # Ground source / member set
-        m_name = lead.ground_source_name or lead.telecaller_name or lead.field_staff_name or 'Direct'
-        member_set.add(m_name)
+        g_source = lead.source_ref_name or lead.guru_name or lead.source_details or 'Direct'
+        member_set.add(g_source)
         
         processed_leads.append({
             'id': lead.id,
-            'customer_name': lead.customer_name or 'N/A',
-            'phone_number': lead.phone_number or '',
-            'stage': lead.solar_pipeline_status or lead.status or 'At Bank',
+            'customer_name': lead.name or 'N/A',
+            'phone_number': lead.phone or '',
+            'stage': 'At Bank',
             'bank_name': b_name,
             'bank_branch': lead.bank_branch or 'N/A',
             'stage_days': stage_days,
-            'stage_updated_at': s_date_ist.isoformat() if s_date_ist else None,
-            'ground_source_name': lead.ground_source_name or 'N/A',
-            'telecaller_name': lead.telecaller_name or 'N/A',
-            'field_staff_name': lead.field_staff_name or 'N/A',
-            'senior_handler_name': getattr(lead, 'senior_handler_name', None) or 'N/A',
-            'city_district': f"{lead.district or ''}, {lead.state or ''}".strip(', '),
+            'stage_updated_at': s_date_dt.isoformat() if s_date_dt else None,
+            'ground_source_name': g_source,
+            'telecaller_name': '—',
+            'field_staff_name': '—',
+            'brand_name': '—',
+            'area': lead.area or '—',
+            'city_district': f"{lead.city or ''}, {lead.state or ''}".strip(', ') or '—',
             'deal_value': deal_val,
-            'capacity_kw': float(lead.capacity_kw or 0.0),
-            'remarks': getattr(lead, 'remarks', '') or '',
-            'google_maps_url': f"https://www.google.com/maps/search/?api=1&query={lead.customer_name}+{lead.district}"
+            'capacity_kw': float(lead.kw_size or 0.0),
+            'remarks': getattr(lead, 'description', '') or '',
+            'google_maps_url': lead.google_maps_link or f"https://www.google.com/maps/search/?api=1&query={lead.name}+{lead.city}"
         })
         
     # Sort leads based on sort_by query parameter
