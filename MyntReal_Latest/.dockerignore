@@ -83,3 +83,7 @@ frontend/playwright-report/
 frontend/test-results/
 frontend/tests/
 frontend/public/catalog/*.pdf
+.next/
+frontend/.next/
+.cache/
+.venv/

@@ -69,14 +69,11 @@ async def app_exception_handler(request: Request, exc: AppException):
 
 async def integrity_error_handler(request: Request, exc: IntegrityError):
     """Handle database integrity errors"""
-    # Extract meaningful message from SQLAlchemy error
     error_msg = str(exc.orig) if hasattr(exc, 'orig') else str(exc)
     
-    # DEBUG: Log full error for troubleshooting
     import logging
     logger = logging.getLogger(__name__)
-    logger.error(f"IntegrityError caught: {error_msg}")
-    logger.error(f"Full exception: {exc}")
+    logger.error(f"IntegrityError caught on {request.method} {request.url.path}: {error_msg}")
     
     if 'unique constraint' in error_msg.lower() or 'duplicate' in error_msg.lower():
         message = "This record already exists. Please check for duplicates."
@@ -91,8 +88,7 @@ async def integrity_error_handler(request: Request, exc: IntegrityError):
             "success": False,
             "message": message,
             "errors": [message],
-            "error_code": "IntegrityError",
-            "debug_error": error_msg  # Include actual error in response for debugging
+            "error_code": "IntegrityError"
         }
     )
 
@@ -104,7 +100,7 @@ async def sqlalchemy_error_handler(request: Request, exc: SQLAlchemyError):
     
     error_msg = str(exc.orig) if hasattr(exc, 'orig') else str(exc)
     error_trace = traceback.format_exc()
-    logger.error(f"SQLAlchemy Error: {error_msg}")
+    logger.error(f"SQLAlchemy Error on {request.method} {request.url.path}: {error_msg}")
     logger.error(f"Full traceback: {error_trace}")
     
     return JSONResponse(
@@ -112,7 +108,7 @@ async def sqlalchemy_error_handler(request: Request, exc: SQLAlchemyError):
         content={
             "success": False,
             "message": "Database operation failed. Please try again.",
-            "errors": [error_msg],
+            "errors": ["Database operation failed."],
             "error_code": "DatabaseError"
         }
     )

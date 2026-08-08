@@ -7601,8 +7601,29 @@ const VGK_TOKEN_PROPAGATION_SCRIPT = `
 const server = http.createServer(async (req, res) => {
   // DC Protocol: Global error handler wrapper for production stability
   try {
-  const url = req.url;
-  console.log(`[REQ] ${req.method} ${url}`);
+    // Intercept writeHead to automatically append security headers
+    const _origWriteHead = res.writeHead.bind(res);
+    res.writeHead = function(statusCode, headers) {
+      try {
+        res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('X-XSS-Protection', '1; mode=block');
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        res.setHeader('Server', 'MyntOS-Gateway');
+      } catch (e) {}
+      return _origWriteHead(statusCode, headers);
+    };
+
+    const url = req.url;
+    console.log(`[REQ] ${req.method} ${url}`);
+
+    // Reject literal JS template string placeholders crawler requests
+    const rawUrlDecoded = decodeURIComponent(url);
+    if (rawUrlDecoded.includes('embedUrl') || rawUrlDecoded.includes('fallbackUrl') || rawUrlDecoded.includes('short_name') || rawUrlDecoded.includes('escHtml') || rawUrlDecoded.includes('${') || rawUrlDecoded.includes('$%7B') || rawUrlDecoded.includes("' s.")) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Resource not found');
+      return;
+    }
   const urlParts = new URL(url, `http://${getSafeHost(req)}`);
   const reqPathLower = (urlParts.pathname || '').toLowerCase();
 
