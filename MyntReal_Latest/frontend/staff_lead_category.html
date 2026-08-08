@@ -9,6 +9,7 @@
 <script src="/public/js/staff-token-manager.js"></script>
 <script src="/public/js/staff-fetch.js"></script>
 <script src="/public/js/crm-handler-confirm.js"></script>
+<script src="/public/js/mnr-map-modal.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f3f4f6;min-height:100vh}
@@ -1310,7 +1311,7 @@ function toggleExpand(leadId) {
 function buildDetailPanel(l) {
   const v=x=>x?`<span class="val">${esc(String(x))}</span>`:`<span class="val empty">—</span>`;
   const addr=[l.address,l.area,l.city,l.state,l.pincode].filter(Boolean).join(', ');
-  const mapsBtn=l.google_maps_link?`<a href="${esc(l.google_maps_link)}" target="_blank" class="maps-btn"><i class="fas fa-map-marker-alt"></i> Open Maps</a>`:`<span style="color:#d1d5db;font-size:10px;font-style:italic">No maps link</span>`;
+  const mapsBtn=(l.google_maps_link||l.latitude||addr)?`<button onclick="openLeadMapModal(${esc(JSON.stringify(l))})" class="maps-btn" style="border:none;cursor:pointer"><i class="fas fa-map-marker-alt"></i> Location Options</button>`:`<span style="color:#d1d5db;font-size:10px;font-style:italic">No maps link</span>`;
   let html=`<div class="detail-panel"><div class="detail-grid">`;
   html+=`<div class="detail-section"><h6><i class="fas fa-users me-1"></i>Handlers</h6>
     <div class="detail-field"><div class="lbl">Support/Telecaller</div><div>${v(l.telecaller_name||l.telecaller_emp_code)}</div></div>
