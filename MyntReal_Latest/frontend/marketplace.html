@@ -1236,22 +1236,26 @@ async function loadSegments(attempt){
     }
     if(!r.ok) throw new Error('HTTP '+r.status);
     const segs=await r.json();
-    if(!Array.isArray(segs)||!segs.length) return;
-    state.segments=segs;
-    // Read URL param
-    const urlSeg=new URLSearchParams(location.search).get('segment');
-    let active=segs[0];
-    if(urlSeg){ const found=segs.find(s=>s.slug===urlSeg); if(found) active=found; }
-    state.segmentId=active.id;
-    state.segmentSlug=active.slug;
-    state.segmentType=active.segment_type||'ECOM';
-    // Always show strip so users can see which catalog they're in
-    const strip=document.getElementById('segmentStrip');
-    if(strip) strip.style.display='block';
-    renderSegmentPills(segs, active.id);
-    updatePromoBanner(active);
+    if(Array.isArray(segs)&&segs.length){
+      state.segments=segs;
+      // Read URL param
+      const urlSeg=new URLSearchParams(location.search).get('segment');
+      let active=segs[0];
+      if(urlSeg){ const found=segs.find(s=>s.slug===urlSeg); if(found) active=found; }
+      state.segmentId=active.id;
+      state.segmentSlug=active.slug;
+      state.segmentType=active.segment_type||'ECOM';
+      // Always show strip so users can see which catalog they're in
+      const strip=document.getElementById('segmentStrip');
+      if(strip) strip.style.display='block';
+      renderSegmentPills(segs, active.id);
+      updatePromoBanner(active);
+    }
+  }catch(e){
+    console.error('[marketplace] loadSegments:',e);
+  }finally{
     applySegmentView();
-  }catch(e){ console.error('[marketplace] loadSegments:',e); }
+  }
 }
 
 function renderSegmentPills(segs, activeId){
@@ -1931,7 +1935,8 @@ function resetFilters(){
 }
 function debounceSearch(){
   clearTimeout(state.searchTimer);
-  state.searchTimer=setTimeout(()=>{state.search=document.getElementById('searchInput').value.trim();state.page=1;loadProducts();},380);
+  const val=(document.getElementById('searchInput')?.value || '').trim();
+  state.searchTimer=setTimeout(()=>{state.search=val;state.page=1;loadProducts();},150);
 }
 function refresh(){state.page=1;loadProducts();}
 
@@ -2891,24 +2896,28 @@ window.vgkScrollToProduct = function(id) {
 
 // Boot — DC Protocol Mar 2026: loadSegments sets state.segmentType then calls
 // applySegmentView() which routes to the correct loader (ECOM or REAL_DREAMS).
-(async () => {
+(() => {
   const urlParams = new URLSearchParams(window.location.search);
   const qCid = parseInt(urlParams.get('company_id'));
   if (qCid && !isNaN(qCid)) {
     COMPANY_ID = qCid;
     window.__MARKETPLACE_COMPANY_ID__ = COMPANY_ID;
-  } else {
-    try {
-      const r = await fetch('/api/v1/auth/me');
-      if (r.ok) {
-        const u = await r.json();
-        if (u.active_company_id) COMPANY_ID = u.active_company_id;
-        else if (u.base_company_id) COMPANY_ID = u.base_company_id;
-        window.__MARKETPLACE_COMPANY_ID__ = COMPANY_ID;
-      }
-    } catch(e) {}
   }
+  // Start segment & catalog loading immediately
   loadSegments();
+  // Non-blocking background auth check for logged-in staff company ID
+  if (!qCid) {
+    fetch('/api/v1/auth/me').then(r => r.ok ? r.json() : null).then(u => {
+      if (u) {
+        const newCid = u.active_company_id || u.base_company_id;
+        if (newCid && newCid !== COMPANY_ID) {
+          COMPANY_ID = newCid;
+          window.__MARKETPLACE_COMPANY_ID__ = COMPANY_ID;
+          loadProducts();
+        }
+      }
+    }).catch(() => {});
+  }
 })();
 </script>
 <script src="/vgk_assistant.js" defer></script>

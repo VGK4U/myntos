@@ -7646,6 +7646,17 @@ const server = http.createServer(async (req, res) => {
       res.end(html);
     });
     return;
+  }  // EV Spares & Accessories Marketplace Route (/ecom, /ecom/, /marketplace, /marketplace/)
+  if (reqPathLower === '/ecom' || reqPathLower === '/ecom/' || reqPathLower === '/marketplace' || reqPathLower === '/marketplace/') {
+    const filePath = path.join(__dirname, 'marketplace.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('Marketplace not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`);
+      html = html.replace('</body>', LEGAL_DISCLAIMER_HTML + '</body>');
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
   }
 
   // Direct APK / Mobile App Download Handling (Fixes 302 infinite loop and 404s)
@@ -19594,7 +19605,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.end(html);
     });
     return;
-  } else if (url === '/ecom' || url.startsWith('/ecom?')) {
+  } else if (url === '/ecom' || url === '/ecom/' || url.startsWith('/ecom?') || url.startsWith('/ecom/') || url.startsWith('/ecom#')) {
     const filePath = path.join(__dirname, 'marketplace.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Marketplace not found'); return; }
@@ -19604,8 +19615,8 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.end(html);
     });
     return;
-  } else if (url === '/marketplace' || url.startsWith('/marketplace?')) {
-    const _mktSuffix = url.includes('?') ? url.substring('/marketplace'.length) : '';
+  } else if (url === '/marketplace' || url === '/marketplace/' || url.startsWith('/marketplace?') || url.startsWith('/marketplace/')) {
+    const _mktSuffix = url.includes('?') ? url.substring(url.indexOf('?')) : '';
     res.writeHead(301, { 'Location': '/ecom' + _mktSuffix });
     res.end();
     return;
