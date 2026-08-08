@@ -7,24 +7,30 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link rel="stylesheet" href="/public/css/mobile-responsive.css">
+  <script src="/public/js/staff-token-manager.js"></script>
+  <script src="/public/js/staff-fetch.js"></script>
+  <script src="/staff_sidebar.js"></script>
+  <script src="/staff_header.js"></script>
+  <script src="/shared/staff_inactivity_manager.js"></script>
+  <script src="/public/js/mnr-map-modal.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding-top: 60px; }
-    .content-container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-    .metric-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px 22px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-    .metric-val { font-size: 1.6rem; font-weight: 800; color: #38bdf8; }
-    .metric-label { font-size: 0.78rem; text-transform: uppercase; font-weight: 700; color: #94a3b8; letter-spacing: 0.5px; }
-    .filter-bar { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; }
-    .form-control, .form-select { background-color: #0f172a !important; color: #ffffff !important; border: 1px solid #334155 !important; font-size: 0.88rem; }
+    .content-area { max-width: 1550px; margin: 0 auto; padding: 20px; }
+    .metric-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px 20px; margin-bottom: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    .metric-val { font-size: 1.5rem; font-weight: 800; color: #38bdf8; }
+    .metric-label { font-size: 0.76rem; text-transform: uppercase; font-weight: 700; color: #94a3b8; letter-spacing: 0.5px; }
+    .filter-bar { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 14px 18px; margin-bottom: 18px; }
+    .form-control, .form-select { background-color: #0f172a !important; color: #ffffff !important; border: 1px solid #334155 !important; font-size: 0.85rem; }
     .form-control:focus, .form-select:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important; }
     
-    .table-responsive-custom { background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
-    table.bank-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 0; }
-    table.bank-table th { background: #0f172a; color: #38bdf8; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; padding: 12px 14px; border-bottom: 2px solid #334155; white-space: nowrap; }
-    table.bank-table td { padding: 12px 14px; border-bottom: 1px solid #334155; vertical-align: middle; color: #f1f5f9; }
+    .table-responsive-custom { background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow-x: auto; box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+    table.bank-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; margin: 0; min-width: 1300px; }
+    table.bank-table th { background: #0f172a; color: #38bdf8; font-size: 0.76rem; font-weight: 800; text-transform: uppercase; padding: 10px 12px; border-bottom: 2px solid #334155; white-space: nowrap; }
+    table.bank-table td { padding: 10px 12px; border-bottom: 1px solid #334155; vertical-align: middle; color: #f1f5f9; white-space: nowrap; }
     table.bank-table tr:hover td { background: rgba(255,255,255,0.03); }
     
-    .days-badge { padding: 4px 10px; border-radius: 20px; font-weight: 800; font-size: 0.8rem; display: inline-block; }
+    .days-badge { padding: 3px 8px; border-radius: 12px; font-weight: 800; font-size: 0.78rem; display: inline-block; }
     .days-high { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
     .days-mid { background: rgba(249, 115, 22, 0.2); color: #f97316; border: 1px solid #f97316; }
     .days-normal { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid #3b82f6; }
@@ -33,20 +39,20 @@
     .staff-badge { background: #3b82f6; color: white; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.78rem; }
 
     /* Mobile Card Layout */
-    .mobile-lead-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+    .mobile-lead-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 14px; margin-bottom: 12px; }
   </style>
 </head>
 <body>
   <nav id="staffSidebar"></nav>
   <div class="main-content">
     <div id="headerContainer"></div>
-    <div class="content-container">
+    <div class="content-area">
 
       <!-- Page Title & Access Badge -->
-      <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
         <div>
           <h1 class="h4 mb-1 text-white font-weight-bold"><i class="fas fa-university text-primary me-2"></i>Bank Wise Files & Pipeline Sorter</h1>
-          <p class="text-secondary small mb-0">Track all solar leads under bank stage, sorted by Member & Stage Days duration</p>
+          <p class="text-secondary small mb-0">Track all solar leads under bank stage, sorted by Ground Source & Stage Days duration (Descending)</p>
         </div>
         <div id="accessBadgeContainer">
           <span class="staff-badge"><i class="fas fa-user-shield me-1"></i>Loading Access Rights...</span>
@@ -76,7 +82,7 @@
         <div class="col-md-3 col-6">
           <div class="metric-card">
             <div class="metric-label"><i class="fas fa-building-columns me-1"></i>Top Processing Bank</div>
-            <div class="metric-val text-warning" style="font-size: 1.1rem; line-height: 2rem;" id="metricTopBank">None</div>
+            <div class="metric-val text-warning" style="font-size: 1.1rem; line-height: 1.8rem;" id="metricTopBank">None</div>
           </div>
         </div>
       </div>
@@ -93,9 +99,9 @@
           <div class="col-md-3">
             <label class="form-label small text-secondary fw-bold">Sort By</label>
             <select id="sortSelect" class="form-select" onchange="loadBankLeads()">
-              <option value="stage_days_desc">Days in Stage (Highest to Lowest)</option>
-              <option value="stage_days_asc">Days in Stage (Lowest to Highest)</option>
-              <option value="member">Member Wise (Ground Source)</option>
+              <option value="stage_days_desc">Stage Days (Highest to Lowest) ▼</option>
+              <option value="stage_days_asc">Stage Days (Lowest to Highest) ▲</option>
+              <option value="member">Ground Source (A - Z)</option>
               <option value="bank">Bank Name (A - Z)</option>
               <option value="deal_value">Deal Value (Highest to Lowest)</option>
               <option value="customer_name">Customer Name (A - Z)</option>
@@ -114,26 +120,29 @@
         </div>
       </div>
 
-      <!-- Data Table (Desktop & Tablet) -->
+      <!-- Data Table (Executive Dashboard Modal Format: 1st Col Ground Source, 2nd Col Stage Days) -->
       <div class="d-none d-md-block table-responsive-custom">
         <table class="bank-table">
           <thead>
             <tr>
-              <th>#</th>
-              <th>Customer Name</th>
-              <th>Contact</th>
-              <th>Bank Name & Branch</th>
-              <th>Stage Days</th>
-              <th>Ground Source / Member</th>
-              <th>Telecaller</th>
-              <th>Field Staff</th>
-              <th>City / District</th>
-              <th>Deal Value</th>
-              <th>Actions</th>
+              <th style="color:#0284c7;">#</th>
+              <th style="color:#0284c7;">Ground Source</th>
+              <th style="color:#f97316;">Stage Days ▼</th>
+              <th style="color:#ffffff;">Lead Name</th>
+              <th style="color:#38bdf8;">Contact</th>
+              <th style="color:#0891b2;">Stage</th>
+              <th style="color:#7c3aed;">Brand</th>
+              <th style="color:#94a3b8;">Area</th>
+              <th style="color:#cbd5e1;">City / District</th>
+              <th style="color:#ea4335;">Google Maps</th>
+              <th style="color:#7c3aed;">Telecaller</th>
+              <th style="color:#6b7280;">Field Staff</th>
+              <th style="color:#059669;">Bank & Branch</th>
+              <th style="color:#047857; text-align:right;">Deal Value</th>
             </tr>
           </thead>
           <tbody id="bankTableBody">
-            <tr><td colspan="11" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 small text-secondary mb-0">Loading Bank Files...</p></td></tr>
+            <tr><td colspan="14" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 small text-secondary mb-0">Loading Bank Files...</p></td></tr>
           </tbody>
         </table>
       </div>
@@ -146,13 +155,13 @@
     </div>
   </div>
 
-  <script src="/public/js/staff_header.js"></script>
-  <script src="/public/js/staff_sidebar.js"></script>
   <script>
-    let globalBankLeads = [];
-
-    document.addEventListener("DOMContentLoaded", function() {
-      StaffHeader.inject('Bank Wise Files','fas fa-university');
+    document.addEventListener("DOMContentLoaded", async function() {
+      if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+      if (typeof StaffHeader !== 'undefined') {
+        StaffHeader.inject('Bank Wise Files','fas fa-university');
+        StaffHeader.init();
+      }
       loadBankLeads();
     });
 
@@ -172,7 +181,8 @@
       if (search && search.trim() !== '') queryParams.append('search', search.trim());
 
       try {
-        const res = await fetch(`/api/v1/crm/bank-wise-leads?${queryParams.toString()}`);
+        const fetchFn = (typeof staffFetch === 'function') ? staffFetch : fetch;
+        const res = await fetchFn(`/api/v1/crm/bank-wise-leads?${queryParams.toString()}`);
         const data = await res.json();
 
         if (data && data.success) {
@@ -183,10 +193,11 @@
           renderDesktopTable(data.leads);
           renderMobileCards(data.leads);
         } else {
-          document.getElementById('bankTableBody').innerHTML = `<tr><td colspan="11" class="text-center text-danger py-4">Failed to load bank files.</td></tr>`;
+          document.getElementById('bankTableBody').innerHTML = `<tr><td colspan="14" class="text-center text-danger py-4">Failed to load bank files.</td></tr>`;
         }
       } catch (err) {
         console.error("Error fetching bank leads:", err);
+        document.getElementById('bankTableBody').innerHTML = `<tr><td colspan="14" class="text-center text-danger py-4">Error loading bank files. Please check connection.</td></tr>`;
       }
     }
 
@@ -245,7 +256,7 @@
     function renderDesktopTable(leads) {
       const tbody = document.getElementById('bankTableBody');
       if (!leads || leads.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" class="text-center text-secondary py-4">No bank files match current filter criteria.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="14" class="text-center text-secondary py-4">No bank files match current filter criteria.</td></tr>`;
         return;
       }
 
@@ -259,18 +270,21 @@
 
         html += `<tr>
           <td><strong>${idx + 1}</strong></td>
+          <td><strong class="text-warning">${l.ground_source_name || '—'}</strong></td>
+          <td><span class="days-badge ${dayClass}">${l.stage_days} Days</span></td>
           <td><strong class="text-white">${l.customer_name}</strong></td>
           <td><a href="tel:${l.phone_number}" class="text-info text-decoration-none"><i class="fas fa-phone-alt me-1"></i>${l.phone_number}</a></td>
-          <td><span class="badge bg-dark border border-secondary">${l.bank_name}</span><br><small class="text-secondary">${l.bank_branch}</small></td>
-          <td><span class="days-badge ${dayClass}">${l.stage_days} Days</span></td>
-          <td><strong class="text-warning">${l.ground_source_name}</strong></td>
-          <td><small class="text-secondary">${l.telecaller_name}</small></td>
-          <td><small class="text-secondary">${l.field_staff_name}</small></td>
-          <td><small>${l.city_district}</small></td>
-          <td><strong class="text-success">${valText}</strong></td>
+          <td><span class="badge bg-info text-dark">${l.stage}</span></td>
+          <td><small class="text-purple">${l.brand_name || '—'}</small></td>
+          <td><small class="text-secondary">${l.area || '—'}</small></td>
+          <td><small>${l.city_district || '—'}</small></td>
           <td>
-            <a href="${l.google_maps_url}" target="_blank" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size: 0.75rem;"><i class="fas fa-map-marker-alt"></i> Map</a>
+            <a href="${l.google_maps_url}" target="_blank" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size: 0.75rem;"><i class="fas fa-map-marker-alt"></i> Maps</a>
           </td>
+          <td><small class="text-secondary">${l.telecaller_name || '—'}</small></td>
+          <td><small class="text-secondary">${l.field_staff_name || '—'}</small></td>
+          <td><span class="badge bg-dark border border-secondary">${l.bank_name}</span><br><small class="text-secondary">${l.bank_branch}</small></td>
+          <td style="text-align:right;"><strong class="text-success">${valText}</strong></td>
         </tr>`;
       });
       tbody.innerHTML = html;
@@ -294,7 +308,8 @@
         html += `<div class="mobile-lead-card">
           <div class="d-flex justify-content-between align-items-start mb-2">
             <div>
-              <strong class="text-white h6 mb-0">${idx + 1}. ${l.customer_name}</strong>
+              <strong class="text-warning small">${l.ground_source_name || 'Direct'}</strong>
+              <h6 class="text-white mb-0 mt-1">${idx + 1}. ${l.customer_name}</h6>
               <div class="small text-secondary"><i class="fas fa-map-marker-alt me-1"></i>${l.city_district}</div>
             </div>
             <span class="days-badge ${dayClass}">${l.stage_days}d</span>
@@ -306,9 +321,6 @@
             </div>
             <div class="col-6 text-end">
               <span class="text-secondary">Value:</span> <strong class="text-success">${valText}</strong>
-            </div>
-            <div class="col-12">
-              <span class="text-secondary">Member:</span> <strong class="text-warning">${l.ground_source_name}</strong>
             </div>
           </div>
 
