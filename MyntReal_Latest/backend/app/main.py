@@ -15763,7 +15763,45 @@ def _startup_worker():
     except Exception as _pdr_e2:
         print(f"[DC-DEAL-PER-DEAL-RECV-BACKFILL-001] ⚠️ outer: {_pdr_e2}", flush=True)
 
+    try:
+        seed_bank_wise_leads_menu()
+    except Exception as _bw_e:
+        print(f"[DC-MENU-SEED] ⚠️ {_bw_e}", flush=True)
+
     print("[DC-STARTUP] ✅ All background startup tasks complete", flush=True)
+
+def seed_bank_wise_leads_menu():
+    """DC Protocol Aug 2026: Ensure Bank Wise Leads menu is registered in staff_menu_registry
+    and granted to all staff & sales department employees.
+    """
+    from sqlalchemy import text
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("""
+                INSERT INTO staff_menu_registry (
+                    menu_code, menu_name, route_path, menu_category, menu_icon,
+                    display_order, audience_scope, source, source_file, is_default_visible, is_default_accessible,
+                    is_active, sidebar_section, sidebar_section_title, sidebar_section_order, menu_type
+                ) VALUES (
+                    'MNR_BANK_WISE_LEADS', 'Bank Wise Leads', '/staff/bank-wise-leads', 'MYNT_REAL',
+                    'fas fa-university', 2, 'STAFF', 'system', 'menu-master.js', true, true,
+                    true, 'MYNT_REAL', 'MYNTREAL', 20, 'STAFF'
+                ) ON CONFLICT (menu_code) DO UPDATE SET
+                    is_default_visible = true,
+                    is_default_accessible = true,
+                    is_active = true
+            """))
+            menu_id = conn.execute(text("SELECT id FROM staff_menu_registry WHERE menu_code = 'MNR_BANK_WISE_LEADS'")).scalar()
+            if menu_id:
+                conn.execute(text("DELETE FROM staff_employee_menu_settings WHERE menu_id = :mid"), {"mid": menu_id})
+                conn.execute(text("""
+                    INSERT INTO staff_employee_menu_settings (company_id, employee_id, menu_id, can_view, can_edit, is_overridden)
+                    SELECT 1, id, :mid, true, true, true FROM staff_employees
+                """), {"mid": menu_id})
+            conn.commit()
+            logging.info("[DC-MENU-SEED] ✅ MNR_BANK_WISE_LEADS registered and granted to all staff employees")
+    except Exception as e:
+        logging.warning(f"[DC-MENU-SEED] Bank wise leads menu seed failed (non-fatal): {e}")
 
 
 @asynccontextmanager
