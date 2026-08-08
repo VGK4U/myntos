@@ -2348,10 +2348,11 @@ function toggleExpand(leadId) {
 }
 
 function buildDetailPanel(l) {
+  if (window.registerLeadForMap) window.registerLeadForMap(l);
   const v = x => x ? `<span class="val">${esc(String(x))}</span>` : `<span class="val empty">—</span>`;
   const addr = [l.address,l.area,l.city,l.state,l.pincode].filter(Boolean).join(', ');
   const mapsBtn = (l.google_maps_link || l.latitude || addr)
-    ? `<button onclick="openLeadMapModal(${esc(JSON.stringify(l))})" class="maps-btn" style="border:none;cursor:pointer"><i class="fas fa-map-marker-alt"></i> Location Options</button>`
+    ? `<button type="button" onclick="event.stopPropagation();openLeadMapModal('${l.id}')" class="maps-btn" style="border:none;cursor:pointer"><i class="fas fa-map-marker-alt"></i> Location Options</button>`
     : `<span style="color:#d1d5db;font-size:10px;font-style:italic">No maps link</span>`;
   const isSolar = activeTab==='solar';
 

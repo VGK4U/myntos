@@ -1662,9 +1662,13 @@ function _edUpdateSortUI(){
 let _edIsTrendDrillDown = false;
 
 function _edBuildMapsCell(l) {
+  if (!l) return `<td style="font-size:10px;color:#d1d5db;white-space:nowrap;padding:5px 6px;text-align:center">—</td>`;
+  
+  if (window.registerLeadForMap) window.registerLeadForMap(l);
+
   const hasLatLon = l.latitude && l.longitude && !isNaN(parseFloat(l.latitude)) && !isNaN(parseFloat(l.longitude));
   const hasLink = l.google_maps_link && l.google_maps_link.trim() && l.google_maps_link !== '—';
-  const hasAddr = (l.area || l.city || l.state || l.pincode);
+  const hasAddr = (l.area || l.city || l.state || l.pincode || l.address);
 
   if (!hasLatLon && !hasLink && !hasAddr) {
     return `<td style="font-size:10px;color:#d1d5db;white-space:nowrap;padding:5px 6px;text-align:center">—</td>`;
@@ -1672,15 +1676,14 @@ function _edBuildMapsCell(l) {
 
   const isExactGps = hasLatLon;
   const badgeTitle = isExactGps ? `Exact Customer GPS (${l.latitude}, ${l.longitude})` : `Open Location Options (Google / Apple Maps)`;
-  const safeJson = esc(JSON.stringify(l));
 
   return `
     <td style="font-size:10px;white-space:nowrap;padding:5px 6px" onclick="event.stopPropagation()">
       <div style="display:inline-flex;align-items:center;gap:4px">
-        <button onclick="openLeadMapModal(${safeJson})" style="padding:2px 7px;font-size:10px;background:${isExactGps ? '#059669' : '#ea4335'};color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:3px;box-shadow:0 1px 2px rgba(0,0,0,0.1)" title="${esc(badgeTitle)}">
+        <button type="button" onclick="event.stopPropagation();openLeadMapModal('${l.id}')" style="padding:2px 7px;font-size:10px;background:${isExactGps ? '#059669' : '#ea4335'};color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:3px;box-shadow:0 1px 2px rgba(0,0,0,0.1)" title="${esc(badgeTitle)}">
           <i class="fas fa-map-marker-alt"></i> Maps${isExactGps ? ' (GPS)' : ''}
         </button>
-        <button onclick="openLeadMapModal(${safeJson})" style="padding:2px 6px;font-size:10px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:4px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:2px" title="Map Options">
+        <button type="button" onclick="event.stopPropagation();openLeadMapModal('${l.id}')" style="padding:2px 6px;font-size:10px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:4px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:2px" title="Map Options">
           <i class="far fa-copy"></i> Options
         </button>
       </div>
