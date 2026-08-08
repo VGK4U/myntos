@@ -3261,15 +3261,17 @@ def get_bank_wise_leads(
         )
         
     # Optional Bank Name filter
-    if bank_name and bank_name.strip() and bank_name.lower() != 'all':
-        if bank_name.lower() == 'unassigned':
+    if bank_name and bank_name.strip() and not bank_name.strip().lower().startswith('all'):
+        if 'unassigned' in bank_name.lower():
             query = query.filter(or_(CRMLead.loan_bank == None, CRMLead.loan_bank == ''))
         else:
-            query = query.filter(CRMLead.loan_bank.ilike(f"%{bank_name}%"))
+            clean_bank = bank_name.split('(')[0].strip()
+            query = query.filter(CRMLead.loan_bank.ilike(f"%{clean_bank}%"))
             
     # Optional Member filter
-    if member_filter and member_filter.strip() and member_filter.lower() != 'all':
-        m_term = f"%{member_filter}%"
+    if member_filter and member_filter.strip() and not member_filter.strip().lower().startswith('all'):
+        clean_member = member_filter.split('(')[0].strip()
+        m_term = f"%{clean_member}%"
         query = query.filter(
             or_(
                 CRMLead.source_ref_name.ilike(m_term),
