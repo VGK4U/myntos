@@ -5303,17 +5303,26 @@ async function generateMemberPoster(partnerId) {
       potentialEarning += uniqueLeads[key];
     }
     
-    // Dynamic Filter-Based Today's Earning
-    let latestPaidDate = null;
+    // Dynamic Filter-Based Today's Earning (includes all non-cancelled income entries)
+    let latestEntryDate = null;
     entries.forEach(e => {
-      if ((e.status === 'PAID' || e.status === 'RELEASED') && e.income_date && e.income_date !== 'None') {
-        if (!latestPaidDate || e.income_date > latestPaidDate) {
-          latestPaidDate = e.income_date;
+      if (e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
+        if (!latestEntryDate || e.income_date > latestEntryDate) {
+          latestEntryDate = e.income_date;
         }
       }
     });
     
-    const selectedDate = latestPaidDate || iedDt;
+    // Priority: 1. Dashboard active filter date (iedDt) if valid, 2. Today's date if entries exist, 3. Latest entry date
+    const todayStr = new Date().toISOString().split('T')[0];
+    let selectedDate = null;
+    if (typeof iedDt === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(iedDt) && entries.some(e => e.income_date === iedDt && e.status !== 'CANCELLED')) {
+      selectedDate = iedDt;
+    } else if (entries.some(e => e.income_date === todayStr && e.status !== 'CANCELLED')) {
+      selectedDate = todayStr;
+    } else {
+      selectedDate = latestEntryDate || iedDt || todayStr;
+    }
     window._currentSelectedDate = selectedDate;
 
     // Extract unique dates of non-cancelled entries
@@ -5363,7 +5372,7 @@ async function generateMemberPoster(partnerId) {
     
     let customerName = '—';
     let location = '—';
-    const targetEntries = entries.filter(e => e.status !== 'CANCELLED' && e.income_date === selectedDate);
+    const targetEntries = entries.filter(e => e.status !== 'CANCELLED' && e.income_date === window._currentSelectedDate);
     if (targetEntries.length) {
       customerName = targetEntries[0].client_name || '—';
       location = targetEntries[0].location || '—';
@@ -5374,7 +5383,7 @@ async function generateMemberPoster(partnerId) {
     
     document.getElementById('postTitle').value = 'CONGRATULATIONS';
     document.getElementById('postSubtitle').value = m.partner_name || '';
-    const overallVal = m.received !== undefined && m.received !== null ? m.received : (m.gross_earned || 0);
+    const overallVal = (m.gross_earned !== undefined && m.gross_earned !== null) ? m.gross_earned : (m.net_earning !== undefined && m.net_earning !== null ? m.net_earning : (m.received || 0));
     document.getElementById('postHighlight').value = '₹' + _meFormatInr(overallVal) + '/-';
     document.getElementById('postFiles').value = activeFiles + ' FILES';
     document.getElementById('postOverall').value = (m.total_team_size || 0) + ' MEMBERS';
@@ -5456,7 +5465,7 @@ function recalculateTodayPayout() {
   let extraAmt = 0;
   
   entries.forEach(e => {
-    if ((e.status === 'PAID' || e.status === 'RELEASED') && e.income_date === selectedDate) {
+    if (e.status !== 'CANCELLED' && e.income_date === selectedDate) {
       const amt = e.commission_amount || 0;
       if (e.kind === 'ADVANCE' || e.kind === 'DVR_ADVANCE') {
         stage1Amt += amt;
@@ -5466,6 +5475,8 @@ function recalculateTodayPayout() {
         bonanzaAmt += amt;
       } else if (e.kind === 'EXTRA_COMMISSION') {
         extraAmt += amt;
+      } else {
+        stage1Amt += amt;
       }
     }
   });
