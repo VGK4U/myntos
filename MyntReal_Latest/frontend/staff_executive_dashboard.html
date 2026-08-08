@@ -1734,6 +1734,7 @@ function _edRenderLeadsTrend(leads) {
       <th style="padding:6px 6px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;text-align:center;border-bottom:1px solid #e5e7eb;white-space:nowrap">#</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Lead Name</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Contact</th>
+      <th data-sk="solar_pipeline_status" onclick="_edSortLeads('solar_pipeline_status')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#0891b2;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Stage<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th data-sk="brand_name" onclick="_edSortLeads('brand_name')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Brand<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Area</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">City / District</th>
@@ -1744,7 +1745,6 @@ function _edRenderLeadsTrend(leads) {
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Lead Date</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">1st Pmt Date</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Install Date</th>
-      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#0891b2;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Solar Stage</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#059669;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Bank</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#047857;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Branch</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#b91c1c;text-transform:uppercase;border-bottom:1px solid #e5e7eb;text-align:right;white-space:nowrap">Bal Pending</th>
@@ -1765,7 +1765,20 @@ function _edRenderLeadsTrend(leads) {
       })();
 
       const phoneDisplay = l.phone_raw || l.phone || '—';
-      const solarStageLabel = l.solar_pipeline_status ? (_SOL_LABEL[l.solar_pipeline_status] || l.solar_pipeline_status) : '—';
+      const stageBadge = (() => {
+        if (l.solar_pipeline_status) {
+          const lbl = _SOL_LABEL[l.solar_pipeline_status] || l.solar_pipeline_status;
+          const isComp = l.solar_pipeline_status === 'completed';
+          const col = isComp ? '#065f46' : '#0891b2';
+          const bg = isComp ? '#ecfdf5' : '#e0f2fe';
+          const border = isComp ? '#a7f3d0' : '#bae6fd';
+          return `<span style="display:inline-block;padding:2px 8px;border-radius:12px;background:${bg};color:${col};border:1px solid ${border};font-size:10px;font-weight:700;white-space:nowrap">${esc(lbl)}</span>`;
+        }
+        const stStr = l.status ? (l.status.charAt(0).toUpperCase() + l.status.slice(1)) : '— Stage';
+        const stCol = _STATUS_COL[l.status] || '#6b7280';
+        return `<span style="display:inline-block;padding:2px 8px;border-radius:12px;background:#f3f4f6;color:${stCol};border:1px solid #e5e7eb;font-size:10px;font-weight:600;white-space:nowrap">${esc(stStr)}</span>`;
+      })();
+
       const balPend = (l.balance_pending || (l.deal_value_total - (l.deal_value_received||0))) > 0 ? '₹' + fmtVal(l.balance_pending || (l.deal_value_total - (l.deal_value_received||0))) : '—';
       const areaVal = l.area || l.address || '—';
       const cityDistVal = [l.city, l.state].filter(p => p && p !== '—').join(', ') || '—';
@@ -1779,6 +1792,7 @@ function _edRenderLeadsTrend(leads) {
           <td style="text-align:center;font-size:10px;color:#9ca3af;padding:5px 6px">${i+1}</td>
           <td style="font-weight:600;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 6px">${esc(l.name)}</td>
           <td style="font-size:10.5px;padding:5px 6px;white-space:nowrap"><a href="tel:${esc(l.phone_raw||'')}" style="color:#2563eb;text-decoration:none;font-weight:600">${esc(phoneDisplay)}</a></td>
+          <td style="font-size:10px;padding:5px 6px;white-space:nowrap">${stageBadge}</td>
           <td style="font-size:10px;color:#7c3aed;white-space:nowrap;padding:5px 6px;max-width:100px;overflow:hidden;text-overflow:ellipsis" title="${esc(brandVal)}">${esc(brandVal)}</td>
           <td style="font-size:10px;color:#334155;white-space:nowrap;padding:5px 6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(areaVal)}">${esc(areaVal)}</td>
           <td style="font-size:10px;color:#334155;white-space:nowrap;padding:5px 6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(cityDistVal)}">${esc(cityDistVal)}</td>
@@ -1789,7 +1803,6 @@ function _edRenderLeadsTrend(leads) {
           <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.created_at)}</td>
           <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.first_payment_received_date)}</td>
           <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.installation_date)}</td>
-          <td style="font-size:10px;color:#0891b2;white-space:nowrap;padding:5px 6px">${esc(solarStageLabel)}</td>
           <td style="font-size:10px;color:#059669;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(l.loan_bank || '—')}</td>
           <td style="font-size:10px;color:#047857;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(l.bank_branch || '—')}</td>
           <td style="font-size:10px;font-weight:600;color:#b91c1c;white-space:nowrap;text-align:right;padding:5px 6px">${balPend}</td>

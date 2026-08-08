@@ -5630,7 +5630,7 @@ def lead_analytics(
     _completed_cond = _or_(
         CRMLead.solar_pipeline_status == 'completed',
         CRMLead.ev_b2b_stage == 'completed',
-        _and_(CRMLead.status.in_(POST_WON), CRMLead.solar_pipeline_status.is_(None), CRMLead.ev_b2b_stage.is_(None)),
+        CRMLead.status == 'completed',
         _etc_done_sq
     )
 
@@ -6981,7 +6981,7 @@ def exec_trend_leads(
     _completed_cond = _sa_or(
         CRMLead.solar_pipeline_status == 'completed',
         CRMLead.ev_b2b_stage == 'completed',
-        _sa_and(CRMLead.status.in_(POST_WON), CRMLead.solar_pipeline_status.is_(None), CRMLead.ev_b2b_stage.is_(None)),
+        CRMLead.status == 'completed',
         _etc_done_sq
     )
 
