@@ -19632,6 +19632,18 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     res.end();
     return;
 
+  } else if (url.startsWith('/staff/bank-wise-leads') || url.startsWith('/staff/at-bank-leads')) {
+    const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
+    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login?redirect=' + encodeURIComponent(url) }); res.end(); return; }
+    const filePath = path.join(__dirname, 'staff_bank_wise_leads.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('Bank Wise Leads page not found'); return; }
+      let html = data.toString().replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, getStrictNoCacheHeaders());
+      res.end(html);
+    });
+    return;
+
   } else if (url.startsWith('/staff/solar-leads') || url.startsWith('/staff/ev-b2b-leads') || url.startsWith('/staff/ev-b2c-leads') || url.startsWith('/staff/ev-spares-leads') || url.startsWith('/staff/real-dreams-leads') || url.startsWith('/staff/insurance-leads')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
     if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login?redirect=' + encodeURIComponent(url) }); res.end(); return; }

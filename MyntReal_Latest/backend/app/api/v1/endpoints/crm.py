@@ -3180,6 +3180,194 @@ def get_my_leads(
     }
 
 
+@router.get("/bank-wise-leads")
+def get_bank_wise_leads(
+    company_id: Optional[int] = Query(1, description="Company ID"),
+    bank_name: Optional[str] = Query(None, description="Filter by specific bank name"),
+    sort_by: Optional[str] = Query("stage_days_desc", description="stage_days_desc, stage_days_asc, member, bank, deal_value, customer_name"),
+    search: Optional[str] = Query(None, description="Search by customer name, phone, district, branch"),
+    member_filter: Optional[str] = Query(None, description="Filter by Ground Source or Handler member name"),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC Protocol & Bank-Wise File Dashboard Endpoint.
+    
+    Manager-level access (Raju, Bhoolakshmi, Yaswanth, Jagannadh, MR10001, Admins)
+    can view ALL files currently under bank processing across the entire company.
+    
+    Other staff members can ONLY view files assigned to them as telecaller, field staff, or ground source.
+    """
+    staff_type = (current_employee.staff_type or '').upper()
+    emp_code = (getattr(current_employee, 'emp_code', '') or '').upper()
+    emp_name = (getattr(current_employee, 'full_name', '') or '').lower()
+    emp_id = current_employee.id
+    
+    is_admin = is_vgk_admin(staff_type)
+    is_leader = has_direct_reports(emp_id, db, StaffEmployee)
+    
+    MANAGER_NAMES = ['raju', 'bhoolakshmi', 'yaswanth', 'jagan', 'jagannadh']
+    MANAGER_CODES = ['MR10001', 'ADMIN', 'VGK4U']
+    
+    is_manager = (
+        is_admin or
+        is_leader or
+        emp_code in MANAGER_CODES or
+        any(m_name in emp_name for m_name in MANAGER_NAMES) or
+        (getattr(current_employee, 'role', '') or '').upper() in ['ADMIN', 'MANAGER', 'DIRECTOR', 'EXECUTIVE']
+    )
+    
+    # Query all leads in At Bank stage
+    query = db.query(CRMLead).filter(
+        or_(
+            CRMLead.solar_pipeline_status.ilike('%bank%'),
+            CRMLead.status.ilike('%bank%'),
+            CRMLead.solar_pipeline_status == 'At Bank',
+            CRMLead.solar_pipeline_status == 'AT_BANK'
+        )
+    )
+    
+    if company_id:
+        query = query.filter(CRMLead.company_id == company_id)
+        
+    # Non-manager restricted access filter
+    if not is_manager:
+        query = query.filter(
+            or_(
+                CRMLead.handler_staff_id == emp_id,
+                CRMLead.created_by_staff_id == emp_id,
+                CRMLead.telecaller_name.ilike(f"%{current_employee.full_name}%"),
+                CRMLead.field_staff_name.ilike(f"%{current_employee.full_name}%"),
+                CRMLead.ground_source_name.ilike(f"%{current_employee.full_name}%")
+            )
+        )
+        
+    # Optional search
+    if search:
+        s_term = f"%{search}%"
+        query = query.filter(
+            or_(
+                CRMLead.customer_name.ilike(s_term),
+                CRMLead.phone_number.ilike(s_term),
+                CRMLead.district.ilike(s_term),
+                CRMLead.loan_bank.ilike(s_term),
+                CRMLead.bank_branch.ilike(s_term),
+                CRMLead.ground_source_name.ilike(s_term)
+            )
+        )
+        
+    # Optional Bank Name filter
+    if bank_name and bank_name.strip() and bank_name.lower() != 'all':
+        if bank_name.lower() == 'unassigned':
+            query = query.filter(or_(CRMLead.loan_bank == None, CRMLead.loan_bank == ''))
+        else:
+            query = query.filter(CRMLead.loan_bank.ilike(f"%{bank_name}%"))
+            
+    # Optional Member filter
+    if member_filter and member_filter.strip() and member_filter.lower() != 'all':
+        m_term = f"%{member_filter}%"
+        query = query.filter(
+            or_(
+                CRMLead.ground_source_name.ilike(m_term),
+                CRMLead.telecaller_name.ilike(m_term),
+                CRMLead.field_staff_name.ilike(m_term),
+                CRMLead.senior_handler_name.ilike(m_term)
+            )
+        )
+        
+    leads = query.all()
+    now_dt = datetime.now()
+    
+    # Process leads and calculate Stage Days dynamically
+    processed_leads = []
+    bank_counts = {}
+    member_set = set()
+    total_deal_value = 0.0
+    
+    for lead in leads:
+        # Determine bank name
+        b_name = (lead.loan_bank or '').strip()
+        if not b_name:
+            b_name = 'Unassigned Bank'
+            
+        # Determine stage date (solar_pipeline_status_updated_at -> submit_date -> created_at)
+        s_date = lead.solar_pipeline_status_updated_at or lead.submit_date or lead.created_at
+        s_date_ist = _to_ist_naive(s_date)
+        stage_days = (now_dt - s_date_ist).days if s_date_ist else 0
+        if stage_days < 0:
+            stage_days = 0
+            
+        deal_val = float(lead.deal_value or lead.calculated_deal_value or 0.0)
+        total_deal_value += deal_val
+        
+        # Bank Summary aggregations
+        if b_name not in bank_counts:
+            bank_counts[b_name] = {'count': 0, 'deal_value': 0.0}
+        bank_counts[b_name]['count'] += 1
+        bank_counts[b_name]['deal_value'] += deal_val
+        
+        # Ground source / member set
+        m_name = lead.ground_source_name or lead.telecaller_name or lead.field_staff_name or 'Direct'
+        member_set.add(m_name)
+        
+        processed_leads.append({
+            'id': lead.id,
+            'customer_name': lead.customer_name or 'N/A',
+            'phone_number': lead.phone_number or '',
+            'stage': lead.solar_pipeline_status or lead.status or 'At Bank',
+            'bank_name': b_name,
+            'bank_branch': lead.bank_branch or 'N/A',
+            'stage_days': stage_days,
+            'stage_updated_at': s_date_ist.isoformat() if s_date_ist else None,
+            'ground_source_name': lead.ground_source_name or 'N/A',
+            'telecaller_name': lead.telecaller_name or 'N/A',
+            'field_staff_name': lead.field_staff_name or 'N/A',
+            'senior_handler_name': getattr(lead, 'senior_handler_name', None) or 'N/A',
+            'city_district': f"{lead.district or ''}, {lead.state or ''}".strip(', '),
+            'deal_value': deal_val,
+            'capacity_kw': float(lead.capacity_kw or 0.0),
+            'remarks': getattr(lead, 'remarks', '') or '',
+            'google_maps_url': f"https://www.google.com/maps/search/?api=1&query={lead.customer_name}+{lead.district}"
+        })
+        
+    # Sort leads based on sort_by query parameter
+    if sort_by == 'stage_days_desc':
+        processed_leads.sort(key=lambda x: x['stage_days'], reverse=True)
+    elif sort_by == 'stage_days_asc':
+        processed_leads.sort(key=lambda x: x['stage_days'])
+    elif sort_by == 'member':
+        processed_leads.sort(key=lambda x: x['ground_source_name'].lower())
+    elif sort_by == 'bank':
+        processed_leads.sort(key=lambda x: x['bank_name'].lower())
+    elif sort_by == 'deal_value':
+        processed_leads.sort(key=lambda x: x['deal_value'], reverse=True)
+    elif sort_by == 'customer_name':
+        processed_leads.sort(key=lambda x: x['customer_name'].lower())
+    else:
+        processed_leads.sort(key=lambda x: x['stage_days'], reverse=True)
+        
+    # Format bank summary list
+    bank_summary = [
+        {'bank_name': k, 'count': v['count'], 'deal_value': v['deal_value']}
+        for k, v in sorted(bank_counts.items(), key=lambda item: item[1]['count'], reverse=True)
+    ]
+    
+    return {
+        'success': True,
+        'is_manager': is_manager,
+        'current_user': {
+            'id': emp_id,
+            'emp_code': emp_code,
+            'name': current_employee.full_name
+        },
+        'total_bank_leads': len(processed_leads),
+        'total_bank_deal_value': total_deal_value,
+        'bank_summary': bank_summary,
+        'unique_members': sorted(list(member_set)),
+        'leads': processed_leads
+    }
+
+
 @router.get("/leads")
 def list_leads(
     company_id: int = Query(..., description="Company ID for DC Protocol"),

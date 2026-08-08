@@ -500,6 +500,7 @@ const MENU_MASTER = [
     order: 20,
     items: [
       { menu_code: "MNR_EXECUTIVE_DASHBOARD", label: "Executive Dashboard", route: "/staff/executive-dashboard", icon: "fas fa-chart-line", audience: ["STAFF"] },
+      { menu_code: "MNR_BANK_WISE_LEADS", label: "Bank Wise Leads", route: "/staff/bank-wise-leads", icon: "fas fa-university", audience: ["STAFF"] },
       { menu_code: "MNR_CATEGORY_LEADS", label: "Category Lead Master", route: "/staff/mnr-leads", icon: "fas fa-layer-group", audience: ["STAFF"] },
       { menu_code: "MNR_SOLAR_LEADS", label: "Solar Leads", route: "/staff/solar-leads", icon: "fas fa-solar-panel", audience: ["STAFF"] },
       { menu_code: "MNR_EV_B2B_LEADS", label: "EV B2B Leads", route: "/staff/ev-b2b-leads", icon: "fas fa-truck", audience: ["STAFF"] },
