@@ -1,35 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Disable image optimization to reduce memory
-  images: {
-    unoptimized: true
-  },
-  
-  // Experimental features
-  experimental: {
-    // Reduce memory usage during build
-    webpackMemoryOptimizations: true,
-  },
-  
-  // Optimize build performance
-  webpack: (config, { dev, isServer }) => {
-    if (!dev && !isServer) {
-      // Optimize for production builds
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          chunks: 'all',
-          cacheGroups: {
-            vendor: {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'vendors',
-              chunks: 'all',
-            },
-          },
-        },
-      };
-    }
-    return config;
+  reactStrictMode: true,
+  swcMinify: true,
+  async rewrites() {
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: 'http://127.0.0.1:8000/api/v1/:path*',
+      },
+    ];
   },
 };
 
