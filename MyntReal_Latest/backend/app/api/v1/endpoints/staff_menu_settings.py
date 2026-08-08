@@ -3694,15 +3694,15 @@ async def get_my_menus(
     except Exception as _de:
         logger.warning(f"[DC-DEPT-AUTO-GRANT] Error checking departments for employee {employee_id}: {_de}")
 
-    # DC Protocol May 2026: Role-based auto-grant for My Earnings.
-    # Key Leadership, EA, Executive Admin, and Accounts role_codes get My Earnings visibility.
+    # DC Protocol May 2026: Role-based auto-grant for My Earnings and Bank Wise Leads.
+    # Key Leadership, EA, Executive Admin, Accounts, and Sales role_codes get My Earnings visibility.
     _ROLE_AUTO_GRANT_MENUS = {
-        'key_leadership': ['staff_my_lead_incentives'],
+        'key_leadership': ['staff_my_lead_incentives', 'MNR_BANK_WISE_LEADS'],
         'ea':             ['staff_my_lead_incentives'],
         'executive_admin':['staff_my_lead_incentives'],
         'accounts':       ['staff_my_lead_incentives'],
-        'sales':          ['staff_my_lead_incentives'],
-        'leadership':     ['staff_my_lead_incentives'],
+        'sales':          ['staff_my_lead_incentives', 'MNR_BANK_WISE_LEADS'],
+        'leadership':     ['staff_my_lead_incentives', 'MNR_BANK_WISE_LEADS'],
     }
     try:
         _role_code = (getattr(current_user.role, 'role_code', '') if current_user.role else '') or ''
@@ -3716,6 +3716,10 @@ async def get_my_menus(
         _dept_auto_codes.add('staff_change_password')
         _dept_auto_codes.add('staff_dashboard')
         _dept_auto_codes.add('staff_profile')
+
+        # Auto-grant MNR_BANK_WISE_LEADS ONLY to Key Leadership (dept 1) & Sales Department (dept 13)
+        if current_user.department_id in (1, 13) or (current_user.emp_code or '').upper() in ('MR10001', 'MN10003'):
+            _dept_auto_codes.add('MNR_BANK_WISE_LEADS')
         if _dept_auto_codes:
             logger.info(f"[DC-ROLE-AUTO-GRANT] Employee {employee_id} ({current_user.emp_code}) role/emp auto-granted menus: {_dept_auto_codes}")
     except Exception as _re:
@@ -3764,15 +3768,19 @@ async def get_my_menus(
     elif not employee_settings and _dept_auto_codes:
         logger.info(f"[DC-MY-MENUS] No explicit settings but dept auto-grant active for employee {employee_id} — building from dept codes only")
     
-    # MENU-CODE RESOLUTION: Get menu_codes from settings' linked menus
+    # MENU-CODE RESOLUTION: Get menu_codes from settings' linked menus (checking both Master & Registry)
     menu_ids = [s.menu_id for s in employee_settings]
-    linked_menus = db.query(StaffMenuMaster.id, StaffMenuMaster.menu_code).filter(
+    linked_master = db.query(StaffMenuMaster.id, StaffMenuMaster.menu_code).filter(
         StaffMenuMaster.id.in_(menu_ids)
+    ).all()
+    linked_registry = db.query(StaffMenuRegistry.id, StaffMenuRegistry.menu_code).filter(
+        StaffMenuRegistry.id.in_(menu_ids)
     ).all()
     
     # Build menu_code -> best permission map (prefer can_edit=True if multiple grants)
     menu_code_permissions = {}
-    id_to_code = {m.id: m.menu_code for m in linked_menus}
+    id_to_code = {m.id: m.menu_code for m in linked_master}
+    id_to_code.update({r.id: r.menu_code for r in linked_registry})
     
     for setting in employee_settings:
         menu_code = id_to_code.get(setting.menu_id)

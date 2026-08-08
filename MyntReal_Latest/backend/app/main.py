@@ -15772,7 +15772,7 @@ def _startup_worker():
 
 def seed_bank_wise_leads_menu():
     """DC Protocol Aug 2026: Ensure Bank Wise Leads menu is registered in staff_menu_registry
-    and granted ONLY to Key Leadership and Sales Department employees.
+    and granted ONLY to Key Leadership and Sales Department employees across all companies.
     """
     from sqlalchemy import text
     try:
@@ -15784,27 +15784,29 @@ def seed_bank_wise_leads_menu():
                     is_active, sidebar_section, sidebar_section_title, sidebar_section_order, menu_type
                 ) VALUES (
                     'MNR_BANK_WISE_LEADS', 'Bank Wise Leads', '/staff/bank-wise-leads', 'MYNT_REAL',
-                    'fas fa-university', 2, 'STAFF', 'system', 'menu-master.js', true, true,
+                    'fas fa-university', 2, 'staff', 'system', 'menu-master.js', true, true,
                     true, 'MYNT_REAL', 'MYNTREAL', 20, 'STAFF'
                 ) ON CONFLICT (menu_code) DO UPDATE SET
                     is_default_visible = true,
                     is_default_accessible = true,
-                    is_active = true
+                    is_active = true,
+                    audience_scope = 'staff'
             """))
             menu_id = conn.execute(text("SELECT id FROM staff_menu_registry WHERE menu_code = 'MNR_BANK_WISE_LEADS'")).scalar()
             if menu_id:
                 conn.execute(text("DELETE FROM staff_employee_menu_settings WHERE menu_id = :mid"), {"mid": menu_id})
-                conn.execute(text("""
-                    INSERT INTO staff_employee_menu_settings (company_id, employee_id, menu_id, can_view, can_edit, is_overridden)
-                    SELECT 1, e.id, :mid,
-                           CASE WHEN (e.department_id IN (1, 13) OR e.emp_code = 'MR10001' OR LOWER(COALESCE(d.name, '')) LIKE '%sales%' OR LOWER(COALESCE(d.name, '')) LIKE '%management%' OR LOWER(COALESCE(e.designation, '')) LIKE '%telecaller%' OR LOWER(COALESCE(e.designation, '')) LIKE '%sales%') THEN true ELSE false END,
-                           CASE WHEN (e.department_id IN (1, 13) OR e.emp_code = 'MR10001' OR LOWER(COALESCE(d.name, '')) LIKE '%sales%' OR LOWER(COALESCE(d.name, '')) LIKE '%management%' OR LOWER(COALESCE(e.designation, '')) LIKE '%telecaller%' OR LOWER(COALESCE(e.designation, '')) LIKE '%sales%') THEN true ELSE false END,
-                           true
-                    FROM staff_employees e
-                    LEFT JOIN staff_departments d ON e.department_id = d.id
-                """), {"mid": menu_id})
+                for cid in (1, 2, 3, 4, 5):
+                    conn.execute(text("""
+                        INSERT INTO staff_employee_menu_settings (company_id, employee_id, menu_id, can_view, can_edit, is_overridden)
+                        SELECT :cid, e.id, :mid,
+                               CASE WHEN (e.department_id IN (1, 13) OR e.emp_code IN ('MR10001', 'MN10003', 'MN10014') OR LOWER(COALESCE(d.name, '')) LIKE '%sales%' OR LOWER(COALESCE(d.name, '')) LIKE '%management%' OR LOWER(COALESCE(e.designation, '')) LIKE '%telecaller%' OR LOWER(COALESCE(e.designation, '')) LIKE '%sales%' OR LOWER(COALESCE(e.designation, '')) LIKE '%executive%') THEN true ELSE false END,
+                               CASE WHEN (e.department_id IN (1, 13) OR e.emp_code IN ('MR10001', 'MN10003', 'MN10014') OR LOWER(COALESCE(d.name, '')) LIKE '%sales%' OR LOWER(COALESCE(d.name, '')) LIKE '%management%' OR LOWER(COALESCE(e.designation, '')) LIKE '%telecaller%' OR LOWER(COALESCE(e.designation, '')) LIKE '%sales%' OR LOWER(COALESCE(e.designation, '')) LIKE '%executive%') THEN true ELSE false END,
+                               true
+                        FROM staff_employees e
+                        LEFT JOIN staff_departments d ON e.department_id = d.id
+                    """), {"mid": menu_id, "cid": cid})
             conn.commit()
-            logging.info("[DC-MENU-SEED] ✅ MNR_BANK_WISE_LEADS registered and restricted ONLY to Key Leadership & Sales Department employees")
+            logging.info("[DC-MENU-SEED] ✅ MNR_BANK_WISE_LEADS registered and granted to Key Leadership & Sales Department employees across all companies")
     except Exception as e:
         logging.warning(f"[DC-MENU-SEED] Bank wise leads menu seed failed (non-fatal): {e}")
 
