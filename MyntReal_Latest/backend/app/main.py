@@ -15772,7 +15772,7 @@ def _startup_worker():
 
 def seed_bank_wise_leads_menu():
     """DC Protocol Aug 2026: Ensure Bank Wise Leads menu is registered in staff_menu_registry
-    and granted to all staff & sales department employees.
+    and granted ONLY to Key Leadership and Sales Department employees.
     """
     from sqlalchemy import text
     try:
@@ -15796,10 +15796,15 @@ def seed_bank_wise_leads_menu():
                 conn.execute(text("DELETE FROM staff_employee_menu_settings WHERE menu_id = :mid"), {"mid": menu_id})
                 conn.execute(text("""
                     INSERT INTO staff_employee_menu_settings (company_id, employee_id, menu_id, can_view, can_edit, is_overridden)
-                    SELECT 1, id, :mid, true, true, true FROM staff_employees
+                    SELECT 1, e.id, :mid,
+                           CASE WHEN (e.department_id IN (1, 13) OR e.emp_code = 'MR10001' OR LOWER(COALESCE(d.name, '')) LIKE '%sales%' OR LOWER(COALESCE(d.name, '')) LIKE '%management%' OR LOWER(COALESCE(e.designation, '')) LIKE '%telecaller%' OR LOWER(COALESCE(e.designation, '')) LIKE '%sales%') THEN true ELSE false END,
+                           CASE WHEN (e.department_id IN (1, 13) OR e.emp_code = 'MR10001' OR LOWER(COALESCE(d.name, '')) LIKE '%sales%' OR LOWER(COALESCE(d.name, '')) LIKE '%management%' OR LOWER(COALESCE(e.designation, '')) LIKE '%telecaller%' OR LOWER(COALESCE(e.designation, '')) LIKE '%sales%') THEN true ELSE false END,
+                           true
+                    FROM staff_employees e
+                    LEFT JOIN staff_departments d ON e.department_id = d.id
                 """), {"mid": menu_id})
             conn.commit()
-            logging.info("[DC-MENU-SEED] ✅ MNR_BANK_WISE_LEADS registered and granted to all staff employees")
+            logging.info("[DC-MENU-SEED] ✅ MNR_BANK_WISE_LEADS registered and restricted ONLY to Key Leadership & Sales Department employees")
     except Exception as e:
         logging.warning(f"[DC-MENU-SEED] Bank wise leads menu seed failed (non-fatal): {e}")
 
