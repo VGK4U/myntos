@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script src="/public/js/menu-master.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
     
@@ -140,6 +141,11 @@
       border-radius: 6px;
       border: 1px solid #475569;
       font-weight: 600;
+      text-decoration: none;
+    }
+    .tree-route:hover {
+      background: #2563eb;
+      color: #ffffff !important;
     }
 
     .gap-card {
@@ -178,6 +184,21 @@
 
     table.custom-table tr:nth-child(even) { background: #172033; }
     code { font-family: 'JetBrains Mono', monospace; color: #f472b6 !important; background: #1e293b; padding: 2px 6px; border-radius: 4px; }
+    
+    .search-input {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #ffffff;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      width: 100%;
+      outline: none;
+    }
+    .search-input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    }
   </style>
 </head>
 <body>
@@ -186,14 +207,14 @@
   <div class="investor-header d-flex flex-wrap justify-content-between align-items-center">
     <div>
       <div class="d-flex align-items-center gap-3 mb-2">
-        <h1 class="h3 mb-0 text-white font-weight-bold">Mynt OS — Master End-to-End Enterprise Architecture</h1>
-        <span class="badge-pill badge-green"><i class="fa-solid fa-circle-check me-1"></i>Investor Presentation</span>
-        <span class="badge-pill badge-purple"><i class="fa-solid fa-code me-1"></i>Developer Blueprint</span>
+        <h1 class="h3 mb-0 text-white font-weight-bold">Mynt OS — Dynamic Master System Architecture</h1>
+        <span class="badge-pill badge-green"><i class="fa-solid fa-circle-check me-1"></i>Dynamic Menu Engine</span>
+        <span class="badge-pill badge-purple"><i class="fa-solid fa-code me-1"></i>Next.js 14 SSR Enabled</span>
       </div>
-      <p class="text-slate-muted mb-0 font-weight-medium">Full Program Breakdown: MNR Core, VGK4U Ecosystem, ZY Properties (16.1 & 16.2), Team Hierarchies, Identified Gaps & Scale Roadmap</p>
+      <p class="text-slate-muted mb-0 font-weight-medium">Live Dynamic Module Tree, Program Topology, Identified Gaps, and Growth Roadmap</p>
     </div>
     <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
-      <span class="badge-pill badge-blue"><i class="fa-brands fa-aws me-1"></i>AWS Ready (152.57 MB)</span>
+      <span class="badge-pill badge-blue" id="statRoutesCount"><i class="fa-solid fa-link me-1"></i>Loading Routes...</span>
       <span class="badge-pill badge-orange"><i class="fa-solid fa-bolt me-1"></i>v2026.08</span>
     </div>
   </div>
@@ -201,7 +222,7 @@
   <!-- Tab Navigation -->
   <ul class="nav nav-pills mb-4 gap-2" id="archTabs" role="tablist">
     <li class="nav-item" role="presentation">
-      <button class="nav-link active" id="tab-structure-tab" data-bs-toggle="pill" data-bs-target="#tab-structure" type="button" role="tab"><i class="fa-solid fa-bars-staggered me-2"></i>1. Full Program Menu & Module Structure</button>
+      <button class="nav-link active" id="tab-structure-tab" data-bs-toggle="pill" data-bs-target="#tab-structure" type="button" role="tab"><i class="fa-solid fa-bars-staggered me-2"></i>1. Live Dynamic Menu & Module Tree</button>
     </li>
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="tab-program-tab" data-bs-toggle="pill" data-bs-target="#tab-program" type="button" role="tab"><i class="fa-solid fa-microchip me-2"></i>2. Technical Program Architecture</button>
@@ -217,128 +238,22 @@
   <!-- Tab Content Area -->
   <div class="tab-content" id="archTabsContent">
 
-    <!-- ==================== TAB 1: FULL PROGRAM MENU & MODULE STRUCTURE ==================== -->
+    <!-- ==================== TAB 1: DYNAMIC HAMBURGER MENU STRUCTURE ==================== -->
     <div class="tab-pane fade show active" id="tab-structure" role="tabpanel">
       
-      <!-- ROW 1: MNR CORE & VGK4U ECOSYSTEM -->
-      <div class="row">
-        <!-- 1. MNR CORE & SEGMENT MASTERS -->
-        <div class="col-xl-6 mb-4">
-          <div class="arch-card">
-            <h2 class="h5 text-info mb-3"><i class="fa-solid fa-crown me-2"></i>1. MNR (MyntReal Core & Brand Ecosystem)</h2>
-            
-            <div class="tree-group">
-              <div class="tree-title"><i class="fa-solid fa-chart-line text-primary me-2"></i> Executive Dashboard & Segments</div>
-              <ul class="tree-list">
-                <li class="tree-item"><span>Executive Dashboard & Monthly/Weekly Trends</span> <span class="tree-route">/staff/executive-dashboard</span></li>
-                <li class="tree-item"><span>Category Lead Master (Consolidated)</span> <span class="tree-route">/staff/mnr-leads</span></li>
-                <li class="tree-item"><span>Solar Energy Segment Leads</span> <span class="tree-route">/staff/solar-leads</span></li>
-                <li class="tree-item"><span>EV B2B Fleet & EV B2C Retail Vehicle Leads</span> <span class="tree-route">/staff/ev-b2b-leads</span></li>
-                <li class="tree-item"><span>EV Spares Inventory & Real Estate Segment</span> <span class="tree-route">/staff/ev-spares-leads</span></li>
-                <li class="tree-item"><span>Insurance Policies & ETC Training Students</span> <span class="tree-route">/staff/insurance-leads</span></li>
-              </ul>
-            </div>
-
-            <div class="tree-group">
-              <div class="tree-title"><i class="fa-solid fa-user-shield text-warning me-2"></i> MNR Admin & User Portals</div>
-              <ul class="tree-list">
-                <li class="tree-item"><span>MNR Income Unified & Awards Management</span> <span class="tree-route">/staff/mnr/income-unified</span></li>
-                <li class="tree-item"><span>MNR KYC Management & User Deliverables</span> <span class="tree-route">/staff/mnr/kyc-management</span></li>
-                <li class="tree-item"><span>Withdrawal Supreme & Payout History</span> <span class="tree-route">/staff/mnr/withdrawal-supreme</span></li>
-                <li class="tree-item"><span>Finance Supreme & Financial Statements</span> <span class="tree-route">/staff/mnr/finance-supreme</span></li>
-                <li class="tree-item"><span>MNR Compliance Dashboard & Company Earnings</span> <span class="tree-route">/staff/mnr/compliance</span></li>
-                <li class="tree-item"><span>MNR User Dashboard, Downline & Earnings</span> <span class="tree-route">/staff/mnr-user/dashboard</span></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <!-- 2. VGK4U ENTERPRISE ECOSYSTEM -->
-        <div class="col-xl-6 mb-4">
-          <div class="arch-card">
-            <h2 class="h5 text-success mb-3"><i class="fa-solid fa-city me-2"></i>2. VGK4U Enterprise & Vendor Ecosystem</h2>
-
-            <div class="tree-group">
-              <div class="tree-title"><i class="fa-solid fa-users-rectangle text-success me-2"></i> VGK Team & Bonanza Campaigns</div>
-              <ul class="tree-list">
-                <li class="tree-item"><span>VGK Team Members & Income Management</span> <span class="tree-route">/staff/vgk/members</span></li>
-                <li class="tree-item"><span>VGK PIN Activation & Promo Codes</span> <span class="tree-route">/staff/vgk/coupons/available</span></li>
-                <li class="tree-item"><span>VGK Bonanza Campaigns & Claims</span> <span class="tree-route">/staff/vgk/bonanza-management</span></li>
-                <li class="tree-item"><span>Income Unified & Cash Income (Sales/Accounts)</span> <span class="tree-route">/staff/vgk/income-unified</span></li>
-                <li class="tree-item"><span>Partner KYC Review & Approvals</span> <span class="tree-route">/staff/vgk/partner-kyc-review</span></li>
-              </ul>
-            </div>
-
-            <div class="tree-group">
-              <div class="tree-title"><i class="fa-solid fa-store text-warning me-2"></i> Vendor Master & Marketplace</div>
-              <ul class="tree-list">
-                <li class="tree-item"><span>Vendor Master & Vendor Categories</span> <span class="tree-route">/staff/vgk/vendors</span></li>
-                <li class="tree-item"><span>Vendor Products Marketplace</span> <span class="tree-route">/staff/vgk/vendor-products</span></li>
-                <li class="tree-item"><span>Vendor Transaction Approvals</span> <span class="tree-route">/staff/vgk/vendor-transactions</span></li>
-                <li class="tree-item"><span>Vendor Wallet & Withdrawal Management</span> <span class="tree-route">/staff/vgk/wallet</span></li>
-              </ul>
-            </div>
-          </div>
+      <!-- Live Search & Filter Bar -->
+      <div class="mb-4">
+        <div class="input-group">
+          <span class="input-group-text bg-dark border-secondary text-info"><i class="fa-solid fa-magnifying-glass"></i></span>
+          <input type="text" id="menuSearchInput" class="form-control bg-dark text-white border-secondary" placeholder="Type to search any module, segment, page label, or route dynamically..." onkeyup="filterDynamicMenu()">
         </div>
       </div>
 
-      <!-- ROW 2: ZY PROPERTIES, TEAM STRUCTURES, ACCOUNTS -->
-      <div class="row">
-        <!-- 3. ZY PROPERTIES & MEMBER EARNINGS (RVZ 16.1 & 16.2) -->
-        <div class="col-xl-6 mb-4">
-          <div class="arch-card">
-            <h2 class="h5 text-purple mb-3"><i class="fa-solid fa-house-circle-check me-2"></i>3. ZY Properties & Member Earnings (RVZ 16.1 & 16.2)</h2>
-            
-            <div class="tree-group">
-              <div class="tree-title"><i class="fa-solid fa-building-user text-purple me-2"></i> ZY Property Workings (RVZ 16.1)</div>
-              <ul class="tree-list">
-                <li class="tree-item"><span>Property Marketplace</span> <span class="tree-route">/rvz/real-dreams/marketplace</span></li>
-                <li class="tree-item"><span>Property Amenities Management</span> <span class="tree-route">/rvz/real-dreams</span></li>
-                <li class="tree-item"><span>Partner Profiles & Real Estate Handlers</span> <span class="tree-route">/rvz/real-dreams/partners</span></li>
-                <li class="tree-item"><span>Property Handlers & Units Master</span> <span class="tree-route">/rvz/real-dreams/properties</span></li>
-                <li class="tree-item"><span>Real Dreams Master Dashboard</span> <span class="tree-route">/rvz/real-dreams-dashboard</span></li>
-              </ul>
-            </div>
-
-            <div class="tree-group">
-              <div class="tree-title"><i class="fa-solid fa-coins text-warning me-2"></i> ZY Member Earnings & Incentives (RVZ 16.2)</div>
-              <ul class="tree-list">
-                <li class="tree-item"><span>Incentive Approvals & Payout Review</span> <span class="tree-route">/staff/incentives/approvals</span></li>
-                <li class="tree-item"><span>All VGK4U Members Registry</span> <span class="tree-route">/staff/incentives/vgk4u</span></li>
-                <li class="tree-item"><span>VGK Real Estate Vertical (ZR)</span> <span class="tree-route">/staff/vgk4u/real-estate</span></li>
-                <li class="tree-item"><span>VGK Care Vertical (ZC)</span> <span class="tree-route">/staff/vgk4u/insurance</span></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <!-- 4. TEAM STRUCTURES, HR, FIELD & ACCOUNTS -->
-        <div class="col-xl-6 mb-4">
-          <div class="arch-card">
-            <h2 class="h5 text-danger mb-3"><i class="fa-solid fa-sitemap me-2"></i>4. Team Structures, HR, Field & Accounts (SFMS)</h2>
-
-            <div class="tree-group">
-              <div class="tree-title"><i class="fa-solid fa-user-group text-danger me-2"></i> Team Structures, HR & Staff NDA</div>
-              <ul class="tree-list">
-                <li class="tree-item"><span>Employee Directory, Roles & Hierarchy Upline</span> <span class="tree-route">/staff/employees</span></li>
-                <li class="tree-item"><span>Attendance In/Out, Leaves & Approvals</span> <span class="tree-route">/staff/my-attendance</span></li>
-                <li class="tree-item"><span>Staff NDA Versions & Acceptance Audit</span> <span class="tree-route">/staff/nda-versions</span></li>
-                <li class="tree-item"><span>Promoter Management & Promo NDA Editor</span> <span class="tree-route">/staff/promoters</span></li>
-                <li class="tree-item"><span>KRA Status, Templates & Tracking Sheet</span> <span class="tree-route">/staff/kra-templates</span></li>
-              </ul>
-            </div>
-
-            <div class="tree-group">
-              <div class="tree-title"><i class="fa-solid fa-calculator text-info me-2"></i> Accounts, SFMS & Inventory</div>
-              <ul class="tree-list">
-                <li class="tree-item"><span>SFMS Fund Allocations & Expense Entries</span> <span class="tree-route">/staff/accounts/expense-entries</span></li>
-                <li class="tree-item"><span>Party Master, Capital Account & TDS</span> <span class="tree-route">/staff/accounts/parties</span></li>
-                <li class="tree-item"><span>Purchase & Sales Invoices, Ledger</span> <span class="tree-route">/staff/accounts/general-ledger</span></li>
-                <li class="tree-item"><span>Inventory BOM, Manufacturing & Stock</span> <span class="tree-route">/staff/inventory/stock-items</span></li>
-                <li class="tree-item"><span>Payroll Profiles, Runs & Consultant Invoices</span> <span class="tree-route">/staff/payroll/runs</span></li>
-              </ul>
-            </div>
-          </div>
+      <!-- Container where dynamic section cards will render -->
+      <div id="dynamicMenuContainer" class="row">
+        <div class="col-12 text-center py-5">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="mt-2 text-slate-muted">Loading live MENU_MASTER single source of truth...</p>
         </div>
       </div>
     </div>
@@ -357,7 +272,7 @@
 
             subgraph Gateway_Layer["Reverse Proxy and Gateway Layer"]
                 Nginx["AWS Nginx Reverse Proxy (Port 80/443)"]
-                NodeProxy["Node.js Express Proxy (Port 5000)"]
+                NextProxy["Next.js 14 App Router (Port 5000)"]
             end
 
             subgraph App_Layer["Application Service Layer (FastAPI)"]
@@ -380,8 +295,8 @@
 
             Web --> Nginx
             Mobile --> Nginx
-            Nginx --> NodeProxy
-            NodeProxy -->|API Proxy /api/v1| FastAPI
+            Nginx --> NextProxy
+            NextProxy -->|API Proxy /api/v1| FastAPI
             FastAPI --> MNR
             FastAPI --> VGK
             FastAPI --> ZY
@@ -454,10 +369,10 @@
         <div class="col-md-6 mb-3">
           <div class="arch-card gap-card">
             <div class="d-flex justify-content-between align-items-center mb-3">
-              <h3 class="h6 text-white mb-0"><i class="fa-solid fa-bug text-danger me-2"></i>1. Monolithic HTML vs Modern Component Framework</h3>
-              <span class="badge-pill badge-red">Architectural Debt</span>
+              <h3 class="h6 text-white mb-0"><i class="fa-solid fa-check-circle text-success me-2"></i>1. Monolithic HTML Migration (Active Next.js 14 Upgrade)</h3>
+              <span class="badge-pill badge-green">In Progress</span>
             </div>
-            <p class="text-white mb-0 font-weight-medium">The frontend currently relies on large monolithic HTML files (with <code>server.js</code> preloading 400+ HTML files) with inline JavaScript string concatenation. This increases memory consumption and makes component reuse harder.</p>
+            <p class="text-white mb-0 font-weight-medium">Next.js 14 App Router initialized to replace legacy HTML files with React Server Components, TypeScript types, and Tailwind CSS modules.</p>
           </div>
         </div>
 
@@ -467,7 +382,7 @@
               <h3 class="h6 text-white mb-0"><i class="fa-solid fa-microchip text-warning me-2"></i>2. AWS Micro-Instance RAM Constraints</h3>
               <span class="badge-pill badge-orange">Infrastructure Constraint</span>
             </div>
-            <p class="text-white mb-0 font-weight-medium">The current AWS Elastic Beanstalk deployment runs on a 1GB RAM micro instance. This mandated restricting Uvicorn to a single worker process to prevent memory spikes above 100%.</p>
+            <p class="text-white mb-0 font-weight-medium">The current AWS Elastic Beanstalk deployment runs on a 1GB RAM micro instance. Restricting Uvicorn to a single worker process prevents memory spikes above 100%.</p>
           </div>
         </div>
 
@@ -499,10 +414,10 @@
         <div class="col-md-6 mb-3">
           <div class="arch-card roadmap-card">
             <div class="d-flex justify-content-between align-items-center mb-3">
-              <h3 class="h6 text-white mb-0"><i class="fa-solid fa-rocket text-success me-2"></i>1. Migration to Next.js 14 (React SSR)</h3>
-              <span class="badge-pill badge-green">Phase 1 Target</span>
+              <h3 class="h6 text-white mb-0"><i class="fa-solid fa-rocket text-success me-2"></i>1. Next.js 14 App Router SSR (Phase 1 Initialized)</h3>
+              <span class="badge-pill badge-green">Active Target</span>
             </div>
-            <p class="text-white mb-0 font-weight-medium">Migrate monolithic static HTML templates to Next.js 14 App Router with React Server Components, TypeScript, and Tailwind CSS for superior speed, maintainability, and SEO.</p>
+            <p class="text-white mb-0 font-weight-medium">Migrating monolithic static HTML templates to Next.js 14 App Router with React Server Components, TypeScript, and Tailwind CSS for superior speed, maintainability, and SEO.</p>
           </div>
         </div>
 
@@ -544,7 +459,95 @@
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+      renderDynamicMenuMaster();
     });
+
+    function renderDynamicMenuMaster() {
+      const container = document.getElementById('dynamicMenuContainer');
+      const menuData = (typeof MENU_MASTER !== 'undefined') ? MENU_MASTER : [];
+
+      if (!menuData || menuData.length === 0) {
+        container.innerHTML = `<div class="col-12 text-center text-warning py-4">MENU_MASTER data not loaded. Check script include.</div>`;
+        return;
+      }
+
+      let totalRoutes = 0;
+      let html = '';
+
+      menuData.forEach(section => {
+        const secLabel = section.section_label || section.section_code;
+        html += `<div class="col-xl-6 mb-4 menu-section-card" data-sec="${secLabel.toLowerCase()}">
+          <div class="arch-card">
+            <h2 class="h5 text-info mb-3"><i class="fa-solid fa-layer-group me-2"></i>${secLabel}</h2>`;
+
+        // Direct Items
+        if (section.items && section.items.length > 0) {
+          totalRoutes += section.items.length;
+          html += `<div class="tree-group mb-3">
+            <div class="tree-title"><i class="fa-solid fa-folder-open text-primary me-2"></i> Core Module Items</div>
+            <ul class="tree-list">`;
+          section.items.forEach(item => {
+            html += `<li class="tree-item menu-item-node" data-label="${item.label.toLowerCase()}" data-route="${item.route.toLowerCase()}">
+              <span>${item.label}</span>
+              <a href="${item.route}" target="_blank" class="tree-route"><i class="fa-solid fa-arrow-up-right-from-square me-1"></i>${item.route}</a>
+            </li>`;
+          });
+          html += `</ul></div>`;
+        }
+
+        // SubSections
+        if (section.subSections && section.subSections.length > 0) {
+          section.subSections.forEach(subSec => {
+            const subLabel = subSec.sub_section_label || subSec.sub_section_code;
+            if (subSec.items && subSec.items.length > 0) {
+              totalRoutes += subSec.items.length;
+              html += `<div class="tree-group mb-3">
+                <div class="tree-title"><i class="fa-solid fa-circle-chevron-right text-success me-2"></i> ${subLabel}</div>
+                <ul class="tree-list">`;
+              subSec.items.forEach(item => {
+                html += `<li class="tree-item menu-item-node" data-label="${item.label.toLowerCase()}" data-route="${item.route.toLowerCase()}">
+                  <span>${item.label}</span>
+                  <a href="${item.route}" target="_blank" class="tree-route"><i class="fa-solid fa-arrow-up-right-from-square me-1"></i>${item.route}</a>
+                </li>`;
+              });
+              html += `</ul></div>`;
+            }
+          });
+        }
+
+        html += `</div></div>`;
+      });
+
+      container.innerHTML = html;
+      document.getElementById('statRoutesCount').innerHTML = `<i class="fa-solid fa-link me-1"></i>${totalRoutes} Live Dynamic Routes`;
+    }
+
+    function filterDynamicMenu() {
+      const query = document.getElementById('menuSearchInput').value.toLowerCase().trim();
+      const sectionCards = document.querySelectorAll('.menu-section-card');
+
+      sectionCards.forEach(card => {
+        const itemNodes = card.querySelectorAll('.menu-item-node');
+        let cardMatch = false;
+
+        itemNodes.forEach(node => {
+          const label = node.getAttribute('data-label') || '';
+          const route = node.getAttribute('data-route') || '';
+          if (!query || label.includes(query) || route.includes(query)) {
+            node.style.display = 'flex';
+            cardMatch = true;
+          } else {
+            node.style.display = 'none';
+          }
+        });
+
+        if (cardMatch || !query) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
   </script>
 </body>
 </html>
