@@ -3280,6 +3280,9 @@ def get_bank_wise_leads(
     leads = query.all()
     now_dt = datetime.now()
     
+    # Pre-fetch staff employee map for telecaller and field staff resolution
+    staff_map = {s.id: s.full_name for s in db.query(StaffEmployee.id, StaffEmployee.full_name).all()}
+    
     # Process leads and calculate Stage Days dynamically
     processed_leads = []
     bank_counts = {}
@@ -3318,6 +3321,10 @@ def get_bank_wise_leads(
         g_source = lead.source_ref_name or lead.guru_name or lead.source_details or 'Direct'
         member_set.add(g_source)
         
+        # Resolve Telecaller and Field Staff names
+        tc_name = staff_map.get(lead.telecaller_id) or getattr(lead, 'telecaller_supported', None) or '—'
+        fs_name = staff_map.get(lead.field_staff_id) or getattr(lead, 'field_support_ref_name', None) or '—'
+        
         processed_leads.append({
             'id': lead.id,
             'customer_name': lead.name or 'N/A',
@@ -3328,9 +3335,9 @@ def get_bank_wise_leads(
             'stage_days': stage_days,
             'stage_updated_at': s_date_dt.isoformat() if s_date_dt else None,
             'ground_source_name': g_source,
-            'telecaller_name': '—',
-            'field_staff_name': '—',
-            'brand_name': '—',
+            'telecaller_name': tc_name,
+            'field_staff_name': fs_name,
+            'brand_name': getattr(lead, 'brand_name', None) or '—',
             'area': lead.area or '—',
             'city_district': f"{lead.city or ''}, {lead.state or ''}".strip(', ') or '—',
             'deal_value': deal_val,
