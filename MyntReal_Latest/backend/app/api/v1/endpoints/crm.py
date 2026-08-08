@@ -3228,9 +3228,10 @@ def get_bank_wise_leads(
     role_obj = getattr(current_employee, 'role', None)
     role_str = (getattr(role_obj, 'role_code', '') or getattr(role_obj, 'role_name', '') or (role_obj if isinstance(role_obj, str) else '') or '').upper()
 
-    # Manager / Full View Access: Key Leadership (dept 1), Sales (dept 13), MR10001, MN10003
+    # Manager / Full View Access: Key Leadership (dept 1), Sales (dept 13), Sales staff, Team A, MR10001, MN10003, MN10008, MN10009, MN10010
     is_manager = False
-    if dept_id in (1, 13) or emp_code in ('MR10001', 'MN10003') or 'sales' in dept_name or 'management' in dept_name:
+    _team_tag = (current_employee.team_tag or '').lower()
+    if dept_id in (1, 13) or emp_code in ('MR10001', 'MN10003', 'MN10008', 'MN10009', 'MN10010') or 'sales' in dept_name or 'management' in dept_name or _team_tag == 'team_a' or is_sales_or_leadership:
         is_manager = True
     elif getattr(current_employee, 'staff_type', None) in ('VGK4U', 'VGK4U Supreme'):
         is_manager = True
