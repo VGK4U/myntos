@@ -1906,6 +1906,144 @@ def get_attendance_exceptions(
     }
 
 
+@router.get("/exceptions/summary", summary="Executive summary of exception approvals grouped per employee")
+def get_attendance_exceptions_summary(
+    from_date: Optional[date] = Query(None, description="Start date filter"),
+    to_date: Optional[date] = Query(None, description="End date filter"),
+    department_id: Optional[int] = Query(None, description="Filter by department"),
+    approver_id: Optional[int] = Query(None, description="Filter by approver"),
+    bypass_type: Optional[str] = Query(None, description="Filter by bypass type"),
+    search: Optional[str] = Query(None, description="Search employee name or code"),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get aggregated exception approval statistics grouped by employee for Executive Dashboard view.
+    """
+    _role_code = (current_user.role.role_code if current_user.role else '').lower()
+    _emp_code = (current_user.emp_code or '').upper()
+    _cross_company = _emp_code == 'MR10001' or _role_code in ('key_leadership', 'vgk4u', 'ea')
+    
+    if _cross_company:
+        query = db.query(StaffAttendanceException)
+    elif hasattr(current_user, 'base_company_id') and current_user.base_company_id:
+        query = db.query(StaffAttendanceException).filter(
+            StaffAttendanceException.company_id == current_user.base_company_id
+        )
+    else:
+        query = db.query(StaffAttendanceException)
+        
+    def _clean_param(val):
+        if val is None or hasattr(val, 'default'):
+            return None
+        return val
+
+    v_from = _clean_param(from_date)
+    v_to = _clean_param(to_date)
+    v_dept = _clean_param(department_id)
+    v_appr = _clean_param(approver_id)
+    v_btype = _clean_param(bypass_type)
+    v_search = _clean_param(search)
+
+    if v_from:
+        query = query.filter(StaffAttendanceException.date >= v_from)
+    if v_to:
+        query = query.filter(StaffAttendanceException.date <= v_to)
+    if v_dept or v_search:
+        query = query.join(StaffEmployee, StaffAttendanceException.employee_id == StaffEmployee.id)
+        if v_dept:
+            query = query.filter(StaffEmployee.department_id == v_dept)
+        if v_search:
+            s_pat = f"%{v_search.strip()}%"
+            query = query.filter(
+                or_(
+                    StaffEmployee.full_name.ilike(s_pat),
+                    StaffEmployee.emp_code.ilike(s_pat)
+                )
+            )
+    if v_appr:
+        query = query.filter(StaffAttendanceException.approver_id == v_appr)
+    if v_btype:
+        try:
+            bypass_enum = ExceptionBypassType(v_btype)
+            query = query.filter(StaffAttendanceException.bypass_type == bypass_enum)
+        except ValueError:
+            pass
+
+    exceptions = query.order_by(desc(StaffAttendanceException.date)).all()
+
+    emp_map = {}
+    total_exceptions = len(exceptions)
+    total_hours_given = 0.0
+    no_timesheet_count = 0
+    mismatch_count = 0
+    manual_count = 0
+
+    for exc in exceptions:
+        emp_id = exc.employee_id
+        hrs = float(exc.approved_hours or 0.0)
+        total_hours_given += hrs
+        
+        btype = exc.bypass_type.value if exc.bypass_type else 'manual'
+        if btype == 'no_timesheet':
+            no_timesheet_count += 1
+        elif btype == 'mismatch_override':
+            mismatch_count += 1
+        else:
+            manual_count += 1
+
+        if emp_id not in emp_map:
+            employee = db.query(StaffEmployee).filter_by(id=emp_id).first()
+            emp_map[emp_id] = {
+                "employee_id": emp_id,
+                "employee_name": employee.full_name if employee else f"Employee #{emp_id}",
+                "employee_code": employee.emp_code if employee else "N/A",
+                "department": employee.department.name if employee and employee.department else "N/A",
+                "department_id": employee.department_id if employee else None,
+                "total_exceptions": 0,
+                "total_hours_given": 0.0,
+                "total_days_given": 0.0,
+                "no_timesheet_count": 0,
+                "mismatch_count": 0,
+                "manual_count": 0,
+                "latest_exception_date": str(exc.date),
+                "latest_reason": exc.exception_reason or ""
+            }
+
+        emp_summary = emp_map[emp_id]
+        emp_summary["total_exceptions"] += 1
+        emp_summary["total_hours_given"] += hrs
+        emp_summary["total_days_given"] = round(emp_summary["total_hours_given"] / 8.0, 2)
+        
+        if btype == 'no_timesheet':
+            emp_summary["no_timesheet_count"] += 1
+        elif btype == 'mismatch_override':
+            emp_summary["mismatch_count"] += 1
+        else:
+            emp_summary["manual_count"] += 1
+
+        if str(exc.date) > emp_summary["latest_exception_date"]:
+            emp_summary["latest_exception_date"] = str(exc.date)
+            emp_summary["latest_reason"] = exc.exception_reason or ""
+
+    summary_list = list(emp_map.values())
+    summary_list.sort(key=lambda x: x["total_exceptions"], reverse=True)
+
+    return {
+        "success": True,
+        "summary": {
+            "total_employees": len(emp_map),
+            "total_exceptions": total_exceptions,
+            "total_hours_given": round(total_hours_given, 1),
+            "total_days_given": round(total_hours_given / 8.0, 2),
+            "no_timesheet_count": no_timesheet_count,
+            "mismatch_count": mismatch_count,
+            "manual_count": manual_count
+        },
+        "employees": summary_list
+    }
+
+
 @router.get("/time-report", summary="DC-TIMEREPORT-001: Per-employee daily time report with punch + sheet + exception data")
 def get_time_report(
     employee_id: int = Query(..., description="Employee ID (required)"),
