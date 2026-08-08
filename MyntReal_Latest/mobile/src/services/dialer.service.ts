@@ -165,16 +165,18 @@ class DialerService {
       this.session = data.session;
       this.currentIndex = data.current_index ?? 0;
       const leadIds: number[] = data.queue_lead_ids ?? [];
-      // Restore queue items from saved IDs
-      if (this.queue.length === 0 && leadIds.length > 0) {
+      // DC_SAME_DAY_EXCLUDE: Always reconcile queue with fresh backend queue (purges dialed/future-deferred leads)
+      const fullRes = await this.fetchQueue();
+      if (leadIds.length > 0) {
         const fetchedIds = new Set(leadIds);
-        const fullRes = await this.fetchQueue();
         this.queue = fullRes.queue.filter(q => fetchedIds.has(q.lead_id));
-        // Preserve skip order
         this.queue.sort((a, b) => leadIds.indexOf(a.lead_id) - leadIds.indexOf(b.lead_id));
+      } else {
+        this.queue = fullRes.queue;
       }
+      this.currentIndex = Math.min(this.currentIndex, Math.max(0, this.queue.length - 1));
       await this._saveLocalState();
-      return { session: this.session as DialerSession, current_index: this.currentIndex, queue_lead_ids: leadIds };
+      return { session: this.session as DialerSession, current_index: this.currentIndex, queue_lead_ids: this.getQueueLeadIds() };
     }
     return null;
   }

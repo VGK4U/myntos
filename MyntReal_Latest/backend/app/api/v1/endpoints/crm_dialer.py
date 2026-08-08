@@ -345,14 +345,24 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
     emp_code = staff.emp_code
     user_ref = str(staff.id)
 
-    # DC_DIALER_FIX2: Exclude leads already dialed today by this user (non-skip outcomes)
+    # DC_DIALER_SAME_DAY_EXCLUDE: Exclude ALL leads dialed or contacted today (non-skip outcomes),
+    # or updated with last_contact_date/last_dialed_at today, or with a future next_followup_date set.
     ist_today = get_ist_now().replace(hour=0, minute=0, second=0, microsecond=0)
+    ist_today_end = ist_today + timedelta(days=1)
     dialed_rows = db.execute(text("""
         SELECT DISTINCT lead_id FROM crm_dialer_attempts
-        WHERE user_ref = :ref AND call_outcome != 'skip'
-        AND dialed_at >= :today
-    """), {"ref": user_ref, "today": ist_today}).fetchall()
-    dialed_today = {r[0] for r in dialed_rows}
+        WHERE call_outcome != 'skip' AND dialed_at >= :today
+        UNION
+        SELECT DISTINCT lead_id FROM crm_lead_calls
+        WHERE created_at >= :today OR call_start_time >= :today
+        UNION
+        SELECT id FROM crm_leads
+        WHERE (last_contact_date >= :today OR last_dialed_at >= :today)
+        UNION
+        SELECT id FROM crm_leads
+        WHERE next_followup_date >= :today_end
+    """), {"ref": user_ref, "today": ist_today, "today_end": ist_today_end}).fetchall()
+    dialed_today = {r[0] for r in dialed_rows if r[0] is not None}
 
     # DC_NMC_FIX: Permanently exclude unassigned leads this user dismissed as "not my category"
     nmc_rows = db.execute(text("""
@@ -474,14 +484,24 @@ def _build_queue_for_mnr(user: User, db: Session) -> List[dict]:
     user_id = user.id
     user_ref = str(user.id)
 
-    # DC_DIALER_FIX2: Exclude leads already dialed today by this user (non-skip outcomes)
+    # DC_DIALER_SAME_DAY_EXCLUDE: Exclude ALL leads dialed or contacted today (non-skip outcomes),
+    # or updated with last_contact_date/last_dialed_at today, or with a future next_followup_date set.
     ist_today = get_ist_now().replace(hour=0, minute=0, second=0, microsecond=0)
+    ist_today_end = ist_today + timedelta(days=1)
     dialed_rows = db.execute(text("""
         SELECT DISTINCT lead_id FROM crm_dialer_attempts
-        WHERE user_ref = :ref AND call_outcome != 'skip'
-        AND dialed_at >= :today
-    """), {"ref": user_ref, "today": ist_today}).fetchall()
-    dialed_today = {r[0] for r in dialed_rows}
+        WHERE call_outcome != 'skip' AND dialed_at >= :today
+        UNION
+        SELECT DISTINCT lead_id FROM crm_lead_calls
+        WHERE created_at >= :today OR call_start_time >= :today
+        UNION
+        SELECT id FROM crm_leads
+        WHERE (last_contact_date >= :today OR last_dialed_at >= :today)
+        UNION
+        SELECT id FROM crm_leads
+        WHERE next_followup_date >= :today_end
+    """), {"ref": user_ref, "today": ist_today, "today_end": ist_today_end}).fetchall()
+    dialed_today = {r[0] for r in dialed_rows if r[0] is not None}
 
     # DC_FUTURE_NFD_EXCLUDE: Compute today-end for MNR queue future-date filter
     _mnr_now = get_ist_now()
@@ -1227,8 +1247,9 @@ async def log_dialer_attempt(
                 lead.category_id = int(new_category_id)
             except (ValueError, TypeError):
                 pass
-        if call_outcome in ('answered', 'callback') or (call_outcome and call_outcome != 'skip'):
+        if call_outcome and call_outcome != 'skip':
             lead.last_contact_date = now
+            lead.last_dialed_at = now
         if next_followup_date:
             try:
                 lead.next_followup_date = datetime.fromisoformat(next_followup_date.replace('Z', ''))

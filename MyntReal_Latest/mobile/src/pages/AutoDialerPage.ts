@@ -1115,10 +1115,12 @@ export class AutoDialerPage {
       ]);
 
       this._closePopup(overlay);
-      const hasNext = dialerService.advanceQueue();
+      // DC_SAME_DAY_EXCLUDE: Immediately remove this dialed/updated lead from the in-memory queue
+      // so it never appears again during this session or today!
+      dialerService.removeFromQueue(leadId);
       this.currentLead = dialerService.getCurrentLead();
 
-      if (!hasNext) {
+      if (!this.currentLead) {
         this._showQueueComplete();
       } else {
         this._render();
