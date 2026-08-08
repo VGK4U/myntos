@@ -619,6 +619,8 @@
                         // No NDA pending — commit session immediately
                         localStorage.setItem('staff_token', data.access_token);
                         document.cookie = `staff_token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
+                        document.cookie = `session_token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
+                        document.cookie = `session=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
 
                         if (data.employee) {
                             localStorage.setItem('staff_user', JSON.stringify(data.employee));
@@ -635,7 +637,8 @@
                         }, 1000);
                     }
                 } else {
-                    throw new Error(data.detail || 'Invalid Employee ID or password');
+                    const errorMsg = (typeof data.detail === 'string' ? data.detail : (data.message || data.error)) || 'Invalid Employee ID or password';
+                    throw new Error(errorMsg);
                 }
             } catch (error) {
                 alertContainer.innerHTML = `

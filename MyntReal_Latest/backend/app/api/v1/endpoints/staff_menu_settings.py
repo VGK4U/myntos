@@ -3717,9 +3717,17 @@ async def get_my_menus(
         _dept_auto_codes.add('staff_dashboard')
         _dept_auto_codes.add('staff_profile')
 
-        # Auto-grant MNR_BANK_WISE_LEADS ONLY to Key Leadership (dept 1) & Sales Department (dept 13)
-        if current_user.department_id in (1, 13) or (current_user.emp_code or '').upper() in ('MR10001', 'MN10003'):
+        # Auto-grant MNR_BANK_WISE_LEADS to Key Leadership (dept 1), Sales Department (dept 13), all MN/MR staff employees
+        _emp_code_upper = (current_user.emp_code or '').upper()
+        _staff_type_upper = (current_user.staff_type or '').upper()
+        if current_user.department_id in (1, 13) or _emp_code_upper.startswith(('MN', 'MR')) or _staff_type_upper in ('MN_STAFF', 'MYNTREAL'):
             _dept_auto_codes.add('MNR_BANK_WISE_LEADS')
+
+        # DC Protocol Aug 2026: Explicit menu grants for MN10009 and MN10008
+        if _emp_code_upper == 'MN10009':
+            _dept_auto_codes.update(['VGK_TEAM_MEMBERS', 'staff_solar_leads', 'mnr_solar_leads', 'MNR_BANK_WISE_LEADS'])
+        elif _emp_code_upper == 'MN10008':
+            _dept_auto_codes.update(['staff_solar_leads', 'mnr_solar_leads', 'MNR_BANK_WISE_LEADS'])
         if _dept_auto_codes:
             logger.info(f"[DC-ROLE-AUTO-GRANT] Employee {employee_id} ({current_user.emp_code}) role/emp auto-granted menus: {_dept_auto_codes}")
     except Exception as _re:

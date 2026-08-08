@@ -3184,6 +3184,7 @@ def get_my_leads(
 def get_bank_wise_leads(
     company_id: Optional[int] = Query(None, description="Company ID (Optional - leave empty for all companies)"),
     bank_name: Optional[str] = Query(None, description="Filter by specific bank name"),
+    bucket_filter: Optional[str] = Query(None, description="Filter by stage age bucket: b_0_7, b_8_15, b_16_30, b_31_60, b_gt_60"),
     sort_by: Optional[str] = Query("stage_days_desc", description="stage_days_desc, stage_days_asc, member, bank, deal_value, customer_name"),
     search: Optional[str] = Query(None, description="Search by customer name, phone, district, branch"),
     member_filter: Optional[str] = Query(None, description="Filter by Ground Source or Handler member name"),
@@ -3300,16 +3301,48 @@ def get_bank_wise_leads(
     leads = query.all()
     now_dt = datetime.now()
     
-    # Pre-fetch staff employee map for telecaller, field staff, and handler resolution
+    # Pre-fetch staff employee map for names and phone numbers
     staff_map = {}
-    for s in db.query(StaffEmployee.id, StaffEmployee.emp_code, StaffEmployee.full_name).all():
+    staff_phone_map = {}
+    for s in db.query(StaffEmployee.id, StaffEmployee.emp_code, StaffEmployee.full_name, StaffEmployee.phone).all():
         staff_map[s.id] = s.full_name
         staff_map[str(s.id)] = s.full_name
+        if s.phone:
+            staff_phone_map[s.id] = s.phone
+            staff_phone_map[str(s.id)] = s.phone
+            if s.full_name:
+                staff_phone_map[s.full_name.lower().strip()] = s.phone
         if s.emp_code:
             staff_map[s.emp_code.upper()] = s.full_name
             staff_map[s.emp_code.lower()] = s.full_name
+
+    # Pre-fetch official partner phone map
+    partner_phone_map = {}
+    try:
+        from app.models.staff_accounts import OfficialPartner
+        for p in db.query(OfficialPartner.id, OfficialPartner.partner_name, OfficialPartner.phone, OfficialPartner.whatsapp_number).all():
+            ph = p.phone or p.whatsapp_number
+            if ph:
+                partner_phone_map[p.id] = ph
+                partner_phone_map[str(p.id)] = ph
+                if p.partner_name:
+                    partner_phone_map[p.partner_name.lower().strip()] = ph
+    except Exception:
+        pass
+
+    # Pre-fetch user / member phone map
+    user_phone_map = {}
+    try:
+        from app.models.user import User
+        for u in db.query(User.id, User.full_name, User.mobile).all():
+            if u.mobile:
+                user_phone_map[str(u.id)] = u.mobile
+                if u.full_name:
+                    user_phone_map[u.full_name.lower().strip()] = u.mobile
+    except Exception:
+        pass
     
-    # Process leads and calculate Stage Days dynamically
+    # Process leads, Stage Age Buckets, and Contact Phones
     processed_leads = []
     bank_counts = {}
     member_set = set()
@@ -3317,6 +3350,9 @@ def get_bank_wise_leads(
     ground_support_set = set()
     uport_staff_set = set()
     total_deal_value = 0.0
+
+    bucket_counts = {'b_0_7': 0, 'b_8_15': 0, 'b_16_30': 0, 'b_31_60': 0, 'b_gt_60': 0}
+    bucket_values = {'b_0_7': 0.0, 'b_8_15': 0.0, 'b_16_30': 0.0, 'b_31_60': 0.0, 'b_gt_60': 0.0}
     
     for lead in leads:
         # Determine bank name
@@ -3336,9 +3372,28 @@ def get_bank_wise_leads(
         stage_days = (now_dt - s_date_dt).days if s_date_dt else 0
         if stage_days < 0:
             stage_days = 0
-            
+
+        # Classify into Bucket
+        bucket_key = 'b_gt_60'
+        bucket_label = '> 60 Days'
+        if stage_days <= 7:
+            bucket_key = 'b_0_7'
+            bucket_label = '0-7 Days'
+        elif stage_days <= 15:
+            bucket_key = 'b_8_15'
+            bucket_label = '8-15 Days'
+        elif stage_days <= 30:
+            bucket_key = 'b_16_30'
+            bucket_label = '16-30 Days'
+        elif stage_days <= 60:
+            bucket_key = 'b_31_60'
+            bucket_label = '31-60 Days'
+
         deal_val = float(lead.deal_value_total or lead.deal_value or 0.0)
         total_deal_value += deal_val
+
+        bucket_counts[bucket_key] += 1
+        bucket_values[bucket_key] += deal_val
         
         # Bank Summary aggregations
         if b_name not in bank_counts:
@@ -3353,6 +3408,24 @@ def get_bank_wise_leads(
         # Resolve Telecaller, Ground Support (Field Staff), and Up-port Staff names
         tc_name = staff_map.get(lead.telecaller_id) or getattr(lead, 'telecaller_supported', None) or '—'
         fs_name = staff_map.get(lead.field_staff_id) or getattr(lead, 'field_support_ref_name', None) or '—'
+
+        # Resolve Ground Source Phone
+        gs_phone = ''
+        if getattr(lead, 'associated_partner_id', None) and lead.associated_partner_id in partner_phone_map:
+            gs_phone = partner_phone_map[lead.associated_partner_id]
+        if not gs_phone and g_source and g_source.lower().strip() in partner_phone_map:
+            gs_phone = partner_phone_map[g_source.lower().strip()]
+        if not gs_phone and g_source and g_source.lower().strip() in user_phone_map:
+            gs_phone = user_phone_map[g_source.lower().strip()]
+        if not gs_phone and g_source and g_source.lower().strip() in staff_phone_map:
+            gs_phone = staff_phone_map[g_source.lower().strip()]
+
+        # Resolve Ground Support Phone
+        fs_phone = ''
+        if lead.field_staff_id and lead.field_staff_id in staff_phone_map:
+            fs_phone = staff_phone_map[lead.field_staff_id]
+        elif fs_name and fs_name.lower().strip() in staff_phone_map:
+            fs_phone = staff_phone_map[fs_name.lower().strip()]
         
         # Up-port Staff resolution (handler_id or created_by_id or assigned staff)
         u_name = '—'
@@ -3373,10 +3446,14 @@ def get_bank_wise_leads(
             'bank_name': b_name,
             'bank_branch': lead.bank_branch or 'N/A',
             'stage_days': stage_days,
+            'bucket_key': bucket_key,
+            'bucket_label': bucket_label,
             'stage_updated_at': s_date_dt.isoformat() if s_date_dt else None,
             'ground_source_name': g_source,
+            'ground_source_phone': gs_phone,
             'telecaller_name': tc_name,
             'ground_support_name': fs_name,
+            'ground_support_phone': fs_phone,
             'field_staff_name': fs_name,
             'uport_staff_name': u_name,
             'brand_name': getattr(lead, 'brand_name', None) or '—',
@@ -3387,6 +3464,11 @@ def get_bank_wise_leads(
             'remarks': getattr(lead, 'description', '') or '',
             'google_maps_url': lead.google_maps_link or f"https://www.google.com/maps/search/?api=1&query={lead.name}+{lead.city}"
         })
+
+    # Apply Bucket Filter
+    if bucket_filter and bucket_filter.strip() and not bucket_filter.strip().lower().startswith('all'):
+        clean_b = bucket_filter.strip().lower()
+        processed_leads = [l for l in processed_leads if l['bucket_key'].lower() == clean_b or clean_b in l['bucket_label'].lower()]
 
     # Apply Telecaller Filter
     if telecaller_filter and telecaller_filter.strip() and not telecaller_filter.strip().lower().startswith('all'):
@@ -3427,6 +3509,14 @@ def get_bank_wise_leads(
         {'bank_name': k, 'count': v['count'], 'deal_value': v['deal_value']}
         for k, v in sorted(bank_counts.items(), key=lambda item: item[1]['count'], reverse=True)
     ]
+
+    bucket_summary = {
+        'b_0_7': {'label': '0-7 Days', 'count': bucket_counts['b_0_7'], 'deal_value': bucket_values['b_0_7']},
+        'b_8_15': {'label': '8-15 Days', 'count': bucket_counts['b_8_15'], 'deal_value': bucket_values['b_8_15']},
+        'b_16_30': {'label': '16-30 Days', 'count': bucket_counts['b_16_30'], 'deal_value': bucket_values['b_16_30']},
+        'b_31_60': {'label': '31-60 Days', 'count': bucket_counts['b_31_60'], 'deal_value': bucket_values['b_31_60']},
+        'b_gt_60': {'label': '> 60 Days', 'count': bucket_counts['b_gt_60'], 'deal_value': bucket_values['b_gt_60']}
+    }
     
     return {
         'success': True,
@@ -3439,6 +3529,7 @@ def get_bank_wise_leads(
         'total_bank_leads': len(processed_leads),
         'total_bank_deal_value': total_deal_value,
         'bank_summary': bank_summary,
+        'bucket_summary': bucket_summary,
         'unique_members': sorted(list(member_set)),
         'unique_telecallers': sorted(list(telecaller_set)),
         'unique_ground_supports': sorted(list(ground_support_set)),

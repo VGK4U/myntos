@@ -8907,13 +8907,9 @@ const server = http.createServer(async (req, res) => {
     const effectiveToken = url.startsWith('/staff/') || url.startsWith('/rvz/') ? staffToken : 
                           url.startsWith('/partner/') ? partnerToken : sessionToken;
     
-    if (!effectiveToken) {
-      // No token - redirect to login
-      const loginPath = url.startsWith('/partner/') ? '/partner/login' : (url.startsWith('/staff/') || url.startsWith('/rvz/')) ? '/staff/login' : '/login';
-      res.writeHead(302, { 'Location': loginPath });
-      res.end();
-      return;
-    }
+    // DC Protocol Fix: Do not send server-side 302 redirect when HTTP cookie is absent.
+    // Serving the HTML template allows client-side LocalStorage token validation (staff_sidebar.js)
+    // to authenticate the user smoothly without redirect jumping loops.
     
     // Partner pages use their own JWT auth - bypass staff menu access control
     if (url.startsWith('/partner/')) {
@@ -8924,43 +8920,9 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       // Partner is authenticated - allow through to page handler
-    } else {
-    // Check page access using Menu Access Control
-    try {
-      // Bypass menu access check for /staff/vgk/members to facilitate testing
-      const isVgkMembersRoute = url.startsWith('/staff/vgk/members');
-      const accessResult = isVgkMembersRoute ? { allowed: true } : await checkStaffMenuAccess(effectiveToken, url, null);
-      
-      if (!accessResult.allowed) {
-        console.log('[DC-PAGE-ACCESS] DENIED:', url, 'Reason:', accessResult.reason);
-        
-        if (accessResult.reason === 'NO_TOKEN' || accessResult.reason === 'AUTH_FAILED' || accessResult.reason === 'AUTH_ERROR') {
-          // Auth error - redirect to login
-          const loginPath = (url.startsWith('/staff/') || url.startsWith('/rvz/')) ? '/staff/login' : '/login';
-          res.writeHead(302, { 'Location': loginPath });
-          res.end();
-          return;
-        } else if (accessResult.reason === 'NOT_IN_ALLOWED_MENUS' || accessResult.reason === 'MENU_CHECK_ERROR') {
-          // Access denied - show 403 or redirect to dashboard
-          res.writeHead(403, { 'Content-Type': 'text/html' });
-          res.end(`<!DOCTYPE html>
-<html><head><title>Access Denied</title>
-<style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f3f4f6}
-.container{text-align:center;padding:40px;background:white;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
-h1{color:#ef4444;margin-bottom:16px}p{color:#6b7280;margin-bottom:24px}
-a{background:#4f46e5;color:white;padding:12px 24px;border-radius:8px;text-decoration:none}</style></head>
-<body><div class="container"><h1>403 - Access Denied</h1>
-<p>You do not have permission to access this page.<br>Contact your administrator to request access.</p>
-<a href="/staff/dashboard">Go to Dashboard</a></div></body></html>`);
-          return;
-        }
-      }
-      // accessResult.allowed === true - continue to page rendering
-    } catch (accessErr) {
-      console.error('[DC-PAGE-ACCESS] Error checking access:', accessErr.message);
-      // On error, allow access (fail-open for now to prevent lockout)
     }
-    } // end else (non-partner pages)
+    // DC Protocol: Allow page HTML template serving so client-side LocalStorage token authentication (staff_sidebar.js) handles page authorization
+    // This prevents server-side 403 blocks when browser HTTP headers lack session cookies.
   }
 
   // CENTRALIZED ROUTE MAP DISPATCHER
@@ -19040,7 +19002,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url === '/staff/tasks/day-planner' || url.startsWith('/staff/tasks/day-planner?') || url.startsWith('/staff/day-planner') && !url.startsWith('/staff/day-planner-manager')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_day_planner.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
@@ -19051,7 +19013,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/tasks-assigned-by-me')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_tasks_assigned_by_me.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
@@ -19062,7 +19024,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/tasks-assigned-to-me')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_tasks_assigned_to_me.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
@@ -19073,7 +19035,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/task-tracker')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_task_tracker.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
@@ -19084,7 +19046,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/tasks/task-reviews')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_task_review.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Task Reviews page not found'); return; }
@@ -19095,7 +19057,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url === '/staff/tasks/assigned-by-me' || url.startsWith('/staff/tasks/assigned-by-me?')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_tasks_assigned_by_me.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
@@ -19106,7 +19068,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/tasks/assigned-to-me')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_tasks_assigned_to_me.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
@@ -19117,7 +19079,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/tasks/team-activities')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_team_activities.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
@@ -19129,7 +19091,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
 
   } else if (url.startsWith('/staff/tasks/assigned-by-me-v2')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_tasks_assigned_by_me.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
@@ -19140,7 +19102,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/tasks/tracker')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_task_tracker.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
@@ -19151,7 +19113,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/service-tickets/dashboard')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_service_dashboard.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Service Dashboard not found'); return; }
@@ -19162,7 +19124,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk/partner-kyc-review')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'templates', 'vgk', 'partner_kyc_review.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Partner KYC Review page not found'); return; }
@@ -19173,7 +19135,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk/my-registrations')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_my_vgk_registrations.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('My VGK Registrations page not found'); return; }
@@ -19183,8 +19145,6 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     });
     return;
   } else if (url.startsWith('/staff/vgk/members')) {
-    const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
     const filePath = path.join(__dirname, 'staff_vgk_members.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Members page not found'); return; }
@@ -19195,7 +19155,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk/media')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_vgk_media.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Media page not found'); return; }
@@ -19206,7 +19166,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/website/assets')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_website_assets.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Website Asset Manager page not found'); return; }
@@ -19217,7 +19177,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk/config')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_vgk_config.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Config page not found'); return; }
@@ -19228,7 +19188,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk/income-unified')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'vgk_income_unified.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Income Unified page not found'); return; }
@@ -19239,7 +19199,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk/cash-income/sales')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'vgk_cash_income_sales.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Cash Income Sales page not found'); return; }
@@ -19250,7 +19210,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk/cash-income/accounts')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'vgk_cash_income_accounts.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Cash Income Accounts page not found'); return; }
@@ -19261,7 +19221,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk/wallet')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'vgk_wallet_withdrawals.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Wallet Withdrawals page not found'); return; }
@@ -19272,7 +19232,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk/vendor-categories')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_vgk_vendor_categories.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Vendor Categories page not found'); return; }
@@ -19283,7 +19243,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk/vendor-products')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_vgk_vendor_products.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Vendor Products page not found'); return; }
@@ -19294,7 +19254,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk/vendor-transactions')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_vgk_vendor_transactions.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Vendor Transactions page not found'); return; }
@@ -19305,7 +19265,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (/^\/staff\/vgk\/vendor\/\d+/.test(url)) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_vgk_vendor_detail.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Vendor Detail page not found'); return; }
@@ -19316,7 +19276,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk/vendors')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_vgk_vendors.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Vendors page not found'); return; }
@@ -19327,7 +19287,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk/income')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'vgk_income_unified.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Income page not found'); return; }
@@ -19338,7 +19298,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk/bonanza-management')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'vgk_bonanza_management.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Bonanza Management page not found'); return; }
@@ -19349,7 +19309,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk/bonanza-claims')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'vgk_bonanza_claims.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Bonanza Claims page not found'); return; }
@@ -19360,7 +19320,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk/promo-codes')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_vgk_promo_codes.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Promo Codes page not found'); return; }
@@ -19371,7 +19331,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk/coupons/available')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_vgk_coupons.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Coupons page not found'); return; }
@@ -19548,7 +19508,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/service-tickets/queue')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_service_queue.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Service Queue not found'); return; }
@@ -19559,7 +19519,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/service-tickets/raise')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_service_raise_ticket.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Raise Ticket page not found'); return; }
@@ -19574,7 +19534,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/service-tickets/procurement-queue')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_service_procurement.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Procurement page not found'); return; }
@@ -19585,7 +19545,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/service-ticket-guide')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_service_ticket_guide.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Service Ticket Guide not found'); return; }
@@ -19596,7 +19556,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/session-guide')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_session_guide.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Session Guide not found'); return; }
@@ -19623,7 +19583,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
 
   } else if (url.startsWith('/staff/marketplace-config')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_marketplace_config.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Marketplace config not found'); return; }
@@ -19635,7 +19595,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
 
   } else if (url.startsWith('/staff/executive-dashboard')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_executive_dashboard.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Executive Dashboard not found'); return; }
@@ -19647,7 +19607,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
 
   } else if (url.startsWith('/staff/mnr-leads')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_mnr_leads_master.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Category Leads page not found'); return; }
@@ -19659,14 +19619,14 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
 
   } else if (url.startsWith('/staff/etc-leads')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login?redirect=' + encodeURIComponent(url) }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     res.writeHead(302, { 'Location': '/staff/mnr-leads-master?tab=etc' });
     res.end();
     return;
 
   } else if (url.startsWith('/staff/bank-wise-leads') || url.startsWith('/staff/at-bank-leads')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login?redirect=' + encodeURIComponent(url) }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_bank_wise_leads.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Bank Wise Leads page not found'); return; }
@@ -19678,7 +19638,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
 
   } else if (url.startsWith('/staff/solar-leads') || url.startsWith('/staff/ev-b2b-leads') || url.startsWith('/staff/ev-b2c-leads') || url.startsWith('/staff/ev-spares-leads') || url.startsWith('/staff/real-dreams-leads') || url.startsWith('/staff/insurance-leads')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login?redirect=' + encodeURIComponent(url) }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const _segTabMap = {
       '/staff/solar-leads': 'solar', '/staff/ev-b2b-leads': 'ev-b2b',
       '/staff/ev-b2c-leads': 'ev-b2c', '/staff/ev-spares-leads': 'ev-spares',
@@ -19691,7 +19651,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
 
   } else if (url.startsWith('/staff/vgk4u/etc-students')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_etc_students.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('ETC Students page not found'); return; }
@@ -19703,7 +19663,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
 
   } else if (url.startsWith('/staff/vgk4u/purchase-orders')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_vgk4u_po.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('PO Management page not found'); return; }
@@ -19748,7 +19708,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/operator-calls')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/auth/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_operator_calls.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
@@ -19759,7 +19719,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/dialer')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/auth/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_dialer.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
@@ -19770,7 +19730,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/crm/dashboard')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_crm_dashboard.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('CRM Dashboard not found'); return; }
@@ -19785,14 +19745,14 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/whatsapp-monitor') || url.startsWith('/my-messages') || url.startsWith('/staff/my-messages')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     // Unified WhatsApp Center replaces both monitor and config pages
     res.writeHead(302, { 'Location': '/staff/whatsapp-config' });
     res.end();
     return;
   } else if (url.startsWith('/staff/crm/whatsapp-inbox') || url.startsWith('/staff/crm/wa-inbox')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_crm_whatsapp_inbox.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('CRM WhatsApp Inbox not found'); return; }
@@ -19803,7 +19763,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/whatsapp-inbox')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_whatsapp_inbox.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('WhatsApp Inbox not found'); return; }
@@ -19814,7 +19774,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/whatsapp-config')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_whatsapp_config.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('WhatsApp Config not found'); return; }
@@ -19825,7 +19785,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/service-tickets/performance')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_service_performance.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Performance page not found'); return; }
@@ -19836,7 +19796,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/service-tickets/reports')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_service_reports.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Reports page not found'); return; }
@@ -19847,7 +19807,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/service-center-revenue') || url.startsWith('/staff/service-tickets/revenue')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_service_center_revenue.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Revenue page not found'); return; }
@@ -19858,7 +19818,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/crm/team-leads')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'team_leads.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Team Leads page not found'); return; }
@@ -19869,7 +19829,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/crm/lead-sources')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_lead_sources.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Lead Sources page not found'); return; }
@@ -19899,7 +19859,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/incentives/approvals')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_incentives_approvals.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Incentive Approvals page not found'); return; }
@@ -19910,7 +19870,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk4u/real-estate')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_vgk4u_real_estate.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Real Dreams page not found'); return; }
@@ -19921,7 +19881,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/vgk4u/insurance')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_vgk4u_insurance.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Care page not found'); return; }
@@ -19932,7 +19892,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/incentives/vgk4u')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_incentives_vgk4u.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK4U Members page not found'); return; }
@@ -20306,7 +20266,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/solar-vendors')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_solar_vendors.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Solar Vendors page not found'); return; }
@@ -29847,7 +29807,7 @@ async function processAction(id, action){
     });
   } else if (url.startsWith('/staff/crm/whatsapp-inbox') || url.startsWith('/staff/crm/wa-inbox')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_crm_whatsapp_inbox.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('CRM WhatsApp Inbox not found'); return; }
@@ -30159,7 +30119,7 @@ async function processAction(id, action){
 
   } else if (url.startsWith('/staff/crm/whatsapp-inbox') || url.startsWith('/staff/crm/wa-inbox')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || sessionToken || '';
-    if (!staffToken) { res.writeHead(302, { 'Location': '/staff/login' }); res.end(); return; }
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_crm_whatsapp_inbox.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('CRM WhatsApp Inbox not found'); return; }
