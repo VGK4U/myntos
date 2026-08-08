@@ -5392,8 +5392,9 @@ async function generateMemberPoster(partnerId) {
     document.getElementById('postCustomer').value = customerName;
     document.getElementById('postLocation').value = location;
     document.getElementById('postSeniorName').value = seniorName;
-    const activeL1Count = entries.filter(e => e.level === 1 && e.status !== 'CANCELLED' && e.income_date === window._currentSelectedDate).length;
-    document.getElementById('postSeniorToday').value = '₹' + _meFormatInr(activeL1Count * 500) + '/-';
+    const activeFileCount = entries.filter(e => e.status !== 'CANCELLED' && e.income_date === window._currentSelectedDate).length;
+    const seniorTodayAmt = activeFileCount > 0 ? (activeFileCount * 500) : 0;
+    document.getElementById('postSeniorToday').value = '₹' + _meFormatInr(seniorTodayAmt) + '/-';
     document.getElementById('postSeniorEarning').value = seniorEarning;
     const postSeniorPot = document.getElementById('postSeniorPotential');
     if (postSeniorPot) {
