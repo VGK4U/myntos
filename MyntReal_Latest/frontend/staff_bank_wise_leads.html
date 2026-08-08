@@ -33,7 +33,8 @@
 
     .table-wrap{background:white;border-radius:8px;border:1px solid #e5e7eb;overflow-x:auto;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
     table.bank-table{width:100%;border-collapse:collapse;font-size:11px;min-width:1400px}
-    table.bank-table th{background:#1e3a5f;color:white;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:8px 10px;white-space:nowrap;border-bottom:1px solid #0f2240}
+    table.bank-table th{background:#1e3a5f;color:white;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:8px 10px;white-space:nowrap;border-bottom:1px solid #0f2240;user-select:none}
+    table.bank-table th:hover{background:#0f2240;cursor:pointer}
     table.bank-table td{padding:8px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle;white-space:nowrap;color:#1f2937}
     table.bank-table tr:hover td{background:#f0f6ff}
 
@@ -44,6 +45,9 @@
     .days-high{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5}
     .days-mid{background:#ffedd5;color:#ea580c;border:1px solid #fed7aa}
     .days-normal{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+
+    .sort-icon{font-size:10px;opacity:0.6;margin-left:3px}
+    .sort-icon.active{opacity:1;color:#fbbf24;font-weight:bold}
     
     /* Mobile Card Layout */
     .mobile-card{background:white;border-radius:8px;padding:14px;margin-bottom:10px;border:1px solid #e5e7eb;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
@@ -59,7 +63,7 @@
       <div class="page-banner">
         <div>
           <h1><i class="fas fa-university"></i> Bank Wise Files & Pipeline Sorter</h1>
-          <p>Sorted by Ground Source (1st) & Stage Days Descending (2nd)</p>
+          <p>Click any column header to sort table instantly (Toggles ▲ Ascending / ▼ Descending)</p>
         </div>
         <div id="accessBadgeContainer">
           <span class="badge-staff"><i class="fas fa-user-shield me-1"></i>Checking Access Rights...</span>
@@ -96,7 +100,7 @@
             </select>
           </div>
           <div class="col-md-3">
-            <div class="filter-label">Sort By</div>
+            <div class="filter-label">Default Sort</div>
             <select id="sortSelect" class="form-select form-select-sm" onchange="loadBankLeads()">
               <option value="stage_days_desc">1st Ground Source, 2nd Stage Days (Desc) ▼</option>
               <option value="stage_days_only">Stage Days Only (Highest to Lowest)</option>
@@ -119,26 +123,26 @@
         </div>
       </div>
 
-      <!-- Desktop Data Table (1st Col: Ground Source, 2nd Col: Stage Days, 3rd Col: Bank Name, 4th Col: Branch) -->
+      <!-- Desktop Data Table with Top-Row Interactive Header Sorting -->
       <div class="d-none d-md-block table-wrap">
         <table class="bank-table">
           <thead>
             <tr>
-              <th style="width:30px;text-align:center">#</th>
-              <th style="color:#fbbf24">Ground Source</th>
-              <th style="color:#38bdf8;text-align:center">Stage Days ▼</th>
-              <th style="color:#34d399">Bank Name</th>
-              <th style="color:#a7f3d0">Branch</th>
-              <th style="color:#ffffff">Lead Name</th>
-              <th>Contact</th>
-              <th style="color:#60a5fa">Stage</th>
-              <th style="color:#c084fc">Brand</th>
-              <th>Area</th>
-              <th>City / District</th>
-              <th style="color:#f87171">Google Maps</th>
-              <th>Telecaller</th>
-              <th>Field Staff</th>
-              <th style="text-align:right">Deal Value</th>
+              <th style="width:30px;text-align:center" onclick="sortTableByHeader('id')"># <span id="sicon_id" class="sort-icon">⇅</span></th>
+              <th style="color:#fbbf24" onclick="sortTableByHeader('ground_source_name')">Ground Source <span id="sicon_ground_source_name" class="sort-icon active">▲</span></th>
+              <th style="color:#38bdf8;text-align:center" onclick="sortTableByHeader('stage_days')">Stage Days <span id="sicon_stage_days" class="sort-icon">⇅</span></th>
+              <th style="color:#34d399" onclick="sortTableByHeader('bank_name')">Bank Name <span id="sicon_bank_name" class="sort-icon">⇅</span></th>
+              <th style="color:#a7f3d0" onclick="sortTableByHeader('bank_branch')">Branch <span id="sicon_bank_branch" class="sort-icon">⇅</span></th>
+              <th style="color:#ffffff" onclick="sortTableByHeader('customer_name')">Lead Name <span id="sicon_customer_name" class="sort-icon">⇅</span></th>
+              <th onclick="sortTableByHeader('phone_number')">Contact <span id="sicon_phone_number" class="sort-icon">⇅</span></th>
+              <th style="color:#60a5fa" onclick="sortTableByHeader('stage')">Stage <span id="sicon_stage" class="sort-icon">⇅</span></th>
+              <th style="color:#c084fc" onclick="sortTableByHeader('brand_name')">Brand <span id="sicon_brand_name" class="sort-icon">⇅</span></th>
+              <th onclick="sortTableByHeader('area')">Area <span id="sicon_area" class="sort-icon">⇅</span></th>
+              <th onclick="sortTableByHeader('city_district')">City / District <span id="sicon_city_district" class="sort-icon">⇅</span></th>
+              <th style="color:#f87171;cursor:default">Google Maps</th>
+              <th onclick="sortTableByHeader('telecaller_name')">Telecaller <span id="sicon_telecaller_name" class="sort-icon">⇅</span></th>
+              <th onclick="sortTableByHeader('field_staff_name')">Field Staff <span id="sicon_field_staff_name" class="sort-icon">⇅</span></th>
+              <th style="text-align:right" onclick="sortTableByHeader('deal_value')">Deal Value <span id="sicon_deal_value" class="sort-icon">⇅</span></th>
             </tr>
           </thead>
           <tbody id="bankTableBody">
@@ -156,6 +160,10 @@
   </div>
 
   <script>
+    let globalBankLeads = [];
+    let currentHeaderCol = 'ground_source_name';
+    let currentHeaderDir = 'asc';
+
     document.addEventListener("DOMContentLoaded", async function() {
       try {
         if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
@@ -189,12 +197,13 @@
         const data = await res.json();
 
         if (data && data.success) {
+          globalBankLeads = data.leads || [];
           renderAccessBadge(data.is_manager, data.current_user);
           renderMetrics(data);
           populateBankDropdown(data.bank_summary, bank);
           populateMemberDropdown(data.unique_members, member);
-          renderDesktopTable(data.leads);
-          renderMobileCards(data.leads);
+          renderDesktopTable(globalBankLeads);
+          renderMobileCards(globalBankLeads);
         } else {
           document.getElementById('bankTableBody').innerHTML = `<tr><td colspan="15" class="text-center text-danger py-4">Failed to load bank files.</td></tr>`;
         }
@@ -202,6 +211,53 @@
         console.error("Error fetching bank leads:", err);
         document.getElementById('bankTableBody').innerHTML = `<tr><td colspan="15" class="text-center text-danger py-4">Error loading bank files. Please refresh.</td></tr>`;
       }
+    }
+
+    function sortTableByHeader(colKey) {
+      if (!globalBankLeads || globalBankLeads.length === 0) return;
+
+      if (currentHeaderCol === colKey) {
+        currentHeaderDir = (currentHeaderDir === 'asc') ? 'desc' : 'asc';
+      } else {
+        currentHeaderCol = colKey;
+        currentHeaderDir = 'asc';
+      }
+
+      // Update Header Icons
+      const allIcons = document.querySelectorAll('.sort-icon');
+      allIcons.forEach(icon => {
+        icon.innerText = '⇅';
+        icon.classList.remove('active');
+      });
+
+      const activeIcon = document.getElementById(`sicon_${colKey}`);
+      if (activeIcon) {
+        activeIcon.innerText = (currentHeaderDir === 'asc') ? '▲' : '▼';
+        activeIcon.classList.add('active');
+      }
+
+      // Perform sorting
+      globalBankLeads.sort((a, b) => {
+        let valA = a[colKey];
+        let valB = b[colKey];
+
+        if (valA === undefined || valA === null) valA = '';
+        if (valB === undefined || valB === null) valB = '';
+
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return (currentHeaderDir === 'asc') ? valA - valB : valB - valA;
+        }
+
+        const strA = String(valA).toLowerCase();
+        const strB = String(valB).toLowerCase();
+
+        if (strA < strB) return (currentHeaderDir === 'asc') ? -1 : 1;
+        if (strA > strB) return (currentHeaderDir === 'asc') ? 1 : -1;
+        return 0;
+      });
+
+      renderDesktopTable(globalBankLeads);
+      renderMobileCards(globalBankLeads);
     }
 
     function renderAccessBadge(isManager, user) {
