@@ -7,7 +7,12 @@ Preserves exact core structure from Flask app
 import sys
 import os
 import threading
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+_backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_root_dir = os.path.dirname(_backend_dir)
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+if _root_dir not in sys.path:
+    sys.path.insert(1, _root_dir)
 
 if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
     try: sys.stdout.reconfigure(encoding='utf-8')

@@ -14,6 +14,7 @@ echo "Frontend port: ${PORT:-5000}"
 echo "Backend port: 8000 (internal)"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PYTHONPATH="$SCRIPT_DIR/backend:$SCRIPT_DIR:${PYTHONPATH}"
 
 # Verify critical environment variables
 echo ""
