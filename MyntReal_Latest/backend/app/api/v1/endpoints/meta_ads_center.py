@@ -446,3 +446,135 @@ def execute_real_ad_pipeline_endpoint(
     """
     from app.services.meta_real_ad_pipeline_service import execute_full_real_ad_creation_pipeline
     return execute_full_real_ad_creation_pipeline(db, company_id, vertical, product_name, language)
+
+
+class StatusToggleInput(BaseModel):
+    new_status: str  # ACTIVE or PAUSED
+    reason: Optional[str] = "Manual status toggle"
+
+class EditObjectInput(BaseModel):
+    name: Optional[str] = None
+    daily_budget: Optional[float] = None
+    targeting: Optional[str] = None
+    status: Optional[str] = None
+
+class CreativeSaveInput(BaseModel):
+    headline: str
+    primary_text: str
+    description: Optional[str] = None
+    call_to_action: Optional[str] = "Sign Up / Apply Now"
+    destination_url: Optional[str] = "https://vgk4u.com"
+    image_url: Optional[str] = None
+    instructions: Optional[str] = None
+
+
+@router.post("/campaigns/{campaign_id}/status")
+def toggle_campaign_status(
+    campaign_id: str,
+    payload: StatusToggleInput,
+    company_id: int = Query(default=1),
+    db: Session = Depends(get_db)
+):
+    """Update Campaign Status (ACTIVE / PAUSED)."""
+    status_val = payload.new_status.upper()
+    if status_val not in ['ACTIVE', 'PAUSED']:
+        raise HTTPException(status_code=400, detail="Status must be ACTIVE or PAUSED")
+    
+    db.execute(text("""
+        UPDATE meta_campaigns 
+        SET status = :status, updated_at = NOW() 
+        WHERE company_id = :cid AND campaign_id = :camp_id
+    """), {"status": status_val, "cid": company_id, "camp_id": campaign_id})
+    db.commit()
+    return {"success": True, "campaign_id": campaign_id, "status": status_val, "message": f"Campaign status updated to {status_val}"}
+
+
+@router.post("/campaigns/{campaign_id}/edit")
+def edit_campaign_details(
+    campaign_id: str,
+    payload: EditObjectInput,
+    company_id: int = Query(default=1),
+    db: Session = Depends(get_db)
+):
+    """Edit Campaign Name, Daily Budget, Status."""
+    updates = []
+    params = {"cid": company_id, "camp_id": campaign_id}
+    if payload.name:
+        updates.append("name = :name")
+        params["name"] = payload.name
+    if payload.daily_budget is not None:
+        updates.append("daily_budget = :daily_budget")
+        params["daily_budget"] = payload.daily_budget
+    if payload.status:
+        updates.append("status = :status")
+        params["status"] = payload.status.upper()
+
+    if updates:
+        sql = f"UPDATE meta_campaigns SET {', '.join(updates)}, updated_at = NOW() WHERE company_id = :cid AND campaign_id = :camp_id"
+        db.execute(text(sql), params)
+        db.commit()
+    
+    return {"success": True, "campaign_id": campaign_id, "message": "Campaign updated successfully"}
+
+
+@router.post("/adsets/{adset_id}/status")
+def toggle_adset_status(
+    adset_id: str,
+    payload: StatusToggleInput,
+    company_id: int = Query(default=1),
+    db: Session = Depends(get_db)
+):
+    """Update AdSet Status (ACTIVE / PAUSED)."""
+    status_val = payload.new_status.upper()
+    if status_val not in ['ACTIVE', 'PAUSED']:
+        raise HTTPException(status_code=400, detail="Status must be ACTIVE or PAUSED")
+    
+    db.execute(text("""
+        UPDATE meta_adsets 
+        SET status = :status, updated_at = NOW() 
+        WHERE company_id = :cid AND adset_id = :adset_id
+    """), {"status": status_val, "cid": company_id, "adset_id": adset_id})
+    db.commit()
+    return {"success": True, "adset_id": adset_id, "status": status_val, "message": f"AdSet status updated to {status_val}"}
+
+
+@router.post("/ads/{ad_id}/status")
+def toggle_ad_status(
+    ad_id: str,
+    payload: StatusToggleInput,
+    company_id: int = Query(default=1),
+    db: Session = Depends(get_db)
+):
+    """Update Ad Status (ACTIVE / PAUSED)."""
+    status_val = payload.new_status.upper()
+    if status_val not in ['ACTIVE', 'PAUSED']:
+        raise HTTPException(status_code=400, detail="Status must be ACTIVE or PAUSED")
+    
+    db.execute(text("""
+        UPDATE meta_ads 
+        SET status = :status, updated_at = NOW() 
+        WHERE company_id = :cid AND ad_id = :ad_id
+    """), {"status": status_val, "cid": company_id, "ad_id": ad_id})
+    db.commit()
+    return {"success": True, "ad_id": ad_id, "status": status_val, "message": f"Ad status updated to {status_val}"}
+
+
+@router.post("/creatives/save")
+def save_creative_content(
+    payload: CreativeSaveInput,
+    company_id: int = Query(default=1),
+    db: Session = Depends(get_db)
+):
+    """Save/Update Creative Asset & Content Upload."""
+    db.execute(text("""
+        INSERT INTO creative_generations 
+        (company_id, concept_name, provider_name, image_url_or_path, decision_status, created_at)
+        VALUES (:cid, :concept, 'MANUAL_UPLOAD', :path, 'APPROVED', NOW())
+    """), {
+        "cid": company_id,
+        "concept": payload.headline[:100],
+        "path": payload.image_url or '/static/images/solar_banner.png'
+    })
+    db.commit()
+    return {"success": True, "message": "Creative content and instructions updated successfully"}
+

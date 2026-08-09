@@ -38,12 +38,13 @@
     <div id="headerContainer"></div>
 
     <div class="content-area">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <div>
                 <h2 style="font-size: 22px; font-weight: 700; color: #111827; margin: 0;">Meta Ads Management Center</h2>
-                <p style="font-size: 13px; color: #6b7280; margin: 3px 0 0;">Live Meta Graph API v24.0 Management Dashboard</p>
+                <p style="font-size: 13px; color: #6b7280; margin: 3px 0 0;">Live Meta Graph API v24.0 Management Dashboard & Ad Controls</p>
             </div>
-            <div>
+            <div class="d-flex gap-2">
+                <button onclick="window.location.href='/staff/meta-ads/creative-studio'" class="btn btn-sm btn-success"><i class="fas fa-cloud-upload-alt me-1"></i> Upload Content & Image</button>
                 <button onclick="fetchDashboardData()" class="btn btn-sm btn-primary" style="background: #1877f2; border: none; font-weight: 600;"><i class="fas fa-sync-alt me-1"></i> Refresh Live Telemetry</button>
             </div>
         </div>
@@ -80,8 +81,8 @@
             <div class="col-lg-8">
                 <div class="panel-card">
                     <div class="panel-head">
-                        <div class="panel-title"><i class="fab fa-facebook-square style="color:#1877f2;"></i> Live Meta Advertising Hierarchy</div>
-                        <span class="status-badge-active"><i class="fas fa-circle" style="font-size: 7px;"></i> APPROVED & ACTIVE</span>
+                        <div class="panel-title"><i class="fab fa-facebook-square" style="color:#1877f2;"></i> Live Meta Advertising Hierarchy</div>
+                        <span class="status-badge-active" id="topGovernanceBadge"><i class="fas fa-circle" style="font-size: 7px;"></i> APPROVED & ACTIVE</span>
                     </div>
                     <div class="panel-body p-0">
                         <table class="tbl">
@@ -92,29 +93,51 @@
                                     <th>Page Identity</th>
                                     <th>Config Status</th>
                                     <th>Effective Status</th>
+                                    <th class="text-end pe-3">Actions & Options</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
                                     <td><span class="badge bg-primary">Campaign</span></td>
-                                    <td><strong>Solar Rooftop AP - Lead Gen - 3KW</strong><br><small class="text-muted">120254919777680348</small></td>
+                                    <td><strong id="ctrCampName_1">Solar Rooftop AP - Lead Gen - 3KW</strong><br><small class="text-muted">120254919777680348</small></td>
                                     <td>Vedhansh Kari</td>
-                                    <td><span class="status-badge-active">ACTIVE</span></td>
-                                    <td><span class="status-badge-active">ACTIVE</span></td>
+                                    <td><span class="status-badge-active" id="ctrCampStatus_1">ACTIVE</span></td>
+                                    <td><span class="status-badge-active" id="ctrCampEff_1">ACTIVE</span></td>
+                                    <td class="text-end pe-3">
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-warning text-dark btn-sm fw-bold" id="ctrCampBtn_1" onclick="toggleCenterObject('campaign', '120254919777680348', 'ctrCampStatus_1', 'ctrCampBtn_1')"><i class="fas fa-pause me-1"></i> Pause</button>
+                                            <button class="btn btn-outline-primary btn-sm" onclick="openCenterEditModal('Campaign', '120254919777680348', 'Solar Rooftop AP - Lead Gen - 3KW')"><i class="fas fa-edit me-1"></i> Edit</button>
+                                            <button class="btn btn-outline-secondary btn-sm" onclick="openCenterInstructions('Campaign Strategy', 'Targeting AP Homeowners 25-65. Budget: ₹1,000/day. High-conversion Telugu & English creatives.')"><i class="fas fa-info-circle me-1"></i> Instructions</button>
+                                        </div>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td><span class="badge bg-secondary">Ad Set</span></td>
-                                    <td><strong>AdSet AP Homeowners - Har Ghar Solar</strong><br><small class="text-muted">120254925638200348</small></td>
+                                    <td><strong id="ctrAdsetName_1">AdSet AP Homeowners - Har Ghar Solar</strong><br><small class="text-muted">120254925638200348</small></td>
                                     <td>Myntreal - Har Ghar Solar (894208310452980)</td>
-                                    <td><span class="status-badge-active">ACTIVE</span></td>
-                                    <td><span class="status-badge-active">ACTIVE</span></td>
+                                    <td><span class="status-badge-active" id="ctrAdsetStatus_1">ACTIVE</span></td>
+                                    <td><span class="status-badge-active" id="ctrAdsetEff_1">ACTIVE</span></td>
+                                    <td class="text-end pe-3">
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-warning text-dark btn-sm fw-bold" id="ctrAdsetBtn_1" onclick="toggleCenterObject('adset', '120254925638200348', 'ctrAdsetStatus_1', 'ctrAdsetBtn_1')"><i class="fas fa-pause me-1"></i> Pause</button>
+                                            <button class="btn btn-outline-primary btn-sm" onclick="openCenterEditModal('Ad Set', '120254925638200348', 'AdSet AP Homeowners - Har Ghar Solar')"><i class="fas fa-edit me-1"></i> Edit</button>
+                                            <button class="btn btn-outline-secondary btn-sm" onclick="openCenterInstructions('AdSet Audience Notes', 'Andhra Pradesh state geography, age 25-65 homeowners.')"><i class="fas fa-info-circle me-1"></i> Instructions</button>
+                                        </div>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td><span class="badge bg-success">Ad</span></td>
-                                    <td><strong>Ad 1 - 3KW Solar AP - Har Ghar Solar</strong><br><small class="text-muted">120254925638870348</small></td>
+                                    <td><strong id="ctrAdName_1">Ad 1 - 3KW Solar AP - Har Ghar Solar</strong><br><small class="text-muted">120254925638870348</small></td>
                                     <td>Myntreal - Har Ghar Solar (894208310452980)</td>
-                                    <td><span class="status-badge-active">ACTIVE</span></td>
-                                    <td><span class="status-badge-active">ACTIVE</span></td>
+                                    <td><span class="status-badge-active" id="ctrAdStatus_1">ACTIVE</span></td>
+                                    <td><span class="status-badge-active" id="ctrAdEff_1">ACTIVE</span></td>
+                                    <td class="text-end pe-3">
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-warning text-dark btn-sm fw-bold" id="ctrAdBtn_1" onclick="toggleCenterObject('ad', '120254925638870348', 'ctrAdStatus_1', 'ctrAdBtn_1')"><i class="fas fa-pause me-1"></i> Pause</button>
+                                            <button class="btn btn-outline-primary btn-sm" onclick="openCenterEditModal('Ad', '120254925638870348', 'Ad 1 - 3KW Solar AP - Har Ghar Solar')"><i class="fas fa-edit me-1"></i> Edit</button>
+                                            <button class="btn btn-outline-secondary btn-sm" onclick="openCenterInstructions('Ad Creative Specs', 'Creative ID: 1063753229511074. Form: form_3kw_solar_ap.')"><i class="fas fa-info-circle me-1"></i> Instructions</button>
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -155,9 +178,65 @@
     </div>
 </div>
 
+<!-- Modal: Edit Object -->
+<div class="modal fade" id="editMetaCenterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="centerEditModalTitle"><i class="fas fa-edit me-2"></i> Edit Object</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="centerEditObjectType">
+                <input type="hidden" id="centerEditObjectId">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Object Name</label>
+                    <input type="text" id="centerEditObjectName" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Status</label>
+                    <select id="centerEditObjectStatus" class="form-select">
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="PAUSED">PAUSED</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm fw-bold" onclick="saveCenterEdit()"><i class="fas fa-check me-1"></i> Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Instructions -->
+<div class="modal fade" id="centerInstructionsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold" id="centerInstructionsTitle"><i class="fas fa-file-alt me-2"></i> Instructions</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info py-2 small mb-3">
+                    <i class="fas fa-shield-alt me-1"></i> Meta Graph v24.0 Telemetry Guidance
+                </div>
+                <p id="centerInstructionsBody" style="font-size: 14px; line-height: 1.6; color: #374151;"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/staff_header.js"></script>
 <script src="/staff_sidebar.js"></script>
 <script>
+let centerEditModal = null;
+let centerInstModal = null;
+
 async function fetchDashboardData() {
     try {
         const res = await staffFetch('/api/v1/meta-ads/dashboard');
@@ -168,6 +247,60 @@ async function fetchDashboardData() {
     } catch(e) {
         console.warn('Dashboard fetch error:', e);
     }
+}
+
+function toggleCenterObject(type, objId, statusSpanId, btnId) {
+    const span = document.getElementById(statusSpanId);
+    const btn = document.getElementById(btnId);
+    const isCurrentlyActive = span.classList.contains('status-badge-active');
+    const newStatus = isCurrentlyActive ? 'PAUSED' : 'ACTIVE';
+
+    let endpoint = `/api/v1/meta-ads/${type}s/${objId}/status`;
+    staffFetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_status: newStatus })
+    }).catch(e => console.warn(e));
+
+    if (newStatus === 'PAUSED') {
+        span.className = 'status-badge-process';
+        span.innerText = 'PAUSED';
+        btn.className = 'btn btn-success btn-sm fw-bold';
+        btn.innerHTML = '<i class="fas fa-play me-1"></i> Continue';
+    } else {
+        span.className = 'status-badge-active';
+        span.innerText = 'ACTIVE';
+        btn.className = 'btn btn-warning text-dark btn-sm fw-bold';
+        btn.innerHTML = '<i class="fas fa-pause me-1"></i> Pause';
+    }
+}
+
+function openCenterEditModal(typeLabel, objId, currentName) {
+    document.getElementById('centerEditModalTitle').innerHTML = `<i class="fas fa-edit me-2"></i> Edit ${typeLabel}`;
+    document.getElementById('centerEditObjectType').value = typeLabel;
+    document.getElementById('centerEditObjectId').value = objId;
+    document.getElementById('centerEditObjectName').value = currentName;
+    if (!centerEditModal) centerEditModal = new bootstrap.Modal(document.getElementById('editMetaCenterModal'));
+    centerEditModal.show();
+}
+
+function saveCenterEdit() {
+    const typeLabel = document.getElementById('centerEditObjectType').value;
+    const objId = document.getElementById('centerEditObjectId').value;
+    const newName = document.getElementById('centerEditObjectName').value;
+    
+    if (typeLabel === 'Campaign') document.getElementById('ctrCampName_1').innerText = newName;
+    else if (typeLabel === 'Ad Set') document.getElementById('ctrAdsetName_1').innerText = newName;
+    else if (typeLabel === 'Ad') document.getElementById('ctrAdName_1').innerText = newName;
+
+    if (centerEditModal) centerEditModal.hide();
+}
+
+function openCenterInstructions(title, bodyText) {
+    document.getElementById('centerInstructionsTitle').innerHTML = `<i class="fas fa-file-alt me-2"></i> ${title}`;
+    document.getElementById('centerInstructionsBody').innerText = bodyText;
+    if (!centerInstModal) centerInstModal = new bootstrap.Modal(document.getElementById('centerInstructionsModal'));
+    centerInstModal.show();
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
