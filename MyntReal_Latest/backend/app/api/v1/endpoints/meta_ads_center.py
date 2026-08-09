@@ -467,6 +467,32 @@ class CreativeSaveInput(BaseModel):
     image_url: Optional[str] = None
     instructions: Optional[str] = None
 
+class TokenUpdateInput(BaseModel):
+    access_token: str
+    page_id: Optional[str] = "894208310452980"
+
+@router.post("/update-token")
+def update_meta_access_token(
+    payload: TokenUpdateInput,
+    company_id: int = Query(default=1),
+    db: Session = Depends(get_db)
+):
+    """
+    Encrypt and store updated Meta Access Token in PostgreSQL.
+    """
+    from app.core.security_encryption import encrypt_credential
+    enc_token = encrypt_credential(payload.access_token.strip())
+    
+    db.execute(text("""
+        UPDATE facebook_pages 
+        SET access_token = :token, updated_at = NOW() 
+        WHERE is_active = TRUE
+    """), {"token": enc_token})
+    db.commit()
+    
+    return {"success": True, "message": "Meta Access Token updated & encrypted successfully in database!"}
+
+
 
 @router.post("/campaigns/{campaign_id}/status")
 def toggle_campaign_status(
