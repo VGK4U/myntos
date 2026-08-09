@@ -292,7 +292,7 @@ function saveCreativeContent() {
             image_url: uploadedImageSrc
         })
     }).then(r => r.json()).then(data => {
-        alert('✅ Creative Asset, Image & Copy content saved successfully and synchronized with Meta Graph API!');
+        alert(`✅ ${data.message || 'Creative Asset, Image & Copy content saved and synchronized with Meta Graph API!'}`);
     }).catch(e => {
         alert('✅ Creative content saved and synced locally!');
     });

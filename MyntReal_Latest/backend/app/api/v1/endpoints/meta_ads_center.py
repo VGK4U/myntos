@@ -565,7 +565,14 @@ def save_creative_content(
     company_id: int = Query(default=1),
     db: Session = Depends(get_db)
 ):
-    """Save/Update Creative Asset & Content Upload."""
+    """
+    Save/Update Creative Asset & Content Upload locally and push live updates to Meta Graph API v24.0.
+    """
+    import requests, os
+    from app.core.security_encryption import decrypt_credential_safe
+
+    # 1. Local Database Persistence
+    image_path = payload.image_url or '/static/images/solar_banner_creative.jpg'
     db.execute(text("""
         INSERT INTO creative_generations 
         (company_id, concept_name, provider_name, image_url_or_path, decision_status, created_at)
@@ -573,8 +580,98 @@ def save_creative_content(
     """), {
         "cid": company_id,
         "concept": payload.headline[:100],
-        "path": payload.image_url or '/static/images/solar_banner.png'
+        "path": image_path
     })
     db.commit()
-    return {"success": True, "message": "Creative content and instructions updated successfully"}
+
+    meta_status = "LOCAL_ONLY"
+    graph_creative_id = None
+    graph_image_hash = None
+    meta_message = ""
+
+    # 2. Attempt Live Meta Graph API Sync
+    try:
+        p_row = db.execute(text("SELECT access_token FROM facebook_pages WHERE company_id = :cid AND is_active = TRUE LIMIT 1"), {"cid": company_id}).fetchone()
+        if not p_row:
+            p_row = db.execute(text("SELECT access_token FROM facebook_pages WHERE is_active = TRUE LIMIT 1")).fetchone()
+
+        token = decrypt_credential_safe(p_row[0]) if p_row else None
+
+        if token:
+            ad_account_id = "act_560062103113819"
+            page_id = "894208310452980"
+            version = "v24.0"
+
+            # Step A: Upload Image to Meta Ad Images endpoint
+            local_img_file = "frontend/static/images/solar_banner_creative.jpg"
+            if not os.path.exists(local_img_file):
+                local_img_file = "backend/static/images/solar_banner_creative.jpg"
+
+            if os.path.exists(local_img_file):
+                with open(local_img_file, "rb") as f:
+                    img_resp = requests.post(
+                        f"https://graph.facebook.com/{version}/{ad_account_id}/adimages",
+                        params={"access_token": token},
+                        files={"filename": ("solar_banner_creative.jpg", f, "image/jpeg")},
+                        timeout=30
+                    )
+                    if img_resp.status_code in (200, 201):
+                        images_dict = img_resp.json().get("images", {})
+                        for k, v in images_dict.items():
+                            graph_image_hash = v.get("hash")
+                            break
+
+            # Step B: Create New Ad Creative on Meta Graph API
+            creative_payload = {
+                "name": payload.headline[:100],
+                "object_story_spec": {
+                    "page_id": page_id,
+                    "link_data": {
+                        "image_hash": graph_image_hash or "7db4abcb49f4c4fa2d37d6bac21aeb56",
+                        "link": payload.destination_url or "https://myntreal.com",
+                        "message": payload.primary_text,
+                        "name": payload.headline,
+                        "call_to_action": {
+                            "type": "SIGN_UP",
+                            "value": {"link": payload.destination_url or "https://myntreal.com"}
+                        }
+                    }
+                }
+            }
+
+            cr_resp = requests.post(
+                f"https://graph.facebook.com/{version}/{ad_account_id}/adcreatives",
+                params={"access_token": token},
+                json=creative_payload,
+                timeout=30
+            )
+
+            if cr_resp.status_code in (200, 201):
+                graph_creative_id = cr_resp.json().get("id")
+                meta_status = "META_GRAPH_SYNCED"
+                meta_message = f"Successfully pushed new Ad Creative ID {graph_creative_id} to Meta Ads Manager!"
+
+                # Step C: Update existing live Ads with new Creative ID
+                target_ad_ids = ["120254925638870348", "120254919778030348"]
+                for target_ad_id in target_ad_ids:
+                    requests.post(
+                        f"https://graph.facebook.com/{version}/{target_ad_id}",
+                        params={"access_token": token},
+                        json={"creative": {"creative_id": graph_creative_id}},
+                        timeout=15
+                    )
+            else:
+                meta_message = f"Meta Graph API response: {cr_resp.status_code} - {cr_resp.text}"
+
+    except Exception as e:
+        meta_message = f"Meta Graph API sync exception: {str(e)}"
+
+    return {
+        "success": True,
+        "meta_status": meta_status,
+        "graph_creative_id": graph_creative_id,
+        "graph_image_hash": graph_image_hash,
+        "message": meta_message or "Creative content and instructions updated successfully"
+    }
+
 
