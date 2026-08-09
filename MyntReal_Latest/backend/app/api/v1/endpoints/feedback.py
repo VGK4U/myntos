@@ -21,7 +21,10 @@ import shutil
 from pathlib import Path
 from app.utils.watermark import process_media_watermark, process_media_bytes
 from app.utils.media import normalize_media_path
-from app.services.object_storage import storage_service
+try:
+    from app.services.object_storage import storage_service
+except ImportError:
+    from app.services.s3_storage import s3_storage_service as storage_service
 from app.services.universal_upload_service import UniversalUploadService
 import logging
 
