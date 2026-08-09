@@ -33,9 +33,9 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, Tuple
 from fastapi import UploadFile, HTTPException
 try:
-    from app.services.object_storage import storage_service
+    from app.services.s3_storage import s3_storage_service as storage_service
 except ImportError:
-    from .object_storage import storage_service
+    from .s3_storage import s3_storage_service as storage_service
 
 logger = logging.getLogger(__name__)
 

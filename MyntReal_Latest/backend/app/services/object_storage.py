@@ -4,7 +4,10 @@ Currently routed to AWS S3 storage service.
 This file is kept for backwards compatibility with imports.
 """
 
-from .s3_storage import S3StorageService, s3_storage_service as storage_service
+try:
+    from app.services.s3_storage import S3StorageService, s3_storage_service as storage_service
+except ImportError:
+    from .s3_storage import S3StorageService, s3_storage_service as storage_service
 from collections import namedtuple
 
 ObjectInfo = namedtuple('ObjectInfo', ['name'])
