@@ -370,15 +370,23 @@
             renderCurrentView();
         }
 
+        function isBankLead(l) {
+            const stage = (l.solar_pipeline_stage || l.stage || '').toLowerCase();
+            const bank = (l.bank_name || '').toLowerCase();
+            return stage.includes('bank') || stage === 'at bank' || (bank !== '' && bank !== 'unassigned bank');
+        }
+
+        function isBalancePendingLead(l) {
+            const bal = (l.deal_value_balance !== undefined && l.deal_value_balance !== null) ? l.deal_value_balance : (l.deal_value - (l.deal_value_received || 0));
+            const stage = (l.solar_pipeline_stage || l.stage || '').toLowerCase();
+            return bal > 0 || stage.includes('balance') || stage.includes('pending') || stage === 'bal pending' || stage === 'balance_pending';
+        }
+
         function getActiveLeads() {
             if (currentMainTab === 'balance-pending') {
-                return globalBankLeads.filter(l => {
-                    const bal = (l.deal_value_balance !== undefined) ? l.deal_value_balance : (l.deal_value - (l.deal_value_received || 0));
-                    const stage = (l.solar_pipeline_stage || l.stage || '').toLowerCase();
-                    return bal > 0 || stage.includes('balance') || stage.includes('pending') || stage.includes('partially');
-                });
+                return globalBankLeads.filter(isBalancePendingLead);
             }
-            return globalBankLeads;
+            return globalBankLeads.filter(isBankLead);
         }
 
         function renderCurrentView() {
@@ -422,12 +430,9 @@
                     renderAccessBadge(data.is_manager, data.current_user);
 
                     // Update Tab Counts
-                    const pendingLeads = globalBankLeads.filter(l => {
-                        const bal = (l.deal_value_balance !== undefined) ? l.deal_value_balance : (l.deal_value - (l.deal_value_received || 0));
-                        const stage = (l.solar_pipeline_stage || l.stage || '').toLowerCase();
-                        return bal > 0 || stage.includes('balance') || stage.includes('pending') || stage.includes('partially');
-                    });
-                    document.getElementById('tabBankCount').innerText = globalBankLeads.length;
+                    const bankLeads = globalBankLeads.filter(isBankLead);
+                    const pendingLeads = globalBankLeads.filter(isBalancePendingLead);
+                    document.getElementById('tabBankCount').innerText = bankLeads.length;
                     document.getElementById('tabPendingCount').innerText = pendingLeads.length;
 
                     renderMetrics(data);

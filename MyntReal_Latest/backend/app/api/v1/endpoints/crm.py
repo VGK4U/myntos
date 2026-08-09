@@ -3245,7 +3245,12 @@ def get_bank_wise_leads(
             CRMLead.status.ilike('%bank%'),
             CRMLead.solar_pipeline_status == 'At Bank',
             CRMLead.solar_pipeline_status == 'AT_BANK',
-            CRMLead.solar_pipeline_status == 'pending_with_bank'
+            CRMLead.solar_pipeline_status == 'pending_with_bank',
+            CRMLead.solar_pipeline_status.ilike('%balance%'),
+            CRMLead.solar_pipeline_status.ilike('%pending%'),
+            CRMLead.solar_pipeline_status == 'balance_pending',
+            CRMLead.status == 'balance_pending',
+            CRMLead.deal_value_balance > 0
         )
     )
     
