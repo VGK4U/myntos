@@ -36,22 +36,43 @@ pkill -f "uvicorn.*8000" 2>/dev/null || true
 pkill -f "gunicorn.*8000" 2>/dev/null || true
 sleep 1
 
-# Start backend with gunicorn + 2 UvicornWorkers in background
-# DC_WS_CAPACITY_001: 2 workers prevents single-worker queue exhaustion under load.
-# --preload ensures lifespan/startup (APScheduler, DB migrations) runs once in the
-# master process before workers fork — prevents duplicate background jobs.
+# Start backend with auto-restart supervisor loop in background
+# Ensures backend stays alive and automatically restarts if worker crashes
 echo ""
-echo "Starting FastAPI Backend with Uvicorn (background)..."
-cd "$SCRIPT_DIR/backend"
-
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info &
+echo "Starting FastAPI Backend with Uvicorn supervisor (background)..."
+(
+  while true; do
+    echo "[SUPERVISOR] Starting FastAPI Backend on port 8000..."
+    cd "$SCRIPT_DIR/backend"
+    python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info
+    echo "[SUPERVISOR] FastAPI Backend process exited with code $?. Restarting in 2 seconds..."
+    sleep 2
+  done
+) &
 BACKEND_PID=$!
-echo "Backend PID: $BACKEND_PID"
+echo "Backend Supervisor PID: $BACKEND_PID"
 
-# DC Protocol: Start frontend IMMEDIATELY (parallel startup)
-# Frontend has graceful handling for backend unavailability
+# Wait for FastAPI Backend to be ready on port 8000 (up to 45 seconds)
+# Prevents 502 ECONNREFUSED during initial DB module loading and migrations
 echo ""
-echo "Starting Frontend Server on port ${PORT:-5000} (parallel)..."
+echo "Waiting for FastAPI Backend (port 8000) to accept connections..."
+python -c "
+import socket, time, sys
+start = time.time()
+while time.time() - start < 45:
+    try:
+        s = socket.create_connection(('127.0.0.1', 8000), timeout=1)
+        s.close()
+        print('✅ FastAPI Backend is UP & READY on port 8000!')
+        sys.exit(0)
+    except Exception:
+        time.sleep(1)
+print('⚠️ Backend initialization took longer than 45s, starting frontend server...')
+"
+
+# Start Frontend Server on port 5000
+echo ""
+echo "Starting Frontend Server on port ${PORT:-5000}..."
 cd "$SCRIPT_DIR/frontend"
 echo "======================================"
 echo "Startup complete - serving traffic"
