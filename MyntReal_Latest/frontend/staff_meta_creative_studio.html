@@ -131,6 +131,49 @@
                             </div>
                         </div>
                         
+                        <!-- Target Location & Audience Configuration Component -->
+                        <div class="border rounded p-3 bg-white mb-3" style="border-left: 4px solid #ef4444 !important;">
+                            <label class="form-label fw-bold small text-danger"><i class="fas fa-map-marked-alt me-1"></i> TARGET LOCATIONS & AUDIENCE CONFIGURATION</label>
+                            
+                            <div class="mb-2">
+                                <label class="form-label fw-bold small text-muted">TARGET STATES & CITIES</label>
+                                <input type="text" id="inputTargetLocations" class="form-control form-control-sm" value="Andhra Pradesh & Telangana, India (Vijayawada, Visakhapatnam, Tirupati, Hyderabad, Warangal, Guntur, Rajahmundry, Kakinada, Nellore, Nizamabad, Karimnagar)">
+                                <small class="text-muted">Targeting homeowners and commercial properties across AP & TS.</small>
+                            </div>
+
+                            <div class="row g-2 mb-2">
+                                <div class="col-4">
+                                    <label class="form-label fw-bold small text-muted">MIN AGE</label>
+                                    <select id="inputMinAge" class="form-select form-select-sm">
+                                        <option value="25" selected>25 Years</option>
+                                        <option value="18">18 Years</option>
+                                        <option value="30">30 Years</option>
+                                    </select>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label fw-bold small text-muted">MAX AGE</label>
+                                    <select id="inputMaxAge" class="form-select form-select-sm">
+                                        <option value="65+" selected>65+ Years</option>
+                                        <option value="55">55 Years</option>
+                                        <option value="60">60 Years</option>
+                                    </select>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label fw-bold small text-muted">GENDER</label>
+                                    <select id="inputGender" class="form-select form-select-sm">
+                                        <option value="All" selected>All (Men & Women)</option>
+                                        <option value="Men">Men Only</option>
+                                        <option value="Women">Women Only</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-1">
+                                <label class="form-label fw-bold small text-muted">TARGET INTERESTS & KEYWORDS</label>
+                                <input type="text" id="inputInterests" class="form-control form-control-sm" value="Rooftop Solar, PM Surya Ghar, Home Improvement, Solar Panels, Renewable Energy">
+                            </div>
+                        </div>
+
                         <!-- Image Upload & Content Upload Component -->
                         <div class="border rounded p-3 bg-light mb-3">
                             <label class="form-label fw-bold small"><i class="fas fa-upload me-1 text-success"></i> MANUAL IMAGE UPLOAD & ASSET SELECTOR</label>

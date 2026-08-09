@@ -463,9 +463,13 @@ class CreativeSaveInput(BaseModel):
     primary_text: str
     description: Optional[str] = None
     call_to_action: Optional[str] = "Sign Up / Apply Now"
-    destination_url: Optional[str] = "https://vgk4u.com"
+    destination_url: Optional[str] = "https://myntreal.com"
     image_url: Optional[str] = None
     instructions: Optional[str] = None
+    target_locations: Optional[str] = "Andhra Pradesh & Telangana, India"
+    min_age: Optional[int] = 25
+    max_age: Optional[str] = "65+"
+    interests: Optional[str] = "Solar Energy, PM Surya Ghar, Homeowners"
 
 class TokenUpdateInput(BaseModel):
     access_token: str

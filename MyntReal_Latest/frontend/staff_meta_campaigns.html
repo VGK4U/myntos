@@ -113,29 +113,29 @@
                             <td><code>120254925638200348</code></td>
                             <td><strong id="adsetName_120254925638200348">AdSet AP Homeowners - Har Ghar Solar</strong></td>
                             <td>Myntreal - Har Ghar Solar (894208310452980)</td>
-                            <td>Andhra Pradesh, India (Homeowners 25-65)</td>
+                            <td><i class="fas fa-map-marker-alt text-danger me-1"></i> <strong id="adsetTargeting_120254925638200348">Andhra Pradesh & Telangana, India</strong> (Homeowners 25-65+)</td>
                             <td><span class="status-badge-active" id="adsetStatusBadge_120254925638200348">ACTIVE</span></td>
                             <td><span class="badge bg-success">Har Ghar Solar Live Path</span></td>
                             <td class="text-end pe-3">
                                 <div class="btn-group btn-group-sm">
                                     <button class="btn btn-warning text-dark btn-sm fw-bold" id="toggleAdsetBtn_120254925638200348" onclick="toggleAdsetStatus('120254925638200348')"><i class="fas fa-pause me-1"></i> Pause</button>
                                     <button class="btn btn-outline-primary btn-sm" onclick="openEditAdsetModal('120254925638200348', 'AdSet AP Homeowners - Har Ghar Solar')"><i class="fas fa-edit me-1"></i> Edit</button>
-                                    <button class="btn btn-outline-secondary btn-sm" onclick="openInstructionsModal('AdSet Location Instructions', 'Audience: Homeowners 25-65 in AP. Languages: English, Telugu.')"><i class="fas fa-info-circle me-1"></i> Instructions</button>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="openInstructionsModal('AdSet Location Instructions', 'Audience: Homeowners 25-65+ in Andhra Pradesh & Telangana. Cities: Vijayawada, Vizag, Tirupati, Hyderabad, Warangal.')"><i class="fas fa-info-circle me-1"></i> Instructions</button>
                                 </div>
                             </td>
                         </tr>
                         <tr>
                             <td><code>120254919777930348</code></td>
-                            <td><strong id="adsetName_120254919777930348">AdSet Andhra Pradesh Homeowners (VGK4U)</strong></td>
+                            <td><strong id="adsetName_120254919777930348">AdSet Andhra Pradesh & Telangana Homeowners (VGK4U)</strong></td>
                             <td>VGK4U (1081963148335244)</td>
-                            <td>Andhra Pradesh, India</td>
+                            <td><i class="fas fa-map-marker-alt text-danger me-1"></i> <strong id="adsetTargeting_120254919777930348">Andhra Pradesh & Telangana, India</strong> (VGK4U Feed)</td>
                             <td><span class="status-badge-paused" id="adsetStatusBadge_120254919777930348">PAUSED</span></td>
                             <td><span class="badge bg-secondary">Protected & Untouched</span></td>
                             <td class="text-end pe-3">
                                 <div class="btn-group btn-group-sm">
                                     <button class="btn btn-success btn-sm fw-bold" id="toggleAdsetBtn_120254919777930348" onclick="toggleAdsetStatus('120254919777930348')"><i class="fas fa-play me-1"></i> Continue</button>
-                                    <button class="btn btn-outline-primary btn-sm" onclick="openEditAdsetModal('120254919777930348', 'AdSet Andhra Pradesh Homeowners (VGK4U)')"><i class="fas fa-edit me-1"></i> Edit</button>
-                                    <button class="btn btn-outline-secondary btn-sm" onclick="openInstructionsModal('Backup AdSet Notes', 'Standby adset for VGK4U branding campaign.')"><i class="fas fa-info-circle me-1"></i> Instructions</button>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="openEditAdsetModal('120254919777930348', 'AdSet Andhra Pradesh & Telangana Homeowners (VGK4U)')"><i class="fas fa-edit me-1"></i> Edit</button>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="openInstructionsModal('Backup AdSet Notes', 'Standby adset for VGK4U branding campaign in AP & TS.')"><i class="fas fa-info-circle me-1"></i> Instructions</button>
                                 </div>
                             </td>
                         </tr>
@@ -159,6 +159,10 @@
                 <div class="mb-3">
                     <label class="form-label fw-bold small">Campaign Name</label>
                     <input type="text" id="editCampName" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Target States & Locations</label>
+                    <input type="text" id="editCampLocation" class="form-control" value="Andhra Pradesh & Telangana, India">
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold small">Daily Budget (₹ INR)</label>
@@ -185,7 +189,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-info text-white">
-                <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i> Edit Meta Ad Set</h5>
+                <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i> Edit Meta Ad Set & Location Targeting</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -195,8 +199,18 @@
                     <input type="text" id="editAdsetName" class="form-control">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">Target Location & Audience</label>
-                    <input type="text" id="editAdsetTargeting" class="form-control" value="Andhra Pradesh, India (Homeowners 25-65)">
+                    <label class="form-label fw-bold small"><i class="fas fa-map-marker-alt text-danger me-1"></i> Target States & Locations</label>
+                    <input type="text" id="editAdsetTargeting" class="form-control" value="Andhra Pradesh & Telangana, India (Vijayawada, Vizag, Tirupati, Hyderabad, Warangal)">
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold small">Age Range</label>
+                        <input type="text" id="editAdsetAge" class="form-control" value="25 - 65+ Years">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold small">Target Interests</label>
+                        <input type="text" id="editAdsetInterests" class="form-control" value="Solar Energy, PM Surya Ghar, Homeowners">
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold small">AdSet Status</label>
@@ -225,9 +239,12 @@
             <div class="modal-body">
                 <div class="mb-3">
                     <label class="form-label fw-bold small">Campaign Title</label>
-                    <input type="text" id="newCampName" class="form-control" placeholder="e.g. Har Ghar Solar AP 5KW Promotion">
+                    <input type="text" id="newCampName" class="form-control" placeholder="e.g. Har Ghar Solar AP & TS 3KW Promotion">
                 </div>
                 <div class="mb-3">
+                    <label class="form-label fw-bold small"><i class="fas fa-map-marker-alt text-danger me-1"></i> Target Locations (States)</label>
+                    <input type="text" id="newCampLocation" class="form-control" value="Andhra Pradesh & Telangana, India">
+                </div>
                     <label class="form-label fw-bold small">Objective</label>
                     <select id="newCampObjective" class="form-select">
                         <option value="LEAD_GENERATION">LEAD_GENERATION</option>
