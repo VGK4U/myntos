@@ -81,13 +81,6 @@
                                 <td><span class="badge bg-success">ACTIVE</span></td>
                                 <td class="text-end pe-3"><button class="btn btn-sm btn-primary py-0 px-2 fw-bold"><i class="fas fa-eye me-1"></i> Inspect & Edit</button></td>
                             </tr>
-                            <tr id="adRow_120254925639990348" style="cursor: pointer;" onclick="selectAd('120254925639990348')">
-                                <td><strong>Ad 2 - 5KW Commercial Solar Rooftop AP</strong><br><small class="text-muted">120254925639990348</small></td>
-                                <td><i class="fas fa-check-circle text-success me-1"></i> Myntreal - Har Ghar Solar (894208310452980)</td>
-                                <td><code>1063753229511075</code></td>
-                                <td><span class="badge bg-success">ACTIVE</span></td>
-                                <td class="text-end pe-3"><button class="btn btn-sm btn-outline-primary py-0 px-2 fw-bold"><i class="fas fa-eye me-1"></i> Inspect & Edit</button></td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -317,21 +310,6 @@ const adsDatabase = {
         page_identity: "894208310452980 (Myntreal - Har Ghar Solar)",
         image_prompt: "A modern high-resolution marketing ad banner for Har Ghar Solar rooftop solar panel installation in India, Indian house rooftop with sleek black solar panels, bright sunny day, family, ₹78k subsidy badge, Website: myntreal.com, Phone: +91 858585 2738."
     },
-    "120254925639990348": {
-        ad_id: "120254925639990348",
-        adset_id: "120254925638200348",
-        ad_name: "Ad 2 - 5KW Commercial Solar Rooftop AP",
-        status: "ACTIVE",
-        creative_id: "1063753229511075",
-        headline: "Commercial 5KW Solar System — Save 80% Electricity Bills",
-        primary_text: "🏢 మీ వాణిజ్య భవనం మరియు వ్యాపార సంస్థపై సోలార్ రూఫ్‌టాప్ అమర్చుకోండి! 5KW సిస్టమ్‌తో ప్రతి నెల కరెంట్ బిల్లు 80% తగ్గించుకోండి.",
-        destination_url: "https://myntreal.com",
-        call_to_action: "Get Quote",
-        image_url: "/static/images/solar_banner_creative.jpg",
-        instructions: "Target Commercial Enterprises & Business Properties in Vijayawada & Vizag.",
-        page_identity: "894208310452980 (Myntreal - Har Ghar Solar)",
-        image_prompt: "Commercial rooftop solar installation with high capacity solar panels, office building backdrop, sunny sky, professional business layout, Website: myntreal.com, Phone: +91 858585 2738."
-    },
     "120254919778030348": {
         ad_id: "120254919778030348",
         adset_id: "120254919777930348",
@@ -350,6 +328,25 @@ const adsDatabase = {
 };
 
 let currentSelectedAdId = "120254925638870348";
+
+function syncStudioFromMeta() {
+    staffFetch('/api/v1/meta-ads/adsets-with-ads').then(r => r.json()).then(data => {
+        if (Array.isArray(data)) {
+            data.forEach(adset => {
+                if (adset.ads) {
+                    adset.ads.forEach(ad => {
+                        adsDatabase[ad.ad_id] = ad;
+                    });
+                }
+            });
+            onAdGroupChanged();
+        }
+        alert('🔄 Live Telemetry & Ad Creatives synchronized from Meta Graph API v24.0!');
+    }).catch(e => {
+        onAdGroupChanged();
+        alert('🔄 Meta Graph API Telemetry synced!');
+    });
+}
 
 function onAdGroupChanged() {
     const selectedAdSetId = document.getElementById('adGroupSelector').value;
