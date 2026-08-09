@@ -6,6 +6,7 @@ Supports leads from any category with handlers: Staff, Partners, Members
 
 import logging
 import os as _os
+import re
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -3469,7 +3470,7 @@ def get_bank_wise_leads(
             'deal_value_received': float(getattr(lead, 'deal_value_received', 0.0) or 0.0),
             'deal_value_balance': float(getattr(lead, 'deal_value_balance', 0.0) or (deal_val - float(getattr(lead, 'deal_value_received', 0.0) or 0.0))),
             'solar_pipeline_stage': getattr(lead, 'solar_pipeline_stage', None) or getattr(lead, 'status', 'New'),
-            'capacity_kw': float(lead.kw_size or 0.0),
+            'capacity_kw': float(re.search(r"([0-9]+(?:\.[0-9]+)?)", str(lead.kw_size or "0")).group(1)) if re.search(r"([0-9]+(?:\.[0-9]+)?)", str(lead.kw_size or "0")) else 0.0,
             'remarks': getattr(lead, 'description', '') or '',
             'google_maps_url': lead.google_maps_link or f"https://www.google.com/maps/search/?api=1&query={lead.name}+{lead.city}"
         })
