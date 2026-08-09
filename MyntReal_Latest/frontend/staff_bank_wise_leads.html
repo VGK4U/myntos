@@ -296,14 +296,14 @@
           <thead>
             <tr>
               <th style="width:40px;text-align:center" onclick="sortTableByHeader('id')"># <span id="sicon_id" class="sort-icon">⇅</span></th>
+              <th style="color:#fbbf24;min-width:180px" onclick="sortTableByHeader('ground_source_name')">Ground Source <span id="sicon_ground_source_name" class="sort-icon active">▲</span></th>
               <th style="color:#38bdf8;min-width:180px" onclick="sortTableByHeader('telecaller_name')">Telecaller <span id="sicon_telecaller_name" class="sort-icon">⇅</span></th>
-              <th style="color:#34d399;min-width:180px" onclick="sortTableByHeader('ground_support_name')"><i class="fas fa-user-gear me-1"></i>Ground Support <span id="sicon_ground_support_name" class="sort-icon">⇅</span></th>
               <th style="color:#38bdf8;text-align:center;min-width:110px" onclick="sortTableByHeader('stage_days')">Stage Days <span id="sicon_stage_days" class="sort-icon">⇅</span></th>
               <th style="color:#34d399;min-width:160px" onclick="sortTableByHeader('bank_name')">Bank Name <span id="sicon_bank_name" class="sort-icon">⇅</span></th>
               <th style="color:#a7f3d0;min-width:160px" onclick="sortTableByHeader('bank_branch')">Branch <span id="sicon_bank_branch" class="sort-icon">⇅</span></th>
               <th style="color:#ffffff;min-width:200px" onclick="sortTableByHeader('customer_name')">Lead Name <span id="sicon_customer_name" class="sort-icon">⇅</span></th>
               <th style="min-width:130px" onclick="sortTableByHeader('phone_number')">Contact <span id="sicon_phone_number" class="sort-icon">⇅</span></th>
-              <th style="color:#fbbf24;min-width:180px" onclick="sortTableByHeader('ground_source_name')">Ground Source <span id="sicon_ground_source_name" class="sort-icon active">▲</span></th>
+              <th style="color:#34d399;min-width:180px" onclick="sortTableByHeader('ground_support_name')"><i class="fas fa-user-gear me-1"></i>Ground Support <span id="sicon_ground_support_name" class="sort-icon">⇅</span></th>
               <th style="color:#c084fc;min-width:180px" onclick="sortTableByHeader('uport_staff_name')"><i class="fas fa-user-tie me-1"></i>Up-port Staff <span id="sicon_uport_staff_name" class="sort-icon">⇅</span></th>
               <th style="color:#60a5fa;min-width:100px" onclick="sortTableByHeader('stage')">Stage <span id="sicon_stage" class="sort-icon">⇅</span></th>
               <th style="color:#c084fc;min-width:120px" onclick="sortTableByHeader('brand_name')">Brand <span id="sicon_brand_name" class="sort-icon">⇅</span></th>
@@ -850,16 +850,16 @@
                     : '';
 
                 const dealCellHtml = (currentMainTab === 'balance-pending')
-                    ? `<span class="badge bg-warning text-dark px-2 py-1" style="font-size:12px;font-weight:800;border:1px solid #d97706" title="Balance Pending: ${balText}">${balText} Pending</span><br><small class="text-muted" style="font-size:10px">Total: ${valText} \| Paid: ${paidText}</small>`
+                    ? `<span class="badge bg-warning text-dark px-2 py-1" style="font-size:12px;font-weight:800;border:1px solid #d97706" title="Balance Pending: ${balText}">${balText} Pending</span><br><small class="text-muted" style="font-size:10px">Total: ${valText} | Paid: ${paidText}</small>`
                     : valText;
 
                 html += `<tr>
                     <td style="text-align:center;color:#9ca3af;font-weight:600">${idx + 1}</td>
+                    <td style="font-weight:700;color:#d97706">
+                        <span class="clickable-label" onclick="applyCustomFilter('member', '${escJs(l.ground_source_name)}')" title="Click to filter by Ground Source: ${esc(l.ground_source_name)}">${esc(l.ground_source_name)}</span>${gsCallBtn}
+                    </td>
                     <td style="color:#0284c7;font-weight:600">
                         <span class="clickable-label" onclick="applyCustomFilter('telecaller', '${escJs(l.telecaller_name)}')" title="Click to filter by Telecaller: ${esc(l.telecaller_name)}">${esc(l.telecaller_name)}</span>
-                    </td>
-                    <td style="color:#059669;font-weight:600">
-                        <i class="fas fa-user-gear me-1"></i><span class="clickable-label" onclick="applyCustomFilter('groundSupport', '${escJs(gsStaffName)}')" title="Click to filter by Ground Support: ${esc(gsStaffName)}">${esc(gsStaffName)}</span>${gsSupportCallBtn}
                     </td>
                     <td style="text-align:center"><span class="days-badge ${dayClass}">${l.stage_days} Days</span></td>
                     <td>
@@ -872,8 +872,8 @@
                         <span class="clickable-label" onclick="applyCustomFilter('search', '${escJs(l.customer_name)}')" title="Click to filter by Lead Name: ${esc(l.customer_name)}">${esc(l.customer_name)}</span>
                     </td>
                     <td><a href="tel:${esc(l.phone_number)}" style="color:#2563eb;text-decoration:none;font-weight:600"><i class="fas fa-phone-alt me-1"></i>${esc(l.phone_number)}</a></td>
-                    <td style="font-weight:700;color:#d97706">
-                        <span class="clickable-label" onclick="applyCustomFilter('member', '${escJs(l.ground_source_name)}')" title="Click to filter by Ground Source: ${esc(l.ground_source_name)}">${esc(l.ground_source_name)}</span>${gsCallBtn}
+                    <td style="color:#059669;font-weight:600">
+                        <i class="fas fa-user-gear me-1"></i><span class="clickable-label" onclick="applyCustomFilter('groundSupport', '${escJs(gsStaffName)}')" title="Click to filter by Ground Support: ${esc(gsStaffName)}">${esc(gsStaffName)}</span>${gsSupportCallBtn}
                     </td>
                     <td style="color:#7c3aed;font-weight:600">
                         <i class="fas fa-user-tie me-1"></i><span class="clickable-label" onclick="applyCustomFilter('uportStaff', '${escJs(upStaffName)}')" title="Click to filter by Up-port Staff: ${esc(upStaffName)}">${esc(upStaffName)}</span>
