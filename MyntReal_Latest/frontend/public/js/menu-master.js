@@ -266,6 +266,19 @@ const MENU_MASTER = [
       { menu_code: "MNR_USER_CREATE_ANNOUNCEMENT", label: "Create Announcement", route: "/staff/mnr-user/announcements/create", icon: "fas fa-globe", audience: ["STAFF"] }
     ]
   },
+
+  {
+    section_code: "META_ADS",
+    section_label: "META ADS",
+    order: 15,
+    items: [
+      { menu_code: "META_ADS_CENTER", label: "Meta Ads Center", route: "/staff/meta-ads/center", icon: "fab fa-facebook-square", audience: ["STAFF", "VGK4U"] },
+      { menu_code: "META_CAMPAIGNS", label: "Meta Campaigns", route: "/staff/meta-ads/campaigns", icon: "fas fa-bullhorn", audience: ["STAFF", "VGK4U"] },
+      { menu_code: "META_CREATIVE_STUDIO", label: "Creative Studio", route: "/staff/meta-ads/creative-studio", icon: "fas fa-palette", audience: ["STAFF", "VGK4U"] },
+      { menu_code: "META_LEADS", label: "Meta Lead Ingestion", route: "/staff/meta-ads/leads", icon: "fas fa-user-check", audience: ["STAFF", "VGK4U"] },
+      { menu_code: "META_SETTINGS", label: "Meta OAuth & Settings", route: "/staff/meta-ads/settings", icon: "fas fa-cog", audience: ["STAFF", "VGK4U"] }
+    ]
+  },
   {
     section_code: "MNR_USER_SIDEBAR",
     section_label: "MNR",

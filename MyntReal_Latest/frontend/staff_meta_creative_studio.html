@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creative Studio — MYNT OS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .content-area { padding: 20px 24px; }
+        .panel-card { background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 20px; overflow: hidden; }
+        .panel-head { padding: 16px 20px; border-bottom: 1px solid #e5e7eb; background: #fafafa; display: flex; align-items: center; justify-content: space-between; }
+        .panel-title { font-size: 15px; font-weight: 700; color: #111827; margin: 0; }
+        .ad-preview-box { border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; background: #ffffff; max-width: 440px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,.05); }
+        .ad-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .ad-avatar { width: 40px; height: 40px; border-radius: 50%; background: #0f766e; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+        .ad-title { font-size: 14px; font-weight: 700; color: #111827; }
+        .ad-sub { font-size: 11px; color: #6b7280; }
+        .ad-image { width: 100%; border-radius: 8px; margin: 10px 0; background: #111827; color: white; padding: 30px; text-align: center; font-weight: 700; background: linear-gradient(135deg, #0f766e, #1e3a8a); }
+        .ad-body { font-size: 13px; color: #374151; line-height: 1.5; margin-bottom: 10px; }
+        .ad-cta-btn { background: #1877f2; color: white; border-radius: 6px; padding: 8px 16px; font-size: 13px; font-weight: 700; text-align: center; width: 100%; display: block; text-decoration: none; }
+    </style>
+</head>
+<body>
+<script src="/public/js/staff-token-manager.js?v=1"></script>
+<script src="/public/js/staff-fetch.js?v=1"></script>
+
+<nav id="staffSidebar"></nav>
+
+<div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 style="font-size: 22px; font-weight: 700; color: #111827; margin: 0;">Meta AI Creative Studio</h2>
+                <p style="font-size: 13px; color: #6b7280; margin: 3px 0 0;">Verified Har Ghar Solar Ad Creative Telemetry</p>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="panel-card">
+                    <div class="panel-head">
+                        <div class="panel-title"><i class="fas fa-palette text-primary me-2"></i> Creative Assets & Metadata</div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="mb-3">
+                            <label class="text-muted small fw-bold">CREATIVE ID</label>
+                            <div class="fw-bold"><code>1063753229511074</code></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-muted small fw-bold">FACEBOOK PAGE IDENTITY</label>
+                            <div class="fw-bold text-success"><i class="fas fa-check-circle me-1"></i> 894208310452980 (Myntreal - Har Ghar Solar)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-muted small fw-bold">IMAGE HASH</label>
+                            <div class="fw-bold"><code>7db4abcb49f4c4fa2d37d6bac21aeb56</code></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-muted small fw-bold">LEAD FORM</label>
+                            <div class="fw-bold"><code>form_3kw_solar_ap</code></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-muted small fw-bold">DESTINATION URL</label>
+                            <div class="fw-bold text-primary">https://vgk4u.com</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="panel-card">
+                    <div class="panel-head">
+                        <div class="panel-title"><i class="fab fa-facebook-f text-primary me-2"></i> Live Ad Feed Render Preview</div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="ad-preview-box">
+                            <div class="ad-header">
+                                <div class="ad-avatar"><i class="fas fa-solar-panel"></i></div>
+                                <div>
+                                    <div class="ad-title">Myntreal - Har Ghar Solar</div>
+                                    <div class="ad-sub">Sponsored · <i class="fas fa-globe"></i></div>
+                                </div>
+                            </div>
+                            <div class="ad-body">
+                                🏠 మీ ఇంటిపై 3KW సోలార్ రూఫ్‌టాప్ అమర్చుకోండి! ప్రతి నెల ఉచిత విద్యుత్ పొందండి. ప్రభుత్వం ఇచ్చే ₹78,000 సబ్సిడీని నేడే క్లెయిమ్ చేసుకోండి.
+                            </div>
+                            <div class="ad-image">
+                                ☀️ HAR GHAR SOLAR 3KW<br>
+                                <span style="font-size: 14px; font-weight: 500;">₹78,000 Government Subsidy AP</span>
+                            </div>
+                            <div style="background: #f3f4f6; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
+                                <div style="font-size: 11px; color: #6b7280; text-transform: uppercase;">VGK4U.COM</div>
+                                <div style="font-weight: 700; font-size: 13px; color: #111827;">Har Ghar Solar AP — 3KW Solar Rooftop System</div>
+                            </div>
+                            <a href="#" class="ad-cta-btn">Sign Up / Apply Now</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/staff_header.js"></script>
+<script src="/staff_sidebar.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    if (typeof StaffHeader !== 'undefined') StaffHeader.inject('Creative Studio', 'fas fa-palette');
+    if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+    if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+});
+</script>
+</body>
+</html>

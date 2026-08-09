@@ -2624,6 +2624,13 @@ DEFAULT_STAFF_MENUS = [
     {"menu_code": "staff_razorpay_dashboard", "menu_name": "Razorpay Executive", "menu_category": "configuration", "menu_icon": "fas fa-credit-card", "route_path": "/staff/configuration/razorpay", "display_order": 750, "is_default_visible": True, "is_default_accessible": True},
     {"menu_code": "staff_a1top_dashboard", "menu_name": "A1Top Executive", "menu_category": "configuration", "menu_icon": "fas fa-mobile-alt", "route_path": "/staff/configuration/a1top", "display_order": 751, "is_default_visible": True, "is_default_accessible": True},
 
+    # ===================== META ADS MANAGEMENT CENTER (760-764) =====================
+    {"menu_code": "META_ADS_CENTER", "menu_name": "Meta Ads Center", "menu_category": "meta_ads", "menu_icon": "fab fa-facebook-square", "route_path": "/staff/meta-ads/center", "display_order": 760, "is_default_visible": True, "is_default_accessible": True, "audience_scope": "shared", "sidebar_section": "meta_ads", "sidebar_section_title": "META ADS", "sidebar_section_order": 15},
+    {"menu_code": "META_CAMPAIGNS", "menu_name": "Meta Campaigns", "menu_category": "meta_ads", "menu_icon": "fas fa-bullhorn", "route_path": "/staff/meta-ads/campaigns", "display_order": 761, "is_default_visible": True, "is_default_accessible": True, "audience_scope": "shared", "sidebar_section": "meta_ads", "sidebar_section_title": "META ADS", "sidebar_section_order": 15},
+    {"menu_code": "META_CREATIVE_STUDIO", "menu_name": "Creative Studio", "menu_category": "meta_ads", "menu_icon": "fas fa-palette", "route_path": "/staff/meta-ads/creative-studio", "display_order": 762, "is_default_visible": True, "is_default_accessible": True, "audience_scope": "shared", "sidebar_section": "meta_ads", "sidebar_section_title": "META ADS", "sidebar_section_order": 15},
+    {"menu_code": "META_LEADS", "menu_name": "Meta Lead Ingestion", "menu_category": "meta_ads", "menu_icon": "fas fa-user-check", "route_path": "/staff/meta-ads/leads", "display_order": 763, "is_default_visible": True, "is_default_accessible": True, "audience_scope": "shared", "sidebar_section": "meta_ads", "sidebar_section_title": "META ADS", "sidebar_section_order": 15},
+    {"menu_code": "META_SETTINGS", "menu_name": "Meta Settings & OAuth", "menu_category": "meta_ads", "menu_icon": "fas fa-cog", "route_path": "/staff/meta-ads/settings", "display_order": 764, "is_default_visible": True, "is_default_accessible": True, "audience_scope": "shared", "sidebar_section": "meta_ads", "sidebar_section_title": "META ADS", "sidebar_section_order": 15},
+
 ]
 
 

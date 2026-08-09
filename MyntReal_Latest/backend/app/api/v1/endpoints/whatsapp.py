@@ -637,6 +637,69 @@ async def meta_webhook_status_canonical(request: Request, db: Session = Depends(
                     )
                     db.add(inbox)
                     db.flush()  # get inbox.id before auto-reply check
+
+                    # ── Release 1A Non-Disruptive WhatsApp Audit & Service Window Layer ──
+                    try:
+                        from app.models.wa_audit import WAConversation, WAMessage
+                        from app.services.job_queue_service import enqueue_system_job
+                        import uuid
+                        
+                        target_company_id = lead.company_id if lead else 1
+                        
+                        if lead:
+                            # 1. Look up active session
+                            cutoff_now = datetime.utcnow()
+                            active_conv = db.query(WAConversation).filter(
+                                WAConversation.company_id == target_company_id,
+                                WAConversation.lead_id == lead.id,
+                                WAConversation.phone == from_phone,
+                                WAConversation.window_24h_expires_at > cutoff_now,
+                                WAConversation.session_closed_at.is_(None)
+                            ).order_by(WAConversation.id.desc()).first()
+
+                            if active_conv:
+                                # Extend service window
+                                active_conv.window_24h_expires_at = cutoff_now + timedelta(hours=24)
+                                active_conv.last_inbound_at = cutoff_now
+                                active_conv.last_inbound_wamid = wamid_in
+                                active_conv.service_window_open = True
+                                active_conv_id = active_conv.id
+                            else:
+                                # Create new 24h operational session linked to SAME lead history
+                                new_conv = WAConversation(
+                                    company_id=target_company_id,
+                                    lead_id=lead.id,
+                                    phone=from_phone,
+                                    session_uuid=str(uuid.uuid4()),
+                                    current_state='QUALIFYING',
+                                    window_24h_expires_at=cutoff_now + timedelta(hours=24),
+                                    service_window_open=True,
+                                    last_inbound_at=cutoff_now,
+                                    last_inbound_wamid=wamid_in,
+                                    session_started_at=cutoff_now
+                                )
+                                db.add(new_conv)
+                                db.flush()
+                                active_conv_id = new_conv.id
+
+                            # Enqueue durable audit job (idempotent via wamid)
+                            if wamid_in:
+                                enqueue_system_job(
+                                    db=db,
+                                    company_id=target_company_id,
+                                    job_type="WA_AUDIT_LOG",
+                                    payload={
+                                        "conversation_id": active_conv_id,
+                                        "lead_id": lead.id,
+                                        "wamid": wamid_in,
+                                        "direction": "INBOUND",
+                                        "sender_type": "CUSTOMER",
+                                        "body_text": body_text[:2000] if body_text else ""
+                                    },
+                                    idempotency_key=f"wa_audit_in_{wamid_in}"
+                                )
+                    except Exception as wa_audit_err:
+                        logger.warning(f"[WA-AUDIT-NON-FATAL] Inbound audit log error: {wa_audit_err}")
                     # ── Auto-reply: once per 24h per phone ─────────────────
                     try:
                         from app.services.whatsapp_auto_service import _send_meta as _sm, _is_valid_phone as _ivp

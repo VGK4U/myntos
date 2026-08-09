@@ -19,10 +19,12 @@ def get_wa_credentials(db) -> Dict[str, str]:
     """
     try:
         from sqlalchemy import text as _t
+        from app.core.security_encryption import decrypt_credential_safe
         row = db.execute(_t(f"SELECT access_token, phone_number_id, verify_token, business_account_id, facebook_app_id FROM {_TABLE} ORDER BY id DESC LIMIT 1")).fetchone()
         if row and row[0]:
+            token = decrypt_credential_safe(row[0] or "")
             return {
-                "access_token":        row[0] or "",
+                "access_token":        token,
                 "phone_number_id":     row[1] or os.environ.get("META_WHATSAPP_PHONE_NUMBER_ID", ""),
                 "verify_token":        row[2] or os.environ.get("META_WHATSAPP_VERIFY_TOKEN", ""),
                 "business_account_id": row[3] or os.environ.get("META_WHATSAPP_BUSINESS_ACCOUNT_ID", ""),

@@ -88,12 +88,13 @@ class FacebookLeadsService:
     def get_page_token(self, page_id: str, db: Optional[Session] = None) -> Optional[str]:
         if db and page_id:
             try:
+                from app.core.security_encryption import decrypt_credential_safe
                 row = db.execute(
                     text("SELECT access_token FROM facebook_pages WHERE page_id = :pid AND is_active = TRUE"),
                     {'pid': str(page_id)}
                 ).fetchone()
-                if row:
-                    return row[0]
+                if row and row[0]:
+                    return decrypt_credential_safe(row[0])
             except Exception as e:
                 logger.warning(f"DB token lookup failed: {e}")
         return self._legacy_token
@@ -103,12 +104,14 @@ class FacebookLeadsService:
         info = {'token': self._legacy_token or '', 'segment': 'GENERAL', 'name': ''}
         if db and page_id:
             try:
+                from app.core.security_encryption import decrypt_credential_safe
                 row = db.execute(
                     text("SELECT access_token, crm_segment, page_name FROM facebook_pages WHERE page_id = :pid"),
                     {'pid': str(page_id)}
                 ).fetchone()
                 if row:
-                    info['token']   = row[0] or info['token']
+                    raw_token = row[0] or info['token']
+                    info['token']   = decrypt_credential_safe(raw_token) if raw_token else ''
                     info['segment'] = row[1] or 'GENERAL'
                     info['name']    = row[2] or ''
             except Exception as e:
@@ -211,6 +214,9 @@ class FacebookLeadsService:
             if not pid or not ptoken:
                 continue
 
+            from app.core.security_encryption import encrypt_credential
+            enc_ptoken = encrypt_credential(ptoken)
+
             # Upsert into facebook_pages
             try:
                 db.execute(text("""
@@ -225,7 +231,7 @@ class FacebookLeadsService:
                         crm_segment   = EXCLUDED.crm_segment,
                         updated_at    = NOW()
                 """), {'cid': company_id, 'pid': pid, 'pname': pname,
-                       'pcat': pcat, 'ptoken': ptoken, 'seg': seg})
+                       'pcat': pcat, 'ptoken': enc_ptoken, 'seg': seg})
                 db.commit()
                 results['stored'] += 1
             except Exception as e:

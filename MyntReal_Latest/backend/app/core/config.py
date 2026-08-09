@@ -81,6 +81,18 @@ class Settings(BaseSettings):
     # Pagination defaults
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
+
+    # ── Release 1A & Phase 2D Feature Flags ──
+    META_SYNC_ENABLED: bool = True
+    META_ADS_READ_ENABLED: bool = True
+    META_ADS_WRITE_ENABLED: bool = False
+    CAPI_ENABLED: bool = False
+    WA_AUDIT_ENABLED: bool = True
+    WA_AI_ENABLED: bool = False
+    VOICE_AI_ENABLED: bool = False
+    AI_ORCHESTRATOR_ENABLED: bool = False
+    CAMPAIGN_AUTOMATION_ENABLED: bool = False
+    STRICT_ENCRYPTED_CREDS_ONLY: bool = True
     
     @validator("DATABASE_URL", pre=True)
     def assemble_db_connection(cls, v: Optional[str], values: dict) -> str:

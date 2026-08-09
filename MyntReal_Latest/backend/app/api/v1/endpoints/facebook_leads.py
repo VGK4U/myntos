@@ -177,6 +177,25 @@ async def process_facebook_lead(
     db.commit()
     db.refresh(crm_lead)
 
+    # ── Release 1A Immutable Meta Attribution Layer ───────────────────────────
+    try:
+        from app.models.meta_attribution import MetaLeadsAttribution
+        attribution = MetaLeadsAttribution(
+            company_id=default_company.id,
+            lead_id=crm_lead.id,
+            meta_lead_id=str(lead_id),
+            meta_campaign_id=str(lead_data.get('campaign_id') or '') or None,
+            meta_adset_id=str(lead_data.get('adset_id') or '') or None,
+            meta_ad_id=str(lead_data.get('ad_id') or '') or None,
+            meta_form_id=str(lead_data.get('form_id') or form_id or '') or None,
+            meta_form_name=str(page_name) if page_name else None
+        )
+        db.add(attribution)
+        db.commit()
+    except Exception as att_err:
+        db.rollback()
+        logger.warning(f"Meta attribution creation non-fatal error: {att_err}")
+
     logger.info(f"CRM lead {crm_lead.id} created from FB lead {lead_id} | page: {page_name} | segment: {page_segment}")
     return crm_lead
 

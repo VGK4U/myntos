@@ -4930,6 +4930,320 @@ def _startup_worker():
     except Exception as _e:
         print(f"[DC-FB-PAGES] Skipped (non-fatal): {_e}", flush=True)
 
+    # ── Release 1A Foundation Tables Setup (Aug 2026) ──────────────────────────
+    try:
+        with engine.connect() as _r1a:
+            _r1a.execute(text("""
+                CREATE TABLE IF NOT EXISTS meta_leads_attribution (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER UNIQUE NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    meta_lead_id VARCHAR(50) NOT NULL,
+                    meta_campaign_id VARCHAR(50),
+                    meta_campaign_name VARCHAR(200),
+                    meta_adset_id VARCHAR(50),
+                    meta_adset_name VARCHAR(200),
+                    meta_ad_id VARCHAR(50),
+                    meta_ad_name VARCHAR(200),
+                    meta_form_id VARCHAR(50),
+                    meta_form_name VARCHAR(200),
+                    utm_source VARCHAR(100),
+                    utm_medium VARCHAR(100),
+                    utm_campaign VARCHAR(100),
+                    utm_content VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS system_jobs (
+                    id BIGSERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    job_type VARCHAR(50) NOT NULL,
+                    payload JSONB NOT NULL,
+                    status VARCHAR(20) NOT NULL DEFAULT 'QUEUED',
+                    attempts INTEGER NOT NULL DEFAULT 0,
+                    max_attempts INTEGER NOT NULL DEFAULT 5,
+                    next_attempt_at TIMESTAMP DEFAULT NOW(),
+                    locked_by VARCHAR(100),
+                    locked_until TIMESTAMP,
+                    idempotency_key VARCHAR(150) UNIQUE NOT NULL,
+                    correlation_id VARCHAR(100),
+                    error_log TEXT,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    processed_at TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS wa_conversations (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    phone VARCHAR(20) NOT NULL,
+                    session_uuid VARCHAR(100) UNIQUE NOT NULL,
+                    current_state VARCHAR(50) NOT NULL DEFAULT 'NEW_LEAD',
+                    previous_state VARCHAR(50),
+                    channel_provider VARCHAR(30) NOT NULL DEFAULT 'META_CLOUD_API',
+                    window_24h_expires_at TIMESTAMP NOT NULL,
+                    service_window_open BOOLEAN NOT NULL DEFAULT TRUE,
+                    messaging_policy_window_type VARCHAR(30) NOT NULL DEFAULT '24H_SERVICE',
+                    is_human_takeover BOOLEAN DEFAULT FALSE,
+                    assigned_staff_id INTEGER,
+                    last_inbound_at TIMESTAMP,
+                    last_outbound_at TIMESTAMP,
+                    last_inbound_wamid VARCHAR(250),
+                    session_started_at TIMESTAMP DEFAULT NOW(),
+                    session_closed_at TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS wa_messages (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    conversation_id INTEGER NOT NULL REFERENCES wa_conversations(id) ON DELETE CASCADE,
+                    lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    wamid VARCHAR(250) UNIQUE,
+                    direction VARCHAR(10) NOT NULL,
+                    sender_type VARCHAR(20) NOT NULL DEFAULT 'CUSTOMER',
+                    message_type VARCHAR(20) NOT NULL DEFAULT 'TEXT',
+                    body_text TEXT,
+                    delivery_status VARCHAR(20) DEFAULT 'QUEUED',
+                    sent_at TIMESTAMP DEFAULT NOW(),
+                    delivered_at TIMESTAMP,
+                    read_at TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS meta_daily_insights (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    ad_account_id VARCHAR(50) NOT NULL,
+                    campaign_id VARCHAR(50) NOT NULL,
+                    campaign_name VARCHAR(200),
+                    adset_id VARCHAR(50) NOT NULL,
+                    adset_name VARCHAR(200),
+                    ad_id VARCHAR(50) NOT NULL,
+                    ad_name VARCHAR(200),
+                    meta_ad_account_timezone VARCHAR(50) NOT NULL DEFAULT 'Asia/Kolkata',
+                    meta_reporting_date DATE NOT NULL,
+                    myntos_display_timezone VARCHAR(50) NOT NULL DEFAULT 'Asia/Kolkata',
+                    myntos_display_date DATE,
+                    spend NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+                    impressions INTEGER NOT NULL DEFAULT 0,
+                    reach INTEGER NOT NULL DEFAULT 0,
+                    clicks INTEGER NOT NULL DEFAULT 0,
+                    ctr NUMERIC(6,4) DEFAULT 0.0000,
+                    cpc NUMERIC(10,2) DEFAULT 0.00,
+                    cpm NUMERIC(10,2) DEFAULT 0.00,
+                    leads_count INTEGER NOT NULL DEFAULT 0,
+                    cpl NUMERIC(10,2) DEFAULT 0.00,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_meta_daily_insights UNIQUE (company_id, ad_id, meta_reporting_date)
+                );
+                CREATE TABLE IF NOT EXISTS system_feature_flags (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    vertical VARCHAR(50) NOT NULL DEFAULT 'GENERAL',
+                    feature_key VARCHAR(100) NOT NULL,
+                    is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+                    updated_by_staff_id INTEGER REFERENCES staff_employees(id),
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_feature_flag UNIQUE (company_id, vertical, feature_key)
+                );
+                CREATE TABLE IF NOT EXISTS meta_capi_logs (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    event_name VARCHAR(50) NOT NULL,
+                    event_id VARCHAR(150) UNIQUE NOT NULL,
+                    status VARCHAR(20) NOT NULL DEFAULT 'QUEUED',
+                    request_payload JSONB,
+                    response_payload TEXT,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    processed_at TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS lead_feature_matrix (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER UNIQUE NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    vertical VARCHAR(50) NOT NULL DEFAULT 'GENERAL',
+                    acquisition_source VARCHAR(50),
+                    campaign_id VARCHAR(50),
+                    lead_age_days INTEGER NOT NULL DEFAULT 0,
+                    has_phone BOOLEAN NOT NULL DEFAULT TRUE,
+                    has_email BOOLEAN NOT NULL DEFAULT FALSE,
+                    has_budget BOOLEAN NOT NULL DEFAULT FALSE,
+                    wa_message_count INTEGER NOT NULL DEFAULT 0,
+                    wa_response_rate FLOAT NOT NULL DEFAULT 0.0,
+                    call_count INTEGER NOT NULL DEFAULT 0,
+                    appointment_scheduled BOOLEAN NOT NULL DEFAULT FALSE,
+                    site_visit_completed BOOLEAN NOT NULL DEFAULT FALSE,
+                    raw_features JSONB,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS lead_outcome_labels (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER UNIQUE NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    is_qualified BOOLEAN NOT NULL DEFAULT FALSE,
+                    is_won BOOLEAN NOT NULL DEFAULT FALSE,
+                    realized_cash_revenue FLOAT NOT NULL DEFAULT 0.0,
+                    outcome_stage VARCHAR(50) NOT NULL DEFAULT 'NEW',
+                    recorded_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS lead_score_history (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    score INTEGER NOT NULL,
+                    score_version VARCHAR(20) NOT NULL DEFAULT 'v1.0_RULES_PLUS_AI',
+                    rule_score INTEGER NOT NULL,
+                    ai_intent_score INTEGER NOT NULL,
+                    ai_confidence FLOAT NOT NULL DEFAULT 0.0,
+                    positive_factors JSONB NOT NULL DEFAULT '[]',
+                    negative_factors JSONB NOT NULL DEFAULT '[]',
+                    explanation TEXT,
+                    calculated_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS ai_knowledge_categories (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    vertical VARCHAR(50) NOT NULL DEFAULT 'GENERAL',
+                    category_code VARCHAR(50) NOT NULL,
+                    display_name VARCHAR(100) NOT NULL,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_knowledge_cat UNIQUE (company_id, vertical, category_code)
+                );
+                CREATE TABLE IF NOT EXISTS ai_knowledge_items (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    category_id INTEGER NOT NULL REFERENCES ai_knowledge_categories(id) ON DELETE CASCADE,
+                    title VARCHAR(200) NOT NULL,
+                    fact_content TEXT NOT NULL,
+                    keywords VARCHAR(300),
+                    is_approved BOOLEAN NOT NULL DEFAULT TRUE,
+                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                    version VARCHAR(20) NOT NULL DEFAULT 'v1.0',
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS voice_call_records (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    phone VARCHAR(20) NOT NULL,
+                    provider_name VARCHAR(50) NOT NULL DEFAULT 'NULL_VOICE_PROVIDER',
+                    provider_call_id VARCHAR(100) UNIQUE,
+                    call_direction VARCHAR(10) NOT NULL DEFAULT 'OUTBOUND',
+                    status VARCHAR(30) NOT NULL DEFAULT 'QUEUED',
+                    duration_seconds INTEGER NOT NULL DEFAULT 0,
+                    transcript TEXT,
+                    ai_summary TEXT,
+                    intent_detected VARCHAR(50),
+                    qualification_result VARCHAR(50),
+                    is_transferred_to_human BOOLEAN NOT NULL DEFAULT FALSE,
+                    scheduled_at TIMESTAMP,
+                    started_at TIMESTAMP,
+                    ended_at TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS ai_action_logs (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    vertical VARCHAR(50) NOT NULL DEFAULT 'GENERAL',
+                    channel VARCHAR(30) NOT NULL DEFAULT 'WHATSAPP',
+                    action_type VARCHAR(50) NOT NULL,
+                    model_name VARCHAR(100) NOT NULL DEFAULT 'mock_llm_v1',
+                    prompt_version VARCHAR(50) NOT NULL DEFAULT 'v1.0',
+                    confidence_score FLOAT NOT NULL DEFAULT 0.0,
+                    ai_recommendation JSONB,
+                    final_action_taken VARCHAR(50) NOT NULL,
+                    human_override BOOLEAN NOT NULL DEFAULT FALSE,
+                    correlation_id VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS ai_usage_logs (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    provider_name VARCHAR(50) NOT NULL,
+                    model_name VARCHAR(100) NOT NULL,
+                    task_name VARCHAR(50) NOT NULL,
+                    input_tokens INTEGER NOT NULL DEFAULT 0,
+                    output_tokens INTEGER NOT NULL DEFAULT 0,
+                    estimated_cost_usd FLOAT NOT NULL DEFAULT 0.000000,
+                    latency_ms INTEGER NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS meta_campaigns (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    campaign_id VARCHAR(50) NOT NULL,
+                    account_id VARCHAR(50) NOT NULL,
+                    name VARCHAR(200) NOT NULL,
+                    objective VARCHAR(50),
+                    status VARCHAR(30) NOT NULL DEFAULT 'PAUSED',
+                    daily_budget FLOAT,
+                    lifetime_budget FLOAT,
+                    start_time TIMESTAMP,
+                    stop_time TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_meta_campaign_company_id UNIQUE (company_id, campaign_id)
+                );
+                CREATE TABLE IF NOT EXISTS meta_adsets (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    adset_id VARCHAR(50) NOT NULL,
+                    campaign_id VARCHAR(50) NOT NULL,
+                    name VARCHAR(200) NOT NULL,
+                    status VARCHAR(30) NOT NULL DEFAULT 'PAUSED',
+                    targeting_summary JSONB,
+                    optimization_goal VARCHAR(50),
+                    billing_event VARCHAR(50),
+                    daily_budget FLOAT,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_meta_adset_company_id UNIQUE (company_id, adset_id)
+                );
+                CREATE TABLE IF NOT EXISTS meta_ads (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    ad_id VARCHAR(50) NOT NULL,
+                    adset_id VARCHAR(50) NOT NULL,
+                    campaign_id VARCHAR(50) NOT NULL,
+                    name VARCHAR(200) NOT NULL,
+                    creative_id VARCHAR(50),
+                    status VARCHAR(30) NOT NULL DEFAULT 'PAUSED',
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_meta_ad_company_id UNIQUE (company_id, ad_id)
+                );
+                CREATE TABLE IF NOT EXISTS meta_creatives (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    creative_id VARCHAR(50) NOT NULL,
+                    headline VARCHAR(300),
+                    primary_text TEXT,
+                    description TEXT,
+                    call_to_action_type VARCHAR(50),
+                    image_url_ref TEXT,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_meta_creative_company_id UNIQUE (company_id, creative_id)
+                );
+                CREATE TABLE IF NOT EXISTS meta_permissions (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    permission_name VARCHAR(100) NOT NULL,
+                    endpoint_requiring VARCHAR(150) NOT NULL,
+                    token_type VARCHAR(50) NOT NULL DEFAULT 'PAGE_ACCESS_TOKEN',
+                    verification_status VARCHAR(50) NOT NULL DEFAULT 'VERIFIED',
+                    notes TEXT,
+                    checked_at TIMESTAMP DEFAULT NOW()
+                );
+            """))
+            _r1a.commit()
+        print("[PHASE-2] ✅ Phase 2 Meta Ads database tables ensured", flush=True)
+    except Exception as _r1a_e:
+        print(f"[PHASE-2] Skipped table init (non-fatal): {_r1a_e}", flush=True)
+
     # DC Protocol (Mar 2026): Add thumbnail_url to feedback_media for OG preview + share cards
     try:
         from sqlalchemy import text as _sa_text2
