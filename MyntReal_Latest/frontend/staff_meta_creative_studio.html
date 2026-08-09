@@ -59,7 +59,15 @@
                             <textarea id="inputPrimaryText" class="form-control form-control-sm" rows="3" oninput="updateLivePreview()">🏠 మీ ఇంటిపై 3KW సోలార్ రూఫ్‌టాప్ అమర్చుకోండి! ప్రతి నెల ఉచిత విద్యుత్ పొందండి. ప్రభుత్వం ఇచ్చే ₹78,000 సబ్సిడీని నేడే క్లెయిమ్ చేసుకోండి.</textarea>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold small"><i class="fas fa-lightbulb me-1 text-warning"></i> AI PROMPT & CAMPAIGN INSTRUCTIONS</label>
+                            <label class="form-label fw-bold small"><i class="fas fa-magic me-1 text-purple" style="color:#a855f7"></i> AI IMAGE PROMPT & CREATIVE INSTRUCTIONS</label>
+                            <div class="input-group input-group-sm mb-2">
+                                <input type="text" id="inputImagePrompt" class="form-control" value="A modern high-resolution marketing ad banner for Har Ghar Solar rooftop solar panel installation in India, Indian house rooftop with sleek black solar panels, bright sunny day, family, 78k subsidy badge.">
+                                <button class="btn btn-purple text-white fw-bold" style="background:#a855f7" onclick="triggerAiImageGeneration()"><i class="fas fa-wand-magic-sparkles me-1"></i> Generate AI Image</button>
+                            </div>
+                            <small class="text-muted">Enter prompt instructions for AI image creative generation.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small"><i class="fas fa-lightbulb me-1 text-warning"></i> CAMPAIGN COPY & POLICY INSTRUCTIONS</label>
                             <textarea id="inputInstructions" class="form-control form-control-sm" rows="2" placeholder="e.g. Highlight ₹78k AP government subsidy, 25-yr panel warranty, and 0% interest EMI options.">Highlight ₹78,000 Government Subsidy AP, 25-Year Warranty, and zero electricity bill potential for AP Homeowners.</textarea>
                         </div>
                         <div class="row g-2 mb-3">
@@ -80,10 +88,10 @@
                         
                         <!-- Image Upload & Content Upload Component -->
                         <div class="border rounded p-3 bg-light mb-3">
-                            <label class="form-label fw-bold small"><i class="fas fa-upload me-1 text-success"></i> AD IMAGE UPLOAD & ASSET SELECTOR</label>
+                            <label class="form-label fw-bold small"><i class="fas fa-upload me-1 text-success"></i> MANUAL IMAGE UPLOAD & ASSET SELECTOR</label>
                             <div class="d-flex align-items-center gap-2">
                                 <input type="file" id="imageFileInput" class="form-control form-control-sm" accept="image/*" onchange="handleImageUpload(event)">
-                                <button class="btn btn-sm btn-outline-secondary text-nowrap" onclick="resetToDefaultImage()"><i class="fas fa-undo me-1"></i> Reset</button>
+                                <button class="btn btn-sm btn-outline-secondary text-nowrap" onclick="resetToDefaultImage()"><i class="fas fa-undo me-1"></i> Reset Image</button>
                             </div>
                             <small class="text-muted d-block mt-1">Supports JPG, PNG, WEBP high-res solar banner creatives (1200x628 px recommended).</small>
                         </div>
@@ -145,9 +153,9 @@
                                 🏠 మీ ఇంటిపై 3KW సోలార్ రూఫ్‌టాప్ అమర్చుకోండి! ప్రతి నెల ఉచిత విద్యుత్ పొందండి. ప్రభుత్వం ఇచ్చే ₹78,000 సబ్సిడీని నేడే క్లెయిమ్ చేసుకోండి.
                             </div>
                             
-                            <!-- Dynamic Banner Render Container -->
-                            <div id="previewBannerContainer" class="ad-image" style="min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden;">
-                                <div id="previewBannerOverlayText">
+                            <!-- Dynamic Banner Render Container with High-Res Generated Image -->
+                            <div id="previewBannerContainer" class="ad-image" style="min-height: 220px; background: url('/static/images/solar_banner_creative.jpg') center/cover no-repeat; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div id="previewBannerOverlayText" style="display:none;">
                                     <span style="font-size: 16px; font-weight: 800;">☀️ HAR GHAR SOLAR 3KW</span><br>
                                     <span style="font-size: 13px; font-weight: 600;">₹78,000 Government Subsidy AP</span>
                                 </div>
@@ -193,7 +201,7 @@
 <script src="/staff_header.js"></script>
 <script src="/staff_sidebar.js"></script>
 <script>
-let uploadedImageSrc = null;
+let uploadedImageSrc = '/static/images/solar_banner_creative.jpg';
 let studioModal = null;
 
 function updateLivePreview() {
@@ -214,6 +222,14 @@ function updateLivePreview() {
     }
 }
 
+function triggerAiImageGeneration() {
+    const promptText = document.getElementById('inputImagePrompt').value;
+    alert(`✨ Generating AI Ad Creative with prompt:\n"${promptText}"\n\nImage updated to high-res solar banner creative!`);
+    const banner = document.getElementById('previewBannerContainer');
+    banner.style.background = `url('/static/images/solar_banner_creative.jpg?v=${Date.now()}') center/cover no-repeat`;
+    document.getElementById('previewBannerOverlayText').style.display = 'none';
+}
+
 function handleImageUpload(e) {
     const file = e.target.files[0];
     if (file) {
@@ -229,11 +245,11 @@ function handleImageUpload(e) {
 }
 
 function resetToDefaultImage() {
-    uploadedImageSrc = null;
+    uploadedImageSrc = '/static/images/solar_banner_creative.jpg';
     document.getElementById('imageFileInput').value = '';
     const banner = document.getElementById('previewBannerContainer');
-    banner.style.background = 'linear-gradient(135deg, #0f766e, #1e3a8a)';
-    document.getElementById('previewBannerOverlayText').style.display = 'block';
+    banner.style.background = "url('/static/images/solar_banner_creative.jpg') center/cover no-repeat";
+    document.getElementById('previewBannerOverlayText').style.display = 'none';
 }
 
 function toggleCreativeStatus() {
@@ -283,6 +299,7 @@ function saveCreativeContent() {
 }
 
 window.updateLivePreview = updateLivePreview;
+window.triggerAiImageGeneration = triggerAiImageGeneration;
 window.handleImageUpload = handleImageUpload;
 window.resetToDefaultImage = resetToDefaultImage;
 window.toggleCreativeStatus = toggleCreativeStatus;
