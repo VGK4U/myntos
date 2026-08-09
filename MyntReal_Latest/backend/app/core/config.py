@@ -32,13 +32,18 @@ class Settings(BaseSettings):
     # DC Protocol: Explicit production domains for TrustedHostMiddleware
     # Includes custom domain, Replit deployment domain, and localhost for dev
     ALLOWED_HOSTS: List[str] = [
+        "*",
         "localhost",
         "127.0.0.1",
         "0.0.0.0",
+        "vgk4u.com",
+        "www.vgk4u.com",
+        "*.vgk4u.com",
         "myntreal.com",
         "www.myntreal.com",
         "mnrteam.com",
         "www.mnrteam.com",
+        "*.elasticbeanstalk.com",
         "newbev.replit.app",
         "*.replit.app",
         "*.repl.co",
