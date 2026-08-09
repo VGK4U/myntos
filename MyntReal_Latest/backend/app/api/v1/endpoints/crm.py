@@ -3239,19 +3239,11 @@ def get_bank_wise_leads(
     elif getattr(current_employee, 'role', None) and getattr(current_employee.role, 'role_code', '') in ('key_leadership', 'sales', 'ea', 'supreme'):
         is_manager = True
         
-    # 2. Base Query for Bank Files (pipeline status contains 'bank' or 'At Bank')
+    # 2. Base Query for Bank Files & Balance Pending Leads (matching Executive Dashboard)
     query = db.query(CRMLead).filter(
         or_(
-            CRMLead.solar_pipeline_status.ilike('%bank%'),
-            CRMLead.status.ilike('%bank%'),
-            CRMLead.solar_pipeline_status == 'At Bank',
-            CRMLead.solar_pipeline_status == 'AT_BANK',
-            CRMLead.solar_pipeline_status == 'pending_with_bank',
-            CRMLead.solar_pipeline_status.ilike('%balance%'),
-            CRMLead.solar_pipeline_status.ilike('%pending%'),
-            CRMLead.solar_pipeline_status == 'balance_pending',
-            CRMLead.status == 'balance_pending',
-            CRMLead.deal_value_balance > 0
+            CRMLead.solar_pipeline_status.in_(['pending_with_bank', 'at_bank', 'at bank', 'balance_pending', 'bal_pending']),
+            CRMLead.status.in_(['pending_with_bank', 'balance_pending'])
         )
     )
     
@@ -3449,7 +3441,7 @@ def get_bank_wise_leads(
             'id': lead.id,
             'customer_name': lead.name or 'N/A',
             'phone_number': lead.phone or '',
-            'stage': 'At Bank',
+            'stage': 'Bal Pending' if getattr(lead, 'solar_pipeline_status', None) in ['balance_pending', 'bal_pending'] else 'At Bank',
             'bank_name': b_name,
             'bank_branch': lead.bank_branch or 'N/A',
             'stage_days': stage_days,
@@ -3469,7 +3461,7 @@ def get_bank_wise_leads(
             'deal_value': deal_val,
             'deal_value_received': float(getattr(lead, 'deal_value_received', 0.0) or 0.0),
             'deal_value_balance': float(getattr(lead, 'deal_value_balance', 0.0) or (deal_val - float(getattr(lead, 'deal_value_received', 0.0) or 0.0))),
-            'solar_pipeline_stage': getattr(lead, 'solar_pipeline_stage', None) or getattr(lead, 'status', 'New'),
+            'solar_pipeline_stage': getattr(lead, 'solar_pipeline_status', None) or getattr(lead, 'status', 'At Bank'),
             'capacity_kw': float(re.search(r"([0-9]+(?:\.[0-9]+)?)", str(lead.kw_size or "0")).group(1)) if re.search(r"([0-9]+(?:\.[0-9]+)?)", str(lead.kw_size or "0")) else 0.0,
             'remarks': getattr(lead, 'description', '') or '',
             'google_maps_url': lead.google_maps_link or f"https://www.google.com/maps/search/?api=1&query={lead.name}+{lead.city}"

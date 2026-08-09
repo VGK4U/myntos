@@ -369,14 +369,12 @@
 
         function isBankLead(l) {
             const stage = (l.solar_pipeline_stage || l.stage || '').toLowerCase();
-            const bank = (l.bank_name || '').toLowerCase();
-            return stage.includes('bank') || stage === 'at bank' || (bank !== '' && bank !== 'unassigned bank');
+            return stage === 'pending_with_bank' || stage === 'at bank' || stage === 'at_bank' || stage.includes('bank');
         }
 
         function isBalancePendingLead(l) {
-            const bal = (l.deal_value_balance !== undefined && l.deal_value_balance !== null) ? l.deal_value_balance : (l.deal_value - (l.deal_value_received || 0));
             const stage = (l.solar_pipeline_stage || l.stage || '').toLowerCase();
-            return bal > 0 || stage.includes('balance') || stage.includes('pending') || stage === 'bal pending' || stage === 'balance_pending';
+            return stage === 'balance_pending' || stage === 'bal pending' || stage === 'bal_pending' || stage.includes('balance');
         }
 
         function getActiveLeads() {
