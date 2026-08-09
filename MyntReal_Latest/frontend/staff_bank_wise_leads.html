@@ -301,7 +301,7 @@
       </div>
 
       <!-- Prominent Left-to-Right Scrollable Desktop Data Table (min-width: 2400px) -->
-      <div class="d-none d-md-block table-wrap">
+      <div id="desktopTableContainer" class="d-none d-md-block table-wrap">
         <table class="bank-table">
           <thead>
             <tr>
@@ -395,18 +395,24 @@
                 }
             });
 
-            const tableWrap = document.querySelector('.table-wrap');
+            const desktopTable = document.getElementById('desktopTableContainer');
             const mobileCards = document.getElementById('mobileCardsContainer');
             const summaryContainer = document.getElementById('summaryTabContainer');
 
             if (tabName === 'branch-bank-summary' || tabName === 'ground-source-summary') {
-                if (tableWrap) tableWrap.classList.add('d-none');
-                if (mobileCards) mobileCards.classList.add('d-none');
-                if (summaryContainer) summaryContainer.classList.remove('d-none');
+                if (desktopTable) desktopTable.style.setProperty('display', 'none', 'important');
+                if (mobileCards) mobileCards.style.setProperty('display', 'none', 'important');
+                if (summaryContainer) {
+                    summaryContainer.style.setProperty('display', 'block', 'important');
+                    summaryContainer.classList.remove('d-none');
+                }
             } else {
-                if (tableWrap) tableWrap.classList.remove('d-none');
-                if (mobileCards) mobileCards.classList.remove('d-none');
-                if (summaryContainer) summaryContainer.classList.add('d-none');
+                if (desktopTable) desktopTable.style.removeProperty('display');
+                if (mobileCards) mobileCards.style.removeProperty('display');
+                if (summaryContainer) {
+                    summaryContainer.style.setProperty('display', 'none', 'important');
+                    summaryContainer.classList.add('d-none');
+                }
             }
 
             renderCurrentView();
@@ -440,8 +446,10 @@
 
         function renderCurrentView() {
             if (currentMainTab === 'branch-bank-summary') {
+                renderMetricsForActiveTab(globalBankLeads);
                 renderBranchBankSummaryView(globalBankLeads);
             } else if (currentMainTab === 'ground-source-summary') {
+                renderMetricsForActiveTab(globalBankLeads);
                 renderGroundSourceSummaryView(globalBankLeads);
             } else {
                 const activeLeads = getActiveLeads();
