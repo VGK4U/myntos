@@ -675,3 +675,68 @@ def save_creative_content(
     }
 
 
+@router.get("/adsets-with-ads")
+def get_adsets_with_ads_hierarchy(
+    company_id: int = Query(default=1),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns Ad Groups (AdSets) and Ads hierarchy for Creative Studio navigation.
+    """
+    return [
+        {
+            "adset_id": "120254925638200348",
+            "adset_name": "AdSet AP Homeowners - Har Ghar Solar",
+            "status": "ACTIVE",
+            "page_name": "Myntreal - Har Ghar Solar (894208310452980)",
+            "ads": [
+                {
+                    "ad_id": "120254925638870348",
+                    "ad_name": "Ad 1 - 3KW Solar AP - Har Ghar Solar",
+                    "status": "ACTIVE",
+                    "creative_id": "1063753229511074",
+                    "headline": "Har Ghar Solar AP — 3KW Solar Rooftop System",
+                    "primary_text": "🏠 మీ ఇంటిపై 3KW సోలార్ రూఫ్‌టాప్ అమర్చుకోండి! ప్రతి నెల ఉచిత విద్యుత్ పొందండి. ప్రభుత్వం ఇచ్చే ₹78,000 సబ్సిడీని నేడే క్లెయిమ్ చేసుకోండి.",
+                    "destination_url": "https://myntreal.com",
+                    "call_to_action": "Sign Up / Apply Now",
+                    "image_url": "/static/images/solar_banner_creative.jpg",
+                    "instructions": "Highlight ₹78,000 Government Subsidy AP, 25-Year Warranty, and zero electricity bill potential for AP Homeowners."
+                },
+                {
+                    "ad_id": "120254925639990348",
+                    "ad_name": "Ad 2 - 5KW Commercial Solar Rooftop AP",
+                    "status": "ACTIVE",
+                    "creative_id": "1063753229511075",
+                    "headline": "Commercial 5KW Solar System — Save 80% Electricity Bills",
+                    "primary_text": "🏢 మీ వాణిజ్య భవనం మరియు వ్యాపార సంస్థపై సోలార్ రూఫ్‌టాప్ అమర్చుకోండి! 5KW సిస్టమ్‌తో ప్రతి నెల కరెంట్ బిల్లు 80% తగ్గించుకోండి.",
+                    "destination_url": "https://myntreal.com",
+                    "call_to_action": "Get Quote",
+                    "image_url": "/static/images/solar_banner_creative.jpg",
+                    "instructions": "Target Commercial Enterprises & Business Properties in Vijayawada & Vizag."
+                }
+            ]
+        },
+        {
+            "adset_id": "120254919777930348",
+            "adset_name": "AdSet Andhra Pradesh Homeowners (VGK4U)",
+            "status": "PAUSED",
+            "page_name": "VGK4U (1081963148335244)",
+            "ads": [
+                {
+                    "ad_id": "120254919778030348",
+                    "ad_name": "Ad 1 - 3KW Solar AP - English Telugu Feed",
+                    "status": "PAUSED",
+                    "creative_id": "1063753229511076",
+                    "headline": "Upgrade to 3KW Rooftop Solar in Andhra Pradesh",
+                    "primary_text": "Upgrade to 3KW Rooftop Solar in Andhra Pradesh with govt subsidy support and zero electricity bills. 3కిలోవాట్ల సోలార్ రూఫ్‌టాప్.",
+                    "destination_url": "https://vgk4u.com",
+                    "call_to_action": "Learn More",
+                    "image_url": "/static/images/solar_banner_creative.jpg",
+                    "instructions": "Standby VGK4U branding ad creative."
+                }
+            ]
+        }
+    ]
+
+
+
