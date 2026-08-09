@@ -311,7 +311,10 @@ async def staff_login(
             detail=f"Account locked. Try again in {remaining} minutes."
         )
     
-    if not SecurityManager.verify_password(login_data.password, employee.password_hash):
+    raw_pw = login_data.password or ""
+    clean_pw = raw_pw.strip()
+    pw_ok = SecurityManager.verify_password(raw_pw, employee.password_hash) or (clean_pw != raw_pw and SecurityManager.verify_password(clean_pw, employee.password_hash))
+    if not pw_ok:
         employee.failed_login_attempts += 1
         max_attempts = get_staff_setting(db, 'max_login_attempts', 5)
         lockout_minutes = get_staff_setting(db, 'lockout_duration_minutes', 15)
