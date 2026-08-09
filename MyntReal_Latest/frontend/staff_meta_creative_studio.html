@@ -63,19 +63,23 @@
             <!-- TAB 1: Editor Pane -->
             <div class="tab-pane fade show active" id="editor-pane" role="tabpanel">
 
-        <!-- Ad Group (AdSet) & Ad List Selection Panel -->
+        <!-- Active Ads Selection & Filter Panel (Replaced Dropdown with Filters) -->
         <div class="panel-card mb-4">
             <div class="panel-head bg-light">
                 <div class="d-flex align-items-center gap-3 flex-wrap w-100 justify-content-between">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="fas fa-layer-group text-primary fs-5"></i>
-                        <span class="fw-bold small text-muted">SELECT AD GROUP (ADSET):</span>
-                        <select id="adGroupSelector" class="form-select form-select-sm fw-bold border-primary" style="min-width: 320px;" onchange="onAdGroupChanged()">
-                            <option value="120254925638200348" selected>AdSet 1: AP Homeowners - Har Ghar Solar (894208310452980)</option>
-                            <option value="120254919777930348">AdSet 2: Andhra Pradesh Homeowners (VGK4U - Standby)</option>
-                        </select>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <i class="fas fa-list text-primary fs-5"></i>
+                        <span class="fw-bold small text-dark me-2">FILTER ADS:</span>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-success fw-bold px-3 active" id="filterBtnActive" onclick="filterAdsByStatus('ACTIVE')"><i class="fas fa-check-circle me-1"></i> Active Ads</button>
+                            <button type="button" class="btn btn-outline-secondary fw-bold px-3" id="filterBtnPaused" onclick="filterAdsByStatus('PAUSED')"><i class="fas fa-pause-circle me-1"></i> Inactive / Paused</button>
+                            <button type="button" class="btn btn-outline-primary fw-bold px-3" id="filterBtnAll" onclick="filterAdsByStatus('ALL')"><i class="fas fa-list me-1"></i> All Ads</button>
+                        </div>
                     </div>
-                    <span class="badge bg-primary px-3 py-2 fw-bold" id="adGroupCountBadge"><i class="fas fa-ad me-1"></i> 2 Ads in Selected Ad Group</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="text" id="adSearchInput" class="form-control form-control-sm border-primary" style="width: 220px;" placeholder="🔍 Search ads by name or ID..." oninput="renderAdsTable()">
+                        <span class="badge bg-primary px-3 py-2 fw-bold" id="adGroupCountBadge"><i class="fas fa-ad me-1"></i> 2 Active Ads</span>
+                    </div>
                 </div>
             </div>
             <div class="panel-body p-0">
@@ -526,6 +530,24 @@ const adsDatabase = {
 };
 
 let currentSelectedAdId = "120254925638870348";
+let currentStatusFilter = "ACTIVE";
+
+function filterAdsByStatus(status) {
+    currentStatusFilter = status;
+
+    // Update active button styles
+    const btnActive = document.getElementById('filterBtnActive');
+    const btnPaused = document.getElementById('filterBtnPaused');
+    const btnAll = document.getElementById('filterBtnAll');
+
+    if (btnActive && btnPaused && btnAll) {
+        btnActive.className = status === 'ACTIVE' ? 'btn btn-success fw-bold px-3 active' : 'btn btn-outline-success fw-bold px-3';
+        btnPaused.className = status === 'PAUSED' ? 'btn btn-secondary fw-bold px-3 active' : 'btn btn-outline-secondary fw-bold px-3';
+        btnAll.className = status === 'ALL' ? 'btn btn-primary fw-bold px-3 active' : 'btn btn-outline-primary fw-bold px-3';
+    }
+
+    renderAdsTable();
+}
 
 function syncStudioFromMeta() {
     staffFetch('/api/v1/meta-ads/adsets-with-ads').then(r => r.json()).then(data => {
@@ -537,25 +559,30 @@ function syncStudioFromMeta() {
                     });
                 }
             });
-            onAdGroupChanged();
+            renderAdsTable();
         }
         alert('🔄 Live Telemetry & Ad Creatives synchronized from Meta Graph API v24.0!');
     }).catch(e => {
-        onAdGroupChanged();
+        renderAdsTable();
         alert('🔄 Meta Graph API Telemetry synced!');
     });
 }
 
-function onAdGroupChanged() {
-    const selectedAdSetId = document.getElementById('adGroupSelector').value;
+function renderAdsTable() {
     const tbody = document.getElementById('studioAdsListTbody');
+    if (!tbody) return;
     tbody.innerHTML = '';
+
+    const searchQuery = (document.getElementById('adSearchInput')?.value || '').toLowerCase().strip ? (document.getElementById('adSearchInput')?.value || '').toLowerCase().strip() : (document.getElementById('adSearchInput')?.value || '').toLowerCase();
     
     let matchingCount = 0;
     let firstAdId = null;
 
     Object.values(adsDatabase).forEach(ad => {
-        if (ad.adset_id === selectedAdSetId) {
+        const matchesStatus = currentStatusFilter === 'ALL' || ad.status === currentStatusFilter;
+        const matchesSearch = !searchQuery || ad.ad_name.toLowerCase().includes(searchQuery) || ad.ad_id.includes(searchQuery);
+
+        if (matchesStatus && matchesSearch) {
             matchingCount++;
             if (!firstAdId) firstAdId = ad.ad_id;
 
@@ -578,11 +605,17 @@ function onAdGroupChanged() {
         }
     });
 
-    document.getElementById('adGroupCountBadge').innerHTML = `<i class="fas fa-ad me-1"></i> ${matchingCount} Ad(s) in Selected Ad Group`;
+    const badgeLabel = currentStatusFilter === 'ACTIVE' ? 'Active Ads' : (currentStatusFilter === 'PAUSED' ? 'Paused Ads' : 'Total Ads');
+    const badgeEl = document.getElementById('adGroupCountBadge');
+    if (badgeEl) badgeEl.innerHTML = `<i class="fas fa-ad me-1"></i> ${matchingCount} ${badgeLabel}`;
 
-    if (firstAdId && !adsDatabase[currentSelectedAdId] || adsDatabase[currentSelectedAdId].adset_id !== selectedAdSetId) {
+    if (firstAdId && (!adsDatabase[currentSelectedAdId] || (currentStatusFilter !== 'ALL' && adsDatabase[currentSelectedAdId].status !== currentStatusFilter))) {
         selectAd(firstAdId);
     }
+}
+
+function onAdGroupChanged() {
+    renderAdsTable();
 }
 
 function selectAd(adId) {
@@ -860,6 +893,8 @@ window.approveAiSuggestion = approveAiSuggestion;
 window.editAiSuggestion = editAiSuggestion;
 window.selectCarouselImage = selectCarouselImage;
 window.saveCarouselCreatives = saveCarouselCreatives;
+window.filterAdsByStatus = filterAdsByStatus;
+window.renderAdsTable = renderAdsTable;
 
 window.onAdGroupChanged = onAdGroupChanged;
 window.selectAd = selectAd;
@@ -880,7 +915,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (typeof StaffHeader !== 'undefined') StaffHeader.inject('Creative Studio', 'fas fa-palette');
     if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
     if (typeof StaffHeader !== 'undefined') StaffHeader.init();
-    onAdGroupChanged();
+    filterAdsByStatus('ACTIVE');
 });
 </script>
 </body>
