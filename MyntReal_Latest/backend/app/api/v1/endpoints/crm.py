@@ -3258,6 +3258,7 @@ def normalize_branch_name(br: str) -> str:
 def get_bank_wise_leads(
     company_id: Optional[int] = Query(None, description="Company ID (Optional - leave empty for all companies)"),
     bank_name: Optional[str] = Query(None, description="Filter by specific bank name"),
+    stage_filter: Optional[str] = Query(None, description="Filter by specific pipeline stage: pending_with_bank, balance_pending, etc."),
     bucket_filter: Optional[str] = Query(None, description="Filter by stage age bucket: b_0_7, b_8_15, b_16_30, b_31_60, b_gt_60"),
     sort_by: Optional[str] = Query("stage_days_desc", description="stage_days_desc, stage_days_asc, member, bank, deal_value, customer_name"),
     search: Optional[str] = Query(None, description="Search by customer name, phone, district, branch"),
@@ -3370,6 +3371,11 @@ def get_bank_wise_leads(
             )
         )
         
+    # Optional Stage filter
+    if stage_filter and stage_filter.strip() and not stage_filter.strip().lower().startswith('all'):
+        clean_stage = stage_filter.strip()
+        query = query.filter(CRMLead.solar_pipeline_stage.ilike(f"%{clean_stage}%"))
+
     leads = query.all()
     now_dt = datetime.now()
     

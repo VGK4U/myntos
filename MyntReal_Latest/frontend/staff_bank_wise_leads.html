@@ -268,21 +268,29 @@
           </div>
         </div>
 
-        <!-- Row 2: Secondary Role Filters -->
+        <!-- Row 2: Secondary Role Filters & Stage Filter -->
         <div class="row g-2 mt-1">
-          <div class="col-md-4">
+          <div class="col-md-3">
+            <div class="filter-label"><i class="fas fa-tasks text-warning me-1"></i>Stage Filter</div>
+            <select id="stageSelect" class="form-select form-select-sm" onchange="loadBankLeads()">
+              <option value="ALL">All Stages</option>
+              <option value="pending_with_bank">Pending with Bank / At Bank</option>
+              <option value="balance_pending">Balance Pending</option>
+            </select>
+          </div>
+          <div class="col-md-3">
             <div class="filter-label"><i class="fas fa-headset text-info me-1"></i>Tele Caller</div>
             <select id="telecallerSelect" class="form-select form-select-sm" onchange="loadBankLeads()">
               <option value="ALL">All Tele Callers</option>
             </select>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-3">
             <div class="filter-label"><i class="fas fa-user-gear text-emerald me-1" style="color:#10b981"></i>Ground Support Staff</div>
             <select id="groundSupportSelect" class="form-select form-select-sm" onchange="loadBankLeads()">
               <option value="ALL">All Ground Support Staff</option>
             </select>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-3">
             <div class="filter-label"><i class="fas fa-user-tie text-purple me-1" style="color:#a855f7"></i>Up-port Staff</div>
             <select id="uportStaffSelect" class="form-select form-select-sm" onchange="loadBankLeads()">
               <option value="ALL">All Up-port Staff</option>
@@ -461,6 +469,7 @@
 
         async function loadBankLeads() {
             const bank = document.getElementById('bankSelect').value;
+            const stage = document.getElementById('stageSelect').value;
             const bucket = document.getElementById('bucketSelect').value;
             const sortBy = document.getElementById('sortSelect').value;
             const member = document.getElementById('memberSelect').value;
@@ -476,6 +485,7 @@
             });
 
             if (bank && bank !== 'ALL') queryParams.append('bank_name', bank);
+            if (stage && stage !== 'ALL') queryParams.append('stage_filter', stage);
             if (bucket && bucket !== 'ALL') queryParams.append('bucket_filter', bucket);
             if (member && member !== 'ALL') queryParams.append('member_filter', member);
             if (telecaller && telecaller !== 'ALL') queryParams.append('telecaller_filter', telecaller);
@@ -526,6 +536,8 @@
 
             if (type === 'bank') {
                 setSelectOrAdd('bankSelect', val);
+            } else if (type === 'stage') {
+                setSelectOrAdd('stageSelect', val);
             } else if (type === 'member') {
                 setSelectOrAdd('memberSelect', val);
             } else if (type === 'telecaller') {
@@ -572,6 +584,7 @@
 
         function resetAllFilters() {
             document.getElementById('bankSelect').value = 'ALL';
+            document.getElementById('stageSelect').value = 'ALL';
             document.getElementById('bucketSelect').value = 'ALL';
             document.getElementById('sortSelect').value = 'stage_days_desc';
             document.getElementById('memberSelect').value = 'ALL';
@@ -585,6 +598,7 @@
 
         function updateActiveFilterBadges() {
             const bank = document.getElementById('bankSelect').value;
+            const stage = document.getElementById('stageSelect').value;
             const bucket = document.getElementById('bucketSelect').value;
             const member = document.getElementById('memberSelect').value;
             const telecaller = document.getElementById('telecallerSelect').value;
@@ -597,6 +611,11 @@
             
             if (bank && bank !== 'ALL') {
                 html += `<span class="badge bg-primary text-white me-1 p-1 px-2 mb-1" style="font-weight:600;font-size:11px">Bank: ${esc(bank)} <i class="fas fa-times ms-1" style="cursor:pointer" onclick="clearSpecificFilter('bankSelect')"></i></span>`;
+                count++;
+            }
+            if (stage && stage !== 'ALL') {
+                const stageLabels = {'pending_with_bank': 'Pending with Bank', 'balance_pending': 'Balance Pending'};
+                html += `<span class="badge bg-warning text-dark me-1 p-1 px-2 mb-1" style="font-weight:600;font-size:11px">Stage: ${stageLabels[stage] || stage} <i class="fas fa-times ms-1" style="cursor:pointer" onclick="clearSpecificFilter('stageSelect')"></i></span>`;
                 count++;
             }
             if (bucket && bucket !== 'ALL') {
