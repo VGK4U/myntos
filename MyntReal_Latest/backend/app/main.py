@@ -2721,7 +2721,67 @@ def create_marketplace_tables():
             if not _lock_acq:
                 logging.info("[MARKETPLACE] Another worker holds the startup advisory lock — skipping DDL")
             else:
-              try:
+                # ── DC Meta Ads Menu Auto-Bootstrap (Aug 2026) ─────────────────────
+                try:
+                    meta_ads_items = [
+                        ("META_ADS_CENTER", "Meta Ads Center", "fab fa-facebook-square", "/staff/meta-ads/center", 1, "meta_ads", "META ADS", 15),
+                        ("META_CAMPAIGNS", "Meta Campaigns", "fas fa-bullhorn", "/staff/meta-ads/campaigns", 2, "meta_ads", "META ADS", 15),
+                        ("META_CREATIVE_STUDIO", "Creative Studio", "fas fa-palette", "/staff/meta-ads/creative-studio", 3, "meta_ads", "META ADS", 15),
+                        ("META_LEADS", "Meta Lead Ingestion", "fas fa-user-check", "/staff/meta-ads/leads", 4, "meta_ads", "META ADS", 15),
+                        ("META_SETTINGS", "Meta Settings & OAuth", "fas fa-cog", "/staff/meta-ads/settings", 5, "meta_ads", "META ADS", 15),
+                    ]
+                    c_rows = conn.execute(text("SELECT id FROM associated_companies WHERE is_active = TRUE")).fetchall()
+                    c_ids = [r[0] for r in c_rows] if c_rows else [1]
+                    for cid in c_ids:
+                        for (code, name, icon, route, order, sec_code, sec_title, sec_order) in meta_ads_items:
+                            m_ex = conn.execute(text(
+                                "SELECT id FROM staff_menu_master WHERE company_id=:c AND menu_code=:mc"
+                            ), {"c": cid, "mc": code}).fetchone()
+                            if not m_ex:
+                                conn.execute(text("""
+                                    INSERT INTO staff_menu_master
+                                        (company_id, menu_code, menu_name, menu_category, menu_icon,
+                                         route_path, display_order, audience_scope, is_active,
+                                         is_default_visible, is_default_accessible,
+                                         sidebar_section, sidebar_section_title, sidebar_section_order,
+                                         created_at, updated_at)
+                                    VALUES
+                                        (:c, :mc, :mn, 'meta_ads', :mi, :rp, :do, 'staff', TRUE,
+                                         TRUE, TRUE, :sec_code, :sec_title, :sec_order, NOW(), NOW())
+                                """), {
+                                    "c": cid, "mc": code, "mn": name, "mi": icon, "rp": route, "do": order,
+                                    "sec_code": sec_code, "sec_title": sec_title, "sec_order": sec_order
+                                })
+                            else:
+                                conn.execute(text("""
+                                    UPDATE staff_menu_master
+                                    SET sidebar_section = :sec_code,
+                                        sidebar_section_title = :sec_title,
+                                        sidebar_section_order = :sec_order,
+                                        is_active = TRUE,
+                                        is_default_visible = TRUE,
+                                        is_default_accessible = TRUE,
+                                        updated_at = NOW()
+                                    WHERE company_id = :c AND menu_code = :mc
+                                """), {
+                                    "c": cid, "mc": code,
+                                    "sec_code": sec_code, "sec_title": sec_title, "sec_order": sec_order
+                                })
+                    conn.execute(text("""
+                        INSERT INTO staff_employee_menu_settings (employee_id, menu_id, can_view, can_edit, created_at, updated_at)
+                        SELECT e.id, smm.id, TRUE, TRUE, NOW(), NOW()
+                        FROM staff_employees e
+                        CROSS JOIN staff_menu_master smm
+                        WHERE smm.sidebar_section = 'meta_ads'
+                          AND e.status = 'active'
+                        ON CONFLICT (employee_id, menu_id)
+                        DO UPDATE SET can_view = TRUE, can_edit = TRUE, updated_at = NOW()
+                    """))
+                    conn.commit()
+                    logging.info("[DC-META-ADS-BOOTSTRAP] ✅ Meta Ads menus and permissions bootstrapped across all companies")
+                except Exception as _meta_boot_err:
+                    logging.warning(f"[DC-META-ADS-BOOTSTRAP] ⚠️ Meta Ads bootstrap (non-fatal): {_meta_boot_err}")
+
                 conn.execute(text("SET statement_timeout = 0"))  # DC: prevent DDL timeout on startup
                 conn.execute(text("""
                     CREATE TABLE IF NOT EXISTS staff_performance_config (
