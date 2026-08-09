@@ -1025,6 +1025,79 @@
             container.innerHTML = html;
         }
 
+        const BANK_ALIAS_MAP = {
+            'APGB': 'APGVB',
+            'AP GVB': 'APGVB',
+            'AP VGB': 'APGVB',
+            'ANDHRA PRADESH GRAMEENA VIKAS BANK': 'APGVB',
+            'CBI': 'Central Bank of India',
+            'CENTRAL BANK OF INDIA': 'Central Bank of India',
+            'CENTRAL BANK': 'Central Bank of India',
+            'SBI': 'SBI',
+            'STATE BANK OF INDIA': 'SBI',
+            'STATE BANK': 'SBI',
+            'UBI': 'UBI',
+            'UNION BANK OF INDIA': 'UBI',
+            'UNION BANK': 'UBI',
+            'PNB': 'PNB',
+            'PUNJAB NATIONAL BANK': 'PNB',
+            'BOB': 'Bank of Baroda',
+            'BANK OF BARODA': 'Bank of Baroda',
+            'ICICI': 'ICICI Bank',
+            'ICICI BANK': 'ICICI Bank',
+            'HDFC': 'HDFC Bank',
+            'HDFC BANK': 'HDFC Bank',
+            'AXIS': 'Axis Bank',
+            'AXIS BANK': 'Axis Bank',
+            'CANARA': 'Canara Bank',
+            'CANARA BANK': 'Canara Bank'
+        };
+
+        const BRANCH_ALIAS_MAP = {
+            'NATHAVARM': 'Nathavaram',
+            'NATHAVARAM': 'Nathavaram',
+            'NATHAVRM': 'Nathavaram',
+            'NARSIPATNAM': 'Narsipatnam',
+            'NARSIPATANAM': 'Narsipatnam',
+            'NARSIPETA': 'Narsipatnam',
+            'GOWRAMPETA': 'Gowrampeta',
+            'GOWRAM PETA': 'Gowrampeta',
+            'S.KOTA': 'S.Kota',
+            'SKOTA': 'S.Kota',
+            'S KOTA': 'S.Kota',
+            'V MADUGULA': 'V Madugula',
+            'V.MADUGULA': 'V Madugula',
+            'VMADUGULA': 'V Madugula',
+            'Y.DONDAPETA': 'Y.Dondapeta',
+            'Y DONDAPETA': 'Y.Dondapeta',
+            'YDONDAPETA': 'Y.Dondapeta',
+            'ROLUGUNTA': 'Rolugunta',
+            'ROLUAGUNTA': 'Rolugunta',
+            'PENDURTHI': 'Pendurthi',
+            'PENDURTI': 'Pendurthi',
+            'SITAYAPETA': 'Sitayopeta',
+            'SITAYOPETA': 'Sitayopeta',
+            'KD PETA': 'KD Peta',
+            'KDPETA': 'KD Peta',
+            'K.D.PETA': 'KD Peta',
+            'ADAKULA': 'Adakula',
+            'GUNUPUDI': 'Gunupudi',
+            'KOYYURU': 'Koyyuru',
+            'AGENCY LAKSHMIPURAM': 'Agency Lakshmipuram'
+        };
+
+        function normalizeBank(b) {
+            if (!b || b === 'N/A' || b === '—') return 'Unassigned Bank';
+            const clean = b.toString().trim().toUpperCase();
+            return BANK_ALIAS_MAP[clean] || (b.toString().trim().charAt(0).toUpperCase() + b.toString().trim().slice(1));
+        }
+
+        function normalizeBranch(br) {
+            if (!br || br === 'N/A' || br === '—') return 'N/A';
+            const clean = br.toString().trim().toUpperCase();
+            return BRANCH_ALIAS_MAP[clean] || (br.toString().trim().charAt(0).toUpperCase() + br.toString().trim().slice(1));
+        }
+
         function renderBranchBankSummaryView(leads) {
             const container = document.getElementById('summaryTabContainer');
             if (!container) return;
@@ -1036,8 +1109,8 @@
 
             const groups = {};
             leads.forEach(l => {
-                const bName = l.bank_name || 'Unassigned Bank';
-                const brName = l.bank_branch || 'N/A Branch';
+                const bName = normalizeBank(l.bank_name);
+                const brName = normalizeBranch(l.bank_branch);
                 const key = `${bName}:::${brName}`;
                 if (!groups[key]) {
                     groups[key] = {

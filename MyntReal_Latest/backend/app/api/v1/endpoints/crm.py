@@ -3181,6 +3181,79 @@ def get_my_leads(
     }
 
 
+BANK_ALIAS_MAP = {
+    'APGB': 'APGVB',
+    'AP GVB': 'APGVB',
+    'AP VGB': 'APGVB',
+    'ANDHRA PRADESH GRAMEENA VIKAS BANK': 'APGVB',
+    'CBI': 'Central Bank of India',
+    'CENTRAL BANK OF INDIA': 'Central Bank of India',
+    'CENTRAL BANK': 'Central Bank of India',
+    'SBI': 'SBI',
+    'STATE BANK OF INDIA': 'SBI',
+    'STATE BANK': 'SBI',
+    'UBI': 'UBI',
+    'UNION BANK OF INDIA': 'UBI',
+    'UNION BANK': 'UBI',
+    'PNB': 'PNB',
+    'PUNJAB NATIONAL BANK': 'PNB',
+    'BOB': 'Bank of Baroda',
+    'BANK OF BARODA': 'Bank of Baroda',
+    'ICICI': 'ICICI Bank',
+    'ICICI BANK': 'ICICI Bank',
+    'HDFC': 'HDFC Bank',
+    'HDFC BANK': 'HDFC Bank',
+    'AXIS': 'Axis Bank',
+    'AXIS BANK': 'Axis Bank',
+    'CANARA': 'Canara Bank',
+    'CANARA BANK': 'Canara Bank'
+}
+
+BRANCH_ALIAS_MAP = {
+    'NATHAVARM': 'Nathavaram',
+    'NATHAVARAM': 'Nathavaram',
+    'NATHAVRM': 'Nathavaram',
+    'NARSIPATNAM': 'Narsipatnam',
+    'NARSIPATANAM': 'Narsipatnam',
+    'NARSIPETA': 'Narsipatnam',
+    'GOWRAMPETA': 'Gowrampeta',
+    'GOWRAM PETA': 'Gowrampeta',
+    'S.KOTA': 'S.Kota',
+    'SKOTA': 'S.Kota',
+    'S KOTA': 'S.Kota',
+    'V MADUGULA': 'V Madugula',
+    'V.MADUGULA': 'V Madugula',
+    'VMADUGULA': 'V Madugula',
+    'Y.DONDAPETA': 'Y.Dondapeta',
+    'Y DONDAPETA': 'Y.Dondapeta',
+    'YDONDAPETA': 'Y.Dondapeta',
+    'ROLUGUNTA': 'Rolugunta',
+    'ROLUAGUNTA': 'Rolugunta',
+    'PENDURTHI': 'Pendurthi',
+    'PENDURTI': 'Pendurthi',
+    'SITAYAPETA': 'Sitayopeta',
+    'SITAYOPETA': 'Sitayopeta',
+    'KD PETA': 'KD Peta',
+    'KDPETA': 'KD Peta',
+    'K.D.PETA': 'KD Peta',
+    'ADAKULA': 'Adakula',
+    'GUNUPUDI': 'Gunupudi',
+    'KOYYURU': 'Koyyuru',
+    'AGENCY LAKSHMIPURAM': 'Agency Lakshmipuram'
+}
+
+def normalize_bank_name(b: str) -> str:
+    if not b or str(b).strip() in ('', 'N/A', '—', 'None'):
+        return 'Unassigned Bank'
+    clean = str(b).strip().upper()
+    return BANK_ALIAS_MAP.get(clean, str(b).strip().title())
+
+def normalize_branch_name(br: str) -> str:
+    if not br or str(br).strip() in ('', 'N/A', '—', 'None'):
+        return 'N/A'
+    clean = str(br).strip().upper()
+    return BRANCH_ALIAS_MAP.get(clean, str(br).strip().title())
+
 @router.get("/bank-wise-leads")
 def get_bank_wise_leads(
     company_id: Optional[int] = Query(None, description="Company ID (Optional - leave empty for all companies)"),
@@ -3354,10 +3427,10 @@ def get_bank_wise_leads(
     bucket_values = {'b_0_7': 0.0, 'b_8_15': 0.0, 'b_16_30': 0.0, 'b_31_60': 0.0, 'b_gt_60': 0.0}
     
     for lead in leads:
-        # Determine bank name
-        b_name = (lead.loan_bank or '').strip()
-        if not b_name:
-            b_name = 'Unassigned Bank'
+        # Determine normalized bank and branch name
+        raw_b_name = (lead.loan_bank or '').strip()
+        b_name = normalize_bank_name(raw_b_name)
+        br_name = normalize_branch_name(lead.bank_branch)
             
         # Determine stage date (solar_pipeline_status_updated_at -> submit_date -> created_at)
         s_date = lead.solar_pipeline_status_updated_at or lead.submit_date or lead.created_at
@@ -3443,7 +3516,7 @@ def get_bank_wise_leads(
             'phone_number': lead.phone or '',
             'stage': 'Bal Pending' if getattr(lead, 'solar_pipeline_status', None) in ['balance_pending', 'bal_pending'] else 'At Bank',
             'bank_name': b_name,
-            'bank_branch': lead.bank_branch or 'N/A',
+            'bank_branch': br_name,
             'stage_days': stage_days,
             'bucket_key': bucket_key,
             'bucket_label': bucket_label,
