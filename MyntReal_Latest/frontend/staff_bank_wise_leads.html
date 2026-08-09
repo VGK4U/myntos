@@ -131,6 +131,22 @@
         </div>
       </div>
 
+      <!-- Navigation Tabs Switcher -->
+      <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+        <ul class="nav nav-pills" id="leadMainTabs" style="gap: 8px;">
+          <li class="nav-item">
+            <button class="nav-link active fw-bold px-4 py-2" id="tabBankFilesBtn" onclick="switchMainTab('bank-files')" style="border-radius: 8px; font-size: 14px;">
+              <i class="fas fa-university me-2 text-primary"></i>Bank Wise Files & Pipeline (<span id="tabBankCount">0</span>)
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link fw-bold px-4 py-2 text-dark bg-white border" id="tabBalancePendingBtn" onclick="switchMainTab('balance-pending')" style="border-radius: 8px; font-size: 14px;">
+              <i class="fas fa-wallet me-2 text-warning"></i>Balance Pending Solar Leads (<span id="tabPendingCount" class="badge bg-danger ms-1">0</span>)
+            </button>
+          </li>
+        </ul>
+      </div>
+
       <!-- Metric Summary Cards -->
       <div class="metric-row">
         <div class="metric-box">
@@ -317,6 +333,8 @@
     <script src="/staff_header.js"></script>
     <script>
         let globalBankLeads = [];
+        let globalRawData = null;
+        let currentMainTab = 'bank-files';
         let currentHeaderCol = 'ground_source_name';
         let currentHeaderDir = 'asc';
 
@@ -328,6 +346,46 @@
 
             loadBankLeads();
         });
+
+        function switchMainTab(tabName) {
+            currentMainTab = tabName;
+            const bankBtn = document.getElementById('tabBankFilesBtn');
+            const pendingBtn = document.getElementById('tabBalancePendingBtn');
+            
+            if (tabName === 'balance-pending') {
+                bankBtn.classList.remove('active');
+                bankBtn.classList.add('bg-white', 'text-dark', 'border');
+                pendingBtn.classList.add('active', 'bg-warning', 'text-dark');
+                pendingBtn.classList.remove('bg-white', 'text-dark', 'border');
+            } else {
+                pendingBtn.classList.remove('active', 'bg-warning', 'text-dark');
+                pendingBtn.classList.add('bg-white', 'text-dark', 'border');
+                bankBtn.classList.add('active');
+                bankBtn.classList.remove('bg-white', 'text-dark', 'border');
+            }
+
+            if (globalRawData) {
+                renderMetrics(globalRawData);
+            }
+            renderCurrentView();
+        }
+
+        function getActiveLeads() {
+            if (currentMainTab === 'balance-pending') {
+                return globalBankLeads.filter(l => {
+                    const bal = (l.deal_value_balance !== undefined) ? l.deal_value_balance : (l.deal_value - (l.deal_value_received || 0));
+                    const stage = (l.solar_pipeline_stage || l.stage || '').toLowerCase();
+                    return bal > 0 || stage.includes('balance') || stage.includes('pending') || stage.includes('partially');
+                });
+            }
+            return globalBankLeads;
+        }
+
+        function renderCurrentView() {
+            const activeLeads = getActiveLeads();
+            renderDesktopTable(activeLeads);
+            renderMobileCards(activeLeads);
+        }
 
         async function loadBankLeads() {
             const bank = document.getElementById('bankSelect').value;
@@ -359,8 +417,19 @@
                 const data = await res.json();
 
                 if (data && data.success) {
+                    globalRawData = data;
                     globalBankLeads = data.leads || [];
                     renderAccessBadge(data.is_manager, data.current_user);
+
+                    // Update Tab Counts
+                    const pendingLeads = globalBankLeads.filter(l => {
+                        const bal = (l.deal_value_balance !== undefined) ? l.deal_value_balance : (l.deal_value - (l.deal_value_received || 0));
+                        const stage = (l.solar_pipeline_stage || l.stage || '').toLowerCase();
+                        return bal > 0 || stage.includes('balance') || stage.includes('pending') || stage.includes('partially');
+                    });
+                    document.getElementById('tabBankCount').innerText = globalBankLeads.length;
+                    document.getElementById('tabPendingCount').innerText = pendingLeads.length;
+
                     renderMetrics(data);
                     renderBucketMetrics(data.bucket_summary);
                     populateBankDropdown(data.bank_summary, bank);
@@ -368,8 +437,8 @@
                     populateTelecallerDropdown(data.unique_telecallers, telecaller);
                     populateGroundSupportDropdown(data.unique_ground_supports, groundSupport);
                     populateUportStaffDropdown(data.unique_uport_staff, uportStaff);
-                    renderDesktopTable(globalBankLeads);
-                    renderMobileCards(globalBankLeads);
+                    
+                    renderCurrentView();
                 } else {
                     document.getElementById('bankTableBody').innerHTML = `<tr><td colspan="16" class="text-center text-danger py-4">Failed to load bank files.</td></tr>`;
                 }
@@ -699,6 +768,11 @@
                 else if (l.stage_days >= 31) dayClass = 'days-mid';
 
                 const valText = l.deal_value ? `₹${(l.deal_value / 100000).toFixed(2)}L` : '—';
+                const paidVal = l.deal_value_received || 0;
+                const paidText = paidVal ? `₹${(paidVal / 100000).toFixed(2)}L` : '₹0.00L';
+                const balVal = (l.deal_value_balance !== undefined && l.deal_value_balance !== null) ? l.deal_value_balance : (l.deal_value - paidVal);
+                const balText = balVal ? `₹${(balVal / 100000).toFixed(2)}L` : '₹0.00L';
+
                 const gsStaffName = l.ground_support_name || l.field_staff_name || '—';
                 const upStaffName = l.uport_staff_name || '—';
 
@@ -709,6 +783,10 @@
                 const gsSupportCallBtn = l.ground_support_phone 
                     ? `<br><a href="tel:${esc(l.ground_support_phone)}" class="btn btn-sm btn-outline-success py-0 px-2 mt-1" style="font-size:10px;font-weight:600;display:inline-block" title="Call Ground Support"><i class="fas fa-phone-alt me-1"></i>${esc(l.ground_support_phone)}</a>` 
                     : '';
+
+                const dealCellHtml = (currentMainTab === 'balance-pending')
+                    ? `<span class="badge bg-warning text-dark px-2 py-1" style="font-size:12px;font-weight:800;border:1px solid #d97706" title="Balance Pending: ${balText}">${balText} Pending</span><br><small class="text-muted" style="font-size:10px">Total: ${valText} | Paid: ${paidText}</small>`
+                    : valText;
 
                 html += `<tr>
                     <td style="text-align:center;color:#9ca3af;font-weight:600">${idx + 1}</td>
@@ -735,7 +813,7 @@
                     <td style="color:#7c3aed;font-weight:600">
                         <i class="fas fa-user-tie me-1"></i><span class="clickable-label" onclick="applyCustomFilter('uportStaff', '${escJs(upStaffName)}')" title="Click to filter by Up-port Staff: ${esc(upStaffName)}">${esc(upStaffName)}</span>
                     </td>
-                    <td><span style="display:inline-block;padding:2px 8px;border-radius:12px;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;font-size:10px;font-weight:700">At Bank</span></td>
+                    <td><span style="display:inline-block;padding:2px 8px;border-radius:12px;background:${currentMainTab === 'balance-pending' ? '#fffbeb' : '#e0f2fe'};color:${currentMainTab === 'balance-pending' ? '#b45309' : '#0369a1'};border:1px solid ${currentMainTab === 'balance-pending' ? '#fde68a' : '#bae6fd'};font-size:10px;font-weight:700">${currentMainTab === 'balance-pending' ? 'Balance Pending' : 'At Bank'}</span></td>
                     <td style="color:#7c3aed">
                         <span class="clickable-label" onclick="applyCustomFilter('search', '${escJs(l.brand_name)}')" title="Click to filter by Brand: ${esc(l.brand_name)}">${esc(l.brand_name || '—')}</span>
                     </td>
@@ -746,7 +824,7 @@
                     <td>
                         <a href="${l.google_maps_url}" target="_blank" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:10px;font-weight:600"><i class="fas fa-map-marker-alt"></i> Maps</a>
                     </td>
-                    <td style="text-align:right;font-weight:700;color:#047857">${valText}</td>
+                    <td style="text-align:right;font-weight:700;color:#047857">${dealCellHtml}</td>
                 </tr>`;
             });
             tbody.innerHTML = html;

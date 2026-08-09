@@ -3461,6 +3461,9 @@ def get_bank_wise_leads(
             'area': lead.area or '—',
             'city_district': f"{lead.city or ''}, {lead.state or ''}".strip(', ') or '—',
             'deal_value': deal_val,
+            'deal_value_received': float(getattr(lead, 'deal_value_received', 0.0) or 0.0),
+            'deal_value_balance': float(getattr(lead, 'deal_value_balance', 0.0) or (deal_val - float(getattr(lead, 'deal_value_received', 0.0) or 0.0))),
+            'solar_pipeline_stage': getattr(lead, 'solar_pipeline_stage', None) or getattr(lead, 'status', 'New'),
             'capacity_kw': float(lead.kw_size or 0.0),
             'remarks': getattr(lead, 'description', '') or '',
             'google_maps_url': lead.google_maps_link or f"https://www.google.com/maps/search/?api=1&query={lead.name}+{lead.city}"
