@@ -2708,7 +2708,6 @@ def create_marketplace_tables():
                 conn.commit()
         except Exception as _blk_e:
             print(f"[DC-STARTUP] ⚠️ PO lifecycle columns (non-fatal): {_blk_e}", flush=True)
-
         try:
           with engine.connect() as conn:
             # DC Protocol (Mar 2026): Advisory lock — only ONE worker runs this DDL block.
@@ -2721,6 +2720,7 @@ def create_marketplace_tables():
             if not _lock_acq:
                 logging.info("[MARKETPLACE] Another worker holds the startup advisory lock — skipping DDL")
             else:
+              try:
                 # ── DC Meta Ads Menu Auto-Bootstrap (Aug 2026) ─────────────────────
                 try:
                     meta_ads_items = [
@@ -3499,11 +3499,11 @@ def create_marketplace_tables():
                 conn.commit()
                 logging.info("[MARKETPLACE] ✅ Phase 1+2+3 tables ready (spares, sync_log, category_config, PO management, segments)")
               finally:
-                try:
-                    conn.execute(text("SELECT pg_advisory_unlock(:lid)"), {"lid": _PERF_LOCK_ID})
-                    conn.commit()
-                except Exception:
-                    pass
+                    try:
+                        conn.execute(text("SELECT pg_advisory_unlock(:lid)"), {"lid": _PERF_LOCK_ID})
+                        conn.commit()
+                    except Exception:
+                        pass
         except Exception as _perf_e:
             # DC Protocol Mar 2026: explicit rollback prevents InFailedSqlTransaction
             # from poisoning subsequent statements in the same connection pool slot.
