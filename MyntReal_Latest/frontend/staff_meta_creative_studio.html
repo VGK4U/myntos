@@ -282,6 +282,13 @@ function saveCreativeContent() {
     });
 }
 
+window.updateLivePreview = updateLivePreview;
+window.handleImageUpload = handleImageUpload;
+window.resetToDefaultImage = resetToDefaultImage;
+window.toggleCreativeStatus = toggleCreativeStatus;
+window.openCreativeInstructions = openCreativeInstructions;
+window.saveCreativeContent = saveCreativeContent;
+
 document.addEventListener('DOMContentLoaded', async function() {
     if (typeof StaffHeader !== 'undefined') StaffHeader.inject('Creative Studio', 'fas fa-palette');
     if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();

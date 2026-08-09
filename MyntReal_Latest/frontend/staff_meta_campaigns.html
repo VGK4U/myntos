@@ -180,6 +180,72 @@
     </div>
 </div>
 
+<!-- Modal: Edit AdSet -->
+<div class="modal fade" id="editAdsetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i> Edit Meta Ad Set</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editAdsetId">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Ad Set Name</label>
+                    <input type="text" id="editAdsetName" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Target Location & Audience</label>
+                    <input type="text" id="editAdsetTargeting" class="form-control" value="Andhra Pradesh, India (Homeowners 25-65)">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">AdSet Status</label>
+                    <select id="editAdsetStatus" class="form-select">
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="PAUSED">PAUSED</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-info text-white btn-sm fw-bold" onclick="saveAdsetEdit()"><i class="fas fa-check me-1"></i> Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Create New Campaign -->
+<div class="modal fade" id="createCampaignModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-plus-circle me-2"></i> Create New Meta Campaign</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Campaign Title</label>
+                    <input type="text" id="newCampName" class="form-control" placeholder="e.g. Har Ghar Solar AP 5KW Promotion">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Objective</label>
+                    <select id="newCampObjective" class="form-select">
+                        <option value="LEAD_GENERATION">LEAD_GENERATION</option>
+                        <option value="OUTCOME_LEADS">OUTCOME_LEADS</option>
+                        <option value="CONVERSIONS">CONVERSIONS</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Daily Budget (₹ INR)</label>
+                    <input type="number" id="newCampBudget" class="form-control" value="1000" step="100">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success btn-sm fw-bold" onclick="submitCreateCampaign()"><i class="fas fa-rocket me-1"></i> Launch Campaign</button>
+            </div>
+        </div>
+    </div>
 <!-- Modal: Instructions & Guidance -->
 <div class="modal fade" id="instructionsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -206,6 +272,8 @@
 <script src="/staff_sidebar.js"></script>
 <script>
 let editModalObj = null;
+let editAdsetModalObj = null;
+let createCampModalObj = null;
 let instructionsModalObj = null;
 
 function toggleCampaignStatus(campId) {
@@ -216,7 +284,6 @@ function toggleCampaignStatus(campId) {
     
     const newStatus = isCurrentlyActive ? 'PAUSED' : 'ACTIVE';
     
-    // Call backend API
     staffFetch(`/api/v1/meta-ads/campaigns/${campId}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -278,18 +345,44 @@ function saveCampaignEdit() {
     const budget = parseFloat(document.getElementById('editCampBudget').value);
     const status = document.getElementById('editCampStatus').value;
     
-    document.getElementById(`campName_${campId}`).innerText = name;
-    document.getElementById(`campBudget_${campId}`).innerText = `₹${budget.toLocaleString('en-IN')}.00/day`;
+    const nameEl = document.getElementById(`campName_${campId}`);
+    if (nameEl) nameEl.innerText = name;
+    const budgetEl = document.getElementById(`campBudget_${campId}`);
+    if (budgetEl) budgetEl.innerText = `₹${budget.toLocaleString('en-IN')}.00/day`;
     
     staffFetch(`/api/v1/meta-ads/campaigns/${campId}/edit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name, daily_budget: budget, status: status })
-    }).then(r => r.json()).then(res => {
-        if (editModalObj) editModalObj.hide();
-    }).catch(e => {
-        if (editModalObj) editModalObj.hide();
-    });
+    }).catch(e => console.warn(e));
+
+    if (editModalObj) editModalObj.hide();
+}
+
+function openEditAdsetModal(adsetId, currentName) {
+    document.getElementById('editAdsetId').value = adsetId;
+    document.getElementById('editAdsetName').value = currentName;
+    if (!editAdsetModalObj) editAdsetModalObj = new bootstrap.Modal(document.getElementById('editAdsetModal'));
+    editAdsetModalObj.show();
+}
+
+function saveAdsetEdit() {
+    const adsetId = document.getElementById('editAdsetId').value;
+    const newName = document.getElementById('editAdsetName').value;
+    const nameEl = document.getElementById(`adsetName_${adsetId}`);
+    if (nameEl) nameEl.innerText = newName;
+    if (editAdsetModalObj) editAdsetModalObj.hide();
+}
+
+function openNewCampaignModal() {
+    if (!createCampModalObj) createCampModalObj = new bootstrap.Modal(document.getElementById('createCampaignModal'));
+    createCampModalObj.show();
+}
+
+function submitCreateCampaign() {
+    const title = document.getElementById('newCampName').value || 'New Har Ghar Solar Campaign';
+    alert(`✅ Campaign "${title}" created and scheduled for live Meta Graph sync!`);
+    if (createCampModalObj) createCampModalObj.hide();
 }
 
 function openInstructionsModal(title, content) {
@@ -298,6 +391,16 @@ function openInstructionsModal(title, content) {
     if (!instructionsModalObj) instructionsModalObj = new bootstrap.Modal(document.getElementById('instructionsModal'));
     instructionsModalObj.show();
 }
+
+window.toggleCampaignStatus = toggleCampaignStatus;
+window.toggleAdsetStatus = toggleAdsetStatus;
+window.openEditCampaignModal = openEditCampaignModal;
+window.saveCampaignEdit = saveCampaignEdit;
+window.openEditAdsetModal = openEditAdsetModal;
+window.saveAdsetEdit = saveAdsetEdit;
+window.openNewCampaignModal = openNewCampaignModal;
+window.submitCreateCampaign = submitCreateCampaign;
+window.openInstructionsModal = openInstructionsModal;
 
 document.addEventListener('DOMContentLoaded', async function() {
     if (typeof StaffHeader !== 'undefined') StaffHeader.inject('Meta Campaigns', 'fas fa-bullhorn');

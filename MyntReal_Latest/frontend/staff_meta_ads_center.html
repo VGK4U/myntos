@@ -303,6 +303,12 @@ function openCenterInstructions(title, bodyText) {
     centerInstModal.show();
 }
 
+window.fetchDashboardData = fetchDashboardData;
+window.toggleCenterObject = toggleCenterObject;
+window.openCenterEditModal = openCenterEditModal;
+window.saveCenterEdit = saveCenterEdit;
+window.openCenterInstructions = openCenterInstructions;
+
 document.addEventListener('DOMContentLoaded', async function() {
     if (typeof StaffHeader !== 'undefined') StaffHeader.inject('Meta Ads Center', 'fab fa-facebook-square');
     if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
