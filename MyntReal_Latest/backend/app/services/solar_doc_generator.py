@@ -122,6 +122,8 @@ def _styles():
     _add('TableHeader', fontName='Helvetica-Bold', fontSize=8.5, textColor=WHITE)
     _add('CGNote', fontName='Helvetica-Oblique', fontSize=7.5,
          textColor=colors.HexColor('#888888'), alignment=TA_CENTER, leading=10)
+    _add('OEMWarrantyNote', fontName='Helvetica-Oblique', fontSize=7.2,
+         textColor=colors.HexColor('#475569'), alignment=TA_LEFT, leading=9.5, spaceAfter=1)
     return ss
 
 
@@ -208,20 +210,24 @@ def _section_header(text):
     return t
 
 
-def _partner_logos_footer(logo_h=12*mm):
-    """Horizontal strip of 3 partner logos for quotation footer (MNR logo removed)."""
+def _partner_logos_footer(logo_h=7.5*mm, total_w=175*mm):
+    """Horizontal strip of 3 partner logos for quotation/invoice footer."""
     logos = [
-        (LOGO_MYNTREAL, 48*mm, logo_h),
-        (LOGO_HARGHAR, 48*mm, logo_h),
-        (LOGO_VGK4U, 32*mm, logo_h),
+        (LOGO_MYNTREAL, 42*mm, logo_h),
+        (LOGO_HARGHAR, 42*mm, logo_h),
+        (LOGO_VGK4U, 26*mm, logo_h),
     ]
     cells = [_rl_image(p, w, h) for p, w, h in logos]
-    t = Table([cells], colWidths=[55*mm, 55*mm, 40*mm])
+    w1 = total_w * 0.36
+    w2 = total_w * 0.36
+    w3 = total_w * 0.28
+    t = Table([cells], colWidths=[w1, w2, w3])
     t.setStyle(TableStyle([
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ('LINEABOVE', (0, 0), (-1, 0), 1, GREY_BORDER),
+        ('TOPPADDING', (0, 0), (-1, -1), 1.5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1.5),
+        ('LINEABOVE', (0, 0), (-1, 0), 0.6, GREY_BORDER),
     ]))
     return t
 
@@ -279,28 +285,35 @@ def _computer_generated_note(ss):
     return Paragraph('This is a Computer Generated Document', ss['CGNote'])
 
 
-def _sig_stamp_table(ss, sig_img, stamp_img, sig_label='Authorised Signatory'):
+def _sig_stamp_table(ss, sig_img, stamp_img, sig_label='Authorised Signatory', total_w=175*mm):
     """
     Returns a Table that places the signature (left) and round stamp (right)
-    side-by-side. Stamp uses square 30×30 mm so circular seals stay round.
+    side-by-side.
     """
-    sig_cell = [Paragraph(f'<b>{sig_label}</b>', ss['BodySmall'])]
+    sig_cell = [Paragraph(f'<b>{sig_label}</b>', ss['BodySmallBold'])]
     if sig_img:
-        sig_cell += [Spacer(1, 1*mm), sig_img]
+        sig_cell += [Spacer(1, 0.8*mm), sig_img]
     else:
-        sig_cell.append(Spacer(1, 16*mm))
+        sig_cell.append(Spacer(1, 14*mm))
 
-    stamp_cell = [Paragraph('<b>Stamp</b>', ss['BodySmall'])]
+    stamp_cell = [Paragraph('<b>Stamp</b>', ss['BodySmallBold'])]
     if stamp_img:
-        stamp_cell += [Spacer(1, 1*mm), stamp_img]
+        stamp_cell += [Spacer(1, 0.8*mm), stamp_img]
     else:
-        stamp_cell.append(Spacer(1, 24*mm))
+        stamp_cell.append(Spacer(1, 18*mm))
 
-    t = Table([[sig_cell, stamp_cell]], colWidths=[115*mm, 65*mm])
+    w_left = total_w * 0.60
+    w_right = total_w * 0.40
+    t = Table([[sig_cell, stamp_cell]], colWidths=[w_left, w_right])
     t.setStyle(TableStyle([
         ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
         ('FONTSIZE', (0, 0), (-1, -1), 8.5),
         ('VALIGN',   (0, 0), (-1, -1), 'TOP'),
+        ('ALIGN',    (1, 0), (1, -1),  'RIGHT'),
+        ('LEFTPADDING',  (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING',   (0, 0), (-1, -1), 1),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
     ]))
     return t
 
@@ -880,15 +893,22 @@ def generate_invoice(
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     story.append(_warr_t)
+    story.append(Spacer(1, 0.6*mm))
+
+    # Company-favorable OEM Warranty Facilitation Clause
+    story.append(Paragraph(
+        '<i>* Note: All component &amp; equipment warranties (Solar Modules, Inverter, Structure &amp; Accessories) are provided directly by their respective Original Equipment Manufacturers (OEM). Our company will assist and facilitate all OEM warranty claims and technical service requests for a seamless experience.</i>',
+        ss['OEMWarrantyNote']
+    ))
     story.append(Spacer(1, 1*mm))
 
     # Signature + stamp block
-    _inv_sig   = _fetch_url_image(vendor.get('rep_signature_url', ''), width=34*mm, height=15*mm)
-    _inv_stamp = _fetch_url_image(vendor.get('stamp_image_url', ''),   width=22*mm, height=22*mm)
-    story.append(_sig_stamp_table(ss, _inv_sig, _inv_stamp, 'Authorised Signatory'))
-    story.append(Spacer(1, 0.5*mm))
+    _inv_sig   = _fetch_url_image(vendor.get('rep_signature_url', ''), width=32*mm, height=14*mm)
+    _inv_stamp = _fetch_url_image(vendor.get('stamp_image_url', ''),   width=20*mm, height=20*mm)
+    story.append(_sig_stamp_table(ss, _inv_sig, _inv_stamp, 'Authorised Signatory', total_w=175*mm))
+    story.append(Spacer(1, 1*mm))
 
-    story.append(_partner_logos_footer(logo_h=8*mm))
+    story.append(_partner_logos_footer(logo_h=7.5*mm, total_w=175*mm))
 
     doc.build(story)
     return buf.getvalue()
