@@ -2998,7 +2998,7 @@ async function openInvoiceModal(){
     if(document.getElementById('invInverterSerial')) document.getElementById('invInverterSerial').value=t.inverter_serial_no||'';
     if(document.getElementById('invPanelProdWarr')) document.getElementById('invPanelProdWarr').value=t.panel_product_warranty_years||'10';
     if(document.getElementById('invPanelPerfWarr')) document.getElementById('invPanelPerfWarr').value=t.panel_performance_warranty_years||'25';
-    if(document.getElementById('invInverterWarr')) document.getElementById('invInverterWarr').value=t.inverter_warranty_years||'5';
+    if(document.getElementById('invInverterWarr')) document.getElementById('invInverterWarr').value=t.inverter_warranty_years||'8';
   }catch(e){
     document.getElementById('invVendorInfo').textContent='Could not load prefill data';
   }
@@ -3020,7 +3020,7 @@ async function submitInvoiceGenerate(){
   const inverterSerial=(document.getElementById('invInverterSerial')?.value||'').trim();
   const panelProdWarr=(document.getElementById('invPanelProdWarr')?.value||'10').trim();
   const panelPerfWarr=(document.getElementById('invPanelPerfWarr')?.value||'25').trim();
-  const inverterWarr=(document.getElementById('invInverterWarr')?.value||'5').trim();
+  const inverterWarr=(document.getElementById('invInverterWarr')?.value||'8').trim();
 
   if(!_sdocVendorId){showToast('No vendor on record. Please generate a Quotation first.','error');return;}
   if(!kwSize){showToast('Please enter system size (KW)','error');return;}
@@ -3039,7 +3039,7 @@ async function submitInvoiceGenerate(){
     inverter_serial_no:inverterSerial||undefined,
     panel_product_warranty_years:panelProdWarr||'10',
     panel_performance_warranty_years:panelPerfWarr||'25',
-    inverter_warranty_years:inverterWarr||'5',
+    inverter_warranty_years:inverterWarr||'8',
   });
 }
 
@@ -3417,7 +3417,7 @@ async function submitMissingFields(){
         </div>
         <div>
           <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Inverter (Yrs)</label>
-          <input id="invInverterWarr" type="number" value="5" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px"/>
+          <input id="invInverterWarr" type="number" value="8" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px"/>
         </div>
       </div>
     </div>

@@ -637,7 +637,7 @@ def generate_invoice(
     inverter_serial_no: str = '',
     panel_product_warranty_years: str = '10',
     panel_performance_warranty_years: str = '25',
-    inverter_warranty_years: str = '5',
+    inverter_warranty_years: str = '8',
 ) -> bytes:
     import re as _re
     buf = BytesIO()
@@ -834,7 +834,7 @@ def generate_invoice(
 
     # Equipment Serial Numbers (if available)
     _p_serials = (panel_serial_numbers or tech.get('panel_serial_numbers') or '').strip()
-    _i_serial  = (inverter_serial_no or tech.get('inverter_serial_no') or '').strip()
+    _i_serial  = (inverter_serial_no or tech.get('inverter_serial_no') or tech.get('inverter_serial_number') or tech.get('inverter_serial') or tech.get('inverter_number') or tech.get('inverter_no') or tech.get('inverter_sl_no') or tech.get('inverter_sn') or '').strip()
     if _p_serials or _i_serial:
         story.append(_section_header('EQUIPMENT & SERIAL NUMBERS'))
         story.append(Spacer(1, 0.8*mm))
@@ -857,7 +857,7 @@ def generate_invoice(
     # Warranty Block (dynamic years configured by user/team)
     _p_prod_yrs = (str(panel_product_warranty_years or '10').strip() or '10')
     _p_perf_yrs = (str(panel_performance_warranty_years or '25').strip() or '25')
-    _inv_w_yrs  = (str(inverter_warranty_years or '5').strip() or '5')
+    _inv_w_yrs  = (str(inverter_warranty_years or '8').strip() or '8')
     
     if not _p_prod_yrs.lower().endswith('year') and not _p_prod_yrs.lower().endswith('years'): _p_prod_yrs += ' Years'
     if not _p_perf_yrs.lower().endswith('year') and not _p_perf_yrs.lower().endswith('years'): _p_perf_yrs += ' Years'
@@ -866,9 +866,9 @@ def generate_invoice(
     story.append(_section_header('WARRANTY DETAILS'))
     story.append(Spacer(1, 0.8*mm))
     _warr_rows = [
-        ['Solar Panels Product Warranty', f'{_p_prod_yrs} workmanship warranty'],
-        ['Solar Panels Performance Warranty', f'{_p_perf_yrs} (Min output 90% for first 10 yrs, 80% up to {_p_perf_yrs})'],
-        ['Solar Inverter Warranty', f'{_inv_w_yrs} against manufacturing defects'],
+        ['Solar Panels Product Warranty', _p_prod_yrs],
+        ['Solar Panels Performance Warranty', _p_perf_yrs],
+        ['Solar Inverter Warranty', _inv_w_yrs],
     ]
     _warr_data = [[Paragraph(r[0], ss['CellBold']), Paragraph(r[1], ss['CellBody'])] for r in _warr_rows]
     _warr_t = Table(_warr_data, colWidths=[65*mm, 110*mm])
