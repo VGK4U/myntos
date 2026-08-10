@@ -1851,14 +1851,14 @@
             bsModal.show();
 
             try {
-                const response = await staffFetch(`/api/v1/staff/journeys/${journeyId}/track-points`);
+                const response = await staffFetch(`${API_BASE}/staff/journeys/${journeyId}/track-points`);
                 const resData = await response.json();
-                if (!resData.success || !resData.data) {
+                if (!response.ok || !resData.success) {
                     body.innerHTML = `<div class="alert alert-danger">Failed to load metrics data.</div>`;
                     return;
                 }
-                const j = resData.data.journey || resData.data;
-                const pts = resData.data.track_points || [];
+                const j = resData.journey || {};
+                const pts = resData.track_points || [];
 
                 let maxSpeed = 0;
                 let avgSpeed = 0;
@@ -1908,7 +1908,7 @@
                         <div class="col-md-3 col-6">
                             <div class="p-3 bg-light rounded text-center border">
                                 <small class="text-muted d-block text-uppercase fw-bold" style="font-size:10px;">Battery Level</small>
-                                <span class="fs-4 fw-bold ${latestBattery < 20 ? 'text-danger' : 'text-success'}">
+                                <span class="fs-4 fw-bold ${latestBattery !== null && latestBattery < 20 ? 'text-danger' : 'text-success'}">
                                     <i class="fas fa-battery-three-quarters me-1"></i>${latestBattery !== null ? latestBattery + '%' : 'N/A'}
                                 </span>
                             </div>
@@ -1919,7 +1919,7 @@
                                 <table class="table table-sm table-borderless mb-0 small">
                                     <tr><td class="text-muted" style="width:140px;">Employee:</td><td><strong>${j.employee_name || 'N/A'} (${j.employee_code || ''})</strong></td></tr>
                                     <tr><td class="text-muted">Purpose & Mode:</td><td>${j.purpose || 'Client Visit'} (${j.transport_mode || 'Bike'})</td></tr>
-                                    <tr><td class="text-muted">Started At:</td><td>${j.start_time || 'N/A'}</td></tr>
+                                    <tr><td class="text-muted">Started At:</td><td>${j.start_time_formatted || j.start_time || 'N/A'}</td></tr>
                                     <tr><td class="text-muted">Current Location:</td><td class="text-primary fw-semibold"><i class="fas fa-map-marker-alt me-1 text-danger"></i>${lastAddr}</td></tr>
                                 </table>
                             </div>
@@ -1942,14 +1942,14 @@
             bsModal.show();
 
             try {
-                const response = await staffFetch(`/api/v1/staff/journeys/${journeyId}/track-points`);
+                const response = await staffFetch(`${API_BASE}/staff/journeys/${journeyId}/track-points`);
                 const resData = await response.json();
-                if (!resData.success || !resData.data) {
+                if (!response.ok || !resData.success) {
                     detailsDiv.innerHTML = `<div class="alert alert-danger m-2">Location details unavailable.</div>`;
                     return;
                 }
-                const j = resData.data.journey || resData.data;
-                const pts = resData.data.track_points || [];
+                const j = resData.journey || {};
+                const pts = resData.track_points || [];
                 if (!pts.length) {
                     detailsDiv.innerHTML = `<div class="alert alert-warning m-2">No GPS points recorded yet for this active journey.</div>`;
                     return;
@@ -1963,7 +1963,7 @@
                 detailsDiv.innerHTML = `
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <strong style="font-size:15px;" class="text-dark">${j.employee_name}</strong> 
+                            <strong style="font-size:15px;" class="text-dark">${j.employee_name || 'Staff Member'}</strong> 
                             <span class="badge bg-success ms-2">LIVE NOW</span><br>
                             <span class="text-primary small"><i class="fas fa-map-marker-alt me-1 text-danger"></i>${addr}</span>
                         </div>
@@ -1993,7 +1993,7 @@
                         iconAnchor: [11, 11]
                     });
                     L.marker([lat, lng], { icon: pulseIcon }).addTo(currentLocationMapObj)
-                     .bindPopup(`<b>${j.employee_name}</b><br>${addr}`).openPopup();
+                     .bindPopup(`<b>${j.employee_name || 'Staff Member'}</b><br>${addr}`).openPopup();
                 }, 300);
 
             } catch (err) {
