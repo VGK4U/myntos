@@ -16162,17 +16162,19 @@ def seed_bank_wise_leads_menu():
                     display_order, audience_scope, source, source_file, is_default_visible, is_default_accessible,
                     is_active, sidebar_section, sidebar_section_title, sidebar_section_order, menu_type
                 ) VALUES (
-                    'MNR_BANK_WISE_LEADS', 'Bank Wise Leads', '/staff/bank-wise-leads', 'MYNT_REAL',
-                    'fas fa-university', 2, 'staff', 'system', 'menu-master.js', true, true,
+                    'MNR_BANK_WISE_LEADS', 'Field staff leads', '/staff/bank-wise-leads', 'MYNT_REAL',
+                    'fas fa-users-gear', 2, 'staff', 'system', 'menu-master.js', true, true,
                     true, 'MYNT_REAL', 'MYNTREAL', 20, 'STAFF'
                 ) ON CONFLICT (menu_code) DO UPDATE SET
+                    menu_name = 'Field staff leads',
+                    menu_icon = 'fas fa-users-gear',
                     is_default_visible = true,
                     is_default_accessible = true,
                     is_active = true,
                     audience_scope = 'staff'
             """))
             menu_id = conn.execute(text("SELECT id FROM staff_menu_registry WHERE menu_code = 'MNR_BANK_WISE_LEADS'")).scalar()
-            conn.execute(text("UPDATE staff_menu_master SET is_active = true, is_default_visible = true, is_default_accessible = true WHERE menu_code = 'MNR_BANK_WISE_LEADS'"))
+            conn.execute(text("UPDATE staff_menu_master SET menu_name = 'Field staff leads', is_active = true, is_default_visible = true, is_default_accessible = true WHERE menu_code = 'MNR_BANK_WISE_LEADS'"))
             if menu_id:
                 conn.execute(text("DELETE FROM staff_employee_menu_settings WHERE menu_id = :mid"), {"mid": menu_id})
                 for cid in (1, 2, 3, 4, 5):

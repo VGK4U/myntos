@@ -3318,11 +3318,11 @@ def get_bank_wise_leads(
     elif getattr(current_employee, 'role', None) and getattr(current_employee.role, 'role_code', '') in ('key_leadership', 'sales', 'ea', 'supreme'):
         is_manager = True
         
-    # 2. Base Query for Bank Files & Balance Pending Leads (matching Executive Dashboard)
+    # 2. Base Query for Bank Files, Balance Pending & Net Meter Pending Leads (matching Executive Dashboard)
     query = db.query(CRMLead).filter(
         or_(
-            CRMLead.solar_pipeline_status.in_(['pending_with_bank', 'at_bank', 'at bank', 'balance_pending', 'bal_pending']),
-            CRMLead.status.in_(['pending_with_bank', 'balance_pending'])
+            CRMLead.solar_pipeline_status.in_(['pending_with_bank', 'at_bank', 'at bank', 'balance_pending', 'bal_pending', 'net_meter_pending', 'net_meter', 'net_metering_pending']),
+            CRMLead.status.in_(['pending_with_bank', 'balance_pending', 'net_meter_pending'])
         )
     )
     
@@ -3379,7 +3379,22 @@ def get_bank_wise_leads(
     # Optional Stage filter
     if stage_filter and stage_filter.strip() and not stage_filter.strip().lower().startswith('all'):
         clean_stage = stage_filter.strip()
-        query = query.filter(CRMLead.solar_pipeline_stage.ilike(f"%{clean_stage}%"))
+        if 'net_meter' in clean_stage.lower() or 'net meter' in clean_stage.lower():
+            query = query.filter(
+                or_(
+                    CRMLead.solar_pipeline_status.ilike("%net_meter%"),
+                    CRMLead.solar_pipeline_status.ilike("%net meter%"),
+                    CRMLead.status.ilike("%net_meter%"),
+                    CRMLead.status.ilike("%net meter%")
+                )
+            )
+        else:
+            query = query.filter(
+                or_(
+                    CRMLead.solar_pipeline_status.ilike(f"%{clean_stage}%"),
+                    CRMLead.status.ilike(f"%{clean_stage}%")
+                )
+            )
 
     leads = query.all()
     now_dt = datetime.now()
