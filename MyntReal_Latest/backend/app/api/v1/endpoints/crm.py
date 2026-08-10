@@ -5182,7 +5182,7 @@ def master_leads(
     staff_type = (current_employee.staff_type or '').upper()
     is_admin = is_vgk_admin(staff_type)
 
-    # DC Protocol (Mar 2026): Full-access tier — leadership roles see ALL leads
+    # DC Protocol (Mar 2026): Full-access tier — leadership roles and Team A Sales staff see ALL leads
     # across all companies (same as VGK/EA admin), no assignment filtering.
     _FULL_ACCESS_ROLE_CODES = {
         'vgk4u', 'vgk4u_supreme',
@@ -5191,6 +5191,12 @@ def master_leads(
     }
     _role_code = (current_employee.role.role_code if current_employee.role else '') or ''
     _is_leadership = _role_code in _FULL_ACCESS_ROLE_CODES
+    
+    _team_tag_lower = (current_employee.team_tag or '').lower()
+    is_team_a_sales = (_team_tag_lower in ('team_a', 'team a') or 
+                       (current_employee.department and 'sales' in (current_employee.department.name or '').lower()) or
+                       current_employee.emp_code in ('MN10009', 'MN10003', 'MN10008', 'MN10010', 'MR10018', 'MR10001'))
+
     # DC Protocol (Apr 2026): Fetch direct subordinate IDs for team-scoped access.
     # Reporting managers see their OWN leads + their DIRECT REPORTS' leads only.
     # Same-level peers cannot see each other's leads (including Won leads).
@@ -5202,7 +5208,7 @@ def master_leads(
         ).all()
     ]
 
-    is_full_access = is_admin or _is_leadership
+    is_full_access = is_admin or _is_leadership or is_team_a_sales
 
     query = db.query(CRMLead)
 
@@ -5861,7 +5867,13 @@ def lead_analytics(
     _an_role_code = (current_employee.role.role_code if current_employee.role else '') or ''
     _AN_FULL_ACCESS = {'vgk4u', 'vgk4u_supreme', 'key_leadership', 'leadership_role', 'team_leader', 'manager'}
     _an_is_leadership = _an_role_code in _AN_FULL_ACCESS
-    if not is_admin and not _an_is_leadership:
+    
+    _an_team_tag_lower = (current_employee.team_tag or '').lower()
+    _an_is_team_a = (_an_team_tag_lower in ('team_a', 'team a') or 
+                     (current_employee.department and 'sales' in (current_employee.department.name or '').lower()) or
+                     current_employee.emp_code in ('MN10009', 'MN10003', 'MN10008', 'MN10010', 'MR10018', 'MR10001'))
+
+    if not is_admin and not _an_is_leadership and not _an_is_team_a:
         _an_sub_ids = [
             row.id for row in db.query(StaffEmployee.id).filter(
                 StaffEmployee.reporting_manager_id == current_employee.id,
