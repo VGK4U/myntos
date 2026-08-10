@@ -8,7 +8,21 @@
     };
     
     function getToken() {
-        return localStorage.getItem(STORAGE_KEYS.TOKEN);
+        let tok = localStorage.getItem(STORAGE_KEYS.TOKEN) ||
+                  localStorage.getItem('token') ||
+                  localStorage.getItem('authToken') ||
+                  localStorage.getItem('access_token') ||
+                  sessionStorage.getItem(STORAGE_KEYS.TOKEN) ||
+                  sessionStorage.getItem('token') ||
+                  (document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('staff_token='))?.split('=')[1]) ||
+                  (document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('token='))?.split('=')[1]) || null;
+        if (tok && tok !== 'null' && tok !== 'undefined' && tok !== '[object Object]') {
+            if (!localStorage.getItem(STORAGE_KEYS.TOKEN)) {
+                try { localStorage.setItem(STORAGE_KEYS.TOKEN, tok); } catch (e) {}
+            }
+            return tok;
+        }
+        return null;
     }
     
     function getCompanyId() {

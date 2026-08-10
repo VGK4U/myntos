@@ -72,6 +72,13 @@ def get_current_staff_user(request: Request, db: Session = Depends(get_db)) -> S
     raw_token = auth_header.split(" ")[1] if " " in auth_header else auth_header
     token = raw_token.strip().strip('"').strip("'")
     
+    if not token or token.lower() in ("null", "undefined", "none", "[object object]", ""):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+    
     try:
         from jose import jwt, JWTError
         from jose.exceptions import ExpiredSignatureError

@@ -164,9 +164,18 @@
     }
     
     async function staffFetch(url, options = {}) {
-        let token = localStorage.getItem('staff_token');
+        let token = localStorage.getItem('staff_token') ||
+                    localStorage.getItem('token') ||
+                    localStorage.getItem('authToken') ||
+                    localStorage.getItem('access_token') ||
+                    sessionStorage.getItem('staff_token') ||
+                    sessionStorage.getItem('token') || null;
         
-        if (!token) {
+        if (token && token !== 'null' && token !== 'undefined' && !localStorage.getItem('staff_token')) {
+            try { localStorage.setItem('staff_token', token); } catch (e) {}
+        }
+        
+        if (!token || token === 'null' || token === 'undefined') {
             console.warn('[DC_TOKEN] No token available for request');
             handleSessionExpired('No authentication token');
             throw new Error('Not authenticated');
