@@ -16360,6 +16360,11 @@ async def generate_solar_doc(
                 subsidy_amount=float(ctx.get("subsidy") or 0),
                 application_charge=str(ctx.get("application_charge") or "Actuals"),
                 net_meters_cost=str(ctx.get("net_meters_cost") or ""),
+                panel_serial_numbers=str(ctx.get("panel_serial_numbers") or tech_d.get("panel_serial_numbers") or ""),
+                inverter_serial_no=str(ctx.get("inverter_serial_no") or tech_d.get("inverter_serial_no") or ""),
+                panel_product_warranty_years=str(ctx.get("panel_product_warranty_years") or tech_d.get("panel_product_warranty_years") or "10"),
+                panel_performance_warranty_years=str(ctx.get("panel_performance_warranty_years") or tech_d.get("panel_performance_warranty_years") or "25"),
+                inverter_warranty_years=str(ctx.get("inverter_warranty_years") or tech_d.get("inverter_warranty_years") or "5"),
             )
         elif generator_key == "synchronisation_certificate":
             pdf_bytes = generator_fn(

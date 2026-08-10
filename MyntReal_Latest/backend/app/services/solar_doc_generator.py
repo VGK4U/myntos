@@ -641,7 +641,7 @@ def generate_invoice(
 ) -> bytes:
     import re as _re
     buf = BytesIO()
-    doc = _doc(buf, top=12*mm, bottom=12*mm)
+    doc = _doc(buf, top=6*mm, bottom=6*mm, left=10*mm, right=10*mm)
     ss = _styles()
     story = []
 
@@ -657,7 +657,7 @@ def generate_invoice(
 
     # Letterhead
     story.append(_vendor_letterhead(vendor, ss))
-    story.append(Spacer(1, 2*mm))
+    story.append(Spacer(1, 1*mm))
 
     # Invoice header — Invoice No + Date row
     inv_date = invoice_date or date.today()
@@ -671,10 +671,10 @@ def generate_invoice(
     rt = Table(ref_data, colWidths=[110*mm, 65*mm])
     rt.setStyle(TableStyle([
         ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
-        ('PADDING', (0, 0), (-1, -1), 2),
+        ('PADDING', (0, 0), (-1, -1), 1),
     ]))
     story.append(rt)
-    story.append(Spacer(1, 1.5*mm))
+    story.append(Spacer(1, 1*mm))
 
     # Bill To block
     cust_name = lead.get('customer_name') or lead.get('name', '')
@@ -700,7 +700,7 @@ def generate_invoice(
         story.append(Paragraph(f'Ph: {cust_phone}', ss['BodySmall']))
     if app_no:
         story.append(Paragraph(f'S.No. {app_no}', ss['BodySmall']))
-    story.append(Spacer(1, 2*mm))
+    story.append(Spacer(1, 1*mm))
 
     # Title
     story.append(Paragraph(
@@ -708,11 +708,10 @@ def generate_invoice(
         f' - On-grid for Net meter',
         ss['DocTitle']
     ))
-    story.append(HRFlowable(width='100%', thickness=1.5, color=NAVY))
-    story.append(Spacer(1, 1.5*mm))
+    story.append(HRFlowable(width='100%', thickness=1.2, color=NAVY))
+    story.append(Spacer(1, 1*mm))
 
     # System description (left) + pricing table (right)
-    # DC-SOLAR-PANEL-BRAND-001: use vendor default if set; strip DCR placeholder; no hardcoded fallback.
     _inv_panel_brand = vendor.get('panel_make_default', '') or ''
     if _inv_panel_brand.strip().upper() == 'DCR SOLAR PANEL':
         _inv_panel_brand = ''
@@ -732,8 +731,7 @@ def generate_invoice(
         '&nbsp;&nbsp;&nbsp;4Sq. Copper DC cable<br/>'
         '&nbsp;&nbsp;&nbsp;GI Mounting Structure<br/>'
         '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(North Pole&#8211;6 Feet, South Pole&#8211;4 Feet)<br/>'
-        '&nbsp;&nbsp;&nbsp;AC-DCDB, Earthing,<br/>'
-        '&nbsp;&nbsp;&nbsp;1" PVC Pipe, Flexible PVC Pipe<br/>'
+        '&nbsp;&nbsp;&nbsp;AC-DCDB, Earthing, 1" PVC Pipe<br/>'
         '&nbsp;&nbsp;&nbsp;GI/SS Nuts, Bolts &amp; Hardware',
     ]
     desc_para = Paragraph('<br/>'.join(desc_lines), ss['BodySmall'])
@@ -744,7 +742,7 @@ def generate_invoice(
         except Exception:
             return str(v)
 
-    net_m_label = net_meters_cost if net_meters_cost else f'Actuals\n(Estimating given by {discom})'
+    net_m_label = net_meters_cost if net_meters_cost else f'Actuals (by {discom})'
     app_chg_label = application_charge if application_charge else 'Actuals'
 
     # [DC-INV-GST-REV-001] Reverse-calculate GST from final amount (5% total: CGST 2.5% + SGST 2.5%)
@@ -762,7 +760,7 @@ def generate_invoice(
         ['SGST @ 2.5%', _fmt(_sgst)],
         ['Application Charge', app_chg_label],
         ['Net Meters Cost', net_m_label],
-        ['MNRE SRT National Solar Portal Subsidy', _fmt(subsidy_amount)],
+        ['MNRE SRT Portal Subsidy', _fmt(subsidy_amount)],
     ]
 
     price_data = [[Paragraph(r[0], ss['CellBold']),
@@ -771,7 +769,7 @@ def generate_invoice(
     price_t = Table(price_data, colWidths=[62*mm, 36*mm])
     price_t.setStyle(TableStyle([
         ('GRID', (0, 0), (-1, -1), 0.4, GREY_BORDER),
-        ('PADDING', (0, 0), (-1, -1), 4),
+        ('PADDING', (0, 0), (-1, -1), 2),
         ('ROWBACKGROUNDS', (0, 0), (-1, -1), [WHITE, GREY_LIGHT]),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#dbeafe')),
@@ -782,27 +780,17 @@ def generate_invoice(
     body_t = Table([[desc_para, price_t]], colWidths=[80*mm, 100*mm])
     body_t.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('PADDING', (0, 0), (-1, -1), 4),
+        ('PADDING', (0, 0), (-1, -1), 2.5),
         ('BOX', (0, 0), (-1, -1), 0.5, GREY_BORDER),
     ]))
     story.append(body_t)
-    story.append(Spacer(1, 1.5*mm))
+    story.append(Spacer(1, 1*mm))
 
     story.append(Paragraph(
-        'The above prices are for the complete SPV kit which includes SPV modules, Solar Inverter, '
-        'Structure &amp; all Accessories. Fabricated Shed, High Rise Structure, Civil Work, '
-        'Net Meter Equipment, Extra cables (AC-DC), Contract Load Enhancement Charges, '
-        'Special Drawings &amp; Internal Wiring are customer scope.',
+        'The above prices are for the complete SPV kit including modules, inverter, structure &amp; accessories.',
         ss['BodySmall']
     ))
-    story.append(Spacer(1, 1.5*mm))
-
-    story.append(Paragraph(
-        f'Above system designed for S.No. {app_no or "—"}<br/>'
-        f'Discom Sanction Load: {sanction_load}-Cat-{phase_code}-Phase-1',
-        ss['BodySmall']
-    ))
-    story.append(Spacer(1, 1.5*mm))
+    story.append(Spacer(1, 1*mm))
 
     # T&C + Bank details
     bank_name = vendor.get('bank_name', '')
@@ -813,60 +801,58 @@ def generate_invoice(
 
     tc_lines = [
         '1. Taxes: GST Included',
-        '2. Payment terms: 100% Advance upon placing order.',
+        '2. Payment: 100% Advance',
         '3. Delivery: 2-4 weeks',
     ]
     bank_str = (
         f'<b>A/c Name:</b> {acc_holder}<br/>'
-        f'<b>A/c No.:</b> {acc_no}<br/>'
-        f'<b>Bank:</b> {bank_name}, {bank_branch}<br/>'
+        f'<b>A/c No.:</b> {acc_no} | <b>Bank:</b> {bank_name}, {bank_branch}<br/>'
         f'<b>NEFT/RTGS/IFSC:</b> {ifsc}'
     )
 
     tc_bank = Table(
-        [[Paragraph('<b>Terms and Conditions:</b><br/>' + '\n'.join(tc_lines), ss['BodySmall']),
-          Paragraph('<b>Our Banking Details (CC Account)</b><br/>' + bank_str, ss['BodySmall'])]],
-        colWidths=[90*mm, 85*mm]
+        [[Paragraph('<b>Terms &amp; Conditions:</b><br/>' + '<br/>'.join(tc_lines), ss['BodySmall']),
+          Paragraph('<b>Banking Details:</b><br/>' + bank_str, ss['BodySmall'])]],
+        colWidths=[85*mm, 95*mm]
     )
     tc_bank.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('BOX', (0, 0), (-1, -1), 0.5, GREY_BORDER),
         ('LINEAFTER', (0, 0), (0, 0), 0.5, GREY_BORDER),
-        ('PADDING', (0, 0), (-1, -1), 4),
+        ('PADDING', (0, 0), (-1, -1), 2.5),
     ]))
     story.append(tc_bank)
-    story.append(Spacer(1, 1.5*mm))
+    story.append(Spacer(1, 1*mm))
 
-    # [DC-INV-HYPOTHICATION-001] Narration: Invoice Hypothicated to <loan_bank>
     _loan_bank = (lead.get('loan_bank') or '').strip()
     if _loan_bank:
         story.append(Paragraph(
             f'<b>Narration:</b> Invoice Hypothicated to {_loan_bank}',
             ss['BodySmall']
         ))
-        story.append(Spacer(1, 1.5*mm))
+        story.append(Spacer(1, 1*mm))
 
     # Equipment Serial Numbers (if available)
     _p_serials = (panel_serial_numbers or tech.get('panel_serial_numbers') or '').strip()
     _i_serial  = (inverter_serial_no or tech.get('inverter_serial_no') or '').strip()
     if _p_serials or _i_serial:
         story.append(_section_header('EQUIPMENT & SERIAL NUMBERS'))
-        story.append(Spacer(1, 1*mm))
+        story.append(Spacer(1, 0.8*mm))
         _eq_rows = []
         if _p_serials:
             _eq_rows.append(['Panel Serial Numbers', _p_serials])
         if _i_serial:
             _eq_rows.append(['Inverter Serial Number', _i_serial])
         _eq_data = [[Paragraph(r[0], ss['CellBold']), Paragraph(r[1], ss['CellBody'])] for r in _eq_rows]
-        _eq_t = Table(_eq_data, colWidths=[65*mm, 110*mm])
+        _eq_t = Table(_eq_data, colWidths=[60*mm, 115*mm])
         _eq_t.setStyle(TableStyle([
             ('GRID', (0, 0), (-1, -1), 0.4, GREY_BORDER),
-            ('PADDING', (0, 0), (-1, -1), 3),
+            ('PADDING', (0, 0), (-1, -1), 2),
             ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f8fafc')),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
         story.append(_eq_t)
-        story.append(Spacer(1, 1.5*mm))
+        story.append(Spacer(1, 1*mm))
 
     # Warranty Block (dynamic years configured by user/team)
     _p_prod_yrs = (str(panel_product_warranty_years or '10').strip() or '10')
@@ -878,40 +864,31 @@ def generate_invoice(
     if not _inv_w_yrs.lower().endswith('year') and not _inv_w_yrs.lower().endswith('years'): _inv_w_yrs += ' Years'
 
     story.append(_section_header('WARRANTY DETAILS'))
-    story.append(Spacer(1, 1*mm))
+    story.append(Spacer(1, 0.8*mm))
     _warr_rows = [
         ['Solar Panels Product Warranty', f'{_p_prod_yrs} workmanship warranty'],
         ['Solar Panels Performance Warranty', f'{_p_perf_yrs} (Min output 90% for first 10 yrs, 80% up to {_p_perf_yrs})'],
         ['Solar Inverter Warranty', f'{_inv_w_yrs} against manufacturing defects'],
     ]
     _warr_data = [[Paragraph(r[0], ss['CellBold']), Paragraph(r[1], ss['CellBody'])] for r in _warr_rows]
-    _warr_t = Table(_warr_data, colWidths=[70*mm, 105*mm])
+    _warr_t = Table(_warr_data, colWidths=[65*mm, 110*mm])
     _warr_t.setStyle(TableStyle([
         ('GRID', (0, 0), (-1, -1), 0.4, GREY_BORDER),
-        ('PADDING', (0, 0), (-1, -1), 3),
+        ('PADDING', (0, 0), (-1, -1), 2),
         ('ROWBACKGROUNDS', (0, 0), (-1, -1), [WHITE, GREY_LIGHT]),
         ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f1f5f9')),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     story.append(_warr_t)
-    story.append(Spacer(1, 2*mm))
-
-    if vendor.get('mnre_empanelled'):
-        story.append(Paragraph(
-            'MNRE NATIONAL SOLAR PORTAL (PMSURYAGHAR) EMPANELLED VENDOR',
-            ss['RedNote']
-        ))
-        story.append(Spacer(1, 1.5*mm))
+    story.append(Spacer(1, 1*mm))
 
     # Signature + stamp block
-    _inv_sig   = _fetch_url_image(vendor.get('rep_signature_url', ''), width=40*mm, height=22*mm)
-    _inv_stamp = _fetch_url_image(vendor.get('stamp_image_url', ''),   width=30*mm, height=30*mm)
+    _inv_sig   = _fetch_url_image(vendor.get('rep_signature_url', ''), width=34*mm, height=15*mm)
+    _inv_stamp = _fetch_url_image(vendor.get('stamp_image_url', ''),   width=22*mm, height=22*mm)
     story.append(_sig_stamp_table(ss, _inv_sig, _inv_stamp, 'Authorised Signatory'))
-    story.append(Spacer(1, 1.5*mm))
+    story.append(Spacer(1, 0.5*mm))
 
-    story.append(Paragraph('Authorised Partners', ss['FooterTiny']))
-    story.append(Spacer(1, 1*mm))
-    story.append(_partner_logos_footer())
+    story.append(_partner_logos_footer(logo_h=8*mm))
 
     doc.build(story)
     return buf.getvalue()
