@@ -404,6 +404,42 @@
         </div><!-- End Tab Content -->
     </div>
     
+    <!-- DATA METRICS MODAL FOR ACTIVE JOURNEY -->
+    <div class="modal fade" id="activeMetricsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title"><i class="fas fa-chart-line me-2 text-info"></i>Active Journey Data Metrics</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="activeMetricsModalBody">
+                    <div class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
+                        <p class="mt-2 text-muted">Loading journey metrics...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CURRENT LOCATION MODAL FOR ACTIVE JOURNEY -->
+    <div class="modal fade" id="currentLocationModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-location-arrow me-2"></i>Live Employee Location</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div id="currentLocationMap" style="height: 420px; width: 100%;"></div>
+                    <div class="p-3 bg-light border-top" id="currentLocationDetails">
+                        <div class="text-center text-muted">Loading location details...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- DC Protocol (Dec 05, 2025): Upgraded to modal-xl with playback controls for WVV compliance -->
     <div class="modal fade" id="journeyDetailModal" tabindex="-1">
         <div class="modal-dialog modal-xl">
@@ -430,6 +466,9 @@
                                         <option value="2" selected>2x</option>
                                         <option value="4">4x</option>
                                         <option value="8">8x</option>
+                                        <option value="10">10x</option>
+                                        <option value="15">15x</option>
+                                        <option value="20">20x</option>
                                     </select>
                                 </div>
                                 <div class="mt-2 d-flex justify-content-between small text-muted">
@@ -1765,15 +1804,31 @@
                                             `<span style="color: #d97706;"><i class="fas fa-exclamation-triangle"></i> GPS Off</span>`
                                         }
                                     </td>
-                                    <td>
-                                        ${j.can_force_stop ? `
-                                            <button class="btn btn-sm btn-outline-danger" 
-                                                    onclick="showForceStopModal(${j.id}, '${escapeHtml(j.employee_name)}', '${j.duration_formatted}', ${j.total_distance_km})">
-                                                <i class="fas fa-stop-circle me-1"></i>Stop
+                                    <td class="text-nowrap">
+                                        <div class="d-flex align-items-center gap-1">
+                                            <button class="btn btn-sm btn-success" 
+                                                    title="Play Journey" 
+                                                    onclick="viewJourneyDetail(${j.id})">
+                                                <i class="fas fa-play me-1"></i>Play
                                             </button>
-                                        ` : `
-                                            <span class="text-muted">-</span>
-                                        `}
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    title="View Location" 
+                                                    onclick="showCurrentLocationModal(${j.id})">
+                                                <i class="fas fa-location-arrow me-1"></i>Location
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-info" 
+                                                    title="View Metrics" 
+                                                    onclick="showActiveJourneyMetricsModal(${j.id})">
+                                                <i class="fas fa-chart-bar me-1"></i>Metrics
+                                            </button>
+                                            ${j.can_force_stop ? `
+                                                <button class="btn btn-sm btn-outline-danger" 
+                                                        title="Force Stop"
+                                                        onclick="showForceStopModal(${j.id}, '${escapeHtml(j.employee_name)}', '${j.duration_formatted}', ${j.total_distance_km})">
+                                                    <i class="fas fa-stop-circle"></i>
+                                                </button>
+                                            ` : ''}
+                                        </div>
                                     </td>
                                 </tr>
                             `).join('')}
@@ -1781,6 +1836,170 @@
                     </table>
                 </div>
             `;
+        }
+        
+        async function showActiveJourneyMetricsModal(journeyId) {
+            const modalEl = document.getElementById('activeMetricsModal');
+            const body = document.getElementById('activeMetricsModalBody');
+            body.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
+                    <p class="mt-2 text-muted">Fetching live metrics...</p>
+                </div>
+            `;
+            const bsModal = new bootstrap.Modal(modalEl);
+            bsModal.show();
+
+            try {
+                const response = await staffFetch(`/api/v1/staff/journeys/${journeyId}/track-points`);
+                const resData = await response.json();
+                if (!resData.success || !resData.data) {
+                    body.innerHTML = `<div class="alert alert-danger">Failed to load metrics data.</div>`;
+                    return;
+                }
+                const j = resData.data.journey || resData.data;
+                const pts = resData.data.track_points || [];
+
+                let maxSpeed = 0;
+                let avgSpeed = 0;
+                let totalSpeedSum = 0;
+                let validSpeedCount = 0;
+                let latestBattery = null;
+
+                pts.forEach(p => {
+                    const sp = p.speed_kmh || p.speed || 0;
+                    if (sp > maxSpeed) maxSpeed = sp;
+                    if (sp > 0) {
+                        totalSpeedSum += sp;
+                        validSpeedCount++;
+                    }
+                    if (p.battery_percentage !== undefined && p.battery_percentage !== null) {
+                        latestBattery = p.battery_percentage;
+                    }
+                });
+
+                if (validSpeedCount > 0) {
+                    avgSpeed = (totalSpeedSum / validSpeedCount).toFixed(1);
+                }
+
+                const lastPt = pts.length > 0 ? pts[pts.length - 1] : null;
+                const lastAddr = lastPt ? (lastPt.address || `${lastPt.latitude.toFixed(5)}, ${lastPt.longitude.toFixed(5)}`) : 'N/A';
+
+                body.innerHTML = `
+                    <div class="row g-3">
+                        <div class="col-md-3 col-6">
+                            <div class="p-3 bg-light rounded text-center border">
+                                <small class="text-muted d-block text-uppercase fw-bold" style="font-size:10px;">Total Distance</small>
+                                <span class="fs-4 fw-bold text-success">${j.total_distance_km || 0} km</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="p-3 bg-light rounded text-center border">
+                                <small class="text-muted d-block text-uppercase fw-bold" style="font-size:10px;">GPS Points</small>
+                                <span class="fs-4 fw-bold text-primary">${pts.length} pts</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="p-3 bg-light rounded text-center border">
+                                <small class="text-muted d-block text-uppercase fw-bold" style="font-size:10px;">Avg / Max Speed</small>
+                                <span class="fs-4 fw-bold text-dark">${avgSpeed} / ${Math.round(maxSpeed)} <small class="fs-6">km/h</small></span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="p-3 bg-light rounded text-center border">
+                                <small class="text-muted d-block text-uppercase fw-bold" style="font-size:10px;">Battery Level</small>
+                                <span class="fs-4 fw-bold ${latestBattery < 20 ? 'text-danger' : 'text-success'}">
+                                    <i class="fas fa-battery-three-quarters me-1"></i>${latestBattery !== null ? latestBattery + '%' : 'N/A'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="p-3 border rounded bg-white">
+                                <h6 class="fw-bold mb-2"><i class="fas fa-info-circle me-2 text-primary"></i>Live Tracking Summary</h6>
+                                <table class="table table-sm table-borderless mb-0 small">
+                                    <tr><td class="text-muted" style="width:140px;">Employee:</td><td><strong>${j.employee_name || 'N/A'} (${j.employee_code || ''})</strong></td></tr>
+                                    <tr><td class="text-muted">Purpose & Mode:</td><td>${j.purpose || 'Client Visit'} (${j.transport_mode || 'Bike'})</td></tr>
+                                    <tr><td class="text-muted">Started At:</td><td>${j.start_time || 'N/A'}</td></tr>
+                                    <tr><td class="text-muted">Current Location:</td><td class="text-primary fw-semibold"><i class="fas fa-map-marker-alt me-1 text-danger"></i>${lastAddr}</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                console.error('[ActiveMetricsModal] Error:', err);
+                body.innerHTML = `<div class="alert alert-danger">Error loading metrics.</div>`;
+            }
+        }
+
+        let currentLocationMapObj = null;
+        async function showCurrentLocationModal(journeyId) {
+            const modalEl = document.getElementById('currentLocationModal');
+            const detailsDiv = document.getElementById('currentLocationDetails');
+            detailsDiv.innerHTML = `<div class="text-center text-muted">Locating employee on map...</div>`;
+            
+            const bsModal = new bootstrap.Modal(modalEl);
+            bsModal.show();
+
+            try {
+                const response = await staffFetch(`/api/v1/staff/journeys/${journeyId}/track-points`);
+                const resData = await response.json();
+                if (!resData.success || !resData.data) {
+                    detailsDiv.innerHTML = `<div class="alert alert-danger m-2">Location details unavailable.</div>`;
+                    return;
+                }
+                const j = resData.data.journey || resData.data;
+                const pts = resData.data.track_points || [];
+                if (!pts.length) {
+                    detailsDiv.innerHTML = `<div class="alert alert-warning m-2">No GPS points recorded yet for this active journey.</div>`;
+                    return;
+                }
+
+                const lastPt = pts[pts.length - 1];
+                const lat = lastPt.latitude;
+                const lng = lastPt.longitude;
+                const addr = lastPt.address || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+
+                detailsDiv.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong style="font-size:15px;" class="text-dark">${j.employee_name}</strong> 
+                            <span class="badge bg-success ms-2">LIVE NOW</span><br>
+                            <span class="text-primary small"><i class="fas fa-map-marker-alt me-1 text-danger"></i>${addr}</span>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-success" onclick="bootstrap.Modal.getInstance(document.getElementById('currentLocationModal')).hide(); viewJourneyDetail(${journeyId});">
+                                <i class="fas fa-play me-1"></i>Play Full Journey
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                setTimeout(() => {
+                    const container = document.getElementById('currentLocationMap');
+                    if (currentLocationMapObj) {
+                        currentLocationMapObj.remove();
+                        currentLocationMapObj = null;
+                    }
+                    currentLocationMapObj = L.map('currentLocationMap').setView([lat, lng], 16);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 19
+                    }).addTo(currentLocationMapObj);
+
+                    const pulseIcon = L.divIcon({
+                        className: 'custom-pulse-marker',
+                        html: '<div style="background: #10b981; width: 22px; height: 22px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 12px #10b981;"></div>',
+                        iconSize: [22, 22],
+                        iconAnchor: [11, 11]
+                    });
+                    L.marker([lat, lng], { icon: pulseIcon }).addTo(currentLocationMapObj)
+                     .bindPopup(`<b>${j.employee_name}</b><br>${addr}`).openPopup();
+                }, 300);
+
+            } catch (err) {
+                console.error('[CurrentLocationModal] Error:', err);
+                detailsDiv.innerHTML = `<div class="alert alert-danger m-2">Failed to render live map.</div>`;
+            }
         }
         
         function escapeHtml(text) {
