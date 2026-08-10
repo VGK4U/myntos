@@ -16172,6 +16172,7 @@ def seed_bank_wise_leads_menu():
                     audience_scope = 'staff'
             """))
             menu_id = conn.execute(text("SELECT id FROM staff_menu_registry WHERE menu_code = 'MNR_BANK_WISE_LEADS'")).scalar()
+            conn.execute(text("UPDATE staff_menu_master SET is_active = true, is_default_visible = true, is_default_accessible = true WHERE menu_code = 'MNR_BANK_WISE_LEADS'"))
             if menu_id:
                 conn.execute(text("DELETE FROM staff_employee_menu_settings WHERE menu_id = :mid"), {"mid": menu_id})
                 for cid in (1, 2, 3, 4, 5):
