@@ -15982,7 +15982,8 @@ def get_invoice_prefill(
     """
     lead = db.execute(text("""
         SELECT id, name, phone, email, address, area, city, state, pincode,
-               kw_size, discom, grid_phase, application_no, sc_number
+               kw_size, discom, grid_phase, application_no, sc_number,
+               deal_value_total, deal_value
         FROM crm_leads WHERE id = :lid
     """), {"lid": lead_id}).fetchone()
     if not lead:
@@ -16002,8 +16003,27 @@ def get_invoice_prefill(
         if v:
             vendor_d = {col: getattr(v, col, None) for col in v._fields}
 
+    if not vendor_d:
+        first_v = db.execute(text("""
+            SELECT id, vendor_name, vendor_code, gst_number, address, city, state, pincode,
+                   phone, email, bank_name, bank_branch, account_number, account_holder_name, ifsc_code
+            FROM vendor_master WHERE vendor_type = 'SOLAR' ORDER BY id ASC LIMIT 1
+        """)).fetchone()
+        if first_v:
+            vendor_d = {col: getattr(first_v, col, None) for col in first_v._fields}
+            vendor_id = first_v.id
+
     ref_no = tech_d.get("last_quote_ref_no") or ""
-    invoice_number = f"INV-{ref_no}" if ref_no else ""
+    invoice_number = f"INV-{ref_no}" if ref_no else f"INV-{lead.id:04d}"
+
+    _kw = lead.kw_size or tech_d.get("last_quote_kw_size") or ""
+    _qv = tech_d.get("last_quote_value")
+    if _qv is None:
+        _qv = lead.deal_value_total or lead.deal_value or None
+    _disc = tech_d.get("last_quote_discount") if tech_d.get("last_quote_discount") is not None else 0
+    _fin = tech_d.get("last_quote_final")
+    if _fin is None and _qv is not None:
+        _fin = max(0, float(_qv) - float(_disc or 0))
 
     return {
         "success": True,
@@ -16017,18 +16037,18 @@ def get_invoice_prefill(
             "city":          lead.city or "",
             "state":         lead.state or "",
             "pincode":       lead.pincode or "",
-            "kw_size":       lead.kw_size or "",
+            "kw_size":       _kw,
             "discom":        lead.discom or "",
             "grid_phase":    lead.grid_phase or "",
             "application_no":lead.application_no or "",
             "sc_number":     lead.sc_number or "",
         },
         "tech": {
-            "last_quote_vendor_id":  tech_d.get("last_quote_vendor_id"),
-            "last_quote_kw_size":    tech_d.get("last_quote_kw_size") or "",
-            "last_quote_value":      tech_d.get("last_quote_value"),
-            "last_quote_discount":   tech_d.get("last_quote_discount"),
-            "last_quote_final":      tech_d.get("last_quote_final"),
+            "last_quote_vendor_id":  vendor_id,
+            "last_quote_kw_size":    _kw,
+            "last_quote_value":      _qv,
+            "last_quote_discount":   _disc,
+            "last_quote_final":      _fin,
             "last_quote_subsidy":    tech_d.get("last_quote_subsidy"),
             "last_quote_ref_no":     ref_no,
             "panel_serial_numbers":  tech_d.get("panel_serial_numbers") or "",
@@ -16425,20 +16445,36 @@ async def generate_solar_doc(
 
     db.commit()
 
-    # ── Save quote details to tech record ────────────────────────────────────
-    if generator_key == "quotation" and vendor_id:
+    # ── Save quote/invoice details to tech record ────────────────────────────
+    if generator_key in ("quotation", "invoice") and vendor_id:
         now_str = datetime.now().isoformat()
         tech_rec = db.query(CRMSolarLeadTech).filter(CRMSolarLeadTech.lead_id == lead_id).first()
         if tech_rec is None:
             tech_rec = CRMSolarLeadTech(lead_id=lead_id, company_id=lead.company_id, created_at=now_str)
             db.add(tech_rec)
         tech_rec.last_quote_vendor_id = vendor_id
-        tech_rec.last_quote_kw_size = str(extra.get("kw_size", ""))
-        tech_rec.last_quote_value = extra.get("quote_value")
-        tech_rec.last_quote_discount = extra.get("discount")
-        tech_rec.last_quote_final = extra.get("final_amount")
-        tech_rec.last_quote_subsidy = extra.get("subsidy")
-        tech_rec.last_quote_ref_no = doc_number
+        if extra.get("kw_size"):
+            tech_rec.last_quote_kw_size = str(extra.get("kw_size", ""))
+        if extra.get("quote_value") is not None:
+            tech_rec.last_quote_value = extra.get("quote_value")
+        if extra.get("discount") is not None:
+            tech_rec.last_quote_discount = extra.get("discount")
+        if extra.get("final_amount") is not None:
+            tech_rec.last_quote_final = extra.get("final_amount")
+        if extra.get("subsidy") is not None:
+            tech_rec.last_quote_subsidy = extra.get("subsidy")
+        if doc_number:
+            tech_rec.last_quote_ref_no = doc_number
+        if extra.get("panel_serial_numbers"):
+            tech_rec.panel_serial_numbers = str(extra.get("panel_serial_numbers"))
+        if extra.get("inverter_serial_no"):
+            tech_rec.inverter_serial_no = str(extra.get("inverter_serial_no"))
+        if extra.get("panel_product_warranty_years"):
+            tech_rec.panel_product_warranty_years = str(extra.get("panel_product_warranty_years"))
+        if extra.get("panel_performance_warranty_years"):
+            tech_rec.panel_performance_warranty_years = str(extra.get("panel_performance_warranty_years"))
+        if extra.get("inverter_warranty_years"):
+            tech_rec.inverter_warranty_years = str(extra.get("inverter_warranty_years"))
         tech_rec.last_quote_generated_at = _date.today()
         tech_rec.updated_at = now_str
         db.commit()
