@@ -1808,7 +1808,7 @@
                                         <div class="d-flex align-items-center gap-1">
                                             <button class="btn btn-sm btn-success" 
                                                     title="Play Journey" 
-                                                    onclick="viewJourneyDetail(${j.id})">
+                                                    onclick="viewJourney(${j.id})">
                                                 <i class="fas fa-play me-1"></i>Play
                                             </button>
                                             <button class="btn btn-sm btn-outline-primary" 
@@ -1883,7 +1883,7 @@
                 }
 
                 const lastPt = pts.length > 0 ? pts[pts.length - 1] : null;
-                const lastAddr = lastPt ? (lastPt.address || `${lastPt.latitude.toFixed(5)}, ${lastPt.longitude.toFixed(5)}`) : 'N/A';
+                let lastAddr = lastPt ? (lastPt.address || `${lastPt.latitude.toFixed(5)}, ${lastPt.longitude.toFixed(5)}`) : 'N/A';
 
                 body.innerHTML = `
                     <div class="row g-3">
@@ -1920,12 +1920,28 @@
                                     <tr><td class="text-muted" style="width:140px;">Employee:</td><td><strong>${j.employee_name || 'N/A'} (${j.employee_code || ''})</strong></td></tr>
                                     <tr><td class="text-muted">Purpose & Mode:</td><td>${j.purpose || 'Client Visit'} (${j.transport_mode || 'Bike'})</td></tr>
                                     <tr><td class="text-muted">Started At:</td><td>${j.start_time_formatted || j.start_time || 'N/A'}</td></tr>
-                                    <tr><td class="text-muted">Current Location:</td><td class="text-primary fw-semibold"><i class="fas fa-map-marker-alt me-1 text-danger"></i>${lastAddr}</td></tr>
+                                    <tr><td class="text-muted">Current Location:</td><td class="text-primary fw-semibold"><i class="fas fa-map-marker-alt me-1 text-danger"></i><span id="activeMetricsLocationText">${lastAddr}</span></td></tr>
                                 </table>
                             </div>
                         </div>
                     </div>
                 `;
+
+                if (lastPt && (!lastPt.address || lastPt.address.includes(','))) {
+                    try {
+                        const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lastPt.latitude}&lon=${lastPt.longitude}`;
+                        const geoRes = await fetch(geoUrl);
+                        if (geoRes.ok) {
+                            const geoData = await geoRes.json();
+                            if (geoData && geoData.display_name) {
+                                const locEl = document.getElementById('activeMetricsLocationText');
+                                if (locEl) locEl.textContent = geoData.display_name;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[Nominatim] Geocode fallback:', e);
+                    }
+                }
             } catch (err) {
                 console.error('[ActiveMetricsModal] Error:', err);
                 body.innerHTML = `<div class="alert alert-danger">Error loading metrics.</div>`;
@@ -1958,43 +1974,85 @@
                 const lastPt = pts[pts.length - 1];
                 const lat = lastPt.latitude;
                 const lng = lastPt.longitude;
-                const addr = lastPt.address || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                let addr = lastPt.address || `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
 
                 detailsDiv.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <div>
                             <strong style="font-size:15px;" class="text-dark">${j.employee_name || 'Staff Member'}</strong> 
-                            <span class="badge bg-success ms-2">LIVE NOW</span><br>
-                            <span class="text-primary small"><i class="fas fa-map-marker-alt me-1 text-danger"></i>${addr}</span>
+                            <span class="badge bg-success ms-2"><i class="fas fa-satellite-dish me-1"></i>LIVE NOW</span><br>
+                            <span class="text-primary fw-bold small"><i class="fas fa-map-marker-alt me-1 text-danger"></i><span id="currentLocModalAddress">${addr}</span></span>
                         </div>
                         <div>
-                            <button class="btn btn-sm btn-success" onclick="bootstrap.Modal.getInstance(document.getElementById('currentLocationModal')).hide(); viewJourneyDetail(${journeyId});">
+                            <button class="btn btn-sm btn-success fw-bold" onclick="bootstrap.Modal.getInstance(document.getElementById('currentLocationModal')).hide(); viewJourney(${journeyId});">
                                 <i class="fas fa-play me-1"></i>Play Full Journey
                             </button>
                         </div>
                     </div>
                 `;
 
-                setTimeout(() => {
+                // Handle Leaflet map rendering once modal is fully shown
+                const initMap = () => {
                     const container = document.getElementById('currentLocationMap');
                     if (currentLocationMapObj) {
                         currentLocationMapObj.remove();
                         currentLocationMapObj = null;
                     }
                     currentLocationMapObj = L.map('currentLocationMap').setView([lat, lng], 16);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        maxZoom: 19
+                    
+                    const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        attribution: '&copy; OpenStreetMap'
+                    }).addTo(currentLocationMapObj);
+
+                    const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        maxZoom: 19,
+                        attribution: '&copy; Esri World Imagery'
+                    });
+
+                    L.control.layers({
+                        "Street Map": streetLayer,
+                        "Satellite": satLayer
                     }).addTo(currentLocationMapObj);
 
                     const pulseIcon = L.divIcon({
                         className: 'custom-pulse-marker',
-                        html: '<div style="background: #10b981; width: 22px; height: 22px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 12px #10b981;"></div>',
-                        iconSize: [22, 22],
-                        iconAnchor: [11, 11]
+                        html: '<div style="background: #10b981; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px #10b981, 0 2px 6px rgba(0,0,0,0.4);"></div>',
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
                     });
-                    L.marker([lat, lng], { icon: pulseIcon }).addTo(currentLocationMapObj)
-                     .bindPopup(`<b>${j.employee_name || 'Staff Member'}</b><br>${addr}`).openPopup();
-                }, 300);
+                    
+                    const marker = L.marker([lat, lng], { icon: pulseIcon }).addTo(currentLocationMapObj);
+                    marker.bindPopup(`<b>${j.employee_name || 'Staff Member'}</b><br><span id="popupLocationText">${addr}</span>`).openPopup();
+
+                    setTimeout(() => {
+                        currentLocationMapObj.invalidateSize();
+                    }, 250);
+                };
+
+                modalEl.addEventListener('shown.bs.modal', initMap, { once: true });
+                if (modalEl.classList.contains('show')) {
+                    initMap();
+                }
+
+                // Reverse geocode if missing address
+                if (!lastPt.address) {
+                    try {
+                        const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
+                        const geoRes = await fetch(geoUrl);
+                        if (geoRes.ok) {
+                            const geoData = await geoRes.json();
+                            if (geoData && geoData.display_name) {
+                                const addEl = document.getElementById('currentLocModalAddress');
+                                const popEl = document.getElementById('popupLocationText');
+                                if (addEl) addEl.textContent = geoData.display_name;
+                                if (popEl) popEl.textContent = geoData.display_name;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[Nominatim] Geocode error:', e);
+                    }
+                }
 
             } catch (err) {
                 console.error('[CurrentLocationModal] Error:', err);
