@@ -5859,12 +5859,21 @@ function _fldHalf(label,id,val,type,hint){
 
 function _renderInvoiceModal(d){
   const l=d.lead||{};const t=d.tech||{};const v=d.vendor||{};
+  const tableLead=(typeof _leadsCache!=='undefined'&&Array.isArray(_leadsCache))?(_leadsCache.find(x=>x.id==_sdocLeadId)||_leadsCache.find(x=>x.id==l.id)||{}):{};
+
+  const custName = l.name || tableLead.name || tableLead.customer_name || '';
+  const custAddr = l.address || tableLead.address || tableLead.street_address || '';
+  const custCity = l.city || tableLead.city || tableLead.district || '';
+  const custState = l.state || tableLead.state || '';
+  const custPin = l.pincode || tableLead.pincode || tableLead.pin || '';
+  const custPhone = l.phone || tableLead.phone || tableLead.mobile || '';
+
   const today=new Date().toISOString().slice(0,10);
-  const kw=t.last_quote_kw_size||l.kw_size||'';
-  const qv=t.last_quote_value!=null?t.last_quote_value:'';
-  const disc=t.last_quote_discount!=null?t.last_quote_discount:'0';
-  const fin=t.last_quote_final!=null?t.last_quote_final:'';
-  const sub=t.last_quote_subsidy!=null?t.last_quote_subsidy:'';
+  const kw=t.last_quote_kw_size||l.kw_size||tableLead.kw_size||tableLead.system_size||'';
+  const qv=(t.last_quote_value!=null&&t.last_quote_value!=='')?t.last_quote_value:(tableLead.deal_value_total||tableLead.deal_value||tableLead.quote_value||'');
+  const disc=(t.last_quote_discount!=null&&t.last_quote_discount!=='')?t.last_quote_discount:'0';
+  const fin=(t.last_quote_final!=null&&t.last_quote_final!=='')?t.last_quote_final:(qv ? Math.max(0, parseFloat(qv)-parseFloat(disc||0)).toFixed(2) : '');
+  const sub=(t.last_quote_subsidy!=null&&t.last_quote_subsidy!=='')?t.last_quote_subsidy:(tableLead.subsidy||'');
 
   const vendorOpts='<option value="">-- Select Vendor --</option>'+
     _solarVendors.map(vv=>'<option value="'+vv.id+'"'+(vv.id===(v.id||t.last_quote_vendor_id)?' selected':'')+'>'+esc(vv.vendor_name)+' ('+esc(vv.vendor_code)+')</option>').join('');
@@ -5882,14 +5891,14 @@ function _renderInvoiceModal(d){
   html+='</div>';
 
   html+='<div style="font-size:11px;font-weight:700;color:#1e3a5f;background:#eef4fb;padding:6px 10px;border-radius:6px;margin-bottom:10px">CUSTOMER INFO</div>';
-  html+=_fld('Customer Name','imCustName',l.name,'text',true);
-  html+=_fld('Customer Address','imCustAddr',l.address,'text',true,'Street address, landmark');
+  html+=_fld('Customer Name','imCustName',custName,'text',true);
+  html+=_fld('Customer Address','imCustAddr',custAddr,'text',true,'Street address, landmark');
   html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">';
-  html+='<div>'+_fldHalf('City','imCustCity',l.city)+'</div>';
-  html+='<div>'+_fldHalf('State','imCustState',l.state)+'</div>';
-  html+='<div>'+_fldHalf('Pincode','imCustPin',l.pincode)+'</div>';
+  html+='<div>'+_fldHalf('City','imCustCity',custCity)+'</div>';
+  html+='<div>'+_fldHalf('State','imCustState',custState)+'</div>';
+  html+='<div>'+_fldHalf('Pincode','imCustPin',custPin)+'</div>';
   html+='</div>';
-  html+=_fld('Customer Phone','imCustPhone',l.phone,'tel');
+  html+=_fld('Customer Phone','imCustPhone',custPhone,'tel');
 
   html+='<div style="font-size:11px;font-weight:700;color:#1e3a5f;background:#eef4fb;padding:6px 10px;border-radius:6px;margin-bottom:10px">SYSTEM & PRICING</div>';
   html+=_fld('System Size (KW)','imKw',kw,'text',true,'e.g. 3 or 3KW');
