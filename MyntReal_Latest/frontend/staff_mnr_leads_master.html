@@ -5902,6 +5902,17 @@ function _renderInvoiceModal(d){
   html+=_fldHalf('MNRE Subsidy (₹)','imSubsidy',sub,'number');
   html+='</div>';
 
+  html+='<div style="font-size:11px;font-weight:700;color:#1e3a5f;background:#eef4fb;padding:6px 10px;border-radius:6px;margin-bottom:10px">EQUIPMENT & SERIAL NUMBERS</div>';
+  html+=_fld('Panel Serial Numbers','imPanelSerials',t.panel_serial_numbers||'','text',false,'Comma-separated panel serial numbers');
+  html+=_fld('Inverter Serial Number','imInverterSerial',t.inverter_serial_no||'','text',false,'Inverter serial number');
+
+  html+='<div style="font-size:11px;font-weight:700;color:#1e3a5f;background:#eef4fb;padding:6px 10px;border-radius:6px;margin-bottom:10px">WARRANTY DETAILS (YEARS)</div>';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">';
+  html+='<div>'+_fldHalf('Panel Product (Yrs)','imPanelProdWarr',t.panel_product_warranty_years||'10','number')+'</div>';
+  html+='<div>'+_fldHalf('Panel Perf. (Yrs)','imPanelPerfWarr',t.panel_performance_warranty_years||'25','number')+'</div>';
+  html+='<div>'+_fldHalf('Inverter (Yrs)','imInverterWarr',t.inverter_warranty_years||'5','number')+'</div>';
+  html+='</div>';
+
   html+='<div style="font-size:11px;font-weight:700;color:#1e3a5f;background:#eef4fb;padding:6px 10px;border-radius:6px;margin-bottom:10px">OPTIONAL OVERRIDES</div>';
   html+=_fld('Application Charge','imAppCharge','Actuals','text',false,'Leave as "Actuals" or enter amount');
   html+=_fld('Net Meters Cost','imNetMeters','','text',false,'Leave blank for default DISCOM estimate');
@@ -5947,6 +5958,12 @@ async function submitInvoiceGenerate(){
   const discount=parseFloat(document.getElementById('imDiscount')?.value)||0;
   const finalAmt=parseFloat(document.getElementById('imFinal')?.value)||0;
   const subsidy=parseFloat(document.getElementById('imSubsidy')?.value)||0;
+  const panelSerials=(document.getElementById('imPanelSerials')?.value||'').trim();
+  const inverterSerial=(document.getElementById('imInverterSerial')?.value||'').trim();
+  const panelProdWarr=(document.getElementById('imPanelProdWarr')?.value||'10').trim();
+  const panelPerfWarr=(document.getElementById('imPanelPerfWarr')?.value||'25').trim();
+  const inverterWarr=(document.getElementById('imInverterWarr')?.value||'5').trim();
+
   const techUpdates={
     last_quote_vendor_id:vendorId,
     last_quote_kw_size:kwSize,
@@ -5954,6 +5971,8 @@ async function submitInvoiceGenerate(){
     last_quote_discount:discount,
     last_quote_final:finalAmt,
     last_quote_subsidy:subsidy,
+    panel_serial_numbers:panelSerials||undefined,
+    inverter_serial_no:inverterSerial||undefined,
   };
 
   closeInvoiceModal();
@@ -5982,6 +6001,11 @@ async function submitInvoiceGenerate(){
     invoice_date:invDate||undefined,
     application_charge:appCharge||undefined,
     net_meters_cost:netMeters||undefined,
+    panel_serial_numbers:panelSerials||undefined,
+    inverter_serial_no:inverterSerial||undefined,
+    panel_product_warranty_years:panelProdWarr||'10',
+    panel_performance_warranty_years:panelPerfWarr||'25',
+    inverter_warranty_years:inverterWarr||'5',
   });
 }
 // ── End Invoice Modal ──────────────────────────────────────────────────────────

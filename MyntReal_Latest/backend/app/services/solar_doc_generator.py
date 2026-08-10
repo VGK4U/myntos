@@ -209,15 +209,14 @@ def _section_header(text):
 
 
 def _partner_logos_footer(logo_h=12*mm):
-    """Horizontal strip of 4 partner logos for quotation footer."""
+    """Horizontal strip of 3 partner logos for quotation footer (MNR logo removed)."""
     logos = [
-        (LOGO_MYNTREAL, 42*mm, logo_h),
-        (LOGO_HARGHAR, 42*mm, logo_h),
-        (LOGO_MNR, 32*mm, logo_h),
-        (LOGO_VGK4U, 28*mm, logo_h),
+        (LOGO_MYNTREAL, 48*mm, logo_h),
+        (LOGO_HARGHAR, 48*mm, logo_h),
+        (LOGO_VGK4U, 32*mm, logo_h),
     ]
     cells = [_rl_image(p, w, h) for p, w, h in logos]
-    t = Table([cells], colWidths=[42*mm, 42*mm, 32*mm, 28*mm])
+    t = Table([cells], colWidths=[55*mm, 55*mm, 40*mm])
     t.setStyle(TableStyle([
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -634,6 +633,11 @@ def generate_invoice(
     subsidy_amount: float = 0,
     application_charge: str = 'Actuals',
     net_meters_cost: str = '',
+    panel_serial_numbers: str = '',
+    inverter_serial_no: str = '',
+    panel_product_warranty_years: str = '10',
+    panel_performance_warranty_years: str = '25',
+    inverter_warranty_years: str = '5',
 ) -> bytes:
     import re as _re
     buf = BytesIO()
@@ -842,17 +846,54 @@ def generate_invoice(
         ))
         story.append(Spacer(1, 1.5*mm))
 
-    # Warranty
-    story.append(_section_header('Product Warranty'))
+    # Equipment Serial Numbers (if available)
+    _p_serials = (panel_serial_numbers or tech.get('panel_serial_numbers') or '').strip()
+    _i_serial  = (inverter_serial_no or tech.get('inverter_serial_no') or '').strip()
+    if _p_serials or _i_serial:
+        story.append(_section_header('EQUIPMENT & SERIAL NUMBERS'))
+        story.append(Spacer(1, 1*mm))
+        _eq_rows = []
+        if _p_serials:
+            _eq_rows.append(['Panel Serial Numbers', _p_serials])
+        if _i_serial:
+            _eq_rows.append(['Inverter Serial Number', _i_serial])
+        _eq_data = [[Paragraph(r[0], ss['CellBold']), Paragraph(r[1], ss['CellBody'])] for r in _eq_rows]
+        _eq_t = Table(_eq_data, colWidths=[65*mm, 110*mm])
+        _eq_t.setStyle(TableStyle([
+            ('GRID', (0, 0), (-1, -1), 0.4, GREY_BORDER),
+            ('PADDING', (0, 0), (-1, -1), 3),
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f8fafc')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(_eq_t)
+        story.append(Spacer(1, 1.5*mm))
+
+    # Warranty Block (dynamic years configured by user/team)
+    _p_prod_yrs = (str(panel_product_warranty_years or '10').strip() or '10')
+    _p_perf_yrs = (str(panel_performance_warranty_years or '25').strip() or '25')
+    _inv_w_yrs  = (str(inverter_warranty_years or '5').strip() or '5')
+    
+    if not _p_prod_yrs.lower().endswith('year') and not _p_prod_yrs.lower().endswith('years'): _p_prod_yrs += ' Years'
+    if not _p_perf_yrs.lower().endswith('year') and not _p_perf_yrs.lower().endswith('years'): _p_perf_yrs += ' Years'
+    if not _inv_w_yrs.lower().endswith('year') and not _inv_w_yrs.lower().endswith('years'): _inv_w_yrs += ' Years'
+
+    story.append(_section_header('WARRANTY DETAILS'))
     story.append(Spacer(1, 1*mm))
-    story.append(Paragraph(
-        '<b>Modules:</b> As per MNRE guidelines IEC/BIS standards<br/>'
-        '1. 10-year workmanship warranty (Minimum power output 90% for first 10 years; 80% from Year 11 to 25)<br/>'
-        '2. 25 Years Life<br/>'
-        '<b>Solar Inverter:</b> As per IEC/BIS Standard<br/>'
-        '1. 5 year warranty against manufacturing defects',
-        ss['BodySmall']
-    ))
+    _warr_rows = [
+        ['Solar Panels Product Warranty', f'{_p_prod_yrs} workmanship warranty'],
+        ['Solar Panels Performance Warranty', f'{_p_perf_yrs} (Min output 90% for first 10 yrs, 80% up to {_p_perf_yrs})'],
+        ['Solar Inverter Warranty', f'{_inv_w_yrs} against manufacturing defects'],
+    ]
+    _warr_data = [[Paragraph(r[0], ss['CellBold']), Paragraph(r[1], ss['CellBody'])] for r in _warr_rows]
+    _warr_t = Table(_warr_data, colWidths=[70*mm, 105*mm])
+    _warr_t.setStyle(TableStyle([
+        ('GRID', (0, 0), (-1, -1), 0.4, GREY_BORDER),
+        ('PADDING', (0, 0), (-1, -1), 3),
+        ('ROWBACKGROUNDS', (0, 0), (-1, -1), [WHITE, GREY_LIGHT]),
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f1f5f9')),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    story.append(_warr_t)
     story.append(Spacer(1, 2*mm))
 
     if vendor.get('mnre_empanelled'):
