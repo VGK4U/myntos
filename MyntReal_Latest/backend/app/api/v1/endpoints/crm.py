@@ -7504,6 +7504,7 @@ def exec_trend_leads(
     label = _cl(label)
     metric = _cl(metric)
     limit = _cl(limit)
+    company_id_filter = _cl(company_id_filter)
 
     POST_WON = ['won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed']
     _EXCL_WON_PS = ['loan_rejected', 'documents_issue', 'not_interested', 'cancelled', 'different_vendor']
@@ -7514,16 +7515,10 @@ def exec_trend_leads(
     if _eh_role_code in {'vgk4u', 'vgk4u_supreme', 'key_leadership', 'leadership_role', 'team_leader', 'manager'}:
         _is_admin = True
 
-    # Parse company filters
-    _all_cos = db.query(AssociatedCompany).filter(AssociatedCompany.is_active == True).all()
-    if company_id_filter and _is_admin:
-        _co_ids = [company_id_filter]
-    elif _is_admin:
-        _co_ids = [c.id for c in _all_cos]
-    else:
-        _co_ids = [current_employee.base_company_id] if current_employee.base_company_id else [c.id for c in _all_cos]
-
-    base = db.query(CRMLead).filter(CRMLead.company_id.in_(_co_ids))
+    # Parse company filters (matches get_executive_dashboard logic)
+    base = db.query(CRMLead)
+    if company_id_filter:
+        base = base.filter(CRMLead.company_id == company_id_filter)
 
     base = _apply_exec_dashboard_common_filters(
         base, db, current_employee, _is_admin,
