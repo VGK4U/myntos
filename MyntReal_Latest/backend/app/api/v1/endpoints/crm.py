@@ -7004,10 +7004,16 @@ def _apply_exec_dashboard_common_filters(
     combined_bank_filter = _cl(combined_bank_filter)
     company_id_filter = _cl(company_id_filter)
 
-    # Team-scoped visibility (mirrors lead_analytics)
+    # Team-scoped visibility (mirrors lead_analytics & master_leads)
     _role_code = (current_employee.role.role_code if current_employee.role else '') or ''
     _FULL_ACCESS = {'vgk4u', 'vgk4u_supreme', 'key_leadership', 'leadership_role', 'team_leader', 'manager'}
-    if not is_admin and _role_code not in _FULL_ACCESS:
+    
+    _team_tag_lower = (current_employee.team_tag or '').lower()
+    _is_team_a_sales = (_team_tag_lower in ('team_a', 'team a') or 
+                       (current_employee.department and 'sales' in (current_employee.department.name or '').lower()) or
+                       current_employee.emp_code in ('MN10009', 'MN10003', 'MN10008', 'MN10010', 'MR10018', 'MR10001'))
+
+    if not is_admin and _role_code not in _FULL_ACCESS and not _is_team_a_sales:
         _sub_ids = [
             row.id for row in db.query(StaffEmployee.id).filter(
                 StaffEmployee.reporting_manager_id == current_employee.id,
