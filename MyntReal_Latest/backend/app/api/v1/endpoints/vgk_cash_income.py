@@ -201,7 +201,8 @@ def confirm_or_reject_entry(
         raise HTTPException(status_code=400, detail="action must be 'confirm' or 'reject'")
 
     if not result.get('success'):
-        raise HTTPException(status_code=400, detail=result.get('error', 'Operation failed'))
+        status_code = result.get('status_code', 400)
+        raise HTTPException(status_code=status_code, detail=result.get('error', 'Operation failed'))
 
     try:
         db.commit()
@@ -283,7 +284,8 @@ def release_entry(
 
     result = release_cash_income(db, entry_id, company_id, current_employee.id, notes)
     if not result.get('success'):
-        raise HTTPException(status_code=400, detail=result.get('error', 'Release failed'))
+        status_code = result.get('status_code', 400)
+        raise HTTPException(status_code=status_code, detail=result.get('error', 'Release failed'))
 
     try:
         db.commit()

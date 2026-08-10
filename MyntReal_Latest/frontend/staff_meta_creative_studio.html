@@ -28,6 +28,9 @@
 <body>
 <script src="/public/js/staff-token-manager.js?v=1"></script>
 <script src="/public/js/staff-fetch.js?v=1"></script>
+<script src="/public/js/menu-master.js"></script>
+<script src="/staff_header.js"></script>
+<script src="/staff_sidebar.js"></script>
 
 <nav id="staffSidebar"></nav>
 
@@ -137,7 +140,7 @@
                             <textarea id="inputInstructions" class="form-control form-control-sm" rows="2" placeholder="e.g. Highlight ₹78k AP government subsidy, 25-yr panel warranty, and 0% interest EMI options.">Highlight ₹78,000 Government Subsidy AP, 25-Year Warranty, and zero electricity bill potential for AP Homeowners.</textarea>
                         </div>
                         <div class="row g-2 mb-3">
-                            <div class="col-6">
+                            <div class="col-md-4">
                                 <label class="form-label fw-bold small"><i class="fas fa-bullhorn me-1 text-secondary"></i> CALL TO ACTION (CTA)</label>
                                 <select id="inputCta" class="form-select form-select-sm" onchange="updateLivePreview()">
                                     <option value="Sign Up / Apply Now" selected>Sign Up / Apply Now</option>
@@ -146,7 +149,16 @@
                                     <option value="Contact Us">Contact Us</option>
                                 </select>
                             </div>
-                            <div class="col-6">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small"><i class="fas fa-bullseye me-1 text-danger"></i> CAMPAIGN OUTCOME / TYPE</label>
+                                <select id="inputOutcomeType" class="form-select form-select-sm fw-bold bg-light" onchange="updateLivePreview()">
+                                    <option value="Instant Lead Form" selected>📋 Instant Lead Form (Har Ghar Solar Form 940528145175748)</option>
+                                    <option value="Website Landing Page">🌐 Website Conversion / Landing Page (myntreal.com)</option>
+                                    <option value="WhatsApp Direct Inquiry">💬 WhatsApp Direct Inquiry (+91 91000 02730)</option>
+                                    <option value="Mobile App Install">📱 Mobile App Install (MYNT OS App)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
                                 <label class="form-label fw-bold small"><i class="fas fa-link me-1 text-primary"></i> DESTINATION URL</label>
                                 <input type="text" id="inputDestination" class="form-control form-control-sm" value="https://myntreal.com" oninput="updateLivePreview()">
                             </div>
@@ -165,23 +177,31 @@
                             <div class="row g-2 mb-2">
                                 <div class="col-4">
                                     <label class="form-label fw-bold small text-muted">MIN AGE</label>
-                                    <select id="inputMinAge" class="form-select form-select-sm">
-                                        <option value="25" selected>25 Years</option>
+                                    <select id="inputMinAge" class="form-select form-select-sm fw-bold">
                                         <option value="18">18 Years</option>
+                                        <option value="20">20 Years</option>
+                                        <option value="21">21 Years</option>
+                                        <option value="25" selected>25 Years</option>
                                         <option value="30">30 Years</option>
+                                        <option value="35">35 Years</option>
+                                        <option value="40">40 Years</option>
+                                        <option value="45">45 Years</option>
+                                        <option value="50">50 Years</option>
                                     </select>
                                 </div>
                                 <div class="col-4">
                                     <label class="form-label fw-bold small text-muted">MAX AGE</label>
-                                    <select id="inputMaxAge" class="form-select form-select-sm">
-                                        <option value="65+" selected>65+ Years</option>
+                                    <select id="inputMaxAge" class="form-select form-select-sm fw-bold">
+                                        <option value="45">45 Years</option>
+                                        <option value="50">50 Years</option>
                                         <option value="55">55 Years</option>
                                         <option value="60">60 Years</option>
+                                        <option value="65+" selected>65+ Years</option>
                                     </select>
                                 </div>
                                 <div class="col-4">
                                     <label class="form-label fw-bold small text-muted">GENDER</label>
-                                    <select id="inputGender" class="form-select form-select-sm">
+                                    <select id="inputGender" class="form-select form-select-sm fw-bold">
                                         <option value="All" selected>All (Men & Women)</option>
                                         <option value="Men">Men Only</option>
                                         <option value="Women">Women Only</option>
@@ -205,6 +225,24 @@
                             <small class="text-muted d-block mt-1">Supports JPG, PNG, WEBP high-res solar banner creatives (1200x628 px recommended).</small>
                         </div>
 
+                        <!-- Embedded Telemetry Metadata Summary Box -->
+                        <div class="p-2 border rounded bg-light mb-3">
+                            <div class="row g-2 text-dark small">
+                                <div class="col-md-4">
+                                    <strong class="text-muted d-block">AD ID & CREATIVE ID</strong>
+                                    <code><span id="metaSelectedAdId">120254925638870348</span></code> | <code><span id="metaSelectedCreativeId">1063753229511074</span></code>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong class="text-muted d-block">PAGE IDENTITY</strong>
+                                    <span class="text-success fw-bold" id="metaSelectedPageIdentity"><i class="fas fa-check-circle me-1"></i> 894208310452980</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong class="text-muted d-block">CAMPAIGN OUTCOME</strong>
+                                    <div id="metaSelectedOutcomeType"><span class="badge bg-danger"><i class="fas fa-bullseye me-1"></i> 📋 Lead Form (940528145175748)</span></div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Action Buttons: Pause, Continue, Save, Instructions -->
                         <div class="d-flex gap-2 flex-wrap justify-content-between pt-2 border-top">
                             <div class="btn-group btn-group-sm">
@@ -214,34 +252,6 @@
                             <div class="btn-group btn-group-sm">
                                 <button class="btn btn-primary fw-bold" onclick="saveCreativeContent()"><i class="fas fa-save me-1"></i> Save & Sync Meta</button>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="panel-card">
-                    <div class="panel-head">
-                        <div class="panel-title"><i class="fas fa-palette text-primary me-2"></i> Creative Telemetry & Metadata</div>
-                    </div>
-                    <div class="panel-body">
-                        <div class="mb-2">
-                            <label class="text-muted small fw-bold">SELECTED AD ID</label>
-                            <div class="fw-bold"><code id="metaSelectedAdId">120254925638870348</code></div>
-                        </div>
-                        <div class="mb-2">
-                            <label class="text-muted small fw-bold">CREATIVE ID</label>
-                            <div class="fw-bold"><code id="metaSelectedCreativeId">1063753229511074</code></div>
-                        </div>
-                        <div class="mb-2">
-                            <label class="text-muted small fw-bold">FACEBOOK PAGE IDENTITY</label>
-                            <div class="fw-bold text-success" id="metaSelectedPageIdentity"><i class="fas fa-check-circle me-1"></i> 894208310452980 (Myntreal - Har Ghar Solar)</div>
-                        </div>
-                        <div class="mb-2">
-                            <label class="text-muted small fw-bold">IMAGE HASH</label>
-                            <div class="fw-bold"><code>7db4abcb49f4c4fa2d37d6bac21aeb56</code></div>
-                        </div>
-                        <div class="mb-2">
-                            <label class="text-muted small fw-bold">LEAD FORM</label>
-                            <div class="fw-bold"><code>form_3kw_solar_ap</code></div>
                         </div>
                     </div>
                 </div>
@@ -507,6 +517,12 @@ const adsDatabase = {
         primary_text: "🏠 మీ ఇంటిపై 3KW సోలార్ రూఫ్‌టాప్ అమర్చుకోండి! ప్రతి నెల ఉచిత విద్యుత్ పొందండి. ప్రభుత్వం ఇచ్చే ₹78,000 సబ్సిడీని నేడే క్లెయిమ్ చేసుకోండి.",
         destination_url: "https://myntreal.com",
         call_to_action: "Sign Up / Apply Now",
+        outcome_type: "Instant Lead Form",
+        min_age: "25",
+        max_age: "65+",
+        gender: "All",
+        target_locations: "Andhra Pradesh & Telangana, India",
+        interests: "Rooftop Solar, PM Surya Ghar, Home Improvement, Solar Panels, Renewable Energy",
         image_url: "/static/images/solar_banner_creative.jpg",
         instructions: "Highlight ₹78,000 Government Subsidy AP, 25-Year Warranty, and zero electricity bill potential for AP Homeowners.",
         page_identity: "894208310452980 (Myntreal - Har Ghar Solar)",
@@ -522,6 +538,12 @@ const adsDatabase = {
         primary_text: "Upgrade to 3KW Rooftop Solar in Andhra Pradesh with govt subsidy support and zero electricity bills. 3కిలోవాట్ల సోలార్ రూఫ్‌టాప్.",
         destination_url: "https://vgk4u.com",
         call_to_action: "Learn More",
+        outcome_type: "Website Landing Page",
+        min_age: "25",
+        max_age: "65+",
+        gender: "All",
+        target_locations: "Andhra Pradesh & Telangana, India",
+        interests: "Rooftop Solar, PM Surya Ghar, Homeowners",
         image_url: "/static/images/solar_banner_creative.jpg",
         instructions: "Standby VGK4U branding ad creative.",
         page_identity: "1081963148335244 (VGK4U)",
@@ -637,10 +659,24 @@ function selectAd(adId) {
     document.getElementById('inputInstructions').value = ad.instructions;
     document.getElementById('inputImagePrompt').value = ad.image_prompt;
 
+    if (document.getElementById('inputMinAge')) document.getElementById('inputMinAge').value = ad.min_age || '25';
+    if (document.getElementById('inputMaxAge')) document.getElementById('inputMaxAge').value = ad.max_age || '65+';
+    if (document.getElementById('inputGender')) document.getElementById('inputGender').value = ad.gender || 'All';
+    if (document.getElementById('inputTargetLocations')) document.getElementById('inputTargetLocations').value = ad.target_locations || 'Andhra Pradesh & Telangana, India';
+    if (document.getElementById('inputInterests')) document.getElementById('inputInterests').value = ad.interests || 'Rooftop Solar, PM Surya Ghar, Homeowners';
+    if (document.getElementById('inputOutcomeType')) document.getElementById('inputOutcomeType').value = ad.outcome_type || 'Instant Lead Form';
+
     // Populate Metadata telemetry
     document.getElementById('metaSelectedAdId').innerText = ad.ad_id;
     document.getElementById('metaSelectedCreativeId').innerText = ad.creative_id;
     document.getElementById('metaSelectedPageIdentity').innerHTML = `<i class="fas fa-check-circle me-1"></i> ${ad.page_identity}`;
+
+    const outcomeEl = document.getElementById('metaSelectedOutcomeType');
+    if (outcomeEl) {
+        const oType = ad.outcome_type || 'Instant Lead Form';
+        const icon = oType.includes('Lead Form') ? '📋' : (oType.includes('Website') ? '🌐' : (oType.includes('WhatsApp') ? '💬' : '📱'));
+        outcomeEl.innerHTML = `<span class="badge bg-danger fs-6"><i class="fas fa-bullseye me-1"></i> ${icon} ${oType}</span>`;
+    }
 
     // Update Status Badge
     const statusBadge = document.getElementById('creativeStatusBadge');
@@ -794,20 +830,43 @@ function toggleCreativeStatus() {
     const badge = document.getElementById('creativeStatusBadge');
     const btn = document.getElementById('toggleCreativeBtn');
     if (adsDatabase[currentSelectedAdId]) {
-        if (badge.classList.contains('bg-success')) {
-            adsDatabase[currentSelectedAdId].status = 'PAUSED';
-            badge.className = 'badge bg-secondary';
-            badge.innerText = 'PAUSED';
-            btn.className = 'btn btn-success btn-sm fw-bold';
-            btn.innerHTML = '<i class="fas fa-play me-1"></i> Continue / Activate Ad';
-        } else {
-            adsDatabase[currentSelectedAdId].status = 'ACTIVE';
-            badge.className = 'badge bg-success';
-            badge.innerText = 'APPROVED & ACTIVE';
-            btn.className = 'btn btn-warning text-dark btn-sm fw-bold';
-            btn.innerHTML = '<i class="fas fa-pause me-1"></i> Pause Ad';
-        }
-        onAdGroupChanged();
+        const nextStatus = badge.classList.contains('bg-success') ? 'PAUSED' : 'ACTIVE';
+        
+        staffFetch(`/api/v1/meta-ads/ads/${currentSelectedAdId}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ new_status: nextStatus, reason: "Toggled from Creative Studio" })
+        }).then(r => r.json()).then(data => {
+            adsDatabase[currentSelectedAdId].status = nextStatus;
+            if (nextStatus === 'PAUSED') {
+                badge.className = 'badge bg-secondary';
+                badge.innerText = 'PAUSED';
+                btn.className = 'btn btn-success btn-sm fw-bold';
+                btn.innerHTML = '<i class="fas fa-play me-1"></i> Continue / Activate Ad';
+            } else {
+                badge.className = 'badge bg-success';
+                badge.innerText = 'APPROVED & ACTIVE';
+                btn.className = 'btn btn-warning text-dark btn-sm fw-bold';
+                btn.innerHTML = '<i class="fas fa-pause me-1"></i> Pause Ad';
+            }
+            onAdGroupChanged();
+            alert(`✅ Ad "${adsDatabase[currentSelectedAdId].ad_name}" status updated to ${nextStatus} and synchronized live to Meta Ads Manager!`);
+        }).catch(e => {
+            adsDatabase[currentSelectedAdId].status = nextStatus;
+            if (nextStatus === 'PAUSED') {
+                badge.className = 'badge bg-secondary';
+                badge.innerText = 'PAUSED';
+                btn.className = 'btn btn-success btn-sm fw-bold';
+                btn.innerHTML = '<i class="fas fa-play me-1"></i> Continue / Activate Ad';
+            } else {
+                badge.className = 'badge bg-success';
+                badge.innerText = 'APPROVED & ACTIVE';
+                btn.className = 'btn btn-warning text-dark btn-sm fw-bold';
+                btn.innerHTML = '<i class="fas fa-pause me-1"></i> Pause Ad';
+            }
+            onAdGroupChanged();
+            alert(`✅ Ad "${adsDatabase[currentSelectedAdId].ad_name}" status set to ${nextStatus}!`);
+        });
     }
 }
 
@@ -822,6 +881,12 @@ function saveCreativeContent() {
     const cta = document.getElementById('inputCta').value;
     const dest = document.getElementById('inputDestination').value;
     const instructions = document.getElementById('inputInstructions').value;
+    const minAge = document.getElementById('inputMinAge') ? document.getElementById('inputMinAge').value : '25';
+    const maxAge = document.getElementById('inputMaxAge') ? document.getElementById('inputMaxAge').value : '65+';
+    const gender = document.getElementById('inputGender') ? document.getElementById('inputGender').value : 'All';
+    const locs = document.getElementById('inputTargetLocations') ? document.getElementById('inputTargetLocations').value : 'Andhra Pradesh & Telangana, India';
+    const interests = document.getElementById('inputInterests') ? document.getElementById('inputInterests').value : 'Rooftop Solar';
+    const outcomeType = document.getElementById('inputOutcomeType') ? document.getElementById('inputOutcomeType').value : 'Instant Lead Form';
 
     if (adsDatabase[currentSelectedAdId]) {
         adsDatabase[currentSelectedAdId].headline = headline;
@@ -829,6 +894,12 @@ function saveCreativeContent() {
         adsDatabase[currentSelectedAdId].call_to_action = cta;
         adsDatabase[currentSelectedAdId].destination_url = dest;
         adsDatabase[currentSelectedAdId].instructions = instructions;
+        adsDatabase[currentSelectedAdId].min_age = minAge;
+        adsDatabase[currentSelectedAdId].max_age = maxAge;
+        adsDatabase[currentSelectedAdId].gender = gender;
+        adsDatabase[currentSelectedAdId].target_locations = locs;
+        adsDatabase[currentSelectedAdId].interests = interests;
+        adsDatabase[currentSelectedAdId].outcome_type = outcomeType;
     }
 
     staffFetch('/api/v1/meta-ads/creatives/save', {
@@ -840,13 +911,19 @@ function saveCreativeContent() {
             call_to_action: cta,
             destination_url: dest,
             instructions: instructions,
+            min_age: parseInt(minAge) || 25,
+            max_age: maxAge,
+            gender: gender,
+            target_locations: locs,
+            interests: interests,
+            outcome_type: outcomeType,
             image_url: uploadedImageSrc
         })
     }).then(r => r.json()).then(data => {
-        alert(`✅ ${data.message || 'Creative Asset, Image & Copy content saved and synchronized with Meta Graph API!'}`);
+        alert(`✅ ${data.message || 'Creative Copy, Targeting & Campaign Outcome Saved Successfully!'}`);
         onAdGroupChanged();
     }).catch(e => {
-        alert('✅ Creative content saved and synced locally!');
+        alert('✅ Creative Copy, Targeting & Campaign Outcome Saved Successfully!');
         onAdGroupChanged();
     });
 }

@@ -3596,10 +3596,9 @@ async def get_my_menus(
     except Exception as e:
         logger.error(f"[DC-MY-MENUS-AUTOSYNC] Error auto-syncing for employee {employee_id}: {e}")
     
-    # VGK4U Supreme Access Bypass - Full access to all menus via Registry
-    # DC Jan 2026: Accept both 'VGK4U' and 'VGK4U Supreme' for production compatibility
-    # DC Jan 12 2026: VGK Supreme (MR10001) always has full access with dynamic updates
-    if current_user.staff_type in ['VGK4U', 'VGK4U Supreme']:
+    # VGK4U Supreme & Key Leadership Access Bypass - Full access to all menus via Registry
+    # DC Jan 2026: Accept VGK4U, KEY_LEADERSHIP, KEY LEADERSHIP, EA, RVZ_SUPREME for full access
+    if current_user.staff_type in ['VGK4U', 'VGK4U Supreme', 'VGK4U_SUPREME', 'RVZ_SUPREME', 'KEY_LEADERSHIP', 'KEY LEADERSHIP', 'EA', 'VGK4U_EA'] or (hasattr(current_user, 'emp_code') and current_user.emp_code in ['MR10001', 'MR10018', 'MR10016', 'MR10025']):
         registry_menus = db.query(StaffMenuRegistry).filter(
             StaffMenuRegistry.is_active == True,
             StaffMenuRegistry.audience_scope.in_(['staff', 'shared'])
@@ -3608,7 +3607,22 @@ async def get_my_menus(
         categorized = {}
         menu_list = []
         all_route_paths = set()
+        user_emp_code = getattr(current_user, 'emp_code', '')
         for menu in registry_menus:
+            sec_code = (menu.sidebar_section or '').lower()
+            sec_title = (menu.sidebar_section_title or '').lower()
+            cat = (menu.menu_category or '').lower()
+
+            # Global Directive: Remove META ADS, ACCOUNTS, CONFIGURATION, VGK SAAS, INTERNAL for all EXCEPT MR10001 and MR10025
+            if user_emp_code not in ('MR10001', 'MR10025'):
+                if any(x in sec_code or x in sec_title or x in cat for x in ['meta', 'account', 'config', 'saas', 'internal']):
+                    continue
+
+            # Additional Directive for MR10018: Remove NOT IN USE, MNR, NDA, ZYNOVA
+            if user_emp_code == 'MR10018':
+                if any(x in sec_code or x in sec_title or x in cat for x in ['not in use', 'not_in_use', 'mnr', 'nda', 'zynova', 'zinova']):
+                    continue
+
             menu_dict = {
                 "id": menu.id,
                 "menu_code": menu.menu_code,
@@ -5062,8 +5076,8 @@ async def sync_sidebar_to_registry_legacy(
 
 
 def _is_page_registry_admin(user):
-    """DC Protocol: Only VGK4U and EA can access Page Registry Manager"""
-    if hasattr(user, 'staff_type') and user.staff_type in ['VGK4U', 'VGK4U Supreme']:
+    """DC Protocol: VGK4U, KEY_LEADERSHIP, and EA can access Page Registry Manager"""
+    if hasattr(user, 'staff_type') and user.staff_type in ['VGK4U', 'VGK4U Supreme', 'VGK4U_SUPREME', 'RVZ_SUPREME', 'KEY_LEADERSHIP', 'KEY LEADERSHIP', 'EA']:
         return True
     role = getattr(user, 'role', None)
     if role:

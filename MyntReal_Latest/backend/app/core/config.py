@@ -6,7 +6,7 @@ Preserves settings compatibility with Flask app
 import os
 from dotenv import load_dotenv
 load_dotenv()
-from typing import List, Optional
+from typing import List, Optional, Any
 from pydantic_settings import BaseSettings
 from pydantic import validator
 
@@ -124,11 +124,26 @@ class Settings(BaseSettings):
     
     @validator("ALLOWED_HOSTS", pre=True)
     def assemble_cors_origins(cls, v: List[str]) -> List[str]:
-        """Configure CORS origins based on environment"""
-        # DC Protocol: Use "*" to allow all hosts - Replit's proxy handles host validation
-        # Note: Starlette TrustedHostMiddleware doesn't support *.domain.com wildcards
-        # Using "*" is safe because Replit's infrastructure validates incoming requests
-        return ["*"]
+        """Configure explicit allowed hosts for TrustedHostMiddleware"""
+        return [
+            "localhost",
+            "127.0.0.1",
+            "0.0.0.0",
+            "vgk4u.com",
+            "www.vgk4u.com",
+            "*.vgk4u.com",
+            "myntreal.com",
+            "www.myntreal.com",
+            "*.myntreal.com",
+            "mnrteam.com",
+            "www.mnrteam.com",
+            "*.mnrteam.com",
+            "*.elasticbeanstalk.com",
+            "newbev.replit.app",
+            "*.replit.app",
+            "*.repl.co",
+            "*.replit.dev"
+        ]
     
     class Config:
         case_sensitive = True
@@ -137,6 +152,35 @@ class Settings(BaseSettings):
 
 # Create settings instance
 settings = Settings()
+
+# Centralized Approved Public Domains List
+APPROVED_PUBLIC_DOMAINS = {
+    "myntreal.com",
+    "www.myntreal.com",
+    "mnrteam.com",
+    "www.mnrteam.com",
+    "vgk4u.com",
+    "www.vgk4u.com"
+}
+DEFAULT_PUBLIC_DOMAIN = "https://www.vgk4u.com"
+
+def get_safe_base_url(request: Optional[Any] = None) -> str:
+    """
+    Safely resolves the public base URL using an explicit approved-domain allowlist.
+    Prevents Host Header Poisoning by validating against APPROVED_PUBLIC_DOMAINS.
+    Defaults to DEFAULT_PUBLIC_DOMAIN (https://www.vgk4u.com) if request is missing or Host is untrusted.
+    """
+    if not request:
+        return DEFAULT_PUBLIC_DOMAIN
+    try:
+        raw_host = request.headers.get("host", "").split(":")[0].strip().lower()
+        if raw_host in APPROVED_PUBLIC_DOMAINS:
+            scheme = request.headers.get("x-forwarded-proto", getattr(getattr(request, "url", None), "scheme", "https")).split(",")[0].strip()
+            return f"{scheme}://{raw_host}"
+    except Exception:
+        pass
+    return DEFAULT_PUBLIC_DOMAIN
+
 
 # Constants for business logic (preserve exact Flask values)
 class BusinessConstants:

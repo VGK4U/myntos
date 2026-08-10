@@ -18,7 +18,7 @@ from decimal import Decimal
 
 from app.core.database import get_db
 from app.core.security import SecurityManager
-from app.core.config import settings
+from app.core.config import settings, get_safe_base_url
 from app.models.staff_accounts import OfficialPartner, VGKTeamIncomeEntry, PartnerOrder, VGKPINPurchaseRequest, VGKPointsLedger
 from app.models.crm import CRMLead
 from app.models.ticket import ServiceTicket
@@ -272,7 +272,8 @@ def vgk_me(current_member: OfficialPartner = Depends(get_current_vgk_member), db
 @router.get("/member/visiting-card")
 def vgk_visiting_card(
     current_member: OfficialPartner = Depends(get_current_vgk_member),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request: Request = None
 ):
     """DC Protocol Apr 2026: Return VGK member's visiting card data + eligibility status.
     Eligibility tiers:
@@ -322,7 +323,7 @@ def vgk_visiting_card(
     card_eligible = eligible_tier is not None
 
     # ── Build referral QR code as base64 ──────────────────────────────────────
-    host = "https://www.vgk4u.com"
+    host = get_safe_base_url(request)
     referral_url = f"{host}/vgk/login?tab=signup&ref={current_member.partner_code}"
     qr_b64 = ""
     try:
@@ -486,7 +487,7 @@ def vgk_staff_member_card(
         raise HTTPException(status_code=404, detail="Member not found.")
 
     # ── Build QR code ──────────────────────────────────────────────────────
-    host = "https://www.vgk4u.com"
+    host = get_safe_base_url(request)
     referral_url = f"{host}/vgk/login?tab=signup&ref={member.partner_code}"
     qr_b64 = ""
     try:
@@ -572,11 +573,12 @@ def vgk_is_card_admin(
 def vgk_member_own_card_preview(
     current_member: OfficialPartner = Depends(get_current_vgk_member),
     db: Session = Depends(get_db),
+    request: Request = None
 ):
     """Returns card data for the currently logged-in VGK member. No is_card_admin required."""
     import qrcode, io, base64 as _b64
     member = current_member
-    host = "https://www.vgk4u.com"
+    host = get_safe_base_url(request)
     referral_url = f"{host}/vgk/login?tab=signup&ref={member.partner_code}"
     qr_b64 = ""
     try:
@@ -644,6 +646,7 @@ def vgk_member_card_preview(
     member_id: int,
     current_member: OfficialPartner = Depends(get_current_vgk_member),
     db: Session = Depends(get_db),
+    request: Request = None
 ):
     """[DC-ID-CARD-MEMBER] VGK member auth version of the staff card preview.
     Gate: logged-in member's phone must match a MR10001 or EA staff employee.
@@ -663,7 +666,7 @@ def vgk_member_card_preview(
         raise HTTPException(status_code=404, detail="Member not found.")
 
     # ── QR code ────────────────────────────────────────────────────────────
-    host = "https://www.vgk4u.com"
+    host = get_safe_base_url(request)
     referral_url = f"{host}/vgk/login?tab=signup&ref={member.partner_code}"
     qr_b64 = ""
     try:
@@ -2591,7 +2594,7 @@ def vgk_submit_lead(
                     "partner_name": req.customer_name.strip(),
                     "phone": phone_clean,
                     "auto_password": auto_pwd,
-                    "login_url": "https://www.vgk4u.com/vgk/login",
+                    "login_url": f"{get_safe_base_url(request)}/vgk/login",
                 }
             else:
                 vgk_account_data = {"created": False, "reason": "code_generation_failed"}
@@ -4196,12 +4199,13 @@ def _compute_cp_designation(partner, db) -> dict:
 @router.get("/designation/progress")
 def vgk_designation_progress(
     current_member: OfficialPartner = Depends(get_current_vgk_member),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request: Request = None
 ):
     """DC_CP_CARD_001: Return CP designation tier, progress toward next tier, and visiting card data."""
     desig = _compute_cp_designation(current_member, db)
 
-    host = "https://www.vgk4u.com"
+    host = get_safe_base_url(request)
     referral_url = f"{host}/vgk/login?tab=signup&ref={current_member.partner_code}"
     # [DC-PERF-001] Use cached QR — generate only once per partner per process lifetime
     qr_b64 = _qr_b64_cache.get(current_member.partner_code, '')

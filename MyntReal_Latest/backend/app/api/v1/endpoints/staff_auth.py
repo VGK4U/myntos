@@ -69,30 +69,32 @@ def get_current_staff_user(request: Request, db: Session = Depends(get_db)) -> S
             headers={"WWW-Authenticate": "Bearer"}
         )
     
-    token = auth_header.split(" ")[1]
+    raw_token = auth_header.split(" ")[1] if " " in auth_header else auth_header
+    token = raw_token.strip().strip('"').strip("'")
     
     try:
         from jose import jwt, JWTError
         from jose.exceptions import ExpiredSignatureError
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         
-        user_type = payload.get("user_type")
-        if user_type != "staff":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token type for staff access",
-                headers={"WWW-Authenticate": "Bearer"}
-            )
+        employee_id = payload.get("sub") or payload.get("employee_id") or payload.get("user_id")
+        emp_code = payload.get("emp_code")
         
-        employee_id = payload.get("sub")
-        if not employee_id:
+        if not employee_id and not emp_code:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token payload",
                 headers={"WWW-Authenticate": "Bearer"}
             )
         
-        employee = db.query(StaffEmployee).filter_by(id=int(employee_id)).first()
+        employee = None
+        if employee_id and str(employee_id).isdigit():
+            employee = db.query(StaffEmployee).filter_by(id=int(employee_id)).first()
+        if not employee and emp_code:
+            employee = db.query(StaffEmployee).filter_by(emp_code=str(emp_code)).first()
+        if not employee and employee_id:
+            employee = db.query(StaffEmployee).filter_by(emp_code=str(employee_id)).first()
+            
         if not employee:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

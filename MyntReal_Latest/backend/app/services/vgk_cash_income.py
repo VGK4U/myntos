@@ -518,6 +518,16 @@ def confirm_cash_income(db: Session, entry_id: int, company_id: int, confirmed_b
     if not entry:
         return {'success': False, 'error': 'Entry not found or not in DRAFT status'}
 
+    # DC PROTOCOL REMEDIATION: Person-level separation of duties
+    # Creator cannot confirm their own transaction if created by staff
+    creator_id = getattr(entry, 'created_by_id', None)
+    if creator_id is not None and str(creator_id) == str(confirmed_by_id):
+        return {
+            'success': False,
+            'error': 'Self-confirmation is forbidden. The creator of a cash income entry cannot confirm it.',
+            'status_code': 403
+        }
+
     partner = db.query(OfficialPartner).filter(
         OfficialPartner.id == entry.partner_id
     ).with_for_update().first()
@@ -593,6 +603,25 @@ def release_cash_income(
 
     if not entry:
         return {'success': False, 'error': 'Entry not found or not in PENDING status'}
+
+    # DC PROTOCOL REMEDIATION: Person-level separation of duties
+    # 1. Creator cannot release their own transaction
+    creator_id = getattr(entry, 'created_by_id', None)
+    if creator_id is not None and str(creator_id) == str(released_by_id):
+        return {
+            'success': False,
+            'error': 'Self-release is forbidden. The creator of a cash income entry cannot release it.',
+            'status_code': 403
+        }
+
+    # 2. Confirmer cannot release the same transaction
+    confirmer_id = getattr(entry, 'confirmed_by_id', None)
+    if confirmer_id is not None and str(confirmer_id) == str(released_by_id):
+        return {
+            'success': False,
+            'error': 'Separation of duties violation: The staff member who confirmed this entry cannot release it.',
+            'status_code': 403
+        }
 
     # DC-SOLAR-RELEASE-GATE-001 (Jul 2026): Final COMMISSION entries for solar leads
     # must only be released once solar_pipeline_status = 'completed'.

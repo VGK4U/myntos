@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text, or_, and_, func
 
 from app.core.database import get_db
-from app.core.config import settings
+from app.core.config import settings, get_safe_base_url
 from app.core.security import SecurityManager
 from app.models.staff import StaffEmployee
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
@@ -300,7 +300,8 @@ def create_vendor(
 def get_vendor_detail(
     vendor_id: int,
     db: Session = Depends(get_db),
-    current_user: StaffEmployee = Depends(get_current_staff_user)
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    request: Request = None,
 ):
     from app.models.vgk_vendor import VGKVendor, VGKVendorKYC, VGKVendorAgreement, VGKVendorProductCategory
     cid = _staff_cid(current_user)
@@ -317,7 +318,7 @@ def get_vendor_detail(
         VGKVendorProductCategory.is_active == True
     ).order_by(VGKVendorProductCategory.display_order).all()
 
-    qr_url = f"https://www.vgk4u.com/v/{v.qr_token}"
+    qr_url = f"{get_safe_base_url(request)}/v/{v.qr_token}"
     qr_b64 = _generate_qr_base64(qr_url)
 
     return {
@@ -881,14 +882,15 @@ def reject_vendor_transaction(
 def get_vendor_qr(
     vendor_id: int,
     db: Session = Depends(get_db),
-    current_user: StaffEmployee = Depends(get_current_staff_user)
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    request: Request = None,
 ):
     from app.models.vgk_vendor import VGKVendor
     cid = _staff_cid(current_user)
     v = db.query(VGKVendor).filter(VGKVendor.id == vendor_id, VGKVendor.company_id == cid).first()
     if not v:
         raise HTTPException(status_code=404, detail="Vendor not found")
-    qr_url = f"https://www.vgk4u.com/v/{v.qr_token}"
+    qr_url = f"{get_safe_base_url(request)}/v/{v.qr_token}"
     return {"vendor_code": v.vendor_code, "vendor_name": v.vendor_name,
             "qr_url": qr_url, "qr_b64": _generate_qr_base64(qr_url)}
 
@@ -1261,7 +1263,7 @@ def vendor_me(
 ):
     token = _extract_vendor_token(request)
     vl, vendor = _get_vendor_auth(token, db)
-    qr_url = f"https://www.vgk4u.com/v/{vendor.qr_token}"
+    qr_url = f"{get_safe_base_url(request)}/v/{vendor.qr_token}"
     return {
         "id": vendor.id, "vendor_code": vendor.vendor_code,
         "vendor_name": vendor.vendor_name, "category_name": vendor.category_name,

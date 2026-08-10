@@ -63,6 +63,7 @@ let _menuMasterReady = (function loadMenuMaster() {
         }
         var script = document.createElement("script");
         script.src = "/public/js/menu-master.js?v=" + Date.now();
+        (document.head || document.documentElement).appendChild(script);
         script.onload = function() {
             if (typeof MENU_MASTER !== "undefined") {
                 MENU_MASTER_DATA = MENU_MASTER;
@@ -88,7 +89,7 @@ const StaffSidebar = {
     allowedMenuPaths: null,  // Set of allowed route_path values
     allowedMenuCodes: null,  // DC Protocol (Jan 22, 2026): Set of allowed menu_code values
     rawMenus: null,          // Raw menu items returned from API
-    SUPREME_STAFF_TYPES: ["VGK4U_SUPREME", "RVZ_SUPREME", "VGK4U", "VGK4U Supreme", "VGK4U_EA"],
+    SUPREME_STAFF_TYPES: ["VGK4U_SUPREME", "RVZ_SUPREME", "VGK4U", "VGK4U Supreme", "VGK4U_EA", "KEY_LEADERSHIP", "KEY LEADERSHIP", "EA"],
     zeroAccessMessage: null, // Message to show when no access granted
     // DC Protocol (Jan 12, 2026): REMOVED ALL HARDCODED MENU CONFIG
     // Sidebar is now 100% API-driven from /staff/menu-settings/registry
@@ -386,11 +387,13 @@ const StaffSidebar = {
             // All other staff types (EA, RVZ, MYNT_REAL, etc.) follow Access Matrix control
             const staffType = this.userData?.staff_type || '';
             
-            // DC Protocol (Jan 2, 2026): Explicit allowlist for VGK4U variants (prevents RBAC escalation)
-            const vgk4uVariants = ['VGK4U', 'VGK4U Supreme'];
-            if (staffType && vgk4uVariants.includes(staffType)) {
-                console.log('[DC-SIDEBAR] Supreme bypass: Full menu access for', staffType);
-                this.allowedMenuPaths = '*';  // VGK4U variants are supreme, always full access
+            // DC Protocol: Supreme & Key Leadership variants have default full access
+            const supremeVariants = ["VGK4U_SUPREME", "RVZ_SUPREME", "VGK4U", "VGK4U Supreme", "VGK4U_EA", "KEY_LEADERSHIP", "KEY LEADERSHIP", "EA"];
+            const empCode = this.userData?.emp_code || '';
+            const roleCode = (this.userData?.role?.role_code || '').toLowerCase();
+            if ((staffType && supremeVariants.includes(staffType)) || ['MR10018', 'MR10001', 'MR10016', 'MR10025'].includes(empCode) || ['key_leadership', 'vgk4u', 'ea'].includes(roleCode)) {
+                console.log('[DC-SIDEBAR] Supreme & Key Leadership bypass: Full menu access for', staffType, empCode);
+                this.allowedMenuPaths = '*';  // Supreme & Key Leadership always get full access
                 return;
             }
             
@@ -688,10 +691,14 @@ const StaffSidebar = {
             return { sections: [], zeroAccess: false };
         }
         
-        // Check if user is Supreme (bypass all access control)
-        const supremeTypes = this.SUPREME_STAFF_TYPES || ['VGK4U_SUPREME', 'RVZ_SUPREME', 'VGK4U', 'VGK4U Supreme', 'VGK4U_EA'];
+        // Check if user is Supreme / Key Leadership (bypass all access control)
+        const supremeTypes = this.SUPREME_STAFF_TYPES || ['VGK4U_SUPREME', 'RVZ_SUPREME', 'VGK4U', 'VGK4U Supreme', 'VGK4U_EA', 'KEY_LEADERSHIP', 'KEY LEADERSHIP', 'EA'];
+        const empCode = (this.userData?.emp_code || '').toUpperCase();
+        const roleCode = (this.userData?.role?.role_code || '').toLowerCase();
         const isSupreme = this.allowedMenuPaths === '*' || 
-                         (staffType && supremeTypes.some(s => staffType.toUpperCase().includes(s.toUpperCase())));
+                         ['MR10018', 'MR10001', 'MR10016', 'MR10025'].includes(empCode) ||
+                         ['key_leadership', 'vgk4u', 'ea'].includes(roleCode) ||
+                         (staffType && supremeTypes.some(s => staffType.toUpperCase().includes(s.toUpperCase().replace('_', ' ')) || staffType.toUpperCase().includes(s.toUpperCase())));
         
         if (isSupreme) {
             // VGK4U_SUPREME / RVZ_SUPREME: Render ALL sections & items from MENU_MASTER
@@ -746,6 +753,28 @@ const StaffSidebar = {
         }
         
         for (const section of menuMaster) {
+            const sCode = (section.section_code || '').toUpperCase();
+            const sTitle = (section.section_label || section.title || section.id || '').toUpperCase();
+            const empCode = (this.userData?.emp_code || '').toUpperCase();
+            
+            // Global Directive: Remove META ADS, ACCOUNTS, CONFIGURATION, VGK SAAS, INTERNAL for all staff EXCEPT MR10001 and MR10025
+            if (empCode !== 'MR10001' && empCode !== 'MR10025') {
+                const globalRestrictedKeywords = ['META', 'ACCOUNT', 'CONFIG', 'SAAS', 'INTERNAL'];
+                if (globalRestrictedKeywords.some(k => sCode.includes(k) || sTitle.includes(k))) {
+                    console.log('[DC-SIDEBAR-RESTRICT] Hiding section for staff', empCode, ':', sTitle);
+                    continue;
+                }
+            }
+
+            // Additional Directive for MR10018: Remove NOT IN USE, MNR, NDA, ZYNOVA
+            if (empCode === 'MR10018') {
+                const mr10018RestrictedKeywords = ['NOT IN USE', 'NOT_IN_USE', 'MNR', 'NDA', 'ZYNOVA', 'ZINOVA'];
+                if (mr10018RestrictedKeywords.some(k => sCode.includes(k) || sTitle.includes(k))) {
+                    console.log('[DC-SIDEBAR-MR10018] Hiding section for MR10018:', sTitle);
+                    continue;
+                }
+            }
+
             const sectionItems = [];
             const sectionSubSections = [];
             const isStaffDashboardSection = (section.section_code === 'STAFF_DASHBOARD' || section.section_label === 'STAFF DASHBOARD');
@@ -1477,26 +1506,28 @@ const StaffSidebar = {
     },
 
     // Restore section states from localStorage
-    // DC Protocol: Default is COLLAPSED, only expand sections that were saved as open
+    // Key Leadership Protocol: Auto-expand major sections (CRM, Journey, Attendance, Myntreal, Service Tickets) by default
     restoreSectionStates: function() {
         try {
             const savedStates = localStorage.getItem(this.getStorageKey());
-            if (!savedStates) return; // No saved state = keep default collapsed
-            
-            const states = JSON.parse(savedStates);
-            
+            const isKeyLeadership = this.userData && (
+                this.SUPREME_STAFF_TYPES.includes(this.userData.staff_type) || 
+                ['MR10018', 'MR10001', 'MR10016', 'MR10025'].includes(this.userData.emp_code) ||
+                (this.userData.role && ['key_leadership', 'vgk4u', 'ea'].includes((this.userData.role.role_code || '').toLowerCase()))
+            );
+
+            const states = savedStates ? JSON.parse(savedStates) : {};
+
             // Restore main group states
             const groups = document.querySelectorAll('.sidebar-group');
             groups.forEach(group => {
                 const sectionId = group.dataset.sectionId;
-                if (sectionId && states.hasOwnProperty(sectionId)) {
-                    const isExpanded = states[sectionId];
-                    const toggle = group.querySelector('.sidebar-group-toggle');
-                    
-                    if (isExpanded) {
-                        group.classList.remove('collapsed');
-                        toggle?.setAttribute('aria-expanded', 'true');
-                    }
+                let isExpanded = states.hasOwnProperty(sectionId) ? states[sectionId] : isKeyLeadership;
+                const toggle = group.querySelector('.sidebar-group-toggle');
+                
+                if (isExpanded) {
+                    group.classList.remove('collapsed');
+                    toggle?.setAttribute('aria-expanded', 'true');
                 }
             });
             
@@ -1504,14 +1535,12 @@ const StaffSidebar = {
             const subGroups = document.querySelectorAll('.sidebar-sub-group');
             subGroups.forEach(subGroup => {
                 const sectionId = subGroup.dataset.sectionId;
-                if (sectionId && states.hasOwnProperty(sectionId)) {
-                    const isExpanded = states[sectionId];
-                    const toggle = subGroup.querySelector('.sidebar-sub-group-toggle');
-                    
-                    if (isExpanded) {
-                        subGroup.classList.remove('collapsed');
-                        toggle?.setAttribute('aria-expanded', 'true');
-                    }
+                let isExpanded = states.hasOwnProperty(sectionId) ? states[sectionId] : isKeyLeadership;
+                const toggle = subGroup.querySelector('.sidebar-sub-group-toggle');
+                
+                if (isExpanded) {
+                    subGroup.classList.remove('collapsed');
+                    toggle?.setAttribute('aria-expanded', 'true');
                 }
             });
         } catch (e) {

@@ -17,6 +17,7 @@ from decimal import Decimal
 logger = logging.getLogger(__name__)
 
 from app.core.database import get_db
+from app.core.config import get_safe_base_url
 from app.models.staff_accounts import OfficialPartner, VGKTeamCommissionConfig, VGKTeamIncomeEntry, VGKPINPurchaseRequest, VGKPointsLedger, VGKUplineChangeLog
 from app.models.signup_category import SignupCategory
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
@@ -3433,17 +3434,18 @@ class VGKCredWASendPayload(BaseModel):
     context: Optional[dict] = None
 
 
-def _vgk_wa_build_message(name: str, code: str, points: float, password: Optional[str] = None) -> str:
-    ref     = f"https://www.vgk4u.com/vgk/login?tab=signup&ref={code}"
+def _vgk_wa_build_message(name: str, code: str, points: float, password: Optional[str] = None, request: Optional[Request] = None) -> str:
+    host    = get_safe_base_url(request)
+    ref     = f"{host}/vgk/login?tab=signup&ref={code}"
     yt      = "https://www.youtube.com/@VGK4YOU"
-    fp      = "https://www.vgk4u.com/vgk/forgot-password"
+    fp      = f"{host}/vgk/forgot-password"
     bal     = f"{int(points):,}" if points == int(points) else f"{points:,.1f}"
     pwd_str = (password or "").strip() or code   # DC-VGK-WA-PWD-001: use actual password, not default code
     return (
         f"🎉 *Congratulations {name}! Welcome to VGK4U!* 🎉\n\n"
         f"Your VGK4U Partner account is *active and ready* to earn! 🚀\n\n"
         f"🔐 *Login Credentials:*\n"
-        f"🌐 Portal: https://www.vgk4u.com/vgk/login\n"
+        f"🌐 Portal: {host}/vgk/login\n"
         f"👤 Username: {code}\n"
         f"🔒 Password: {pwd_str}\n"
         f"📌 Your VGK4U ID: {code}\n\n"
@@ -3502,6 +3504,7 @@ def send_vgk_member_credentials_wa(
     payload: Optional[VGKCredWASendPayload] = None,
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db),
+    request: Request = None,
 ):
     """DC-VGK-WA-SEND-001: Send credentials message to a VGK member.
     Optional body: template_id, custom_message, context (variable values for template).
@@ -3526,19 +3529,20 @@ def send_vgk_member_credentials_wa(
     _name   = member.partner_name or "Partner"
     _code   = member.partner_code or ""
     _points = float(member.vgk_points_balance or 0)
+    base_host = get_safe_base_url(request)
 
     # Use custom message if provided, otherwise build credentials message
     if payload and payload.custom_message:
         msg = payload.custom_message
     else:
-        msg = _vgk_wa_build_message(name=_name, code=_code, points=_points)
+        msg = _vgk_wa_build_message(name=_name, code=_code, points=_points, request=request)
 
     # Build context — always include member vars so template variables resolve
     wa_context = {
         "name":      _name,
         "code":      _code,
         "points":    str(int(_points)),
-        "login_url": "https://www.vgk4u.com/vgk/login",
+        "login_url": f"{base_host}/vgk/login",
     }
     if payload and payload.context:
         wa_context.update(payload.context)
@@ -3589,12 +3593,14 @@ def bulk_send_vgk_credentials_wa(
     payload: BulkWASendRequest,
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db),
+    request: Request = None,
 ):
     """DC-VGK-WA-SEND-001: Bulk-send motivational credentials to filtered VGK members via Meta WA API."""
     from app.services.whatsapp_auto_service import send_direct_whatsapp
     from datetime import timedelta
 
     company_id = _get_staff_company_id(current_user)
+    base_host = get_safe_base_url(request)
     base_q = db.query(OfficialPartner).filter(
         OfficialPartner.company_id == company_id,
         OfficialPartner.is_active == True,
