@@ -1417,7 +1417,7 @@ function renderTrendTable(containerId, rows){
   const trPipeVal = rows.reduce((s,r)=>s+(r.pipeline_value||0), 0);
   const trAtBank = rows.reduce((s,r)=>s+(r.at_bank||0), 0);
   const trEbChange = rows.reduce((s,r)=>s+(r.eb_change||0), 0);
-  const trInst = rows.reduce((s,r)=>s+(r.installed||0), 0);
+  const trNetMeterPend = rows.reduce((s,r)=>s+(r.net_meter_pending||0), 0);
   const trComp = rows.reduce((s,r)=>s+(r.completed||0), 0);
   const trCompVal = rows.reduce((s,r)=>s+(r.comp_value||0), 0);
   const trInProg = rows.reduce((s,r)=>s+(r.in_progress||0), 0);
@@ -1463,7 +1463,7 @@ function renderTrendTable(containerId, rows){
     
     <!-- COMPLETED TOTALS -->
     <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('inst_pending', 'Installation Pending', trInstPend)}</td>
-    <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('installed', 'Installed (By Inst. Date)', trInst)}</td>
+    <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('net_meter_pending', 'Net Meter Pending', trNetMeterPend)}</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('bal_pending', 'Balance Pending', trBalPend)}</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('subsidy_pending', 'Subsidy Pending', trSubPend)}</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('completed', 'Completed', trComp)}</td>
@@ -1506,7 +1506,7 @@ function renderTrendTable(containerId, rows){
 
           <!-- COMPLETED columns -->
           <th style="color:#ea580c;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">INST.<br>PENDING</th>
-          <th style="color:#6366f1;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">INSTALLED<br>(BY INST. DATE)</th>
+          <th style="color:#6366f1;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">NET METER<br>PENDING</th>
           <th style="color:#ea580c;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">BAL.<br>PENDING</th>
           <th style="color:#8b5cf6;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">SUBSIDY<br>PENDING</th>
           <th style="color:#4f46e5;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">COMPLETED</th>
@@ -1529,7 +1529,7 @@ function renderTrendTable(containerId, rows){
           const pipeVal = r.pipeline_value || 0;
           const atBank = r.at_bank || 0;
           const ebChange = r.eb_change || 0;
-          const inst = r.installed || 0;
+          const netMeterPend = r.net_meter_pending || 0;
           const comp = r.completed || 0;
           const compVal = r.comp_value || 0;
           const inProg = r.in_progress || 0;
@@ -1581,7 +1581,7 @@ function renderTrendTable(containerId, rows){
 
             <!-- COMPLETED -->
             <td style="${cellStyle} font-weight:600; color:#ea580c">${clickFn('inst_pending', 'Installation Pending', instPend)}</td>
-            <td style="${cellStyle} font-weight:700; color:#6366f1">${clickFn('installed', 'Installed (By Inst. Date)', inst)}</td>
+            <td style="${cellStyle} font-weight:700; color:#6366f1">${clickFn('net_meter_pending', 'Net Meter Pending', netMeterPend)}</td>
             <td style="${cellStyle} font-weight:600; color:#ea580c">${clickFn('bal_pending', 'Balance Pending', balPend)}</td>
             <td style="${cellStyle} font-weight:600; color:#8b5cf6">${clickFn('subsidy_pending', 'Subsidy Pending', subPend)}</td>
             <td style="${cellStyle} font-weight:700; color:#4f46e5">${clickFn('completed', 'Completed', comp)}</td>
