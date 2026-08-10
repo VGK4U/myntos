@@ -717,7 +717,13 @@ function canSeeAllTeam() {
 // ── Auth ─────────────────────────────────────────────────────────────────────
 function getToken() {
   return localStorage.getItem('staff_token') ||
-         document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('staff_token='))?.split('=')[1] || '';
+         localStorage.getItem('token') ||
+         localStorage.getItem('authToken') ||
+         localStorage.getItem('access_token') ||
+         sessionStorage.getItem('staff_token') ||
+         sessionStorage.getItem('token') ||
+         (document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('staff_token='))?.split('=')[1]) ||
+         (document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('token='))?.split('=')[1]) || '';
 }
 async function staffFetch(url, opts = {}) {
   const token = getToken();

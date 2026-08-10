@@ -144,7 +144,12 @@ function debounceLoad() {
 }
 
 async function staffFetch(url, opts = {}) {
-  const token = localStorage.getItem('staff_token');
+  const token = localStorage.getItem('staff_token') ||
+                localStorage.getItem('token') ||
+                localStorage.getItem('authToken') ||
+                localStorage.getItem('access_token') ||
+                sessionStorage.getItem('staff_token') ||
+                sessionStorage.getItem('token') || '';
   opts.headers = { ...(opts.headers || {}), 'Authorization': `Bearer ${token}` };
   return fetch(url, opts);
 }
