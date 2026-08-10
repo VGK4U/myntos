@@ -5838,7 +5838,7 @@ async function openInvoiceModal(){
   document.getElementById('imBody').innerHTML='<div style="text-align:center;padding:24px;color:#9ca3af;font-size:12px"><i class="fas fa-spinner fa-spin"></i> Loading lead data...</div>';
   try{
     const r=await staffFetch('/api/v1/crm/leads/'+_sdocLeadId+'/invoice-prefill');
-    const d=r.ok?await r.json():{};
+    const d=(r&&r.success)?r:(r||{});
     _imPrefill=d;
     _renderInvoiceModal(d);
   }catch(e){

@@ -2979,7 +2979,7 @@ async function openInvoiceModal(){
   document.getElementById('invSubsidy').value='';
   try{
     const r=await staffFetch('/api/v1/crm/leads/'+_sdocLeadId+'/invoice-prefill');
-    const d=r.ok?await r.json():{};
+    const d=(r&&r.success)?r:(r||{});
     _invPrefill=d;
     const v=d.vendor||{};
     const vendorName=v.vendor_name||'';
