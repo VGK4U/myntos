@@ -25,6 +25,11 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Reason:', reason);
 });
 
+process.on('SIGTERM', () => {
+  console.log('✅ [DC-SIGTERM] Received SIGTERM from AWS EB. Shutting down gracefully...');
+  process.exit(0);
+});
+
 // SERVER-SIDE JavaScript String Escaping - For embedding values in inline <script> tags
 function escapeJSServer(str) {
   if (!str) return '';

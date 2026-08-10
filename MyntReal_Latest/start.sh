@@ -53,23 +53,11 @@ echo "Starting FastAPI Backend with Uvicorn supervisor (background)..."
 BACKEND_PID=$!
 echo "Backend Supervisor PID: $BACKEND_PID"
 
-# Wait for FastAPI Backend to be ready on port 8000 (up to 45 seconds)
-# Prevents 502 ECONNREFUSED during initial DB module loading and migrations
+# Let FastAPI Backend start in the background while we immediately start the frontend.
+# This prevents 502/5xx errors during Elastic Beanstalk deployments by ensuring
+# port 5000 is open and ready to answer ELB health checks instantly.
 echo ""
-echo "Waiting for FastAPI Backend (port 8000) to accept connections..."
-python -c "
-import socket, time, sys
-start = time.time()
-while time.time() - start < 45:
-    try:
-        s = socket.create_connection(('127.0.0.1', 8000), timeout=1)
-        s.close()
-        print('✅ FastAPI Backend is UP & READY on port 8000!')
-        sys.exit(0)
-    except Exception:
-        time.sleep(1)
-print('⚠️ Backend initialization took longer than 45s, starting frontend server...')
-"
+echo "Backend is warming up in the background. Starting frontend server immediately..."
 
 # Start Frontend Server on port 5000
 echo ""

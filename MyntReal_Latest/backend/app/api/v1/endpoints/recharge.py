@@ -151,44 +151,60 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
         # Call Real A1Topup API
         if settings.A1TOPUP_USERNAME and settings.A1TOPUP_PASSWORD:
             a1_url = "https://business.a1topup.com/recharge/api"
-            operator_code = A1TOPUP_OPERATOR_MAP.get(tx.operator, "A")
             
-            params = {
-                "username": settings.A1TOPUP_USERNAME,
-                "pwd": settings.A1TOPUP_PASSWORD,
-                "operatorcode": operator_code,
-                "number": tx.mobile_number,
-                "amount": int(tx.amount),
-                "orderid": str(tx.id),
-                "format": "json"
-            }
-            params["circlecode"] = tx.circle if tx.circle else "2"
-                
-            try:
-                response = requests.get(a1_url, params=params)
-                print(f"A1Topup Raw Response: {response.text}")
-                
-                try:
-                    data = response.json()
-                except Exception:
-                    print("A1Topup returned non-JSON response.")
-                    data = {}
-                    
-                if data.get("status") == "Success":
-                    tx.api_status = "Success"
-                    tx.api_tx_id = str(data.get("txid", ""))
-                    tx.api_operator_id = str(data.get("opid", ""))
-                    
-                    success_msg = f"✅ Success! Your mobile recharge of ₹{int(tx.amount)} for {tx.mobile_number} is complete. TXN ID: {tx.id}"
-                    background_tasks.add_task(notify_user_bg, tx.mobile_number, success_msg)
-                else:
-                    tx.api_status = "Failed"
-                    tx.api_tx_id = str(data.get("txid", "ERROR"))
-            except Exception as e:
-                print(f"A1Topup API Request Error: {e}")
+            # FIX: Strict Operator Map (Case-Insensitive)
+            operator_code = {k.upper(): v for k, v in A1TOPUP_OPERATOR_MAP.items()}.get(tx.operator.upper() if tx.operator else "")
+            if not operator_code:
+                print(f"CRITICAL: Unknown operator '{tx.operator}'. Aborting A1Topup.")
                 tx.api_status = "Failed"
-                
-            db.commit()
+                db.commit()
+            else:
+                params = {
+                    "username": settings.A1TOPUP_USERNAME,
+                    "pwd": settings.A1TOPUP_PASSWORD,
+                    "operatorcode": operator_code,
+                    "number": tx.mobile_number,
+                    "amount": int(tx.amount),
+                    "orderid": f"VGK_TXN_{tx.id}",
+                    "format": "json"
+                }
+                params["circlecode"] = tx.circle if tx.circle else "2"
+                    
+                try:
+                    # FIX: Add strict 15s timeout
+                    response = requests.get(a1_url, params=params, timeout=15)
+                    print(f"A1Topup Raw Response: {response.text}")
+                    
+                    try:
+                        data = response.json()
+                    except Exception:
+                        print("A1Topup returned non-JSON response.")
+                        data = {}
+                        
+                    if str(data.get("status", "")).lower() == "success":
+                        tx.api_status = "Success"
+                        tx.api_tx_id = str(data.get("txid", ""))
+                        tx.api_operator_id = str(data.get("opid", ""))
+                        
+                        success_msg = f"✅ Success! Your mobile recharge of ₹{int(tx.amount)} for {tx.mobile_number} is complete. TXN ID: {tx.id}"
+                        background_tasks.add_task(notify_user_bg, tx.mobile_number, success_msg)
+                    else:
+                        tx.api_status = "Failed"
+                        tx.api_tx_id = str(data.get("txid", "ERROR"))
+                        
+                except requests.exceptions.Timeout:
+                    # FIX: Timeout exception (Prevent Auto Refund)
+                    print(f"A1Topup API Request TIMEOUT for Txn {tx.id}.")
+                    tx.api_status = "Timeout - Manual Check Required"
+                    
+                    delay_msg = f"⏳ Recharge Update: Your recharge of ₹{int(tx.amount)} for {tx.mobile_number} is taking longer than expected due to network delays. We will update you shortly once confirmed."
+                    background_tasks.add_task(notify_user_bg, tx.mobile_number, delay_msg)
+                    
+                except Exception as e:
+                    print(f"A1Topup API Request Error: {e}")
+                    tx.api_status = "Failed"
+                    
+                db.commit()
         else:
             tx.api_status = "Failed"
             db.commit()
@@ -208,6 +224,10 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
             print(f"Razorpay Refund Error: {refund_err}")
             tx.payment_status = "Refund Failed"
             db.commit()
+            
+            # FIX: Refund API Failure Edge case notification
+            fail_msg_hard = f"⚠️ Recharge Failed. Your recharge of ₹{int(tx.amount)} failed, but our automatic refund system faced a delay. Please contact VGK support with TXN ID {tx.id} for manual refund processing."
+            background_tasks.add_task(notify_user_bg, tx.mobile_number, fail_msg_hard)
     
     return {
         "status": "success", 
@@ -252,7 +272,9 @@ def a1topup_callback(txid: str, status: str, opid: str, db: Session = Depends(ge
     URL Format: ?txid=ORDER_ID&status=Success/Failure&opid=OPERATOR_ID
     """
     try:
-        tx = db.query(RechargeTransaction).filter(RechargeTransaction.id == int(txid)).first()
+        # Strip the VGK_TXN_ prefix to locate the local DB ID
+        db_id_str = txid.replace("VGK_TXN_", "")
+        tx = db.query(RechargeTransaction).filter(RechargeTransaction.id == int(db_id_str)).first()
         if tx:
             tx.api_status = status
             tx.api_operator_id = opid

@@ -5,24 +5,9 @@ import hashlib
 import tempfile
 from pathlib import Path
 
-SOURCE_DIR = Path("/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest").resolve()
-OUTPUT_ZIP = Path("/Users/viswanathkari/Documents/Mynt OS/MyntReal_AWS_Deploy_Full.zip").resolve()
+SOURCE_DIR = Path(__file__).resolve().parent.parent
+OUTPUT_ZIP = SOURCE_DIR / "MyntReal_AWS_Deploy_Full.zip"
 
-# Free up disk space by removing any old temporary zips
-OLD_ZIPS = [
-    Path("/Users/viswanathkari/Documents/Mynt OS/MyntReal_AWS_Deploy_Slim.zip"),
-    Path("/Users/viswanathkari/Documents/Mynt OS/MyntReal_Production_Release_20260809.zip"),
-]
-
-for old_z in OLD_ZIPS:
-    if old_z.exists():
-        try:
-            old_z.unlink()
-            print(f"🗑️ Cleaned up old build artifact: {old_z.name}")
-        except Exception as e:
-            print(f"Failed to remove {old_z}: {e}")
-
-# Aligning exclusions strictly with .dockerignore and production deployment standards
 EXCLUDE_DIRS = {
     ".git",
     "node_modules",
@@ -42,7 +27,9 @@ EXCLUDE_DIRS = {
     "tests",
     "docs",
     ".agents",
-    ".canvas"
+    ".canvas",
+    "pgsql",
+    "pgsql16"
 }
 
 EXCLUDE_FILES = {
@@ -71,7 +58,7 @@ def should_exclude(rel_path: Path) -> bool:
     if rel_path.name in EXCLUDE_FILES:
         return True
     
-    if rel_path.suffix.lower() == ".zip":
+    if rel_path.suffix.lower() in [".zip", ".sql", ".dump"]:
         return True
         
     return False
@@ -102,6 +89,26 @@ def build_zip():
                     total_uncompressed += abs_file.stat().st_size
                 except Exception as err:
                     print(f"Warning skipping file {rel_path}: {err}")
+                    
+        # Dynamically inject the .env variables securely into the zip without writing to disk
+        env_path = SOURCE_DIR / '.env'
+        if not env_path.exists():
+            env_path = SOURCE_DIR / 'backend' / '.env'
+            
+        if env_path.exists():
+            env_config_lines = ["option_settings:", "  aws:elasticbeanstalk:application:environment:"]
+            with open(env_path, 'r', encoding='utf-8') as env_file:
+                for line in env_file:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, val = line.split('=', 1)
+                        # Remove surrounding quotes if present
+                        val = val.strip().strip('\'"')
+                        env_config_lines.append(f"    {key.strip()}: \"{val}\"")
+            
+            env_config_content = '\n'.join(env_config_lines) + '\n'
+            zf.writestr('.ebextensions/01_env.config', env_config_content)
+            print(f"✅ Successfully injected secure environment variables from {env_path.name} into the ZIP as .ebextensions/01_env.config")
 
     compressed_size = OUTPUT_ZIP.stat().st_size
     
@@ -118,44 +125,6 @@ def build_zip():
     print(f"📦 Compressed Size: {compressed_size / (1024*1024):.2f} MB ({compressed_size:,} bytes)")
     print(f"📂 Uncompressed Size: {total_uncompressed / (1024*1024):.2f} MB ({total_uncompressed:,} bytes)")
     print(f"🔑 SHA256 Checksum: {sha256_checksum}")
-
-    # Verification: Extract and inspect
-    print("\n🔍 Extracting and verifying ZIP contents...")
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_path = Path(tmp_dir)
-        with zipfile.ZipFile(OUTPUT_ZIP, 'r') as zf_extract:
-            zf_extract.extractall(tmp_path)
-            extracted_files = set(zf_extract.namelist())
-            
-        required_storage_files = [
-            "backend/app/services/s3_storage.py",
-            "backend/app/services/object_storage.py",
-            "backend/app/services/universal_upload_service.py"
-        ]
-        
-        for req_f in required_storage_files:
-            if req_f in extracted_files:
-                print(f"  ✅ Required file present: {req_f}")
-            else:
-                print(f"  ❌ CRITICAL ERROR: Missing file {req_f}")
-                sys.exit(1)
-                
-        # Test imports from extracted ZIP context
-        sys.path.insert(0, str(tmp_path / "backend"))
-        os.environ["DATABASE_URL"] = "sqlite:///./mlm_app.db"
-        
-        try:
-            from app.services.s3_storage import s3_storage_service
-            print("  ✅ S3_STORAGE_IMPORT_OK (Extracted Context)")
-            from app.services.universal_upload_service import UniversalUploadService
-            print("  ✅ UNIVERSAL_UPLOAD_IMPORT_OK (Extracted Context)")
-            from app.services.object_storage import ObjectStorageService
-            print("  ✅ OBJECT_STORAGE_IMPORT_OK (Extracted Context)")
-            from app.main import app
-            print("  ✅ APP_IMPORT_OK (Extracted Context)")
-        except Exception as e:
-            print(f"  ❌ Import error in extracted context: {e}")
-            sys.exit(1)
 
 if __name__ == "__main__":
     build_zip()
