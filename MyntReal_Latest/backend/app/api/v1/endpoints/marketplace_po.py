@@ -1561,10 +1561,11 @@ def generate_po_invoice(
     if po.pi_number:
         return {'success': True, 'po_id': po_id, 'po_number': po.po_number, 'pi_number': po.pi_number, 'already_existed': True}
 
-    # Advisory lock: prevent race on sequential number generation
-    lock_acquired = db.execute(text('SELECT pg_try_advisory_xact_lock(:id)'), {'id': _INVOICE_LOCK_ID}).scalar()
-    if not lock_acquired:
-        raise HTTPException(status_code=409, detail='Invoice generation in progress. Please retry in a moment.')
+    # Advisory lock: prevent race on sequential number generation (PostgreSQL only)
+    if db.bind and db.bind.dialect.name == 'postgresql':
+        lock_acquired = db.execute(text('SELECT pg_try_advisory_xact_lock(:id)'), {'id': _INVOICE_LOCK_ID}).scalar()
+        if not lock_acquired:
+            raise HTTPException(status_code=409, detail='Invoice generation in progress. Please retry in a moment.')
 
     # Generate next PI number: ZYPI-YYYYMM-NNNN (company-scoped)
     from app.models.base import get_indian_time

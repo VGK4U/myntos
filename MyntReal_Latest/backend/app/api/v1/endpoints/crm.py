@@ -16078,7 +16078,9 @@ async def generate_solar_doc(
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
 
-    # ── Load Vendor (if needed) ──────────────────────────────────────────────
+    # ── Load Tech & Vendor ──────────────────────────────────────────────────
+    tech = db.query(CRMSolarLeadTech).filter(CRMSolarLeadTech.lead_id == lead_id).first()
+
     vendor_id = payload.get("vendor_id")
     vendor = None
     if vendor_id:
@@ -16087,14 +16089,9 @@ async def generate_solar_doc(
         """), {"vid": vendor_id}).fetchone()
         if not vendor:
             raise HTTPException(status_code=404, detail="Solar vendor not found")
-    elif generator_key in ("quotation", "invoice"):
-        raise HTTPException(status_code=400, detail="vendor_id is required for quotation/invoice generation")
 
-    # ── Load Tech ────────────────────────────────────────────────────────────
-    tech = db.query(CRMSolarLeadTech).filter(CRMSolarLeadTech.lead_id == lead_id).first()
-
-    # [DC-SOLAR-VENDOR-AUTO] For non-quotation/invoice docs, auto-carry vendor from last quotation
-    if vendor is None and generator_key not in ("quotation", "invoice") and tech and tech.last_quote_vendor_id:
+    # [DC-SOLAR-VENDOR-AUTO] Auto-carry vendor from last quotation if vendor_id omitted
+    if vendor is None and tech and tech.last_quote_vendor_id:
         _auto_v = db.execute(text("""
             SELECT * FROM vendor_master WHERE id = :vid AND vendor_type = 'SOLAR'
         """), {"vid": tech.last_quote_vendor_id}).fetchone()
@@ -16102,6 +16099,9 @@ async def generate_solar_doc(
             vendor = _auto_v
             vendor_id = tech.last_quote_vendor_id
             logger.info("[DC-SOLAR-VENDOR-AUTO] Auto-loaded vendor_id=%s for lead #%s doc=%s", vendor_id, lead_id, doc_type)
+
+    if generator_key in ("quotation", "invoice") and not vendor:
+        raise HTTPException(status_code=400, detail="vendor_id is required for quotation/invoice generation")
 
     # ── Build context dict ───────────────────────────────────────────────────
     def _s(val):
