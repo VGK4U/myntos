@@ -273,8 +273,13 @@ def get_my_companies(
     is_admin = is_vgk_admin(staff_type)
     is_leader = has_direct_reports(current_employee.id, db, StaffEmployee)
     
-    # Can view all leads if admin OR has direct reports (team leader)
-    can_view_all_leads = is_admin or is_leader
+    _team_tag_lower = (current_employee.team_tag or '').lower()
+    is_team_a_sales = (_team_tag_lower in ('team_a', 'team a') or 
+                       (current_employee.department and 'sales' in (current_employee.department.name or '').lower()) or
+                       current_employee.emp_code in ('MN10009', 'MN10003', 'MN10008', 'MN10010', 'MR10018', 'MR10001'))
+    
+    # Can view all leads if admin OR has direct reports (team leader) OR Team A sales staff
+    can_view_all_leads = is_admin or is_leader or is_team_a_sales
     
     return {
         'success': True,
@@ -3664,7 +3669,14 @@ def list_leads(
     staff_type = (current_employee.staff_type or '').upper()
     is_admin = is_vgk_admin(staff_type)
     is_leader = has_direct_reports(current_employee.id, db, StaffEmployee)
-    can_view_all = is_admin or is_leader
+    
+    # Team A / Sales & Core Lead Handlers: Full lead visibility for sales staff and team A members
+    _team_tag_lower = (current_employee.team_tag or '').lower()
+    is_team_a_sales = (_team_tag_lower in ('team_a', 'team a') or 
+                       (current_employee.department and 'sales' in (current_employee.department.name or '').lower()) or
+                       current_employee.emp_code in ('MN10009', 'MN10003', 'MN10008', 'MN10010', 'MR10018', 'MR10001'))
+    
+    can_view_all = is_admin or is_leader or is_team_a_sales
     
     is_restricted_freelancer = (staff_type == 'FREELANCER' and getattr(current_employee, 'freelancer_access_mode', 'default') == 'only_leads')
     if is_restricted_freelancer:
