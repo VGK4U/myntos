@@ -1743,7 +1743,9 @@ async def get_service_queue(
         _user_role_code = (getattr(_role_obj, 'role_code', '') or '').lower().strip()
     except Exception:
         pass
-    _is_privileged = _user_role_code in _PRIVILEGED_ROLES
+    _team_tag = (getattr(current_user, 'team_tag', '') or '').lower().strip()
+    _is_team_service = _team_tag in ('team_b', 'team_c', 'team b', 'team c')
+    _is_privileged = _user_role_code in _PRIVILEGED_ROLES or _is_team_service
     _staff_id_filter = None if _is_privileged else getattr(current_user, 'id', None)
 
     try:
