@@ -954,7 +954,8 @@ def get_partner_potential_earning(db, partner_id: int, exclude_l1: bool = False)
     rows = db.execute(text("""
         SELECT 
             e.id, e.source_lead_id, e.level, e.commission_amount, e.commission_pct, e.kind, e.category_id,
-            l.solar_value, l.deal_value_excl_tax, l.deal_value_total, l.category_id AS lead_category_id
+            l.solar_value, l.deal_value_excl_tax, l.deal_value_total, l.category_id AS lead_category_id,
+            l.solar_brand_id
         FROM vgk_cash_income_entries e
         LEFT JOIN crm_leads l ON e.source_lead_id = l.id
         WHERE e.partner_id = :pid AND e.status != 'CANCELLED'
@@ -962,6 +963,16 @@ def get_partner_potential_earning(db, partner_id: int, exclude_l1: bool = False)
     
     configs = db.query(VGKTeamCommissionConfig).all()
     config_map = {c.category_id: c for c in configs}
+
+    # Fetch active solar brand incentive configs
+    try:
+        brands = db.execute(text("""
+            SELECT id, l1_amount, l2_amount, l5_amount
+            FROM vgk_incentive_brands WHERE is_active = true
+        """)).fetchall()
+        brand_map = {b.id: b for b in brands}
+    except Exception:
+        brand_map = {}
     
     unique_leads = {}
     for r in rows:
@@ -1035,6 +1046,16 @@ def get_partner_potential_earning(db, partner_id: int, exclude_l1: bool = False)
                 standard_solar_pcts = {1: 2.50, 2: 1.00, 3: 0.50, 4: 0.50, 5: 1.50, 6: 3.50}
                 potential_pct = standard_solar_pcts.get(lvl_int, 0.0)
                 potential_amount = round(lead_val * potential_pct / 100.0, 2)
+            
+            # Include brand-wise commission in potential earnings (paid at final completion)
+            if hasattr(r, 'solar_brand_id') and r.solar_brand_id and r.solar_brand_id in brand_map:
+                b_cfg = brand_map[r.solar_brand_id]
+                if lvl_int == 1 and b_cfg.l1_amount:
+                    potential_amount += float(b_cfg.l1_amount)
+                elif lvl_int == 2 and b_cfg.l2_amount:
+                    potential_amount += float(b_cfg.l2_amount)
+                elif lvl_int == 5 and b_cfg.l5_amount:
+                    potential_amount += float(b_cfg.l5_amount)
                 
         if potential_amount <= 0:
             potential_amount = commission_amount

@@ -297,149 +297,16 @@ def _create_brand_advance_vci(
 
 def check_and_create_brand_advance(db: Session, lead_id: int) -> dict:
     """
-    DC-VGK-BRAND-INCENTIVE-001: Called at the same CIBIL gate as the regular advance.
-    Creates brand advance rows in vgk_solar_cibil_advances for L1, L2, and L5
-    if solar_brand_id is set on the lead and the brand is active.
-
-    Narration: "For referring specific brand [Brand Name]"
-    Returns a summary dict.
+    DC-VGK-BRAND-INCENTIVE-002: Brand-wise commissions are NOT paid as advances.
+    Per user directive, brand commissions are paid ONLY with the final completion payment.
     """
-    try:
-        lead = db.execute(text("""
-            SELECT id, company_id,
-                   associated_partner_id,
-                   team_senior_partner_id,
-                   vgk_field_support_id,
-                   solar_pipeline_status,
-                   cibil_confirmed, cibil_score,
-                   solar_brand_id
-            FROM crm_leads WHERE id = :lid
-        """), {'lid': lead_id}).fetchone()
-
-        if not lead or not lead.solar_brand_id:
-            return {'created': False, 'reason': 'No brand set on lead'}
-
-        pipeline = (lead.solar_pipeline_status or '').strip()
-        if pipeline not in ELIGIBLE_STAGES:
-            return {'created': False, 'reason': f'Stage {pipeline!r} not eligible'}
-
-        if not lead.cibil_confirmed:
-            return {'created': False, 'reason': 'CIBIL not confirmed'}
-
-        score = lead.cibil_score or 0
-        if score < CIBIL_MIN_SCORE:
-            return {'created': False, 'reason': f'CIBIL score {score} < {CIBIL_MIN_SCORE}'}
-
-        brand = db.execute(text("""
-            SELECT id, brand_name, l1_amount, l2_amount, l5_amount, is_active
-            FROM vgk_incentive_brands WHERE id = :bid
-        """), {'bid': lead.solar_brand_id}).fetchone()
-
-        if not brand or not brand.is_active:
-            return {'created': False, 'reason': 'Brand not found or inactive'}
-
-        narration = f'For referring specific brand {brand.brand_name}'
-        now = _get_ist()
-
-        tiers = []
-        if lead.associated_partner_id and Decimal(str(brand.l1_amount or 0)) > 0:
-            tiers.append((1, lead.associated_partner_id, Decimal(str(brand.l1_amount))))
-        if lead.team_senior_partner_id and Decimal(str(brand.l2_amount or 0)) > 0:
-            tiers.append((2, lead.team_senior_partner_id, Decimal(str(brand.l2_amount))))
-        if lead.vgk_field_support_id and Decimal(str(brand.l5_amount or 0)) > 0:
-            tiers.append((5, lead.vgk_field_support_id, Decimal(str(brand.l5_amount))))
-
-        if not tiers:
-            return {'created': False, 'reason': 'No eligible partners or zero amounts'}
-
-        created_numbers = []
-        for (level, partner_id, amount) in tiers:
-            existing = db.execute(text("""
-                SELECT id FROM vgk_solar_cibil_advances
-                WHERE lead_id = :lid AND level = :lv AND kind = 'BRAND_ADVANCE'
-                LIMIT 1
-            """), {'lid': lead_id, 'lv': level}).fetchone()
-
-            if existing:
-                logger.debug(
-                    f'[VGK-BRAND-ADV] L{level} brand advance already exists '
-                    f'for lead {lead_id} — skipping'
-                )
-                continue
-
-            entry_number = _next_advance_number(db)
-            db.execute(text("""
-                INSERT INTO vgk_solar_cibil_advances
-                    (company_id, lead_id, partner_id, entry_number, advance_amount,
-                     status, stage_at_eligibility, cibil_score_at_check,
-                     level, kind, narration, created_at, updated_at)
-                VALUES
-                    (:cid, :lid, :pid, :en, :amt,
-                     'PENDING', :stage, :score,
-                     :lv, 'BRAND_ADVANCE', :narration, :now, :now)
-            """), {
-                'cid': lead.company_id,
-                'lid': lead_id,
-                'pid': partner_id,
-                'en': entry_number,
-                'amt': float(amount),
-                'stage': pipeline,
-                'score': score,
-                'lv': level,
-                'narration': narration,
-                'now': now.replace(tzinfo=None),
-            })
-            db.commit()
-
-            logger.info(
-                f'[VGK-BRAND-ADV] PENDING brand advance {entry_number} L{level} '
-                f'created for lead {lead_id}, partner {partner_id}'
-            )
-
-            new_adv = db.execute(text(
-                "SELECT id FROM vgk_solar_cibil_advances WHERE entry_number = :en"
-            ), {'en': entry_number}).fetchone()
-
-            if new_adv:
-                try:
-                    rel = _release_brand_advance(db, new_adv.id, narration)
-                    if not rel.get('success'):
-                        logger.warning(
-                            f'[VGK-BRAND-ADV] Auto-release of {entry_number} failed: '
-                            f'{rel.get("error")}'
-                        )
-                    else:
-                        logger.info(f'[VGK-BRAND-ADV] Auto-RELEASED {entry_number}')
-                except Exception as _re:
-                    logger.warning(
-                        f'[VGK-BRAND-ADV] Auto-release exception for {entry_number}: {_re}'
-                    )
-                    try:
-                        db.rollback()
-                    except Exception:
-                        pass
-
-            created_numbers.append(entry_number)
-
-        if created_numbers:
-            return {'created': True, 'entry_numbers': created_numbers, 'brand': brand.brand_name}
-        return {'created': False, 'reason': 'All brand advances already existed'}
-
-    except Exception as e:
-        logger.warning(
-            f'[VGK-BRAND-ADV] check_and_create_brand_advance failed for lead {lead_id}: {e}'
-        )
-        try:
-            db.rollback()
-        except Exception:
-            pass
-        return {'created': False, 'reason': str(e)}
+    return {'created': False, 'reason': 'Brand commissions are paid at final completion stage only'}
 
 
 def generate_brand_commission_entries(db: Session, lead) -> int:
     """
-    DC-VGK-BRAND-INCENTIVE-001: Called at income generation time (lead completed).
-    Creates L2 and L5 brand commission VCI entries if solar_brand_id is set.
+    DC-VGK-BRAND-INCENTIVE-002: Called at income generation time (lead completed).
+    Creates L1, L2, and L5 brand commission VCI entries if solar_brand_id is set.
     Returns number of entries created.
     """
     try:
@@ -448,7 +315,7 @@ def generate_brand_commission_entries(db: Session, lead) -> int:
             return 0
 
         brand = db.execute(text("""
-            SELECT id, brand_name, l2_amount, l5_amount, is_active
+            SELECT id, brand_name, l1_amount, l2_amount, l5_amount, is_active
             FROM vgk_incentive_brands WHERE id = :bid
         """), {'bid': solar_brand_id}).fetchone()
 
@@ -458,9 +325,12 @@ def generate_brand_commission_entries(db: Session, lead) -> int:
         company_id = 4
 
         tiers = []
+        l1_pid = getattr(lead, 'associated_partner_id', None)
         l2_pid = getattr(lead, 'team_senior_partner_id', None)
         l5_pid = getattr(lead, 'vgk_field_support_id', None)
 
+        if l1_pid and Decimal(str(brand.l1_amount or 0)) > 0:
+            tiers.append((BRAND_COMM_VCI_LEVEL[1], l1_pid, Decimal(str(brand.l1_amount))))
         if l2_pid and Decimal(str(brand.l2_amount or 0)) > 0:
             tiers.append((BRAND_COMM_VCI_LEVEL[2], l2_pid, Decimal(str(brand.l2_amount))))
         if l5_pid and Decimal(str(brand.l5_amount or 0)) > 0:
