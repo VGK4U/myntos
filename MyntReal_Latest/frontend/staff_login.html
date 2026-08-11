@@ -472,23 +472,30 @@
     </div>
     
     <script>
-        // DC Protocol: Fetch with retry for production resilience
+        // DC Protocol: Fetch with retry and timeout for production resilience
         async function fetchWithRetry(url, options = {}, maxRetries = 3, delay = 1000) {
             for (let i = 0; i < maxRetries; i++) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
                 try {
-                    const response = await fetch(url, options);
+                    const reqOptions = { ...options, signal: controller.signal };
+                    const response = await fetch(url, reqOptions);
+                    clearTimeout(timeoutId);
                     if (response.ok || response.status < 500) {
                         return response;
                     }
                     console.warn(`⚠️ Retry ${i + 1}/${maxRetries} for ${url} (status: ${response.status})`);
                 } catch (error) {
-                    console.warn(`⚠️ Retry ${i + 1}/${maxRetries} for ${url}: ${error.message}`);
+                    clearTimeout(timeoutId);
+                    const isAbort = error.name === 'AbortError';
+                    const msg = isAbort ? 'Request timed out after 15s' : error.message;
+                    console.warn(`⚠️ Retry ${i + 1}/${maxRetries} for ${url}: ${msg}`);
                 }
                 if (i < maxRetries - 1) {
                     await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
                 }
             }
-            throw new Error('Failed after ' + maxRetries + ' retries');
+            throw new Error('Connection timed out or failed after ' + maxRetries + ' retries. Please check network/backend.');
         }
         
         let pendingNdaData = null;
