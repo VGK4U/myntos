@@ -290,18 +290,36 @@ def list_students(
     where = ["is_active = TRUE", "company_id = :cid"]
     params: dict = {"cid": COMPANY_ID}
 
-    if search:
+    def _s(val): return val if isinstance(val, str) else None
+    search_s = _s(search)
+    batch_no_s = _s(batch_no)
+    state_s = _s(state)
+    district_s = _s(district)
+    training_stage_s = _s(training_stage)
+    source_filter_s = _s(source_filter)
+    crm_status_s = _s(crm_status)
+    handler_s = _s(handler_emp_code)
+    tc_s = _s(telecaller_emp_code)
+    fs_s = _s(field_staff_emp_code)
+    date_from_s = _s(date_from)
+    date_to_s = _s(date_to)
+    start_from_s = _s(start_date_from)
+    start_to_s = _s(start_date_to)
+    comp_from_s = _s(comp_date_from)
+    comp_to_s = _s(comp_date_to)
+
+    if search_s:
         where.append("(LOWER(name) LIKE :srch OR LOWER(student_id) LIKE :srch OR LOWER(registration_id) LIKE :srch OR phone LIKE :srch OR aadhar_number LIKE :srch)")
-        params['srch'] = f'%{search.lower()}%'
-    if batch_no:
+        params['srch'] = f'%{search_s.lower()}%'
+    if batch_no_s and (not crm_status_s or crm_status_s.lower() not in ('won', 'won_plus')):
         where.append("batch_no = :batch_no")
-        params['batch_no'] = batch_no
-    if state:
+        params['batch_no'] = batch_no_s
+    if state_s:
         where.append("LOWER(state) = :state")
-        params['state'] = state.lower()
-    if district:
+        params['state'] = state_s.lower()
+    if district_s:
         where.append("LOWER(district) = :district")
-        params['district'] = district.lower()
+        params['district'] = district_s.lower()
     if mnr_member is not None:
         where.append("mnr_member = :mnr")
         params['mnr'] = mnr_member
@@ -319,44 +337,44 @@ def list_students(
             where.append("training_completed_date IS NOT NULL")
         else:
             where.append("training_completed_date IS NULL")
-    if training_stage == 'training_completed':
+    if training_stage_s == 'training_completed':
         where.append("(training_completed_date IS NOT NULL OR (batch_start_date IS NOT NULL AND batch_start_date <= '2025-02-28'))")
-    elif training_stage == 'under_training':
+    elif training_stage_s == 'under_training':
         where.append("training_completed_date IS NULL AND batch_start_date IS NOT NULL AND batch_start_date > '2025-02-28' AND batch_start_date <= CURRENT_DATE")
-    elif training_stage == 'schedule_pending':
+    elif training_stage_s == 'schedule_pending':
         where.append("training_completed_date IS NULL AND (batch_start_date IS NULL OR batch_start_date > CURRENT_DATE)")
-    if date_from:
+    if date_from_s:
         where.append("created_at::date >= :date_from")
-        params['date_from'] = date_from
-    if date_to:
+        params['date_from'] = date_from_s
+    if date_to_s:
         where.append("created_at::date <= :date_to")
-        params['date_to'] = date_to
+        params['date_to'] = date_to_s
     # DC-ETC-DATE-FILTERS-001: start date and completed date range filters
-    if start_date_from:
+    if start_from_s:
         where.append("batch_start_date >= :start_date_from")
-        params['start_date_from'] = start_date_from
-    if start_date_to:
+        params['start_date_from'] = start_from_s
+    if start_to_s:
         where.append("batch_start_date <= :start_date_to")
-        params['start_date_to'] = start_date_to
-    if comp_date_from:
+        params['start_date_to'] = start_to_s
+    if comp_from_s:
         where.append("training_completed_date >= :comp_date_from")
-        params['comp_date_from'] = comp_date_from
-    if comp_date_to:
+        params['comp_date_from'] = comp_from_s
+    if comp_to_s:
         where.append("training_completed_date <= :comp_date_to")
-        params['comp_date_to'] = comp_date_to
-    if handler_emp_code:
+        params['comp_date_to'] = comp_to_s
+    if handler_s:
         where.append("LOWER(handler_emp_code) LIKE :handler_code")
-        params['handler_code'] = f'%{handler_emp_code.lower()}%'
-    if telecaller_emp_code:
+        params['handler_code'] = f'%{handler_s.lower()}%'
+    if tc_s:
         where.append("LOWER(telecaller_emp_code) LIKE :tc_code")
-        params['tc_code'] = f'%{telecaller_emp_code.lower()}%'
-    if field_staff_emp_code:
+        params['tc_code'] = f'%{tc_s.lower()}%'
+    if fs_s:
         where.append("LOWER(field_staff_emp_code) LIKE :fs_code")
-        params['fs_code'] = f'%{field_staff_emp_code.lower()}%'
+        params['fs_code'] = f'%{fs_s.lower()}%'
 
     allowed_sort = {'sno','name','batch_no','batch_start_date','training_completed_date','score','state','district','package_value','created_at'}
-    direction = 'DESC' if sort_dir.lower() == 'desc' else 'ASC'
-    sort_col = sort_by if sort_by in allowed_sort else 'sno'
+    direction = 'DESC' if isinstance(sort_dir, str) and sort_dir.lower() == 'desc' else 'ASC'
+    sort_col = sort_by if isinstance(sort_by, str) and sort_by in allowed_sort else 'sno'
     order_clause = f"ORDER BY {sort_col} {direction} NULLS LAST"
     where_clause = " AND ".join(where)
 
@@ -416,7 +434,7 @@ def list_students(
     crm_dicts = []
     if include_crm:
         crm_where = ["l.category_id IN :cat_ids",
-                     "NOT EXISTS (SELECT 1 FROM etc_students s WHERE s.crm_lead_id = l.id AND s.is_active=TRUE)"]
+                     "NOT EXISTS (SELECT 1 FROM etc_students s WHERE (s.crm_lead_id = l.id OR (l.phone IS NOT NULL AND l.phone != '' AND s.phone = l.phone)) AND s.is_active=TRUE)"]
         crm_params: dict = {'cat_ids': _resolved_cat_ids}
 
         if search:
@@ -426,8 +444,11 @@ def list_students(
             crm_where.append("LOWER(l.state) = :state")
             crm_params['state'] = state.lower()
         if crm_status:
-            crm_where.append("l.status = :crm_status")
-            crm_params['crm_status'] = crm_status
+            if crm_status.lower() in ('won', 'won_plus'):
+                crm_where.append("l.status IN ('won', 'completed')")
+            else:
+                crm_where.append("l.status = :crm_status")
+                crm_params['crm_status'] = crm_status
         if training_completed is True:
             crm_dicts = []  # CRM leads are never training-completed
             include_crm = False
@@ -439,7 +460,7 @@ def list_students(
             crm_rows = db.execute(text(f"""
                 SELECT l.id, l.name, l.phone, l.email, l.status,
                        l.deal_value_total, l.actual_close_date,
-                       l.state, l.city, l.created_at, l.company_id
+                       l.state, l.city, l.created_at, l.company_id, l.mnr_handler_id
                 FROM crm_leads l
                 WHERE {crm_clause}
                 ORDER BY l.actual_close_date DESC NULLS LAST, l.created_at DESC
@@ -463,14 +484,32 @@ def list_students(
                         b_no = f'Batch-{max_num}'
                         new_date_batches[d_str] = b_no
 
-                # Apply batch_no filter if set
-                if batch_no and b_no != batch_no:
+                # Apply batch_no filter if set (except when explicitly filtering won/won_plus leads)
+                if batch_no and b_no != batch_no and (not crm_status or crm_status.lower() not in ('won', 'won_plus')):
                     continue
 
                 crm_dicts.append(_crm_to_dict(r, b_no))
 
-    # ── 4. Combine, paginate in Python ────────────────────────────────────────
+    # ── 4. Combine, deduplicate & paginate in Python ──────────────────────────
     combined = student_dicts + crm_dicts
+    seen_identifiers = set()
+    unique_combined = []
+    for item in combined:
+        key = None
+        if item.get('crm_lead_id'):
+            key = f"crm_{item['crm_lead_id']}"
+        elif item.get('student_id'):
+            key = f"stu_{item['student_id']}"
+        elif item.get('phone'):
+            key = f"phone_{item['phone']}"
+        else:
+            key = f"id_{item.get('id')}"
+
+        if key not in seen_identifiers:
+            seen_identifiers.add(key)
+            unique_combined.append(item)
+
+    combined = unique_combined
     total_combined = len(combined)
     offset = (page - 1) * per_page
     page_slice = combined[offset: offset + per_page]

@@ -3129,7 +3129,7 @@ async function loadEtcStudents(page=1) {
   if(hostel) url+=`&hostel_opted=${hostel}`;
   if(training) url+=`&training_completed=${training}`;
   if(src) url+=`&source_filter=${encodeURIComponent(src)}`;
-  const csEff=_etcWonFilter?'won':cs;
+  const csEff=_etcWonFilter?'won_plus':cs;
   if(csEff) url+=`&crm_status=${encodeURIComponent(csEff)}`;
   if(sg) url+=`&training_stage=${encodeURIComponent(sg)}`;
   if(hndCode) url+=`&handler_emp_code=${encodeURIComponent(hndCode)}`;
@@ -5051,19 +5051,20 @@ async function exportCSV(){
 
 // ── Background tab counts ─────────────────────────────────────────────────
 async function loadTabCounts(){
+  const promises = [];
   for(const t of TABS){
-    if(t.key===activeTab)continue;
-    if(t.key==='ground-source')continue;   // GS report has no simple lead count
+    if(t.key===activeTab || t.key==='ground-source') continue;
     if(t.key==='etc'){
-      try{const r=await staffFetch(`${API_ETC}/students/?page=1&per_page=1`);const d=await r.json();tabCounts['etc']=d.total||0;updateTabCount('etc');}catch{}
+      promises.push(staffFetch(`${API_ETC}/students/?page=1&per_page=1`).then(r=>r.json()).then(d=>{tabCounts['etc']=d.total||0;updateTabCount('etc');}).catch(()=>{}));
     }else{
-      try{const r=await staffFetch(`${API_CRM}/master-leads?category=${encodeURIComponent(t.category)}&per_page=1&page=1`);const d=await r.json();tabCounts[t.key]=(d.pagination||{}).total||0;updateTabCount(t.key);}catch{}
+      promises.push(staffFetch(`${API_CRM}/master-leads?category=${encodeURIComponent(t.category)}&per_page=1&page=1`).then(r=>r.json()).then(d=>{tabCounts[t.key]=(d.pagination||{}).total||0;updateTabCount(t.key);}).catch(()=>{}));
     }
   }
   for(const t of TABS){
-    if(t.key==='etc'||t.key==='ground-source')continue;
-    try{const r=await staffFetch(`${API_CRM}/master-leads?category=${encodeURIComponent(t.category)}&per_page=1&page=1&status=won_plus`);const d=await r.json();wonCounts[t.key]=(d.pagination||{}).total||0;updateTabCount(t.key);}catch{}
+    if(t.key==='etc'||t.key==='ground-source') continue;
+    promises.push(staffFetch(`${API_CRM}/master-leads?category=${encodeURIComponent(t.category)}&per_page=1&page=1&status=won_plus`).then(r=>r.json()).then(d=>{wonCounts[t.key]=(d.pagination||{}).total||0;updateTabCount(t.key);}).catch(()=>{}));
   }
+  await Promise.allSettled(promises);
 }
 
 function updateTabCount(key){
