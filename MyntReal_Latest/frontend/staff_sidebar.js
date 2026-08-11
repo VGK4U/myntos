@@ -664,6 +664,11 @@ const StaffSidebar = {
         localStorage.removeItem('staff_token');
         localStorage.removeItem('staff_user');
         localStorage.removeItem('staff_sidebar_collapsed');
+        try {
+            Object.keys(localStorage).forEach(k => {
+                if (k.startsWith('staff_sidebar_state_')) localStorage.removeItem(k);
+            });
+        } catch (_) {}
         window.location.href = '/staff/login';
     },
 
@@ -1506,23 +1511,17 @@ const StaffSidebar = {
     },
 
     // Restore section states from localStorage
-    // Default mode: All groups/sub-groups are collapsed (grouped) by default
+    // Default mode: All groups/sub-groups are collapsed (grouped) by default for ALL users
     restoreSectionStates: function() {
         try {
             const savedStates = localStorage.getItem(this.getStorageKey());
-            const supremeTypes = this.SUPREME_STAFF_TYPES || ["VGK4U_SUPREME", "RVZ_SUPREME", "VGK4U", "VGK4U Supreme", "VGK4U_EA", "KEY_LEADERSHIP", "KEY LEADERSHIP", "EA"];
-            const isKeyLeadership = this.userData && (
-                supremeTypes.includes(this.userData.staff_type) || 
-                ['MR10018', 'MR10001', 'MR10016', 'MR10025'].includes(this.userData.emp_code) ||
-                (this.userData.role && ['key_leadership', 'vgk4u', 'ea'].includes((this.userData.role.role_code || '').toLowerCase()))
-            );
             const states = savedStates ? JSON.parse(savedStates) : {};
 
-            // Restore main group states
+            // Restore main group states (default: collapsed)
             const groups = document.querySelectorAll('.sidebar-group');
             groups.forEach(group => {
                 const sectionId = group.dataset.sectionId;
-                let isExpanded = states.hasOwnProperty(sectionId) ? Boolean(states[sectionId]) : (isKeyLeadership || false);
+                let isExpanded = states.hasOwnProperty(sectionId) ? Boolean(states[sectionId]) : false;
                 const toggle = group.querySelector('.sidebar-group-toggle');
                 
                 if (isExpanded) {
@@ -1534,11 +1533,11 @@ const StaffSidebar = {
                 }
             });
             
-            // Restore sub-group states (DC Protocol: Nested menu support)
+            // Restore sub-group states (default: collapsed)
             const subGroups = document.querySelectorAll('.sidebar-sub-group');
             subGroups.forEach(subGroup => {
                 const sectionId = subGroup.dataset.sectionId;
-                let isExpanded = states.hasOwnProperty(sectionId) ? Boolean(states[sectionId]) : (isKeyLeadership || false);
+                let isExpanded = states.hasOwnProperty(sectionId) ? Boolean(states[sectionId]) : false;
                 const toggle = subGroup.querySelector('.sidebar-sub-group-toggle');
                 
                 if (isExpanded) {
