@@ -6139,18 +6139,12 @@ def lead_analytics(
         _or_(CRMLead.solar_pipeline_status.is_(None), ~CRMLead.solar_pipeline_status.in_(_EXCL_SOLAR_PS)),
         _or_(CRMLead.ev_b2b_stage.is_(None), CRMLead.ev_b2b_stage != 'completed')
     )
-    from sqlalchemy import text as _ex_text
-    _etc_done_sq = _ex_text(
-        "EXISTS (SELECT 1 FROM etc_students s "
-        "WHERE s.crm_lead_id = crm_leads.id "
-        "AND s.training_completed_date IS NOT NULL "
-        "AND s.is_active = TRUE)"
-    )
+    _ce_etc = CRMLead.id.in_(_etc_comp_ids) if _etc_comp_ids else False
     _completed_cond = _or_(
         CRMLead.solar_pipeline_status == 'completed',
         CRMLead.ev_b2b_stage == 'completed',
         CRMLead.status == 'completed',
-        _etc_done_sq
+        _ce_etc
     )
 
     # DC-RECV-EXPRS-001: Received value expressions — deal_value_received for won and completed leads.

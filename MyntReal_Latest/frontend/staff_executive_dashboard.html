@@ -176,7 +176,7 @@ th[data-sk]:hover{background:#eef2f7!important}
       <button class="tab-btn active" id="tab_overview" onclick="switchTab('overview')"><i class="fas fa-chart-bar me-1"></i>Overview</button>
       <button class="tab-btn" id="tab_trends" onclick="switchTab('trends')"><i class="fas fa-chart-line me-1"></i>Monthly &amp; Weekly Trends</button>
       <button class="tab-btn" id="tab_handlers" onclick="switchTab('handlers')"><i class="fas fa-users me-1"></i>Handlers Status Wise</button>
-      <button class="tab-btn" id="tab_stagewise" onclick="switchTab('stagewise')"><i class="fas fa-table me-1"></i>Stagewise Handlers</button>
+      <button class="tab-btn" id="tab_stagewise" style="display:none" onclick="switchTab('stagewise')"><i class="fas fa-table me-1"></i>Stagewise Handlers</button>
       <button class="tab-btn" id="tab_etc_batchwise" style="display:none" onclick="switchTab('etc_batchwise')"><i class="fas fa-graduation-cap me-1"></i>ETC Students Batch Wise</button>
       <button class="tab-btn" id="tab_groundsource" style="display:none" onclick="switchTab('groundsource')"><i class="fas fa-map-marker-alt me-1"></i>Ground Source</button>
       <button class="tab-btn" id="tab_lead_view" style="display:none" onclick="switchTab('lead_view')"><i class="fas fa-file-invoice me-1"></i>Lead View</button>
@@ -862,9 +862,21 @@ function exportEtcBatchCsv(){
 // ── Check Access Permission for ETC Batch-wise Tab ──────────────────────────
 (async function checkEtcBatchAccess(){
   try {
-    const res = await staffFetch('/api/v1/staff/auth/me');
-    if (res.ok) {
-      const u = await res.json();
+    let u = null;
+    const stored = localStorage.getItem('staff_user');
+    if (stored) {
+      try { u = JSON.parse(stored); } catch(e) {}
+    }
+    
+    if (!u) {
+      const res = await staffFetch('/api/v1/staff/auth/me');
+      if (res.ok) {
+        const raw = await res.json();
+        u = raw.employee || raw.user || raw;
+      }
+    }
+    
+    if (u) {
       const code = (u.emp_code || u.employee_code || '').toUpperCase().trim();
       const name = (u.full_name || u.name || '').toLowerCase();
       const dept = (u.department_name || (u.department ? u.department.name : '') || '').toLowerCase();
