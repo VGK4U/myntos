@@ -276,7 +276,8 @@ const MENU_MASTER = [
       { menu_code: "META_CAMPAIGNS", label: "Meta Campaigns", route: "/staff/meta-ads/campaigns", icon: "fas fa-bullhorn", audience: ["STAFF", "VGK4U"] },
       { menu_code: "META_CREATIVE_STUDIO", label: "Creative Studio", route: "/staff/meta-ads/creative-studio", icon: "fas fa-palette", audience: ["STAFF", "VGK4U"] },
       { menu_code: "META_LEADS", label: "Meta Lead Ingestion", route: "/staff/meta-ads/leads", icon: "fas fa-user-check", audience: ["STAFF", "VGK4U"] },
-      { menu_code: "META_SETTINGS", label: "Meta OAuth & Settings", route: "/staff/meta-ads/settings", icon: "fas fa-cog", audience: ["STAFF", "VGK4U"] }
+      { menu_code: "META_SETTINGS", label: "Meta OAuth & Settings", route: "/staff/meta-ads/settings", icon: "fas fa-cog", audience: ["STAFF", "VGK4U"] },
+      { menu_code: "AI_MARKETING_PRO", label: "AI Marketing Pro", route: "/staff/meta-ads/ai-marketing-pro", icon: "fas fa-brain", audience: ["STAFF", "VGK4U"] }
     ]
   },
   {

@@ -1805,9 +1805,11 @@
                           if(verifyRes.ok) {
                               let statusText = "Payment successful! Recharge initiated.";
                               let iconType = "success";
-                              if(verifyData.recharge_status === "Success") {
+                              const rStatus = (verifyData.recharge_status || "").toLowerCase();
+                              
+                              if(rStatus === "success") {
                                   statusText = "Payment successful and recharge completed!";
-                              } else if(verifyData.recharge_status === "Failed") {
+                              } else if(rStatus.includes("failed") || rStatus.includes("refund")) {
                                   statusText = "Payment successful, but the recharge failed at the operator side. We will check the status shortly.";
                                   iconType = "warning";
                               } else {
@@ -1815,15 +1817,21 @@
                                   iconType = "info";
                               }
                               
-                              Swal.fire({
+                              // Hide the Bootstrap modal FIRST to prevent Z-index / backdrop conflicts!
+                              var modal = bootstrap.Modal.getInstance(document.getElementById('rechargeModal'));
+                              if (modal) {
+                                  modal.hide();
+                              }
+                              
+                              // Wait for Swal to finish so it isn't abruptly destroyed
+                              await Swal.fire({
                                   title: 'Status',
                                   text: statusText,
                                   icon: iconType,
                                   confirmButtonText: 'OK'
                               });
-
-                              var modal = bootstrap.Modal.getInstance(document.getElementById('rechargeModal'));
-                              modal.hide();
+                              
+                              // Optional: Reset form
                               document.getElementById('rechargeForm').reset();
                           } else {
                               Swal.fire('Error', verifyData.detail || "Payment verification failed", 'error');

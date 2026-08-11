@@ -102,13 +102,14 @@ api_router.include_router(daily_ceiling.router, tags=["RVZ ID Daily Ceiling"])
 api_router.include_router(emergency_wallet.router, tags=["RVZ ID Emergency Wallet"])
 api_router.include_router(log_reports.router, prefix="/log-reports", tags=["Log Reports"])
 api_router.include_router(testing.router, tags=["System Testing"])
-from app.api.v1.endpoints import system_health, unified_lead_view, meta_connection, meta_oauth, creative_studio, meta_ads_center
+from app.api.v1.endpoints import system_health, unified_lead_view, meta_connection, meta_oauth, creative_studio, meta_ads_center, meta_ads_pro
 api_router.include_router(system_health.router, tags=["System Health & Monitoring"])
 api_router.include_router(unified_lead_view.router, tags=["CRM Unified Lead Timeline"])
 api_router.include_router(meta_connection.router, tags=["Meta Connection & Real Asset Verification"])
 api_router.include_router(meta_oauth.router, tags=["Meta OAuth 2.0 Connection"])
 api_router.include_router(creative_studio.router, tags=["Creative AI Studio & Ad Composition"])
 api_router.include_router(meta_ads_center.router, tags=["Meta Ads Management Center (Supreme Admin)"])
+api_router.include_router(meta_ads_pro.router, prefix="/meta-ads-pro", tags=["Meta AI Marketing Pro"])
 
 # Task #33 — VGK4U Member Parity Phase 1 (audience tab switch audit)
 from app.api.v1.endpoints import audience_audit  # noqa: E402

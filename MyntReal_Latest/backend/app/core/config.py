@@ -89,7 +89,7 @@ class Settings(BaseSettings):
     # ── Release 1A & Phase 2D Feature Flags ──
     META_SYNC_ENABLED: bool = True
     META_ADS_READ_ENABLED: bool = True
-    META_ADS_WRITE_ENABLED: bool = False
+    META_ADS_WRITE_ENABLED: bool = True
     CAPI_ENABLED: bool = False
     WA_AUDIT_ENABLED: bool = True
     WA_AI_ENABLED: bool = False

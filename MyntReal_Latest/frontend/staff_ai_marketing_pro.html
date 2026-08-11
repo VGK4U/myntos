@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Marketing Pro — MYNT OS</title>
+    <!-- Use Bootstrap for grid/utilities, but override with premium custom CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #FAFAFA;
+            --surface-color: #FFFFFF;
+            --border-color: #EAEAEA;
+            --text-primary: #111111;
+            --text-secondary: #666666;
+            --accent-color: #000000;
+            --accent-hover: #333333;
+            --user-msg-bg: #F4F4F5;
+            --ai-msg-bg: #FFFFFF;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.025);
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: var(--font-family); 
+            background: var(--bg-color); 
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Sidebar Integrations */
+        .main-content { margin-left: 0; transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1); height: 100vh; display: flex; flex-direction: column; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        
+        #headerContainer { flex-shrink: 0; }
+        
+        /* Workspace layout */
+        .workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* Main Chat Area */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        /* Header */
+        .chat-header {
+            padding: 24px 32px 16px;
+            background: rgba(250, 250, 250, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid transparent;
+            z-index: 10;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-title {
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .header-title i {
+            color: var(--text-secondary);
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background: #10B981;
+            border-radius: 50%;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+        }
+
+        /* Message Scroll Area */
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 80px 32px 120px;
+            scroll-behavior: smooth;
+        }
+        
+        .messages-area::-webkit-scrollbar { width: 6px; }
+        .messages-area::-webkit-scrollbar-track { background: transparent; }
+        .messages-area::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 10px; }
+        .messages-area::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+
+        /* Welcome State */
+        .welcome-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        .welcome-avatar {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #111 0%, #333 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .welcome-title {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        
+        .welcome-subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            max-width: 400px;
+            line-height: 1.5;
+        }
+        
+        .suggestion-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        .suggestion-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .suggestion-card:hover {
+            border-color: #D1D5DB;
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
+        
+        .suggestion-icon {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        .suggestion-text {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        /* Messages */
+        .message-group {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        
+        .message-row {
+            display: flex;
+            gap: 16px;
+            animation: slideUp 0.3s ease-out;
+            max-width: 85%;
+        }
+        
+        .message-row.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+        
+        .message-row.ai {
+            align-self: flex-start;
+        }
+        
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .avatar.user { background: #E5E7EB; color: #374151; }
+        .avatar.ai { background: var(--accent-color); color: white; }
+        
+        .bubble {
+            padding: 14px 18px;
+            font-size: 15px;
+            line-height: 1.6;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .user .bubble {
+            background: var(--user-msg-bg);
+            border: 1px solid transparent;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .ai .bubble {
+            background: var(--ai-msg-bg);
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Markdown/Formatting inside Bubble */
+        .bubble p { margin-bottom: 12px; }
+        .bubble p:last-child { margin-bottom: 0; }
+        .bubble strong { font-weight: 600; color: #111; }
+        .bubble ul, .bubble ol { margin-left: 20px; margin-bottom: 12px; }
+        .bubble li { margin-bottom: 4px; }
+        
+        /* Interactive Component/Card inserted by AI */
+        .ai-component {
+            margin-top: 16px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            width: 100%;
+        }
+
+        .metric-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .metric-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+        }
+        
+        .metric-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; }
+        .metric-value { font-size: 18px; font-weight: 700; margin-top: 4px; }
+        
+        /* Input Area */
+        .input-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 32px 32px;
+            background: linear-gradient(180deg, rgba(250,250,250,0) 0%, rgba(250,250,250,1) 40%);
+            z-index: 10;
+        }
+        
+        .input-box {
+            position: relative;
+            max-width: 768px;
+            margin: 0 auto;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-lg);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .input-box:focus-within {
+            border-color: #D1D5DB;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04);
+        }
+        
+        .input-textarea {
+            width: 100%;
+            border: none;
+            background: transparent;
+            padding: 16px 56px 16px 20px;
+            font-family: inherit;
+            font-size: 15px;
+            line-height: 1.5;
+            color: var(--text-primary);
+            resize: none;
+            max-height: 200px;
+            min-height: 56px;
+            outline: none;
+        }
+        
+        .input-textarea::placeholder {
+            color: #9CA3AF;
+        }
+        
+        .send-btn {
+            position: absolute;
+            right: 8px;
+            bottom: 8px;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .send-btn:hover {
+            background: var(--accent-hover);
+            transform: scale(1.05);
+        }
+        
+        .send-btn:disabled {
+            background: #E5E7EB;
+            color: #9CA3AF;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Loading Skeleton */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 4px 8px;
+            align-items: center;
+            height: 24px;
+        }
+        
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #D1D5DB;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+        
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Chart Container */
+        .chart-wrapper {
+            width: 100%;
+            height: 200px;
+            margin-top: 16px;
+            background: var(--surface-color);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+        }
+        
+        .action-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-top: 12px;
+        }
+        .action-button:hover { background: #F9FAFB; border-color: #D1D5DB; }
+        .action-button.primary { background: var(--accent-color); color: white; border-color: var(--accent-color); }
+        .action-button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+        
+        .ad-preview {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            background: white;
+            margin-top: 16px;
+            max-width: 350px;
+        }
+        
+        .ad-header { padding: 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border-color); }
+        .ad-header img { width: 32px; height: 32px; border-radius: 50%; }
+        .ad-name { font-weight: 600; font-size: 13px; }
+        .ad-sponsored { font-size: 11px; color: var(--text-secondary); }
+        .ad-text { padding: 12px; font-size: 13px; line-height: 1.4; }
+        .ad-media { width: 100%; height: auto; display: block; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
+        .ad-cta-area { padding: 12px; display: flex; justify-content: space-between; align-items: center; background: #F0F2F5; }
+        .ad-headline { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+        .ad-desc { font-size: 12px; color: var(--text-secondary); }
+        .ad-btn { background: #E4E6EB; font-weight: 600; font-size: 13px; padding: 6px 12px; border-radius: 4px; border: none; }
+        
+    </style>
+</head>
+<body>
+
+<script src="/public/js/staff-token-manager.js?v=1"></script>
+<script src="/public/js/staff-fetch.js?v=1"></script>
+<script src="/public/js/menu-master.js"></script>
+<script src="/staff_header.js"></script>
+<script src="/staff_sidebar.js"></script>
+<!-- Chart.js for rendering dynamic charts from AI -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<nav id="staffSidebar"></nav>
+
+<div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="workspace">
+        <div class="chat-container">
+            <div class="chat-header">
+                <div class="header-title"><i class="fas fa-brain"></i> AI Marketing Pro</div>
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    System Ready
+                </div>
+            </div>
+            
+            <div class="messages-area" id="messagesArea">
+                <!-- Welcome State -->
+                <div class="welcome-state" id="welcomeState">
+                    <div class="welcome-avatar"><i class="fas fa-robot"></i></div>
+                    <h1 class="welcome-title">How can I help you grow today?</h1>
+                    <p class="welcome-subtitle">I'm your AI Marketing Employee. I can plan campaigns, manage budgets, optimize ads, and generate creative assets.</p>
+                    
+                    <div class="suggestion-grid">
+                        <div class="suggestion-card" onclick="sendSuggestion('Create a lead generation campaign for my new Real Estate project with a ₹1000 daily budget.')">
+                            <i class="fas fa-bullseye suggestion-icon"></i>
+                            <span class="suggestion-text">Launch a Lead Gen Campaign</span>
+                        </div>
+                        <div class="suggestion-card" onclick="sendSuggestion('Analyze my active campaigns and tell me if I should optimize the budget.')">
+                            <i class="fas fa-chart-line suggestion-icon"></i>
+                            <span class="suggestion-text">Analyze Active Campaigns</span>
+                        </div>
+                        <div class="suggestion-card" onclick="sendSuggestion('Generate 3 highly converting ad creatives and headlines for a 3KW Solar setup.')">
+                            <i class="fas fa-magic suggestion-icon"></i>
+                            <span class="suggestion-text">Generate Ad Creatives</span>
+                        </div>
+                        <div class="suggestion-card" onclick="sendSuggestion('Give me a weekly performance report of all my Meta ads in a summary format.')">
+                            <i class="fas fa-file-alt suggestion-icon"></i>
+                            <span class="suggestion-text">Weekly Performance Report</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Dynamic Chat Content -->
+                <div class="message-group" id="chatHistory" style="display: none;">
+                    <!-- Messages will be injected here -->
+                </div>
+            </div>
+            
+            <div class="input-container">
+                <div class="input-box">
+                    <textarea 
+                        id="chatInput" 
+                        class="input-textarea" 
+                        placeholder="Message AI Marketing Pro..."
+                        rows="1"
+                        oninput="this.style.height = '';this.style.height = Math.min(this.scrollHeight, 200) + 'px'"
+                        onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }"
+                    ></textarea>
+                    <button id="sendBtn" class="send-btn" onclick="sendMessage()" disabled>
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let conversationHistory = [];
+    let isWaiting = false;
+
+    // DOM Elements
+    const inputEl = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const messagesArea = document.getElementById('messagesArea');
+    const welcomeState = document.getElementById('welcomeState');
+    const chatHistory = document.getElementById('chatHistory');
+    
+    // Enable/Disable button based on input
+    inputEl.addEventListener('input', () => {
+        sendBtn.disabled = inputEl.value.trim().length === 0 || isWaiting;
+    });
+
+    async function sendSuggestion(text) {
+        inputEl.value = text;
+        inputEl.style.height = '';
+        sendBtn.disabled = false;
+        await sendMessage();
+    }
+
+    function appendMessage(role, content, components = null) {
+        welcomeState.style.display = 'none';
+        chatHistory.style.display = 'flex';
+        
+        const row = document.createElement('div');
+        row.className = `message-row ${role}`;
+        
+        const avatar = document.createElement('div');
+        avatar.className = `avatar ${role}`;
+        avatar.innerHTML = role === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+        
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        
+        // Parse markdown using marked.js
+        if(role === 'ai') {
+            bubble.innerHTML = marked.parse(content);
+        } else {
+            bubble.textContent = content;
+        }
+        
+        // If there are UI components (charts, previews, metric cards) returned by AI function calls
+        if (components && components.html) {
+            const compDiv = document.createElement('div');
+            compDiv.className = 'ai-component';
+            compDiv.innerHTML = components.html;
+            bubble.appendChild(compDiv);
+        }
+        
+        row.appendChild(avatar);
+        row.appendChild(bubble);
+        chatHistory.appendChild(row);
+        
+        // Scroll to bottom
+        setTimeout(() => {
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }, 50);
+        
+        return bubble;
+    }
+
+    function showTypingIndicator() {
+        const row = document.createElement('div');
+        row.className = 'message-row ai typing-row';
+        row.id = 'typingIndicator';
+        
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar ai';
+        avatar.innerHTML = '<i class="fas fa-robot"></i>';
+        
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.innerHTML = `
+            <div class="typing-indicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        `;
+        
+        row.appendChild(avatar);
+        row.appendChild(bubble);
+        chatHistory.appendChild(row);
+        messagesArea.scrollTop = messagesArea.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+        const el = document.getElementById('typingIndicator');
+        if (el) el.remove();
+    }
+
+    async function sendMessage() {
+        const text = inputEl.value.trim();
+        if (!text || isWaiting) return;
+        
+        // UI Updates
+        isWaiting = true;
+        inputEl.value = '';
+        inputEl.style.height = '56px';
+        sendBtn.disabled = true;
+        
+        // Append user message
+        appendMessage('user', text);
+        conversationHistory.push({ role: 'user', content: text });
+        
+        showTypingIndicator();
+        
+        try {
+            const response = await staffFetch('/api/v1/meta-ads-pro/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    message: text,
+                    history: conversationHistory.slice(-10) // Send last 10 messages for context
+                })
+            });
+            
+            removeTypingIndicator();
+            
+            if (response.ok) {
+                const data = await response.json();
+                appendMessage('ai', data.response, data.components);
+                conversationHistory.push({ role: 'assistant', content: data.response });
+                
+                // If there's script to execute (like rendering a Chart.js canvas)
+                if (data.components && data.components.script) {
+                    try {
+                        const scriptFn = new Function(data.components.script);
+                        scriptFn();
+                    } catch (err) {
+                        console.error('Error executing component script:', err);
+                    }
+                }
+            } else {
+                appendMessage('ai', "I'm sorry, I encountered an error communicating with the server. Please try again.");
+            }
+        } catch (error) {
+            removeTypingIndicator();
+            appendMessage('ai', "A network error occurred. Please check your connection and try again.");
+            console.error(error);
+        } finally {
+            isWaiting = false;
+            if (inputEl.value.trim().length > 0) sendBtn.disabled = false;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', async function() {
+        if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+        if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+        
+        // Wait briefly for header to inject, then hide its toggle if necessary or style it to fit the workspace
+        document.querySelector('.chat-container').focus();
+    });
+</script>
+</body>
+</html>

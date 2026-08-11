@@ -18932,6 +18932,24 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.end(html);
     });
     return;
+  } else if (url.startsWith('/staff/meta-ads/ai-marketing-pro')) {
+    const filePath = path.join(__dirname, 'staff_ai_marketing_pro.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
+  } else if (url.startsWith('/staff/meta-ads/ai-agent')) {
+    const filePath = path.join(__dirname, 'staff_meta_ai_agent.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
   } else if (url.startsWith('/staff/audit-logs')) {
     const filePath = path.join(__dirname, 'staff_audit_logs.html');
     readFileWithRetry(filePath, (err, data) => {

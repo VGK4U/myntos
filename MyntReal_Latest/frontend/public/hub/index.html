@@ -618,6 +618,9 @@ setInterval(nextWhy, 4500);
     max-width: 520px;
     box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.25);
     overflow: hidden;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
     font-family: 'Inter', sans-serif;
     transform: scale(0.92);
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -657,6 +660,9 @@ setInterval(nextWhy, 4500);
 }
 .custom-modal-body {
     padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 }
 .custom-modal-body label {
     display: block;
@@ -1156,6 +1162,16 @@ document.getElementById('hubRechargeForm').addEventListener('submit', async func
             "order_id": orderData.order_id,
             "handler": async function (response) {
                 try {
+                    // Instantly show a loading popup so the screen isn't empty!
+                    Swal.fire({
+                        title: 'Confirming Recharge...',
+                        html: 'Please wait while we connect to the operator. Do not refresh.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
                     const verifyRes = await fetch('/api/v1/recharge/verify-payment', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1166,17 +1182,28 @@ document.getElementById('hubRechargeForm').addEventListener('submit', async func
                         })
                     });
                     const verifyData = await verifyRes.json();
+                    
+                    // Reset Button
+                    btn.innerHTML = 'Proceed to Pay';
+                    btn.disabled = false;
+
                     if(verifyRes.ok) {
-                        if(verifyData.recharge_status === "Success") {
-                            Swal.fire({
+                        const rStatus = (verifyData.recharge_status || "").toLowerCase();
+                        
+                        // CRITICAL FIX: Close the modal FIRST, because its z-index (99999) is higher than Swal (1060)!
+                        // If we don't close it, the Success popup is hidden behind it permanently!
+                        closeRechargeModal();
+
+                        if(rStatus === "success") {
+                            await Swal.fire({
                                 title: 'Recharge Successful! 🎉',
                                 html: 'Your mobile pack is now active.<br><br><small style="color: #64748b;">A confirmation WhatsApp message has been sent to your number.</small>',
                                 icon: 'success',
                                 confirmButtonText: 'Great!',
                                 confirmButtonColor: '#10b981'
                             });
-                        } else if(verifyData.recharge_status === "Refunded (Operator Failed)") {
-                            Swal.fire({
+                        } else if(rStatus.includes("failed") || rStatus.includes("refund")) {
+                            await Swal.fire({
                                 title: 'Recharge Failed ❌',
                                 html: 'The operator network is temporarily down or the plan is invalid.<br><br><b>A full refund has been instantly initiated</b> to your bank account. It will reflect in 3-5 days.<br><br><small style="color: #64748b;">A WhatsApp notification has been sent to your number.</small>',
                                 icon: 'error',
@@ -1184,7 +1211,7 @@ document.getElementById('hubRechargeForm').addEventListener('submit', async func
                                 confirmButtonColor: '#ef4444'
                             });
                         } else {
-                            Swal.fire({
+                            await Swal.fire({
                                 title: 'Recharge Pending ⏳',
                                 html: 'Your payment was successful but the operator is taking longer to respond. It will be completed shortly.',
                                 icon: 'info',
@@ -1193,12 +1220,13 @@ document.getElementById('hubRechargeForm').addEventListener('submit', async func
                             });
                         }
                         
-                        closeRechargeModal();
                         document.getElementById('hubRechargeForm').reset();
                     } else {
                         Swal.fire('Error', verifyData.detail || "Payment verification failed", 'error');
                     }
                 } catch(err) {
+                    btn.innerHTML = 'Proceed to Pay';
+                    btn.disabled = false;
                     Swal.fire('Error', 'Error verifying payment.', 'error');
                 }
             },

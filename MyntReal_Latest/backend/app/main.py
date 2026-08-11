@@ -2734,6 +2734,7 @@ def create_marketplace_tables():
                         ("META_CREATIVE_STUDIO", "Creative Studio", "fas fa-palette", "/staff/meta-ads/creative-studio", 3, "meta_ads", "META ADS", 15),
                         ("META_LEADS", "Meta Lead Ingestion", "fas fa-user-check", "/staff/meta-ads/leads", 4, "meta_ads", "META ADS", 15),
                         ("META_SETTINGS", "Meta Settings & OAuth", "fas fa-cog", "/staff/meta-ads/settings", 5, "meta_ads", "META ADS", 15),
+                        ("META_AI_AGENT", "AI Ads Manager", "fas fa-robot", "/staff/meta-ads/ai-agent", 6, "meta_ads", "META ADS", 15),
                     ]
                     c_rows = conn.execute(text("SELECT id FROM associated_companies WHERE is_active = TRUE")).fetchall()
                     c_ids = [r[0] for r in c_rows] if c_rows else [1]

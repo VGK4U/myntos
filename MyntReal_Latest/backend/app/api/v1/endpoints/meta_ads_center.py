@@ -17,6 +17,7 @@ from app.services.meta_budget_alert_service import evaluate_meta_budget_alerts
 from app.services.meta_approval_engine import create_action_request, approve_and_execute_action
 from app.services.multilingual_creative_qa_service import evaluate_creative_multilingual_qa
 from app.services.meta_reports_generator import generate_meta_ads_export_report
+from app.services.ai_marketing_agent_service import AIMarketingAgentService
 
 router = APIRouter(prefix="/meta-ads", tags=["Meta Ads Management Center (Supreme Admin)"])
 
@@ -850,5 +851,23 @@ def get_adsets_with_ads_hierarchy(
     ]
 
 
+class AIChatRequest(BaseModel):
+    message: str
+    company_id: int = 1
+    staff_id: int = 1
 
-
+@router.post("/agent/chat")
+def chat_with_meta_ai(
+    req: AIChatRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint for the AI Marketing Agent.
+    Accepts user text, processes it through Gemini with Graph API tools, and returns response.
+    """
+    try:
+        agent = AIMarketingAgentService(db=db, company_id=req.company_id, staff_id=req.staff_id)
+        response_text = agent.process_message(req.message)
+        return {"success": True, "response": response_text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
