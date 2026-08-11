@@ -869,6 +869,165 @@ def validate_student_id(
     student_id: str = Query(...),
     db: Session = Depends(get_db),
 ):
+    ...
+
+# ── BATCHWISE ANALYTICS (Executive Dashboard Tab) ────────────────────────────
+
+@router.get('/students/batchwise-analytics')
+def get_etc_batchwise_analytics(
+    search: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user_hybrid),
+):
+    """
+    Executive Report: Batch-wise ETC Students Analytics.
+    Accessible only to authorized accounts/leadership staff (e.g. MR10001, Subash Kari).
+    Returns batch-level aggregates (Month, Start Date, Batch Name, Students, Completed, Deal Value, Received, Balance, Confirmed)
+    and detailed student lists per batch with expand/group support.
+    """
+    search_s = search if isinstance(search, str) and search.strip() else None
+
+    st_where = ["is_active = TRUE", "company_id = :cid"]
+    st_params: dict = {'cid': COMPANY_ID}
+    if search_s:
+        st_where.append("(LOWER(name) LIKE :srch OR LOWER(student_id) LIKE :srch OR LOWER(registration_id) LIKE :srch OR phone LIKE :srch OR LOWER(batch_no) LIKE :srch)")
+        st_params['srch'] = f'%{search_s.lower()}%'
+
+    st_clause = " AND ".join(st_where)
+    student_rows = db.execute(text(f"""
+        SELECT s.id, s.registration_id, s.student_id, s.batch_no, s.batch_start_date,
+               s.name, s.phone, s.email, s.state, s.district, s.course_type,
+               s.training_completed_date, s.package_value, s.deal_value_received,
+               s.handler_confirmed, s.telecaller_confirmed, s.field_staff_confirmed,
+               s.handler_emp_code, s.telecaller_emp_code, s.crm_lead_id, s.created_at,
+               s.guru_name, s.z_guru_name, s.source
+        FROM etc_students s
+        WHERE {st_clause}
+        ORDER BY s.batch_start_date DESC NULLS LAST, s.id DESC
+    """), st_params).fetchall()
+
+    all_codes = set()
+    for r in student_rows:
+        if r.handler_emp_code: all_codes.add(r.handler_emp_code.upper())
+        if r.telecaller_emp_code: all_codes.add(r.telecaller_emp_code.upper())
+    h_map: dict = {}
+    if all_codes:
+        h_rows = db.execute(text(
+            "SELECT emp_code, full_name FROM staff_employees WHERE UPPER(emp_code) = ANY(:codes)"
+        ), {'codes': list(all_codes)}).fetchall()
+        h_map = {hr.emp_code.upper(): (hr.full_name or hr.emp_code) for hr in h_rows}
+
+    batches_map = {}
+    total_all_students = 0
+    total_all_completed = 0
+    total_all_deal_value = 0.0
+    total_all_received = 0.0
+    total_all_balance = 0.0
+    total_all_confirmed = 0
+
+    import re
+    for r in student_rows:
+        b_raw = (r.batch_no or '').strip()
+        if b_raw:
+            m_b = re.match(r'(?i)^batch\s*[-_]?\s*(\d+)$', b_raw)
+            b_key = f"Batch-{m_b.group(1)}" if m_b else b_raw
+        else:
+            b_key = 'Unassigned'
+
+        if b_key not in batches_map:
+            d_obj = r.batch_start_date
+            month_str = d_obj.strftime('%b %Y') if d_obj else '—'
+            start_date_str = d_obj.strftime('%d-%b-%Y') if d_obj else '—'
+            batches_map[b_key] = {
+                'batch_no': b_key,
+                'month': month_str,
+                'start_date': start_date_str,
+                'start_date_raw': d_obj.isoformat() if d_obj else '',
+                'total_students': 0,
+                'completed': 0,
+                'deal_value': 0.0,
+                'received': 0.0,
+                'balance': 0.0,
+                'confirmed_count': 0,
+                'students': []
+            }
+
+        b = batches_map[b_key]
+        b['total_students'] += 1
+        total_all_students += 1
+
+        is_completed = bool(r.training_completed_date)
+        if is_completed:
+            b['completed'] += 1
+            total_all_completed += 1
+
+        dv = float(r.package_value or 0.0)
+        rec = float(r.deal_value_received or 0.0)
+        bal = max(0.0, dv - rec)
+        is_conf = bool(r.handler_confirmed or r.telecaller_confirmed or r.field_staff_confirmed)
+
+        b['deal_value'] += dv
+        b['received'] += rec
+        b['balance'] += bal
+        total_all_deal_value += dv
+        total_all_received += rec
+        total_all_balance += bal
+
+        if is_conf:
+            b['confirmed_count'] += 1
+            total_all_confirmed += 1
+
+        h_name = h_map.get(r.handler_emp_code.upper()) if r.handler_emp_code else '—'
+        tc_name = h_map.get(r.telecaller_emp_code.upper()) if r.telecaller_emp_code else '—'
+
+        b['students'].append({
+            'id': r.id,
+            'registration_id': r.registration_id or '—',
+            'student_id': r.student_id or '—',
+            'name': r.name or 'Unknown',
+            'phone': r.phone or '—',
+            'email': r.email or '—',
+            'state': r.state or '—',
+            'district': r.district or '—',
+            'course_type': r.course_type or 'ETC Training',
+            'training_stage': 'training_completed' if is_completed else 'under_training',
+            'training_completed_date': r.training_completed_date.isoformat() if r.training_completed_date else None,
+            'deal_value': dv,
+            'received': rec,
+            'balance': bal,
+            'confirmed': is_conf,
+            'handler_name': h_name,
+            'handler_emp_code': r.handler_emp_code or '',
+            'telecaller_name': tc_name,
+            'telecaller_emp_code': r.telecaller_emp_code or '',
+            'crm_lead_id': r.crm_lead_id,
+            'source': 'student'
+        })
+
+    import re
+    def _batch_sort_key(bm):
+        b_name = bm['batch_no']
+        if b_name.lower().startswith('batch'):
+            m = re.search(r'\d+', b_name)
+            if m:
+                return (1, int(m.group()))
+        return (0, bm['start_date_raw'] or '0000-00-00')
+
+    batch_list = list(batches_map.values())
+    batch_list.sort(key=_batch_sort_key, reverse=True)
+
+    return {
+        'kpis': {
+            'total_batches': len(batch_list),
+            'total_students': total_all_students,
+            'completed_students': total_all_completed,
+            'total_deal_value': round(total_all_deal_value, 2),
+            'total_received': round(total_all_received, 2),
+            'total_balance': round(total_all_balance, 2),
+            'confirmed_count': total_all_confirmed,
+        },
+        'batches': batch_list
+    }
     """Public endpoint — validate ETC student ID for 10% marketplace discount."""
     row = db.execute(text("""
         SELECT name, student_id, registration_id, batch_no

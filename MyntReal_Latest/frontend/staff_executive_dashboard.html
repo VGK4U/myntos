@@ -177,9 +177,10 @@ th[data-sk]:hover{background:#eef2f7!important}
       <button class="tab-btn" id="tab_trends" onclick="switchTab('trends')"><i class="fas fa-chart-line me-1"></i>Monthly &amp; Weekly Trends</button>
       <button class="tab-btn" id="tab_handlers" onclick="switchTab('handlers')"><i class="fas fa-users me-1"></i>Handlers Status Wise</button>
       <button class="tab-btn" id="tab_stagewise" onclick="switchTab('stagewise')"><i class="fas fa-table me-1"></i>Stagewise Handlers</button>
-      <button class="tab-btn" id="tab_groundsource" onclick="switchTab('groundsource')"><i class="fas fa-map-marker-alt me-1"></i>Ground Source</button>
-      <button class="tab-btn" id="tab_lead_view" onclick="switchTab('lead_view')"><i class="fas fa-file-invoice me-1"></i>Lead View</button>
-      <button class="tab-btn" id="tab_member_view" onclick="switchTab('member_view')"><i class="fas fa-coins me-1"></i>Member Earnings</button>
+      <button class="tab-btn" id="tab_etc_batchwise" style="display:none" onclick="switchTab('etc_batchwise')"><i class="fas fa-graduation-cap me-1"></i>ETC Students Batch Wise</button>
+      <button class="tab-btn" id="tab_groundsource" style="display:none" onclick="switchTab('groundsource')"><i class="fas fa-map-marker-alt me-1"></i>Ground Source</button>
+      <button class="tab-btn" id="tab_lead_view" style="display:none" onclick="switchTab('lead_view')"><i class="fas fa-file-invoice me-1"></i>Lead View</button>
+      <button class="tab-btn" id="tab_member_view" style="display:none" onclick="switchTab('member_view')"><i class="fas fa-coins me-1"></i>Member Earnings</button>
     </div>
 
     <!-- Quick date filters -->
@@ -464,7 +465,7 @@ th[data-sk]:hover{background:#eef2f7!important}
       ></iframe>
     </div>
 
-    <!-- Member Earnings Tab (DC-EXEC-ME-001: live embed of VGK Members Income Dashboard — single source) -->
+    <!-- Member Earnings Tab -->
     <div class="tab-pane" id="pane_member_view">
       <div style="font-size:10.5px;color:#6b7280;padding:4px 2px 8px;display:flex;align-items:center;gap:6px">
         <i class="fas fa-link" style="color:#7c3aed"></i>
@@ -473,6 +474,61 @@ th[data-sk]:hover{background:#eef2f7!important}
       <iframe id="iframeMemberView" src="about:blank"
         style="width:100%;height:calc(100vh - 290px);min-height:520px;border:none;border-radius:8px;background:#f3f4f6"
       ></iframe>
+    </div>
+
+    <!-- ETC Students Batch Wise Tab (Restricted Access: MR10001 & Subash Kari / Accounts Dept) -->
+    <div class="tab-pane" id="pane_etc_batchwise">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px">
+        <div class="kpi-card" style="border-left:4px solid #1e3a5f">
+          <div class="kpi-label">TOTAL BATCHES</div>
+          <div class="kpi-value" id="etcKpiBatches">—</div>
+          <div class="kpi-sub">Active training batches</div>
+        </div>
+        <div class="kpi-card" style="border-left:4px solid #2563eb">
+          <div class="kpi-label">TOTAL STUDENTS</div>
+          <div class="kpi-value" id="etcKpiStudents">—</div>
+          <div class="kpi-sub">Enrolled &amp; CRM leads</div>
+        </div>
+        <div class="kpi-card" style="border-left:4px solid #16a34a">
+          <div class="kpi-label">COMPLETED</div>
+          <div class="kpi-value" id="etcKpiCompleted" style="color:#16a34a">—</div>
+          <div class="kpi-sub">Training finished</div>
+        </div>
+        <div class="kpi-card" style="border-left:4px solid #7c3aed">
+          <div class="kpi-label">TOTAL DEAL VALUE</div>
+          <div class="kpi-value" id="etcKpiDealValue" style="color:#7c3aed;font-size:16px">—</div>
+          <div class="kpi-sub">Batch total value</div>
+        </div>
+        <div class="kpi-card" style="border-left:4px solid #059669">
+          <div class="kpi-label">RECEIVED</div>
+          <div class="kpi-value" id="etcKpiReceived" style="color:#059669;font-size:16px">—</div>
+          <div class="kpi-sub">Amount collected</div>
+        </div>
+        <div class="kpi-card" style="border-left:4px solid #dc2626">
+          <div class="kpi-label">PENDING BALANCE</div>
+          <div class="kpi-value" id="etcKpiBalance" style="color:#dc2626;font-size:16px">—</div>
+          <div class="kpi-sub">Remaining balance</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap;background:#fff;padding:10px 14px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:260px">
+          <div class="input-group input-group-sm" style="max-width:320px">
+            <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+            <input type="text" id="etcBatchSearch" class="form-control" placeholder="Search batch or student name..." onkeyup="filterEtcBatches()">
+          </div>
+          <button class="btn btn-sm btn-outline-secondary" onclick="loadEtcBatchwise()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="btn btn-sm btn-outline-primary" onclick="expandAllEtcBatches(true)"><i class="fas fa-angle-double-down me-1"></i>Expand All</button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="expandAllEtcBatches(false)"><i class="fas fa-angle-double-up me-1"></i>Collapse All</button>
+          <button class="btn btn-sm btn-success text-white" onclick="exportEtcBatchCsv()"><i class="fas fa-file-excel me-1"></i>Export CSV</button>
+        </div>
+      </div>
+
+      <div class="handler-table-wrap" style="max-height:calc(100vh - 300px);background:white" id="etcBatchTableWrap">
+        <div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading ETC Batch-wise report…</div>
+      </div>
     </div>
 
   </div>
@@ -585,11 +641,12 @@ function switchTab(name){
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab_'+name).classList.add('active');
   document.getElementById('pane_'+name).classList.add('active');
-  if(name==='overview'     && _dashData) renderKPIs(_dashData);
-  if(name==='trends'       && _dashData) renderKPIs(_dashData);
-  if(name==='handlers'     && _dashData) renderHandlerTable();
-  if(name==='stagewise'    && _dashData) renderStagewiseTable();
-  if(name==='groundsource' && !_execGsAll.length) loadExecGs();
+  if(name==='overview'      && _dashData) renderKPIs(_dashData);
+  if(name==='trends'        && _dashData) renderKPIs(_dashData);
+  if(name==='handlers'      && _dashData) renderHandlerTable();
+  if(name==='stagewise'     && _dashData) renderStagewiseTable();
+  if(name==='etc_batchwise' && !_etcBatchData) loadEtcBatchwise();
+  if(name==='groundsource'  && !_execGsAll.length) loadExecGs();
   if(name==='lead_view'){
     const f=document.getElementById('iframeLeadView');
     if(f && f.src==='about:blank') f.src='/staff/vgk/members?embed=1&autotab=leadView';
@@ -599,6 +656,231 @@ function switchTab(name){
     if(f && f.src==='about:blank') f.src='/staff/vgk/members?embed=1&autotab=incomeDash';
   }
 }
+
+// ── ETC STUDENTS BATCH WISE TAB ──────────────────────────────────────────────
+let _etcBatchData = null;
+let _etcBatchExpandedMap = {};
+
+async function loadEtcBatchwise(){
+  const wrap = document.getElementById('etcBatchTableWrap');
+  if(!wrap) return;
+  wrap.innerHTML = '<div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading ETC Batch-wise report…</div>';
+  
+  try {
+    const q = (document.getElementById('etcBatchSearch')?.value || '').trim();
+    let url = '/api/v1/etc/students/batchwise-analytics';
+    if (q) url += `?search=${encodeURIComponent(q)}`;
+    
+    const resp = await staffFetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    _etcBatchData = data;
+    
+    // Update KPI cards
+    const kpis = data.kpis || {};
+    document.getElementById('etcKpiBatches').textContent   = fmtNum(kpis.total_batches || 0);
+    document.getElementById('etcKpiStudents').textContent  = fmtNum(kpis.total_students || 0);
+    document.getElementById('etcKpiCompleted').textContent = fmtNum(kpis.completed_students || 0);
+    document.getElementById('etcKpiDealValue').textContent = '₹' + fmtVal(kpis.total_deal_value || 0);
+    document.getElementById('etcKpiReceived').textContent  = '₹' + fmtVal(kpis.total_received || 0);
+    document.getElementById('etcKpiBalance').textContent   = '₹' + fmtVal(kpis.total_balance || 0);
+    
+    renderEtcBatchwiseTable(data.batches || []);
+  } catch(e) {
+    wrap.innerHTML = `<div class="dash-empty" style="color:#dc2626"><i class="fas fa-exclamation-circle"></i> Error loading report: ${esc(e.message)}</div>`;
+  }
+}
+
+function filterEtcBatches(){
+  if(!_etcBatchData) return;
+  const q = (document.getElementById('etcBatchSearch')?.value || '').toLowerCase().trim();
+  if(!q){
+    renderEtcBatchwiseTable(_etcBatchData.batches || []);
+    return;
+  }
+  const filtered = (_etcBatchData.batches || []).filter(b => {
+    const matchBatch = (b.batch_no || '').toLowerCase().includes(q) || (b.month || '').toLowerCase().includes(q);
+    const matchStudents = (b.students || []).some(s => 
+      (s.name || '').toLowerCase().includes(q) || 
+      (s.phone || '').includes(q) || 
+      (s.student_id || '').toLowerCase().includes(q) || 
+      (s.registration_id || '').toLowerCase().includes(q)
+    );
+    return matchBatch || matchStudents;
+  });
+  renderEtcBatchwiseTable(filtered);
+}
+
+function expandAllEtcBatches(expanded){
+  if(!_etcBatchData) return;
+  (_etcBatchData.batches || []).forEach(b => {
+    _etcBatchExpandedMap[b.batch_no] = expanded;
+  });
+  filterEtcBatches();
+}
+
+function toggleEtcBatchExpand(bNo){
+  _etcBatchExpandedMap[bNo] = !_etcBatchExpandedMap[bNo];
+  filterEtcBatches();
+}
+
+function renderEtcBatchwiseTable(batches){
+  const wrap = document.getElementById('etcBatchTableWrap');
+  if(!wrap) return;
+  if(!batches || !batches.length){
+    wrap.innerHTML = '<div class="dash-empty">No batch records found.</div>';
+    return;
+  }
+  
+  let html = `<table class="handler-table" style="width:100%;border-collapse:collapse;font-size:11.5px">
+    <thead>
+      <tr style="background:#1e3a5f;color:white">
+        <th style="padding:8px 10px;text-align:left;width:110px">Month</th>
+        <th style="padding:8px 10px;text-align:left;width:120px">Start Date</th>
+        <th style="padding:8px 12px;text-align:left;font-weight:800">Batch</th>
+        <th style="padding:8px 10px;text-align:center;width:90px">Students</th>
+        <th style="padding:8px 10px;text-align:center;width:90px">Completed</th>
+        <th style="padding:8px 12px;text-align:right;width:120px">Deal Value</th>
+        <th style="padding:8px 12px;text-align:right;width:120px">Received</th>
+        <th style="padding:8px 12px;text-align:right;width:120px">Balance</th>
+        <th style="padding:8px 10px;text-align:center;width:100px">Confirmed</th>
+        <th style="padding:8px 10px;text-align:center;width:140px">Actions</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  batches.forEach((b, idx) => {
+    const isExpanded = !!_etcBatchExpandedMap[b.batch_no];
+    const iconClass = isExpanded ? 'fa-chevron-down' : 'fa-chevron-right';
+    const bgStyle = idx % 2 === 0 ? 'background:#fff' : 'background:#f8fafc';
+    
+    html += `<tr style="${bgStyle};border-bottom:1px solid #e2e8f0;font-weight:600">
+      <td style="padding:9px 10px;color:#475569">${esc(b.month)}</td>
+      <td style="padding:9px 10px;color:#475569">${esc(b.start_date)}</td>
+      <td style="padding:9px 12px;color:#1e3a5f;font-weight:800;font-size:12.5px"><i class="fas fa-layer-group me-2" style="color:#3b82f6"></i>${esc(b.batch_no)}</td>
+      <td style="padding:9px 10px;text-align:center"><span class="badge" style="background:#eff6ff;color:#1d4ed8;font-size:11px;padding:3px 8px;border-radius:12px">${fmtNum(b.total_students)}</span></td>
+      <td style="padding:9px 10px;text-align:center"><span class="badge" style="background:#d1fae5;color:#065f46;font-size:11px;padding:3px 8px;border-radius:12px">${fmtNum(b.completed)}</span></td>
+      <td style="padding:9px 12px;text-align:right;color:#1d4ed8;font-weight:700">₹${fmtVal(b.deal_value)}</td>
+      <td style="padding:9px 12px;text-align:right;color:#059669;font-weight:700">₹${fmtVal(b.received)}</td>
+      <td style="padding:9px 12px;text-align:right;color:${b.balance > 0 ? '#dc2626' : '#059669'};font-weight:700">₹${fmtVal(b.balance)}</td>
+      <td style="padding:9px 10px;text-align:center">${b.confirmed_count > 0 ? `<span class="badge bg-success" style="font-size:10px">${b.confirmed_count} Confirmed</span>` : `<span class="text-muted" style="font-size:10px">—</span>`}</td>
+      <td style="padding:9px 10px;text-align:center">
+        <button class="btn btn-sm ${isExpanded ? 'btn-primary' : 'btn-outline-primary'}" style="font-size:10.5px;padding:3px 9px" onclick="toggleEtcBatchExpand('${esc(b.batch_no)}')">
+          <i class="fas ${iconClass} me-1"></i>${isExpanded ? 'Hide' : 'Show Students'} (${b.total_students})
+        </button>
+      </td>
+    </tr>`;
+    
+    // Expandable Student Sub-table Row
+    if (isExpanded) {
+      const students = b.students || [];
+      html += `<tr style="background:#f1f5f9">
+        <td colspan="10" style="padding:10px 14px;border-bottom:2px solid #cbd5e1">
+          <div style="background:#fff;border-radius:8px;border:1px solid #cbd5e1;padding:10px 14px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.03)">
+            <div style="font-size:11.5px;font-weight:800;color:#1e3a5f;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+              <span><i class="fas fa-users me-2 text-primary"></i> Students List — ${esc(b.batch_no)} (${students.length} Total)</span>
+              <span style="font-size:10.5px;color:#64748b">Batch Start Date: ${esc(b.start_date)}</span>
+            </div>`;
+      
+      if (!students.length) {
+        html += `<div style="text-align:center;padding:12px;color:#94a3b8;font-size:11px">No students found in this batch.</div>`;
+      } else {
+        html += `<table style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead>
+            <tr style="background:#e2e8f0;color:#334155;font-size:9.5px;text-transform:uppercase;letter-spacing:0.04em">
+              <th style="padding:6px 8px;text-align:center;width:40px">#</th>
+              <th style="padding:6px 8px;text-align:left;width:120px">Reg ID / Stu ID</th>
+              <th style="padding:6px 8px;text-align:left;font-weight:700">Student Name</th>
+              <th style="padding:6px 8px;text-align:left;width:110px">Phone</th>
+              <th style="padding:6px 8px;text-align:left;width:120px">Location</th>
+              <th style="padding:6px 8px;text-align:left;width:110px">Course</th>
+              <th style="padding:6px 8px;text-align:center;width:120px">Training Stage</th>
+              <th style="padding:6px 8px;text-align:right;width:95px">Deal Value</th>
+              <th style="padding:6px 8px;text-align:right;width:95px">Received</th>
+              <th style="padding:6px 8px;text-align:right;width:95px">Balance</th>
+              <th style="padding:6px 8px;text-align:center;width:90px">Confirmed</th>
+              <th style="padding:6px 8px;text-align:left;width:130px">Handler / TC</th>
+            </tr>
+          </thead>
+          <tbody>`;
+          
+        students.forEach((s, sIdx) => {
+          const isComp = s.training_stage === 'training_completed';
+          const stageBadge = isComp 
+            ? `<span class="badge" style="background:#d1fae5;color:#065f46;font-size:9.5px"><i class="fas fa-check-circle me-1"></i>Completed</span>`
+            : `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:9.5px"><i class="fas fa-clock me-1"></i>Under Training</span>`;
+            
+          const confBadge = s.confirmed
+            ? `<span class="badge bg-success" style="font-size:9px">Confirmed</span>`
+            : `<span class="text-muted" style="font-size:9px">Pending</span>`;
+
+          html += `<tr style="border-bottom:1px solid #f1f5f9">
+            <td style="padding:6px 8px;text-align:center;color:#64748b">${sIdx + 1}</td>
+            <td style="padding:6px 8px;font-family:monospace;font-size:10px;color:#475569">${esc(s.registration_id)}<br><span style="color:#94a3b8">${esc(s.student_id)}</span></td>
+            <td style="padding:6px 8px;font-weight:700;color:#0f172a">${esc(s.name)}</td>
+            <td style="padding:6px 8px;color:#334155">${esc(s.phone)}</td>
+            <td style="padding:6px 8px;color:#475569;font-size:10.5px">${esc(s.district)}${s.state && s.state !== '—' ? ', ' + esc(s.state) : ''}</td>
+            <td style="padding:6px 8px;color:#1e3a5f;font-weight:600">${esc(s.course_type)}</td>
+            <td style="padding:6px 8px;text-align:center">${stageBadge}</td>
+            <td style="padding:6px 8px;text-align:right;font-weight:700;color:#1d4ed8">₹${fmtVal(s.deal_value)}</td>
+            <td style="padding:6px 8px;text-align:right;font-weight:700;color:#059669">₹${fmtVal(s.received)}</td>
+            <td style="padding:6px 8px;text-align:right;font-weight:700;color:${s.balance > 0 ? '#dc2626' : '#059669'}">₹${fmtVal(s.balance)}</td>
+            <td style="padding:6px 8px;text-align:center">${confBadge}</td>
+            <td style="padding:6px 8px;font-size:10px;color:#475569">${esc(s.handler_name)}<br><span style="color:#94a3b8">TC: ${esc(s.telecaller_name)}</span></td>
+          </tr>`;
+        });
+        
+        html += `</tbody></table>`;
+      }
+      
+      html += `</div></td></tr>`;
+    }
+  });
+
+  html += `</tbody></table>`;
+  wrap.innerHTML = html;
+}
+
+function exportEtcBatchCsv(){
+  if(!_etcBatchData || !_etcBatchData.batches || !_etcBatchData.batches.length){
+    alert('No batch data available to export.');
+    return;
+  }
+  let csv = 'Month,Start Date,Batch,Total Students,Completed,Deal Value,Received,Balance,Confirmed Count\n';
+  _etcBatchData.batches.forEach(b => {
+    csv += `"${b.month}","${b.start_date}","${b.batch_no}",${b.total_students},${b.completed},${b.deal_value},${b.received},${b.balance},${b.confirmed_count}\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.setAttribute('download', `ETC_Batchwise_Analytics_${new Date().toISOString().slice(0,10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// ── Check Access Permission for ETC Batch-wise Tab ──────────────────────────
+(async function checkEtcBatchAccess(){
+  try {
+    const res = await staffFetch('/api/v1/staff/auth/me');
+    if (res.ok) {
+      const u = await res.json();
+      const code = (u.emp_code || u.employee_code || '').toUpperCase().trim();
+      const name = (u.full_name || u.name || '').toLowerCase();
+      const dept = (u.department_name || (u.department ? u.department.name : '') || '').toLowerCase();
+      const deptId = u.department_id;
+      
+      const isMR10001 = code === 'MR10001';
+      const isSubash = code === 'MR10025' || (name.includes('subash') || name.includes('subhash'));
+      const isAccounts = dept.includes('account') || deptId === 15;
+      
+      if (isMR10001 || (isSubash && isAccounts) || code === 'MR10025') {
+        const btn = document.getElementById('tab_etc_batchwise');
+        if (btn) btn.style.display = 'inline-flex';
+      }
+    }
+  } catch(e) { console.error('Access check error:', e); }
+})();
 
 /* DC-KPI-TAB-001: Update KPI cards from the rows currently shown in the
    Handlers tab. Rows carry s_won + s_lost from _stageFromRow(). */

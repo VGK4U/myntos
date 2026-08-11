@@ -5763,6 +5763,40 @@ def lead_analytics(
     staff_type = (current_employee.staff_type or '').upper()
     is_admin = is_vgk_admin(staff_type)
 
+    def _str_val(v):
+        return v if isinstance(v, str) and v.strip() else None
+
+    category = _str_val(category)
+    status = _str_val(status)
+    search = _str_val(search)
+    source = _str_val(source)
+    net_source = _str_val(net_source)
+    guru_filter = _str_val(guru_filter)
+    z_guru_filter = _str_val(z_guru_filter)
+    telecaller_emp_code = _str_val(telecaller_emp_code)
+    field_staff_emp_code = _str_val(field_staff_emp_code)
+    pincode = _str_val(pincode)
+    created_from = _str_val(created_from)
+    created_to = _str_val(created_to)
+    closed_from = _str_val(closed_from)
+    closed_to = _str_val(closed_to)
+    accepted_date_from = _str_val(accepted_date_from)
+    accepted_date_to = _str_val(accepted_date_to)
+    installation_date_from = _str_val(installation_date_from)
+    installation_date_to = _str_val(installation_date_to)
+    material_reach_date_from = _str_val(material_reach_date_from)
+    material_reach_date_to = _str_val(material_reach_date_to)
+    next_followup_from = _str_val(next_followup_from)
+    next_followup_to = _str_val(next_followup_to)
+    solar_pipeline_status = _str_val(solar_pipeline_status)
+    ev_b2b_stage = _str_val(ev_b2b_stage)
+    combined_bank_filter = _str_val(combined_bank_filter)
+    submit_date_from = _str_val(submit_date_from)
+    submit_date_to = _str_val(submit_date_to)
+    complete_date_from = _str_val(complete_date_from)
+    complete_date_to = _str_val(complete_date_to)
+    company_id_filter = company_id_filter if isinstance(company_id_filter, int) else None
+
     POST_WON = ['won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed']
     # DC Protocol (May 2026): Solar pipeline stages that disqualify a lead from Won counts/values.
     # A lead status='won' with one of these solar stages means the deal fell through post-win.
@@ -5844,20 +5878,22 @@ def lead_analytics(
             d['dv_' + k] = float(getattr(r, 'dv_' + k, 0) or 0)
         return d
 
+    # Pre-fetch completed CRM lead IDs from etc_students to avoid correlated EXISTS subqueries in aggregations
+    _etc_comp_rows = db.execute(text(
+        "SELECT crm_lead_id FROM etc_students WHERE crm_lead_id IS NOT NULL AND training_completed_date IS NOT NULL AND is_active = TRUE"
+    )).fetchall()
+    _etc_comp_ids = set(r[0] for r in _etc_comp_rows if r[0])
+
     def _completed_exprs():
-        from sqlalchemy import or_ as _ce_or, and_ as _ce_and, text as _ce_text
+        from sqlalchemy import or_ as _ce_or, and_ as _ce_and
+        _ce_etc = CRMLead.id.in_(_etc_comp_ids) if _etc_comp_ids else False
         _cc = _ce_or(
             CRMLead.solar_pipeline_status == 'completed',
             CRMLead.ev_b2b_stage == 'completed',
             _ce_and(CRMLead.status == 'completed',
                     CRMLead.solar_pipeline_status.is_(None),
                     CRMLead.ev_b2b_stage.is_(None)),
-            _ce_text(
-                "EXISTS (SELECT 1 FROM etc_students s "
-                "WHERE s.crm_lead_id = crm_leads.id "
-                "AND s.training_completed_date IS NOT NULL "
-                "AND s.is_active = TRUE)"
-            )
+            _ce_etc
         )
         return [
             _f.coalesce(_f.sum(_sa_case((_cc, 1), else_=0)), 0).label('cnt_completed'),
