@@ -130,8 +130,38 @@ def _text_width(draw, text, font):
         return len(text) * 10
 
 
+def _smart_crop_passport_photo(img):
+    import numpy as np
+    try:
+        arr = np.array(img.convert('RGB'))
+        r, g, b = arr[:,:,0].astype(int), arr[:,:,1].astype(int), arr[:,:,2].astype(int)
+        blue_mask = (b > 110) & (b > r + 15) & (g > 60)
+        
+        rows = np.any(blue_mask, axis=1)
+        cols = np.any(blue_mask, axis=0)
+        
+        if np.any(rows) and np.any(cols):
+            ymin, ymax = np.where(rows)[0][[0, -1]]
+            xmin, xmax = np.where(cols)[0][[0, -1]]
+            
+            h, w = arr.shape[:2]
+            box_h = ymax - ymin
+            box_w = xmax - xmin
+            
+            ymax = min(h, ymax + int(box_h * 0.4))
+            ymin = max(0, ymin - int(box_h * 0.1))
+            xmin = max(0, xmin - int(box_w * 0.1))
+            xmax = min(w, xmax + int(box_w * 0.1))
+            
+            return img.crop((xmin, ymin, xmax, ymax))
+    except Exception:
+        pass
+    return img
+
+
 def _circular_crop(img, size):
     from PIL import Image, ImageDraw
+    img = _smart_crop_passport_photo(img)
     img = img.convert('RGBA')
     img = img.resize((size, size), Image.LANCZOS)
     mask = Image.new('L', (size, size), 0)
