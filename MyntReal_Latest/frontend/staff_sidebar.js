@@ -104,6 +104,15 @@ const StaffSidebar = {
     // Current page path
     currentPath: window.location.pathname,
 
+    // Helper for precise route active matching (prevents false prefix matching on /staff)
+    isPathActive: function(href) {
+        if (!href) return false;
+        const c = (this.currentPath || '').split('?')[0].replace(/\/$/, '');
+        const h = href.split('?')[0].replace(/\/$/, '');
+        if (!h || h === '/staff' || h === '/staff/dashboard') return c === h;
+        return c === h || (c.startsWith(h + '/') && h.length > 7);
+    },
+
     // User data cache
     userData: null,
 
@@ -1103,8 +1112,7 @@ const StaffSidebar = {
             // Removed special MNR USER handling - now uses same structure as ACCOUNTS, ZYNOVA, MNR
             const sectionItems = section.items || [];
             for (const item of sectionItems) {
-                const isActive = this.currentPath === item.href || 
-                               (item.href !== '/staff/dashboard' && this.currentPath.startsWith(item.href));
+                const isActive = this.isPathActive(item.href);
                 const activeClass = isActive ? 'active' : '';
                 
                 html += `
@@ -1136,8 +1144,7 @@ const StaffSidebar = {
                     // DC Protocol (Jan 11, 2026): Null-safe sub-item rendering
                     const subItems = subSection.items || [];
                     for (const subItem of subItems) {
-                        const isSubActive = this.currentPath === subItem.href || 
-                                          (subItem.href !== '/staff/dashboard' && this.currentPath.startsWith(subItem.href));
+                        const isSubActive = this.isPathActive(subItem.href);
                         const subActiveClass = isSubActive ? 'active' : '';
                         
                         html += `
@@ -1158,8 +1165,7 @@ const StaffSidebar = {
             // DC Protocol (Jan 9, 2026): Render standalone items (items without parent grouping)
             if (section.standaloneItems && section.standaloneItems.length > 0) {
                 for (const item of section.standaloneItems) {
-                    const isActive = this.currentPath === item.href || 
-                                   (item.href !== '/staff/dashboard' && this.currentPath.startsWith(item.href));
+                    const isActive = this.isPathActive(item.href);
                     const activeClass = isActive ? 'active' : '';
                     
                     html += `
@@ -1312,8 +1318,7 @@ const StaffSidebar = {
         
         // Render standalone items first (Member Dashboard, Create Member, etc.)
         standaloneItems.forEach(item => {
-            const isActive = this.currentPath === item.href || 
-                           (item.href !== '/staff/dashboard' && this.currentPath.startsWith(item.href));
+            const isActive = this.isPathActive(item.href);
             const activeClass = isActive ? 'active' : '';
             html += `
                 <a href="${item.href}" class="nav-item ${activeClass}">
@@ -1324,7 +1329,7 @@ const StaffSidebar = {
         });
         
         // DC Protocol (Jan 10, 2026): Inject static "MNR User MyntReal" menu item after standalone items
-        const myntRealActive = this.currentPath.includes('/staff/mnr-user/myntreal') ? 'active' : '';
+        const myntRealActive = this.isPathActive('/staff/mnr-user/myntreal/properties') ? 'active' : '';
         html += `
             <a href="/staff/mnr-user/myntreal/properties" class="nav-item ${myntRealActive}">
                 <i class="fas fa-gem"></i>
@@ -1333,7 +1338,7 @@ const StaffSidebar = {
         `;
         
         // DC Protocol (Jan 10, 2026): Inject static "MNR User Coupons" menu item
-        const couponsActive = this.currentPath.includes('/staff/mnr-user/coupons') ? 'active' : '';
+        const couponsActive = this.isPathActive('/staff/mnr-user/coupons') ? 'active' : '';
         html += `
             <a href="/staff/mnr-user/coupons" class="nav-item ${couponsActive}">
                 <i class="fas fa-ticket-alt"></i>
@@ -1342,7 +1347,7 @@ const StaffSidebar = {
         `;
         
         // DC Protocol (Jan 10, 2026): Inject static "MNR User Awards" menu item
-        const awardsActive = this.currentPath.includes('/staff/mnr-user/awards') ? 'active' : '';
+        const awardsActive = this.isPathActive('/staff/mnr-user/awards') ? 'active' : '';
         html += `
             <a href="/staff/mnr-user/awards" class="nav-item ${awardsActive}">
                 <i class="fas fa-trophy"></i>
@@ -1351,7 +1356,7 @@ const StaffSidebar = {
         `;
         
         // DC Protocol (Jan 10, 2026): Inject static "MNR User Allowances" menu item
-        const allowancesActive = this.currentPath.includes('/staff/mnr-user/allowances') ? 'active' : '';
+        const allowancesActive = this.isPathActive('/staff/mnr-user/allowances') ? 'active' : '';
         html += `
             <a href="/staff/mnr-user/allowances" class="nav-item ${allowancesActive}">
                 <i class="fas fa-hand-holding-usd"></i>
@@ -1374,8 +1379,7 @@ const StaffSidebar = {
             
             if (children.length === 0) {
                 // Parent without children - render as standalone
-                const isActive = this.currentPath === parent.href || 
-                               (parent.href !== '/staff/dashboard' && this.currentPath.startsWith(parent.href));
+                const isActive = this.isPathActive(parent.href);
                 const activeClass = isActive ? 'active' : '';
                 html += `
                     <a href="${parent.href}" class="nav-item ${activeClass}">
@@ -1398,8 +1402,7 @@ const StaffSidebar = {
                 
                 // Render child items
                 children.forEach(child => {
-                    const isActive = this.currentPath === child.href || 
-                                   (child.href !== '/staff/dashboard' && this.currentPath.startsWith(child.href));
+                    const isActive = this.isPathActive(child.href);
                     const activeClass = isActive ? 'active' : '';
                     html += `
                         <a href="${child.href}" class="nav-item sub-nav-item ${activeClass}">
