@@ -175,12 +175,7 @@ th[data-sk]:hover{background:#eef2f7!important}
     <div class="tab-bar">
       <button class="tab-btn active" id="tab_overview" onclick="switchTab('overview')"><i class="fas fa-chart-bar me-1"></i>Overview</button>
       <button class="tab-btn" id="tab_trends" onclick="switchTab('trends')"><i class="fas fa-chart-line me-1"></i>Monthly &amp; Weekly Trends</button>
-      <button class="tab-btn" id="tab_handlers" style="display:none" onclick="switchTab('handlers')"><i class="fas fa-users me-1"></i>Handlers Status Wise</button>
-      <button class="tab-btn" id="tab_stagewise" style="display:none" onclick="switchTab('stagewise')"><i class="fas fa-table me-1"></i>Stagewise Handlers</button>
       <button class="tab-btn" id="tab_etc_batchwise" style="display:none" onclick="switchTab('etc_batchwise')"><i class="fas fa-graduation-cap me-1"></i>ETC Students Batch Wise</button>
-      <button class="tab-btn" id="tab_groundsource" style="display:none" onclick="switchTab('groundsource')"><i class="fas fa-map-marker-alt me-1"></i>Ground Source</button>
-      <button class="tab-btn" id="tab_lead_view" style="display:none" onclick="switchTab('lead_view')"><i class="fas fa-file-invoice me-1"></i>Lead View</button>
-      <button class="tab-btn" id="tab_member_view" style="display:none" onclick="switchTab('member_view')"><i class="fas fa-coins me-1"></i>Member Earnings</button>
     </div>
 
     <!-- Quick date filters -->
@@ -763,7 +758,7 @@ function renderEtcBatchwiseTable(batches){
       <td style="padding:9px 12px;text-align:right;color:#1d4ed8;font-weight:700">₹${fmtVal(b.deal_value)}</td>
       <td style="padding:9px 12px;text-align:right;color:#059669;font-weight:700">₹${fmtVal(b.received)}</td>
       <td style="padding:9px 12px;text-align:right;color:${b.balance > 0 ? '#dc2626' : '#059669'};font-weight:700">₹${fmtVal(b.balance)}</td>
-      <td style="padding:9px 10px;text-align:center">${b.confirmed_count > 0 ? `<span class="badge bg-success" style="font-size:10px">${b.confirmed_count} Confirmed</span>` : `<span class="text-muted" style="font-size:10px">—</span>`}</td>
+      <td style="padding:9px 10px;text-align:center">${b.confirmed_value > 0 ? `<span class="badge bg-success" style="font-size:10.5px;padding:4px 8px">₹${fmtVal(b.confirmed_value)}</span>` : `<span class="text-muted" style="font-size:10.5px">₹0</span>`}</td>
       <td style="padding:9px 10px;text-align:center">
         <button class="btn btn-sm ${isExpanded ? 'btn-primary' : 'btn-outline-primary'}" style="font-size:10.5px;padding:3px 9px" onclick="toggleEtcBatchExpand('${esc(b.batch_no)}')">
           <i class="fas ${iconClass} me-1"></i>${isExpanded ? 'Hide' : 'Show Students'} (${b.total_students})
@@ -810,9 +805,11 @@ function renderEtcBatchwiseTable(batches){
             ? `<span class="badge" style="background:#d1fae5;color:#065f46;font-size:9.5px"><i class="fas fa-check-circle me-1"></i>Completed</span>`
             : `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:9.5px"><i class="fas fa-clock me-1"></i>Under Training</span>`;
             
-          const confBadge = s.confirmed
-            ? `<span class="badge bg-success" style="font-size:9px">Confirmed</span>`
-            : `<span class="text-muted" style="font-size:9px">Pending</span>`;
+          const confBadge = (s.confirmed && s.confirmed_amount > 0)
+            ? `<span class="badge bg-success" style="font-size:9px"><i class="fas fa-check-circle me-1"></i>Confirmed (₹${fmtVal(s.confirmed_amount)})</span>`
+            : (s.confirmed 
+              ? `<span class="badge bg-success" style="font-size:9px"><i class="fas fa-check-circle me-1"></i>Confirmed</span>`
+              : `<span class="text-muted" style="font-size:9px">Pending</span>`);
 
           html += `<tr style="border-bottom:1px solid #f1f5f9">
             <td style="padding:6px 8px;text-align:center;color:#64748b">${sIdx + 1}</td>

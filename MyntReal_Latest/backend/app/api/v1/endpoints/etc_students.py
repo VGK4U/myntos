@@ -677,6 +677,30 @@ def get_etc_batchwise_analytics(
         ORDER BY s.batch_start_date DESC NULLS LAST, s.id DESC
     """), st_params).fetchall()
 
+    lead_ids = [r.crm_lead_id for r in student_rows if r.crm_lead_id]
+    tx_map = {}
+    inc_map = {}
+    if lead_ids:
+        lids_tuple = tuple(set(lead_ids))
+        tx_rows = db.execute(text("""
+            SELECT lead_id, SUM(amount) as total_tx
+            FROM crm_lead_transactions
+            WHERE lead_id IN :lids
+            GROUP BY lead_id
+        """), {'lids': lids_tuple}).fetchall()
+        tx_map = {tr.lead_id: float(tr.total_tx or 0.0) for tr in tx_rows}
+
+        inc_rows = db.execute(text("""
+            SELECT lead_id, 
+                   SUM(amount) as inc_total,
+                   SUM(CASE WHEN UPPER(status) IN ('CONFIRMED', 'TALLY_DONE', 'APPROVED') THEN amount ELSE 0 END) as inc_conf_total,
+                   COUNT(CASE WHEN UPPER(status) IN ('CONFIRMED', 'TALLY_DONE', 'APPROVED') THEN 1 END) as inc_conf_cnt
+            FROM income_entries
+            WHERE is_deleted IS NOT TRUE AND lead_id IN :lids
+            GROUP BY lead_id
+        """), {'lids': lids_tuple}).fetchall()
+        inc_map = {ir.lead_id: (float(ir.inc_total or 0.0), float(ir.inc_conf_total or 0.0), int(ir.inc_conf_cnt or 0)) for ir in inc_rows}
+
     all_codes = set()
     for r in student_rows:
         if r.handler_emp_code: all_codes.add(r.handler_emp_code.upper())
@@ -695,6 +719,7 @@ def get_etc_batchwise_analytics(
     total_all_received = 0.0
     total_all_balance = 0.0
     total_all_confirmed = 0
+    total_all_confirmed_value = 0.0
 
     import re
     for r in student_rows:
@@ -720,6 +745,7 @@ def get_etc_batchwise_analytics(
                 'received': 0.0,
                 'balance': 0.0,
                 'confirmed_count': 0,
+                'confirmed_value': 0.0,
                 'students': []
             }
 
@@ -733,16 +759,25 @@ def get_etc_batchwise_analytics(
             total_all_completed += 1
 
         dv = float(r.package_value or 0.0)
-        rec = float(r.deal_value_received or 0.0)
+        
+        # Calculate received value from crm_lead_transactions & income_entries
+        tx_val = tx_map.get(r.crm_lead_id, 0.0)
+        inc_val, inc_conf_val, inc_conf_cnt = inc_map.get(r.crm_lead_id, (0.0, 0.0, 0))
+        rec_db = float(r.deal_value_received or 0.0)
+        rec = max(rec_db, tx_val, inc_val)
         bal = max(0.0, dv - rec)
-        is_conf = bool(r.handler_confirmed or r.telecaller_confirmed or r.field_staff_confirmed)
+
+        is_conf = bool(inc_conf_cnt > 0 or inc_conf_val > 0 or r.handler_confirmed or r.telecaller_confirmed or r.field_staff_confirmed)
+        conf_amt = inc_conf_val if inc_conf_val > 0 else (dv if is_conf else 0.0)
 
         b['deal_value'] += dv
         b['received'] += rec
         b['balance'] += bal
+        b['confirmed_value'] += conf_amt
         total_all_deal_value += dv
         total_all_received += rec
         total_all_balance += bal
+        total_all_confirmed_value += conf_amt
 
         if is_conf:
             b['confirmed_count'] += 1
@@ -767,6 +802,7 @@ def get_etc_batchwise_analytics(
             'received': rec,
             'balance': bal,
             'confirmed': is_conf,
+            'confirmed_amount': conf_amt,
             'handler_name': h_name,
             'handler_emp_code': r.handler_emp_code or '',
             'telecaller_name': tc_name,
@@ -796,6 +832,7 @@ def get_etc_batchwise_analytics(
             'total_received': round(total_all_received, 2),
             'total_balance': round(total_all_balance, 2),
             'total_confirmed': total_all_confirmed,
+            'total_confirmed_value': round(total_all_confirmed_value, 2),
         },
         'batches': batch_list
     }
