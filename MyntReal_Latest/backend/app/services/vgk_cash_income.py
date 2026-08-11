@@ -262,11 +262,11 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
     # DC-SOLAR-SPEC-20260710: Final commission must trigger ONLY at solar_pipeline_status
     # = 'completed' — explicitly NOT at balance_received or subsidy_pending (those stages
     # now only carry CIBIL/DVR advances, not the final settlement).
-    # DC-SOLAR-GATE-ALLCAT-001 (Jul 2026): Extended from category_id==6 to ANY lead that has
-    # a solar_pipeline_status set (e.g. category_id=19 EV/Solar hybrids). Any non-null,
-    # non-empty solar_pipeline_status that is not 'completed' must block COMMISSION generation.
+    # DC-SOLAR-GATE-ALLCAT-001 (Jul 2026): Check all Solar category IDs across all 4 companies (6, 19, 36, 48)
+    # as well as any lead with a solar_pipeline_status set.
+    _SOLAR_CAT_IDS = (6, 19, 36, 48)
     _sps_gate = (getattr(lead, 'solar_pipeline_status', '') or '').lower()
-    _is_solar = (category_id == 6) or bool(_sps_gate)
+    _is_solar = (category_id in _SOLAR_CAT_IDS) or bool(_sps_gate)
     if _is_solar:
         _SOLAR_COMM_STAGES = {'subsidy_pending', 'completed'}
         if _sps_gate not in _SOLAR_COMM_STAGES:
