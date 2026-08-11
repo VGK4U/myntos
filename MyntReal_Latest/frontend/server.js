@@ -2318,6 +2318,11 @@ ${customStyles}
 // Serves MNR management pages with Staff sidebar/header layout for hybrid access
 const createStaffMnrHTML = (title, bodyContent, staffToken = '', customStyles = '') => {
   let cleanBody = bodyContent;
+  let rawToken = (staffToken || '').trim();
+  while (rawToken.toLowerCase().startsWith('bearer ')) {
+      rawToken = rawToken.slice(7).trim();
+  }
+  const cleanStaffToken = rawToken.replace(/^["']|["']$/g, '').trim();
   cleanBody = cleanBody.replace(/<script\s+src="https:\/\/cdn\.jsdelivr\.net\/npm\/bootstrap@[^"]*"><\/script>/gi, '');
   cleanBody = cleanBody.replace(/<script\s+src="https:\/\/code\.jquery\.com\/jquery[^"]*"><\/script>/gi, '');
   return `
@@ -2416,13 +2421,13 @@ const createStaffMnrHTML = (title, bodyContent, staffToken = '', customStyles = 
         // DC Protocol: Define API_BASE_URL and sessionToken for RVZ/shared builder content (Dec 28, 2025)
         const API_BASE_URL = '';  // Use relative URLs - frontend proxies to backend
         window.BACKEND_URL = '';  // DC Protocol: For MNR pages using fetch with BACKEND_URL
-        const sessionToken = '${staffToken}';  // For shared builder content scripts
+        const sessionToken = '${cleanStaffToken}';  // For shared builder content scripts
         window.sessionToken = sessionToken;    // Expose globally for compatibility
-        window.rvzSessionToken = '${staffToken}';  // For RVZ dashboard scripts
+        window.rvzSessionToken = '${cleanStaffToken}';  // For RVZ dashboard scripts
         
         // Override localStorage.getItem to return staff token for authToken requests
         (function() {
-            var STAFF_TOKEN = '${staffToken}';
+            var STAFF_TOKEN = '${cleanStaffToken}';
             var originalGetItem = localStorage.getItem.bind(localStorage);
             localStorage.getItem = function(key) {
                 if (key === 'authToken' && STAFF_TOKEN) {
@@ -7664,14 +7669,15 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Direct APK / Mobile App Download Handling (Fixes 302 infinite loop and 404s)
-  const isApkDownload = [
+  // Direct APK / Mobile App Download & Portal Landing Page Handling
+  const isApkPath = [
     '/mobile.app', '/mobile.apk', '/download/mobile.app', '/download/mobile.apk',
     '/download-app', '/download/apk', '/myntreal.apk', '/public/myntreal.apk',
-    '/app.apk', '/app.app', '/download/app'
+    '/app.apk', '/app.app', '/download/app', '/app', '/mobile', '/mobile-app',
+    '/myntreal', '/apk', '/download', '/get-app'
   ].includes(reqPathLower);
 
-  if (isApkDownload) {
+  if (isApkPath) {
     const apkCandidates = [
       path.join(__dirname, 'public', 'mobile.apk'),
       path.join(__dirname, 'public', 'MyntReal.apk'),
@@ -7685,21 +7691,145 @@ const server = http.createServer(async (req, res) => {
         break;
       }
     }
-    if (selectedApk) {
-      const stat = fs.statSync(selectedApk);
-      res.writeHead(200, {
-        'Content-Type': 'application/vnd.android.package-archive',
-        'Content-Length': stat.size,
-        'Content-Disposition': 'attachment; filename="MyntReal.apk"',
-        'Cache-Control': 'public, max-age=86400'
-      });
-      fs.createReadStream(selectedApk).pipe(res);
-      return;
-    } else {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('APK file not found on server');
-      return;
+
+    const isDirect = urlParts.searchParams.has('direct') || 
+                     reqPathLower.endsWith('.apk') || 
+                     reqPathLower.endsWith('.app') || 
+                     (req.headers['accept'] && req.headers['accept'].includes('application/vnd.android.package-archive'));
+
+    if (isDirect) {
+      if (selectedApk) {
+        const stat = fs.statSync(selectedApk);
+        res.writeHead(200, {
+          'Content-Type': 'application/vnd.android.package-archive',
+          'Content-Length': stat.size,
+          'Content-Disposition': 'attachment; filename="MyntReal.apk"',
+          'Cache-Control': 'public, max-age=86400'
+        });
+        fs.createReadStream(selectedApk).pipe(res);
+        return;
+      } else {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('APK file not found on server');
+        return;
+      }
     }
+
+    // Render Mobile Download Portal Landing Page (Supports all browsers and platforms)
+    const downloadPageHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download MyntReal Mobile App</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at 50% 20%, #1e2952 0%, #0b1120 70%, #040711 100%);
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 1.5rem;
+      padding: 2.5rem 2rem;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(245, 158, 11, 0.15);
+      backdrop-filter: blur(16px);
+    }
+    .app-icon {
+      width: 88px;
+      height: 88px;
+      border-radius: 22px;
+      margin: 0 auto 1.5rem;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      color: #ffffff;
+      box-shadow: 0 10px 25px rgba(245, 158, 11, 0.4);
+    }
+    h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.5rem; background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .subtitle { color: #94a3b8; font-size: 0.95rem; margin-bottom: 1.8rem; line-height: 1.5; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.35rem 0.8rem;
+      border-radius: 50px;
+      margin-bottom: 1.8rem;
+    }
+    .btn-download {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: #040711;
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 1.1rem 1.5rem;
+      border-radius: 0.85rem;
+      text-decoration: none;
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.35);
+      transition: all 0.2s ease;
+      margin-bottom: 1.2rem;
+    }
+    .btn-download:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 25px rgba(245, 158, 11, 0.5);
+    }
+    .file-info { font-size: 0.82rem; color: #64748b; line-height: 1.6; }
+    .file-info strong { color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="app-icon">
+      <i class="fas fa-mobile-alt"></i>
+    </div>
+    <h1>MyntReal Official App</h1>
+    <p class="subtitle">Complete EV, Solar, Real Estate & Member Rewards Program on your mobile device.</p>
+    <div class="badge">
+      <i class="fas fa-shield-alt"></i> Verified Official Release v1.0
+    </div>
+    <a href="/app?direct=1" class="btn-download">
+      <i class="fas fa-download"></i> Download Android App (APK)
+    </a>
+    <div class="file-info">
+      Package Size: <strong>10.9 MB</strong> &bull; Requires <strong>Android 8.0+</strong><br>
+      Tap the button above to begin direct download.
+    </div>
+  </div>
+  <script>
+    // Auto trigger direct download for mobile devices
+    if (/Android/i.test(navigator.userAgent)) {
+      setTimeout(function() {
+        window.location.href = '/app?direct=1';
+      }, 1200);
+    }
+  </script>
+</body>
+</html>`;
+
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(downloadPageHtml);
+    return;
   }
 
   // DC Protocol (Aug 2026): Enforce session/cookie creation from token query param
@@ -7869,18 +7999,12 @@ const server = http.createServer(async (req, res) => {
       const sessionTokenMatch = cookieStr.match(/session_token=([^;]+)/);
       const sessionMatch = cookieStr.match(/session=([^;]+)/);
 
-      // DC Fix (Apr 2026): In staff context, cookie is authoritative — always override client token
-      // Exception: never inject when URL already carries ?Authorization= (e.g. PDF download links)
+      // DC Protocol Rule: Preserve valid client Authorization header; use cookie staff_token ONLY as fallback when header is missing/null
       const cookieStaffToken = staffTokenMatch && staffTokenMatch[1] ? decodeURIComponent(staffTokenMatch[1]) : null;
-      if (!isAuthLoginEndpoint && !hasAuthQueryParam && isStaffContext && cookieStaffToken) {
-        const clientToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-        if (!clientToken || clientToken !== cookieStaffToken) {
+      if (!isAuthLoginEndpoint && !hasAuthQueryParam && isStaffContext) {
+        if (isInvalidAuth && cookieStaffToken) {
           proxyHeaders.authorization = `Bearer ${cookieStaffToken}`;
-          if (clientToken) {
-            console.log(`[DC-PROXY-API-${requestId}] 🔄 Replaced stale client token with cookie staff_token`);
-          } else {
-            console.log(`[DC-PROXY-API-${requestId}] ⚡ Injected auth from staff_token cookie`);
-          }
+          console.log(`[DC-PROXY-API-${requestId}] ⚡ Injected auth from staff_token cookie (header missing/invalid)`);
         }
       } else if (isInvalidAuth && !isAuthLoginEndpoint && !hasAuthQueryParam) {
         // Context-aware token priority for non-staff contexts (or when no staff cookie available)

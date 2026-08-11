@@ -494,8 +494,11 @@ async def get_current_user_hybrid(
     # Fix: When MNR client sends Authorization: Bearer MNR_TOKEN, it must resolve to MNR user
     # even if a staff_token cookie exists from a previous Staff Portal session.
     auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ")[1]
+    if auth_header and auth_header.strip():
+        token = auth_header.strip()
+        while token.lower().startswith("bearer "):
+            token = token[7:].strip()
+        token = token.strip('"').strip("'")
         try:
             payload = SecurityManager.verify_token(token)
             if payload and payload.get("sub"):
@@ -569,8 +572,11 @@ async def get_current_vgk_partner_any(
     logger = logging.getLogger(__name__)
 
     auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ")[1]
+    if auth_header and auth_header.strip():
+        token = auth_header.strip()
+        while token.lower().startswith("bearer "):
+            token = token[7:].strip()
+        token = token.strip('"').strip("'")
         try:
             payload = SecurityManager.verify_token(token)
             if payload and payload.get("sub"):
@@ -621,8 +627,11 @@ async def get_current_user_hybrid_with_partner(
     # Try partner token from Authorization header or session cookies
     auth_header = request.headers.get("Authorization")
     token = None
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ")[1]
+    if auth_header and auth_header.strip():
+        token = auth_header.strip()
+        while token.lower().startswith("bearer "):
+            token = token[7:].strip()
+        token = token.strip('"').strip("'")
     else:
         token = request.cookies.get("session_token") or request.cookies.get("session")
         
@@ -711,8 +720,11 @@ async def get_current_mnr_user_from_hybrid(
     
     # Priority 2: Try JWT from Authorization header (MNR tokens only)
     auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ")[1]
+    if auth_header and auth_header.strip():
+        token = auth_header.strip()
+        while token.lower().startswith("bearer "):
+            token = token[7:].strip()
+        token = token.strip('"').strip("'")
         try:
             payload = SecurityManager.verify_token(token)
             if payload and payload.get("sub"):

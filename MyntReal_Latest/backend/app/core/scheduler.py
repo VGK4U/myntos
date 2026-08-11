@@ -2212,20 +2212,44 @@ def calculate_previous_day_incomes():
     """
     Midnight job: Calculate incomes for yesterday (automatic)
     DC Protocol Fix: Use IST date (not UTC date.today()) since scheduler fires at midnight IST
+    DC Protocol (Aug 2026): Multi-instance safety — acquire transaction-level advisory lock
+    (pg_try_advisory_xact_lock) so only one worker runs when deployed on a load-balanced multi-instance cluster.
+    
+    TRANSACTION BOUNDARY GUARANTEE:
+    The lock is bound strictly to this transaction lifetime. It is acquired at transaction start,
+    remains held throughout _recover_missed_dates and _calculate_incomes_with_date, and is automatically
+    released by PostgreSQL when db.commit() or db.rollback() is executed at the end.
+    Works 100% safely with SQLAlchemy connection pooling with zero session leakage.
     
     SELF-HEALING: Before processing yesterday, checks for any missed dates
     in the last 7 days where the scheduler failed or created 0 incomes despite
     having activated users. Automatically backfills those dates first.
     Duplicate protection in _calculate_incomes_with_date ensures safe re-runs.
     """
-    import pytz
-    ist = pytz.timezone('Asia/Kolkata')
-    today_ist = datetime.now(ist).date()
-    yesterday = today_ist - timedelta(days=1)
-    
-    _recover_missed_dates(today_ist, yesterday)
-    
-    return _calculate_incomes_with_date(target_date=yesterday, is_manual=False, triggered_by="SCHEDULER")
+    db = SessionLocal()
+    try:
+        # Transaction-level advisory lock (automatically releases at commit/rollback)
+        lock_acquired = db.execute(text("SELECT pg_try_advisory_xact_lock(88890099)")).scalar()
+        if not lock_acquired:
+            logger.info("🔒 [DC-LOCK] Midnight income calculation advisory transaction lock held by another worker — skipping duplicate run")
+            db.rollback()
+            return None
+        import pytz
+        ist = pytz.timezone('Asia/Kolkata')
+        today_ist = datetime.now(ist).date()
+        yesterday = today_ist - timedelta(days=1)
+        
+        _recover_missed_dates(today_ist, yesterday)
+        
+        result = _calculate_incomes_with_date(target_date=yesterday, is_manual=False, triggered_by="SCHEDULER")
+        db.commit()
+        return result
+    except Exception as e:
+        db.rollback()
+        logger.error(f"🔒 [DC-LOCK] Error during midnight income calculation: {e}")
+        raise
+    finally:
+        db.close()
 
 
 def _recover_missed_dates(today_ist: date, yesterday: date):

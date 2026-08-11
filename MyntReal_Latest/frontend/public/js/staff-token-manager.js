@@ -78,8 +78,11 @@
                 const error = await response.json();
                 console.error('[DC_TOKEN] Refresh failed:', error.detail);
                 
-                if (response.status === 401 || response.status === 403) {
-                    handleSessionExpired(error.detail);
+                if (response.status === 401) {
+                    const currentTok = localStorage.getItem('staff_token');
+                    if (!currentTok || isTokenExpired(currentTok)) {
+                        handleSessionExpired(error.detail);
+                    }
                 }
                 return null;
             }
@@ -164,22 +167,37 @@
     }
     
     async function staffFetch(url, options = {}) {
-        let token = localStorage.getItem('staff_token') ||
-                    localStorage.getItem('token') ||
-                    localStorage.getItem('authToken') ||
-                    localStorage.getItem('access_token') ||
-                    sessionStorage.getItem('staff_token') ||
-                    sessionStorage.getItem('token') || null;
-        
-        if (token && token !== 'null' && token !== 'undefined' && !localStorage.getItem('staff_token')) {
-            try { localStorage.setItem('staff_token', token); } catch (e) {}
+        let token = localStorage.getItem('staff_token');
+        if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
+            const cookieMatch = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('staff_token='));
+            if (cookieMatch) {
+                token = cookieMatch.split('=')[1];
+                if (token) {
+                    try { token = decodeURIComponent(token); } catch(e) {}
+                }
+            }
         }
         
-        if (!token || token === 'null' || token === 'undefined') {
+        if (token) {
+            token = token.trim();
+            while (token.toLowerCase().startsWith('bearer ')) {
+                token = token.slice(7).trim();
+            }
+            token = token.replace(/^["']|["']$/g, '').trim();
+        }
+        
+        if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
             console.warn('[DC_TOKEN] No token available for request');
             handleSessionExpired('No authentication token');
             throw new Error('Not authenticated');
         }
+        
+        // Self-heal localStorage if token was dirty
+        try {
+            if (localStorage.getItem('staff_token') !== token) {
+                localStorage.setItem('staff_token', token);
+            }
+        } catch(e) {}
         
         if (isTokenExpired(token) || isTokenExpiringSoon(token)) {
             const newToken = await refreshToken();
@@ -210,41 +228,32 @@
         
         if (response.status === 401) {
             const error = await response.clone().json().catch(() => ({}));
-            const errorDetail = (error.detail || '').toUpperCase();
+            const errorDetail = (error.detail || '').toString();
             
-            const authErrors = [
-                'TOKEN_EXPIRED',
-                'INVALID_TOKEN',
-                'TOKEN_INVALID',
-                'NOT_AUTHENTICATED',
-                'COULD NOT VALIDATE CREDENTIALS',
-                'INVALID AUTHENTICATION CREDENTIALS',
-                'SIGNATURE HAS EXPIRED',
-                'TOKEN HAS EXPIRED'
-            ];
-            
-            const isAuthError = authErrors.some(e => errorDetail.includes(e));
-            
-            if (errorDetail.includes('TOKEN_EXPIRED')) {
-                const newToken = await refreshToken();
-                if (newToken) {
-                    const refreshedHeaders = {
-                        ...options.headers,
-                        'Authorization': `Bearer ${newToken}`
-                    };
-                    if (options.body && typeof options.body === 'string' && !refreshedHeaders['Content-Type']) {
-                        try {
-                            JSON.parse(options.body);
-                            refreshedHeaders['Content-Type'] = 'application/json';
-                        } catch (e) {}
-                    }
-                    console.log('[DC_TOKEN] Retrying request with refreshed token');
-                    return fetch(url, { ...options, headers: refreshedHeaders });
+            // Try refreshing token first
+            const newToken = await refreshToken();
+            if (newToken) {
+                const refreshedHeaders = {
+                    ...options.headers,
+                    'Authorization': `Bearer ${newToken}`
+                };
+                if (options.body && typeof options.body === 'string' && !refreshedHeaders['Content-Type']) {
+                    try {
+                        JSON.parse(options.body);
+                        refreshedHeaders['Content-Type'] = 'application/json';
+                    } catch (e) {}
                 }
+                console.log('[DC_TOKEN] Retrying request with refreshed token');
+                return fetch(url, { ...options, headers: refreshedHeaders });
             }
             
-            if (isAuthError) {
-                handleSessionExpired(error.detail || 'Authentication failed');
+            // If refresh fails, check if local token is truly expired before nuking session
+            const currentTok = localStorage.getItem('staff_token');
+            if (!currentTok || isTokenExpired(currentTok)) {
+                console.warn('[DC_TOKEN] Confirmed expired token — triggering session expiry:', errorDetail);
+                handleSessionExpired(errorDetail || 'Session expired or invalid token. Please login again.');
+            } else {
+                console.warn('[DC_TOKEN] Non-fatal 401 response (token valid locally, session preserved):', errorDetail);
             }
         }
         
@@ -381,34 +390,28 @@
                     const error = await clonedResponse.json();
                     const errorDetail = (error.detail || '').toUpperCase();
                     
-                    const authErrors = [
-                        'TOKEN_EXPIRED',
-                        'INVALID_TOKEN',
-                        'TOKEN_INVALID',
-                        'NOT_AUTHENTICATED',
-                        'COULD NOT VALIDATE CREDENTIALS',
-                        'INVALID AUTHENTICATION CREDENTIALS',
-                        'SIGNATURE HAS EXPIRED',
-                        'TOKEN HAS EXPIRED'
-                    ];
-                    
-                    const isAuthError = authErrors.some(e => errorDetail.includes(e));
+                    const isAuthError = true;
                     
                     if (isAuthError) {
-                        console.warn('[DC_TOKEN] Auth failure detected:', error.detail, '- attempting refresh before redirect');
-                        // DC Fix (Apr 2026): Try to refresh the token before giving up and redirecting.
-                        // This handles the case where the token just expired mid-session.
+                        console.warn('[DC_TOKEN] Auth failure detected:', error.detail, '- attempting refresh');
                         const newToken = await refreshToken().catch(() => null);
                         if (!newToken) {
-                            handleSessionExpired(error.detail);
+                            const currentTok = localStorage.getItem('staff_token');
+                            if (!currentTok || isTokenExpired(currentTok)) {
+                                handleSessionExpired(error.detail || 'Session expired or invalid token. Please login again.');
+                            } else {
+                                console.warn('[DC_TOKEN] 401 response on unexpired token — session preserved');
+                            }
                         } else {
                             console.log('[DC_TOKEN] Token refreshed after 401 - session preserved');
                         }
-                    } else {
-                        console.log('[DC_TOKEN] 401 non-auth error (not clearing session):', error.detail);
                     }
                 } catch {
                     console.log('[DC_TOKEN] 401 response without parseable error body');
+                    const currentTok = localStorage.getItem('staff_token');
+                    if (!currentTok || isTokenExpired(currentTok)) {
+                        handleSessionExpired('Session expired. Please login again.');
+                    }
                 }
             }
             
@@ -453,18 +456,17 @@
                 if (xhr.status === 401 && isApiCall && !isAuthEndpoint) {
                     try {
                         const error = JSON.parse(xhr.responseText);
-                        const errorDetail = (error.detail || '').toUpperCase();
-                        
-                        const authErrors = [
-                            'TOKEN_EXPIRED', 'INVALID_TOKEN', 'TOKEN_INVALID',
-                            'NOT_AUTHENTICATED', 'COULD NOT VALIDATE CREDENTIALS'
-                        ];
-                        
-                        if (authErrors.some(e => errorDetail.includes(e))) {
-                            console.warn('[DC_TOKEN] XHR Auth failure:', error.detail);
-                            handleSessionExpired(error.detail);
+                        console.warn('[DC_TOKEN] XHR Auth failure:', error.detail);
+                        const currentTok = localStorage.getItem('staff_token');
+                        if (!currentTok || isTokenExpired(currentTok)) {
+                            handleSessionExpired(error.detail || 'Session expired. Please login again.');
                         }
-                    } catch {}
+                    } catch {
+                        const currentTok = localStorage.getItem('staff_token');
+                        if (!currentTok || isTokenExpired(currentTok)) {
+                            handleSessionExpired('Session expired. Please login again.');
+                        }
+                    }
                 }
             });
             

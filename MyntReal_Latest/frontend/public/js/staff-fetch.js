@@ -8,18 +8,37 @@
     };
     
     function getToken() {
-        let tok = localStorage.getItem(STORAGE_KEYS.TOKEN) ||
-                  localStorage.getItem('token') ||
-                  localStorage.getItem('authToken') ||
-                  localStorage.getItem('access_token') ||
-                  sessionStorage.getItem(STORAGE_KEYS.TOKEN) ||
-                  sessionStorage.getItem('token') ||
-                  (document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('staff_token='))?.split('=')[1]) ||
-                  (document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('token='))?.split('=')[1]) || null;
-        if (tok && tok !== 'null' && tok !== 'undefined' && tok !== '[object Object]') {
-            if (!localStorage.getItem(STORAGE_KEYS.TOKEN)) {
-                try { localStorage.setItem(STORAGE_KEYS.TOKEN, tok); } catch (e) {}
+        // Sole staff authority: localStorage.staff_token
+        let tok = localStorage.getItem(STORAGE_KEYS.TOKEN);
+        
+        // Defensive cookie fallback for staff_token ONLY if localStorage is transiently empty
+        if (!tok || tok === 'null' || tok === 'undefined' || tok === '[object Object]' || tok.trim() === '') {
+            const cookieMatch = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('staff_token='));
+            if (cookieMatch) {
+                tok = cookieMatch.split('=')[1];
+                if (tok) {
+                    try { tok = decodeURIComponent(tok); } catch(e) {}
+                }
             }
+        }
+        
+        if (tok) {
+            tok = tok.trim();
+            while (tok.toLowerCase().startsWith('bearer ')) {
+                tok = tok.slice(7).trim();
+            }
+            tok = tok.replace(/^["']|["']$/g, '').trim();
+        }
+        
+        // STRICT ENFORCEMENT: Never return legacy keys (authToken, token, access_token).
+        // Never return 'null', 'undefined', or empty string.
+        if (tok && tok !== 'null' && tok !== 'undefined' && tok !== '[object Object]' && tok.trim() !== '') {
+            // Self-heal localStorage if it was quote-wrapped or dirty
+            try {
+                if (localStorage.getItem(STORAGE_KEYS.TOKEN) !== tok) {
+                    localStorage.setItem(STORAGE_KEYS.TOKEN, tok);
+                }
+            } catch(e) {}
             return tok;
         }
         return null;
@@ -84,22 +103,43 @@
                     errorDetail = errorData.detail || errorData.message || errorDetail;
                 } catch (e) {}
                 
+                // DC Protocol: NDA_PENDING must NEVER trigger auth failure or token removal
+                if (errorDetail === 'NDA_PENDING') {
+                    return response;
+                }
+                
                 const authErrorKeywords = [
-                    'token', 'expired', 'invalid', 'unauthorized', 
-                    'not authenticated', 'session', 'credentials',
-                    'could not validate', 'jwt', 'bearer'
+                    'token_expired', 'token expired', 'session expired',
+                    'could not validate credentials', 'invalid token'
                 ];
                 
-                const isAuthError = authErrorKeywords.some(keyword => 
+                const isExplicitAuthExpiry = authErrorKeywords.some(keyword => 
                     errorDetail.toLowerCase().includes(keyword)
                 );
                 
-                if (isAuthError) {
+                // Check if token is locally expired before nuking session
+                const activeToken = getToken();
+                let isLocallyExpired = false;
+                if (activeToken) {
+                    try {
+                        const parts = activeToken.split('.');
+                        if (parts.length === 3) {
+                            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+                            if (payload.exp && Date.now() >= payload.exp * 1000) {
+                                isLocallyExpired = true;
+                            }
+                        }
+                    } catch (e) {}
+                } else {
+                    isLocallyExpired = true;
+                }
+
+                if (isExplicitAuthExpiry || (response.status === 401 && isLocallyExpired)) {
                     handleAuthFailure(response.status, errorDetail);
                     throw new Error('AUTH_EXPIRED');
                 }
                 
-                console.warn('[DC-FETCH] Non-auth 401/403:', errorDetail);
+                console.warn('[DC-FETCH] Non-fatal 401/403 response (session preserved):', errorDetail);
             }
             
             return response;

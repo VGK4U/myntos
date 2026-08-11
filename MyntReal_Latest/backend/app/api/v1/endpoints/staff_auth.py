@@ -62,15 +62,18 @@ def get_current_staff_user(request: Request, db: Session = Depends(get_db)) -> S
     """
     auth_header = request.headers.get("Authorization")
     
-    if not auth_header or not auth_header.startswith("Bearer "):
+    if not auth_header or not auth_header.strip():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid authorization header",
+            detail="Missing authorization header",
             headers={"WWW-Authenticate": "Bearer"}
         )
     
-    raw_token = auth_header.split(" ")[1] if " " in auth_header else auth_header
-    token = raw_token.strip().strip('"').strip("'")
+    # Strip all leading 'Bearer ' prefixes (handles duplicate 'Bearer Bearer ...') and extra quotes
+    token = auth_header.strip()
+    while token.lower().startswith("bearer "):
+        token = token[7:].strip()
+    token = token.strip('"').strip("'")
     
     if not token or token.lower() in ("null", "undefined", "none", "[object object]", ""):
         raise HTTPException(

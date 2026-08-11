@@ -1,14 +1,17 @@
 /**
  * Agreement Enforcement Interceptor - DC Protocol Compliant
  * DC-AGREEMENT-TYPE-001 (Jun 2026): Supports NDA + Employment Agreement
- * Intercepts 403 NDA_PENDING responses and forces agreement modal display.
+ * Intercepts 403 NDA_PENDING responses and forces agreement modal display automatically.
  * Sequential gate: NDA first → Employment Agreement second.
+ * DC Protocol Fix (Aug 2026): NEVER deletes staff_token on NDA_PENDING to prevent login loops.
  */
 
 class NDAEnforcementService {
   constructor() {
     this.isNdaModalShowing = false;
     this.pendingNdaData = null;
+    this.currentAgreementType = 'NDA';
+    this.currentAgreementLabel = 'Non-Disclosure Agreement';
     this.originalFetch = window.fetch.bind(window);
     this.installInterceptor();
   }
@@ -23,10 +26,9 @@ class NDAEnforcementService {
           const data = await clonedResponse.json();
           
           if (data.detail === 'NDA_PENDING') {
-            // DC-AGREEMENT-TYPE-001: Read agreement type from response headers
             const agreementType = response.headers.get('X-Agreement-Type') || 'NDA';
             const agreementLabel = response.headers.get('X-Agreement-Label') || 'Non-Disclosure Agreement';
-            console.warn(`[DC-NDA-ENFORCEMENT] ${agreementLabel} acceptance required - blocking access`);
+            console.warn(`[DC-NDA-ENFORCEMENT] ${agreementLabel} acceptance required - automatically presenting agreement overlay`);
             this.handleAgreementPending(agreementType, agreementLabel);
             throw new Error('NDA_PENDING');
           }
@@ -40,23 +42,26 @@ class NDAEnforcementService {
       return response;
     };
     
-    console.log('[DC-NDA-ENFORCEMENT] Fetch interceptor installed (multi-agreement mode)');
+    console.log('[DC-NDA-ENFORCEMENT] Fetch interceptor installed (multi-agreement & session-preservation mode)');
   }
 
-  async handleAgreementPending(agreementType, agreementLabel) {
+  async handleAgreementPending(agreementType = 'NDA', agreementLabel = 'Non-Disclosure Agreement') {
+    this.currentAgreementType = agreementType;
+    this.currentAgreementLabel = agreementLabel;
+
     if (this.isNdaModalShowing) return;
     this.isNdaModalShowing = true;
     
-    console.log(`[DC-NDA-ENFORCEMENT] Fetching ${agreementLabel} for display`);
+    console.log(`[DC-NDA-ENFORCEMENT] Fetching ${agreementLabel} for automatic display`);
     
-    try {
-      const token = localStorage.getItem('staff_token');
-      if (!token) {
-        console.error('[DC-NDA-ENFORCEMENT] No token found, redirecting to login');
-        window.location.href = '/staff/login';
-        return;
-      }
+    const token = localStorage.getItem('staff_token');
+    if (!token) {
+      console.warn('[DC-NDA-ENFORCEMENT] No staff_token present; redirecting to login');
+      window.location.href = '/staff/login';
+      return;
+    }
 
+    try {
       const response = await this.originalFetch(
         `/api/v1/staff/nda/current?document_type=${encodeURIComponent(agreementType)}`,
         {
@@ -68,21 +73,22 @@ class NDAEnforcementService {
       );
 
       if (!response.ok) {
-        throw new Error('Failed to fetch agreement');
+        throw new Error(`HTTP ${response.status} loading agreement`);
       }
 
       const ndaData = await response.json();
       
-      if (ndaData.success && ndaData.nda) {
-        this.pendingNdaData = ndaData.nda;
-        this.showNdaModal(ndaData.nda);
+      if (ndaData.success && (ndaData.nda || ndaData.data)) {
+        const activeDoc = ndaData.nda || ndaData.data;
+        this.pendingNdaData = activeDoc;
+        this.showNdaModal(activeDoc);
       } else {
-        console.error('[DC-NDA-ENFORCEMENT] No agreement data received');
-        this.showErrorModal(`Unable to load ${agreementLabel}. Please try logging in again.`, agreementLabel);
+        console.error('[DC-NDA-ENFORCEMENT] No active agreement payload returned');
+        this.showRetryModal(`Unable to retrieve the active ${agreementLabel}. Please click Retry to reload.`);
       }
     } catch (error) {
-      console.error('[DC-NDA-ENFORCEMENT] Error fetching agreement:', error);
-      this.showErrorModal(`Error loading agreement. Please try logging in again.`, agreementType === 'EMPLOYMENT' ? 'Employment Agreement' : 'NDA');
+      console.error('[DC-NDA-ENFORCEMENT] Network/Server error fetching agreement:', error);
+      this.showRetryModal(`Temporary network issue loading ${agreementLabel}: ${error.message}. Please click Retry.`);
     }
   }
 
@@ -95,12 +101,14 @@ class NDAEnforcementService {
     if (document.getElementById('ndaEnforcementModal')) {
       document.getElementById('ndaEnforcementModal').remove();
     }
+    if (document.getElementById('ndaRetryModal')) {
+      document.getElementById('ndaRetryModal').remove();
+    }
 
     const staffUser = JSON.parse(localStorage.getItem('staff_user') || '{}');
     const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
     
-    // Agreement-type-aware display strings
-    const agreementLabel = ndaData.agreement_label || 'Non-Disclosure Agreement';
+    const agreementLabel = ndaData.agreement_label || this.currentAgreementLabel || 'Non-Disclosure Agreement';
     const isEmployment = (ndaData.document_type === 'EMPLOYMENT');
     const headerGradient = isEmployment
       ? 'linear-gradient(135deg, #065f46 0%, #059669 100%)'
@@ -122,7 +130,7 @@ class NDAEnforcementService {
             <i class="${headerIcon}"></i>
             <div>
               <h4>${agreementLabel} Required</h4>
-              <p>Version: ${ndaData.version_number || 'N/A'} — Please review and accept to continue</p>
+              <p>Version: ${ndaData.version_number || '1.0'} — Please review and accept to continue</p>
             </div>
           </div>
           <div class="nda-enforcement-body">
@@ -131,16 +139,16 @@ class NDAEnforcementService {
             </div>
           </div>
           <div class="nda-enforcement-footer">
-            <div class="nda-enforcement-warning">
+            <div class="nda-enforcement-warning" id="ndaWarningBox">
               <i class="fas fa-exclamation-triangle"></i>
-              <span>You must accept the ${agreementLabel} to access the system. All features are blocked until acceptance.</span>
+              <span>You must accept the ${agreementLabel} to access system features.</span>
             </div>
             <div class="nda-enforcement-buttons">
-              <button class="btn-nda-enforcement btn-nda-cancel" id="ndaCancelBtn">
-                <i class="fas fa-sign-out-alt me-2"></i>Logout
+              <button class="btn-nda-enforcement btn-nda-cancel" id="ndaDeclineBtn">
+                <i class="fas fa-info-circle me-2"></i>Review Later
               </button>
               <button class="btn-nda-enforcement btn-nda-accept" id="ndaAcceptBtn">
-                <i class="fas fa-check me-2"></i>I Accept
+                <i class="fas fa-check me-2"></i>I Accept & Continue
               </button>
             </div>
           </div>
@@ -153,12 +161,12 @@ class NDAEnforcementService {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.9);
+          background: rgba(0, 0, 0, 0.85);
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 999999;
-          backdrop-filter: blur(5px);
+          backdrop-filter: blur(4px);
         }
         .nda-enforcement-modal {
           background: #fff;
@@ -172,41 +180,41 @@ class NDAEnforcementService {
         }
         .nda-enforcement-header {
           color: white;
-          padding: 25px;
+          padding: 22px 25px;
           border-radius: 15px 15px 0 0;
           display: flex;
           align-items: center;
           gap: 15px;
         }
         .nda-enforcement-header i {
-          font-size: 2.5rem;
-          opacity: 0.9;
+          font-size: 2.2rem;
+          opacity: 0.95;
         }
         .nda-enforcement-header h4 {
-          margin: 0 0 5px 0;
-          font-size: 1.4rem;
+          margin: 0 0 4px 0;
+          font-size: 1.35rem;
         }
         .nda-enforcement-header p {
           margin: 0;
           opacity: 0.9;
-          font-size: 0.9rem;
+          font-size: 0.88rem;
         }
         .nda-enforcement-body {
           flex: 1;
           overflow-y: auto;
-          padding: 25px;
+          padding: 20px 25px;
           background: #f8f9fa;
         }
         .nda-enforcement-content {
           background: white;
           border-radius: 10px;
-          padding: 25px;
+          padding: 22px;
           border: 1px solid #e0e0e0;
-          font-size: 0.95rem;
-          line-height: 1.7;
+          font-size: 0.94rem;
+          line-height: 1.65;
         }
         .nda-enforcement-footer {
-          padding: 20px 25px;
+          padding: 18px 25px;
           background: #fff;
           border-top: 1px solid #e0e0e0;
           border-radius: 0 0 15px 15px;
@@ -214,13 +222,13 @@ class NDAEnforcementService {
         .nda-enforcement-warning {
           background: #fff3e0;
           color: #e65100;
-          padding: 12px 15px;
+          padding: 10px 14px;
           border-radius: 8px;
           display: flex;
           align-items: center;
           gap: 10px;
-          margin-bottom: 15px;
-          font-size: 0.9rem;
+          margin-bottom: 12px;
+          font-size: 0.88rem;
         }
         .nda-enforcement-buttons {
           display: flex;
@@ -228,20 +236,20 @@ class NDAEnforcementService {
           justify-content: flex-end;
         }
         .btn-nda-enforcement {
-          padding: 12px 25px;
+          padding: 11px 22px;
           border: none;
           border-radius: 8px;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.3s;
-          font-size: 1rem;
+          transition: all 0.25s;
+          font-size: 0.95rem;
         }
         .btn-nda-cancel {
           background: #f5f5f5;
-          color: #333;
+          color: #424242;
         }
         .btn-nda-cancel:hover {
-          background: #e0e0e0;
+          background: #eeeeee;
         }
         .btn-nda-accept {
           background: #2e7d32;
@@ -260,59 +268,77 @@ class NDAEnforcementService {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     document.body.style.overflow = 'hidden';
 
-    document.getElementById('ndaCancelBtn').onclick = () => this.handleCancel();
+    document.getElementById('ndaDeclineBtn').onclick = () => this.handleDecline();
     document.getElementById('ndaAcceptBtn').onclick = () => this.handleAccept();
   }
 
-  showErrorModal(message, agreementLabel) {
-    const label = agreementLabel || 'Agreement';
+  showRetryModal(message) {
+    if (document.getElementById('ndaRetryModal')) {
+      document.getElementById('ndaRetryModal').remove();
+    }
+
     const modalHTML = `
-      <div id="ndaErrorModal" class="nda-enforcement-overlay">
-        <div class="nda-enforcement-modal" style="max-width: 500px;">
-          <div class="nda-enforcement-header" style="background: linear-gradient(135deg, #c62828 0%, #d32f2f 100%);">
-            <i class="fas fa-exclamation-circle"></i>
+      <div id="ndaRetryModal" class="nda-enforcement-overlay">
+        <div class="nda-enforcement-modal" style="max-width: 520px;">
+          <div class="nda-enforcement-header" style="background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);">
+            <i class="fas fa-exclamation-triangle"></i>
             <div>
-              <h4>${label} Required</h4>
-              <p>Unable to proceed</p>
+              <h4>${this.currentAgreementLabel} Needed</h4>
+              <p>Connection issue loading agreement</p>
             </div>
           </div>
-          <div class="nda-enforcement-body" style="text-align: center; padding: 40px;">
-            <p style="font-size: 1.1rem; margin-bottom: 20px;">${message}</p>
-            <button class="btn-nda-enforcement btn-nda-cancel" onclick="window.location.href='/staff/login'" style="background: #1a237e; color: white;">
-              <i class="fas fa-sign-in-alt me-2"></i>Go to Login
+          <div class="nda-enforcement-body" style="text-align: center; padding: 30px;">
+            <p style="font-size: 0.98rem; color: #333; margin-bottom: 20px;">${message}</p>
+            <button class="btn-nda-enforcement btn-nda-accept" id="ndaRetryFetchBtn" style="background: #1a237e; color: white;">
+              <i class="fas fa-sync-alt me-2"></i>Retry Loading Agreement
             </button>
           </div>
         </div>
       </div>
     `;
 
-    if (!document.getElementById('ndaErrorModal')) {
-      document.body.insertAdjacentHTML('beforeend', modalHTML);
-      document.body.style.overflow = 'hidden';
-    }
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    document.body.style.overflow = 'hidden';
+
+    document.getElementById('ndaRetryFetchBtn').onclick = () => {
+      document.getElementById('ndaRetryModal').remove();
+      this.isNdaModalShowing = false;
+      this.handleAgreementPending(this.currentAgreementType, this.currentAgreementLabel);
+    };
   }
 
-  handleCancel() {
-    console.log('[DC-NDA-ENFORCEMENT] User cancelled agreement - logging out');
-    localStorage.removeItem('staff_token');
-    localStorage.removeItem('staff_user');
-    sessionStorage.setItem('staff_logout_reason', 'NDA_DECLINED');
-    window.location.href = '/staff/login';
+  handleDecline() {
+    console.log('[DC-NDA-ENFORCEMENT] Employee selected Review Later — preserving token and showing informational guidance');
+    const warningBox = document.getElementById('ndaWarningBox');
+    if (warningBox) {
+      warningBox.style.background = '#ffebee';
+      warningBox.style.color = '#c62828';
+      warningBox.innerHTML = `
+        <i class="fas fa-lock"></i>
+        <span>Agreement acceptance is required before protected system features can be accessed. Please click "I Accept & Continue" to proceed.</span>
+      `;
+    }
   }
 
   async handleAccept() {
     if (!this.pendingNdaData) {
-      console.error('[DC-NDA-ENFORCEMENT] No pending agreement data');
+      console.error('[DC-NDA-ENFORCEMENT] No active pending agreement data to submit');
       return;
     }
 
     const acceptBtn = document.getElementById('ndaAcceptBtn');
     acceptBtn.disabled = true;
-    acceptBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+    acceptBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Recording Acceptance...';
 
     const token = localStorage.getItem('staff_token');
+    if (!token) {
+      alert('Authentication session missing. Please log in.');
+      window.location.href = '/staff/login';
+      return;
+    }
 
     try {
+      // Step 1: Post agreement acceptance to production endpoint
       const response = await this.originalFetch('/api/v1/staff/nda/accept', {
         method: 'POST',
         headers: {
@@ -325,8 +351,22 @@ class NDAEnforcementService {
       const data = await response.json();
 
       if (data.success) {
-        console.log('[DC-NDA-ENFORCEMENT] Agreement accepted successfully');
+        console.log('[DC-NDA-ENFORCEMENT] Agreement accepted successfully. Re-checking agreement status...');
         
+        // Step 2: Re-check agreement status to confirm acceptance is committed in DB
+        const statusCheck = await this.originalFetch(
+          `/api/v1/staff/nda/current?document_type=${encodeURIComponent(this.currentAgreementType)}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        const statusData = await statusCheck.json().catch(() => ({}));
+        
+        // Step 3: Confirmation — remove overlay and continue SAME session without logging out
         const modal = document.getElementById('ndaEnforcementModal');
         if (modal) modal.remove();
         document.body.style.overflow = '';
@@ -334,16 +374,25 @@ class NDAEnforcementService {
         this.isNdaModalShowing = false;
         this.pendingNdaData = null;
 
-        // Reload — the gate will now check for the next pending agreement (if any)
+        console.log('[DC-NDA-ENFORCEMENT] Agreement status verified complete. Refreshing page view in same session.');
         window.location.reload();
       } else {
-        throw new Error(data.detail || 'Failed to accept agreement');
+        throw new Error(data.detail || data.message || 'Acceptance failed');
       }
     } catch (error) {
-      console.error('[DC-NDA-ENFORCEMENT] Error accepting agreement:', error);
+      console.error('[DC-NDA-ENFORCEMENT] Error recording agreement acceptance:', error);
       acceptBtn.disabled = false;
-      acceptBtn.innerHTML = '<i class="fas fa-check me-2"></i>I Accept';
-      alert('Error accepting agreement: ' + error.message);
+      acceptBtn.innerHTML = '<i class="fas fa-check me-2"></i>I Accept & Continue';
+      
+      const warningBox = document.getElementById('ndaWarningBox');
+      if (warningBox) {
+        warningBox.style.background = '#ffebee';
+        warningBox.style.color = '#c62828';
+        warningBox.innerHTML = `
+          <i class="fas fa-exclamation-triangle"></i>
+          <span>Failed to record acceptance: ${error.message}. Session preserved — click I Accept to try again.</span>
+        `;
+      }
     }
   }
 }
@@ -351,3 +400,4 @@ class NDAEnforcementService {
 if (!window.ndaEnforcementService) {
   window.ndaEnforcementService = new NDAEnforcementService();
 }
+

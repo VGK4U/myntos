@@ -59,11 +59,17 @@ echo "Backend Supervisor PID: $BACKEND_PID"
 echo ""
 echo "Backend is warming up in the background. Starting frontend server immediately..."
 
-# Start Frontend Server on port 5000
+# Start Frontend Server on port 5000 with supervisor loop
 echo ""
 echo "Starting Frontend Server on port ${PORT:-5000}..."
 cd "$SCRIPT_DIR/frontend"
 echo "======================================"
 echo "Startup complete - serving traffic"
 echo "======================================"
-exec node server.js
+
+while true; do
+  echo "[SUPERVISOR] Starting Node.js Frontend on port ${PORT:-5000}..."
+  node server.js || true
+  echo "[SUPERVISOR] Node.js Frontend exited with code $?. Restarting in 2 seconds..."
+  sleep 2
+done

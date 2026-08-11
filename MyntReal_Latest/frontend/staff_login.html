@@ -609,40 +609,25 @@
                 const data = await response.json();
                 
                 if (response.ok && data.access_token) {
-                    // Check if NDA acceptance is required BEFORE committing session
-                    if (data.nda_required && data.nda_data) {
-                        // DC Protocol: Hold token in memory only — do NOT write to localStorage
-                        // until the employee explicitly accepts the NDA.
-                        // This prevents the token-reuse bypass where a tab close + revisit
-                        // skips the NDA modal entirely.
-                        pendingToken = data.access_token;
-                        pendingEmployee = data.employee;
-                        pendingNdaData = data.nda_data;
-                        showNdaModal(data.nda_data, data.employee);
+                    // Commit session immediately upon valid authentication
+                    localStorage.setItem('staff_token', data.access_token);
+                    document.cookie = `staff_token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
+                    document.cookie = `session_token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
+                    document.cookie = `session=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
 
-                        loginBtn.disabled = false;
-                        loginBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Login';
-                    } else {
-                        // No NDA pending — commit session immediately
-                        localStorage.setItem('staff_token', data.access_token);
-                        document.cookie = `staff_token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
-                        document.cookie = `session_token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
-                        document.cookie = `session=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
-
-                        if (data.employee) {
-                            localStorage.setItem('staff_user', JSON.stringify(data.employee));
-                        }
-
-                        alertContainer.innerHTML = `
-                            <div class="alert alert-success">
-                                <i class="fas fa-check-circle me-2"></i>Login successful! Redirecting...
-                            </div>
-                        `;
-
-                        setTimeout(() => {
-                            window.location.href = getRedirectUrl();
-                        }, 1000);
+                    if (data.employee) {
+                        localStorage.setItem('staff_user', JSON.stringify(data.employee));
                     }
+
+                    alertContainer.innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>Login successful! Redirecting...
+                        </div>
+                    `;
+
+                    setTimeout(() => {
+                        window.location.href = getRedirectUrl();
+                    }, 500);
                 } else {
                     const errorMsg = (typeof data.detail === 'string' ? data.detail : (data.message || data.error)) || 'Invalid Employee ID or password';
                     throw new Error(errorMsg);
