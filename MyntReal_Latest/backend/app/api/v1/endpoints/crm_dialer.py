@@ -353,13 +353,16 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
         SELECT DISTINCT lead_id FROM crm_dialer_attempts
         WHERE call_outcome != 'skip' AND dialed_at >= :today
         UNION
-        SELECT DISTINCT lead_id FROM crm_lead_calls
-        WHERE created_at >= :today OR call_start_time >= :today
+        SELECT DISTINCT matched_lead_id AS lead_id FROM staff_call_logs
+        WHERE matched_lead_id IS NOT NULL AND (created_at >= :today OR call_datetime >= :today)
         UNION
-        SELECT id FROM crm_leads
-        WHERE (last_contact_date >= :today OR last_dialed_at >= :today)
+        SELECT DISTINCT crm_lead_id AS lead_id FROM operator_calls
+        WHERE crm_lead_id IS NOT NULL AND (created_at >= :today OR started_at >= :today)
         UNION
-        SELECT id FROM crm_leads
+        SELECT id AS lead_id FROM crm_leads
+        WHERE last_contact_date >= :today
+        UNION
+        SELECT id AS lead_id FROM crm_leads
         WHERE next_followup_date >= :today_end
     """), {"ref": user_ref, "today": ist_today, "today_end": ist_today_end}).fetchall()
     dialed_today = {r[0] for r in dialed_rows if r[0] is not None}
@@ -420,11 +423,15 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
         u_exclude = a_ids | dialed_today | nmc_excluded
         u_filter = [
             CRMLead.company_id.in_(co_ids),
-            CRMLead.status == 'new',
-            CRMLead.handler_type == 'unassigned',
+            CRMLead.status.notin_(['won', 'lost', 'completed', 'do_not_call']),
+            or_(
+                CRMLead.handler_type == 'unassigned',
+                CRMLead.handler_id.is_(None),
+                CRMLead.handler_id == '',
+            ),
             CRMLead.telecaller_id.is_(None),
             CRMLead.field_staff_id.is_(None),
-            # DC_FUTURE_NFD_EXCLUDE: Unassigned new leads with a future follow-up date
+            # DC_FUTURE_NFD_EXCLUDE: Unassigned active leads with a future follow-up date
             # are excluded — a future date on an unassigned lead is unusual but guard it.
             or_(
                 CRMLead.next_followup_date.is_(None),
@@ -492,10 +499,13 @@ def _build_queue_for_mnr(user: User, db: Session) -> List[dict]:
         SELECT DISTINCT lead_id FROM crm_dialer_attempts
         WHERE call_outcome != 'skip' AND dialed_at >= :today
         UNION
-        SELECT DISTINCT lead_id FROM crm_lead_calls
-        WHERE created_at >= :today OR call_start_time >= :today
+        SELECT DISTINCT matched_lead_id AS lead_id FROM staff_call_logs
+        WHERE matched_lead_id IS NOT NULL AND (created_at >= :today OR call_datetime >= :today)
         UNION
-        SELECT id FROM crm_leads
+        SELECT DISTINCT crm_lead_id AS lead_id FROM operator_calls
+        WHERE crm_lead_id IS NOT NULL AND (created_at >= :today OR started_at >= :today)
+        UNION
+        SELECT id AS lead_id FROM crm_leads
         WHERE (last_contact_date >= :today OR last_dialed_at >= :today)
         UNION
         SELECT id FROM crm_leads
@@ -537,8 +547,12 @@ def _build_queue_for_mnr(user: User, db: Session) -> List[dict]:
     if company_ids:
         unassigned_filter = [
             CRMLead.company_id.in_(company_ids),
-            CRMLead.status == 'new',
-            CRMLead.handler_type == 'unassigned',
+            CRMLead.status.notin_(['won', 'lost', 'completed', 'do_not_call']),
+            or_(
+                CRMLead.handler_type == 'unassigned',
+                CRMLead.handler_id.is_(None),
+                CRMLead.handler_id == '',
+            ),
             CRMLead.telecaller_id.is_(None),
             CRMLead.field_staff_id.is_(None),
             # DC_FUTURE_NFD_EXCLUDE: Guard unassigned leads with a future date too
@@ -1249,7 +1263,16 @@ async def log_dialer_attempt(
                 pass
         if call_outcome and call_outcome != 'skip':
             lead.last_contact_date = now
-            lead.last_dialed_at = now
+            # DC_DIALER_CLAIM_LEAD: If an active staff member handles an unassigned lead (sets outcome, status, or followup),
+            # automatically assign the lead to them so it is exclusive to them and avoided for all other telecallers.
+            if is_staff:
+                lead.handler_type = 'staff'
+                lead.handler_id = current_user.emp_code
+                lead.telecaller_id = current_user.id
+                lead.primary_owner_type = 'staff'
+                lead.primary_owner_id = current_user.id
+            else:
+                lead.mnr_handler_id = current_user.id
         if next_followup_date:
             try:
                 lead.next_followup_date = datetime.fromisoformat(next_followup_date.replace('Z', ''))
