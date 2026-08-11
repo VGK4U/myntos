@@ -1510,13 +1510,19 @@ const StaffSidebar = {
     restoreSectionStates: function() {
         try {
             const savedStates = localStorage.getItem(this.getStorageKey());
+            const supremeTypes = this.SUPREME_STAFF_TYPES || ["VGK4U_SUPREME", "RVZ_SUPREME", "VGK4U", "VGK4U Supreme", "VGK4U_EA", "KEY_LEADERSHIP", "KEY LEADERSHIP", "EA"];
+            const isKeyLeadership = this.userData && (
+                supremeTypes.includes(this.userData.staff_type) || 
+                ['MR10018', 'MR10001', 'MR10016', 'MR10025'].includes(this.userData.emp_code) ||
+                (this.userData.role && ['key_leadership', 'vgk4u', 'ea'].includes((this.userData.role.role_code || '').toLowerCase()))
+            );
             const states = savedStates ? JSON.parse(savedStates) : {};
 
             // Restore main group states
             const groups = document.querySelectorAll('.sidebar-group');
             groups.forEach(group => {
                 const sectionId = group.dataset.sectionId;
-                let isExpanded = states.hasOwnProperty(sectionId) ? Boolean(states[sectionId]) : false;
+                let isExpanded = states.hasOwnProperty(sectionId) ? Boolean(states[sectionId]) : (isKeyLeadership || false);
                 const toggle = group.querySelector('.sidebar-group-toggle');
                 
                 if (isExpanded) {
@@ -1532,7 +1538,7 @@ const StaffSidebar = {
             const subGroups = document.querySelectorAll('.sidebar-sub-group');
             subGroups.forEach(subGroup => {
                 const sectionId = subGroup.dataset.sectionId;
-                let isExpanded = states.hasOwnProperty(sectionId) ? Boolean(states[sectionId]) : false;
+                let isExpanded = states.hasOwnProperty(sectionId) ? Boolean(states[sectionId]) : (isKeyLeadership || false);
                 const toggle = subGroup.querySelector('.sidebar-sub-group-toggle');
                 
                 if (isExpanded) {
