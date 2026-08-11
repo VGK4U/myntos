@@ -1506,28 +1506,25 @@ const StaffSidebar = {
     },
 
     // Restore section states from localStorage
-    // Key Leadership Protocol: Auto-expand major sections (CRM, Journey, Attendance, Myntreal, Service Tickets) by default
+    // Default mode: All groups/sub-groups are collapsed (grouped) by default
     restoreSectionStates: function() {
         try {
             const savedStates = localStorage.getItem(this.getStorageKey());
-            const isKeyLeadership = this.userData && (
-                this.SUPREME_STAFF_TYPES.includes(this.userData.staff_type) || 
-                ['MR10018', 'MR10001', 'MR10016', 'MR10025'].includes(this.userData.emp_code) ||
-                (this.userData.role && ['key_leadership', 'vgk4u', 'ea'].includes((this.userData.role.role_code || '').toLowerCase()))
-            );
-
             const states = savedStates ? JSON.parse(savedStates) : {};
 
             // Restore main group states
             const groups = document.querySelectorAll('.sidebar-group');
             groups.forEach(group => {
                 const sectionId = group.dataset.sectionId;
-                let isExpanded = states.hasOwnProperty(sectionId) ? states[sectionId] : isKeyLeadership;
+                let isExpanded = states.hasOwnProperty(sectionId) ? Boolean(states[sectionId]) : false;
                 const toggle = group.querySelector('.sidebar-group-toggle');
                 
                 if (isExpanded) {
                     group.classList.remove('collapsed');
                     toggle?.setAttribute('aria-expanded', 'true');
+                } else {
+                    group.classList.add('collapsed');
+                    toggle?.setAttribute('aria-expanded', 'false');
                 }
             });
             
@@ -1535,12 +1532,15 @@ const StaffSidebar = {
             const subGroups = document.querySelectorAll('.sidebar-sub-group');
             subGroups.forEach(subGroup => {
                 const sectionId = subGroup.dataset.sectionId;
-                let isExpanded = states.hasOwnProperty(sectionId) ? states[sectionId] : isKeyLeadership;
+                let isExpanded = states.hasOwnProperty(sectionId) ? Boolean(states[sectionId]) : false;
                 const toggle = subGroup.querySelector('.sidebar-sub-group-toggle');
                 
                 if (isExpanded) {
                     subGroup.classList.remove('collapsed');
                     toggle?.setAttribute('aria-expanded', 'true');
+                } else {
+                    subGroup.classList.add('collapsed');
+                    toggle?.setAttribute('aria-expanded', 'false');
                 }
             });
         } catch (e) {

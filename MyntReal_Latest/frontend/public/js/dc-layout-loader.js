@@ -28,7 +28,16 @@
             
             await this.injectHeader();
             this.ensureSidebarContainer();
+            this.injectModalResizable();
             this.log('Layout initialization complete');
+        },
+
+        injectModalResizable: function() {
+            if (window.makeModalResizableAndDraggable || document.getElementById('dc-modal-resizable-script')) return;
+            const script = document.createElement('script');
+            script.id = 'dc-modal-resizable-script';
+            script.src = '/public/js/modal-resizable.js?v=' + Date.now();
+            document.head.appendChild(script);
         },
 
         injectHeader: async function() {

@@ -6693,6 +6693,30 @@ def lead_analytics(
     ).group_by('bucket').all()
     _mo_at_bank_map = {(r.bucket.year, r.bucket.month): int(r.at_bank) for r in _mo_at_bank_rows if r.bucket}
 
+    # DC-FIRST-PMT-RECD-001: Subquery for earliest transaction date per lead
+    _tx_sub = db.query(
+        CRMLeadTransaction.lead_id.label('lead_id'),
+        _f.min(_sa_cast(CRMLeadTransaction.transaction_date, _sa_Date)).label('min_tx_date')
+    ).group_by(CRMLeadTransaction.lead_id).subquery()
+
+    _mo_pmt_dt = _f.coalesce(
+        _sa_cast(CRMLead.first_payment_received_date, _sa_Date),
+        _tx_sub.c.min_tx_date
+    )
+    _pmt_cond = _sa_or(
+        CRMLead.first_payment_received_date.isnot(None),
+        _tx_sub.c.lead_id.isnot(None)
+    )
+
+    _mo_pmt_recd_rows = trend_base.outerjoin(_tx_sub, CRMLead.id == _tx_sub.c.lead_id).filter(
+        _pmt_cond,
+        _mo_pmt_dt >= _mo12_start.date()
+    ).with_entities(
+        _f.date_trunc('month', _mo_pmt_dt).label('bucket'),
+        _f.count(CRMLead.id).label('pmt_recd')
+    ).group_by('bucket').all()
+    _mo_pmt_recd_map = {(r.bucket.year, r.bucket.month): int(r.pmt_recd) for r in _mo_pmt_recd_rows if r.bucket}
+
     monthly_trend = []
     for _mo in range(11, -1, -1):
         _yr = _today.year
@@ -6713,12 +6737,14 @@ def lead_analytics(
         _m_bal_pending = _mo_bal_pend_map.get((_yr, _mn), 0)
         _m_sub_pending = _mo_sub_pend_map.get((_yr, _mn), 0)
         _m_at_bank = _mo_at_bank_map.get((_yr, _mn), 0)
+        _m_first_pmt_recd = _mo_pmt_recd_map.get((_yr, _mn), 0)
         monthly_trend.append({
             'label': f"{_date(1900, _mn, 1).strftime('%b')} {_yr}",
             'total': _m_total, 'won': _m_won,
             'submitted': _m_sub, 'submitted_value': _m_sub_val,
             'pipeline': _m_pipe, 'pipeline_value': _m_pipe_val,
             'at_bank': _m_at_bank, 'eb_change': _m_eb_change,
+            'first_pmt_recd': _m_first_pmt_recd,
             'installed': _m_inst, 'completed': _m_comp, 'comp_value': _m_fdv,
             'in_progress': _m_in_prog, 'inprog_value': _m_in_prog_val,
             'inst_pending': _m_inst_pending, 'net_meter_pending': _m_net_meter_pending,
@@ -6843,6 +6869,19 @@ def lead_analytics(
     ).group_by('bucket').all()
     _wk_at_bank_map = {r.bucket.date(): int(r.at_bank) for r in _wk_at_bank_rows if r.bucket}
 
+    _wk_pmt_dt = _f.coalesce(
+        _sa_cast(CRMLead.first_payment_received_date, _sa_Date),
+        _tx_sub.c.min_tx_date
+    )
+    _wk_pmt_recd_rows = trend_base.outerjoin(_tx_sub, CRMLead.id == _tx_sub.c.lead_id).filter(
+        _pmt_cond,
+        _wk_pmt_dt >= _wk12_start.date()
+    ).with_entities(
+        _f.date_trunc('week', _wk_pmt_dt).label('bucket'),
+        _f.count(CRMLead.id).label('pmt_recd')
+    ).group_by('bucket').all()
+    _wk_pmt_recd_map = {r.bucket.date(): int(r.pmt_recd) for r in _wk_pmt_recd_rows if r.bucket}
+
     weekly_trend = []
     for _wk in range(11, -1, -1):
         _ws = _week_start - _td(weeks=_wk)
@@ -6857,16 +6896,19 @@ def lead_analytics(
         _w_comp, _w_fdv, _w_cr = _wk_comp_map.get(_ws.date(), (0, 0.0, 0.0))
         _w_installed = _wk_inst_map.get(_ws.date(), 0)
         _w_net_meter_pending = _wk_net_meter_pend_map.get(_ws.date(), 0)
+        _w_first_pmt_recd = _wk_pmt_recd_map.get(_ws.date(), 0)
+        _w_sub_pending = _wk_sub_pend_map.get(_ws.date(), 0)
         weekly_trend.append({
             'label': f"W{12-_wk} ({_ws.strftime('%d %b')})",
             'total': _w_total, 'won': _w_won,
             'submitted': _w_submitted, 'submitted_value': _w_submitted_value,
             'pipeline': _w_pipeline, 'pipeline_value': _w_pipeline_value,
             'at_bank': _w_at_bank, 'eb_change': _w_eb_change,
+            'first_pmt_recd': _w_first_pmt_recd,
             'installed': _w_installed, 'completed': _w_comp, 'comp_value': _w_fdv,
             'in_progress': _w_in_progress, 'inprog_value': _w_inprog_value,
             'inst_pending': _w_inst_pending, 'net_meter_pending': _w_net_meter_pending,
-            'bal_pending': _w_bal_pending,
+            'bal_pending': _w_bal_pending, 'subsidy_pending': _w_sub_pending,
         })
 
     # ── EV B2B Stage Breakdown ────────────────────────────────────────────────
@@ -7664,6 +7706,22 @@ def exec_trend_leads(
         base = base.filter(CRMLead.solar_pipeline_status == 'net_meter_pending')
         if start_dt and end_dt:
             base = base.filter(_stage_upd_dt_expr >= start_dt, _stage_upd_dt_expr <= end_dt)
+    elif metric == 'first_pmt_recd':
+        _tx_sub = db.query(
+            CRMLeadTransaction.lead_id.label('lead_id'),
+            _sa_func.min(_sa_cast(CRMLeadTransaction.transaction_date, _sa_Date)).label('min_tx_date')
+        ).group_by(CRMLeadTransaction.lead_id).subquery()
+        _pmt_dt_expr = _sa_func.coalesce(
+            _sa_cast(CRMLead.first_payment_received_date, _sa_Date),
+            _tx_sub.c.min_tx_date
+        )
+        _pmt_cond = _sa_or(
+            CRMLead.first_payment_received_date.isnot(None),
+            _tx_sub.c.lead_id.isnot(None)
+        )
+        base = base.outerjoin(_tx_sub, CRMLead.id == _tx_sub.c.lead_id).filter(_pmt_cond)
+        if start_dt and end_dt:
+            base = base.filter(_pmt_dt_expr >= start_dt, _pmt_dt_expr <= end_dt)
     else:
         # Default trend date bucketing
         if start_dt and end_dt:

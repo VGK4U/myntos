@@ -9,6 +9,7 @@
 <script src="/public/js/staff-token-manager.js"></script>
 <script src="/public/js/staff-fetch.js"></script>
 <script src="/public/js/mnr-map-modal.js"></script>
+<script src="/public/js/modal-resizable.js"></script>
 <style>
 *{box-sizing:border-box}
 body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f3f4f6;min-height:100vh;margin:0}
@@ -1415,16 +1416,16 @@ function renderTrendTable(containerId, rows){
   const trSubVal = rows.reduce((s,r)=>s+(r.submitted_value||0), 0);
   const trPipe = rows.reduce((s,r)=>s+(r.pipeline||0), 0);
   const trPipeVal = rows.reduce((s,r)=>s+(r.pipeline_value||0), 0);
-  const trAtBank = rows.reduce((s,r)=>s+(r.at_bank||0), 0);
   const trEbChange = rows.reduce((s,r)=>s+(r.eb_change||0), 0);
-  const trNetMeterPend = rows.reduce((s,r)=>s+(r.net_meter_pending||0), 0);
-  const trComp = rows.reduce((s,r)=>s+(r.completed||0), 0);
-  const trCompVal = rows.reduce((s,r)=>s+(r.comp_value||0), 0);
-  const trInProg = rows.reduce((s,r)=>s+(r.in_progress||0), 0);
+  const trAtBank = rows.reduce((s,r)=>s+(r.at_bank||0), 0);
+  const trFirstPmtRecd = rows.reduce((s,r)=>s+(r.first_pmt_recd||0), 0);
   const trInstPend = rows.reduce((s,r)=>s+(r.inst_pending||0), 0);
+  const trNetMeterPend = rows.reduce((s,r)=>s+(r.net_meter_pending||0), 0);
   const trBalPend = rows.reduce((s,r)=>s+(r.bal_pending||0), 0);
   const trSubPend = rows.reduce((s,r)=>s+(r.subsidy_pending||0), 0);
-  const trInProgVal = rows.reduce((s,r)=>s+(r.inprog_value||0), 0);
+  const trComp = rows.reduce((s,r)=>s+(r.completed||0), 0);
+  const trCompVal = rows.reduce((s,r)=>s+(r.comp_value||0), 0);
+  const trInst = rows.reduce((s,r)=>s+(r.installed||0), 0);
 
   const trSubWonPct = trWon>0 ? ((trSub/trWon)*100).toFixed(1) : '0.0';
   const trPipeSubPct = trSub>0 ? ((trPipe/trSub)*100).toFixed(1) : '0.0';
@@ -1458,10 +1459,11 @@ function renderTrendTable(containerId, rows){
     <td style="${trtotCell};background:#084298;color:#cfe2ff">${trPipeSubPct}%</td>
     <td style="${trtotCell};background:#084298;color:#cfe2ff">${totClickValFn('pipeline', 'Pipeline Value', trPipeVal)}</td>
     <td style="${trtotCell};background:#084298;color:#cfe2ff">—</td>
-    <td style="${trtotCell};background:#084298;color:#cfe2ff">${totClickFn('at_bank', 'At Bank', trAtBank)}</td>
     <td style="${trtotCell};background:#084298;color:#cfe2ff">${totClickFn('eb_change', 'EB Change', trEbChange)}</td>
+    <td style="${trtotCell};background:#084298;color:#cfe2ff">${totClickFn('at_bank', 'At Bank', trAtBank)}</td>
     
-    <!-- COMPLETED TOTALS -->
+    <!-- PROGRESS TOTALS -->
+    <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('first_pmt_recd', '1st Payment Received', trFirstPmtRecd)}</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('inst_pending', 'Installation Pending', trInstPend)}</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('net_meter_pending', 'Net Meter Pending', trNetMeterPend)}</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('bal_pending', 'Balance Pending', trBalPend)}</td>
@@ -1470,10 +1472,7 @@ function renderTrendTable(containerId, rows){
     <td style="${trtotCell};background:#432874;color:#e8def8">${trCompSubPct}%</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">${totClickValFn('completed', 'Completed Value', trCompVal)}</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">—</td>
-    
-    <!-- IN PROGRESS TOTALS -->
-    <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${totClickFn('in_progress', 'In Progress (Inst->Subsidy)', trInProg)}</td>
-    <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${totClickValFn('in_progress', 'In Progress Value', trInProgVal)}</td>
+    <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('installed', 'Installed', trInst)}</td>
   </tr>`;
 
   el.innerHTML=`
@@ -1485,8 +1484,7 @@ function renderTrendTable(containerId, rows){
           <th rowspan="2" style="text-align:center;vertical-align:middle;padding:6px 5px;border:1px solid #cbd5e1;font-weight:700">Overall Leads</th>
           <th colspan="5" style="text-align:center;background:rgba(16, 185, 129, 0.08);color:#047857;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">WON VS SUBMITTED</th>
           <th colspan="6" style="text-align:center;background:rgba(59, 130, 246, 0.08);color:#1d4ed8;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">PIPELINE</th>
-          <th colspan="8" style="text-align:center;background:rgba(99, 102, 241, 0.08);color:#4f46e5;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">PROGRESS</th>
-          <th colspan="2" style="text-align:center;background:rgba(249, 115, 22, 0.08);color:#c2410c;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">IN PROGRESS</th>
+          <th colspan="10" style="text-align:center;background:rgba(99, 102, 241, 0.08);color:#4f46e5;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">PROGRESS</th>
         </tr>
         <tr style="background:#f8fafc">
           <!-- WON VS SUBMITTED columns -->
@@ -1501,10 +1499,11 @@ function renderTrendTable(containerId, rows){
           <th style="color:#8b5cf6;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">PIPE/SUB<br>%</th>
           <th style="color:#2563eb;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">PIPE<br>VALUE</th>
           <th style="color:#3b82f6;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">VS<br>PREV</th>
-          <th style="color:#1d4ed8;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">AT<br>BANK</th>
           <th style="color:#1d4ed8;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">EB<br>CHANGE</th>
+          <th style="color:#1d4ed8;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">AT<br>BANK</th>
 
-          <!-- COMPLETED columns -->
+          <!-- PROGRESS columns -->
+          <th style="color:#10b981;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">1ST PMT<br>RECD</th>
           <th style="color:#ea580c;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">INST.<br>PENDING</th>
           <th style="color:#6366f1;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">NET METER<br>PENDING</th>
           <th style="color:#ea580c;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">BAL.<br>PENDING</th>
@@ -1513,10 +1512,7 @@ function renderTrendTable(containerId, rows){
           <th style="color:#8b5cf6;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">COMP/<br>SUB%</th>
           <th style="color:#6366f1;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">COMP<br>VALUE</th>
           <th style="color:#3b82f6;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">VS<br>PREV</th>
-
-          <!-- IN PROGRESS columns -->
-          <th style="color:#f97316;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">IN PROGRESS<br>(INST→SUBSIDY)</th>
-          <th style="color:#ea580c;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">INPROG<br>VALUE</th>
+          <th style="color:#059669;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">INSTALLED</th>
         </tr>
       </thead>
       <tbody>
@@ -1527,16 +1523,16 @@ function renderTrendTable(containerId, rows){
           const subVal = r.submitted_value || 0;
           const pipe = r.pipeline || 0;
           const pipeVal = r.pipeline_value || 0;
-          const atBank = r.at_bank || 0;
           const ebChange = r.eb_change || 0;
-          const netMeterPend = r.net_meter_pending || 0;
-          const comp = r.completed || 0;
-          const compVal = r.comp_value || 0;
-          const inProg = r.in_progress || 0;
+          const atBank = r.at_bank || 0;
+          const firstPmtRecd = r.first_pmt_recd || 0;
           const instPend = r.inst_pending || 0;
+          const netMeterPend = r.net_meter_pending || 0;
           const balPend = r.bal_pending || 0;
           const subPend = r.subsidy_pending || 0;
-          const inProgVal = r.inprog_value || 0;
+          const comp = r.completed || 0;
+          const compVal = r.comp_value || 0;
+          const installed = r.installed || 0;
 
           const subWonPct = won > 0 ? ((sub / won) * 100).toFixed(1) : '—';
           const pipeSubPct = sub > 0 ? ((pipe / sub) * 100).toFixed(1) : '—';
@@ -1576,10 +1572,11 @@ function renderTrendTable(containerId, rows){
             <td style="${cellStyle} font-weight:700; color:#7c3aed">${pipeSubPct !== '—' ? pipeSubPct + '%' : '—'}</td>
             <td style="${cellStyle} font-weight:700; color:#2563eb; white-space:nowrap">${clickValFn('pipeline', 'Pipeline Value', pipeVal)}</td>
             <td style="${cellStyle}">${pipeVsPrev}</td>
-            <td style="${cellStyle} font-weight:600; color:#1d4ed8">${clickFn('at_bank', 'At Bank', atBank)}</td>
             <td style="${cellStyle} font-weight:600; color:#1d4ed8">${clickFn('eb_change', 'EB Change', ebChange)}</td>
+            <td style="${cellStyle} font-weight:600; color:#1d4ed8">${clickFn('at_bank', 'At Bank', atBank)}</td>
 
-            <!-- COMPLETED -->
+            <!-- PROGRESS -->
+            <td style="${cellStyle} font-weight:700; color:#10b981">${clickFn('first_pmt_recd', '1st Payment Received', firstPmtRecd)}</td>
             <td style="${cellStyle} font-weight:600; color:#ea580c">${clickFn('inst_pending', 'Installation Pending', instPend)}</td>
             <td style="${cellStyle} font-weight:700; color:#6366f1">${clickFn('net_meter_pending', 'Net Meter Pending', netMeterPend)}</td>
             <td style="${cellStyle} font-weight:600; color:#ea580c">${clickFn('bal_pending', 'Balance Pending', balPend)}</td>
@@ -1588,10 +1585,7 @@ function renderTrendTable(containerId, rows){
             <td style="${cellStyle} font-weight:700; color:#7c3aed">${compSubPct !== '—' ? compSubPct + '%' : '—'}</td>
             <td style="${cellStyle} font-weight:700; color:#6366f1; white-space:nowrap">${clickValFn('completed', 'Completed Value', compVal)}</td>
             <td style="${cellStyle}">${compVsPrev}</td>
-
-            <!-- IN PROGRESS -->
-            <td style="${cellStyle} font-weight:700; color:#f97316">${clickFn('in_progress', 'In Progress (Inst->Subsidy)', inProg)}</td>
-            <td style="${cellStyle} font-weight:700; color:#f97316; white-space:nowrap">${clickValFn('in_progress', 'In Progress Value', inProgVal)}</td>
+            <td style="${cellStyle} font-weight:700; color:#059669">${clickFn('installed', 'Installed', installed)}</td>
           </tr>`;
         }).join('')}
       </tbody>
@@ -1737,6 +1731,7 @@ function _edRenderLeadsTrend(leads) {
   const theadHtml = `
     <tr style="background:#f8fafc">
       <th style="padding:6px 6px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;text-align:center;border-bottom:1px solid #e5e7eb;white-space:nowrap">#</th>
+      <th data-sk="category_name" onclick="_edSortLeads('category_name')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#0369a1;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Segment<span class="ed-si" style="color:#1e3a5f"> ▲</span></th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Lead Name</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Contact</th>
       <th data-sk="solar_pipeline_status" onclick="_edSortLeads('solar_pipeline_status')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#0891b2;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Stage<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
@@ -1744,7 +1739,7 @@ function _edRenderLeadsTrend(leads) {
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Area</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">City / District</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#ea4335;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Google Maps</th>
-      <th data-sk="_days" onclick="_edSortLeads('_days')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#4b5563;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center" title="Days in current stage till today">Stage Days<span class="ed-si" style="color:#1e3a5f"> ▼</span></th>
+      <th data-sk="_days" onclick="_edSortLeads('_days')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#4b5563;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center" title="Days in current stage till today">Stage Days<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#0284c7;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Ground Source</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Telecaller</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Lead Date</th>
@@ -1759,7 +1754,7 @@ function _edRenderLeadsTrend(leads) {
 
   let tbodyHtml = '';
   if (!leads.length) {
-    tbodyHtml = '<tr><td colspan="18" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
+    tbodyHtml = '<tr><td colspan="19" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
   } else {
     tbodyHtml = leads.map((l, i) => {
       const days = _edComputeDays(l);
@@ -1791,10 +1786,12 @@ function _edRenderLeadsTrend(leads) {
       const gSourceVal = l.ground_source || '—';
       const tcVal = l.telecaller_name || '—';
       const brandVal = l.brand_name || '—';
+      const segVal = l.category_name || '—';
 
       return `
         <tr class="ed-lead-row" style="cursor:pointer" onclick="_edSelectLead(${l.id},${l.company_id},'${esc(l.name)}','${esc(l.phone_raw||'')}',this)">
           <td style="text-align:center;font-size:10px;color:#9ca3af;padding:5px 6px">${i+1}</td>
+          <td style="font-size:10px;font-weight:600;color:#0284c7;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis" title="${esc(segVal)}"><span style="display:inline-block;padding:2px 7px;border-radius:10px;background:#e0f2fe;color:#0369a1;font-size:9.5px;font-weight:700">${esc(segVal)}</span></td>
           <td style="font-weight:600;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 6px">${esc(l.name)}</td>
           <td style="font-size:10.5px;padding:5px 6px;white-space:nowrap"><a href="tel:${esc(l.phone_raw||'')}" style="color:#2563eb;text-decoration:none;font-weight:600">${esc(phoneDisplay)}</a></td>
           <td style="font-size:10px;padding:5px 6px;white-space:nowrap">${stageBadge}</td>
@@ -1828,6 +1825,7 @@ function _edRenderLeadsHandler(leads) {
   const theadHtml = `
     <tr style="background:#f8fafc">
       <th style="padding:6px 6px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;text-align:center;border-bottom:1px solid #e5e7eb;white-space:nowrap">#</th>
+      <th data-sk="category_name" onclick="_edSortLeads('category_name')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#0369a1;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Segment<span class="ed-si" style="color:#1e3a5f"> ▲</span></th>
       <th data-sk="created_at" onclick="_edSortLeads('created_at')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Date of Lead<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th data-sk="submit_date" onclick="_edSortLeads('submit_date')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Submit Date<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th data-sk="name" onclick="_edSortLeads('name')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Name<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
@@ -1836,7 +1834,7 @@ function _edRenderLeadsHandler(leads) {
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Area</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">City / District</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#ea4335;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Google Maps</th>
-      <th data-sk="_days" onclick="_edSortLeads('_days')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#4b5563;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center" title="Days in current stage till today">Stage Days<span class="ed-si" style="color:#1e3a5f"> ▼</span></th>
+      <th data-sk="_days" onclick="_edSortLeads('_days')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#4b5563;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center" title="Days in current stage till today">Stage Days<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#0284c7;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Ground Source</th>
       <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Telecaller</th>
       <th data-sk="status" onclick="_edSortLeads('status')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Status<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
@@ -1850,7 +1848,7 @@ function _edRenderLeadsHandler(leads) {
 
   let tbodyHtml = '';
   if (!leads.length) {
-    tbodyHtml = '<tr><td colspan="18" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
+    tbodyHtml = '<tr><td colspan="19" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
   } else {
     tbodyHtml = leads.map((l, i) => {
       const stCol = _STATUS_COL[l.status] || '#6b7280';
@@ -1869,10 +1867,12 @@ function _edRenderLeadsHandler(leads) {
       const gSourceVal = l.ground_source || '—';
       const tcVal = l.telecaller_name || '—';
       const brandVal = l.brand_name || '—';
+      const segVal = l.category_name || '—';
 
       return `
         <tr class="ed-lead-row" style="cursor:pointer" onclick="_edSelectLead(${l.id},${l.company_id},'${esc(l.name)}','${esc(l.phone_raw||'')}',this)">
           <td style="text-align:center;font-size:10px;color:#9ca3af;padding:5px 6px">${i+1}</td>
+          <td style="font-size:10px;font-weight:600;color:#0284c7;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis" title="${esc(segVal)}"><span style="display:inline-block;padding:2px 7px;border-radius:10px;background:#e0f2fe;color:#0369a1;font-size:9.5px;font-weight:700">${esc(segVal)}</span></td>
           <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.created_at)}</td>
           <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.submit_date)}</td>
           <td style="font-weight:600;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 6px">${esc(l.name)}</td>
@@ -1949,7 +1949,7 @@ async function openExecDrillDown(tr){
   cnt.textContent='';
   if(panel) panel.style.display='none';
   _edCurrentLead=null;
-  _edLeadsData=[]; _edSortBy='_days'; _edSortDir='desc';
+  _edLeadsData=[]; _edSortBy='category_name'; _edSortDir='asc';
   ov.style.display='flex';
   // Build params: reuse all current dashboard filters + handler-specific ones
   const base=buildParams();
@@ -1964,7 +1964,7 @@ async function openExecDrillDown(tr){
     _edLeadsData=d.data||[];
     const total=d.total||0;
     cnt.textContent=`${fmtNum(total)} lead${total!==1?'s':''} (showing ${_edLeadsData.length})`;
-    _edLeadsData.sort((a,b)=>{const va=_edComputeDays(a)??-1;const vb=_edComputeDays(b)??-1;return vb-va;});
+    _edLeadsData.sort((a,b)=>{const ca=(a.category_name||'').toString();const cb=(b.category_name||'').toString();return ca.localeCompare(cb);});
     _edRenderLeads(_edLeadsData);
   }catch(e){
     body.innerHTML=`<tr><td colspan="13" style="text-align:center;padding:20px;color:#dc2626"><i class="fas fa-exclamation-circle me-1"></i>${esc(e.message)}</td></tr>`;
@@ -1985,7 +1985,7 @@ async function openTrendDrillDown(periodType, label, metric, columnName) {
   cnt.textContent='';
   if(panel) panel.style.display='none';
   _edCurrentLead=null;
-  _edLeadsData=[]; _edSortBy='_days'; _edSortDir='desc';
+  _edLeadsData=[]; _edSortBy='category_name'; _edSortDir='asc';
   ov.style.display='flex';
 
   const base=buildParams();
@@ -2039,7 +2039,7 @@ async function openTrendDrillDown(periodType, label, metric, columnName) {
     
     cnt.innerHTML = `${extraPill}<span style="display:inline-block; background:rgba(16,185,129,0.08); color:#10b981; padding:2px 8px; border-radius:12px; font-weight:600; font-size:11px"><i class="fas fa-users me-1"></i>${total} lead${total!==1?'s':''}</span>`;
     
-    _edLeadsData.sort((a,b)=>{const va=_edComputeDays(a)??-1;const vb=_edComputeDays(b)??-1;return vb-va;});
+    _edLeadsData.sort((a,b)=>{const ca=(a.category_name||'').toString();const cb=(b.category_name||'').toString();return ca.localeCompare(cb);});
     _edRenderLeads(_edLeadsData);
   }catch(e){
     body.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:20px;color:#dc2626"><i class="fas fa-exclamation-circle me-1"></i>${esc(e.message)}</td></tr>`;
@@ -2199,34 +2199,12 @@ async function _edToggleCallHist(){
 </div>
 
 <script>
-// Make modal header draggable
+// Initialize mouse drag-to-expand resizer for edModal
 (function(){
   const modal = document.getElementById('edModal');
   const header = document.getElementById('edModalHeader');
-  if(!modal || !header) return;
-  let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-  header.onmousedown = dragMouseDown;
-  function dragMouseDown(e) {
-    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'I') return;
-    e.preventDefault();
-    pos3 = e.clientX;
-    pos4 = e.clientY;
-    document.onmouseup = closeDragElement;
-    document.onmousemove = elementDrag;
-  }
-  function elementDrag(e) {
-    e.preventDefault();
-    pos1 = pos3 - e.clientX;
-    pos2 = pos4 - e.clientY;
-    pos3 = e.clientX;
-    pos4 = e.clientY;
-    modal.style.top = (modal.offsetTop - pos2) + "px";
-    modal.style.left = (modal.offsetLeft - pos1) + "px";
-    modal.style.position = "absolute";
-  }
-  function closeDragElement() {
-    document.onmouseup = null;
-    document.onmousemove = null;
+  if (modal && typeof window.makeModalResizableAndDraggable === 'function') {
+    window.makeModalResizableAndDraggable(modal, header);
   }
 })();
 </script>
