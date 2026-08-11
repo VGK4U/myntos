@@ -658,10 +658,10 @@ def get_etc_batchwise_analytics(
     """
     search_s = search if isinstance(search, str) and search.strip() else None
 
-    st_where = ["is_active = TRUE", "company_id = :cid"]
+    st_where = ["s.is_active = TRUE", "s.company_id = :cid"]
     st_params: dict = {'cid': COMPANY_ID}
     if search_s:
-        st_where.append("(LOWER(name) LIKE :srch OR LOWER(student_id) LIKE :srch OR LOWER(registration_id) LIKE :srch OR phone LIKE :srch OR LOWER(batch_no) LIKE :srch)")
+        st_where.append("(LOWER(s.name) LIKE :srch OR LOWER(s.student_id) LIKE :srch OR LOWER(s.registration_id) LIKE :srch OR s.phone LIKE :srch OR LOWER(s.batch_no) LIKE :srch)")
         st_params['srch'] = f'%{search_s.lower()}%'
 
     st_clause = " AND ".join(st_where)
@@ -671,8 +671,10 @@ def get_etc_batchwise_analytics(
                s.training_completed_date, s.package_value, s.deal_value_received,
                s.handler_confirmed, s.telecaller_confirmed, s.field_staff_confirmed,
                s.handler_emp_code, s.telecaller_emp_code, s.crm_lead_id, s.created_at,
-               s.guru_name, s.z_guru_name, s.source
+               s.guru_name, s.z_guru_name, s.source,
+               cl.deal_value_received as cl_deal_value_received
         FROM etc_students s
+        LEFT JOIN crm_leads cl ON s.crm_lead_id = cl.id
         WHERE {st_clause}
         ORDER BY s.batch_start_date DESC NULLS LAST, s.id DESC
     """), st_params).fetchall()
@@ -760,15 +762,21 @@ def get_etc_batchwise_analytics(
 
         dv = float(r.package_value or 0.0)
         
-        # Calculate received value from crm_lead_transactions & income_entries
+        # Comprehensive received calculation from CRM leads, student record, transactions & income entries
+        cl_rec = float(r.cl_deal_value_received or 0.0)
+        s_rec = float(r.deal_value_received or 0.0)
         tx_val = tx_map.get(r.crm_lead_id, 0.0)
         inc_val, inc_conf_val, inc_conf_cnt = inc_map.get(r.crm_lead_id, (0.0, 0.0, 0))
-        rec_db = float(r.deal_value_received or 0.0)
-        rec = max(rec_db, tx_val, inc_val)
+        rec = max(cl_rec, s_rec, tx_val, inc_val)
         bal = max(0.0, dv - rec)
 
-        is_conf = bool(inc_conf_cnt > 0 or inc_conf_val > 0 or r.handler_confirmed or r.telecaller_confirmed or r.field_staff_confirmed)
-        conf_amt = inc_conf_val if inc_conf_val > 0 else (dv if is_conf else 0.0)
+        # STRICT RULE: Without a received value (rec > 0), a student CANNOT be confirmed!
+        if rec > 0:
+            is_conf = bool(inc_conf_cnt > 0 or inc_conf_val > 0 or r.handler_confirmed or r.telecaller_confirmed or r.field_staff_confirmed)
+            conf_amt = inc_conf_val if inc_conf_val > 0 else rec
+        else:
+            is_conf = False
+            conf_amt = 0.0
 
         b['deal_value'] += dv
         b['received'] += rec
