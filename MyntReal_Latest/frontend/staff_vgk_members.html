@@ -5197,15 +5197,26 @@ function updateAdvSearchBadge() {
 }
 
 // ══════════════ POSTER GENERATION SYSTEM ══════════════
-function getUploadsBaseUrl() {
-  const host = window.location.hostname;
-  const port = window.location.port;
-  const protocol = window.location.protocol;
-  if ((host === 'localhost' || host === '127.0.0.1') && port && port !== '8000') {
-    return protocol + '//' + host + ':8000/storage/';
+function resolvePosterMediaUrl(rawPath) {
+  if (!rawPath || typeof rawPath !== 'string' || rawPath.trim() === '' || rawPath === 'null' || rawPath === 'undefined') {
+    return null;
   }
-  return '/storage/';
+  let path = rawPath.trim();
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+    return path;
+  }
+  if (path.startsWith('/storage/')) {
+    return window.location.origin + path;
+  }
+  if (path.startsWith('storage/')) {
+    return window.location.origin + '/' + path;
+  }
+  if (path.startsWith('/')) {
+    return window.location.origin + '/storage' + path;
+  }
+  return window.location.origin + '/storage/' + path;
 }
+
 async function generateMemberPoster(partnerId) {
   const modal = document.getElementById('posterModal');
   if(!modal) return;
@@ -5242,8 +5253,9 @@ async function generateMemberPoster(partnerId) {
     const avatar = document.getElementById('prevAvatar');
     avatar.textContent = initials;
     
-    const photoPath = m.passport_photo || m.logo_path;
-    if (photoPath) {
+    const photoPath = m.passport_photo || m.logo_path || m.profile_image || m.photo_url || m.avatar_url || m.id_card_photo || m.photo;
+    const resolvedUrl = resolvePosterMediaUrl(photoPath);
+    if (resolvedUrl) {
       const img = document.getElementById('prevImg');
       img.crossOrigin = "anonymous";
       img.onload = () => {
@@ -5256,7 +5268,7 @@ async function generateMemberPoster(partnerId) {
         img.style.display = 'none';
         avatar.style.display = 'flex';
       };
-      img.src = getUploadsBaseUrl() + photoPath + '?t=' + Date.now();
+      img.src = resolvedUrl.includes('?') ? resolvedUrl : (resolvedUrl + '?t=' + Date.now());
     } else {
       console.log("[Poster Debug] No main photo path found. Displaying initials.");
       avatar.style.display = 'flex';
@@ -5316,6 +5328,7 @@ async function generateMemberPoster(partnerId) {
     
     // Priority: 1. Dashboard active filter date (iedDt) if valid, 2. Today's date if entries exist, 3. Latest entry date
     const todayStr = new Date().toISOString().split('T')[0];
+    const iedDt = (document.getElementById('iedDateTo')?.value || '').trim();
     let selectedDate = null;
     if (typeof iedDt === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(iedDt) && entries.some(e => e.income_date === iedDt && e.status !== 'CANCELLED')) {
       selectedDate = iedDt;
@@ -5416,7 +5429,9 @@ async function generateMemberPoster(partnerId) {
     const seniorImg = document.getElementById('prevSeniorImg');
     const seniorAvatar = document.getElementById('prevSeniorAvatar');
     if (seniorImg) {
-      if (m.senior_photo) {
+      const seniorPhotoPath = m.senior_photo || m.senior_passport_photo || m.senior_logo_path || m.senior_profile_image;
+      const resolvedSeniorUrl = resolvePosterMediaUrl(seniorPhotoPath);
+      if (resolvedSeniorUrl) {
         seniorImg.crossOrigin = "anonymous";
         seniorImg.onload = () => {
           console.log("[Poster Debug] Senior photo loaded successfully:", seniorImg.src);
@@ -5429,7 +5444,7 @@ async function generateMemberPoster(partnerId) {
           seniorAvatar.style.display = 'flex';
           seniorAvatar.textContent = (m.senior_name || 'SR').trim().split(/\s+/).map(p=>p[0]).join('').slice(0,2).toUpperCase();
         };
-        seniorImg.src = getUploadsBaseUrl() + m.senior_photo + '?t=' + Date.now();
+        seniorImg.src = resolvedSeniorUrl.includes('?') ? resolvedSeniorUrl : (resolvedSeniorUrl + '?t=' + Date.now());
       } else {
         console.log("[Poster Debug] No senior photo path found. Displaying initials.");
         seniorImg.style.display = 'none';

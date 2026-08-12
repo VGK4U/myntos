@@ -778,11 +778,30 @@
                     document.getElementById('orgNonReimbursable').textContent = nonReimbursable;
                     
                     renderOrgJourneyList();
+                } else {
+                    console.error('[DC] Error loading org journeys:', response.status);
+                    renderOrgJourneysError(response.status === 403 ? 'Access Restricted: Organization permissions required' : 'Unable to load organization journeys');
                 }
             } catch (error) {
                 if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
                 console.error('[DC] Error loading org journeys:', error);
+                renderOrgJourneysError('Network or connection error');
             }
+        }
+        
+        function renderOrgJourneysError(msg) {
+            const container = document.getElementById('orgJourneyList');
+            if (!container) return;
+            container.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-3 text-warning"></i>
+                    <h5 style="color: #374151;">${escapeHtml(msg)}</h5>
+                    <p class="text-muted mb-3">Failed to load organization journey logs.</p>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadOrgJourneys()">
+                        <i class="fas fa-sync-alt me-1"></i>Retry
+                    </button>
+                </div>
+            `;
         }
         
         function renderOrgJourneyList() {
@@ -967,11 +986,30 @@
                     
                     renderJourneyList();
                     updateBulkActionsVisibility();
+                } else {
+                    console.error('Failed to load team journeys:', response.status);
+                    renderTeamJourneysError(response.status === 403 ? 'Access Restricted: Manager permissions required' : 'Unable to load team journeys');
                 }
             } catch (error) {
                 if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
                 console.error('Error loading journeys:', error);
+                renderTeamJourneysError('Network or connection error');
             }
+        }
+        
+        function renderTeamJourneysError(msg) {
+            const container = document.getElementById('journeyList');
+            if (!container) return;
+            container.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-3 text-warning"></i>
+                    <h5 style="color: #374151;">${escapeHtml(msg)}</h5>
+                    <p class="text-muted mb-3">Failed to load team journey records from server.</p>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadJourneys()">
+                        <i class="fas fa-sync-alt me-1"></i>Retry
+                    </button>
+                </div>
+            `;
         }
         
         function renderJourneyList() {
@@ -1732,11 +1770,28 @@
                     renderActiveJourneysList();
                 } else {
                     console.error('Failed to load active journeys:', response.status);
+                    renderActiveJourneysError(response.status === 403 ? 'Access Restricted: Permission required' : 'Unable to load active journeys');
                 }
             } catch (error) {
                 if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
                 console.error('Error loading active journeys:', error);
+                renderActiveJourneysError('Network or connection error');
             }
+        }
+        
+        function renderActiveJourneysError(msg) {
+            const container = document.getElementById('activeJourneysList');
+            if (!container) return;
+            container.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-exclamation-circle fa-2x mb-3 text-warning"></i>
+                    <h5 style="color: #374151;">${escapeHtml(msg)}</h5>
+                    <p class="text-muted mb-3">Failed to load live active journeys from server.</p>
+                    <button class="btn btn-sm btn-outline-success" onclick="loadActiveJourneys()">
+                        <i class="fas fa-sync-alt me-1"></i>Retry
+                    </button>
+                </div>
+            `;
         }
         
         function renderActiveJourneysList() {

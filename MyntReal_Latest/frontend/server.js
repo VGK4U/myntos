@@ -7709,8 +7709,13 @@ const server = http.createServer(async (req, res) => {
         fs.createReadStream(selectedApk).pipe(res);
         return;
       } else {
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('APK file not found on server');
+        // S3 Redirect Fallback: Redirect to canonical AWS S3 release binary
+        const s3ApkUrl = 'https://myntreal-media-vault.s3.ap-south-2.amazonaws.com/public/applications/v2.0.4/MyntReal.apk';
+        res.writeHead(302, {
+          'Location': s3ApkUrl,
+          'Cache-Control': 'no-cache'
+        });
+        res.end();
         return;
       }
     }

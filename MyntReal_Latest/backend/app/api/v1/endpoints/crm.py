@@ -3569,41 +3569,45 @@ def get_bank_wise_leads(
     # Apply Bucket Filter
     if bucket_filter and bucket_filter.strip() and not bucket_filter.strip().lower().startswith('all'):
         clean_b = bucket_filter.strip().lower()
-        processed_leads = [l for l in processed_leads if l['bucket_key'].lower() == clean_b or clean_b in l['bucket_label'].lower()]
+        processed_leads = [l for l in processed_leads if str(l.get('bucket_key') or '').lower() == clean_b or clean_b in str(l.get('bucket_label') or '').lower()]
 
     # Apply Telecaller Filter
     if telecaller_filter and telecaller_filter.strip() and not telecaller_filter.strip().lower().startswith('all'):
         clean_tc = telecaller_filter.strip()
-        processed_leads = [l for l in processed_leads if clean_tc.lower() in l['telecaller_name'].lower()]
+        processed_leads = [l for l in processed_leads if clean_tc.lower() in str(l.get('telecaller_name') or '').lower()]
 
     # Apply Ground Support Filter
     if ground_support_filter and ground_support_filter.strip() and not ground_support_filter.strip().lower().startswith('all'):
         clean_gs = ground_support_filter.strip()
-        processed_leads = [l for l in processed_leads if clean_gs.lower() in l['ground_support_name'].lower()]
+        processed_leads = [l for l in processed_leads if clean_gs.lower() in str(l.get('ground_support_name') or '').lower()]
 
     # Apply Up-port Staff Filter
     if uport_staff_filter and uport_staff_filter.strip() and not uport_staff_filter.strip().lower().startswith('all'):
         clean_up = uport_staff_filter.strip()
-        processed_leads = [l for l in processed_leads if clean_up.lower() in l['uport_staff_name'].lower()]
+        processed_leads = [l for l in processed_leads if clean_up.lower() in str(l.get('uport_staff_name') or '').lower()]
         
+    # Safe helper for sorting strings
+    def _safe_str(val):
+        return str(val or '').strip().lower()
+
     # Sort leads based on sort_by query parameter
     if sort_by in ('stage_days_desc', 'member_days_desc', 'default'):
         # Primary: Ground Source (A-Z), Secondary: Stage Days (Highest to Lowest)
-        processed_leads.sort(key=lambda x: (x['ground_source_name'].lower(), -x['stage_days']))
+        processed_leads.sort(key=lambda x: (_safe_str(x.get('ground_source_name')), -int(x.get('stage_days') or 0)))
     elif sort_by == 'stage_days_only':
-        processed_leads.sort(key=lambda x: x['stage_days'], reverse=True)
+        processed_leads.sort(key=lambda x: int(x.get('stage_days') or 0), reverse=True)
     elif sort_by == 'stage_days_asc':
-        processed_leads.sort(key=lambda x: x['stage_days'])
+        processed_leads.sort(key=lambda x: int(x.get('stage_days') or 0))
     elif sort_by == 'member':
-        processed_leads.sort(key=lambda x: (x['ground_source_name'].lower(), -x['stage_days']))
+        processed_leads.sort(key=lambda x: (_safe_str(x.get('ground_source_name')), -int(x.get('stage_days') or 0)))
     elif sort_by == 'bank':
-        processed_leads.sort(key=lambda x: (x['bank_name'].lower(), -x['stage_days']))
+        processed_leads.sort(key=lambda x: (_safe_str(x.get('bank_name')), -int(x.get('stage_days') or 0)))
     elif sort_by == 'deal_value':
-        processed_leads.sort(key=lambda x: x['deal_value'], reverse=True)
+        processed_leads.sort(key=lambda x: float(x.get('deal_value') or 0.0), reverse=True)
     elif sort_by == 'customer_name':
-        processed_leads.sort(key=lambda x: x['customer_name'].lower())
+        processed_leads.sort(key=lambda x: _safe_str(x.get('customer_name')))
     else:
-        processed_leads.sort(key=lambda x: (x['ground_source_name'].lower(), -x['stage_days']))
+        processed_leads.sort(key=lambda x: (_safe_str(x.get('ground_source_name')), -int(x.get('stage_days') or 0)))
         
     # Format bank summary list
     bank_summary = [

@@ -505,11 +505,30 @@
                     
                     renderJourneyList();
                     updateBulkActionsVisibility();
+                } else {
+                    console.error('Error loading journeys:', response.status);
+                    renderAllJourneysError(response.status === 403 ? 'Access Restricted: Permission required' : 'Unable to load mobility logs');
                 }
             } catch (error) {
                 if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
                 console.error('Error loading journeys:', error);
+                renderAllJourneysError('Network or connection error');
             }
+        }
+        
+        function renderAllJourneysError(msg) {
+            const container = document.getElementById('journeyList');
+            if (!container) return;
+            container.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-3 text-warning"></i>
+                    <h5 style="color: #374151;">${escapeHtml(msg)}</h5>
+                    <p class="text-muted mb-3">Failed to load mobility and location logs from server.</p>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadJourneys()">
+                        <i class="fas fa-sync-alt me-1"></i>Retry
+                    </button>
+                </div>
+            `;
         }
         
         function renderJourneyList() {

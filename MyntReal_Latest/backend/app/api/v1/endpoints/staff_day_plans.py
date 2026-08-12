@@ -1094,11 +1094,22 @@ def get_day_progress(
     from app.models.staff_attendance_sheet import StaffAttendanceSheet, StaffLeaveRequest, LeaveRequestStatus
 
     target_date = get_indian_date()
-    if plan_date:
-        try:
-            target_date = date.fromisoformat(plan_date)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    if plan_date and plan_date.strip():
+        pd = plan_date.strip()
+        parsed = None
+        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+            try:
+                parsed = datetime.strptime(pd, fmt).date()
+                break
+            except ValueError:
+                pass
+        if parsed:
+            target_date = parsed
+        else:
+            try:
+                target_date = date.fromisoformat(pd)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD or DD/MM/YYYY")
 
     is_admin = _is_admin_user(current_user)
 

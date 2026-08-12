@@ -733,7 +733,23 @@ async def catalog_admin_upload(
                     os.path.join(tmp_pages_dir, new_name)
                 )
 
-        # ── 7. Atomic swap (WVV — Validate) ──────────────────────────────────
+        # ── 7. Atomic S3 Sync & Local Swap (WVV — Validate) ──────────────────────────────────
+        from app.services.s3_storage import s3_storage_service
+        
+        # Upload Master PDF to Private S3 Canonical Path
+        s3_storage_service.upload_file("private/catalogs/v2.0.4/mnr-catalog-master.pdf", data)
+        
+        # Upload Web PDF to Public S3 Canonical Path
+        s3_storage_service.upload_file("public/catalogs/v2.0.4/mnr-catalog-web.pdf", data)
+        
+        # Upload Page Images to Public S3 Canonical Path
+        for i in range(1, page_count + 1):
+            page_filename = f"page-{i:02d}.jpg"
+            local_page_path = os.path.join(tmp_pages_dir, page_filename)
+            if os.path.exists(local_page_path):
+                with open(local_page_path, "rb") as pf:
+                    s3_storage_service.upload_file(f"public/catalogs/v2.0.4/pages/{page_filename}", pf.read())
+
         # Back up existing pages
         if os.path.isdir(pages_dir):
             if os.path.isdir(old_pages_bak):
@@ -745,7 +761,7 @@ async def catalog_admin_upload(
             shutil.rmtree(pages_dir)
         shutil.move(tmp_pages_dir, pages_dir)
 
-        # Replace PDF
+        # Replace PDF locally for dev fallback
         if os.path.isfile(pdf_path):
             os.remove(pdf_path)
         with open(pdf_path, "wb") as fh:
@@ -758,7 +774,7 @@ async def catalog_admin_upload(
         size_mb = round(len(data) / (1024 * 1024), 2)
         uploader = getattr(current_user, "emp_code", "unknown")
         logger.info(
-            "CATALOG UPLOAD: %s uploaded new catalog PDF — %s MB, %d pages",
+            "CATALOG UPLOAD: %s uploaded new catalog PDF — %s MB, %d pages (S3 Synced)",
             uploader, size_mb, page_count
         )
 

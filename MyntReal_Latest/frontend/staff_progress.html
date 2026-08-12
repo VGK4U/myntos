@@ -6273,8 +6273,22 @@
             loadDayProgress();
         }
 
+        function normalizeProgressDate(rawDate) {
+            if (!rawDate) return getISTToday();
+            let d = rawDate.trim();
+            if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}$/.test(d)) {
+                const parts = d.split(/[\/-]/);
+                const day = parts[0].padStart(2, '0');
+                const month = parts[1].padStart(2, '0');
+                const year = parts[2];
+                return `${year}-${month}-${day}`;
+            }
+            return d;
+        }
+
         async function loadDayProgress() {
-            const dateVal = document.getElementById('progressDatePicker').value;
+            const rawVal = document.getElementById('progressDatePicker').value;
+            const dateVal = normalizeProgressDate(rawVal);
             const selfBody = document.getElementById('selfProgressBody');
             const teamBody = document.getElementById('teamProgressBody');
             selfBody.innerHTML = '<tr><td colspan="8" class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';

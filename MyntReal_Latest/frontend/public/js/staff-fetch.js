@@ -7,6 +7,12 @@
         COMPANY_ID: 'staff_company_id'
     };
     
+    function isValidJwt(tok) {
+        if (!tok || typeof tok !== 'string') return false;
+        const parts = tok.split('.');
+        return parts.length === 3 && parts[0].length > 5 && parts[1].length > 5;
+    }
+
     function getToken() {
         // Sole staff authority: localStorage.staff_token
         let tok = localStorage.getItem(STORAGE_KEYS.TOKEN);
@@ -30,9 +36,8 @@
             tok = tok.replace(/^["']|["']$/g, '').trim();
         }
         
-        // STRICT ENFORCEMENT: Never return legacy keys (authToken, token, access_token).
-        // Never return 'null', 'undefined', or empty string.
-        if (tok && tok !== 'null' && tok !== 'undefined' && tok !== '[object Object]' && tok.trim() !== '') {
+        // Validation: Must be a valid 3-part JWT string
+        if (tok && isValidJwt(tok)) {
             // Self-heal localStorage if it was quote-wrapped or dirty
             try {
                 if (localStorage.getItem(STORAGE_KEYS.TOKEN) !== tok) {
@@ -40,6 +45,12 @@
                 }
             } catch(e) {}
             return tok;
+        }
+        
+        // If token exists but is corrupted (not valid JWT), clear it
+        if (tok) {
+            console.warn('[DC-FETCH] Corrupted non-JWT token detected in storage. Auto-clearing...');
+            clearSession();
         }
         return null;
     }
@@ -66,8 +77,75 @@
         redirectToLogin();
     }
     
-    async function staffFetch(url, options = {}) {
+    let isRefreshingToken = false;
+    let refreshPromise = null;
+    
+    async function silentRefreshToken() {
+        if (isRefreshingToken) return refreshPromise;
+        const currentTok = getToken();
+        if (!currentTok) return null;
+        
+        isRefreshingToken = true;
+        console.log('[DC-FETCH] Attempting transparent token refresh...');
+        
+        refreshPromise = (async () => {
+            try {
+                const res = await fetch('/api/v1/staff/auth/refresh', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${currentTok}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.access_token) {
+                        localStorage.setItem(STORAGE_KEYS.TOKEN, data.access_token);
+                        document.cookie = `staff_token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
+                        console.log('[DC-FETCH] Transparent token refresh successful!');
+                        return data.access_token;
+                    }
+                } else {
+                    console.warn('[DC-FETCH] Token refresh endpoint returned status:', res.status);
+                }
+            } catch (e) {
+                console.warn('[DC-FETCH] Transparent token refresh failed:', e);
+            } finally {
+                isRefreshingToken = false;
+                refreshPromise = null;
+            }
+            return null;
+        })();
+        
+        return refreshPromise;
+    }
+    
+    // Proactive background refresh every 5 minutes if token exp <= 10 mins
+    function checkAndProactivelyRefreshToken() {
         const token = getToken();
+        if (!token) return;
+        try {
+            const parts = token.split('.');
+            if (parts.length === 3) {
+                const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+                if (payload.exp) {
+                    const timeUntilExpMs = (payload.exp * 1000) - Date.now();
+                    // If token expires in less than 10 minutes, refresh proactively
+                    if (timeUntilExpMs > 0 && timeUntilExpMs <= (10 * 60 * 1000)) {
+                        console.log('[DC-FETCH] Proactive token refresh triggered (expires in', Math.round(timeUntilExpMs / 1000), 's)');
+                        silentRefreshToken();
+                    }
+                }
+            }
+        } catch(e) {}
+    }
+    
+    // Run proactive check every 5 minutes
+    setInterval(checkAndProactivelyRefreshToken, 5 * 60 * 1000);
+    setTimeout(checkAndProactivelyRefreshToken, 3000);
+
+    async function staffFetch(url, options = {}) {
+        let token = getToken();
         const companyId = getCompanyId();
         
         if (!token) {
@@ -94,9 +172,9 @@
         };
         
         try {
-            const response = await fetch(url, fetchOptions);
+            let response = await fetch(url, fetchOptions);
             
-            if (response.status === 401 || response.status === 403) {
+            if (response.status === 401) {
                 let errorDetail = 'Authentication failed';
                 try {
                     const errorData = await response.clone().json();
@@ -108,38 +186,22 @@
                     return response;
                 }
                 
-                const authErrorKeywords = [
-                    'token_expired', 'token expired', 'session expired',
-                    'could not validate credentials', 'invalid token'
-                ];
-                
-                const isExplicitAuthExpiry = authErrorKeywords.some(keyword => 
-                    errorDetail.toLowerCase().includes(keyword)
-                );
-                
-                // Check if token is locally expired before nuking session
-                const activeToken = getToken();
-                let isLocallyExpired = false;
-                if (activeToken) {
-                    try {
-                        const parts = activeToken.split('.');
-                        if (parts.length === 3) {
-                            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-                            if (payload.exp && Date.now() >= payload.exp * 1000) {
-                                isLocallyExpired = true;
-                            }
-                        }
-                    } catch (e) {}
-                } else {
-                    isLocallyExpired = true;
-                }
-
-                if (isExplicitAuthExpiry || (response.status === 401 && isLocallyExpired)) {
-                    handleAuthFailure(response.status, errorDetail);
-                    throw new Error('AUTH_EXPIRED');
+                // Do NOT immediately log out! Attempt transparent silent refresh first!
+                console.log('[DC-FETCH] HTTP 401 received. Attempting transparent token refresh for:', url);
+                const newToken = await silentRefreshToken();
+                if (newToken) {
+                    // Refresh succeeded! Retry original request with fresh token
+                    fetchOptions.headers['Authorization'] = `Bearer ${newToken}`;
+                    console.log('[DC-FETCH] Retrying original request with refreshed token...');
+                    const retryResponse = await fetch(url, fetchOptions);
+                    if (retryResponse.ok || retryResponse.status !== 401) {
+                        return retryResponse;
+                    }
                 }
                 
-                console.warn('[DC-FETCH] Non-fatal 401/403 response (session preserved):', errorDetail);
+                // If refresh failed or retry still returns 401, check if session is truly dead
+                handleAuthFailure(response.status, errorDetail);
+                throw new Error('AUTH_EXPIRED');
             }
             
             return response;

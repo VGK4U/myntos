@@ -516,7 +516,7 @@
                 const res = await fetchFn(`/api/v1/crm/bank-wise-leads?${queryParams.toString()}`);
                 const data = await res.json();
 
-                if (data && data.success) {
+                if (res.ok && data && data.success) {
                     globalRawData = data;
                     globalBankLeads = data.leads || [];
                     renderAccessBadge(data.is_manager, data.current_user);
@@ -542,12 +542,36 @@
                     populateUportStaffDropdown(data.unique_uport_staff, uportStaff);
                     
                     renderCurrentView();
+                } else if (res.status === 403) {
+                    document.getElementById('bankTableBody').innerHTML = `
+                        <tr><td colspan="16" class="text-center text-warning py-5">
+                            <i class="fas fa-user-shield fa-2x mb-2"></i><br>
+                            <strong>Access Restricted</strong><br>
+                            <small class="text-muted">Manager or Sales role scope is required to view full company bank files.</small>
+                        </td></tr>`;
                 } else {
-                    document.getElementById('bankTableBody').innerHTML = `<tr><td colspan="16" class="text-center text-danger py-4">Failed to load bank files.</td></tr>`;
+                    const errorMsg = (data && data.detail) ? data.detail : 'Failed to load bank files.';
+                    document.getElementById('bankTableBody').innerHTML = `
+                        <tr><td colspan="16" class="text-center text-danger py-5">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>
+                            <strong>${escapeHtml(errorMsg)}</strong><br>
+                            <button class="btn btn-sm btn-outline-danger mt-2" onclick="fetchBankLeads()">
+                                <i class="fas fa-sync-alt me-1"></i>Retry
+                            </button>
+                        </td></tr>`;
                 }
             } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
                 console.error("Error fetching bank leads:", err);
-                document.getElementById('bankTableBody').innerHTML = `<tr><td colspan="16" class="text-center text-danger py-4">Error loading bank files. Please refresh.</td></tr>`;
+                document.getElementById('bankTableBody').innerHTML = `
+                    <tr><td colspan="16" class="text-center text-danger py-5">
+                        <i class="fas fa-exclamation-circle fa-2x mb-2"></i><br>
+                        <strong>Network or Server Error</strong><br>
+                        <small class="text-muted">Unable to connect to bank leads service.</small><br>
+                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="fetchBankLeads()">
+                            <i class="fas fa-sync-alt me-1"></i>Retry
+                        </button>
+                    </td></tr>`;
             }
         }
 

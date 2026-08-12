@@ -14,11 +14,14 @@ class S3StorageService:
         """Initialize S3 client using environment variables"""
         try:
             self.bucket_name = os.environ.get("AWS_S3_BUCKET_NAME")
+            region = os.environ.get("AWS_REGION", "ap-south-2")
+            endpoint_url = f"https://s3.{region}.amazonaws.com"
             self.s3_client = boto3.client(
                 's3',
                 aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
                 aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
-                region_name=os.environ.get("AWS_REGION", "ap-south-2")
+                region_name=region,
+                endpoint_url=endpoint_url
             )
             if not self.bucket_name:
                 logger.error("❌ AWS_S3_BUCKET_NAME not found in environment variables")
@@ -128,9 +131,40 @@ class S3StorageService:
             logger.error(f"❌ S3 List failed for prefix '{prefix}': {e}")
             return []
             
-    def get_file_url(self, file_path: str) -> str:
-        """Get URL for accessing a file. Still routes through our backend /storage endpoint for now."""
+    def generate_presigned_url(self, file_path: str, expiration: int = 900) -> Optional[str]:
+        """
+        Generate presigned URL for private asset access (default: 15 minutes / 900 seconds)
+        DC Protocol: Secure private S3 object access
+        """
+        try:
+            s3_key = file_path.lstrip('/')
+            url = self.s3_client.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': self.bucket_name, 'Key': s3_key},
+                ExpiresIn=expiration
+            )
+            return url
+        except ClientError as e:
+            logger.error(f"❌ Failed to generate presigned URL for {file_path}: {e}")
+            return None
+
+    def get_public_url(self, file_path: str) -> str:
+        """
+        Get public S3 URL for public assets (catalogs, branding, APK downloads)
+        """
+        s3_key = file_path.lstrip('/')
+        region = os.environ.get("AWS_REGION", "ap-south-2")
+        return f"https://{self.bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
+
+    def get_file_url(self, file_path: str, is_public: bool = False, expiration: int = 900) -> str:
+        """Get URL for accessing a file: S3 presigned URL for private, S3 direct URL for public"""
         file_path = file_path.lstrip('/')
+        if is_public or file_path.startswith("public/"):
+            return self.get_public_url(file_path)
+        elif self.bucket_name and os.environ.get("AWS_ACCESS_KEY_ID"):
+            presigned = self.generate_presigned_url(file_path, expiration=expiration)
+            if presigned:
+                return presigned
         return f"/storage/{file_path}"
 
 # Global instance

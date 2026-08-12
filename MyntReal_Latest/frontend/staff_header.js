@@ -631,10 +631,11 @@ window.StaffHeader = window.StaffHeader || {
 
                     // 3. Render campaign banner if an active campaign banner exists
                     if (bannerContainer) {
-                        const activeCampaign = (data.services || []).find(s => s.banner_image);
-                        if (activeCampaign && activeCampaign.banner_image) {
+                        const activeCampaign = (data.services || []).find(s => s.banner_image || (s.banner_images && s.banner_images.length > 0));
+                        const bannerImg = activeCampaign ? (activeCampaign.banner_image || (activeCampaign.banner_images && activeCampaign.banner_images[0])) : null;
+                        if (activeCampaign && bannerImg) {
                             bannerContainer.innerHTML = `
-                                <img src="/storage/${activeCampaign.banner_image}" alt="${activeCampaign.service_name}" class="header-community-banner" onerror="this.style.display='none'">
+                                <img src="/storage/${bannerImg}" alt="${activeCampaign.service_name || 'Campaign Banner'}" class="header-community-banner" onerror="this.style.display='none'">
                             `;
                         } else {
                             bannerContainer.innerHTML = '';

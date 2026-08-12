@@ -421,43 +421,42 @@ class UniversalUploadService:
         
         file_extension = Path(file.filename).suffix
         unique_filename = f"{record_id}_{uuid.uuid4().hex}{file_extension}"
-        use_object_storage = file_size >= cls.OBJECT_STORAGE_THRESHOLD
         
-        # DC PROTOCOL: Dual Storage Architecture with proper metadata
-        if use_object_storage:
-            # LARGE FILES: Save to Object Storage
-            object_key = f"{storage_dir}/{unique_filename}"  # Pure storage key (no prefix)
-            success = storage_service.upload_file(object_key, file_content)
-            
-            if not success:
-                raise HTTPException(
-                    status_code=500,
-                    detail="Failed to upload file to object storage"
-                )
-            
-            # Store BOTH for DB: file_path stays clean, metadata stores storage details
-            file_path_str = object_key  # Clean path without prefix
+        # DC Protocol: Canonical Prefix Resolution (public/* vs private/*)
+        public_segments = {'rd_property', 'stock_item_image', 'community_services'}
+        is_public_segment = table_name in public_segments or storage_dir in public_segments
+        prefix = "public" if is_public_segment else "private"
+        
+        canonical_object_key = f"{prefix}/{storage_dir}/{unique_filename}"
+        
+        is_production = os.environ.get("NODE_ENV") == "production" or bool(os.environ.get("REPL_DEPLOYMENT")) or bool(os.environ.get("PROD_DATABASE_URL"))
+        
+        # Attempt AWS S3 upload
+        success = storage_service.upload_file(canonical_object_key, file_content)
+        
+        if success:
+            file_path_str = canonical_object_key
             storage_type = 'object_storage'
-            storage_key = object_key
-            logger.info(f"[UPLOAD] Saved to OBJECT STORAGE: {object_key} ({file_size/1024/1024:.2f}MB)")
-            
+            storage_key = canonical_object_key
+            logger.info(f"[UPLOAD] Saved to S3 ({prefix.upper()}): {canonical_object_key} ({file_size/1024:.2f}KB)")
+        elif is_production:
+            # STRICT PRODUCTION RULE: No local disk fallback. Fail fast with HTTP 503.
+            logger.error(f"[DC-S3-FATAL] Failed to upload {file.filename} to S3 object key '{canonical_object_key}' in production!")
+            raise HTTPException(
+                status_code=503,
+                detail="[DC-S3-FATAL] Storage service unavailable. Production upload failed. Please try again."
+            )
         else:
-            # SMALL FILES: Save to Local Storage
+            # DEVELOPMENT FALLBACK ONLY: Save to Local Storage
             upload_dir = cls.STORAGE_ROOT / storage_dir
             upload_dir.mkdir(parents=True, exist_ok=True)
-            
             file_path = upload_dir / unique_filename
             with open(file_path, "wb") as f:
                 f.write(file_content)
-            
-            # DC Protocol Fix (Nov 29, 2025): Store CLEAN path without frontend/storage/ prefix
-            # This matches Object Storage format and works with normalize_media_path()
-            # Before: "frontend/storage/feedback_media/36_uuid.png" (broken - causes double path)
-            # After: "feedback_media/36_uuid.png" (clean - works correctly)
             file_path_str = f"{storage_dir}/{unique_filename}"
             storage_type = 'local'
-            storage_key = None  # No storage key for local files
-            logger.info(f"[UPLOAD] Saved to LOCAL STORAGE: {file_path} → DB path: {file_path_str} ({file_size/1024:.2f}KB)")
+            storage_key = None
+            logger.warning(f"[UPLOAD] S3 unavailable in dev — Fallback to LOCAL STORAGE: {file_path_str}")
         
         # DC: Determine if compression needed
         needs_compression = (file_type in ['image', 'video'])

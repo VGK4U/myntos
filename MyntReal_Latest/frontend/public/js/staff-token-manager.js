@@ -167,6 +167,12 @@
     }
     
     async function staffFetch(url, options = {}) {
+        function isValidJwt(tok) {
+            if (!tok || typeof tok !== 'string') return false;
+            const parts = tok.split('.');
+            return parts.length === 3 && parts[0].length > 5 && parts[1].length > 5;
+        }
+
         let token = localStorage.getItem('staff_token');
         if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
             const cookieMatch = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('staff_token='));
@@ -186,8 +192,13 @@
             token = token.replace(/^["']|["']$/g, '').trim();
         }
         
-        if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
-            console.warn('[DC_TOKEN] No token available for request');
+        if (!token || !isValidJwt(token)) {
+            if (token) {
+                console.warn('[DC_TOKEN] Corrupted non-JWT token detected in storage. Clearing...');
+                localStorage.removeItem('staff_token');
+                document.cookie = 'staff_token=; path=/; max-age=0';
+            }
+            console.warn('[DC_TOKEN] No valid token available for request');
             handleSessionExpired('No authentication token');
             throw new Error('Not authenticated');
         }
@@ -452,18 +463,18 @@
                 }
             }
             
-            xhr.addEventListener('load', function() {
+            xhr.addEventListener('load', async function() {
                 if (xhr.status === 401 && isApiCall && !isAuthEndpoint) {
                     try {
                         const error = JSON.parse(xhr.responseText);
                         console.warn('[DC_TOKEN] XHR Auth failure:', error.detail);
-                        const currentTok = localStorage.getItem('staff_token');
-                        if (!currentTok || isTokenExpired(currentTok)) {
+                        const refreshed = await refreshToken();
+                        if (!refreshed) {
                             handleSessionExpired(error.detail || 'Session expired. Please login again.');
                         }
                     } catch {
-                        const currentTok = localStorage.getItem('staff_token');
-                        if (!currentTok || isTokenExpired(currentTok)) {
+                        const refreshed = await refreshToken();
+                        if (!refreshed) {
                             handleSessionExpired('Session expired. Please login again.');
                         }
                     }

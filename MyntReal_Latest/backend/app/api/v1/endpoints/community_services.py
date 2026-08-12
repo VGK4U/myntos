@@ -46,7 +46,10 @@ def get_active_headers(db: Session = Depends(get_db)):
         {
             "id": s.id,
             "service_name": s.service_name,
-            "short_name": s.short_name
+            "short_name": s.short_name,
+            "description": s.description or "",
+            "banner_image": (s.banner_images[0] if (isinstance(s.banner_images, list) and len(s.banner_images) > 0) else None) if s.banner_images else None,
+            "banner_images": s.banner_images or []
         } for s in active_services
     ]
     
