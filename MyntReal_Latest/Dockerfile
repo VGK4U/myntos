@@ -10,9 +10,11 @@ COPY --from=node-binaries /usr/local/bin/node /usr/local/bin/
 COPY --from=node-binaries /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm
 
-# Install system dependencies required for python-magic and health checks
+# Install system dependencies required for python-magic, Node.js (libstdc++6), and health checks
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
+    libstdc++6 \
+    libgcc-s1 \
     curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*

@@ -118,7 +118,10 @@ class Settings(BaseSettings):
     def validate_secret_key(cls, v: str) -> str:
         """Ensure secret key is provided via environment"""
         secret = os.getenv("SECRET_KEY", v)
-        if secret == "your-secret-key-here":
+        is_prod = os.getenv("ENVIRONMENT", "").lower() == "production"
+        if secret == "your-secret-key-here" or not secret:
+            if is_prod:
+                raise ValueError("CRITICAL: SECRET_KEY is missing or insecure in PRODUCTION. App will not start.")
             print("⚠️ WARNING: Using default secret key. Set SECRET_KEY environment variable for production!")
         return secret
     

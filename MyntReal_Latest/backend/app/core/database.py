@@ -11,19 +11,26 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from app.core.config import settings
 
+import re
+
+def get_safe_db_url(url: str) -> str:
+    if not url: return ""
+    return re.sub(r"(://[^:]+:)[^@]+(@)", r"\1***\2", str(url))
+
 # DC Protocol (Dec 24, 2025): Early diagnostic logging for production debugging
 # This runs at import time, BEFORE lifespan, to catch issues early
 print("[DC-DB-INIT] Database module loading...", flush=True)
 db_url_raw = os.getenv("DATABASE_URL") or os.getenv("PROD_DATABASE_URL")
 if db_url_raw:
     # Mask password in URL for logging
-    masked_url = db_url_raw[:30] + "..." if len(db_url_raw) > 30 else db_url_raw
+    masked_url = get_safe_db_url(db_url_raw)
     print(f"[DC-DB-INIT] DATABASE_URL found: {masked_url}", flush=True)
 else:
     print("[DC-DB-INIT] WARNING: No DATABASE_URL or PROD_DATABASE_URL environment variable found!", flush=True)
     print("[DC-DB-INIT] Will fall back to SQLite (may fail on read-only filesystem)", flush=True)
 
-print(f"[DC-DB-INIT] Using config DATABASE_URL: {str(settings.DATABASE_URL)[:30]}...", flush=True)
+safe_config_url = get_safe_db_url(settings.DATABASE_URL)
+print(f"[DC-DB-INIT] Using config DATABASE_URL: {safe_config_url}", flush=True)
 
 # Create SQLAlchemy engine with PostgreSQL (preserves Flask database)
 if settings.DATABASE_URL and str(settings.DATABASE_URL).startswith("sqlite"):
@@ -93,25 +100,18 @@ else:
         # 8 concurrent background threads. Under burst load (multi-company dashboard, GPS ticks,
         # CRM pages loading simultaneously) the old pool_size=3/overflow=4 (7 max) was fully
         # exhausted — new requests waited 12s then threw QueuePool → "socket hang up" → login fails.
-        # Fix: pool_size=5 + max_overflow=10 = 15 max connections.
-        #   Neon free tier ceiling = 25. 15 app + 5 Neon internal + 5 spare = 25. Safe.
-        # pool_timeout=5: fail fast (not 12s) so the single uvicorn worker moves on quickly
-        #   and the proxy's auto-retry picks it up on the next attempt.
         print("[DC-DB-INIT] Creating PostgreSQL engine (Neon cloud mode)...", flush=True)
         engine = create_engine(
-            settings.DATABASE_URL,
+            _db_url_str,
             pool_pre_ping=True,          # Detect dead Neon SSL connections before use
             pool_recycle=300,            # Recycle every 5m — just before Neon drops idle SSL at ~5m
-            pool_size=5,                 # 1 worker + APScheduler: 5 base connections always ready
-            max_overflow=15,             # DC-POOL-001: Burst headroom increased to 20 total (was 15)
-                                         # Neon free-tier ceiling = 25; 20 app + 5 Neon internal = 25. Safe.
-                                         # Prevents JV POST / critical writes from timing out during
-                                         # service-queue burst load (pool exhaustion was confirmed root cause).
-            pool_timeout=5,              # Fail fast (was 12s) — let proxy retry rather than blocking worker
+            pool_size=20,                # Increased for high concurrency
+            max_overflow=40,             # Increased for high concurrency bursts
+            pool_timeout=15,             # Increased timeout to allow queries to wait for a connection
             pool_use_lifo=True,          # LIFO: reuse warm connections, reduces SSL churn
             pool_reset_on_return='rollback',  # Ensure returned connections are always clean
             connect_args={
-                "connect_timeout": 10,       # Fail fast if Neon unreachable (no indefinite hang)
+                "connect_timeout": 15,       # Fail fast if Neon unreachable (no indefinite hang)
                 "keepalives": 1,
                 "keepalives_idle": 30,       # Send keepalive after 30s idle
                 "keepalives_interval": 10,

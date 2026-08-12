@@ -8067,6 +8067,7 @@ const server = http.createServer(async (req, res) => {
       const isLongRunning = isMultipart ||
         proxyUrl.includes('/brochure-extract') ||
         proxyUrl.includes('/knowledge-chat') ||
+        proxyUrl.includes('/meta-ads-pro/chat') ||
         proxyUrl.includes('/ai-calling/') ||
         proxyUrl.includes('/tts') ||
         proxyUrl.includes('/webhook') ||
@@ -26737,6 +26738,14 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/api/')) {
     // Proxy all /api/* requests to FastAPI backend
+    
+    // Add explicit blocking for SSRF probes and sensitive files before fetching
+    if (url.includes('169.254.169.254') || url.includes('localhost') || url.includes('.env') || url.startsWith('/api/proxy') || url.startsWith('/api/fetch')) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Forbidden request' }));
+      return;
+    }
+
     const backendUrl = BACKEND_URL_SERVER + url;
     let body = '';
     req.on('data', chunk => body += chunk.toString());
@@ -26747,6 +26756,11 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
           ...req.headers,
           host: 'localhost:8000',  // Set correct host for backend
         };
+        
+        // Delete forbidden headers to prevent Undici fetch crashes
+        delete forwardHeaders['connection'];
+        delete forwardHeaders['keep-alive'];
+        delete forwardHeaders['transfer-encoding'];
         
         const options = {
           method: req.method,

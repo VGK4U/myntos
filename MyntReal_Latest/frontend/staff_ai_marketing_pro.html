@@ -475,8 +475,6 @@
 <script src="/public/js/menu-master.js"></script>
 <script src="/staff_header.js"></script>
 <script src="/staff_sidebar.js"></script>
-<!-- Chart.js for rendering dynamic charts from AI -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
 <nav id="staffSidebar"></nav>
@@ -672,16 +670,6 @@
                 const data = await response.json();
                 appendMessage('ai', data.response, data.components);
                 conversationHistory.push({ role: 'assistant', content: data.response });
-                
-                // If there's script to execute (like rendering a Chart.js canvas)
-                if (data.components && data.components.script) {
-                    try {
-                        const scriptFn = new Function(data.components.script);
-                        scriptFn();
-                    } catch (err) {
-                        console.error('Error executing component script:', err);
-                    }
-                }
             } else {
                 appendMessage('ai', "I'm sorry, I encountered an error communicating with the server. Please try again.");
             }

@@ -721,7 +721,7 @@ def _card_public_url(card_storage_key: str) -> str:
     import os as _os
     if not card_storage_key:
         return ''
-    if _os.environ.get('REPL_DEPLOYMENT') or _os.environ.get('PROD_DATABASE_URL'):
+    if _os.environ.get("ENVIRONMENT", "").lower() == "production":
         base = 'https://mnrteam.com'
     else:
         dev_domain = _os.environ.get('REPLIT_DEV_DOMAIN', '').strip()

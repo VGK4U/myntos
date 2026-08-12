@@ -784,7 +784,7 @@ def seed_vgk_support_scenarios():
     Idempotent — uses sentinel entry_number 'VGK-DEMO-S00' to detect prior run.
     """
     import os
-    if os.environ.get('REPLIT_DEPLOYMENT') == '1':
+    if os.environ.get("ENVIRONMENT", "").lower() == "production":
         return  # skip production
 
     from sqlalchemy import text as _t
@@ -1919,7 +1919,7 @@ def seed_sample_dealers_and_stock(db):
     from app.models.staff_accounts import OfficialPartner
     from datetime import datetime
     
-    is_production = os.getenv("REPL_DEPLOYMENT") or os.getenv("PROD_DATABASE_URL")
+    is_production = os.getenv("ENVIRONMENT", "").lower() == "production"
     if is_production:
         logging.info("[DC-SEED] Production detected - skipping sample data seeding")
         return
@@ -16209,6 +16209,11 @@ async def lifespan(app: FastAPI):
     db_url = os.getenv("DATABASE_URL") or os.getenv("PROD_DATABASE_URL")
     if not db_url:
         print("[DC-STARTUP] ❌ CRITICAL: No DATABASE_URL found! Configure DB secrets.", flush=True)
+
+    is_prod_startup = os.getenv("ENVIRONMENT", "").lower() == "production"
+    if is_prod_startup and not os.getenv("AWS_S3_BUCKET_NAME"):
+        print("[DC-STARTUP] ❌ CRITICAL: No AWS_S3_BUCKET_NAME found in production! App will not start.", flush=True)
+        sys.exit(1)
 
     # Launch ALL startup work in a daemon thread.
     # Server yields BEFORE any DB operation — health check passes immediately.

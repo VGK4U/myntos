@@ -359,7 +359,7 @@ class AttendanceEvidenceService:
         relative_path = f"attendance_evidence/{captured_at.strftime('%Y')}/{re.sub(r'[^a-zA-Z0-9]', '', employee.emp_code.upper())}/{filename}"
         
         # DC Protocol: Determine environment for storage strategy
-        is_production = os.environ.get('REPL_DEPLOYMENT', '').lower() == 'true' or os.environ.get('REPLIT_DEPLOYMENT', '').lower() == '1'
+        is_production = os.environ.get("ENVIRONMENT", "").lower() == "production"
         
         try:
             # Step 1: Upload to Object Storage (persists across production restarts)

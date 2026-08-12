@@ -14,6 +14,9 @@ class S3StorageService:
         """Initialize S3 client using environment variables"""
         try:
             self.bucket_name = os.environ.get("AWS_S3_BUCKET_NAME")
+            if self.bucket_name == "None":
+                self.bucket_name = None
+            
             region = os.environ.get("AWS_REGION", "ap-south-2")
             endpoint_url = f"https://s3.{region}.amazonaws.com"
             self.s3_client = boto3.client(
@@ -23,7 +26,7 @@ class S3StorageService:
                 region_name=region,
                 endpoint_url=endpoint_url
             )
-            if not self.bucket_name:
+            if not self.bucket_name or self.bucket_name == 'None':
                 logger.error("❌ AWS_S3_BUCKET_NAME not found in environment variables")
             else:
                 logger.info("✅ AWS S3 client initialized")
@@ -33,6 +36,8 @@ class S3StorageService:
     
     def upload_file(self, file_path: str, file_data: bytes) -> bool:
         """Upload file to S3 bucket"""
+        if not self.bucket_name:
+            return False
         try:
             # ENFORCE FORWARD SLASHES FOR ALL NEW UPLOADS
             # This prevents Windows-style backslashes from polluting S3 keys
@@ -49,9 +54,14 @@ class S3StorageService:
         except ClientError as e:
             logger.error(f"❌ S3 Upload failed for {file_path}: {e}")
             return False
+        except Exception as e:
+            logger.error(f"❌ S3 Upload failed (unexpected error) for {file_path}: {e}")
+            return False
     
     def download_file(self, file_path: str) -> Optional[bytes]:
         """Download file from S3 bucket"""
+        if not self.bucket_name:
+            return None
         try:
             response = self.s3_client.get_object(
                 Bucket=self.bucket_name,
@@ -77,9 +87,14 @@ class S3StorageService:
             else:
                 logger.error(f"❌ S3 Download failed for {file_path}: {e}")
             return None
+        except Exception as e:
+            logger.error(f"❌ S3 Download failed (unexpected error) for {file_path}: {e}")
+            return None
     
     def file_exists(self, file_path: str) -> bool:
         """Check if file exists in S3 bucket"""
+        if not self.bucket_name:
+            return False
         try:
             self.s3_client.head_object(
                 Bucket=self.bucket_name,
@@ -104,6 +119,8 @@ class S3StorageService:
             
     def delete_file(self, file_path: str) -> bool:
         """Delete file from S3 bucket"""
+        if not self.bucket_name:
+            return False
         try:
             self.s3_client.delete_object(
                 Bucket=self.bucket_name,
@@ -117,6 +134,8 @@ class S3StorageService:
             
     def list_files(self, prefix: str = "") -> list:
         """List files with optional prefix filter from S3"""
+        if not self.bucket_name:
+            return []
         try:
             paginator = self.s3_client.get_paginator('list_objects_v2')
             pages = paginator.paginate(Bucket=self.bucket_name, Prefix=prefix)

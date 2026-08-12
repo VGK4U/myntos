@@ -1992,32 +1992,32 @@ def record_solar_advance_as_income_row(
 
     _notes = f'Solar CIBIL advance mirror (advance#{advance_row.id} {advance_row.entry_number})'
 
-        _adv_created      = getattr(advance_row, 'created_at', None) or _get_ist()
-        _adv_date         = _adv_created.date() if hasattr(_adv_created, 'date') else _get_ist().date()
-        entry = VGKCashIncomeEntry(
-            company_id        = company_id,
-            entry_number      = _next_entry_number(db, company_id),
-            partner_id        = partner.id,
-            source_lead_id    = getattr(advance_row, 'lead_id', None),
-            category_id       = None,
-            level             = getattr(advance_row, 'level', 1) or 1,
-            deal_value_total  = 0,
-            deal_value_excl_tax = 0,
-            commission_pct    = 0,
-            commission_amount = amount,
-            points_debit_required = 0,
-            points_actually_debited = 0,
-            kind              = 'ADVANCE',
-            status            = 'PENDING',
-            admin_charges     = (amount * ADMIN_CHARGE_PCT / Decimal('100')).quantize(Decimal('0.01')),
-            tds_amount        = (amount * TDS_PCT          / Decimal('100')).quantize(Decimal('0.01')),
-            net_payout        = amount - (amount * (ADMIN_CHARGE_PCT + TDS_PCT) / Decimal('100')).quantize(Decimal('0.01')),
-            confirmed_by_id   = released_by_id,
-            confirmed_at      = getattr(advance_row, 'released_at', None) or _adv_created,
-            income_date       = _adv_date,
-            created_at        = _adv_created,
-            notes             = _notes,
-        )
+    _adv_created = getattr(advance_row, 'created_at', None) or _get_ist()
+    _adv_date = _adv_created.date() if hasattr(_adv_created, 'date') else _get_ist().date()
+    entry = VGKCashIncomeEntry(
+        company_id        = company_id,
+        entry_number      = _next_entry_number(db, company_id),
+        partner_id        = partner.id,
+        source_lead_id    = getattr(advance_row, 'lead_id', None),
+        category_id       = None,
+        level             = getattr(advance_row, 'level', 1) or 1,
+        deal_value_total  = 0,
+        deal_value_excl_tax = 0,
+        commission_pct    = 0,
+        commission_amount = amount,
+        points_debit_required = 0,
+        points_actually_debited = 0,
+        kind              = 'ADVANCE',
+        status            = 'PENDING',
+        admin_charges     = (amount * ADMIN_CHARGE_PCT / Decimal('100')).quantize(Decimal('0.01')),
+        tds_amount        = (amount * TDS_PCT          / Decimal('100')).quantize(Decimal('0.01')),
+        net_payout        = amount - (amount * (ADMIN_CHARGE_PCT + TDS_PCT) / Decimal('100')).quantize(Decimal('0.01')),
+        confirmed_by_id   = released_by_id,
+        confirmed_at      = getattr(advance_row, 'released_at', None) or _adv_created,
+        income_date       = _adv_date,
+        created_at        = _adv_created,
+        notes             = _notes,
+    )
     db.add(entry)
     db.flush()
 

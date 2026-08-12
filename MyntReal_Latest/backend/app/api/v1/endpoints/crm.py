@@ -39,7 +39,7 @@ def _canonical_base(request: Request) -> str:
     In production (REPL_DEPLOYMENT set) falls back to https://mnrteam.com.
     In dev, allows .replit.dev URLs so tokens created in dev are reachable."""
     _RAW_HOSTS = {"127.0.0.1:8000", "localhost:8000", "localhost", "0.0.0.0:8000"}
-    is_prod = bool(_os.environ.get("REPL_DEPLOYMENT"))
+    is_prod = _os.environ.get("ENVIRONMENT", "").lower() == "production"
     scheme = request.headers.get("x-forwarded-proto", "https")
     # X-Forwarded-Host is set by Replit's CDN/proxy to the custom domain
     forwarded_host = request.headers.get("x-forwarded-host", "").strip()
@@ -185,7 +185,7 @@ def get_editable_handler_slots(lead, current_employee, db) -> dict:
     if lead.telecaller_id:
         telecaller = db.query(StaffEmployee).filter(StaffEmployee.id == lead.telecaller_id).first()
         # DC Protocol: Verify manager and handler share company context
-        if telecaller and telecaller.reporting_to == current_employee.emp_code:
+        if telecaller and telecaller.reporting_manager_id == current_employee.id:
             # Check if handler's base_company matches manager's company for DC compliance
             if telecaller.base_company_id == current_company_id or current_company_id is None:
                 is_reporting_manager = True
@@ -193,7 +193,7 @@ def get_editable_handler_slots(lead, current_employee, db) -> dict:
     if lead.field_staff_id and not is_reporting_manager:
         field_staff = db.query(StaffEmployee).filter(StaffEmployee.id == lead.field_staff_id).first()
         # DC Protocol: Verify manager and handler share company context
-        if field_staff and field_staff.reporting_to == current_employee.emp_code:
+        if field_staff and field_staff.reporting_manager_id == current_employee.id:
             if field_staff.base_company_id == current_company_id or current_company_id is None:
                 is_reporting_manager = True
     

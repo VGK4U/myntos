@@ -1,9 +1,10 @@
 import os
 import json
 import logging
+import requests
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+
 try:
     from google import genai
     from google.genai import types
@@ -15,30 +16,43 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+GRAPH_API_VERSION = "v19.0"
+
 SYSTEM_PROMPT = """
-You are a highly capable AI Marketing Employee inside a Real Estate & Corporate CRM system.
+You are a highly capable AI Marketing Agent functioning as a fully autonomous Meta Ads Manager (Model Context Protocol).
+You have direct integration with the Meta Graph API.
 Your goal is to help users manage, create, and analyze Meta Ads (Facebook & Instagram) entirely through conversation.
-You are professional, concise, and proactive. You do not ask excessive questions; you infer logical defaults (e.g., if the user wants to advertise Real Estate, you can infer audiences like 'Property Buyers', 'Investors', etc. without asking).
+You are professional, concise, and proactive. Do not hallucinate data; always use your tools to fetch real data from the Meta Ads account.
 
-# Key Capabilities
-1. You can fetch campaign performance metrics.
-2. You can create new campaigns, ad sets, and ads.
-3. You can generate ad creatives and copy.
-
-When answering, format your text nicely. If you execute a tool, analyze the result and present it to the user in a readable format.
-If you output a chart, the backend will parse it, but you should still provide a conversational summary.
+# Key Capabilities & Rules
+1. You can fetch active campaigns and their performance insights directly from Meta.
+2. You can create new campaigns.
+3. You can update campaign daily budgets and statuses (PAUSED/ACTIVE).
+4. CRITICAL: For any action that spends money or modifies live campaigns (create_meta_campaign, update_campaign_budget, update_campaign_status), YOU MUST FIRST ASK THE USER FOR EXPLICIT PERMISSION before calling the tool. For example: "I am ready to increase the budget to ₹1000. Please confirm if I should proceed."
+5. If the user gives permission, proceed to call the tool immediately.
+6. When displaying data to the user, format it neatly in Markdown tables or bulleted lists. 
+7. Do not mention "tools" or "backend functions" to the user. Just provide the information seamlessly.
 """
 
-# Native Function Declarations for Gemini Tools
-fetch_campaign_metrics_schema = {"function_declarations": [{
-    "name": "fetch_campaign_metrics",
-    "description": "Fetches performance metrics for existing Meta Ads campaigns (Spend, Impressions, Clicks, Leads).",
+get_meta_campaigns_schema = {"function_declarations": [{
+    "name": "get_meta_campaigns",
+    "description": "Fetches a list of all Meta Ads campaigns with their ID, name, status, and objective.",
+    "parameters": {"type": "OBJECT", "properties": {}}
+}]}
+
+get_meta_insights_schema = {"function_declarations": [{
+    "name": "get_meta_insights",
+    "description": "Fetches real-time performance metrics (Spend, Impressions, Clicks) for the ad account or a specific campaign.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
+            "campaign_id": {
+                "type": "STRING",
+                "description": "Optional. The ID of the campaign to get insights for. If omitted, gets account-level insights."
+            },
             "date_preset": {
                 "type": "STRING",
-                "description": "Date preset for metrics (e.g., 'last_30d', 'last_7d', 'today', 'lifetime'). Defaults to 'last_30d'."
+                "description": "Date preset, e.g., 'last_30d', 'last_7d', 'today', 'lifetime'. Defaults to 'last_30d'."
             }
         }
     }
@@ -46,28 +60,41 @@ fetch_campaign_metrics_schema = {"function_declarations": [{
 
 create_meta_campaign_schema = {"function_declarations": [{
     "name": "create_meta_campaign",
-    "description": "Creates a new Meta Ads campaign.",
+    "description": "Creates a new Meta Ads campaign. MUST ask for permission before calling.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
             "campaign_name": {"type": "STRING", "description": "Name of the campaign."},
             "daily_budget_inr": {"type": "NUMBER", "description": "Daily budget in INR."},
-            "objective": {"type": "STRING", "description": "Campaign objective (e.g., 'OUTCOME_LEADS', 'OUTCOME_SALES')."}
+            "objective": {"type": "STRING", "description": "Campaign objective, default 'OUTCOME_LEADS'."}
         },
         "required": ["campaign_name", "daily_budget_inr"]
     }
 }]}
 
-create_ad_creative_schema = {"function_declarations": [{
-    "name": "generate_ad_creative",
-    "description": "Generates a new image creative and ad copy for a campaign.",
+update_campaign_status_schema = {"function_declarations": [{
+    "name": "update_campaign_status",
+    "description": "Pauses or resumes a campaign. MUST ask for permission before calling.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
-            "prompt": {"type": "STRING", "description": "Visual description of the image to generate."},
-            "aspect_ratio": {"type": "STRING", "description": "Image aspect ratio, e.g., '1:1', '16:9', '9:16'."}
+            "campaign_id": {"type": "STRING", "description": "The Meta ID of the campaign."},
+            "status": {"type": "STRING", "description": "The new status: 'PAUSED' or 'ACTIVE'."}
         },
-        "required": ["prompt"]
+        "required": ["campaign_id", "status"]
+    }
+}]}
+
+update_campaign_budget_schema = {"function_declarations": [{
+    "name": "update_campaign_budget",
+    "description": "Updates the daily budget of a campaign (actually updates the adset budget). MUST ask for permission before calling.",
+    "parameters": {
+        "type": "OBJECT",
+        "properties": {
+            "campaign_id": {"type": "STRING", "description": "The Meta ID of the campaign."},
+            "new_daily_budget_inr": {"type": "NUMBER", "description": "The new daily budget in INR."}
+        },
+        "required": ["campaign_id", "new_daily_budget_inr"]
     }
 }]}
 
@@ -77,27 +104,36 @@ class AIMarketingProService:
         self.company_id = company_id
         self.staff_id = staff_id
         self.api_key = os.environ.get("GEMINI_API_KEY")
+        
+        # Meta Credentials
+        self.meta_token = os.environ.get("META_SYSTEM_USER_TOKEN") or os.environ.get("FACEBOOK_PAGE_ACCESS_TOKEN")
+        self.ad_account_id = os.environ.get("META_AD_ACCOUNT_ID")
+        if self.ad_account_id and not self.ad_account_id.startswith('act_'):
+            self.ad_account_id = f"act_{self.ad_account_id}"
+            
         if HAS_GENAI and self.api_key:
             self.client = genai.Client(api_key=self.api_key)
         else:
             self.client = None
-        self.model_name = "gemini-flash-latest" # Fast and supports tools
-        self.image_model = "imagen-3.0-generate-001"
+            
+        self.model_name = "gemini-2.5-flash"
 
     def process_chat(self, user_message: str, history: List[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Process a user message using Gemini with Function Calling.
-        """
         if not self.client:
             return {
-                "text": "AI Marketing Assistant is currently unavailable. Please verify that google-genai is installed and GEMINI_API_KEY is configured in your environment.",
-                "html": "<p style='color:#ef4444;'><i>AI Marketing Assistant is currently unavailable (missing google-genai dependency or GEMINI_API_KEY).</i></p>"
+                "response": "AI Marketing Assistant is currently unavailable. Please check API keys.",
+                "components": None
+            }
+
+        if not self.meta_token or not self.ad_account_id:
+            return {
+                "response": "Meta Ads Integration is not fully configured. Please ensure META_SYSTEM_USER_TOKEN and META_AD_ACCOUNT_ID are set in the .env file.",
+                "components": None
             }
 
         if not history:
             history = []
 
-        # Convert history to Gemini contents
         contents = []
         for msg in history:
             role = 'user' if msg.get('role') == 'user' else 'model'
@@ -114,55 +150,81 @@ class AIMarketingProService:
                 parts=[types.Part.from_text(text=user_message)]
             )
         )
+        
+        tools = [
+            get_meta_campaigns_schema, 
+            get_meta_insights_schema, 
+            create_meta_campaign_schema, 
+            update_campaign_status_schema, 
+            update_campaign_budget_schema
+        ]
 
         try:
+            # 1st turn: User message -> Model
             response = self.client.models.generate_content(
                 model=self.model_name,
                 contents=contents,
                 config=types.GenerateContentConfig(
                     system_instruction=SYSTEM_PROMPT,
                     temperature=0.3,
-                    tools=[fetch_campaign_metrics_schema, create_meta_campaign_schema, create_ad_creative_schema]
+                    tools=tools
                 )
             )
 
-            # Handle Function Calls
-            components = None
-            if response.function_calls:
-                fn = response.function_calls[0]
-                if fn.name == "fetch_campaign_metrics":
-                    # Fetch REAL data from the existing analytics service
-                    from app.services.meta_insights_analytics_service import get_meta_ads_dashboard_kpis
-                    real_data = get_meta_ads_dashboard_kpis(self.db, self.company_id)
+            # Handle Function Calls recursively until the model returns a text response
+            max_turns = 3
+            turns = 0
+            
+            while response.function_calls and turns < max_turns:
+                turns += 1
+                
+                # Add the model's entire response to history (preserves thoughts + all function calls)
+                contents.append(response.candidates[0].content)
+                
+                tool_responses = []
+                for fn in response.function_calls:
+                    tool_name = fn.name
+                    tool_args = fn.args or {}
                     
-                    spend = real_data.get('metrics', {}).get('spend_inr', 0)
-                    leads = real_data.get('metrics', {}).get('leads', 0)
-                    cpl = real_data.get('metrics', {}).get('cpl', 0)
-                    active_campaigns = real_data.get('active_campaigns', 0)
+                    logger.info(f"Executing tool: {tool_name} with args: {tool_args}")
                     
-                    # Convert the real data into chart components
-                    components = self._render_chart_component({
-                        "spend": spend,
-                        "leads": leads,
-                        "cpl": cpl,
-                        "active_campaigns": active_campaigns
-                    })
+                    tool_result = {}
                     
-                    return {
-                        "response": f"Here is the real-time performance data for your Meta Ads. You have {active_campaigns} active campaigns, with a total spend of ₹{spend} generating {leads} leads at a CPL of ₹{cpl}.",
-                        "components": components
-                    }
-                elif fn.name == "create_meta_campaign":
-                    return {
-                        "response": f"I have initiated the creation of the campaign '{fn.args.get('campaign_name')}' with a daily budget of ₹{fn.args.get('daily_budget_inr')}.",
-                        "components": None
-                    }
-                elif fn.name == "generate_ad_creative":
-                    components = self._generate_image(fn.args)
-                    return {
-                        "response": "Here is the ad creative I generated for you based on the strategy. You can download this directly to your Meta Ads Media Library.",
-                        "components": components
-                    }
+                    if tool_name == "get_meta_campaigns":
+                        tool_result = self._get_meta_campaigns()
+                    elif tool_name == "get_meta_insights":
+                        tool_result = self._get_meta_insights(tool_args)
+                    elif tool_name == "create_meta_campaign":
+                        tool_result = self._create_meta_campaign(tool_args)
+                    elif tool_name == "update_campaign_status":
+                        tool_result = self._update_campaign_status(tool_args)
+                    elif tool_name == "update_campaign_budget":
+                        tool_result = self._update_campaign_budget(tool_args)
+                    else:
+                        tool_result = {"error": "Unknown function"}
+                        
+                    tool_responses.append(
+                        types.Part.from_function_response(name=tool_name, response={"result": tool_result})
+                    )
+                
+                # Add all tool responses to history as a single user message
+                contents.append(
+                    types.Content(
+                        role="user",
+                        parts=tool_responses
+                    )
+                )
+                
+                # Ask model to generate the next response based on the tool result
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        system_instruction=SYSTEM_PROMPT,
+                        temperature=0.3,
+                        tools=tools
+                    )
+                )
 
             return {
                 "response": response.text,
@@ -171,105 +233,95 @@ class AIMarketingProService:
             
         except Exception as e:
             logger.error(f"Error in AIMarketingProService: {str(e)}")
-            # Fallback to standard chat if model fails or tools fail
             return {
-                "response": "I'm currently experiencing high latency with my core reasoning engine. Please try again in a moment.",
+                "response": f"I'm currently experiencing an error connecting to Meta: {str(e)}",
                 "components": None
             }
 
-    def _render_chart_component(self, args: dict) -> dict:
-        """
-        Generates HTML/JS to be injected into the chat UI for charts.
-        """
-        chart_id = f"chart_{os.urandom(4).hex()}"
-        
-        spend = args.get('spend', 0)
-        leads = args.get('leads', 0)
-        cpl = args.get('cpl', 0)
-        
-        html = f'''
-        <div class="metric-cards">
-            <div class="metric-card"><div class="metric-label">Spend</div><div class="metric-value">₹{spend:,.2f}</div></div>
-            <div class="metric-card"><div class="metric-label">Leads</div><div class="metric-value">{leads}</div></div>
-            <div class="metric-card"><div class="metric-label">CPL</div><div class="metric-value">₹{cpl:,.2f}</div></div>
-        </div>
-        <div class="chart-wrapper">
-            <canvas id="{chart_id}"></canvas>
-        </div>
-        '''
-        
-        script = f'''
-        const ctx = document.getElementById('{chart_id}').getContext('2d');
-        new Chart(ctx, {{
-            type: 'line',
-            data: {{
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                datasets: [{{
-                    label: 'Leads Trend',
-                    data: [Math.max(0, {leads}-10), Math.max(0, {leads}-5), {leads}, Math.max(0, {leads}-2), {leads}+5, {leads}+12, {leads}+8],
-                    borderColor: '#10B981',
-                    tension: 0.4,
-                    fill: false
-                }}]
-            }},
-            options: {{ responsive: true, maintainAspectRatio: false }}
-        }});
-        '''
-        return {"html": html, "script": script}
-
-    def _generate_image(self, args: dict) -> dict:
-        """
-        Uses Google Imagen 3 (via Gemini SDK) to generate an image based on the AI's prompt.
-        """
-        prompt = args.get("prompt", "A high quality marketing image")
-        aspect_ratio = args.get("aspect_ratio", "1:1")
-        
+    def _get_meta_campaigns(self) -> dict:
+        url = f"https://graph.facebook.com/{GRAPH_API_VERSION}/{self.ad_account_id}/campaigns"
+        params = {
+            "access_token": self.meta_token,
+            "fields": "id,name,status,objective,daily_budget",
+            "limit": 50
+        }
         try:
-            # Using Imagen 3 syntax if available on standard key
-            result = self.client.models.generate_images(
-                model=self.image_model,
-                prompt=prompt,
-                config=types.GenerateImagesConfig(
-                    number_of_images=1,
-                    aspect_ratio=aspect_ratio,
-                    output_mime_type="image/jpeg",
-                    # Some accounts require safety settings, omit for now to use defaults
-                )
-            )
-            
-            # Extract base64 image data (or fallback)
-            if hasattr(result, 'generated_images') and len(result.generated_images) > 0:
-                image_bytes = result.generated_images[0].image.image_bytes
-                import base64
-                b64 = base64.b64encode(image_bytes).decode('utf-8')
-                
-                html = f'''
-                <div class="ad-preview">
-                    <div class="ad-header">
-                        <img src="/public/images/logo.png" alt="Logo" onerror="this.src='https://ui-avatars.com/api/?name=MR&background=0D8ABC&color=fff'">
-                        <div>
-                            <div class="ad-name">Your Company</div>
-                            <div class="ad-sponsored">Sponsored · <i class="fas fa-globe-americas"></i></div>
-                        </div>
-                    </div>
-                    <div class="ad-text">{prompt[:100]}...</div>
-                    <img src="data:image/jpeg;base64,{b64}" class="ad-media" alt="Generated Ad">
-                    <div class="ad-cta-area">
-                        <div>
-                            <div class="ad-headline">Exclusive Offer</div>
-                            <div class="ad-desc">Learn more about our services.</div>
-                        </div>
-                        <button class="ad-btn">Learn more</button>
-                    </div>
-                </div>
-                '''
-                return {"html": html}
-            else:
-                return {"html": "<p><i>Image generation returned empty results. Your API key might not support Imagen 3 yet.</i></p>"}
+            r = requests.get(url, params=params, timeout=15)
+            return r.json()
         except Exception as e:
-            logger.error(f"Imagen error: {e}")
-            return {"html": f"<p style='color:red;'><i>Image Generation Error: {str(e)}<br>Ensure your Gemini API key has access to Imagen 3.</i></p>"}
+            return {"error": str(e)}
 
+    def _get_meta_insights(self, args: dict) -> dict:
+        campaign_id = args.get("campaign_id")
+        date_preset = args.get("date_preset", "last_30d")
+        
+        target_id = campaign_id if campaign_id else self.ad_account_id
+        url = f"https://graph.facebook.com/{GRAPH_API_VERSION}/{target_id}/insights"
+        
+        params = {
+            "access_token": self.meta_token,
+            "fields": "spend,impressions,clicks,cpc,cpm,reach",
+            "date_preset": date_preset
+        }
+        try:
+            r = requests.get(url, params=params, timeout=15)
+            return r.json()
+        except Exception as e:
+            return {"error": str(e)}
 
-# Backward Compatibility Alias
+    def _create_meta_campaign(self, args: dict) -> dict:
+        # Simplified creation logic for the agent mode
+        name = args.get("campaign_name", "AI Generated Campaign")
+        objective = args.get("objective", "OUTCOME_LEADS")
+        
+        url = f"https://graph.facebook.com/{GRAPH_API_VERSION}/{self.ad_account_id}/campaigns"
+        payload = {
+            "name": name,
+            "objective": objective,
+            "status": "PAUSED", # Default to PAUSED for safety
+            "special_ad_categories": '["NONE"]',
+            "access_token": self.meta_token
+        }
+        try:
+            r = requests.post(url, data=payload, timeout=15)
+            return r.json()
+        except Exception as e:
+            return {"error": str(e)}
+
+    def _update_campaign_status(self, args: dict) -> dict:
+        campaign_id = args.get("campaign_id")
+        status = args.get("status")
+        
+        if not campaign_id or not status:
+            return {"error": "Missing campaign_id or status"}
+            
+        url = f"https://graph.facebook.com/{GRAPH_API_VERSION}/{campaign_id}"
+        payload = {
+            "status": status,
+            "access_token": self.meta_token
+        }
+        try:
+            r = requests.post(url, data=payload, timeout=15)
+            return r.json()
+        except Exception as e:
+            return {"error": str(e)}
+
+    def _update_campaign_budget(self, args: dict) -> dict:
+        campaign_id = args.get("campaign_id")
+        budget = args.get("new_daily_budget_inr")
+        
+        if not campaign_id or not budget:
+            return {"error": "Missing campaign_id or budget"}
+            
+        url = f"https://graph.facebook.com/{GRAPH_API_VERSION}/{campaign_id}"
+        payload = {
+            "daily_budget": int(float(budget) * 100), # Graph API expects budget in cents/paise
+            "access_token": self.meta_token
+        }
+        try:
+            r = requests.post(url, data=payload, timeout=15)
+            return r.json()
+        except Exception as e:
+            return {"error": str(e)}
+
 AIMarketingAgentService = AIMarketingProService

@@ -227,7 +227,7 @@ def get_ist_now():
 def _webhook_base(request: Request) -> str:
     # DC Protocol: In Replit production deployments REPL_DEPLOYMENT is set; always use
     # canonical public domain so webhook/share URLs are never the worf.replit.dev dev domain.
-    if os.environ.get("REPL_DEPLOYMENT") or os.environ.get("PROD_DATABASE_URL"):
+    if os.environ.get("ENVIRONMENT", "").lower() == "production":
         return "https://mnrteam.com"
     # Dev: prefer the Replit preview domain so webhooks reach the running server
     dev_domain = os.environ.get("REPLIT_DEV_DOMAIN", "")

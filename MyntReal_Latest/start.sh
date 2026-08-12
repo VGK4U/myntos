@@ -45,8 +45,8 @@ echo "Starting FastAPI Backend with Uvicorn supervisor (background)..."
   while true; do
     echo "[SUPERVISOR] Starting FastAPI Backend on port 8000..."
     cd "$SCRIPT_DIR/backend"
-    python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info
-    echo "[SUPERVISOR] FastAPI Backend process exited with code $?. Restarting in 2 seconds..."
+    python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info || true
+    echo "[SUPERVISOR] FastAPI Backend process exited. Restarting in 2 seconds..."
     sleep 2
   done
 ) &
