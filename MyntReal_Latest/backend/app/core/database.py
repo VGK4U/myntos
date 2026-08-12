@@ -139,11 +139,13 @@ def get_db():
     Used in FastAPI route dependencies.
     DC-MIGRATION-TIMEOUT-001: statement_timeout applied here (not at engine level) so
     startup migration sessions that bypass get_db() are never killed mid-key-check.
+    Guarded for PostgreSQL only — prevents sqlite3.OperationalError near SET syntax error.
     """
     from sqlalchemy import text as _text
     db = SessionLocal()
     try:
-        db.execute(_text("SET statement_timeout = 25000"))
+        if db.bind and db.bind.dialect.name == "postgresql":
+            db.execute(_text("SET statement_timeout = 25000"))
         yield db
     finally:
         db.close()

@@ -6,7 +6,8 @@
  * DC Protocol Fix (Aug 2026): NEVER deletes staff_token on NDA_PENDING to prevent login loops.
  */
 
-class NDAEnforcementService {
+if (typeof window.NDAEnforcementService === 'undefined') {
+window.NDAEnforcementService = class NDAEnforcementService {
   constructor() {
     this.isNdaModalShowing = false;
     this.pendingNdaData = null;
@@ -393,11 +394,11 @@ class NDAEnforcementService {
           <span>Failed to record acceptance: ${error.message}. Session preserved — click I Accept to try again.</span>
         `;
       }
-    }
   }
 }
+}
 
-if (!window.ndaEnforcementService) {
-  window.ndaEnforcementService = new NDAEnforcementService();
+if (!window.ndaEnforcementService && window.NDAEnforcementService) {
+  window.ndaEnforcementService = new window.NDAEnforcementService();
 }
 

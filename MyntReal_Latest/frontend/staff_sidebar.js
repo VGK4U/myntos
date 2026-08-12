@@ -48,7 +48,8 @@ window.ThemeManager = ThemeManager;
 ThemeManager.init();
 
 // DC Protocol (Jan 22, 2026): Load MENU_MASTER - the authoritative source of all menus
-let MENU_MASTER_DATA = null;
+window.MENU_MASTER_DATA = window.MENU_MASTER_DATA || null;
+var MENU_MASTER_DATA = window.MENU_MASTER_DATA;
 
 // DC-SIDEBAR-RACE-FIX-001 (Jun 2026): Promise that resolves when menu-master.js is ready.
 // Previously this was fire-and-forget, causing StaffSidebar.init() to call getMenuForRole()
