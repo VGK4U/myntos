@@ -4,8 +4,14 @@ import logging
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from google import genai
-from google.genai import types
+try:
+    from google import genai
+    from google.genai import types
+    HAS_GENAI = True
+except ImportError:
+    genai = None
+    types = None
+    HAS_GENAI = False
 
 logger = logging.getLogger(__name__)
 
@@ -71,9 +77,10 @@ class AIMarketingProService:
         self.company_id = company_id
         self.staff_id = staff_id
         self.api_key = os.environ.get("GEMINI_API_KEY")
-        if not self.api_key:
-            raise ValueError("GEMINI_API_KEY is not set.")
-        self.client = genai.Client(api_key=self.api_key)
+        if HAS_GENAI and self.api_key:
+            self.client = genai.Client(api_key=self.api_key)
+        else:
+            self.client = None
         self.model_name = "gemini-flash-latest" # Fast and supports tools
         self.image_model = "imagen-3.0-generate-001"
 
@@ -81,6 +88,12 @@ class AIMarketingProService:
         """
         Process a user message using Gemini with Function Calling.
         """
+        if not self.client:
+            return {
+                "text": "AI Marketing Assistant is currently unavailable. Please verify that google-genai is installed and GEMINI_API_KEY is configured in your environment.",
+                "html": "<p style='color:#ef4444;'><i>AI Marketing Assistant is currently unavailable (missing google-genai dependency or GEMINI_API_KEY).</i></p>"
+            }
+
         if not history:
             history = []
 
@@ -256,3 +269,7 @@ class AIMarketingProService:
         except Exception as e:
             logger.error(f"Imagen error: {e}")
             return {"html": f"<p style='color:red;'><i>Image Generation Error: {str(e)}<br>Ensure your Gemini API key has access to Imagen 3.</i></p>"}
+
+
+# Backward Compatibility Alias
+AIMarketingAgentService = AIMarketingProService

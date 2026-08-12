@@ -17,7 +17,7 @@ from app.services.meta_budget_alert_service import evaluate_meta_budget_alerts
 from app.services.meta_approval_engine import create_action_request, approve_and_execute_action
 from app.services.multilingual_creative_qa_service import evaluate_creative_multilingual_qa
 from app.services.meta_reports_generator import generate_meta_ads_export_report
-from app.services.ai_marketing_agent_service import AIMarketingAgentService
+from app.services.ai_marketing_pro_service import AIMarketingProService as AIMarketingAgentService
 
 router = APIRouter(prefix="/meta-ads", tags=["Meta Ads Management Center (Supreme Admin)"])
 
