@@ -12,11 +12,11 @@ logger = logging.getLogger(__name__)
 
 # Configure Gemini
 # We use try/except or safe get in case the env isn't loaded properly in some environments
-api_key = getattr(settings, 'GEMINI_API_KEY', None)
+api_key = getattr(settings, 'GEMINI_API_KEY', None) or os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY')
 if api_key:
     genai.configure(api_key=api_key)
 else:
-    logger.warning("GEMINI_API_KEY not found in settings!")
+    logger.warning("GEMINI_API_KEY / GOOGLE_API_KEY not found in settings/env!")
 
 # Define the Marketing Agent persona
 SYSTEM_PROMPT = """
@@ -83,25 +83,10 @@ class AIMarketingAgentService:
         # Define a fallback list of models to prevent rate limiting or temporary outages
         # Prioritize the most advanced (3.x and 2.x) series first, falling back to 1.x
         self.model_names = [
-            "gemini-3.5-pro",
-            "gemini-3.5-flash",
-            "gemini-3.0-pro",
-            "gemini-3.0-flash",
-            "gemini-2.5-pro",
-            "gemini-2.5-flash",
-            "gemini-2.0-pro",
-            "gemini-2.0-flash",
-            "gemini-1.5-pro",
             "gemini-1.5-flash",
-            "gemini-3.0-pro-latest",
-            "gemini-3.0-flash-latest",
-            "gemini-2.0-pro-latest",
-            "gemini-2.0-flash-latest",
-            "gemini-1.5-pro-latest",
-            "gemini-1.5-flash-latest",
-            "gemini-1.5-flash-8b",
-            "gemini-1.0-pro",
-            "gemini-pro"
+            "gemini-1.5-pro",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash-8b"
         ]
 
     def process_message(self, message: str) -> str:

@@ -671,7 +671,14 @@
                 appendMessage('ai', data.response, data.components);
                 conversationHistory.push({ role: 'assistant', content: data.response });
             } else {
-                appendMessage('ai', "I'm sorry, I encountered an error communicating with the server. Please try again.");
+                let errText = "I'm sorry, I encountered an error communicating with the server. Please try again.";
+                try {
+                    const errJson = await response.json();
+                    if (errJson.detail) errText = errJson.detail;
+                    else if (errJson.response) errText = errJson.response;
+                    else if (errJson.message) errText = errJson.message;
+                } catch(e) {}
+                appendMessage('ai', errText);
             }
         } catch (error) {
             removeTypingIndicator();

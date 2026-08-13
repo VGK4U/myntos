@@ -4681,7 +4681,7 @@ def member_income_entries_detail(
                 "  COALESCE(solar_value, 0)::float AS solar_value, "
                 "  COALESCE(deal_value_excl_tax, 0)::float AS deal_value_excl_tax, "
                 "  COALESCE(deal_value_total, 0)::float AS deal_value_total, "
-                "  category_id "
+                "  category_id, solar_brand_id "
                 "FROM crm_leads WHERE id = ANY(:ids)"
             ), {"ids": lead_ids}).fetchall()
             lead_info = {r.id: {
@@ -4695,9 +4695,24 @@ def member_income_entries_detail(
                 "deal_value_excl_tax": float(r.deal_value_excl_tax or 0),
                 "deal_value_total": float(r.deal_value_total or 0),
                 "category_id": r.category_id,
+                "solar_brand_id": r.solar_brand_id,
             } for r in lr}
         except Exception:
             pass
+
+    # Fetch commission configs & solar brand incentive configs for accurate potential calculations
+    try:
+        from app.models.staff_accounts import VGKTeamCommissionConfig
+        configs = db.query(VGKTeamCommissionConfig).all()
+        config_map = {c.category_id: c for c in configs}
+    except Exception:
+        config_map = {}
+
+    try:
+        brands = db.execute(text("SELECT id, l1_amount, l2_amount, l5_amount FROM vgk_incentive_brands WHERE is_active = true")).fetchall()
+        brand_map = {b.id: b for b in brands}
+    except Exception:
+        brand_map = {}
 
     result = []
     _lvl_labels_map = {0:'Comm', 1:'Source', 2:'Senior', 3:'Extended', 4:'Core', 5:'Support'}
@@ -4741,7 +4756,7 @@ def member_income_entries_detail(
                 lead_val = commission_base
                 
             cat_id = (_li["category_id"] if _li else None) or r.category_id
-            config = config_map.get(cat_id) if (cat_id and 'config_map' in locals()) else None
+            config = config_map.get(cat_id) if (cat_id and config_map) else None
             
             potential_pct = 0.0
             potential_flat = 0.0
@@ -4782,6 +4797,17 @@ def member_income_entries_detail(
                 standard_solar_pcts = {1: 2.50, 2: 1.00, 3: 0.50, 4: 0.50, 5: 1.50, 6: 3.50}
                 potential_pct = standard_solar_pcts.get(_lvl_int, 0.0)
                 potential_amount = round(lead_val * potential_pct / 100.0, 2)
+
+            # Include brand-wise commission in potential earnings
+            solar_brand_id = _li.get("solar_brand_id") if _li else None
+            if solar_brand_id and solar_brand_id in brand_map:
+                b_cfg = brand_map[solar_brand_id]
+                if _lvl_int == 1 and b_cfg.l1_amount:
+                    potential_amount += float(b_cfg.l1_amount)
+                elif _lvl_int == 2 and b_cfg.l2_amount:
+                    potential_amount += float(b_cfg.l2_amount)
+                elif _lvl_int == 5 and b_cfg.l5_amount:
+                    potential_amount += float(b_cfg.l5_amount)
                 
         if potential_amount <= 0:
             potential_amount = float(r.commission_amount)

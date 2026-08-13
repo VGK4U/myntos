@@ -1207,34 +1207,46 @@
                 </div>
             `;
             
-            // Update stops panel - DC_JOURNEY_ADDRESS_001: Enhanced with address and timestamp-based duration
+            // Update stops panel - DC_JOURNEY_ADDRESS_001: Enhanced with address, duration, and stops count
             const stopsList = document.getElementById('stopsList');
             if (coordinates && coordinates.length > 0) {
                 const stops = detectStopsWithTimestamps(playbackTrackPoints);
-                // DC_JOURNEY_ADDRESS_001: Get start/end addresses from track points
                 const startAddress = playbackTrackPoints[0]?.address;
                 const endAddress = playbackTrackPoints[playbackTrackPoints.length - 1]?.address;
                 
                 stopsList.innerHTML = `
                     <div class="small">
+                        <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+                            <span class="fw-bold text-dark"><i class="fas fa-map-marker-alt me-1 text-warning"></i>Stops Summary</span>
+                            <span class="badge bg-warning text-dark">${stops.length} ${stops.length === 1 ? 'stop' : 'stops'}</span>
+                        </div>
                         <div class="mb-2 text-success">
                             <i class="fas fa-play-circle me-2"></i><strong>Start Point</strong>
                             ${startAddress ? `<div class="text-muted ms-4" style="font-size: 11px;">${startAddress}</div>` : ''}
                         </div>
-                        ${stops.map((stop, i) => `
+                        ${stops.length === 0 ? `
+                            <div class="text-muted small ms-4 mb-2">No stationary stops (>2 mins) recorded.</div>
+                        ` : stops.map((stop, i) => `
                             <div class="mb-2" style="padding-left: 1rem; border-left: 2px solid var(--warning-color, #ffc107);">
-                                <i class="fas fa-pause-circle text-warning me-1"></i>Stop ${i+1} 
-                                <span class="text-muted">(${formatStopDuration(stop.durationMinutes)})</span>
-                                ${stop.address ? `<div class="text-muted" style="font-size: 11px; margin-left: 1.2rem;">${stop.address}</div>` : ''}
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span><i class="fas fa-pause-circle text-warning me-1"></i><strong>Stop ${i+1}</strong></span>
+                                    <span class="badge bg-light text-dark border"><i class="far fa-clock me-1"></i>${formatStopDuration(stop.durationMinutes)}</span>
+                                </div>
+                                <div class="text-secondary mt-1" style="font-size: 11px; margin-left: 1.2rem;" id="modalStopAddr_${i}">
+                                    <i class="fas fa-map-marker-alt text-danger me-1"></i>${stop.address || 'Resolving location area...'}
+                                </div>
                             </div>
                         `).join('')}
                         <div class="mt-2 text-danger">
                             <i class="fas fa-flag-checkered me-2"></i><strong>End Point</strong>
                             ${endAddress ? `<div class="text-muted ms-4" style="font-size: 11px;">${endAddress}</div>` : ''}
                         </div>
-                        <div class="mt-2 text-muted">${coordinates.length} GPS points recorded</div>
+                        <div class="mt-2 text-muted">${coordinates.length} GPS points recorded (${stops.length} stops)</div>
                     </div>
                 `;
+                
+                // Asynchronously load stop location addresses if missing
+                loadStopLocationAddresses(stops, 'modalStopAddr_');
             } else {
                 stopsList.innerHTML = '<p class="text-warning small">No GPS track data available</p>';
             }
@@ -1488,6 +1500,55 @@
             const mins = Math.round(minutes % 60);
             if (mins === 0) return `${hrs} hr`;
             return `${hrs} hr ${mins} min`;
+        }
+
+        const addressCacheMap = new Map();
+        async function loadStopLocationAddresses(stops, prefix = 'modalStopAddr_') {
+            if (!stops || stops.length === 0) return;
+            for (let i = 0; i < stops.length; i++) {
+                const stop = stops[i];
+                const el = document.getElementById(`${prefix}${i}`);
+                if (!el) continue;
+
+                if (stop.address && stop.address.length > 5 && !stop.address.includes('GPS:')) {
+                    el.innerHTML = `<i class="fas fa-map-marker-alt text-danger me-1"></i>${stop.address}`;
+                    continue;
+                }
+
+                const lat = stop.latitude;
+                const lon = stop.longitude;
+                if (!lat || !lon) continue;
+
+                const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)}`;
+                if (addressCacheMap.has(cacheKey)) {
+                    const cachedAddr = addressCacheMap.get(cacheKey);
+                    stop.address = cachedAddr;
+                    el.innerHTML = `<i class="fas fa-map-marker-alt text-danger me-1"></i>${cachedAddr}`;
+                    continue;
+                }
+
+                try {
+                    const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18`;
+                    const res = await fetch(geoUrl, { headers: { 'User-Agent': 'MyntReal-Staff/1.0' } });
+                    if (res.ok) {
+                        const data = await res.json();
+                        const addr = data.display_name || (data.address ? Object.values(data.address).filter(Boolean).join(', ') : null);
+                        if (addr) {
+                            addressCacheMap.set(cacheKey, addr);
+                            stop.address = addr;
+                            el.innerHTML = `<i class="fas fa-map-marker-alt text-danger me-1"></i>${addr}`;
+                        } else {
+                            el.innerHTML = `<i class="fas fa-map-marker-alt text-danger me-1"></i>GPS: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+                        }
+                    } else {
+                        el.innerHTML = `<i class="fas fa-map-marker-alt text-danger me-1"></i>GPS: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+                    }
+                } catch (e) {
+                    console.warn('[GeocodeStop] Location lookup failed:', e);
+                    el.innerHTML = `<i class="fas fa-map-marker-alt text-danger me-1"></i>GPS: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+                }
+                await new Promise(r => setTimeout(r, 200));
+            }
         }
         
         // DC Protocol (Dec 05, 2025): Playback control functions for WVV compliance
@@ -1940,31 +2001,38 @@
                     avgSpeed = (totalSpeedSum / validSpeedCount).toFixed(1);
                 }
 
+                const detectedStops = detectStopsWithTimestamps(pts);
                 const lastPt = pts.length > 0 ? pts[pts.length - 1] : null;
                 let lastAddr = lastPt ? (lastPt.address || `${lastPt.latitude.toFixed(5)}, ${lastPt.longitude.toFixed(5)}`) : 'N/A';
 
                 body.innerHTML = `
                     <div class="row g-3">
-                        <div class="col-md-3 col-6">
-                            <div class="p-3 bg-light rounded text-center border">
+                        <div class="col-md-2-4 col-sm-4 col-6" style="flex: 0 0 auto; width: 20%;">
+                            <div class="p-3 bg-light rounded text-center border h-100">
                                 <small class="text-muted d-block text-uppercase fw-bold" style="font-size:10px;">Total Distance</small>
                                 <span class="fs-4 fw-bold text-success">${j.total_distance_km || 0} km</span>
                             </div>
                         </div>
-                        <div class="col-md-3 col-6">
-                            <div class="p-3 bg-light rounded text-center border">
+                        <div class="col-md-2-4 col-sm-4 col-6" style="flex: 0 0 auto; width: 20%;">
+                            <div class="p-3 bg-light rounded text-center border h-100">
                                 <small class="text-muted d-block text-uppercase fw-bold" style="font-size:10px;">GPS Points</small>
                                 <span class="fs-4 fw-bold text-primary">${pts.length} pts</span>
                             </div>
                         </div>
-                        <div class="col-md-3 col-6">
-                            <div class="p-3 bg-light rounded text-center border">
+                        <div class="col-md-2-4 col-sm-4 col-6" style="flex: 0 0 auto; width: 20%;">
+                            <div class="p-3 bg-light rounded text-center border h-100" style="background-color: #fff9e6 !important;">
+                                <small class="text-muted d-block text-uppercase fw-bold" style="font-size:10px;">Stops Count</small>
+                                <span class="fs-4 fw-bold text-warning">${detectedStops.length} stops</span>
+                            </div>
+                        </div>
+                        <div class="col-md-2-4 col-sm-6 col-6" style="flex: 0 0 auto; width: 20%;">
+                            <div class="p-3 bg-light rounded text-center border h-100">
                                 <small class="text-muted d-block text-uppercase fw-bold" style="font-size:10px;">Avg / Max Speed</small>
                                 <span class="fs-4 fw-bold text-dark">${avgSpeed} / ${Math.round(maxSpeed)} <small class="fs-6">km/h</small></span>
                             </div>
                         </div>
-                        <div class="col-md-3 col-6">
-                            <div class="p-3 bg-light rounded text-center border">
+                        <div class="col-md-2-4 col-sm-6 col-6" style="flex: 0 0 auto; width: 20%;">
+                            <div class="p-3 bg-light rounded text-center border h-100">
                                 <small class="text-muted d-block text-uppercase fw-bold" style="font-size:10px;">Battery Level</small>
                                 <span class="fs-4 fw-bold ${latestBattery !== null && latestBattery < 20 ? 'text-danger' : 'text-success'}">
                                     <i class="fas fa-battery-three-quarters me-1"></i>${latestBattery !== null ? latestBattery + '%' : 'N/A'}
@@ -1980,6 +2048,31 @@
                                     <tr><td class="text-muted">Started At:</td><td>${j.start_time_formatted || j.start_time || 'N/A'}</td></tr>
                                     <tr><td class="text-muted">Current Location:</td><td class="text-primary fw-semibold"><i class="fas fa-map-marker-alt me-1 text-danger"></i><span id="activeMetricsLocationText">${lastAddr}</span></td></tr>
                                 </table>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="p-3 border rounded bg-white">
+                                <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+                                    <h6 class="fw-bold m-0"><i class="fas fa-pause-circle me-2 text-warning"></i>Route Stops Breakdown (${detectedStops.length} Stops)</h6>
+                                    <span class="badge bg-warning text-dark">${detectedStops.length} ${detectedStops.length === 1 ? 'Stop' : 'Stops'}</span>
+                                </div>
+                                ${detectedStops.length === 0 ? `
+                                    <p class="text-muted small mb-0">No stationary stops (>2 mins) recorded along this route yet.</p>
+                                ` : `
+                                    <div class="list-group list-group-flush small">
+                                        ${detectedStops.map((stop, idx) => `
+                                            <div class="list-group-item px-0 py-2 border-bottom">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span class="fw-bold text-dark"><i class="fas fa-pause-circle text-warning me-1"></i>Stop ${idx + 1}</span>
+                                                    <span class="badge bg-light text-dark border"><i class="far fa-clock me-1"></i>Duration: ${formatStopDuration(stop.durationMinutes)}</span>
+                                                </div>
+                                                <div class="text-secondary small mt-1 ms-3" id="activeStopLoc_${idx}">
+                                                    <i class="fas fa-map-marker-alt text-danger me-1"></i>${stop.address || 'Resolving location area...'}
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                `}
                             </div>
                         </div>
                     </div>
@@ -2000,6 +2093,9 @@
                         console.warn('[Nominatim] Geocode fallback:', e);
                     }
                 }
+
+                // Asynchronously load area names for all detected stops
+                loadStopLocationAddresses(detectedStops, 'activeStopLoc_');
             } catch (err) {
                 console.error('[ActiveMetricsModal] Error:', err);
                 body.innerHTML = `<div class="alert alert-danger">Error loading metrics.</div>`;

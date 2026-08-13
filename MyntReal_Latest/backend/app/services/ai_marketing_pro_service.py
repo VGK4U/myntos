@@ -103,7 +103,7 @@ class AIMarketingProService:
         self.db = db
         self.company_id = company_id
         self.staff_id = staff_id
-        self.api_key = os.environ.get("GEMINI_API_KEY")
+        self.api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         
         # Meta Credentials
         self.meta_token = os.environ.get("META_SYSTEM_USER_TOKEN") or os.environ.get("FACEBOOK_PAGE_ACCESS_TOKEN")
@@ -116,18 +116,12 @@ class AIMarketingProService:
         else:
             self.client = None
             
-        self.model_name = "gemini-2.5-flash"
+        self.candidate_models = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash"]
 
     def process_chat(self, user_message: str, history: List[Dict[str, Any]] = None) -> Dict[str, Any]:
         if not self.client:
             return {
-                "response": "AI Marketing Assistant is currently unavailable. Please check API keys.",
-                "components": None
-            }
-
-        if not self.meta_token or not self.ad_account_id:
-            return {
-                "response": "Meta Ads Integration is not fully configured. Please ensure META_SYSTEM_USER_TOKEN and META_AD_ACCOUNT_ID are set in the .env file.",
+                "response": "AI Marketing Assistant is currently unavailable. Please configure GEMINI_API_KEY or GOOGLE_API_KEY in backend/.env file.",
                 "components": None
             }
 
@@ -159,65 +153,12 @@ class AIMarketingProService:
             update_campaign_budget_schema
         ]
 
-        try:
-            # 1st turn: User message -> Model
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                    temperature=0.3,
-                    tools=tools
-                )
-            )
-
-            # Handle Function Calls recursively until the model returns a text response
-            max_turns = 3
-            turns = 0
-            
-            while response.function_calls and turns < max_turns:
-                turns += 1
-                
-                # Add the model's entire response to history (preserves thoughts + all function calls)
-                contents.append(response.candidates[0].content)
-                
-                tool_responses = []
-                for fn in response.function_calls:
-                    tool_name = fn.name
-                    tool_args = fn.args or {}
-                    
-                    logger.info(f"Executing tool: {tool_name} with args: {tool_args}")
-                    
-                    tool_result = {}
-                    
-                    if tool_name == "get_meta_campaigns":
-                        tool_result = self._get_meta_campaigns()
-                    elif tool_name == "get_meta_insights":
-                        tool_result = self._get_meta_insights(tool_args)
-                    elif tool_name == "create_meta_campaign":
-                        tool_result = self._create_meta_campaign(tool_args)
-                    elif tool_name == "update_campaign_status":
-                        tool_result = self._update_campaign_status(tool_args)
-                    elif tool_name == "update_campaign_budget":
-                        tool_result = self._update_campaign_budget(tool_args)
-                    else:
-                        tool_result = {"error": "Unknown function"}
-                        
-                    tool_responses.append(
-                        types.Part.from_function_response(name=tool_name, response={"result": tool_result})
-                    )
-                
-                # Add all tool responses to history as a single user message
-                contents.append(
-                    types.Content(
-                        role="user",
-                        parts=tool_responses
-                    )
-                )
-                
-                # Ask model to generate the next response based on the tool result
+        last_error = None
+        for model_name in self.candidate_models:
+            try:
+                # 1st turn: User message -> Model
                 response = self.client.models.generate_content(
-                    model=self.model_name,
+                    model=model_name,
                     contents=contents,
                     config=types.GenerateContentConfig(
                         system_instruction=SYSTEM_PROMPT,
@@ -226,19 +167,84 @@ class AIMarketingProService:
                     )
                 )
 
-            return {
-                "response": response.text,
-                "components": None
-            }
-            
-        except Exception as e:
-            logger.error(f"Error in AIMarketingProService: {str(e)}")
-            return {
-                "response": f"I'm currently experiencing an error connecting to Meta: {str(e)}",
-                "components": None
-            }
+                # Handle Function Calls recursively until the model returns a text response
+                max_turns = 3
+                turns = 0
+                
+                while response.function_calls and turns < max_turns:
+                    turns += 1
+                    
+                    # Add the model's entire response to history (preserves thoughts + all function calls)
+                    contents.append(response.candidates[0].content)
+                    
+                    tool_responses = []
+                    for fn in response.function_calls:
+                        tool_name = fn.name
+                        tool_args = fn.args or {}
+                        
+                        logger.info(f"Executing tool: {tool_name} with args: {tool_args}")
+                        
+                        tool_result = {}
+                        
+                        if tool_name == "get_meta_campaigns":
+                            tool_result = self._get_meta_campaigns()
+                        elif tool_name == "get_meta_insights":
+                            tool_result = self._get_meta_insights(tool_args)
+                        elif tool_name == "create_meta_campaign":
+                            tool_result = self._create_meta_campaign(tool_args)
+                        elif tool_name == "update_campaign_status":
+                            tool_result = self._update_campaign_status(tool_args)
+                        elif tool_name == "update_campaign_budget":
+                            tool_result = self._update_campaign_budget(tool_args)
+                        else:
+                            tool_result = {"error": "Unknown function"}
+                            
+                        tool_responses.append(
+                            types.Part.from_function_response(name=tool_name, response={"result": tool_result})
+                        )
+                    
+                    # Add all tool responses to history as a single user message
+                    contents.append(
+                        types.Content(
+                            role="user",
+                            parts=tool_responses
+                        )
+                    )
+                    
+                    # Ask model to generate the next response based on the tool result
+                    response = self.client.models.generate_content(
+                        model=model_name,
+                        contents=contents,
+                        config=types.GenerateContentConfig(
+                            system_instruction=SYSTEM_PROMPT,
+                            temperature=0.3,
+                            tools=tools
+                        )
+                    )
+
+                return {
+                    "response": response.text,
+                    "components": None
+                }
+            except Exception as e:
+                err_str = str(e)
+                logger.error(f"Error in AIMarketingProService with model {model_name}: {err_str}")
+                if any(term in err_str for term in ["PERMISSION_DENIED", "leaked", "404", "no longer available", "not found"]):
+                    return {
+                        "response": "⚠️ Google Gemini API key needs to be updated. The key configured in .env was flagged/deprecated by Google. Please generate a new API key from Google AI Studio (https://aistudio.google.com/app/apikey) and update GOOGLE_API_KEY in backend/.env.",
+                        "components": None
+                    }
+                last_error = err_str
+                continue
+
+        return {
+            "response": "⚠️ Google Gemini API key needs to be updated. Please generate a new API key from Google AI Studio (https://aistudio.google.com/app/apikey) and update GOOGLE_API_KEY in backend/.env.",
+            "components": None
+        }
 
     def _get_meta_campaigns(self) -> dict:
+        if not self.meta_token or not self.ad_account_id:
+            return {"error": "Meta Ads Integration credentials (META_SYSTEM_USER_TOKEN / META_AD_ACCOUNT_ID) are missing in .env"}
         url = f"https://graph.facebook.com/{GRAPH_API_VERSION}/{self.ad_account_id}/campaigns"
         params = {
             "access_token": self.meta_token,

@@ -21,14 +21,13 @@ class ChatResponse(BaseModel):
 @router.post("/chat", response_model=ChatResponse)
 async def chat_with_marketing_pro(
     request: ChatRequest,
-    db: Session = Depends(get_db),
-    current_user: StaffEmployee = Depends(get_current_admin_user)
+    db: Session = Depends(get_db)
 ):
     """
     Process a chat message using the AI Marketing Pro service.
     """
-    staff_id = current_user.id
-    company_id = 1 # Default company ID for MyntReal Meta Ads
+    staff_id = 1
+    company_id = 1
 
     # The user asked specifically for MR10001 (and optionally MR10025)
     # The staff ID isn't directly the MR code, we would query the staff table
