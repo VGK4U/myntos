@@ -35,7 +35,7 @@ async def chat_with_marketing_pro(
 
     try:
         service = AIMarketingProService(db=db, company_id=company_id, staff_id=staff_id)
-        result = service.process_chat(user_message=request.message, history=request.history)
+        result = await service.process_chat(user_message=request.message, history=request.history)
         
         return ChatResponse(
             response=result.get("response", "I'm sorry, I couldn't process that."),
