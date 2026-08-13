@@ -422,14 +422,7 @@ def list_students(
             d['telecaller_name'] = h_map.get(d['telecaller_emp_code'].upper()) if d.get('telecaller_emp_code') else None
             d['field_staff_name'] = h_map.get(d['field_staff_emp_code'].upper()) if d.get('field_staff_emp_code') else None
 
-    # ── 3. Fetch CRM ETC leads not yet enrolled ──────────────────────────────
-    # DC-ETC-DYNCAT-001: Discover ETC category IDs dynamically from signup_categories
-    # so newly created or renamed ETC Training categories are auto-included.
-    # Falls back to hardcoded ETC_CATEGORY_IDS if DB returns nothing.
-    _dyn_cats = db.execute(text(
-        "SELECT id FROM signup_categories WHERE LOWER(name) LIKE '%etc%' OR LOWER(name) LIKE '%training%'"
-    )).fetchall()
-    _resolved_cat_ids = tuple(r[0] for r in _dyn_cats) or tuple(ETC_CATEGORY_IDS)
+    _resolved_cat_ids = (3, 9, 13, 30, 42)
 
     crm_dicts = []
     if include_crm:
@@ -622,11 +615,19 @@ def stage_stats(
     """), params).fetchone()
 
     earnings_r = db.execute(text("""
-        SELECT COALESCE(SUM(op.vgk_cash_earned_total), 0) AS total_earnings
+        SELECT COALESCE(SUM(
+            CASE 
+                WHEN es.deal_value_received > 0 THEN es.deal_value_received
+                WHEN cl.deal_value_received > 0 THEN cl.deal_value_received
+                WHEN es.package_value > 0 THEN es.package_value
+                WHEN cl.deal_value_total > 0 THEN cl.deal_value_total
+                ELSE 0
+            END
+        ), 0) AS total_earnings
         FROM etc_students es
-        JOIN official_partners op ON UPPER(TRIM(op.partner_code)) = UPPER(TRIM(es.vgk_id))
+        LEFT JOIN crm_leads cl ON es.crm_lead_id = cl.id
         WHERE es.is_active = TRUE AND es.company_id = :cid
-          AND es.vgk_id IS NOT NULL AND es.vgk_id != ''
+          AND (es.training_completed_date IS NOT NULL OR cl.status IN ('won', 'completed', 'won+'))
     """), {'cid': COMPANY_ID}).fetchone()
 
     return {
@@ -1018,44 +1019,98 @@ def sync_from_crm(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user_hybrid),
 ):
-    cutoff = (datetime.now() - timedelta(days=15)).date()
+    # Sync deal values received from crm_lead_transactions to crm_leads
+    try:
+        db.execute(text("""
+            UPDATE crm_leads cl
+            SET deal_value_received = GREATEST(COALESCE(cl.deal_value_received, 0), tx.sum_tx)
+            FROM (
+                SELECT lead_id, SUM(amount) as sum_tx
+                FROM crm_lead_transactions
+                WHERE lead_id IS NOT NULL
+                GROUP BY lead_id
+            ) tx
+            WHERE cl.id = tx.lead_id AND (cl.deal_value_received IS NULL OR cl.deal_value_received < tx.sum_tx)
+        """))
+        db.commit()
+    except Exception as e:
+        logger.warning(f"[ETC] Tx sync error: {e}")
+        db.rollback()
+
+    # Sync package values and deal values received from crm_leads to existing etc_students
+    try:
+        db.execute(text("""
+            UPDATE etc_students es
+            SET package_value = COALESCE(es.package_value, cl.deal_value_total, cl.deal_value),
+                deal_value_received = GREATEST(COALESCE(es.deal_value_received, 0), COALESCE(cl.deal_value_received, 0)),
+                training_completed_date = CASE WHEN cl.status IN ('won', 'completed') AND es.training_completed_date IS NULL THEN COALESCE(cl.actual_close_date, NOW()) ELSE es.training_completed_date END
+            FROM crm_leads cl
+            WHERE (es.crm_lead_id = cl.id OR (cl.phone IS NOT NULL AND cl.phone != '' AND es.phone = cl.phone))
+              AND (
+                  es.package_value IS NULL OR es.package_value = 0 
+                  OR es.deal_value_received IS NULL OR es.deal_value_received < cl.deal_value_received
+              )
+        """))
+        db.commit()
+    except Exception as e:
+        logger.warning(f"[ETC] Student deal sync error: {e}")
+        db.rollback()
+
     rows = db.execute(text("""
         SELECT l.id, l.name, l.phone, l.email,
-               COALESCE(d.deal_value_total, 0) AS deal_value,
-               l.actual_close_date
+               COALESCE(l.deal_value_total, l.deal_value, 0) AS deal_value,
+               COALESCE(l.deal_value_received, 0) AS deal_value_received,
+               l.actual_close_date, l.status, l.state, l.city
         FROM crm_leads l
-        LEFT JOIN crm_lead_deals d ON d.lead_id = l.id
-        LEFT JOIN signup_categories sc ON sc.id = l.category_id
-        WHERE l.status = 'won'
-          AND l.actual_close_date >= :cutoff
-          AND (
-              sc.name ILIKE '%etc%' OR sc.name ILIKE '%training%'
-              OR l.source ILIKE '%etc%' OR l.source ILIKE '%training%'
-          )
+        WHERE (l.category_id IN (3, 9, 13, 30, 42) OR LOWER(l.solar_pipeline_status) LIKE '%etc%')
+          AND l.status IN ('won', 'completed', 'won+')
           AND NOT EXISTS (
-              SELECT 1 FROM etc_students WHERE crm_lead_id = l.id
+              SELECT 1 FROM etc_students es WHERE es.crm_lead_id = l.id OR (l.phone IS NOT NULL AND l.phone != '' AND es.phone = l.phone)
           )
-        ORDER BY l.actual_close_date DESC
-    """), {'cutoff': cutoff}).fetchall()
+        ORDER BY l.actual_close_date DESC NULLS LAST, l.created_at DESC
+    """)).fetchall()
+
+    date_map, max_num = _batch_map_and_max(db)
+    new_date_batches: dict = {}
 
     created = []
     for r in rows:
         try:
+            b_no = 'Unassigned'
+            c_date = r.actual_close_date
+            if c_date:
+                d_obj = c_date.date() if hasattr(c_date, 'date') else c_date
+                d_str = d_obj.isoformat()
+                if d_str in date_map:
+                    b_no = date_map[d_str]
+                elif d_str in new_date_batches:
+                    b_no = new_date_batches[d_str]
+                else:
+                    max_num += 1
+                    b_no = f'Batch-{max_num}'
+                    new_date_batches[d_str] = b_no
+
             reg_id, stu_id = _next_registration_id(db)
+            pkg_val = float(r.deal_value) if r.deal_value else None
+            rec_val = float(r.deal_value_received) if r.deal_value_received else None
+
             db.execute(text("""
-                INSERT INTO etc_students
-                    (registration_id, student_id, name, phone, email,
-                     package_value, crm_lead_id, company_id, created_by)
-                VALUES
-                    (:rid, :sid, :name, :phone, :email,
-                     :pv, :lid, :cid, 'CRM_SYNC')
+                INSERT INTO etc_students (
+                    registration_id, student_id, batch_no, batch_start_date, name, phone, email,
+                    package_value, deal_value_received, crm_lead_id, company_id, created_by,
+                    state, district, source, training_completed_date
+                ) VALUES (
+                    :rid, :sid, :bno, :bdate, :name, :phone, :email,
+                    :pv, :rec, :lid, :cid, 'CRM_SYNC',
+                    :state, :district, 'CRM Lead', :comp_date
+                )
                 ON CONFLICT (registration_id) DO NOTHING
             """), {
-                'rid': reg_id, 'sid': stu_id,
-                'name': r.name or 'Unknown',
-                'phone': r.phone, 'email': r.email,
-                'pv': float(r.deal_value) if r.deal_value else None,
-                'lid': r.id, 'cid': COMPANY_ID,
+                'rid': reg_id, 'sid': stu_id, 'bno': b_no, 'bdate': c_date,
+                'name': r.name or 'Unknown', 'phone': r.phone, 'email': r.email,
+                'pv': pkg_val, 'rec': rec_val, 'lid': r.id, 'cid': COMPANY_ID,
+                'state': r.state, 'district': r.city,
+                'comp_date': c_date if r.status in ('won', 'completed') else None
             })
             db.commit()
             created.append({'crm_id': r.id, 'name': r.name, 'student_id': stu_id})
