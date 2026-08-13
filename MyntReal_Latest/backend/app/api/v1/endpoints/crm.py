@@ -3318,11 +3318,11 @@ def get_bank_wise_leads(
     elif getattr(current_employee, 'role', None) and getattr(current_employee.role, 'role_code', '') in ('key_leadership', 'sales', 'ea', 'supreme'):
         is_manager = True
         
-    # 2. Base Query for Bank Files, Balance Pending & Net Meter Pending Leads (matching Executive Dashboard)
+    # 2. Base Query for Bank Files, Balance Pending, Net Meter Pending & Electricity Bill Change Leads
     query = db.query(CRMLead).filter(
         or_(
-            CRMLead.solar_pipeline_status.in_(['pending_with_bank', 'at_bank', 'at bank', 'balance_pending', 'bal_pending', 'net_meter_pending', 'net_meter', 'net_metering_pending']),
-            CRMLead.status.in_(['pending_with_bank', 'balance_pending', 'net_meter_pending'])
+            CRMLead.solar_pipeline_status.in_(['pending_with_bank', 'at_bank', 'at bank', 'balance_pending', 'bal_pending', 'net_meter_pending', 'net_meter', 'net_metering_pending', 'electricity_bill_change', 'electricity_bill', 'eb_name_change', 'eb_change_pending', 'bill_change_pending']),
+            CRMLead.status.in_(['pending_with_bank', 'balance_pending', 'net_meter_pending', 'electricity_bill_change', 'eb_name_change'])
         )
     )
     
@@ -3386,6 +3386,16 @@ def get_bank_wise_leads(
                     CRMLead.solar_pipeline_status.ilike("%net meter%"),
                     CRMLead.status.ilike("%net_meter%"),
                     CRMLead.status.ilike("%net meter%")
+                )
+            )
+        elif 'electricity' in clean_stage.lower() or 'eb' in clean_stage.lower() or 'bill' in clean_stage.lower():
+            query = query.filter(
+                or_(
+                    CRMLead.solar_pipeline_status.ilike("%electricity%"),
+                    CRMLead.solar_pipeline_status.ilike("%eb%"),
+                    CRMLead.solar_pipeline_status.ilike("%bill%"),
+                    CRMLead.status.ilike("%electricity%"),
+                    CRMLead.status.ilike("%eb%")
                 )
             )
         else:

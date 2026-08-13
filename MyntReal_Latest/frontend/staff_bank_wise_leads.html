@@ -153,6 +153,11 @@
             </button>
           </li>
           <li class="nav-item">
+            <button class="nav-link fw-bold py-1 px-3 text-dark bg-white border" id="tabElectricityBillBtn" onclick="switchMainTab('electricity-bill-change')" style="border-radius: 6px; font-size: 11.5px; padding: 4px 10px;">
+              <i class="fas fa-file-invoice me-1" style="color:#2563eb"></i>Electricity Bill Change Leads (<span id="tabElectricityBillCount" class="badge bg-primary text-white ms-1" style="font-size:9.5px;padding:1px 5px">0</span>)
+            </button>
+          </li>
+          <li class="nav-item">
             <button class="nav-link fw-bold py-1 px-3 text-dark bg-white border" id="tabBranchBankSummaryBtn" onclick="switchMainTab('branch-bank-summary')" style="border-radius: 6px; font-size: 11.5px; padding: 4px 10px;">
               <i class="fas fa-sitemap me-1 text-info"></i>Branch & Bank Summary (<span id="tabBranchBankCount" class="badge bg-info text-dark ms-1" style="font-size:9.5px;padding:1px 5px">0</span>)
             </button>
@@ -285,6 +290,7 @@
               <option value="pending_with_bank">Pending with Bank / At Bank</option>
               <option value="balance_pending">Balance Pending</option>
               <option value="net_meter_pending">Net Meter Pending</option>
+              <option value="electricity_bill_change">Electricity Bill Change Pending</option>
             </select>
           </div>
           <div class="col-md-3">
@@ -392,6 +398,7 @@
             const bankBtn = document.getElementById('tabBankFilesBtn');
             const pendingBtn = document.getElementById('tabBalancePendingBtn');
             const netMeterBtn = document.getElementById('tabNetMeterPendingBtn');
+            const ebBtn = document.getElementById('tabElectricityBillBtn');
             const branchBankBtn = document.getElementById('tabBranchBankSummaryBtn');
             const groundSourceBtn = document.getElementById('tabGroundSourceSummaryBtn');
 
@@ -399,6 +406,7 @@
                 { id: bankBtn, tab: 'bank-files', activeClass: ['active'], inactiveClass: ['bg-white', 'text-dark', 'border'] },
                 { id: pendingBtn, tab: 'balance-pending', activeClass: ['active', 'bg-warning', 'text-dark'], inactiveClass: ['bg-white', 'text-dark', 'border'] },
                 { id: netMeterBtn, tab: 'net-meter-pending', activeClass: ['active', 'bg-purple', 'text-white'], inactiveClass: ['bg-white', 'text-dark', 'border'] },
+                { id: ebBtn, tab: 'electricity-bill-change', activeClass: ['active', 'bg-primary', 'text-white'], inactiveClass: ['bg-white', 'text-dark', 'border'] },
                 { id: branchBankBtn, tab: 'branch-bank-summary', activeClass: ['active', 'bg-info', 'text-dark'], inactiveClass: ['bg-white', 'text-dark', 'border'] },
                 { id: groundSourceBtn, tab: 'ground-source-summary', activeClass: ['active', 'bg-success', 'text-white'], inactiveClass: ['bg-white', 'text-dark', 'border'] }
             ];
@@ -461,11 +469,18 @@
             return stage === 'net_meter_pending' || stage === 'net_meter' || stage === 'net meter' || stage === 'net_metering_pending' || stage.includes('net_meter') || stage.includes('net meter');
         }
 
+        function isElectricityBillChangeLead(l) {
+            const stage = (l.solar_pipeline_stage || l.solar_pipeline_status || l.stage || '').toLowerCase();
+            return stage === 'electricity_bill_change' || stage === 'electricity_bill' || stage === 'eb_name_change' || stage.includes('electricity') || stage.includes('eb_name') || stage.includes('bill_change');
+        }
+
         function getActiveLeads() {
             if (currentMainTab === 'balance-pending') {
                 return globalBankLeads.filter(isBalancePendingLead);
             } else if (currentMainTab === 'net-meter-pending') {
                 return globalBankLeads.filter(isNetMeterPendingLead);
+            } else if (currentMainTab === 'electricity-bill-change') {
+                return globalBankLeads.filter(isElectricityBillChangeLead);
             }
             return globalBankLeads.filter(isBankLead);
         }
@@ -525,6 +540,7 @@
                     const bankLeads = globalBankLeads.filter(isBankLead);
                     const pendingLeads = globalBankLeads.filter(isBalancePendingLead);
                     const netMeterLeads = globalBankLeads.filter(isNetMeterPendingLead);
+                    const ebLeads = globalBankLeads.filter(isElectricityBillChangeLead);
 
                     const branchBankKeys = new Set(globalBankLeads.map(l => `${l.bank_name || 'Unassigned'}:::${l.bank_branch || 'N/A'}`));
                     const groundSourceKeys = new Set(globalBankLeads.map(l => l.ground_source_name || 'Unassigned'));
@@ -532,6 +548,7 @@
                     document.getElementById('tabBankCount').innerText = bankLeads.length;
                     document.getElementById('tabPendingCount').innerText = pendingLeads.length;
                     if (document.getElementById('tabNetMeterCount')) document.getElementById('tabNetMeterCount').innerText = netMeterLeads.length;
+                    if (document.getElementById('tabElectricityBillCount')) document.getElementById('tabElectricityBillCount').innerText = ebLeads.length;
                     document.getElementById('tabBranchBankCount').innerText = branchBankKeys.size;
                     document.getElementById('tabGroundSourceCount').innerText = groundSourceKeys.size;
 
@@ -804,14 +821,15 @@
         function renderMetricsForActiveTab(activeLeads) {
             const isPendingTab = (currentMainTab === 'balance-pending');
             const isNetMeterTab = (currentMainTab === 'net-meter-pending');
+            const isEBTab = (currentMainTab === 'electricity-bill-change');
             
             // Labels
             const lblFiles = document.getElementById('lblTotalFiles');
             const lblValue = document.getElementById('lblTotalValue');
             const lblBank = document.getElementById('lblTopBank');
-            if (lblFiles) lblFiles.innerText = isPendingTab ? 'Total Balance Pending Leads' : (isNetMeterTab ? 'Total Net Meter Pending Leads' : 'Total Files At Bank');
-            if (lblValue) lblValue.innerText = isPendingTab ? 'Total Pending Balance' : (isNetMeterTab ? 'Total Net Meter Portfolio' : 'Total Bank Portfolio');
-            if (lblBank) lblBank.innerText = isPendingTab ? 'Top Pending Bank' : (isNetMeterTab ? 'Top Net Meter Bank' : 'Top Processing Bank');
+            if (lblFiles) lblFiles.innerText = isPendingTab ? 'Total Balance Pending Leads' : (isNetMeterTab ? 'Total Net Meter Pending Leads' : (isEBTab ? 'Total Electricity Bill Change Leads' : 'Total Files At Bank'));
+            if (lblValue) lblValue.innerText = isPendingTab ? 'Total Pending Balance' : (isNetMeterTab ? 'Total Net Meter Portfolio' : (isEBTab ? 'Total EB Change Portfolio' : 'Total Bank Portfolio'));
+            if (lblBank) lblBank.innerText = isPendingTab ? 'Top Pending Bank' : (isNetMeterTab ? 'Top Net Meter Bank' : (isEBTab ? 'Top EB Change Bank' : 'Top Processing Bank'));
 
             // Metrics calculation
             const totalCount = activeLeads ? activeLeads.length : 0;
@@ -991,7 +1009,9 @@
                     ? `<span class="badge bg-warning text-dark px-2 py-1" style="font-size:12px;font-weight:800;border:1px solid #d97706" title="Balance Pending: ${balText}">${balText} Pending</span><br><small class="text-muted" style="font-size:10px">Total: ${valText} | Paid: ${paidText}</small>`
                     : (currentMainTab === 'net-meter-pending')
                         ? `<span class="badge bg-purple text-white px-2 py-1" style="font-size:12px;font-weight:800;background-color:#8b5cf6" title="Net Meter Pending: ${valText}">${valText}</span><br><small class="text-muted" style="font-size:10px">Bank: ${esc(l.bank_name || 'N/A')}</small>`
-                        : valText;
+                        : (currentMainTab === 'electricity-bill-change')
+                            ? `<span class="badge bg-primary text-white px-2 py-1" style="font-size:12px;font-weight:800" title="EB Bill Change: ${valText}">${valText}</span><br><small class="text-muted" style="font-size:10px">Bank: ${esc(l.bank_name || 'N/A')}</small>`
+                            : valText;
 
                 html += `<tr>
                     <td style="text-align:center;color:#9ca3af;font-weight:600">${idx + 1}</td>
