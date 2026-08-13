@@ -394,9 +394,10 @@ window.NDAEnforcementService = class NDAEnforcementService {
           <span>Failed to record acceptance: ${error.message}. Session preserved — click I Accept to try again.</span>
         `;
       }
+    }
   }
 }
-}
+} // Closes if (typeof window.NDAEnforcementService === 'undefined')
 
 if (!window.ndaEnforcementService && window.NDAEnforcementService) {
   window.ndaEnforcementService = new window.NDAEnforcementService();

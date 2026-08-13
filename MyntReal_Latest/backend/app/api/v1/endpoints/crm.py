@@ -243,7 +243,7 @@ def can_change_primary_owner(lead, current_employee, db) -> tuple:
     # Rule 3: Reporting Manager of the lead owner
     if lead.primary_owner_type == 'staff' and lead.primary_owner_id:
         owner = db.query(StaffEmployee).filter(StaffEmployee.id == lead.primary_owner_id).first()
-        if owner and owner.reporting_to == current_employee.emp_code:
+        if owner and owner.reporting_manager_id == current_employee.id:
             return True, 'reporting_manager'
     
     return False, 'unauthorized'
@@ -14313,13 +14313,13 @@ async def update_lead_full(
             # Check if telecaller reports to current user (via either field)
             if lead.telecaller_id:
                 telecaller = db.query(StaffEmployee).filter(StaffEmployee.id == lead.telecaller_id).first()
-                if telecaller and (telecaller.reporting_manager_id == staff_id or telecaller.reporting_to == current_emp_code):
+                if telecaller and telecaller.reporting_manager_id == staff_id:
                     is_team_leader = True
             
             # Also check if field_staff reports to current user (via either field)
             if not is_team_leader and lead.field_staff_id:
                 field_staff = db.query(StaffEmployee).filter(StaffEmployee.id == lead.field_staff_id).first()
-                if field_staff and (field_staff.reporting_manager_id == staff_id or field_staff.reporting_to == current_emp_code):
+                if field_staff and field_staff.reporting_manager_id == staff_id:
                     is_team_leader = True
         
         if not is_owner and not is_team_leader:

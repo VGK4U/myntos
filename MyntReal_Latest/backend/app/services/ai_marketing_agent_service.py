@@ -83,10 +83,10 @@ class AIMarketingAgentService:
         # Define a fallback list of models to prevent rate limiting or temporary outages
         # Prioritize the most advanced (3.x and 2.x) series first, falling back to 1.x
         self.model_names = [
-            "gemini-1.5-flash",
-            "gemini-1.5-pro",
-            "gemini-2.0-flash",
-            "gemini-1.5-flash-8b"
+            "gemini-3.5-flash",
+            "gemini-2.5-flash",
+            "gemini-flash-latest",
+            "gemini-3.1-flash-lite"
         ]
 
     def process_message(self, message: str) -> str:

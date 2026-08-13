@@ -116,7 +116,7 @@ class AIMarketingProService:
         else:
             self.client = None
             
-        self.candidate_models = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash"]
+        self.candidate_models = ["gemini-3.5-flash", "gemini-3.5-flash-lite"]
 
     def process_chat(self, user_message: str, history: List[Dict[str, Any]] = None) -> Dict[str, Any]:
         if not self.client:
@@ -131,10 +131,21 @@ class AIMarketingProService:
         contents = []
         for msg in history:
             role = 'user' if msg.get('role') == 'user' else 'model'
+            
+            # Extract text depending on frontend payload structure
+            text_content = ""
+            if "content" in msg:
+                text_content = msg["content"]
+            elif "parts" in msg and len(msg["parts"]) > 0:
+                text_content = msg["parts"][0].get("text", "")
+                
+            if not text_content:
+                continue
+
             contents.append(
                 types.Content(
                     role=role,
-                    parts=[types.Part.from_text(text=msg.get('content', ''))]
+                    parts=[types.Part.from_text(text=text_content)]
                 )
             )
             
@@ -168,7 +179,7 @@ class AIMarketingProService:
                 )
 
                 # Handle Function Calls recursively until the model returns a text response
-                max_turns = 3
+                max_turns = 10
                 turns = 0
                 
                 while response.function_calls and turns < max_turns:
@@ -182,7 +193,7 @@ class AIMarketingProService:
                         tool_name = fn.name
                         tool_args = fn.args or {}
                         
-                        logger.info(f"Executing tool: {tool_name} with args: {tool_args}")
+                        logger.error(f"Executing tool: {tool_name} with args: {tool_args}")
                         
                         tool_result = {}
                         
@@ -200,7 +211,13 @@ class AIMarketingProService:
                             tool_result = {"error": "Unknown function"}
                             
                         tool_responses.append(
-                            types.Part.from_function_response(name=tool_name, response={"result": tool_result})
+                            types.Part(
+                                function_response=types.FunctionResponse(
+                                    name=tool_name, 
+                                    response={"result": tool_result},
+                                    id=fn.id
+                                )
+                            )
                         )
                     
                     # Add all tool responses to history as a single user message
@@ -222,14 +239,18 @@ class AIMarketingProService:
                         )
                     )
 
+                final_text = response.text
+                if not final_text:
+                    final_text = "I gathered the data but reached my internal processing limit before formulating an answer. Could you please ask a more specific question?"
+
                 return {
-                    "response": response.text,
+                    "response": final_text,
                     "components": None
                 }
             except Exception as e:
                 err_str = str(e)
                 logger.error(f"Error in AIMarketingProService with model {model_name}: {err_str}")
-                if any(term in err_str for term in ["PERMISSION_DENIED", "leaked", "404", "no longer available", "not found"]):
+                if any(term in err_str for term in ["PERMISSION_DENIED", "leaked", "API_KEY_INVALID", "no longer available"]):
                     return {
                         "response": "⚠️ Google Gemini API key needs to be updated. The key configured in .env was flagged/deprecated by Google. Please generate a new API key from Google AI Studio (https://aistudio.google.com/app/apikey) and update GOOGLE_API_KEY in backend/.env.",
                         "components": None
