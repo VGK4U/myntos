@@ -824,15 +824,13 @@ def get_etc_batchwise_analytics(
         })
 
     import re
-    today_str = datetime.now().date().isoformat()
     def _batch_sort_key(bm):
         d_raw = bm.get('start_date_raw') or '0000-00-00'
-        is_future = 1 if d_raw > today_str else 0
         b_num = 0
         m = re.search(r'\d+', bm.get('batch_no', ''))
         if m:
             b_num = int(m.group())
-        return (0 if is_future else 1, d_raw, b_num)
+        return (d_raw, b_num)
 
     batch_list = list(batches_map.values())
     batch_list.sort(key=_batch_sort_key, reverse=True)
