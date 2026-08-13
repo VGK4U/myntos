@@ -673,11 +673,14 @@ def get_etc_batchwise_analytics(
                s.handler_confirmed, s.telecaller_confirmed, s.field_staff_confirmed,
                s.handler_emp_code, s.telecaller_emp_code, s.crm_lead_id, s.created_at,
                s.guru_name, s.z_guru_name, s.source,
-               cl.deal_value_received as cl_deal_value_received
+               cl.deal_value_received as cl_deal_value_received,
+               cl.actual_close_date as cl_actual_close_date,
+               cl.deal_value_total as cl_deal_value_total,
+               cl.deal_value as cl_deal_value
         FROM etc_students s
         LEFT JOIN crm_leads cl ON s.crm_lead_id = cl.id
         WHERE {st_clause}
-        ORDER BY s.batch_start_date DESC NULLS LAST, s.id DESC
+        ORDER BY COALESCE(s.batch_start_date, s.training_completed_date, cl.actual_close_date::date, s.created_at::date) DESC, s.id DESC
     """), st_params).fetchall()
 
     lead_ids = [r.crm_lead_id for r in student_rows if r.crm_lead_id]
@@ -734,7 +737,7 @@ def get_etc_batchwise_analytics(
             b_key = 'Unassigned'
 
         if b_key not in batches_map:
-            d_obj = r.batch_start_date
+            d_obj = r.batch_start_date or r.training_completed_date or (r.cl_actual_close_date.date() if hasattr(r.cl_actual_close_date, 'date') and r.cl_actual_close_date else None) or (r.created_at.date() if hasattr(r.created_at, 'date') and r.created_at else None)
             month_str = d_obj.strftime('%b %Y') if d_obj else '—'
             start_date_str = d_obj.strftime('%d-%b-%Y') if d_obj else '—'
             batches_map[b_key] = {
@@ -761,7 +764,7 @@ def get_etc_batchwise_analytics(
             b['completed'] += 1
             total_all_completed += 1
 
-        dv = float(r.package_value or 0.0)
+        dv = float(r.package_value or r.cl_deal_value_total or r.cl_deal_value or 0.0)
         
         # Comprehensive received calculation from CRM leads, student record, transactions & income entries
         cl_rec = float(r.cl_deal_value_received or 0.0)
@@ -821,13 +824,15 @@ def get_etc_batchwise_analytics(
         })
 
     import re
+    today_str = datetime.now().date().isoformat()
     def _batch_sort_key(bm):
-        b_name = bm['batch_no']
-        if b_name.lower().startswith('batch'):
-            m = re.search(r'\d+', b_name)
-            if m:
-                return (1, int(m.group()))
-        return (0, bm['start_date_raw'] or '0000-00-00')
+        d_raw = bm.get('start_date_raw') or '0000-00-00'
+        is_future = 1 if d_raw > today_str else 0
+        b_num = 0
+        m = re.search(r'\d+', bm.get('batch_no', ''))
+        if m:
+            b_num = int(m.group())
+        return (0 if is_future else 1, d_raw, b_num)
 
     batch_list = list(batches_map.values())
     batch_list.sort(key=_batch_sort_key, reverse=True)
