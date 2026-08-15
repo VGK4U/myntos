@@ -3053,6 +3053,14 @@ async function toggleLvRow(lid){
   }
 }
 
+window._lvSortAsc = window._lvSortAsc || {};
+window.toggleLvSubSort = function(lid){
+  window._lvSortAsc[lid] = !window._lvSortAsc[lid];
+  if(_lvDetailCache[lid]){
+    _lvRenderDetail(lid, _lvDetailCache[lid]);
+  }
+};
+
 function _lvDetailRowHtml(lid, entries){
   const cancelFilter = document.getElementById('lvCancelFilter')?.value || 'HIDE_CANCELLED';
   let filtered = entries.filter(e=>{
@@ -3062,8 +3070,16 @@ function _lvDetailRowHtml(lid, entries){
   });
 
   if(!filtered.length){
-    return `<tr id="lvDetail_${lid}"><td colspan="15" style="padding:12px 20px;background:#f9fafb;text-align:center;color:#9ca3af;font-size:12px">No entries match the current filter.</td></tr>`;
+    return `<tr id="lvDetail_${lid}"><td colspan="13" style="padding:12px 20px;background:#f9fafb;text-align:center;color:#9ca3af;font-size:12px">No entries match the current filter.</td></tr>`;
   }
+
+  const isAsc = !!window._lvSortAsc[lid];
+  filtered.sort((a,b)=>{
+    const da = a.trigger_date || a.income_date || '';
+    const db = b.trigger_date || b.income_date || '';
+    const cmp = db.localeCompare(da) || ((b.id || 0) - (a.id || 0));
+    return isAsc ? -cmp : cmp;
+  });
 
   const lvlColors = {0:'#6b7280',1:'#6366f1',2:'#0891b2',3:'#059669',4:'#d97706',5:'#db2777',6:'#6366f1'};
 
@@ -3088,12 +3104,15 @@ function _lvDetailRowHtml(lid, entries){
       calcBase = Math.round(e.commission_amount / (e.commission_pct / 100));
     }
     const baseText = calcBase > 0 ? _meInr(calcBase) : '—';
-    const rateText = (e.commission_pct && e.commission_pct > 0) ? (e.commission_pct + '%') : '—';
+    let calcPct = (e.commission_pct && e.commission_pct > 0) ? e.commission_pct : 0;
+    if((!calcPct || calcPct <= 0) && calcBase > 0 && e.commission_amount > 0){
+      calcPct = (e.commission_amount / calcBase * 100).toFixed(2);
+    }
+    const rateText = calcPct > 0 ? (calcPct + '%') : '—';
     return `<tr style="border-bottom:1px solid #f0f0f0;background:#fafaf9">
-      <td style="padding:8px 10px;text-align:center;font-size:11px;color:#9ca3af">${e.income_date?fmtDate(e.income_date):'—'}</td>
       <td style="padding:8px 10px;font-size:11px;color:#6b7280;white-space:nowrap">${e.submit_date?fmtDate(e.submit_date):'<span style="color:#d1d5db">—</span>'}</td>
-      <td style="padding:8px 10px;font-size:11px;color:#6b7280;white-space:nowrap">${e.first_payment_received_date?fmtDate(e.first_payment_received_date):'<span style="color:#d1d5db">—</span>'}</td>
-      <td style="padding:8px 10px;font-size:11px;color:#059669;white-space:nowrap">${e.complete_date?fmtDate(e.complete_date):'<span style="color:#d1d5db">—</span>'}</td>
+      <td style="padding:8px 10px;font-size:11px;color:#111827;font-weight:600;white-space:nowrap">${(e.trigger_date||e.income_date)?fmtDate(e.trigger_date||e.income_date):'<span style="color:#d1d5db">—</span>'}</td>
+      <td style="padding:8px 10px;font-size:11px;color:${e.payment_date?'#059669':'#6b7280'};white-space:nowrap">${e.payment_date?fmtDate(e.payment_date):'<span style="color:#d1d5db">—</span>'}</td>
       <td style="padding:8px 10px;font-size:11px;color:#6b7280;font-family:monospace">${e.entry_number||'—'}</td>
       <td style="padding:8px 10px;text-align:center">
         <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${lvlColor}22;color:${lvlColor}">${_lvLvlLabel[lvl]||('L'+lvl)}</span>
@@ -3117,12 +3136,11 @@ function _lvDetailRowHtml(lid, entries){
   }).join('');
 
   const subHead = `<tr style="background:#f0f0fb;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">
-    <td style="padding:6px 10px">Date</td>
     <td style="padding:6px 10px">Submit Date</td>
-    <td style="padding:6px 10px">1st Txn Date</td>
-    <td style="padding:6px 10px">Final Date</td>
+    <td style="padding:6px 10px;cursor:pointer;user-select:none;color:#4c1d95" onclick="toggleLvSubSort(${lid})" title="Click to toggle sort order">Trigger Date <i class="fas fa-sort-${isAsc?'up':'down'}" style="font-size:9px;margin-left:2px"></i></td>
+    <td style="padding:6px 10px">Payment Date</td>
     <td style="padding:6px 10px">Entry #</td>
-    <td style="padding:6px 10px">Level / Type</td>
+    <td style="padding:6px 10px;text-align:center">Level / Role</td>
     <td style="padding:6px 10px">Member</td>
     <td style="padding:6px 10px;text-align:right">Base Value</td>
     <td style="padding:6px 10px;text-align:center">Rate %</td>
@@ -3137,7 +3155,7 @@ function _lvDetailRowHtml(lid, entries){
     <table style="width:100%;border-collapse:collapse;font-size:12px">
       ${subHead}${rows}
       <tr style="background:#f0f0fb;font-weight:700">
-        <td colspan="7" style="padding:7px 10px;font-size:11px;color:#7c3aed">${filtered.length} entr${filtered.length===1?'y':'ies'}</td>
+        <td colspan="6" style="padding:7px 10px;font-size:11px;color:#7c3aed">${filtered.length} entr${filtered.length===1?'y':'ies'}</td>
         <td style="padding:7px 10px;text-align:right;color:#374151"></td>
         <td></td>
         <td style="padding:7px 10px;text-align:right;color:#7c3aed">${_meInr(filtered.reduce((s,e)=>s+(e.commission_amount||0),0))}</td>

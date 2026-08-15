@@ -5064,69 +5064,67 @@ def lead_income_members_detail(
     try:
         rows = db.execute(text(
             "SELECT e.id, e.entry_number, e.status, e.kind, e.level, "
-            "  e.created_at::date::text AS income_date, "
-            "  COALESCE(e.commission_pct,0)::float    AS commission_pct, "
-            "  COALESCE(NULLIF(e.solar_value,0), NULLIF(e.deal_value_total,0), NULLIF(e.confirmed_final_value,0), 0)::float AS base_value, "
+            "  e.created_at::date::text AS trigger_date, "
+            "  COALESCE(e.paid_at::date::text, e.released_at::date::text, e.confirmed_at::date::text, CASE WHEN e.status = 'PAID' THEN e.updated_at::date::text ELSE NULL END) AS payment_date, "
+            "  COALESCE(e.commission_pct,0)::float AS raw_commission_pct, "
+            "  COALESCE( "
+            "    NULLIF(e.solar_value, 0), "
+            "    NULLIF(e.deal_value_total, 0), "
+            "    NULLIF(e.confirmed_final_value, 0), "
+            "    NULLIF(cl.solar_value, 0), "
+            "    NULLIF(cl.deal_value_total, 0), "
+            "    NULLIF(cl.confirmed_final_value, 0), "
+            "    0 "
+            "  )::float AS base_value, "
             "  COALESCE(e.commission_amount,0)::float AS commission_amount, "
             "  COALESCE(e.net_payout,0)::float        AS net_payout, "
             "  COALESCE(e.admin_charges,0)::float     AS admin_charges, "
             "  COALESCE(e.tds_amount,0)::float        AS tds_amount, "
-            "  op.partner_code, op.partner_name "
+            "  op.partner_code, op.partner_name, "
+            "  cl.submit_date::text AS submit_date, "
+            "  cl.community_id, "
+            "  cs.service_name AS community_event_name "
             "FROM vgk_cash_income_entries e "
             "JOIN official_partners op ON op.id = e.partner_id "
+            "JOIN crm_leads cl ON cl.id = e.source_lead_id "
+            "LEFT JOIN community_registrations cr ON cr.id = cl.community_id "
+            "LEFT JOIN community_services cs ON cs.id = cr.community_service_id "
             f"WHERE e.source_lead_id = :lid{_extra} AND op.category = 'VGK_TEAM' "
-            "ORDER BY e.level ASC, e.created_at DESC"
+            "ORDER BY e.created_at DESC, e.id DESC"
         ), _p).fetchall()
     except Exception as exc:
         return {"success": False, "error": str(exc), "data": []}
 
-    submit_date = None
-    first_payment_received_date = None
-    complete_date = None
-    community_id = None
-    community_event_name = None
-    try:
-        lr = db.execute(text(
-            "SELECT cl.submit_date::text AS submit_date, "
-            "       cl.first_payment_received_date::text AS first_payment_received_date, "
-            "       cl.complete_date::text AS complete_date, "
-            "       cl.community_id, "
-            "       cs.service_name AS community_event_name "
-            "FROM crm_leads cl "
-            "LEFT JOIN community_registrations cr ON cr.id = cl.community_id "
-            "LEFT JOIN community_services cs ON cs.id = cr.community_service_id "
-            "WHERE cl.id = :lid"
-        ), {"lid": lead_id}).fetchone()
-        if lr:
-            submit_date = lr.submit_date
-            first_payment_received_date = lr.first_payment_received_date
-            complete_date = lr.complete_date
-            community_id = int(lr.community_id) if lr.community_id is not None else None
-            community_event_name = lr.community_event_name
-    except Exception:
-        pass
+    res_data = []
+    for r in rows:
+        bv = float(r.base_value)
+        amt = float(r.commission_amount)
+        pct = float(r.raw_commission_pct)
+        if (pct <= 0) and bv > 0 and amt > 0:
+            pct = round(amt / bv * 100.0, 2)
+        res_data.append({
+            "id":                int(r.id),
+            "entry_number":      r.entry_number or f"INC-{r.id}",
+            "status":            r.status,
+            "kind":              r.kind or "COMMISSION",
+            "level":             r.level,
+            "submit_date":       r.submit_date,
+            "income_date":       r.trigger_date,
+            "trigger_date":      r.trigger_date,
+            "payment_date":      r.payment_date,
+            "commission_pct":    pct,
+            "base_value":        bv,
+            "commission_amount": amt,
+            "net_payout":        float(r.net_payout),
+            "admin_charges":     float(r.admin_charges),
+            "tds_amount":        float(r.tds_amount),
+            "partner_code":      r.partner_code,
+            "partner_name":      r.partner_name,
+            "community_id":      int(r.community_id) if r.community_id is not None else None,
+            "community_event_name": r.community_event_name,
+        })
 
-    return {"success": True, "total": len(rows), "data": [{
-        "id":                int(r.id),
-        "entry_number":      r.entry_number or f"INC-{r.id}",
-        "status":            r.status,
-        "kind":              r.kind or "COMMISSION",
-        "level":             r.level,
-        "income_date":       r.income_date,
-        "commission_pct":    float(r.commission_pct),
-        "base_value":        float(r.base_value),
-        "commission_amount": float(r.commission_amount),
-        "net_payout":        float(r.net_payout),
-        "admin_charges":     float(r.admin_charges),
-        "tds_amount":        float(r.tds_amount),
-        "partner_code":      r.partner_code,
-        "partner_name":      r.partner_name,
-        "submit_date":       submit_date,
-        "first_payment_received_date": first_payment_received_date,
-        "complete_date":     complete_date,
-        "community_id":      community_id,
-        "community_event_name": community_event_name,
-    } for r in rows]}
+    return {"success": True, "total": len(res_data), "data": res_data}
 
 
 # ── [DC-VGK-STAFF-REG-001] My Registrations — staff-scoped list ──────────────
