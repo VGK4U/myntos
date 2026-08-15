@@ -3022,11 +3022,10 @@ async function toggleLvRow(lid){
 
   // Insert loading placeholder
   const existingRow = document.getElementById(`lvRow_${lid}`);
-  if(existingRow){
-    const ph = document.createElement('tr');
-    ph.id = `lvDetail_${lid}`;
-    ph.innerHTML = `<td colspan="15" style="padding:16px;background:#f9fafb;text-align:center;color:#9ca3af"><i class="fas fa-spinner fa-spin me-1"></i>Loading members…</td>`;
-    existingRow.insertAdjacentElement('afterend', ph);
+  if(existingRow && existingRow.parentNode){
+    const tempTbody = document.createElement('tbody');
+    tempTbody.innerHTML = `<tr id="lvDetail_${lid}"><td colspan="15" style="padding:16px;background:#f9fafb;text-align:center;color:#9ca3af"><i class="fas fa-spinner fa-spin me-1"></i>Loading members…</td></tr>`;
+    existingRow.parentNode.insertBefore(tempTbody.firstElementChild, existingRow.nextSibling);
   }
 
   const stage    = document.getElementById('lvStageFilter')?.value || '';
@@ -3156,7 +3155,14 @@ function _lvRenderDetail(lid, entries){
     existing.outerHTML = html;
   } else {
     const parentRow = document.getElementById(`lvRow_${lid}`);
-    if(parentRow){ parentRow.insertAdjacentHTML('afterend', html); }
+    if(parentRow && parentRow.parentNode){
+      const tempTbody = document.createElement('tbody');
+      tempTbody.innerHTML = html;
+      const newTr = tempTbody.firstElementChild;
+      if(newTr){
+        parentRow.parentNode.insertBefore(newTr, parentRow.nextSibling);
+      }
+    }
   }
 }
 
