@@ -4714,33 +4714,36 @@ def member_income_entries_detail(
     adv_map: dict = {}
     if lead_ids:
         try:
+            int_lead_ids = [int(x) for x in lead_ids if x is not None]
             adv_vci = db.execute(text(
                 "SELECT source_lead_id, level, SUM(COALESCE(commission_amount, 0)) AS total_adv "
                 "FROM vgk_cash_income_entries "
-                "WHERE partner_id = :pid AND source_lead_id = ANY(:lids) "
+                "WHERE source_lead_id = ANY(:lids) "
                 "  AND kind IN ('ADVANCE', 'DVR_ADVANCE') AND status != 'CANCELLED' "
                 "GROUP BY source_lead_id, level"
-            ), {"pid": partner_id, "lids": lead_ids}).fetchall()
+            ), {"lids": int_lead_ids}).fetchall()
             for ar in adv_vci:
-                adv_map[(ar.source_lead_id, ar.level)] = float(ar.total_adv or 0)
+                if ar.source_lead_id is not None and ar.level is not None:
+                    adv_map[(int(ar.source_lead_id), int(ar.level))] = float(ar.total_adv or 0)
 
             adv_vsca = db.execute(text(
                 "SELECT a.lead_id, a.level, SUM(COALESCE(a.advance_amount, 0)) AS total_adv "
                 "FROM vgk_solar_cibil_advances a "
-                "WHERE a.partner_id = :pid AND a.lead_id = ANY(:lids) "
+                "WHERE a.lead_id = ANY(:lids) "
                 "  AND a.status IN ('PENDING', 'RELEASED') "
                 "  AND NOT EXISTS ( "
                 "    SELECT 1 FROM vgk_cash_income_entries vci "
-                "    WHERE vci.partner_id = a.partner_id AND vci.source_lead_id = a.lead_id "
+                "    WHERE vci.source_lead_id = a.lead_id "
                 "      AND vci.level = a.level AND vci.kind = a.kind AND vci.status != 'CANCELLED' "
                 "  ) "
                 "GROUP BY a.lead_id, a.level"
-            ), {"pid": partner_id, "lids": lead_ids}).fetchall()
+            ), {"lids": int_lead_ids}).fetchall()
             for ar in adv_vsca:
-                key = (ar.lead_id, ar.level)
-                adv_map[key] = adv_map.get(key, 0.0) + float(ar.total_adv or 0)
-        except Exception:
-            pass
+                if ar.lead_id is not None and ar.level is not None:
+                    key = (int(ar.lead_id), int(ar.level))
+                    adv_map[key] = adv_map.get(key, 0.0) + float(ar.total_adv or 0)
+        except Exception as _exc:
+            print(f"[ERROR-ADV-MAP] Failed to compute adv_map: {_exc}")
 
     # Fetch commission configs & solar brand incentive configs for accurate potential calculations
     try:
@@ -4859,8 +4862,8 @@ def member_income_entries_detail(
 
         # Prior advance deduction for Final Commission entries
         adv_paid = 0.0
-        if _resolved_kind == 'COMMISSION' and r.source_lead_id and _lvl_int is not None:
-            adv_paid = adv_map.get((r.source_lead_id, _lvl_int), 0.0)
+        if _resolved_kind == 'COMMISSION' and r.source_lead_id is not None and _lvl_int is not None:
+            adv_paid = adv_map.get((int(r.source_lead_id), int(_lvl_int)), 0.0)
         gross_amt = float(r.commission_amount)
         bal_gross = max(0.0, round(gross_amt - adv_paid, 2))
 
