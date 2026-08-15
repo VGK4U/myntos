@@ -313,9 +313,9 @@ def list_vgk_members(
 ):
     from datetime import date, timedelta
     query = db.query(OfficialPartner).filter(OfficialPartner.category == 'VGK_TEAM')
-    if is_active is not None:
+    if isinstance(is_active, bool):
         query = query.filter(OfficialPartner.is_active == is_active)
-    if search:
+    if isinstance(search, str) and search.strip():
         term = f"%{search.strip()}%"
         query = query.filter(or_(
             OfficialPartner.partner_name.ilike(term),
@@ -323,7 +323,7 @@ def list_vgk_members(
             OfficialPartner.whatsapp_number.ilike(term),
             OfficialPartner.partner_code.ilike(term)
         ))
-    if category_id:
+    if isinstance(category_id, str) and category_id.strip():
         if str(category_id).isdigit():
             query = query.filter(OfficialPartner.id.in_(
                 db.query(CRMLead.associated_partner_id).filter(CRMLead.category_id == int(category_id)).subquery()
@@ -336,7 +336,7 @@ def list_vgk_members(
                 ))
             else:
                 query = query.filter(OfficialPartner.id == -1)
-    if referred_by:
+    if isinstance(referred_by, str) and referred_by.strip():
         _ref_term = f"%{referred_by.strip()}%"
         try:
             _ref_matched = db.execute(text(
@@ -350,7 +350,7 @@ def list_vgk_members(
         else:
             query = query.filter(OfficialPartner.parent_partner_id == -1)
     # [DC-VGK-STAFF-REG-001] Filter by registering staff emp_code OR full_name
-    if registered_by_emp_code:
+    if isinstance(registered_by_emp_code, str) and registered_by_emp_code.strip():
         _rbq = registered_by_emp_code.strip()
         try:
             _matched = db.execute(text(
@@ -365,38 +365,41 @@ def list_vgk_members(
             query = query.filter(OfficialPartner.registered_by_emp_code == _rbq.upper())
     # Date range filters on created_at (registration date)
     today = date.today()
-    if reg_period:
-        if reg_period == 'today':
+    if isinstance(reg_period, str) and reg_period.strip():
+        _rp = reg_period.strip()
+        if _rp == 'today':
             reg_from = reg_to = today.isoformat()
-        elif reg_period == 'yesterday':
+        elif _rp == 'yesterday':
             yest = (today - timedelta(days=1)).isoformat()
             reg_from = reg_to = yest
-        elif reg_period == 'week':
+        elif _rp == 'week':
             reg_from = (today - timedelta(days=today.weekday())).isoformat()
             reg_to = today.isoformat()
-        elif reg_period == 'mtd':
+        elif _rp == 'mtd':
             reg_from = today.replace(day=1).isoformat()
             reg_to = today.isoformat()
-    if reg_from:
-        query = query.filter(OfficialPartner.created_at >= datetime.strptime(reg_from, '%Y-%m-%d'))
-    if reg_to:
-        query = query.filter(OfficialPartner.created_at <= datetime.strptime(reg_to + 'T23:59:59', '%Y-%m-%dT%H:%M:%S'))
+    if isinstance(reg_from, str) and reg_from.strip():
+        query = query.filter(OfficialPartner.created_at >= datetime.strptime(reg_from.strip(), '%Y-%m-%d'))
+    if isinstance(reg_to, str) and reg_to.strip():
+        query = query.filter(OfficialPartner.created_at <= datetime.strptime(reg_to.strip() + 'T23:59:59', '%Y-%m-%dT%H:%M:%S'))
     # DC_CP_CARD_001: computed fields that require full-dataset Python sort/filter
     _COMPUTED_SORT_FIELDS = {'downline_count', 'src_revenue', 'leads_total', 'leads_won', 'leads_lost'}
-    _do_python_sort  = sort_by in _COMPUTED_SORT_FIELDS
-    _needs_full_fetch = _do_python_sort or bool(designation_tier)
+    _sb_str = sort_by if isinstance(sort_by, str) else ''
+    _do_python_sort  = _sb_str in _COMPUTED_SORT_FIELDS
+    _des_str = designation_tier if isinstance(designation_tier, str) else ''
+    _needs_full_fetch = _do_python_sort or bool(_des_str.strip())
 
     # Sorting
     _sort_col = OfficialPartner.id
-    if sort_by == 'registered':
+    if _sb_str == 'registered':
         _sort_col = OfficialPartner.created_at
-    elif sort_by == 'last_login':
+    elif _sb_str == 'last_login':
         _sort_col = OfficialPartner.last_login
-    elif sort_by == 'login_count':
+    elif _sb_str == 'login_count':
         _sort_col = OfficialPartner.login_count
-    elif sort_by == 'name':
+    elif _sb_str == 'name':
         _sort_col = OfficialPartner.partner_name
-    elif sort_by == 'code':
+    elif _sb_str == 'code':
         _sort_col = OfficialPartner.partner_code
     elif sort_by == 'registered_by':   # [DC-VGK-STAFF-REG-001]
         _sort_col = OfficialPartner.registered_by_emp_code
@@ -594,8 +597,8 @@ def list_vgk_members(
         items.append(d)
 
     # DC_CP_CARD_001: designation filter (Python-side)
-    if designation_tier:
-        items = [i for i in items if i.get('designation_tier') == designation_tier]
+    if isinstance(designation_tier, str) and designation_tier.strip():
+        items = [i for i in items if i.get('designation_tier') == designation_tier.strip()]
 
     # DC_CP_CARD_001: Python-side sort for computed fields
     if _do_python_sort:
