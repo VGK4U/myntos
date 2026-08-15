@@ -18550,6 +18550,24 @@ finally:
     except Exception:
         pass
 
+# ── DC-VGK-BRAND-LEVEL-001: expand vgk_cash_income_level_check constraint for brand levels 11..15
+_vblc_mk = 'vgk_cash_income_level_check_20260815'
+_vblc_db = SessionLocal()
+try:
+    if _vblc_mk not in _applied_keys:
+        _vblc_db.execute(text("ALTER TABLE vgk_cash_income_entries DROP CONSTRAINT IF EXISTS vgk_cash_income_level_check"))
+        _vblc_db.execute(text("ALTER TABLE vgk_cash_income_entries ADD CONSTRAINT vgk_cash_income_level_check CHECK (level >= 0 AND level <= 20)"))
+        _vblc_db.execute(text("INSERT INTO dc_migrations(key) VALUES(:k) ON CONFLICT(key) DO NOTHING"), {"k": _vblc_mk})
+        _vblc_db.commit()
+        print("[DC-VGK-BRAND-LEVEL-001] ✅ vgk_cash_income_level_check updated to 0..20", flush=True)
+    else:
+        print("[DC-VGK-BRAND-LEVEL-001] ✅ Already applied — skip", flush=True)
+except Exception as _vblc_err:
+    _vblc_db.rollback()
+    print(f"[DC-VGK-BRAND-LEVEL-001] ⚠️ error: {_vblc_err}", flush=True)
+finally:
+    _vblc_db.close()
+
 # ── DC-VGK-BRAND-LEAD-001: solar_brand_id on crm_leads ──────────────────────────────────────────
 _vbl_mk = 'vgk_brand_lead_fk_20260627'
 _vbl_db = SessionLocal()

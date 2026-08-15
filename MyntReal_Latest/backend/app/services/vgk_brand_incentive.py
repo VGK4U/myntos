@@ -45,7 +45,7 @@ TDS_PCT          = Decimal('2')
 # VCI level for brand advances (avoids collision with regular entries at level=0)
 BRAND_ADV_VCI_LEVEL = {1: 7, 2: 8, 5: 9}
 # VCI level for brand commissions (avoids collision with regular commissions)
-BRAND_COMM_VCI_LEVEL = {2: 12, 5: 15}
+BRAND_COMM_VCI_LEVEL = {1: 11, 2: 12, 5: 15}
 
 
 def _get_ist():
