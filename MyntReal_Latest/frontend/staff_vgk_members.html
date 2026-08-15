@@ -2654,39 +2654,29 @@ function _renderMeDetailTable(partnerId){
     return `<span style="background:${bg};color:${c};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">${name}${lvlTag}</span>`;
   };
 
-  const _pendSet = new Set(['DRAFT','PENDING','STAGE1_APPROVED']);
     const totGross        = rows.reduce((s,e)=>s+e.commission_amount,0);
     const totAdvPaid      = rows.reduce((s,e)=>s+(e.advance_paid||0),0);
     const totBalGross     = rows.reduce((s,e)=>{
-      const adv = e.advance_paid || 0;
+      const isC = (e.kind === 'COMMISSION');
+      const adv = isC ? (e.advance_paid || 0) : 0;
       const gross = e.commission_amount || 0;
-      const bal = e.balance_gross !== undefined ? e.balance_gross : Math.max(0, gross - adv);
-      return s + bal;
+      return s + (isC ? (e.balance_gross !== undefined ? e.balance_gross : Math.max(0, gross - adv)) : gross);
     }, 0);
     const totAdmin        = rows.reduce((s,e)=>{
-      const adv = e.advance_paid || 0;
+      const isC = (e.kind === 'COMMISSION');
+      const adv = isC ? (e.advance_paid || 0) : 0;
       const gross = e.commission_amount || 0;
-      const bal = e.balance_gross !== undefined ? e.balance_gross : Math.max(0, gross - adv);
+      const bal = isC ? (e.balance_gross !== undefined ? e.balance_gross : Math.max(0, gross - adv)) : gross;
       return s + Math.round(bal * 0.08);
     }, 0);
     const totTds          = rows.reduce((s,e)=>{
-      const adv = e.advance_paid || 0;
+      const isC = (e.kind === 'COMMISSION');
+      const adv = isC ? (e.advance_paid || 0) : 0;
       const gross = e.commission_amount || 0;
-      const bal = e.balance_gross !== undefined ? e.balance_gross : Math.max(0, gross - adv);
+      const bal = isC ? (e.balance_gross !== undefined ? e.balance_gross : Math.max(0, gross - adv)) : gross;
       return s + Math.round(bal * 0.02);
     }, 0);
     const totNet          = totBalGross - totAdmin - totTds;
-    const totGrossPending = rows.filter(e=>_pendSet.has(e.status)).reduce((s,e)=>{
-      const adv = e.advance_paid || 0;
-      const gross = e.commission_amount || 0;
-      return s + (e.balance_gross !== undefined ? e.balance_gross : Math.max(0, gross - adv));
-    }, 0);
-    const totNetPending   = rows.filter(e=>_pendSet.has(e.status)).reduce((s,e)=>{
-      const adv = e.advance_paid || 0;
-      const gross = e.commission_amount || 0;
-      const bal = e.balance_gross !== undefined ? e.balance_gross : Math.max(0, gross - adv);
-      return s + Math.round(bal * 0.90);
-    }, 0);
     const totalAll = allRows.length;
 
     const TH = (txt, align='left', extra='') =>
@@ -2721,18 +2711,14 @@ function _renderMeDetailTable(partnerId){
           ${TH('Trigger Date')}
           ${TH('Payment Date')}
           ${TH('Entry #')}
-          ${TH('Level / Role')}
+          ${TH('Level / Role','center')}
           ${TH('Customer')}
-          ${TH('Base Value ₹','right')}
-          ${TH('Rate %','right')}
           ${TH('Gross ₹','right')}
           ${TH('Advance Paid ₹','right','color:#d97706')}
           ${TH('Balance Gross ₹','right','color:#2563eb')}
-          ${TH('Admin ₹','right')}
-          ${TH('TDS ₹','right')}
-          ${TH('Net ₹','right')}
-          ${TH('Gross Pending ₹','right','color:#d97706')}
-          ${TH('Net Pending ₹','right','color:#b45309')}
+          ${TH('Admin (8%)','right')}
+          ${TH('TDS (2%)','right')}
+          ${TH('Net (90%)','right')}
           ${TH('Status','center')}
         </tr>
       </thead>
@@ -2743,41 +2729,6 @@ function _renderMeDetailTable(partnerId){
         const lvlLabelText = _lvLvlLabel[e.level] || (e.level ? 'L'+e.level : '—');
         const kindLabelText = _getIncomeTypeLabel(e.kind);
         
-        let calcBase = e.deal_value || e.base_value || e.deal_value_total || e.solar_value || e.confirmed_final_value || 0;
-        let calcPct  = (e.commission_pct && e.commission_pct > 0) ? e.commission_pct : 0;
-
-        if (!calcBase || calcBase <= 0) {
-          if (calcPct > 0 && e.commission_amount > 0) {
-            calcBase = Math.round(e.commission_amount / (calcPct / 100));
-          } else if (e.level === 1 && e.commission_amount > 0) {
-            calcBase = Math.round(e.commission_amount / 0.04);
-          } else if ((e.level === 5 || e.level === 2) && e.commission_amount > 0) {
-            calcBase = Math.round(e.commission_amount / 0.015);
-          } else if (e.level === 6 && e.commission_amount > 0) {
-            calcBase = Math.round(e.commission_amount / 0.035);
-          } else if (e.level === 3 && e.commission_amount > 0) {
-            calcBase = Math.round(e.commission_amount / 0.01);
-          } else if (e.level === 4 && e.commission_amount > 0) {
-            calcBase = Math.round(e.commission_amount / 0.005);
-          }
-        }
-
-        if (!calcPct || calcPct <= 0) {
-          if (calcBase > 0 && e.commission_amount > 0) {
-            calcPct = parseFloat((e.commission_amount / calcBase * 100).toFixed(2));
-          } else if (e.level === 1) {
-            calcPct = 4.00;
-          } else if (e.level === 5 || e.level === 2) {
-            calcPct = 1.50;
-          } else if (e.level === 6) {
-            calcPct = 3.50;
-          } else if (e.level === 3) {
-            calcPct = 1.00;
-          } else if (e.level === 4) {
-            calcPct = 0.50;
-          }
-        }
-
         const isComm   = (e.kind === 'COMMISSION');
         const grossAmt = e.commission_amount || 0;
         const advPaid  = isComm ? (e.advance_paid || 0) : 0;
@@ -2791,8 +2742,6 @@ function _renderMeDetailTable(partnerId){
         const advPaidHtml  = isComm ? (advPaid > 0 ? _meInr(advPaid) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
         const balGrossHtml = isComm ? (balGross > 0 ? _meInr(balGross) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
 
-        const baseText = calcBase > 0 ? _meInr(calcBase) : '—';
-        const rateText = calcPct > 0 ? (calcPct + '%') : '—';
         const isPaidSt = (e.status === 'PAID' || e.status === 'RELEASED' || e.status === 'VERIFIED');
         const resolvedPmtDate = e.payment_date || (isPaidSt ? (e.trigger_date || e.income_date) : null);
         const pmtCellHtml = resolvedPmtDate ? fmtDate(resolvedPmtDate) : '<span style="color:#d1d5db">—</span>';
@@ -2807,31 +2756,25 @@ function _renderMeDetailTable(partnerId){
           <span style="font-size:10px;padding:2px 6px;border-radius:6px;background:#f3f4f6;color:#6b7280;margin-left:3px;font-weight:500">${kindLabelText}</span>
         </td>
         <td style="padding:7px 10px;color:#374151;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${e.client_name||''}">${e.client_name||'<span style="color:#d1d5db">—</span>'}</td>
-        <td style="padding:7px 10px;text-align:right;color:#1e40af;font-weight:600">${baseText}</td>
-        <td style="padding:7px 10px;text-align:right;color:#7c3aed;font-weight:700">${rateText}</td>
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:#374151">${grossAmt>0?_meInr(grossAmt):'—'}</td>
         <td style="padding:7px 10px;text-align:right;color:#d97706;font-weight:600">${advPaidHtml}</td>
         <td style="padding:7px 10px;text-align:right;color:#2563eb;font-weight:700">${balGrossHtml}</td>
         <td style="padding:7px 10px;text-align:right;color:#d97706">${adminVal>0?_meInr(adminVal):'—'}</td>
         <td style="padding:7px 10px;text-align:right;color:#dc2626">${tdsVal>0?_meInr(tdsVal):'—'}</td>
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:#059669">${netVal>0?_meInr(netVal):'—'}</td>
-        <td style="padding:7px 10px;text-align:right;font-weight:700;color:#d97706">${_pendSet.has(e.status)&&baseForDeductions>0?_meInr(baseForDeductions):'<span style="color:#d1d5db">—</span>'}</td>
-        <td style="padding:7px 10px;text-align:right;font-weight:700;color:#b45309">${_pendSet.has(e.status)&&baseForDeductions>0?_meInr(netVal):'<span style="color:#d1d5db">—</span>'}</td>
         <td style="padding:7px 10px;text-align:center"><span style="background:${sc(e.status)}20;color:${sc(e.status)};padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700">${e.status}</span></td>
       </tr>`;}).join('')
-      : '<tr><td colspan="17" style="padding:20px;text-align:center;color:#9ca3af;font-size:12px"><i class="fas fa-search me-1"></i>No entries match the filter.</td></tr>'}
+      : '<tr><td colspan="13" style="padding:20px;text-align:center;color:#9ca3af;font-size:12px"><i class="fas fa-search me-1"></i>No entries match the filter.</td></tr>'}
       </tbody>
       <tfoot>
         <tr style="background:#f0fdf4;font-weight:700;border-top:2px solid #bbf7d0">
-          <td colspan="8" style="padding:8px 10px;color:#374151;font-size:12px">TOTAL (${rows.length} entries)</td>
+          <td colspan="6" style="padding:8px 10px;color:#374151;font-size:12px">TOTAL (${rows.length} entries)</td>
           <td style="padding:8px 10px;text-align:right;color:#374151">${_meInr(totGross)}</td>
           <td style="padding:8px 10px;text-align:right;color:#d97706">${totAdvPaid>0?_meInr(totAdvPaid):'—'}</td>
           <td style="padding:8px 10px;text-align:right;color:#2563eb">${_meInr(totBalGross)}</td>
           <td style="padding:8px 10px;text-align:right;color:#d97706">${_meInr(totAdmin)}</td>
           <td style="padding:8px 10px;text-align:right;color:#dc2626">${_meInr(totTds)}</td>
           <td style="padding:8px 10px;text-align:right;color:#059669">${_meInr(totNet)}</td>
-          <td style="padding:8px 10px;text-align:right;color:#d97706;background:#fffbeb">${totGrossPending>0?_meInr(totGrossPending):'—'}</td>
-          <td style="padding:8px 10px;text-align:right;color:#b45309;background:#fffbeb">${totNetPending>0?_meInr(totNetPending):'—'}</td>
           <td></td>
         </tr>
       </tfoot>
@@ -3258,11 +3201,11 @@ function _lvDetailRowHtml(lid, entries){
       </td>
       <td style="padding:8px 10px;text-align:right;font-weight:600;color:#374151;font-size:11px">${baseText}</td>
       <td style="padding:8px 10px;text-align:center;font-weight:700;color:#7c3aed;font-size:11px">${rateText}</td>
-      <td style="padding:8px 10px;text-align:right;font-weight:700;color:#7c3aed;font-size:12px">${grossAmt>0?_meInr(grossAmt):'—'}</td>
+      <td style="padding:8px 10px;text-align:right;font-weight:700;color:#374151;font-size:12px">${grossAmt>0?_meInr(grossAmt):'—'}</td>
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706;font-weight:600">${advPaidHtml}</td>
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#2563eb;font-weight:700">${balGrossHtml}</td>
-      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#6b7280">${adminVal>0?_meInr(adminVal):'—'}</td>
-      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#6b7280">${tdsVal>0?_meInr(tdsVal):'—'}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706">${adminVal>0?_meInr(adminVal):'—'}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#dc2626">${tdsVal>0?_meInr(tdsVal):'—'}</td>
       <td style="padding:8px 10px;text-align:right;font-weight:700;color:#059669;font-size:12px">${netVal>0?_meInr(netVal):'—'}</td>
       <td style="padding:8px 10px">
         <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${stColor};color:#fff">${stLabel}</span>
@@ -3277,44 +3220,49 @@ function _lvDetailRowHtml(lid, entries){
     <td style="padding:6px 10px">Entry #</td>
     <td style="padding:6px 10px;text-align:center">Level / Role</td>
     <td style="padding:6px 10px">Member</td>
-    <td style="padding:6px 10px;text-align:right">Base Value</td>
-    <td style="padding:6px 10px;text-align:center">Rate %</td>
-    <td style="padding:6px 10px;text-align:right">Gross</td>
-    <td style="padding:6px 10px;text-align:right;color:#d97706">Advance Paid</td>
-    <td style="padding:6px 10px;text-align:right;color:#2563eb">Balance Gross</td>
-    <td style="padding:6px 10px;text-align:right">Admin</td>
-    <td style="padding:6px 10px;text-align:right">TDS</td>
-    <td style="padding:6px 10px;text-align:right">Net</td>
+    <td style="padding:6px 10px;text-align:right">Gross ₹</td>
+    <td style="padding:6px 10px;text-align:right;color:#d97706">Advance Paid ₹</td>
+    <td style="padding:6px 10px;text-align:right;color:#2563eb">Balance Gross ₹</td>
+    <td style="padding:6px 10px;text-align:right">Admin (8%)</td>
+    <td style="padding:6px 10px;text-align:right">TDS (2%)</td>
+    <td style="padding:6px 10px;text-align:right">Net (90%)</td>
     <td style="padding:6px 10px">Status</td>
   </tr>`;
 
   const totGross    = filtered.reduce((s,e)=>s+(e.commission_amount||0),0);
   const totAdvPaid  = filtered.reduce((s,e)=>s+(e.advance_paid||0),0);
   const totBalGross = filtered.reduce((s,e)=>{
-    const adv = e.advance_paid || 0;
+    const isC = ((e.kind||'COMMISSION').toUpperCase()==='COMMISSION');
+    const adv = isC ? (e.advance_paid || 0) : 0;
     const gross = e.commission_amount || 0;
-    return s + (e.balance_gross !== undefined ? e.balance_gross : Math.max(0, gross - adv));
+    return s + (isC ? (e.balance_gross !== undefined ? e.balance_gross : Math.max(0, gross - adv)) : gross);
   }, 0);
-  const totNet      = filtered.reduce((s,e)=>{
-    const adv = e.advance_paid || 0;
+  const totAdmin    = filtered.reduce((s,e)=>{
+    const isC = ((e.kind||'COMMISSION').toUpperCase()==='COMMISSION');
+    const adv = isC ? (e.advance_paid || 0) : 0;
     const gross = e.commission_amount || 0;
-    const bal = e.balance_gross !== undefined ? e.balance_gross : Math.max(0, gross - adv);
-    const adm = Math.round(bal * 0.08);
-    const tds = Math.round(bal * 0.02);
-    return s + Math.max(0, bal - adm - tds);
+    const bal = isC ? (e.balance_gross !== undefined ? e.balance_gross : Math.max(0, gross - adv)) : gross;
+    return s + Math.round(bal * 0.08);
   }, 0);
+  const totTds      = filtered.reduce((s,e)=>{
+    const isC = ((e.kind||'COMMISSION').toUpperCase()==='COMMISSION');
+    const adv = isC ? (e.advance_paid || 0) : 0;
+    const gross = e.commission_amount || 0;
+    const bal = isC ? (e.balance_gross !== undefined ? e.balance_gross : Math.max(0, gross - adv)) : gross;
+    return s + Math.round(bal * 0.02);
+  }, 0);
+  const totNet      = totBalGross - totAdmin - totTds;
 
-  return `<tr id="lvDetail_${lid}"><td colspan="17" style="padding:0;background:#f9fafb">
+  return `<tr id="lvDetail_${lid}"><td colspan="13" style="padding:0;background:#f9fafb">
     <table style="width:100%;border-collapse:collapse;font-size:12px">
       ${subHead}${rows}
       <tr style="background:#f0f0fb;font-weight:700">
         <td colspan="6" style="padding:7px 10px;font-size:11px;color:#7c3aed">${filtered.length} entr${filtered.length===1?'y':'ies'}</td>
-        <td style="padding:7px 10px;text-align:right;color:#374151"></td>
-        <td></td>
         <td style="padding:7px 10px;text-align:right;color:#374151">${_meInr(totGross)}</td>
         <td style="padding:7px 10px;text-align:right;color:#d97706">${totAdvPaid>0?_meInr(totAdvPaid):'—'}</td>
         <td style="padding:7px 10px;text-align:right;color:#2563eb">${_meInr(totBalGross)}</td>
-        <td colspan="2"></td>
+        <td style="padding:7px 10px;text-align:right;color:#d97706">${_meInr(totAdmin)}</td>
+        <td style="padding:7px 10px;text-align:right;color:#dc2626">${_meInr(totTds)}</td>
         <td style="padding:7px 10px;text-align:right;color:#059669">${_meInr(totNet)}</td>
         <td></td>
       </tr>
