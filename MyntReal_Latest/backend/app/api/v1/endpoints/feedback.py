@@ -1958,38 +1958,36 @@ async def get_public_announcement(
     from sqlalchemy import func
     from app.models.feedback import AnnouncementRating
     
-    # Query with user details and ratings
-    result = db.query(
-        FeedbackSubmission,
-        User.name.label('user_name'),
-        User.city.label('city'),
-        func.coalesce(func.avg(AnnouncementRating.rating), 0).label('average_rating'),
-        func.count(AnnouncementRating.id).label('total_ratings')
-    ).join(
-        User, FeedbackSubmission.user_id == User.id
-    ).outerjoin(
-        AnnouncementRating, FeedbackSubmission.id == AnnouncementRating.submission_id
-    ).filter(
+    # Query FeedbackSubmission directly to avoid PostgreSQL GROUP BY column mismatch errors
+    ann = db.query(FeedbackSubmission).filter(
         FeedbackSubmission.id == announcement_id,
         or_(
             FeedbackSubmission.status == SubmissionStatus.APPROVED,
             FeedbackSubmission.status == SubmissionStatus.UNDER_REVIEW
         ),
         FeedbackSubmission.is_visible == True  # Only show visible announcements publicly
-    ).group_by(
-        FeedbackSubmission.id,
-        User.name,
-        User.city
     ).first()
     
-    if not result:
+    if not ann:
         raise HTTPException(status_code=404, detail="Announcement not found or not visible")
     
-    ann = result[0]
-    user_name_value = result[1]
-    city_value = result[2]
-    avg_rating = float(result[3]) if result[3] else 0.0
-    total_ratings_value = int(result[4]) if result[4] else 0
+    user_name_value = "System User"
+    city_value = None
+    if ann.user_id:
+        u = db.query(User).filter(User.id == ann.user_id).first()
+        if u:
+            user_name_value = u.name
+            city_value = u.city
+
+    rating_stats = db.query(
+        func.coalesce(func.avg(AnnouncementRating.rating), 0).label('avg'),
+        func.count(AnnouncementRating.id).label('cnt')
+    ).filter(
+        AnnouncementRating.submission_id == announcement_id
+    ).first()
+
+    avg_rating = float(rating_stats[0]) if rating_stats and rating_stats[0] else 0.0
+    total_ratings_value = int(rating_stats[1]) if rating_stats and rating_stats[1] else 0
     
     # Increment counters if tracking
     if track_share:
