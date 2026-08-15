@@ -2722,27 +2722,31 @@ function _renderMeDetailTable(partnerId){
           if (calcPct > 0 && e.commission_amount > 0) {
             calcBase = Math.round(e.commission_amount / (calcPct / 100));
           } else if (e.level === 1 && e.commission_amount > 0) {
-            calcBase = Math.round(e.commission_amount / 0.0421);
+            calcBase = Math.round(e.commission_amount / 0.04);
           } else if ((e.level === 5 || e.level === 2) && e.commission_amount > 0) {
             calcBase = Math.round(e.commission_amount / 0.015);
           } else if (e.level === 6 && e.commission_amount > 0) {
             calcBase = Math.round(e.commission_amount / 0.035);
           } else if (e.level === 3 && e.commission_amount > 0) {
             calcBase = Math.round(e.commission_amount / 0.01);
+          } else if (e.level === 4 && e.commission_amount > 0) {
+            calcBase = Math.round(e.commission_amount / 0.005);
           }
         }
 
         if (!calcPct || calcPct <= 0) {
           if (calcBase > 0 && e.commission_amount > 0) {
-            calcPct = (e.commission_amount / calcBase * 100).toFixed(2);
+            calcPct = parseFloat((e.commission_amount / calcBase * 100).toFixed(2));
           } else if (e.level === 1) {
-            calcPct = 4.21;
+            calcPct = 4.00;
           } else if (e.level === 5 || e.level === 2) {
             calcPct = 1.50;
           } else if (e.level === 6) {
             calcPct = 3.50;
           } else if (e.level === 3) {
             calcPct = 1.00;
+          } else if (e.level === 4) {
+            calcPct = 0.50;
           }
         }
 
@@ -3160,27 +3164,31 @@ function _lvDetailRowHtml(lid, entries){
       if (calcPct > 0 && e.commission_amount > 0) {
         calcBase = Math.round(e.commission_amount / (calcPct / 100));
       } else if (lvl === 1 && e.commission_amount > 0) {
-        calcBase = Math.round(e.commission_amount / 0.0421);
+        calcBase = Math.round(e.commission_amount / 0.04);
       } else if ((lvl === 5 || lvl === 2) && e.commission_amount > 0) {
         calcBase = Math.round(e.commission_amount / 0.015);
       } else if (lvl === 6 && e.commission_amount > 0) {
         calcBase = Math.round(e.commission_amount / 0.035);
       } else if (lvl === 3 && e.commission_amount > 0) {
         calcBase = Math.round(e.commission_amount / 0.01);
+      } else if (lvl === 4 && e.commission_amount > 0) {
+        calcBase = Math.round(e.commission_amount / 0.005);
       }
     }
 
     if (!calcPct || calcPct <= 0) {
       if (calcBase > 0 && e.commission_amount > 0) {
-        calcPct = (e.commission_amount / calcBase * 100).toFixed(2);
+        calcPct = parseFloat((e.commission_amount / calcBase * 100).toFixed(2));
       } else if (lvl === 1) {
-        calcPct = 4.21;
+        calcPct = 4.00;
       } else if (lvl === 5 || lvl === 2) {
         calcPct = 1.50;
       } else if (lvl === 6) {
         calcPct = 3.50;
       } else if (lvl === 3) {
         calcPct = 1.00;
+      } else if (lvl === 4) {
+        calcPct = 0.50;
       }
     }
 
