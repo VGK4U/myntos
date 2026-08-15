@@ -180,12 +180,16 @@ th[data-sk]:hover{background:#eef2f7!important}
       <button class="tab-btn" id="tab_etc_batchwise" style="display:none" onclick="switchTab('etc_batchwise')"><i class="fas fa-graduation-cap me-1"></i>ETC Students Batch Wise</button>
     </div>
 
-    <!-- Quick date filters -->
+    <!-- Unified Timeframe Bar -->
     <div class="quick-filter-bar">
-      <span class="qf-label"><i class="fas fa-bolt me-1"></i>Quick Period</span>
+      <span class="qf-label"><i class="fas fa-filter me-1"></i>TIMEFRAME:</span>
       <button class="qf-btn active" id="qf_overall" onclick="applyQuickFilter('overall')">Overall</button>
-      <button class="qf-btn" id="qf_mtd" onclick="applyQuickFilter('mtd')">MTD</button>
-      <button class="qf-btn" id="qf_ytd" onclick="applyQuickFilter('ytd')">YTD <span style="font-size:9px;opacity:.7">(Apr 1)</span></button>
+      <button class="qf-btn" id="qf_today" onclick="applyQuickFilter('today')">Today</button>
+      <button class="qf-btn" id="qf_this_week" onclick="applyQuickFilter('this_week')">This Week</button>
+      <button class="qf-btn" id="qf_last_week" onclick="applyQuickFilter('last_week')">Last Week</button>
+      <button class="qf-btn" id="qf_this_month" onclick="applyQuickFilter('this_month')">This Month</button>
+      <button class="qf-btn" id="qf_last_month" onclick="applyQuickFilter('last_month')">Last Month</button>
+      <button class="qf-btn" id="qf_this_fy" onclick="applyQuickFilter('this_fy')">This FY</button>
       <div class="qf-divider"></div>
       <span style="font-size:10px;color:#9ca3af" id="qfPeriodLabel">All time</span>
     </div>
@@ -442,19 +446,6 @@ th[data-sk]:hover{background:#eef2f7!important}
           </div>
         </div>
 
-        <!-- Quick Period Filter Bar for Employee Performance -->
-        <div class="quick-filter-bar mb-3" style="background:#f8fafc;padding:6px 10px;border-radius:6px;border:1px solid #e2e8f0;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <span class="qf-label" style="font-weight:700;font-size:11px;color:#334155"><i class="fas fa-filter me-1" style="color:#2563eb"></i>Timeframe:</span>
-          <button class="qf-btn active" id="epf_overall" onclick="applyEmpPerfPreset('overall')">Overall</button>
-          <button class="qf-btn" id="epf_today" onclick="applyEmpPerfPreset('today')">Today</button>
-          <button class="qf-btn" id="epf_this_week" onclick="applyEmpPerfPreset('this_week')">This Week</button>
-          <button class="qf-btn" id="epf_last_week" onclick="applyEmpPerfPreset('last_week')">Last Week</button>
-          <button class="qf-btn" id="epf_this_month" onclick="applyEmpPerfPreset('this_month')">This Month</button>
-          <button class="qf-btn" id="epf_last_month" onclick="applyEmpPerfPreset('last_month')">Last Month</button>
-          <button class="qf-btn" id="epf_this_fy" onclick="applyEmpPerfPreset('this_fy')">This FY</button>
-          <span style="font-size:10.5px;color:#64748b;margin-left:auto" id="epfPresetLabel">All time frame</span>
-        </div>
-
         <!-- Section 1: Monthly Performance (Last 12 Months) -->
         <div class="mb-4">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -638,25 +629,63 @@ function getYtdStart(){
 let _activeQF='overall';
 function applyQuickFilter(type){
   _activeQF=type;
-  document.querySelectorAll('.qf-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('qf_'+type).classList.add('active');
+  document.querySelectorAll('.quick-filter-bar .qf-btn').forEach(b=>b.classList.remove('active'));
+  const btn = document.getElementById('qf_'+type);
+  if(btn) btn.classList.add('active');
+
   const today=new Date();
   const todayStr=fmtDateISO(today);
   const fromEl=document.getElementById('dashFrom');
   const toEl=document.getElementById('dashTo');
   const lbl=document.getElementById('qfPeriodLabel');
+
   if(type==='overall'){
-    fromEl.value=''; toEl.value='';
-    lbl.textContent='All time';
-  } else if(type==='mtd'){
+    if(fromEl) fromEl.value=''; 
+    if(toEl) toEl.value='';
+    if(lbl) lbl.textContent='All time';
+  } else if(type==='today'){
+    if(fromEl) fromEl.value=todayStr; 
+    if(toEl) toEl.value=todayStr;
+    if(lbl) lbl.textContent=`Today (${today.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})})`;
+  } else if(type==='this_week'){
+    const day = today.getDay();
+    const diffToMon = today.getDate() - day + (day === 0 ? -6 : 1);
+    const mon = new Date(today.setDate(diffToMon));
+    const now = new Date();
+    if(fromEl) fromEl.value=fmtDateISO(mon); 
+    if(toEl) toEl.value=fmtDateISO(now);
+    if(lbl) lbl.textContent=`This Week (${mon.toLocaleDateString('en-IN',{day:'numeric',month:'short'})} – ${now.toLocaleDateString('en-IN',{day:'numeric',month:'short'})})`;
+  } else if(type==='last_week'){
+    const now = new Date();
+    const day = now.getDay();
+    const diffToMon = now.getDate() - day + (day === 0 ? -6 : 1) - 7;
+    const mon = new Date(now.setDate(diffToMon));
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate() + 6);
+    if(fromEl) fromEl.value=fmtDateISO(mon); 
+    if(toEl) toEl.value=fmtDateISO(sun);
+    if(lbl) lbl.textContent=`Last Week (${mon.toLocaleDateString('en-IN',{day:'numeric',month:'short'})} – ${sun.toLocaleDateString('en-IN',{day:'numeric',month:'short'})})`;
+  } else if(type==='this_month'){
     const s=getMtdStart();
-    fromEl.value=fmtDateISO(s); toEl.value=todayStr;
-    lbl.textContent=`${s.toLocaleDateString('en-IN',{day:'numeric',month:'short'})} – ${today.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}`;
-  } else if(type==='ytd'){
+    const now=new Date();
+    if(fromEl) fromEl.value=fmtDateISO(s); 
+    if(toEl) toEl.value=fmtDateISO(now);
+    if(lbl) lbl.textContent=`This Month (${s.toLocaleDateString('en-IN',{day:'numeric',month:'short'})} – ${now.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})})`;
+  } else if(type==='last_month'){
+    const now = new Date();
+    const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    if(fromEl) fromEl.value=fmtDateISO(firstDayLastMonth); 
+    if(toEl) toEl.value=fmtDateISO(lastDayLastMonth);
+    if(lbl) lbl.textContent=`Last Month (${firstDayLastMonth.toLocaleDateString('en-IN',{day:'numeric',month:'short'})} – ${lastDayLastMonth.toLocaleDateString('en-IN',{day:'numeric',month:'short'})})`;
+  } else if(type==='this_fy'){
     const s=getYtdStart();
-    fromEl.value=fmtDateISO(s); toEl.value=todayStr;
-    lbl.textContent=`Apr 1, ${s.getFullYear()} – ${today.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})} (FY ${s.getFullYear()}-${String(s.getFullYear()+1).slice(2)})`;
+    const now=new Date();
+    if(fromEl) fromEl.value=fmtDateISO(s); 
+    if(toEl) toEl.value=fmtDateISO(now);
+    if(lbl) lbl.textContent=`This FY (Apr 1, ${s.getFullYear()} – ${now.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})})`;
   }
+
   loadDashboard();
 }
 
