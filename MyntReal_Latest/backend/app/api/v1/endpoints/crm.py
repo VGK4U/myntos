@@ -5732,6 +5732,163 @@ def master_leads(
     }
 
 
+@router.get("/employee-performance-dashboard")
+def get_employee_performance_dashboard(
+    department_id: Optional[int] = Query(None),
+    search: Optional[str] = Query(None),
+    created_from: Optional[str] = Query(None),
+    created_to: Optional[str] = Query(None),
+    company_id_filter: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Employee-Wise Performance Dashboard Endpoint:
+    Returns 2 datasets:
+      1. monthly: Breakdown by Month (Last 12 Months) per Department & Employee
+      2. weekly: Breakdown by Week (Last 12 Weeks) per Department & Employee
+    Columns returned per row:
+      period_key, department_name, emp_code, employee_name, self_leads, overall_new_leads,
+      overall_won, overall_rev, solar_won, solar_rev, etc_won, etc_rev,
+      b2b_won, b2b_rev, b2c_won, b2c_rev, insurance_won, insurance_rev,
+      service_tickets_count, service_rev, spares_rev, others_won, others_rev
+    """
+    from sqlalchemy import text
+
+    search_query = search.strip().lower() if isinstance(search, str) and search.strip() else None
+    dept_id_filter = department_id if isinstance(department_id, int) else None
+
+    def _get_dataset(period_type='monthly'):
+        date_fmt = 'YYYY-MM' if period_type == 'monthly' else 'IYYY-"W"IW'
+        interval_val = '12 months' if period_type == 'monthly' else '12 weeks'
+        
+        # Lead performance aggregation
+        lead_sql = f"""
+            WITH lead_data AS (
+                SELECT 
+                    TO_CHAR(l.created_at, '{date_fmt}') as period_key,
+                    COALESCE(d.name, 'General') as department_name,
+                    COALESCE(s.emp_code, 'UNASSIGNED') as emp_code,
+                    COALESCE(s.full_name, 'Unassigned Staff') as employee_name,
+                    CASE 
+                        WHEN CAST(l.created_by_id AS TEXT) = s.emp_code OR CAST(l.primary_owner_id AS TEXT) = s.emp_code THEN 1 
+                        ELSE 0 
+                    END as is_self_lead,
+                    l.id as lead_id,
+                    l.status,
+                    COALESCE(l.deal_value_total, 0) as deal_val,
+                    LOWER(COALESCE(c.name, '')) as cat_name
+                FROM crm_leads l
+                LEFT JOIN staff_employees s ON (
+                    CAST(l.handler_id AS TEXT) = s.emp_code OR CAST(l.handler_id AS TEXT) = CAST(s.id AS TEXT) 
+                    OR CAST(l.field_staff_id AS TEXT) = s.emp_code OR CAST(l.telecaller_id AS TEXT) = s.emp_code 
+                    OR CAST(l.created_by_id AS TEXT) = s.emp_code
+                )
+                LEFT JOIN staff_departments d ON s.department_id = d.id
+                LEFT JOIN signup_categories c ON l.category_id = c.id
+                WHERE l.created_at >= NOW() - INTERVAL '{interval_val}'
+                GROUP BY l.id, l.created_at, d.name, s.emp_code, s.full_name, s.id, c.name
+            )
+            SELECT 
+                period_key,
+                department_name,
+                emp_code,
+                employee_name,
+                SUM(is_self_lead) as self_leads,
+                COUNT(lead_id) as overall_new_leads,
+                COUNT(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') THEN 1 END) as overall_won,
+                COALESCE(SUM(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') THEN deal_val ELSE 0 END), 0) as overall_rev,
+                COUNT(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%solar%' THEN 1 END) as solar_won,
+                COALESCE(SUM(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%solar%' THEN deal_val ELSE 0 END), 0) as solar_rev,
+                COUNT(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%etc%' THEN 1 END) as etc_won,
+                COALESCE(SUM(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%etc%' THEN deal_val ELSE 0 END), 0) as etc_rev,
+                COUNT(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%b2b%' THEN 1 END) as b2b_won,
+                COALESCE(SUM(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%b2b%' THEN deal_val ELSE 0 END), 0) as b2b_rev,
+                COUNT(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%b2c%' THEN 1 END) as b2c_won,
+                COALESCE(SUM(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%b2c%' THEN deal_val ELSE 0 END), 0) as b2c_rev,
+                COUNT(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%insurance%' THEN 1 END) as insurance_won,
+                COALESCE(SUM(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%insurance%' THEN deal_val ELSE 0 END), 0) as insurance_rev,
+                COUNT(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name NOT LIKE '%solar%' AND cat_name NOT LIKE '%etc%' AND cat_name NOT LIKE '%b2b%' AND cat_name NOT LIKE '%b2c%' AND cat_name NOT LIKE '%insurance%' THEN 1 END) as others_won,
+                COALESCE(SUM(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name NOT LIKE '%solar%' AND cat_name NOT LIKE '%etc%' AND cat_name NOT LIKE '%b2b%' AND cat_name NOT LIKE '%b2c%' AND cat_name NOT LIKE '%insurance%' THEN deal_val ELSE 0 END), 0) as others_rev
+            FROM lead_data
+            GROUP BY period_key, department_name, emp_code, employee_name
+            ORDER BY period_key DESC, department_name, employee_name
+        """
+        lead_rows = db.execute(text(lead_sql)).fetchall()
+
+        # Service & spares aggregation
+        st_sql = f"""
+            SELECT 
+                TO_CHAR(t.created_date, '{date_fmt}') as period_key,
+                COALESCE(s.emp_code, 'UNASSIGNED') as emp_code,
+                COUNT(DISTINCT t.id) as ticket_count,
+                COALESCE(SUM(stx.amount), 0) as spares_rev
+            FROM service_ticket t
+            LEFT JOIN staff_employees s ON (t.service_manager_id = s.id OR t.service_technician_id = s.id)
+            LEFT JOIN service_ticket_spare_transactions stx ON stx.ticket_id = t.id
+            WHERE t.created_date >= NOW() - INTERVAL '{interval_val}'
+            GROUP BY TO_CHAR(t.created_date, '{date_fmt}'), s.emp_code
+        """
+        st_rows = db.execute(text(st_sql)).fetchall()
+        st_map = {}
+        for r in st_rows:
+            key = f"{r[0]}_{r[1]}"
+            st_map[key] = {
+                'tickets': int(r[2] or 0),
+                'service_rev': 0.0,
+                'spares_rev': float(r[3] or 0.0)
+            }
+
+        rows = []
+        for r in lead_rows:
+            p_key = r[0]
+            e_code = r[2]
+            st_info = st_map.get(f"{p_key}_{e_code}", {'tickets': 0, 'service_rev': 0.0, 'spares_rev': 0.0})
+
+            # Filters
+            if search_query:
+                if search_query not in (r[3] or '').lower() and search_query not in (r[2] or '').lower():
+                    continue
+
+            rows.append({
+                'period_key': p_key,
+                'department_name': r[1],
+                'emp_code': r[2],
+                'employee_name': r[3],
+                'self_leads': int(r[4] or 0),
+                'overall_new_leads': int(r[5] or 0),
+                'overall_won': int(r[6] or 0),
+                'overall_rev': float(r[7] or 0.0),
+                'solar_won': int(r[8] or 0),
+                'solar_rev': float(r[9] or 0.0),
+                'etc_won': int(r[10] or 0),
+                'etc_rev': float(r[11] or 0.0),
+                'b2b_won': int(r[12] or 0),
+                'b2b_rev': float(r[13] or 0.0),
+                'b2c_won': int(r[14] or 0),
+                'b2c_rev': float(r[15] or 0.0),
+                'insurance_won': int(r[16] or 0),
+                'insurance_rev': float(r[17] or 0.0),
+                'service_tickets_count': st_info['tickets'],
+                'service_rev': st_info['service_rev'],
+                'spares_rev': st_info['spares_rev'],
+                'others_won': int(r[18] or 0),
+                'others_rev': float(r[19] or 0.0),
+            })
+        return rows
+
+    # Fetch departments for filter dropdown
+    dept_rows = db.execute(text("SELECT id, name FROM staff_departments ORDER BY name")).fetchall()
+    departments = [{'id': d[0], 'name': d[1]} for d in dept_rows]
+
+    return {
+        'success': True,
+        'departments': departments,
+        'monthly': _get_dataset('monthly'),
+        'weekly': _get_dataset('weekly')
+    }
+
+
 @router.get("/lead-analytics")
 def lead_analytics(
     category: Optional[str] = Query(None),

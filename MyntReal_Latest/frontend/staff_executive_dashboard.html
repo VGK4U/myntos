@@ -176,6 +176,7 @@ th[data-sk]:hover{background:#eef2f7!important}
     <div class="tab-bar">
       <button class="tab-btn active" id="tab_overview" onclick="switchTab('overview')"><i class="fas fa-chart-bar me-1"></i>Overview</button>
       <button class="tab-btn" id="tab_trends" onclick="switchTab('trends')"><i class="fas fa-chart-line me-1"></i>Monthly &amp; Weekly Trends</button>
+      <button class="tab-btn" id="tab_emp_perf" onclick="switchTab('emp_perf')"><i class="fas fa-users-cog me-1"></i>Employee Performance</button>
       <button class="tab-btn" id="tab_etc_batchwise" style="display:none" onclick="switchTab('etc_batchwise')"><i class="fas fa-graduation-cap me-1"></i>ETC Students Batch Wise</button>
     </div>
 
@@ -417,6 +418,60 @@ th[data-sk]:hover{background:#eef2f7!important}
       </div>
     </div>
 
+    <!-- Employee Wise Performance Tab -->
+    <div class="tab-pane" id="pane_emp_perf">
+      <div class="dash-card mb-3" style="padding:14px 18px;background:#ffffff">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px">
+          <div>
+            <h5 style="font-size:16px;font-weight:700;color:#1e293b;margin:0;display:flex;align-items:center;gap:8px">
+              <i class="fas fa-users-cog" style="color:#2563eb"></i> Employee Wise Performance Dashboard
+            </h5>
+            <p style="font-size:11px;color:#64748b;margin:2px 0 0">Performance analytics across departments, sales categories, service tickets &amp; spare parts revenue</p>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div class="input-group input-group-sm" style="width:200px">
+              <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+              <input type="text" id="empPerfSearch" class="form-control" placeholder="Search employee name or code..." onkeyup="filterEmpPerfTables()">
+            </div>
+            <select class="form-select form-select-sm" id="empPerfDeptFilter" style="width:160px" onchange="filterEmpPerfTables()">
+              <option value="">All Departments</option>
+            </select>
+            <button class="btn btn-sm btn-outline-primary" onclick="loadEmployeePerformance()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+            <button class="btn btn-sm btn-success text-white" onclick="exportEmpPerfCsv('monthly')"><i class="fas fa-file-excel me-1"></i>Export Monthly CSV</button>
+            <button class="btn btn-sm btn-info text-white" onclick="exportEmpPerfCsv('weekly')"><i class="fas fa-file-excel me-1"></i>Export Weekly CSV</button>
+          </div>
+        </div>
+
+        <!-- Section 1: Monthly Performance (Last 12 Months) -->
+        <div class="mb-4">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <h6 style="font-size:13px;font-weight:700;color:#0f172a;margin:0;display:flex;align-items:center;gap:6px">
+              <span class="badge bg-primary" style="font-size:10px">MONTHLY</span> Last 12 Months Employee Performance
+            </h6>
+            <span id="empPerfMonthlyCount" style="font-size:11px;color:#64748b"></span>
+          </div>
+          <div class="handler-table-wrap" style="max-height:500px;background:white" id="empPerfMonthlyWrap">
+            <div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading Monthly Employee Performance…</div>
+          </div>
+        </div>
+
+        <hr style="border-top:1px dashed #e2e8f0;margin:20px 0">
+
+        <!-- Section 2: Weekly Performance (Last 12 Weeks) -->
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <h6 style="font-size:13px;font-weight:700;color:#0f172a;margin:0;display:flex;align-items:center;gap:6px">
+              <span class="badge bg-info text-dark" style="font-size:10px">WEEKLY</span> Last 12 Weeks Employee Performance
+            </h6>
+            <span id="empPerfWeeklyCount" style="font-size:11px;color:#64748b"></span>
+          </div>
+          <div class="handler-table-wrap" style="max-height:500px;background:white" id="empPerfWeeklyWrap">
+            <div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading Weekly Employee Performance…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Ground Source Tab (DC-EXEC-GS-001: same endpoint + same format as Category Lead Master Ground Source Wise) -->
     <div class="tab-pane" id="pane_groundsource">
       <div class="dash-card">
@@ -651,6 +706,240 @@ function switchTab(name){
     const f=document.getElementById('iframeMemberView');
     if(f && f.src==='about:blank') f.src='/staff/vgk/members?embed=1&autotab=incomeDash';
   }
+  if(name==='emp_perf' && !_empPerfData) loadEmployeePerformance();
+}
+
+/* ── EMPLOYEE WISE PERFORMANCE DASHBOARD JS ────────────────────────────────── */
+let _empPerfData = null;
+let _empPerfSort = {
+  monthly: { col: 'period_key', dir: 'desc' },
+  weekly: { col: 'period_key', dir: 'desc' }
+};
+
+async function loadEmployeePerformance() {
+  const mWrap = document.getElementById('empPerfMonthlyWrap');
+  const wWrap = document.getElementById('empPerfWeeklyWrap');
+  if (mWrap) mWrap.innerHTML = '<div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading Monthly Employee Performance…</div>';
+  if (wWrap) wWrap.innerHTML = '<div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading Weekly Employee Performance…</div>';
+
+  try {
+    const q = (document.getElementById('empPerfSearch')?.value || '').trim();
+    const deptId = document.getElementById('empPerfDeptFilter')?.value || '';
+    let url = '/api/v1/crm/employee-performance-dashboard?';
+    if (q) url += `search=${encodeURIComponent(q)}&`;
+    if (deptId) url += `department_id=${encodeURIComponent(deptId)}&`;
+
+    const resp = await staffFetch(url);
+    if (!resp.ok) throw new Error('Failed to fetch employee performance data');
+    const res = await resp.json();
+    _empPerfData = res;
+
+    // Populate department dropdown if empty
+    const deptSel = document.getElementById('empPerfDeptFilter');
+    if (deptSel && deptSel.options.length <= 1 && res.departments) {
+      deptSel.innerHTML = '<option value="">All Departments</option>' + 
+        res.departments.map(d => `<option value="${d.id}">${esc(d.name)}</option>`).join('');
+      if (deptId) deptSel.value = deptId;
+    }
+
+    renderEmployeePerformanceTables();
+  } catch (err) {
+    console.error('Error loading employee performance:', err);
+    if (mWrap) mWrap.innerHTML = `<div class="p-3 text-danger"><i class="fas fa-exclamation-triangle me-1"></i> ${esc(err.message || 'Error loading monthly performance')}</div>`;
+    if (wWrap) wWrap.innerHTML = `<div class="p-3 text-danger"><i class="fas fa-exclamation-triangle me-1"></i> ${esc(err.message || 'Error loading weekly performance')}</div>`;
+  }
+}
+
+function filterEmpPerfTables() {
+  if (!_empPerfData) {
+    loadEmployeePerformance();
+    return;
+  }
+  renderEmployeePerformanceTables();
+}
+
+function sortEmpPerfTable(section, colKey) {
+  const current = _empPerfSort[section];
+  if (current.col === colKey) {
+    current.dir = current.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    current.col = colKey;
+    current.dir = 'desc';
+  }
+  renderEmployeePerformanceTables();
+}
+
+function renderEmployeePerformanceTables() {
+  if (!_empPerfData) return;
+
+  const searchVal = (document.getElementById('empPerfSearch')?.value || '').trim().toLowerCase();
+  const deptVal = (document.getElementById('empPerfDeptFilter')?.value || '').trim();
+
+  ['monthly', 'weekly'].forEach(section => {
+    const wrap = document.getElementById(section === 'monthly' ? 'empPerfMonthlyWrap' : 'empPerfWeeklyWrap');
+    const countLabel = document.getElementById(section === 'monthly' ? 'empPerfMonthlyCount' : 'empPerfWeeklyCount');
+    if (!wrap) return;
+
+    let rows = (_empPerfData[section] || []).slice();
+
+    // Local filters
+    if (searchVal) {
+      rows = rows.filter(r => 
+        (r.employee_name || '').toLowerCase().includes(searchVal) || 
+        (r.emp_code || '').toLowerCase().includes(searchVal)
+      );
+    }
+    if (deptVal) {
+      const selectedDeptObj = (_empPerfData.departments || []).find(d => String(d.id) === String(deptVal));
+      const targetDeptName = selectedDeptObj ? selectedDeptObj.name.toLowerCase() : deptVal.toLowerCase();
+      rows = rows.filter(r => (r.department_name || '').toLowerCase().includes(targetDeptName));
+    }
+
+    // Sort
+    const sortInfo = _empPerfSort[section];
+    const col = sortInfo.col;
+    const mult = sortInfo.dir === 'asc' ? 1 : -1;
+    rows.sort((a, b) => {
+      let va = a[col], vb = b[col];
+      if (typeof va === 'string') return mult * va.localeCompare(vb || '');
+      return mult * ((va || 0) - (vb || 0));
+    });
+
+    if (countLabel) countLabel.textContent = `${rows.length} records found`;
+
+    if (!rows.length) {
+      wrap.innerHTML = '<div class="p-4 text-center text-muted"><i class="fas fa-info-circle me-1"></i> No performance data available for this filter selection.</div>';
+      return;
+    }
+
+    // Render HTML table
+    const periodHeaderLabel = section === 'monthly' ? 'Month' : 'Week';
+    
+    let html = `
+      <table class="table table-sm table-bordered table-hover mb-0" style="font-size:11.5px;min-width:1400px;border-color:#e2e8f0">
+        <thead style="background:#f8fafc;position:sticky;top:0;z-index:2">
+          <tr>
+            <th rowspan="2" class="align-middle text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'period_key')" style="min-width:90px;background:#f1f5f9">
+              ${periodHeaderLabel} ${sortInfo.col === 'period_key' ? (sortInfo.dir === 'asc' ? '▲' : '▼') : ''}
+            </th>
+            <th rowspan="2" class="align-middle text-start cursor-pointer" onclick="sortEmpPerfTable('${section}', 'department_name')" style="min-width:120px;background:#f1f5f9">
+              Department ${sortInfo.col === 'department_name' ? (sortInfo.dir === 'asc' ? '▲' : '▼') : ''}
+            </th>
+            <th rowspan="2" class="align-middle text-start cursor-pointer" onclick="sortEmpPerfTable('${section}', 'employee_name')" style="min-width:160px;background:#f1f5f9">
+              Employee Name ${sortInfo.col === 'employee_name' ? (sortInfo.dir === 'asc' ? '▲' : '▼') : ''}
+            </th>
+            <th rowspan="2" class="align-middle text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'self_leads')" style="min-width:85px;background:#f1f5f9">
+              Self Leads ${sortInfo.col === 'self_leads' ? (sortInfo.dir === 'asc' ? '▲' : '▼') : ''}
+            </th>
+            <th rowspan="2" class="align-middle text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'overall_new_leads')" style="min-width:110px;background:#f1f5f9">
+              Overall New Leads ${sortInfo.col === 'overall_new_leads' ? (sortInfo.dir === 'asc' ? '▲' : '▼') : ''}
+            </th>
+            <th colspan="2" class="text-center" style="background:#ffedd5;color:#9a3412">Overall</th>
+            <th colspan="2" class="text-center" style="background:#e0f2fe;color:#075985">Solar</th>
+            <th colspan="2" class="text-center" style="background:#fef3c7;color:#92400e">ETC</th>
+            <th colspan="2" class="text-center" style="background:#e0e7ff;color:#3730a3">B2B</th>
+            <th colspan="2" class="text-center" style="background:#fae8ff;color:#86198f">B2C</th>
+            <th colspan="2" class="text-center" style="background:#dcfce7;color:#166534">Insurance</th>
+            <th colspan="3" class="text-center" style="background:#f1f5f9;color:#334155">Service &amp; Spares</th>
+            <th colspan="2" class="text-center" style="background:#f3f4f6;color:#374151">Others</th>
+          </tr>
+          <tr>
+            <th class="text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'overall_won')" style="background:#fff7ed">Won ${sortInfo.col==='overall_won'?(sortInfo.dir==='asc'?'▲':'▼'):''}</th>
+            <th class="text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'overall_rev')" style="background:#fff7ed">Rev ${sortInfo.col==='overall_rev'?(sortInfo.dir==='asc'?'▲':'▼'):''}</th>
+            <th class="text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'solar_won')" style="background:#f0f9ff">Won ${sortInfo.col==='solar_won'?(sortInfo.dir==='asc'?'▲':'▼'):''}</th>
+            <th class="text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'solar_rev')" style="background:#f0f9ff">Rev ${sortInfo.col==='solar_rev'?(sortInfo.dir==='asc'?'▲':'▼'):''}</th>
+            <th class="text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'etc_won')" style="background:#fffbeb">Won ${sortInfo.col==='etc_won'?(sortInfo.dir==='asc'?'▲':'▼'):''}</th>
+            <th class="text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'etc_rev')" style="background:#fffbeb">Rev ${sortInfo.col==='etc_rev'?(sortInfo.dir==='asc'?'▲':'▼'):''}</th>
+            <th class="text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'b2b_won')" style="background:#eef2ff">Won ${sortInfo.col==='b2b_won'?(sortInfo.dir==='asc'?'▲':'▼'):''}</th>
+            <th class="text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'b2b_rev')" style="background:#eef2ff">Rev ${sortInfo.col==='b2b_rev'?(sortInfo.dir==='asc'?'▲':'▼'):''}</th>
+            <th class="text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'b2c_won')" style="background:#fdf4ff">Won ${sortInfo.col==='b2c_won'?(sortInfo.dir==='asc'?'▲':'▼'):''}</th>
+            <th class="text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'b2c_rev')" style="background:#fdf4ff">Rev ${sortInfo.col==='b2c_rev'?(sortInfo.dir==='asc'?'▲':'▼'):''}</th>
+            <th class="text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'insurance_won')" style="background:#f0fdf4">Won ${sortInfo.col==='insurance_won'?(sortInfo.dir==='asc'?'▲':'▼'):''}</th>
+            <th class="text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'insurance_rev')" style="background:#f0fdf4">Rev ${sortInfo.col==='insurance_rev'?(sortInfo.dir==='asc'?'▲':'▼'):''}</th>
+            <th class="text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'service_tickets_count')" style="background:#f8fafc">Tickets ${sortInfo.col==='service_tickets_count'?(sortInfo.dir==='asc'?'▲':'▼'):''}</th>
+            <th class="text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'service_rev')" style="background:#f8fafc">Service Rev ${sortInfo.col==='service_rev'?(sortInfo.dir==='asc'?'▲':'▼'):''}</th>
+            <th class="text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'spares_rev')" style="background:#f8fafc">Spares Rev ${sortInfo.col==='spares_rev'?(sortInfo.dir==='asc'?'▲':'▼'):''}</th>
+            <th class="text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'others_won')" style="background:#f9fafb">Won ${sortInfo.col==='others_won'?(sortInfo.dir==='asc'?'▲':'▼'):''}</th>
+            <th class="text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'others_rev')" style="background:#f9fafb">Rev ${sortInfo.col==='others_rev'?(sortInfo.dir==='asc'?'▲':'▼'):''}</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    rows.forEach(r => {
+      html += `
+        <tr>
+          <td class="text-center font-monospace fw-semibold" style="background:#fafafa">${esc(r.period_key)}</td>
+          <td class="text-start" style="color:#475569">${esc(r.department_name)}</td>
+          <td class="text-start fw-bold" style="color:#1e293b">
+            ${esc(r.employee_name)}
+            ${r.emp_code && r.emp_code !== 'UNASSIGNED' ? `<span class="badge bg-light text-secondary ms-1 font-monospace" style="font-size:9.5px">${esc(r.emp_code)}</span>` : ''}
+          </td>
+          <td class="text-center fw-semibold" style="color:#2563eb">${fmtNum(r.self_leads)}</td>
+          <td class="text-center fw-bold">${fmtNum(r.overall_new_leads)}</td>
+          
+          <td class="text-center fw-bold" style="color:#c2410c;background:#fffaf5">${fmtNum(r.overall_won)}</td>
+          <td class="text-end fw-bold" style="color:#c2410c;background:#fffaf5">₹${fmtVal(r.overall_rev)}</td>
+          
+          <td class="text-center fw-semibold" style="color:#0369a1;background:#f8fafc">${fmtNum(r.solar_won)}</td>
+          <td class="text-end" style="color:#0369a1;background:#f8fafc">₹${fmtVal(r.solar_rev)}</td>
+          
+          <td class="text-center fw-semibold" style="color:#b45309">${fmtNum(r.etc_won)}</td>
+          <td class="text-end" style="color:#b45309">₹${fmtVal(r.etc_rev)}</td>
+          
+          <td class="text-center fw-semibold" style="color:#4338ca">${fmtNum(r.b2b_won)}</td>
+          <td class="text-end" style="color:#4338ca">₹${fmtVal(r.b2b_rev)}</td>
+          
+          <td class="text-center fw-semibold" style="color:#a21caf">${fmtNum(r.b2c_won)}</td>
+          <td class="text-end" style="color:#a21caf">₹${fmtVal(r.b2c_rev)}</td>
+          
+          <td class="text-center fw-semibold" style="color:#15803d">${fmtNum(r.insurance_won)}</td>
+          <td class="text-end" style="color:#15803d">₹${fmtVal(r.insurance_rev)}</td>
+
+          <td class="text-center fw-semibold" style="color:#0f766e">${fmtNum(r.service_tickets_count)}</td>
+          <td class="text-end" style="color:#0f766e">₹${fmtVal(r.service_rev)}</td>
+          <td class="text-end" style="color:#0f766e">₹${fmtVal(r.spares_rev)}</td>
+          
+          <td class="text-center text-muted">${fmtNum(r.others_won)}</td>
+          <td class="text-end text-muted">₹${fmtVal(r.others_rev)}</td>
+        </tr>
+      `;
+    });
+
+    html += `</tbody></table>`;
+    wrap.innerHTML = html;
+  });
+}
+
+function exportEmpPerfCsv(section) {
+  if (!_empPerfData || !_empPerfData[section]) {
+    alert('No data available to export.');
+    return;
+  }
+  const periodLabel = section === 'monthly' ? 'Month' : 'Week';
+  const headers = [
+    periodLabel, 'Department', 'Employee Code', 'Employee Name', 'Self Leads', 'Overall New Leads',
+    'Overall Won', 'Overall Rev', 'Solar Won', 'Solar Rev', 'ETC Won', 'ETC Rev',
+    'B2B Won', 'B2B Rev', 'B2C Won', 'B2C Rev', 'Insurance Won', 'Insurance Rev',
+    'Service Tickets', 'Service Rev', 'Spares Rev', 'Others Won', 'Others Rev'
+  ];
+
+  const rows = _empPerfData[section].map(r => [
+    `"${r.period_key}"`, `"${r.department_name}"`, `"${r.emp_code}"`, `"${r.employee_name}"`,
+    r.self_leads, r.overall_new_leads, r.overall_won, r.overall_rev,
+    r.solar_won, r.solar_rev, r.etc_won, r.etc_rev, r.b2b_won, r.b2b_rev,
+    r.b2c_won, r.b2c_rev, r.insurance_won, r.insurance_rev,
+    r.service_tickets_count, r.service_rev, r.spares_rev, r.others_won, r.others_rev
+  ]);
+
+  let csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement('a');
+  link.setAttribute('href', encodedUri);
+  link.setAttribute('download', `Employee_Performance_${section}_${new Date().toISOString().slice(0,10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 // ── ETC STUDENTS BATCH WISE TAB ──────────────────────────────────────────────
