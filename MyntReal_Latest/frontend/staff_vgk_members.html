@@ -3655,34 +3655,37 @@ function _renderTopPartners(d) {
 
 async function loadMembers(page = 1) {
   currentPage = page;
-  const search = document.getElementById('searchInput').value.trim();
-  const status = document.getElementById('statusFilter').value;
-  const desigFilter = document.getElementById('designationFilter').value;
+  const tbody = document.getElementById('membersTable');
+  if (!tbody) return;
+
+  const search = (document.getElementById('searchInput')?.value || '').trim();
+  const status = document.getElementById('statusFilter')?.value ?? '';
+  const desigFilter = (document.getElementById('designationFilter')?.value || '').trim();
   const categoryFilter = (document.getElementById('categoryFilter')?.value || '').trim();
   let url = API + '/vgk/members?page=' + page + '&page_size=25';
   if (search) url += '&search=' + encodeURIComponent(search);
   if (status !== '') url += '&is_active=' + status;
   if (desigFilter) url += '&designation_tier=' + encodeURIComponent(desigFilter);
   if (categoryFilter) url += '&category_id=' + encodeURIComponent(categoryFilter);
-  if (_regPeriod) url += '&reg_period=' + encodeURIComponent(_regPeriod);
-  // DC-VGK-EXEC-DASH-001: month filter → convert to reg_from / reg_to
-  if (_regMonth) {
-    const [yr, mo] = _regMonth.split('-').map(Number);
+  if (window._regPeriod) url += '&reg_period=' + encodeURIComponent(window._regPeriod);
+  if (window._regMonth) {
+    const [yr, mo] = window._regMonth.split('-').map(Number);
     const lastDay = new Date(yr, mo, 0).getDate();
     url += `&reg_from=${yr}-${String(mo).padStart(2,'0')}-01&reg_to=${yr}-${String(mo).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
   }
-  if (_sortBy) url += '&sort_by=' + encodeURIComponent(_sortBy) + '&sort_dir=' + _sortDir;
+  if (window._sortBy) url += '&sort_by=' + encodeURIComponent(window._sortBy) + '&sort_dir=' + (window._sortDir || 'desc');
   const regByFilter = (document.getElementById('regByFilter')?.value || '').trim().toUpperCase();
   if (regByFilter) url += '&registered_by_emp_code=' + encodeURIComponent(regByFilter);
   const referrerFilter = (document.getElementById('referrerFilter')?.value || '').trim();
   if (referrerFilter) url += '&referred_by=' + encodeURIComponent(referrerFilter);
-  const tbody = document.getElementById('membersTable');
+
   tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
   try {
     const r = await staffFetch(url);
     const d = await r.json();
     if (!d.success) { showToast('Failed to load', 'error'); return; }
-    document.getElementById('totalBadge').textContent = d.total || 0;
+    const tb = document.getElementById('totalBadge');
+    if (tb) tb.textContent = d.total || 0;
     const membersList = d.data || d.members || [];
     if (!membersList.length) { tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:30px;color:#9ca3af">No Channel Partners found</td></tr>'; }
     else {
@@ -3722,8 +3725,12 @@ async function loadMembers(page = 1) {
         </tr>`;
       }).join('');
     }
-    renderPagination(d.total, page, 25);
-  } catch(e) { showToast('Error loading Channel Partners', 'error'); tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:20px;color:#dc2626">Error loading data</td></tr>'; }
+    renderPagination(d.total || 0, page, 25);
+  } catch(e) {
+    console.error('[ERROR loadMembers]', e);
+    showToast('Error loading Channel Partners', 'error');
+    tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:20px;color:#dc2626">Error loading data: ' + e.message + '</td></tr>';
+  }
 }
 
 function renderPagination(total, page, size) {
