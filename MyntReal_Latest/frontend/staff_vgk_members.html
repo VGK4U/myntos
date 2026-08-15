@@ -4721,7 +4721,7 @@ async function submitAddMember() {
   } catch(e) { showToast('Error creating Channel Partner', 'error'); }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function _initApp() {
   try {
     const _autoTab = window._EMBED_AUTOTAB || '';
     if (_autoTab && _autoTab !== 'members') {
@@ -4736,7 +4736,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof StaffSidebar !== 'undefined' && StaffSidebar.init) {
     StaffSidebar.init().catch(err => console.warn('[StaffSidebar.init warning]', err));
   }
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _initApp);
+} else {
+  _initApp();
+}
 
 // ── Credentials Share Modal (shown after new VGK ID creation) ───────────────
 let _csData = {};
