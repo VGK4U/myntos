@@ -5810,7 +5810,6 @@ def get_employee_performance_dashboard(
                     END as is_self_lead,
                     l.id as lead_id,
                     l.status,
-                    COALESCE(l.deal_value_total, 0) as deal_val,
                     LOWER(COALESCE(c.name, '')) as cat_name
                 FROM crm_leads l
                 LEFT JOIN staff_employees s ON (
@@ -5831,24 +5830,76 @@ def get_employee_performance_dashboard(
                 SUM(is_self_lead) as self_leads,
                 COUNT(lead_id) as overall_new_leads,
                 COUNT(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') THEN 1 END) as overall_won,
-                COALESCE(SUM(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') THEN deal_val ELSE 0 END), 0) as overall_rev,
                 COUNT(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%solar%' THEN 1 END) as solar_won,
-                COALESCE(SUM(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%solar%' THEN deal_val ELSE 0 END), 0) as solar_rev,
                 COUNT(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%etc%' THEN 1 END) as etc_won,
-                COALESCE(SUM(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%etc%' THEN deal_val ELSE 0 END), 0) as etc_rev,
                 COUNT(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%b2b%' THEN 1 END) as b2b_won,
-                COALESCE(SUM(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%b2b%' THEN deal_val ELSE 0 END), 0) as b2b_rev,
                 COUNT(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%b2c%' THEN 1 END) as b2c_won,
-                COALESCE(SUM(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%b2c%' THEN deal_val ELSE 0 END), 0) as b2c_rev,
                 COUNT(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%insurance%' THEN 1 END) as insurance_won,
-                COALESCE(SUM(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name LIKE '%insurance%' THEN deal_val ELSE 0 END), 0) as insurance_rev,
-                COUNT(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name NOT LIKE '%solar%' AND cat_name NOT LIKE '%etc%' AND cat_name NOT LIKE '%b2b%' AND cat_name NOT LIKE '%b2c%' AND cat_name NOT LIKE '%insurance%' THEN 1 END) as others_won,
-                COALESCE(SUM(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name NOT LIKE '%solar%' AND cat_name NOT LIKE '%etc%' AND cat_name NOT LIKE '%b2b%' AND cat_name NOT LIKE '%b2c%' AND cat_name NOT LIKE '%insurance%' THEN deal_val ELSE 0 END), 0) as others_rev
+                COUNT(CASE WHEN status IN ('won', 'completed', 'delivered', 'installed') AND cat_name NOT LIKE '%solar%' AND cat_name NOT LIKE '%etc%' AND cat_name NOT LIKE '%b2b%' AND cat_name NOT LIKE '%b2c%' AND cat_name NOT LIKE '%insurance%' THEN 1 END) as others_won
             FROM lead_data
             GROUP BY period_key, department_name, emp_code, employee_name
             ORDER BY period_key DESC, department_name, employee_name
         """
         lead_rows = db.execute(text(lead_sql), params).fetchall()
+
+        # Confirmed revenue aggregation from income_entries (Income Entries page)
+        inc_where_conds = ["ie.status IN ('CONFIRMED', 'TALLY_DONE', 'APPROVED')", "(ie.is_deleted IS FALSE OR ie.is_deleted IS NULL)"]
+        if period_type == 'monthly':
+            if c_from:
+                inc_where_conds.append("COALESCE(ie.income_date, ie.created_at) >= CAST(:c_from AS TIMESTAMP)")
+            if c_to:
+                inc_where_conds.append("COALESCE(ie.income_date, ie.created_at) <= CAST(:c_to AS TIMESTAMP) + INTERVAL '1 day'")
+            if not (c_from or c_to):
+                inc_where_conds.append("COALESCE(ie.income_date, ie.created_at) >= NOW() - INTERVAL '12 months'")
+        else:
+            inc_where_conds.append("COALESCE(ie.income_date, ie.created_at) >= NOW() - INTERVAL '12 weeks'")
+
+        inc_where_str = " AND ".join(inc_where_conds)
+
+        inc_sql = f"""
+            WITH confirmed_inc AS (
+                SELECT 
+                    ie.amount,
+                    COALESCE(ie.income_date, ie.created_at) as inc_date,
+                    LOWER(COALESCE(c.name, '')) as cat_name,
+                    COALESCE(s.emp_code, 'UNASSIGNED') as emp_code
+                FROM income_entries ie
+                JOIN crm_leads l ON ie.lead_id = l.id
+                LEFT JOIN staff_employees s ON (
+                    CAST(l.handler_id AS TEXT) = s.emp_code OR CAST(l.handler_id AS TEXT) = CAST(s.id AS TEXT) 
+                    OR CAST(l.field_staff_id AS TEXT) = s.emp_code OR CAST(l.telecaller_id AS TEXT) = s.emp_code 
+                    OR CAST(l.created_by_id AS TEXT) = s.emp_code
+                )
+                LEFT JOIN signup_categories c ON l.category_id = c.id
+                WHERE {inc_where_str}
+            )
+            SELECT 
+                TO_CHAR(inc_date, '{date_fmt}') as period_key,
+                emp_code,
+                COALESCE(SUM(amount), 0) as overall_rev,
+                COALESCE(SUM(CASE WHEN cat_name LIKE '%solar%' THEN amount ELSE 0 END), 0) as solar_rev,
+                COALESCE(SUM(CASE WHEN cat_name LIKE '%etc%' THEN amount ELSE 0 END), 0) as etc_rev,
+                COALESCE(SUM(CASE WHEN cat_name LIKE '%b2b%' THEN amount ELSE 0 END), 0) as b2b_rev,
+                COALESCE(SUM(CASE WHEN cat_name LIKE '%b2c%' THEN amount ELSE 0 END), 0) as b2c_rev,
+                COALESCE(SUM(CASE WHEN cat_name LIKE '%insurance%' THEN amount ELSE 0 END), 0) as insurance_rev,
+                COALESCE(SUM(CASE WHEN cat_name NOT LIKE '%solar%' AND cat_name NOT LIKE '%etc%' AND cat_name NOT LIKE '%b2b%' AND cat_name NOT LIKE '%b2c%' AND cat_name NOT LIKE '%insurance%' THEN amount ELSE 0 END), 0) as others_rev
+            FROM confirmed_inc
+            WHERE emp_code != 'UNASSIGNED'
+            GROUP BY TO_CHAR(inc_date, '{date_fmt}'), emp_code
+        """
+        inc_rows = db.execute(text(inc_sql), params).fetchall()
+        inc_map = {}
+        for r in inc_rows:
+            key = f"{r[0]}_{r[1]}"
+            inc_map[key] = {
+                'overall_rev': float(r[2] or 0.0),
+                'solar_rev': float(r[3] or 0.0),
+                'etc_rev': float(r[4] or 0.0),
+                'b2b_rev': float(r[5] or 0.0),
+                'b2c_rev': float(r[6] or 0.0),
+                'insurance_rev': float(r[7] or 0.0),
+                'others_rev': float(r[8] or 0.0)
+            }
 
         # Service & spares aggregation
         st_sql = f"""
@@ -5878,6 +5929,7 @@ def get_employee_performance_dashboard(
             p_key = r[0]
             e_code = r[2]
             st_info = st_map.get(f"{p_key}_{e_code}", {'tickets': 0, 'service_rev': 0.0, 'spares_rev': 0.0})
+            inc_info = inc_map.get(f"{p_key}_{e_code}", {'overall_rev': 0.0, 'solar_rev': 0.0, 'etc_rev': 0.0, 'b2b_rev': 0.0, 'b2c_rev': 0.0, 'insurance_rev': 0.0, 'others_rev': 0.0})
 
             # Exclude UNASSIGNED
             if e_code == 'UNASSIGNED' or not e_code:
@@ -5896,22 +5948,22 @@ def get_employee_performance_dashboard(
                 'self_leads': int(r[4] or 0),
                 'overall_new_leads': int(r[5] or 0),
                 'overall_won': int(r[6] or 0),
-                'overall_rev': float(r[7] or 0.0),
-                'solar_won': int(r[8] or 0),
-                'solar_rev': float(r[9] or 0.0),
-                'etc_won': int(r[10] or 0),
-                'etc_rev': float(r[11] or 0.0),
-                'b2b_won': int(r[12] or 0),
-                'b2b_rev': float(r[13] or 0.0),
-                'b2c_won': int(r[14] or 0),
-                'b2c_rev': float(r[15] or 0.0),
-                'insurance_won': int(r[16] or 0),
-                'insurance_rev': float(r[17] or 0.0),
+                'overall_rev': inc_info['overall_rev'],
+                'solar_won': int(r[7] or 0),
+                'solar_rev': inc_info['solar_rev'],
+                'etc_won': int(r[8] or 0),
+                'etc_rev': inc_info['etc_rev'],
+                'b2b_won': int(r[9] or 0),
+                'b2b_rev': inc_info['b2b_rev'],
+                'b2c_won': int(r[10] or 0),
+                'b2c_rev': inc_info['b2c_rev'],
+                'insurance_won': int(r[11] or 0),
+                'insurance_rev': inc_info['insurance_rev'],
                 'service_tickets_count': st_info['tickets'],
                 'service_rev': st_info['service_rev'],
                 'spares_rev': st_info['spares_rev'],
-                'others_won': int(r[18] or 0),
-                'others_rev': float(r[19] or 0.0),
+                'others_won': int(r[12] or 0),
+                'others_rev': inc_info['others_rev'],
             })
         return rows
 
