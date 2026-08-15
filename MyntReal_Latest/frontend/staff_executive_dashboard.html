@@ -442,6 +442,19 @@ th[data-sk]:hover{background:#eef2f7!important}
           </div>
         </div>
 
+        <!-- Quick Period Filter Bar for Employee Performance -->
+        <div class="quick-filter-bar mb-3" style="background:#f8fafc;padding:6px 10px;border-radius:6px;border:1px solid #e2e8f0;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span class="qf-label" style="font-weight:700;font-size:11px;color:#334155"><i class="fas fa-filter me-1" style="color:#2563eb"></i>Timeframe:</span>
+          <button class="qf-btn active" id="epf_overall" onclick="applyEmpPerfPreset('overall')">Overall</button>
+          <button class="qf-btn" id="epf_today" onclick="applyEmpPerfPreset('today')">Today</button>
+          <button class="qf-btn" id="epf_this_week" onclick="applyEmpPerfPreset('this_week')">This Week</button>
+          <button class="qf-btn" id="epf_last_week" onclick="applyEmpPerfPreset('last_week')">Last Week</button>
+          <button class="qf-btn" id="epf_this_month" onclick="applyEmpPerfPreset('this_month')">This Month</button>
+          <button class="qf-btn" id="epf_last_month" onclick="applyEmpPerfPreset('last_month')">Last Month</button>
+          <button class="qf-btn" id="epf_this_fy" onclick="applyEmpPerfPreset('this_fy')">This FY</button>
+          <span style="font-size:10.5px;color:#64748b;margin-left:auto" id="epfPresetLabel">All time frame</span>
+        </div>
+
         <!-- Section 1: Monthly Performance (Last 12 Months) -->
         <div class="mb-4">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -716,6 +729,69 @@ let _empPerfSort = {
   weekly: { col: 'period_key', dir: 'desc' }
 };
 
+let _activeEmpPerfPreset = 'overall';
+
+function applyEmpPerfPreset(preset) {
+  _activeEmpPerfPreset = preset;
+  document.querySelectorAll('#pane_emp_perf .qf-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('epf_' + preset);
+  if (btn) btn.classList.add('active');
+
+  const today = new Date();
+  const todayStr = fmtDateISO(today);
+  const fromEl = document.getElementById('dashFrom');
+  const toEl = document.getElementById('dashTo');
+  const lbl = document.getElementById('epfPresetLabel');
+
+  if (preset === 'overall') {
+    if (fromEl) fromEl.value = '';
+    if (toEl) toEl.value = '';
+    if (lbl) lbl.textContent = 'All time frame';
+  } else if (preset === 'today') {
+    if (fromEl) fromEl.value = todayStr;
+    if (toEl) toEl.value = todayStr;
+    if (lbl) lbl.textContent = `Today (${today.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })})`;
+  } else if (preset === 'this_week') {
+    const day = today.getDay();
+    const diffToMon = today.getDate() - day + (day === 0 ? -6 : 1);
+    const mon = new Date(today.setDate(diffToMon));
+    const now = new Date();
+    if (fromEl) fromEl.value = fmtDateISO(mon);
+    if (toEl) toEl.value = fmtDateISO(now);
+    if (lbl) lbl.textContent = `This Week (${mon.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })})`;
+  } else if (preset === 'last_week') {
+    const now = new Date();
+    const day = now.getDay();
+    const diffToMon = now.getDate() - day + (day === 0 ? -6 : 1) - 7;
+    const mon = new Date(now.setDate(diffToMon));
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate() + 6);
+    if (fromEl) fromEl.value = fmtDateISO(mon);
+    if (toEl) toEl.value = fmtDateISO(sun);
+    if (lbl) lbl.textContent = `Last Week (${mon.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${sun.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })})`;
+  } else if (preset === 'this_month') {
+    const s = getMtdStart();
+    const now = new Date();
+    if (fromEl) fromEl.value = fmtDateISO(s);
+    if (toEl) toEl.value = fmtDateISO(now);
+    if (lbl) lbl.textContent = `This Month (${s.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })})`;
+  } else if (preset === 'last_month') {
+    const now = new Date();
+    const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    if (fromEl) fromEl.value = fmtDateISO(firstDayLastMonth);
+    if (toEl) toEl.value = fmtDateISO(lastDayLastMonth);
+    if (lbl) lbl.textContent = `Last Month (${firstDayLastMonth.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${lastDayLastMonth.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })})`;
+  } else if (preset === 'this_fy') {
+    const s = getYtdStart();
+    const now = new Date();
+    if (fromEl) fromEl.value = fmtDateISO(s);
+    if (toEl) toEl.value = fmtDateISO(now);
+    if (lbl) lbl.textContent = `This FY (${s.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} – ${now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })})`;
+  }
+  loadEmployeePerformance();
+}
+
 async function loadEmployeePerformance() {
   const mWrap = document.getElementById('empPerfMonthlyWrap');
   const wWrap = document.getElementById('empPerfWeeklyWrap');
@@ -725,9 +801,18 @@ async function loadEmployeePerformance() {
   try {
     const q = (document.getElementById('empPerfSearch')?.value || '').trim();
     const deptId = document.getElementById('empPerfDeptFilter')?.value || '';
+    const fromVal = document.getElementById('dashFrom')?.value || '';
+    const toVal = document.getElementById('dashTo')?.value || '';
+    const closedFrom = document.getElementById('dashClosedFrom')?.value || '';
+    const closedTo = document.getElementById('dashClosedTo')?.value || '';
+
     let url = '/api/v1/crm/employee-performance-dashboard?';
     if (q) url += `search=${encodeURIComponent(q)}&`;
     if (deptId) url += `department_id=${encodeURIComponent(deptId)}&`;
+    if (fromVal) url += `created_from=${encodeURIComponent(fromVal)}&`;
+    if (toVal) url += `created_to=${encodeURIComponent(toVal)}&`;
+    if (closedFrom) url += `closed_from=${encodeURIComponent(closedFrom)}&`;
+    if (closedTo) url += `closed_to=${encodeURIComponent(closedTo)}&`;
 
     const resp = await staffFetch(url);
     if (!resp.ok) throw new Error('Failed to fetch employee performance data');
@@ -1299,6 +1384,7 @@ async function loadDashboard(){
     renderTrends(data);
     if(_activeTab==='handlers')  renderHandlerTable();
     if(_activeTab==='stagewise') renderStagewiseTable();
+    if(_activeTab==='emp_perf')  loadEmployeePerformance();
   }catch(e){
     console.error('[EXEC-DASH]',e);
     ['dashByStatus','dashByCategory','dashBySource','dashByTelecaller','dashByFieldStaff','dashMonthly','dashWeekly'].forEach(id=>{

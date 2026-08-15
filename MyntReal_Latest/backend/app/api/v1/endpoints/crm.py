@@ -5846,6 +5846,9 @@ def get_employee_performance_dashboard(
             st_info = st_map.get(f"{p_key}_{e_code}", {'tickets': 0, 'service_rev': 0.0, 'spares_rev': 0.0})
 
             # Filters
+            if e_code == 'UNASSIGNED' or not e_code:
+                continue
+
             if search_query:
                 if search_query not in (r[3] or '').lower() and search_query not in (r[2] or '').lower():
                     continue
