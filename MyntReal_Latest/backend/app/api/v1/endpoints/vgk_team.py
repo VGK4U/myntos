@@ -4406,6 +4406,7 @@ def member_earnings_dashboard(
         pts_balance  = float(m.vgk_points_balance or 0)
         inc = inc_map.get(m.id, {})
         gross    = sum(v["amount"] for st, v in inc.items() if st != "CANCELLED")
+        net_earning = sum(v.get("net_amount", 0.0) for st, v in inc.items() if st != "CANCELLED")
         received = sum(v["amount"] for st, v in inc.items() if st in ("RELEASED", "PAID"))
         _lvl = lvl_map.get(m.id, {})
         
@@ -4428,6 +4429,7 @@ def member_earnings_dashboard(
             "points_used":            pts_debited,
             "points_balance":         pts_balance,
             "gross_earned":           gross,
+            "net_earning":            net_earning,
             "received":               received,
             "income_by_status":       inc,
             # DC-VGK-EARN-DASH-001: level-wise breakdown + new summary fields
