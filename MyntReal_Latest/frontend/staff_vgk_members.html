@@ -2633,16 +2633,21 @@ function _renderMeDetailTable(partnerId){
   };
   const typeLbl = (kind, level, level_label) => {
     if(kind==='SLAB_BONUS'){
-      return `<span style="background:#fdf4ff;color:#7e22ce;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700"><i class="fas fa-star" style="font-size:8px;margin-right:2px"></i>Slab Bonus</span>`;
+      return `<span style="background:#fdf4ff;color:#7e22ce;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700"><i class="fas fa-star" style="font-size:8px;margin-right:2px"></i>Bonanza</span>`;
+    }
+    if(kind==='EXTRA_COMMISSION'){
+      return `<span style="background:#fdf4ff;color:#7e22ce;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700"><i class="fas fa-star" style="font-size:8px;margin-right:2px"></i>Extra Bonanza</span>`;
     }
     if(kind==='ADVANCE'||kind==='DVR_ADVANCE'){
-      const _aLbl=kind==='DVR_ADVANCE'?'DVR Adv':'Solar Adv';
-      const _stg =kind==='DVR_ADVANCE'?' <span style="opacity:.65;font-size:9px">St.2</span>':' <span style="opacity:.65;font-size:9px">St.1</span>';
+      const _aLbl=kind==='DVR_ADVANCE'?'Stage 2 Advance':'Stage 1 Advance';
       const _lvl =(level && level > 0) ? ` <span style="opacity:.75">L${level}</span>` : '';
-      return `<span style="background:#fef3c7;color:#d97706;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">${_aLbl}${_stg}${_lvl}</span>`;
+      return `<span style="background:#fef3c7;color:#d97706;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">${_aLbl}${_lvl}</span>`;
+    }
+    if(kind==='BRAND_ADVANCE'||kind==='BRAND_COMMISSION'){
+      return `<span style="background:#e0f2fe;color:#0369a1;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">Brand Comm.</span>`;
     }
     const m = _lvlMeta[level];
-    const name = (m && m.lbl) || level_label || 'Comm';
+    const name = (m && m.lbl) || level_label || 'Final Comm.';
     const bg   = (m && m.bg)  || '#f1f5f9';
     const c    = (m && m.c)   || '#475569';
     const lvlTag = (level && level > 0) ? ` <span style="opacity:.75">L${level}</span>` : '';
@@ -2760,6 +2765,24 @@ let _lvPage = 1, _lvTotal = 0, _lvLoaded = false;
 const _lvExpanded  = new Set();
 const _lvDetailCache = {};
 const _lvLvlLabel  = {0:'L0 Bonus',1:'L1 Source',2:'L2 Senior',3:'L3 Extended',4:'L4 Core',5:'L5 Support',6:'L6 Showroom'};
+const _ME_KIND_LABELS = {
+  'ADVANCE': 'Stage 1 Advance',
+  'DVR_ADVANCE': 'Stage 2 Advance',
+  'SLAB_BONUS': 'Bonanza',
+  'EXTRA_COMMISSION': 'Extra Bonanza',
+  'BRAND_ADVANCE': 'Brand Comm.',
+  'BRAND_COMMISSION': 'Brand Comm.',
+  'COMMISSION': 'Final Comm.',
+  'SENIOR_COMM': 'Senior Comm.',
+  'REFERRAL_BONUS': 'Referral Bonus'
+};
+
+function _getIncomeTypeLabel(kind, communityId, eventName) {
+  if (communityId) return eventName || 'Community Service';
+  if (!kind) return 'Final Comm.';
+  const k = String(kind).toUpperCase();
+  return _ME_KIND_LABELS[k] || kind.replace(/_/g, ' ');
+}
 
 function debounceLeadView(){ clearTimeout(window._lvDebTimer); window._lvDebTimer = setTimeout(()=>loadLeadView(1), 400); }
 
@@ -3059,7 +3082,7 @@ function _lvDetailRowHtml(lid, entries){
     const lvlColor = lvlColors[lvl] || '#6b7280';
     const stColor  = _ME_STATUS_COLOR[e.status] || '#6b7280';
     const stLabel  = _ME_STATUS_LABEL[e.status] || e.status;
-    const kindBadge= e.community_id ? (e.community_event_name || 'Community Service') : (e.kind||'').replace(/_/g,' ');
+    const kindBadge= _getIncomeTypeLabel(e.kind, e.community_id, e.community_event_name);
     let calcBase = e.base_value || 0;
     if((!calcBase || calcBase <= 0) && (e.commission_amount > 0 && e.commission_pct > 0)){
       calcBase = Math.round(e.commission_amount / (e.commission_pct / 100));
