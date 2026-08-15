@@ -9445,6 +9445,14 @@ def update_lead(
                         apply_adjustment_at_completion(db, lead_id, _l1e_tr.id)
                 except Exception as _adj_tr_e:
                     logger.warning(f'[DC-ADV-COMPLETION-ADJ-001] RETRIGGER adjustment failed lead {lead_id}: {_adj_tr_e}')
+            # DC-VGK-BRAND-INCENTIVE-001: retrigger brand commission entries if solar_brand_id updated or lead completed
+            try:
+                from app.services.vgk_brand_incentive import generate_brand_commission_entries as _gen_bce_tr
+                _bce_tr_n = _gen_bce_tr(db, lead)
+                if _bce_tr_n:
+                    logger.info(f'[VGK-BRAND-COMM] Lead {lead_id}: {_bce_tr_n} brand commission DRAFT(s) created on retrigger')
+            except Exception as _bce_tr_e:
+                logger.warning(f'[VGK-BRAND-COMM] Brand commission retrigger hook failed for lead {lead_id}: {_bce_tr_e}')
         except Exception as _tr_e:
             logger.warning(f'[DC-TEAM-RETRIGGER-001] Retrigger failed lead {lead_id}: {_tr_e}')
 
