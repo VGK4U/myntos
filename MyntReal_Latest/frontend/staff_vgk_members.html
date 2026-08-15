@@ -3082,6 +3082,7 @@ function _lvDetailRowHtml(lid, entries){
     const stColor  = _ME_STATUS_COLOR[e.status] || '#6b7280';
     const stLabel  = _ME_STATUS_LABEL[e.status] || e.status;
     const kindBadge= _getIncomeTypeLabel(e.kind, e.community_id, e.community_event_name);
+    const commBadgeHtml = e.community_id ? `<span style="font-size:9.5px;padding:2px 6px;border-radius:6px;background:#0ea5e9;color:#fff;margin-left:3px;font-weight:600">Comm ID: ${e.community_id}</span>` : '';
     let calcBase = e.base_value || 0;
     if((!calcBase || calcBase <= 0) && (e.commission_amount > 0 && e.commission_pct > 0)){
       calcBase = Math.round(e.commission_amount / (e.commission_pct / 100));
