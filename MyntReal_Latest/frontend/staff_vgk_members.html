@@ -2654,21 +2654,25 @@ function _renderMeDetailTable(partnerId){
     return `<span style="background:${bg};color:${c};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">${name}${lvlTag}</span>`;
   };
 
-    const totGross        = rows.reduce((s,e)=>s+parseFloat(e.commission_amount||0),0);
-    const totDealVal      = rows.reduce((s,e)=>s+parseFloat(e.deal_value||e.base_value||0),0);
+    const totGross        = rows.reduce((s,e)=>(e.status==='CANCELLED'?s:s+parseFloat(e.commission_amount||0)),0);
+    const totDealVal      = rows.reduce((s,e)=>(e.status==='CANCELLED'?s:s+parseFloat(e.deal_value||e.base_value||0)),0);
     const totStg1         = rows.reduce((s,e)=>{
+      if (e.status === 'CANCELLED') return s;
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
       return s + ((_k==='COMMISSION'||_k==='SENIOR_COMM') ? parseFloat(e.stage1_adv||0) : 0);
     }, 0);
     const totStg2         = rows.reduce((s,e)=>{
+      if (e.status === 'CANCELLED') return s;
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
       return s + ((_k==='COMMISSION'||_k==='SENIOR_COMM') ? parseFloat(e.stage2_adv||0) : 0);
     }, 0);
     const totAdvPaid      = rows.reduce((s,e)=>{
+      if (e.status === 'CANCELLED') return s;
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
       return s + ((_k==='COMMISSION'||_k==='SENIOR_COMM') ? parseFloat(e.advance_paid||0) : 0);
     }, 0);
     const totBalGross     = rows.reduce((s,e)=>{
+      if (e.status === 'CANCELLED') return s;
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
       const isC = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
       const gross = parseFloat(e.commission_amount || 0);
@@ -2676,6 +2680,7 @@ function _renderMeDetailTable(partnerId){
       return s + (isC ? (e.balance_gross !== undefined && e.balance_gross !== null ? parseFloat(e.balance_gross) : Math.max(0, gross - adv)) : gross);
     }, 0);
     const totAdmin        = rows.reduce((s,e)=>{
+      if (e.status === 'CANCELLED') return s;
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
       const isC = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
       const gross = parseFloat(e.commission_amount || 0);
@@ -2684,6 +2689,7 @@ function _renderMeDetailTable(partnerId){
       return s + Math.round(bal * 0.08);
     }, 0);
     const totTds          = rows.reduce((s,e)=>{
+      if (e.status === 'CANCELLED') return s;
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
       const isC = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
       const gross = parseFloat(e.commission_amount || 0);
@@ -3283,27 +3289,32 @@ function _lvDetailRowHtml(lid, entries){
     <td style="padding:6px 10px">Status</td>
   </tr>`;
 
-  const totGross    = filtered.reduce((s,e)=>s+(e.commission_amount||0),0);
-  const totDealVal  = filtered.reduce((s,e)=>s+(e.deal_value||e.base_value||0),0);
+  const totGross    = filtered.reduce((s,e)=>(e.status==='CANCELLED'?s:s+(e.commission_amount||0)),0);
+  const totDealVal  = filtered.reduce((s,e)=>(e.status==='CANCELLED'?s:s+(e.deal_value||e.base_value||0)),0);
   const totStg1     = filtered.reduce((s,e)=>{
+    if (e.status === 'CANCELLED') return s;
     const isC = ((e.kind||'COMMISSION').toUpperCase()==='COMMISSION');
     return s + (isC ? (e.stage1_adv || 0) : 0);
   }, 0);
   const totStg2     = filtered.reduce((s,e)=>{
+    if (e.status === 'CANCELLED') return s;
     const isC = ((e.kind||'COMMISSION').toUpperCase()==='COMMISSION');
     return s + (isC ? (e.stage2_adv || 0) : 0);
   }, 0);
   const totAdvPaid  = filtered.reduce((s,e)=>{
+    if (e.status === 'CANCELLED') return s;
     const isC = ((e.kind||'COMMISSION').toUpperCase()==='COMMISSION');
     return s + (isC ? (e.advance_paid || 0) : 0);
   }, 0);
   const totBalGross = filtered.reduce((s,e)=>{
+    if (e.status === 'CANCELLED') return s;
     const isC = ((e.kind||'COMMISSION').toUpperCase()==='COMMISSION');
     const adv = isC ? (e.advance_paid || 0) : 0;
     const gross = e.commission_amount || 0;
     return s + (isC ? (e.balance_gross !== undefined ? e.balance_gross : Math.max(0, gross - adv)) : gross);
   }, 0);
   const totAdmin    = filtered.reduce((s,e)=>{
+    if (e.status === 'CANCELLED') return s;
     const isC = ((e.kind||'COMMISSION').toUpperCase()==='COMMISSION');
     const adv = isC ? (e.advance_paid || 0) : 0;
     const gross = e.commission_amount || 0;
@@ -3311,6 +3322,7 @@ function _lvDetailRowHtml(lid, entries){
     return s + Math.round(bal * 0.08);
   }, 0);
   const totTds      = filtered.reduce((s,e)=>{
+    if (e.status === 'CANCELLED') return s;
     const isC = ((e.kind||'COMMISSION').toUpperCase()==='COMMISSION');
     const adv = isC ? (e.advance_paid || 0) : 0;
     const gross = e.commission_amount || 0;

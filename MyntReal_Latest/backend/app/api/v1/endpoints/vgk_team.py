@@ -4507,22 +4507,22 @@ def member_income_entries_detail(
     config_map = {c.category_id: c for c in configs}
 
     # DC-BRP-001: build optional status clause
-    _status_val = status.strip().upper() if status else None
+    _status_val = status.strip().upper() if isinstance(status, str) and status.strip() else None
     _extra_where = ""
     _extra_params: dict = {"pid": partner_id}
     # DC-IE-DATE-FILTER-001: date range filter on created_at::date
-    if date_from:
+    if isinstance(date_from, str) and date_from.strip():
         _extra_where += " AND e.created_at::date >= CAST(:ie_date_from AS DATE)"
-        _extra_params["ie_date_from"] = date_from
-    if date_to:
+        _extra_params["ie_date_from"] = date_from.strip()
+    if isinstance(date_to, str) and date_to.strip():
         _extra_where += " AND e.created_at::date <= CAST(:ie_date_to AS DATE)"
-        _extra_params["ie_date_to"] = date_to
-    if community_only:
+        _extra_params["ie_date_to"] = date_to.strip()
+    if isinstance(community_only, bool) and community_only:
         _extra_where += " AND e.source_lead_id IN (SELECT id FROM crm_leads WHERE community_id IS NOT NULL)"
-    if community_service_id:
+    if isinstance(community_service_id, int) and community_service_id > 0:
         _extra_where += " AND e.source_lead_id IN (SELECT id FROM crm_leads WHERE community_id IN (SELECT id FROM community_registrations WHERE community_service_id = :comm_svc_id))"
         _extra_params["comm_svc_id"] = community_service_id
-    _st_list = [s.strip().upper() for s in status.split(',') if s.strip()] if status else []
+    _st_list = [s.strip().upper() for s in status.split(',') if s.strip()] if isinstance(status, str) and status.strip() else []
     _is_brp = 'BALANCE_RECEIVED_PLUS' in _st_list
     _other_st = [s for s in _st_list if s != 'BALANCE_RECEIVED_PLUS']
     if _st_list:
