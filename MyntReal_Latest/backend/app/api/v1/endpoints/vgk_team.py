@@ -654,7 +654,7 @@ def list_vgk_members(
         code = d.get('registered_by_emp_code')
         d['registered_by_name'] = name_map.get(code, None)
 
-    return {"success": True, "total": total, "page": page, "page_size": page_size, "data": items}
+    return {"success": True, "total": total, "page": page, "page_size": page_size, "data": items, "members": items}
 
 
 @router.post("/members/send-otp")

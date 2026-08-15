@@ -3682,11 +3682,12 @@ async function loadMembers(page = 1) {
     const r = await staffFetch(url);
     const d = await r.json();
     if (!d.success) { showToast('Failed to load', 'error'); return; }
-    document.getElementById('totalBadge').textContent = d.total;
-    if (!d.data.length) { tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:30px;color:#9ca3af">No Channel Partners found</td></tr>'; }
+    document.getElementById('totalBadge').textContent = d.total || 0;
+    const membersList = d.data || d.members || [];
+    if (!membersList.length) { tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:30px;color:#9ca3af">No Channel Partners found</td></tr>'; }
     else {
-      d.data.forEach(m => { _vgkMemberCache[m.id] = m; });
-      tbody.innerHTML = d.data.map(m => {
+      membersList.forEach(m => { _vgkMemberCache[m.id] = m; });
+      tbody.innerHTML = membersList.map(m => {
         const ptsUsed = Number(m.points_utilised || 0);
         const earnings = Number(m.confirmed_income_total || 0);
         const loginCount = Number(m.login_count || 0);
