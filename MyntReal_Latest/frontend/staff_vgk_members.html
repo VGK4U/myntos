@@ -2618,7 +2618,7 @@ function _renderMeDetailTable(partnerId){
   else if(statusVal === 'ONLY_CANCELLED') rows = rows.filter(e => e.status === 'CANCELLED');
   // statusVal === '' (All) → no status filtering applied
 
-  // Default & Dynamic Sorting Logic
+  // Dynamic Sorting Logic for all columns
   if (!sortVal || sortVal === 'name_asc') {
     rows.sort((a, b) => {
       const na = (a.client_name || '').toLowerCase();
@@ -2637,22 +2637,54 @@ function _renderMeDetailTable(partnerId){
       const db = b.trigger_date || b.income_date || '';
       return db.localeCompare(da);
     });
-  } else if (sortVal === 'date_desc') {
-    rows.sort((a, b) => {
-      const da = a.trigger_date || a.income_date || '';
-      const db = b.trigger_date || b.income_date || '';
-      return db.localeCompare(da);
-    });
-  } else if (sortVal === 'date_asc') {
-    rows.sort((a, b) => {
-      const da = a.trigger_date || a.income_date || '';
-      const db = b.trigger_date || b.income_date || '';
-      return da.localeCompare(db);
-    });
+  } else if (sortVal === 'date_desc' || sortVal === 'trigger_date_desc' || sortVal === 'date') {
+    rows.sort((a, b) => (b.trigger_date || b.income_date || '').localeCompare(a.trigger_date || a.income_date || ''));
+  } else if (sortVal === 'date_asc' || sortVal === 'trigger_date_asc') {
+    rows.sort((a, b) => (a.trigger_date || a.income_date || '').localeCompare(b.trigger_date || b.income_date || ''));
+  } else if (sortVal === 'submit_date_desc') {
+    rows.sort((a, b) => (b.submit_date || '').localeCompare(a.submit_date || ''));
+  } else if (sortVal === 'submit_date_asc') {
+    rows.sort((a, b) => (a.submit_date || '').localeCompare(b.submit_date || ''));
+  } else if (sortVal === 'payment_date_desc') {
+    rows.sort((a, b) => (b.payment_date || '').localeCompare(a.payment_date || ''));
+  } else if (sortVal === 'payment_date_asc') {
+    rows.sort((a, b) => (a.payment_date || '').localeCompare(b.payment_date || ''));
+  } else if (sortVal === 'entry_number_desc') {
+    rows.sort((a, b) => (b.entry_number || '').localeCompare(a.entry_number || ''));
+  } else if (sortVal === 'entry_number_asc') {
+    rows.sort((a, b) => (a.entry_number || '').localeCompare(b.entry_number || ''));
+  } else if (sortVal === 'level_desc') {
+    rows.sort((a, b) => (b.level || 0) - (a.level || 0));
+  } else if (sortVal === 'level_asc') {
+    rows.sort((a, b) => (a.level || 0) - (b.level || 0));
+  } else if (sortVal === 'kind_desc') {
+    rows.sort((a, b) => (b.kind || '').localeCompare(a.kind || ''));
+  } else if (sortVal === 'kind_asc') {
+    rows.sort((a, b) => (a.kind || '').localeCompare(b.kind || ''));
+  } else if (sortVal === 'deal_value_desc') {
+    rows.sort((a, b) => (parseFloat(b.deal_value || 0) - parseFloat(a.deal_value || 0)));
+  } else if (sortVal === 'deal_value_asc') {
+    rows.sort((a, b) => (parseFloat(a.deal_value || 0) - parseFloat(b.deal_value || 0)));
   } else if (sortVal === 'gross_desc') {
     rows.sort((a, b) => (parseFloat(b.commission_amount || 0) - parseFloat(a.commission_amount || 0)));
   } else if (sortVal === 'gross_asc') {
     rows.sort((a, b) => (parseFloat(a.commission_amount || 0) - parseFloat(b.commission_amount || 0)));
+  } else if (sortVal === 'advance_paid_desc') {
+    rows.sort((a, b) => (parseFloat(b.advance_paid || 0) - parseFloat(a.advance_paid || 0)));
+  } else if (sortVal === 'advance_paid_asc') {
+    rows.sort((a, b) => (parseFloat(a.advance_paid || 0) - parseFloat(b.advance_paid || 0)));
+  } else if (sortVal === 'balance_gross_desc') {
+    rows.sort((a, b) => (parseFloat(b.balance_gross || b.commission_amount || 0) - parseFloat(a.balance_gross || a.commission_amount || 0)));
+  } else if (sortVal === 'balance_gross_asc') {
+    rows.sort((a, b) => (parseFloat(a.balance_gross || a.commission_amount || 0) - parseFloat(b.balance_gross || b.commission_amount || 0)));
+  } else if (sortVal === 'net_desc') {
+    rows.sort((a, b) => (parseFloat(b.net_payout || 0) - parseFloat(a.net_payout || 0)));
+  } else if (sortVal === 'net_asc') {
+    rows.sort((a, b) => (parseFloat(a.net_payout || 0) - parseFloat(b.net_payout || 0)));
+  } else if (sortVal === 'status_desc') {
+    rows.sort((a, b) => (b.status || '').localeCompare(a.status || ''));
+  } else if (sortVal === 'status_asc') {
+    rows.sort((a, b) => (a.status || '').localeCompare(b.status || ''));
   }
 
   const sc   = (st) => _ME_STATUS_COLOR[st]||'#6b7280';
@@ -2739,11 +2771,18 @@ function _renderMeDetailTable(partnerId){
       const bal = isC ? (e.balance_gross !== undefined && e.balance_gross !== null ? parseFloat(e.balance_gross) : Math.max(0, gross - adv)) : gross;
       return s + Math.round(bal * 0.02);
     }, 0);
-    const totNet          = totBalGross - totAdmin - totTds;
+    const totNetBal       = totBalGross - totAdmin - totTds;
+    const totNetEarned    = Math.round(totGross * 0.90);
     const totalAll = allRows.length;
 
-    const TH = (txt, align='left', extra='') =>
-      `<th style="padding:7px 10px;text-align:${align};color:#6b7280;font-weight:700;font-size:10.5px;text-transform:uppercase;${extra}">${txt}</th>`;
+    const TH = (txt, sortKey, align='left', extra='') => {
+      if (!sortKey) return `<th style="padding:7px 10px;text-align:${align};color:#6b7280;font-weight:700;font-size:10.5px;text-transform:uppercase;${extra}">${txt}</th>`;
+      const isCur = sortVal.startsWith(sortKey);
+      const isDesc = sortVal.endsWith('_desc');
+      const icon = isCur ? (isDesc ? ' <i class="fas fa-sort-down"></i>' : ' <i class="fas fa-sort-up"></i>') : ' <i class="fas fa-sort" style="opacity:.35"></i>';
+      const toggleKey = isCur ? (isDesc ? sortKey + '_asc' : sortKey + '_desc') : sortKey + '_desc';
+      return `<th onclick="_setMeSubSort(${partnerId}, '${toggleKey}')" style="padding:7px 10px;text-align:${align};color:${isCur?'#4c1d95':'#6b7280'};font-weight:700;font-size:10.5px;text-transform:uppercase;cursor:pointer;user-select:none;${extra}">${txt}${icon}</th>`;
+    };
 
     detail.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
@@ -2779,24 +2818,24 @@ function _renderMeDetailTable(partnerId){
     <table style="width:100%;border-collapse:collapse;font-size:12px">
       <thead>
         <tr style="background:#ede9fe;border-bottom:1px solid #ddd6fe">
-          ${TH('Submit Date')}
-          ${TH('Trigger Date')}
-          ${TH('Payment Date')}
-          ${TH('Entry #')}
-          ${TH('Level / Role','center')}
-          ${TH('Customer Name')}
-          ${TH('Entry Kind','center')}
-          ${TH('Deal Value ₹','right','color:#4b5563')}
-          ${TH('Calc %','center','color:#4b5563')}
-          ${TH('Gross ₹','right')}
-          ${TH('Stage 1 Adv.','right','color:#d97706')}
-          ${TH('Stage 2 Adv.','right','color:#d97706')}
-          ${TH('Advance Paid ₹','right','color:#d97706')}
-          ${TH('Balance Gross ₹','right','color:#2563eb')}
-          ${TH('Admin (8%)','right')}
-          ${TH('TDS (2%)','right')}
-          ${TH('Net (90%)','right')}
-          ${TH('Status','center')}
+          ${TH('Submit Date', 'submit_date')}
+          ${TH('Trigger Date', 'date')}
+          ${TH('Payment Date', 'payment_date')}
+          ${TH('Entry #', 'entry_number')}
+          ${TH('Level / Role', 'level', 'center')}
+          ${TH('Customer Name', 'name')}
+          ${TH('Entry Kind', 'kind', 'center')}
+          ${TH('Deal Value ₹', 'deal_value', 'right', 'color:#4b5563')}
+          ${TH('Calc %', '', 'center', 'color:#4b5563')}
+          ${TH('Gross ₹', 'gross', 'right')}
+          ${TH('Stage 1 Adv.', '', 'right', 'color:#d97706')}
+          ${TH('Stage 2 Adv.', '', 'right', 'color:#d97706')}
+          ${TH('Advance Paid ₹', 'advance_paid', 'right', 'color:#d97706')}
+          ${TH('Balance Gross ₹', 'balance_gross', 'right', 'color:#2563eb')}
+          ${TH('Admin (8%)', '', 'right')}
+          ${TH('TDS (2%)', '', 'right')}
+          ${TH('Net (90%)', 'net', 'right')}
+          ${TH('Status', 'status', 'center')}
         </tr>
       </thead>
       <tbody>
