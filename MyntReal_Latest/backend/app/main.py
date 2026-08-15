@@ -10633,9 +10633,9 @@ def _startup_worker():
             ))
             _vcl.execute(text(
                 "ALTER TABLE vgk_cash_income_entries ADD CONSTRAINT vgk_cash_income_level_check "
-                "CHECK (level BETWEEN 0 AND 10)"
+                "CHECK (level BETWEEN 0 AND 20)"
             ))
-        print("[DC-VGK-CASH-LEVEL-001] ✅ vgk_cash_income_entries level constraint updated (0-10 now allowed)", flush=True)
+        print("[DC-VGK-CASH-LEVEL-001] ✅ vgk_cash_income_entries level constraint updated (0-20 now allowed)", flush=True)
     except Exception as _vcl_e:
         print(f"[DC-VGK-CASH-LEVEL-001] ⚠️ (non-fatal) {_vcl_e}", flush=True)
 
