@@ -4822,6 +4822,9 @@ def member_income_entries_detail(
         if potential_amount <= 0:
             potential_amount = float(r.commission_amount)
 
+        is_paid_st = r.status in ('PAID', 'RELEASED', 'VERIFIED')
+        pmt_date = r.entry_date if is_paid_st else None
+
         return {
             "id":                int(r.id),
             "entry_number":      r.entry_number or f"INC-{r.id}",
@@ -4830,6 +4833,8 @@ def member_income_entries_detail(
             "level":             _lvl_int,
             "level_label":       _lvl_labels_map.get(_lvl_int, f"L{_lvl_int}") if _lvl_int is not None else "—",
             "income_date":       r.entry_date,
+            "trigger_date":      r.entry_date,
+            "payment_date":      pmt_date,
             "deal_value":        commission_base,
             "commission_pct":    float(r.commission_pct),
             "commission_amount": float(r.commission_amount),

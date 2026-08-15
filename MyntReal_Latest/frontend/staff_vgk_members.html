@@ -2691,15 +2691,14 @@ function _renderMeDetailTable(partnerId){
     <table style="width:100%;border-collapse:collapse;font-size:12px">
       <thead>
         <tr style="background:#ede9fe;border-bottom:1px solid #ddd6fe">
-          ${TH('Date')}
           ${TH('Submit Date')}
-          ${TH('1st Txn Date')}
-          ${TH('Final Date')}
+          ${TH('Trigger Date')}
+          ${TH('Payment Date')}
           ${TH('Entry #')}
-          ${TH('Level / Type')}
+          ${TH('Level / Role')}
           ${TH('Customer')}
-          ${TH('Commission Base ₹','right')}
-          ${TH('%','right')}
+          ${TH('Base Value ₹','right')}
+          ${TH('Rate %','right')}
           ${TH('Gross ₹','right')}
           ${TH('Admin ₹','right')}
           ${TH('TDS ₹','right')}
@@ -2711,18 +2710,60 @@ function _renderMeDetailTable(partnerId){
       </thead>
       <tbody>
       ${rows.length ? rows.map(e=>{
-        const _lvlColor = {1:'#7c3aed',2:'#1d4ed8',3:'#0d9488',4:'#d97706',5:'#6b7280'};
+        const _lvlColor = {0:'#6b7280',1:'#7c3aed',2:'#1d4ed8',3:'#0d9488',4:'#d97706',5:'#db2777',6:'#c026d3'};
         const lvlC = _lvlColor[e.level]||'#6b7280';
+        const lvlLabelText = _lvLvlLabel[e.level] || (e.level ? 'L'+e.level : '—');
+        const kindLabelText = _getIncomeTypeLabel(e.kind);
+        
+        let calcBase = e.deal_value || e.base_value || e.deal_value_total || e.solar_value || e.confirmed_final_value || 0;
+        let calcPct  = (e.commission_pct && e.commission_pct > 0) ? e.commission_pct : 0;
+
+        if (!calcBase || calcBase <= 0) {
+          if (calcPct > 0 && e.commission_amount > 0) {
+            calcBase = Math.round(e.commission_amount / (calcPct / 100));
+          } else if (e.level === 1 && e.commission_amount > 0) {
+            calcBase = Math.round(e.commission_amount / 0.0421);
+          } else if ((e.level === 5 || e.level === 2) && e.commission_amount > 0) {
+            calcBase = Math.round(e.commission_amount / 0.015);
+          } else if (e.level === 6 && e.commission_amount > 0) {
+            calcBase = Math.round(e.commission_amount / 0.035);
+          } else if (e.level === 3 && e.commission_amount > 0) {
+            calcBase = Math.round(e.commission_amount / 0.01);
+          }
+        }
+
+        if (!calcPct || calcPct <= 0) {
+          if (calcBase > 0 && e.commission_amount > 0) {
+            calcPct = (e.commission_amount / calcBase * 100).toFixed(2);
+          } else if (e.level === 1) {
+            calcPct = 4.21;
+          } else if (e.level === 5 || e.level === 2) {
+            calcPct = 1.50;
+          } else if (e.level === 6) {
+            calcPct = 3.50;
+          } else if (e.level === 3) {
+            calcPct = 1.00;
+          }
+        }
+
+        const baseText = calcBase > 0 ? _meInr(calcBase) : '—';
+        const rateText = calcPct > 0 ? (calcPct + '%') : '—';
+        const isPaidSt = (e.status === 'PAID' || e.status === 'RELEASED' || e.status === 'VERIFIED');
+        const resolvedPmtDate = e.payment_date || (isPaidSt ? (e.trigger_date || e.income_date) : null);
+        const pmtCellHtml = resolvedPmtDate ? fmtDate(resolvedPmtDate) : '<span style="color:#d1d5db">—</span>';
+
         return `<tr style="border-bottom:1px solid #f3f4f6">
-        <td style="padding:7px 10px;color:#6b7280;white-space:nowrap">${fmtDate(e.income_date)}</td>
         <td style="padding:7px 10px;color:#6b7280;white-space:nowrap">${e.submit_date?fmtDate(e.submit_date):'<span style="color:#d1d5db">—</span>'}</td>
-        <td style="padding:7px 10px;color:#6b7280;white-space:nowrap">${e.first_payment_received_date?fmtDate(e.first_payment_received_date):'<span style="color:#d1d5db">—</span>'}</td>
-        <td style="padding:7px 10px;color:#059669;white-space:nowrap">${e.complete_date?fmtDate(e.complete_date):'<span style="color:#d1d5db">—</span>'}</td>
+        <td style="padding:7px 10px;color:#111827;font-weight:600;white-space:nowrap">${(e.trigger_date||e.income_date)?fmtDate(e.trigger_date||e.income_date):'<span style="color:#d1d5db">—</span>'}</td>
+        <td style="padding:7px 10px;color:${resolvedPmtDate?'#059669':'#6b7280'};white-space:nowrap">${pmtCellHtml}</td>
         <td style="padding:7px 10px;font-family:monospace;color:#1f2937;font-size:11px">${e.entry_number||'—'}</td>
-        <td style="padding:7px 10px">${typeLbl(e.kind, e.level, e.level_label)}</td>
+        <td style="padding:7px 10px;text-align:center">
+          <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${lvlC}22;color:${lvlC}">${lvlLabelText}</span>
+          <span style="font-size:10px;padding:2px 6px;border-radius:6px;background:#f3f4f6;color:#6b7280;margin-left:3px;font-weight:500">${kindLabelText}</span>
+        </td>
         <td style="padding:7px 10px;color:#374151;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${e.client_name||''}">${e.client_name||'<span style="color:#d1d5db">—</span>'}</td>
-        <td style="padding:7px 10px;text-align:right;color:#1e40af;font-weight:600">${e.deal_value>0?_meInr(e.deal_value):'—'}</td>
-        <td style="padding:7px 10px;text-align:right;color:#7c3aed;font-weight:700">${e.commission_pct>0?e.commission_pct+'%':'—'}</td>
+        <td style="padding:7px 10px;text-align:right;color:#1e40af;font-weight:600">${baseText}</td>
+        <td style="padding:7px 10px;text-align:right;color:#7c3aed;font-weight:700">${rateText}</td>
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:#374151">${e.commission_amount>0?_meInr(e.commission_amount):'—'}</td>
         <td style="padding:7px 10px;text-align:right;color:#d97706">${e.admin_charges>0?_meInr(e.admin_charges):'—'}</td>
         <td style="padding:7px 10px;text-align:right;color:#dc2626">${e.tds_amount>0?_meInr(e.tds_amount):'—'}</td>
@@ -2731,11 +2772,11 @@ function _renderMeDetailTable(partnerId){
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:#b45309">${_pendSet.has(e.status)&&e.commission_amount>0?_meInr(e.net_payout>0?e.net_payout:e.commission_amount*0.9)+'<span style="font-size:9px;color:#d97706;margin-left:2px">'+(e.net_payout>0?'':'~')+'</span>':'<span style="color:#d1d5db">—</span>'}</td>
         <td style="padding:7px 10px;text-align:center"><span style="background:${sc(e.status)}20;color:${sc(e.status)};padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700">${e.status}</span></td>
       </tr>`;}).join('')
-      : '<tr><td colspan="16" style="padding:20px;text-align:center;color:#9ca3af;font-size:12px"><i class="fas fa-search me-1"></i>No entries match the filter.</td></tr>'}
+      : '<tr><td colspan="15" style="padding:20px;text-align:center;color:#9ca3af;font-size:12px"><i class="fas fa-search me-1"></i>No entries match the filter.</td></tr>'}
       </tbody>
       <tfoot>
         <tr style="background:#f0fdf4;font-weight:700;border-top:2px solid #bbf7d0">
-          <td colspan="9" style="padding:8px 10px;color:#374151;font-size:12px">TOTAL (${rows.length} entries)</td>
+          <td colspan="8" style="padding:8px 10px;color:#374151;font-size:12px">TOTAL (${rows.length} entries)</td>
           <td style="padding:8px 10px;text-align:right;color:#374151">${_meInr(totGross)}</td>
           <td style="padding:8px 10px;text-align:right;color:#d97706">${_meInr(rows.reduce((s,e)=>s+e.admin_charges,0))}</td>
           <td style="padding:8px 10px;text-align:right;color:#dc2626">${_meInr(rows.reduce((s,e)=>s+e.tds_amount,0))}</td>
