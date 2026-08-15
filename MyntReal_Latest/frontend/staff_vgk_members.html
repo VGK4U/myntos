@@ -3061,8 +3061,10 @@ function _lvDetailRowHtml(lid, entries){
     const stLabel  = _ME_STATUS_LABEL[e.status] || e.status;
     const kindBadge= e.community_id ? (e.community_event_name || 'Community Service') : (e.kind||'').replace(/_/g,' ');
     const commBadgeHtml = e.community_id ? `<span style="font-size:9.5px;padding:2px 6px;border-radius:6px;background:#0ea5e9;color:#fff;margin-left:3px;font-weight:600">Comm ID: ${e.community_id}</span>` : '';
+    const baseText = e.base_value > 0 ? _meInr(e.base_value) : '—';
+    const rateText = e.commission_pct > 0 ? (e.commission_pct + '%') : '—';
     return `<tr style="border-bottom:1px solid #f0f0f0;background:#fafaf9">
-      <td style="padding:8px 10px;text-align:center;font-size:11px;color:#9ca3af">${e.income_date||'—'}</td>
+      <td style="padding:8px 10px;text-align:center;font-size:11px;color:#9ca3af">${e.income_date?fmtDate(e.income_date):'—'}</td>
       <td style="padding:8px 10px;font-size:11px;color:#6b7280;white-space:nowrap">${e.submit_date?fmtDate(e.submit_date):'<span style="color:#d1d5db">—</span>'}</td>
       <td style="padding:8px 10px;font-size:11px;color:#6b7280;white-space:nowrap">${e.first_payment_received_date?fmtDate(e.first_payment_received_date):'<span style="color:#d1d5db">—</span>'}</td>
       <td style="padding:8px 10px;font-size:11px;color:#059669;white-space:nowrap">${e.complete_date?fmtDate(e.complete_date):'<span style="color:#d1d5db">—</span>'}</td>
@@ -3076,6 +3078,8 @@ function _lvDetailRowHtml(lid, entries){
         <span style="font-weight:700;color:#111827;font-size:12px">${e.partner_code||''}</span>
         <span style="color:#6b7280;font-size:11px;margin-left:5px">${e.partner_name||''}</span>
       </td>
+      <td style="padding:8px 10px;text-align:right;font-weight:600;color:#374151;font-size:11px">${baseText}</td>
+      <td style="padding:8px 10px;text-align:center;font-weight:700;color:#7c3aed;font-size:11px">${rateText}</td>
       <td style="padding:8px 10px;text-align:right;font-weight:700;color:#7c3aed;font-size:12px">${_meInr(e.commission_amount)}</td>
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#6b7280">${_meInr(e.admin_charges)}</td>
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#6b7280">${_meInr(e.tds_amount)}</td>
@@ -3094,6 +3098,8 @@ function _lvDetailRowHtml(lid, entries){
     <td style="padding:6px 10px">Entry #</td>
     <td style="padding:6px 10px">Level / Type</td>
     <td style="padding:6px 10px">Member</td>
+    <td style="padding:6px 10px;text-align:right">Base Value</td>
+    <td style="padding:6px 10px;text-align:center">Rate %</td>
     <td style="padding:6px 10px;text-align:right">Gross</td>
     <td style="padding:6px 10px;text-align:right">Admin</td>
     <td style="padding:6px 10px;text-align:right">TDS</td>
@@ -3106,6 +3112,8 @@ function _lvDetailRowHtml(lid, entries){
       ${subHead}${rows}
       <tr style="background:#f0f0fb;font-weight:700">
         <td colspan="7" style="padding:7px 10px;font-size:11px;color:#7c3aed">${filtered.length} entr${filtered.length===1?'y':'ies'}</td>
+        <td style="padding:7px 10px;text-align:right;color:#374151"></td>
+        <td></td>
         <td style="padding:7px 10px;text-align:right;color:#7c3aed">${_meInr(filtered.reduce((s,e)=>s+(e.commission_amount||0),0))}</td>
         <td colspan="2"></td>
         <td style="padding:7px 10px;text-align:right;color:#059669">${_meInr(filtered.reduce((s,e)=>s+(e.net_payout||0),0))}</td>

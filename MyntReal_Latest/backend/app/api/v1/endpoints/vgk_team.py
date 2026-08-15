@@ -5065,6 +5065,8 @@ def lead_income_members_detail(
         rows = db.execute(text(
             "SELECT e.id, e.entry_number, e.status, e.kind, e.level, "
             "  e.created_at::date::text AS income_date, "
+            "  COALESCE(e.commission_pct,0)::float    AS commission_pct, "
+            "  COALESCE(e.solar_value, e.confirmed_final_value, e.deal_value_total, 0)::float AS base_value, "
             "  COALESCE(e.commission_amount,0)::float AS commission_amount, "
             "  COALESCE(e.net_payout,0)::float        AS net_payout, "
             "  COALESCE(e.admin_charges,0)::float     AS admin_charges, "
@@ -5111,6 +5113,8 @@ def lead_income_members_detail(
         "kind":              r.kind or "COMMISSION",
         "level":             r.level,
         "income_date":       r.income_date,
+        "commission_pct":    float(r.commission_pct),
+        "base_value":        float(r.base_value),
         "commission_amount": float(r.commission_amount),
         "net_payout":        float(r.net_payout),
         "admin_charges":     float(r.admin_charges),
