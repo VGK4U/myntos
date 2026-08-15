@@ -317,8 +317,8 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
     l4_core = _l4_ovr if _l4_ovr else (db.query(OfficialPartner).filter(OfficialPartner.id == l3.parent_partner_id).first() if (l3 and l3.parent_partner_id) else None)
 
     # DC-L4-FALLBACK-001: Use assigned field support for L5.
-    # If no field support is assigned, fall back to VGK07102207 (partner 31) as company-level support.
-    _l5_id = lead.vgk_field_support_id or 31
+    # If no field support is assigned, fall back to associated_partner_id (the lead source partner) so L5 is never lost, then fallback to 31.
+    _l5_id = lead.vgk_field_support_id or lead.associated_partner_id or 31
     l5 = db.query(OfficialPartner).filter(OfficialPartner.id == _l5_id).first()
 
     # DC-VGK-ACTIVATION-001: L2/L3 earn only if they hold a VGK07 partner code (default activation).
