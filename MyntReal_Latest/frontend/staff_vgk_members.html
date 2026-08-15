@@ -2459,7 +2459,7 @@ async function toggleIedRow(partnerId){
     const activeStage = (document.getElementById('iedStageFilter')?.value||'').trim();
     const iedDf = (document.getElementById('iedDateFrom')?.value||'').trim();
     const iedDt = (document.getElementById('iedDateTo')?.value||'').trim();
-    let detailUrl = API + '/vgk/dashboard/member-income-entries?partner_id=' + partnerId;
+    let detailUrl = API + '/vgk/dashboard/member-income-entries?partner_id=' + partnerId + '&_t=' + Date.now();
     if(activeStage) detailUrl += '&status=' + encodeURIComponent(activeStage);
     if(iedDf) detailUrl += '&date_from=' + encodeURIComponent(iedDf);
     if(iedDt) detailUrl += '&date_to='   + encodeURIComponent(iedDt);
@@ -2508,7 +2508,7 @@ async function toggleMeRow(partnerId){
     const activeStage = (document.getElementById('meStageFilter')?.value||'').trim();
     const meDf = (document.getElementById('meDateFrom')?.value||'').trim();
     const meDt = (document.getElementById('meDateTo')?.value||'').trim();
-    let detailUrl = API + '/vgk/dashboard/member-income-entries?partner_id=' + partnerId;
+    let detailUrl = API + '/vgk/dashboard/member-income-entries?partner_id=' + partnerId + '&_t=' + Date.now();
     if(activeStage) detailUrl += '&status=' + encodeURIComponent(activeStage);
     if(meDf) detailUrl += '&date_from=' + encodeURIComponent(meDf);
     if(meDt) detailUrl += '&date_to='   + encodeURIComponent(meDt);
