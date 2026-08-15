@@ -268,7 +268,7 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
     _sps_gate = (getattr(lead, 'solar_pipeline_status', '') or '').lower()
     _is_solar = (category_id in _SOLAR_CAT_IDS) or bool(_sps_gate)
     if _is_solar:
-        _SOLAR_COMM_STAGES = {'subsidy_pending', 'completed'}
+        _SOLAR_COMM_STAGES = {'net_meter_pending', 'balance_received', 'subsidy_pending', 'completed'}
         if _sps_gate not in _SOLAR_COMM_STAGES:
             logger.info(
                 f'[VGK-CI] DC-SOLAR-STAGE-GATE-001: Lead {lead.id} cat={category_id} '
@@ -420,7 +420,7 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
             VGKCashIncomeEntry.partner_id     == partner.id,
             VGKCashIncomeEntry.level          == level,
             VGKCashIncomeEntry.status         != 'CANCELLED',
-            VGKCashIncomeEntry.kind           != 'ADVANCE',
+            VGKCashIncomeEntry.kind.notin_(['ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'SLAB_BONUS']),
         ).first()
         if exists:
             logger.info(f'[VGK-CI] Lead {lead.id} L{level} entry already exists (kind={exists.kind}, status={exists.status}) — skipping')
