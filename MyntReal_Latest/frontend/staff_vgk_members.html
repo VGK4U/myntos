@@ -2772,6 +2772,7 @@ function _renderMeDetailTable(partnerId){
       return s + Math.round(bal * 0.02);
     }, 0);
     const totNetBal       = totBalGross - totAdmin - totTds;
+    const totNet          = totNetBal;
     const totNetEarned    = Math.round(totGross * 0.90);
     const totalAll = allRows.length;
 
