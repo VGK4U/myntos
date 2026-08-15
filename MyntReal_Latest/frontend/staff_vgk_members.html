@@ -2778,13 +2778,18 @@ function _renderMeDetailTable(partnerId){
           }
         }
 
+        const isComm   = (e.kind === 'COMMISSION');
         const grossAmt = e.commission_amount || 0;
-        const advPaid  = e.advance_paid || 0;
-        const balGross = e.balance_gross !== undefined ? e.balance_gross : Math.max(0, grossAmt - advPaid);
+        const advPaid  = isComm ? (e.advance_paid || 0) : 0;
+        const balGross = isComm ? (e.balance_gross !== undefined ? e.balance_gross : Math.max(0, grossAmt - advPaid)) : grossAmt;
 
-        let adminVal = Math.round(balGross * 0.08);
-        let tdsVal   = Math.round(balGross * 0.02);
-        let netVal   = Math.max(0, Math.round(balGross - adminVal - tdsVal));
+        const baseForDeductions = isComm ? balGross : grossAmt;
+        let adminVal = Math.round(baseForDeductions * 0.08);
+        let tdsVal   = Math.round(baseForDeductions * 0.02);
+        let netVal   = Math.max(0, Math.round(baseForDeductions - adminVal - tdsVal));
+
+        const advPaidHtml  = isComm ? (advPaid > 0 ? _meInr(advPaid) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
+        const balGrossHtml = isComm ? (balGross > 0 ? _meInr(balGross) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
 
         const baseText = calcBase > 0 ? _meInr(calcBase) : '—';
         const rateText = calcPct > 0 ? (calcPct + '%') : '—';
@@ -2805,13 +2810,13 @@ function _renderMeDetailTable(partnerId){
         <td style="padding:7px 10px;text-align:right;color:#1e40af;font-weight:600">${baseText}</td>
         <td style="padding:7px 10px;text-align:right;color:#7c3aed;font-weight:700">${rateText}</td>
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:#374151">${grossAmt>0?_meInr(grossAmt):'—'}</td>
-        <td style="padding:7px 10px;text-align:right;color:#d97706;font-weight:600">${advPaid>0?_meInr(advPaid):'—'}</td>
-        <td style="padding:7px 10px;text-align:right;color:#2563eb;font-weight:700">${balGross>0?_meInr(balGross):'—'}</td>
+        <td style="padding:7px 10px;text-align:right;color:#d97706;font-weight:600">${advPaidHtml}</td>
+        <td style="padding:7px 10px;text-align:right;color:#2563eb;font-weight:700">${balGrossHtml}</td>
         <td style="padding:7px 10px;text-align:right;color:#d97706">${adminVal>0?_meInr(adminVal):'—'}</td>
         <td style="padding:7px 10px;text-align:right;color:#dc2626">${tdsVal>0?_meInr(tdsVal):'—'}</td>
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:#059669">${netVal>0?_meInr(netVal):'—'}</td>
-        <td style="padding:7px 10px;text-align:right;font-weight:700;color:#d97706">${_pendSet.has(e.status)&&balGross>0?_meInr(balGross):'<span style="color:#d1d5db">—</span>'}</td>
-        <td style="padding:7px 10px;text-align:right;font-weight:700;color:#b45309">${_pendSet.has(e.status)&&balGross>0?_meInr(netVal):'<span style="color:#d1d5db">—</span>'}</td>
+        <td style="padding:7px 10px;text-align:right;font-weight:700;color:#d97706">${_pendSet.has(e.status)&&baseForDeductions>0?_meInr(baseForDeductions):'<span style="color:#d1d5db">—</span>'}</td>
+        <td style="padding:7px 10px;text-align:right;font-weight:700;color:#b45309">${_pendSet.has(e.status)&&baseForDeductions>0?_meInr(netVal):'<span style="color:#d1d5db">—</span>'}</td>
         <td style="padding:7px 10px;text-align:center"><span style="background:${sc(e.status)}20;color:${sc(e.status)};padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700">${e.status}</span></td>
       </tr>`;}).join('')
       : '<tr><td colspan="17" style="padding:20px;text-align:center;color:#9ca3af;font-size:12px"><i class="fas fa-search me-1"></i>No entries match the filter.</td></tr>'}
@@ -3218,13 +3223,18 @@ function _lvDetailRowHtml(lid, entries){
       }
     }
 
+    const isComm   = ((e.kind || 'COMMISSION').toUpperCase() === 'COMMISSION');
     const grossAmt = e.commission_amount || 0;
-    const advPaid  = e.advance_paid || 0;
-    const balGross = e.balance_gross !== undefined ? e.balance_gross : Math.max(0, grossAmt - advPaid);
+    const advPaid  = isComm ? (e.advance_paid || 0) : 0;
+    const balGross = isComm ? (e.balance_gross !== undefined ? e.balance_gross : Math.max(0, grossAmt - advPaid)) : grossAmt;
 
-    let adminVal = Math.round(balGross * 0.08);
-    let tdsVal   = Math.round(balGross * 0.02);
-    let netVal   = Math.max(0, Math.round(balGross - adminVal - tdsVal));
+    const baseForDeductions = isComm ? balGross : grossAmt;
+    let adminVal = Math.round(baseForDeductions * 0.08);
+    let tdsVal   = Math.round(baseForDeductions * 0.02);
+    let netVal   = Math.max(0, Math.round(baseForDeductions - adminVal - tdsVal));
+
+    const advPaidHtml  = isComm ? (advPaid > 0 ? _meInr(advPaid) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
+    const balGrossHtml = isComm ? (balGross > 0 ? _meInr(balGross) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
 
     const baseText = calcBase > 0 ? _meInr(calcBase) : '—';
     const rateText = calcPct > 0 ? (calcPct + '%') : '—';
@@ -3249,8 +3259,8 @@ function _lvDetailRowHtml(lid, entries){
       <td style="padding:8px 10px;text-align:right;font-weight:600;color:#374151;font-size:11px">${baseText}</td>
       <td style="padding:8px 10px;text-align:center;font-weight:700;color:#7c3aed;font-size:11px">${rateText}</td>
       <td style="padding:8px 10px;text-align:right;font-weight:700;color:#7c3aed;font-size:12px">${grossAmt>0?_meInr(grossAmt):'—'}</td>
-      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706;font-weight:600">${advPaid>0?_meInr(advPaid):'—'}</td>
-      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#2563eb;font-weight:700">${balGross>0?_meInr(balGross):'—'}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706;font-weight:600">${advPaidHtml}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#2563eb;font-weight:700">${balGrossHtml}</td>
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#6b7280">${adminVal>0?_meInr(adminVal):'—'}</td>
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#6b7280">${tdsVal>0?_meInr(tdsVal):'—'}</td>
       <td style="padding:8px 10px;text-align:right;font-weight:700;color:#059669;font-size:12px">${netVal>0?_meInr(netVal):'—'}</td>
