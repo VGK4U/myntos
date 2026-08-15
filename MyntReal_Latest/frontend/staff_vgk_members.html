@@ -3196,7 +3196,6 @@ function _lvDetailRowHtml(lid, entries){
 
     const isComm   = ((e.kind || 'COMMISSION').toUpperCase() === 'COMMISSION');
     const grossAmt = e.commission_amount || 0;
-    const advPaid  = isComm ? (e.advance_paid || 0) : 0;
     const stg1Adv  = isComm ? parseFloat(e.stage1_adv || 0) : 0;
     const stg2Adv  = isComm ? parseFloat(e.stage2_adv || 0) : 0;
     const advPaid  = isComm ? parseFloat(e.advance_paid || 0) : 0;
