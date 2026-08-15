@@ -355,6 +355,16 @@ def generate_brand_commission_entries(db: Session, lead) -> int:
             if existing:
                 continue
 
+            # Inherit status from existing main COMMISSION entry for this partner and lead
+            comm_row = db.execute(text("""
+                SELECT status FROM vgk_cash_income_entries
+                WHERE partner_id = :pid AND source_lead_id = :lid
+                  AND kind IN ('COMMISSION','SENIOR_COMM') AND status != 'CANCELLED'
+                LIMIT 1
+            """), {'pid': partner_id, 'lid': lead.id}).fetchone()
+
+            init_status = comm_row.status if comm_row else 'DRAFT'
+
             _admin = (amount * ADMIN_CHARGE_PCT / Decimal('100')).quantize(Decimal('0.01'))
             _tds   = (amount * TDS_PCT          / Decimal('100')).quantize(Decimal('0.01'))
             _net   = amount - _admin - _tds
@@ -368,7 +378,7 @@ def generate_brand_commission_entries(db: Session, lead) -> int:
                 source_lead_id          = lead.id,
                 level                   = vci_level,
                 kind                    = 'BRAND_COMMISSION',
-                status                  = 'DRAFT',
+                status                  = init_status,
                 commission_amount       = amount,
                 admin_charges           = _admin,
                 tds_amount              = _tds,

@@ -329,8 +329,12 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
 
     _l4core_pct = Decimal(str(getattr(cfg, 'level4_core_pct', 0) or 0))
 
-    # DC-SHOWROOM-COMMISSION-001: Showroom commission if showroom_vgk_id is set on lead.
-    _showroom_id   = getattr(lead, 'showroom_vgk_id', None)
+    # DC-SHOWROOM-COMMISSION-001: Showroom commission ONLY if explicit showroom_vgk_id is set on lead
+    # and is distinct from associated_partner_id (L1) and vgk_field_support_id (L5). L6 is optional.
+    _raw_showroom_id = getattr(lead, 'showroom_vgk_id', None)
+    _l1_pid = getattr(lead, 'associated_partner_id', None)
+    _l5_pid = getattr(lead, 'vgk_field_support_id', None)
+    _showroom_id = _raw_showroom_id if (_raw_showroom_id and _raw_showroom_id not in (_l1_pid, _l5_pid)) else None
     _showroom_pct  = Decimal(str(getattr(cfg, 'showroom_pct',  0) or 0))
     _showroom_type = str(getattr(cfg, 'showroom_type', 'PCT') or 'PCT')
     _showroom_amt  = Decimal(str(getattr(cfg, 'showroom_amt',  0) or 0))
@@ -670,6 +674,14 @@ def release_cash_income(
         entry.notes = (entry.notes or '') + f' | Release note: {notes}'
     entry.updated_at = now
     partner.updated_at = now
+
+    # Automatically release tied BRAND_COMMISSION entries for the same lead and partner
+    if entry.kind in ('COMMISSION', 'SENIOR_COMM') and entry.source_lead_id:
+        db.execute(text("""
+            UPDATE vgk_cash_income_entries
+            SET status = 'RELEASED', released_by_id = :rel_by, released_at = NOW(), updated_at = NOW()
+            WHERE source_lead_id = :lid AND partner_id = :pid AND kind = 'BRAND_COMMISSION'
+        """), {'rel_by': released_by_id, 'lid': entry.source_lead_id, 'pid': entry.partner_id})
 
     _log_wallet_txn(
         db, partner.id, partner.company_id,
@@ -1749,6 +1761,14 @@ def mark_paid_cash_income(
     if notes:
         entry.notes = (entry.notes or '') + f' | Paid: {notes}'
     entry.updated_at = now
+
+    # Automatically mark tied BRAND_COMMISSION entries as PAID for the same lead and partner
+    if entry.kind in ('COMMISSION', 'SENIOR_COMM') and entry.source_lead_id:
+        db.execute(text("""
+            UPDATE vgk_cash_income_entries
+            SET status = 'PAID', paid_by_id = :pd_by, paid_at = NOW(), payment_mode = :pmode, payment_utr = :putr, updated_at = NOW()
+            WHERE source_lead_id = :lid AND partner_id = :pid AND kind = 'BRAND_COMMISSION'
+        """), {'pd_by': paid_by_id, 'pmode': pm, 'putr': utr, 'lid': entry.source_lead_id, 'pid': entry.partner_id})
 
     # DC_VGK_POINTS_AT_PAID_001 + DC-FIX-ADV-WALLET-EARNED-001:
     # For ADVANCE kind entries at PAID time:
