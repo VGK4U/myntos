@@ -2571,6 +2571,40 @@ function _updateParentRowFromEntries(partnerId, rows, isIed){
   }
 }
 
+function _meParseDateStr(ds) {
+  if (!ds) return '';
+  const s = String(ds).trim();
+  if (s.length >= 10 && s.includes('-')) {
+    return s.substring(0, 10);
+  }
+  if (s.includes('/')) {
+    const parts = s.split('/');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  }
+  return s;
+}
+
+window._setMeSubSort = function(partnerId, toggleKey) {
+  const isIedActive = document.getElementById('tabIncomeDash')?.classList.contains('active');
+  const sortSelect = isIedActive
+    ? (document.querySelector('#tabIncomeDash #me-det-sort-' + partnerId) || document.getElementById('me-det-sort-' + partnerId))
+    : (document.querySelector('#tabEarnings #me-det-sort-' + partnerId) || document.getElementById('me-det-sort-' + partnerId));
+  
+  if (sortSelect) {
+    let opt = sortSelect.querySelector(`option[value="${toggleKey}"]`);
+    if (!opt) {
+      opt = document.createElement('option');
+      opt.value = toggleKey;
+      opt.textContent = `Sort: Custom (${toggleKey})`;
+      sortSelect.appendChild(opt);
+    }
+    sortSelect.value = toggleKey;
+  }
+  _filterMeDetail(partnerId);
+};
+
 function _renderMeDetailTable(partnerId){
   const isIedActive = document.getElementById('tabIncomeDash')?.classList.contains('active');
   let detail = null;
@@ -2605,7 +2639,7 @@ function _renderMeDetailTable(partnerId){
   // DC-CANCELLED-FILTER-001: reads from global top-bar filter (moved from per-partner dropdown)
   const statusVal   = document.getElementById('iedCancelFilter')?.value ?? 'HIDE_CANCELLED';
 
-  let rows = allRows;
+  let rows = allRows.slice();
   if(searchTxt) rows = rows.filter(e =>
     (e.client_name  ||'').toLowerCase().includes(searchTxt) ||
     (e.client_mobile||'').toLowerCase().includes(searchTxt)
@@ -2624,8 +2658,8 @@ function _renderMeDetailTable(partnerId){
       const na = (a.client_name || '').toLowerCase();
       const nb = (b.client_name || '').toLowerCase();
       if (na !== nb) return na.localeCompare(nb);
-      const da = a.trigger_date || a.income_date || '';
-      const db = b.trigger_date || b.income_date || '';
+      const da = _meParseDateStr(a.trigger_date || a.income_date);
+      const db = _meParseDateStr(b.trigger_date || b.income_date);
       return db.localeCompare(da);
     });
   } else if (sortVal === 'name_desc') {
@@ -2633,22 +2667,22 @@ function _renderMeDetailTable(partnerId){
       const na = (a.client_name || '').toLowerCase();
       const nb = (b.client_name || '').toLowerCase();
       if (na !== nb) return nb.localeCompare(na);
-      const da = a.trigger_date || a.income_date || '';
-      const db = b.trigger_date || b.income_date || '';
+      const da = _meParseDateStr(a.trigger_date || a.income_date);
+      const db = _meParseDateStr(b.trigger_date || b.income_date);
       return db.localeCompare(da);
     });
   } else if (sortVal === 'date_desc' || sortVal === 'trigger_date_desc' || sortVal === 'date') {
-    rows.sort((a, b) => (b.trigger_date || b.income_date || '').localeCompare(a.trigger_date || a.income_date || ''));
+    rows.sort((a, b) => _meParseDateStr(b.trigger_date || b.income_date).localeCompare(_meParseDateStr(a.trigger_date || a.income_date)));
   } else if (sortVal === 'date_asc' || sortVal === 'trigger_date_asc') {
-    rows.sort((a, b) => (a.trigger_date || a.income_date || '').localeCompare(b.trigger_date || b.income_date || ''));
+    rows.sort((a, b) => _meParseDateStr(a.trigger_date || a.income_date).localeCompare(_meParseDateStr(b.trigger_date || b.income_date)));
   } else if (sortVal === 'submit_date_desc') {
-    rows.sort((a, b) => (b.submit_date || '').localeCompare(a.submit_date || ''));
+    rows.sort((a, b) => _meParseDateStr(b.submit_date).localeCompare(_meParseDateStr(a.submit_date)));
   } else if (sortVal === 'submit_date_asc') {
-    rows.sort((a, b) => (a.submit_date || '').localeCompare(b.submit_date || ''));
+    rows.sort((a, b) => _meParseDateStr(a.submit_date).localeCompare(_meParseDateStr(b.submit_date)));
   } else if (sortVal === 'payment_date_desc') {
-    rows.sort((a, b) => (b.payment_date || '').localeCompare(a.payment_date || ''));
+    rows.sort((a, b) => _meParseDateStr(b.payment_date).localeCompare(_meParseDateStr(a.payment_date)));
   } else if (sortVal === 'payment_date_asc') {
-    rows.sort((a, b) => (a.payment_date || '').localeCompare(b.payment_date || ''));
+    rows.sort((a, b) => _meParseDateStr(a.payment_date).localeCompare(_meParseDateStr(b.payment_date)));
   } else if (sortVal === 'entry_number_desc') {
     rows.sort((a, b) => (b.entry_number || '').localeCompare(a.entry_number || ''));
   } else if (sortVal === 'entry_number_asc') {
@@ -2807,12 +2841,26 @@ function _renderMeDetailTable(partnerId){
       </select>
       <select id="me-det-sort-${partnerId}" onchange="_filterMeDetail(${partnerId})"
         style="padding:5px 9px;border:1.5px solid #e5e7eb;border-radius:7px;font-size:12px;outline:none;background:#fff;cursor:pointer;font-weight:600;color:#4c1d95">
-        <option value="name_asc"   ${sortVal==='name_asc'?'selected':''}>Sort: Customer Name (A-Z)</option>
-        <option value="name_desc"  ${sortVal==='name_desc'?'selected':''}>Sort: Customer Name (Z-A)</option>
-        <option value="date_desc"  ${sortVal==='date_desc'?'selected':''}>Sort: Trigger Date (Newest first)</option>
-        <option value="date_asc"   ${sortVal==='date_asc'?'selected':''}>Sort: Trigger Date (Oldest first)</option>
-        <option value="gross_desc" ${sortVal==='gross_desc'?'selected':''}>Sort: Gross (High to Low)</option>
-        <option value="gross_asc"  ${sortVal==='gross_asc'?'selected':''}>Sort: Gross (Low to High)</option>
+        <option value="name_asc"          ${sortVal==='name_asc'?'selected':''}>Sort: Customer Name (A-Z)</option>
+        <option value="name_desc"         ${sortVal==='name_desc'?'selected':''}>Sort: Customer Name (Z-A)</option>
+        <option value="date_desc"         ${sortVal==='date_desc'||sortVal==='date'?'selected':''}>Sort: Trigger Date (Newest first)</option>
+        <option value="date_asc"          ${sortVal==='date_asc'?'selected':''}>Sort: Trigger Date (Oldest first)</option>
+        <option value="submit_date_desc"  ${sortVal==='submit_date_desc'?'selected':''}>Sort: Submit Date (Newest first)</option>
+        <option value="submit_date_asc"   ${sortVal==='submit_date_asc'?'selected':''}>Sort: Submit Date (Oldest first)</option>
+        <option value="payment_date_desc" ${sortVal==='payment_date_desc'?'selected':''}>Sort: Payment Date (Newest first)</option>
+        <option value="payment_date_asc"  ${sortVal==='payment_date_asc'?'selected':''}>Sort: Payment Date (Oldest first)</option>
+        <option value="entry_number_asc"  ${sortVal==='entry_number_asc'?'selected':''}>Sort: Entry # (A-Z)</option>
+        <option value="entry_number_desc" ${sortVal==='entry_number_desc'?'selected':''}>Sort: Entry # (Z-A)</option>
+        <option value="level_asc"         ${sortVal==='level_asc'?'selected':''}>Sort: Level (L1 to L6)</option>
+        <option value="level_desc"        ${sortVal==='level_desc'?'selected':''}>Sort: Level (L6 to L1)</option>
+        <option value="gross_desc"        ${sortVal==='gross_desc'?'selected':''}>Sort: Gross (High to Low)</option>
+        <option value="gross_asc"         ${sortVal==='gross_asc'?'selected':''}>Sort: Gross (Low to High)</option>
+        <option value="advance_paid_desc" ${sortVal==='advance_paid_desc'?'selected':''}>Sort: Advance Paid (High to Low)</option>
+        <option value="advance_paid_asc"  ${sortVal==='advance_paid_asc'?'selected':''}>Sort: Advance Paid (Low to High)</option>
+        <option value="balance_gross_desc"${sortVal==='balance_gross_desc'?'selected':''}>Sort: Balance Gross (High to Low)</option>
+        <option value="balance_gross_asc" ${sortVal==='balance_gross_asc'?'selected':''}>Sort: Balance Gross (Low to High)</option>
+        <option value="net_desc"           ${sortVal==='net_desc'?'selected':''}>Sort: Net (High to Low)</option>
+        <option value="net_asc"            ${sortVal==='net_asc'?'selected':''}>Sort: Net (Low to High)</option>
       </select>
     </div>
     <div style="overflow-x:auto">
