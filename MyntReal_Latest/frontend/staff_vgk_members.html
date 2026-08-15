@@ -3060,9 +3060,12 @@ function _lvDetailRowHtml(lid, entries){
     const stColor  = _ME_STATUS_COLOR[e.status] || '#6b7280';
     const stLabel  = _ME_STATUS_LABEL[e.status] || e.status;
     const kindBadge= e.community_id ? (e.community_event_name || 'Community Service') : (e.kind||'').replace(/_/g,' ');
-    const commBadgeHtml = e.community_id ? `<span style="font-size:9.5px;padding:2px 6px;border-radius:6px;background:#0ea5e9;color:#fff;margin-left:3px;font-weight:600">Comm ID: ${e.community_id}</span>` : '';
-    const baseText = e.base_value > 0 ? _meInr(e.base_value) : '—';
-    const rateText = e.commission_pct > 0 ? (e.commission_pct + '%') : '—';
+    let calcBase = e.base_value || 0;
+    if((!calcBase || calcBase <= 0) && (e.commission_amount > 0 && e.commission_pct > 0)){
+      calcBase = Math.round(e.commission_amount / (e.commission_pct / 100));
+    }
+    const baseText = calcBase > 0 ? _meInr(calcBase) : '—';
+    const rateText = (e.commission_pct && e.commission_pct > 0) ? (e.commission_pct + '%') : '—';
     return `<tr style="border-bottom:1px solid #f0f0f0;background:#fafaf9">
       <td style="padding:8px 10px;text-align:center;font-size:11px;color:#9ca3af">${e.income_date?fmtDate(e.income_date):'—'}</td>
       <td style="padding:8px 10px;font-size:11px;color:#6b7280;white-space:nowrap">${e.submit_date?fmtDate(e.submit_date):'<span style="color:#d1d5db">—</span>'}</td>
