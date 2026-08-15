@@ -670,16 +670,45 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
     </div>
     <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
       <i class="fas fa-layer-group"></i>
-      <select id="iedStageFilter" onchange="loadIncomeDash(1)" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:#fff;cursor:pointer">
-        <option value="">All Payment Stages</option>
-        <option value="DRAFT">Draft</option>
-        <option value="PENDING">Pending</option>
-        <option value="STAGE1_APPROVED">Stage 1 Approved</option>
-        <option value="RELEASED">Released</option>
-        <option value="PAID">Completed (Paid)</option>
-        <option value="CANCELLED">Cancelled</option>
-        <option value="BALANCE_RECEIVED_PLUS">Balance Received +</option>
-      </select>
+      <input type="hidden" id="iedStageFilter" value="">
+      <div class="stage-multi-wrapper" style="position:relative;display:inline-block">
+        <button type="button" id="iedStageBtn" onclick="toggleStageDropdown('ied', event)" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:145px;justify-content:space-between">
+          <span id="iedStageBtnText" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px">All Payment Stages</span>
+          <i class="fas fa-chevron-down" style="font-size:10px;color:#9ca3af"></i>
+        </button>
+        <div id="iedStageDropdown" class="stage-dropdown-menu" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;z-index:9999;background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.14);padding:8px;min-width:190px">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 6px;margin-bottom:6px;border-bottom:1px solid #f3f4f6;font-size:11px;font-weight:700">
+            <span style="color:#6b7280">Payment Stages</span>
+            <div>
+              <a href="javascript:void(0)" onclick="selectAllStages('ied',true)" style="color:#7c3aed;margin-right:8px;text-decoration:none">All</a>
+              <a href="javascript:void(0)" onclick="selectAllStages('ied',false)" style="color:#9ca3af;text-decoration:none">Clear</a>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto;padding-right:4px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="ied-stage-cb" value="DRAFT" onchange="updateStageFilter('ied')"> Draft
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="ied-stage-cb" value="PENDING" onchange="updateStageFilter('ied')"> Pending
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="ied-stage-cb" value="STAGE1_APPROVED" onchange="updateStageFilter('ied')"> Stage 1 Approved
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="ied-stage-cb" value="RELEASED" onchange="updateStageFilter('ied')"> Released
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="ied-stage-cb" value="PAID" onchange="updateStageFilter('ied')"> Completed (Paid)
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="ied-stage-cb" value="CANCELLED" onchange="updateStageFilter('ied')"> Cancelled
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="ied-stage-cb" value="BALANCE_RECEIVED_PLUS" onchange="updateStageFilter('ied')"> Balance Received +
+            </label>
+          </div>
+        </div>
+      </div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
       <i class="fas fa-tags"></i>
@@ -760,16 +789,45 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
     </div>
     <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
       <i class="fas fa-layer-group"></i>
-      <select id="lvStageFilter" onchange="loadLeadView(1)" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:#fff;cursor:pointer">
-        <option value="">All Payment Stages</option>
-        <option value="DRAFT">Draft</option>
-        <option value="PENDING">Pending</option>
-        <option value="STAGE1_APPROVED">Stage 1 Approved</option>
-        <option value="RELEASED">Released</option>
-        <option value="PAID">Completed (Paid)</option>
-        <option value="CANCELLED">Cancelled</option>
-        <option value="BALANCE_RECEIVED_PLUS">Balance Received +</option>
-      </select>
+      <input type="hidden" id="lvStageFilter" value="">
+      <div class="stage-multi-wrapper" style="position:relative;display:inline-block">
+        <button type="button" id="lvStageBtn" onclick="toggleStageDropdown('lv', event)" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:145px;justify-content:space-between">
+          <span id="lvStageBtnText" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px">All Payment Stages</span>
+          <i class="fas fa-chevron-down" style="font-size:10px;color:#9ca3af"></i>
+        </button>
+        <div id="lvStageDropdown" class="stage-dropdown-menu" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;z-index:9999;background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.14);padding:8px;min-width:190px">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 6px;margin-bottom:6px;border-bottom:1px solid #f3f4f6;font-size:11px;font-weight:700">
+            <span style="color:#6b7280">Payment Stages</span>
+            <div>
+              <a href="javascript:void(0)" onclick="selectAllStages('lv',true)" style="color:#7c3aed;margin-right:8px;text-decoration:none">All</a>
+              <a href="javascript:void(0)" onclick="selectAllStages('lv',false)" style="color:#9ca3af;text-decoration:none">Clear</a>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto;padding-right:4px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="lv-stage-cb" value="DRAFT" onchange="updateStageFilter('lv')"> Draft
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="lv-stage-cb" value="PENDING" onchange="updateStageFilter('lv')"> Pending
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="lv-stage-cb" value="STAGE1_APPROVED" onchange="updateStageFilter('lv')"> Stage 1 Approved
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="lv-stage-cb" value="RELEASED" onchange="updateStageFilter('lv')"> Released
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="lv-stage-cb" value="PAID" onchange="updateStageFilter('lv')"> Completed (Paid)
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="lv-stage-cb" value="CANCELLED" onchange="updateStageFilter('lv')"> Cancelled
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="lv-stage-cb" value="BALANCE_RECEIVED_PLUS" onchange="updateStageFilter('lv')"> Balance Received +
+            </label>
+          </div>
+        </div>
+      </div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
       <i class="fas fa-tags"></i>
@@ -2038,6 +2096,60 @@ let _iedSortBy = 'received', _iedSortDir = 'desc';
 let _iedPeriod = 'overall';
 const _iedExpanded = new Set();
 
+function toggleStageDropdown(prefix, e) {
+  if (e) e.stopPropagation();
+  const dropdown = document.getElementById(prefix + 'StageDropdown');
+  if (!dropdown) return;
+  const isVis = dropdown.style.display !== 'none';
+  document.querySelectorAll('.stage-dropdown-menu').forEach(d => d.style.display = 'none');
+  if (!isVis) {
+    dropdown.style.display = 'block';
+  }
+}
+
+function selectAllStages(prefix, checkAll) {
+  const cbs = document.querySelectorAll('.' + prefix + '-stage-cb');
+  cbs.forEach(cb => cb.checked = !!checkAll);
+  updateStageFilter(prefix);
+}
+
+function updateStageFilter(prefix) {
+  const cbs = document.querySelectorAll('.' + prefix + '-stage-cb:checked');
+  const vals = Array.from(cbs).map(c => c.value);
+  const hiddenInput = document.getElementById(prefix + 'StageFilter');
+  if (hiddenInput) {
+    hiddenInput.value = vals.join(',');
+  }
+  
+  const btnText = document.getElementById(prefix + 'StageBtnText');
+  if (btnText) {
+    const allCbs = document.querySelectorAll('.' + prefix + '-stage-cb');
+    if (vals.length === 0 || vals.length === allCbs.length) {
+      btnText.innerText = 'All Payment Stages';
+    } else if (vals.length <= 2) {
+      const labels = Array.from(cbs).map(c => c.parentElement.innerText.trim());
+      btnText.innerText = labels.join(', ');
+    } else {
+      btnText.innerText = vals.length + ' Stages Selected';
+    }
+  }
+  
+  if (prefix === 'ied') {
+    if (typeof loadIncomeDash === 'function') loadIncomeDash(1);
+  } else if (prefix === 'lv') {
+    if (typeof loadLeadView === 'function') loadLeadView(1);
+  }
+}
+
+if (!window._stageMultiClickListenerAdded) {
+  window._stageMultiClickListenerAdded = true;
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.stage-multi-wrapper')) {
+      document.querySelectorAll('.stage-dropdown-menu').forEach(d => d.style.display = 'none');
+    }
+  });
+}
+
 function debounceIED(){ clearTimeout(_iedDebTimer); _iedDebTimer = setTimeout(()=>loadIncomeDash(1), 400); }
 
 function _iedResetFilters(){
@@ -2046,7 +2158,9 @@ function _iedResetFilters(){
   document.getElementById('iedDateFrom').value  = '';
   document.getElementById('iedDateTo').value    = '';
   document.getElementById('iedRegBy').value     = '';
-  document.getElementById('iedStageFilter').value   = '';
+  document.querySelectorAll('.ied-stage-cb').forEach(c => c.checked = false);
+  const iedHidden = document.getElementById('iedStageFilter'); if(iedHidden) iedHidden.value = '';
+  const iedTxt = document.getElementById('iedStageBtnText'); if(iedTxt) iedTxt.innerText = 'All Payment Stages';
   document.getElementById('iedSegmentFilter').value = '';
   document.getElementById('iedLevelFilter').value   = '';
   document.getElementById('iedCancelFilter').value  = 'HIDE_CANCELLED';
@@ -2708,7 +2822,9 @@ function _lvResetFilters(){
   document.getElementById('lvSearch').value = '';
   document.getElementById('lvDateFrom').value = '';
   document.getElementById('lvDateTo').value = '';
-  document.getElementById('lvStageFilter').value = '';
+  document.querySelectorAll('.lv-stage-cb').forEach(c => c.checked = false);
+  const lvHidden = document.getElementById('lvStageFilter'); if(lvHidden) lvHidden.value = '';
+  const lvTxt = document.getElementById('lvStageBtnText'); if(lvTxt) lvTxt.innerText = 'All Payment Stages';
   document.getElementById('lvSegmentFilter').value = '';
   document.getElementById('lvLevelFilter').value = '';
   document.getElementById('lvCancelFilter').value = 'HIDE_CANCELLED';

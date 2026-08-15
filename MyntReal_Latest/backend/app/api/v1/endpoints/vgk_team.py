@@ -4186,29 +4186,33 @@ def member_earnings_dashboard(
         date_params['comm_svc_id'] = community_service_id
     date_sql = ' '.join(date_clauses)
 
-    # income_status filter clause
-    # DC-BRP-001 (Jun 2026): BALANCE_RECEIVED_PLUS = entries whose source CRM lead is at
-    # balance_received / subsidy_pending / completed solar pipeline stage (grouped filter).
-    status_val = income_status.strip().upper() if income_status else None
-    IS_BRP = status_val == 'BALANCE_RECEIVED_PLUS'
-    _BRP_SUBQ = (
-        "AND e.source_lead_id IN ("
+    # income_status filter clause (supports multi-status selection e.g. "DRAFT,PENDING")
+    status_list = [s.strip().upper() for s in income_status.split(',') if s.strip()] if income_status else []
+    status_val = ','.join(status_list) if status_list else None
+    IS_BRP = 'BALANCE_RECEIVED_PLUS' in status_list
+    _other_st = [s for s in status_list if s != 'BALANCE_RECEIVED_PLUS']
+    _BRP_COND = (
+        "e.source_lead_id IN ("
         "SELECT id FROM crm_leads "
         "WHERE solar_pipeline_status IN ('balance_received','subsidy_pending','completed'))"
     )
-    if IS_BRP:
-        status_sql = _BRP_SUBQ
+
+    if status_list:
+        if IS_BRP:
+            if _other_st:
+                status_sql = f"AND ({_BRP_COND} OR e.status = ANY(:st_list))"
+                date_params['st_list'] = _other_st
+            else:
+                status_sql = f"AND {_BRP_COND}"
+        else:
+            status_sql = "AND e.status = ANY(:st_list)"
+            date_params['st_list'] = status_list
     else:
-        status_sql = "AND e.status = :ist" if status_val else ""
-        if status_val:
-            date_params['ist'] = status_val
+        status_sql = ""
 
     if earners_only or status_val:
-        # Filter: status_val takes priority; otherwise exclude CANCELLED
-        if IS_BRP:
-            earner_sql = f"SELECT DISTINCT partner_id FROM vgk_cash_income_entries e WHERE 1=1 {_BRP_SUBQ} {date_sql}"
-        elif status_val:
-            earner_sql = f"SELECT DISTINCT partner_id FROM vgk_cash_income_entries e WHERE e.status = :ist {date_sql}"
+        if status_sql:
+            earner_sql = f"SELECT DISTINCT partner_id FROM vgk_cash_income_entries e WHERE 1=1 {status_sql} {date_sql}"
         else:
             earner_sql = f"SELECT DISTINCT partner_id FROM vgk_cash_income_entries e WHERE e.status != 'CANCELLED' {date_sql}"
         try:
@@ -4514,15 +4518,20 @@ def member_income_entries_detail(
     if community_service_id:
         _extra_where += " AND e.source_lead_id IN (SELECT id FROM crm_leads WHERE community_id IN (SELECT id FROM community_registrations WHERE community_service_id = :comm_svc_id))"
         _extra_params["comm_svc_id"] = community_service_id
-    if _status_val == 'BALANCE_RECEIVED_PLUS':
-        _extra_where = (
-            " AND e.source_lead_id IN ("
-            "SELECT id FROM crm_leads WHERE solar_pipeline_status "
-            "IN ('balance_received','subsidy_pending','completed'))"
-        )
-    elif _status_val:
-        _extra_where = " AND e.status = :st"
-        _extra_params["st"] = _status_val
+    _st_list = [s.strip().upper() for s in status.split(',') if s.strip()] if status else []
+    _is_brp = 'BALANCE_RECEIVED_PLUS' in _st_list
+    _other_st = [s for s in _st_list if s != 'BALANCE_RECEIVED_PLUS']
+    if _st_list:
+        _brp_sub = "e.source_lead_id IN (SELECT id FROM crm_leads WHERE solar_pipeline_status IN ('balance_received','subsidy_pending','completed'))"
+        if _is_brp:
+            if _other_st:
+                _extra_where += " AND (" + _brp_sub + " OR e.status = ANY(:st_list))"
+                _extra_params["st_list"] = _other_st
+            else:
+                _extra_where += " AND " + _brp_sub
+        else:
+            _extra_where += " AND e.status = ANY(:st_list)"
+            _extra_params["st_list"] = _st_list
     try:
         rows = db.execute(text(
             "SELECT e.id, e.entry_number, e.status, e.kind, e.level, "
