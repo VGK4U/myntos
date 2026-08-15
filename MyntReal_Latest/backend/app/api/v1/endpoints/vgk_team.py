@@ -4406,7 +4406,7 @@ def member_earnings_dashboard(
         pts_balance  = float(m.vgk_points_balance or 0)
         inc = inc_map.get(m.id, {})
         gross    = sum(v["amount"] for st, v in inc.items() if st != "CANCELLED")
-        net_earning = sum(v.get("net_amount", 0.0) for st, v in inc.items() if st != "CANCELLED")
+        net_earning = round(gross * 0.90, 2)
         received = sum(v["amount"] for st, v in inc.items() if st in ("RELEASED", "PAID"))
         _lvl = lvl_map.get(m.id, {})
         

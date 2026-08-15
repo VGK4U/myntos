@@ -2358,7 +2358,7 @@ function _iedRenderTable(rows){
   const tL5     = rows.reduce((s,r)=>s+(r.l5_support||0),0);
   const tL0     = rows.reduce((s,r)=>s+(r.l0_bonus||0),0);
   const tGross  = rows.reduce((s,r)=>s+(r.gross_earned||0),0);
-  const tNet    = rows.reduce((s, r) => s + ((r.net_earning !== undefined && r.net_earning !== null) ? r.net_earning : Math.round((r.gross_earned || 0) * 0.9)), 0);
+  const tNet    = Math.round(tGross * 0.9);
   const tRcv    = rows.reduce((s,r)=>s+(r.received||0),0);
   const totalsRow = `<tr style="background:#f0fdf4;border-bottom:2px solid #bbf7d0;position:sticky;top:0;z-index:1">
     <td style="padding:8px;text-align:center"><span style="font-size:9px;font-weight:800;color:#059669;background:#dcfce7;padding:2px 5px;border-radius:4px;white-space:nowrap">TOTAL</span></td>
@@ -2407,7 +2407,7 @@ function _iedRenderTable(rows){
     const l6 = Number(m.l6_showroom || 0);
     const l0 = Number(m.l0_bonus || 0);
     const gross = m.gross_earned || 0;
-    const net = (m.net_earning !== undefined && m.net_earning !== null) ? m.net_earning : Math.round(gross * 0.9);
+    const net = Math.round(gross * 0.9);
     return `<tr id="ied-row-${m.id}" style="border-bottom:1px solid #f3f4f6" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background=''">
       <td style="padding:8px;text-align:center">
         <div style="display:flex;align-items:center;justify-content:center;gap:6px">
