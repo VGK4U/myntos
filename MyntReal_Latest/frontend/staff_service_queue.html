@@ -309,6 +309,21 @@
             } catch(e) { return ''; }
         }
 
+        function _decodeJwtTeamTag() {
+            try {
+                const tok = localStorage.getItem('staff_token') || localStorage.getItem('token');
+                if (tok) {
+                    const payload = JSON.parse(atob(tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+                    if (payload.team_tag) return (payload.team_tag || '').toLowerCase().trim();
+                }
+            } catch(e) {}
+            try {
+                const u = JSON.parse(localStorage.getItem('staff_user') || '{}');
+                const emp = u.employee || u;
+                return (emp.team_tag || '').toLowerCase().trim();
+            } catch(e) { return ''; }
+        }
+
         // DC Protocol Mar 2026: Single modal instance helper — prevents stacked backdrops
         function getModal() {
             return bootstrap.Modal.getOrCreateInstance(document.getElementById('ticketModal'));
@@ -328,8 +343,11 @@
 
             const _myRole    = _decodeJwtRole();
             const _myEmpCode = _decodeJwtEmpCode();
-            // SQ-EMP-ASSIGN-001: privileged by role OR named individual whitelist
-            _canAssignTickets = _SQ_PRIVILEGED_ROLES.has(_myRole) || _SQ_ASSIGN_TECH_EMP_CODES.has(_myEmpCode);
+            const _myTeamTag = _decodeJwtTeamTag();
+            const _isTeamC   = _myTeamTag === 'team_c' || _myTeamTag === 'c' || _myTeamTag === 'team c';
+
+            // SQ-EMP-ASSIGN-001: privileged by role, named individual whitelist, OR Team C (Field & Technical Execution)
+            _canAssignTickets = _SQ_PRIVILEGED_ROLES.has(_myRole) || _SQ_ASSIGN_TECH_EMP_CODES.has(_myEmpCode) || _isTeamC;
             _isFilteredView = !_canAssignTickets;
             if (_isFilteredView) {
                 const banner = document.getElementById('sqFilteredBanner');

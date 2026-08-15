@@ -370,6 +370,7 @@ async def staff_login(
             "emp_code": employee.emp_code,
             "email": employee.email,
             "role": employee.role.role_code if employee.role else "junior_executive",
+            "team_tag": employee.team_tag,
             "user_type": "staff"
         },
         expires_delta=timedelta(hours=session_hours)
@@ -589,6 +590,7 @@ async def refresh_staff_token(
                 "emp_code": employee.emp_code,
                 "email": employee.email,
                 "role": employee.role.role_code if employee.role else "junior_executive",
+                "team_tag": employee.team_tag,
                 "user_type": "staff"
             },
             expires_delta=timedelta(hours=session_hours)
