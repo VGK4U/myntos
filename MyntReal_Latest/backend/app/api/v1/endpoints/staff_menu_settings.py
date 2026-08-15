@@ -2404,6 +2404,8 @@ async def get_menu_settings_matrix(
     # DC Protocol (Mar 18, 2026): Also build route_path lookup as secondary fallback
     # DC Protocol (Mar 20, 2026): Canonical title overrides — fixes wrong DB titles in all envs
     CANONICAL_SECTION_TITLES = {
+        'hr': 'HR',
+        'field_and_location_tracking': 'FIELD & LOCATION TRACKING',
         'vgk4u': 'ZYNOVA',
         'vgk_team': 'VGK4U',
         'vendor_management': 'VENDOR MANAGEMENT',

@@ -15,22 +15,23 @@ SIDEBAR_SECTIONS = [
     {"id": "progress", "title": "PROGRESS", "order": 1, "parent": None, "cascade_enabled": True},
     # Section 2: STAFF DASHBOARD
     {"id": "staff-dashboard", "title": "STAFF DASHBOARD", "order": 2, "parent": None, "cascade_enabled": True},
-    # Section 3: ATTENDANCE
-    {"id": "attendance", "title": "ATTENDANCE", "order": 3, "parent": None, "cascade_enabled": True},
+    # Section 3: HR & ATTENDANCE
+    {"id": "hr", "title": "HR", "order": 3, "parent": None, "cascade_enabled": True},
+    {"id": "attendance", "title": "Attendance", "order": 3, "parent": "hr", "cascade_enabled": True},
     # Section 4: CRM & LEADS
     {"id": "crm", "title": "CRM & LEADS", "order": 4, "parent": None, "cascade_enabled": True},
     # Section 5: TASK MANAGEMENT
     {"id": "task-management", "title": "TASK MANAGEMENT", "order": 5, "parent": None, "cascade_enabled": True},
     # Section 6: KRA MANAGEMENT
     {"id": "kra-management", "title": "KRA MANAGEMENT", "order": 6, "parent": None, "cascade_enabled": True},
-    # Section 7: TIMESHEET
-    {"id": "timesheet", "title": "TIMESHEET", "order": 7, "parent": None, "cascade_enabled": True},
-    # Section 8: JOURNEY TRACKING
-    {"id": "journey-tracking", "title": "JOURNEY TRACKING", "order": 8, "parent": None, "cascade_enabled": True},
-    # Section 9: LOCATION TRACKING
-    {"id": "location-tracking", "title": "LOCATION TRACKING", "order": 9, "parent": None, "cascade_enabled": True},
-    # Section 10: REIMBURSEMENT
-    {"id": "reimbursement", "title": "REIMBURSEMENT", "order": 10, "parent": None, "cascade_enabled": True},
+    # Section 7: TIMESHEET under HR
+    {"id": "timesheet", "title": "Timesheet", "order": 3, "parent": "hr", "cascade_enabled": True},
+    # Section 8: FIELD & LOCATION TRACKING
+    {"id": "field_and_location_tracking", "title": "FIELD & LOCATION TRACKING", "order": 8, "parent": None, "cascade_enabled": True},
+    {"id": "journey-tracking", "title": "Journey Tracking", "order": 8, "parent": "field_and_location_tracking", "cascade_enabled": True},
+    {"id": "location-tracking", "title": "Location Tracking", "order": 8, "parent": "field_and_location_tracking", "cascade_enabled": True},
+    # Section 10: REIMBURSEMENT under HR
+    {"id": "reimbursement", "title": "Reimbursements", "order": 3, "parent": "hr", "cascade_enabled": True},
     # Section 11: SERVICE TICKETS
     {"id": "service-tickets", "title": "SERVICE TICKETS", "order": 11, "parent": None, "cascade_enabled": True},
     # Section 12: ACCOUNTS with SFMS, Inventory, Payroll subsections
