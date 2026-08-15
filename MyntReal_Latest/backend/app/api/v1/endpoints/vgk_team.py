@@ -4131,9 +4131,9 @@ def member_earnings_dashboard(
     from sqlalchemy import or_ as _or
 
     query = db.query(OfficialPartner).filter(OfficialPartner.category == 'VGK_TEAM')
-    if partner_code:
-        query = query.filter(OfficialPartner.partner_code == partner_code)
-    if search:
+    if partner_code and isinstance(partner_code, str):
+        query = query.filter(OfficialPartner.partner_code == partner_code.strip())
+    if search and isinstance(search, str):
         term = f"%{search.strip()}%"
         query = query.filter(_or(
             OfficialPartner.partner_name.ilike(term),
@@ -4141,7 +4141,7 @@ def member_earnings_dashboard(
         ))
 
     # DC-VGK-CUST-SEARCH-001 (Jun 2026): filter members who have entries for leads matching customer name/phone
-    if customer_search:
+    if customer_search and isinstance(customer_search, str):
         _cs = customer_search.strip()
         try:
             _cs_ids = db.execute(text(
@@ -4153,41 +4153,42 @@ def member_earnings_dashboard(
             _cs_ids = []
         query = query.filter(OfficialPartner.id.in_(_cs_ids))
 
-    if registered_by_emp_code:
+    if registered_by_emp_code and isinstance(registered_by_emp_code, str):
         rbe = registered_by_emp_code.strip().upper()
         query = query.filter(OfficialPartner.registered_by_emp_code == rbe)
 
     # Build date + status WHERE clauses for income SQL
     date_params: dict = {}
     date_clauses = []
-    if date_from:
+    if date_from and isinstance(date_from, str):
         date_clauses.append("AND e.created_at::date >= :df")
-        date_params['df'] = date_from
-    if date_to:
+        date_params['df'] = date_from.strip()
+    if date_to and isinstance(date_to, str):
         date_clauses.append("AND e.created_at::date <= :dt")
-        date_params['dt'] = date_to
+        date_params['dt'] = date_to.strip()
     # DC-VGK-CUST-AGG-001: when customer_search is active, restrict aggregate SQL to matching leads
     cust_join_sql = ""
-    if customer_search:
+    if customer_search and isinstance(customer_search, str):
         _csk = customer_search.strip()
         cust_join_sql = "JOIN crm_leads _cl ON _cl.id = e.source_lead_id AND (_cl.name ILIKE :_cs OR _cl.phone ILIKE :_cs)"
         date_params['_cs'] = f"%{_csk}%"
     # DC-VGK-EARN-DASH-001: segment + level filters (threaded into all income SQL)
-    if category_id:
+    if category_id and isinstance(category_id, int):
         date_clauses.append("AND e.category_id = :cat_id")
         date_params['cat_id'] = category_id
-    if level:
+    if level and isinstance(level, int):
         date_clauses.append("AND e.level = :lv")
         date_params['lv'] = level
-    if community_only:
+    if community_only and isinstance(community_only, bool) and community_only:
         date_clauses.append("AND e.source_lead_id IN (SELECT id FROM crm_leads WHERE community_id IS NOT NULL)")
-    if community_service_id:
+    if community_service_id and isinstance(community_service_id, int):
         date_clauses.append("AND e.source_lead_id IN (SELECT id FROM crm_leads WHERE community_id IN (SELECT id FROM community_registrations WHERE community_service_id = :comm_svc_id))")
         date_params['comm_svc_id'] = community_service_id
     date_sql = ' '.join(date_clauses)
 
     # income_status filter clause (supports multi-status selection e.g. "DRAFT,PENDING")
-    status_list = [s.strip().upper() for s in income_status.split(',') if s.strip()] if income_status else []
+    raw_status = income_status if (income_status and isinstance(income_status, str)) else None
+    status_list = [s.strip().upper() for s in raw_status.split(',') if s.strip()] if raw_status else []
     status_val = ','.join(status_list) if status_list else None
     IS_BRP = 'BALANCE_RECEIVED_PLUS' in status_list
     _other_st = [s for s in status_list if s != 'BALANCE_RECEIVED_PLUS']
@@ -4885,36 +4886,46 @@ def lead_earnings_dashboard(
     where_clauses = ["e.source_lead_id IS NOT NULL", "op.category = 'VGK_TEAM'"]
     params: dict = {}
 
-    if search:
+    if search and isinstance(search, str):
         where_clauses.append("(cl.name ILIKE :search OR cl.phone ILIKE :search)")
         params['search'] = f"%{search.strip()}%"
-    if date_from:
+    if date_from and isinstance(date_from, str):
         where_clauses.append("e.created_at::date >= :df")
-        params['df'] = date_from
-    if date_to:
+        params['df'] = date_from.strip()
+    if date_to and isinstance(date_to, str):
         where_clauses.append("e.created_at::date <= :dt")
-        params['dt'] = date_to
-    if category_id:
+        params['dt'] = date_to.strip()
+    if category_id and isinstance(category_id, int):
         where_clauses.append("cl.category_id = :cat_id")
         params['cat_id'] = category_id
-    if level is not None:
+    if level is not None and isinstance(level, int):
         where_clauses.append("e.level = :lv")
         params['lv'] = level
-    if community_id is not None:
+    if community_id is not None and isinstance(community_id, int):
         where_clauses.append("cl.community_id = :comm_id")
         params['comm_id'] = community_id
-    if community_service_id is not None:
+    if community_service_id is not None and isinstance(community_service_id, int):
         where_clauses.append("cl.community_id IN (SELECT id FROM community_registrations WHERE community_service_id = :comm_srv_id)")
         params['comm_srv_id'] = community_service_id
-    if community_only:
+    if community_only and isinstance(community_only, bool) and community_only:
         where_clauses.append("cl.community_id IS NOT NULL")
 
-    status_val = income_status.strip().upper() if income_status else None
-    if status_val == 'BALANCE_RECEIVED_PLUS':
-        where_clauses.append("cl.solar_pipeline_status IN ('balance_received','subsidy_pending','completed')")
-    elif status_val:
-        where_clauses.append("e.status = :ist")
-        params['ist'] = status_val
+    raw_status = income_status if (income_status and isinstance(income_status, str)) else None
+    status_list = [s.strip().upper() for s in raw_status.split(',') if s.strip()] if raw_status else []
+    IS_BRP = 'BALANCE_RECEIVED_PLUS' in status_list
+    _other_st = [s for s in status_list if s != 'BALANCE_RECEIVED_PLUS']
+
+    if status_list:
+        _brp_cond = "cl.solar_pipeline_status IN ('balance_received','subsidy_pending','completed')"
+        if IS_BRP:
+            if _other_st:
+                where_clauses.append(f"({_brp_cond} OR e.status = ANY(:ist_list))")
+                params['ist_list'] = _other_st
+            else:
+                where_clauses.append(_brp_cond)
+        else:
+            where_clauses.append("e.status = ANY(:ist_list)")
+            params['ist_list'] = status_list
 
     where_sql = " AND ".join(where_clauses)
 
