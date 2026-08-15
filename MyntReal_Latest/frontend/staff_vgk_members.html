@@ -3131,10 +3131,14 @@ function _lvDetailRowHtml(lid, entries){
 
     const baseText = calcBase > 0 ? _meInr(calcBase) : '—';
     const rateText = calcPct > 0 ? (calcPct + '%') : '—';
+    const isPaidSt = (e.status === 'PAID' || e.status === 'RELEASED' || e.status === 'VERIFIED');
+    const resolvedPmtDate = e.payment_date || (isPaidSt ? (e.trigger_date || e.income_date) : null);
+    const pmtCellHtml = resolvedPmtDate ? fmtDate(resolvedPmtDate) : '<span style="color:#d1d5db">—</span>';
+
     return `<tr style="border-bottom:1px solid #f0f0f0;background:#fafaf9">
       <td style="padding:8px 10px;font-size:11px;color:#6b7280;white-space:nowrap">${e.submit_date?fmtDate(e.submit_date):'<span style="color:#d1d5db">—</span>'}</td>
       <td style="padding:8px 10px;font-size:11px;color:#111827;font-weight:600;white-space:nowrap">${(e.trigger_date||e.income_date)?fmtDate(e.trigger_date||e.income_date):'<span style="color:#d1d5db">—</span>'}</td>
-      <td style="padding:8px 10px;font-size:11px;color:${e.payment_date?'#059669':'#6b7280'};white-space:nowrap">${e.payment_date?fmtDate(e.payment_date):'<span style="color:#d1d5db">—</span>'}</td>
+      <td style="padding:8px 10px;font-size:11px;color:${resolvedPmtDate?'#059669':'#6b7280'};white-space:nowrap">${pmtCellHtml}</td>
       <td style="padding:8px 10px;font-size:11px;color:#6b7280;font-family:monospace">${e.entry_number||'—'}</td>
       <td style="padding:8px 10px;text-align:center">
         <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${lvlColor}22;color:${lvlColor}">${_lvLvlLabel[lvl]||('L'+lvl)}</span>

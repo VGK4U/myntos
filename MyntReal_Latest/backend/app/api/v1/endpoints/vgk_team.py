@@ -5065,7 +5065,7 @@ def lead_income_members_detail(
         rows = db.execute(text(
             "SELECT e.id, e.entry_number, e.status, e.kind, e.level, "
             "  e.created_at::date::text AS trigger_date, "
-            "  COALESCE(e.paid_at::date::text, e.released_at::date::text, e.confirmed_at::date::text, CASE WHEN e.status = 'PAID' THEN e.updated_at::date::text ELSE NULL END) AS payment_date, "
+            "  COALESCE(e.paid_at::date::text, e.released_at::date::text, e.confirmed_at::date::text, CASE WHEN e.status IN ('PAID','RELEASED','VERIFIED') THEN COALESCE(e.income_date::text, e.created_at::date::text) ELSE NULL END) AS payment_date, "
             "  COALESCE(e.commission_pct,0)::float AS raw_commission_pct, "
             "  COALESCE( "
             "    NULLIF(e.solar_value, 0), "
