@@ -2238,22 +2238,23 @@ function _iedSortClick(col){
 
 function _iedRenderHead(){
   const cols = [
-    {key:'',           label:'',              align:'center', w:'72px',  nosort:true},
-    {key:'code',       label:'Code',          align:'left'},
-    {key:'name',       label:'Name',          align:'left'},
-    {key:'',           label:'Reg By',        align:'left',   w:'90px', nosort:true},
-    {key:'total_files',label:'Files',         align:'center', color:'#374151'},
-    {key:'l0',         label:'L0 Bonus',      align:'right',  color:'#475569'},
-    {key:'l1',         label:'L1 Source',     align:'right',  color:'#7c3aed'},
-    {key:'l2',         label:'L2 Senior',     align:'right',  color:'#1d4ed8'},
-    {key:'l3',         label:'L3 Extended',   align:'right',  color:'#0d9488'},
-    {key:'l4',         label:'L4 Core',       align:'right',  color:'#d97706'},
-    {key:'l5',         label:'L5 Support',    align:'right',  color:'#db2777'},
-    {key:'l6',         label:'L6 Showroom',   align:'right',  color:'#c026d3'},
-    {key:'gross',      label:'Gross Earned',  align:'right',  color:'#374151'},
-    {key:'net',        label:'Net Earning',   align:'right',  color:'#059669', nosort:true},
-    {key:'received',   label:'Released/Paid', align:'right',  color:'#059669'},
-    {key:'',           label:'Status',        align:'left',   nosort:true},
+    {key:'',                 label:'',              align:'center', w:'72px',  nosort:true},
+    {key:'code',             label:'Code',          align:'left'},
+    {key:'name',             label:'Name',          align:'left'},
+    {key:'',                 label:'Reg By',        align:'left',   w:'90px', nosort:true},
+    {key:'total_files',      label:'Files',         align:'center', color:'#374151'},
+    {key:'l0',               label:'L0 Bonus',      align:'right',  color:'#475569'},
+    {key:'l1',               label:'L1 Source',     align:'right',  color:'#7c3aed'},
+    {key:'l2',               label:'L2 Senior',     align:'right',  color:'#1d4ed8'},
+    {key:'l3',               label:'L3 Extended',   align:'right',  color:'#0d9488'},
+    {key:'l4',               label:'L4 Core',       align:'right',  color:'#d97706'},
+    {key:'l5',               label:'L5 Support',    align:'right',  color:'#db2777'},
+    {key:'l6',               label:'L6 Showroom',   align:'right',  color:'#c026d3'},
+    {key:'gross',            label:'Gross Earned',  align:'right',  color:'#374151'},
+    {key:'net',              label:'Net Earning',   align:'right',  color:'#059669', nosort:true},
+    {key:'received',         label:'Released/Paid', align:'right',  color:'#059669'},
+    {key:'potential_earning',label:'Pot. Earning',  align:'right',  color:'#7c3aed'},
+    {key:'',                 label:'Status',        align:'left',   nosort:true},
   ];
   const arrow = k => {
     if(!k) return '';
@@ -2292,7 +2293,7 @@ async function loadIncomeDash(pg=1){
   if(levelFilter) url += '&level='                   + encodeURIComponent(levelFilter);
 
   _iedRenderHead();
-  document.getElementById('iedBody').innerHTML = '<tr><td colspan="15" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+  document.getElementById('iedBody').innerHTML = '<tr><td colspan="16" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
   try{
     const r = await staffFetch(url);
     const d = await r.json();
@@ -2302,13 +2303,14 @@ async function loadIncomeDash(pg=1){
     _iedRenderTable(d.data);
     _iedRenderPagination(d.total, pg, 50);
   } catch(e){
-    document.getElementById('iedBody').innerHTML = '<tr><td colspan="15" style="text-align:center;padding:30px;color:#dc2626">Error: '+e.message+'</td></tr>';
+    document.getElementById('iedBody').innerHTML = '<tr><td colspan="16" style="text-align:center;padding:30px;color:#dc2626">Error: '+e.message+'</td></tr>';
   }
 }
 
 function _iedRenderKpis(rows, total){
   const totGross    = rows.reduce((s,r)=>s+r.gross_earned,0);
   const totRcv      = rows.reduce((s,r)=>s+r.received,0);
+  const totPot      = rows.reduce((s,r)=>s+(r.potential_earning||0),0);
   const totFiles    = rows.reduce((s,r)=>s+(r.total_files||0),0);
   const totL1       = rows.reduce((s,r)=>s+(r.l1_source||0),0);
   const totL2       = rows.reduce((s,r)=>s+(r.l2_senior||0),0);
@@ -2326,6 +2328,7 @@ function _iedRenderKpis(rows, total){
     {label:'Gross Earned',  val:_meInr(totGross),  color:'#374151'},
     {label:'Net Earning',   val:_meInr(totNet),    color:'#059669'},
     {label:'Released/Paid', val:_meInr(totRcv),    color:'#059669'},
+    {label:'Pot. Earning',  val:_meInr(totPot),    color:'#7c3aed'},
     {label:'Pending',       val:_meInr(totPending),color:'#d97706', border:'#fbbf24'},
     {label:'L1 Source',     val:_meInr(totL1),     color:'#7c3aed'},
     {label:'L2 Senior',     val:_meInr(totL2),     color:'#1d4ed8'},
@@ -2344,7 +2347,7 @@ function _iedRenderTable(rows){
   window._iedCurrentRows = rows;
   const tbody = document.getElementById('iedBody');
   if(!rows.length){
-    tbody.innerHTML='<tr><td colspan="15" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-chart-bar me-2"></i>No earners found with current filters</td></tr>';
+    tbody.innerHTML='<tr><td colspan="16" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-chart-bar me-2"></i>No earners found with current filters</td></tr>';
     return;
   }
   const _lvlInr = v => v > 0 ? `<span style="font-weight:700">${_meInr(v)}</span>` : `<span style="color:#e5e7eb">—</span>`;
@@ -2360,6 +2363,7 @@ function _iedRenderTable(rows){
   const tGross  = rows.reduce((s,r)=>s+(r.gross_earned||0),0);
   const tNet    = Math.round(tGross * 0.9);
   const tRcv    = rows.reduce((s,r)=>s+(r.received||0),0);
+  const tPot    = rows.reduce((s,r)=>s+(r.potential_earning||0),0);
   const totalsRow = `<tr style="background:#f0fdf4;border-bottom:2px solid #bbf7d0;position:sticky;top:0;z-index:1">
     <td style="padding:8px;text-align:center"><span style="font-size:9px;font-weight:800;color:#059669;background:#dcfce7;padding:2px 5px;border-radius:4px;white-space:nowrap">TOTAL</span></td>
     <td colspan="3" style="padding:8px 12px;font-size:11px;font-weight:700;color:#059669">${rows.length} member${rows.length!==1?'s':''} (page)</td>
@@ -2373,6 +2377,7 @@ function _iedRenderTable(rows){
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#374151">${_meInr(tGross)}</td>
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#059669">${_meInr(tNet)}</td>
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#059669">${_meInr(tRcv)}</td>
+    <td style="padding:8px 12px;text-align:right;font-weight:800;color:#7c3aed">${tPot>0?_meInr(tPot):'—'}</td>
     <td style="padding:8px 12px"></td>
   </tr>`;
 
@@ -2408,6 +2413,7 @@ function _iedRenderTable(rows){
     const l0 = Number(m.l0_bonus || 0);
     const gross = m.gross_earned || 0;
     const net = Math.round(gross * 0.9);
+    const pot = Number(m.potential_earning || 0);
     return `<tr id="ied-row-${m.id}" style="border-bottom:1px solid #f3f4f6" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background=''">
       <td style="padding:8px;text-align:center">
         <div style="display:flex;align-items:center;justify-content:center;gap:6px">
@@ -2431,10 +2437,11 @@ function _iedRenderTable(rows){
       <td style="padding:8px 12px;text-align:right;font-weight:700;color:#374151">${gross>0?_meInr(gross):'<span style="color:#d1d5db">—</span>'}</td>
       <td style="padding:8px 12px;text-align:right;font-weight:700;color:${net>0?'#059669':'#d1d5db'}">${net>0?_meInr(net):'—'}</td>
       <td style="padding:8px 12px;text-align:right;font-weight:800;color:${m.received>0?'#059669':'#9ca3af'}">${_meInr(m.received)}</td>
+      <td style="padding:8px 12px;text-align:right;font-weight:800;color:${pot>0?'#7c3aed':'#9ca3af'}">${pot>0?_meInr(pot):'<span style="color:#d1d5db">—</span>'}</td>
       <td style="padding:8px 12px">${statusPills||'<span style="color:#d1d5db;font-size:11px">—</span>'}</td>
     </tr>
     <tr id="ied-expand-${m.id}" style="display:${expanded?'table-row':'none'}">
-      <td colspan="15" style="padding:0;background:#f5f3ff">
+      <td colspan="17" style="padding:0;background:#f5f3ff">
         <div id="ied-detail-${m.id}" style="padding:14px 28px"></div>
       </td>
     </tr>`;
@@ -2561,7 +2568,7 @@ function _updateParentRowFromEntries(partnerId, rows, isIed){
     if(cells[12]) cells[12].innerHTML = gross>0?_meInr(gross):'<span style="color:#d1d5db">—</span>';
     if(cells[13]) cells[13].innerHTML = `<span style="font-weight:700;color:${net>0?'#059669':'#d1d5db'}">${net>0?_meInr(net):'—'}</span>`;
     if(cells[14]) cells[14].innerHTML = `<span style="font-weight:800;color:${received>0?'#059669':'#9ca3af'}">${_meInr(received)}</span>`;
-    if(cells[15]) cells[15].innerHTML = pills||'<span style="color:#d1d5db;font-size:11px">—</span>';
+    if(cells[16]) cells[16].innerHTML = pills||'<span style="color:#d1d5db;font-size:11px">—</span>';
   } else {
     const gross    = nonCan.reduce((s,e)=>s+e.commission_amount,0);
     const received = rows.filter(e=>['RELEASED','PAID'].includes(e.status)).reduce((s,e)=>s+(e.net_payout||0),0);

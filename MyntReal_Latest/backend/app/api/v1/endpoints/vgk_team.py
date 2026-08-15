@@ -4431,6 +4431,7 @@ def member_earnings_dashboard(
             "gross_earned":           gross,
             "net_earning":            net_earning,
             "received":               received,
+            "potential_earning":      float(get_partner_potential_earning(db, m.id, exclude_l1=False)),
             "income_by_status":       inc,
             # DC-VGK-EARN-DASH-001: level-wise breakdown + new summary fields
             "income_by_level":        _lvl,
