@@ -3015,17 +3015,15 @@ async function toggleLvRow(lid){
   const tog = document.getElementById(`lvToggle_${lid}`);
   if(tog){ tog.textContent='−'; tog.style.background='#7c3aed'; tog.style.color='#fff'; }
 
-  if(_lvDetailCache[lid]){
-    _lvRenderDetail(lid, _lvDetailCache[lid]);
-    return;
-  }
-
-  // Insert loading placeholder
-  const existingRow = document.getElementById(`lvRow_${lid}`);
-  if(existingRow && existingRow.parentNode){
-    const tempTbody = document.createElement('tbody');
-    tempTbody.innerHTML = `<tr id="lvDetail_${lid}"><td colspan="15" style="padding:16px;background:#f9fafb;text-align:center;color:#9ca3af"><i class="fas fa-spinner fa-spin me-1"></i>Loading members…</td></tr>`;
-    existingRow.parentNode.insertBefore(tempTbody.firstElementChild, existingRow.nextSibling);
+  // Insert loading placeholder if not existing
+  let existingDetail = document.getElementById(`lvDetail_${lid}`);
+  if(!existingDetail){
+    const existingRow = document.getElementById(`lvRow_${lid}`);
+    if(existingRow && existingRow.parentNode){
+      const tempTbody = document.createElement('tbody');
+      tempTbody.innerHTML = `<tr id="lvDetail_${lid}"><td colspan="15" style="padding:16px;background:#f9fafb;text-align:center;color:#9ca3af"><i class="fas fa-spinner fa-spin me-1"></i>Loading members…</td></tr>`;
+      existingRow.parentNode.insertBefore(tempTbody.firstElementChild, existingRow.nextSibling);
+    }
   }
 
   const stage    = document.getElementById('lvStageFilter')?.value || '';
@@ -3099,15 +3097,39 @@ function _lvDetailRowHtml(lid, entries){
     const stLabel  = _ME_STATUS_LABEL[e.status] || e.status;
     const kindBadge= _getIncomeTypeLabel(e.kind, e.community_id, e.community_event_name);
     const commBadgeHtml = e.community_id ? `<span style="font-size:9.5px;padding:2px 6px;border-radius:6px;background:#0ea5e9;color:#fff;margin-left:3px;font-weight:600">Comm ID: ${e.community_id}</span>` : '';
-    let calcBase = e.base_value || 0;
-    if((!calcBase || calcBase <= 0) && (e.commission_amount > 0 && e.commission_pct > 0)){
-      calcBase = Math.round(e.commission_amount / (e.commission_pct / 100));
+    
+    let calcBase = e.base_value || e.deal_value_total || e.solar_value || e.confirmed_final_value || 0;
+    let calcPct  = (e.commission_pct && e.commission_pct > 0) ? e.commission_pct : 0;
+
+    if (!calcBase || calcBase <= 0) {
+      if (calcPct > 0 && e.commission_amount > 0) {
+        calcBase = Math.round(e.commission_amount / (calcPct / 100));
+      } else if (lvl === 1 && e.commission_amount > 0) {
+        calcBase = Math.round(e.commission_amount / 0.0421);
+      } else if ((lvl === 5 || lvl === 2) && e.commission_amount > 0) {
+        calcBase = Math.round(e.commission_amount / 0.015);
+      } else if (lvl === 6 && e.commission_amount > 0) {
+        calcBase = Math.round(e.commission_amount / 0.035);
+      } else if (lvl === 3 && e.commission_amount > 0) {
+        calcBase = Math.round(e.commission_amount / 0.01);
+      }
     }
+
+    if (!calcPct || calcPct <= 0) {
+      if (calcBase > 0 && e.commission_amount > 0) {
+        calcPct = (e.commission_amount / calcBase * 100).toFixed(2);
+      } else if (lvl === 1) {
+        calcPct = 4.21;
+      } else if (lvl === 5 || lvl === 2) {
+        calcPct = 1.50;
+      } else if (lvl === 6) {
+        calcPct = 3.50;
+      } else if (lvl === 3) {
+        calcPct = 1.00;
+      }
+    }
+
     const baseText = calcBase > 0 ? _meInr(calcBase) : '—';
-    let calcPct = (e.commission_pct && e.commission_pct > 0) ? e.commission_pct : 0;
-    if((!calcPct || calcPct <= 0) && calcBase > 0 && e.commission_amount > 0){
-      calcPct = (e.commission_amount / calcBase * 100).toFixed(2);
-    }
     const rateText = calcPct > 0 ? (calcPct + '%') : '—';
     return `<tr style="border-bottom:1px solid #f0f0f0;background:#fafaf9">
       <td style="padding:8px 10px;font-size:11px;color:#6b7280;white-space:nowrap">${e.submit_date?fmtDate(e.submit_date):'<span style="color:#d1d5db">—</span>'}</td>
