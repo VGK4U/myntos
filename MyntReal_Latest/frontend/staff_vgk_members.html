@@ -2723,6 +2723,7 @@ function _lvResetFilters(){
 
 async function loadLeadView(pg){
   _lvPage = pg || 1;
+  Object.keys(_lvDetailCache).forEach(k=>delete _lvDetailCache[k]);
   const tbody = document.getElementById('lvBody');
   tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
 
@@ -2889,9 +2890,14 @@ async function toggleLvRow(lid){
     existingRow.insertAdjacentElement('afterend', ph);
   }
 
-  const stage = document.getElementById('lvStageFilter')?.value || '';
+  const stage    = document.getElementById('lvStageFilter')?.value || '';
+  const dateFrom = document.getElementById('lvDateFrom')?.value || '';
+  const dateTo   = document.getElementById('lvDateTo')?.value || '';
+
   const params = new URLSearchParams({ lead_id: lid });
-  if(stage) params.set('status', stage);
+  if(stage)    params.set('status', stage);
+  if(dateFrom) params.set('date_from', dateFrom);
+  if(dateTo)   params.set('date_to', dateTo);
 
   try{
     const r = await staffFetch('/api/v1/vgk/dashboard/lead-income-members?' + params.toString());

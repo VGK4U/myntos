@@ -5017,6 +5017,8 @@ def lead_earnings_dashboard(
 def lead_income_members_detail(
     lead_id: int = Query(..., description="source_lead_id"),
     status: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
@@ -5025,11 +5027,20 @@ def lead_income_members_detail(
     """
     _extra = ""
     _p: dict = {"lid": lead_id}
-    if status:
-        sv = status.strip().upper()
-        if sv not in ('BALANCE_RECEIVED_PLUS',):
-            _extra = " AND e.status = :st"
-            _p["st"] = sv
+    status_str = status.strip().upper() if isinstance(status, str) and status.strip() else None
+    d_from = date_from.strip() if isinstance(date_from, str) and date_from.strip() else None
+    d_to = date_to.strip() if isinstance(date_to, str) and date_to.strip() else None
+
+    if status_str:
+        if status_str not in ('BALANCE_RECEIVED_PLUS',):
+            _extra += " AND e.status = :st"
+            _p["st"] = status_str
+    if d_from:
+        _extra += " AND e.created_at::date >= :df"
+        _p["df"] = d_from
+    if d_to:
+        _extra += " AND e.created_at::date <= :dt"
+        _p["dt"] = d_to
     try:
         rows = db.execute(text(
             "SELECT e.id, e.entry_number, e.status, e.kind, e.level, "
