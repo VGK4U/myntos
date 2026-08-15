@@ -381,22 +381,7 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
     if _showroom_p and (_showroom_pct > 0 or (_showroom_type == 'AMOUNT' and _showroom_amt > 0)):
         if _showroom_type == 'AMOUNT' and _showroom_amt > 0:
             levels_map[6] = (_showroom_p, Decimal('0'))          # pct placeholder
-        else:
-            levels_map[6] = (_showroom_p, _showroom_pct)
-
-    # DC-CHAIN-DEDUP-001: Deduplicate partners in chain map so lower levels (L5/L6)
-    # do not grant double commissions to a partner already assigned at L1/L2.
-    _chain_seen_pids: set = set()
-    _deduped_levels_map: dict = {}
-    for _cl, (_cp, _cpct) in levels_map.items():
-        if _cp is None:
-            continue
-        if _cp.id in _chain_seen_pids:
-            pass
-        else:
-            _chain_seen_pids.add(_cp.id)
-            _deduped_levels_map[_cl] = (_cp, _cpct)
-    levels_map = _deduped_levels_map
+    # Allow all levels (L1, L2, L3, L4, L5, L6) to generate entries even if the same partner is assigned across multiple roles (e.g. L1 Source + L5 Support).
 
     created = 0
     for level, (partner, pct) in levels_map.items():
