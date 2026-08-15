@@ -654,6 +654,10 @@
                 buttons.push(`<button class="action-btn" style="background:#8b5cf6;color:white;" onclick="event.stopPropagation(); showRequestSparesModal(${ticket.id})" title="Request Spare Parts from Catalog"><i class="fas fa-boxes me-1"></i>Spares</button>`);
             }
 
+            if (!ticket.service_technician_id || !ticket.service_manager_id) {
+                buttons.push(`<button class="action-btn" style="background:#d97706;color:white;" onclick="event.stopPropagation(); showReassignModal(${ticket.id})" title="Assign Technician or Manager"><i class="fas fa-user-plus me-1"></i>Assign Staff</button>`);
+            }
+
             if (ticket.sub_status !== 'closed' && ticket.sub_status !== 'cancelled') {
                 buttons.push(`<button class="action-btn" style="background:#0ea5e9;color:white;" onclick="event.stopPropagation(); showAddServiceItemModal(${ticket.id}, '${(ticket.ticket_id||'').replace(/'/g,"\\'")}', ${ticket.partner_id||'null'}, '${(ticket.customer_name||'').replace(/'/g,"\\'")}', '${(ticket.issue_description||'').replace(/'/g,"\\'")}', ${ticket.company_id||1})" title="Add Item to Service Center"><i class="fas fa-tools me-1"></i>Add Item</button>`);
             }
@@ -889,16 +893,22 @@
                     </div>
                 </div>
                 <hr>
-                <div class="row mb-3">
-                    <div class="col-md-6">
+                <div class="row mb-3 align-items-center">
+                    <div class="col-md-7">
                         <h6 class="fw-bold mb-2"><i class="fas fa-users me-2"></i>Assigned Staff</h6>
-                        <p><strong>Technician:</strong> ${ticket.service_technician_name || '<span class="text-muted">Unassigned</span>'}</p>
-                        <p><strong>Manager:</strong> ${ticket.service_manager_name || '<span class="text-muted">Unassigned</span>'}</p>
+                        <div class="mb-2">
+                            <strong>Technician:</strong> 
+                            ${ticket.service_technician_name ? `<span class="fw-semibold text-dark">${ticket.service_technician_name}</span>` : `<span class="badge bg-warning text-dark me-2">Unassigned</span> <button class="btn btn-sm btn-primary py-0 px-2 shadow-sm" onclick="showReassignModal(${ticket.id})"><i class="fas fa-user-plus me-1"></i>Assign Technician</button>`}
+                        </div>
+                        <div>
+                            <strong>Manager:</strong> 
+                            ${ticket.service_manager_name ? `<span class="fw-semibold text-dark">${ticket.service_manager_name}</span>` : `<span class="badge bg-warning text-dark me-2">Unassigned</span> <button class="btn btn-sm btn-outline-primary py-0 px-2 shadow-sm" onclick="showReassignModal(${ticket.id})"><i class="fas fa-user-plus me-1"></i>Assign Manager</button>`}
+                        </div>
                     </div>
-                    <div class="col-md-6 text-end">
-                        ${_canAssignTickets ? `<button class="btn btn-outline-primary btn-sm" onclick="showReassignModal(${ticket.id})">
-                            <i class="fas fa-user-edit me-1"></i>Reassign Staff
-                        </button>` : ''}
+                    <div class="col-md-5 text-end">
+                        <button class="btn btn-primary btn-sm shadow-sm" onclick="showReassignModal(${ticket.id})">
+                            <i class="fas fa-user-edit me-1"></i>Assign / Reassign Staff
+                        </button>
                     </div>
                 </div>
                 <hr>
