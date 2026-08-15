@@ -4364,14 +4364,15 @@ def member_earnings_dashboard(
             ), {"ids": parent_ids}).fetchall()
             p_earnings = {r[0]: float(r[1]) for r in p_inc_rows}
             
-            from app.services.vgk_earner_card import get_partner_potential_earning
+            from app.services.vgk_earner_card import get_bulk_partner_potential_earning
+            p_pot_map = get_bulk_partner_potential_earning(db, parent_ids, exclude_l1=False) if parent_ids else {}
             for pid in parent_ids:
                 info = p_info.get(pid, {})
                 parent_map[pid] = {
                     "partner_name": info.get("name"),
                     "gross_earned": p_earnings.get(pid, 0.0),
                     "passport_photo": passport_photo_map.get(pid),
-                    "potential_earned": get_partner_potential_earning(db, pid, exclude_l1=False)
+                    "potential_earned": float(p_pot_map.get(pid, 0.0))
                 }
         except Exception:
             pass
@@ -4397,6 +4398,9 @@ def member_earnings_dashboard(
                 }
         except Exception:
             pass
+
+    from app.services.vgk_earner_card import get_bulk_partner_potential_earning
+    pot_map = get_bulk_partner_potential_earning(db, member_ids, exclude_l1=False) if member_ids else {}
 
     items = []
     for m in members:
@@ -4431,7 +4435,7 @@ def member_earnings_dashboard(
             "gross_earned":           gross,
             "net_earning":            net_earning,
             "received":               received,
-            "potential_earning":      float(get_partner_potential_earning(db, m.id, exclude_l1=False)),
+            "potential_earning":      float(pot_map.get(m.id, 0.0)),
             "income_by_status":       inc,
             # DC-VGK-EARN-DASH-001: level-wise breakdown + new summary fields
             "income_by_level":        _lvl,

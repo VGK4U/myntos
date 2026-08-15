@@ -1099,6 +1099,130 @@ def get_partner_potential_earning(db, partner_id: int, exclude_l1: bool = False)
     return sum(unique_leads.values())
 
 
+def get_bulk_partner_potential_earning(db, partner_ids: list[int], exclude_l1: bool = False) -> dict[int, float]:
+    if not partner_ids:
+        return {}
+    from sqlalchemy import text
+    from app.models.staff_accounts import VGKTeamCommissionConfig
+    
+    rows = db.execute(text("""
+        SELECT 
+            e.partner_id, e.id, e.source_lead_id, e.level, e.commission_amount, e.commission_pct, e.kind, e.category_id,
+            l.solar_value, l.deal_value_excl_tax, l.deal_value_total, l.category_id AS lead_category_id,
+            l.solar_brand_id
+        FROM vgk_cash_income_entries e
+        LEFT JOIN crm_leads l ON e.source_lead_id = l.id
+        WHERE e.partner_id = ANY(:pids) AND e.status != 'CANCELLED'
+    """), {'pids': list(partner_ids)}).fetchall()
+    
+    configs = db.query(VGKTeamCommissionConfig).all()
+    config_map = {c.category_id: c for c in configs}
+
+    try:
+        brands = db.execute(text("""
+            SELECT id, l1_amount, l2_amount, l5_amount
+            FROM vgk_incentive_brands WHERE is_active = true
+        """)).fetchall()
+        brand_map = {b.id: b for b in brands}
+    except Exception:
+        brand_map = {}
+    
+    partner_leads = {}
+    for r in rows:
+        pid = r.partner_id
+        if pid not in partner_leads:
+            partner_leads[pid] = {}
+        unique_leads = partner_leads[pid]
+
+        lead_id = r.source_lead_id or 0
+        lvl = r.level if r.level is not None else -1
+        key = f"{lead_id}_{lvl}"
+        
+        commission_amount = float(r.commission_amount or 0.0)
+        commission_pct = float(r.commission_pct or 0.0)
+        kind = r.kind or "COMMISSION"
+        lvl_int = r.level
+        
+        if exclude_l1 and lvl_int == 1:
+            continue
+        
+        commission_base = round(commission_amount / commission_pct * 100, 2) if commission_pct > 0 else 0.0
+            
+        potential_amount = 0.0
+        if lvl_int == 0 or kind == 'SLAB_BONUS':
+            potential_amount = commission_amount
+        else:
+            _sv = float(r.solar_value or 0.0)
+            _dvet = float(r.deal_value_excl_tax or 0.0)
+            _dvt_val = float(r.deal_value_total or 0.0)
+            
+            lead_val = _sv if _sv > 0 else (_dvet if _dvet > 0 else _dvt_val)
+            if lead_val <= 0:
+                lead_val = commission_base
+                
+            cat_id = r.lead_category_id or r.category_id
+            config = config_map.get(cat_id)
+            
+            potential_pct = 0.0
+            potential_flat = 0.0
+            potential_type = 'PCT'
+            
+            if config and lvl_int is not None:
+                if lvl_int == 1:
+                    potential_pct = float(config.level1_pct or 0)
+                    potential_type = config.level1_type or 'PCT'
+                    potential_flat = float(config.level1_amt or 0)
+                elif lvl_int == 2:
+                    potential_pct = float(config.level2_pct or 0)
+                    potential_type = config.level2_type or 'PCT'
+                    potential_flat = float(config.level2_amt or 0)
+                elif lvl_int == 3:
+                    potential_pct = float(config.level3_pct or 0)
+                    potential_type = config.level3_type or 'PCT'
+                    potential_flat = float(config.level3_amt or 0)
+                elif lvl_int == 4:
+                    potential_pct = float(config.level4_core_pct or 0)
+                    potential_type = config.level4_core_type or 'PCT'
+                    potential_flat = float(config.level4_core_amt or 0)
+                elif lvl_int == 5:
+                    potential_pct = float(config.level4_pct or 0)
+                    potential_type = config.level4_type or 'PCT'
+                    potential_flat = float(config.level4_amt or 0)
+                elif lvl_int == 6:
+                    potential_pct = float(config.showroom_pct or 0)
+                    potential_type = config.showroom_type or 'PCT'
+                    potential_flat = float(config.showroom_amt or 0)
+                    
+                if potential_type == 'AMOUNT':
+                    potential_amount = potential_flat
+                else:
+                    potential_amount = round(lead_val * potential_pct / 100.0, 2)
+            else:
+                standard_solar_pcts = {1: 2.50, 2: 1.00, 3: 0.50, 4: 0.50, 5: 1.50, 6: 3.50}
+                potential_pct = standard_solar_pcts.get(lvl_int, 0.0)
+                potential_amount = round(lead_val * potential_pct / 100.0, 2)
+            
+            if hasattr(r, 'solar_brand_id') and r.solar_brand_id and r.solar_brand_id in brand_map:
+                b_cfg = brand_map[r.solar_brand_id]
+                if lvl_int == 1 and b_cfg.l1_amount:
+                    potential_amount += float(b_cfg.l1_amount)
+                elif lvl_int == 2 and b_cfg.l2_amount:
+                    potential_amount += float(b_cfg.l2_amount)
+                elif lvl_int == 5 and b_cfg.l5_amount:
+                    potential_amount += float(b_cfg.l5_amount)
+                
+        if potential_amount <= 0:
+            potential_amount = commission_amount
+            
+        if lvl_int in (0, -1) or not r.source_lead_id:
+            unique_leads[f"bonus_{r.id}"] = potential_amount
+        else:
+            if key not in unique_leads or potential_amount > unique_leads[key]:
+                unique_leads[key] = potential_amount
+                
+    return {pid: sum(uleads.values()) for pid, uleads in partner_leads.items()}
+
+
 def _do_celebration(db, entry_id: int):
     from sqlalchemy import text
     from app.services.object_storage import storage_service
