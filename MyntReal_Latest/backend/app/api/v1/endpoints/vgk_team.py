@@ -5221,9 +5221,17 @@ def lead_income_members_detail(
             pct = round(amt / bv * 100.0, 2)
 
         _kind_upper = (r.kind or 'COMMISSION').upper()
-        adv_paid = 0.0
+        stage1_adv = 0.0
+        stage2_adv = 0.0
+        adv_paid   = 0.0
         if _kind_upper == 'COMMISSION' and r.level is not None:
-            adv_paid = adv_map.get((r.partner_id, r.level), 0.0)
+            adv_info = adv_map.get((r.partner_id, r.level), {})
+            if isinstance(adv_info, dict):
+                stage1_adv = float(adv_info.get("stage1", 0.0))
+                stage2_adv = float(adv_info.get("stage2", 0.0))
+                adv_paid   = float(adv_info.get("total", 0.0))
+            else:
+                adv_paid   = float(adv_info)
         bal_gross = max(0.0, round(amt - adv_paid, 2))
 
         res_data.append({
@@ -5237,8 +5245,11 @@ def lead_income_members_detail(
             "trigger_date":      r.trigger_date,
             "payment_date":      r.payment_date,
             "commission_pct":    pct,
+            "deal_value":        bv,
             "base_value":        bv,
             "commission_amount": amt,
+            "stage1_adv":        stage1_adv,
+            "stage2_adv":        stage2_adv,
             "advance_paid":      adv_paid,
             "balance_gross":     bal_gross,
             "net_payout":        float(r.net_payout),
