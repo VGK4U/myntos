@@ -4710,6 +4710,38 @@ def member_income_entries_detail(
         except Exception:
             pass
 
+    # Batch-resolve prior advances (ADVANCE + DVR_ADVANCE) for each (lead_id, level)
+    adv_map: dict = {}
+    if lead_ids:
+        try:
+            adv_vci = db.execute(text(
+                "SELECT source_lead_id, level, SUM(COALESCE(commission_amount, 0)) AS total_adv "
+                "FROM vgk_cash_income_entries "
+                "WHERE partner_id = :pid AND source_lead_id = ANY(:lids) "
+                "  AND kind IN ('ADVANCE', 'DVR_ADVANCE') AND status != 'CANCELLED' "
+                "GROUP BY source_lead_id, level"
+            ), {"pid": partner_id, "lids": lead_ids}).fetchall()
+            for ar in adv_vci:
+                adv_map[(ar.source_lead_id, ar.level)] = float(ar.total_adv or 0)
+
+            adv_vsca = db.execute(text(
+                "SELECT a.lead_id, a.level, SUM(COALESCE(a.advance_amount, 0)) AS total_adv "
+                "FROM vgk_solar_cibil_advances a "
+                "WHERE a.partner_id = :pid AND a.lead_id = ANY(:lids) "
+                "  AND a.status IN ('PENDING', 'RELEASED') "
+                "  AND NOT EXISTS ( "
+                "    SELECT 1 FROM vgk_cash_income_entries vci "
+                "    WHERE vci.partner_id = a.partner_id AND vci.source_lead_id = a.lead_id "
+                "      AND vci.level = a.level AND vci.kind = a.kind AND vci.status != 'CANCELLED' "
+                "  ) "
+                "GROUP BY a.lead_id, a.level"
+            ), {"pid": partner_id, "lids": lead_ids}).fetchall()
+            for ar in adv_vsca:
+                key = (ar.lead_id, ar.level)
+                adv_map[key] = adv_map.get(key, 0.0) + float(ar.total_adv or 0)
+        except Exception:
+            pass
+
     # Fetch commission configs & solar brand incentive configs for accurate potential calculations
     try:
         from app.models.staff_accounts import VGKTeamCommissionConfig
@@ -4825,6 +4857,13 @@ def member_income_entries_detail(
         is_paid_st = r.status in ('PAID', 'RELEASED', 'VERIFIED')
         pmt_date = r.entry_date if is_paid_st else None
 
+        # Prior advance deduction for Final Commission entries
+        adv_paid = 0.0
+        if _resolved_kind == 'COMMISSION' and r.source_lead_id and _lvl_int is not None:
+            adv_paid = adv_map.get((r.source_lead_id, _lvl_int), 0.0)
+        gross_amt = float(r.commission_amount)
+        bal_gross = max(0.0, round(gross_amt - adv_paid, 2))
+
         return {
             "id":                int(r.id),
             "entry_number":      r.entry_number or f"INC-{r.id}",
@@ -4837,7 +4876,9 @@ def member_income_entries_detail(
             "payment_date":      pmt_date,
             "deal_value":        commission_base,
             "commission_pct":    float(r.commission_pct),
-            "commission_amount": float(r.commission_amount),
+            "commission_amount": gross_amt,
+            "advance_paid":      adv_paid,
+            "balance_gross":     bal_gross,
             "admin_charges":     float(r.admin_charges),
             "tds_amount":        float(r.tds_amount),
             "net_payout":        float(r.net_payout),
@@ -5100,6 +5141,36 @@ def lead_income_members_detail(
     except Exception as exc:
         return {"success": False, "error": str(exc), "data": []}
 
+    # Batch-resolve prior advances for this lead grouped by (partner_id, level)
+    adv_map: dict = {}
+    try:
+        adv_rows = db.execute(text(
+            "SELECT e.partner_id, e.level, SUM(COALESCE(e.commission_amount, 0)) AS total_adv "
+            "FROM vgk_cash_income_entries e "
+            "WHERE e.source_lead_id = :lid "
+            "  AND e.kind IN ('ADVANCE', 'DVR_ADVANCE') AND e.status != 'CANCELLED' "
+            "GROUP BY e.partner_id, e.level"
+        ), {"lid": lead_id}).fetchall()
+        for ar in adv_rows:
+            adv_map[(ar.partner_id, ar.level)] = float(ar.total_adv or 0)
+
+        vsca_adv = db.execute(text(
+            "SELECT a.partner_id, a.level, SUM(COALESCE(a.advance_amount, 0)) AS total_adv "
+            "FROM vgk_solar_cibil_advances a "
+            "WHERE a.lead_id = :lid AND a.status IN ('PENDING', 'RELEASED') "
+            "  AND NOT EXISTS ( "
+            "    SELECT 1 FROM vgk_cash_income_entries vci "
+            "    WHERE vci.partner_id = a.partner_id AND vci.source_lead_id = a.lead_id "
+            "      AND vci.level = a.level AND vci.kind = a.kind AND vci.status != 'CANCELLED' "
+            "  ) "
+            "GROUP BY a.partner_id, a.level"
+        ), {"lid": lead_id}).fetchall()
+        for ar in vsca_adv:
+            key = (ar.partner_id, ar.level)
+            adv_map[key] = adv_map.get(key, 0.0) + float(ar.total_adv or 0)
+    except Exception:
+        pass
+
     res_data = []
     for r in rows:
         bv = float(r.base_value)
@@ -5107,6 +5178,13 @@ def lead_income_members_detail(
         pct = float(r.raw_commission_pct)
         if (pct <= 0) and bv > 0 and amt > 0:
             pct = round(amt / bv * 100.0, 2)
+
+        _kind_upper = (r.kind or 'COMMISSION').upper()
+        adv_paid = 0.0
+        if _kind_upper == 'COMMISSION' and r.level is not None:
+            adv_paid = adv_map.get((r.partner_id, r.level), 0.0)
+        bal_gross = max(0.0, round(amt - adv_paid, 2))
+
         res_data.append({
             "id":                int(r.id),
             "entry_number":      r.entry_number or f"INC-{r.id}",
@@ -5120,6 +5198,8 @@ def lead_income_members_detail(
             "commission_pct":    pct,
             "base_value":        bv,
             "commission_amount": amt,
+            "advance_paid":      adv_paid,
+            "balance_gross":     bal_gross,
             "net_payout":        float(r.net_payout),
             "admin_charges":     float(r.admin_charges),
             "tds_amount":        float(r.tds_amount),
