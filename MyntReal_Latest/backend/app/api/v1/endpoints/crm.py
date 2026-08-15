@@ -5770,27 +5770,28 @@ def get_employee_performance_dashboard(
         st_where_conds = []
         params = {}
 
-        if c_from:
-            where_conds.append("l.created_at >= CAST(:c_from AS TIMESTAMP)")
-            st_where_conds.append("t.created_date >= CAST(:c_from AS TIMESTAMP)")
-            params['c_from'] = c_from
-        
-        if c_to:
-            where_conds.append("l.created_at <= CAST(:c_to AS TIMESTAMP) + INTERVAL '1 day'")
-            st_where_conds.append("t.created_date <= CAST(:c_to AS TIMESTAMP) + INTERVAL '1 day'")
-            params['c_to'] = c_to
-
-        if cl_from:
-            where_conds.append("l.actual_close_date >= CAST(:cl_from AS DATE)")
-            params['cl_from'] = cl_from
-
-        if cl_to:
-            where_conds.append("l.actual_close_date <= CAST(:cl_to AS DATE)")
-            params['cl_to'] = cl_to
-
-        if not where_conds:
-            where_conds.append(f"l.created_at >= NOW() - INTERVAL '{interval_val}'")
-            st_where_conds.append(f"t.created_date >= NOW() - INTERVAL '{interval_val}'")
+        if period_type == 'monthly':
+            if c_from:
+                where_conds.append("l.created_at >= CAST(:c_from AS TIMESTAMP)")
+                st_where_conds.append("t.created_date >= CAST(:c_from AS TIMESTAMP)")
+                params['c_from'] = c_from
+            if c_to:
+                where_conds.append("l.created_at <= CAST(:c_to AS TIMESTAMP) + INTERVAL '1 day'")
+                st_where_conds.append("t.created_date <= CAST(:c_to AS TIMESTAMP) + INTERVAL '1 day'")
+                params['c_to'] = c_to
+            if cl_from:
+                where_conds.append("l.actual_close_date >= CAST(:cl_from AS DATE)")
+                params['cl_from'] = cl_from
+            if cl_to:
+                where_conds.append("l.actual_close_date <= CAST(:cl_to AS DATE)")
+                params['cl_to'] = cl_to
+            if not where_conds:
+                where_conds.append("l.created_at >= NOW() - INTERVAL '12 months'")
+                st_where_conds.append("t.created_date >= NOW() - INTERVAL '12 months'")
+        else:
+            # Weekly performance consistently displays rolling Last 12 Weeks (unaffected by top date filters)
+            where_conds.append("l.created_at >= NOW() - INTERVAL '12 weeks'")
+            st_where_conds.append("t.created_date >= NOW() - INTERVAL '12 weeks'")
 
         lead_where_str = " AND ".join(where_conds)
         st_where_str = " AND ".join(st_where_conds) if st_where_conds else "1=1"
