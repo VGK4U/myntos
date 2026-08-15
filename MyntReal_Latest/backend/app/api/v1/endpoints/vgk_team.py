@@ -4716,7 +4716,10 @@ def member_income_entries_detail(
         try:
             int_lead_ids = [int(x) for x in lead_ids if x is not None]
             adv_vci = db.execute(text(
-                "SELECT source_lead_id, level, SUM(COALESCE(commission_amount, 0)) AS total_adv "
+                "SELECT source_lead_id, level, "
+                "  SUM(CASE WHEN kind = 'ADVANCE' THEN COALESCE(commission_amount, 0) ELSE 0 END) AS stage1_adv, "
+                "  SUM(CASE WHEN kind = 'DVR_ADVANCE' THEN COALESCE(commission_amount, 0) ELSE 0 END) AS stage2_adv, "
+                "  SUM(COALESCE(commission_amount, 0)) AS total_adv "
                 "FROM vgk_cash_income_entries "
                 "WHERE source_lead_id = ANY(:lids) "
                 "  AND kind IN ('ADVANCE', 'DVR_ADVANCE') AND status != 'CANCELLED' "
@@ -4724,10 +4727,17 @@ def member_income_entries_detail(
             ), {"lids": int_lead_ids}).fetchall()
             for ar in adv_vci:
                 if ar.source_lead_id is not None and ar.level is not None:
-                    adv_map[(int(ar.source_lead_id), int(ar.level))] = float(ar.total_adv or 0)
+                    adv_map[(int(ar.source_lead_id), int(ar.level))] = {
+                        "stage1": float(ar.stage1_adv or 0),
+                        "stage2": float(ar.stage2_adv or 0),
+                        "total":  float(ar.total_adv or 0)
+                    }
 
             adv_vsca = db.execute(text(
-                "SELECT a.lead_id, a.level, SUM(COALESCE(a.advance_amount, 0)) AS total_adv "
+                "SELECT a.lead_id, a.level, "
+                "  SUM(CASE WHEN a.kind = 'ADVANCE' THEN COALESCE(a.advance_amount, 0) ELSE 0 END) AS stage1_adv, "
+                "  SUM(CASE WHEN a.kind = 'DVR_ADVANCE' THEN COALESCE(a.advance_amount, 0) ELSE 0 END) AS stage2_adv, "
+                "  SUM(COALESCE(a.advance_amount, 0)) AS total_adv "
                 "FROM vgk_solar_cibil_advances a "
                 "WHERE a.lead_id = ANY(:lids) "
                 "  AND a.status IN ('PENDING', 'RELEASED') "
@@ -4741,7 +4751,11 @@ def member_income_entries_detail(
             for ar in adv_vsca:
                 if ar.lead_id is not None and ar.level is not None:
                     key = (int(ar.lead_id), int(ar.level))
-                    adv_map[key] = adv_map.get(key, 0.0) + float(ar.total_adv or 0)
+                    cur = adv_map.get(key, {"stage1": 0.0, "stage2": 0.0, "total": 0.0})
+                    cur["stage1"] += float(ar.stage1_adv or 0)
+                    cur["stage2"] += float(ar.stage2_adv or 0)
+                    cur["total"]  += float(ar.total_adv or 0)
+                    adv_map[key] = cur
         except Exception as _exc:
             print(f"[ERROR-ADV-MAP] Failed to compute adv_map: {_exc}")
 
@@ -4861,9 +4875,14 @@ def member_income_entries_detail(
         pmt_date = r.entry_date if is_paid_st else None
 
         # Prior advance deduction for Final Commission entries
-        adv_paid = 0.0
+        stage1_adv = 0.0
+        stage2_adv = 0.0
+        adv_paid   = 0.0
         if _resolved_kind == 'COMMISSION' and r.source_lead_id is not None and _lvl_int is not None:
-            adv_paid = adv_map.get((int(r.source_lead_id), int(_lvl_int)), 0.0)
+            adv_info = adv_map.get((int(r.source_lead_id), int(_lvl_int)), {})
+            stage1_adv = float(adv_info.get("stage1", 0.0))
+            stage2_adv = float(adv_info.get("stage2", 0.0))
+            adv_paid   = float(adv_info.get("total", 0.0))
         gross_amt = float(r.commission_amount)
         bal_gross = max(0.0, round(gross_amt - adv_paid, 2))
 
@@ -4880,6 +4899,8 @@ def member_income_entries_detail(
             "deal_value":        commission_base,
             "commission_pct":    float(r.commission_pct),
             "commission_amount": gross_amt,
+            "stage1_adv":        stage1_adv,
+            "stage2_adv":        stage2_adv,
             "advance_paid":      adv_paid,
             "balance_gross":     bal_gross,
             "admin_charges":     float(r.admin_charges),
@@ -5148,17 +5169,27 @@ def lead_income_members_detail(
     adv_map: dict = {}
     try:
         adv_rows = db.execute(text(
-            "SELECT e.partner_id, e.level, SUM(COALESCE(e.commission_amount, 0)) AS total_adv "
+            "SELECT e.partner_id, e.level, "
+            "  SUM(CASE WHEN e.kind = 'ADVANCE' THEN COALESCE(e.commission_amount, 0) ELSE 0 END) AS stage1_adv, "
+            "  SUM(CASE WHEN e.kind = 'DVR_ADVANCE' THEN COALESCE(e.commission_amount, 0) ELSE 0 END) AS stage2_adv, "
+            "  SUM(COALESCE(e.commission_amount, 0)) AS total_adv "
             "FROM vgk_cash_income_entries e "
             "WHERE e.source_lead_id = :lid "
             "  AND e.kind IN ('ADVANCE', 'DVR_ADVANCE') AND e.status != 'CANCELLED' "
             "GROUP BY e.partner_id, e.level"
         ), {"lid": lead_id}).fetchall()
         for ar in adv_rows:
-            adv_map[(ar.partner_id, ar.level)] = float(ar.total_adv or 0)
+            adv_map[(ar.partner_id, ar.level)] = {
+                "stage1": float(ar.stage1_adv or 0),
+                "stage2": float(ar.stage2_adv or 0),
+                "total":  float(ar.total_adv or 0)
+            }
 
         vsca_adv = db.execute(text(
-            "SELECT a.partner_id, a.level, SUM(COALESCE(a.advance_amount, 0)) AS total_adv "
+            "SELECT a.partner_id, a.level, "
+            "  SUM(CASE WHEN a.kind = 'ADVANCE' THEN COALESCE(a.advance_amount, 0) ELSE 0 END) AS stage1_adv, "
+            "  SUM(CASE WHEN a.kind = 'DVR_ADVANCE' THEN COALESCE(a.advance_amount, 0) ELSE 0 END) AS stage2_adv, "
+            "  SUM(COALESCE(a.advance_amount, 0)) AS total_adv "
             "FROM vgk_solar_cibil_advances a "
             "WHERE a.lead_id = :lid AND a.status IN ('PENDING', 'RELEASED') "
             "  AND NOT EXISTS ( "
@@ -5170,7 +5201,11 @@ def lead_income_members_detail(
         ), {"lid": lead_id}).fetchall()
         for ar in vsca_adv:
             key = (ar.partner_id, ar.level)
-            adv_map[key] = adv_map.get(key, 0.0) + float(ar.total_adv or 0)
+            cur = adv_map.get(key, {"stage1": 0.0, "stage2": 0.0, "total": 0.0})
+            cur["stage1"] += float(ar.stage1_adv or 0)
+            cur["stage2"] += float(ar.stage2_adv or 0)
+            cur["total"]  += float(ar.total_adv or 0)
+            adv_map[key] = cur
     except Exception:
         pass
 
