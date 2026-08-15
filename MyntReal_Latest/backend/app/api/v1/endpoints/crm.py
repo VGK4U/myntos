@@ -5738,6 +5738,8 @@ def get_employee_performance_dashboard(
     search: Optional[str] = Query(None),
     created_from: Optional[str] = Query(None),
     created_to: Optional[str] = Query(None),
+    closed_from: Optional[str] = Query(None),
+    closed_to: Optional[str] = Query(None),
     company_id_filter: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user)
@@ -5745,23 +5747,54 @@ def get_employee_performance_dashboard(
     """
     Employee-Wise Performance Dashboard Endpoint:
     Returns 2 datasets:
-      1. monthly: Breakdown by Month (Last 12 Months) per Department & Employee
-      2. weekly: Breakdown by Week (Last 12 Weeks) per Department & Employee
-    Columns returned per row:
-      period_key, department_name, emp_code, employee_name, self_leads, overall_new_leads,
-      overall_won, overall_rev, solar_won, solar_rev, etc_won, etc_rev,
-      b2b_won, b2b_rev, b2c_won, b2c_rev, insurance_won, insurance_rev,
-      service_tickets_count, service_rev, spares_rev, others_won, others_rev
+      1. monthly: Breakdown by Month per Department & Employee
+      2. weekly: Breakdown by Week per Department & Employee
+    Filters applied dynamically:
+      created_from, created_to, closed_from, closed_to, department_id, search
     """
     from sqlalchemy import text
 
     search_query = search.strip().lower() if isinstance(search, str) and search.strip() else None
     dept_id_filter = department_id if isinstance(department_id, int) else None
 
+    c_from = created_from.strip() if isinstance(created_from, str) and created_from.strip() else None
+    c_to = created_to.strip() if isinstance(created_to, str) and created_to.strip() else None
+    cl_from = closed_from.strip() if isinstance(closed_from, str) and closed_from.strip() else None
+    cl_to = closed_to.strip() if isinstance(closed_to, str) and closed_to.strip() else None
+
     def _get_dataset(period_type='monthly'):
         date_fmt = 'YYYY-MM' if period_type == 'monthly' else 'IYYY-"W"IW'
         interval_val = '12 months' if period_type == 'monthly' else '12 weeks'
         
+        where_conds = []
+        st_where_conds = []
+        params = {}
+
+        if c_from:
+            where_conds.append("l.created_at >= CAST(:c_from AS TIMESTAMP)")
+            st_where_conds.append("t.created_date >= CAST(:c_from AS TIMESTAMP)")
+            params['c_from'] = c_from
+        
+        if c_to:
+            where_conds.append("l.created_at <= CAST(:c_to AS TIMESTAMP) + INTERVAL '1 day'")
+            st_where_conds.append("t.created_date <= CAST(:c_to AS TIMESTAMP) + INTERVAL '1 day'")
+            params['c_to'] = c_to
+
+        if cl_from:
+            where_conds.append("l.actual_close_date >= CAST(:cl_from AS DATE)")
+            params['cl_from'] = cl_from
+
+        if cl_to:
+            where_conds.append("l.actual_close_date <= CAST(:cl_to AS DATE)")
+            params['cl_to'] = cl_to
+
+        if not where_conds:
+            where_conds.append(f"l.created_at >= NOW() - INTERVAL '{interval_val}'")
+            st_where_conds.append(f"t.created_date >= NOW() - INTERVAL '{interval_val}'")
+
+        lead_where_str = " AND ".join(where_conds)
+        st_where_str = " AND ".join(st_where_conds) if st_where_conds else "1=1"
+
         # Lead performance aggregation
         lead_sql = f"""
             WITH lead_data AS (
@@ -5786,7 +5819,7 @@ def get_employee_performance_dashboard(
                 )
                 LEFT JOIN staff_departments d ON s.department_id = d.id
                 LEFT JOIN signup_categories c ON l.category_id = c.id
-                WHERE l.created_at >= NOW() - INTERVAL '{interval_val}'
+                WHERE {lead_where_str}
                 GROUP BY l.id, l.created_at, d.name, s.emp_code, s.full_name, s.id, c.name
             )
             SELECT 
@@ -5814,7 +5847,7 @@ def get_employee_performance_dashboard(
             GROUP BY period_key, department_name, emp_code, employee_name
             ORDER BY period_key DESC, department_name, employee_name
         """
-        lead_rows = db.execute(text(lead_sql)).fetchall()
+        lead_rows = db.execute(text(lead_sql), params).fetchall()
 
         # Service & spares aggregation
         st_sql = f"""
@@ -5826,10 +5859,10 @@ def get_employee_performance_dashboard(
             FROM service_ticket t
             LEFT JOIN staff_employees s ON (t.service_manager_id = s.id OR t.service_technician_id = s.id)
             LEFT JOIN service_ticket_spare_transactions stx ON stx.ticket_id = t.id
-            WHERE t.created_date >= NOW() - INTERVAL '{interval_val}'
+            WHERE {st_where_str}
             GROUP BY TO_CHAR(t.created_date, '{date_fmt}'), s.emp_code
         """
-        st_rows = db.execute(text(st_sql)).fetchall()
+        st_rows = db.execute(text(st_sql), params).fetchall()
         st_map = {}
         for r in st_rows:
             key = f"{r[0]}_{r[1]}"
@@ -5845,10 +5878,11 @@ def get_employee_performance_dashboard(
             e_code = r[2]
             st_info = st_map.get(f"{p_key}_{e_code}", {'tickets': 0, 'service_rev': 0.0, 'spares_rev': 0.0})
 
-            # Filters
+            # Exclude UNASSIGNED
             if e_code == 'UNASSIGNED' or not e_code:
                 continue
 
+            # Filters
             if search_query:
                 if search_query not in (r[3] or '').lower() and search_query not in (r[2] or '').lower():
                     continue
