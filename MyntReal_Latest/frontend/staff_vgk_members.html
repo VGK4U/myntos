@@ -2746,6 +2746,20 @@ function _renderMeDetailTable(partnerId){
           }
         }
 
+        let adminVal = (e.admin_charges && e.admin_charges > 0) ? e.admin_charges : 0;
+        let tdsVal   = (e.tds_amount && e.tds_amount > 0) ? e.tds_amount : 0;
+        let netVal   = (e.net_payout && e.net_payout > 0) ? e.net_payout : 0;
+
+        if ((!adminVal || adminVal <= 0) && e.commission_amount > 0) {
+          adminVal = Math.round(e.commission_amount * 0.08);
+        }
+        if ((!tdsVal || tdsVal <= 0) && e.commission_amount > 0) {
+          tdsVal = Math.round(e.commission_amount * 0.02);
+        }
+        if ((!netVal || netVal <= 0) && e.commission_amount > 0) {
+          netVal = Math.max(0, Math.round(e.commission_amount - adminVal - tdsVal));
+        }
+
         const baseText = calcBase > 0 ? _meInr(calcBase) : '—';
         const rateText = calcPct > 0 ? (calcPct + '%') : '—';
         const isPaidSt = (e.status === 'PAID' || e.status === 'RELEASED' || e.status === 'VERIFIED');
@@ -2765,9 +2779,9 @@ function _renderMeDetailTable(partnerId){
         <td style="padding:7px 10px;text-align:right;color:#1e40af;font-weight:600">${baseText}</td>
         <td style="padding:7px 10px;text-align:right;color:#7c3aed;font-weight:700">${rateText}</td>
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:#374151">${e.commission_amount>0?_meInr(e.commission_amount):'—'}</td>
-        <td style="padding:7px 10px;text-align:right;color:#d97706">${e.admin_charges>0?_meInr(e.admin_charges):'—'}</td>
-        <td style="padding:7px 10px;text-align:right;color:#dc2626">${e.tds_amount>0?_meInr(e.tds_amount):'—'}</td>
-        <td style="padding:7px 10px;text-align:right;font-weight:700;color:#059669">${e.net_payout>0?_meInr(e.net_payout):'—'}</td>
+        <td style="padding:7px 10px;text-align:right;color:#d97706">${adminVal>0?_meInr(adminVal):'—'}</td>
+        <td style="padding:7px 10px;text-align:right;color:#dc2626">${tdsVal>0?_meInr(tdsVal):'—'}</td>
+        <td style="padding:7px 10px;text-align:right;font-weight:700;color:#059669">${netVal>0?_meInr(netVal):'—'}</td>
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:#d97706">${_pendSet.has(e.status)&&e.commission_amount>0?_meInr(e.commission_amount):'<span style="color:#d1d5db">—</span>'}</td>
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:#b45309">${_pendSet.has(e.status)&&e.commission_amount>0?_meInr(e.net_payout>0?e.net_payout:e.commission_amount*0.9)+'<span style="font-size:9px;color:#d97706;margin-left:2px">'+(e.net_payout>0?'':'~')+'</span>':'<span style="color:#d1d5db">—</span>'}</td>
         <td style="padding:7px 10px;text-align:center"><span style="background:${sc(e.status)}20;color:${sc(e.status)};padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700">${e.status}</span></td>
@@ -3170,6 +3184,20 @@ function _lvDetailRowHtml(lid, entries){
       }
     }
 
+    let adminVal = (e.admin_charges && e.admin_charges > 0) ? e.admin_charges : 0;
+    let tdsVal   = (e.tds_amount && e.tds_amount > 0) ? e.tds_amount : 0;
+    let netVal   = (e.net_payout && e.net_payout > 0) ? e.net_payout : 0;
+
+    if ((!adminVal || adminVal <= 0) && e.commission_amount > 0) {
+      adminVal = Math.round(e.commission_amount * 0.08);
+    }
+    if ((!tdsVal || tdsVal <= 0) && e.commission_amount > 0) {
+      tdsVal = Math.round(e.commission_amount * 0.02);
+    }
+    if ((!netVal || netVal <= 0) && e.commission_amount > 0) {
+      netVal = Math.max(0, Math.round(e.commission_amount - adminVal - tdsVal));
+    }
+
     const baseText = calcBase > 0 ? _meInr(calcBase) : '—';
     const rateText = calcPct > 0 ? (calcPct + '%') : '—';
     const isPaidSt = (e.status === 'PAID' || e.status === 'RELEASED' || e.status === 'VERIFIED');
@@ -3193,9 +3221,9 @@ function _lvDetailRowHtml(lid, entries){
       <td style="padding:8px 10px;text-align:right;font-weight:600;color:#374151;font-size:11px">${baseText}</td>
       <td style="padding:8px 10px;text-align:center;font-weight:700;color:#7c3aed;font-size:11px">${rateText}</td>
       <td style="padding:8px 10px;text-align:right;font-weight:700;color:#7c3aed;font-size:12px">${_meInr(e.commission_amount)}</td>
-      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#6b7280">${_meInr(e.admin_charges)}</td>
-      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#6b7280">${_meInr(e.tds_amount)}</td>
-      <td style="padding:8px 10px;text-align:right;font-weight:700;color:#059669;font-size:12px">${_meInr(e.net_payout)}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#6b7280">${adminVal>0?_meInr(adminVal):'—'}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#6b7280">${tdsVal>0?_meInr(tdsVal):'—'}</td>
+      <td style="padding:8px 10px;text-align:right;font-weight:700;color:#059669;font-size:12px">${netVal>0?_meInr(netVal):'—'}</td>
       <td style="padding:8px 10px">
         <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${stColor};color:#fff">${stLabel}</span>
       </td>
