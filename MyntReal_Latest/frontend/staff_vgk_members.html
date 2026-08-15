@@ -2597,6 +2597,11 @@ function _renderMeDetailTable(partnerId){
     : document.querySelector('#tabEarnings #me-det-kind-'+partnerId);
   const kindVal     = (kindSelect?.value||'').trim();
 
+  const sortSelect = isIedActive
+    ? document.querySelector('#tabIncomeDash #me-det-sort-'+partnerId)
+    : document.querySelector('#tabEarnings #me-det-sort-'+partnerId);
+  const sortVal     = (sortSelect?.value||'name_asc').trim();
+
   // DC-CANCELLED-FILTER-001: reads from global top-bar filter (moved from per-partner dropdown)
   const statusVal   = document.getElementById('iedCancelFilter')?.value ?? 'HIDE_CANCELLED';
 
@@ -2612,6 +2617,43 @@ function _renderMeDetailTable(partnerId){
   if(statusVal === 'HIDE_CANCELLED') rows = rows.filter(e => e.status !== 'CANCELLED');
   else if(statusVal === 'ONLY_CANCELLED') rows = rows.filter(e => e.status === 'CANCELLED');
   // statusVal === '' (All) → no status filtering applied
+
+  // Default & Dynamic Sorting Logic
+  if (!sortVal || sortVal === 'name_asc') {
+    rows.sort((a, b) => {
+      const na = (a.client_name || '').toLowerCase();
+      const nb = (b.client_name || '').toLowerCase();
+      if (na !== nb) return na.localeCompare(nb);
+      const da = a.trigger_date || a.income_date || '';
+      const db = b.trigger_date || b.income_date || '';
+      return db.localeCompare(da);
+    });
+  } else if (sortVal === 'name_desc') {
+    rows.sort((a, b) => {
+      const na = (a.client_name || '').toLowerCase();
+      const nb = (b.client_name || '').toLowerCase();
+      if (na !== nb) return nb.localeCompare(na);
+      const da = a.trigger_date || a.income_date || '';
+      const db = b.trigger_date || b.income_date || '';
+      return db.localeCompare(da);
+    });
+  } else if (sortVal === 'date_desc') {
+    rows.sort((a, b) => {
+      const da = a.trigger_date || a.income_date || '';
+      const db = b.trigger_date || b.income_date || '';
+      return db.localeCompare(da);
+    });
+  } else if (sortVal === 'date_asc') {
+    rows.sort((a, b) => {
+      const da = a.trigger_date || a.income_date || '';
+      const db = b.trigger_date || b.income_date || '';
+      return da.localeCompare(db);
+    });
+  } else if (sortVal === 'gross_desc') {
+    rows.sort((a, b) => (parseFloat(b.commission_amount || 0) - parseFloat(a.commission_amount || 0)));
+  } else if (sortVal === 'gross_asc') {
+    rows.sort((a, b) => (parseFloat(a.commission_amount || 0) - parseFloat(b.commission_amount || 0)));
+  }
 
   const sc   = (st) => _ME_STATUS_COLOR[st]||'#6b7280';
   const fmtDate = (ds) => {
@@ -2722,6 +2764,15 @@ function _renderMeDetailTable(partnerId){
         <option value="5"  ${kindVal==='5'?'selected':''}>Support (L5)</option>
         <option value="6"  ${kindVal==='6'?'selected':''}>Showroom (L6)</option>
         <option value="ADVANCE" ${kindVal==='ADVANCE'?'selected':''}>Solar Advance</option>
+      </select>
+      <select id="me-det-sort-${partnerId}" onchange="_filterMeDetail(${partnerId})"
+        style="padding:5px 9px;border:1.5px solid #e5e7eb;border-radius:7px;font-size:12px;outline:none;background:#fff;cursor:pointer;font-weight:600;color:#4c1d95">
+        <option value="name_asc"   ${sortVal==='name_asc'?'selected':''}>Sort: Customer Name (A-Z)</option>
+        <option value="name_desc"  ${sortVal==='name_desc'?'selected':''}>Sort: Customer Name (Z-A)</option>
+        <option value="date_desc"  ${sortVal==='date_desc'?'selected':''}>Sort: Trigger Date (Newest first)</option>
+        <option value="date_asc"   ${sortVal==='date_asc'?'selected':''}>Sort: Trigger Date (Oldest first)</option>
+        <option value="gross_desc" ${sortVal==='gross_desc'?'selected':''}>Sort: Gross (High to Low)</option>
+        <option value="gross_asc"  ${sortVal==='gross_asc'?'selected':''}>Sort: Gross (Low to High)</option>
       </select>
     </div>
     <div style="overflow-x:auto">
