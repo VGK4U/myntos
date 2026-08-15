@@ -3153,9 +3153,7 @@ function _lvRenderDetail(lid, entries){
   const existing = document.getElementById(`lvDetail_${lid}`);
   const html = _lvDetailRowHtml(lid, entries);
   if(existing){
-    const tmp = document.createElement('tbody');
-    tmp.innerHTML = html;
-    existing.replaceWith(...tmp.children);
+    existing.outerHTML = html;
   } else {
     const parentRow = document.getElementById(`lvRow_${lid}`);
     if(parentRow){ parentRow.insertAdjacentHTML('afterend', html); }
