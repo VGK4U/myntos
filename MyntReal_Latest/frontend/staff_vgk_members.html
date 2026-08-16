@@ -6194,7 +6194,7 @@ function updatePoster() {
 }
 
 function changeThemePreset() {
-  const preset = document.getElementById('postThemePreset').value;
+  const preset = document.getElementById('postThemePreset')?.value || 'celebration_graphic';
   const customColorsDiv = document.getElementById('customColorsContainer');
   const canvas = document.getElementById('posterCanvasWrapper');
   
@@ -6223,14 +6223,14 @@ function changeThemePreset() {
   } else if (preset === 'custom') {
     if (canvas) { canvas.style.backgroundImage = "none"; }
     if (customColorsDiv) customColorsDiv.style.display = 'flex';
-    bg = document.getElementById('postColorBg').value;
-    cardBg = document.getElementById('postColorCard').value;
-    text = document.getElementById('postColorText').value;
-    accent = document.getElementById('postColorAccent').value;
-    border = document.getElementById('postColorBorder').value;
+    bg = document.getElementById('postColorBg')?.value || '#000c28';
+    cardBg = document.getElementById('postColorCard')?.value || '#001744';
+    text = document.getElementById('postColorText')?.value || '#F8FAFC';
+    accent = document.getElementById('postColorAccent')?.value || '#fbbf24';
+    border = document.getElementById('postColorBorder')?.value || '#d4af37';
   }
   
-  // Update picker input values
+  // Update picker input values safely
   if (document.getElementById('postColorBg')) document.getElementById('postColorBg').value = bg;
   if (document.getElementById('postColorCard')) document.getElementById('postColorCard').value = cardBg;
   if (document.getElementById('postColorText')) document.getElementById('postColorText').value = text;
@@ -6241,11 +6241,11 @@ function changeThemePreset() {
 }
 
 function changeCustomColors() {
-  const bg = document.getElementById('postColorBg').value;
-  const cardBg = document.getElementById('postColorCard').value;
-  const text = document.getElementById('postColorText').value;
-  const accent = document.getElementById('postColorAccent').value;
-  const border = document.getElementById('postColorBorder').value;
+  const bg = document.getElementById('postColorBg')?.value || '#000c28';
+  const cardBg = document.getElementById('postColorCard')?.value || '#001744';
+  const text = document.getElementById('postColorText')?.value || '#F8FAFC';
+  const accent = document.getElementById('postColorAccent')?.value || '#fbbf24';
+  const border = document.getElementById('postColorBorder')?.value || '#d4af37';
   applyThemeColors(bg, cardBg, text, accent, border);
 }
 
@@ -7304,16 +7304,16 @@ function _renderCommDetailTable(partnerId) {
             <!-- 4. Member Profile Photo inside Golden Wreath Ring with Lower-Positioned 104px Dual Champion Trophies (Right Above Overall Earning Block) -->
             <div style="position:relative;width:188px;height:188px;margin-bottom:10px">
               
-              <!-- Left Side 3D Champion Trophy Badge (104px x 104px) - Lowered Right Above Overall Earning Block -->
-              <div style="position:absolute;bottom:-14px;left:-82px;background:radial-gradient(circle,#fffbeb,#fde047 35%,#b45309 100%);border:3.5px solid #ffffff;border-radius:50%;width:104px;height:104px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,0.85), 0 0 32px rgba(251,191,36,0.95);font-size:56px;z-index:10">🏆</div>
+              <!-- Left Side 3D Champion Trophy Badge (104px x 104px) - Moved Completely Outside Photo Circle -->
+              <div style="position:absolute;bottom:-14px;left:-118px;background:radial-gradient(circle,#fffbeb,#fde047 35%,#b45309 100%);border:3.5px solid #ffffff;border-radius:50%;width:104px;height:104px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,0.85), 0 0 32px rgba(251,191,36,0.95);font-size:56px;z-index:10">🏆</div>
 
               <div style="width:188px;height:188px;border-radius:50%;border:5px solid #fde047;overflow:hidden;background:#001233;box-shadow:0 0 45px rgba(234,179,8,0.9);display:flex;align-items:center;justify-content:center">
                 <img id="prevImg" src="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;object-position:center 20%;display:none">
                 <div id="prevAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:58px;font-weight:900">BG</div>
               </div>
 
-              <!-- Right Side 3D Champion Trophy Badge (104px x 104px) - Lowered Right Above Overall Earning Block -->
-              <div style="position:absolute;bottom:-14px;right:-82px;background:radial-gradient(circle,#fffbeb,#fde047 35%,#b45309 100%);border:3.5px solid #ffffff;border-radius:50%;width:104px;height:104px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,0.85), 0 0 32px rgba(251,191,36,0.95);font-size:56px;z-index:10">🏆</div>
+              <!-- Right Side 3D Champion Trophy Badge (104px x 104px) - Moved Completely Outside Photo Circle -->
+              <div style="position:absolute;bottom:-14px;right:-118px;background:radial-gradient(circle,#fffbeb,#fde047 35%,#b45309 100%);border:3.5px solid #ffffff;border-radius:50%;width:104px;height:104px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,0.85), 0 0 32px rgba(251,191,36,0.95);font-size:56px;z-index:10">🏆</div>
 
               <!-- Champion Pill at Bottom -->
               <div style="position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#b45309,#f59e0b,#b45309);border:1px solid #fef08a;color:#ffffff;font-size:9.5px;font-weight:900;padding:2.5px 16px;border-radius:12px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 3px 10px rgba(0,0,0,0.6);z-index:11">🏆 CHAMPION</div>
