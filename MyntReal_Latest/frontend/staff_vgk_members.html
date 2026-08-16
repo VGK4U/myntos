@@ -6073,7 +6073,8 @@ function recalculateTodayPayout() {
       } else if (k === 'AWARD' || k === 'INCENTIVE' || typeStr.includes('award') || typeStr.includes('incentive') || typeStr.includes('brand')) {
         awardAmt += grossAmt;
       } else {
-        stage2Amt += netPayoutAmt;
+        const isComm = (k === 'COMMISSION' || k === 'SENIOR_COMM');
+        stage2Amt += isComm ? balGross : grossAmt;
       }
     }
   });
