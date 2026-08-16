@@ -5871,16 +5871,32 @@ async function generateMemberPoster(partnerId) {
     const validDates = entries.filter(e => e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None').map(e => e.income_date).sort();
     const lastEarningDate = validDates.length > 0 ? validDates[validDates.length - 1] : todayStr;
     
+    // Inherit date filter range from main page filters (#meDateFrom & #meDateTo)
+    const mainDateFrom = (document.getElementById('meDateFrom')?.value || '').trim();
+    const mainDateTo   = (document.getElementById('meDateTo')?.value || '').trim();
+    
+    let initFrom = mainDateFrom;
+    let initTo   = mainDateTo;
+    
+    if (!initFrom && !initTo) {
+      initFrom = lastEarningDate;
+      initTo   = lastEarningDate;
+    } else if (!initFrom) {
+      initFrom = initTo;
+    } else if (!initTo) {
+      initTo = initFrom;
+    }
+    
     const pDateFrom = document.getElementById('postPayoutDateFrom');
     const pDateTo = document.getElementById('postPayoutDateTo');
-    if (pDateFrom) pDateFrom.value = lastEarningDate;
-    if (pDateTo) pDateTo.value = lastEarningDate;
+    if (pDateFrom) pDateFrom.value = initFrom;
+    if (pDateTo) pDateTo.value = initTo;
     
     const seniorName = m.senior_name || '—';
     const seniorEarning = m.senior_earning !== null && m.senior_earning !== undefined ? '₹' + _meFormatInr(m.senior_earning) + '/-' : '—';
     
     let customerName = '—', location = '—';
-    const targetEntries = entries.filter(e => e.status !== 'CANCELLED' && e.income_date >= lastEarningDate && e.income_date <= lastEarningDate);
+    const targetEntries = entries.filter(e => e.status !== 'CANCELLED' && (!initFrom || e.income_date >= initFrom) && (!initTo || e.income_date <= initTo));
     if (targetEntries.length) {
       customerName = targetEntries[0].client_name || '—';
       location = targetEntries[0].location || '—';
