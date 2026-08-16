@@ -5854,48 +5854,33 @@ async function generateMemberPoster(partnerId) {
     const activeFiles = uniqueL1Leads.size;
     const gross = entries.filter(e => e.status !== 'CANCELLED').reduce((s, e) => s + (e.commission_amount || 0), 0);
     
-    // Group entries by unique (source_lead_id, level) to sum potential overall earnings without double counting
+    
     const uniqueLeads = {};
     entries.forEach(e => {
       if (e.status !== 'CANCELLED') {
         const leadId = e.source_lead_id || 0;
         const lvl = e.level !== null && e.level !== undefined ? e.level : -1;
         const key = `${leadId}_${lvl}`;
-        
-        if (lvl === 0 || lvl === -1 || !leadId) {
-          const uniqueKey = `bonus_${e.id}`;
-          uniqueLeads[uniqueKey] = e.potential_overall_earning || e.commission_amount || 0;
-        } else {
-          const val = e.potential_overall_earning || e.commission_amount || 0;
-          if (!uniqueLeads[key] || val > uniqueLeads[key]) {
-            uniqueLeads[key] = val;
-          }
-        }
+        const val = e.potential_overall_earning || e.commission_amount || 0;
+        if (!uniqueLeads[key] || val > uniqueLeads[key]) uniqueLeads[key] = val;
       }
     });
+    let potentialEarning = Object.values(uniqueLeads).reduce((a, b) => a + b, 0);
     
-    let potentialEarning = 0;
-    for (const key in uniqueLeads) {
-      potentialEarning += uniqueLeads[key];
-    }
-    
-    // Default date range: Last Earning Date
     const todayStr = new Date().toISOString().split('T')[0];
     const validDates = entries.filter(e => e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None').map(e => e.income_date).sort();
     const lastEarningDate = validDates.length > 0 ? validDates[validDates.length - 1] : todayStr;
     
-    let defaultFrom = lastEarningDate;
-    let defaultTo = lastEarningDate;
-    
-    document.getElementById('postPayoutDateFrom').value = defaultFrom;
-    document.getElementById('postPayoutDateTo').value = defaultTo;
+    const pDateFrom = document.getElementById('postPayoutDateFrom');
+    const pDateTo = document.getElementById('postPayoutDateTo');
+    if (pDateFrom) pDateFrom.value = lastEarningDate;
+    if (pDateTo) pDateTo.value = lastEarningDate;
     
     const seniorName = m.senior_name || '—';
     const seniorEarning = m.senior_earning !== null && m.senior_earning !== undefined ? '₹' + _meFormatInr(m.senior_earning) + '/-' : '—';
     
-    let customerName = '—';
-    let location = '—';
-    const targetEntries = entries.filter(e => e.status !== 'CANCELLED' && e.income_date >= defaultFrom && e.income_date <= defaultTo);
+    let customerName = '—', location = '—';
+    const targetEntries = entries.filter(e => e.status !== 'CANCELLED' && e.income_date >= lastEarningDate && e.income_date <= lastEarningDate);
     if (targetEntries.length) {
       customerName = targetEntries[0].client_name || '—';
       location = targetEntries[0].location || '—';
@@ -5919,34 +5904,31 @@ async function generateMemberPoster(partnerId) {
     }
     const filesDisplay = (installedFiles > 0 ? `${installedFiles}/${activeFiles}` : `${activeFiles}`) + ' FILES';
     
-    document.getElementById('postTitle').value = 'CONGRATULATIONS';
-    document.getElementById('postSubtitle').value = m.partner_name || '';
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    const setChecked = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
+
+    setVal('postTitle', 'CONGRATULATIONS');
+    setVal('postSubtitle', m.partner_name || '');
     const overallVal = (m.gross_earned !== undefined && m.gross_earned !== null) ? m.gross_earned : (m.net_earning !== undefined && m.net_earning !== null ? m.net_earning : (m.received || 0));
-    document.getElementById('postHighlight').value = '₹' + _meFormatInr(overallVal) + '/-';
-    document.getElementById('postFiles').value = filesDisplay;
-    document.getElementById('postOverall').value = (m.total_team_size || 0) + ' MEMBERS';
-    document.getElementById('postTeamBreakup').value = `L2: ${m.team_l2_count || 0} | L3: ${m.team_l3_count || 0} | L4: ${m.team_l4_count || 0}`;
-    document.getElementById('postPotential').value = '₹' + _meFormatInr(potentialEarning) + '/-';
-    document.getElementById('postCustomer').value = customerName;
-    document.getElementById('postLocation').value = location;
-    document.getElementById('postSeniorName').value = seniorName;
-    document.getElementById('postSeniorEarning').value = seniorEarning;
+    setVal('postHighlight', '₹' + _meFormatInr(overallVal) + '/-');
+    setVal('postFiles', filesDisplay);
+    setVal('postOverall', (m.total_team_size || 0) + ' MEMBERS');
+    setVal('postTeamBreakup', `L2: ${m.team_l2_count || 0} | L3: ${m.team_l3_count || 0} | L4: ${m.team_l4_count || 0}`);
+    setVal('postPotential', '₹' + _meFormatInr(potentialEarning) + '/-');
+    setVal('postCustomer', customerName);
+    setVal('postLocation', location);
+    setVal('postSeniorName', seniorName);
+    setVal('postSeniorEarning', seniorEarning);
+    
     const postSeniorPot = document.getElementById('postSeniorPotential');
-    if (postSeniorPot) {
-      if (m.senior_potential_earned !== null && m.senior_potential_earned !== undefined) {
-        postSeniorPot.value = '₹' + _meFormatInr(m.senior_potential_earned) + '/-';
-      } else {
-        postSeniorPot.value = '₹' + _meFormatInr(activeFiles * 500) + '/-';
-      }
-    }
+    if (postSeniorPot) postSeniorPot.value = '₹' + _meFormatInr((m.senior_potential_earned !== null && m.senior_potential_earned !== undefined) ? m.senior_potential_earned : (activeFiles * 500)) + '/-';
     
-    // Set checkboxes default state to checked
-    document.getElementById('payTypeStage1').checked = true;
-    document.getElementById('payTypeStage2').checked = true;
-    document.getElementById('payTypeBonanza').checked = true;
-    document.getElementById('payTypeExtra').checked = true;
+    setChecked('payTypeStage1', true);
+    setChecked('payTypeStage2', true);
+    setChecked('payTypeBonanza', true);
+    setChecked('payTypeExtra', true);
+    setChecked('payTypeAward', true);
     
-    // Load senior referrer image and fallback avatar
     const seniorImg = document.getElementById('prevSeniorImg');
     const seniorAvatar = document.getElementById('prevSeniorAvatar');
     if (seniorImg) {
@@ -5954,23 +5936,12 @@ async function generateMemberPoster(partnerId) {
       const resolvedSeniorUrl = resolvePosterMediaUrl(seniorPhotoPath);
       if (resolvedSeniorUrl) {
         seniorImg.crossOrigin = "anonymous";
-        seniorImg.onload = () => {
-          console.log("[Poster Debug] Senior photo loaded successfully:", seniorImg.src);
-          seniorImg.style.display = 'block';
-          seniorAvatar.style.display = 'none';
-        };
-        seniorImg.onerror = (err) => {
-          console.error("[Poster Debug] Senior photo failed to load:", seniorImg.src, err);
-          seniorImg.style.display = 'none';
-          seniorAvatar.style.display = 'flex';
-          seniorAvatar.textContent = (m.senior_name || 'SR').trim().split(/\s+/).map(p=>p[0]).join('').slice(0,2).toUpperCase();
-        };
+        seniorImg.onload = () => { seniorImg.style.display = 'block'; if (seniorAvatar) seniorAvatar.style.display = 'none'; };
+        seniorImg.onerror = () => { seniorImg.style.display = 'none'; if (seniorAvatar) seniorAvatar.style.display = 'flex'; };
         seniorImg.src = resolvedSeniorUrl.includes('?') ? resolvedSeniorUrl : (resolvedSeniorUrl + '?t=' + Date.now());
       } else {
-        console.log("[Poster Debug] No senior photo path found. Displaying initials.");
         seniorImg.style.display = 'none';
-        seniorAvatar.style.display = 'flex';
-        seniorAvatar.textContent = (m.senior_name || 'SR').trim().split(/\s+/).map(p=>p[0]).join('').slice(0,2).toUpperCase();
+        if (seniorAvatar) seniorAvatar.style.display = 'flex';
       }
     }
     
@@ -5981,7 +5952,7 @@ async function generateMemberPoster(partnerId) {
     alert('Failed to generate poster: ' + err.message);
     closePosterModal();
   } finally {
-    spinner.style.display = 'none';
+    if (spinner) spinner.style.display = 'none';
   }
 }
 
@@ -6127,9 +6098,14 @@ function recalculateTodayPayout() {
     breakupItems.push("Stage 2 Payout: ₹5,600/-");
   }
   
-  document.getElementById('postTodayPayout').value = breakupItems.join(' | ');
-  document.getElementById('postTotalToday').value = '₹' + _meFormatInr(total || 5600) + '/-';
-  document.getElementById('postBonusDesc').value = 'Active breakups (' + periodLabel + ')';
+  const postTodayPayoutEl = document.getElementById('postTodayPayout');
+  if (postTodayPayoutEl) postTodayPayoutEl.value = breakupItems.join(' | ');
+  
+  const postTotalTodayEl = document.getElementById('postTotalToday');
+  if (postTotalTodayEl) postTotalTodayEl.value = '₹' + _meFormatInr(total || 5600) + '/-';
+  
+  const postBonusDescEl = document.getElementById('postBonusDesc');
+  if (postBonusDescEl) postBonusDescEl.value = 'Active breakups (' + periodLabel + ')';
   
   const postSeniorToday = document.getElementById('postSeniorToday');
   if (postSeniorToday) {
@@ -6146,18 +6122,24 @@ function recalculateTodayPayout() {
     prevLabelText.textContent = isSingleDay ? "Today's Earning" : "Period Earning";
   }
   
-  document.getElementById('prevTotalToday').textContent = '₹' + _meFormatInr(total || 5600) + '/-';
-  document.getElementById('prevBonusDesc').textContent = 'Period: ' + periodLabel;
+  const prevTotalTodayEl = document.getElementById('prevTotalToday');
+  if (prevTotalTodayEl) prevTotalTodayEl.textContent = '₹' + _meFormatInr(total || 5600) + '/-';
+  
+  const prevBonusDescEl = document.getElementById('prevBonusDesc');
+  if (prevBonusDescEl) prevBonusDescEl.textContent = 'Period: ' + periodLabel;
   updatePoster();
 }
 
 function updatePoster() {
-  document.getElementById('prevTitle').textContent = '★ ' + document.getElementById('postTitle').value.toUpperCase() + ' ★';
-  document.getElementById('prevSubtitle').textContent = document.getElementById('postSubtitle').value.toUpperCase();
-  document.getElementById('prevHighlight').textContent = document.getElementById('postHighlight').value;
-  document.getElementById('prevFiles').textContent = document.getElementById('postFiles').value.toUpperCase();
+  const getVal = id => document.getElementById(id)?.value || '';
+  const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+
+  setTxt('prevTitle', '★ ' + getVal('postTitle').toUpperCase() + ' ★');
+  setTxt('prevSubtitle', getVal('postSubtitle').toUpperCase());
+  setTxt('prevHighlight', getVal('postHighlight'));
+  setTxt('prevFiles', getVal('postFiles').toUpperCase());
   
-  const manualToday = document.getElementById('postTodayPayout').value;
+  const manualToday = getVal('postTodayPayout');
   const prevToday = document.getElementById('prevTodayPayout');
   if (prevToday) {
     let items = [];
@@ -6179,11 +6161,12 @@ function updatePoster() {
     }).join('');
   }
   
-  document.getElementById('prevBonusDesc').textContent = document.getElementById('postBonusDesc').value;
-  document.getElementById('prevTotalToday').textContent = document.getElementById('postTotalToday').value;
-  document.getElementById('prevOverall').textContent = document.getElementById('postOverall').value;
-  document.getElementById('prevTeamBreakup').textContent = document.getElementById('postTeamBreakup').value;
-  document.getElementById('prevPotential').textContent = document.getElementById('postPotential').value;
+  setTxt('prevBonusDesc', getVal('postBonusDesc'));
+  setTxt('prevTotalToday', getVal('postTotalToday'));
+  setTxt('prevOverall', getVal('postOverall'));
+  setTxt('prevTeamBreakup', getVal('postTeamBreakup'));
+  setTxt('prevPotential', getVal('postPotential'));
+  
   const prevCust = document.getElementById('prevCustomer');
   if (prevCust) prevCust.textContent = document.getElementById('postCustomer').value.toUpperCase();
   const prevLoc = document.getElementById('prevLocation');
