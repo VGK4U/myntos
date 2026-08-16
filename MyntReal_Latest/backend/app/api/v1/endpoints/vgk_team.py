@@ -4304,6 +4304,7 @@ def member_earnings_dashboard(
 
     # DC-VGK-L1-FILES-001: Files where member is ground source (level=1 only, non-cancelled)
     l1_files_map: dict = {}
+    installed_files_map: dict = {}
     if member_ids:
         try:
             l1f_sql = (
@@ -4314,6 +4315,19 @@ def member_earnings_dashboard(
             )
             l1f_rows = db.execute(text(l1f_sql), {"ids": member_ids, **date_params}).fetchall()
             l1_files_map = {int(r[0]): int(r[1]) for r in l1f_rows}
+
+            # Installed files (level=1 leads that reached completed / installed stage in Executive Dashboard)
+            inst_sql = (
+                "SELECT e.partner_id, COUNT(DISTINCT e.source_lead_id) FROM vgk_cash_income_entries e " +
+                "LEFT JOIN crm_leads l ON e.source_lead_id = l.id " +
+                cust_join_sql +
+                " WHERE e.partner_id = ANY(:ids) AND e.level = 1 AND e.status != 'CANCELLED' " +
+                " AND (l.status IN ('completed', 'installed', 'subsidy_pending') OR l.solar_pipeline_status IN ('completed', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed', 'net_meter_pending', 'balance_pending', 'balance_received')) "
+                + date_sql + (" " + status_sql if status_val else "") +
+                " GROUP BY e.partner_id"
+            )
+            inst_rows = db.execute(text(inst_sql), {"ids": member_ids, **date_params}).fetchall()
+            installed_files_map = {int(r[0]): int(r[1]) for r in inst_rows}
         except Exception:
             pass
 
@@ -4449,6 +4463,7 @@ def member_earnings_dashboard(
             "l6_showroom":            float(_lvl.get(6, {}).get("amount", 0)),
             "l0_bonus":               float(_lvl.get(0, {}).get("amount", 0)),
             "l1_files":               l1_files_map.get(m.id, 0),
+            "installed_files":        installed_files_map.get(m.id, 0),
             "team_l2_count":          team_network_map.get(m.id, {}).get("l2", 0) if team_network_map else 0,
             "team_l3_count":          team_network_map.get(m.id, {}).get("l3", 0) if team_network_map else 0,
             "team_l4_count":          team_network_map.get(m.id, {}).get("l4", 0) if team_network_map else 0,
@@ -4457,22 +4472,24 @@ def member_earnings_dashboard(
 
     # Python-level sort (supports computed columns like gross_earned, received)
     _sort_fns = {
-        'name':        lambda x: (x['partner_name'] or '').lower(),
-        'code':        lambda x: (x['partner_code'] or ''),
-        'gross':       lambda x: x['gross_earned'],
-        'received':    lambda x: x['received'],
-        'pts_balance': lambda x: x['points_balance'],
-        'pts_used':    lambda x: x['points_used'],
+        'name':            lambda x: (x['partner_name'] or '').lower(),
+        'code':            lambda x: (x['partner_code'] or ''),
+        'gross':           lambda x: x['gross_earned'],
+        'received':        lambda x: x['received'],
+        'pts_balance':     lambda x: x['points_balance'],
+        'pts_used':        lambda x: x['points_used'],
         # DC-VGK-EARN-DASH-001: level + files sort
-        'l1':          lambda x: x['l1_source'],
-        'l2':          lambda x: x['l2_senior'],
-        'l3':          lambda x: x['l3_extended'],
-        'l4':          lambda x: x['l4_core'],
-        'l5':          lambda x: x['l5_support'],
-        'l6':          lambda x: x['l6_showroom'],
-        'l0':          lambda x: x['l0_bonus'],
-        'total_files': lambda x: x['total_files'],
-        'files':       lambda x: x['l1_files'],
+        'l1':              lambda x: x['l1_source'],
+        'l2':              lambda x: x['l2_senior'],
+        'l3':              lambda x: x['l3_extended'],
+        'l4':              lambda x: x['l4_core'],
+        'l5':              lambda x: x['l5_support'],
+        'l6':              lambda x: x['l6_showroom'],
+        'l0':              lambda x: x['l0_bonus'],
+        'total_files':     lambda x: x['total_files'],
+        'files':           lambda x: x['l1_files'],
+        'installed_files': lambda x: x['installed_files'],
+        'installed':       lambda x: x['installed_files'],
     }
     _sfn = _sort_fns.get(sort_by or 'name', _sort_fns['name'])
     items.sort(key=_sfn, reverse=(sort_dir == 'desc'))

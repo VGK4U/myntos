@@ -2243,6 +2243,7 @@ function _iedRenderHead(){
     {key:'name',             label:'Name',          align:'left'},
     {key:'',                 label:'Reg By',        align:'left',   w:'90px', nosort:true},
     {key:'total_files',      label:'Files',         align:'center', color:'#374151'},
+    {key:'installed_files',  label:'Installed',     align:'center', color:'#059669'},
     {key:'l0',               label:'L0 Bonus',      align:'right',  color:'#475569'},
     {key:'l1',               label:'L1 Source',     align:'right',  color:'#7c3aed'},
     {key:'l2',               label:'L2 Senior',     align:'right',  color:'#1d4ed8'},
@@ -2293,7 +2294,7 @@ async function loadIncomeDash(pg=1){
   if(levelFilter) url += '&level='                   + encodeURIComponent(levelFilter);
 
   _iedRenderHead();
-  document.getElementById('iedBody').innerHTML = '<tr><td colspan="16" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+  document.getElementById('iedBody').innerHTML = '<tr><td colspan="17" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
   try{
     const r = await staffFetch(url);
     const d = await r.json();
@@ -2303,7 +2304,7 @@ async function loadIncomeDash(pg=1){
     _iedRenderTable(d.data);
     _iedRenderPagination(d.total, pg, 50);
   } catch(e){
-    document.getElementById('iedBody').innerHTML = '<tr><td colspan="16" style="text-align:center;padding:30px;color:#dc2626">Error: '+e.message+'</td></tr>';
+    document.getElementById('iedBody').innerHTML = '<tr><td colspan="17" style="text-align:center;padding:30px;color:#dc2626">Error: '+e.message+'</td></tr>';
   }
 }
 
@@ -2312,6 +2313,7 @@ function _iedRenderKpis(rows, total){
   const totRcv      = rows.reduce((s,r)=>s+r.received,0);
   const totPot      = rows.reduce((s,r)=>s+(r.potential_earning||0),0);
   const totFiles    = rows.reduce((s,r)=>s+(r.total_files||0),0);
+  const totInstalled= rows.reduce((s,r)=>s+(r.installed_files||0),0);
   const totL1       = rows.reduce((s,r)=>s+(r.l1_source||0),0);
   const totL2       = rows.reduce((s,r)=>s+(r.l2_senior||0),0);
   const totL3       = rows.reduce((s,r)=>s+(r.l3_extended||0),0);
@@ -2325,6 +2327,7 @@ function _iedRenderKpis(rows, total){
   const kpis = [
     {label:'Total Members', val:total,             color:'#7c3aed'},
     {label:'Total Files',   val:totFiles,          color:'#374151'},
+    {label:'Installed',     val:totInstalled,      color:'#059669'},
     {label:'Gross Earned',  val:_meInr(totGross),  color:'#374151'},
     {label:'Net Earning',   val:_meInr(totNet),    color:'#059669'},
     {label:'Released/Paid', val:_meInr(totRcv),    color:'#059669'},
@@ -2347,27 +2350,29 @@ function _iedRenderTable(rows){
   window._iedCurrentRows = rows;
   const tbody = document.getElementById('iedBody');
   if(!rows.length){
-    tbody.innerHTML='<tr><td colspan="16" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-chart-bar me-2"></i>No earners found with current filters</td></tr>';
+    tbody.innerHTML='<tr><td colspan="17" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-chart-bar me-2"></i>No earners found with current filters</td></tr>';
     return;
   }
   const _lvlInr = v => v > 0 ? `<span style="font-weight:700">${_meInr(v)}</span>` : `<span style="color:#e5e7eb">—</span>`;
 
   // Page-level totals row (above first data row, no separate tiles needed)
-  const tFiles  = rows.reduce((s,r)=>s+(r.l1_files||0),0);
-  const tL1     = rows.reduce((s,r)=>s+(r.l1_source||0),0);
-  const tL2     = rows.reduce((s,r)=>s+(r.l2_senior||0),0);
-  const tL3     = rows.reduce((s,r)=>s+(r.l3_extended||0),0);
-  const tL4     = rows.reduce((s,r)=>s+(r.l4_core||0),0);
-  const tL5     = rows.reduce((s,r)=>s+(r.l5_support||0),0);
-  const tL0     = rows.reduce((s,r)=>s+(r.l0_bonus||0),0);
-  const tGross  = rows.reduce((s,r)=>s+(r.gross_earned||0),0);
-  const tNet    = Math.round(tGross * 0.9);
-  const tRcv    = rows.reduce((s,r)=>s+(r.received||0),0);
-  const tPot    = rows.reduce((s,r)=>s+(r.potential_earning||0),0);
+  const tFiles     = rows.reduce((s,r)=>s+(r.l1_files||0),0);
+  const tInstalled = rows.reduce((s,r)=>s+(r.installed_files||0),0);
+  const tL1        = rows.reduce((s,r)=>s+(r.l1_source||0),0);
+  const tL2        = rows.reduce((s,r)=>s+(r.l2_senior||0),0);
+  const tL3        = rows.reduce((s,r)=>s+(r.l3_extended||0),0);
+  const tL4        = rows.reduce((s,r)=>s+(r.l4_core||0),0);
+  const tL5        = rows.reduce((s,r)=>s+(r.l5_support||0),0);
+  const tL0        = rows.reduce((s,r)=>s+(r.l0_bonus||0),0);
+  const tGross     = rows.reduce((s,r)=>s+(r.gross_earned||0),0);
+  const tNet       = Math.round(tGross * 0.9);
+  const tRcv       = rows.reduce((s,r)=>s+(r.received||0),0);
+  const tPot       = rows.reduce((s,r)=>s+(r.potential_earning||0),0);
   const totalsRow = `<tr style="background:#f0fdf4;border-bottom:2px solid #bbf7d0;position:sticky;top:0;z-index:1">
     <td style="padding:8px;text-align:center"><span style="font-size:9px;font-weight:800;color:#059669;background:#dcfce7;padding:2px 5px;border-radius:4px;white-space:nowrap">TOTAL</span></td>
     <td colspan="3" style="padding:8px 12px;font-size:11px;font-weight:700;color:#059669">${rows.length} member${rows.length!==1?'s':''} (page)</td>
     <td style="padding:8px 12px;text-align:center;font-weight:800;color:#374151">${tFiles||'—'}</td>
+    <td style="padding:8px 12px;text-align:center;font-weight:800;color:#059669">${tInstalled||'—'}</td>
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#475569">${tL0>0?_meInr(tL0):'—'}</td>
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#7c3aed">${tL1>0?_meInr(tL1):'—'}</td>
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#1d4ed8">${tL2>0?_meInr(tL2):'—'}</td>
@@ -2404,6 +2409,7 @@ function _iedRenderTable(rows){
       ? `${firstNm}${m.registered_by_emp_code ? ` <span style="font-family:monospace;color:#7c3aed;font-size:9.5px">(${m.registered_by_emp_code})</span>` : ''}`
       : (m.registered_by_emp_code || '<span style="color:#d1d5db">—</span>');
     const files = m.l1_files || 0;
+    const instFiles = m.installed_files || 0;
     const l1 = Number(m.l1_source || 0);
     const l2 = Number(m.l2_senior || 0);
     const l3 = Number(m.l3_extended || 0);
@@ -2427,6 +2433,9 @@ function _iedRenderTable(rows){
       <td style="padding:8px 12px;text-align:center">
         ${files > 0 ? `<span style="font-weight:800;color:#374151">${files}</span>` : '<span style="color:#d1d5db">0</span>'}
       </td>
+      <td style="padding:8px 12px;text-align:center">
+        ${instFiles > 0 ? `<span style="font-weight:800;color:#059669">${instFiles}</span>` : '<span style="color:#d1d5db">0</span>'}
+      </td>
       <td style="padding:8px 12px;text-align:right;font-size:12px">${_lvlInr(l0)}</td>
       <td style="padding:8px 12px;text-align:right;font-size:12px">${_lvlInr(l1)}</td>
       <td style="padding:8px 12px;text-align:right;font-size:12px">${_lvlInr(l2)}</td>
@@ -2441,7 +2450,7 @@ function _iedRenderTable(rows){
       <td style="padding:8px 12px">${statusPills||'<span style="color:#d1d5db;font-size:11px">—</span>'}</td>
     </tr>
     <tr id="ied-expand-${m.id}" style="display:${expanded?'table-row':'none'}">
-      <td colspan="17" style="padding:0;background:#f5f3ff">
+      <td colspan="18" style="padding:0;background:#f5f3ff">
         <div id="ied-detail-${m.id}" style="padding:14px 28px"></div>
       </td>
     </tr>`;
