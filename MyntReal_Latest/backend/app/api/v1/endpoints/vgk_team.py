@@ -4440,10 +4440,7 @@ def member_earnings_dashboard(
         gross    = sum(v["amount"] for st, v in inc.items() if st != "CANCELLED")
         net_earning = round(gross * 0.90, 2)
         received = sum(v["amount"] for st, v in inc.items() if st in ("RELEASED", "PAID"))
-        pending_amt = sum(
-            round(v["net_amount"] if (v.get("net_amount") and v["net_amount"] > 0) else v["amount"] * 0.90, 2)
-            for st, v in inc.items() if st in ("DRAFT", "PENDING", "STAGE1_APPROVED")
-        )
+        pending_amt = sum(v["amount"] for st, v in inc.items() if st in ("DRAFT", "PENDING", "STAGE1_APPROVED"))
         _lvl = lvl_map.get(m.id, {})
         
         senior_info = parent_map.get(m.parent_partner_id, {}) if m.parent_partner_id else {}
