@@ -6189,8 +6189,10 @@ function changeThemePreset() {
     bg = '#000c28'; cardBg = '#001744'; text = '#F8FAFC'; accent = '#fbbf24'; border = '#d4af37';
     if (customColorsDiv) customColorsDiv.style.display = 'none';
     if (canvas) {
-      canvas.style.backgroundImage = "none";
-      canvas.style.background = "radial-gradient(circle at 50% 25%, #002366 0%, #001233 65%, #000511 100%)";
+      canvas.style.backgroundImage = "url('/public/poster-celebration-template-clean.jpg')";
+      canvas.style.backgroundSize = "100% 100%";
+      canvas.style.backgroundPosition = "center center";
+      canvas.style.backgroundRepeat = "no-repeat";
       canvas.style.border = "6px double #d4af37";
     }
   } else if (preset === 'dark_navy') {
@@ -7310,8 +7312,8 @@ function _renderCommDetailTable(partnerId) {
           <div style="text-align:center"><i class="fas fa-circle-notch fa-spin fa-2x mb-2"></i><div>Analyzing and populating values…</div></div>
         </div>
         
-        <!-- Renderable Canvas Wrapper using exact Celebration Artwork Template v2 -->
-        <div id="posterCanvasWrapper" style="width:450px;height:820px;--poster-bg:#000c28;--poster-card-bg:#001744;--poster-text:#F8FAFC;--poster-accent:#fbbf24;--poster-border:#d4af37;background-image:url('/public/poster-celebration-template-v2.jpg');background-size:100% 100%;background-position:center center;background-repeat:no-repeat;border:6px double var(--poster-border);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,0.85), 0 0 40px rgba(212,175,55,0.4);position:relative;padding:12px 16px;box-sizing:border-box;color:var(--poster-text);font-family:'Segoe UI',Roboto,Helvetica,sans-serif;user-select:none;flex-shrink:0;display:flex;flex-direction:column;justify-content:space-between">
+        <!-- Renderable Canvas Wrapper using exact Celebration Artwork Template (Clean Background) -->
+        <div id="posterCanvasWrapper" style="width:450px;height:820px;--poster-bg:#000c28;--poster-card-bg:#001744;--poster-text:#F8FAFC;--poster-accent:#fbbf24;--poster-border:#d4af37;background-image:url('/public/poster-celebration-template-clean.jpg');background-size:100% 100%;background-position:center center;background-repeat:no-repeat;border:6px double var(--poster-border);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,0.85), 0 0 40px rgba(212,175,55,0.4);position:relative;padding:12px 16px;box-sizing:border-box;color:var(--poster-text);font-family:'Segoe UI',Roboto,Helvetica,sans-serif;user-select:none;flex-shrink:0;display:flex;flex-direction:column;justify-content:space-between">
           <div id="prevName" style="display: none;"></div>
           <div id="prevBonusDesc" style="display: none;"></div>
           
