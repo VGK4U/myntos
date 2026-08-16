@@ -6194,11 +6194,9 @@ function changeThemePreset() {
     bg = '#000c28'; cardBg = '#001744'; text = '#F8FAFC'; accent = '#fbbf24'; border = '#d4af37';
     if (customColorsDiv) customColorsDiv.style.display = 'none';
     if (canvas) {
-      canvas.style.backgroundImage = "url('/public/poster-celebration-template-clean.jpg?v=1786848800')";
-      canvas.style.backgroundSize = "100% 100%";
-      canvas.style.backgroundPosition = "center center";
-      canvas.style.backgroundRepeat = "no-repeat";
-      canvas.style.border = "6px double #d4af37";
+      canvas.style.backgroundImage = "none";
+      canvas.style.background = "radial-gradient(circle at 50% 25%, #0f2347 0%, #061126 60%, #020610 100%)";
+      canvas.style.border = "5px double #eab308";
     }
   } else if (preset === 'light_cream') {
     if (canvas) { canvas.style.backgroundImage = "none"; }
@@ -7311,82 +7309,107 @@ function _renderCommDetailTable(partnerId) {
           <div style="text-align:center"><i class="fas fa-circle-notch fa-spin fa-2x mb-2"></i><div>Analyzing and populating values…</div></div>
         </div>
         
-        <!-- Renderable Canvas Wrapper using exact Celebration Artwork Template (Clean Background 450x706 Aspect Ratio) -->
-        <div id="posterCanvasWrapper" style="width:450px;height:706px;--poster-bg:#000c28;--poster-card-bg:#001744;--poster-text:#F8FAFC;--poster-accent:#fbbf24;--poster-border:#d4af37;background-image:url('/public/poster-celebration-template-clean.jpg?v=1786856500');background-size:100% 100%;background-position:center center;background-repeat:no-repeat;border:6px double var(--poster-border);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,0.85), 0 0 40px rgba(212,175,55,0.4);position:relative;box-sizing:border-box;color:var(--poster-text);font-family:'Segoe UI',Roboto,Helvetica,sans-serif;user-select:none;flex-shrink:0">
-          <div id="prevName" style="display: none;"></div>
-          <div id="prevBonusDesc" style="display: none;"></div>
+        <!-- Renderable Canvas Wrapper - Fresh Pure HTML/CSS Luxury Celebration Design (450x720px) -->
+        <div id="posterCanvasWrapper" style="width:450px;height:720px;background:radial-gradient(circle at 50% 25%, #0f2347 0%, #061126 60%, #020610 100%);border:5px double #eab308;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.9), 0 0 40px rgba(234,179,8,0.35);position:relative;box-sizing:border-box;color:#ffffff;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;user-select:none;flex-shrink:0;padding:16px;display:flex;flex-direction:column;align-items:center;overflow:hidden">
+          
+          <div id="prevName" style="display:none"></div>
+          <div id="prevBonusDesc" style="display:none"></div>
+          <div id="prevTitle" style="display:none">CONGRATULATIONS</div>
+          <div id="prevTodayTitle" style="display:none">TODAY'S PAYOUT</div>
+          <div id="prevTodayPayout" style="display:none"></div>
+          <div id="prevImageInstructions" style="display:none"></div>
 
-          <!-- DYNAMIC VALUE OVERLAYS (Precision Aligned to 450x706 Template Artwork Slots) -->
-          <div style="position:absolute;inset:0;z-index:3;pointer-events:none">
+          <!-- Background Sparkle Particles Overlay -->
+          <div style="position:absolute;inset:0;background-image:radial-gradient(2px 2px at 20px 30px, #ffd700, transparent), radial-gradient(2px 2px at 40px 70px, #ffffff, transparent), radial-gradient(1.5px 1.5px at 90px 40px, #fde047, transparent), radial-gradient(2px 2px at 160px 120px, #ffffff, transparent), radial-gradient(1.5px 1.5px at 230px 80px, #ffd700, transparent), radial-gradient(2px 2px at 310px 50px, #ffffff, transparent), radial-gradient(2px 2px at 380px 110px, #fde047, transparent), radial-gradient(1.5px 1.5px at 420px 30px, #ffffff, transparent), radial-gradient(2px 2px at 50px 250px, #ffd700, transparent), radial-gradient(2px 2px at 400px 280px, #ffffff, transparent), radial-gradient(1.5px 1.5px at 30px 500px, #fde047, transparent), radial-gradient(2px 2px at 420px 520px, #ffffff, transparent);opacity:0.6;pointer-events:none;z-index:1"></div>
+
+          <!-- Content Layer -->
+          <div style="position:relative;z-index:2;width:100%;display:flex;flex-direction:column;align-items:center;height:100%">
             
-            <!-- Hidden inputs target anchors -->
-            <div id="prevTitle" style="display:none">CONGRATULATIONS</div>
-            <div id="prevTodayTitle" style="display:none">TODAY'S PAYOUT</div>
-
-            <!-- 1. Dynamic Member Name (Clean overlay, font size 27px) -->
-            <div style="position:absolute;top:132px;left:15px;right:15px;text-align:center;pointer-events:auto">
-              <div id="prevSubtitle" style="font-size:27px;font-weight:950;background:linear-gradient(180deg,#fffbeb 0%,#fde047 50%,#eab308 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 4px 12px rgba(251,191,36,0.7));font-family:Georgia,serif;text-transform:uppercase;letter-spacing:0.9px">MR. BANDI GANGARAJU</div>
+            <!-- 1. Header Bar with Brand Logos -->
+            <div style="width:100%;background:linear-gradient(135deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92));border:1.5px solid rgba(234,179,8,0.6);border-radius:12px;padding:6px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;box-shadow:0 4px 15px rgba(0,0,0,0.3)">
+              <img src="/assets/logos/myntreal_logo_new.png" style="height:24px;object-fit:contain" alt="MYNTREAL">
+              <div style="font-weight:900;font-size:14px;color:#1e3a8a;letter-spacing:0.5px">VGK<span style="color:#eab308">4U</span></div>
+              <div style="font-weight:800;font-size:11.5px;color:#047857">HAR GHAR SOLAR</div>
             </div>
 
-            <!-- 2. Dynamic Member Profile Photo inside laurel wreath circle -->
-            <div style="position:absolute;top:178px;left:156px;width:138px;height:138px;border-radius:50%;overflow:hidden;background:#001233;display:flex;align-items:center;justify-content:center;box-shadow:0 0 25px rgba(251,191,36,0.8);pointer-events:auto;z-index:4">
-              <img id="prevImg" src="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;object-position:center 20%;display:none">
-              <div id="prevAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:42px;font-weight:900">BG</div>
+            <!-- 2. Congratulations Ribbon Badge -->
+            <div style="background:linear-gradient(135deg, #854d0e 0%, #ca8a04 50%, #854d0e 100%);border:1.5px solid #fde047;color:#fffbeb;font-family:Georgia,serif;font-size:12px;font-weight:900;letter-spacing:2px;padding:4px 20px;border-radius:30px;box-shadow:0 4px 14px rgba(202,138,4,0.45);margin-bottom:10px;text-transform:uppercase">👑 ★★ CONGRATULATIONS ★★ 👑</div>
+
+            <!-- 3. Member Name (3D Gold Typography) -->
+            <div style="width:100%;text-align:center;margin-bottom:10px">
+              <div id="prevSubtitle" style="font-size:25px;font-weight:950;background:linear-gradient(180deg,#ffffff 0%,#fef08a 45%,#eab308 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 2px 8px rgba(234,179,8,0.6));font-family:Georgia,serif;text-transform:uppercase;letter-spacing:0.8px;line-height:1.2">MR. BANDI GANGARAJU</div>
             </div>
 
-            <!-- 3. Dynamic Overall Earning Amount inside Gold Plaque -->
-            <div style="position:absolute;top:352px;left:30px;right:30px;text-align:center;pointer-events:auto">
-              <div id="prevHighlight" style="font-size:38px;font-weight:950;color:#991b1b;letter-spacing:-0.5px;line-height:1;text-shadow:0 1px 2px rgba(255,255,255,0.9)">₹1,07,880/-</div>
-            </div>
-
-            <!-- 4. Dynamic Today's Payout Total inside Gold Border Box -->
-            <div id="prevTodayPayout" style="display:none"></div>
-            <div style="position:absolute;top:408px;left:65px;right:65px;text-align:center;pointer-events:auto">
-              <div style="font-size:16px;font-weight:950;color:#ffffff;text-transform:uppercase"><span id="prevTodayLabelText">Today's Earning</span>: <span id="prevTotalToday">₹5,600/-</span></div>
-            </div>
-
-            <!-- 5. Dynamic Metrics (Files | Members) -->
-            <!-- Files Count -->
-            <div style="position:absolute;top:470px;left:45px;width:115px;text-align:center;pointer-events:auto">
-              <div id="prevFiles" style="color:#ffffff;font-size:14px;font-weight:950">16 FILES</div>
-              <div id="prevTeamBreakupFiles" style="font-size:9px;font-weight:900;color:#93c5fd;margin-top:1px">L2: 6 | L3: 2 | L4: 0</div>
-            </div>
-
-            <!-- Members Count -->
-            <div style="position:absolute;top:470px;left:165px;width:115px;text-align:center;pointer-events:auto">
-              <div id="prevOverall" style="color:#ffffff;font-size:14px;font-weight:950">8 MEMBERS</div>
-              <div id="prevTeamBreakup" style="font-size:9px;font-weight:900;color:#6ee7b7;margin-top:1px">L2: 6 | L3: 2 | L4: 0</div>
-            </div>
-
-            <!-- Points Installed (REMOVED / HIDDEN) -->
-            <div style="display:none">
-              <div style="font-size:0px"></div>
-            </div>
-
-            <!-- 6. Dynamic Potential Valuation Amount -->
-            <div style="position:absolute;top:544px;left:160px;right:50px;text-align:center;pointer-events:auto">
-              <div id="prevPotential" style="font-size:20px;font-weight:950;color:#ffffff">₹1,37,725/-</div>
-            </div>
-
-            <!-- 7. Dynamic Senior Referrer Row -->
-            <div id="prevSeniorRow" style="position:absolute;top:575px;left:17px;width:415px;height:60px;pointer-events:auto">
-              <!-- Senior Photo / Avatar -->
-              <div style="position:absolute;top:4px;left:12px;width:42px;height:42px;border-radius:50%;overflow:hidden;background:#001233;display:flex;align-items:center;justify-content:center;border:1.5px solid #fbbf24">
-                <img id="prevSeniorImg" src="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;display:none">
-                <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:15px;font-weight:900">NE</div>
+            <!-- 4. Member Profile Photo inside Golden Wreath Ring -->
+            <div style="position:relative;width:122px;height:122px;margin-bottom:14px">
+              <div style="width:122px;height:122px;border-radius:50%;border:3.5px solid #fde047;overflow:hidden;background:#001233;box-shadow:0 0 25px rgba(234,179,8,0.65);display:flex;align-items:center;justify-content:center">
+                <img id="prevImg" src="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;object-position:center 20%;display:none">
+                <div id="prevAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:38px;font-weight:900">BG</div>
               </div>
-              
-              <!-- Senior Name -->
-              <div id="prevSeniorName" style="position:absolute;top:47px;left:0px;width:68px;text-align:center;font-size:7.5px;font-weight:950;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">NISSI ENTERPRISES</div>
-
-              <!-- Senior 3 Data Columns -->
-              <div id="prevSeniorToday" style="position:absolute;top:30px;left:132px;width:80px;text-align:center;font-size:13.5px;font-weight:950;color:#fde047">₹1,000/-</div>
-              <div id="prevSeniorEarning" style="position:absolute;top:30px;left:222px;width:85px;text-align:center;font-size:13.5px;font-weight:950;color:#34d399">₹28,230/-</div>
-              <div id="prevSeniorPotential" style="position:absolute;top:30px;left:315px;width:85px;text-align:center;font-size:13.5px;font-weight:950;color:#fb923c">₹39,700/-</div>
+              <div style="position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#b45309,#f59e0b,#b45309);border:1px solid #fef08a;color:#ffffff;font-size:9.5px;font-weight:900;padding:2px 14px;border-radius:12px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,0.5)">CHAMPION</div>
             </div>
 
-            <!-- Notes & Instructions -->
-            <div id="prevImageInstructions" style="display:none"></div>
+            <!-- 5. Overall Earning Plaque (Centerpiece) -->
+            <div style="width:100%;background:linear-gradient(135deg, #fffbeb 0%, #fef3c7 40%, #fde047 100%);border:2.5px solid #d97706;border-radius:16px;padding:10px 16px;text-align:center;margin-bottom:10px;box-shadow:0 8px 25px rgba(0,0,0,0.4), inset 0 0 10px rgba(255,255,255,0.8)">
+              <div style="color:#78350f;font-size:11px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px">★ OVERALL EARNING ★</div>
+              <div id="prevHighlight" style="color:#991b1b;font-size:36px;font-weight:950;line-height:1;text-shadow:0 1px 2px rgba(255,255,255,0.9);letter-spacing:-0.5px">₹1,07,880/-</div>
+            </div>
+
+            <!-- 6. Today's Earning Banner Card -->
+            <div style="width:100%;background:linear-gradient(135deg, #064e3b 0%, #047857 50%, #065f46 100%);border:1.5px solid #34d399;border-radius:12px;padding:8px 14px;text-align:center;margin-bottom:10px;box-shadow:0 4px 15px rgba(4,120,87,0.4)">
+              <div style="font-size:15px;font-weight:900;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px"><span id="prevTodayLabelText">Today's Earning</span>: <span id="prevTotalToday">₹5,600/-</span></div>
+            </div>
+
+            <!-- 7. Performance Metrics 2 Grid Cards -->
+            <div style="width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+              <div style="background:rgba(15,23,42,0.8);border:1.5px solid rgba(234,179,8,0.4);border-radius:12px;padding:8px 10px;text-align:center">
+                <div id="prevFiles" style="font-size:14.5px;font-weight:950;color:#ffffff;margin-bottom:2px">16 FILES</div>
+                <div id="prevTeamBreakupFiles" style="font-size:9.5px;font-weight:800;color:#93c5fd">L2: 6 | L3: 2 | L4: 0</div>
+              </div>
+              <div style="background:rgba(15,23,42,0.8);border:1.5px solid rgba(234,179,8,0.4);border-radius:12px;padding:8px 10px;text-align:center">
+                <div id="prevOverall" style="font-size:14.5px;font-weight:950;color:#ffffff;margin-bottom:2px">8 MEMBERS</div>
+                <div id="prevTeamBreakup" style="font-size:9.5px;font-weight:800;color:#6ee7b7">L2: 6 | L3: 2 | L4: 0</div>
+              </div>
+            </div>
+
+            <!-- 8. Potential Valuation Banner -->
+            <div style="width:100%;background:linear-gradient(135deg, #701a75 0%, #831843 50%, #500724 100%);border:1.5px solid #f472b6;border-radius:12px;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;box-shadow:0 4px 15px rgba(131,24,67,0.4)">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:20px">💰</span>
+                <span style="font-size:11px;font-weight:900;color:#fbcfe8;letter-spacing:1px">POTENTIAL VALUATION</span>
+              </div>
+              <div id="prevPotential" style="font-size:18px;font-weight:950;color:#ffffff">₹1,37,725/-</div>
+            </div>
+
+            <!-- 9. Senior Referrer Card Row -->
+            <div id="prevSeniorRow" style="width:100%;background:rgba(8,18,38,0.9);border:1.5px solid rgba(234,179,8,0.5);border-radius:12px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div style="display:flex;align-items:center;gap:8px;width:125px">
+                <div style="width:34px;height:34px;border-radius:50%;background:#1e3a8a;border:1.5px solid #fde047;color:white;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
+                  <img id="prevSeniorImg" src="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;display:none">
+                  <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:12px;font-weight:900">NE</div>
+                </div>
+                <div id="prevSeniorName" style="font-size:8.5px;font-weight:900;color:#ffffff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">NISSI ENTERPRISES</div>
+              </div>
+              <div style="display:flex;gap:12px">
+                <div style="text-align:center">
+                  <div style="font-size:7.5px;font-weight:700;color:#94a3b8;text-transform:uppercase">Today</div>
+                  <div id="prevSeniorToday" style="font-size:11.5px;font-weight:900;color:#fde047">₹1,000/-</div>
+                </div>
+                <div style="text-align:center">
+                  <div style="font-size:7.5px;font-weight:700;color:#94a3b8;text-transform:uppercase">Overall</div>
+                  <div id="prevSeniorEarning" style="font-size:11.5px;font-weight:900;color:#34d399">₹28,230/-</div>
+                </div>
+                <div style="text-align:center">
+                  <div style="font-size:7.5px;font-weight:700;color:#94a3b8;text-transform:uppercase">Potential</div>
+                  <div id="prevSeniorPotential" style="font-size:11.5px;font-weight:900;color:#fb923c">₹39,700/-</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 10. Footer Terms -->
+            <div style="font-size:7.5px;color:#94a3b8;text-align:center;letter-spacing:0.3px;margin-top:auto">
+              * POTENTIAL EARNING IS BASED ON FINAL COMPLETION OF PROJECTS AND SUBJECT TO COMPANY TERMS.
+            </div>
 
           </div>
         </div>
