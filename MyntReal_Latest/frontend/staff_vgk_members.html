@@ -7292,36 +7292,41 @@ function _renderCommDetailTable(partnerId) {
         </div>
         
         <!-- Renderable Canvas Wrapper -->
-        <div id="posterCanvasWrapper" style="width:450px;height:800px;--poster-bg:#0A0F1D;--poster-card-bg:#131B2E;--poster-text:#F8FAFC;--poster-accent:#fbbf24;--poster-border:#d4af37;background:radial-gradient(circle at 50% 25%, #1e2952 0%, #0b1120 60%, #040711 100%);border:8px double var(--poster-border);border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,0.8), 0 0 35px rgba(251,191,36,0.3);position:relative;padding:12px 16px;box-sizing:border-box;color:var(--poster-text);font-family:'Segoe UI',Roboto,Helvetica,sans-serif;user-select:none;flex-shrink:0;display:flex;flex-direction:column;justify-content:space-between">
+        <div id="posterCanvasWrapper" style="width:450px;height:820px;--poster-bg:#000c28;--poster-card-bg:#001744;--poster-text:#F8FAFC;--poster-accent:#fbbf24;--poster-border:#d4af37;background:radial-gradient(circle at 50% 25%, #002366 0%, #001233 60%, #000511 100%);border:6px double var(--poster-border);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,0.85), 0 0 40px rgba(212,175,55,0.4);position:relative;padding:12px 16px;box-sizing:border-box;color:var(--poster-text);font-family:'Segoe UI',Roboto,Helvetica,sans-serif;user-select:none;flex-shrink:0;display:flex;flex-direction:column;justify-content:space-between">
           <div id="prevName" style="display: none;"></div>
           <div id="prevBonusDesc" style="display: none;"></div>
           
           <!-- Decorative Inner Gold Border with Corner Accents -->
-          <div style="position:absolute;inset:5px;border:1.5px dashed rgba(251,191,36,0.6);border-radius:10px;pointer-events:none;z-index:2"></div>
+          <div style="position:absolute;inset:5px;border:1.5px dashed rgba(251,191,36,0.6);border-radius:12px;pointer-events:none;z-index:2"></div>
 
           <!-- TOP ZONE (Header Zone - Brand and Ribbon) -->
           <div style="position:relative;z-index:3;display:flex;flex-direction:column;gap:6px;margin-top:2px">
             <!-- Brand Logos Row with unified complete white background -->
-            <div style="background:rgba(255,255,255,0.96);border:1px solid rgba(212,175,55,0.5);border-radius:8px;padding:4px 14px;height:58px;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box;box-shadow:0 4px 12px rgba(0,0,0,0.25)">
-              <div style="height:38px;display:flex;align-items:center"><img src="/vgk4u-logo.png" style="height:100%;object-fit:contain" crossorigin="anonymous"></div>
-              <div style="height:38px;display:flex;align-items:center"><img src="/public/myntreal-logo-trans.png" style="height:100%;object-fit:contain" crossorigin="anonymous"></div>
-              <div style="height:48px;display:flex;align-items:center;justify-content:center"><img src="/public/solar-logo-harghar-trans.png" style="height:100%;transform:scale(1.22);transform-origin:center;object-fit:contain" crossorigin="anonymous"></div>
+            <div style="background:#ffffff;border:2px solid rgba(212,175,55,0.8);border-radius:25px;padding:4px 16px;height:56px;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box;box-shadow:0 4px 15px rgba(0,0,0,0.3)">
+              <div style="height:36px;display:flex;align-items:center"><img src="/vgk4u-logo.png" style="height:100%;object-fit:contain" crossorigin="anonymous"></div>
+              <div style="height:36px;display:flex;align-items:center"><img src="/public/myntreal-logo-trans.png" style="height:100%;object-fit:contain" crossorigin="anonymous"></div>
+              <div style="height:46px;display:flex;align-items:center;justify-content:center"><img src="/public/solar-logo-harghar-trans.png" style="height:100%;transform:scale(1.22);transform-origin:center;object-fit:contain" crossorigin="anonymous"></div>
             </div>
 
             <!-- Title & Subtitle Block -->
-            <div style="text-align:center;display:flex;flex-direction:column;gap:5px;margin-top:2px">
-              <!-- Congratulations Ribbon -->
+            <div style="text-align:center;display:flex;flex-direction:column;gap:4px;margin-top:2px">
+              <!-- Crown Congratulations Ribbon -->
               <div style="display:flex;align-items:center;justify-content:center">
-                <div style="background:linear-gradient(135deg,#7c3aed,#1e1b4b);border:1.5px solid var(--poster-accent);border-radius:10px;padding:5px 20px;display:flex;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(251,191,36,0.4)">
-                  <span style="color:var(--poster-accent);font-size:12px">🎉</span>
-                  <div id="prevTitle" style="font-size:13.5px;font-weight:900;color:var(--poster-accent);text-transform:uppercase;letter-spacing:1.2px">★ CONGRATULATIONS ★</div>
-                  <span style="color:var(--poster-accent);font-size:12px">🎉</span>
+                <div style="background:linear-gradient(180deg,#fef08a 0%,#facc15 50%,#ca8a04 100%);border:1.5px solid #fef08a;border-radius:20px;padding:4px 22px;display:flex;align-items:center;gap:6px;box-shadow:0 4px 18px rgba(251,191,36,0.6)">
+                  <span style="color:#7f1d1d;font-size:12px">👑</span>
+                  <div id="prevTitle" style="font-size:13px;font-weight:950;color:#7f1d1d;text-transform:uppercase;letter-spacing:1.2px">★ CONGRATULATIONS ★</div>
+                  <span style="color:#7f1d1d;font-size:12px">👑</span>
                 </div>
               </div>
 
               <!-- Subtitle displays dynamic Member Name -->
-              <div style="text-align:center">
-                <div id="prevSubtitle" style="font-size:23px;font-weight:900;background:linear-gradient(180deg,#fffbeb 0%,#fbbf24 60%,#d4af37 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 2px 10px rgba(251,191,36,0.5));font-family:Georgia,serif;text-transform:uppercase;letter-spacing:0.8px">BANDI GANGARAJU</div>
+              <div style="text-align:center;margin-top:1px">
+                <div id="prevSubtitle" style="font-size:25px;font-weight:950;background:linear-gradient(180deg,#fffbeb 0%,#fde047 50%,#eab308 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 3px 10px rgba(251,191,36,0.6));font-family:Georgia,serif;text-transform:uppercase;letter-spacing:0.8px">MR. BANDI GANGARAJU</div>
+              </div>
+
+              <!-- Winner Shield Banner -->
+              <div style="display:flex;justify-content:center">
+                <div style="background:linear-gradient(90deg,#001f54,#003366,#001f54);color:#fde047;font-size:11.5px;font-weight:950;letter-spacing:1.5px;padding:3px 18px;border-radius:12px;text-transform:uppercase;border:1.5px solid #fde047;box-shadow:0 3px 10px rgba(0,0,0,0.5)">👑 PROUD WINNER 👑</div>
               </div>
             </div>
           </div>
@@ -7329,61 +7334,62 @@ function _renderCommDetailTable(partnerId) {
           <!-- VERTICAL STACK ZONE -->
           <div style="position:relative;z-index:3;display:flex;flex-direction:column;gap:8px;flex:1;justify-content:center;margin:4px 0">
             
-            <!-- 1. Winner Profile Card -->
-            <div style="width:330px;margin:0 auto;background:linear-gradient(145deg,rgba(15,23,42,0.95),rgba(30,41,59,0.85));border:1.5px solid rgba(251,191,36,0.7);border-radius:14px;padding:8px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;text-align:center;position:relative;box-shadow:0 12px 35px rgba(0,0,0,0.65),inset 0 0 22px rgba(251,191,36,0.15);gap:6px">
-              <div style="background:linear-gradient(90deg,#1e3a8a,#0f172a);color:#fbbf24;font-size:12px;font-weight:900;letter-spacing:1.5px;padding:4px;border-radius:6px;text-transform:uppercase;border:1px solid rgba(251,191,36,0.4)">🏆 PROUD WINNER 🏆</div>
+            <!-- 1. Winner Profile Photo Container with Gold Laurel Wreath and Trophy -->
+            <div style="width:330px;margin:0 auto;position:relative;text-align:center">
               
               <!-- Profile Royal Circular Frame -->
-              <div style="width:185px;height:185px;border-radius:50%;border:4px solid var(--poster-accent);box-shadow:0 0 30px rgba(251,191,36,0.7),inset 0 0 15px rgba(0,0,0,0.5);overflow:hidden;margin:4px auto;background:#0f172a;display:flex;align-items:center;justify-content:center;position:relative">
+              <div style="width:175px;height:175px;border-radius:50%;border:4px solid #fde047;box-shadow:0 0 30px rgba(251,191,36,0.8),inset 0 0 15px rgba(0,0,0,0.6);overflow:hidden;margin:0 auto;background:#001233;display:flex;align-items:center;justify-content:center;position:relative">
                 <img id="prevImg" src="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;object-position:center 20%;display:none">
-                <div id="prevAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#3b82f6,#7c3aed);color:white;font-size:46px;font-weight:900">AB</div>
+                <div id="prevAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:48px;font-weight:900">BG</div>
               </div>
               
-              <!-- Champion badge -->
-              <div style="background:linear-gradient(90deg,rgba(251,191,36,0.2),rgba(212,175,55,0.4),rgba(251,191,36,0.2));border:1px solid var(--poster-border);padding:4px;border-radius:6px;box-shadow:0 3px 8px rgba(0,0,0,0.35)">
-                <div style="font-size:12.5px;font-weight:900;color:var(--poster-accent);letter-spacing:1.2px">⭐ STAR PERFORMER ⭐</div>
+              <!-- Champion Red Metallic Ribbon overlay across bottom of photo -->
+              <div style="position:relative;margin-top:-18px;z-index:4;display:flex;justify-content:center">
+                <div style="background:linear-gradient(180deg,#dc2626 0%,#991b1b 100%);border:1.5px solid #fde047;border-radius:14px;padding:4px 22px;box-shadow:0 4px 14px rgba(0,0,0,0.5)">
+                  <div style="font-size:13.5px;font-weight:950;color:#ffffff;letter-spacing:1.5px;text-transform:uppercase">★ CHAMPION ★</div>
+                </div>
               </div>
             </div>
 
-            <!-- 2. Overall Earning Marquee Box -->
+            <!-- 2. Overall Earning Marquee Plaque (Gold Box) -->
             <div style="display:flex;justify-content:center;width:100%">
-              <div style="background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 40%,#fde68a 100%);border:2.5px solid var(--poster-accent);border-radius:14px;padding:8px 18px;text-align:center;box-shadow:0 10px 30px rgba(251,191,36,0.45),inset 0 0 15px rgba(255,255,255,0.95);width:340px;box-sizing:border-box">
-                <div id="prevHighlight" style="font-size:30px;font-weight:950;color:#991b1b;letter-spacing:-0.5px;line-height:1;text-shadow:0 1px 2px rgba(255,255,255,0.9)">₹15,000/-</div>
-                <div style="font-size:11px;font-weight:900;color:#0f172a;letter-spacing:1.8px;margin-top:3px;text-transform:uppercase;border-top:1px solid rgba(0,0,0,0.12);padding-top:3px">🏆 OVERALL EARNING 🏆</div>
+              <div style="background:linear-gradient(180deg,#fffbeb 0%,#fde047 40%,#d4af37 100%);border:2.5px solid #b45309;border-radius:16px;padding:8px 20px;text-align:center;box-shadow:0 10px 30px rgba(251,191,36,0.5),inset 0 2px 8px rgba(255,255,255,0.9);width:340px;box-sizing:border-box">
+                <div id="prevHighlight" style="font-size:32px;font-weight:950;color:#991b1b;letter-spacing:-0.5px;line-height:1;text-shadow:0 1px 2px rgba(255,255,255,0.9)">₹1,07,880/-</div>
+                <div style="font-size:11.5px;font-weight:950;color:#0f172a;letter-spacing:1.8px;margin-top:3px;text-transform:uppercase;border-top:1px solid rgba(0,0,0,0.15);padding-top:3px">🏆 OVERALL EARNING 🏆</div>
               </div>
             </div>
 
             <!-- 3. Today's Payout Card -->
-            <div style="background:linear-gradient(135deg,rgba(15,23,42,0.98),rgba(30,41,59,0.95));border:1.5px solid rgba(52,211,153,0.7);border-radius:14px;padding:8px 14px;box-shadow:0 8px 25px rgba(0,0,0,0.5);display:flex;flex-direction:column;justify-content:space-between;width:340px;margin:0 auto;box-sizing:border-box;gap:4px">
-              <div id="prevTodayTitle" style="font-size:12px;font-weight:900;color:var(--poster-accent);letter-spacing:1.2px;text-align:center">🎉 ★ TODAY'S PAYOUT ★ 🎉</div>
+            <div style="background:linear-gradient(135deg,rgba(0,18,51,0.98),rgba(0,35,102,0.95));border:1.5px solid rgba(253,224,71,0.7);border-radius:14px;padding:8px 14px;box-shadow:0 8px 25px rgba(0,0,0,0.6);display:flex;flex-direction:column;justify-content:space-between;width:340px;margin:0 auto;box-sizing:border-box;gap:4px">
+              <div id="prevTodayTitle" style="font-size:12px;font-weight:950;color:#fde047;letter-spacing:1.2px;text-align:center">🎉 ★ TODAY'S PAYOUT ★ 🎉</div>
               <div id="prevTodayPayout" style="font-size:13px;font-weight:800;color:var(--poster-text);text-align:center;line-height:1.25;margin:2px 0">
                 <!-- Payout breakups loaded dynamically -->
               </div>
-              <div style="background:linear-gradient(135deg,#059669,#047857);box-shadow:0 4px 14px rgba(5,150,105,0.45);border-radius:8px;padding:5px;text-align:center;border:1px solid rgba(52,211,153,0.4)">
-                <div style="font-size:14px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:0.4px"><span id="prevTodayLabelText">Today's Earning</span>: <span id="prevTotalToday">₹2,500/-</span></div>
+              <div style="background:linear-gradient(135deg,#10b981,#047857);box-shadow:0 4px 14px rgba(16,185,129,0.45);border-radius:8px;padding:5px;text-align:center;border:1.5px solid #6ee7b7">
+                <div style="font-size:14px;font-weight:950;color:white;text-transform:uppercase;letter-spacing:0.4px"><span id="prevTodayLabelText">Today's Earning</span>: <span id="prevTotalToday">₹5,600/-</span></div>
               </div>
             </div>
 
-            <!-- 4. Combined Metrics and Potential Earning Grid -->
+            <!-- 4. Combined Metrics and Potential Valuation Grid -->
             <div style="display:flex;gap:8px;width:340px;margin:0 auto;box-sizing:border-box;align-items:stretch">
               <!-- Combined Files & Team -->
-              <div style="flex:1.2;background:linear-gradient(135deg,rgba(15,23,42,0.95),rgba(30,41,59,0.9));border:1.5px solid var(--poster-accent);border-radius:10px;padding:4px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 4px 12px rgba(0,0,0,0.3)">
+              <div style="flex:1.2;background:linear-gradient(135deg,rgba(0,18,51,0.95),rgba(0,35,102,0.9));border:1.5px solid #fde047;border-radius:10px;padding:5px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 4px 12px rgba(0,0,0,0.4)">
                 <div style="display:flex;justify-content:space-between;gap:3px">
-                  <div id="prevFiles" style="flex:1;background:#1e293b;color:white;font-size:11px;font-weight:900;border-radius:5px;padding:3px;text-align:center;border:1px solid rgba(255,255,255,0.1)">12 FILES</div>
-                  <div id="prevOverall" style="flex:1.2;background:#047857;color:white;font-size:11px;font-weight:900;border-radius:5px;padding:3px;text-align:center;border:1px solid rgba(52,211,153,0.3)">8 TEAM</div>
+                  <div id="prevFiles" style="flex:1;background:#001233;color:white;font-size:11px;font-weight:950;border-radius:5px;padding:3px;text-align:center;border:1px solid rgba(255,255,255,0.2)">16 FILES</div>
+                  <div id="prevOverall" style="flex:1.2;background:#047857;color:white;font-size:11px;font-weight:950;border-radius:5px;padding:3px;text-align:center;border:1px solid rgba(110,231,183,0.4)">8 MEMBERS</div>
                 </div>
-                <div style="background:rgba(255,255,255,0.08);border-radius:5px;padding:3px;text-align:center;margin-top:3px">
-                  <div id="prevTeamBreakup" style="font-size:8.5px;font-weight:900;color:var(--poster-text);text-transform:uppercase">L2: 6 | L3: 2</div>
+                <div style="background:rgba(255,255,255,0.1);border-radius:5px;padding:3px;text-align:center;margin-top:3px">
+                  <div id="prevTeamBreakup" style="font-size:9px;font-weight:950;color:#fde047;text-transform:uppercase">L2: 6 | L3: 2 | L4: 0</div>
                 </div>
               </div>
 
-              <!-- Potential Earning -->
-              <div style="flex:1;background:linear-gradient(135deg,rgba(153,27,27,0.95),rgba(185,28,28,0.85));border:1.5px solid #fca5a5;border-radius:10px;padding:4px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 6px 20px rgba(185,28,28,0.4)">
-                <div style="font-size:9px;font-weight:900;color:#fca5a5;text-transform:uppercase;text-align:center;letter-spacing:0.5px">POTENTIAL</div>
-                <div style="background:#991b1b;border-radius:5px;padding:3px;margin:1px 0;text-align:center;border:1px solid rgba(254,202,202,0.3)">
-                  <div id="prevPotential" style="font-size:13.5px;font-weight:950;color:#ffffff;line-height:1">₹105,000/-</div>
+              <!-- Potential Valuation -->
+              <div style="flex:1;background:linear-gradient(135deg,rgba(153,27,27,0.95),rgba(185,28,28,0.85));border:1.5px solid #fca5a5;border-radius:10px;padding:5px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 6px 20px rgba(185,28,28,0.5)">
+                <div style="font-size:9.5px;font-weight:950;color:#fca5a5;text-transform:uppercase;text-align:center;letter-spacing:0.5px">POTENTIAL VALUATION</div>
+                <div style="background:#7f1d1d;border-radius:5px;padding:3px;margin:1px 0;text-align:center;border:1px solid rgba(254,202,202,0.4)">
+                  <div id="prevPotential" style="font-size:14px;font-weight:950;color:#ffffff;line-height:1">₹1,37,725/-</div>
                 </div>
-                <div style="font-size:8px;font-weight:900;color:#fca5a5;text-align:center;letter-spacing:0.5px">VALUATION</div>
+                <div style="font-size:8.5px;font-weight:900;color:#fca5a5;text-align:center;letter-spacing:0.5px">ESTIMATED TOTAL</div>
               </div>
             </div>
           </div>
@@ -7391,12 +7397,12 @@ function _renderCommDetailTable(partnerId) {
           <!-- BOTTOM ZONE (Footer Zone - Full Width) -->
           <div style="position:relative;z-index:3;display:flex;flex-direction:column;gap:3px;margin-bottom:1px">
             <!-- Footer Container Bar -->
-            <div id="prevSeniorRow" style="background:linear-gradient(90deg,rgba(15,23,42,0.95),rgba(30,41,59,0.95));border:1.5px solid rgba(251,191,36,0.4);border-radius:12px;padding:6px 10px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(0,0,0,0.4)">
+            <div id="prevSeniorRow" style="background:linear-gradient(90deg,rgba(0,18,51,0.95),rgba(0,35,102,0.95));border:1.5px solid rgba(253,224,71,0.5);border-radius:12px;padding:6px 10px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(0,0,0,0.5)">
               
               <!-- Senior Referrer Photo Frame -->
-              <div style="width:68px;height:68px;border-radius:50%;border:2.5px solid var(--poster-accent);box-shadow:0 0 12px rgba(251,191,36,0.5);overflow:hidden;background:#0f172a;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0">
+              <div style="width:64px;height:64px;border-radius:50%;border:2.5px solid #fde047;box-shadow:0 0 12px rgba(251,191,36,0.6);overflow:hidden;background:#001233;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0">
                 <img id="prevSeniorImg" src="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;display:none">
-                <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#3b82f6,#7c3aed);color:white;font-size:22px;font-weight:900">SR</div>
+                <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:22px;font-weight:900">NE</div>
               </div>
 
               <!-- Senior Referrer Details Row -->
@@ -7404,25 +7410,25 @@ function _renderCommDetailTable(partnerId) {
                 <!-- Name Block -->
                 <div style="display:flex;flex-direction:column;text-align:left;flex:1.1">
                   <div style="font-size:7px;font-weight:850;color:var(--poster-text);opacity:0.85;letter-spacing:0.2px">SENIOR REFERRER</div>
-                  <div id="prevSeniorName" style="font-size:9.5px;font-weight:900;color:var(--poster-text);text-transform:uppercase;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
+                  <div id="prevSeniorName" style="font-size:9.5px;font-weight:950;color:#fde047;text-transform:uppercase;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">NISSI ENTERPRISES</div>
                 </div>
                 
                 <!-- Today's Earning Block -->
                 <div style="display:flex;flex-direction:column;text-align:center;flex:0.8">
                   <div style="font-size:7px;font-weight:850;color:var(--poster-text);opacity:0.85;letter-spacing:0.2px">TODAY'S EARNING</div>
-                  <div id="prevSeniorToday" style="font-size:10.5px;font-weight:950;color:var(--poster-accent);text-transform:uppercase;line-height:1.2">₹0/-</div>
+                  <div id="prevSeniorToday" style="font-size:10.5px;font-weight:950;color:#fde047;text-transform:uppercase;line-height:1.2">₹1,000/-</div>
                 </div>
                 
                 <!-- Overall Earnings Block -->
                 <div style="display:flex;flex-direction:column;text-align:center;flex:0.9">
                   <div style="font-size:7px;font-weight:850;color:var(--poster-text);opacity:0.85;letter-spacing:0.2px">OVERALL EARNING</div>
-                  <div id="prevSeniorEarning" style="font-size:10.5px;font-weight:950;color:#34d399;text-transform:uppercase;line-height:1.2">—</div>
+                  <div id="prevSeniorEarning" style="font-size:10.5px;font-weight:950;color:#34d399;text-transform:uppercase;line-height:1.2">₹28,230/-</div>
                 </div>
 
                 <!-- Potential Earnings Block -->
                 <div style="display:flex;flex-direction:column;text-align:right;flex:1.1">
                   <div style="font-size:7px;font-weight:850;color:var(--poster-text);opacity:0.85;letter-spacing:0.2px">POTENTIAL EARNING</div>
-                  <div id="prevSeniorPotential" style="font-size:10.5px;font-weight:950;color:#fb923c;text-transform:uppercase;line-height:1.2">₹0/-</div>
+                  <div id="prevSeniorPotential" style="font-size:10.5px;font-weight:950;color:#fb923c;text-transform:uppercase;line-height:1.2">₹30,500/-</div>
                 </div>
               </div>
 
@@ -7431,9 +7437,9 @@ function _renderCommDetailTable(partnerId) {
             <!-- Images & Composition Instructions note -->
             <div id="prevImageInstructions" style="font-size:6px;font-weight:700;color:var(--poster-accent);text-align:center;letter-spacing:0.1px;text-transform:uppercase;margin-top:2px"></div>
             
-            <!-- Disclaimer line -->
-            <div style="font-size:6.5px;font-weight:700;color:var(--poster-text);opacity:0.75;text-align:center;letter-spacing:0.1px;text-transform:uppercase">
-              * Potential earning is based on final completion of projects and subject to company terms.
+            <!-- Legal Disclaimer line -->
+            <div style="font-size:7px;font-weight:900;color:#fde047;text-align:center;letter-spacing:0.2px;text-transform:uppercase">
+              ★ POTENTIAL EARNING IS BASED ON FINAL COMPLETION OF PROJECTS AND SUBJECT TO COMPANY TERMS. ★
             </div>
           </div>
         </div>
