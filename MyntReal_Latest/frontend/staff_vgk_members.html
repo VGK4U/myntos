@@ -6126,8 +6126,27 @@ function recalculateTodayPayout() {
   if (prevTotalTodayEl) prevTotalTodayEl.textContent = '₹' + _meFormatInr(total || 5600) + '/-';
   
   const prevBonusDescEl = document.getElementById('prevBonusDesc');
-  if (prevBonusDescEl) prevBonusDescEl.textContent = 'Period: ' + periodLabel;
   updatePoster();
+}
+
+function numberToWordsInr(num) {
+  num = Math.floor(Math.abs(Number(num) || 0));
+  if (num === 0) return "Rupees Zero Only";
+
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 
+             'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  function inWords(n) {
+    if (n < 20) return a[n];
+    if (n < 100) return b[Math.floor(n / 10)] + (n % 10 ? ' ' + a[n % 10] : '');
+    if (n < 1000) return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + inWords(n % 100) : '');
+    if (n < 100000) return inWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + inWords(n % 1000) : '');
+    if (n < 10000000) return inWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + inWords(n % 100000) : '');
+    return inWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + inWords(n % 10000000) : '');
+  }
+
+  return 'Rupees ' + inWords(num) + ' Only';
 }
 
 function updatePoster() {
@@ -6136,7 +6155,14 @@ function updatePoster() {
 
   setTxt('prevTitle', '★ ' + getVal('postTitle').toUpperCase() + ' ★');
   setTxt('prevSubtitle', getVal('postSubtitle').toUpperCase());
-  setTxt('prevHighlight', getVal('postHighlight'));
+  
+  const rawHighlight = getVal('postHighlight');
+  setTxt('prevHighlight', rawHighlight);
+  const numOnly = rawHighlight.replace(/[^0-9]/g, '');
+  const prevHighlightInWordsEl = document.getElementById('prevHighlightInWords');
+  if (prevHighlightInWordsEl && numOnly) {
+    prevHighlightInWordsEl.textContent = numberToWordsInr(numOnly);
+  }
   
   const filesVal = getVal('postFiles').toUpperCase().trim();
   const prevFilesEl = document.getElementById('prevFiles');
@@ -7328,7 +7354,8 @@ function _renderCommDetailTable(partnerId) {
             <!-- 5. Overall Earning Plaque (Centerpiece) -->
             <div style="width:100%;background:linear-gradient(135deg, #ffffff 0%, #fffbeb 50%, #fef3c7 100%);border:2.5px solid #eab308;border-radius:16px;padding:8px 16px;text-align:center;margin-bottom:8px;box-shadow:0 8px 25px rgba(0,0,0,0.5), 0 0 20px rgba(251,191,36,0.3)">
               <div style="color:#92400e;font-size:12px;font-weight:900;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px">★ OVERALL EARNING ★</div>
-              <div id="prevHighlight" style="color:#b91c1c;font-size:38px;font-weight:950;line-height:1;font-family:Georgia,serif;letter-spacing:-0.5px;text-shadow:0 2px 4px rgba(185,28,28,0.15)">₹1,07,880/-</div>
+              <div id="prevHighlight" style="color:#b91c1c;font-size:36px;font-weight:950;line-height:1;font-family:'Segoe UI',Roboto,sans-serif;letter-spacing:-0.5px">₹1,07,880/-</div>
+              <div id="prevHighlightInWords" style="font-size:10px;font-weight:800;color:#92400e;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px">Rupees One Lakh Seven Thousand Eight Hundred Eighty Only</div>
             </div>
 
             <!-- 6. Today's Earning Banner Card (Moved ABOVE Breakup) -->
@@ -7345,7 +7372,7 @@ function _renderCommDetailTable(partnerId) {
               </div>
             </div>
 
-            <!-- 8. 3-Column Metrics Grid (FILES | MEMBERS | POTENTIAL PENDING) -->
+            <!-- 8. 3-Column Metrics Grid (FILES | TEAM SIZE | POTENTIAL PENDING) -->
             <div style="width:100%;display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:8px;margin-bottom:8px">
               <!-- Files Card -->
               <div style="background:rgba(15,23,42,0.88);border:1.5px solid rgba(234,179,8,0.5);border-radius:12px;padding:6px 5px;text-align:center">
@@ -7353,9 +7380,10 @@ function _renderCommDetailTable(partnerId) {
                 <div id="prevTeamBreakupFiles" style="font-size:8.5px;font-weight:800;color:#93c5fd">L2: 6 | L3: 2 | L4: 0</div>
               </div>
               
-              <!-- Members Card -->
+              <!-- Members / Team Size Card -->
               <div style="background:rgba(15,23,42,0.88);border:1.5px solid rgba(234,179,8,0.5);border-radius:12px;padding:6px 5px;text-align:center">
-                <div id="prevOverall" style="font-size:13.5px;font-weight:950;color:#ffffff;margin-bottom:2px">8 MEMBERS</div>
+                <div style="font-size:8.5px;font-weight:900;color:#a7f3d0;text-transform:uppercase;letter-spacing:0.5px">👥 TEAM SIZE</div>
+                <div id="prevOverall" style="font-size:13.5px;font-weight:950;color:#ffffff;margin-top:2px;margin-bottom:2px">8 MEMBERS</div>
                 <div id="prevTeamBreakup" style="font-size:8.5px;font-weight:800;color:#6ee7b7">L2: 6 | L3: 2 | L4: 0</div>
               </div>
 
