@@ -7310,28 +7310,20 @@ function _renderCommDetailTable(partnerId) {
           <div style="text-align:center"><i class="fas fa-circle-notch fa-spin fa-2x mb-2"></i><div>Analyzing and populating values…</div></div>
         </div>
         
-        <!-- Renderable Canvas Wrapper -->
-        <div id="posterCanvasWrapper" style="width:450px;height:820px;--poster-bg:#000c28;--poster-card-bg:#001744;--poster-text:#F8FAFC;--poster-accent:#fbbf24;--poster-border:#d4af37;background:radial-gradient(circle at 50% 25%, #002366 0%, #001233 65%, #000511 100%);border:6px double var(--poster-border);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,0.85), 0 0 40px rgba(212,175,55,0.4);position:relative;padding:12px 16px;box-sizing:border-box;color:var(--poster-text);font-family:'Segoe UI',Roboto,Helvetica,sans-serif;user-select:none;flex-shrink:0;display:flex;flex-direction:column;justify-content:space-between">
+        <!-- Renderable Canvas Wrapper using exact Celebration Artwork Template v2 -->
+        <div id="posterCanvasWrapper" style="width:450px;height:820px;--poster-bg:#000c28;--poster-card-bg:#001744;--poster-text:#F8FAFC;--poster-accent:#fbbf24;--poster-border:#d4af37;background-image:url('/public/poster-celebration-template-v2.jpg');background-size:100% 100%;background-position:center center;background-repeat:no-repeat;border:6px double var(--poster-border);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,0.85), 0 0 40px rgba(212,175,55,0.4);position:relative;padding:12px 16px;box-sizing:border-box;color:var(--poster-text);font-family:'Segoe UI',Roboto,Helvetica,sans-serif;user-select:none;flex-shrink:0;display:flex;flex-direction:column;justify-content:space-between">
           <div id="prevName" style="display: none;"></div>
           <div id="prevBonusDesc" style="display: none;"></div>
           
-          <!-- Decorative Inner Gold Border with Corner Accents -->
+          <!-- Decorative Inner Gold Border -->
           <div style="position:absolute;inset:5px;border:1.5px dashed rgba(251,191,36,0.6);border-radius:12px;pointer-events:none;z-index:2"></div>
 
           <!-- TOP ZONE (Header Zone - Brand and Ribbon) -->
           <div style="position:relative;z-index:3;display:flex;flex-direction:column;gap:6px;margin-top:2px">
-            <!-- Fireworks Background SVG Accents -->
-            <div style="position:absolute;top:-10px;left:-5px;width:70px;height:70px;opacity:0.85;pointer-events:none">
-              <svg viewBox="0 0 100 100" style="width:100%;height:100%"><circle cx="50" cy="50" r="3" fill="#fde047"/><path d="M50 15 L50 25 M50 75 L50 85 M15 50 L25 50 M75 50 L85 50 M25 25 L32 32 M68 68 L75 75 M75 25 L68 32 M32 68 L25 75" stroke="#fde047" stroke-width="2" stroke-linecap="round"/></svg>
-            </div>
-            <div style="position:absolute;top:-10px;right:-5px;width:70px;height:70px;opacity:0.85;pointer-events:none">
-              <svg viewBox="0 0 100 100" style="width:100%;height:100%"><circle cx="50" cy="50" r="3" fill="#fde047"/><path d="M50 15 L50 25 M50 75 L50 85 M15 50 L25 50 M75 50 L85 50 M25 25 L32 32 M68 68 L75 75 M75 25 L68 32 M32 68 L25 75" stroke="#fde047" stroke-width="2" stroke-linecap="round"/></svg>
-            </div>
-
             <!-- Brand Logos Row with unified complete white background -->
             <div style="background:#ffffff;border:2px solid rgba(212,175,55,0.8);border-radius:25px;padding:4px 16px;height:56px;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box;box-shadow:0 4px 15px rgba(0,0,0,0.3)">
-              <div style="height:36px;display:flex;align-items:center"><img src="/vgk4u-logo.png" style="height:100%;object-fit:contain" crossorigin="anonymous"></div>
               <div style="height:36px;display:flex;align-items:center"><img src="/public/myntreal-logo-trans.png" style="height:100%;object-fit:contain" crossorigin="anonymous"></div>
+              <div style="height:36px;display:flex;align-items:center"><img src="/vgk4u-logo.png" style="height:100%;object-fit:contain" crossorigin="anonymous"></div>
               <div style="height:46px;display:flex;align-items:center;justify-content:center"><img src="/public/solar-logo-harghar-trans.png" style="height:100%;transform:scale(1.22);transform-origin:center;object-fit:contain" crossorigin="anonymous"></div>
             </div>
 
@@ -7346,14 +7338,14 @@ function _renderCommDetailTable(partnerId) {
                 </div>
               </div>
 
-              <!-- Subtitle displays dynamic Member Name -->
+              <!-- Subtitle displays dynamic Member Name over solid gold backing container -->
               <div style="text-align:center;margin-top:1px">
                 <div id="prevSubtitle" style="font-size:25px;font-weight:950;background:linear-gradient(180deg,#fffbeb 0%,#fde047 50%,#eab308 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 3px 10px rgba(251,191,36,0.6));font-family:Georgia,serif;text-transform:uppercase;letter-spacing:0.8px">MR. BANDI GANGARAJU</div>
               </div>
 
               <!-- Winner Shield Banner -->
               <div style="display:flex;justify-content:center">
-                <div style="background:linear-gradient(90deg,#001f54,#003366,#001f54);color:#fde047;font-size:11.5px;font-weight:950;letter-spacing:1.5px;padding:3px 18px;border-radius:12px;text-transform:uppercase;border:1.5px solid #fde047;box-shadow:0 3px 10px rgba(0,0,0,0.5)">👑 PROUD WINNER 👑</div>
+                <div style="background:linear-gradient(90deg,#001f54,#003366,#001f54);color:#fde047;font-size:11.5px;font-weight:950;letter-spacing:1.5px;padding:3px 18px;border-radius:12px;text-transform:uppercase;border:1.5px solid #fde047;box-shadow:0 3px 10px rgba(0,0,0,0.5)">★ PROUD WINNER ★</div>
               </div>
             </div>
           </div>
@@ -7363,25 +7355,16 @@ function _renderCommDetailTable(partnerId) {
             
             <!-- 1. Winner Profile Photo Container with Gold Laurel Wreath and Trophy -->
             <div style="width:330px;margin:0 auto;position:relative;text-align:center">
-              
-              <!-- Floating Golden Streamer Left -->
-              <div style="position:absolute;left:-20px;top:20px;font-size:26px;opacity:0.9;transform:rotate(-15deg);pointer-events:none">🎗️</div>
-              <!-- Floating Golden Streamer Right -->
-              <div style="position:absolute;right:-20px;top:20px;font-size:26px;opacity:0.9;transform:rotate(15deg);pointer-events:none">🎗️</div>
-              
-              <!-- Trophy Cup Right -->
-              <div style="position:absolute;right:-25px;bottom:10px;font-size:42px;filter:drop-shadow(0 4px 10px rgba(251,191,36,0.6));z-index:5;pointer-events:none">🏆</div>
-              
               <!-- Profile Royal Circular Frame -->
               <div style="width:175px;height:175px;border-radius:50%;border:4px solid #fde047;box-shadow:0 0 30px rgba(251,191,36,0.8),inset 0 0 15px rgba(0,0,0,0.6);overflow:hidden;margin:0 auto;background:#001233;display:flex;align-items:center;justify-content:center;position:relative">
                 <img id="prevImg" src="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;object-position:center 20%;display:none">
                 <div id="prevAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:48px;font-weight:900">BG</div>
               </div>
               
-              <!-- Champion Red Metallic Ribbon overlay across bottom of photo -->
+              <!-- Champion Gold Metallic Curved Ribbon overlay across bottom of photo -->
               <div style="position:relative;margin-top:-18px;z-index:4;display:flex;justify-content:center">
-                <div style="background:linear-gradient(180deg,#dc2626 0%,#991b1b 100%);border:1.5px solid #fde047;border-radius:14px;padding:4px 22px;box-shadow:0 4px 14px rgba(0,0,0,0.5)">
-                  <div style="font-size:13.5px;font-weight:950;color:#ffffff;letter-spacing:1.5px;text-transform:uppercase">★ CHAMPION ★</div>
+                <div style="background:linear-gradient(180deg,#fef08a 0%,#facc15 50%,#ca8a04 100%);border:1.5px solid #ffffff;border-radius:14px;padding:4px 24px;box-shadow:0 4px 14px rgba(0,0,0,0.6)">
+                  <div style="font-size:13.5px;font-weight:950;color:#7f1d1d;letter-spacing:1.5px;text-transform:uppercase">★ CHAMPION ★</div>
                 </div>
               </div>
             </div>
@@ -7405,45 +7388,93 @@ function _renderCommDetailTable(partnerId) {
               </div>
             </div>
 
-            <!-- 4. Combined Metrics and Potential Valuation Grid -->
-            <div style="display:flex;gap:8px;width:340px;margin:0 auto;box-sizing:border-box;align-items:stretch">
-              <!-- Combined Files & Team -->
-              <div style="flex:1.2;background:linear-gradient(135deg,rgba(0,18,51,0.95),rgba(0,35,102,0.9));border:1.5px solid #fde047;border-radius:10px;padding:5px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 4px 12px rgba(0,0,0,0.4)">
-                <div style="display:flex;justify-content:space-between;gap:3px">
-                  <div id="prevFiles" style="flex:1;background:#001233;color:white;font-size:11px;font-weight:950;border-radius:5px;padding:3px;text-align:center;border:1px solid rgba(255,255,255,0.2)">16 FILES</div>
-                  <div id="prevOverall" style="flex:1.2;background:#047857;color:white;font-size:11px;font-weight:950;border-radius:5px;padding:3px;text-align:center;border:1px solid rgba(110,231,183,0.4)">8 MEMBERS</div>
-                </div>
-                <div style="background:rgba(255,255,255,0.1);border-radius:5px;padding:3px;text-align:center;margin-top:3px">
-                  <div id="prevTeamBreakup" style="font-size:9px;font-weight:950;color:#fde047;text-transform:uppercase">L2: 6 | L3: 2 | L4: 0</div>
+            <!-- 4. 3-Box Metrics Grid (16 FILES | 8 MEMBERS | POINTS INSTALLED) -->
+            <div style="display:flex;gap:6px;width:350px;margin:0 auto;box-sizing:border-box;align-items:stretch">
+              <!-- Files Count Box -->
+              <div style="flex:1;background:#001233;border:1.5px solid #3b82f6;border-radius:10px;padding:5px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 4px 12px rgba(0,0,0,0.4)">
+                <div id="prevFiles" style="background:#001233;color:white;font-size:11px;font-weight:950;border-radius:5px;padding:3px;text-align:center;border:1px solid rgba(255,255,255,0.2)">📄 16 FILES</div>
+                <div style="background:rgba(255,255,255,0.1);border-radius:5px;padding:2px;text-align:center;margin-top:2px">
+                  <div id="prevTeamBreakupFiles" style="font-size:8px;font-weight:950;color:#93c5fd">L2: 6 | L3: 2 | L4: 0</div>
                 </div>
               </div>
 
-              <!-- Potential Valuation -->
-              <div style="flex:1;background:linear-gradient(135deg,rgba(153,27,27,0.95),rgba(185,28,28,0.85));border:1.5px solid #fca5a5;border-radius:10px;padding:5px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 6px 20px rgba(185,28,28,0.5)">
-                <div style="font-size:9.5px;font-weight:950;color:#fca5a5;text-transform:uppercase;text-align:center;letter-spacing:0.5px">POTENTIAL VALUATION</div>
-                <div style="background:#7f1d1d;border-radius:5px;padding:3px;margin:1px 0;text-align:center;border:1px solid rgba(254,202,202,0.4)">
-                  <div id="prevPotential" style="font-size:14px;font-weight:950;color:#ffffff;line-height:1">₹1,37,725/-</div>
+              <!-- Members Count Box -->
+              <div style="flex:1;background:#001233;border:1.5px solid #10b981;border-radius:10px;padding:5px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 4px 12px rgba(0,0,0,0.4)">
+                <div id="prevOverall" style="background:#047857;color:white;font-size:11px;font-weight:950;border-radius:5px;padding:3px;text-align:center;border:1px solid rgba(110,231,183,0.4)">👥 8 MEMBERS</div>
+                <div style="background:rgba(255,255,255,0.1);border-radius:5px;padding:2px;text-align:center;margin-top:2px">
+                  <div id="prevTeamBreakup" style="font-size:8px;font-weight:950;color:#6ee7b7">L2: 6 | L3: 2 | L4: 0</div>
                 </div>
-                <div style="font-size:8.5px;font-weight:900;color:#fca5a5;text-align:center;letter-spacing:0.5px">ESTIMATED TOTAL</div>
+              </div>
+
+              <!-- Points Installed Box -->
+              <div style="flex:1.2;background:#001233;border:1.5px solid #fde047;border-radius:10px;padding:5px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 4px 12px rgba(0,0,0,0.4)">
+                <div style="font-size:8px;font-weight:950;color:#fde047;text-transform:uppercase;text-align:center">🏆 POINTS INSTALLED</div>
+                <div style="background:#002366;border-radius:5px;padding:2px;margin:1px 0;text-align:center;border:1px solid rgba(253,224,71,0.4)">
+                  <div style="font-size:11px;font-weight:950;color:#fde047">2,45,000+</div>
+                </div>
+                <div style="font-size:7.5px;font-weight:800;color:#94a3b8;text-align:center">(Total Count)</div>
+              </div>
+            </div>
+
+            <!-- 5. Potential Valuation Box -->
+            <div style="background:linear-gradient(135deg,#7f1d1d,#991b1b);border:1.5px solid #fca5a5;border-radius:12px;padding:6px 14px;width:350px;margin:0 auto;box-shadow:0 6px 20px rgba(153,27,27,0.7);display:flex;align-items:center;justify-content:center;gap:10px">
+              <div style="font-size:24px">💰</div>
+              <div style="display:flex;flex-direction:column;text-align:center">
+                <div style="font-size:9px;font-weight:900;color:#fca5a5;letter-spacing:0.8px">POTENTIAL VALUATION</div>
+                <div id="prevPotential" style="font-size:18px;font-weight:950;color:#ffffff;line-height:1">₹1,37,725/-</div>
               </div>
             </div>
           </div>
 
           <!-- BOTTOM ZONE (Footer Zone - Full Width) -->
           <div style="position:relative;z-index:3;display:flex;flex-direction:column;gap:3px;margin-bottom:1px">
-            <!-- Footer Container Bar -->
-            <div id="prevSeniorRow" style="background:linear-gradient(90deg,rgba(0,18,51,0.95),rgba(0,35,102,0.95));border:1.5px solid rgba(253,224,71,0.5);border-radius:12px;padding:6px 10px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(0,0,0,0.5)">
+            <!-- Senior Referrer Footer Container Bar -->
+            <div id="prevSeniorRow" style="background:#001233;border:1.5px solid #fde047;border-radius:14px;padding:8px 12px;width:420px;margin:0 auto;box-shadow:0 6px 25px rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:space-between">
               
-              <!-- Senior Referrer Photo Frame -->
-              <div style="width:64px;height:64px;border-radius:50%;border:2.5px solid #fde047;box-shadow:0 0 12px rgba(251,191,36,0.6);overflow:hidden;background:#001233;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0">
-                <img id="prevSeniorImg" src="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;display:none">
-                <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:22px;font-weight:900">NE</div>
+              <!-- Senior Referrer Avatar & Red Ribbon Badge -->
+              <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;position:relative">
+                <div style="width:52px;height:52px;border-radius:50%;border:2.5px solid #fde047;box-shadow:0 0 14px rgba(251,191,36,0.7);overflow:hidden;background:#001233;display:flex;align-items:center;justify-content:center;position:relative">
+                  <img id="prevSeniorImg" src="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;display:none">
+                  <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:20px;font-weight:900">NE</div>
+                </div>
+                <!-- Red Ribbon Banner Overlay for Senior Name -->
+                <div style="background:linear-gradient(180deg,#dc2626 0%,#991b1b 100%);border:1px solid #fde047;border-radius:8px;padding:2px 6px;margin-top:-8px;z-index:4;box-shadow:0 2px 6px rgba(0,0,0,0.4);white-space:nowrap">
+                  <div style="font-size:7.5px;font-weight:950;color:#ffffff;letter-spacing:0.5px">SENIOR REFERRER</div>
+                </div>
               </div>
 
-              <!-- Senior Referrer Details Row -->
-              <div style="display:flex;flex:1;justify-content:space-between;align-items:center;gap:6px">
-                <!-- Name Block -->
-                <div style="display:flex;flex-direction:column;text-align:left;flex:1.1">
+              <!-- Senior Referrer 3 Distinct Data Columns WITH ICONS -->
+              <div style="display:flex;flex:1;justify-content:space-around;align-items:center;gap:6px">
+                <!-- Senior Name Header + Today's Earning -->
+                <div style="display:flex;flex-direction:column;text-align:center">
+                  <div id="prevSeniorName" style="font-size:9.5px;font-weight:950;color:#ffffff;text-transform:uppercase;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">NISSI ENTERPRISES</div>
+                  <div style="font-size:7.5px;font-weight:900;color:#94a3b8;letter-spacing:0.5px;text-transform:uppercase">👛 TODAY'S EARNING</div>
+                  <div id="prevSeniorToday" style="font-size:12px;font-weight:950;color:#fde047;text-transform:uppercase;line-height:1.1">₹1,000/-</div>
+                </div>
+                
+                <!-- Overall Earnings Column -->
+                <div style="display:flex;flex-direction:column;text-align:center;border-left:1px solid rgba(255,255,255,0.15);padding-left:6px">
+                  <div style="font-size:7.5px;font-weight:900;color:#94a3b8;letter-spacing:0.5px;text-transform:uppercase">📈 OVERALL EARNING</div>
+                  <div id="prevSeniorEarning" style="font-size:12px;font-weight:950;color:#34d399;text-transform:uppercase;line-height:1.1">₹28,230/-</div>
+                </div>
+
+                <!-- Potential Earnings Column -->
+                <div style="display:flex;flex-direction:column;text-align:center;border-left:1px solid rgba(255,255,255,0.15);padding-left:6px">
+                  <div style="font-size:7.5px;font-weight:900;color:#94a3b8;letter-spacing:0.5px;text-transform:uppercase">🎯 POTENTIAL EARNING</div>
+                  <div id="prevSeniorPotential" style="font-size:12px;font-weight:950;color:#fb923c;text-transform:uppercase;line-height:1.1">₹30,500/-</div>
+                </div>
+              </div>
+
+            </div>
+            
+            <!-- Images & Composition Instructions note -->
+            <div id="prevImageInstructions" style="font-size:6px;font-weight:700;color:var(--poster-accent);text-align:center;letter-spacing:0.1px;text-transform:uppercase;margin-top:2px"></div>
+            
+            <!-- Legal Disclaimer line -->
+            <div style="font-size:7px;font-weight:900;color:#fde047;text-align:center;letter-spacing:0.2px;text-transform:uppercase">
+              ★ POTENTIAL EARNING IS BASED ON FINAL COMPLETION OF PROJECTS AND SUBJECT TO COMPANY TERMS. ★
+            </div>
+          </div>
                   <div style="font-size:7px;font-weight:850;color:var(--poster-text);opacity:0.85;letter-spacing:0.2px">SENIOR REFERRER</div>
                   <div id="prevSeniorName" style="font-size:9.5px;font-weight:950;color:#fde047;text-transform:uppercase;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">NISSI ENTERPRISES</div>
                 </div>
