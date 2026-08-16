@@ -2807,9 +2807,9 @@ function _renderMeDetailTable(partnerId){
       const adv = isC ? parseFloat(e.advance_paid || 0) : 0;
       return s + (isC ? (e.balance_gross !== undefined && e.balance_gross !== null ? parseFloat(e.balance_gross) : Math.max(0, gross - adv)) : gross);
     }, 0);
-    const totAdmin        = Math.round(totGross * 0.08);
-    const totTds          = Math.round(totGross * 0.02);
-    const totNet          = Math.round(totGross * 0.90);
+    const totAdmin        = Math.round(totBalGross * 0.08);
+    const totTds          = Math.round(totBalGross * 0.02);
+    const totNet          = Math.max(0, Math.round(totBalGross - totAdmin - totTds));
     const totRcvGross     = rows.filter(e=>['RELEASED','PAID'].includes(e.status)).reduce((s,e) => s + parseFloat(e.commission_amount||0), 0);
     const totPendingGross = rows.filter(e=>['DRAFT','PENDING','STAGE1_APPROVED'].includes(e.status)).reduce((s,e) => s + parseFloat(e.commission_amount||0), 0);
     const totRcvNet       = Math.round(totRcvGross * 0.90);
@@ -2903,9 +2903,9 @@ function _renderMeDetailTable(partnerId){
             const advPaid  = isComm ? parseFloat(e.advance_paid || 0) : 0;
             const balGross = isComm ? ((e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, grossAmt - advPaid)) : grossAmt;
 
-            let adminVal = Math.round(grossAmt * 0.08);
-            let tdsVal   = Math.round(grossAmt * 0.02);
-            let netVal   = Math.round(grossAmt * 0.90);
+            let adminVal = Math.round(balGross * 0.08);
+            let tdsVal   = Math.round(balGross * 0.02);
+            let netVal   = Math.max(0, Math.round(balGross - adminVal - tdsVal));
 
             if (e.status !== 'CANCELLED') {
               if (!leadDealValueRecorded && dealVal > 0) {
@@ -2956,9 +2956,9 @@ function _renderMeDetailTable(partnerId){
             </tr>`;
           }).join('');
 
-          const subAdmin = Math.round(subGross * 0.08);
-          const subTds   = Math.round(subGross * 0.02);
-          const subNet   = Math.round(subGross * 0.90);
+          const subAdmin = Math.round(subBalGross * 0.08);
+          const subTds   = Math.round(subBalGross * 0.02);
+          const subNet   = Math.max(0, Math.round(subBalGross - subAdmin - subTds));
 
           const subtotalRowHtml = `<tr style="background:#f5f3ff;border-top:1.5px dashed #c4b5fd;border-bottom:2px solid #ddd6fe;font-weight:800">
             <td colspan="5" style="padding:6px 10px;text-align:left;color:#5b21b6;font-size:11px">
