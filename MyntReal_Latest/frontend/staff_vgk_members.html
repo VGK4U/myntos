@@ -5844,23 +5844,13 @@ async function generateMemberPoster(partnerId) {
       potentialEarning += uniqueLeads[key];
     }
     
-    // Set initial date range for poster period filter
+    // Default date range: Last Earning Date
     const todayStr = new Date().toISOString().split('T')[0];
-    const iedFrom = (document.getElementById('iedDateFrom')?.value || '').trim();
-    const iedTo = (document.getElementById('iedDateTo')?.value || '').trim();
+    const validDates = entries.filter(e => e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None').map(e => e.income_date).sort();
+    const lastEarningDate = validDates.length > 0 ? validDates[validDates.length - 1] : todayStr;
     
-    let defaultFrom = iedFrom;
-    let defaultTo = iedTo || todayStr;
-    
-    if (!defaultFrom) {
-      const validDates = entries.filter(e => e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None').map(e => e.income_date).sort();
-      if (validDates.length > 0) {
-        defaultFrom = validDates[0];
-        defaultTo = validDates[validDates.length - 1];
-      } else {
-        defaultFrom = todayStr;
-      }
-    }
+    let defaultFrom = lastEarningDate;
+    let defaultTo = lastEarningDate;
     
     document.getElementById('postPayoutDateFrom').value = defaultFrom;
     document.getElementById('postPayoutDateTo').value = defaultTo;
@@ -7292,16 +7282,16 @@ function _renderCommDetailTable(partnerId) {
             <div style="text-align:center;display:flex;flex-direction:column;gap:5px;margin-top:2px">
               <!-- Congratulations Ribbon -->
               <div style="display:flex;align-items:center;justify-content:center">
-                <div style="background:linear-gradient(135deg,#1d4ed8,#0f172a);border:1.5px solid var(--poster-accent);border-radius:8px;padding:4px 18px;display:flex;align-items:center;gap:6px;box-shadow:0 4px 15px rgba(251,191,36,0.3)">
-                  <span style="color:var(--poster-accent);font-size:11px"><i class="fas fa-crown"></i></span>
-                  <div id="prevTitle" style="font-size:13px;font-weight:900;color:var(--poster-accent);text-transform:uppercase;letter-spacing:1px">★ CONGRATULATIONS ★</div>
-                  <span style="color:var(--poster-accent);font-size:11px"><i class="fas fa-crown"></i></span>
+                <div style="background:linear-gradient(135deg,#7c3aed,#1e1b4b);border:1.5px solid var(--poster-accent);border-radius:10px;padding:5px 20px;display:flex;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(251,191,36,0.4)">
+                  <span style="color:var(--poster-accent);font-size:12px">🎉</span>
+                  <div id="prevTitle" style="font-size:13.5px;font-weight:900;color:var(--poster-accent);text-transform:uppercase;letter-spacing:1.2px">★ CONGRATULATIONS ★</div>
+                  <span style="color:var(--poster-accent);font-size:12px">🎉</span>
                 </div>
               </div>
 
               <!-- Subtitle displays dynamic Member Name -->
               <div style="text-align:center">
-                <div id="prevSubtitle" style="font-size:22px;font-weight:900;background:linear-gradient(180deg,#fffbeb 0%,#fbbf24 60%,#d4af37 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 2px 8px rgba(251,191,36,0.4));font-family:Georgia,serif;text-transform:uppercase;letter-spacing:0.5px">BANDI GANGARAJU</div>
+                <div id="prevSubtitle" style="font-size:23px;font-weight:900;background:linear-gradient(180deg,#fffbeb 0%,#fbbf24 60%,#d4af37 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 2px 10px rgba(251,191,36,0.5));font-family:Georgia,serif;text-transform:uppercase;letter-spacing:0.8px">BANDI GANGARAJU</div>
               </div>
             </div>
           </div>
@@ -7310,37 +7300,37 @@ function _renderCommDetailTable(partnerId) {
           <div style="position:relative;z-index:3;display:flex;flex-direction:column;gap:8px;flex:1;justify-content:center;margin:4px 0">
             
             <!-- 1. Winner Profile Card -->
-            <div style="width:330px;margin:0 auto;background:linear-gradient(145deg,rgba(15,23,42,0.95),rgba(30,41,59,0.85));border:1.5px solid rgba(251,191,36,0.6);border-radius:14px;padding:8px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;text-align:center;position:relative;box-shadow:0 10px 30px rgba(0,0,0,0.6),inset 0 0 20px rgba(251,191,36,0.12);gap:6px">
-              <div style="background:linear-gradient(90deg,#1e3a8a,#0f172a);color:#ffffff;font-size:12px;font-weight:900;letter-spacing:1.2px;padding:4px;border-radius:6px;text-transform:uppercase;border:1px solid rgba(251,191,36,0.3)">PROUD WINNER</div>
+            <div style="width:330px;margin:0 auto;background:linear-gradient(145deg,rgba(15,23,42,0.95),rgba(30,41,59,0.85));border:1.5px solid rgba(251,191,36,0.7);border-radius:14px;padding:8px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;text-align:center;position:relative;box-shadow:0 12px 35px rgba(0,0,0,0.65),inset 0 0 22px rgba(251,191,36,0.15);gap:6px">
+              <div style="background:linear-gradient(90deg,#1e3a8a,#0f172a);color:#fbbf24;font-size:12px;font-weight:900;letter-spacing:1.5px;padding:4px;border-radius:6px;text-transform:uppercase;border:1px solid rgba(251,191,36,0.4)">🏆 PROUD WINNER 🏆</div>
               
               <!-- Profile Royal Circular Frame -->
-              <div style="width:185px;height:185px;border-radius:50%;border:4px solid var(--poster-accent);box-shadow:0 0 25px rgba(251,191,36,0.6),inset 0 0 15px rgba(0,0,0,0.5);overflow:hidden;margin:4px auto;background:#0f172a;display:flex;align-items:center;justify-content:center;position:relative">
+              <div style="width:185px;height:185px;border-radius:50%;border:4px solid var(--poster-accent);box-shadow:0 0 30px rgba(251,191,36,0.7),inset 0 0 15px rgba(0,0,0,0.5);overflow:hidden;margin:4px auto;background:#0f172a;display:flex;align-items:center;justify-content:center;position:relative">
                 <img id="prevImg" src="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;object-position:center 20%;display:none">
                 <div id="prevAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#3b82f6,#7c3aed);color:white;font-size:46px;font-weight:900">AB</div>
               </div>
               
               <!-- Champion badge -->
-              <div style="background:linear-gradient(90deg,rgba(251,191,36,0.15),rgba(212,175,55,0.3),rgba(251,191,36,0.15));border:1px solid var(--poster-border);padding:4px;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.3)">
-                <div style="font-size:12.5px;font-weight:900;color:var(--poster-accent);letter-spacing:1px">★ CHAMPION ★</div>
+              <div style="background:linear-gradient(90deg,rgba(251,191,36,0.2),rgba(212,175,55,0.4),rgba(251,191,36,0.2));border:1px solid var(--poster-border);padding:4px;border-radius:6px;box-shadow:0 3px 8px rgba(0,0,0,0.35)">
+                <div style="font-size:12.5px;font-weight:900;color:var(--poster-accent);letter-spacing:1.2px">⭐ STAR PERFORMER ⭐</div>
               </div>
             </div>
 
             <!-- 2. Overall Earning Marquee Box -->
             <div style="display:flex;justify-content:center;width:100%">
-              <div style="background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 40%,#fde68a 100%);border:2.5px solid var(--poster-accent);border-radius:12px;padding:6px 16px;text-align:center;box-shadow:0 8px 25px rgba(251,191,36,0.4),inset 0 0 12px rgba(255,255,255,0.9);width:340px;box-sizing:border-box">
-                <div id="prevHighlight" style="font-size:28px;font-weight:950;color:#dc2626;letter-spacing:-0.5px;line-height:1;text-shadow:0 1px 2px rgba(255,255,255,0.9)">₹15,000/-</div>
-                <div style="font-size:10.5px;font-weight:900;color:#0f172a;letter-spacing:1.5px;margin-top:2px;text-transform:uppercase;border-top:1px solid rgba(0,0,0,0.1);padding-top:2px">OVERALL EARNING</div>
+              <div style="background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 40%,#fde68a 100%);border:2.5px solid var(--poster-accent);border-radius:14px;padding:8px 18px;text-align:center;box-shadow:0 10px 30px rgba(251,191,36,0.45),inset 0 0 15px rgba(255,255,255,0.95);width:340px;box-sizing:border-box">
+                <div id="prevHighlight" style="font-size:30px;font-weight:950;color:#991b1b;letter-spacing:-0.5px;line-height:1;text-shadow:0 1px 2px rgba(255,255,255,0.9)">₹15,000/-</div>
+                <div style="font-size:11px;font-weight:900;color:#0f172a;letter-spacing:1.8px;margin-top:3px;text-transform:uppercase;border-top:1px solid rgba(0,0,0,0.12);padding-top:3px">🏆 OVERALL EARNING 🏆</div>
               </div>
             </div>
 
             <!-- 3. Today's Payout Card -->
-            <div style="background:linear-gradient(135deg,rgba(15,23,42,0.95),rgba(30,41,59,0.9));border:1.5px solid rgba(52,211,153,0.5);border-radius:12px;padding:6px 12px;box-shadow:0 6px 20px rgba(0,0,0,0.4);display:flex;flex-direction:column;justify-content:space-between;width:340px;margin:0 auto;box-sizing:border-box;gap:3px">
-              <div style="font-size:11.5px;font-weight:900;color:var(--poster-accent);letter-spacing:1px;text-align:center">★ TODAY'S PAYOUT ★</div>
-              <div id="prevTodayPayout" style="font-size:13px;font-weight:800;color:var(--poster-text);text-align:center;line-height:1.2;margin:1px 0">
+            <div style="background:linear-gradient(135deg,rgba(15,23,42,0.98),rgba(30,41,59,0.95));border:1.5px solid rgba(52,211,153,0.7);border-radius:14px;padding:8px 14px;box-shadow:0 8px 25px rgba(0,0,0,0.5);display:flex;flex-direction:column;justify-content:space-between;width:340px;margin:0 auto;box-sizing:border-box;gap:4px">
+              <div id="prevTodayTitle" style="font-size:12px;font-weight:900;color:var(--poster-accent);letter-spacing:1.2px;text-align:center">🎉 ★ TODAY'S PAYOUT ★ 🎉</div>
+              <div id="prevTodayPayout" style="font-size:13px;font-weight:800;color:var(--poster-text);text-align:center;line-height:1.25;margin:2px 0">
                 <!-- Payout breakups loaded dynamically -->
               </div>
-              <div style="background:linear-gradient(135deg,#059669,#047857);box-shadow:0 3px 10px rgba(5,150,105,0.4);border-radius:6px;padding:4px;text-align:center">
-                <div style="font-size:13.5px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:0.3px">Today's Earning: <span id="prevTotalToday">₹2,500/-</span></div>
+              <div style="background:linear-gradient(135deg,#059669,#047857);box-shadow:0 4px 14px rgba(5,150,105,0.45);border-radius:8px;padding:5px;text-align:center;border:1px solid rgba(52,211,153,0.4)">
+                <div style="font-size:14px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:0.4px"><span id="prevTodayLabelText">Today's Earning</span>: <span id="prevTotalToday">₹2,500/-</span></div>
               </div>
             </div>
 
