@@ -16492,10 +16492,12 @@ if os.path.exists(STATIC_DIR):
 else:
     logging.warning(f"⚠️ Static directory not found: {STATIC_DIR}")
 
-# Mount marketplace product images — served directly from frontend/public/marketplace/product-images
-# This allows the Node.js frontend proxy to forward /marketplace/product-images/* to the backend
-# ensuring images load reliably in production (VM deployment)
 _WORKSPACE_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+FRONTEND_PUBLIC_DIR = os.path.join(_WORKSPACE_ROOT, "frontend", "public")
+if os.path.exists(FRONTEND_PUBLIC_DIR):
+    app.mount("/public", StaticFiles(directory=FRONTEND_PUBLIC_DIR, follow_symlink=True), name="public_frontend_assets")
+    print(f"[DC-STATIC] ✅ Public assets mounted: /public -> {FRONTEND_PUBLIC_DIR}", flush=True)
+
 MARKETPLACE_IMAGES_DIR = os.path.join(_WORKSPACE_ROOT, "frontend", "public", "marketplace", "product-images")
 if os.path.exists(MARKETPLACE_IMAGES_DIR):
     app.mount("/marketplace/product-images", StaticFiles(directory=MARKETPLACE_IMAGES_DIR), name="marketplace_product_images")

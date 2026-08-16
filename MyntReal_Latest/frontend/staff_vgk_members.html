@@ -5954,6 +5954,8 @@ async function generateMemberPoster(partnerId) {
       }
     }
     
+    if (document.getElementById('postThemePreset')) document.getElementById('postThemePreset').value = 'celebration_graphic';
+    changeThemePreset();
     recalculateTodayPayout();
   } catch(err) {
     alert('Failed to generate poster: ' + err.message);
@@ -6179,22 +6181,41 @@ function updatePoster() {
 function changeThemePreset() {
   const preset = document.getElementById('postThemePreset').value;
   const customColorsDiv = document.getElementById('customColorsContainer');
+  const canvas = document.getElementById('posterCanvasWrapper');
   
   let bg, cardBg, text, accent, border;
   
-  if (preset === 'dark_navy') {
+  if (preset === 'celebration_graphic') {
+    bg = '#000c28'; cardBg = '#001744'; text = '#F8FAFC'; accent = '#fbbf24'; border = '#d4af37';
+    if (customColorsDiv) customColorsDiv.style.display = 'none';
+    if (canvas) {
+      canvas.style.backgroundImage = "url('/public/poster-celebration-template.jpg')";
+      canvas.style.backgroundSize = "100% 100%";
+      canvas.style.backgroundPosition = "center center";
+      canvas.style.backgroundRepeat = "no-repeat";
+      canvas.style.border = "6px double #d4af37";
+    }
+  } else if (preset === 'dark_navy') {
+    if (canvas) {
+      canvas.style.backgroundImage = "none";
+      canvas.style.background = "radial-gradient(circle at 50% 25%, #002366 0%, #001233 60%, #000511 100%)";
+    }
     bg = '#0A0F1D'; cardBg = '#131B2E'; text = '#F8FAFC'; accent = '#fbbf24'; border = '#d4af37';
     if (customColorsDiv) customColorsDiv.style.display = 'none';
   } else if (preset === 'light_cream') {
+    if (canvas) { canvas.style.backgroundImage = "none"; }
     bg = '#FAF9F6'; cardBg = '#ffffff'; text = '#0f172a'; accent = '#b45309'; border = '#d4af37';
     if (customColorsDiv) customColorsDiv.style.display = 'none';
   } else if (preset === 'emerald_success') {
+    if (canvas) { canvas.style.backgroundImage = "none"; }
     bg = '#064e3b'; cardBg = '#065f46'; text = '#F8FAFC'; accent = '#fbbf24'; border = '#34d399';
     if (customColorsDiv) customColorsDiv.style.display = 'none';
   } else if (preset === 'royal_blue') {
+    if (canvas) { canvas.style.backgroundImage = "none"; }
     bg = '#0f172a'; cardBg = '#1e3a8a'; text = '#ffffff'; accent = '#fde047'; border = '#fbbf24';
     if (customColorsDiv) customColorsDiv.style.display = 'none';
   } else if (preset === 'custom') {
+    if (canvas) { canvas.style.backgroundImage = "none"; }
     if (customColorsDiv) customColorsDiv.style.display = 'flex';
     bg = document.getElementById('postColorBg').value;
     cardBg = document.getElementById('postColorCard').value;
@@ -6204,11 +6225,11 @@ function changeThemePreset() {
   }
   
   // Update picker input values
-  document.getElementById('postColorBg').value = bg;
-  document.getElementById('postColorCard').value = cardBg;
-  document.getElementById('postColorText').value = text;
-  document.getElementById('postColorAccent').value = accent;
-  document.getElementById('postColorBorder').value = border;
+  if (document.getElementById('postColorBg')) document.getElementById('postColorBg').value = bg;
+  if (document.getElementById('postColorCard')) document.getElementById('postColorCard').value = cardBg;
+  if (document.getElementById('postColorText')) document.getElementById('postColorText').value = text;
+  if (document.getElementById('postColorAccent')) document.getElementById('postColorAccent').value = accent;
+  if (document.getElementById('postColorBorder')) document.getElementById('postColorBorder').value = border;
   
   applyThemeColors(bg, cardBg, text, accent, border);
 }
