@@ -6165,32 +6165,21 @@ function updatePoster() {
   setTxt('prevTotalToday', getVal('postTotalToday'));
   setTxt('prevOverall', getVal('postOverall'));
   setTxt('prevTeamBreakup', getVal('postTeamBreakup'));
-  setTxt('prevPotential', getVal('postPotential'));
+  setTxt('prevCustomer', getVal('postCustomer').toUpperCase());
+  setTxt('prevLocation', getVal('postLocation').toUpperCase());
+  setTxt('prevSeniorName', getVal('postSeniorName').toUpperCase());
+  setTxt('prevSeniorToday', getVal('postSeniorToday'));
+  setTxt('prevSeniorEarning', getVal('postSeniorEarning'));
+  setTxt('prevSeniorPotential', getVal('postSeniorPotential'));
   
-  const prevCust = document.getElementById('prevCustomer');
-  if (prevCust) prevCust.textContent = document.getElementById('postCustomer').value.toUpperCase();
-  const prevLoc = document.getElementById('prevLocation');
-  if (prevLoc) prevLoc.textContent = document.getElementById('postLocation').value.toUpperCase();
-  document.getElementById('prevSeniorName').textContent = document.getElementById('postSeniorName').value.toUpperCase();
-  document.getElementById('prevSeniorToday').textContent = document.getElementById('postSeniorToday').value;
-  document.getElementById('prevSeniorEarning').textContent = document.getElementById('postSeniorEarning').value;
-  const prevSeniorPot = document.getElementById('prevSeniorPotential');
-  if (prevSeniorPot) {
-    prevSeniorPot.textContent = document.getElementById('postSeniorPotential').value;
-  }
-  
-  const showSenior = document.getElementById('postShowSenior').checked;
+  const showSenior = document.getElementById('postShowSenior')?.checked ?? true;
   const prevSeniorRow = document.getElementById('prevSeniorRow');
   if (prevSeniorRow) {
     prevSeniorRow.style.display = showSenior ? 'flex' : 'none';
   }
   
-  // Bind Images & Composition instructions
-  const imgInstVal = document.getElementById('postImageInstructions').value;
-  const prevImgInst = document.getElementById('prevImageInstructions');
-  if (prevImgInst) {
-    prevImgInst.textContent = imgInstVal ? '* Instructions: ' + imgInstVal.toUpperCase() : '';
-  }
+  const imgInstVal = getVal('postImageInstructions');
+  setTxt('prevImageInstructions', imgInstVal ? '* Instructions: ' + imgInstVal.toUpperCase() : '');
 }
 
 function changeThemePreset() {
