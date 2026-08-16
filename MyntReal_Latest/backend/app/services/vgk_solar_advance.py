@@ -345,6 +345,9 @@ def release_dvr_advance(
         if not adv:
             return {'success': False, 'error': 'No DVR_ADVANCE record found'}
         if adv.status != 'PENDING':
+            if adv.status in ('RELEASED', 'STAGE1_APPROVED', 'STAGE2_PAID', 'PAID'):
+                logger.info(f'[VGK-SOLAR-ADV] DVR Advance {adv.id} is already {adv.status}; skipping duplicate release.')
+                return {'success': True, 'already_released': True, 'message': f'DVR Advance was already {adv.status}'}
             return {'success': False, 'error': f'DVR_ADVANCE is {adv.status}, not PENDING'}
 
         from app.models.staff_accounts import OfficialPartner
@@ -804,6 +807,9 @@ def release_advance(db: Session, lead_id: int, released_by_id: int, notes: str =
         if not adv:
             return {'success': False, 'error': 'No advance record found for this lead'}
         if adv.status != 'PENDING':
+            if adv.status in ('RELEASED', 'STAGE1_APPROVED', 'STAGE2_PAID', 'PAID'):
+                logger.info(f'[VGK-SOLAR-ADV] Advance {adv.id} is already {adv.status}; skipping duplicate release.')
+                return {'success': True, 'already_released': True, 'message': f'Advance was already {adv.status}'}
             return {'success': False, 'error': f'Advance is {adv.status}, not PENDING'}
 
         from app.models.staff_accounts import OfficialPartner

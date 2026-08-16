@@ -1256,7 +1256,7 @@ def unified_action(
                     raise HTTPException(status_code=400, detail=inner_rel.get('error', 'Wallet deduction at Stage1 failed'))
                 post_jv_release(db, entry, current_employee.id)
                 db.flush(); db.refresh(entry)
-            elif entry.kind in ('ADVANCE', 'DVR_ADVANCE') and entry.status == 'PENDING':
+            elif entry.kind in ('ADVANCE', 'DVR_ADVANCE') and entry.status in ('PENDING', 'RELEASED'):
                 if entry.kind == 'ADVANCE':
                     from app.services.vgk_solar_advance import release_advance as _rel_adv
                     inner_rel = _rel_adv(
@@ -1271,7 +1271,7 @@ def unified_action(
                         partner_id=entry.partner_id, level=entry.level,
                         released_by_id=current_employee.id, notes=notes
                     )
-                if not inner_rel.get('success'):
+                if not inner_rel.get('success') and not inner_rel.get('already_released'):
                     raise HTTPException(status_code=400, detail=inner_rel.get('error', 'Advance release failed'))
                 db.flush(); db.refresh(entry)
 

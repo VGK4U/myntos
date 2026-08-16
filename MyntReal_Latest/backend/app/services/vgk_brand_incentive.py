@@ -117,6 +117,9 @@ def _release_brand_advance(db: Session, advance_id: int, narration: str) -> dict
         if not adv:
             return {'success': False, 'error': 'Advance not found'}
         if adv.status != 'PENDING':
+            if adv.status in ('RELEASED', 'STAGE1_APPROVED', 'STAGE2_PAID', 'PAID'):
+                logger.info(f'[VGK-BRAND-INCENTIVE] Advance {adv.id} is already {adv.status}; skipping duplicate release.')
+                return {'success': True, 'already_released': True, 'message': f'Advance was already {adv.status}'}
             return {'success': False, 'error': f'Advance is {adv.status}, not PENDING'}
 
         from app.models.staff_accounts import OfficialPartner

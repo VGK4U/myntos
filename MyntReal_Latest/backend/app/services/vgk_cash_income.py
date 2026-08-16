@@ -1959,7 +1959,9 @@ def record_solar_advance_as_income_row(
     """), {'pid': partner.id, 'lid': getattr(advance_row, 'lead_id', None)}).fetchone()
     if existing:
         # DC-SLAB-VCI-SEPARATE-001: ADVANCE entry always reflects advance_amount only.
-        # Slab bonus is a separate SLAB_BONUS VCI entry — no patching needed here.
+        # If advance is being released, transition income entry status from PENDING to STAGE1_APPROVED
+        if existing.status in ('PENDING', 'RELEASED'):
+            db.execute(text("UPDATE vgk_cash_income_entries SET status='STAGE1_APPROVED', ledger_posted=true WHERE id=:id"), {'id': existing.id})
         return {'success': True, 'idempotent': True, 'income_entry_id': existing.id}
 
     # DC-ADV-MIRROR-CONFLICT-001 (Jul 2026): Guard against unique constraint violation.
@@ -2013,7 +2015,7 @@ def record_solar_advance_as_income_row(
         points_debit_required = 0,
         points_actually_debited = 0,
         kind              = 'ADVANCE',
-        status            = 'PENDING',
+        status            = 'STAGE1_APPROVED',
         admin_charges     = (amount * ADMIN_CHARGE_PCT / Decimal('100')).quantize(Decimal('0.01')),
         tds_amount        = (amount * TDS_PCT          / Decimal('100')).quantize(Decimal('0.01')),
         net_payout        = amount - (amount * (ADMIN_CHARGE_PCT + TDS_PCT) / Decimal('100')).quantize(Decimal('0.01')),
