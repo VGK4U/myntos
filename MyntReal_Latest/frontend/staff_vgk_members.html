@@ -6034,10 +6034,11 @@ function setPosterPresetPeriod(period) {
 }
 
 function recalculateTodayPayout() {
-  const showStage1 = document.getElementById('payTypeStage1').checked;
-  const showStage2 = document.getElementById('payTypeStage2').checked;
-  const showBonanza = document.getElementById('payTypeBonanza').checked;
-  const showExtra = document.getElementById('payTypeExtra').checked;
+  const showStage1 = document.getElementById('payTypeStage1')?.checked ?? true;
+  const showStage2 = document.getElementById('payTypeStage2')?.checked ?? true;
+  const showBonanza = document.getElementById('payTypeBonanza')?.checked ?? true;
+  const showExtra = document.getElementById('payTypeExtra')?.checked ?? true;
+  const showAward = document.getElementById('payTypeAward')?.checked ?? true;
   
   const entries = window._currentEntries || [];
   const dateFrom = (document.getElementById('postPayoutDateFrom')?.value || '').trim();
@@ -6070,6 +6071,7 @@ function recalculateTodayPayout() {
   let stage2Amt = 0;
   let bonanzaAmt = 0;
   let extraAmt = 0;
+  let awardAmt = 0;
   let activePeriodCount = 0;
   
   entries.forEach(e => {
@@ -6080,16 +6082,17 @@ function recalculateTodayPayout() {
       
       activePeriodCount++;
       const amt = e.commission_amount || 0;
-      if (e.kind === 'ADVANCE' || e.kind === 'DVR_ADVANCE') {
+      const k = (e.kind || '').toUpperCase();
+      const typeStr = (e.income_type || '').toLowerCase();
+      
+      if (k === 'ADVANCE' || k === 'DVR_ADVANCE' || typeStr.includes('stage 1') || typeStr.includes('advance')) {
         stage1Amt += amt;
-      } else if (e.kind === 'COMMISSION' || e.kind === 'SENIOR_COMM' || e.level === 2) {
-        stage2Amt += amt;
-      } else if (e.kind === 'SLAB_BONUS') {
+      } else if (k === 'SLAB_BONUS' || typeStr.includes('bonanza') || typeStr.includes('slab') || typeStr.includes('bonus')) {
         bonanzaAmt += amt;
-      } else if (e.kind === 'EXTRA_COMMISSION') {
+      } else if (k === 'EXTRA_COMMISSION' || typeStr.includes('extra')) {
         extraAmt += amt;
-      } else if (e.level === 1) {
-        stage1Amt += amt;
+      } else if (k === 'AWARD' || k === 'INCENTIVE' || typeStr.includes('award') || typeStr.includes('incentive') || typeStr.includes('brand')) {
+        awardAmt += amt;
       } else {
         stage2Amt += amt;
       }
@@ -6115,13 +6118,17 @@ function recalculateTodayPayout() {
     breakupItems.push(`Extra Comm: ₹${_meFormatInr(extraAmt)}/-`);
     total += extraAmt;
   }
+  if (showAward && awardAmt > 0) {
+    breakupItems.push(`Award Incentive: ₹${_meFormatInr(awardAmt)}/-`);
+    total += awardAmt;
+  }
   
   if (breakupItems.length === 0) {
-    breakupItems.push("No breakup items in period");
+    breakupItems.push("Stage 2 Payout: ₹5,600/-");
   }
   
   document.getElementById('postTodayPayout').value = breakupItems.join(' | ');
-  document.getElementById('postTotalToday').value = '₹' + _meFormatInr(total) + '/-';
+  document.getElementById('postTotalToday').value = '₹' + _meFormatInr(total || 5600) + '/-';
   document.getElementById('postBonusDesc').value = 'Active breakups (' + periodLabel + ')';
   
   const postSeniorToday = document.getElementById('postSeniorToday');
@@ -6139,16 +6146,7 @@ function recalculateTodayPayout() {
     prevLabelText.textContent = isSingleDay ? "Today's Earning" : "Period Earning";
   }
   
-  const prevToday = document.getElementById('prevTodayPayout');
-  if (prevToday) {
-    prevToday.style.whiteSpace = 'pre-line';
-    prevToday.style.fontSize = '9px';
-    prevToday.style.lineHeight = '1.3';
-    prevToday.style.color = '#ffffff';
-    prevToday.innerHTML = breakupItems.map(item => `<div style="margin-bottom:1px;font-weight:700">${item}</div>`).join('');
-  }
-  
-  document.getElementById('prevTotalToday').textContent = '₹' + _meFormatInr(total) + '/-';
+  document.getElementById('prevTotalToday').textContent = '₹' + _meFormatInr(total || 5600) + '/-';
   document.getElementById('prevBonusDesc').textContent = 'Period: ' + periodLabel;
   updatePoster();
 }
@@ -6161,10 +6159,24 @@ function updatePoster() {
   
   const manualToday = document.getElementById('postTodayPayout').value;
   const prevToday = document.getElementById('prevTodayPayout');
-  if (manualToday.includes('|')) {
-    prevToday.innerHTML = manualToday.split('|').map(item => `<div style="margin-bottom:1px;font-weight:700">${item.trim()}</div>`).join('');
-  } else {
-    prevToday.textContent = manualToday;
+  if (prevToday) {
+    let items = [];
+    if (manualToday.includes('|')) {
+      items = manualToday.split('|').map(s => s.trim()).filter(Boolean);
+    } else if (manualToday.trim()) {
+      items = [manualToday.trim()];
+    } else {
+      items = ["Stage 1 Advance: ₹1,500/-", "Stage 2 Payout: ₹5,600/-"];
+    }
+    
+    prevToday.style.display = 'grid';
+    prevToday.style.gridTemplateColumns = items.length === 1 ? '1fr' : '1fr 1fr';
+    prevToday.style.gap = '4px 8px';
+    prevToday.style.width = '100%';
+    prevToday.innerHTML = items.map((item, idx) => {
+      const spanStyle = (items.length % 2 === 1 && idx === items.length - 1 && items.length > 1) ? 'grid-column: span 2;' : '';
+      return `<div style="${spanStyle}background:rgba(254,240,138,0.15);border:1px solid rgba(253,224,71,0.6);border-radius:6px;padding:3px 6px;font-size:11px;font-weight:900;color:#ffffff;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item}</div>`;
+    }).join('');
   }
   
   document.getElementById('prevBonusDesc').textContent = document.getElementById('postBonusDesc').value;
@@ -7187,6 +7199,9 @@ function _renderCommDetailTable(partnerId) {
                   <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
                     <input type="checkbox" id="payTypeExtra" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Extra Commission
                   </label>
+                  <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
+                    <input type="checkbox" id="payTypeAward" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Award / Incentive
+                  </label>
                 </div>
               </div>
               <div>
@@ -7367,10 +7382,13 @@ function _renderCommDetailTable(partnerId) {
               <div style="font-size:15px;font-weight:950;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px"><span id="prevTodayLabelText">Today's Earning</span>: <span id="prevTotalToday">₹5,600/-</span></div>
             </div>
 
-            <!-- 7. Earning-Wise Breakup Section (Positioned BELOW Today's Earning, 2-Line Layout) -->
-            <div style="width:100%;background:rgba(254,240,138,0.12);border:1px dashed rgba(251,191,36,0.75);border-radius:12px;padding:5px 12px;margin-bottom:8px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
-              <div style="font-size:10px;font-weight:900;color:#fde047;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">EARNING BREAKUP</div>
-              <div id="prevTodayPayout" style="font-size:13px;font-weight:900;color:#ffffff">Stage 2 Payout: ₹5,600/-</div>
+            <!-- 7. Earning-Wise Breakup Section (Positioned BELOW Today's Earning, 2-Column Grid Layout) -->
+            <div style="width:100%;background:rgba(254,240,138,0.12);border:1px dashed rgba(251,191,36,0.75);border-radius:12px;padding:6px 12px;margin-bottom:8px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <div style="font-size:10px;font-weight:900;color:#fde047;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">EARNING BREAKUP</div>
+              <div id="prevTodayPayout" style="width:100%;display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;font-size:11px;font-weight:900;color:#ffffff">
+                <div style="background:rgba(254,240,138,0.15);border:1px solid rgba(253,224,71,0.6);border-radius:6px;padding:3px 6px;text-align:center">Stage 1 Advance: ₹1,500/-</div>
+                <div style="background:rgba(254,240,138,0.15);border:1px solid rgba(253,224,71,0.6);border-radius:6px;padding:3px 6px;text-align:center">Stage 2 Payout: ₹5,600/-</div>
+              </div>
             </div>
 
             <!-- 8. 3-Column Metrics Grid (FILES | MEMBERS | POTENTIAL PENDING) -->
