@@ -7277,16 +7277,18 @@ function _renderCommDetailTable(partnerId) {
                 <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">SENIOR POTENTIAL EARNING (₹)</label>
                 <input type="text" id="postSeniorPotential" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. ₹5,000/-">
               </div>
-              <div style="margin-top:4px">
-                <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-                  <input type="checkbox" id="postShowSenior" checked onchange="updatePoster()" style="accent-color:#059669"> Show Senior Referrer Section
-                </label>
-              </div>
             </div>
           </div>
-          
-          <!-- Theme & styling Customizer Section -->
-          <div style="border-top:1px solid #e5        <!-- Renderable Canvas Wrapper - Pristine Ultra-Professional Celebration Poster (480x750px) -->
+        </div>
+      </div>
+      
+      <!-- Right Pane: Live Poster Preview -->
+      <div style="flex:1;background:#131B2E;display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto;position:relative">
+        <div id="posterSpinner" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.6);z-index:10;align-items:center;justify-content:center;color:white;font-size:14px">
+          <div style="text-align:center"><i class="fas fa-circle-notch fa-spin fa-2x mb-2"></i><div>Analyzing and populating values…</div></div>
+        </div>
+        
+        <!-- Renderable Canvas Wrapper - Pristine Ultra-Professional Celebration Poster (480x750px) -->
         <div id="posterCanvasWrapper" style="width:480px;height:750px;background:radial-gradient(circle at 50% 25%, #0f2347 0%, #061126 60%, #020610 100%);border:5px double #eab308;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.9), 0 0 40px rgba(234,179,8,0.35);position:relative;box-sizing:border-box;color:#ffffff;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;user-select:none;flex-shrink:0;padding:16px 20px;display:flex;flex-direction:column;align-items:center;overflow:hidden">
           
           <div id="prevName" style="display:none"></div>
