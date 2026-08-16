@@ -2272,6 +2272,7 @@ function _iedRenderHead(){
     {key:'gross',            label:'Gross Earned',  align:'right',  color:'#374151'},
     {key:'net',              label:'Net Earning',   align:'right',  color:'#059669', nosort:true},
     {key:'received',         label:'Released/Paid', align:'right',  color:'#059669'},
+    {key:'pending',          label:'Pending',       align:'right',  color:'#d97706'},
     {key:'potential_earning',label:'Pot. Earning',  align:'right',  color:'#7c3aed'},
     {key:'',                 label:'Status',        align:'left',   nosort:true},
   ];
@@ -2312,7 +2313,7 @@ async function loadIncomeDash(pg=1){
   if(levelFilter) url += '&level='                   + encodeURIComponent(levelFilter);
 
   _iedRenderHead();
-  document.getElementById('iedBody').innerHTML = '<tr><td colspan="17" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+  document.getElementById('iedBody').innerHTML = '<tr><td colspan="18" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
   try{
     const r = await staffFetch(url);
     const d = await r.json();
@@ -2322,7 +2323,7 @@ async function loadIncomeDash(pg=1){
     _iedRenderTable(d.data);
     _iedRenderPagination(d.total, pg, 50);
   } catch(e){
-    document.getElementById('iedBody').innerHTML = '<tr><td colspan="17" style="text-align:center;padding:30px;color:#dc2626">Error: '+e.message+'</td></tr>';
+    document.getElementById('iedBody').innerHTML = '<tr><td colspan="18" style="text-align:center;padding:30px;color:#dc2626">Error: '+e.message+'</td></tr>';
   }
 }
 
@@ -2368,7 +2369,7 @@ function _iedRenderTable(rows){
   window._iedCurrentRows = rows;
   const tbody = document.getElementById('iedBody');
   if(!rows.length){
-    tbody.innerHTML='<tr><td colspan="17" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-chart-bar me-2"></i>No earners found with current filters</td></tr>';
+    tbody.innerHTML='<tr><td colspan="18" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-chart-bar me-2"></i>No earners found with current filters</td></tr>';
     return;
   }
   const _lvlInr = v => v > 0 ? `<span style="font-weight:700">${_meInr(v)}</span>` : `<span style="color:#e5e7eb">—</span>`;
@@ -2385,6 +2386,7 @@ function _iedRenderTable(rows){
   const tGross     = rows.reduce((s,r)=>s+(r.gross_earned||0),0);
   const tNet       = Math.round(tGross * 0.9);
   const tRcv       = rows.reduce((s,r)=>s+(r.received||0),0);
+  const tPending   = rows.reduce((s,r)=>s+(r.pending||0),0);
   const tPot       = rows.reduce((s,r)=>s+(r.potential_earning||0),0);
   const totalsRow = `<tr style="background:#f0fdf4;border-bottom:2px solid #bbf7d0;position:sticky;top:0;z-index:1">
     <td style="padding:8px;text-align:center"><span style="font-size:9px;font-weight:800;color:#059669;background:#dcfce7;padding:2px 5px;border-radius:4px;white-space:nowrap">TOTAL</span></td>
@@ -2400,6 +2402,7 @@ function _iedRenderTable(rows){
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#374151">${_meInr(tGross)}</td>
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#059669">${_meInr(tNet)}</td>
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#059669">${_meInr(tRcv)}</td>
+    <td style="padding:8px 12px;text-align:right;font-weight:800;color:#d97706">${tPending>0?_meInr(tPending):'—'}</td>
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#7c3aed">${tPot>0?_meInr(tPot):'—'}</td>
     <td style="padding:8px 12px"></td>
   </tr>`;
@@ -2437,6 +2440,8 @@ function _iedRenderTable(rows){
     const l0 = Number(m.l0_bonus || 0);
     const gross = m.gross_earned || 0;
     const net = Math.round(gross * 0.9);
+    const rcv = m.received || 0;
+    const pnd = m.pending || 0;
     const pot = Number(m.potential_earning || 0);
     return `<tr id="ied-row-${m.id}" style="border-bottom:1px solid #f3f4f6" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background=''">
       <td style="padding:8px;text-align:center">
@@ -2463,12 +2468,13 @@ function _iedRenderTable(rows){
       <td style="padding:8px 12px;text-align:right;font-size:12px">${_lvlInr(l6)}</td>
       <td style="padding:8px 12px;text-align:right;font-weight:700;color:#374151">${gross>0?_meInr(gross):'<span style="color:#d1d5db">—</span>'}</td>
       <td style="padding:8px 12px;text-align:right;font-weight:700;color:${net>0?'#059669':'#d1d5db'}">${net>0?_meInr(net):'—'}</td>
-      <td style="padding:8px 12px;text-align:right;font-weight:800;color:${m.received>0?'#059669':'#9ca3af'}">${_meInr(m.received)}</td>
+      <td style="padding:8px 12px;text-align:right;font-weight:800;color:${rcv>0?'#059669':'#9ca3af'}">${rcv>0?_meInr(rcv):'—'}</td>
+      <td style="padding:8px 12px;text-align:right;font-weight:800;color:${pnd>0?'#d97706':'#9ca3af'}">${pnd>0?_meInr(pnd):'—'}</td>
       <td style="padding:8px 12px;text-align:right;font-weight:800;color:${pot>0?'#7c3aed':'#9ca3af'}">${pot>0?_meInr(pot):'<span style="color:#d1d5db">—</span>'}</td>
       <td style="padding:8px 12px">${statusPills||'<span style="color:#d1d5db;font-size:11px">—</span>'}</td>
     </tr>
     <tr id="ied-expand-${m.id}" style="display:${expanded?'table-row':'none'}">
-      <td colspan="18" style="padding:0;background:#f5f3ff">
+      <td colspan="19" style="padding:0;background:#f5f3ff">
         <div id="ied-detail-${m.id}" style="padding:14px 28px"></div>
       </td>
     </tr>`;
