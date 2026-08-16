@@ -6054,20 +6054,26 @@ function recalculateTodayPayout() {
       if (dateTo && d > dateTo) return;
       
       activePeriodCount++;
-      const amt = e.commission_amount || 0;
+      const grossAmt = parseFloat(e.commission_amount || 0);
+      const advPaid = parseFloat(e.advance_paid || 0);
+      const balGross = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, grossAmt - advPaid);
+      const netPayoutAmt = (e.net_payout !== undefined && e.net_payout !== null && e.net_payout > 0)
+        ? parseFloat(e.net_payout)
+        : Math.round(balGross * 0.90);
+
       const k = (e.kind || '').toUpperCase();
       const typeStr = (e.income_type || '').toLowerCase();
       
       if (k === 'ADVANCE' || k === 'DVR_ADVANCE' || typeStr.includes('stage 1') || typeStr.includes('advance')) {
-        stage1Amt += amt;
+        stage1Amt += grossAmt;
       } else if (k === 'SLAB_BONUS' || typeStr.includes('bonanza') || typeStr.includes('slab') || typeStr.includes('bonus')) {
-        bonanzaAmt += amt;
+        bonanzaAmt += grossAmt;
       } else if (k === 'EXTRA_COMMISSION' || typeStr.includes('extra')) {
-        extraAmt += amt;
+        extraAmt += grossAmt;
       } else if (k === 'AWARD' || k === 'INCENTIVE' || typeStr.includes('award') || typeStr.includes('incentive') || typeStr.includes('brand')) {
-        awardAmt += amt;
+        awardAmt += grossAmt;
       } else {
-        stage2Amt += amt;
+        stage2Amt += netPayoutAmt;
       }
     }
   });
@@ -6116,12 +6122,12 @@ function recalculateTodayPayout() {
   
   const prevTitle = document.getElementById('prevTodayTitle');
   if (prevTitle) {
-    prevTitle.textContent = isSingleDay ? "★ TODAY'S PAYOUT ★" : "★ PERIOD PAYOUT ★";
+    prevTitle.textContent = "★ TODAY'S PAYOUT ★";
   }
   
   const prevLabelText = document.getElementById('prevTodayLabelText');
   if (prevLabelText) {
-    prevLabelText.textContent = isSingleDay ? "Today's Earning" : "Period Earning";
+    prevLabelText.textContent = "Today's Earning";
   }
   
   const prevTotalTodayEl = document.getElementById('prevTotalToday');
