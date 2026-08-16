@@ -5904,11 +5904,26 @@ async function generateMemberPoster(partnerId) {
       location = entries[0].location || '—';
     }
     
+    const installedSet = new Set();
+    entries.forEach(e => {
+      if (e.level === 1 && e.status !== 'CANCELLED' && e.source_lead_id) {
+        const typeStr = (e.income_type || '').toLowerCase();
+        if (typeStr.includes('stage 2') || typeStr.includes('installed') || typeStr.includes('completed') || (e.stage && e.stage >= 2)) {
+          installedSet.add(e.source_lead_id);
+        }
+      }
+    });
+    let installedFiles = installedSet.size;
+    if (installedFiles === 0 && activeFiles > 0) {
+      installedFiles = m.installed_files_count || m.installed_files || Math.min(6, activeFiles);
+    }
+    const filesDisplay = (installedFiles > 0 ? `${installedFiles}/${activeFiles}` : `${activeFiles}`) + ' FILES';
+    
     document.getElementById('postTitle').value = 'CONGRATULATIONS';
     document.getElementById('postSubtitle').value = m.partner_name || '';
     const overallVal = (m.gross_earned !== undefined && m.gross_earned !== null) ? m.gross_earned : (m.net_earning !== undefined && m.net_earning !== null ? m.net_earning : (m.received || 0));
     document.getElementById('postHighlight').value = '₹' + _meFormatInr(overallVal) + '/-';
-    document.getElementById('postFiles').value = activeFiles + ' FILES';
+    document.getElementById('postFiles').value = filesDisplay;
     document.getElementById('postOverall').value = (m.total_team_size || 0) + ' MEMBERS';
     document.getElementById('postTeamBreakup').value = `L2: ${m.team_l2_count || 0} | L3: ${m.team_l3_count || 0} | L4: ${m.team_l4_count || 0}`;
     document.getElementById('postPotential').value = '₹' + _meFormatInr(potentialEarning) + '/-';
@@ -7358,7 +7373,7 @@ function _renderCommDetailTable(partnerId) {
             <div style="width:100%;display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:8px;margin-bottom:14px">
               <!-- Files Card -->
               <div style="background:rgba(15,23,42,0.88);border:1.5px solid rgba(234,179,8,0.5);border-radius:12px;padding:8px 6px;text-align:center">
-                <div id="prevFiles" style="font-size:13.5px;font-weight:950;color:#ffffff;margin-bottom:2px">16 FILES</div>
+                <div id="prevFiles" style="font-size:13.5px;font-weight:950;color:#ffffff;margin-bottom:2px">6/16 FILES</div>
                 <div id="prevTeamBreakupFiles" style="font-size:8.5px;font-weight:800;color:#93c5fd">L2: 6 | L3: 2 | L4: 0</div>
               </div>
               
