@@ -2591,7 +2591,7 @@ function _updateParentRowFromEntries(partnerId, rows, isIed){
     const gross   = nonCan.reduce((s,e)=>s+(parseFloat(e.commission_amount)||0),0);
     const net     = Math.round(gross * 0.90);
     const received= rows.filter(e=>['RELEASED','PAID'].includes(e.status)).reduce((s,e)=>s+(parseFloat(e.commission_amount)||0),0);
-    const pending = rows.filter(e=>['DRAFT','PENDING','STAGE1_APPROVED'].includes(e.status)).reduce((s,e)=>s+(parseFloat(e.commission_amount)||0),0);
+    const pending = Math.round(rows.filter(e=>['DRAFT','PENDING','STAGE1_APPROVED'].includes(e.status)).reduce((s,e)=>s+(parseFloat(e.commission_amount)||0),0) * 0.90);
     if(cells[6])  cells[6].innerHTML  = _li(lvlSum(0));
     if(cells[7])  cells[7].innerHTML  = _li(lvlSum(1));
     if(cells[8])  cells[8].innerHTML  = _li(lvlSum(2));
