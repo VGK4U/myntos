@@ -852,24 +852,15 @@ def _ops_metrics_for_ids(db: Session, emp_ids: List[int], is_range: bool,
             po_dc = "WHERE DATE(created_at) BETWEEN :d_from AND :d_to"
             po_p = {"d_from": from_date.isoformat(), "d_to": to_date.isoformat()}
         po_sql = text(f"""
-            SELECT emp_id,
+            SELECT store_manager_id AS emp_id,
                 COUNT(*) AS total,
                 COUNT(*) FILTER (WHERE status IN ('confirmed','accepted','in_progress','under_procurement')) AS in_queue,
                 COUNT(*) FILTER (WHERE status IN ('received','payment_received','payment_pending','dispatched')) AS completed,
                 COUNT(*) FILTER (WHERE status = 'hold') AS pending
-            FROM (
-                SELECT id, status, store_manager_id AS emp_id, created_at FROM marketplace_purchase_orders
-                WHERE store_manager_id IN ({ids_csv_po})
-                UNION ALL
-                SELECT id, status,
-                    CAST(created_by AS INTEGER) AS emp_id, created_at
-                FROM marketplace_purchase_orders
-                WHERE created_by ~ '^[0-9]+$'
-                    AND CAST(created_by AS INTEGER) IN ({ids_csv_po})
-                    AND (store_manager_id IS NULL OR store_manager_id NOT IN ({ids_csv_po}))
-            ) sub
-            {po_dc}
-            GROUP BY emp_id
+            FROM marketplace_purchase_orders
+            WHERE store_manager_id IN ({ids_csv_po})
+            {"AND DATE(created_at) BETWEEN :d_from AND :d_to" if is_range else ""}
+            GROUP BY store_manager_id
         """)
         po_rows2 = db.execute(po_sql, po_p).fetchall()
         po_map = {r.emp_id: r for r in po_rows2}
@@ -878,34 +869,24 @@ def _ops_metrics_for_ids(db: Session, emp_ids: List[int], is_range: bool,
         try: db.rollback()
         except: pass
 
-    # 8. PR — count all PRs raised by team (created_by) or assigned (store_manager_id)
+    # 8. PR — count all PRs assigned (store_manager_id)
     pr_map = {}
     try:
         from app.models.marketplace import MarketplaceProcurementRequest
         ids_csv_pr = ','.join(str(i) for i in emp_ids)
         pr_dc = ""; pr_p: dict = {}
         if is_range:
-            pr_dc = "WHERE DATE(created_at) BETWEEN :d_from AND :d_to"
             pr_p = {"d_from": from_date.isoformat(), "d_to": to_date.isoformat()}
         pr_sql = text(f"""
-            SELECT emp_id,
+            SELECT store_manager_id AS emp_id,
                 COUNT(*) AS total,
                 COUNT(*) FILTER (WHERE status = 'ordered') AS in_queue,
                 COUNT(*) FILTER (WHERE status IN ('received','completed')) AS completed,
                 COUNT(*) FILTER (WHERE status IN ('pending','confirmed','payment_received','procurement')) AS pending
-            FROM (
-                SELECT id, status, store_manager_id AS emp_id, created_at FROM marketplace_procurement_requests
-                WHERE store_manager_id IN ({ids_csv_pr})
-                UNION ALL
-                SELECT id, status,
-                    CAST(created_by AS INTEGER) AS emp_id, created_at
-                FROM marketplace_procurement_requests
-                WHERE created_by ~ '^[0-9]+$'
-                    AND CAST(created_by AS INTEGER) IN ({ids_csv_pr})
-                    AND (store_manager_id IS NULL OR store_manager_id NOT IN ({ids_csv_pr}))
-            ) sub
-            {pr_dc}
-            GROUP BY emp_id
+            FROM marketplace_procurement_requests
+            WHERE store_manager_id IN ({ids_csv_pr})
+            {"AND DATE(created_at) BETWEEN :d_from AND :d_to" if is_range else ""}
+            GROUP BY store_manager_id
         """)
         pr_rows2 = db.execute(pr_sql, pr_p).fetchall()
         pr_map = {r.emp_id: r for r in pr_rows2}
