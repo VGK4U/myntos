@@ -6137,7 +6137,22 @@ function updatePoster() {
   setTxt('prevTitle', '★ ' + getVal('postTitle').toUpperCase() + ' ★');
   setTxt('prevSubtitle', getVal('postSubtitle').toUpperCase());
   setTxt('prevHighlight', getVal('postHighlight'));
-  setTxt('prevFiles', getVal('postFiles').toUpperCase());
+  
+  const filesVal = getVal('postFiles').toUpperCase().trim();
+  const prevFilesEl = document.getElementById('prevFiles');
+  if (prevFilesEl) {
+    const match = filesVal.match(/^(\d+)\s*\/\s*(\d+)\s*(.*)$/);
+    if (match) {
+      const installed = match[1];
+      const total = match[2];
+      const rest = match[3] || 'FILES';
+      prevFilesEl.innerHTML = `<span style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#eab308);color:#0f172a;font-weight:950;font-size:11px;padding:1px 5px;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,0.3);margin-right:2px">${installed} INSTALLED</span> <span style="font-size:10.5px;font-weight:800;color:#e2e8f0">/ ${total} ${rest.replace('FILES','').trim() || 'FILES'}</span>`;
+    } else if (filesVal.includes('INSTALLED')) {
+      prevFilesEl.innerHTML = `<span style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#eab308);color:#0f172a;font-weight:950;font-size:11px;padding:1px 5px;border-radius:4px">${filesVal}</span>`;
+    } else {
+      prevFilesEl.textContent = filesVal;
+    }
+  }
   
   const manualToday = getVal('postTodayPayout');
   const prevToday = document.getElementById('prevTodayPayout');
@@ -6274,7 +6289,7 @@ function downloadPoster() {
   
   html2canvas(container, {
     useCORS: true,
-    scale: 2,
+    scale: 3.5,
     backgroundColor: null
   }).then(canvas => {
     const link = document.createElement('a');
@@ -6300,7 +6315,7 @@ function sharePoster() {
   
   html2canvas(container, {
     useCORS: true,
-    scale: 2,
+    scale: 3.5,
     backgroundColor: null
   }).then(canvas => {
     if (spinner) spinner.style.display = 'none';
@@ -6386,7 +6401,7 @@ function shareOnWhatsApp() {
 
   html2canvas(container, {
     useCORS: true,
-    scale: 2,
+    scale: 3.5,
     backgroundColor: null
   }).then(canvas => {
     if (spinner) spinner.style.display = 'none';
