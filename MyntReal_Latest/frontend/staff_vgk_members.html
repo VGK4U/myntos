@@ -5921,7 +5921,9 @@ async function generateMemberPoster(partnerId) {
     setVal('postSeniorEarning', seniorEarning);
     
     const postSeniorPot = document.getElementById('postSeniorPotential');
-    if (postSeniorPot) postSeniorPot.value = '₹' + _meFormatInr((m.senior_potential_earned !== null && m.senior_potential_earned !== undefined) ? m.senior_potential_earned : (activeFiles * 500)) + '/-';
+    const seniorNameUpper = (seniorName || '').toUpperCase().trim();
+    const isVgkSupport = seniorNameUpper.includes('VGK SUPPORT') || seniorNameUpper.includes('SUPPORT') || seniorNameUpper === 'NONE' || seniorNameUpper === '—' || !seniorNameUpper;
+    setChecked('postShowSenior', !isVgkSupport);
     
     setChecked('payTypeStage1', true);
     setChecked('payTypeStage2', true);
@@ -7276,7 +7278,12 @@ function _renderCommDetailTable(partnerId) {
             </div>
           </div>
           <div style="border-top:1px solid #e5e7eb;margin-top:8px;padding-top:12px">
-            <h6 style="font-size:12px;font-weight:700;color:#111827;margin-bottom:8px">SENIOR REFERRER DETAILS</h6>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <h6 style="font-size:12px;font-weight:700;color:#111827;margin:0">SENIOR REFERRER DETAILS</h6>
+              <label style="font-size:11px;font-weight:700;color:#059669;display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none">
+                <input type="checkbox" id="postShowSenior" checked onchange="updatePoster()" style="accent-color:#059669"> Show Senior
+              </label>
+            </div>
             <div style="display:flex;flex-direction:column;gap:8px">
               <div>
                 <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">SENIOR NAME</label>
