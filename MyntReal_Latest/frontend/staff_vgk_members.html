@@ -2783,25 +2783,6 @@ function _renderMeDetailTable(partnerId){
     if(kind==='SLAB_BONUS'){
       return `<span style="background:#fdf4ff;color:#7e22ce;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700"><i class="fas fa-star" style="font-size:8px;margin-right:2px"></i>Bonanza</span>`;
     }
-    if(kind==='EXTRA_COMMISSION'){
-      return `<span style="background:#fdf4ff;color:#7e22ce;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700"><i class="fas fa-star" style="font-size:8px;margin-right:2px"></i>Extra Bonanza</span>`;
-    }
-    if(kind==='ADVANCE'||kind==='DVR_ADVANCE'){
-      const _aLbl=kind==='DVR_ADVANCE'?'Stage 2 Advance':'Stage 1 Advance';
-      const _lvl =(level && level > 0) ? ` <span style="opacity:.75">L${level}</span>` : '';
-      return `<span style="background:#fef3c7;color:#d97706;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">${_aLbl}${_lvl}</span>`;
-    }
-    if(kind==='BRAND_ADVANCE'||kind==='BRAND_COMMISSION'){
-      return `<span style="background:#e0f2fe;color:#0369a1;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">Brand Comm.</span>`;
-    }
-    const m = _lvlMeta[level];
-    const name = (m && m.lbl) || level_label || 'Final Comm.';
-    const bg   = (m && m.bg)  || '#f1f5f9';
-    const c    = (m && m.c)   || '#475569';
-    const lvlTag = (level && level > 0) ? ` <span style="opacity:.75">L${level}</span>` : '';
-    return `<span style="background:${bg};color:${c};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">${name}${lvlTag}</span>`;
-  };
-
     const totGross        = rows.reduce((s,e)=>(e.status==='CANCELLED'?s:s+parseFloat(e.commission_amount||0)),0);
     const totDealVal      = rows.reduce((s,e)=>(e.status==='CANCELLED'?s:s+parseFloat(e.deal_value||e.base_value||0)),0);
     const totStg1         = rows.reduce((s,e)=>{
@@ -2827,28 +2808,12 @@ function _renderMeDetailTable(partnerId){
       const adv = isC ? parseFloat(e.advance_paid || 0) : 0;
       return s + (isC ? (e.balance_gross !== undefined && e.balance_gross !== null ? parseFloat(e.balance_gross) : Math.max(0, gross - adv)) : gross);
     }, 0);
-    const totAdmin        = rows.reduce((s,e)=>{
-      if (e.status === 'CANCELLED') return s;
-      const _k = String(e.kind || 'COMMISSION').toUpperCase();
-      const isC = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
-      const gross = parseFloat(e.commission_amount || 0);
-      const adv = isC ? parseFloat(e.advance_paid || 0) : 0;
-      const bal = isC ? (e.balance_gross !== undefined && e.balance_gross !== null ? parseFloat(e.balance_gross) : Math.max(0, gross - adv)) : gross;
-      return s + Math.round(bal * 0.08);
-    }, 0);
-    const totTds          = rows.reduce((s,e)=>{
-      if (e.status === 'CANCELLED') return s;
-      const _k = String(e.kind || 'COMMISSION').toUpperCase();
-      const isC = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
-      const gross = parseFloat(e.commission_amount || 0);
-      const adv = isC ? parseFloat(e.advance_paid || 0) : 0;
-      const bal = isC ? (e.balance_gross !== undefined && e.balance_gross !== null ? parseFloat(e.balance_gross) : Math.max(0, gross - adv)) : gross;
-      return s + Math.round(bal * 0.02);
-    }, 0);
-    const totNetBal       = totBalGross - totAdmin - totTds;
-    const totNet          = totNetBal;
-    const totNetEarned    = Math.round(totGross * 0.90);
-    const totalAll = allRows.length;
+    const totAdmin        = Math.round(totGross * 0.08);
+    const totTds          = Math.round(totGross * 0.02);
+    const totNet          = Math.round(totGross * 0.90);
+    const totRcvNet       = rows.reduce((s,e) => (['RELEASED','PAID'].includes(e.status) ? s + Math.round(parseFloat(e.commission_amount||0)*0.90) : s), 0);
+    const totPendingNet   = Math.max(0, totNet - totRcvNet);
+    const totalAll        = allRows.length;
 
     const TH = (txt, sortKey, align='left', extra='') => {
       if (!sortKey) return `<th style="padding:7px 10px;text-align:${align};color:#6b7280;font-weight:700;font-size:10.5px;text-transform:uppercase;${extra}">${txt}</th>`;
@@ -2860,10 +2825,14 @@ function _renderMeDetailTable(partnerId){
     };
 
     detail.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
       <span style="font-size:12px;font-weight:700;color:#7c3aed">
         <i class="fas fa-layer-group me-1"></i>Date-wise Lead &amp; Income Breakdown — ${rows.length}${rows.length<totalAll?' of '+totalAll:''} entr${totalAll===1?'y':'ies'} (Common Filters Applied)
       </span>
+      <div style="display:flex;align-items:center;gap:12px;font-size:11.5px">
+        <span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:6px;font-weight:700">Released/Paid: ${_meInr(totRcvNet)}</span>
+        <span style="background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:6px;font-weight:700">Pending: ${_meInr(totPendingNet)}</span>
+      </div>
     </div>
     <div style="overflow-x:auto">
     <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -2914,7 +2883,7 @@ function _renderMeDetailTable(partnerId){
           const group = leadGroupMap[key];
           const gEntries = group.entries;
 
-          let subDealVal = 0, subGross = 0, subStg1 = 0, subStg2 = 0, subAdvPaid = 0, subBalGross = 0, subAdmin = 0, subTds = 0, subNet = 0;
+          let subDealVal = 0, subGross = 0, subStg1 = 0, subStg2 = 0, subAdvPaid = 0, subBalGross = 0;
           let leadDealValueRecorded = false;
 
           const entryRowsHtml = gEntries.map(e => {
@@ -2933,10 +2902,9 @@ function _renderMeDetailTable(partnerId){
             const advPaid  = isComm ? parseFloat(e.advance_paid || 0) : 0;
             const balGross = isComm ? ((e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, grossAmt - advPaid)) : grossAmt;
 
-            const baseForDeductions = isComm ? balGross : grossAmt;
-            let adminVal = Math.round(baseForDeductions * 0.08);
-            let tdsVal   = Math.round(baseForDeductions * 0.02);
-            let netVal   = Math.max(0, Math.round(baseForDeductions - adminVal - tdsVal));
+            let adminVal = Math.round(grossAmt * 0.08);
+            let tdsVal   = Math.round(grossAmt * 0.02);
+            let netVal   = Math.round(grossAmt * 0.90);
 
             if (e.status !== 'CANCELLED') {
               if (!leadDealValueRecorded && dealVal > 0) {
@@ -2948,9 +2916,6 @@ function _renderMeDetailTable(partnerId){
               subStg2 += stg2Adv;
               subAdvPaid += advPaid;
               subBalGross += balGross;
-              subAdmin += adminVal;
-              subTds += tdsVal;
-              subNet += netVal;
             }
 
             const dealValHtml  = dealVal > 0 ? _meInr(dealVal) : '—';
@@ -2990,6 +2955,10 @@ function _renderMeDetailTable(partnerId){
             </tr>`;
           }).join('');
 
+          const subAdmin = Math.round(subGross * 0.08);
+          const subTds   = Math.round(subGross * 0.02);
+          const subNet   = Math.round(subGross * 0.90);
+
           const subtotalRowHtml = `<tr style="background:#f5f3ff;border-top:1.5px dashed #c4b5fd;border-bottom:2px solid #ddd6fe;font-weight:800">
             <td colspan="5" style="padding:6px 10px;text-align:left;color:#5b21b6;font-size:11px">
               <i class="fas fa-calculator me-1" style="color:#7c3aed"></i>Subtotal for ${group.client_name} (${gEntries.length} ${gEntries.length === 1 ? 'entry' : 'entries'})
@@ -3025,7 +2994,7 @@ function _renderMeDetailTable(partnerId){
           <td style="padding:8px 10px;text-align:right;color:#2563eb">${_meInr(totBalGross)}</td>
           <td style="padding:8px 10px;text-align:right;color:#d97706">${_meInr(totAdmin)}</td>
           <td style="padding:8px 10px;text-align:right;color:#dc2626">${_meInr(totTds)}</td>
-          <td style="padding:8px 10px;text-align:right;color:#059669">${_meInr(totNet)}</td>
+          <td style="padding:8px 10px;text-align:right;color:#059669;font-weight:900">${_meInr(totNet)}</td>
           <td></td>
         </tr>
       </tfoot>
