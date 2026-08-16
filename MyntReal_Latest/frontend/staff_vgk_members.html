@@ -5783,6 +5783,11 @@ async function generateMemberPoster(partnerId) {
   const spinner = document.getElementById('posterSpinner');
   spinner.style.display = 'flex';
   
+  if (document.getElementById('postThemePreset')) {
+    document.getElementById('postThemePreset').value = 'celebration_graphic';
+    changeThemePreset();
+  }
+  
   // Reset avatar / image elements
   document.getElementById('prevImg').style.display = 'none';
   document.getElementById('prevAvatar').style.display = 'none';
@@ -6185,23 +6190,16 @@ function changeThemePreset() {
   
   let bg, cardBg, text, accent, border;
   
-  if (preset === 'celebration_graphic') {
+  if (preset === 'celebration_graphic' || preset === 'dark_navy' || !preset) {
     bg = '#000c28'; cardBg = '#001744'; text = '#F8FAFC'; accent = '#fbbf24'; border = '#d4af37';
     if (customColorsDiv) customColorsDiv.style.display = 'none';
     if (canvas) {
-      canvas.style.backgroundImage = "url('/public/poster-celebration-template-clean.jpg?v=1786846602')";
+      canvas.style.backgroundImage = "url('/public/poster-celebration-template-clean.jpg?v=1786848800')";
       canvas.style.backgroundSize = "100% 100%";
       canvas.style.backgroundPosition = "center center";
       canvas.style.backgroundRepeat = "no-repeat";
       canvas.style.border = "6px double #d4af37";
     }
-  } else if (preset === 'dark_navy') {
-    if (canvas) {
-      canvas.style.backgroundImage = "none";
-      canvas.style.background = "radial-gradient(circle at 50% 25%, #002366 0%, #001233 60%, #000511 100%)";
-    }
-    bg = '#0A0F1D'; cardBg = '#131B2E'; text = '#F8FAFC'; accent = '#fbbf24'; border = '#d4af37';
-    if (customColorsDiv) customColorsDiv.style.display = 'none';
   } else if (preset === 'light_cream') {
     if (canvas) { canvas.style.backgroundImage = "none"; }
     bg = '#FAF9F6'; cardBg = '#ffffff'; text = '#0f172a'; accent = '#b45309'; border = '#d4af37';
@@ -7266,7 +7264,8 @@ function _renderCommDetailTable(partnerId) {
               <div>
                 <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">THEME PRESET</label>
                 <select id="postThemePreset" onchange="changeThemePreset()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px;background-color:white;outline:none">
-                  <option value="dark_navy">Luxury Dark Navy (Default)</option>
+                  <option value="celebration_graphic" selected>Official Celebration Artwork (Attached Template)</option>
+                  <option value="dark_navy">Luxury Dark Navy</option>
                   <option value="light_cream">Classic Light Cream</option>
                   <option value="emerald_success">Emerald Green Gold</option>
                   <option value="royal_blue">Royal Blue Gold</option>
