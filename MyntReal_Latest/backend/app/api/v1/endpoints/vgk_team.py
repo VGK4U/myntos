@@ -4564,18 +4564,36 @@ def member_income_entries_detail(
         _extra_params["comm_svc_id"] = community_service_id
     _st_list = [s.strip().upper() for s in status.split(',') if s.strip()] if isinstance(status, str) and status.strip() else []
     _is_brp = 'BALANCE_RECEIVED_PLUS' in _st_list
-    _other_st = [s for s in _st_list if s != 'BALANCE_RECEIVED_PLUS']
-    if _st_list:
-        _brp_sub = "e.source_lead_id IN (SELECT id FROM crm_leads WHERE solar_pipeline_status IN ('balance_received','subsidy_pending','completed'))"
-        if _is_brp:
-            if _other_st:
-                _extra_where += " AND (" + _brp_sub + " OR e.status = ANY(:st_list))"
-                _extra_params["st_list"] = _other_st
-            else:
-                _extra_where += " AND " + _brp_sub
-        else:
-            _extra_where += " AND e.status = ANY(:st_list)"
-            _extra_params["st_list"] = _st_list
+    _is_installed = 'INSTALLED' in _st_list
+    _is_won = 'WON' in _st_list
+    _is_submitted = 'SUBMITTED' in _st_list
+
+    _special_keys = {'BALANCE_RECEIVED_PLUS', 'INSTALLED', 'WON', 'SUBMITTED'}
+    _standard_st = [s for s in _st_list if s not in _special_keys]
+
+    _cond_parts = []
+    if _is_brp:
+        _cond_parts.append(
+            "e.source_lead_id IN (SELECT id FROM crm_leads WHERE solar_pipeline_status IN ('balance_received','subsidy_pending','completed'))"
+        )
+    if _is_installed:
+        _cond_parts.append(
+            "e.source_lead_id IN (SELECT id FROM crm_leads WHERE status IN ('completed', 'installed', 'subsidy_pending') OR solar_pipeline_status IN ('completed', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed', 'net_meter_pending', 'balance_pending', 'balance_received'))"
+        )
+    if _is_won:
+        _cond_parts.append(
+            "e.source_lead_id IN (SELECT id FROM crm_leads WHERE status = 'won' OR solar_pipeline_status IN ('won', 'order_placed', 'dispatched', 'delivered'))"
+        )
+    if _is_submitted:
+        _cond_parts.append(
+            "e.source_lead_id IN (SELECT id FROM crm_leads WHERE status IN ('submitted', 'application_submitted') OR solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue'))"
+        )
+    if _standard_st:
+        _cond_parts.append("e.status = ANY(:st_list)")
+        _extra_params["st_list"] = _standard_st
+
+    if _cond_parts:
+        _extra_where += f" AND ({' OR '.join(_cond_parts)})"
     try:
         rows = db.execute(text(
             "SELECT e.id, e.entry_number, e.status, e.kind, e.level, "
