@@ -8525,6 +8525,65 @@ def _validate_freelancer_lead_access(lead: CRMLead, current_employee: StaffEmplo
             raise HTTPException(status_code=403, detail="Access denied: Lead is not assigned to you")
 
 
+def _get_lead_staff_visits(db: Session, lead: CRMLead) -> list:
+    """
+    DC-STAFF-VISITS-001: Fetch all staff journey visits tagged to this lead.
+    Supports structured lead_id, notes tag, or customer mobile/name search.
+    """
+    visits = []
+    if not lead:
+        return visits
+
+    phone_clean = (lead.phone or '').strip()
+    name_clean = (lead.name or '').strip()
+
+    try:
+        query = text("""
+            SELECT j.id, j.employee_id, j.date, j.start_time, j.end_time,
+                   j.total_distance_km, j.total_duration_minutes, j.photo_path,
+                   j.compressed_photo_path, j.reimbursement_amount, j.notes, j.client_name,
+                   e.full_name, e.first_name, e.last_name, e.emp_code
+            FROM staff_journeys j
+            JOIN staff_employees e ON e.id = j.employee_id
+            WHERE (
+                (j.notes ILIKE :lead_tag OR j.purpose_description ILIKE :lead_tag)
+                OR (:phone != '' AND (j.notes LIKE :phone_tag OR j.client_name LIKE :phone_tag))
+                OR (:name != '' AND j.client_name ILIKE :name_tag)
+            )
+            ORDER BY j.start_time DESC
+        """)
+        rows = db.execute(query, {
+            'lead_tag': f'%lead:{lead.id}%',
+            'phone': phone_clean,
+            'phone_tag': f'%{phone_clean}%' if phone_clean else '',
+            'name': name_clean,
+            'name_tag': f'%{name_clean}%' if name_clean else ''
+        }).fetchall()
+
+        for j in rows:
+            emp_name = (j.full_name or f"{j.first_name or ''} {j.last_name or ''}".strip() or j.emp_code or 'Staff Member').strip()
+            photo_url = j.compressed_photo_path or j.photo_path or ''
+            if photo_url and not photo_url.startswith('http'):
+                photo_url = '/' + photo_url.lstrip('/')
+
+            visits.append({
+                'journey_id': j.id,
+                'staff_name': emp_name,
+                'staff_code': j.emp_code,
+                'travel_date': j.date.isoformat() if hasattr(j.date, 'isoformat') else str(j.date),
+                'start_time': j.start_time.isoformat() if hasattr(j.start_time, 'isoformat') else str(j.start_time),
+                'distance_km': round(float(j.total_distance_km or 0), 2),
+                'time_spent_mins': round(float(j.total_duration_minutes or 0), 1),
+                'photo_url': photo_url,
+                'expenses_amount': round(float(j.reimbursement_amount or 0), 2),
+                'notes': j.notes or j.client_name or ''
+            })
+    except Exception as e:
+        print(f"[JOURNEY-VISITS-ERR] Failed to fetch visits for lead {lead.id}: {e}")
+
+    return visits
+
+
 @router.get("/leads/{lead_id}")
 def get_lead(
     lead_id: int,
@@ -8763,8 +8822,12 @@ def get_lead(
                 ).scalar()
                 if _min_tx:
                     lead_dict['first_payment_received_date'] = _min_tx.isoformat() if hasattr(_min_tx, 'isoformat') else str(_min_tx)
-        except Exception:
-            pass
+        # DC-STAFF-VISITS-001: Attach staff journey visit history tagged to this lead
+        try:
+            lead_dict['staff_visits'] = _get_lead_staff_visits(db, lead)
+        except Exception as _sve:
+            print(f"[CRM-WARNING] Error fetching staff_visits for lead {lead.id}: {_sve}")
+            lead_dict['staff_visits'] = []
 
         return {
             'success': True,

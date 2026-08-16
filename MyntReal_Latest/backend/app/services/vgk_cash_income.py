@@ -416,6 +416,74 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
             continue
 
         commission = _level_comm_overrides.get(level) or _calc_comm(commission_base, pct, 'PCT', Decimal('0'))
+
+        # DC-DELAYED-BANK-L5-001: Delayed Bank Stage L5 50% Pool Reduction & Multi-Visit Incentive
+        tagged_visits_count = 0
+        if level == 5:
+            at_bank_date = getattr(lead, 'at_bank_date', None) or getattr(lead, 'stage_updated_at', None)
+            days_at_bank = 0
+            if (getattr(lead, 'stage', '') or '').upper() in ('AT_BANK', 'BANK_SUBMISSION', 'WAITING_FOR_BANK_LOAN') and at_bank_date:
+                now_dt = _get_ist()
+                days_at_bank = (now_dt.date() - (at_bank_date.date() if hasattr(at_bank_date, 'date') else at_bank_date)).days
+
+            try:
+                tagged_visits_count = db.execute(text("""
+                    SELECT COUNT(DISTINCT j.id)
+                    FROM staff_journeys j
+                    WHERE (j.notes ILIKE :lead_tag OR j.purpose_description ILIKE :lead_tag)
+                       OR (:phone != '' AND (j.notes LIKE :phone_tag OR j.client_name LIKE :phone_tag))
+                       OR (:name != '' AND j.client_name ILIKE :name_tag)
+                """), {
+                    'lead_tag': f'%lead:{lead.id}%',
+                    'phone': (getattr(lead, 'phone', '') or '').strip(),
+                    'phone_tag': f'%{(getattr(lead, "phone", "") or "").strip()}%' if (getattr(lead, 'phone', '') or '').strip() else '',
+                    'name': (getattr(lead, 'name', '') or '').strip(),
+                    'name_tag': f'%{(getattr(lead, "name", "") or "").strip()}%' if (getattr(lead, 'name', '') or '').strip() else ''
+                }).scalar() or 0
+            except Exception as _tve:
+                logger.warning(f'[VGK-CI] Journey visit count check failed: {_tve}')
+
+            first_payment_received = getattr(lead, 'first_payment_received', False) or (getattr(lead, 'deal_value_received', 0) or 0) > 0
+            if days_at_bank > 10 and not first_payment_received and tagged_visits_count >= 1:
+                commission = (commission * Decimal('0.50')).quantize(Decimal('0.01'))
+                logger.info(f'[VGK-CI] Lead {lead.id} L5 pool reduced to 50% (₹{commission}) — days_at_bank={days_at_bank}, visits={tagged_visits_count}')
+
+            # DC-MULTI-VISIT-BONUS-001: Staff who logged >= 2 journey visits gets ONLY ₹250 flat extra incentive
+            if tagged_visits_count >= 2 and partner:
+                try:
+                    bonus_exists = db.query(VGKCashIncomeEntry).filter(
+                        VGKCashIncomeEntry.company_id == company_id,
+                        VGKCashIncomeEntry.source_lead_id == lead.id,
+                        VGKCashIncomeEntry.partner_id == partner.id,
+                        VGKCashIncomeEntry.kind == 'MULTI_VISIT_BONUS',
+                        VGKCashIncomeEntry.status != 'CANCELLED'
+                    ).first()
+                    if not bonus_exists:
+                        db.flush()
+                        bonus_entry = VGKCashIncomeEntry(
+                            company_id = company_id,
+                            entry_number = _next_entry_number(db, company_id),
+                            partner_id = partner.id,
+                            source_lead_id = lead.id,
+                            category_id = category_id,
+                            level = 5,
+                            income_date = getattr(lead, 'income_date', None) or _get_ist().date(),
+                            deal_value_total = deal_total,
+                            deal_value_excl_tax = deal_ex_tax,
+                            commission_pct = Decimal('0'),
+                            commission_amount = Decimal('250.00'),
+                            admin_charges = Decimal('20.00'),
+                            tds_amount = Decimal('5.00'),
+                            net_payout = Decimal('225.00'),
+                            kind = 'MULTI_VISIT_BONUS',
+                            status = 'DRAFT',
+                            notes = f'₹250 Extra Multi-Visit Incentive (Staff logged {tagged_visits_count} visits for Lead #{lead.id})'
+                        )
+                        db.add(bonus_entry)
+                        logger.info(f'[VGK-CI] Lead {lead.id} ₹250 multi-visit bonus created for partner {partner.partner_code}')
+                except Exception as _mve:
+                    logger.warning(f'[VGK-CI] Multi-visit bonus creation failed (non-fatal): {_mve}')
+
         # Flush before generating the next entry_number so the sequence counter
         # reflects any previously-added entries in this same batch.
         db.flush()

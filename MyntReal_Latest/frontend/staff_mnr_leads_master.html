@@ -1133,6 +1133,17 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
         </div>
       </div>
 
+      <!-- Staff Visit / Journey Details Section — DC Protocol Aug 2026 -->
+      <div class="form-section">
+        <div class="form-section-title" style="color:#4f46e5;border-bottom-color:#c7d2fe;display:flex;align-items:center;justify-content:space-between">
+          <span><i class="fas fa-route me-1" style="color:#6366f1"></i>Staff Visit / Journey Details</span>
+          <span id="ef_visit_count_badge" class="badge" style="font-size:11px;background:#6366f1;color:white;padding:2px 8px;border-radius:10px;font-weight:500">0 Visits</span>
+        </div>
+        <div id="ef_staff_visits_container" style="margin-top:8px">
+          <div class="text-muted text-center py-2" style="font-size:12px;color:#9ca3af"><i class="fas fa-info-circle me-1"></i>No staff journey visits logged for this lead yet.</div>
+        </div>
+      </div>
+
       <!-- Handler Support Confirmation — DC Protocol Apr 2026 -->
       <div class="form-section" id="ef_confirm_section" style="display:none">
         <div class="form-section-title" style="color:#166534;border-bottom-color:#bbf7d0"><i class="fas fa-check-circle me-1"></i>Handler Support Confirmation</div>
@@ -3506,10 +3517,9 @@ function openEdit(leadId){
   }
   sv('ef_tele_id',l.telecaller_id||'');sv('ef_tele_search','');
   efRenderSelected('tele','staff',l.telecaller_id||'',l.telecaller_name||'');
-  if(l.field_staff_id){sv('ef_showroom_id',l.field_staff_id);sv('ef_showroom_type','staff');}else if(l.showroom_vgk_id){sv('ef_showroom_id',l.showroom_vgk_id);sv('ef_showroom_type','partner');}else if(l.associated_partner_id){sv('ef_showroom_id',l.associated_partner_id);sv('ef_showroom_type','partner');}else{sv('ef_showroom_id','');sv('ef_showroom_type','');}sv('ef_showroom_search','');
-  // DC-SHOWROOM-VGK-001: resolve display name — showroom_vgk_id partner (may equal associated_partner)
-  const _shwName=l.field_staff_id?l.field_staff_name:(l.showroom_vgk_id?(l.showroom_vgk_id===l.associated_partner_id?l.associated_partner_name:(l.showroom_vgk_name||String(l.showroom_vgk_id))):l.associated_partner_name)||'';
-  efRenderSelected('showroom',l.field_staff_id?'staff':((l.showroom_vgk_id||l.associated_partner_id)?'partner':''),l.field_staff_id||l.showroom_vgk_id||l.associated_partner_id||'',_shwName);
+  if(l.field_staff_id){sv('ef_showroom_id',l.field_staff_id);sv('ef_showroom_type','staff');}else if(l.showroom_vgk_id){sv('ef_showroom_id',l.showroom_vgk_id);sv('ef_showroom_type','partner');}else{sv('ef_showroom_id','');sv('ef_showroom_type','');}sv('ef_showroom_search','');
+  const _shwName=l.field_staff_id?l.field_staff_name:(l.showroom_vgk_id?(l.showroom_vgk_name||String(l.showroom_vgk_id)):'');
+  efRenderSelected('showroom',l.field_staff_id?'staff':(l.showroom_vgk_id?'partner':''),l.field_staff_id||l.showroom_vgk_id||'',_shwName);
   sv('ef_support_staff_id',l.support_staff_id||'');sv('ef_support_staff_search','');
   efRenderSelected('support_staff','staff',l.support_staff_id||'',l.support_staff_name||'');
   sv('ef_tech1_id',l.technical_staff1_id||'');sv('ef_tech1_search','');
@@ -3519,6 +3529,7 @@ function openEdit(leadId){
   document.getElementById('ef_src_results').style.display='none';document.getElementById('ef_guru_results').style.display='none';document.getElementById('ef_z_guru_results').style.display='none';document.getElementById('ef_core_results').style.display='none';document.getElementById('ef_fs_results').style.display='none';document.getElementById('ef_tele_results').style.display='none';document.getElementById('ef_showroom_results').style.display='none';document.getElementById('ef_support_staff_results').style.display='none';document.getElementById('ef_tech1_results').style.display='none';document.getElementById('ef_tech_results').style.display='none';document.getElementById('ef_community_results').style.display='none';
   CRMHandlerConfirm.open('ef_confirm_section', 'ef_confirm_rows', l, HC_CONFIG_MASTER);
   CRMHandlerConfirm.loadAuditLog(l.id, 'ef_audit_log_rows');
+  renderStaffVisitsSection(l);
   document.getElementById('saveError').style.display='none';
   document.getElementById('btnSaveLead').disabled=false;
   document.getElementById('editModal').classList.add('open');
@@ -3532,6 +3543,85 @@ function openEdit(leadId){
 }
 
 function closeEditModal(){document.getElementById('editModal').classList.remove('open');document.body.style.overflow='';editingLead=null;}
+
+function renderStaffVisitsSection(lead) {
+  const container = document.getElementById('ef_staff_visits_container');
+  const badge = document.getElementById('ef_visit_count_badge');
+  if (!container) return;
+
+  const visits = lead.staff_visits || [];
+  if (badge) badge.textContent = `${visits.length} Visit${visits.length === 1 ? '' : 's'}`;
+
+  if (!visits.length) {
+    container.innerHTML = `
+      <div class="text-muted text-center py-2" style="font-size:12px;color:#9ca3af">
+        <i class="fas fa-info-circle me-1"></i>No staff journey visits logged for this lead yet.
+      </div>`;
+    return;
+  }
+
+  let html = `
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered mb-0 align-middle" style="font-size:11.5px">
+        <thead class="table-light">
+          <tr>
+            <th>Staff Name</th>
+            <th>Date & Time</th>
+            <th>Distance (Km)</th>
+            <th>Time Spent</th>
+            <th class="text-center">Photo Proof</th>
+            <th>Tagged Expenses</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+  visits.forEach(v => {
+    const photoBtn = v.photo_url ? `
+      <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size:11px" onclick="previewVisitPhoto('${esc(v.photo_url)}', '${esc(v.staff_name)}')">
+        <i class="fas fa-image me-1"></i>View Photo
+      </button>` : '<span class="text-muted">—</span>';
+
+    const expDisplay = v.expenses_amount > 0 ? `
+      <span class="text-danger font-weight-bold">₹${v.expenses_amount.toLocaleString('en-IN')}</span>` : '<span class="text-muted">—</span>';
+
+    html += `
+      <tr>
+        <td><strong>${esc(v.staff_name)}</strong> ${v.staff_code ? `<small class="text-muted">(${esc(v.staff_code)})</small>` : ''}</td>
+        <td>${esc(v.travel_date)} <small class="text-muted">${v.start_time ? v.start_time.slice(11, 16) : ''}</small></td>
+        <td>${v.distance_km} km</td>
+        <td>${v.time_spent_mins} mins</td>
+        <td class="text-center">${photoBtn}</td>
+        <td>${expDisplay}</td>
+      </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  container.innerHTML = html;
+}
+
+function previewVisitPhoto(photoUrl, staffName) {
+  let modal = document.getElementById('visitPhotoPreviewModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'visitPhotoPreviewModal';
+    modal.className = 'modal-overlay';
+    modal.style.zIndex = '10000';
+    modal.innerHTML = `
+      <div class="modal-box" style="max-width:550px">
+        <div class="modal-header py-2" style="background:#4f46e5;color:white">
+          <h5 class="modal-title mb-0" id="visitPhotoModalTitle" style="font-size:14px"><i class="fas fa-camera me-1"></i>Visit Photo Proof</h5>
+          <button class="modal-close text-white" onclick="document.getElementById('visitPhotoPreviewModal').style.display='none'">&times;</button>
+        </div>
+        <div class="modal-body text-center p-3">
+          <img id="visitPhotoModalImg" src="" style="max-width:100%;max-height:420px;border-radius:6px;border:1px solid #e2e8f0;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1)">
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  document.getElementById('visitPhotoModalTitle').innerHTML = `<i class="fas fa-camera me-1"></i>Photo Proof — ${esc(staffName)}`;
+  document.getElementById('visitPhotoModalImg').src = photoUrl;
+  modal.style.display = 'flex';
+}
 
 // DC-ETC-CRM-EDIT-001: Open the standard CRM editModal for an ETC CRM-linked lead.
 // Fetches the full CRM lead, injects into _leadsCache, then calls openEdit().
@@ -4497,7 +4587,7 @@ function inlineHandlerEdit(td) {
       } else if (type === 'handler_showroom') {
         // DC-SHOWROOM-TYPE-001: both 'partner' and 'vgk_partner' route to associated_partner_id
         // DC-INLINE-SHOWROOM-VGK-001: mirror showroom_vgk_id in local state
-        if (selType === 'partner' || selType === 'vgk_partner') { lead.associated_partner_id = parseInt(selId)||null; lead.associated_partner_name = selName||null; lead.field_staff_id = null; lead.field_staff_name = null; lead.showroom_vgk_id = parseInt(selId)||null; }
+        if (selType === 'partner' || selType === 'vgk_partner') { lead.associated_partner_id = parseInt(selId)||null; lead.associated_partner_name = selName||null; lead.field_staff_id = null; lead.field_staff_name = null; lead.showroom_vgk_id = null; }
         else { lead.field_staff_id = parseInt(selId)||null; lead.field_staff_name = selName||null; lead.associated_partner_id = null; lead.showroom_vgk_id = null; }
         td.dataset.val = selId||''; td.dataset.name = selName||''; td.dataset.valtype = selType||'';
         td.innerHTML = selId ? `<span class="handler-chip showroom"><span class="hc-name"><i class="fas fa-user-tie" style="font-size:8.5px;margin-right:2px"></i>${esc(selName)}</span><span class="hc-id">${esc(String(selId))}</span></span>` : '<span style="color:#d1d5db">—</span>';
