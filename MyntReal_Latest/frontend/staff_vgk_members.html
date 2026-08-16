@@ -7273,7 +7273,27 @@ function _renderCommDetailTable(partnerId) {
               
               <div id="customColorsContainer" style="display:none;flex-direction:column;gap:6px;background:#f3f4f6;padding:8px;border-radius:6px;border:1px solid #e5e7eb">
                 <div style="display:flex;justify-content:space-between;align-items:center">
-                  <span style="font-siz        <!-- Renderable Canvas Wrapper - Pristine Ultra-Professional Celebration Poster (450x720px) -->
+                  <span style="font-size:10px;color:#374151">Canvas BG:</span>
+                  <input type="color" id="postColorBg" value="#0A0F1D" oninput="changeCustomColors()" style="border:none;width:32px;height:20px;cursor:pointer">
+                </div>
+              </div>
+              
+              <div>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">IMAGES &amp; STYLING INSTRUCTIONS</label>
+                <textarea id="postImageInstructions" oninput="updatePoster()" style="width:100%;height:60px;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px;outline:none;resize:none" placeholder="e.g. Use transparent PNG photos. Recommended size: 1080x1920."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right Pane: Live Poster Preview -->
+      <div style="flex:1;background:#131B2E;display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto;position:relative">
+        <div id="posterSpinner" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.6);z-index:10;align-items:center;justify-content:center;color:white;font-size:14px">
+          <div style="text-align:center"><i class="fas fa-circle-notch fa-spin fa-2x mb-2"></i><div>Analyzing and populating values…</div></div>
+        </div>
+        
+        <!-- Renderable Canvas Wrapper - Pristine Ultra-Professional Celebration Poster (450x720px) -->
         <div id="posterCanvasWrapper" style="width:450px;height:720px;background:radial-gradient(circle at 50% 25%, #0f2347 0%, #061126 60%, #020610 100%);border:5px double #eab308;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.9), 0 0 40px rgba(234,179,8,0.35);position:relative;box-sizing:border-box;color:#ffffff;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;user-select:none;flex-shrink:0;padding:16px 18px;display:flex;flex-direction:column;align-items:center;overflow:hidden">
           
           <div id="prevName" style="display:none"></div>
