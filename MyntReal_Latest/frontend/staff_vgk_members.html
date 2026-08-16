@@ -6166,17 +6166,21 @@ function updatePoster() {
   
   const filesVal = getVal('postFiles').toUpperCase().trim();
   const prevFilesEl = document.getElementById('prevFiles');
+  const prevTeamBreakupFilesEl = document.getElementById('prevTeamBreakupFiles');
   if (prevFilesEl) {
     const match = filesVal.match(/^(\d+)\s*\/\s*(\d+)\s*(.*)$/);
     if (match) {
       const installed = match[1];
       const total = match[2];
-      const rest = match[3] || 'FILES';
-      prevFilesEl.innerHTML = `<span style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#eab308);color:#0f172a;font-weight:950;font-size:11px;padding:1px 5px;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,0.3);margin-right:2px">${installed} INSTALLED</span> <span style="font-size:10.5px;font-weight:800;color:#e2e8f0">/ ${total} ${rest.replace('FILES','').trim() || 'FILES'}</span>`;
-    } else if (filesVal.includes('INSTALLED')) {
-      prevFilesEl.innerHTML = `<span style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#eab308);color:#0f172a;font-weight:950;font-size:11px;padding:1px 5px;border-radius:4px">${filesVal}</span>`;
+      prevFilesEl.innerHTML = `<span style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#eab308);color:#0f172a;font-weight:950;font-size:11.5px;padding:1px 5px;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,0.3)">${installed} INSTALLED</span>`;
+      if (prevTeamBreakupFilesEl) {
+        prevTeamBreakupFilesEl.innerHTML = `<span style="font-size:8.5px;font-weight:900;color:#93c5fd;letter-spacing:0.5px">${total} SUBMITTED</span>`;
+      }
     } else {
       prevFilesEl.textContent = filesVal;
+      if (prevTeamBreakupFilesEl) {
+        prevTeamBreakupFilesEl.innerHTML = `<span style="font-size:8.5px;font-weight:900;color:#93c5fd;letter-spacing:0.5px">16 SUBMITTED</span>`;
+      }
     }
   }
   
@@ -7326,11 +7330,9 @@ function _renderCommDetailTable(partnerId) {
             <!-- 2. Congratulations Ribbon Badge (Clean Background) -->
             <div style="background:linear-gradient(135deg, #854d0e 0%, #ca8a04 50%, #854d0e 100%);border:1.5px solid #fde047;color:#fffbeb;font-family:Georgia,serif;font-size:12px;font-weight:900;letter-spacing:2px;padding:4.5px 22px;border-radius:30px;box-shadow:0 4px 15px rgba(202,138,4,0.5);margin-bottom:6px;text-transform:uppercase">🎉 👑 ★★ CONGRATULATIONS ★★ 👑 🎉</div>
 
-            <!-- 3. Member Name (Royal Gold Plaque with Solid Deep Dark Navy Typography) -->
+            <!-- 3. Member Name (Solid Gold Banner Plaque with Solid Black Typography for HTML2Canvas) -->
             <div style="width:100%;text-align:center;margin-bottom:8px">
-              <div style="background:linear-gradient(135deg, #fef08a 0%, #fde047 50%, #eab308 100%);border:2.5px solid #ffffff;border-radius:12px;padding:6px 20px;display:inline-block;box-shadow:0 6px 20px rgba(234,179,8,0.75)">
-                <div id="prevSubtitle" style="font-size:24px;font-weight:950;color:#030712;font-family:Georgia,serif;text-transform:uppercase;letter-spacing:1px;line-height:1.1">MR. BANDI GANGARAJU</div>
-              </div>
+              <div id="prevSubtitle" style="width:100%;background:#fbbf24;color:#000000 !important;-webkit-text-fill-color:#000000 !important;font-size:22px;font-weight:950;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;text-transform:uppercase;letter-spacing:1px;line-height:1.2;padding:6px 12px;border:2.5px solid #ffffff;border-radius:12px;box-shadow:0 6px 20px rgba(251,191,36,0.75);box-sizing:border-box">MR. BANDI GANGARAJU</div>
             </div>
 
             <!-- 4. Member Profile Photo inside Golden Wreath Ring with Standalone Dual Champion Trophies (No Circles) -->
@@ -7376,8 +7378,9 @@ function _renderCommDetailTable(partnerId) {
             <div style="width:100%;display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:8px;margin-bottom:8px">
               <!-- Files Card -->
               <div style="background:rgba(15,23,42,0.88);border:1.5px solid rgba(234,179,8,0.5);border-radius:12px;padding:6px 5px;text-align:center">
-                <div id="prevFiles" style="font-size:13.5px;font-weight:950;color:#ffffff;margin-bottom:2px">6/16 FILES</div>
-                <div id="prevTeamBreakupFiles" style="font-size:8.5px;font-weight:800;color:#93c5fd">L2: 6 | L3: 2 | L4: 0</div>
+                <div style="font-size:8.5px;font-weight:900;color:#93c5fd;text-transform:uppercase;letter-spacing:0.5px">📂 FILES</div>
+                <div id="prevFiles" style="font-size:13.5px;font-weight:950;color:#ffffff;margin-top:2px;margin-bottom:2px"><span style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#eab308);color:#0f172a;font-weight:950;font-size:11.5px;padding:1px 5px;border-radius:4px">6 INSTALLED</span></div>
+                <div id="prevTeamBreakupFiles" style="font-size:8.5px;font-weight:900;color:#93c5fd;letter-spacing:0.5px">16 SUBMITTED</div>
               </div>
               
               <!-- Members / Team Size Card -->
@@ -7390,7 +7393,8 @@ function _renderCommDetailTable(partnerId) {
               <!-- Potential Pending Card (Labeled POTENTIAL PENDING) -->
               <div style="background:linear-gradient(135deg, rgba(112,26,117,0.88), rgba(131,24,67,0.88));border:1.5px solid #f472b6;border-radius:12px;padding:6px 5px;text-align:center">
                 <div style="font-size:8.5px;font-weight:900;color:#fbcfe8;text-transform:uppercase;letter-spacing:0.5px">💰 POTENTIAL PENDING</div>
-                <div id="prevPotential" style="font-size:13.5px;font-weight:950;color:#ffffff;margin-top:2px">₹1,41,550/-</div>
+                <div id="prevPotential" style="font-size:13.5px;font-weight:950;color:#ffffff;margin-top:2px;margin-bottom:2px">₹1,41,550/-</div>
+                <div style="font-size:8.5px;font-weight:800;color:#fbcfe8;letter-spacing:0.5px">EXPECTED EARNING</div>
               </div>
             </div>
 
