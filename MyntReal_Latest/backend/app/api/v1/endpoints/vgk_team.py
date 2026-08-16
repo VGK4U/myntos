@@ -4189,28 +4189,42 @@ def member_earnings_dashboard(
         date_params['comm_svc_id'] = community_service_id
     date_sql = ' '.join(date_clauses)
 
-    # income_status filter clause (supports multi-status selection e.g. "DRAFT,PENDING")
+    # income_status filter clause (supports multi-status selection e.g. "INSTALLED,WON,PAID")
     raw_status = income_status if (income_status and isinstance(income_status, str)) else None
     status_list = [s.strip().upper() for s in raw_status.split(',') if s.strip()] if raw_status else []
     status_val = ','.join(status_list) if status_list else None
-    IS_BRP = 'BALANCE_RECEIVED_PLUS' in status_list
-    _other_st = [s for s in status_list if s != 'BALANCE_RECEIVED_PLUS']
-    _BRP_COND = (
-        "e.source_lead_id IN ("
-        "SELECT id FROM crm_leads "
-        "WHERE solar_pipeline_status IN ('balance_received','subsidy_pending','completed'))"
-    )
 
-    if status_list:
-        if IS_BRP:
-            if _other_st:
-                status_sql = f"AND ({_BRP_COND} OR e.status = ANY(:st_list))"
-                date_params['st_list'] = _other_st
-            else:
-                status_sql = f"AND {_BRP_COND}"
-        else:
-            status_sql = "AND e.status = ANY(:st_list)"
-            date_params['st_list'] = status_list
+    IS_BRP = 'BALANCE_RECEIVED_PLUS' in status_list
+    IS_INSTALLED = 'INSTALLED' in status_list
+    IS_WON = 'WON' in status_list
+    IS_SUBMITTED = 'SUBMITTED' in status_list
+
+    _special_keys = {'BALANCE_RECEIVED_PLUS', 'INSTALLED', 'WON', 'SUBMITTED'}
+    _standard_st = [s for s in status_list if s not in _special_keys]
+
+    cond_parts = []
+    if IS_BRP:
+        cond_parts.append(
+            "e.source_lead_id IN (SELECT id FROM crm_leads WHERE solar_pipeline_status IN ('balance_received','subsidy_pending','completed'))"
+        )
+    if IS_INSTALLED:
+        cond_parts.append(
+            "e.source_lead_id IN (SELECT id FROM crm_leads WHERE status IN ('completed', 'installed', 'subsidy_pending') OR solar_pipeline_status IN ('completed', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed', 'net_meter_pending', 'balance_pending', 'balance_received'))"
+        )
+    if IS_WON:
+        cond_parts.append(
+            "e.source_lead_id IN (SELECT id FROM crm_leads WHERE status = 'won' OR solar_pipeline_status IN ('won', 'order_placed', 'dispatched', 'delivered'))"
+        )
+    if IS_SUBMITTED:
+        cond_parts.append(
+            "e.source_lead_id IN (SELECT id FROM crm_leads WHERE status IN ('submitted', 'application_submitted') OR solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue'))"
+        )
+    if _standard_st:
+        cond_parts.append("e.status = ANY(:st_list)")
+        date_params['st_list'] = _standard_st
+
+    if cond_parts:
+        status_sql = f"AND ({' OR '.join(cond_parts)})"
     else:
         status_sql = ""
 

@@ -684,12 +684,15 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
               <a href="javascript:void(0)" onclick="selectAllStages('ied',false)" style="color:#9ca3af;text-decoration:none">Clear</a>
             </div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto;padding-right:4px">
-            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-              <input type="checkbox" class="ied-stage-cb" value="DRAFT" onchange="updateStageFilter('ied')"> Draft
+          <div style="display:flex;flex-direction:column;gap:5px;max-height:260px;overflow-y:auto;padding-right:4px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#059669;font-weight:700" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="ied-stage-cb" value="INSTALLED" onchange="updateStageFilter('ied')"> ⚡ Installed
             </label>
             <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-              <input type="checkbox" class="ied-stage-cb" value="PENDING" onchange="updateStageFilter('ied')"> Pending
+              <input type="checkbox" class="ied-stage-cb" value="WON" onchange="updateStageFilter('ied')"> 🏆 Won Business
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="ied-stage-cb" value="SUBMITTED" onchange="updateStageFilter('ied')"> 📄 Application Submitted
             </label>
             <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
               <input type="checkbox" class="ied-stage-cb" value="STAGE1_APPROVED" onchange="updateStageFilter('ied')"> Stage 1 Approved
@@ -701,10 +704,16 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
               <input type="checkbox" class="ied-stage-cb" value="PAID" onchange="updateStageFilter('ied')"> Completed (Paid)
             </label>
             <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-              <input type="checkbox" class="ied-stage-cb" value="CANCELLED" onchange="updateStageFilter('ied')"> Cancelled
+              <input type="checkbox" class="ied-stage-cb" value="BALANCE_RECEIVED_PLUS" onchange="updateStageFilter('ied')"> Balance Received +
             </label>
             <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-              <input type="checkbox" class="ied-stage-cb" value="BALANCE_RECEIVED_PLUS" onchange="updateStageFilter('ied')"> Balance Received +
+              <input type="checkbox" class="ied-stage-cb" value="PENDING" onchange="updateStageFilter('ied')"> Pending
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="ied-stage-cb" value="DRAFT" onchange="updateStageFilter('ied')"> Draft
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="ied-stage-cb" value="CANCELLED" onchange="updateStageFilter('ied')"> Cancelled
             </label>
           </div>
         </div>
@@ -803,12 +812,15 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
               <a href="javascript:void(0)" onclick="selectAllStages('lv',false)" style="color:#9ca3af;text-decoration:none">Clear</a>
             </div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto;padding-right:4px">
-            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-              <input type="checkbox" class="lv-stage-cb" value="DRAFT" onchange="updateStageFilter('lv')"> Draft
+          <div style="display:flex;flex-direction:column;gap:5px;max-height:260px;overflow-y:auto;padding-right:4px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#059669;font-weight:700" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="lv-stage-cb" value="INSTALLED" onchange="updateStageFilter('lv')"> ⚡ Installed
             </label>
             <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-              <input type="checkbox" class="lv-stage-cb" value="PENDING" onchange="updateStageFilter('lv')"> Pending
+              <input type="checkbox" class="lv-stage-cb" value="WON" onchange="updateStageFilter('lv')"> 🏆 Won Business
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="lv-stage-cb" value="SUBMITTED" onchange="updateStageFilter('lv')"> 📄 Application Submitted
             </label>
             <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
               <input type="checkbox" class="lv-stage-cb" value="STAGE1_APPROVED" onchange="updateStageFilter('lv')"> Stage 1 Approved
@@ -820,10 +832,16 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
               <input type="checkbox" class="lv-stage-cb" value="PAID" onchange="updateStageFilter('lv')"> Completed (Paid)
             </label>
             <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-              <input type="checkbox" class="lv-stage-cb" value="CANCELLED" onchange="updateStageFilter('lv')"> Cancelled
+              <input type="checkbox" class="lv-stage-cb" value="BALANCE_RECEIVED_PLUS" onchange="updateStageFilter('lv')"> Balance Received +
             </label>
             <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-              <input type="checkbox" class="lv-stage-cb" value="BALANCE_RECEIVED_PLUS" onchange="updateStageFilter('lv')"> Balance Received +
+              <input type="checkbox" class="lv-stage-cb" value="PENDING" onchange="updateStageFilter('lv')"> Pending
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="lv-stage-cb" value="DRAFT" onchange="updateStageFilter('lv')"> Draft
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" class="lv-stage-cb" value="CANCELLED" onchange="updateStageFilter('lv')"> Cancelled
             </label>
           </div>
         </div>
