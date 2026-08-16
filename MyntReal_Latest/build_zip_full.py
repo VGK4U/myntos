@@ -2,10 +2,12 @@ import os
 import zipfile
 import yaml
 
-source_dir = 'C:/Desktop/VGK4U/MyntReal_Latest'
-output_zip_temp = 'C:/Desktop/VGK4U/MyntReal_Latest/temp_deploy.zip'
-old_zip = 'C:/Desktop/VGK4U/MyntReal_Latest/MyntReal_AWS_Deploy.zip'
-env_file_path = 'C:/Desktop/VGK4U/MyntReal_Latest/backend/.env'
+source_dir = os.path.dirname(os.path.abspath(__file__))
+output_zip_temp = os.path.join(source_dir, 'temp_deploy.zip')
+old_zip = os.path.join(source_dir, 'MyntReal_AWS_Deploy.zip')
+if not os.path.exists(old_zip):
+    old_zip = os.path.join(source_dir, 'MyntReal_AWS_Deploy_Full.zip')
+env_file_path = os.path.join(source_dir, 'backend', '.env')
 
 # Minimal exclusions to ensure we don't accidentally remove anything the user needs.
 # Excluding git, node_modules, pycache, venv, and large PGSQL local databases.
@@ -103,23 +105,17 @@ print('Final un-optimized (full) zip created successfully!')
 import shutil
 
 try:
-    if os.path.exists(old_zip):
-        os.remove(old_zip)
-    os.rename(output_zip_temp, old_zip)
-    print(f'Successfully updated {old_zip}')
+    final_full_zip = os.path.join(source_dir, 'MyntReal_AWS_Deploy_Full.zip')
+    final_deploy_zip = os.path.join(source_dir, 'MyntReal_AWS_Deploy.zip')
     
-    # Clean up messy old zip files as requested by the user
-    messy_zips = [
-        'MyntReal_AWS_Deploy_Final.zip',
-        'MyntReal_AWS_Deploy_Full.zip',
-        'MyntReal_AWS_Deploy_Ready.zip',
-        'MyntReal_Deploy.zip'
-    ]
-    for messy in messy_zips:
-        path = os.path.join(source_dir, messy)
-        if os.path.exists(path):
-            os.remove(path)
-            print(f'Cleaned up old messy zip: {messy}')
-            
+    if os.path.exists(final_full_zip):
+        os.remove(final_full_zip)
+    shutil.copy2(output_zip_temp, final_full_zip)
+    
+    if os.path.exists(final_deploy_zip):
+        os.remove(final_deploy_zip)
+    os.rename(output_zip_temp, final_deploy_zip)
+    
+    print(f'Successfully created fresh deployment packages:\n  - {final_full_zip}\n  - {final_deploy_zip}')
 except Exception as e:
-    print(f'Error moving zip or cleaning up: {e}')
+    print(f'Error saving zip files: {e}')
