@@ -2779,10 +2779,6 @@ function _renderMeDetailTable(partnerId){
     5:{lbl:'Support', bg:'#f9fafb',c:'#db2777'},
     6:{lbl:'Showroom',bg:'#fdf4ff',c:'#c026d3'},
   };
-  const typeLbl = (kind, level, level_label) => {
-    if(kind==='SLAB_BONUS'){
-      return `<span style="background:#fdf4ff;color:#7e22ce;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700"><i class="fas fa-star" style="font-size:8px;margin-right:2px"></i>Bonanza</span>`;
-    }
     const totGross        = rows.reduce((s,e)=>(e.status==='CANCELLED'?s:s+parseFloat(e.commission_amount||0)),0);
     const totDealVal      = rows.reduce((s,e)=>(e.status==='CANCELLED'?s:s+parseFloat(e.deal_value||e.base_value||0)),0);
     const totStg1         = rows.reduce((s,e)=>{
