@@ -1730,7 +1730,7 @@ async function loadTopPartnersTable(page = 1) {
   const body = document.getElementById('tptBody');
   if (!body) return;
   
-  body.innerHTML = `<tr><td colspan="21" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading Leaderboard Data…</td></tr>`;
+  body.innerHTML = `<tr><td colspan="18" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading Leaderboard Data…</td></tr>`;
 
   const search = document.getElementById('tptSearch')?.value?.trim() || '';
   const companyId = document.getElementById('tptCompany')?.value || '';
@@ -1762,7 +1762,7 @@ async function loadTopPartnersTable(page = 1) {
     _renderTptKpis(partners, data.total_count || 0, data.team_summary || {});
 
     if (partners.length === 0) {
-      body.innerHTML = `<tr><td colspan="21" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-inbox me-2"></i>No partner performance data found for the selected filters.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="18" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-inbox me-2"></i>No partner performance data found for the selected filters.</td></tr>`;
       document.getElementById('tptPagination').innerHTML = '';
       return;
     }
@@ -1807,7 +1807,7 @@ async function loadTopPartnersTable(page = 1) {
 
   } catch (err) {
     console.error('[TPT_LOAD_ERR]', err);
-    body.innerHTML = `<tr><td colspan="21" style="text-align:center;padding:40px;color:#ef4444"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load leaderboard data: ${err.message}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="18" style="text-align:center;padding:40px;color:#ef4444"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load leaderboard data: ${err.message}</td></tr>`;
   }
 }
 
