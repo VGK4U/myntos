@@ -5633,7 +5633,20 @@ def vgk_top_partners_leaderboard_table(
                COUNT(*) FILTER (WHERE cl.status IN ('completed', 'subsidy_pending') OR cl.solar_pipeline_status IN ('completed', 'subsidy_pending', 'subsidy_received', 'net_meter_done')) AS completed_count,
                COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.status IN ('completed', 'subsidy_pending') OR cl.solar_pipeline_status IN ('completed', 'subsidy_pending', 'subsidy_received', 'net_meter_done')), 0) AS completed_val,
                COUNT(*) FILTER (WHERE cl.status IN ('lost', 'cancelled', 'rejected') OR cl.solar_pipeline_status IN ('loan_rejected', 'not_interested', 'cancelled')) AS lost_count,
-               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.status IN ('lost', 'cancelled', 'rejected') OR cl.solar_pipeline_status IN ('loan_rejected', 'not_interested', 'cancelled')), 0) AS lost_val
+               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.status IN ('lost', 'cancelled', 'rejected') OR cl.solar_pipeline_status IN ('loan_rejected', 'not_interested', 'cancelled')), 0) AS lost_val,
+               (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id)) AS team_leads,
+               (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id) AND (tcl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change') OR tcl.status IN ('submitted', 'application_submitted'))) AS team_submits_count,
+               (SELECT COALESCE(SUM(tcl.deal_value_total), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id) AND (tcl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change') OR tcl.status IN ('submitted', 'application_submitted'))) AS team_submits_val,
+               (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id) AND (tcl.first_payment_received_date IS NOT NULL OR tcl.deal_value_received > 0)) AS team_dvr_count,
+               (SELECT COALESCE(SUM(
+                   CASE 
+                       WHEN tcl.deal_value_received > 0 THEN tcl.deal_value_received
+                       WHEN EXISTS (SELECT 1 FROM crm_lead_transactions tx WHERE tx.lead_id = tcl.id) 
+                            THEN (SELECT COALESCE(SUM(amount), 0) FROM crm_lead_transactions tx WHERE tx.lead_id = tcl.id)
+                       WHEN tcl.first_payment_received_date IS NOT NULL THEN tcl.deal_value_total
+                       ELSE 0
+                   END
+               ), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id) AND (tcl.first_payment_received_date IS NOT NULL OR tcl.deal_value_received > 0)) AS team_dvr_val
         FROM crm_leads cl
         JOIN official_partners op ON op.id = cl.associated_partner_id
         {join_staff}
@@ -5661,6 +5674,11 @@ def vgk_top_partners_leaderboard_table(
         comp_v = float(r[12] or 0)
         lost_c = int(r[13] or 0)
         lost_v = float(r[14] or 0)
+        tm_leads = int(r[15] or 0)
+        tm_sub_c = int(r[16] or 0)
+        tm_sub_v = float(r[17] or 0)
+        tm_dvr_c = int(r[18] or 0)
+        tm_dvr_v = float(r[19] or 0)
 
         sub_pct = round((sub_c / tot * 100), 1) if tot > 0 else 0.0
         dvr_pct = round((dvr_c / tot * 100), 1) if tot > 0 else 0.0
@@ -5680,7 +5698,12 @@ def vgk_top_partners_leaderboard_table(
             "won_count": won_c, "won_val": won_v, "won_pct": won_pct,
             "completed_count": comp_c, "completed_val": comp_v, "completed_pct": comp_pct,
             "lost_count": lost_c, "lost_val": lost_v, "lost_pct": lost_pct,
-            "win_rate": win_rate
+            "win_rate": win_rate,
+            "team_leads": tm_leads,
+            "team_submits_count": tm_sub_c,
+            "team_submits_val": tm_sub_v,
+            "team_dvr_count": tm_dvr_c,
+            "team_dvr_val": tm_dvr_v
         })
 
     # Sort
