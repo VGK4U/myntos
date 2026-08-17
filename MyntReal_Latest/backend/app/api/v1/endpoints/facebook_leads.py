@@ -445,18 +445,45 @@ async def pull_meta_leads(
 
             leads_data = lr.json().get('data', [])
             for ld in leads_data:
-                lead_id = ld.get('id')
+                lead_id = str(ld.get('id', ''))
                 if not lead_id:
                     continue
+                if facebook_leads_service.lead_already_exists(lead_id, db):
+                    continue
                 try:
-                    crm_lead = await process_facebook_lead(
-                        lead_id=str(lead_id),
-                        page_id=str(page_id),
-                        form_id=str(f_id),
-                        db=db
+                    default_company = db.query(AssociatedCompany).filter(
+                        AssociatedCompany.is_active == True
+                    ).order_by(AssociatedCompany.id).first()
+                    cid = default_company.id if default_company else 1
+
+                    crm_data = facebook_leads_service.map_to_crm_lead(
+                        lead_data=ld,
+                        company_id=cid,
+                        category_id=None,
+                        page_segment=segment,
+                        page_name=page_name
                     )
-                    if crm_lead:
-                        ingested_count += 1
+                    crm_lead = CRMLead(**crm_data)
+                    db.add(crm_lead)
+                    db.commit()
+                    db.refresh(crm_lead)
+
+                    try:
+                        from app.models.meta_attribution import MetaLeadsAttribution
+                        attribution = MetaLeadsAttribution(
+                            company_id=cid,
+                            lead_id=crm_lead.id,
+                            meta_lead_id=lead_id,
+                            meta_form_id=str(f_id),
+                            meta_form_name=str(f_name)
+                        )
+                        db.add(attribution)
+                        db.commit()
+                    except Exception as att_err:
+                        db.rollback()
+                        logger.warning(f"Attribution error for {lead_id}: {att_err}")
+
+                    ingested_count += 1
                 except Exception as ex:
                     errors.append(f"Lead {lead_id}: {str(ex)}")
 

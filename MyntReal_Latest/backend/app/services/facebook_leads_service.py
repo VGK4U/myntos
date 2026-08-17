@@ -195,12 +195,28 @@ class FacebookLeadsService:
         """
         url = f"https://graph.facebook.com/{self.api_version}/me/accounts"
         params = {'access_token': user_token, 'fields': 'id,name,access_token,category', 'limit': 200}
+        pages = []
         try:
             resp = requests.get(url, params=params, timeout=20)
-            resp.raise_for_status()
-            pages = resp.json().get('data', [])
+            if resp.status_code == 200:
+                pages = resp.json().get('data', [])
         except Exception as e:
-            return {'success': False, 'error': f"Could not fetch pages: {e}"}
+            logger.warning(f"me/accounts fetch error: {e}")
+
+        # Also attempt direct page token fetch for active pages (e.g. Har Ghar Solar 894208310452980)
+        existing_pids = set(p.get('id') for p in pages)
+        known_pids = ['894208310452980', '1081963148335244', '1005465332641372', '1019684831223211']
+        for kpid in known_pids:
+            if kpid not in existing_pids:
+                try:
+                    dp_url = f"https://graph.facebook.com/{self.api_version}/{kpid}?fields=id,name,access_token,category&access_token={user_token}"
+                    dp_resp = requests.get(dp_url, timeout=10)
+                    if dp_resp.status_code == 200:
+                        dp_data = dp_resp.json()
+                        if dp_data.get('access_token'):
+                            pages.append(dp_data)
+                except Exception as ex:
+                    logger.warning(f"Direct page token fetch for {kpid} failed: {ex}")
 
         results = {'total': len(pages), 'stored': 0, 'subscribed': 0, 'failed_subscription': [], 'errors': []}
 
