@@ -1125,19 +1125,36 @@ function fmtDuration(secs) {
 
 function fmtTime(iso) {
     if (!iso) return '—';
-    const d = new Date(iso);
-    const now = new Date();
-    const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-    const istOffset = 5.5 * 60 * 60 * 1000;
-    const toISTDateStr = (dt) => new Date(dt.getTime() + istOffset).toISOString().slice(0, 10);
-    const dDate   = toISTDateStr(d);
-    const nowDate = toISTDateStr(now);
-    const yDate   = toISTDateStr(new Date(now.getTime() - 86400000));
+    let str = String(iso).trim();
+    if (!str.includes('Z') && !str.includes('+') && !str.includes('T')) {
+        str = str.replace(' ', 'T') + 'Z';
+    } else if (!str.includes('Z') && !str.includes('+')) {
+        str += 'Z';
+    }
+    const d = new Date(str);
+    if (isNaN(d.getTime())) return String(iso);
+
+    const timeStr = d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
+    
+    // YYYY-MM-DD in IST
+    const getISTDateStr = (dateObj) => {
+        const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(dateObj);
+        return parts; // 'YYYY-MM-DD'
+    };
+
+    const dDate = getISTDateStr(d);
+    const nowDate = getISTDateStr(new Date());
+    const yDate = getISTDateStr(new Date(Date.now() - 86400000));
+
     if (dDate === nowDate) return `Today ${timeStr}`;
     if (dDate === yDate)   return `Yesterday ${timeStr}`;
-    const diffDays = Math.round((now - d) / 86400000);
-    if (diffDays < 7) return `${diffDays}d ago · ${timeStr}`;
-    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ` · ${timeStr}`;
+
+    const nowIST = new Date(getISTDateStr(new Date()));
+    const callIST = new Date(dDate);
+    const diffDays = Math.round((nowIST - callIST) / 86400000);
+
+    if (diffDays > 0 && diffDays < 7) return `${diffDays}d ago · ${timeStr}`;
+    return d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short' }) + ` · ${timeStr}`;
 }
 
 function switchTab(tab) {
