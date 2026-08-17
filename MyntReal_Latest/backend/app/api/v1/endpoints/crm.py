@@ -5752,15 +5752,29 @@ def get_employee_performance_dashboard(
     Filters applied dynamically:
       created_from, created_to, closed_from, closed_to, department_id, search
     """
+    from datetime import datetime
     from sqlalchemy import text
+
+    def _normalize_date_str(d_str: Optional[str]) -> Optional[str]:
+        if not d_str or not isinstance(d_str, str):
+            return None
+        val = d_str.strip()
+        if not val:
+            return None
+        for fmt in ('%d/%m/%Y', '%Y-%m-%d', '%Y/%m/%d', '%d-%m-%Y'):
+            try:
+                return datetime.strptime(val, fmt).strftime('%Y-%m-%d')
+            except ValueError:
+                pass
+        return val
 
     search_query = search.strip().lower() if isinstance(search, str) and search.strip() else None
     dept_id_filter = department_id if isinstance(department_id, int) else None
 
-    c_from = created_from.strip() if isinstance(created_from, str) and created_from.strip() else None
-    c_to = created_to.strip() if isinstance(created_to, str) and created_to.strip() else None
-    cl_from = closed_from.strip() if isinstance(closed_from, str) and closed_from.strip() else None
-    cl_to = closed_to.strip() if isinstance(closed_to, str) and closed_to.strip() else None
+    c_from = _normalize_date_str(created_from)
+    c_to = _normalize_date_str(created_to)
+    cl_from = _normalize_date_str(closed_from)
+    cl_to = _normalize_date_str(closed_to)
 
     # Fetch ALL active staff members (or filtered by department_id)
     staff_conds = ["s.status = 'active'"]
