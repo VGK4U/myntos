@@ -5776,8 +5776,13 @@ def get_employee_performance_dashboard(
     cl_from = _normalize_date_str(closed_from)
     cl_to = _normalize_date_str(closed_to)
 
-    # Fetch ALL active staff members (or filtered by department_id)
-    staff_conds = ["s.status = 'active'"]
+    # Fetch ALL active staff members (excluding Freelancers by design)
+    staff_conds = [
+        "s.status = 'active'",
+        "s.emp_code NOT ILIKE 'FL%'",
+        "COALESCE(s.staff_type, '') NOT ILIKE '%free%'",
+        "COALESCE(s.employment_type, '') NOT ILIKE '%free%'"
+    ]
     staff_params = {}
     if dept_id_filter:
         staff_conds.append("s.department_id = :dept_id_filter")

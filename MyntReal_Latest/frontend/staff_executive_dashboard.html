@@ -951,6 +951,12 @@ function renderEmployeePerformanceTables() {
 
     let rows = (_empPerfData[section] || []).slice();
 
+    // Always exclude Freelancer staff from Executive Performance Report
+    rows = rows.filter(r => {
+      const code = (r.emp_code || '').toUpperCase();
+      return !code.startsWith('FL');
+    });
+
     // Local search filter
     if (searchVal) {
       rows = rows.filter(r => 
