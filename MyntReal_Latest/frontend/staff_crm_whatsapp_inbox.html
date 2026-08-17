@@ -139,14 +139,14 @@
     .msg-group{display:flex;flex-direction:column}
     .msg-group.out{align-items:flex-end}
     .msg-group.in{align-items:flex-start}
-    .thread-bubble{max-width:75%;padding:7px 11px;border-radius:12px;font-size:13px;line-height:1.5;word-break:break-word;position:relative}
-    .bubble-in{background:#fff;border-radius:0 12px 12px 12px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
-    .bubble-out{background:#d9fdd3;border-radius:12px 0 12px 12px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+    .thread-bubble{max-width:82%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.55;word-break:break-word;white-space:pre-wrap;position:relative;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+    .bubble-in{background:#ffffff;border-radius:0 12px 12px 12px;box-shadow:0 1px 2px rgba(0,0,0,.12);color:#111827}
+    .bubble-out{background:#d9fdd3;border-radius:12px 0 12px 12px;box-shadow:0 1px 2px rgba(0,0,0,.12);color:#111827}
     /* Within same group: tight spacing; between groups: spacious */
     .msg-item{display:flex;flex-direction:column}
     .msg-item.out{align-items:flex-end}
     .msg-item.in{align-items:flex-start}
-    .bubble-time{font-size:10px;color:#9ca3af;margin-top:2px;text-align:right}
+    .bubble-time{font-size:10px;color:#65676b;margin-top:4px;text-align:right;font-weight:500}
     /* Media inside bubbles */
     .bubble-img{max-width:240px;max-height:200px;border-radius:8px;display:block;cursor:pointer;object-fit:cover;margin-bottom:4px}
     .bubble-video{max-width:240px;border-radius:8px;display:block;outline:none;margin-bottom:4px}
@@ -1280,6 +1280,16 @@ function buildSenderLabel(m, isOut, contactName) {
   return `<div class="bubble-sender bubble-sender-out"><i class="fas fa-paper-plane" style="font-size:8px"></i> Sent</div>`;
 }
 
+function fmtWaBody(text) {
+  if (!text) return '';
+  let s = escHtml(text);
+  // Format WhatsApp markdown: *bold* -> <b>bold</b>, _italic_ -> <i>italic</i>, ~strike~ -> <del>strike</del>
+  s = s.replace(/\*([^\*]+)\*/g, '<b>$1</b>');
+  s = s.replace(/_([^_]+)_/g, '<i>$1</i>');
+  s = s.replace(/~([^~]+)~/g, '<del>$1</del>');
+  return s;
+}
+
 function renderThread(msgs, contactInfo) {
   if (!msgs.length) {
     document.getElementById('threadMsgs').innerHTML = '<div style="text-align:center;color:#888;padding:20px">No messages yet.</div>';
@@ -1331,7 +1341,7 @@ function renderThread(msgs, contactInfo) {
       html += `<div class="msg-item ${isOut?'out':'in'}" style="${itemMarginTop}">
         <div class="thread-bubble ${bubbleClass}">
           ${mediaHtml}
-          ${showText ? escHtml(body) : (mediaHtml ? '' : escHtml(body || `[${m.message_type||'message'}]`))}${auto}${readIcon}
+          ${showText ? fmtWaBody(body) : (mediaHtml ? '' : fmtWaBody(body || `[${m.message_type||'message'}]`))}${auto}${readIcon}
           <div class="bubble-time">${fmtTime(m.received_at)}</div>
         </div>
         ${senderLabel}
