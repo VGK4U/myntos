@@ -945,22 +945,10 @@ def get_inbox(
             """)).fetchall()
             sp_list = [r[0] for r in staff_phones if r[0]]
             if sp_list:
-                base_conds.append("RIGHT(REGEXP_REPLACE(from_phone, '[^0-9]', '', 'g'), 10) NOT IN (SELECT unnest(:sp_list))")
+                base_conds.append("NOT (RIGHT(REGEXP_REPLACE(from_phone, '[^0-9]', '', 'g'), 10) = ANY(:sp_list))")
                 params["sp_list"] = sp_list
         except Exception as _ex_staff:
             print(f"[WA-INBOX] Exclude staff error: {_ex_staff}")
-
-    if exclude_reminders:
-        base_conds.append("""(
-            body_text IS NULL OR NOT (
-                body_text ILIKE '%Team Snapshot%'
-                OR body_text ILIKE '%task assigned to you is *overdue*%'
-                OR body_text ILIKE '%overdue%'
-                OR body_text ILIKE '%Daily Snapshot%'
-                OR message_type ILIKE 'auto_%'
-                OR wamid ILIKE 'auto.snapshot%'
-            )
-        )""")
 
     # ── [DC-LEADS-TEAM-001] My Leads filter: assigned to me OR CRM handler ──
     if my_leads:
@@ -1008,6 +996,17 @@ def get_inbox(
 
     # ── Thread-level HAVING clause (applied after GROUP BY) ──────────────────
     having_parts = []
+    if exclude_reminders:
+        having_parts.append("""NOT (
+            BOOL_OR(
+                COALESCE(body_text, '') ILIKE '%Team Snapshot%'
+                OR COALESCE(body_text, '') ILIKE '%task assigned to you is *overdue*%'
+                OR COALESCE(body_text, '') ILIKE '%overdue%'
+                OR COALESCE(body_text, '') ILIKE '%Good morning%'
+                OR COALESCE(body_text, '') ILIKE '%Daily Snapshot%'
+                OR message_type ILIKE 'auto_%'
+            )
+        )""")
     if unread_only:
         having_parts.append(
             "SUM(CASE WHEN is_read = false AND message_type != 'outbound' THEN 1 ELSE 0 END) > 0"
@@ -1060,6 +1059,7 @@ def get_inbox(
                 FROM wa_inbox
                 WHERE {base_where}
                 GROUP BY from_phone
+                {having_sql}
             ) agg
         """), {k: v for k, v in params.items()
                if k not in ("status_filter", "dept_filter", "cat_filter", "limit", "offset")}).fetchone()
