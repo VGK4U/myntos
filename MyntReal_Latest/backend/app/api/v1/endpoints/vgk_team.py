@@ -5582,10 +5582,14 @@ def vgk_top_partners_leaderboard_table(
         dvr_filter = """
             WHERE (cl.first_payment_received_date >= CAST(:from_d AS date) AND cl.first_payment_received_date <= CAST(:to_d_end AS date))
         """
+        tcl_date_filter = """ AND ((tcl.created_at >= :from_d AND tcl.created_at <= :to_d_end) OR (tcl.first_payment_received_date >= CAST(:from_d AS date) AND tcl.first_payment_received_date <= CAST(:to_d_end AS date)))"""
+        tcl_dvr_date_filter = """ AND (tcl.first_payment_received_date >= CAST(:from_d AS date) AND tcl.first_payment_received_date <= CAST(:to_d_end AS date))"""
     else:
         dvr_filter = """
             WHERE (cl.first_payment_received_date IS NOT NULL OR cl.deal_value_received > 0)
         """
+        tcl_date_filter = ""
+        tcl_dvr_date_filter = " AND (tcl.first_payment_received_date IS NOT NULL OR tcl.deal_value_received > 0)"
 
     if company_id:
         where_clauses.append("cl.company_id = :cid")
@@ -5634,10 +5638,10 @@ def vgk_top_partners_leaderboard_table(
                COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.status IN ('completed', 'subsidy_pending') OR cl.solar_pipeline_status IN ('completed', 'subsidy_pending', 'subsidy_received', 'net_meter_done')), 0) AS completed_val,
                COUNT(*) FILTER (WHERE cl.status IN ('lost', 'cancelled', 'rejected') OR cl.solar_pipeline_status IN ('loan_rejected', 'not_interested', 'cancelled')) AS lost_count,
                COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.status IN ('lost', 'cancelled', 'rejected') OR cl.solar_pipeline_status IN ('loan_rejected', 'not_interested', 'cancelled')), 0) AS lost_val,
-               (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id)) AS team_leads,
-               (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id) AND (tcl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change') OR tcl.status IN ('submitted', 'application_submitted'))) AS team_submits_count,
-               (SELECT COALESCE(SUM(tcl.deal_value_total), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id) AND (tcl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change') OR tcl.status IN ('submitted', 'application_submitted'))) AS team_submits_val,
-               (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id) AND (tcl.first_payment_received_date IS NOT NULL OR tcl.deal_value_received > 0)) AS team_dvr_count,
+               (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id){tcl_date_filter}) AS team_leads,
+               (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id) AND (tcl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change') OR tcl.status IN ('submitted', 'application_submitted')){tcl_date_filter}) AS team_submits_count,
+               (SELECT COALESCE(SUM(tcl.deal_value_total), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id) AND (tcl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change') OR tcl.status IN ('submitted', 'application_submitted')){tcl_date_filter}) AS team_submits_val,
+               (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id){tcl_dvr_date_filter}) AS team_dvr_count,
                (SELECT COALESCE(SUM(
                    CASE 
                        WHEN tcl.deal_value_received > 0 THEN tcl.deal_value_received
@@ -5646,7 +5650,7 @@ def vgk_top_partners_leaderboard_table(
                        WHEN tcl.first_payment_received_date IS NOT NULL THEN tcl.deal_value_total
                        ELSE 0
                    END
-               ), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id) AND (tcl.first_payment_received_date IS NOT NULL OR tcl.deal_value_received > 0)) AS team_dvr_val,
+               ), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id){tcl_dvr_date_filter}) AS team_dvr_val,
                (SELECT COALESCE(SUM(
                    CASE 
                        WHEN tcl.deal_value_received > 0 THEN tcl.deal_value_received
@@ -5655,7 +5659,7 @@ def vgk_top_partners_leaderboard_table(
                        WHEN tcl.first_payment_received_date IS NOT NULL THEN tcl.deal_value_total
                        ELSE 0
                    END
-               ), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id)) AS team_total_received_val
+               ), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id){tcl_dvr_date_filter}) AS team_total_received_val
         FROM official_partners op
         LEFT JOIN crm_leads cl ON op.id = cl.associated_partner_id
         {join_staff}
