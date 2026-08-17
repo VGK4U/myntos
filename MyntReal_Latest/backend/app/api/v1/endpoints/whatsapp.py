@@ -910,6 +910,8 @@ def get_inbox(
     assigned: Optional[bool] = Query(None),
     my_leads: bool = Query(False),
     team_emp_id: Optional[int] = Query(None),
+    exclude_staff: bool = Query(False),
+    exclude_reminders: bool = Query(False),
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(_require_staff),
 ):
@@ -933,6 +935,32 @@ def get_inbox(
     if to_date:
         base_conds.append("received_at <= :to_date")
         params["to_date"] = to_date.strip() + " 23:59:59"
+
+    if exclude_staff:
+        try:
+            staff_phones = db.execute(_t("""
+                SELECT DISTINCT RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10)
+                FROM staff_employees 
+                WHERE phone IS NOT NULL AND LENGTH(REGEXP_REPLACE(phone, '[^0-9]', '', 'g')) >= 10
+            """)).fetchall()
+            sp_list = [r[0] for r in staff_phones if r[0]]
+            if sp_list:
+                base_conds.append("RIGHT(REGEXP_REPLACE(from_phone, '[^0-9]', '', 'g'), 10) NOT IN (SELECT unnest(:sp_list))")
+                params["sp_list"] = sp_list
+        except Exception as _ex_staff:
+            print(f"[WA-INBOX] Exclude staff error: {_ex_staff}")
+
+    if exclude_reminders:
+        base_conds.append("""(
+            body_text IS NULL OR NOT (
+                body_text ILIKE '%Team Snapshot%'
+                OR body_text ILIKE '%task assigned to you is *overdue*%'
+                OR body_text ILIKE '%overdue%'
+                OR body_text ILIKE '%Daily Snapshot%'
+                OR message_type ILIKE 'auto_%'
+                OR wamid ILIKE 'auto.snapshot%'
+            )
+        )""")
 
     # ── [DC-LEADS-TEAM-001] My Leads filter: assigned to me OR CRM handler ──
     if my_leads:
