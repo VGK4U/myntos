@@ -5998,12 +5998,13 @@ def get_employee_performance_dashboard(
                 'spares_rev': float(r[3] or 0.0)
             }
 
-        # Call log durations
+        # Call log durations and call counts
         call_sql = f"""
             SELECT 
                 TO_CHAR(c.call_datetime, '{date_fmt}') as period_key,
                 s.emp_code,
-                COALESCE(SUM(c.duration_seconds), 0) as total_sec
+                COALESCE(SUM(c.duration_seconds), 0) as total_sec,
+                COUNT(c.id) as total_calls
             FROM staff_call_logs c
             JOIN staff_employees s ON c.staff_id = s.id
             WHERE {call_where_str}
@@ -6014,7 +6015,7 @@ def get_employee_performance_dashboard(
         for r in call_rows:
             if r[0]:
                 period_keys_set.add(r[0])
-            call_map[f"{r[0]}_{r[1]}"] = int(r[2] or 0)
+            call_map[f"{r[0]}_{r[1]}"] = {'sec': int(r[2] or 0), 'cnt': int(r[3] or 0)}
 
         # Attendance days
         att_sql = f"""
@@ -6060,19 +6061,25 @@ def get_employee_performance_dashboard(
                 st_info = st_map.get(k, {'tickets': 0, 'service_rev': 0.0, 'spares_rev': 0.0})
                 inc_info = inc_map.get(k, {'overall_rev': 0.0, 'solar_rev': 0.0, 'etc_rev': 0.0, 'b2b_rev': 0.0, 'b2c_rev': 0.0, 'insurance_rev': 0.0, 'others_rev': 0.0})
 
-                tot_sec = call_map.get(k, 0)
+                call_info = call_map.get(k, {'sec': 0, 'cnt': 0})
+                tot_sec = call_info['sec']
+                tot_calls = call_info['cnt']
                 att_days = att_map.get(k, 0)
                 if att_days > 0:
                     avg_sec = tot_sec / att_days
-                elif tot_sec > 0:
+                    calls_p_day = round(tot_calls / att_days, 1)
+                elif tot_sec > 0 or tot_calls > 0:
                     avg_sec = tot_sec / 1
+                    calls_p_day = float(tot_calls)
                 else:
                     avg_sec = 0
+                    calls_p_day = 0.0
 
                 mins = int(avg_sec // 60)
                 hrs = mins // 60
                 rem_m = mins % 60
                 avg_str = f"{hrs}h {rem_m}m / day" if hrs > 0 else f"{rem_m}m / day"
+                calls_str = f"{int(calls_p_day) if calls_p_day.is_integer() else calls_p_day} / day" if calls_p_day > 0 else "0 / day"
 
                 rows.append({
                     'period_key': p_key,
@@ -6081,8 +6088,11 @@ def get_employee_performance_dashboard(
                     'employee_name': s_name,
                     'self_leads': int(r[4] or 0) if r else 0,
                     'overall_new_leads': int(r[5] or 0) if r else 0,
+                    'total_calls_count': tot_calls,
+                    'calls_per_day_val': calls_p_day,
+                    'calls_per_day': calls_str,
                     'call_duration_seconds': tot_sec,
-                    'attendance_days': att_days if att_days > 0 else (1 if tot_sec > 0 else 0),
+                    'attendance_days': att_days if att_days > 0 else (1 if (tot_sec > 0 or tot_calls > 0) else 0),
                     'avg_talk_time_per_day': avg_str,
                     'overdue_leads': overdue_map.get(e_code, 0),
                     'overall_won': int(r[6] or 0) if r else 0,

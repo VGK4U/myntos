@@ -997,6 +997,8 @@ function renderEmployeePerformanceTables() {
             others_won: 0, others_rev: 0,
             total_call_sec: 0,
             total_att_days: 0,
+            total_calls_count: 0,
+            calls_per_day: '0 / day',
             avg_talk_time_per_day: '0m / day'
           },
           items: []
@@ -1026,6 +1028,8 @@ function renderEmployeePerformanceTables() {
       g.summary.spares_rev += (r.spares_rev || 0);
       g.summary.others_won += (r.others_won || 0);
       g.summary.others_rev += (r.others_rev || 0);
+      g.summary.total_calls_count += (r.total_calls_count || 0);
+
       const rSec = Number(r.call_duration_seconds || 0);
       const rAtt = Number(r.attendance_days || 0);
       if (rSec > 0) {
@@ -1039,13 +1043,17 @@ function renderEmployeePerformanceTables() {
         }
       }
 
-      // Compute overall weighted average talk time per day
+      // Compute overall weighted average talk time & calls per day
       if (g.summary.total_att_days > 0 && g.summary.total_call_sec > 0) {
         const avgSec = g.summary.total_call_sec / g.summary.total_att_days;
         const totalMins = Math.round(avgSec / 60);
         const hrs = Math.floor(totalMins / 60);
         const remM = totalMins % 60;
         g.summary.avg_talk_time_per_day = hrs > 0 ? `${hrs}h ${remM}m / day` : `${remM}m / day`;
+      }
+      if (g.summary.total_att_days > 0 && g.summary.total_calls_count > 0) {
+        const cVal = Math.round((g.summary.total_calls_count / g.summary.total_att_days) * 10) / 10;
+        g.summary.calls_per_day = `${cVal} / day`;
       }
     });
 
@@ -1082,6 +1090,9 @@ function renderEmployeePerformanceTables() {
             </th>
             <th rowspan="2" class="align-middle text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'overall_new_leads')" style="min-width:110px;background:#f1f5f9">
               Overall New Leads ${sortInfo.col === 'overall_new_leads' ? (sortInfo.dir === 'asc' ? '▲' : '▼') : ''}
+            </th>
+            <th rowspan="2" class="align-middle text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'calls_per_day_val')" style="min-width:115px;background:#f0fdf4;color:#15803d">
+              Calls / Day ${sortInfo.col === 'calls_per_day_val' ? (sortInfo.dir === 'asc' ? '▲' : '▼') : ''}
             </th>
             <th rowspan="2" class="align-middle text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'avg_talk_time_per_day')" style="min-width:130px;background:#f0fdf4;color:#0f766e">
               Avg Talk Time / Day ${sortInfo.col === 'avg_talk_time_per_day' ? (sortInfo.dir === 'asc' ? '▲' : '▼') : ''}
@@ -1134,6 +1145,7 @@ function renderEmployeePerformanceTables() {
                (r.overall_rev || 0) > 0 ||
                (r.overdue_leads || 0) > 0 ||
                (r.service_tickets_count || 0) > 0 ||
+               (r.calls_per_day && r.calls_per_day !== '0 / day') ||
                (r.avg_talk_time_per_day && r.avg_talk_time_per_day !== '0m / day' && r.avg_talk_time_per_day !== '0m');
       });
 
@@ -1151,6 +1163,7 @@ function renderEmployeePerformanceTables() {
           </td>
           <td class="text-center fw-bold" style="color:#2563eb">${fmtDashNum(s.self_leads)}</td>
           <td class="text-center fw-bold" style="color:#0f172a">${fmtDashNum(s.overall_new_leads)}</td>
+          <td class="text-center fw-bold" style="color:#15803d;background:#f0fdf4">${fmtDashTalk(s.calls_per_day)}</td>
           <td class="text-center fw-bold" style="color:#0f766e;background:#e6f4ea">${fmtDashTalk(s.avg_talk_time_per_day)}</td>
           <td class="text-center fw-bold" style="color:${s.overdue_leads > 0 ? '#b91c1c' : '#64748b'};background:${s.overdue_leads > 0 ? '#fee2e2' : ''}">${fmtDashNum(s.overdue_leads)}</td>
           
@@ -1185,7 +1198,7 @@ function renderEmployeePerformanceTables() {
       if (!activeSubItems.length) {
         html += `
           <tr class="emp-detail-${section}-${safeKey} d-none" style="background:#fafafa">
-            <td colspan="24" class="text-center text-muted font-monospace py-2" style="font-size:11px">
+            <td colspan="25" class="text-center text-muted font-monospace py-2" style="font-size:11px">
               <i class="fas fa-info-circle me-1 text-secondary"></i> No monthly sales or call performance recorded for ${esc(g.employee_name)} in this timeframe.
             </td>
           </tr>
@@ -1202,6 +1215,7 @@ function renderEmployeePerformanceTables() {
               <td class="text-start text-secondary ps-4" style="font-size:11px">${esc(r.employee_name)}</td>
               <td class="text-center font-monospace fw-semibold" style="color:#2563eb">${fmtDashNum(r.self_leads)}</td>
               <td class="text-center font-monospace fw-semibold">${fmtDashNum(r.overall_new_leads)}</td>
+              <td class="text-center font-monospace fw-semibold" style="color:#15803d">${fmtDashTalk(r.calls_per_day)}</td>
               <td class="text-center font-monospace fw-semibold" style="color:#0f766e">${fmtDashTalk(r.avg_talk_time_per_day)}</td>
               <td class="text-center font-monospace fw-semibold" style="color:${(r.overdue_leads || 0) > 0 ? '#b91c1c' : '#64748b'}">${fmtDashNum(r.overdue_leads)}</td>
               
