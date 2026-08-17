@@ -5821,7 +5821,23 @@ def get_employee_performance_dashboard(
     overdue_map = {r[0]: int(r[1] or 0) for r in overdue_rows}
 
     def _get_dataset(period_type='monthly'):
-        date_fmt = 'YYYY-MM' if period_type == 'monthly' else 'IYYY-"W"IW'
+        # Check if daily date-wise breakdown should be used (e.g. for This Month, Last Month, or date ranges <= 62 days)
+        is_daily_breakdown = False
+        if period_type == 'monthly':
+            if c_from and c_to:
+                try:
+                    df_str = c_from.replace('Z', '+00:00')[:10]
+                    dt_str = c_to.replace('Z', '+00:00')[:10]
+                    d1 = datetime.strptime(df_str, '%Y-%m-%d')
+                    d2 = datetime.strptime(dt_str, '%Y-%m-%d')
+                    if (d2 - d1).days <= 62:
+                        is_daily_breakdown = True
+                except Exception:
+                    is_daily_breakdown = True
+            elif c_from or c_to:
+                is_daily_breakdown = True
+
+        date_fmt = 'YYYY-MM-DD' if is_daily_breakdown else ('YYYY-MM' if period_type == 'monthly' else 'IYYY-"W"IW')
 
         where_conds = []
         st_where_conds = []

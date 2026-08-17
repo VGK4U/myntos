@@ -1076,7 +1076,8 @@ function renderEmployeePerformanceTables() {
 
     if (countLabel) countLabel.textContent = `${empOrder.length} employees (${rows.length} records)`;
 
-    const periodHeaderLabel = section === 'monthly' ? 'Period / Month' : 'Period / Week';
+    const isDaily = rows.some(r => r.period_key && r.period_key.length === 10);
+    const periodHeaderLabel = section === 'monthly' ? (isDaily ? 'Date' : 'Period / Month') : 'Period / Week';
 
     let html = `
       <table class="table table-sm table-bordered table-hover mb-0" style="font-size:11.5px;min-width:1400px;border-color:#e2e8f0">
