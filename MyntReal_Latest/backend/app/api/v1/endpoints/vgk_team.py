@@ -5656,8 +5656,8 @@ def vgk_top_partners_leaderboard_table(
                        ELSE 0
                    END
                ), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id)) AS team_total_received_val
-        FROM crm_leads cl
-        JOIN official_partners op ON op.id = cl.associated_partner_id
+        FROM official_partners op
+        LEFT JOIN crm_leads cl ON op.id = cl.associated_partner_id
         {join_staff}
         WHERE {where_sql}
         GROUP BY op.id, op.partner_name, op.partner_code
@@ -5705,6 +5705,7 @@ def vgk_top_partners_leaderboard_table(
             "total_leads": tot,
             "submits_count": sub_c, "submits_val": sub_v, "submits_pct": sub_pct,
             "dvr_count": dvr_c, "dvr_val": dvr_v, "dvr_pct": dvr_pct,
+            "overall_dvr_val": dvr_v,
             "won_count": won_c, "won_val": won_v, "won_pct": won_pct,
             "completed_count": comp_c, "completed_val": comp_v, "completed_pct": comp_pct,
             "lost_count": lost_c, "lost_val": lost_v, "lost_pct": lost_pct,
