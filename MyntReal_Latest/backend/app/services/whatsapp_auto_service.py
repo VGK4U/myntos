@@ -243,6 +243,26 @@ def _log_message(db: Session, phone: str, message: str, result: Dict, event_key:
             sender_type=sender_type,
         )
         db.add(log)
+
+        # Dual-write to wa_inbox so CRM WhatsApp Inbox displays outbound activity
+        try:
+            from app.models.whatsapp import WAInbox
+            clean_phone = phone[-10:] if len(phone) >= 10 else phone
+            inbox_item = WAInbox(
+                wamid=result.get("wamid") or f"auto.{event_key}.{clean_phone}.{int(datetime.utcnow().timestamp())}",
+                from_phone=clean_phone,
+                from_name=sent_by_name,
+                message_type='outbound',
+                body_text=message,
+                is_read=True,
+                received_at=datetime.utcnow(),
+                status='new',
+                replied=False,
+            )
+            db.add(inbox_item)
+        except Exception as _ie:
+            logger.warning("[WA-AUTO] Dual-write wa_inbox error: %s", str(_ie))
+
         db.commit()
     except Exception as e:
         logger.error("[WA-AUTO] Log exception: %s", str(e))
