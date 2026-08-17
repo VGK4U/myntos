@@ -384,9 +384,10 @@ textarea.tpl-body{min-height:100px;resize:vertical;font-family:'Courier New',mon
               <th>Sent By</th>
               <th>WA ID</th>
               <th>Error</th>
+              <th>Action</th>
             </tr></thead>
             <tbody id="msgTbody">
-              <tr><td colspan="11" class="no-data"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+              <tr><td colspan="12" class="no-data"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
             </tbody>
           </table>
         </div>
@@ -2042,7 +2043,9 @@ async function loadMessages(resetOffset=true) {
       document.getElementById('msgPager').innerHTML = '';
       return;
     }
+    if (!window._loadedWAMessages) window._loadedWAMessages = {};
     tbody.innerHTML = msgs.map(m => {
+      window._loadedWAMessages[m.id] = m;
       const preview = (m.message_body||'').slice(0,60) + ((m.message_body||'').length>60?'…':'');
       const senderBadge = m.sender_type==='staff'
         ? `<span style="font-size:9px;background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:4px">STAFF</span>`
@@ -2070,7 +2073,7 @@ async function loadMessages(resetOffset=true) {
         <td style="white-space:nowrap;font-size:10.5px">${fmtTime(m.sent_at)}</td>
         <td style="font-weight:600">${esc(m.mobile_number||'—')}</td>
         <td style="font-size:10.5px;color:#374151">${esc(m.user_name||'—')}</td>
-        <td style="font-size:10.5px;color:#6b7280;max-width:200px" title="${esc(m.message_body||'')}">${esc(preview||'—')}</td>
+        <td style="font-size:10.5px;color:#374151;max-width:220px;cursor:pointer" onclick="viewFullWAMessage(${m.id})" title="Click to view full message">${esc(preview||'—')}</td>
         <td style="font-size:10px;color:#6b7280">${esc(m.message_type||'—')}</td>
         <td>${statusBadge(m.current_status)}</td>
         <td>${deliveredCell}</td>
@@ -2078,6 +2081,11 @@ async function loadMessages(resetOffset=true) {
         <td style="font-size:10.5px">${esc(m.sent_by_name||'System')} ${senderBadge}</td>
         <td style="font-size:9.5px;color:#9ca3af;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(m.wamid||'')}">${esc((m.wamid||'').slice(0,20)||'—')}</td>
         <td style="font-size:10px;color:#dc2626">${esc(m.error_message||'')}</td>
+        <td>
+          <button class="btn btn-sm btn-outline-success py-0 px-2 fw-bold" onclick="viewFullWAMessage(${m.id})" style="font-size:11px">
+            <i class="fas fa-eye me-1"></i> View
+          </button>
+        </td>
       </tr>`;
     }).join('');
     // Pager
@@ -2114,14 +2122,21 @@ async function loadMyMessages() {
       tbody.innerHTML = '<tr><td colspan="6" class="no-data"><i class="fas fa-inbox"></i><br>No messages found</td></tr>';
       return;
     }
-    tbody.innerHTML = data.map(m => `<tr>
-      <td style="white-space:nowrap">${fmtTime(m.sent_at)}</td>
-      <td>${esc(m.to_number||m.mobile_number||'—')}</td>
-      <td style="font-size:10px;color:#6b7280">${esc(m.message_type||'—')}</td>
-      <td>${statusBadge(m.current_status)}</td>
-      <td style="font-size:10px;color:#9ca3af;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.message_sid||'—')}</td>
-      <td style="font-size:10px;color:#dc2626">${esc(m.error_message||'')}</td>
-    </tr>`).join('');
+    tbody.innerHTML = data.map(m => {
+      window._loadedWAMessages[m.id] = m;
+      return `<tr>
+        <td style="white-space:nowrap">${fmtTime(m.sent_at)}</td>
+        <td>${esc(m.to_number||m.mobile_number||'—')}</td>
+        <td style="font-size:10px;color:#6b7280">${esc(m.message_type||'—')}</td>
+        <td>${statusBadge(m.current_status)}</td>
+        <td style="font-size:10px;color:#9ca3af;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.message_sid||'—')}</td>
+        <td>
+          <button class="btn btn-sm btn-outline-success py-0 px-2 fw-bold" onclick="viewFullWAMessage(${m.id})" style="font-size:11px">
+            <i class="fas fa-eye me-1"></i> View
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="6" class="no-data" style="color:#dc2626"><i class="fas fa-exclamation-triangle"></i> Failed to load</td></tr>';
   }
@@ -4422,6 +4437,89 @@ async function applyMetaLink(idx, metaName, metaLang) {
     btn.disabled = false; btn.innerHTML = '<i class="fas fa-link"></i> Link';
   }
 }
+
+function viewFullWAMessage(id) {
+  const m = (window._loadedWAMessages || {})[id];
+  if (!m) {
+    alert('Message details not found.');
+    return;
+  }
+  document.getElementById('wamModalTo').textContent = m.mobile_number || '—';
+  document.getElementById('wamModalName').textContent = m.user_name || 'Recipient';
+  document.getElementById('wamModalTime').textContent = fmtTime(m.sent_at);
+  document.getElementById('wamModalType').textContent = m.message_type || '—';
+  document.getElementById('wamModalStatus').innerHTML = statusBadge(m.current_status);
+  document.getElementById('wamModalSentBy').textContent = m.sent_by_name || 'System';
+  document.getElementById('wamModalWamid').textContent = m.wamid || '—';
+  document.getElementById('wamModalBody').textContent = m.message_body || '(No Message Content)';
+  
+  const modalEl = document.getElementById('waMessageDetailsModal');
+  if (modalEl) {
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+  }
+}
+
+function copyWAMessageText() {
+  const txt = document.getElementById('wamModalBody').textContent;
+  navigator.clipboard.writeText(txt).then(() => {
+    alert('✅ Message text copied to clipboard!');
+  });
+}
+</script>
+
+<!-- WhatsApp Message Details Modal -->
+<div class="modal fade" id="waMessageDetailsModal" tabindex="-1" aria-labelledby="waMessageDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow-lg" style="border-radius:14px;overflow:hidden">
+      <div class="modal-header bg-success text-white py-3 px-4" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;">
+        <h5 class="modal-title fw-bold fs-6" id="waMessageDetailsModalLabel"><i class="fab fa-whatsapp me-2"></i> WhatsApp Message Payload Details</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4" style="background:#f8fafc">
+        <div class="row g-3 mb-3" style="font-size:12px">
+          <div class="col-md-4">
+            <span class="text-muted fw-bold d-block text-uppercase" style="font-size:10px">Recipient</span>
+            <span class="fw-bold text-dark" id="wamModalName">—</span> (<span id="wamModalTo">—</span>)
+          </div>
+          <div class="col-md-4">
+            <span class="text-muted fw-bold d-block text-uppercase" style="font-size:10px">Sent At</span>
+            <span class="fw-bold text-dark" id="wamModalTime">—</span>
+          </div>
+          <div class="col-md-4">
+            <span class="text-muted fw-bold d-block text-uppercase" style="font-size:10px">Message Type</span>
+            <span class="badge bg-secondary" id="wamModalType">—</span>
+          </div>
+          <div class="col-md-4">
+            <span class="text-muted fw-bold d-block text-uppercase" style="font-size:10px">Status</span>
+            <span id="wamModalStatus">—</span>
+          </div>
+          <div class="col-md-4">
+            <span class="text-muted fw-bold d-block text-uppercase" style="font-size:10px">Sent By</span>
+            <span class="fw-bold text-dark" id="wamModalSentBy">—</span>
+          </div>
+          <div class="col-md-4">
+            <span class="text-muted fw-bold d-block text-uppercase" style="font-size:10px">Meta WA ID</span>
+            <span class="text-muted text-break font-monospace" style="font-size:10px" id="wamModalWamid">—</span>
+          </div>
+        </div>
+
+        <div class="card border border-light shadow-sm" style="border-radius:10px;background:#ffffff">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 px-3">
+            <span class="fw-bold small text-dark"><i class="fas fa-comment-alt text-success me-2"></i> Message Content</span>
+            <button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px" onclick="copyWAMessageText()"><i class="fas fa-copy me-1"></i> Copy Text</button>
+          </div>
+          <div class="card-body p-3">
+            <pre id="wamModalBody" style="white-space:pre-wrap; word-wrap:break-word; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size:13px; color:#1e293b; margin:0; line-height:1.6; background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0"></pre>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light py-2 px-4">
+        <button type="button" class="btn btn-sm btn-secondary fw-bold px-3" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
