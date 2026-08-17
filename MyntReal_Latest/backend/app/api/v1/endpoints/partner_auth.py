@@ -2477,11 +2477,23 @@ async def create_walkin(
             db.flush()
             crm_lead_id = new_lead.id
 
-            # Link CRM lead back to walkin
             db.execute(sq_text(
                 "UPDATE partner_walkins SET crm_lead_id = :cid WHERE id = :wid"
             ), {"cid": crm_lead_id, "wid": walkin_id})
             db.commit()
+
+            try:
+                from app.services.whatsapp_auto_service import send_lead_welcome
+                if new_lead.phone:
+                    send_lead_welcome(
+                        db=db,
+                        phone=new_lead.phone,
+                        lead_name=new_lead.name or '',
+                        lead_id=new_lead.id,
+                        partner_phone=partner.phone or partner.whatsapp_number
+                    )
+            except Exception as wa_err:
+                logger.warning(f"Partner walk-in lead welcome trigger exception for lead {new_lead.id}: {wa_err}")
         except Exception as e:
             db.rollback()
 

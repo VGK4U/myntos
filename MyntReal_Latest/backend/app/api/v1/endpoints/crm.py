@@ -11159,6 +11159,18 @@ def create_public_lead(
     db.commit()
     db.refresh(lead)
 
+    try:
+        from app.services.whatsapp_auto_service import send_lead_welcome
+        if lead.phone:
+            send_lead_welcome(
+                db=db,
+                phone=lead.phone,
+                lead_name=lead.name or '',
+                lead_id=lead.id
+            )
+    except Exception as wa_err:
+        logger.warning(f"Public lead welcome trigger exception for lead {lead.id}: {wa_err}")
+
     return {
         'success': True,
         'message': 'Thank you for your inquiry. We will contact you soon.',
@@ -14399,6 +14411,18 @@ async def create_lead_unified(
     db.add(new_lead)
     db.commit()
     db.refresh(new_lead)
+
+    try:
+        from app.services.whatsapp_auto_service import send_lead_welcome
+        if new_lead.phone:
+            send_lead_welcome(
+                db=db,
+                phone=new_lead.phone,
+                lead_name=new_lead.name or '',
+                lead_id=new_lead.id
+            )
+    except Exception as wa_err:
+        logger.warning(f"Unified lead welcome trigger exception for lead {new_lead.id}: {wa_err}")
     
     return {
         'success': True,
