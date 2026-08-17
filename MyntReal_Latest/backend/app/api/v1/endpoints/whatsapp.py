@@ -394,6 +394,7 @@ async def get_message_stats(
     failed = _base_q().filter(MessageLog.current_status == 'failed').scalar()
     pending = _base_q().filter(MessageLog.current_status.in_(['queued', 'sent'])).scalar()
     read_count = _base_q().filter(MessageLog.current_status == 'read').scalar()
+    total_delivered_or_read = (delivered or 0) + (read_count or 0)
 
     return {
         'total_sent': total_sent,
@@ -401,7 +402,7 @@ async def get_message_stats(
         'failed': failed,
         'pending': pending,
         'read': read_count,
-        'delivery_rate': round((delivered / total_sent * 100), 2) if total_sent > 0 else 0
+        'delivery_rate': round((total_delivered_or_read / total_sent * 100), 2) if total_sent > 0 else 0
     }
 
 
