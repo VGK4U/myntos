@@ -38,6 +38,9 @@
                 <h2 style="font-size: 22px; font-weight: 700; color: #111827; margin: 0;">Meta Lead Ingestion Engine</h2>
                 <p style="font-size: 13px; color: #6b7280; margin: 3px 0 0;">Real-Time Facebook Lead Ads Webhook & CRM Ingestion Engine</p>
             </div>
+            <div>
+                <button class="btn btn-sm btn-primary fw-bold px-3 shadow-sm" onclick="syncMetaLeads()"><i class="fas fa-sync-alt me-1"></i> Sync / Pull Meta Leads</button>
+            </div>
         </div>
 
         <div class="panel-card">
@@ -106,6 +109,28 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
     if (typeof StaffHeader !== 'undefined') StaffHeader.init();
 });
+
+function syncMetaLeads() {
+    const btn = document.querySelector('button[onclick="syncMetaLeads()"]');
+    if (btn) btn.disabled = true;
+    staffFetch('/api/v1/facebook-leads/pull-leads', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (btn) btn.disabled = false;
+            if (data.ingested_count > 0) {
+                alert('✅ ' + data.message);
+                window.location.reload();
+            } else if (data.errors && data.errors.length > 0) {
+                alert('⚠️ Meta Response: ' + data.errors.join('\n'));
+            } else {
+                alert('ℹ️ ' + (data.message || 'Sync complete. No new leads found.'));
+            }
+        })
+        .catch(err => {
+            if (btn) btn.disabled = false;
+            alert('Error syncing leads: ' + err.message);
+        });
+}
 </script>
 </body>
 </html>

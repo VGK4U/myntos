@@ -396,3 +396,73 @@ async def update_page_segment(
     ), {'seg': segment, 'pid': page_id})
     db.commit()
     return {'success': True, 'page_id': page_id, 'crm_segment': segment}
+
+
+@router.post("/pull-leads")
+async def pull_meta_leads(
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Manually pull/sync leads from Meta Graph API for all active pages and leadgen forms.
+    """
+    import requests
+    from app.core.security_encryption import decrypt_credential
+    from sqlalchemy import text as sqlt
+
+    pages = db.execute(sqlt(
+        "SELECT page_id, page_name, access_token, crm_segment FROM facebook_pages WHERE is_active = True AND access_token IS NOT NULL AND access_token != ''"
+    )).fetchall()
+
+    ingested_count = 0
+    errors = []
+
+    for p in pages:
+        page_id, page_name, enc_token, segment = p[0], p[1], p[2], p[3]
+        try:
+            token = decrypt_credential(enc_token)
+        except Exception:
+            token = enc_token
+
+        # Fetch leadgen forms
+        forms_url = f"https://graph.facebook.com/v19.0/{page_id}/leadgen_forms?access_token={token}"
+        fr = requests.get(forms_url)
+        if fr.status_code != 200:
+            err_msg = fr.json().get('error', {}).get('message', 'Failed to fetch forms')
+            errors.append(f"Page {page_name}: {err_msg}")
+            continue
+
+        forms = fr.json().get('data', [])
+        for f in forms:
+            f_id = f.get('id')
+            f_name = f.get('name')
+            leads_url = f"https://graph.facebook.com/v19.0/{f_id}/leads?access_token={token}"
+            lr = requests.get(leads_url)
+            if lr.status_code != 200:
+                err_msg = lr.json().get('error', {}).get('message', 'Failed to fetch leads')
+                errors.append(f"Form {f_name}: {err_msg}")
+                continue
+
+            leads_data = lr.json().get('data', [])
+            for ld in leads_data:
+                lead_id = ld.get('id')
+                if not lead_id:
+                    continue
+                try:
+                    crm_lead = await process_facebook_lead(
+                        lead_id=str(lead_id),
+                        page_id=str(page_id),
+                        form_id=str(f_id),
+                        db=db
+                    )
+                    if crm_lead:
+                        ingested_count += 1
+                except Exception as ex:
+                    errors.append(f"Lead {lead_id}: {str(ex)}")
+
+    return {
+        "success": True,
+        "ingested_count": ingested_count,
+        "errors": errors if errors else None,
+        "message": f"Successfully pulled {ingested_count} new Meta lead submissions!" if ingested_count > 0 else "No new leads found (or token permission needs update)."
+    }
