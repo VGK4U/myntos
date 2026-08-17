@@ -5706,14 +5706,21 @@ def vgk_top_partners_leaderboard_table(
     key_func = sort_key_map.get(sort_by, lambda x: x["total_leads"])
     partners.sort(key=key_func, reverse=reverse)
 
-    total_count = len(partners)
-    start_idx = (page - 1) * limit
-    end_idx = start_idx + limit
-    paginated_partners = partners[start_idx:end_idx]
+    total_team_members = sum(p["team_added"] for p in partners)
+    total_team_files = sum(p["total_leads"] for p in partners)
+    team_submits_count = sum(p["submits_count"] for p in partners)
+    team_submits_val = sum(p["submits_val"] for p in partners)
+    team_dvr_count = sum(p["dvr_count"] for p in partners)
+    team_dvr_val = sum(p["dvr_val"] for p in partners)
 
-    # Assign rank
-    for idx, p in enumerate(paginated_partners, start=start_idx + 1):
-        p["rank"] = idx
+    team_summary = {
+        "total_team_members": total_team_members,
+        "total_team_files": total_team_files,
+        "submitted_count": team_submits_count,
+        "submitted_val": team_submits_val,
+        "dvr_count": team_dvr_count,
+        "dvr_val": team_dvr_val
+    }
 
     return {
         "success": True,
@@ -5725,6 +5732,7 @@ def vgk_top_partners_leaderboard_table(
             "page": page,
             "limit": limit,
             "total_pages": (total_count + limit - 1) // limit if limit > 0 else 1,
+            "team_summary": team_summary,
             "partners": paginated_partners
         }
     }
