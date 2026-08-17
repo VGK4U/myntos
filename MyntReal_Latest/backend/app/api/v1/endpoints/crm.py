@@ -5762,22 +5762,66 @@ def get_employee_performance_dashboard(
     cl_from = closed_from.strip() if isinstance(closed_from, str) and closed_from.strip() else None
     cl_to = closed_to.strip() if isinstance(closed_to, str) and closed_to.strip() else None
 
+    # Fetch ALL active staff members (or filtered by department_id)
+    staff_conds = ["s.status = 'active'"]
+    staff_params = {}
+    if dept_id_filter:
+        staff_conds.append("s.department_id = :dept_id_filter")
+        staff_params['dept_id_filter'] = dept_id_filter
+
+    staff_sql = f"""
+        SELECT 
+            s.id, 
+            s.emp_code, 
+            s.full_name, 
+            COALESCE(d.name, 'General') as department_name,
+            s.department_id
+        FROM staff_employees s
+        LEFT JOIN staff_departments d ON s.department_id = d.id
+        WHERE {" AND ".join(staff_conds)}
+        ORDER BY d.name, s.full_name
+    """
+    all_active_staff = db.execute(text(staff_sql), staff_params).fetchall()
+
+    # Pre-fetch overdue leads count per employee
+    overdue_sql = """
+        SELECT 
+            COALESCE(s.emp_code, 'UNASSIGNED') as emp_code,
+            COUNT(DISTINCT l.id) as overdue_count
+        FROM crm_leads l
+        JOIN staff_employees s ON (
+            CAST(l.handler_id AS TEXT) = s.emp_code OR CAST(l.handler_id AS TEXT) = CAST(s.id AS TEXT) 
+            OR CAST(l.primary_owner_id AS TEXT) = s.emp_code OR CAST(l.field_staff_id AS TEXT) = s.emp_code 
+            OR CAST(l.telecaller_id AS TEXT) = s.emp_code OR CAST(l.created_by_id AS TEXT) = s.emp_code
+        )
+        WHERE l.next_followup_date < NOW()
+          AND LOWER(COALESCE(l.status, '')) NOT IN ('won', 'completed', 'delivered', 'installed', 'lost', 'cancelled', 'junk')
+        GROUP BY s.emp_code
+    """
+    overdue_rows = db.execute(text(overdue_sql)).fetchall()
+    overdue_map = {r[0]: int(r[1] or 0) for r in overdue_rows}
+
     def _get_dataset(period_type='monthly'):
         date_fmt = 'YYYY-MM' if period_type == 'monthly' else 'IYYY-"W"IW'
-        interval_val = '12 months' if period_type == 'monthly' else '12 weeks'
-        
+
         where_conds = []
         st_where_conds = []
+        call_where_conds = []
+        att_where_conds = []
         params = {}
 
         if period_type == 'monthly':
             if c_from:
                 where_conds.append("l.created_at >= CAST(:c_from AS TIMESTAMP)")
                 st_where_conds.append("t.created_date >= CAST(:c_from AS TIMESTAMP)")
+                call_where_conds.append("c.call_datetime >= CAST(:c_from AS TIMESTAMP)")
+                att_where_conds.append("a.date >= CAST(:c_from AS DATE)")
                 params['c_from'] = c_from
             if c_to:
                 where_conds.append("l.created_at <= CAST(:c_to AS TIMESTAMP) + INTERVAL '1 day'")
                 st_where_conds.append("t.created_date <= CAST(:c_to AS TIMESTAMP) + INTERVAL '1 day'")
+                call_where_conds.append("c.call_datetime <= CAST(:c_to AS TIMESTAMP) + INTERVAL '1 day'")
+                att_where_conds.append("a.date <= CAST(:c_to AS DATE)")
                 params['c_to'] = c_to
             if cl_from:
                 where_conds.append("l.actual_close_date >= CAST(:cl_from AS DATE)")
@@ -5788,13 +5832,18 @@ def get_employee_performance_dashboard(
             if not where_conds:
                 where_conds.append("l.created_at >= NOW() - INTERVAL '12 months'")
                 st_where_conds.append("t.created_date >= NOW() - INTERVAL '12 months'")
+                call_where_conds.append("c.call_datetime >= NOW() - INTERVAL '12 months'")
+                att_where_conds.append("a.date >= (NOW() - INTERVAL '12 months')::date")
         else:
-            # Weekly performance consistently displays rolling Last 12 Weeks (unaffected by top date filters)
             where_conds.append("l.created_at >= NOW() - INTERVAL '12 weeks'")
             st_where_conds.append("t.created_date >= NOW() - INTERVAL '12 weeks'")
+            call_where_conds.append("c.call_datetime >= NOW() - INTERVAL '12 weeks'")
+            att_where_conds.append("a.date >= (NOW() - INTERVAL '12 weeks')::date")
 
         lead_where_str = " AND ".join(where_conds)
         st_where_str = " AND ".join(st_where_conds) if st_where_conds else "1=1"
+        call_where_str = " AND ".join(call_where_conds) if call_where_conds else "1=1"
+        att_where_str = " AND ".join(att_where_conds) if att_where_conds else "1=1"
 
         # Lead performance aggregation
         lead_sql = f"""
@@ -5841,6 +5890,13 @@ def get_employee_performance_dashboard(
             ORDER BY period_key DESC, department_name, employee_name
         """
         lead_rows = db.execute(text(lead_sql), params).fetchall()
+        lead_map = {}
+        period_keys_set = set()
+        for r in lead_rows:
+            if r[0]:
+                period_keys_set.add(r[0])
+            key = f"{r[0]}_{r[2]}"
+            lead_map[key] = r
 
         # Confirmed revenue aggregation from income_entries (Income Entries page)
         inc_where_conds = ["ie.status IN ('CONFIRMED', 'TALLY_DONE', 'APPROVED')", "(ie.is_deleted IS FALSE OR ie.is_deleted IS NULL)"]
@@ -5890,6 +5946,8 @@ def get_employee_performance_dashboard(
         inc_rows = db.execute(text(inc_sql), params).fetchall()
         inc_map = {}
         for r in inc_rows:
+            if r[0]:
+                period_keys_set.add(r[0])
             key = f"{r[0]}_{r[1]}"
             inc_map[key] = {
                 'overall_rev': float(r[2] or 0.0),
@@ -5917,6 +5975,8 @@ def get_employee_performance_dashboard(
         st_rows = db.execute(text(st_sql), params).fetchall()
         st_map = {}
         for r in st_rows:
+            if r[0]:
+                period_keys_set.add(r[0])
             key = f"{r[0]}_{r[1]}"
             st_map[key] = {
                 'tickets': int(r[2] or 0),
@@ -5924,47 +5984,109 @@ def get_employee_performance_dashboard(
                 'spares_rev': float(r[3] or 0.0)
             }
 
+        # Call log durations
+        call_sql = f"""
+            SELECT 
+                TO_CHAR(c.call_datetime, '{date_fmt}') as period_key,
+                s.emp_code,
+                COALESCE(SUM(c.duration_seconds), 0) as total_sec
+            FROM staff_call_logs c
+            JOIN staff_employees s ON c.staff_id = s.id
+            WHERE {call_where_str}
+            GROUP BY TO_CHAR(c.call_datetime, '{date_fmt}'), s.emp_code
+        """
+        call_rows = db.execute(text(call_sql), params).fetchall()
+        call_map = {}
+        for r in call_rows:
+            if r[0]:
+                period_keys_set.add(r[0])
+            call_map[f"{r[0]}_{r[1]}"] = int(r[2] or 0)
+
+        # Attendance days
+        att_sql = f"""
+            SELECT 
+                TO_CHAR(a.date, '{date_fmt}') as period_key,
+                s.emp_code,
+                COUNT(DISTINCT a.date) as att_days
+            FROM staff_attendance a
+            JOIN staff_employees s ON a.employee_id = s.id
+            WHERE {att_where_str}
+            GROUP BY TO_CHAR(a.date, '{date_fmt}'), s.emp_code
+        """
+        att_rows = db.execute(text(att_sql), params).fetchall()
+        att_map = {}
+        for r in att_rows:
+            if r[0]:
+                period_keys_set.add(r[0])
+            att_map[f"{r[0]}_{r[1]}"] = int(r[2] or 0)
+
+        # Default to current period if set is empty
+        if not period_keys_set:
+            now_dt = datetime.utcnow()
+            def_key = now_dt.strftime('%Y-%m') if period_type == 'monthly' else now_dt.strftime('%G-W%V')
+            period_keys_set.add(def_key)
+
+        sorted_periods = sorted(list(period_keys_set), reverse=True)
+
         rows = []
-        for r in lead_rows:
-            p_key = r[0]
-            e_code = r[2]
-            st_info = st_map.get(f"{p_key}_{e_code}", {'tickets': 0, 'service_rev': 0.0, 'spares_rev': 0.0})
-            inc_info = inc_map.get(f"{p_key}_{e_code}", {'overall_rev': 0.0, 'solar_rev': 0.0, 'etc_rev': 0.0, 'b2b_rev': 0.0, 'b2c_rev': 0.0, 'insurance_rev': 0.0, 'others_rev': 0.0})
+        for p_key in sorted_periods:
+            for s in all_active_staff:
+                s_id = s[0]
+                e_code = s[1]
+                s_name = s[2] or e_code or f"Staff #{s_id}"
+                dept_name = s[3] or "General"
 
-            # Exclude UNASSIGNED
-            if e_code == 'UNASSIGNED' or not e_code:
-                continue
+                # Filter by search
+                if search_query:
+                    if search_query not in s_name.lower() and search_query not in (e_code or '').lower():
+                        continue
 
-            # Filters
-            if search_query:
-                if search_query not in (r[3] or '').lower() and search_query not in (r[2] or '').lower():
-                    continue
+                k = f"{p_key}_{e_code}"
+                r = lead_map.get(k)
+                st_info = st_map.get(k, {'tickets': 0, 'service_rev': 0.0, 'spares_rev': 0.0})
+                inc_info = inc_map.get(k, {'overall_rev': 0.0, 'solar_rev': 0.0, 'etc_rev': 0.0, 'b2b_rev': 0.0, 'b2c_rev': 0.0, 'insurance_rev': 0.0, 'others_rev': 0.0})
 
-            rows.append({
-                'period_key': p_key,
-                'department_name': r[1],
-                'emp_code': r[2],
-                'employee_name': r[3],
-                'self_leads': int(r[4] or 0),
-                'overall_new_leads': int(r[5] or 0),
-                'overall_won': int(r[6] or 0),
-                'overall_rev': inc_info['overall_rev'],
-                'solar_won': int(r[7] or 0),
-                'solar_rev': inc_info['solar_rev'],
-                'etc_won': int(r[8] or 0),
-                'etc_rev': inc_info['etc_rev'],
-                'b2b_won': int(r[9] or 0),
-                'b2b_rev': inc_info['b2b_rev'],
-                'b2c_won': int(r[10] or 0),
-                'b2c_rev': inc_info['b2c_rev'],
-                'insurance_won': int(r[11] or 0),
-                'insurance_rev': inc_info['insurance_rev'],
-                'service_tickets_count': st_info['tickets'],
-                'service_rev': st_info['service_rev'],
-                'spares_rev': st_info['spares_rev'],
-                'others_won': int(r[12] or 0),
-                'others_rev': inc_info['others_rev'],
-            })
+                tot_sec = call_map.get(k, 0)
+                att_days = att_map.get(k, 0)
+                if att_days > 0:
+                    avg_sec = tot_sec / att_days
+                elif tot_sec > 0:
+                    avg_sec = tot_sec / 1
+                else:
+                    avg_sec = 0
+
+                mins = int(avg_sec // 60)
+                hrs = mins // 60
+                rem_m = mins % 60
+                avg_str = f"{hrs}h {rem_m}m / day" if hrs > 0 else f"{rem_m}m / day"
+
+                rows.append({
+                    'period_key': p_key,
+                    'department_name': dept_name,
+                    'emp_code': e_code,
+                    'employee_name': s_name,
+                    'self_leads': int(r[4] or 0) if r else 0,
+                    'overall_new_leads': int(r[5] or 0) if r else 0,
+                    'avg_talk_time_per_day': avg_str,
+                    'overdue_leads': overdue_map.get(e_code, 0),
+                    'overall_won': int(r[6] or 0) if r else 0,
+                    'overall_rev': inc_info['overall_rev'],
+                    'solar_won': int(r[7] or 0) if r else 0,
+                    'solar_rev': inc_info['solar_rev'],
+                    'etc_won': int(r[8] or 0) if r else 0,
+                    'etc_rev': inc_info['etc_rev'],
+                    'b2b_won': int(r[9] or 0) if r else 0,
+                    'b2b_rev': inc_info['b2b_rev'],
+                    'b2c_won': int(r[10] or 0) if r else 0,
+                    'b2c_rev': inc_info['b2c_rev'],
+                    'insurance_won': int(r[11] or 0) if r else 0,
+                    'insurance_rev': inc_info['insurance_rev'],
+                    'service_tickets_count': st_info['tickets'],
+                    'service_rev': st_info['service_rev'],
+                    'spares_rev': st_info['spares_rev'],
+                    'others_won': int(r[12] or 0) if r else 0,
+                    'others_rev': inc_info['others_rev'],
+                })
         return rows
 
     # Fetch departments for filter dropdown

@@ -946,6 +946,12 @@ function renderEmployeePerformanceTables() {
             <th rowspan="2" class="align-middle text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'overall_new_leads')" style="min-width:110px;background:#f1f5f9">
               Overall New Leads ${sortInfo.col === 'overall_new_leads' ? (sortInfo.dir === 'asc' ? '▲' : '▼') : ''}
             </th>
+            <th rowspan="2" class="align-middle text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'avg_talk_time_per_day')" style="min-width:130px;background:#f0fdf4;color:#0f766e">
+              Avg Talk Time / Day ${sortInfo.col === 'avg_talk_time_per_day' ? (sortInfo.dir === 'asc' ? '▲' : '▼') : ''}
+            </th>
+            <th rowspan="2" class="align-middle text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'overdue_leads')" style="min-width:105px;background:#fef2f2;color:#b91c1c">
+              Overdue Leads ${sortInfo.col === 'overdue_leads' ? (sortInfo.dir === 'asc' ? '▲' : '▼') : ''}
+            </th>
             <th colspan="2" class="text-center" style="background:#ffedd5;color:#9a3412">Overall</th>
             <th colspan="2" class="text-center" style="background:#e0f2fe;color:#075985">Solar</th>
             <th colspan="2" class="text-center" style="background:#fef3c7;color:#92400e">ETC</th>
@@ -989,6 +995,8 @@ function renderEmployeePerformanceTables() {
           </td>
           <td class="text-center fw-semibold" style="color:#2563eb">${fmtNum(r.self_leads)}</td>
           <td class="text-center fw-bold">${fmtNum(r.overall_new_leads)}</td>
+          <td class="text-center fw-semibold" style="color:#0f766e;background:#f0fdf4">${esc(r.avg_talk_time_per_day || '0m / day')}</td>
+          <td class="text-center fw-bold" style="color:${(r.overdue_leads || 0) > 0 ? '#b91c1c' : '#64748b'};background:${(r.overdue_leads || 0) > 0 ? '#fef2f2' : ''}">${fmtNum(r.overdue_leads || 0)}</td>
           
           <td class="text-center fw-bold" style="color:#c2410c;background:#fffaf5">${fmtNum(r.overall_won)}</td>
           <td class="text-end fw-bold" style="color:#c2410c;background:#fffaf5">₹${fmtVal(r.overall_rev)}</td>
