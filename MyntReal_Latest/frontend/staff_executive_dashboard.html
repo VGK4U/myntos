@@ -985,7 +985,9 @@ function renderEmployeePerformanceTables() {
             insurance_won: 0, insurance_rev: 0,
             service_tickets_count: 0, service_rev: 0, spares_rev: 0,
             others_won: 0, others_rev: 0,
-            avg_talk_time_per_day: r.avg_talk_time_per_day || '0m / day'
+            total_call_sec: 0,
+            total_att_days: 0,
+            avg_talk_time_per_day: '0m / day'
           },
           items: []
         };
@@ -1014,9 +1016,16 @@ function renderEmployeePerformanceTables() {
       g.summary.spares_rev += (r.spares_rev || 0);
       g.summary.others_won += (r.others_won || 0);
       g.summary.others_rev += (r.others_rev || 0);
+      g.summary.total_call_sec += (r.call_duration_seconds || 0);
+      g.summary.total_att_days += (r.attendance_days || 0);
 
-      if (r.avg_talk_time_per_day && r.avg_talk_time_per_day !== '0m / day') {
-        g.summary.avg_talk_time_per_day = r.avg_talk_time_per_day;
+      // Compute overall weighted average talk time per day
+      if (g.summary.total_att_days > 0 && g.summary.total_call_sec > 0) {
+        const avgSec = g.summary.total_call_sec / g.summary.total_att_days;
+        const mins = Math.floor(avgSec / 60);
+        const hrs = Math.floor(mins / 60);
+        const remM = mins % 60;
+        g.summary.avg_talk_time_per_day = hrs > 0 ? `${hrs}h ${remM}m / day` : `${remM}m / day`;
       }
     });
 

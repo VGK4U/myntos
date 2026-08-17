@@ -6081,6 +6081,8 @@ def get_employee_performance_dashboard(
                     'employee_name': s_name,
                     'self_leads': int(r[4] or 0) if r else 0,
                     'overall_new_leads': int(r[5] or 0) if r else 0,
+                    'call_duration_seconds': tot_sec,
+                    'attendance_days': att_days if att_days > 0 else (1 if tot_sec > 0 else 0),
                     'avg_talk_time_per_day': avg_str,
                     'overdue_leads': overdue_map.get(e_code, 0),
                     'overall_won': int(r[6] or 0) if r else 0,
