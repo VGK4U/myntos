@@ -196,6 +196,19 @@ async def process_facebook_lead(
         db.rollback()
         logger.warning(f"Meta attribution creation non-fatal error: {att_err}")
 
+    # ── Auto WhatsApp Welcome Message ───────────────────────────────────────────
+    try:
+        from app.services.whatsapp_auto_service import send_lead_welcome
+        if crm_lead.phone:
+            send_lead_welcome(
+                db=db,
+                phone=crm_lead.phone,
+                lead_name=crm_lead.name,
+                lead_id=crm_lead.id
+            )
+    except Exception as wa_err:
+        logger.warning(f"Auto welcome WhatsApp trigger exception for lead {crm_lead.id}: {wa_err}")
+
     logger.info(f"CRM lead {crm_lead.id} created from FB lead {lead_id} | page: {page_name} | segment: {page_segment}")
     return crm_lead
 
@@ -482,6 +495,18 @@ async def pull_meta_leads(
                     except Exception as att_err:
                         db.rollback()
                         logger.warning(f"Attribution error for {lead_id}: {att_err}")
+
+                    try:
+                        from app.services.whatsapp_auto_service import send_lead_welcome
+                        if crm_lead.phone:
+                            send_lead_welcome(
+                                db=db,
+                                phone=crm_lead.phone,
+                                lead_name=crm_lead.name,
+                                lead_id=crm_lead.id
+                            )
+                    except Exception as wa_err:
+                        logger.warning(f"Pull welcome WhatsApp trigger exception for lead {crm_lead.id}: {wa_err}")
 
                     ingested_count += 1
                 except Exception as ex:

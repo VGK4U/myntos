@@ -374,12 +374,19 @@ class FacebookLeadsService:
             'SOLAR':       'solar',
         }.get(page_segment, 'facebook_lead')
 
+        # Auto-detect Solar Category (category_id = 36 or 19) when page / segment is Solar
+        target_category_id = category_id
+        if not target_category_id:
+            if page_segment == 'SOLAR' or 'solar' in (page_name or '').lower():
+                target_category_id = 36 if company_id == 1 else 19
+
         crm = {
             'company_id':          company_id,
+            'category_id':         target_category_id,
             'name':                name[:200],
             'email':               email[:200] if email else None,
             'phone':               phone[:20]  if phone else None,
-            'source':              'Online - M',
+            'source':              'Social Media',
             'source_details':      str(source_details)[:1000],
             'status':              'new',
             'priority':            'high',
