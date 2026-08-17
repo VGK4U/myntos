@@ -8822,6 +8822,9 @@ def get_lead(
                 ).scalar()
                 if _min_tx:
                     lead_dict['first_payment_received_date'] = _min_tx.isoformat() if hasattr(_min_tx, 'isoformat') else str(_min_tx)
+        except Exception:
+            pass
+
         # DC-STAFF-VISITS-001: Attach staff journey visit history tagged to this lead
         try:
             lead_dict['staff_visits'] = _get_lead_staff_visits(db, lead)

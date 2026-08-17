@@ -4,8 +4,15 @@ import logging
 import asyncio
 from typing import List, Dict, Any
 
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+try:
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.client.stdio import stdio_client
+    HAS_MCP = True
+except ImportError:
+    ClientSession = None
+    StdioServerParameters = None
+    stdio_client = None
+    HAS_MCP = False
 
 try:
     from google import genai
