@@ -8074,11 +8074,14 @@ const server = http.createServer(async (req, res) => {
         proxyUrl.includes('/meta-templates/submit') ||
         proxyUrl.includes('/meta-templates/ai-draft') ||
         proxyUrl.includes('/meta-templates/sync-status') ||
-        proxyUrl.includes('/staff/progress/ranking');
+        proxyUrl.includes('/staff/progress/ranking') ||
+        proxyUrl.includes('/lead-analytics') ||
+        proxyUrl.includes('/employee-performance-dashboard') ||
+        proxyUrl.includes('/exec-trend-leads');
       const options = {
         method: req.method,
         headers: proxyHeaders,
-        timeout: isLongRunning ? 120000 : 5000
+        timeout: isLongRunning ? 120000 : 30000
       };
       
       const proxyReq = http.request(backendUrl, options, (backendRes) => {

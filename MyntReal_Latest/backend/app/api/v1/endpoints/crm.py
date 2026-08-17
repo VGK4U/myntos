@@ -6378,8 +6378,18 @@ def lead_analytics(
         base = base.filter(CRMLead.pincode.ilike(f'%{pincode}%'))
 
     def _pd(s):
+        if not s or not isinstance(s, str):
+            return None
+        val = s.strip()
+        if not val:
+            return None
+        for fmt in ('%d/%m/%Y', '%Y-%m-%d', '%Y/%m/%d', '%d-%m-%Y'):
+            try:
+                return datetime.strptime(val, fmt)
+            except ValueError:
+                pass
         try:
-            return datetime.fromisoformat(s.replace('Z', '+00:00').replace('T00:00:00+00:00', ''))
+            return datetime.fromisoformat(val.replace('Z', '+00:00').replace('T00:00:00+00:00', ''))
         except Exception:
             return None
 
