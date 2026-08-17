@@ -5646,7 +5646,16 @@ def vgk_top_partners_leaderboard_table(
                        WHEN tcl.first_payment_received_date IS NOT NULL THEN tcl.deal_value_total
                        ELSE 0
                    END
-               ), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id) AND (tcl.first_payment_received_date IS NOT NULL OR tcl.deal_value_received > 0)) AS team_dvr_val
+               ), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id) AND (tcl.first_payment_received_date IS NOT NULL OR tcl.deal_value_received > 0)) AS team_dvr_val,
+               (SELECT COALESCE(SUM(
+                   CASE 
+                       WHEN tcl.deal_value_received > 0 THEN tcl.deal_value_received
+                       WHEN EXISTS (SELECT 1 FROM crm_lead_transactions tx WHERE tx.lead_id = tcl.id) 
+                            THEN (SELECT COALESCE(SUM(amount), 0) FROM crm_lead_transactions tx WHERE tx.lead_id = tcl.id)
+                       WHEN tcl.first_payment_received_date IS NOT NULL THEN tcl.deal_value_total
+                       ELSE 0
+                   END
+               ), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id)) AS team_total_received_val
         FROM crm_leads cl
         JOIN official_partners op ON op.id = cl.associated_partner_id
         {join_staff}
@@ -5679,6 +5688,7 @@ def vgk_top_partners_leaderboard_table(
         tm_sub_v = float(r[17] or 0)
         tm_dvr_c = int(r[18] or 0)
         tm_dvr_v = float(r[19] or 0)
+        tm_tot_recv_v = float(r[20] or 0)
 
         sub_pct = round((sub_c / tot * 100), 1) if tot > 0 else 0.0
         dvr_pct = round((dvr_c / tot * 100), 1) if tot > 0 else 0.0
@@ -5703,7 +5713,8 @@ def vgk_top_partners_leaderboard_table(
             "team_submits_count": tm_sub_c,
             "team_submits_val": tm_sub_v,
             "team_dvr_count": tm_dvr_c,
-            "team_dvr_val": tm_dvr_v
+            "team_dvr_val": tm_dvr_v,
+            "team_total_received_val": tm_tot_recv_v
         })
 
     # Sort
@@ -5725,16 +5736,23 @@ def vgk_top_partners_leaderboard_table(
         "lost_count": lambda x: x["lost_count"],
         "lost_val": lambda x: x["lost_val"],
         "win_rate": lambda x: x["win_rate"],
+        "team_leads": lambda x: x["team_leads"],
+        "team_submits_count": lambda x: x["team_submits_count"],
+        "team_submits_val": lambda x: x["team_submits_val"],
+        "team_dvr_count": lambda x: x["team_dvr_count"],
+        "team_dvr_val": lambda x: x["team_dvr_val"],
+        "team_total_received_val": lambda x: x["team_total_received_val"],
     }
     key_func = sort_key_map.get(sort_by, lambda x: x["total_leads"])
     partners.sort(key=key_func, reverse=reverse)
 
     total_team_members = sum(p["team_added"] for p in partners)
-    total_team_files = sum(p["total_leads"] for p in partners)
-    team_submits_count = sum(p["submits_count"] for p in partners)
-    team_submits_val = sum(p["submits_val"] for p in partners)
-    team_dvr_count = sum(p["dvr_count"] for p in partners)
-    team_dvr_val = sum(p["dvr_val"] for p in partners)
+    total_team_files = sum(p["team_leads"] for p in partners)
+    team_submits_count = sum(p["team_submits_count"] for p in partners)
+    team_submits_val = sum(p["team_submits_val"] for p in partners)
+    team_dvr_count = sum(p["team_dvr_count"] for p in partners)
+    team_dvr_val = sum(p["team_dvr_val"] for p in partners)
+    team_total_received_val = sum(p["team_total_received_val"] for p in partners)
 
     team_summary = {
         "total_team_members": total_team_members,
@@ -5742,7 +5760,8 @@ def vgk_top_partners_leaderboard_table(
         "submitted_count": team_submits_count,
         "submitted_val": team_submits_val,
         "dvr_count": team_dvr_count,
-        "dvr_val": team_dvr_val
+        "dvr_val": team_dvr_val,
+        "total_received_val": team_total_received_val
     }
 
     return {
