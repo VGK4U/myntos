@@ -5998,13 +5998,14 @@ def get_employee_performance_dashboard(
                 'spares_rev': float(r[3] or 0.0)
             }
 
-        # Call log durations and call counts
+        # Call log durations and connected call counts (duration_seconds > 0)
         call_sql = f"""
             SELECT 
                 TO_CHAR(c.call_datetime, '{date_fmt}') as period_key,
                 s.emp_code,
                 COALESCE(SUM(c.duration_seconds), 0) as total_sec,
-                COUNT(c.id) as total_calls
+                COUNT(CASE WHEN c.duration_seconds > 0 THEN 1 END) as total_calls,
+                COUNT(c.id) as total_attempts
             FROM staff_call_logs c
             JOIN staff_employees s ON c.staff_id = s.id
             WHERE {call_where_str}
@@ -6015,7 +6016,7 @@ def get_employee_performance_dashboard(
         for r in call_rows:
             if r[0]:
                 period_keys_set.add(r[0])
-            call_map[f"{r[0]}_{r[1]}"] = {'sec': int(r[2] or 0), 'cnt': int(r[3] or 0)}
+            call_map[f"{r[0]}_{r[1]}"] = {'sec': int(r[2] or 0), 'cnt': int(r[3] or 0), 'attempts': int(r[4] or 0)}
 
         # Attendance days
         att_sql = f"""
