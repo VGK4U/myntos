@@ -445,7 +445,7 @@ def send_direct_whatsapp(
 
 # ── Staff daily morning reminder ───────────────────────────────────────────────
 
-def send_staff_morning_reminder(db: Session, staff_employee, portal_base_url: str = "https://mnrteam.com"):
+def send_staff_morning_reminder(db: Session, staff_employee, portal_base_url: str = "https://www.myntreal.com"):
     """
     Send a personalised morning WhatsApp to one staff member.
     Called by APScheduler job at 8AM IST every weekday.
@@ -660,7 +660,7 @@ def send_lead_assigned_staff_wa(
 def send_staff_morning_leadership(
     db: Session,
     staff_employee,
-    portal_base_url: str = "https://mnrteam.com",
+    portal_base_url: str = "https://www.myntreal.com",
 ) -> Dict[str, Any]:
     """
     Send morning leadership summary WhatsApp to Key Leadership / EA / VGK Supreme staff.

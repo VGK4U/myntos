@@ -22,8 +22,8 @@ _SEEDED = False   # module-level guard — prevents re-run on hot-reload
 
 _TEMPLATES = [
     {
-        "slug": "mnr_morning_team_greeting",
-        "name": "MNR Morning Team Greeting",
+        "slug": "myntreal_morning_team_greeting",
+        "name": "Myntreal Morning Team Greeting",
         "body_text": (
             "🌅 Good morning, {{name}}!\n\n"
             "📅 *{{date}}*\n\n"
@@ -34,18 +34,18 @@ _TEMPLATES = [
             "Let's make today count! 💪\n"
             "🔗 {{portal_url}}"
         ),
-        "footer_text": "MNR Mega Natural Resources",
+        "footer_text": "Myntreal.com",
         "segment": "staff",
         "meta_category": "UTILITY",
         "event_key": "staff_morning_reminder",
         "event_label": "Staff Daily Morning Greeting",
         "event_category": "staff",
         "example_values": ["Rahul Kumar", "Wed, 07 May 2026", "3", "2", "1",
-                           "mnrteam.com/staff/dashboard"],
+                           "myntreal.com/staff/dashboard"],
     },
     {
-        "slug": "mnr_morning_leadership_summary",
-        "name": "MNR Morning Leadership Summary",
+        "slug": "myntreal_morning_leadership_summary",
+        "name": "Myntreal Morning Leadership Summary",
         "body_text": (
             "🏢 Good morning, {{name}}!\n\n"
             "📅 *{{date}}* — Team Snapshot 📊\n\n"
@@ -56,18 +56,18 @@ _TEMPLATES = [
             "Drive the team forward! 🚀\n"
             "🔗 {{portal_url}}"
         ),
-        "footer_text": "MNR Mega Natural Resources",
+        "footer_text": "Myntreal.com",
         "segment": "staff",
         "meta_category": "UTILITY",
         "event_key": "staff_morning_leadership",
         "event_label": "Leadership Morning Team Summary",
         "event_category": "staff",
         "example_values": ["Anjali Singh", "Wed, 07 May 2026", "24", "12", "3",
-                           "45", "8", "7", "2", "mnrteam.com/staff/dashboard"],
+                           "45", "8", "7", "2", "myntreal.com/staff/dashboard"],
     },
     {
-        "slug": "mnr_task_overdue_alert",
-        "name": "MNR Task Overdue Alert",
+        "slug": "myntreal_task_overdue_alert",
+        "name": "Task Overdue Alert",
         "body_text": (
             "⚠️ Hi {{name}}, a task assigned to you is *overdue*!\n\n"
             "📋 Task: {{task_title}}\n"
@@ -75,9 +75,9 @@ _TEMPLATES = [
             "⏰ Overdue By: {{overdue_days}} day(s)\n"
             "👔 Assigned By: {{assigned_by}}\n\n"
             "Please update the status or contact your manager.\n"
-            "➡️ mnrteam.com/staff/tasks"
+            "➡️ myntreal.com/staff/tasks"
         ),
-        "footer_text": "MNR Mega Natural Resources",
+        "footer_text": "Myntreal.com",
         "segment": "staff",
         "meta_category": "UTILITY",
         "event_key": "task_overdue_alert",
@@ -87,8 +87,8 @@ _TEMPLATES = [
                            "05 May 2026", "2", "Priya Sharma"],
     },
     {
-        "slug": "mnr_kra_overdue_alert",
-        "name": "MNR KRA Overdue Alert",
+        "slug": "myntreal_kra_overdue_alert",
+        "name": "KRA Overdue Alert",
         "body_text": (
             "🔴 Hi {{name}}, your KRA for today is *pending*!\n\n"
             "📊 KRA: {{kra_name}}\n"
@@ -96,9 +96,9 @@ _TEMPLATES = [
             "🎯 Target: {{kra_target}}\n"
             "📋 Status: {{completion_status}}\n\n"
             "Please update your KRA completion status.\n"
-            "➡️ mnrteam.com/staff/kra-status"
+            "➡️ myntreal.com/staff/kra-status"
         ),
-        "footer_text": "MNR Mega Natural Resources",
+        "footer_text": "Myntreal.com",
         "segment": "staff",
         "meta_category": "UTILITY",
         "event_key": "kra_overdue_alert",
@@ -108,8 +108,8 @@ _TEMPLATES = [
                            "07 May 2026", "10 calls", "Pending"],
     },
     {
-        "slug": "mnr_ticket_created_customer",
-        "name": "MNR Service Ticket Created",
+        "slug": "myntreal_ticket_created_customer",
+        "name": "Myntreal Service Ticket Created",
         "body_text": (
             "✅ Dear {{name}}, your service request is registered!\n\n"
             "🎫 Ticket ID: {{ticket_id}}\n"
@@ -118,9 +118,9 @@ _TEMPLATES = [
             "🔄 Status: Open\n\n"
             "Our team will contact you shortly.\n"
             "Quote your Ticket ID for updates.\n\n"
-            "Thank you for choosing MNR! 🙏"
+            "Thank you for choosing Myntreal.com! 🙏"
         ),
-        "footer_text": "mnrteam.com",
+        "footer_text": "myntreal.com",
         "segment": "general",
         "meta_category": "UTILITY",
         "event_key": "ticket_created_customer",
@@ -130,17 +130,17 @@ _TEMPLATES = [
                            "EV Battery Not Charging", "07 May 2026"],
     },
     {
-        "slug": "mnr_ticket_closed_customer",
-        "name": "MNR Service Ticket Closed",
+        "slug": "myntreal_ticket_closed_customer",
+        "name": "Myntreal Service Ticket Closed",
         "body_text": (
             "🎉 Dear {{name}}, your service ticket is *resolved*! ✅\n\n"
             "🎫 Ticket ID: {{ticket_id}}\n"
             "📝 Issue: {{issue}}\n"
             "📅 Closed On: {{date}}\n\n"
             "We hope the issue is resolved to your satisfaction.\n"
-            "Your feedback matters — thank you for being with MNR! ⭐"
+            "Your feedback matters — thank you for choosing Myntreal.com! ⭐"
         ),
-        "footer_text": "mnrteam.com",
+        "footer_text": "myntreal.com",
         "segment": "general",
         "meta_category": "UTILITY",
         "event_key": "ticket_closed_customer",
@@ -150,17 +150,17 @@ _TEMPLATES = [
                            "EV Battery Not Charging", "07 May 2026"],
     },
     {
-        "slug": "mnr_ticket_acknowledged_customer",
-        "name": "MNR Ticket Acknowledged",
+        "slug": "myntreal_ticket_acknowledged_customer",
+        "name": "Myntreal Ticket Acknowledged",
         "body_text": (
             "👋 Dear {{name}}, we have received your service ticket!\n\n"
             "🎫 Ticket ID: {{ticket_id}}\n"
             "🔄 Status: Acknowledged\n\n"
             "Our service team is reviewing your issue.\n"
             "We will keep you updated on progress.\n\n"
-            "Thank you for your patience! 🙏"
+            "Thank you for choosing Myntreal.com! 🙏"
         ),
-        "footer_text": "mnrteam.com",
+        "footer_text": "myntreal.com",
         "segment": "general",
         "meta_category": "UTILITY",
         "event_key": "ticket_acknowledged",
@@ -169,17 +169,17 @@ _TEMPLATES = [
         "example_values": ["Ramesh Kumar", "TKT-2026-001"],
     },
     {
-        "slug": "mnr_ticket_resolved_customer",
-        "name": "MNR Ticket Work Complete",
+        "slug": "myntreal_ticket_resolved_customer",
+        "name": "Myntreal Ticket Work Complete",
         "body_text": (
             "🎯 Dear {{name}}, your service issue is *work complete*!\n\n"
             "🎫 Ticket ID: {{ticket_id}}\n"
             "📝 Issue: {{issue}}\n"
             "✅ Status: Work Complete\n\n"
             "The ticket will be formally closed shortly.\n"
-            "Thank you for choosing MNR! 🙏"
+            "Thank you for choosing Myntreal.com! 🙏"
         ),
-        "footer_text": "mnrteam.com",
+        "footer_text": "myntreal.com",
         "segment": "general",
         "meta_category": "UTILITY",
         "event_key": "ticket_resolved",
@@ -188,16 +188,16 @@ _TEMPLATES = [
         "example_values": ["Ramesh Kumar", "TKT-2026-001", "EV Battery Not Charging"],
     },
     {
-        "slug": "mnr_ticket_status_update_customer",
-        "name": "MNR Ticket Status Update",
+        "slug": "myntreal_ticket_status_update_customer",
+        "name": "Myntreal Ticket Status Update",
         "body_text": (
             "🔔 Dear {{name}}, your ticket status has been updated!\n\n"
             "🎫 Ticket ID: {{ticket_id}}\n"
             "🔄 New Status: {{status}}\n"
             "📅 Updated On: {{date}}\n\n"
-            "For queries, visit mnrteam.com 🙏"
+            "For queries, visit www.myntreal.com 🙏"
         ),
-        "footer_text": "mnrteam.com",
+        "footer_text": "myntreal.com",
         "segment": "general",
         "meta_category": "UTILITY",
         "event_key": "ticket_status_update_customer",
@@ -207,28 +207,28 @@ _TEMPLATES = [
                            "Work In Progress", "07 May 2026"],
     },
     {
-        "slug": "mnr_lead_thankyou_general",
-        "name": "MNR Lead Thank You",
+        "slug": "myntreal_lead_thankyou_general",
+        "name": "Myntreal Lead Thank You",
         "body_text": (
-            "🙏 Dear {{name}}, thank you for your interest in MNR!\n\n"
-            "We have received your enquiry and our team will\n"
+            "🙏 Dear {{name}}, thank you for choosing Myntreal.com!\n\n"
+            "We have received your enquiry and our green energy team will\n"
             "connect with you shortly.\n\n"
             "📞 Reference: {{lead_ref}}\n"
             "📅 Received: {{date}}\n\n"
             "Our executive will reach out within 24 hours.\n\n"
-            "Exciting things ahead! 🌟"
+            "Thank you for choosing Myntreal.com! 🌟"
         ),
-        "footer_text": "MNR Mega Natural Resources",
+        "footer_text": "Myntreal.com",
         "segment": "general",
         "meta_category": "UTILITY",
         "event_key": "crm_lead_created",
         "event_label": "New Lead Thank You — Customer",
         "event_category": "crm",
-        "example_values": ["Suresh Patel", "MNR-LEAD-1042", "07 May 2026"],
+        "example_values": ["Suresh Patel", "MYNTREAL-LEAD-1042", "07 May 2026"],
     },
     {
-        "slug": "mnr_walkin_thankyou_customer",
-        "name": "MNR Walk-in Thank You",
+        "slug": "myntreal_walkin_thankyou_customer",
+        "name": "Myntreal Walk-in Thank You",
         "body_text": (
             "🙏 Dear {{name}}, thank you for visiting our showroom!\n\n"
             "We are delighted to have you here.\n"
@@ -236,20 +236,20 @@ _TEMPLATES = [
             "📞 Reference: {{lead_ref}}\n"
             "📅 Visit Date: {{date}}\n"
             "🏬 Location: {{partner_name}}\n\n"
-            "Looking forward to serving you! 😊"
+            "Thank you for choosing Myntreal.com! 😊"
         ),
-        "footer_text": "MNR Mega Natural Resources",
+        "footer_text": "Myntreal.com",
         "segment": "general",
         "meta_category": "UTILITY",
         "event_key": "crm_lead_walkin_created",
         "event_label": "Walk-in Thank You — Customer",
         "event_category": "crm",
-        "example_values": ["Suresh Patel", "MNR-LEAD-1042",
-                           "07 May 2026", "MNR Solar Hub Hyderabad"],
+        "example_values": ["Suresh Patel", "MYNTREAL-LEAD-1042",
+                           "07 May 2026", "Myntreal Solar Hub Hyderabad"],
     },
     {
-        "slug": "mnr_lead_assigned_staff",
-        "name": "MNR Lead Assigned to Staff",
+        "slug": "myntreal_lead_assigned_staff",
+        "name": "Myntreal Lead Assigned to Staff",
         "body_text": (
             "📞 Hi {{staff_name}}, a new lead has been assigned to you!\n\n"
             "👤 Lead Name: {{lead_name}}\n"
@@ -257,9 +257,9 @@ _TEMPLATES = [
             "🏷️ Source: {{source}}\n"
             "📅 Assigned On: {{date}}\n\n"
             "Please follow up at the earliest! 💼\n"
-            "➡️ mnrteam.com/staff/crm"
+            "➡️ myntreal.com/staff/crm"
         ),
-        "footer_text": "MNR Mega Natural Resources",
+        "footer_text": "Myntreal.com",
         "segment": "staff",
         "meta_category": "UTILITY",
         "event_key": "lead_assigned_staff",
@@ -269,16 +269,16 @@ _TEMPLATES = [
                            "9876543210", "Walk-in", "07 May 2026"],
     },
     {
-        "slug": "mnr_lead_overdue_sales",
-        "name": "MNR Overdue Leads — Sales",
+        "slug": "myntreal_lead_overdue_sales",
+        "name": "Overdue Leads — Sales Alert",
         "body_text": (
             "🔔 Hi {{name}}, you have *{{count}} overdue lead(s)* pending!\n\n"
             "📋 Oldest Lead: {{oldest_lead}}\n"
             "📅 Overdue Since: {{overdue_since}}\n\n"
             "Please take action today to keep your pipeline moving. 💼\n"
-            "➡️ mnrteam.com/staff/crm"
+            "➡️ myntreal.com/staff/crm"
         ),
-        "footer_text": "MNR Mega Natural Resources",
+        "footer_text": "Myntreal.com",
         "segment": "staff",
         "meta_category": "UTILITY",
         "event_key": "lead_overdue_sales",
@@ -287,8 +287,8 @@ _TEMPLATES = [
         "example_values": ["Priya Sharma", "3", "Suresh Patel - Solar EV", "04 May 2026"],
     },
     {
-        "slug": "mnr_lead_overdue_leadership",
-        "name": "MNR Overdue Leads — Leadership",
+        "slug": "myntreal_lead_overdue_leadership",
+        "name": "Overdue Leads — Leadership Summary",
         "body_text": (
             "🏢 Team Lead Overdue Report — {{date}}\n\n"
             "Hi {{name}}, your team overdue lead summary:\n\n"
@@ -296,9 +296,9 @@ _TEMPLATES = [
             "👥 Staff with Overdue: {{staff_count}}\n"
             "📊 Longest Overdue: {{max_days}} day(s)\n\n"
             "Please review and follow up with your team.\n"
-            "➡️ mnrteam.com/staff/crm"
+            "➡️ myntreal.com/staff/crm"
         ),
-        "footer_text": "MNR Mega Natural Resources",
+        "footer_text": "Myntreal.com",
         "segment": "staff",
         "meta_category": "UTILITY",
         "event_key": "lead_overdue_leadership",
@@ -307,8 +307,8 @@ _TEMPLATES = [
         "example_values": ["07 May 2026", "Anjali Singh", "12", "4", "5"],
     },
     {
-        "slug": "mnr_kra_daily_summary_leader",
-        "name": "MNR KRA Daily Summary — Leader",
+        "slug": "myntreal_kra_daily_summary_leader",
+        "name": "KRA Daily Summary — Leader",
         "body_text": (
             "📊 Good morning, {{name}}!\n\n"
             "Team KRA summary for {{date}}:\n\n"
@@ -317,9 +317,9 @@ _TEMPLATES = [
             "🔴 Delayed: {{delayed_count}}\n"
             "👥 Total Staff: {{total_staff}}\n\n"
             "Review and motivate your team! 💪\n"
-            "➡️ mnrteam.com/staff/kra-status"
+            "➡️ myntreal.com/staff/kra-status"
         ),
-        "footer_text": "MNR Mega Natural Resources",
+        "footer_text": "Myntreal.com",
         "segment": "staff",
         "meta_category": "UTILITY",
         "event_key": "kra_daily_summary_leader",
@@ -328,17 +328,17 @@ _TEMPLATES = [
         "example_values": ["Anjali Singh", "07 May 2026", "8", "3", "2", "13"],
     },
     {
-        "slug": "mnr_lead_followup_reminder",
-        "name": "MNR Lead Follow-up Reminder",
+        "slug": "myntreal_lead_followup_reminder",
+        "name": "Lead Follow-up Reminder",
         "body_text": (
             "⏰ Hi {{name}}, you have *{{count}} lead(s)* due for follow-up today!\n\n"
             "📋 Next Up: {{next_lead}}\n"
             "📞 Phone: {{phone}}\n"
             "📅 Follow-up Due: Today\n\n"
             "Don't let any lead go cold — act now! 🔥\n"
-            "➡️ mnrteam.com/staff/crm"
+            "➡️ myntreal.com/staff/crm"
         ),
-        "footer_text": "MNR Mega Natural Resources",
+        "footer_text": "Myntreal.com",
         "segment": "staff",
         "meta_category": "UTILITY",
         "event_key": "lead_followup_reminder",
@@ -346,19 +346,18 @@ _TEMPLATES = [
         "event_category": "crm",
         "example_values": ["Priya Sharma", "4", "Ramesh Kumar - EV B2B", "9876543210"],
     },
-    # T17 — Partner Walk-in Notification (to partner when their walkin lead is registered)
     {
-        "slug": "mnr_walkin_partner_notify",
-        "name": "MNR Walk-in Partner Notify",
+        "slug": "vgk_walkin_partner_notify",
+        "name": "VGK Walk-in Partner Notify",
         "body_text": (
             "🎉 New Walk-in at *{{partner_name}}*!\n\n"
             "Customer *{{customer_name}}* has visited your outlet today.\n"
             "📅 Date: {{date}}\n"
             "📋 Lead Ref: {{lead_ref}}\n\n"
             "Our team will follow up with them shortly.\n"
-            "Thank you for your partnership! 🙏"
+            "Thank you for choosing VGK4U.com! 🙏"
         ),
-        "footer_text": "MNR Partner Network",
+        "footer_text": "VGK4U Partner Network",
         "segment": "partner",
         "meta_category": "UTILITY",
         "event_key": "crm_lead_walkin_partner_notify",
