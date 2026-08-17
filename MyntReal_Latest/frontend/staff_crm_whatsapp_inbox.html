@@ -273,7 +273,11 @@
         <h1><i class="fab fa-whatsapp"></i> CRM WhatsApp Inbox</h1>
         <p>Incoming messages · Assign to departments · Manage leads & service tickets</p>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);padding:5px 12px;border-radius:20px;color:#fff;font-size:11px;font-weight:700;border:1px solid rgba(255,255,255,.3)">
+          <span style="width:8px;height:8px;background:#4ade80;border-radius:50%;display:inline-block;box-shadow:0 0 8px #4ade80"></span>
+          Live Sync Active (8s)
+        </div>
         <button class="btn btn-outline" style="color:#fff;border-color:rgba(255,255,255,.5);background:transparent" onclick="toggleFilters()">
           <i class="fas fa-filter"></i> Filters
         </button>
@@ -833,10 +837,12 @@ async function loadStats() {
 }
 
 // ── Load Inbox ─────────────────────────────────────────────────────────────────
-async function loadInbox(page = 1) {
+async function loadInbox(page = 1, silent = false) {
   currentPage = page;
-  document.getElementById('inboxBody').innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
-  document.getElementById('paginationBar').style.display = 'none';
+  if (!silent) {
+    document.getElementById('inboxBody').innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+    document.getElementById('paginationBar').style.display = 'none';
+  }
 
   const PAGE_SIZE = 25;
   let url = `${API}/whatsapp/inbox?page=${page}&page_size=${PAGE_SIZE}`;
@@ -1973,6 +1979,19 @@ function populateTeamFilters() {
   });
 }
 
+async function refreshActiveThread(silent = false) {
+  if (!activePhone) return;
+  try {
+    const r = await staffFetch(`${API}/whatsapp/inbox/thread/${encodeURIComponent(activePhone)}`);
+    const msgs = r.data || [];
+    if (msgs.length) activeInboxId = msgs[msgs.length - 1].id;
+    _threadContactData = r;
+    renderThread(msgs, r.contact_info);
+  } catch(e) {
+    if (!silent) console.warn('Thread refresh error:', e);
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   await StaffSidebar.init();
@@ -1984,7 +2003,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   populateTeamFilters();
   loadCurrentStaff();   // async — shows tab when ready
   loadInbox(1);
-  setInterval(loadStats, 60000);
+  setInterval(loadStats, 30000);
+
+  // DC Real-Time Auto Sync: Periodically poll incoming messages silently every 8s
+  setInterval(() => {
+    loadInbox(currentPage, true);
+    if (activePhone && document.getElementById('threadModal')?.classList.contains('open')) {
+      refreshActiveThread(true);
+    }
+  }, 8000);
 });
 </script>
 </body>
