@@ -881,6 +881,53 @@ function sortEmpPerfTable(section, colKey) {
   renderEmployeePerformanceTables();
 }
 
+function fmtDashNum(v) {
+  const n = Number(v || 0);
+  if (!n || n === 0) return `<span style="color:#cbd5e1">-</span>`;
+  return n.toLocaleString('en-IN');
+}
+
+function fmtDashVal(v) {
+  const n = Number(v || 0);
+  if (!n || n === 0) return `<span style="color:#cbd5e1">-</span>`;
+  return `₹${fmtVal(n)}`;
+}
+
+function fmtDashTalk(s) {
+  if (!s || s === '0m / day' || s === '0h 0m / day' || s === '0m' || s === '0m/day') {
+    return `<span style="color:#cbd5e1">-</span>`;
+  }
+  return esc(s);
+}
+
+function toggleEmpPerfRow(section, safeKey) {
+  const detailRows = document.querySelectorAll(`.emp-detail-${section}-${safeKey}`);
+  const icon = document.getElementById(`chevron_${section}_${safeKey}`);
+  let isOpening = false;
+  detailRows.forEach(row => {
+    if (row.classList.contains('d-none')) {
+      row.classList.remove('d-none');
+      isOpening = true;
+    } else {
+      row.classList.add('d-none');
+    }
+  });
+  if (icon) {
+    icon.style.transform = isOpening ? 'rotate(90deg)' : 'rotate(0deg)';
+  }
+}
+
+function sortEmpPerfTable(section, colKey) {
+  const current = _empPerfSort[section];
+  if (current.col === colKey) {
+    current.dir = current.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    current.col = colKey;
+    current.dir = 'desc';
+  }
+  renderEmployeePerformanceTables();
+}
+
 function renderEmployeePerformanceTables() {
   if (!_empPerfData) return;
 
@@ -894,50 +941,111 @@ function renderEmployeePerformanceTables() {
 
     let rows = (_empPerfData[section] || []).slice();
 
-    // Local filters
+    // Local search filter
     if (searchVal) {
       rows = rows.filter(r => 
         (r.employee_name || '').toLowerCase().includes(searchVal) || 
         (r.emp_code || '').toLowerCase().includes(searchVal)
       );
     }
+    // Local department filter (applies to BOTH monthly & weekly sections)
     if (deptVal) {
       const selectedDeptObj = (_empPerfData.departments || []).find(d => String(d.id) === String(deptVal));
       const targetDeptName = selectedDeptObj ? selectedDeptObj.name.toLowerCase() : deptVal.toLowerCase();
       rows = rows.filter(r => (r.department_name || '').toLowerCase().includes(targetDeptName));
     }
 
-    // Sort
-    const sortInfo = _empPerfSort[section];
-    const col = sortInfo.col;
-    const mult = sortInfo.dir === 'asc' ? 1 : -1;
-    rows.sort((a, b) => {
-      let va = a[col], vb = b[col];
-      if (typeof va === 'string') return mult * va.localeCompare(vb || '');
-      return mult * ((va || 0) - (vb || 0));
-    });
-
-    if (countLabel) countLabel.textContent = `${rows.length} records found`;
-
     if (!rows.length) {
+      if (countLabel) countLabel.textContent = `0 records found`;
       wrap.innerHTML = '<div class="p-4 text-center text-muted"><i class="fas fa-info-circle me-1"></i> No performance data available for this filter selection.</div>';
       return;
     }
 
-    // Render HTML table
-    const periodHeaderLabel = section === 'monthly' ? 'Month' : 'Week';
-    
+    // Grouping by Employee to create Expandable Summary Rows
+    const empGroups = {};
+    const empOrder = [];
+
+    rows.forEach(r => {
+      const empKey = r.emp_code && r.emp_code !== 'UNASSIGNED' ? r.emp_code : (r.employee_name || 'Staff');
+      if (!empGroups[empKey]) {
+        empGroups[empKey] = {
+          emp_code: r.emp_code,
+          employee_name: r.employee_name,
+          department_name: r.department_name,
+          summary: {
+            self_leads: 0,
+            overall_new_leads: 0,
+            overdue_leads: r.overdue_leads || 0,
+            overall_won: 0,
+            overall_rev: 0,
+            solar_won: 0, solar_rev: 0,
+            etc_won: 0, etc_rev: 0,
+            b2b_won: 0, b2b_rev: 0,
+            b2c_won: 0, b2c_rev: 0,
+            insurance_won: 0, insurance_rev: 0,
+            service_tickets_count: 0, service_rev: 0, spares_rev: 0,
+            others_won: 0, others_rev: 0,
+            avg_talk_time_per_day: r.avg_talk_time_per_day || '0m / day'
+          },
+          items: []
+        };
+        empOrder.push(empKey);
+      }
+
+      const g = empGroups[empKey];
+      g.items.push(r);
+
+      g.summary.self_leads += (r.self_leads || 0);
+      g.summary.overall_new_leads += (r.overall_new_leads || 0);
+      g.summary.overall_won += (r.overall_won || 0);
+      g.summary.overall_rev += (r.overall_rev || 0);
+      g.summary.solar_won += (r.solar_won || 0);
+      g.summary.solar_rev += (r.solar_rev || 0);
+      g.summary.etc_won += (r.etc_won || 0);
+      g.summary.etc_rev += (r.etc_rev || 0);
+      g.summary.b2b_won += (r.b2b_won || 0);
+      g.summary.b2b_rev += (r.b2b_rev || 0);
+      g.summary.b2c_won += (r.b2c_won || 0);
+      g.summary.b2c_rev += (r.b2c_rev || 0);
+      g.summary.insurance_won += (r.insurance_won || 0);
+      g.summary.insurance_rev += (r.insurance_rev || 0);
+      g.summary.service_tickets_count += (r.service_tickets_count || 0);
+      g.summary.service_rev += (r.service_rev || 0);
+      g.summary.spares_rev += (r.spares_rev || 0);
+      g.summary.others_won += (r.others_won || 0);
+      g.summary.others_rev += (r.others_rev || 0);
+
+      if (r.avg_talk_time_per_day && r.avg_talk_time_per_day !== '0m / day') {
+        g.summary.avg_talk_time_per_day = r.avg_talk_time_per_day;
+      }
+    });
+
+    // Sorting summary groups by active column selection
+    const sortInfo = _empPerfSort[section];
+    const col = sortInfo.col;
+    const mult = sortInfo.dir === 'asc' ? 1 : -1;
+    empOrder.sort((keyA, keyB) => {
+      const gA = empGroups[keyA], gB = empGroups[keyB];
+      let va = gA.summary[col] ?? gA[col], vb = gB.summary[col] ?? gB[col];
+      if (typeof va === 'string') return mult * va.localeCompare(vb || '');
+      return mult * ((va || 0) - (vb || 0));
+    });
+
+    if (countLabel) countLabel.textContent = `${empOrder.length} employees (${rows.length} records)`;
+
+    const periodHeaderLabel = section === 'monthly' ? 'Period / Month' : 'Period / Week';
+
     let html = `
       <table class="table table-sm table-bordered table-hover mb-0" style="font-size:11.5px;min-width:1400px;border-color:#e2e8f0">
         <thead style="background:#f8fafc;position:sticky;top:0;z-index:2">
           <tr>
-            <th rowspan="2" class="align-middle text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'period_key')" style="min-width:90px;background:#f1f5f9">
-              ${periodHeaderLabel} ${sortInfo.col === 'period_key' ? (sortInfo.dir === 'asc' ? '▲' : '▼') : ''}
+            <th rowspan="2" class="align-middle text-center" style="min-width:110px;background:#f1f5f9">
+              ${periodHeaderLabel}
             </th>
             <th rowspan="2" class="align-middle text-start cursor-pointer" onclick="sortEmpPerfTable('${section}', 'department_name')" style="min-width:120px;background:#f1f5f9">
               Department ${sortInfo.col === 'department_name' ? (sortInfo.dir === 'asc' ? '▲' : '▼') : ''}
             </th>
-            <th rowspan="2" class="align-middle text-start cursor-pointer" onclick="sortEmpPerfTable('${section}', 'employee_name')" style="min-width:160px;background:#f1f5f9">
+            <th rowspan="2" class="align-middle text-start cursor-pointer" onclick="sortEmpPerfTable('${section}', 'employee_name')" style="min-width:170px;background:#f1f5f9">
               Employee Name ${sortInfo.col === 'employee_name' ? (sortInfo.dir === 'asc' ? '▲' : '▼') : ''}
             </th>
             <th rowspan="2" class="align-middle text-center cursor-pointer" onclick="sortEmpPerfTable('${section}', 'self_leads')" style="min-width:85px;background:#f1f5f9">
@@ -984,46 +1092,97 @@ function renderEmployeePerformanceTables() {
         <tbody>
     `;
 
-    rows.forEach(r => {
-      html += `
-        <tr>
-          <td class="text-center font-monospace fw-semibold" style="background:#fafafa">${esc(r.period_key)}</td>
-          <td class="text-start" style="color:#475569">${esc(r.department_name)}</td>
-          <td class="text-start fw-bold" style="color:#1e293b">
-            ${esc(r.employee_name)}
-            ${r.emp_code && r.emp_code !== 'UNASSIGNED' ? `<span class="badge bg-light text-secondary ms-1 font-monospace" style="font-size:9.5px">${esc(r.emp_code)}</span>` : ''}
-          </td>
-          <td class="text-center fw-semibold" style="color:#2563eb">${fmtNum(r.self_leads)}</td>
-          <td class="text-center fw-bold">${fmtNum(r.overall_new_leads)}</td>
-          <td class="text-center fw-semibold" style="color:#0f766e;background:#f0fdf4">${esc(r.avg_talk_time_per_day || '0m / day')}</td>
-          <td class="text-center fw-bold" style="color:${(r.overdue_leads || 0) > 0 ? '#b91c1c' : '#64748b'};background:${(r.overdue_leads || 0) > 0 ? '#fef2f2' : ''}">${fmtNum(r.overdue_leads || 0)}</td>
-          
-          <td class="text-center fw-bold" style="color:#c2410c;background:#fffaf5">${fmtNum(r.overall_won)}</td>
-          <td class="text-end fw-bold" style="color:#c2410c;background:#fffaf5">₹${fmtVal(r.overall_rev)}</td>
-          
-          <td class="text-center fw-semibold" style="color:#0369a1;background:#f8fafc">${fmtNum(r.solar_won)}</td>
-          <td class="text-end" style="color:#0369a1;background:#f8fafc">₹${fmtVal(r.solar_rev)}</td>
-          
-          <td class="text-center fw-semibold" style="color:#b45309">${fmtNum(r.etc_won)}</td>
-          <td class="text-end" style="color:#b45309">₹${fmtVal(r.etc_rev)}</td>
-          
-          <td class="text-center fw-semibold" style="color:#4338ca">${fmtNum(r.b2b_won)}</td>
-          <td class="text-end" style="color:#4338ca">₹${fmtVal(r.b2b_rev)}</td>
-          
-          <td class="text-center fw-semibold" style="color:#a21caf">${fmtNum(r.b2c_won)}</td>
-          <td class="text-end" style="color:#a21caf">₹${fmtVal(r.b2c_rev)}</td>
-          
-          <td class="text-center fw-semibold" style="color:#15803d">${fmtNum(r.insurance_won)}</td>
-          <td class="text-end" style="color:#15803d">₹${fmtVal(r.insurance_rev)}</td>
+    empOrder.forEach(empKey => {
+      const g = empGroups[empKey];
+      const s = g.summary;
+      const safeKey = empKey.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-          <td class="text-center fw-semibold" style="color:#0f766e">${fmtNum(r.service_tickets_count)}</td>
-          <td class="text-end" style="color:#0f766e">₹${fmtVal(r.service_rev)}</td>
-          <td class="text-end" style="color:#0f766e">₹${fmtVal(r.spares_rev)}</td>
+      // 1. Employee Summary Row
+      html += `
+        <tr class="table-primary-subtle cursor-pointer" onclick="toggleEmpPerfRow('${section}', '${safeKey}')" style="background:#f1f5f9;border-top:2px solid #cbd5e1">
+          <td class="text-center fw-bold text-primary font-monospace" style="background:#e2e8f0">
+            <i class="fas fa-chevron-right me-1 text-primary" id="chevron_${section}_${safeKey}" style="font-size:10px;transition:transform 0.2s"></i>
+            TOTAL (${g.items.length})
+          </td>
+          <td class="text-start fw-semibold" style="color:#334155">${esc(g.department_name)}</td>
+          <td class="text-start fw-bold" style="color:#0f172a">
+            ${esc(g.employee_name)}
+            ${g.emp_code && g.emp_code !== 'UNASSIGNED' ? `<span class="badge bg-secondary text-white ms-1 font-monospace" style="font-size:9.5px">${esc(g.emp_code)}</span>` : ''}
+          </td>
+          <td class="text-center fw-bold" style="color:#2563eb">${fmtDashNum(s.self_leads)}</td>
+          <td class="text-center fw-bold" style="color:#0f172a">${fmtDashNum(s.overall_new_leads)}</td>
+          <td class="text-center fw-bold" style="color:#0f766e;background:#e6f4ea">${fmtDashTalk(s.avg_talk_time_per_day)}</td>
+          <td class="text-center fw-bold" style="color:${s.overdue_leads > 0 ? '#b91c1c' : '#64748b'};background:${s.overdue_leads > 0 ? '#fee2e2' : ''}">${fmtDashNum(s.overdue_leads)}</td>
           
-          <td class="text-center text-muted">${fmtNum(r.others_won)}</td>
-          <td class="text-end text-muted">₹${fmtVal(r.others_rev)}</td>
+          <td class="text-center fw-bold" style="color:#c2410c;background:#ffedd5">${fmtDashNum(s.overall_won)}</td>
+          <td class="text-end fw-bold" style="color:#c2410c;background:#ffedd5">${fmtDashVal(s.overall_rev)}</td>
+          
+          <td class="text-center fw-semibold" style="color:#0369a1">${fmtDashNum(s.solar_won)}</td>
+          <td class="text-end" style="color:#0369a1">${fmtDashVal(s.solar_rev)}</td>
+          
+          <td class="text-center fw-semibold" style="color:#b45309">${fmtDashNum(s.etc_won)}</td>
+          <td class="text-end" style="color:#b45309">${fmtDashVal(s.etc_rev)}</td>
+          
+          <td class="text-center fw-semibold" style="color:#4338ca">${fmtDashNum(s.b2b_won)}</td>
+          <td class="text-end" style="color:#4338ca">${fmtDashVal(s.b2b_rev)}</td>
+          
+          <td class="text-center fw-semibold" style="color:#a21caf">${fmtDashNum(s.b2c_won)}</td>
+          <td class="text-end" style="color:#a21caf">${fmtDashVal(s.b2c_rev)}</td>
+          
+          <td class="text-center fw-semibold" style="color:#15803d">${fmtDashNum(s.insurance_won)}</td>
+          <td class="text-end" style="color:#15803d">${fmtDashVal(s.insurance_rev)}</td>
+
+          <td class="text-center fw-semibold" style="color:#0f766e">${fmtDashNum(s.service_tickets_count)}</td>
+          <td class="text-end" style="color:#0f766e">${fmtDashVal(s.service_rev)}</td>
+          <td class="text-end" style="color:#0f766e">${fmtDashVal(s.spares_rev)}</td>
+          
+          <td class="text-center text-muted">${fmtDashNum(s.others_won)}</td>
+          <td class="text-end text-muted">${fmtDashVal(s.others_rev)}</td>
         </tr>
       `;
+
+      // 2. Child Monthly / Weekly Rows
+      g.items.forEach(r => {
+        html += `
+          <tr class="emp-detail-${section}-${safeKey} d-none" style="background:#ffffff">
+            <td class="text-center font-monospace text-secondary ps-3" style="font-size:11px">
+              <i class="fas fa-level-up-alt fa-rotate-90 me-1 text-muted" style="font-size:9px"></i>
+              ${esc(r.period_key)}
+            </td>
+            <td class="text-start text-muted" style="font-size:11px">${esc(r.department_name)}</td>
+            <td class="text-start text-secondary ps-4" style="font-size:11px">${esc(r.employee_name)}</td>
+            <td class="text-center font-monospace">${fmtDashNum(r.self_leads)}</td>
+            <td class="text-center font-monospace">${fmtDashNum(r.overall_new_leads)}</td>
+            <td class="text-center font-monospace" style="color:#0f766e">${fmtDashTalk(r.avg_talk_time_per_day)}</td>
+            <td class="text-center font-monospace" style="color:${(r.overdue_leads || 0) > 0 ? '#b91c1c' : '#64748b'}">${fmtDashNum(r.overdue_leads)}</td>
+            
+            <td class="text-center font-monospace fw-semibold" style="color:#c2410c">${fmtDashNum(r.overall_won)}</td>
+            <td class="text-end font-monospace fw-semibold" style="color:#c2410c">${fmtDashVal(r.overall_rev)}</td>
+            
+            <td class="text-center font-monospace">${fmtDashNum(r.solar_won)}</td>
+            <td class="text-end font-monospace">${fmtDashVal(r.solar_rev)}</td>
+            
+            <td class="text-center font-monospace">${fmtDashNum(r.etc_won)}</td>
+            <td class="text-end font-monospace">${fmtDashVal(r.etc_rev)}</td>
+            
+            <td class="text-center font-monospace">${fmtDashNum(r.b2b_won)}</td>
+            <td class="text-end font-monospace">${fmtDashVal(r.b2b_rev)}</td>
+            
+            <td class="text-center font-monospace">${fmtDashNum(r.b2c_won)}</td>
+            <td class="text-end font-monospace">${fmtDashVal(r.b2c_rev)}</td>
+            
+            <td class="text-center font-monospace">${fmtDashNum(r.insurance_won)}</td>
+            <td class="text-end font-monospace">${fmtDashVal(r.insurance_rev)}</td>
+
+            <td class="text-center font-monospace">${fmtDashNum(r.service_tickets_count)}</td>
+            <td class="text-end font-monospace">${fmtDashVal(r.service_rev)}</td>
+            <td class="text-end font-monospace">${fmtDashVal(r.spares_rev)}</td>
+            
+            <td class="text-center text-muted font-monospace">${fmtDashNum(r.others_won)}</td>
+            <td class="text-end text-muted font-monospace">${fmtDashVal(r.others_rev)}</td>
+          </tr>
+        `;
+      });
     });
 
     html += `</tbody></table>`;
