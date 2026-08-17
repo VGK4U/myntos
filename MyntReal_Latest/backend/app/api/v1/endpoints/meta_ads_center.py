@@ -477,25 +477,58 @@ class TokenUpdateInput(BaseModel):
     page_id: Optional[str] = "894208310452980"
 
 @router.post("/update-token")
-def update_meta_access_token(
+async def update_meta_access_token(
     payload: TokenUpdateInput,
     company_id: int = Query(default=1),
     db: Session = Depends(get_db)
 ):
     """
     Encrypt and store updated Meta Access Token in PostgreSQL.
+    Automatically syncs Facebook Pages & pulls any pending lead submissions.
     """
     from app.core.security_encryption import encrypt_credential
-    enc_token = encrypt_credential(payload.access_token.strip())
+    from app.services.facebook_leads_service import facebook_leads_service
+    from app.api.v1.endpoints.facebook_leads import pull_meta_leads
+    raw_token = payload.access_token.strip()
+    enc_token = encrypt_credential(raw_token)
     
+    # 1. Update active pages directly
     db.execute(text("""
         UPDATE facebook_pages 
         SET access_token = :token, updated_at = NOW() 
         WHERE is_active = TRUE
     """), {"token": enc_token})
     db.commit()
+
+    # 2. Sync pages via Graph API using User Token if provided
+    sync_res = {}
+    try:
+        sync_res = facebook_leads_service.sync_pages_from_user_token(
+            user_token=raw_token,
+            db=db,
+            company_id=company_id
+        )
+    except Exception as ex:
+        sync_res = {'error': str(ex)}
+
+    # 3. Pull pending leads from Meta Graph API
+    pull_res = {}
+    try:
+        pull_res = await pull_meta_leads(current_user=None, db=db)
+    except Exception as p_ex:
+        pull_res = {'error': str(p_ex)}
     
-    return {"success": True, "message": "Meta Access Token updated & encrypted successfully in database!"}
+    ingested = pull_res.get('ingested_count', 0)
+    msg = f"Meta Access Token updated & encrypted successfully!"
+    if ingested > 0:
+        msg += f" Synced and ingested {ingested} new Meta leads into CRM!"
+
+    return {
+        "success": True,
+        "message": msg,
+        "sync_details": sync_res,
+        "pull_details": pull_res
+    }
 
 
 

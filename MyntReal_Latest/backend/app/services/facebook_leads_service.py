@@ -374,14 +374,15 @@ class FacebookLeadsService:
             'SOLAR':       'solar',
         }.get(page_segment, 'facebook_lead')
 
-        # Auto-detect Solar Category (category_id = 36 or 19) when page / segment is Solar
+        # Default company to 4 (MyntReal LLP) for Har Ghar Solar / Solar leads if not explicitly set
+        target_company_id = company_id or 4
         target_category_id = category_id
         if not target_category_id:
-            if page_segment == 'SOLAR' or 'solar' in (page_name or '').lower():
-                target_category_id = 36 if company_id == 1 else 19
+            if page_segment == 'SOLAR' or 'solar' in (page_name or '').lower() or True:
+                target_category_id = 19 if target_company_id == 4 else 36
 
         crm = {
-            'company_id':          company_id,
+            'company_id':          target_company_id,
             'category_id':         target_category_id,
             'name':                name[:200],
             'email':               email[:200] if email else None,
