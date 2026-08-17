@@ -5764,6 +5764,11 @@ def vgk_top_partners_leaderboard_table(
         "total_received_val": team_total_received_val
     }
 
+    total_count = len(partners)
+    start_idx = (page - 1) * limit
+    end_idx = start_idx + limit
+    paginated_partners = partners[start_idx:end_idx]
+
     return {
         "success": True,
         "data": {
