@@ -9485,6 +9485,26 @@ def update_lead(
     for key, value in update_data.items():
         if hasattr(lead, key):
             setattr(lead, key, value)
+
+    # DC_INACTIVE_REASSIGN: Auto-reassign lead to active staff member if lead is unassigned
+    # or currently assigned to an inactive / resigned employee
+    if current_employee and hasattr(current_employee, 'id'):
+        is_inactive_owner = False
+        if lead.telecaller_id:
+            _st = db.query(StaffEmployee.status, StaffEmployee.is_deleted).filter(StaffEmployee.id == lead.telecaller_id).first()
+            if _st and (_st[0] != 'active' or _st[1]):
+                is_inactive_owner = True
+        elif lead.primary_owner_id and lead.primary_owner_type == 'staff':
+            _sp = db.query(StaffEmployee.status, StaffEmployee.is_deleted).filter(StaffEmployee.id == lead.primary_owner_id).first()
+            if _sp and (_sp[0] != 'active' or _sp[1]):
+                is_inactive_owner = True
+
+        if is_inactive_owner or not lead.telecaller_id:
+            lead.handler_type = 'staff'
+            lead.handler_id = current_employee.emp_code
+            lead.telecaller_id = current_employee.id
+            lead.primary_owner_type = 'staff'
+            lead.primary_owner_id = current_employee.id
     
     if time_taken and int(time_taken) >= 1:
         from app.services.activity_time_service import log_activity_time

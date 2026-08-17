@@ -417,20 +417,38 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
         a_q = db.query(CRMLead).filter(*a_filter).all()
         a_ids = {l.id for l in a_q}
 
-        # Unassigned new leads — secondary pool for this company set
-        # DC_DIALER_FIX1: Exclude leads already claimed by another user
-        # DC_NMC_FIX: Exclude leads this user dismissed as "not my category"
+        # DC_INACTIVE_STAFF_QUEUE: Fetch inactive/resigned staff IDs so their leads enter dialer pool
+        inactive_staff_rows = db.query(StaffEmployee.id, StaffEmployee.emp_code).filter(
+            or_(StaffEmployee.status != 'active', StaffEmployee.is_deleted == True)
+        ).all()
+        inactive_staff_ids = {s.id for s in inactive_staff_rows}
+        inactive_staff_codes = {s.emp_code for s in inactive_staff_rows if s.emp_code}
+
+        # Unassigned & Inactive-Staff leads — secondary pool for this company set
         u_exclude = a_ids | dialed_today | nmc_excluded
         u_filter = [
             CRMLead.company_id.in_(co_ids),
             CRMLead.status.notin_(['won', 'lost', 'completed', 'do_not_call']),
             or_(
-                CRMLead.handler_type == 'unassigned',
-                CRMLead.handler_id.is_(None),
-                CRMLead.handler_id == '',
+                # Truly unassigned leads
+                and_(
+                    or_(
+                        CRMLead.handler_type == 'unassigned',
+                        CRMLead.handler_id.is_(None),
+                        CRMLead.handler_id == '',
+                    ),
+                    CRMLead.telecaller_id.is_(None),
+                    CRMLead.field_staff_id.is_(None),
+                ),
+                # Or leads assigned to an inactive / resigned staff member
+                and_(
+                    or_(
+                        CRMLead.telecaller_id.in_(inactive_staff_ids),
+                        CRMLead.handler_id.in_(inactive_staff_codes),
+                        and_(CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id.in_(inactive_staff_ids)),
+                    )
+                )
             ),
-            CRMLead.telecaller_id.is_(None),
-            CRMLead.field_staff_id.is_(None),
             # DC_FUTURE_NFD_EXCLUDE: Unassigned active leads with a future follow-up date
             # are excluded — a future date on an unassigned lead is unusual but guard it.
             or_(
