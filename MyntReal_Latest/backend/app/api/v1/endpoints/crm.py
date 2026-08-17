@@ -9913,11 +9913,19 @@ def update_lead(
             _wa_phone = getattr(lead, 'phone', None) or getattr(lead, 'mobile', None)
             _wa_event = f"crm_status_{new_status}"
             if _wa_phone:
+                _cat_name = "Solar / Green Energy"
+                if getattr(lead, 'category_id', None):
+                    from app.models.crm import SignupCategory
+                    _cat_obj = db.query(SignupCategory).get(lead.category_id)
+                    if _cat_obj and _cat_obj.name:
+                        _cat_name = _cat_obj.name
+
                 send_auto_whatsapp(
                     db=db, event_key=_wa_event, phone=_wa_phone,
                     context={
-                        'name': getattr(lead, 'name', '') or getattr(lead, 'customer_name', ''),
+                        'name': getattr(lead, 'name', '') or getattr(lead, 'customer_name', '') or 'there',
                         'status': new_status,
+                        'category_name': _cat_name,
                         'lead_id': lead.id,
                     },
                     lead_id=lead.id,
