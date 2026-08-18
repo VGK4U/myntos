@@ -7646,6 +7646,38 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // WhatsApp QR Code & Group Bot Gateway Proxy Route (/qr, /whatsapp-qr, /status)
+  if (reqPathLower === '/qr' || reqPathLower === '/qr/' || reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/' || reqPathLower === '/status') {
+    const targetPath = (reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/') ? '/qr' : req.url;
+    const proxyOptions = {
+      hostname: '127.0.0.1',
+      port: 5002,
+      path: targetPath,
+      method: req.method,
+      headers: { ...req.headers, host: '127.0.0.1:5002' }
+    };
+    const proxyReq = http.request(proxyOptions, (proxyRes) => {
+      res.writeHead(proxyRes.statusCode, proxyRes.headers);
+      proxyRes.pipe(res);
+    });
+    proxyReq.on('error', (err) => {
+      console.warn('[DC-PROXY-QR] WhatsApp bot service on port 5002 error:', err.message);
+      res.writeHead(503, { 'Content-Type': 'text/html' });
+      res.end(`
+        <div style="font-family:sans-serif;text-align:center;padding:40px">
+          <h2>📲 WhatsApp Bot Service Initializing</h2>
+          <p>The WhatsApp gateway service on port 5002 is starting up. Please refresh in a few seconds.</p>
+        </div>
+      `);
+    });
+    if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+      req.pipe(proxyReq);
+    } else {
+      proxyReq.end();
+    }
+    return;
+  }
+
   // System Architecture View Route (/ach, /arch, /architecture)
   if (reqPathLower === '/ach' || reqPathLower === '/arch' || reqPathLower === '/architecture' || reqPathLower === '/staff/architecture') {
     const filePath = path.join(__dirname, 'architecture_view.html');
