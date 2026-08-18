@@ -7662,7 +7662,7 @@ const server = http.createServer(async (req, res) => {
     });
     proxyReq.on('error', (err) => {
       console.warn('[DC-PROXY-QR] WhatsApp bot service on port 5002 error:', err.message);
-      res.writeHead(503, { 'Content-Type': 'text/html' });
+      res.writeHead(503, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(`
         <div style="font-family:sans-serif;text-align:center;padding:40px">
           <h2>📲 WhatsApp Bot Service Initializing</h2>
