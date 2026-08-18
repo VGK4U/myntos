@@ -198,8 +198,19 @@ def _normalize_source_record(source: dict) -> dict:
     except (TypeError, ValueError):
         status_code = 2
 
+    # Inspect leg disconnection status & call duration
+    log_details = source.get('log_details') or []
+    raw_ds = ''
+    if log_details and isinstance(log_details, list):
+        primary_leg = log_details[0] if log_details else {}
+        raw_ds = (primary_leg.get('_ds') or '').upper().strip()
+
     if status_code == 1:
-        status = 'answered'
+        # Reclassify false 'answered' calls as 'missed' if duration is 0 or leg status indicates disconnect
+        if dur_secs == 0 or raw_ds in ('CANCEL', 'NOANSWER', 'BUSY', 'REJECT'):
+            status = 'missed'
+        else:
+            status = 'answered'
     elif status_code == 3:
         status = 'voicemail'
     else:
