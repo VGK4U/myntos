@@ -4777,6 +4777,28 @@ def init_scheduler():
     )
     logger.info("   📊 WhatsApp bi-hourly sales performance report scheduled (9:30 AM - 7:30 PM IST)")
 
+    # DC-VGK4U-WISH-001: Daily 8:00 AM IST VGK4U Inspiring Morning Wish
+    scheduler.add_job(
+        job_daily_vgk4u_morning_wish,
+        trigger=CronTrigger(hour=8, minute=0, timezone='Asia/Kolkata'),
+        id='wa_daily_vgk4u_morning_wish_8am',
+        name='WhatsApp: Daily VGK4U Morning Wish (8AM IST)',
+        replace_existing=True,
+        misfire_grace_time=600,
+    )
+    logger.info("   🌅 VGK4U 8AM IST daily morning wish scheduled")
+
+    # DC-SERVICE-SUMMARY-001: Daily 7:30 PM IST Service Ticket Summary Report
+    scheduler.add_job(
+        job_daily_service_summary_report,
+        trigger=CronTrigger(hour=19, minute=30, timezone='Asia/Kolkata'),
+        id='wa_daily_service_summary_730pm',
+        name='WhatsApp: Daily Service Summary Report (7:30PM IST)',
+        replace_existing=True,
+        misfire_grace_time=600,
+    )
+    logger.info("   🛠️ Service 7:30PM IST daily summary report scheduled")
+
     # [DC-POINTS-REFILL] Safety-net: daily at 2:00 AM IST — catch any missed auto-refills
     scheduler.add_job(
         run_vgk_points_refill_safety_net,
@@ -4946,5 +4968,38 @@ def job_bi_hourly_sales_performance_report():
         logger.error(f"❌ DC-SALES-PERF-001: Group report dispatch failed: {exc}")
     finally:
         db.close()
+
+
+# DC-VGK4U-WISH-001: Daily 8:00 AM VGK4U Morning Wish to Channel/Elite Group
+def job_daily_vgk4u_morning_wish():
+    from app.core.database import SessionLocal
+    from app.services.vgk4u_community_alert_service import dispatch_daily_vgk4u_morning_wish
+
+    logger.info("🌅 DC-VGK4U-WISH-001: Triggering daily 8 AM VGK4U morning wish...")
+    db = SessionLocal()
+    try:
+        res = dispatch_daily_vgk4u_morning_wish(db)
+        logger.info(f"✅ DC-VGK4U-WISH-001: Morning wish result: {res}")
+    except Exception as exc:
+        logger.error(f"❌ DC-VGK4U-WISH-001: Failed to send VGK4U morning wish: {exc}")
+    finally:
+        db.close()
+
+
+# DC-SERVICE-SUMMARY-001: Daily 7:30 PM Service Ticket Summary Report
+def job_daily_service_summary_report():
+    from app.core.database import SessionLocal
+    from app.services.service_group_alert_service import send_daily_service_summary_report
+
+    logger.info("🛠️ DC-SERVICE-SUMMARY-001: Triggering daily 7:30 PM Service summary report...")
+    db = SessionLocal()
+    try:
+        res = send_daily_service_summary_report(db)
+        logger.info(f"✅ DC-SERVICE-SUMMARY-001: Service summary result: {res}")
+    except Exception as exc:
+        logger.error(f"❌ DC-SERVICE-SUMMARY-001: Failed to send Service summary report: {exc}")
+    finally:
+        db.close()
+
 
 
