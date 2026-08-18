@@ -52,7 +52,7 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
         SELECT 
             COUNT(*) as total_calls,
             COALESCE(SUM(duration_seconds), 0) as total_talk_sec,
-            COUNT(CASE WHEN call_type IN ('missed', 'rejected', 'no_answer') THEN 1 END) as missed_calls
+            COUNT(CASE WHEN UPPER(call_type) IN ('MISSED', 'REJECTED', 'NO_ANSWER') THEN 1 END) as missed_calls
         FROM staff_call_logs
         WHERE call_date = :d
     """), {"d": date_str}).fetchone()
@@ -66,6 +66,7 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
         SELECT 
             e.full_name as handled_by,
             COUNT(c.id) as call_count,
+            COUNT(CASE WHEN UPPER(c.call_type) IN ('MISSED', 'REJECTED', 'NO_ANSWER') THEN 1 END) as missed_count,
             COALESCE(SUM(c.duration_seconds), 0) as talk_seconds
         FROM staff_call_logs c
         JOIN staff_employees e ON e.id = c.staff_id
@@ -79,6 +80,7 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
         leaderboard.append({
             "handled_by": row.handled_by,
             "call_count": row.call_count or 0,
+            "missed_count": row.missed_count or 0,
             "talk_seconds": int(row.talk_seconds or 0),
             "talk_time_formatted": _format_seconds_to_hm(row.talk_seconds or 0)
         })
@@ -164,7 +166,8 @@ def generate_bi_hourly_performance_message(db: Session, slot_name: str = "Bi-Hou
     lb_text_lines = []
     for idx, item in enumerate(lb[:3]):
         medal = medals[idx] if idx < 3 else "🏅"
-        lb_text_lines.append(f"{idx+1}. {medal} *{item['handled_by']}* — {item['call_count']} Calls | {item['talk_time_formatted']} Talk Time")
+        missed_str = f" *(🔴 {item['missed_count']} Missed)*" if item.get('missed_count', 0) > 0 else ""
+        lb_text_lines.append(f"{idx+1}. {medal} *{item['handled_by']}* — {item['call_count']} Calls{missed_str} | {item['talk_time_formatted']} Talk Time")
 
     lb_formatted = "\n".join(lb_text_lines) if lb_text_lines else "*(No staff calls recorded yet today)*"
 
