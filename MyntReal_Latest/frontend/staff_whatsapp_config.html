@@ -1526,6 +1526,28 @@ Or paste a loaded template body here to rewrite / improve it."
 
 <script>
 const API = '/api/v1';
+
+function showToast(msg, type = 'info', duration = 3500) {
+  let toastContainer = document.getElementById('dc-toast-container');
+  if (!toastContainer) {
+    toastContainer = document.createElement('div');
+    toastContainer.id = 'dc-toast-container';
+    toastContainer.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:99999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
+    document.body.appendChild(toastContainer);
+  }
+  const toast = document.createElement('div');
+  const bg = type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : type === 'success' ? '#10b981' : '#3b82f6';
+  toast.style.cssText = `background:${bg};color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.15);pointer-events:auto;transition:all 0.3s ease;opacity:0;transform:translateY(10px);`;
+  toast.innerHTML = (type === 'error' ? '❌ ' : type === 'warning' ? '⚠️ ' : type === 'success' ? '✅ ' : 'ℹ️ ') + msg;
+  toastContainer.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; }, 10);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
 let allTemplates = [];
 let allTriggers = [];
 let allCampaigns = [];
