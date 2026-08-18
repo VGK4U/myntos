@@ -4960,7 +4960,7 @@ def member_income_entries_detail(
             "income_date":       r.entry_date,
             "trigger_date":      r.entry_date,
             "payment_date":      pmt_date,
-            "deal_value":        _dvt_val if _dvt_val > 0 else commission_base,
+            "deal_value":        commission_base,
             "calc_base":         commission_base,
             "commission_pct":    float(r.commission_pct),
             "commission_amount": gross_amt,
