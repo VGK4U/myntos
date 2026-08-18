@@ -47,21 +47,27 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
     start_of_today_utc = start_of_today_ist - timedelta(hours=5, minutes=30)
     date_str = ist_now.strftime("%Y-%m-%d")
 
-    # 1. Total Calls, Talk Time & Missed Calls from staff_call_logs
+    # 1. Total Calls, Talk Time & Missed Calls for Tele Sales Department staff
     stats_row = db.execute(text("""
         SELECT 
-            COUNT(*) as total_calls,
-            COALESCE(SUM(duration_seconds), 0) as total_talk_sec,
-            COUNT(CASE WHEN UPPER(call_type) IN ('MISSED', 'REJECTED', 'NO_ANSWER') THEN 1 END) as missed_calls
-        FROM staff_call_logs
-        WHERE call_date = :d
+            COUNT(c.id) as total_calls,
+            COALESCE(SUM(c.duration_seconds), 0) as total_talk_sec,
+            COUNT(CASE WHEN UPPER(c.call_type) IN ('MISSED', 'REJECTED', 'NO_ANSWER') THEN 1 END) as missed_calls
+        FROM staff_employees e
+        LEFT JOIN staff_departments d ON d.id = e.department_id
+        LEFT JOIN staff_employee_departments ed ON ed.employee_id = e.id
+        LEFT JOIN staff_departments ad ON ad.id = ed.department_id
+        LEFT JOIN staff_call_logs c ON c.staff_id = e.id AND c.call_date = :d
+        WHERE (LOWER(d.name) = 'tele sales' OR LOWER(ad.name) = 'tele sales')
+          AND (e.status IS NULL OR e.status = 'active')
+          AND (e.is_deleted IS NOT TRUE)
     """), {"d": date_str}).fetchone()
 
     total_calls = stats_row.total_calls if stats_row else 0
     total_talk_seconds = stats_row.total_talk_sec if stats_row else 0
     missed_calls = stats_row.missed_calls if stats_row else 0
 
-    # 2. Leaderboard from staff_call_logs + staff_employees (including all Tele Sales / Sales department staff)
+    # 2. Leaderboard strictly for Tele Sales department staff
     users_rows = db.execute(text("""
         SELECT 
             e.full_name as handled_by,
@@ -73,7 +79,7 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
         LEFT JOIN staff_employee_departments ed ON ed.employee_id = e.id
         LEFT JOIN staff_departments ad ON ad.id = ed.department_id
         LEFT JOIN staff_call_logs c ON c.staff_id = e.id AND c.call_date = :d
-        WHERE (LOWER(d.name) IN ('tele sales', 'sales') OR LOWER(ad.name) IN ('tele sales', 'sales'))
+        WHERE (LOWER(d.name) = 'tele sales' OR LOWER(ad.name) = 'tele sales')
           AND (e.status IS NULL OR e.status = 'active')
           AND (e.is_deleted IS NOT TRUE)
           AND e.full_name != ''
