@@ -5187,8 +5187,13 @@ def lead_income_members_detail(
 
     if status_str:
         if status_str not in ('BALANCE_RECEIVED_PLUS',):
-            _extra += " AND e.status = :st"
-            _p["st"] = status_str
+            st_list = [s.strip() for s in status_str.split(',') if s.strip()]
+            if len(st_list) == 1:
+                _extra += " AND e.status = :st"
+                _p["st"] = st_list[0]
+            elif len(st_list) > 1:
+                _extra += " AND e.status IN :st_list"
+                _p["st_list"] = tuple(st_list)
     if d_from:
         _extra += " AND e.created_at::date >= :df"
         _p["df"] = d_from
@@ -5197,7 +5202,7 @@ def lead_income_members_detail(
         _p["dt"] = d_to
     try:
         rows = db.execute(text(
-            "SELECT e.id, e.entry_number, e.status, e.kind, e.level, "
+            "SELECT e.id, e.entry_number, e.status, e.kind, e.level, e.partner_id, "
             "  e.created_at::date::text AS trigger_date, "
             "  COALESCE(e.paid_at::date::text, e.released_at::date::text, e.confirmed_at::date::text, CASE WHEN e.status IN ('PAID','RELEASED','VERIFIED') THEN COALESCE(e.income_date::text, e.created_at::date::text) ELSE NULL END) AS payment_date, "
             "  COALESCE(e.commission_pct,0)::float AS raw_commission_pct, "
