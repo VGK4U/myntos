@@ -3009,7 +3009,7 @@ def get_my_leads(
             )
             query = query.filter(or_(
                 CRMLead.category_id.in_(_cat_ids),
-                CRMLead.id.in_(_deal_lead_sq)
+                and_(CRMLead.category_id.is_(None), CRMLead.id.in_(_deal_lead_sq))
             ))
         else:
             query = query.filter(CRMLead.id == -1)
@@ -3878,7 +3878,7 @@ def list_leads(
             )
             query = query.filter(or_(
                 CRMLead.category_id.in_(_cat_ids),
-                CRMLead.id.in_(_deal_lead_sq)
+                and_(CRMLead.category_id.is_(None), CRMLead.id.in_(_deal_lead_sq))
             ))
         else:
             query = query.filter(CRMLead.id == -1)
@@ -5288,7 +5288,7 @@ def master_leads(
             )
             query = query.filter(or_(
                 CRMLead.category_id.in_(_cat_ids),
-                CRMLead.id.in_(_deal_lead_sq)
+                and_(CRMLead.category_id.is_(None), CRMLead.id.in_(_deal_lead_sq))
             ))
         else:
             query = query.filter(CRMLead.id == -1)
@@ -6386,7 +6386,7 @@ def lead_analytics(
             )
             base = base.filter(or_(
                 CRMLead.category_id.in_(_an_cat_ids),
-                CRMLead.id.in_(_an_deal_sq)
+                and_(CRMLead.category_id.is_(None), CRMLead.id.in_(_an_deal_sq))
             ))
         else:
             base = base.filter(CRMLead.id == -1)
@@ -13756,7 +13756,7 @@ async def get_unified_my_leads(
             )
             query = query.filter(or_(
                 CRMLead.category_id.in_(_cat_ids),
-                CRMLead.id.in_(_deal_lead_sq)
+                and_(CRMLead.category_id.is_(None), CRMLead.id.in_(_deal_lead_sq))
             ))
         else:
             query = query.filter(CRMLead.id == -1)
