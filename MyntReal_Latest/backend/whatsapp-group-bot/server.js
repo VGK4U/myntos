@@ -43,7 +43,12 @@ async function startWhatsAppBot() {
         version,
         auth: state,
         logger: pino({ level: 'silent' }),
-        printQRInTerminal: false
+        printQRInTerminal: false,
+        browser: ['MyntOS Gateway', 'Chrome', '120.0.0.0'],
+        syncFullHistory: false,
+        connectTimeoutMs: 60000,
+        keepAliveIntervalMs: 25000,
+        emitOwnEvents: false
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -111,15 +116,35 @@ app.get('/qr', (req, res) => {
     return res.send(`
         <!DOCTYPE html>
         <html>
-        <head><title>Scan WhatsApp Group Bot QR</title></head>
-        <body style="font-family: sans-serif; text-align: center; padding-top: 40px; background: #f4f6f9;">
-            <h2>📱 Scan QR Code to Link Sales WhatsApp Group Bot</h2>
-            <p>Open WhatsApp on phone ➔ Linked Devices ➔ Link a Device</p>
-            <div style="margin: 20px auto; background: white; display: inline-block; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                <img src="${qrUrl}" alt="QR Code" width="300" height="300" />
+        <head>
+            <title>Scan WhatsApp Group Bot QR</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 30px 15px; background: #f4f6f9; color: #1e293b;">
+            <h2 style="font-size: 22px; margin-bottom: 8px;">📱 Scan QR Code to Link WhatsApp Bot</h2>
+            <p style="color: #64748b; font-size: 14px; margin-top: 0;">Open WhatsApp on phone ➔ Linked Devices ➔ Link a Device</p>
+            <div style="margin: 24px auto; background: white; display: inline-block; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08);">
+                <img id="qrImg" src="${qrUrl}" alt="QR Code" width="300" height="300" style="display:block; border-radius: 8px;" />
             </div>
-            <p><small>Status: ${connectionStatus}</small></p>
-            <script>setTimeout(() => { location.reload(); }, 6000);</script>
+            <p id="statusMsg" style="font-size: 13px; font-weight: 600; color: #3b82f6;">🟢 QR Code Ready — Waiting for Phone Scan...</p>
+            <script>
+                // Async status check — no full page reload so camera scanning is smooth & uninterrupted
+                setInterval(async () => {
+                    try {
+                        const res = await fetch('/status');
+                        const data = await res.json();
+                        if (data.status === 'connected') {
+                            document.body.innerHTML = \`
+                                <div style="padding-top: 60px;">
+                                    <h1 style="color: #10b981; font-size: 48px;">✅</h1>
+                                    <h2 style="color: #065f46;">WhatsApp Bot Successfully CONNECTED!</h2>
+                                    <p style="color: #374151;">Group Bot is active and ready to send WhatsApp alerts.</p>
+                                </div>
+                            \`;
+                        }
+                    } catch (e) {}
+                }, 3000);
+            </script>
         </body>
         </html>
     `);
