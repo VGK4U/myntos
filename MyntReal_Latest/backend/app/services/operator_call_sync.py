@@ -407,6 +407,11 @@ def sync_myoperator_logs(db: Optional[Session] = None, days_back: Optional[int] 
                     _ensure_followup(db, existing)
                     if existing.followup_created:
                         followups_created += 1
+                    try:
+                        from app.services.whatsapp_missed_call_service import handle_missed_call_whatsapp_ack
+                        handle_missed_call_whatsapp_ack(db, existing.caller_number, existing.handled_by, existing.crm_lead_id)
+                    except Exception as _mc_e:
+                        logger.warning(f"[OPERATOR_SYNC] Could not send missed call WA ACK: {_mc_e}")
                 updated += 1
             else:
                 lead = _match_lead(db, caller) if caller else None
@@ -439,6 +444,11 @@ def sync_myoperator_logs(db: Optional[Session] = None, days_back: Optional[int] 
                         _ensure_followup(db, call)
                         if call.followup_created:
                             followups_created += 1
+                        try:
+                            from app.services.whatsapp_missed_call_service import handle_missed_call_whatsapp_ack
+                            handle_missed_call_whatsapp_ack(db, call.caller_number, call.handled_by, call.crm_lead_id)
+                        except Exception as _mc_e:
+                            logger.warning(f"[OPERATOR_SYNC] Could not send missed call WA ACK: {_mc_e}")
                     created += 1
                 except IntegrityError:
                     db.rollback()
