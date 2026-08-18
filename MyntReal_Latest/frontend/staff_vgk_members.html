@@ -5973,6 +5973,8 @@ async function generateMemberPoster(partnerId) {
     setVal('postLocation', location);
     setVal('postSeniorName', seniorName);
     setVal('postSeniorEarning', seniorEarning);
+    const seniorPotentialVal = (m.senior_potential_earned !== null && m.senior_potential_earned !== undefined) ? '₹' + _meFormatInr(m.senior_potential_earned) + '/-' : '—';
+    setVal('postSeniorPotential', seniorPotentialVal);
     
     const postSeniorPot = document.getElementById('postSeniorPotential');
     const seniorNameUpper = (seniorName || '').toUpperCase().trim();
@@ -5980,7 +5982,9 @@ async function generateMemberPoster(partnerId) {
     setChecked('postShowSenior', !isVgkSupport);
     
     setChecked('payTypeStage1', true);
-    setChecked('payTypeStage2', true);
+    setChecked('payTypeStage2Adv', true);
+    setChecked('payTypeFinalComm', true);
+    setChecked('payTypeBrand', true);
     setChecked('payTypeBonanza', true);
     setChecked('payTypeExtra', true);
     setChecked('payTypeAward', true);
@@ -6061,11 +6065,13 @@ function setPosterPresetPeriod(period) {
 }
 
 function recalculateTodayPayout() {
-  const showStage1 = document.getElementById('payTypeStage1')?.checked ?? true;
-  const showStage2 = document.getElementById('payTypeStage2')?.checked ?? true;
-  const showBonanza = document.getElementById('payTypeBonanza')?.checked ?? true;
-  const showExtra = document.getElementById('payTypeExtra')?.checked ?? true;
-  const showAward = document.getElementById('payTypeAward')?.checked ?? true;
+  const showStage1    = document.getElementById('payTypeStage1')?.checked ?? true;
+  const showStage2Adv = document.getElementById('payTypeStage2Adv')?.checked ?? true;
+  const showFinalComm = document.getElementById('payTypeFinalComm')?.checked ?? true;
+  const showBrand     = document.getElementById('payTypeBrand')?.checked ?? true;
+  const showBonanza   = document.getElementById('payTypeBonanza')?.checked ?? true;
+  const showExtra     = document.getElementById('payTypeExtra')?.checked ?? true;
+  const showAward     = document.getElementById('payTypeAward')?.checked ?? true;
   
   const entries = window._currentEntries || [];
   const dateFrom = (document.getElementById('postPayoutDateFrom')?.value || '').trim();
@@ -6095,10 +6101,14 @@ function recalculateTodayPayout() {
   }
 
   let stage1Amt = 0;
-  let stage2Amt = 0;
+  let stage2AdvAmt = 0;
+  let finalCommBalGrossAmt = 0;
+  let finalCommAdvPaidAmt = 0;
+  let brandAmt = 0;
   let bonanzaAmt = 0;
   let extraAmt = 0;
   let awardAmt = 0;
+  let seniorTodayAmt = 0;
   let activePeriodCount = 0;
   
   entries.forEach(e => {
@@ -6111,24 +6121,31 @@ function recalculateTodayPayout() {
       const grossAmt = parseFloat(e.commission_amount || 0);
       const advPaid = parseFloat(e.advance_paid || 0);
       const balGross = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, grossAmt - advPaid);
-      const netPayoutAmt = (e.net_payout !== undefined && e.net_payout !== null && e.net_payout > 0)
-        ? parseFloat(e.net_payout)
-        : Math.round(balGross * 0.90);
 
       const k = (e.kind || '').toUpperCase();
       const typeStr = (e.income_type || '').toLowerCase();
       
-      if (k === 'ADVANCE' || k === 'DVR_ADVANCE' || typeStr.includes('stage 1') || typeStr.includes('advance')) {
+      if (k === 'ADVANCE' || typeStr.includes('stage 1 adv')) {
         stage1Amt += grossAmt;
-      } else if (k === 'SLAB_BONUS' || typeStr.includes('bonanza') || typeStr.includes('slab') || typeStr.includes('bonus')) {
+      } else if (k === 'DVR_ADVANCE' || typeStr.includes('stage 2 adv')) {
+        stage2AdvAmt += grossAmt;
+      } else if (k === 'BRAND_COMMISSION' || typeStr.includes('brand')) {
+        brandAmt += grossAmt;
+      } else if (k === 'SLAB_BONUS' || typeStr.includes('bonanza') || typeStr.includes('slab')) {
         bonanzaAmt += grossAmt;
       } else if (k === 'EXTRA_COMMISSION' || typeStr.includes('extra')) {
         extraAmt += grossAmt;
-      } else if (k === 'AWARD' || k === 'INCENTIVE' || typeStr.includes('award') || typeStr.includes('incentive') || typeStr.includes('brand')) {
+      } else if (k === 'AWARD' || k === 'INCENTIVE' || k === 'ROYALTY' || typeStr.includes('award') || typeStr.includes('incentive')) {
         awardAmt += grossAmt;
+      } else if (k === 'COMMISSION' || k === 'SENIOR_COMM') {
+        finalCommBalGrossAmt += balGross;
+        finalCommAdvPaidAmt += advPaid;
       } else {
-        const isComm = (k === 'COMMISSION' || k === 'SENIOR_COMM');
-        stage2Amt += isComm ? balGross : grossAmt;
+        finalCommBalGrossAmt += grossAmt;
+      }
+
+      if (e.level === 2 || k === 'SENIOR_COMM') {
+        seniorTodayAmt += (balGross > 0 ? balGross : grossAmt);
       }
     }
   });
@@ -6140,9 +6157,21 @@ function recalculateTodayPayout() {
     breakupItems.push(`Stage 1 Advance: ₹${_meFormatInr(stage1Amt)}/-`);
     total += stage1Amt;
   }
-  if (showStage2 && stage2Amt > 0) {
-    breakupItems.push(`Stage 2 Payout: ₹${_meFormatInr(stage2Amt)}/-`);
-    total += stage2Amt;
+  if (showStage2Adv && stage2AdvAmt > 0) {
+    breakupItems.push(`Stage 2 Advance: ₹${_meFormatInr(stage2AdvAmt)}/-`);
+    total += stage2AdvAmt;
+  }
+  if (showFinalComm && finalCommBalGrossAmt > 0) {
+    if (finalCommAdvPaidAmt > 0) {
+      breakupItems.push(`Stage 2 Payout: ₹${_meFormatInr(finalCommBalGrossAmt)}/- (Less Adv. ₹${_meFormatInr(finalCommAdvPaidAmt)}/- Paid)`);
+    } else {
+      breakupItems.push(`Stage 2 Payout: ₹${_meFormatInr(finalCommBalGrossAmt)}/-`);
+    }
+    total += finalCommBalGrossAmt;
+  }
+  if (showBrand && brandAmt > 0) {
+    breakupItems.push(`Brand Incentive: ₹${_meFormatInr(brandAmt)}/-`);
+    total += brandAmt;
   }
   if (showBonanza && bonanzaAmt > 0) {
     breakupItems.push(`Bonanza Bonus: ₹${_meFormatInr(bonanzaAmt)}/-`);
@@ -6172,7 +6201,7 @@ function recalculateTodayPayout() {
   
   const postSeniorToday = document.getElementById('postSeniorToday');
   if (postSeniorToday) {
-    postSeniorToday.value = '₹' + _meFormatInr(activePeriodCount * 500) + '/-';
+    postSeniorToday.value = '₹' + _meFormatInr(seniorTodayAmt) + '/-';
   }
   
   const prevTitle = document.getElementById('prevTodayTitle');
@@ -7271,7 +7300,13 @@ function _renderCommDetailTable(partnerId) {
                     <input type="checkbox" id="payTypeStage1" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Stage 1 Advance
                   </label>
                   <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-                    <input type="checkbox" id="payTypeStage2" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Stage 2 Payout (Final Comm.)
+                    <input type="checkbox" id="payTypeStage2Adv" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Stage 2 Advance
+                  </label>
+                  <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
+                    <input type="checkbox" id="payTypeFinalComm" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Stage 2 Payout (Final Comm.)
+                  </label>
+                  <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
+                    <input type="checkbox" id="payTypeBrand" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Brand Commission
                   </label>
                   <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
                     <input type="checkbox" id="payTypeBonanza" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Bonanza
