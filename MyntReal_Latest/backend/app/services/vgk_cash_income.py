@@ -268,12 +268,13 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
     _sps_gate = (getattr(lead, 'solar_pipeline_status', '') or '').lower()
     _is_solar = (category_id in _SOLAR_CAT_IDS) or bool(_sps_gate)
     if _is_solar:
-        _SOLAR_COMM_STAGES = {'net_meter_pending', 'balance_received', 'subsidy_pending', 'completed'}
-        if _sps_gate not in _SOLAR_COMM_STAGES:
+        _SOLAR_COMM_STAGES = {'subsidy_pending', 'completed'}
+        _bal = Decimal(str(getattr(lead, 'deal_value_balance', 0) or 0))
+        if _sps_gate not in _SOLAR_COMM_STAGES or _bal > 0:
             logger.info(
                 f'[VGK-CI] DC-SOLAR-STAGE-GATE-001: Lead {lead.id} cat={category_id} '
-                f'solar_pipeline_status={_sps_gate!r} — COMMISSION draft skipped '
-                f'(requires {_SOLAR_COMM_STAGES})'
+                f'solar_pipeline_status={_sps_gate!r} bal={float(_bal)} — COMMISSION draft skipped '
+                f'(requires balance_received AND {_SOLAR_COMM_STAGES})'
             )
             return 0
 
@@ -351,18 +352,27 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
             return Decimal(str(amt)).quantize(Decimal('0.01'))
         return (base * pct / Decimal('100')).quantize(Decimal('0.01'))
 
-    levels_map = {
-        1: (l1,  Decimal(str(cfg.level1_pct or 0))),
-        2: (l2 if _vgk_active(l2) else None,  Decimal(str(cfg.level2_pct or 0))),
-        3: (None if is_loyal else (l3 if _vgk_active(l3) else None),
-            Decimal('0') if is_loyal else Decimal(str(cfg.level3_pct or 0))),
-        # L4 CORE (DC-VGK-L4CORE-001): upliner of L3
-        4: (None if is_loyal else (l4_core if _vgk_active(l4_core) else None),
-            Decimal('0') if is_loyal else _l4core_pct),
-        # L5 SUPPORT: field support per lead
-        5: (None if is_loyal else l5,
-            Decimal('0') if is_loyal else Decimal(str(cfg.level4_pct or 0))),
-    }
+    if _is_solar:
+        levels_map = {
+            1: (l1, Decimal('4.00')),
+            2: (l2 if _vgk_active(l2) else None, Decimal('1.50')),
+            3: (None if is_loyal else (l3 if _vgk_active(l3) else None), Decimal('0') if is_loyal else Decimal('1.00')),
+            4: (None if is_loyal else (l4_core if _vgk_active(l4_core) else None), Decimal('0') if is_loyal else Decimal('0.50')),
+            5: (None if is_loyal else l5, Decimal('0') if is_loyal else Decimal('1.50')),
+        }
+    else:
+        levels_map = {
+            1: (l1,  Decimal(str(cfg.level1_pct or 0))),
+            2: (l2 if _vgk_active(l2) else None,  Decimal(str(cfg.level2_pct or 0))),
+            3: (None if is_loyal else (l3 if _vgk_active(l3) else None),
+                Decimal('0') if is_loyal else Decimal(str(cfg.level3_pct or 0))),
+            # L4 CORE (DC-VGK-L4CORE-001): upliner of L3
+            4: (None if is_loyal else (l4_core if _vgk_active(l4_core) else None),
+                Decimal('0') if is_loyal else _l4core_pct),
+            # L5 SUPPORT: field support per lead
+            5: (None if is_loyal else l5,
+                Decimal('0') if is_loyal else Decimal(str(cfg.level4_pct or 0))),
+        }
     # DC-AMOUNT-OVERRIDE-001 (Jun 2026): Populate commission overrides for AMOUNT-type
     # levels (L1–L5). When a level is configured as flat AMOUNT, its pct column = 0,
     # so the loop guard (pct<=0 AND level not in overrides) would silently skip the
@@ -529,6 +539,48 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
 
         created += 1
         logger.info(f'[VGK-CI] DRAFT created+credited: lead={lead.id} L{level} partner={partner.partner_code} ₹{float(commission)}')
+
+    # Brand Incentive (Level 11)
+    solar_brand_id = getattr(lead, 'solar_brand_id', None)
+    if _is_solar and solar_brand_id and l1:
+        try:
+            b_exists = db.query(VGKCashIncomeEntry).filter(
+                VGKCashIncomeEntry.company_id == company_id,
+                VGKCashIncomeEntry.source_lead_id == lead.id,
+                VGKCashIncomeEntry.partner_id == l1.id,
+                VGKCashIncomeEntry.level == 11,
+                VGKCashIncomeEntry.kind == 'BRAND_COMMISSION',
+                VGKCashIncomeEntry.status != 'CANCELLED'
+            ).first()
+            if not b_exists:
+                brand_row = db.execute(text("SELECT l1_amount FROM vgk_incentive_brands WHERE id = :bid AND is_active = true"), {"bid": solar_brand_id}).fetchone()
+                b_amt = Decimal(str(brand_row[0])) if (brand_row and brand_row[0]) else Decimal('2000.00')
+                if b_amt > 0:
+                    b_entry = VGKCashIncomeEntry(
+                        company_id = company_id,
+                        entry_number = _next_entry_number(db, company_id),
+                        partner_id = l1.id,
+                        source_lead_id = lead.id,
+                        category_id = category_id,
+                        level = 11,
+                        kind = 'BRAND_COMMISSION',
+                        income_date = getattr(lead, 'income_date', None) or _get_ist().date(),
+                        deal_value_total = deal_total,
+                        deal_value_excl_tax = deal_ex_tax,
+                        confirmed_final_value = Decimal(str(_cfv)) if (_cfv is not None) else None,
+                        solar_value = Decimal(str(_sv)) if (_sv is not None and _sv > 0) else None,
+                        commission_pct = Decimal('0'),
+                        commission_amount = b_amt,
+                        net_payout = (b_amt * Decimal('0.90')).quantize(Decimal('0.01')),
+                        admin_charges = (b_amt * Decimal('0.08')).quantize(Decimal('0.01')),
+                        tds_amount = (b_amt * Decimal('0.02')).quantize(Decimal('0.01')),
+                        status = 'DRAFT'
+                    )
+                    db.add(b_entry)
+                    db.flush()
+                    created += 1
+        except Exception as _be:
+            logger.warning(f'[VGK-CI] Brand commission non-fatal lead={lead.id}: {_be}')
 
     # DC-EXTRA-COMM-001: fire 'file_completed' extra commission for all configured levels.
     # Runs here (after all DRAFT entries created) so the trigger is always executed once per
