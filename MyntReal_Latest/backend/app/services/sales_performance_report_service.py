@@ -61,18 +61,24 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
     total_talk_seconds = stats_row.total_talk_sec if stats_row else 0
     missed_calls = stats_row.missed_calls if stats_row else 0
 
-    # 2. Leaderboard from staff_call_logs + staff_employees
+    # 2. Leaderboard from staff_call_logs + staff_employees (including all Tele Sales / Sales department staff)
     users_rows = db.execute(text("""
         SELECT 
             e.full_name as handled_by,
             COUNT(c.id) as call_count,
             COUNT(CASE WHEN UPPER(c.call_type) IN ('MISSED', 'REJECTED', 'NO_ANSWER') THEN 1 END) as missed_count,
             COALESCE(SUM(c.duration_seconds), 0) as talk_seconds
-        FROM staff_call_logs c
-        JOIN staff_employees e ON e.id = c.staff_id
-        WHERE c.call_date = :d
+        FROM staff_employees e
+        LEFT JOIN staff_departments d ON d.id = e.department_id
+        LEFT JOIN staff_employee_departments ed ON ed.employee_id = e.id
+        LEFT JOIN staff_departments ad ON ad.id = ed.department_id
+        LEFT JOIN staff_call_logs c ON c.staff_id = e.id AND c.call_date = :d
+        WHERE (LOWER(d.name) IN ('tele sales', 'sales') OR LOWER(ad.name) IN ('tele sales', 'sales'))
+          AND (e.status IS NULL OR e.status = 'active')
+          AND (e.is_deleted IS NOT TRUE)
+          AND e.full_name != ''
         GROUP BY e.id, e.full_name
-        ORDER BY COUNT(c.id) DESC
+        ORDER BY COUNT(c.id) DESC, COALESCE(SUM(c.duration_seconds), 0) DESC
     """), {"d": date_str}).fetchall()
 
     leaderboard = []
@@ -160,16 +166,28 @@ def generate_bi_hourly_performance_message(db: Session, slot_name: str = "Bi-Hou
     delta_missed_str = f" *(+{delta_missed} since last update)*" if previous_stats and delta_missed > 0 else ""
     delta_leads_str = f" *(📈 +{delta_leads} since last update)*" if previous_stats and delta_leads >= 0 else ""
 
-    # Build Top 3 Leaderboard
+    # Build Tele Sales Leaderboard & Team Member List
     lb = current_stats["leaderboard"]
     medals = ["🥇", "🥈", "🥉"]
     lb_text_lines = []
-    for idx, item in enumerate(lb[:3]):
+    
+    active_staff = [item for item in lb if item['call_count'] > 0]
+    idle_staff = [item for item in lb if item['call_count'] == 0]
+
+    for idx, item in enumerate(active_staff):
         medal = medals[idx] if idx < 3 else "🏅"
         missed_str = f" *(🔴 {item['missed_count']} Missed)*" if item.get('missed_count', 0) > 0 else ""
         lb_text_lines.append(f"{idx+1}. {medal} *{item['handled_by']}* — {item['call_count']} Calls{missed_str} | {item['talk_time_formatted']} Talk Time")
 
-    lb_formatted = "\n".join(lb_text_lines) if lb_text_lines else "*(No staff calls recorded yet today)*"
+    if not active_staff:
+        lb_text_lines.append("*(No staff calls recorded yet today)*")
+
+    if idle_staff:
+        lb_text_lines.append("\n📋 *TELE SALES TEAM MEMBERS (0 Calls Today)*:")
+        for item in idle_staff:
+            lb_text_lines.append(f"• *{item['handled_by']}* — 0 Calls | 00m Talk Time")
+
+    lb_formatted = "\n".join(lb_text_lines)
 
     is_evening_closing = "07:30" in slot_name or "Closing" in slot_name or ist_now.hour >= 19
     header_title = "📊 *DAILY SALES FINAL CLOSING REPORT*" if is_evening_closing else f"📊 *SALES TEAM 2-HOUR UPDATE ({current_stats['time_str']})*"
