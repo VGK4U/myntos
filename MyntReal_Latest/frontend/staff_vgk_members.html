@@ -186,7 +186,7 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
   <button class="page-tab" id="tabBtnTopPartnersTab" onclick="switchTab('topPartnersTab')">
     <i class="fas fa-trophy" style="color:#d97706"></i> Top Partners Leaderboard
   </button>
-  <button class="page-tab" id="tabBtnEarnings" onclick="switchTab('earnings')">
+  <button class="page-tab" id="tabBtnIncomeDash" onclick="switchTab('incomeDash')">
     <i class="fas fa-coins"></i> Member View
   </button>
   <button class="page-tab" id="tabBtnLeadView" onclick="switchTab('leadView')">
@@ -628,6 +628,10 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
     <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;font-size:12.5px;font-weight:600;color:#059669;padding:6px 12px;border:1.5px solid #d1fae5;border-radius:9px;background:#f0fdf4" title="When ON — only members with at least one non-cancelled income entry are shown">
       <input type="checkbox" id="iedEarnersOnly" checked onchange="loadIncomeDash(1)" style="accent-color:#059669;width:16px;height:16px">
       Earners Only
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;font-size:12.5px;font-weight:600;color:#374151;padding:6px 12px;border:1.5px solid #e5e7eb;border-radius:9px;background:#f9fafb" title="When checked — VGK Support entries and totals are hidden">
+      <input type="checkbox" id="iedHideVgkSupport" checked onchange="loadIncomeDash(1)" style="accent-color:#7c3aed;width:16px;height:16px">
+      Hide VGK Support
     </label>
     <button onclick="loadIncomeDash(1)" style="padding:8px 18px;background:#7c3aed;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer"><i class="fas fa-search me-1"></i>Search</button>
     <button onclick="_iedResetFilters()" style="padding:8px 14px;background:#f3f4f6;color:#374151;border:none;border-radius:9px;font-size:13px;cursor:pointer">Reset All</button>
@@ -1648,26 +1652,26 @@ let _meDebTimer = null;
 function debounceME(){ clearTimeout(_meDebTimer); _meDebTimer = setTimeout(()=>loadMemberEarnings(1), 400); }
 
 function switchTab(tab) {
+  if (tab === 'earnings') tab = 'incomeDash';
   const isTpt = tab === 'topPartnersTab';
   document.getElementById('tabMembers').classList.toggle('active', tab === 'members');
   document.getElementById('tabDashboard').classList.toggle('active', tab === 'dashboard');
   document.getElementById('tabTopPartnersTab').classList.toggle('active', isTpt);
-  document.getElementById('tabEarnings').classList.toggle('active', tab === 'earnings');
+  const tabEarn = document.getElementById('tabEarnings'); if (tabEarn) tabEarn.classList.remove('active');
   document.getElementById('tabIncomeDash').classList.toggle('active', tab === 'incomeDash');
   document.getElementById('tabLeadView').classList.toggle('active', tab === 'leadView');
   document.getElementById('tabCommServices').classList.toggle('active', tab === 'commServices');
   document.getElementById('tabBtnMembers').classList.toggle('active', tab === 'members');
   document.getElementById('tabBtnDashboard').classList.toggle('active', tab === 'dashboard');
   document.getElementById('tabBtnTopPartnersTab').classList.toggle('active', isTpt);
-  document.getElementById('tabBtnEarnings').classList.toggle('active', tab === 'earnings');
-  document.getElementById('tabBtnIncomeDash').classList.toggle('active', tab === 'incomeDash');
+  const tabBtnEarn = document.getElementById('tabBtnEarnings'); if (tabBtnEarn) tabBtnEarn.classList.remove('active');
+  const tabBtnInc = document.getElementById('tabBtnIncomeDash'); if (tabBtnInc) tabBtnInc.classList.toggle('active', tab === 'incomeDash');
   document.getElementById('tabBtnLeadView').classList.toggle('active', tab === 'leadView');
   document.getElementById('tabBtnCommServices').classList.toggle('active', tab === 'commServices');
   const tickEl = document.getElementById('tptFooterTickerContainer');
   if (tickEl) tickEl.style.display = isTpt ? 'block' : 'none';
   if (tab === 'dashboard' && !_execDashLoaded) loadExecutiveDashboard();
   if (isTpt && !_tptLoaded) loadTopPartnersTable(1);
-  if (tab === 'earnings' && !_meLoaded) loadMemberEarnings(1);
   if (tab === 'incomeDash' && !_iedLoaded) { loadIedSegments(); loadIncomeDash(1); }
   if (tab === 'leadView' && !_lvLoaded) { _lvLoadSegments(); _lvLoadCommunityServices(); loadLeadView(1); }
   if (tab === 'commServices' && !_commLoaded) loadCommServicesTab(1);
@@ -2330,9 +2334,12 @@ async function loadIncomeDash(pg=1){
   const segmentId   = (document.getElementById('iedSegmentFilter')?.value||'').trim();
   const levelFilter = (document.getElementById('iedLevelFilter')?.value||'').trim();
 
+  const hideVgk     = document.getElementById('iedHideVgkSupport')?.checked !== false;
+
   let url = API + '/vgk/dashboard/member-earnings?page='+pg+'&page_size=50'
     + '&sort_by='+_iedSortBy+'&sort_dir='+_iedSortDir
-    + '&earners_only='+(earnOnly?'true':'false');
+    + '&earners_only='+(earnOnly?'true':'false')
+    + '&hide_vgk_support='+(hideVgk?'true':'false');
   if(search)      url += '&search='                  + encodeURIComponent(search);
   if(custSearch)  url += '&customer_search='         + encodeURIComponent(custSearch);
   if(stageFilter) url += '&income_status='           + encodeURIComponent(stageFilter);
