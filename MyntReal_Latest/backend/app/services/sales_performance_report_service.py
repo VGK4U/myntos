@@ -172,6 +172,12 @@ def generate_bi_hourly_performance_message(db: Session, slot_name: str = "Bi-Hou
     delta_missed_str = f" *(+{delta_missed} since last update)*" if previous_stats and delta_missed > 0 else ""
     delta_leads_str = f" *(📈 +{delta_leads} since last update)*" if previous_stats and delta_leads >= 0 else ""
 
+    # Build per-staff previous calls map for deltas
+    prev_staff_map = {}
+    if previous_stats and isinstance(previous_stats.get("leaderboard"), list):
+        for p_item in previous_stats["leaderboard"]:
+            prev_staff_map[p_item.get("handled_by")] = p_item.get("call_count", 0)
+
     # Build Tele Sales Leaderboard & Team Member List
     lb = current_stats["leaderboard"]
     medals = ["🥇", "🥈", "🥉"]
@@ -182,8 +188,16 @@ def generate_bi_hourly_performance_message(db: Session, slot_name: str = "Bi-Hou
 
     for idx, item in enumerate(active_staff):
         medal = medals[idx] if idx < 3 else "🏅"
+        staff_name = item['handled_by']
+        prev_cnt = prev_staff_map.get(staff_name)
+        staff_delta_str = ""
+        if previous_stats and prev_cnt is not None:
+            s_diff = item['call_count'] - prev_cnt
+            if s_diff >= 0:
+                staff_delta_str = f" *(📈 +{s_diff} since last update)*"
+
         missed_str = f" *(🔴 {item['missed_count']} Missed)*" if item.get('missed_count', 0) > 0 else ""
-        lb_text_lines.append(f"{idx+1}. {medal} *{item['handled_by']}* — {item['call_count']} Calls{missed_str} | {item['talk_time_formatted']} Talk Time")
+        lb_text_lines.append(f"{idx+1}. {medal} *{staff_name}* — {item['call_count']} Calls{staff_delta_str}{missed_str} | {item['talk_time_formatted']} Talk Time")
 
     if not active_staff:
         lb_text_lines.append("*(No staff calls recorded yet today)*")
