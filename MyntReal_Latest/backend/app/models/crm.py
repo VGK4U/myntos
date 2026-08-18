@@ -351,6 +351,7 @@ class CRMLead(BaseModel):
             'deal_value_balance': getattr(self, 'deal_value_balance', 0) or 0,
             'confirmed_final_value': getattr(self, 'confirmed_final_value', None),
             'solar_value': getattr(self, 'solar_value', None),
+            'solar_brand_id': getattr(self, 'solar_brand_id', None),
             'lost_reason': self.lost_reason,
             'tags': self.tags,
             'last_contact_date': _si(self.last_contact_date),

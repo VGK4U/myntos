@@ -4960,7 +4960,8 @@ def member_income_entries_detail(
             "income_date":       r.entry_date,
             "trigger_date":      r.entry_date,
             "payment_date":      pmt_date,
-            "deal_value":        commission_base,
+            "deal_value":        _dvt_val if _dvt_val > 0 else commission_base,
+            "calc_base":         commission_base,
             "commission_pct":    float(r.commission_pct),
             "commission_amount": gross_amt,
             "stage1_adv":        stage1_adv,
@@ -5206,6 +5207,8 @@ def lead_income_members_detail(
             "  e.created_at::date::text AS trigger_date, "
             "  COALESCE(e.paid_at::date::text, e.released_at::date::text, e.confirmed_at::date::text, CASE WHEN e.status IN ('PAID','RELEASED','VERIFIED') THEN COALESCE(e.income_date::text, e.created_at::date::text) ELSE NULL END) AS payment_date, "
             "  COALESCE(e.commission_pct,0)::float AS raw_commission_pct, "
+            "  COALESCE(NULLIF(cl.deal_value_total, 0), NULLIF(e.deal_value_total, 0), 0)::float AS deal_value_total_val, "
+            "  COALESCE(NULLIF(cl.deal_value_received, 0), NULLIF(cl.confirmed_final_value, 0), NULLIF(e.confirmed_final_value, 0), 0)::float AS deal_value_received_val, "
             "  COALESCE( "
             "    NULLIF(e.solar_value, 0), "
             "    NULLIF(e.deal_value_total, 0), "
@@ -5311,8 +5314,9 @@ def lead_income_members_detail(
             "trigger_date":      r.trigger_date,
             "payment_date":      r.payment_date,
             "commission_pct":    pct,
-            "deal_value":        bv,
-            "base_value":        bv,
+            "deal_value":        float(r.deal_value_total_val) if r.deal_value_total_val > 0 else bv,
+            "base_value":        float(r.deal_value_received_val) if r.deal_value_received_val > 0 else bv,
+            "calc_base":         float(r.deal_value_received_val) if r.deal_value_received_val > 0 else bv,
             "commission_amount": amt,
             "stage1_adv":        stage1_adv,
             "stage2_adv":        stage2_adv,
