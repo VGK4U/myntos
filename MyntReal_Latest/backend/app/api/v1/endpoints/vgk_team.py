@@ -4121,9 +4121,9 @@ def member_earnings_dashboard(
     sort_dir: Optional[str] = Query("asc", description="asc|desc"),
     category_id: Optional[int] = Query(None, description="Filter by signup category / segment"),
     level: Optional[int] = Query(None, description="Filter by income level 1-5"),
-    partner_code: Optional[str] = Query(None, description="Filter by specific partner code"),
     community_only: bool = Query(False, description="Filter only community service entries"),
     community_service_id: Optional[int] = Query(None, description="Filter by specific community service ID"),
+    hide_vgk_support: bool = Query(True, description="Hide VGK Support entries and totals"),
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
@@ -4134,6 +4134,8 @@ def member_earnings_dashboard(
     from sqlalchemy import or_ as _or
 
     query = db.query(OfficialPartner).filter(OfficialPartner.category == 'VGK_TEAM')
+    if hide_vgk_support:
+        query = query.filter(OfficialPartner.partner_code != 'VGK07102207', OfficialPartner.id != 31, OfficialPartner.partner_name.not_ilike('%VGK Support%'))
     if partner_code and isinstance(partner_code, str):
         query = query.filter(OfficialPartner.partner_code == partner_code.strip())
     if search and isinstance(search, str):
@@ -5011,6 +5013,7 @@ def lead_earnings_dashboard(
     community_id: Optional[int] = Query(None),
     community_service_id: Optional[int] = Query(None),
     community_only: Optional[bool] = Query(None),
+    hide_vgk_support: bool = Query(True, description="Hide VGK Support entries"),
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
@@ -5019,6 +5022,8 @@ def lead_earnings_dashboard(
     DC-VGK-LEAD-VIEW-001
     """
     where_clauses = ["e.source_lead_id IS NOT NULL", "op.category = 'VGK_TEAM'"]
+    if hide_vgk_support:
+        where_clauses.append("op.partner_code != 'VGK07102207' AND op.id != 31 AND op.partner_name NOT ILIKE '%VGK Support%'")
     params: dict = {}
 
     if search and isinstance(search, str):
@@ -5174,6 +5179,7 @@ def lead_income_members_detail(
     status: Optional[str] = Query(None),
     date_from: Optional[str] = Query(None),
     date_to: Optional[str] = Query(None),
+    hide_vgk_support: bool = Query(True, description="Hide VGK Support entries"),
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
@@ -5181,6 +5187,8 @@ def lead_income_members_detail(
     DC-VGK-LEAD-VIEW-001
     """
     _extra = ""
+    if hide_vgk_support:
+        _extra += " AND op.partner_code != 'VGK07102207' AND op.id != 31 AND op.partner_name NOT ILIKE '%VGK Support%'"
     _p: dict = {"lid": lead_id}
     status_str = status.strip().upper() if isinstance(status, str) and status.strip() else None
     d_from = date_from.strip() if isinstance(date_from, str) and date_from.strip() else None

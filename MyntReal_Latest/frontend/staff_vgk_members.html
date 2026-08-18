@@ -187,10 +187,7 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
     <i class="fas fa-trophy" style="color:#d97706"></i> Top Partners Leaderboard
   </button>
   <button class="page-tab" id="tabBtnEarnings" onclick="switchTab('earnings')">
-    <i class="fas fa-coins"></i> Member Wise Earnings
-  </button>
-  <button class="page-tab" id="tabBtnIncomeDash" onclick="switchTab('incomeDash')">
-    <i class="fas fa-chart-bar"></i> Income Dashboard
+    <i class="fas fa-coins"></i> Member View
   </button>
   <button class="page-tab" id="tabBtnLeadView" onclick="switchTab('leadView')">
     <i class="fas fa-file-invoice"></i> Lead View
@@ -406,6 +403,11 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
     <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;font-size:12.5px;font-weight:600;color:#059669;padding:6px 12px;border:1.5px solid #d1fae5;border-radius:9px;background:#f0fdf4" title="When ON — only members with at least one PAID entry are shown">
       <input type="checkbox" id="meEarnersOnly" checked onchange="loadMemberEarnings(1)" style="accent-color:#059669;width:16px;height:16px">
       Earners Only (has income)
+    </label>
+
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;font-size:12.5px;font-weight:600;color:#374151;padding:6px 12px;border:1.5px solid #e5e7eb;border-radius:9px;background:#f9fafb" title="When checked — VGK Support entries and totals are hidden">
+      <input type="checkbox" id="meHideVgkSupport" checked onchange="loadMemberEarnings(1)" style="accent-color:#7c3aed;width:16px;height:16px">
+      Hide VGK Support
     </label>
 
     <button onclick="loadMemberEarnings(1)" style="padding:8px 18px;background:#7c3aed;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer"><i class="fas fa-search me-1"></i>Search</button>
@@ -763,6 +765,10 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
   <!-- Filter bar row 1 -->
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
     <input type="text" id="lvSearch" placeholder="Customer name / mobile…" style="padding:8px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;width:230px;outline:none" oninput="debounceLeadView()" onkeydown="if(event.key==='Enter')loadLeadView(1)">
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;font-size:12.5px;font-weight:600;color:#374151;padding:6px 12px;border:1.5px solid #e5e7eb;border-radius:9px;background:#f9fafb" title="When checked — VGK Support entries and totals are hidden">
+      <input type="checkbox" id="lvHideVgkSupport" checked onchange="loadLeadView(1)" style="accent-color:#7c3aed;width:16px;height:16px">
+      Hide VGK Support
+    </label>
     <button onclick="loadLeadView(1)" style="padding:8px 18px;background:#7c3aed;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer"><i class="fas fa-search me-1"></i>Search</button>
     <button onclick="_lvResetFilters()" style="padding:8px 14px;background:#f3f4f6;color:#374151;border:none;border-radius:9px;font-size:13px;cursor:pointer">Reset All</button>
     <button onclick="loadLeadView(_lvPage)" style="padding:8px 14px;background:#ede9fe;color:#7c3aed;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;margin-left:auto"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
@@ -2028,9 +2034,12 @@ async function loadMemberEarnings(pg=1){
   const stageFilter = (document.getElementById('meStageFilter')?.value||'').trim();
   const categoryId  = (document.getElementById('meCategory')?.value||'').trim();
 
+  const hideVgk = document.getElementById('meHideVgkSupport')?.checked !== false;
+
   let url = API + '/vgk/dashboard/member-earnings?page='+pg+'&page_size=50'
     + '&sort_by='+_meSortBy+'&sort_dir='+_meSortDir
-    + '&earners_only='+(earnOnly?'true':'false');
+    + '&earners_only='+(earnOnly?'true':'false')
+    + '&hide_vgk_support='+(hideVgk?'true':'false');
   if(search)      url += '&search='           + encodeURIComponent(search);
   if(custSearch)  url += '&customer_search='  + encodeURIComponent(custSearch);
   if(stageFilter) url += '&income_status='    + encodeURIComponent(stageFilter);
@@ -2569,7 +2578,8 @@ async function toggleMeRow(partnerId){
     const activeStage = (document.getElementById('meStageFilter')?.value||'').trim();
     const meDf = (document.getElementById('meDateFrom')?.value||'').trim();
     const meDt = (document.getElementById('meDateTo')?.value||'').trim();
-    let detailUrl = API + '/vgk/dashboard/member-income-entries?partner_id=' + partnerId + '&_t=' + Date.now();
+    const hideVgk = document.getElementById('meHideVgkSupport')?.checked !== false;
+    let detailUrl = API + '/vgk/dashboard/member-income-entries?partner_id=' + partnerId + '&_t=' + Date.now() + '&hide_vgk_support=' + (hideVgk?'true':'false');
     if(activeStage) detailUrl += '&status=' + encodeURIComponent(activeStage);
     if(meDf) detailUrl += '&date_from=' + encodeURIComponent(meDf);
     if(meDt) detailUrl += '&date_to='   + encodeURIComponent(meDt);
@@ -3151,6 +3161,8 @@ async function loadLeadView(pg){
   const commId   = document.getElementById('lvCommunityIdFilter')?.value || '';
 
   const params = new URLSearchParams({ page: _lvPage, page_size: 50, sort_by: 'gross', sort_dir: 'desc' });
+  const hideVgk = document.getElementById('lvHideVgkSupport')?.checked !== false;
+  params.set('hide_vgk_support', hideVgk ? 'true' : 'false');
   if(search)   params.set('search', search);
   if(dateFrom) params.set('date_from', dateFrom);
   if(dateTo)   params.set('date_to', dateTo);
@@ -3306,6 +3318,8 @@ async function toggleLvRow(lid){
   const dateTo = document.getElementById('lvDateTo')?.value || '';
 
   const params = new URLSearchParams({ lead_id: lid });
+  const hideVgk = document.getElementById('lvHideVgkSupport')?.checked !== false;
+  params.set('hide_vgk_support', hideVgk ? 'true' : 'false');
   if(stage) params.set('status', stage);
   if(dateFrom) params.set('date_from', dateFrom);
   if(dateTo) params.set('date_to', dateTo);
