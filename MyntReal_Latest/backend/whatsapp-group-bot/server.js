@@ -15,7 +15,8 @@ const {
     default: makeWASocket,
     useMultiFileAuthState,
     DisconnectReason,
-    fetchLatestBaileysVersion
+    fetchLatestBaileysVersion,
+    Browsers
 } = require('@whiskeysockets/baileys');
 
 const app = express();
@@ -44,7 +45,7 @@ async function startWhatsAppBot() {
         auth: state,
         logger: pino({ level: 'silent' }),
         printQRInTerminal: false,
-        browser: ['MyntOS Gateway', 'Chrome', '120.0.0.0'],
+        browser: Browsers.macOS('Desktop'),
         syncFullHistory: false,
         connectTimeoutMs: 60000,
         keepAliveIntervalMs: 25000,
@@ -85,10 +86,12 @@ async function startWhatsAppBot() {
 
         if (connection === 'close') {
             connectionStatus = 'disconnected';
-            const shouldReconnect = (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut);
-            console.log(`⚠️ Connection closed. Reconnecting: ${shouldReconnect}`);
+            const errDetail = lastDisconnect?.error?.message || lastDisconnect?.error;
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            const shouldReconnect = (statusCode !== DisconnectReason.loggedOut);
+            console.log(`⚠️ Connection closed (Status: ${statusCode}, Err: ${errDetail}). Reconnecting: ${shouldReconnect}`);
             if (shouldReconnect) {
-                setTimeout(startWhatsAppBot, 3000);
+                setTimeout(startWhatsAppBot, 5000);
             }
         }
     });
@@ -150,6 +153,8 @@ app.get('/qr', (req, res) => {
     `);
 });
 
+const jidCache = {};
+
 app.post('/api/send-group-message', async (req, res) => {
     try {
         const { message, inviteCode, groupId } = req.body;
@@ -165,25 +170,32 @@ app.post('/api/send-group-message', async (req, res) => {
             });
         }
 
-        let destinationJid = groupId || targetJid;
-
-        // Resolve invite code if JID not cached
+        let destinationJid = groupId;
         const codeToUse = inviteCode || DEFAULT_INVITE_CODE;
+
         if (!destinationJid && codeToUse) {
-            try {
-                const groupInfo = await sock.groupGetInviteInfo(codeToUse);
-                if (groupInfo && groupInfo.id) {
-                    destinationJid = groupInfo.id.includes('@g.us') ? groupInfo.id : `${groupInfo.id}@g.us`;
-                    targetJid = destinationJid;
-                }
-            } catch (invErr) {
-                // If bot is already in group, joinGroupViaInviteCode will succeed
+            if (jidCache[codeToUse]) {
+                destinationJid = jidCache[codeToUse];
+            } else {
                 try {
-                    destinationJid = await sock.groupAcceptInvite(codeToUse);
-                } catch (acceptErr) {
-                    console.log(`Invite accept note: ${acceptErr.message}`);
+                    const groupInfo = await sock.groupGetInviteInfo(codeToUse);
+                    if (groupInfo && groupInfo.id) {
+                        destinationJid = groupInfo.id.includes('@g.us') ? groupInfo.id : `${groupInfo.id}@g.us`;
+                        jidCache[codeToUse] = destinationJid;
+                    }
+                } catch (invErr) {
+                    try {
+                        destinationJid = await sock.groupAcceptInvite(codeToUse);
+                        if (destinationJid) jidCache[codeToUse] = destinationJid;
+                    } catch (acceptErr) {
+                        console.log(`Invite accept note: ${acceptErr.message}`);
+                    }
                 }
             }
+        }
+
+        if (!destinationJid) {
+            destinationJid = targetJid;
         }
 
         if (!destinationJid) {
