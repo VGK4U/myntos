@@ -4121,6 +4121,7 @@ def member_earnings_dashboard(
     sort_dir: Optional[str] = Query("asc", description="asc|desc"),
     category_id: Optional[int] = Query(None, description="Filter by signup category / segment"),
     level: Optional[int] = Query(None, description="Filter by income level 1-5"),
+    partner_code: Optional[str] = Query(None, description="Filter by specific partner code"),
     community_only: bool = Query(False, description="Filter only community service entries"),
     community_service_id: Optional[int] = Query(None, description="Filter by specific community service ID"),
     hide_vgk_support: bool = Query(True, description="Hide VGK Support entries and totals"),
