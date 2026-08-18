@@ -38,55 +38,55 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
     """
     Aggregates today's sales performance statistics up to the current moment.
     """
-    from app.models.operator_calls import OperatorCall
+    from sqlalchemy import text
     from app.models.crm import CRMLead
 
     # IST Today Range (+5:30)
     ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
     start_of_today_ist = ist_now.replace(hour=0, minute=0, second=0, microsecond=0)
     start_of_today_utc = start_of_today_ist - timedelta(hours=5, minutes=30)
+    date_str = ist_now.strftime("%Y-%m-%d")
 
-    # 1. Total Calls Handled Today
-    total_calls = db.query(func.count(OperatorCall.id)).filter(
-        OperatorCall.started_at >= start_of_today_utc
-    ).scalar() or 0
+    # 1. Total Calls, Talk Time & Missed Calls from staff_call_logs
+    stats_row = db.execute(text("""
+        SELECT 
+            COUNT(*) as total_calls,
+            COALESCE(SUM(duration_seconds), 0) as total_talk_sec,
+            COUNT(CASE WHEN call_type IN ('missed', 'rejected', 'no_answer') THEN 1 END) as missed_calls
+        FROM staff_call_logs
+        WHERE call_date = :d
+    """), {"d": date_str}).fetchone()
 
-    # 2. Total Talk Time Today (seconds)
-    total_talk_seconds = db.query(func.sum(OperatorCall.duration_seconds)).filter(
-        OperatorCall.started_at >= start_of_today_utc,
-        OperatorCall.status == 'answered'
-    ).scalar() or 0
+    total_calls = stats_row.total_calls if stats_row else 0
+    total_talk_seconds = stats_row.total_talk_sec if stats_row else 0
+    missed_calls = stats_row.missed_calls if stats_row else 0
 
-    # 3. Missed Calls Today
-    missed_calls = db.query(func.count(OperatorCall.id)).filter(
-        OperatorCall.started_at >= start_of_today_utc,
-        OperatorCall.status == 'missed'
-    ).scalar() or 0
-
-    # 4. New Leads Today
-    new_leads = db.query(func.count(CRMLead.id)).filter(
-        CRMLead.created_at >= start_of_today_utc
-    ).scalar() or 0
-
-    # 5. Top Staff Telecallers Leaderboard
-    staff_stats_query = db.query(
-        OperatorCall.handled_by,
-        func.count(OperatorCall.id).label('call_count'),
-        func.sum(OperatorCall.duration_seconds).label('talk_seconds')
-    ).filter(
-        OperatorCall.started_at >= start_of_today_utc,
-        OperatorCall.handled_by.isnot(None),
-        OperatorCall.handled_by != ''
-    ).group_by(OperatorCall.handled_by).order_by(func.count(OperatorCall.id).desc()).all()
+    # 2. Leaderboard from staff_call_logs + staff_employees
+    users_rows = db.execute(text("""
+        SELECT 
+            e.full_name as handled_by,
+            COUNT(c.id) as call_count,
+            COALESCE(SUM(c.duration_seconds), 0) as talk_seconds
+        FROM staff_call_logs c
+        JOIN staff_employees e ON e.id = c.staff_id
+        WHERE c.call_date = :d
+        GROUP BY e.id, e.full_name
+        ORDER BY COUNT(c.id) DESC
+    """), {"d": date_str}).fetchall()
 
     leaderboard = []
-    for row in staff_stats_query:
+    for row in users_rows:
         leaderboard.append({
             "handled_by": row.handled_by,
             "call_count": row.call_count or 0,
             "talk_seconds": int(row.talk_seconds or 0),
             "talk_time_formatted": _format_seconds_to_hm(row.talk_seconds or 0)
         })
+
+    # 3. New Leads Intake Today
+    new_leads = db.query(func.count(CRMLead.id)).filter(
+        CRMLead.created_at >= start_of_today_utc
+    ).scalar() or 0
 
     return {
         "timestamp_ist": ist_now.strftime("%Y-%m-%d %H:%M:%S"),
