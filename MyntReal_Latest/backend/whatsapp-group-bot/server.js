@@ -177,6 +177,7 @@ app.post('/api/send-group-message', async (req, res) => {
             if (jidCache[codeToUse]) {
                 destinationJid = jidCache[codeToUse];
             } else {
+                // Try Group Invite lookup
                 try {
                     const groupInfo = await sock.groupGetInviteInfo(codeToUse);
                     if (groupInfo && groupInfo.id) {
@@ -184,11 +185,17 @@ app.post('/api/send-group-message', async (req, res) => {
                         jidCache[codeToUse] = destinationJid;
                     }
                 } catch (invErr) {
+                    // Try WhatsApp Channel (Newsletter) lookup
                     try {
-                        destinationJid = await sock.groupAcceptInvite(codeToUse);
-                        if (destinationJid) jidCache[codeToUse] = destinationJid;
-                    } catch (acceptErr) {
-                        console.log(`Invite accept note: ${acceptErr.message}`);
+                        if (typeof sock.newsletterMetadata === 'function') {
+                            const newsInfo = await sock.newsletterMetadata('invite', codeToUse);
+                            if (newsInfo && newsInfo.id) {
+                                destinationJid = newsInfo.id.includes('@newsletter') ? newsInfo.id : `${newsInfo.id}@newsletter`;
+                                jidCache[codeToUse] = destinationJid;
+                            }
+                        }
+                    } catch (newsErr) {
+                        console.log(`Newsletter lookup note: ${newsErr.message}`);
                     }
                 }
             }

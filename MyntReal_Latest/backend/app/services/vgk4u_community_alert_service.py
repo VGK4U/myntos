@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 logger = logging.getLogger(__name__)
 
 ELITE_GROUP_INVITE_CODE = "LfX8mGootXa7SpwNIz7P5C"  # Default Elite/Sales Group
+VGK4U_CHANNEL_INVITE_CODE = "0029Vb7Vb5f9cDDXf3zWtf0m"  # VGK4U Official WhatsApp Channel
 BOT_API_URL = "http://localhost:5002/api/send-group-message"
 
 MORNING_QUOTES = [
@@ -50,13 +51,13 @@ def send_vgk4u_group_bot_message(message_text: str, invite_code: str = ELITE_GRO
         return {"success": False, "error": str(exc)}
 
 
-def dispatch_daily_vgk4u_morning_wish(db: Session) -> Dict[str, Any]:
+def dispatch_daily_vgk4u_morning_wish(db: Session, invite_code: str = VGK4U_CHANNEL_INVITE_CODE) -> Dict[str, Any]:
     """
-    Dispatches daily 8:00 AM random inspiring morning wish to VGK4U Elite Group & Channel.
+    Dispatches daily 8:00 AM random inspiring morning wish to VGK4U Channel & Group.
     """
     quote = random.choice(MORNING_QUOTES)
     logger.info("🌅 Dispatching daily VGK4U 8 AM morning wish...")
-    return send_vgk4u_group_bot_message(quote)
+    return send_vgk4u_group_bot_message(quote, invite_code=invite_code)
 
 
 def send_partner_lead_added_congratulations(
