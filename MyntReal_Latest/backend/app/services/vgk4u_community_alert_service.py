@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-ELITE_GROUP_INVITE_CODE = "LfX8mGootXa7SpwNIz7P5C"  # Default Elite/Sales Group
+ELITE_GROUP_INVITE_CODE = "HNQQoKXFfCm5PQngGdrlcY"  # VGK4U Elite Community Group
 VGK4U_CHANNEL_INVITE_CODE = "0029Vb7Vb5f9cDDXf3zWtf0m"  # VGK4U Official WhatsApp Channel
 BOT_API_URL = "http://localhost:5002/api/send-group-message"
 
