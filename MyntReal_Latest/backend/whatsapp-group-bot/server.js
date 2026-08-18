@@ -32,6 +32,14 @@ let currentQr = null;
 let connectionStatus = 'disconnected';
 let targetJid = null;
 
+// Prevent process exit on background Baileys socket disconnection (1006 / connection reset)
+process.on('unhandledRejection', (reason, promise) => {
+    console.log('⚠️ Process captured unhandledRejection (socket reset/reconnect):', reason?.message || reason);
+});
+process.on('uncaughtException', (err) => {
+    console.log('⚠️ Process captured uncaughtException:', err?.message || err);
+});
+
 async function startWhatsAppBot() {
     if (!fs.existsSync(AUTH_DIR)) {
         fs.mkdirSync(AUTH_DIR, { recursive: true });
