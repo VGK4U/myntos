@@ -1,0 +1,16 @@
+{
+  "name": "whatsapp-group-bot",
+  "version": "1.0.0",
+  "description": "Self-hosted WhatsApp Web Gateway for Mynt OS Sales Group Notifications",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.13",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "pino": "^9.6.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

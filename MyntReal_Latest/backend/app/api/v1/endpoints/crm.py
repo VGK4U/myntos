@@ -8591,6 +8591,12 @@ def create_lead(
     db.add(new_lead)
     db.commit()
     db.refresh(new_lead)
+
+    try:
+        from app.services.whatsapp_group_alert_service import send_instant_new_lead_group_alert
+        send_instant_new_lead_group_alert(db, new_lead.id)
+    except Exception as _ga_e:
+        print(f"[CRM_CREATE_LEAD] Could not send WhatsApp group alert: {_ga_e}", flush=True)
     
     if lead_data.handler_type and lead_data.handler_type != 'unassigned':
         assignment = CRMLeadAssignment(

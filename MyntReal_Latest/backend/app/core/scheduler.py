@@ -4766,6 +4766,17 @@ def init_scheduler():
     )
     logger.info("   🌅 WhatsApp 8AM IST daily morning wish dispatch scheduled")
 
+    # DC-SALES-PERF-001: Every 2 Hours (9:30 AM to 7:30 PM IST) Sales Performance Report to WhatsApp Group
+    scheduler.add_job(
+        job_bi_hourly_sales_performance_report,
+        trigger=CronTrigger(hour='9,11,13,15,17,19', minute=30, timezone='Asia/Kolkata'),
+        id='wa_bihourly_sales_perf_report',
+        name='WhatsApp: Bi-Hourly Sales Performance Report (9:30 AM - 7:30 PM IST)',
+        replace_existing=True,
+        misfire_grace_time=600,
+    )
+    logger.info("   📊 WhatsApp bi-hourly sales performance report scheduled (9:30 AM - 7:30 PM IST)")
+
     # [DC-POINTS-REFILL] Safety-net: daily at 2:00 AM IST — catch any missed auto-refills
     scheduler.add_job(
         run_vgk_points_refill_safety_net,
@@ -4916,4 +4927,24 @@ def job_daily_whatsapp_morning_wish():
         logger.error(f"❌ DC-WA-MORNING-WISH-001: Dispatch failed: {exc}")
     finally:
         db.close()
+
+
+# DC-SALES-PERF-001: Bi-Hourly Sales Performance Report (9:30 AM - 7:30 PM IST)
+def job_bi_hourly_sales_performance_report():
+    """
+    DC-SALES-PERF-001: Posts 2-hour sales performance update and delta comparison to Sales WhatsApp Group.
+    """
+    from app.core.database import SessionLocal
+    from app.services.sales_performance_report_service import dispatch_bi_hourly_sales_performance_report
+
+    logger.info("📊 DC-SALES-PERF-001: Triggering bi-hourly sales performance report to WhatsApp Group...")
+    db = SessionLocal()
+    try:
+        res = dispatch_bi_hourly_sales_performance_report(db)
+        logger.info(f"✅ DC-SALES-PERF-001: Group report dispatch result: {res}")
+    except Exception as exc:
+        logger.error(f"❌ DC-SALES-PERF-001: Group report dispatch failed: {exc}")
+    finally:
+        db.close()
+
 
