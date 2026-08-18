@@ -4755,7 +4755,16 @@ def init_scheduler():
         replace_existing=True,
         misfire_grace_time=600,
     )
-    logger.info("   📱 WhatsApp overdue alerts scheduled at 9AM IST Mon-Sat")
+    # DC-WA-MORNING-WISH-001: Daily 8:00 AM IST Morning Wish Dispatch to New/Uncontacted Leads
+    scheduler.add_job(
+        job_daily_whatsapp_morning_wish,
+        trigger=CronTrigger(hour=8, minute=0, timezone='Asia/Kolkata'),
+        id='wa_daily_morning_wish_8am',
+        name='WhatsApp: Daily Morning Wish Dispatch (8AM IST)',
+        replace_existing=True,
+        misfire_grace_time=600,
+    )
+    logger.info("   🌅 WhatsApp 8AM IST daily morning wish dispatch scheduled")
 
     # [DC-POINTS-REFILL] Safety-net: daily at 2:00 AM IST — catch any missed auto-refills
     scheduler.add_job(
@@ -4887,6 +4896,24 @@ def update_credit_overdue_status():
         updated_count = AccountsCreditService.update_overdue_status(db)
         logger.info(f"✅ DC_CREDIT_001: Updated {updated_count} items to OVERDUE status")
     except Exception as e:
-        logger.error(f"❌ DC_CREDIT_001: Failed to update overdue status: {e}")
+        db.close()
+
+
+# DC-WA-MORNING-WISH-001: Daily 8:00 AM IST WhatsApp Morning Wish Dispatch
+def job_daily_whatsapp_morning_wish():
+    """
+    DC-WA-MORNING-WISH-001: Dispatches daily 8:00 AM morning wish to all eligible new & uncontacted leads.
+    """
+    from app.core.database import SessionLocal
+    from app.services.whatsapp_morning_wish_service import dispatch_daily_morning_wishes
+
+    logger.info("🌅 DC-WA-MORNING-WISH-001: Starting daily 8 AM WhatsApp Morning Wish dispatch...")
+    db = SessionLocal()
+    try:
+        res = dispatch_daily_morning_wishes(db)
+        logger.info(f"✅ DC-WA-MORNING-WISH-001: Dispatch completed. Total sent: {res.get('sent_count', 0)}, Skipped: {res.get('skipped_count', 0)}")
+    except Exception as exc:
+        logger.error(f"❌ DC-WA-MORNING-WISH-001: Dispatch failed: {exc}")
     finally:
         db.close()
+

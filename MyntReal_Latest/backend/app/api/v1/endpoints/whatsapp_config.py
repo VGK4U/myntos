@@ -2233,3 +2233,46 @@ async def update_wa_credentials(
             return {"success": True, "message": f"Credentials saved but API verification failed: {err}", "warning": True}
     except Exception as e:
         return {"success": True, "message": f"Credentials saved (verification check failed: {e})", "warning": True}
+
+
+# ── DC-WA-MORNING-WISH-001: 8 AM ROTATING BILINGUAL MORNING WISH ENDPOINTS ────
+
+@router.get("/morning-wish/status")
+def get_morning_wish_status(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_wa_config)
+):
+    """Returns today's 4-day rotation template, date, and eligible lead count."""
+    from app.services.whatsapp_morning_wish_service import (
+        get_current_rotation_template,
+        get_eligible_leads_for_morning_wish
+    )
+    current_rot = get_current_rotation_template(db)
+    eligible_leads = get_eligible_leads_for_morning_wish(db)
+    return {
+        "success": True,
+        "rotation_info": current_rot,
+        "eligible_leads_count": len(eligible_leads)
+    }
+
+
+@router.post("/morning-wish/seed-templates")
+def seed_morning_wish_templates(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_wa_config)
+):
+    """Seeds the 4 bilingual rotating morning wish templates and submits them to Meta API."""
+    from app.services.whatsapp_morning_wish_service import seed_and_submit_morning_wish_templates
+    return seed_and_submit_morning_wish_templates(db)
+
+
+@router.post("/morning-wish/trigger-daily-dispatch")
+def trigger_morning_wish_dispatch(
+    force_test: bool = False,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_wa_config)
+):
+    """Triggers the daily 8 AM morning wish dispatch to eligible new/uncontacted leads."""
+    from app.services.whatsapp_morning_wish_service import dispatch_daily_morning_wishes
+    return dispatch_daily_morning_wishes(db, force_test=force_test)
+
