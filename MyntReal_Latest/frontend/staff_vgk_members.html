@@ -2375,11 +2375,8 @@ function _iedRenderKpis(rows, total){
   const totL3       = rows.reduce((s,r)=>s+(r.l3_extended||0),0);
   const totL4       = rows.reduce((s,r)=>s+(r.l4_core||0),0);
   const totL5       = rows.reduce((s,r)=>s+(r.l5_support||0),0);
-  const totNet      = rows.reduce((s, r) => s + ((r.net_earning !== undefined && r.net_earning !== null) ? r.net_earning : Math.round((r.gross_earned || 0) * 0.9)), 0);
-  const statAgg = {};
-  rows.forEach(r=>{ Object.entries(r.income_by_status||{}).forEach(([st,v])=>{ if(!statAgg[st]) statAgg[st]={count:0,amount:0}; statAgg[st].count+=v.count; statAgg[st].amount+=v.amount; }); });
-  const _PEND = ['DRAFT','PENDING','STAGE1_APPROVED'];
-  const totPending = _PEND.reduce((s,st)=>s+(statAgg[st]?.amount||0),0);
+  const totNet      = rows.reduce((s, r) => s + (r.net_earning !== undefined ? r.net_earning : 0), 0);
+  const totPending  = rows.reduce((s, r) => s + (r.pending !== undefined ? r.pending : 0), 0);
   const kpis = [
     {label:'Total Members', val:total,             color:'#7c3aed'},
     {label:'Total Files',   val:totFiles,          color:'#374151'},
@@ -2388,7 +2385,7 @@ function _iedRenderKpis(rows, total){
     {label:'Net Earning',   val:_meInr(totNet),    color:'#059669'},
     {label:'Released/Paid', val:_meInr(totRcv),    color:'#059669'},
     {label:'Pot. Earning',  val:_meInr(totPot),    color:'#7c3aed'},
-    {label:'Pending',       val:_meInr(totPending),color:'#d97706', border:'#fbbf24'},
+    {label:'Pending',       val:_meInr(totPending),color:'#d97706', border:'#fde68a'},
     {label:'L1 Source',     val:_meInr(totL1),     color:'#7c3aed'},
     {label:'L2 Senior',     val:_meInr(totL2),     color:'#1d4ed8'},
     {label:'L3 Extended',   val:_meInr(totL3),     color:'#0d9488'},
@@ -2396,7 +2393,7 @@ function _iedRenderKpis(rows, total){
     {label:'L5 Support',    val:_meInr(totL5),     color:'#db2777'},
   ];
   document.getElementById('iedKpiRow').innerHTML = kpis.map(k=>`
-    <div style="background:#fff;border-radius:10px;padding:10px 14px;box-shadow:0 1px 3px rgba(0,0,0,.08);min-width:120px;flex:0 0 auto;${k.border?'border:1.5px solid '+k.border+';background:#fffbeb;':''}">
+    <div style="background:#fff;border-radius:10px;padding:10px 14px;box-shadow:0 1px 3px rgba(0,0,0,.08);min-width:110px;flex:1 1 0;${k.border?'border:1.5px solid '+k.border+';background:#fffbeb;':''}">
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#9ca3af;letter-spacing:.04em;margin-bottom:3px">${k.label}</div>
       <div style="font-size:14px;font-weight:800;color:${k.color}">${k.val}</div>
     </div>`).join('');
@@ -2406,12 +2403,11 @@ function _iedRenderTable(rows){
   window._iedCurrentRows = rows;
   const tbody = document.getElementById('iedBody');
   if(!rows.length){
-    tbody.innerHTML='<tr><td colspan="18" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-chart-bar me-2"></i>No earners found with current filters</td></tr>';
+    tbody.innerHTML='<tr><td colspan="18" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-coins me-2"></i>No members found with current filters</td></tr>';
     return;
   }
   const _lvlInr = v => v > 0 ? `<span style="font-weight:700">${_meInr(v)}</span>` : `<span style="color:#e5e7eb">—</span>`;
 
-  // Page-level totals row (above first data row, no separate tiles needed)
   const tFiles     = rows.reduce((s,r)=>s+(r.l1_files||0),0);
   const tInstalled = rows.reduce((s,r)=>s+(r.installed_files||0),0);
   const tL1        = rows.reduce((s,r)=>s+(r.l1_source||0),0);
@@ -2421,9 +2417,9 @@ function _iedRenderTable(rows){
   const tL5        = rows.reduce((s,r)=>s+(r.l5_support||0),0);
   const tL0        = rows.reduce((s,r)=>s+(r.l0_bonus||0),0);
   const tGross     = rows.reduce((s,r)=>s+(r.gross_earned||0),0);
-  const tNet       = Math.round(tGross * 0.9);
+  const tNet       = rows.reduce((s,r)=>s+(r.net_earning!==undefined?r.net_earning:Math.round((r.gross_earned||0)*0.9)),0);
   const tRcv       = rows.reduce((s,r)=>s+(r.received||0),0);
-  const tPending   = rows.reduce((s,r)=>s+(r.pending||0),0);
+  const tPending   = rows.reduce((s,r)=>s+(r.pending!==undefined?r.pending:0),0);
   const tPot       = rows.reduce((s,r)=>s+(r.potential_earning||0),0);
   const totalsRow = `<tr style="background:#f0fdf4;border-bottom:2px solid #bbf7d0;position:sticky;top:0;z-index:1">
     <td style="padding:8px;text-align:center"><span style="font-size:9px;font-weight:800;color:#059669;background:#dcfce7;padding:2px 5px;border-radius:4px;white-space:nowrap">TOTAL</span></td>
@@ -2476,9 +2472,9 @@ function _iedRenderTable(rows){
     const l6 = Number(m.l6_showroom || 0);
     const l0 = Number(m.l0_bonus || 0);
     const gross = m.gross_earned || 0;
-    const net = Math.round(gross * 0.9);
+    const net = m.net_earning !== undefined ? m.net_earning : Math.round(gross * 0.9);
     const rcv = m.received || 0;
-    const pnd = m.pending || 0;
+    const pnd = m.pending_amount !== undefined ? m.pending_amount : (m.pending !== undefined ? m.pending : Math.round(gross * 0.9));
     const pot = Number(m.potential_earning || 0);
     return `<tr id="ied-row-${m.id}" style="border-bottom:1px solid #f3f4f6" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background=''">
       <td style="padding:8px;text-align:center">

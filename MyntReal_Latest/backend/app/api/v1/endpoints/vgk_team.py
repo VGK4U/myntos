@@ -4430,6 +4430,69 @@ def member_earnings_dashboard(
         except Exception:
             pass
 
+    # Bulk: compute per-partner, per-lead, per-level advances for exact net pending matching
+    adv_map_bulk = {}
+    if member_ids:
+        try:
+            adv_rows = db.execute(text("""
+                SELECT source_lead_id, level, SUM(commission_amount) as total_adv
+                FROM vgk_cash_income_entries
+                WHERE partner_id = ANY(:ids)
+                  AND status IN ('PAID', 'RELEASED', 'PENDING', 'DRAFT')
+                  AND kind IN ('ADVANCE', 'DVR_ADVANCE')
+                GROUP BY source_lead_id, level
+            """), {"ids": member_ids}).fetchall()
+            for ar in adv_rows:
+                if ar.source_lead_id and ar.level is not None:
+                    adv_map_bulk[(int(ar.source_lead_id), int(ar.level))] = float(ar.total_adv or 0)
+
+            vsca_rows = db.execute(text("""
+                SELECT lead_id, level, SUM(advance_amount) as total_adv
+                FROM vgk_solar_cibil_advances
+                WHERE partner_id = ANY(:ids)
+                  AND status IN ('PENDING', 'RELEASED')
+                  AND NOT EXISTS (
+                    SELECT 1 FROM vgk_cash_income_entries vci
+                    WHERE vci.source_lead_id = vgk_solar_cibil_advances.lead_id
+                      AND vci.level = vgk_solar_cibil_advances.level
+                      AND vci.kind = vgk_solar_cibil_advances.kind
+                      AND vci.status != 'CANCELLED'
+                  )
+                GROUP BY lead_id, level
+            """), {"ids": member_ids}).fetchall()
+            for vr in vsca_rows:
+                if vr.lead_id and vr.level is not None:
+                    key = (int(vr.lead_id), int(vr.level))
+                    adv_map_bulk[key] = adv_map_bulk.get(key, 0.0) + float(vr.total_adv or 0)
+        except Exception:
+            pass
+
+    # Fetch per-entry details per member for exact pending/net calculations
+    raw_member_entries_map = {}
+    if member_ids:
+        try:
+            _me_sql = (
+                "SELECT e.partner_id, e.status, e.kind, e.level, e.source_lead_id, COALESCE(e.commission_amount,0)::float as gross, COALESCE(e.net_payout,0)::float as net "
+                "FROM vgk_cash_income_entries e " + cust_join_sql +
+                " WHERE e.partner_id = ANY(:ids) AND e.status != 'CANCELLED' "
+                + date_sql + (" " + status_sql if status_val else "")
+            )
+            me_rows = db.execute(text(_me_sql), {"ids": member_ids, **date_params}).fetchall()
+            for r in me_rows:
+                pid = int(r[0])
+                if pid not in raw_member_entries_map:
+                    raw_member_entries_map[pid] = []
+                raw_member_entries_map[pid].append({
+                    "status": r[1],
+                    "kind": (r[2] or '').upper(),
+                    "level": r[3],
+                    "source_lead_id": r[4],
+                    "gross": float(r[5] or 0),
+                    "net": float(r[6] or 0)
+                })
+        except Exception:
+            pass
+
     from app.services.vgk_earner_card import get_bulk_partner_potential_earning
     pot_map = get_bulk_partner_potential_earning(db, member_ids, exclude_l1=False) if member_ids else {}
 
@@ -4440,13 +4503,27 @@ def member_earnings_dashboard(
         pts_debited  = p.get("debited", 0.0)
         pts_balance  = float(m.vgk_points_balance or 0)
         inc = inc_map.get(m.id, {})
-        gross    = sum(v["amount"] for st, v in inc.items() if st != "CANCELLED")
-        net_earning = round(gross * 0.90, 2)
-        received = sum(v["amount"] for st, v in inc.items() if st in ("RELEASED", "PAID"))
-        pending_amt = round(
-            sum(v["amount"] for st, v in inc.items() if st in ("DRAFT", "PENDING", "STAGE1_APPROVED")) * 0.90,
-            2
-        )
+        m_entries = raw_member_entries_map.get(m.id, [])
+        gross    = sum(e["gross"] for e in m_entries)
+        received = sum(e["gross"] for e in m_entries if e["status"] in ("RELEASED", "PAID"))
+        
+        pending_amt = 0.0
+        net_earning = 0.0
+        for e in m_entries:
+            st = e["status"]
+            kind = e["kind"]
+            e_gross = e["gross"]
+            adv_paid = 0.0
+            if kind == 'COMMISSION' and e["source_lead_id"] and e["level"] is not None:
+                adv_paid = adv_map_bulk.get((int(e["source_lead_id"]), int(e["level"])), 0.0)
+            bal_gross = max(0.0, e_gross - adv_paid)
+            e_net = round(bal_gross * 0.90, 2)
+            net_earning += e_net
+            if st in ("DRAFT", "PENDING", "STAGE1_APPROVED"):
+                pending_amt += e_net
+
+        pending_amt = round(pending_amt, 2)
+        net_earning = round(net_earning, 2)
         _lvl = lvl_map.get(m.id, {})
         
         senior_info = parent_map.get(m.parent_partner_id, {}) if m.parent_partner_id else {}
@@ -4471,6 +4548,7 @@ def member_earnings_dashboard(
             "net_earning":            net_earning,
             "received":               received,
             "pending":                pending_amt,
+            "pending_amount":         pending_amt,
             "potential_earning":      float(pot_map.get(m.id, 0.0)),
             "income_by_status":       inc,
             # DC-VGK-EARN-DASH-001: level-wise breakdown + new summary fields
