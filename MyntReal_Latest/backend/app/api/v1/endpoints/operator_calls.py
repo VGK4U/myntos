@@ -389,7 +389,7 @@ async def operator_call_webhook(
             followup = _create_auto_followup(db, call)
             try:
                 from app.services.whatsapp_missed_call_service import handle_missed_call_whatsapp_ack
-                handle_missed_call_whatsapp_ack(db, call.caller_number, call.handled_by, call.crm_lead_id)
+                handle_missed_call_whatsapp_ack(db, call.caller_number, call.handled_by, call.crm_lead_id, call_type=call.call_type)
             except Exception as _mc_e:
                 logger.warning(f"[OPERATOR_WEBHOOK] Could not send missed call WA ACK: {_mc_e}")
 

@@ -150,19 +150,28 @@ def handle_missed_call_whatsapp_ack(
     db: Session,
     caller_phone: str,
     caller_name: Optional[str] = None,
-    lead_id: Optional[int] = None
+    lead_id: Optional[int] = None,
+    call_type: Optional[str] = "inbound"
 ) -> Dict[str, Any]:
     """
     Triggers instant WhatsApp ACK for a missed call:
     - Formats caller phone
-    - Checks 6-hour deduplication guard
+    - Guard 1: Inbound Calls Only Guard (skips outbound dialer attempts)
+    - Guard 2: 24-Hour Deduplication Window Guard (max 1 ACK per 24 hours per caller)
+    - Guard 3: Already Contacted Today Guard (skips if staff already spoke to caller today)
     - Matches or auto-creates CRM lead
     - Dispatches missed_call_ack_v1 template
     """
     from app.models.crm import CRMLead
     from app.models.whatsapp import MessageLog
+    from app.models.operator_calls import OperatorCall
     from app.services.whatsapp_auto_service import _is_valid_phone
     from app.services.wa_credentials import get_wa_credentials
+
+    # ── Guard 1: Inbound Calls Only Guard ──────────────────────────────────────
+    if call_type and str(call_type).lower() in ('outbound', 'outgoing'):
+        logger.info(f"⏭️ Skipping missed call ACK for {caller_phone} — Outbound call attempt.")
+        return {"success": True, "reason": "skipped_outbound_call", "phone": caller_phone}
 
     if not caller_phone or not _is_valid_phone(caller_phone):
         return {"success": False, "reason": "invalid_phone", "phone": caller_phone}
@@ -175,26 +184,45 @@ def handle_missed_call_whatsapp_ack(
     else:
         return {"success": False, "reason": "unsupported_phone_format", "phone": caller_phone}
 
-    # ── 1. Spam Guard: 6-Hour Deduplication Check ─────────────────────────────
-    six_hours_ago = datetime.datetime.utcnow() - timedelta(hours=6)
+    phone_core = phone_digits[-10:]
+
+    # Start of today IST in UTC for "spoken today" checks
+    ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
+    start_of_today_utc = (ist_now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=5, minutes=30))
+
+    # ── Guard 2: 24-Hour Deduplication Window ──────────────────────────────────
+    twenty_four_hours_ago = datetime.datetime.utcnow() - timedelta(hours=24)
     recent_ack = db.query(MessageLog).filter(
         MessageLog.mobile_number == phone_formatted,
-        MessageLog.sent_at >= six_hours_ago
+        MessageLog.sent_at >= twenty_four_hours_ago
     ).first()
 
     if recent_ack:
-        logger.info(f"หม Skipping missed call ACK for {phone_formatted} — ACK sent in last 6 hours.")
-        return {"success": True, "reason": "skipped_dedup_6h", "phone": phone_formatted}
+        logger.info(f"⏭️ Skipping missed call ACK for {phone_formatted} — ACK already sent within 24 hours.")
+        return {"success": True, "reason": "skipped_dedup_24h", "phone": phone_formatted}
 
-    # ── 2. Lead Match or Auto-Create ─────────────────────────────────────────
+    # ── Guard 3: Already Spoken / Contacted Today Guard ───────────────────────
+    answered_today = db.query(OperatorCall).filter(
+        OperatorCall.caller_number.like(f"%{phone_core}"),
+        OperatorCall.status == 'answered',
+        OperatorCall.started_at >= start_of_today_utc
+    ).first()
+
+    if answered_today:
+        logger.info(f"⏭️ Skipping missed call ACK for {phone_formatted} — Staff already spoke with caller today.")
+        return {"success": True, "reason": "skipped_already_contacted_today", "phone": phone_formatted}
+
+    # ── Lead Match or Auto-Create ─────────────────────────────────────────
     lead = None
     if lead_id:
         lead = db.query(CRMLead).get(lead_id)
 
     if not lead:
-        # Match by phone digits
-        phone_core = phone_digits[-10:]
         lead = db.query(CRMLead).filter(CRMLead.phone.like(f"%{phone_core}")).first()
+
+    if lead and lead.last_contact_date and lead.last_contact_date >= start_of_today_utc:
+        logger.info(f"⏭️ Skipping missed call ACK for {phone_formatted} — Lead contacted today in CRM.")
+        return {"success": True, "reason": "skipped_already_contacted_today", "phone": phone_formatted}
 
     if not lead:
         # Auto-create new lead from missed call
