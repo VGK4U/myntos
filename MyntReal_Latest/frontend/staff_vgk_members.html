@@ -3301,14 +3301,9 @@ async function toggleLvRow(lid){
     }
   }
 
-  const stage    = document.getElementById('lvStageFilter')?.value || '';
-  const dateFrom = document.getElementById('lvDateFrom')?.value || '';
-  const dateTo   = document.getElementById('lvDateTo')?.value || '';
-
+  const stage = document.getElementById('lvStageFilter')?.value || '';
   const params = new URLSearchParams({ lead_id: lid });
-  if(stage)    params.set('status', stage);
-  if(dateFrom) params.set('date_from', dateFrom);
-  if(dateTo)   params.set('date_to', dateTo);
+  if(stage) params.set('status', stage);
 
   try{
     const r = await staffFetch('/api/v1/vgk/dashboard/lead-income-members?' + params.toString());
