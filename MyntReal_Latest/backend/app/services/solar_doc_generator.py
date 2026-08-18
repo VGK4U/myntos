@@ -232,6 +232,22 @@ def _partner_logos_footer(logo_h=7.5*mm, total_w=175*mm):
     return t
 
 
+DEFAULT_VISIONERA_STAMP_URL = "/storage/vendor_stamps/stamp_3_1d81c4106cd84b37ba0ba1af08439794.jpg"
+DEFAULT_VISIONERA_REP_SIG_URL = "/storage/vendor_rep_signatures/rep_sig_3_7fd9ccba2ea94c6583ec65091ae7a1db.jpg"
+
+def _get_vendor_sig_url(vendor: dict) -> str:
+    if not isinstance(vendor, dict):
+        return DEFAULT_VISIONERA_REP_SIG_URL
+    url = (vendor.get('rep_signature_url') or vendor.get('tech_signature_url') or '').strip()
+    return url if url else DEFAULT_VISIONERA_REP_SIG_URL
+
+def _get_vendor_stamp_url(vendor: dict) -> str:
+    if not isinstance(vendor, dict):
+        return DEFAULT_VISIONERA_STAMP_URL
+    url = (vendor.get('stamp_image_url') or '').strip()
+    return url if url else DEFAULT_VISIONERA_STAMP_URL
+
+
 def _fetch_url_image(url: str, width=38*mm, height=24*mm):
     """
     DC Fix (Apr 2026): Download an image from a URL and return an RLImage.
@@ -618,8 +634,8 @@ def generate_quotation(
         story.append(Spacer(1, sp))
 
     # Signature + stamp (rendered independently so they stay on page 1)
-    _q_sig   = _fetch_url_image(vendor.get('rep_signature_url', ''), width=40*mm, height=16*mm)
-    _q_stamp = _fetch_url_image(vendor.get('stamp_image_url', ''),   width=26*mm, height=24*mm)
+    _q_sig   = _fetch_url_image(_get_vendor_sig_url(vendor), width=40*mm, height=16*mm)
+    _q_stamp = _fetch_url_image(_get_vendor_stamp_url(vendor), width=26*mm, height=24*mm)
     story.append(_sig_stamp_table(ss, _q_sig, _q_stamp, 'Authorised Signatory'))
     story.append(Spacer(1, sp))
 
@@ -903,8 +919,8 @@ def generate_invoice(
     story.append(Spacer(1, 1*mm))
 
     # Signature + stamp block
-    _inv_sig   = _fetch_url_image(vendor.get('rep_signature_url', ''), width=32*mm, height=14*mm)
-    _inv_stamp = _fetch_url_image(vendor.get('stamp_image_url', ''),   width=20*mm, height=20*mm)
+    _inv_sig   = _fetch_url_image(_get_vendor_sig_url(vendor), width=32*mm, height=14*mm)
+    _inv_stamp = _fetch_url_image(_get_vendor_stamp_url(vendor), width=20*mm, height=20*mm)
     story.append(_sig_stamp_table(ss, _inv_sig, _inv_stamp, 'Authorised Signatory', total_w=175*mm))
     story.append(Spacer(1, 1*mm))
 
@@ -1122,8 +1138,8 @@ def generate_co_applicant_quotation(
         story.append(Spacer(1, 1.5*mm))
 
     # Signature + stamp block
-    _ca_sig   = _fetch_url_image(vendor.get('rep_signature_url', ''), width=40*mm, height=22*mm)
-    _ca_stamp = _fetch_url_image(vendor.get('stamp_image_url', ''),   width=30*mm, height=30*mm)
+    _ca_sig   = _fetch_url_image(_get_vendor_sig_url(vendor), width=40*mm, height=22*mm)
+    _ca_stamp = _fetch_url_image(_get_vendor_stamp_url(vendor), width=30*mm, height=30*mm)
     story.append(_sig_stamp_table(ss, _ca_sig, _ca_stamp, 'Authorised Signatory'))
     story.append(Spacer(1, 1.5*mm))
 
