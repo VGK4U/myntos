@@ -5882,6 +5882,20 @@ async function generateMemberPoster(partnerId) {
     const d = await r.json();
     const entries = (d.success && d.data) ? d.data : [];
     window._currentEntries = entries;
+
+    // Fetch Senior Referrer entries if senior partner exists
+    window._seniorEntries = [];
+    if (m.parent_partner_id) {
+      try {
+        const srRes = await staffFetch(API + '/vgk/dashboard/member-income-entries?partner_id=' + m.parent_partner_id);
+        const srData = await srRes.json();
+        if (srData.success && srData.data) {
+          window._seniorEntries = srData.data;
+        }
+      } catch (srErr) {
+        console.warn("[Poster Debug] Failed to fetch senior partner entries:", srErr);
+      }
+    }
     
     const uniqueL1Leads = new Set();
     entries.forEach(e => {
@@ -6144,11 +6158,34 @@ function recalculateTodayPayout() {
         finalCommBalGrossAmt += grossAmt;
       }
 
-      if (e.level === 2 || k === 'SENIOR_COMM') {
-        seniorTodayAmt += (balGross > 0 ? balGross : grossAmt);
-      }
+  const seniorEntries = window._seniorEntries || [];
+  seniorEntries.forEach(se => {
+    if (se.status !== 'CANCELLED' && se.income_date && se.income_date !== 'None') {
+      const d = se.income_date;
+      if (dateFrom && d < dateFrom) return;
+      if (dateTo && d > dateTo) return;
+      const sGross = parseFloat(se.commission_amount || 0);
+      const sAdv = parseFloat(se.advance_paid || 0);
+      const sBal = (se.balance_gross !== undefined && se.balance_gross !== null) ? parseFloat(se.balance_gross) : Math.max(0, sGross - sAdv);
+      seniorTodayAmt += (sBal > 0 ? sBal : sGross);
     }
   });
+
+  if (seniorTodayAmt === 0) {
+    entries.forEach(e => {
+      if (e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
+        const d = e.income_date;
+        if (dateFrom && d < dateFrom) return;
+        if (dateTo && d > dateTo) return;
+        if (e.level === 2 || (e.kind || '').toUpperCase() === 'SENIOR_COMM') {
+          const sGross = parseFloat(e.commission_amount || 0);
+          const sAdv = parseFloat(e.advance_paid || 0);
+          const sBal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, sGross - sAdv);
+          seniorTodayAmt += (sBal > 0 ? sBal : sGross);
+        }
+      }
+    });
+  }
   
   let breakupItems = [];
   let total = 0;
