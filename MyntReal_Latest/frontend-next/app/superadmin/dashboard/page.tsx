@@ -66,7 +66,7 @@ export default function SuperAdminDashboard() {
             System Core Status
           </h1>
           <p className="text-slate-600 text-lg">
-            Welcome, <span className="font-bold text-rose-600">{user?.name || 'Administrator'}</span>. All services are operating normally.
+            Welcome, <span className="font-bold text-rose-600">Administrator</span>. All services are operating normally.
           </p>
         </div>
         
