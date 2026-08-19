@@ -488,13 +488,15 @@
         let currentHeaderCol = 'ground_source_name';
         let currentHeaderDir = 'asc';
 
-        document.addEventListener("DOMContentLoaded", async function() {
-            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
-            StaffHeader.inject('Field staff leads', 'fas fa-users-gear');
-            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
-            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
-
+        document.addEventListener("DOMContentLoaded", function() {
             loadBankLeads();
+
+            if (typeof StaffSidebar !== 'undefined') StaffSidebar.init();
+            if (typeof StaffHeader !== 'undefined') {
+                StaffHeader.inject('Field staff leads', 'fas fa-users-gear');
+                StaffHeader.init();
+            }
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
         });
 
         let expandedSummaryGroups = new Set();

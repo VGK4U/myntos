@@ -3409,10 +3409,38 @@ def get_bank_wise_leads(
     leads = query.all()
     now_dt = datetime.now()
     
-    # Pre-fetch staff employee map for names and phone numbers
+    # Targeted pre-fetching for matched leads only (avoids full table scans on Staff, Partner, User)
+    target_staff_ids = set()
+    target_partner_ids = set()
+    target_ref_names = set()
+
+    for l in leads:
+        if l.telecaller_id: target_staff_ids.add(l.telecaller_id)
+        if l.field_staff_id: target_staff_ids.add(l.field_staff_id)
+        if l.handler_id:
+            try: target_staff_ids.add(int(l.handler_id))
+            except (ValueError, TypeError): target_ref_names.add(str(l.handler_id).lower().strip())
+        if l.created_by_id:
+            try: target_staff_ids.add(int(l.created_by_id))
+            except (ValueError, TypeError): target_ref_names.add(str(l.created_by_id).lower().strip())
+        if getattr(l, 'associated_partner_id', None):
+            try: target_partner_ids.add(int(l.associated_partner_id))
+            except (ValueError, TypeError): pass
+        
+        for name_field in [l.source_ref_name, l.guru_name, getattr(l, 'field_support_ref_name', None), getattr(l, 'telecaller_supported', None)]:
+            if name_field and name_field.strip():
+                target_ref_names.add(name_field.lower().strip())
+
     staff_map = {}
     staff_phone_map = {}
-    for s in db.query(StaffEmployee.id, StaffEmployee.emp_code, StaffEmployee.full_name, StaffEmployee.phone).all():
+    staff_q = db.query(StaffEmployee.id, StaffEmployee.emp_code, StaffEmployee.full_name, StaffEmployee.phone)
+    if target_staff_ids or target_ref_names:
+        conds = []
+        if target_staff_ids: conds.append(StaffEmployee.id.in_(list(target_staff_ids)))
+        if target_ref_names: conds.append(func.lower(StaffEmployee.full_name).in_(list(target_ref_names)))
+        staff_q = staff_q.filter(or_(*conds))
+    
+    for s in staff_q.all():
         staff_map[s.id] = s.full_name
         staff_map[str(s.id)] = s.full_name
         if s.phone:
@@ -3424,11 +3452,17 @@ def get_bank_wise_leads(
             staff_map[s.emp_code.upper()] = s.full_name
             staff_map[s.emp_code.lower()] = s.full_name
 
-    # Pre-fetch official partner phone map
     partner_phone_map = {}
     try:
         from app.models.staff_accounts import OfficialPartner
-        for p in db.query(OfficialPartner.id, OfficialPartner.partner_name, OfficialPartner.phone, OfficialPartner.whatsapp_number).all():
+        partner_q = db.query(OfficialPartner.id, OfficialPartner.partner_name, OfficialPartner.phone, OfficialPartner.whatsapp_number)
+        if target_partner_ids or target_ref_names:
+            p_conds = []
+            if target_partner_ids: p_conds.append(OfficialPartner.id.in_(list(target_partner_ids)))
+            if target_ref_names: p_conds.append(func.lower(OfficialPartner.partner_name).in_(list(target_ref_names)))
+            partner_q = partner_q.filter(or_(*p_conds))
+        
+        for p in partner_q.all():
             ph = p.phone or p.whatsapp_number
             if ph:
                 partner_phone_map[p.id] = ph
@@ -3438,15 +3472,15 @@ def get_bank_wise_leads(
     except Exception:
         pass
 
-    # Pre-fetch user / member phone map
     user_phone_map = {}
     try:
         from app.models.user import User
-        for u in db.query(User.id, User.full_name, User.mobile).all():
-            if u.mobile:
-                user_phone_map[str(u.id)] = u.mobile
-                if u.full_name:
-                    user_phone_map[u.full_name.lower().strip()] = u.mobile
+        if target_ref_names:
+            for u in db.query(User.id, User.full_name, User.mobile).filter(func.lower(User.full_name).in_(list(target_ref_names))).all():
+                if u.mobile:
+                    user_phone_map[str(u.id)] = u.mobile
+                    if u.full_name:
+                        user_phone_map[u.full_name.lower().strip()] = u.mobile
     except Exception:
         pass
     
