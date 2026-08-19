@@ -54,7 +54,7 @@ export default function CouponsHistoryPage() {
             History Management
           </h1>
           <p className="text-gray-500">
-            Premium Enterprise view for managing {Title.toLowerCase()}.
+            Premium Enterprise view for managing "data".
           </p>
         </div>
         <button 
