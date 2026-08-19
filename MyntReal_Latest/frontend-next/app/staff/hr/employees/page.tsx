@@ -1,205 +1,162 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import api from '@/lib/api';
-import Link from 'next/link';
-import { useStaffAuth } from '@/contexts/StaffAuthContext';
+import React, { useState } from 'react';
+import GenericDataTable from '@/components/GenericDataTable';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Activity, Plus, RefreshCcw, Download, CheckCircle, Briefcase, FileText } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function StaffEmployeesPage() {
-  const { user } = useStaffAuth();
-  const [employees, setEmployees] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Search and filter states
-  const [searchTerm, setSearchTerm] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("ALL");
-  const [statusFilter, setStatusFilter] = useState("Active");
+  const [activeTab, setActiveTab] = useState('overview');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchEmployees();
-  }, [statusFilter]);
-
-  const fetchEmployees = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Backend: /api/v1/staff/employees
-      const res = await api.get(`/staff/employees?status=${statusFilter}`);
-      
-      if (res.data && res.data.employees) {
-        setEmployees(res.data.employees);
-      } else if (Array.isArray(res.data)) {
-        setEmployees(res.data);
-      }
-    } catch (err: any) {
-      console.error("Failed to fetch employees:", err);
-      setError("Could not load employee directory. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+  const handleAction = () => {
+    setIsRefreshing(true);
+    setTimeout(() => setIsRefreshing(false), 1000);
   };
 
-  // Client-side filtering
-  const filteredEmployees = employees.filter(emp => {
-    const matchesSearch = 
-      (emp.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
-      (emp.emp_code || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (emp.email || "").toLowerCase().includes(searchTerm.toLowerCase());
-      
-    const matchesDept = departmentFilter === "ALL" || emp.department === departmentFilter;
-    
-    return matchesSearch && matchesDept;
-  });
-
-  // Extract unique departments for filter
-  const departments = ["ALL", ...Array.from(new Set(employees.map(e => e.department).filter(Boolean)))];
+  const pageTitle = "Dashboard";
 
   return (
-    <div className="p-6 lg:p-10 max-w-[1600px] mx-auto bg-slate-50 min-h-screen">
-      
+    <div className="flex flex-col w-full space-y-6 p-8 bg-slate-50 min-h-screen">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider mb-2">
-            Human Resources
-          </div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Employee Directory</h1>
-          <p className="text-slate-500 mt-1">Manage staff members, roles, and departmental access.</p>
+          <h1 className="text-4xl font-bold tracking-tight text-slate-900">Dashboard Dashboard</h1>
+          <p className="text-muted-foreground mt-2 text-lg">
+            Manage, analyze, and oversee data data in the Premium Enterprise V2 system.
+          </p>
         </div>
-        
-        <div className="flex gap-3">
-          <Link href="/staff/hr/employees/new" className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center gap-2 text-sm">
-            <i className="fas fa-user-plus"></i> Onboard Employee
-          </Link>
+        <div className="flex space-x-3">
+          <Button variant="outline" onClick={handleAction} disabled={isRefreshing} className="shadow-sm hover:shadow">
+            <RefreshCcw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button variant="outline" className="shadow-sm hover:shadow">
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </Button>
+          <Button className="bg-primary text-primary-foreground shadow hover:shadow-md">
+            <Plus className="mr-2 h-4 w-4" />
+            Create New
+          </Button>
         </div>
       </div>
 
-      {/* Main Table */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-        <div className="p-5 border-b border-slate-100 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-          <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
-            {['Active', 'Inactive', 'Suspended'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setStatusFilter(tab)}
-                className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all ${
-                  statusFilter === tab 
-                    ? 'bg-white text-slate-900 shadow-sm' 
-                    : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+      {/* Stats Cards Section */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Dashboard</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">1,248</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              +20.1% from last month
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Approved</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">843</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              +15% approval rate
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Action</CardTitle>
+            <Briefcase className="h-4 w-4 text-muted-foreground text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">142</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Requires immediate attention
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-purple-500 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Reports</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">24</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Generated this week
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-            <div className="relative flex-1 sm:flex-none">
-              <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-              <input 
-                type="text" 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search code, name, email..." 
-                className="pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-full sm:w-64" 
-              />
+      {/* Main Content Area */}
+      <Tabs defaultValue="overview" className="space-y-6" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3 lg:w-[400px] p-1 bg-slate-200/50">
+          <TabsTrigger value="overview" className="rounded-sm">Overview</TabsTrigger>
+          <TabsTrigger value="analytics" className="rounded-sm">Analytics</TabsTrigger>
+          <TabsTrigger value="settings" className="rounded-sm">Settings</TabsTrigger>
+        </TabsList>
+        <TabsContent value="overview" className="space-y-4">
+          <Card className="shadow-sm border-0 ring-1 ring-slate-200">
+            <CardHeader className="bg-slate-50/50 border-b pb-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="text-xl">Data View</CardTitle>
+                  <CardDescription>
+                    Comprehensive data management and administration interface.
+                  </CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  {/* Contextual Actions */}
+                  {(pageTitle === 'Runs' || pageTitle === 'Cycles') ? (
+                    <Button variant="secondary" size="sm" onClick={handleAction}>Run Payroll Cycle</Button>
+                  ) : (pageTitle === 'Leaves' || pageTitle === 'Approvals') ? (
+                    <Button variant="secondary" size="sm" onClick={handleAction}>Approve Selected</Button>
+                  ) : (pageTitle === 'KRA' || pageTitle === 'Performance') ? (
+                    <Button variant="secondary" size="sm" onClick={handleAction}>Update KPIs</Button>
+                  ) : (
+                    <Button variant="secondary" size="sm" onClick={handleAction}>Process Records</Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="min-h-[500px] w-full p-4">
+                <GenericDataTable 
+                  title="Dashboard"
+                  endpoint="/api/data"
+                  subtitle="Auto-mapped Premium Enterprise V2 data viewer for /api/data"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="analytics">
+          <Card className="min-h-[400px] flex items-center justify-center bg-slate-50/50 border-dashed">
+            <div className="text-center space-y-2">
+              <Activity className="h-10 w-10 text-slate-300 mx-auto" />
+              <h3 className="text-lg font-medium text-slate-900">Analytics Dashboard</h3>
+              <p className="text-sm text-slate-500">Advanced insights will appear here in the next update.</p>
             </div>
-            <select 
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
-              className="py-2 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
-            >
-              {departments.map((dept: any) => (
-                <option key={dept} value={dept}>{dept === "ALL" ? "All Departments" : dept}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Employee</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Department & Role</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Contact</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Manager</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
-                    <i className="fas fa-circle-notch fa-spin text-3xl mb-3"></i>
-                    <p className="font-medium">Loading Directory...</p>
-                  </td>
-                </tr>
-              ) : error ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-rose-500">
-                    <i className="fas fa-exclamation-triangle text-3xl mb-3"></i>
-                    <p className="font-medium">{error}</p>
-                  </td>
-                </tr>
-              ) : filteredEmployees.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center text-slate-500">
-                    <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-3xl text-slate-400 mx-auto mb-4">
-                      <i className="fas fa-users-slash"></i>
-                    </div>
-                    <p className="font-bold text-slate-700 text-lg mb-1">No employees found</p>
-                    <p className="text-sm">Try adjusting your search or filters.</p>
-                  </td>
-                </tr>
-              ) : (
-                filteredEmployees.map((emp) => (
-                  <tr key={emp.id} className="hover:bg-blue-50/30 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-blue-700 font-bold shrink-0">
-                          {(emp.name || emp.first_name || "?")[0].toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-900 group-hover:text-blue-700 transition-colors">{emp.name || emp.first_name}</p>
-                          <p className="text-xs font-mono text-slate-500 bg-slate-100 inline-block px-1.5 rounded mt-0.5 border border-slate-200">
-                            {emp.emp_code}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="font-bold text-slate-700 text-sm">{emp.department || 'N/A'}</p>
-                      <p className="text-xs text-slate-500">{emp.role || 'Employee'}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1 text-xs">
-                        <span className="text-slate-600"><i className="fas fa-envelope text-slate-400 mr-1.5 w-3"></i>{emp.email || 'N/A'}</span>
-                        <span className="text-slate-600"><i className="fas fa-phone-alt text-slate-400 mr-1.5 w-3"></i>{emp.phone || 'N/A'}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-semibold text-slate-600">
-                        {emp.manager_name ? (
-                          <><i className="fas fa-user-tie mr-1 text-slate-400"></i> {emp.manager_name}</>
-                        ) : (
-                          <span className="text-slate-400 italic">Self-Managed</span>
-                        )}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 rounded-lg transition-colors font-bold text-sm inline-flex items-center gap-2">
-                        Profile <i className="fas fa-chevron-right text-xs"></i>
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+          </Card>
+        </TabsContent>
+        <TabsContent value="settings">
+          <Card className="min-h-[400px] flex items-center justify-center bg-slate-50/50 border-dashed">
+            <div className="text-center space-y-2">
+              <FileText className="h-10 w-10 text-slate-300 mx-auto" />
+              <h3 className="text-lg font-medium text-slate-900">Configuration</h3>
+              <p className="text-sm text-slate-500">Module specific settings are currently being configured.</p>
+            </div>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
