@@ -1495,6 +1495,8 @@ async def partner_upload_logo(
     """DC_PARTNER_LOGO_001: Partner uploads their own business logo.
     Stored at partner_logos/{partner_id}_{filename}. Used in PDF invoice header."""
     import os, uuid
+    from app.services.object_storage import storage_service
+    
     ALLOWED_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
     content_type = file.content_type or ""
     if content_type not in ALLOWED_TYPES:
@@ -1503,22 +1505,20 @@ async def partner_upload_logo(
     file_bytes = await file.read()
     if len(file_bytes) > MAX_SIZE:
         raise HTTPException(status_code=400, detail="Logo file must be under 2 MB")
+    
     ext = file.filename.rsplit(".", 1)[-1].lower() if "." in (file.filename or "") else "png"
     filename = f"{partner.id}_{uuid.uuid4().hex[:8]}.{ext}"
-    logos_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
-        "uploads", "partner_logos"
-    )
-    os.makedirs(logos_dir, exist_ok=True)
-    full_path = os.path.join(logos_dir, filename)
-    with open(full_path, "wb") as f:
-        f.write(file_bytes)
     relative_path = f"partner_logos/{filename}"
+    
+    storage_service.upload_file(relative_path, file_bytes)
+    
     fresh = db.query(OfficialPartner).filter(OfficialPartner.id == partner.id).first()
     if fresh:
         fresh.logo_path = relative_path
         db.commit()
-    return {"success": True, "logo_path": relative_path, "logo_url": f"/uploads/{relative_path}"}
+    
+    file_url = storage_service.get_file_url(relative_path, is_public=True)
+    return {"success": True, "logo_path": relative_path, "logo_url": file_url}
 
 
 @router.post("/admin/partners/{partner_id}/logo")
@@ -1540,28 +1540,33 @@ async def staff_update_partner_logo(
             raise HTTPException(status_code=403, detail="Staff access required")
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired staff token")
+        
     import os, uuid
+    from app.services.object_storage import storage_service
+    
     target = db.query(OfficialPartner).filter(OfficialPartner.id == partner_id).first()
     if not target:
         raise HTTPException(status_code=404, detail="Partner not found")
+        
     ALLOWED_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
     if (file.content_type or "") not in ALLOWED_TYPES:
         raise HTTPException(status_code=400, detail="Only PNG, JPG, or WebP images are allowed")
+        
     file_bytes = await file.read()
     if len(file_bytes) > 2 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Logo file must be under 2 MB")
+        
     ext = file.filename.rsplit(".", 1)[-1].lower() if "." in (file.filename or "") else "png"
     filename = f"{partner_id}_{uuid.uuid4().hex[:8]}.{ext}"
-    logos_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
-        "uploads", "partner_logos"
-    )
-    os.makedirs(logos_dir, exist_ok=True)
-    with open(os.path.join(logos_dir, filename), "wb") as f:
-        f.write(file_bytes)
-    target.logo_path = f"partner_logos/{filename}"
+    relative_path = f"partner_logos/{filename}"
+    
+    storage_service.upload_file(relative_path, file_bytes)
+    
+    target.logo_path = relative_path
     db.commit()
-    return {"success": True, "logo_path": target.logo_path, "logo_url": f"/uploads/{target.logo_path}"}
+    
+    file_url = storage_service.get_file_url(relative_path, is_public=True)
+    return {"success": True, "logo_path": target.logo_path, "logo_url": file_url}
 
 
 def _ensure_partner_support_requests_table(db: Session):

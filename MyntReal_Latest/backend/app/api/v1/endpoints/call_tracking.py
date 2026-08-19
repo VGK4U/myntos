@@ -1347,16 +1347,15 @@ async def upload_call_recording(
 
     now = get_indian_time()
     date_folder = now.strftime('%Y-%m-%d')
-    storage_dir = os.path.join(RECORDINGS_BASE_DIR, str(company_id), str(staff_id), date_folder)
-    os.makedirs(storage_dir, exist_ok=True)
+    # S3 relative path
+    relative_path = f"staff_call_recordings/{company_id}/{staff_id}/{date_folder}/{uuid.uuid4().hex[:12]}_{now.strftime('%H%M%S')}{ext}"
 
-    safe_name = f"{uuid.uuid4().hex[:12]}_{now.strftime('%H%M%S')}{ext}"
-    storage_path = os.path.join(storage_dir, safe_name)
-
-    with open(storage_path, 'wb') as f:
-        f.write(file_content)
+    from app.services.object_storage import storage_service
+    storage_service.upload_file(relative_path, file_content)
 
     content_type = file.content_type or mimetypes.guess_type(original_filename)[0] or 'audio/mpeg'
+    # Use relative_path as the storage path so it can be retrieved from S3
+    storage_path = relative_path
 
     parsed_recorded_at = None
     if recorded_at:
@@ -1449,18 +1448,17 @@ async def stream_call_recording(
     if not recording:
         raise HTTPException(status_code=404, detail="Recording not found")
 
-    if not os.path.exists(recording.storage_path):
-        raise HTTPException(status_code=404, detail="Recording file not found on disk")
-
-    return FileResponse(
-        recording.storage_path,
-        media_type=recording.mime_type,
-        filename=recording.original_filename,
-        headers={
-            "Accept-Ranges": "bytes",
-            "Cache-Control": "private, max-age=3600"
-        }
-    )
+    s3_key = recording.storage_path.replace('\\', '/')
+    if "uploads/" in s3_key:
+        s3_key = s3_key.split("uploads/")[-1].lstrip("/")
+    elif "call_recordings/" in s3_key:
+        s3_key = s3_key[s3_key.find("call_recordings/"):]
+        
+    from app.services.object_storage import storage_service
+    from fastapi.responses import RedirectResponse
+    
+    file_url = storage_service.get_file_url(s3_key)
+    return RedirectResponse(url=file_url)
 
 
 @router.get("/recordings/{recording_id}/metadata")

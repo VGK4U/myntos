@@ -575,14 +575,14 @@ async def upload_video_thumbnail(
         raise HTTPException(status_code=400, detail="Thumbnail too large (max 2MB)")
 
     try:
-        upload_dir = get_upload_dir()
-        sub_dir = upload_dir / str(media.submission_id)
-        sub_dir.mkdir(parents=True, exist_ok=True)
         thumb_filename = f"thumb_{media_id}.jpg"
-        thumb_path = sub_dir / thumb_filename
-        with open(thumb_path, 'wb') as f:
-            f.write(thumb_content)
-        relative_thumb = f"/uploads/feedback/{media.submission_id}/{thumb_filename}"
+        # Using relative S3 key format matching previous uploads
+        relative_path = f"feedback/{media.submission_id}/{thumb_filename}"
+        
+        from app.services.object_storage import storage_service
+        storage_service.upload_file(relative_path, thumb_content)
+        
+        relative_thumb = f"/storage/{relative_path}"
         media.thumbnail_url = relative_thumb
         db.commit()
         return {"thumbnail_url": relative_thumb, "media_id": media_id}

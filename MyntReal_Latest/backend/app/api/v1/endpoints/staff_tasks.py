@@ -4120,27 +4120,15 @@ async def view_attachment(
     
     # DC PROTOCOL: Determine which version to serve (compressed vs original)
     if version == "compressed" and attachment.has_compressed and attachment.compressed_path:
-        # Serve compressed version (faster, optimized)
-        file_path = Path(attachment.compressed_path)
-        if not file_path.exists():
-            # Fallback to original if compressed not found
-            logger.warning(f"Compressed file not found for attachment {attachment_id}, falling back to original")
-            file_path = Path(attachment.file_path)
+        storage_path = attachment.compressed_path
     else:
-        # Serve original version (default, full quality)
-        file_path = Path(attachment.file_path)
+        storage_path = attachment.file_path
+        
+    from app.services.object_storage import storage_service
+    from fastapi.responses import RedirectResponse
     
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found on server")
-    
-    # DC: Use sanitized filename to prevent Unicode encoding errors
-    content_disposition = f"inline; {sanitize_filename_for_header(attachment.file_name)}"
-    
-    return FileResponse(
-        path=str(file_path),
-        media_type=attachment.file_type,
-        headers={"Content-Disposition": content_disposition}
-    )
+    file_url = storage_service.get_file_url(storage_path)
+    return RedirectResponse(url=file_url)
 
 
 @router.get("/attachments/{attachment_id}/download", summary="Download attachment")
@@ -4167,27 +4155,12 @@ async def download_attachment(
     if task:
         verify_manager_task_scope(task, current_user, db)
     
-    # Check file exists
-    file_path = Path(attachment.file_path)
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found on server")
+    # Generate S3 URL for download
+    from app.services.object_storage import storage_service
+    from fastapi.responses import RedirectResponse
     
-    # DC PROTOCOL: Use semantic download filename if available (NEW - Nov 29, 2025)
-    # WVV: Fallback to legacy behavior for existing records
-    if attachment.uses_new_naming and attachment.download_filename:
-        # NEW: Use pre-generated semantic filename (already filesystem-safe)
-        # Format: TASK_T40_00024_20251129_063020_MR10009_screenshot.png
-        # DC: No further encoding needed (filename already DC-compliant)
-        content_disposition = f"attachment; filename=\"{attachment.download_filename}\""
-    else:
-        # LEGACY: Use sanitized original filename with RFC 2231 encoding (Unicode support)
-        content_disposition = f"attachment; {sanitize_filename_for_header(attachment.file_name)}"
-    
-    return FileResponse(
-        path=str(file_path),
-        media_type=attachment.file_type,
-        headers={"Content-Disposition": content_disposition}
-    )
+    file_url = storage_service.get_file_url(attachment.file_path)
+    return RedirectResponse(url=file_url)
 
 
 @router.post("/attachments/{attachment_id}/log-preview", summary="Log attachment preview action")
