@@ -3428,7 +3428,7 @@ def get_bank_wise_leads(
             except (ValueError, TypeError): pass
         
         for name_field in [l.source_ref_name, l.guru_name, getattr(l, 'field_support_ref_name', None), getattr(l, 'telecaller_supported', None)]:
-            if name_field and name_field.strip():
+            if name_field and isinstance(name_field, str) and name_field.strip():
                 target_ref_names.add(name_field.lower().strip())
 
     staff_map = {}
@@ -3544,29 +3544,33 @@ def get_bank_wise_leads(
         bank_counts[b_name]['deal_value'] += deal_val
         
         # Ground source / member set
-        g_source = lead.source_ref_name or lead.guru_name or lead.source_details or 'Direct'
+        g_source_val = lead.source_ref_name or lead.guru_name or lead.source_details or 'Direct'
+        g_source = str(g_source_val) if not isinstance(g_source_val, str) else g_source_val
         member_set.add(g_source)
         
         # Resolve Telecaller, Ground Support (Field Staff), and Up-port Staff names
-        tc_name = staff_map.get(lead.telecaller_id) or getattr(lead, 'telecaller_supported', None) or '—'
-        fs_name = staff_map.get(lead.field_staff_id) or getattr(lead, 'field_support_ref_name', None) or '—'
+        tc_val = staff_map.get(lead.telecaller_id) or getattr(lead, 'telecaller_supported', None)
+        tc_name = str(tc_val) if tc_val and not isinstance(tc_val, str) else (tc_val or '—')
+
+        fs_val = staff_map.get(lead.field_staff_id) or getattr(lead, 'field_support_ref_name', None)
+        fs_name = str(fs_val) if fs_val and not isinstance(fs_val, str) else (fs_val or '—')
 
         # Resolve Ground Source Phone
         gs_phone = ''
         if getattr(lead, 'associated_partner_id', None) and lead.associated_partner_id in partner_phone_map:
             gs_phone = partner_phone_map[lead.associated_partner_id]
-        if not gs_phone and g_source and g_source.lower().strip() in partner_phone_map:
+        if not gs_phone and isinstance(g_source, str) and g_source.lower().strip() in partner_phone_map:
             gs_phone = partner_phone_map[g_source.lower().strip()]
-        if not gs_phone and g_source and g_source.lower().strip() in user_phone_map:
+        if not gs_phone and isinstance(g_source, str) and g_source.lower().strip() in user_phone_map:
             gs_phone = user_phone_map[g_source.lower().strip()]
-        if not gs_phone and g_source and g_source.lower().strip() in staff_phone_map:
+        if not gs_phone and isinstance(g_source, str) and g_source.lower().strip() in staff_phone_map:
             gs_phone = staff_phone_map[g_source.lower().strip()]
 
         # Resolve Ground Support Phone
         fs_phone = ''
         if lead.field_staff_id and lead.field_staff_id in staff_phone_map:
             fs_phone = staff_phone_map[lead.field_staff_id]
-        elif fs_name and fs_name.lower().strip() in staff_phone_map:
+        elif isinstance(fs_name, str) and fs_name.lower().strip() in staff_phone_map:
             fs_phone = staff_phone_map[fs_name.lower().strip()]
         
         # Up-port Staff resolution (handler_id or created_by_id or assigned staff)

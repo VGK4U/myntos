@@ -685,8 +685,8 @@
                     document.getElementById('bankTableBody').innerHTML = `
                         <tr><td colspan="16" class="text-center text-danger py-5">
                             <i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>
-                            <strong>${escapeHtml(errorMsg)}</strong><br>
-                            <button class="btn btn-sm btn-outline-danger mt-2" onclick="fetchBankLeads()">
+                            <strong>${esc(errorMsg)}</strong><br>
+                            <button class="btn btn-sm btn-outline-danger mt-2" onclick="loadBankLeads()">
                                 <i class="fas fa-sync-alt me-1"></i>Retry
                             </button>
                         </td></tr>`;
@@ -698,8 +698,8 @@
                     <tr><td colspan="16" class="text-center text-danger py-5">
                         <i class="fas fa-exclamation-circle fa-2x mb-2"></i><br>
                         <strong>Network or Server Error</strong><br>
-                        <small class="text-muted">Unable to connect to bank leads service.</small><br>
-                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="fetchBankLeads()">
+                        <small class="text-muted">${esc(err.message || 'Unable to connect to bank leads service.')}</small><br>
+                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="loadBankLeads()">
                             <i class="fas fa-sync-alt me-1"></i>Retry
                         </button>
                     </td></tr>`;
