@@ -7,7 +7,7 @@ import {
   CreditCard, 
   Bell, 
   ShieldCheck,
-  Facebook,
+  Globe,
   RefreshCw
 } from 'lucide-react';
 
@@ -27,7 +27,7 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="md:col-span-1 space-y-1">
           {[
-            { id: 'connection', name: 'Meta Connection', icon: Facebook, active: true },
+            { id: 'connection', name: 'Meta Connection', icon: Globe, active: true },
             { id: 'billing', name: 'Billing Accounts', icon: CreditCard, active: false },
             { id: 'api', name: 'API Credentials', icon: Key, active: false },
             { id: 'notifications', name: 'Notifications', icon: Bell, active: false },
@@ -58,7 +58,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between p-4 border border-emerald-200 bg-emerald-50/50 rounded-lg">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border border-gray-200 shadow-sm">
-                    <Facebook className="w-6 h-6 text-[#1877F2]" />
+                    <Globe className="w-6 h-6 text-[#1877F2]" />
                   </div>
                   <div>
                     <h4 className="font-bold text-gray-900">MyntReal Official</h4>
