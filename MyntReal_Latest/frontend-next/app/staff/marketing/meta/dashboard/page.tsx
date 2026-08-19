@@ -7,16 +7,38 @@ import { useStaffAuth } from "@/contexts/StaffAuthContext";
 export default function MetaAdsDashboardPage() {
   const { token } = useStaffAuth();
   
-  // Mock data for Meta Ads Dashboard
-  const metrics = {
-    totalSpend: 145000,
-    impressions: 1250400,
-    clicks: 45200,
-    cpc: 3.2,
-    ctr: 3.6,
-    leadsGen: 845,
-    cpl: 171.6
-  };
+  const [metrics, setMetrics] = useState({
+    totalSpend: 0,
+    impressions: 0,
+    clicks: 0,
+    cpc: 0,
+    ctr: 0,
+    leadsGen: 0,
+    cpl: 0
+  });
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!token) return;
+    const fetchDashboard = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/staff/marketing/meta/dashboard`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.metrics) setMetrics(data.metrics);
+          if (data.campaigns) setCampaigns(data.campaigns);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch meta ads dashboard", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboard();
+  }, [token]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto h-[calc(100vh-80px)] flex flex-col">
@@ -121,42 +143,20 @@ export default function MetaAdsDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                <tr className="hover:bg-gray-50 transition-colors">
-                  <td className="p-4">
-                    <p className="text-sm font-bold text-gray-900">VGK Builders - Monsoon Offer (FB)</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Objective: Lead Generation</p>
-                  </td>
-                  <td className="p-4">
-                    <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full border border-green-200">ACTIVE</span>
-                  </td>
-                  <td className="p-4 text-right text-sm font-medium text-gray-700">₹ 45,200</td>
-                  <td className="p-4 text-right text-sm font-bold text-indigo-600">312</td>
-                  <td className="p-4 text-right text-sm font-medium text-gray-700">₹ 144</td>
-                </tr>
-                <tr className="hover:bg-gray-50 transition-colors">
-                  <td className="p-4">
-                    <p className="text-sm font-bold text-gray-900">Solar Commercial Retargeting (IG)</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Objective: Conversions</p>
-                  </td>
-                  <td className="p-4">
-                    <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full border border-green-200">ACTIVE</span>
-                  </td>
-                  <td className="p-4 text-right text-sm font-medium text-gray-700">₹ 28,500</td>
-                  <td className="p-4 text-right text-sm font-bold text-indigo-600">145</td>
-                  <td className="p-4 text-right text-sm font-medium text-gray-700">₹ 196</td>
-                </tr>
-                <tr className="hover:bg-gray-50 transition-colors">
-                  <td className="p-4">
-                    <p className="text-sm font-bold text-gray-900">Generic Brand Awareness</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Objective: Reach</p>
-                  </td>
-                  <td className="p-4">
-                    <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-1 rounded-full border border-gray-200">PAUSED</span>
-                  </td>
-                  <td className="p-4 text-right text-sm font-medium text-gray-700">₹ 12,000</td>
-                  <td className="p-4 text-right text-sm font-bold text-indigo-600">42</td>
-                  <td className="p-4 text-right text-sm font-medium text-gray-700">₹ 285</td>
-                </tr>
+                {campaigns.map((camp, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                    <td className="p-4">
+                      <p className="text-sm font-bold text-gray-900">{camp.name}</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Objective: {camp.objective}</p>
+                    </td>
+                    <td className="p-4">
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full border ${camp.status === 'ACTIVE' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>{camp.status}</span>
+                    </td>
+                    <td className="p-4 text-right text-sm font-medium text-gray-700">₹ {camp.spend}</td>
+                    <td className="p-4 text-right text-sm font-bold text-indigo-600">{camp.leads}</td>
+                    <td className="p-4 text-right text-sm font-medium text-gray-700">₹ {camp.cpl}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

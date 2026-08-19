@@ -1,16 +1,60 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSuperAdminAuth } from "@/contexts/SuperAdminAuthContext";
+import { getApiUrl } from "@/lib/api";
 
 export default function SuperAdminPopupControl() {
-  const { user } = useSuperAdminAuth();
+  const { user, token } = useSuperAdminAuth();
 
-  const popups = [
-    { id: 'POP-001', title: 'Diwali Offer Announcement', target: 'Members Only', type: 'Image + Text', status: 'ACTIVE', views: 4205, clicks: 850 },
-    { id: 'POP-002', title: 'System Maintenance Notice', target: 'Global (All Users)', type: 'Text Only', status: 'SCHEDULED', views: 0, clicks: 0 },
-    { id: 'POP-003', title: 'New Vendor Policy', target: 'Vendors Only', type: 'Text + Link', status: 'INACTIVE', views: 120, clicks: 45 },
-  ];
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!token) return;
+    
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`${getApiUrl()}/api/v1/super-admin/config/popups`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success) {
+            setData(json.data);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [token]);
+
+  const popups = data?.popups || [];
+
+  const handleDelete = async (popupId: number) => {
+    if (!confirm('Are you sure you want to delete this popup?')) return;
+    
+    try {
+      const res = await fetch(`${getApiUrl()}/api/v1/banners/popups/${popupId}`, {
+        method: 'DELETE',
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        alert("Popup deleted successfully");
+        window.location.reload();
+      } else {
+        alert("Failed to delete popup");
+      }
+    } catch(err) {
+      console.error(err);
+      alert("Error deleting popup");
+    }
+  };
 
   return (
     <div className="p-6 max-w-7xl mx-auto flex flex-col h-[calc(100vh-64px)]">
@@ -30,22 +74,27 @@ export default function SuperAdminPopupControl() {
         <div className="bg-indigo-900 p-6 rounded-lg shadow-lg border border-indigo-800 text-white">
           <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">Active Broadcasts</p>
           <div className="flex justify-between items-end">
-            <h3 className="text-4xl font-black mt-1">1</h3>
+            <h3 className="text-4xl font-black mt-1">{data?.metrics?.active_broadcasts || 0}</h3>
             <i className="fas fa-broadcast-tower text-3xl text-indigo-500 opacity-50"></i>
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Total Impressions (MTD)</p>
-          <h3 className="text-2xl font-black text-gray-900 mt-1">4,325</h3>
+          <h3 className="text-2xl font-black text-gray-900 mt-1">{data?.metrics?.total_impressions || '0'}</h3>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Avg Click-Through Rate</p>
-          <h3 className="text-2xl font-black text-gray-900 mt-1">20.4%</h3>
+          <h3 className="text-2xl font-black text-gray-900 mt-1">{data?.metrics?.avg_ctr || '0%'}</h3>
         </div>
       </div>
 
+      {loading ? (
+        <div className="flex-1 flex justify-center items-center">
+          <i className="fas fa-circle-notch fa-spin text-3xl text-gray-400"></i>
+        </div>
+      ) : (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex-1 overflow-hidden flex flex-col min-h-0">
         <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
           <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Popup Inventory</h3>
@@ -63,7 +112,7 @@ export default function SuperAdminPopupControl() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {popups.map((popup, idx) => (
+              {popups.map((popup: any, idx: number) => (
                 <tr key={idx} className="hover:bg-gray-50 transition-colors">
                   <td className="p-4">
                     <p className="font-bold text-gray-900 text-sm">{popup.title}</p>
@@ -99,16 +148,29 @@ export default function SuperAdminPopupControl() {
                       </span>
                       <div className="flex space-x-2">
                         <button className="text-gray-400 hover:text-indigo-600 px-2 text-sm"><i className="fas fa-edit"></i></button>
-                        <button className="text-gray-400 hover:text-red-600 px-2 text-sm"><i className="fas fa-trash"></i></button>
+                        <button 
+                          className="text-gray-400 hover:text-red-600 px-2 text-sm"
+                          onClick={() => handleDelete(popup.id)}
+                        >
+                          <i className="fas fa-trash"></i>
+                        </button>
                       </div>
                     </div>
                   </td>
                 </tr>
               ))}
+              {popups.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-gray-500 text-sm font-bold uppercase tracking-wider">
+                    No popups found
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
+      )}
     </div>
   );
 }

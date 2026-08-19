@@ -1,9 +1,39 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSuperAdminAuth } from "@/contexts/SuperAdminAuthContext";
+import { getApiUrl } from "@/lib/api";
 
 export default function SupremeFinanceDashboard() {
+  const { user, token } = useSuperAdminAuth();
   const [timeframe, setTimeframe] = useState("YTD");
+
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!token) return;
+    
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`${getApiUrl()}/api/v1/super-admin/finance/supreme-analytics`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success) {
+            setData(json.data);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [token]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto flex flex-col h-[calc(100vh-64px)]">
@@ -19,23 +49,29 @@ export default function SupremeFinanceDashboard() {
         </div>
       </div>
 
+      {loading ? (
+        <div className="flex-1 flex justify-center items-center">
+          <i className="fas fa-circle-notch fa-spin text-3xl text-gray-400"></i>
+        </div>
+      ) : (
+      <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 shrink-0">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-blue-600">
           <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Total Gross Revenue</p>
-          <h3 className="text-3xl font-black text-gray-900 mb-1">₹ 4.5Cr</h3>
-          <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider"><i className="fas fa-arrow-up mr-1"></i> 14% vs Last Year</p>
+          <h3 className="text-3xl font-black text-gray-900 mb-1">{data?.metrics?.[0]?.value || '₹ 0'}</h3>
+          <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider"><i className="fas fa-arrow-up mr-1"></i> {data?.metrics?.[0]?.trend || '0%'} vs Last Year</p>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-red-600">
-          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Total Payouts (Commissions)</p>
-          <h3 className="text-3xl font-black text-gray-900 mb-1">₹ 1.2Cr</h3>
-          <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider"><i className="fas fa-arrow-up mr-1"></i> 8% vs Last Year</p>
+          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Total Payouts / Expenses</p>
+          <h3 className="text-3xl font-black text-gray-900 mb-1">{data?.metrics?.[1]?.value || '₹ 0'}</h3>
+          <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider"><i className="fas fa-arrow-up mr-1"></i> {data?.metrics?.[1]?.trend || '0%'} vs Last Year</p>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-yellow-500">
-          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Operating Expenses</p>
-          <h3 className="text-3xl font-black text-gray-900 mb-1">₹ 45.2L</h3>
-          <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider"><i className="fas fa-arrow-down mr-1"></i> 2% vs Last Year</p>
+          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Net Profit</p>
+          <h3 className="text-3xl font-black text-gray-900 mb-1">{data?.metrics?.[2]?.value || '₹ 0'}</h3>
+          <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider"><i className="fas fa-arrow-down mr-1"></i> {data?.metrics?.[2]?.trend || '0%'} vs Last Year</p>
         </div>
 
         <div className="bg-[#111827] p-6 rounded-lg shadow-lg border border-gray-800 border-l-4 border-l-green-500 relative overflow-hidden">
@@ -43,9 +79,9 @@ export default function SupremeFinanceDashboard() {
             <i className="fas fa-piggy-bank text-7xl text-white"></i>
           </div>
           <div className="relative z-10">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Net Cash Reserves</p>
-            <h3 className="text-3xl font-black text-white mb-1">₹ 2.84Cr</h3>
-            <p className="text-[10px] font-bold text-green-400 uppercase tracking-wider">Available Liquidity</p>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Net Profit Margin</p>
+            <h3 className="text-3xl font-black text-white mb-1">{data?.net_profit_margin || '0'}%</h3>
+            <p className="text-[10px] font-bold text-green-400 uppercase tracking-wider">{data?.runway_months || '0'} Months Runway</p>
           </div>
         </div>
       </div>
@@ -143,6 +179,8 @@ export default function SupremeFinanceDashboard() {
         </div>
 
       </div>
+      </>
+      )}
     </div>
   );
 }

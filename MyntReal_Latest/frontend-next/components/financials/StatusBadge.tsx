@@ -5,7 +5,7 @@ interface StatusBadgeProps {
 }
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
-  let baseClasses = "px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap border ";
+  const baseClasses = "px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap border ";
   let colorClasses = "";
 
   const s = status.toLowerCase();

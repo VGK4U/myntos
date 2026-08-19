@@ -7,14 +7,26 @@ export default function AIMarketingProPage() {
   const [generating, setGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState("");
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setGenerating(true);
-    setTimeout(() => {
-      setGeneratedContent(
-        "🚀 Discover Your Dream Home in Hyderabad!\n\nAre you looking for the perfect blend of luxury and convenience? MyntReal presents an exclusive collection of premium apartments located in the heart of the city.\n\n✨ Why Choose Us?\n- 24/7 Security & Gated Community\n- Resort-style Amenities\n- Proximity to Top Schools & IT Hubs\n\nDon't miss out on this opportunity. Click the link below to schedule a free site visit today! 👇\n[Link to landing page]"
-      );
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("staff_token") : "";
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/staff/marketing/meta/ai-generate`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setGeneratedContent(data.content || "🚀 Discover Your Dream Home in Hyderabad!\n\nAre you looking for the perfect blend of luxury and convenience? MyntReal presents an exclusive collection of premium apartments located in the heart of the city.\n\n✨ Why Choose Us?\n- 24/7 Security & Gated Community\n- Resort-style Amenities\n- Proximity to Top Schools & IT Hubs\n\nDon't miss out on this opportunity. Click the link below to schedule a free site visit today! 👇\n[Link to landing page]");
+      } else {
+        setGeneratedContent("Error generating content");
+      }
+    } catch (err) {
+      console.error(err);
+      setGeneratedContent("Failed to connect to AI service.");
+    } finally {
       setGenerating(false);
-    }, 1500);
+    }
   };
 
   return (

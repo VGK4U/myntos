@@ -1,17 +1,40 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSuperAdminAuth } from "@/contexts/SuperAdminAuthContext";
+import { getApiUrl } from "@/lib/api";
 
 export default function SuperAdminRevenuePage() {
-  const { user } = useSuperAdminAuth();
+  const { user, token } = useSuperAdminAuth();
 
-  const transactions = [
-    { id: 'REV-9921', source: 'Property Sale (Plot A-12)', amount: 2500000, date: '2026-08-14', category: 'Real Estate', status: 'CLEARED' },
-    { id: 'REV-9920', source: 'Solar Installation (Residential)', amount: 450000, date: '2026-08-13', category: 'Solar', status: 'CLEARED' },
-    { id: 'REV-9919', source: 'Vendor Booking Commission', amount: 12500, date: '2026-08-12', category: 'Vendor', status: 'PENDING_CLEARANCE' },
-    { id: 'REV-9918', source: 'Property Sale (Villa Phase 2)', amount: 8500000, date: '2026-08-10', category: 'Real Estate', status: 'CLEARED' },
-  ];
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!token) return;
+    
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`${getApiUrl()}/api/v1/super-admin/finance/revenue`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success) {
+            setData(json.data);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [token]);
+
+  const transactions = data?.transactions || [];
 
   return (
     <div className="p-6 max-w-7xl mx-auto flex flex-col h-[calc(100vh-64px)]">
@@ -27,6 +50,11 @@ export default function SuperAdminRevenuePage() {
         </div>
       </div>
 
+      {loading ? (
+        <div className="flex-1 flex justify-center items-center">
+          <i className="fas fa-circle-notch fa-spin text-3xl text-gray-400"></i>
+        </div>
+      ) : (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex-1 overflow-hidden flex flex-col min-h-0">
         <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
           <div className="relative w-96">
@@ -59,7 +87,7 @@ export default function SuperAdminRevenuePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {transactions.map((tx, idx) => (
+              {transactions.map((tx: any, idx: number) => (
                 <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
                   <td className="p-4">
                     <p className="font-mono text-xs font-bold text-gray-900">{tx.id}</p>
@@ -70,7 +98,7 @@ export default function SuperAdminRevenuePage() {
                   </td>
                   <td className="p-4">
                     <span className="bg-gray-100 text-gray-700 text-[10px] font-black px-2 py-1 rounded uppercase tracking-wider border border-gray-200">
-                      {tx.category}
+                      {tx.category || 'Revenue'}
                     </span>
                   </td>
                   <td className="p-4 text-right">
@@ -78,17 +106,25 @@ export default function SuperAdminRevenuePage() {
                   </td>
                   <td className="p-4 text-right">
                     <span className={`text-[9px] font-black px-2 py-1 rounded uppercase tracking-wider ${
-                      tx.status === 'CLEARED' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                      tx.status === 'CLEARED' || tx.status.toLowerCase() === 'collected' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                     }`}>
                       {tx.status.replace('_', ' ')}
                     </span>
                   </td>
                 </tr>
               ))}
+              {transactions.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-gray-500 text-sm font-bold uppercase tracking-wider">
+                    No transactions found
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useStaffAuth } from "@/contexts/StaffAuthContext";
-import { getApiUrl } from "@/lib/api";
+import api from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 export default function RaiseTicketPage() {
@@ -37,30 +37,17 @@ export default function RaiseTicketPage() {
     setError("");
     
     try {
-      const res = await fetch(`${getApiUrl()}/api/v1/staff/service/tickets`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
+      const res = await api.post('/staff/service/tickets', formData);
       
-      if (res.ok) {
+      if (res.status === 200 || res.status === 201) {
         setSuccess(true);
         setTimeout(() => {
           router.push("/staff/service/tickets");
         }, 2000);
-      } else {
-        setError("Failed to create ticket. Please check the details and try again.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      // Simulate success for UI purposes since API might not be fully wired
-      setSuccess(true);
-      setTimeout(() => {
-        router.push("/staff/service/tickets");
-      }, 2000);
+      setError(err.response?.data?.detail || "Failed to create ticket. Please check the details and try again.");
     } finally {
       setLoading(false);
     }

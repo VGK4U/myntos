@@ -1,18 +1,51 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useMemberAuth } from "@/contexts/MemberAuthContext";
+import api from "@/lib/api";
 
 export default function MemberAwardsPage() {
   const { user } = useMemberAuth();
 
   const [activeTab, setActiveTab] = useState("achievements");
+  const [loading, setLoading] = useState(true);
+  const [awards, setAwards] = useState<any[]>([]);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
-  const awards = [
-    { id: 1, title: 'Star Performer - Q1', date: '2026-03-31', type: 'Trophy', status: 'RECEIVED', icon: 'fa-trophy', color: 'text-yellow-500' },
-    { id: 2, title: 'Century Club (100 Directs)', date: '2026-07-15', type: 'Gold Coin', status: 'PENDING_DELIVERY', icon: 'fa-coins', color: 'text-amber-500' },
-    { id: 3, title: 'Solar Champion', date: '2025-12-20', type: 'Certificate', status: 'RECEIVED', icon: 'fa-certificate', color: 'text-blue-500' },
-  ];
+  useEffect(() => {
+    if (!user || !user.mnr_id) return;
+
+    api.get(`/unified-awards/list?user_id_search=${user.mnr_id}`)
+      .then(res => {
+        if (res.data && res.data.awards) {
+           const fetched = res.data.awards.map((aw: any, idx: number) => ({
+             id: aw.award_id || idx,
+             title: aw.award_name || aw.gift_name || aw.award_type || 'Award',
+             date: aw.achievement_date || new Date().toISOString(),
+             type: aw.award_type || 'Milestone',
+             status: aw.status || 'PENDING',
+             icon: aw.status === 'Completed' || aw.status === 'Delivered' ? 'fa-trophy' : 'fa-medal',
+             color: aw.status === 'Completed' || aw.status === 'Delivered' ? 'text-yellow-500' : 'text-amber-500'
+           }));
+           setAwards(fetched);
+        }
+      })
+      .catch(err => console.error("Failed to fetch awards", err))
+      .finally(() => setLoading(false));
+
+    api.get(`/unified-awards/leaderboard/direct-awards`)
+      .then(res => {
+        if (res.data && res.data.direct_awards_leaderboard) {
+          setLeaderboard(res.data.direct_awards_leaderboard.map((item: any) => ({
+             name: item.user_name || item.name || 'Unknown',
+             points: item.total_sales || item.points || item.award_count || 0,
+             tier: item.tier || 'Gold',
+             initials: (item.user_name || item.name || 'U').substring(0, 2).toUpperCase()
+          })));
+        }
+      })
+      .catch(err => console.error("Failed to fetch leaderboard", err));
+  }, [user]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto flex flex-col h-[calc(100vh-80px)]">
@@ -41,9 +74,20 @@ export default function MemberAwardsPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex-1 overflow-hidden flex flex-col min-h-0">
         <div className="flex-1 overflow-y-auto p-6 bg-gray-50/50">
           
-          {activeTab === "achievements" && (
+          {loading ? (
+             <div className="flex items-center justify-center h-64">
+               <i className="fas fa-circle-notch fa-spin text-3xl text-indigo-600"></i>
+             </div>
+          ) : activeTab === "achievements" && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               
+              {awards.length === 0 && (
+                <div className="col-span-full p-12 text-center text-gray-500 bg-white rounded-xl border border-gray-200">
+                  <i className="fas fa-medal text-4xl mb-3 text-gray-300"></i>
+                  <p>You haven't unlocked any awards yet. Keep growing your network!</p>
+                </div>
+              )}
+
               {awards.map(award => (
                 <div key={award.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden group hover:shadow-md transition-shadow">
                   <div className="p-6 text-center border-b border-gray-100">
@@ -56,7 +100,7 @@ export default function MemberAwardsPage() {
                   <div className="p-4 bg-gray-50 flex justify-between items-center text-sm">
                     <span className="text-gray-500 font-medium">{new Date(award.date).toLocaleDateString()}</span>
                     <span className={`font-bold px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider ${
-                      award.status === 'RECEIVED' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                      award.status.toLowerCase() === 'completed' || award.status.toLowerCase() === 'delivered' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                     }`}>
                       {award.status.replace('_', ' ')}
                     </span>
@@ -80,7 +124,7 @@ export default function MemberAwardsPage() {
             </div>
           )}
 
-          {activeTab === "leaderboard" && (
+          {!loading && activeTab === "leaderboard" && (
             <div className="max-w-4xl mx-auto">
               <div className="bg-gradient-to-r from-indigo-900 to-purple-900 rounded-t-xl p-6 text-white flex justify-between items-center shadow-lg">
                 <div>
@@ -102,59 +146,55 @@ export default function MemberAwardsPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     
-                    {/* Rank 1 */}
-                    <tr className="bg-yellow-50/30">
-                      <td className="p-4 text-center">
-                        <i className="fas fa-medal text-yellow-500 text-2xl"></i>
-                      </td>
-                      <td className="p-4 font-bold text-gray-900 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-yellow-500 text-white flex items-center justify-center text-xs">SP</div>
-                        Suresh Pillai
-                      </td>
-                      <td className="p-4"><span className="text-xs font-bold px-2 py-1 bg-gray-900 text-white rounded uppercase">Platinum</span></td>
-                      <td className="p-4 text-right font-bold text-gray-900">42,500 <span className="text-[10px] text-gray-500 ml-1">Pts</span></td>
-                    </tr>
+                    {leaderboard.length === 0 && (
+                      <tr><td colSpan={4} className="p-12 text-center text-gray-500">No leaderboard data found</td></tr>
+                    )}
+                    
+                    {leaderboard.map((lb, i) => {
+                      let bgClass = "bg-white";
+                      let medalIcon = null;
+                      if (i === 0) {
+                        bgClass = "bg-yellow-50/30";
+                        medalIcon = <i className="fas fa-medal text-yellow-500 text-2xl"></i>;
+                      } else if (i === 1) {
+                        bgClass = "bg-gray-50/50";
+                        medalIcon = <i className="fas fa-medal text-gray-400 text-2xl"></i>;
+                      } else if (i === 2) {
+                        bgClass = "bg-orange-50/20";
+                        medalIcon = <i className="fas fa-medal text-orange-400 text-2xl"></i>;
+                      }
 
-                    {/* Rank 2 */}
-                    <tr className="bg-gray-50/50">
-                      <td className="p-4 text-center">
-                        <i className="fas fa-medal text-gray-400 text-2xl"></i>
-                      </td>
-                      <td className="p-4 font-bold text-gray-900 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gray-400 text-white flex items-center justify-center text-xs">MR</div>
-                        Meera Reddy
-                      </td>
-                      <td className="p-4"><span className="text-xs font-bold px-2 py-1 bg-gray-900 text-white rounded uppercase">Platinum</span></td>
-                      <td className="p-4 text-right font-bold text-gray-900">38,100 <span className="text-[10px] text-gray-500 ml-1">Pts</span></td>
-                    </tr>
-
-                    {/* Rank 3 */}
-                    <tr className="bg-orange-50/20">
-                      <td className="p-4 text-center">
-                        <i className="fas fa-medal text-orange-400 text-2xl"></i>
-                      </td>
-                      <td className="p-4 font-bold text-gray-900 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-orange-400 text-white flex items-center justify-center text-xs">AJ</div>
-                        Amit Jain
-                      </td>
-                      <td className="p-4"><span className="text-xs font-bold px-2 py-1 bg-yellow-500 text-white rounded uppercase">Gold</span></td>
-                      <td className="p-4 text-right font-bold text-gray-900">35,200 <span className="text-[10px] text-gray-500 ml-1">Pts</span></td>
-                    </tr>
+                      return (
+                        <tr key={i} className={bgClass}>
+                          <td className="p-4 text-center">
+                            {medalIcon ? medalIcon : <span className="font-bold text-gray-500">{i + 1}</span>}
+                          </td>
+                          <td className="p-4 font-bold text-gray-900 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs">
+                              {lb.initials}
+                            </div>
+                            {lb.name}
+                          </td>
+                          <td className="p-4"><span className="text-xs font-bold px-2 py-1 bg-gray-900 text-white rounded uppercase">{lb.tier}</span></td>
+                          <td className="p-4 text-right font-bold text-gray-900">{lb.points.toLocaleString('en-IN')} <span className="text-[10px] text-gray-500 ml-1">Pts/Sales</span></td>
+                        </tr>
+                      );
+                    })}
 
                     {/* Spacer */}
                     <tr><td colSpan={4} className="p-2 bg-gray-50 text-center"><i className="fas fa-ellipsis-v text-gray-300"></i></td></tr>
-
+                    
                     {/* Current User */}
                     <tr className="bg-indigo-50/50 border-indigo-100">
-                      <td className="p-4 text-center font-bold text-indigo-600">42</td>
+                      <td className="p-4 text-center font-bold text-indigo-600">-</td>
                       <td className="p-4 font-bold text-indigo-900 flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs border-2 border-indigo-200">
-                          {user?.first_name.charAt(0)}{user?.last_name.charAt(0)}
+                          {user?.first_name?.charAt(0) || 'U'}{user?.last_name?.charAt(0) || ''}
                         </div>
                         You ({user?.first_name})
                       </td>
                       <td className="p-4"><span className="text-xs font-bold px-2 py-1 bg-yellow-500 text-white rounded uppercase">{user?.tier || 'Gold'}</span></td>
-                      <td className="p-4 text-right font-bold text-indigo-700">12,450 <span className="text-[10px] text-indigo-400 ml-1">Pts</span></td>
+                      <td className="p-4 text-right font-bold text-indigo-700">- <span className="text-[10px] text-indigo-400 ml-1">Pts</span></td>
                     </tr>
 
                   </tbody>

@@ -1,25 +1,45 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemberAuth } from "@/contexts/MemberAuthContext";
+import api from "@/lib/api";
 
 export default function MemberWithdrawPage() {
   const { user } = useMemberAuth();
   const router = useRouter();
   
-  const walletBalance = 42500;
-  
+  const [walletBalance, setWalletBalance] = useState(0);
   const [amount, setAmount] = useState("");
   const [pin, setPin] = useState("");
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [infoMessage, setInfoMessage] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (!user || !user.mnr_id) return;
+    
+    // Fetch latest balance
+    api.get(`/user/${user.mnr_id}/comprehensive`)
+      .then(res => {
+        if (res.data && res.data.success) {
+           setWalletBalance(res.data.dashboard.wallet_balance || 0);
+        }
+      })
+      .catch(err => console.error("Failed to fetch balance", err));
+
+    api.get('/profile')
+      .then(res => setProfile(res.data))
+      .catch(err => console.error("Failed to fetch profile", err));
+  }, [user]);
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setInfoMessage(null);
     
     const reqAmount = parseInt(amount);
     if (!reqAmount || reqAmount < 500) {
@@ -34,22 +54,45 @@ export default function MemberWithdrawPage() {
     setStep(2);
   };
 
-  const handleConfirm = (e: React.FormEvent) => {
+  const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setInfoMessage(null);
     
-    if (pin.length !== 6) {
-      setError("Please enter your 6-digit transaction PIN");
+    if (pin.length < 4) {
+      setError("Please enter your transaction PIN");
       return;
     }
     
     setLoading(true);
     
-    // Simulate API Call
-    setTimeout(() => {
+    try {
+      const res = await api.post('/withdrawals/withdrawal-requests', {
+        amount: parseInt(amount),
+        bank_name: profile?.bank_details?.bank_name || 'Unknown Bank',
+        account_number: profile?.bank_details?.account_number || '',
+        ifsc_code: profile?.bank_details?.ifsc_code || '',
+        account_holder_name: profile?.bank_details?.account_holder || user?.first_name || 'Member'
+      });
+      
+      if (res.data && res.data.success) {
+         setStep(3);
+      }
+    } catch (err: any) {
+      const errDetail = err.response?.data?.detail;
+      if (err.response?.status === 410 && errDetail) {
+         setInfoMessage({
+           title: "Manual Withdrawals Disabled",
+           message: errDetail.message || "Manual requests are no longer supported.",
+           schedule: errDetail.auto_withdrawal_schedule,
+           eligibility: errDetail.eligibility
+         });
+      } else {
+         setError(errDetail || err.response?.data?.message || "Failed to submit withdrawal request.");
+      }
+    } finally {
       setLoading(false);
-      setStep(3); // Success Screen
-    }, 1500);
+    }
   };
 
   return (
@@ -60,7 +103,7 @@ export default function MemberWithdrawPage() {
           <p className="text-sm text-gray-500 mt-2">Transfer your E-Wallet balance directly to your registered bank account.</p>
         </div>
         <div>
-          <Link href="/member/wallet" className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
+          <Link href="/member/dashboard" className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
             <i className="fas fa-times mr-2"></i> Cancel
           </Link>
         </div>
@@ -88,6 +131,19 @@ export default function MemberWithdrawPage() {
             <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-md text-sm font-medium flex items-center">
               <i className="fas fa-exclamation-circle mr-2 text-lg"></i>
               {error}
+            </div>
+          )}
+
+          {infoMessage && (
+            <div className="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 text-blue-900 rounded-md text-sm">
+               <h4 className="font-bold flex items-center mb-2">
+                 <i className="fas fa-info-circle mr-2"></i> {infoMessage.title}
+               </h4>
+               <p className="mb-2">{infoMessage.message}</p>
+               <ul className="list-disc ml-5 text-blue-800">
+                 <li><strong>Schedule:</strong> {infoMessage.schedule}</li>
+                 <li><strong>Eligibility:</strong> {infoMessage.eligibility}</li>
+               </ul>
             </div>
           )}
 
@@ -128,8 +184,12 @@ export default function MemberWithdrawPage() {
                       <i className="fas fa-university"></i>
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-gray-900">HDFC Bank (•••• 4521)</p>
-                      <p className="text-xs text-gray-500">{user?.first_name} {user?.last_name}</p>
+                      <p className="text-sm font-bold text-gray-900">Registered Bank Account</p>
+                      <p className="text-xs text-gray-500">
+                        {profile?.bank_details?.bank_name || 'Bank'} - {profile?.bank_details?.account_number?.slice(-4) || 'XXXX'} 
+                        <br/>
+                        ({profile?.bank_details?.account_holder || `${user?.first_name} ${user?.last_name}`})
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -148,12 +208,12 @@ export default function MemberWithdrawPage() {
               </div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">Authorize Transfer</h2>
               <p className="text-sm text-gray-500 mb-8">
-                You are requesting to withdraw <strong>₹{parseInt(amount).toLocaleString('en-IN')}</strong> to your HDFC Bank account.
+                You are requesting to withdraw <strong>₹{parseInt(amount).toLocaleString('en-IN')}</strong> to your Bank account.
               </p>
 
               <form onSubmit={handleConfirm}>
                 <div className="mb-8">
-                  <label className="block text-sm font-bold text-gray-700 mb-3">Enter 6-Digit Transaction PIN</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">Enter Transaction PIN</label>
                   <input 
                     type="password" 
                     required
@@ -190,7 +250,7 @@ export default function MemberWithdrawPage() {
               <div className="bg-gray-50 rounded-lg p-4 mb-8 text-left border border-gray-200">
                 <div className="flex justify-between mb-2 text-sm">
                   <span className="text-gray-500">Transaction ID</span>
-                  <span className="font-mono font-bold text-gray-900">TXN9042</span>
+                  <span className="font-mono font-bold text-gray-900">TXN-SYS</span>
                 </div>
                 <div className="flex justify-between mb-2 text-sm">
                   <span className="text-gray-500">Expected Processing</span>
@@ -198,8 +258,8 @@ export default function MemberWithdrawPage() {
                 </div>
               </div>
 
-              <button onClick={() => router.push('/member/wallet')} className="w-full py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 transition-colors">
-                Return to Wallet
+              <button onClick={() => router.push('/member/dashboard')} className="w-full py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 transition-colors">
+                Return to Dashboard
               </button>
             </div>
           )}

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSuperAdminAuth } from "@/contexts/SuperAdminAuthContext";
+import api from "@/lib/api";
 
 export default function SuperAdminLoginPage() {
   const [username, setUsername] = useState("");
@@ -21,25 +22,49 @@ export default function SuperAdminLoginPage() {
 
     try {
       if (username && password && securityKey) {
-        // Mock successful login
-        const mockToken = "mock_superadmin_jwt_token";
-        const mockUser = {
-          id: 1,
-          username: username,
-          role: "SUPER_ADMIN",
-          permissions: ["all"],
-        };
-        
-        setTimeout(() => {
-          login(mockToken, mockUser);
-          router.push("/superadmin/dashboard");
-        }, 1200); // slightly longer delay for "security verification"
+        const res = await api.post("/staff/auth/login", {
+          employee_id: username,
+          password: password,
+          totp_code: securityKey
+        });
+
+        if (res.data && res.data.success) {
+          const accessToken = res.data.access_token;
+          
+          // Verify user role explicitly for superadmin access
+          const profileRes = await api.get("/staff/auth/me", {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          });
+          
+          if (profileRes.data.success) {
+            const roleName = profileRes.data.employee?.role_name?.toLowerCase() || '';
+            const isAdmin = roleName.includes('admin') || roleName.includes('leadership') || roleName.includes('director');
+            
+            if (isAdmin) {
+              const adminUser = {
+                id: profileRes.data.employee.id,
+                username: profileRes.data.employee.emp_code,
+                role: profileRes.data.employee.role_name,
+                permissions: ["all"],
+              };
+              login(accessToken, adminUser);
+              router.push("/superadmin/dashboard");
+            } else {
+              setError("Access Denied: Insufficient Clearance Level.");
+            }
+          } else {
+             setError("Failed to fetch profile details.");
+          }
+        } else {
+          setError(res.data.message || "Invalid credentials.");
+        }
       } else {
         setError("All fields including Hardware Security Key are required.");
-        setLoading(false);
       }
-    } catch (err) {
-      setError("Authorization failed. Access Denied.");
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || "Authorization failed. Access Denied.";
+      setError(errorMessage);
+    } finally {
       setLoading(false);
     }
   };

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useStaffAuth } from "@/contexts/StaffAuthContext";
-import { getApiUrl } from "@/lib/api";
+import api from "@/lib/api";
 
 export default function StaffProfileSettingsPage() {
   const { token } = useStaffAuth();
@@ -12,18 +12,35 @@ export default function StaffProfileSettingsPage() {
   const [success, setSuccess] = useState(false);
   
   const [formData, setFormData] = useState({
-    first_name: "Rahul",
-    last_name: "Sharma",
-    email: "rahul.sharma@myntreal.com",
-    phone: "+91 9876543210",
-    designation: "Senior Sales Executive",
-    department: "CRM & Sales",
-    bio: "Passionate about helping clients find their dream homes and green energy solutions.",
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    designation: "",
+    department: "",
+    bio: "",
     timezone: "Asia/Kolkata",
-    notifications_email: true,
+    notifications_email: false,
     notifications_sms: false,
-    notifications_whatsapp: true
+    notifications_whatsapp: false
   });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get('/staff/profile');
+        if (res.data) {
+          setFormData(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch profile", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [token]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -41,12 +58,18 @@ export default function StaffProfileSettingsPage() {
     setLoading(true);
     setSuccess(false);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const res = await api.put('/staff/profile', formData);
+      
+      if (res.status === 200) {
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 3000);
+      }
+    } catch (err) {
+      console.error("Failed to update profile", err);
+    } finally {
       setLoading(false);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-    }, 1200);
+    }
   };
 
   return (

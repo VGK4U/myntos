@@ -1,20 +1,87 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useMemberAuth } from "@/contexts/MemberAuthContext";
+import api from "@/lib/api";
 
 export default function GuruEarningsPage() {
-  const stats = {
-    totalGuruEarning: 25000,
-    activeMentees: 4,
-    highestEarner: "Rahul Sharma"
-  };
+  const { user } = useMemberAuth();
+  
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalGuruEarning: 0,
+    activeMentees: 0,
+    highestEarner: "N/A"
+  });
+  const [mentees, setMentees] = useState<any[]>([]);
 
-  const mentees = [
-    { id: 'VGK00214', name: 'Rahul Sharma', level: 'Direct (Level 1)', theirIncome: 225000, guruShare: 11250 },
-    { id: 'VGK00388', name: 'Priya Desai', level: 'Direct (Level 1)', theirIncome: 0, guruShare: 0 },
-    { id: 'VGK00441', name: 'Anita Patel', level: 'Direct (Level 1)', theirIncome: 275000, guruShare: 13750 },
-  ];
+  useEffect(() => {
+    if (!user || !user.mnr_id) return;
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch team for active count
+        const teamRes = await api.get('/users/team');
+        let activeCount = 0;
+        if (teamRes.data && teamRes.data.success && teamRes.data.data) {
+           activeCount = (teamRes.data.data.direct_referrals || []).filter((r: any) => r.is_active).length;
+        }
+
+        // Fetch transactions
+        const txRes = await api.get(`/financial-operations/income/${user.mnr_id}/guru-dakshina-transactions`);
+        const transactions = txRes.data?.data || [];
+        
+        // Group by mentee
+        const menteeMap: Record<string, { id: string, name: string, level: string, theirIncome: number, guruShare: number }> = {};
+        
+        transactions.forEach((tx: any) => {
+           const id = tx.for_member_id || "Unknown";
+           if (!menteeMap[id]) {
+             menteeMap[id] = {
+                id,
+                name: tx.for_name || "Unknown",
+                level: "Direct (Level 1)",
+                theirIncome: 0,
+                guruShare: 0
+             };
+           }
+           const amount = tx.total_amount || 0;
+           menteeMap[id].guruShare += amount;
+           menteeMap[id].theirIncome += (amount * 20); // since guru dakshina is 5%
+        });
+        
+        const menteeList = Object.values(menteeMap).sort((a, b) => b.guruShare - a.guruShare);
+        
+        const totalEarned = menteeList.reduce((sum, m) => sum + m.guruShare, 0);
+        const topEarner = menteeList.length > 0 ? menteeList[0].name : "N/A";
+
+        setStats({
+          totalGuruEarning: totalEarned,
+          activeMentees: activeCount,
+          highestEarner: topEarner
+        });
+        
+        setMentees(menteeList);
+      } catch (err) {
+        console.error("Failed to fetch guru dakshina data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="min-h-[calc(100vh-80px)] flex items-center justify-center">
+        <i className="fas fa-circle-notch fa-spin text-3xl text-indigo-600"></i>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto flex flex-col h-[calc(100vh-80px)]">
@@ -77,6 +144,13 @@ export default function GuruEarningsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
+              {mentees.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="p-8 text-center text-gray-500">
+                    No mentees have generated income yet.
+                  </td>
+                </tr>
+              )}
               {mentees.map((mentee, idx) => (
                 <tr key={idx} className="hover:bg-gray-50 transition-colors">
                   <td className="p-4">

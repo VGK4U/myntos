@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getApiUrl } from "@/lib/api";
 
 interface VendorUser {
   id: number;
@@ -13,6 +12,7 @@ interface VendorUser {
   email: string;
   phone: string;
   is_active: boolean;
+  [key: string]: any;
 }
 
 interface VendorAuthContextType {
@@ -41,8 +41,8 @@ export function VendorAuthProvider({ children }: { children: React.ReactNode }) 
         const storedUser = JSON.parse(storedUserStr);
         setToken(storedToken);
         setUser(storedUser);
-      } catch (e) {
-        console.error("Failed to parse stored vendor user", e);
+      } catch {
+        console.error("Failed to parse stored vendor user");
         localStorage.removeItem("vendor_token");
         localStorage.removeItem("vendor_user");
       }

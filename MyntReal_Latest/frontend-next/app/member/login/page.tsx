@@ -3,12 +3,13 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMemberAuth } from "@/contexts/MemberAuthContext";
-import { getApiUrl } from "@/lib/api";
+import api from "@/lib/api";
 import Link from "next/link";
 
 export default function MemberLoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useMemberAuth();
@@ -20,33 +21,38 @@ export default function MemberLoginPage() {
     setLoading(true);
 
     try {
-      // Temporary mock authentication for Member Portal
       if (username && password) {
-        // Mock successful login
-        const mockToken = "mock_member_jwt_token_12345";
-        const mockUser = {
-          id: 101,
-          vgk_id: "VGK99421",
-          first_name: "Amit",
-          last_name: "Patel",
-          email: "amit.patel@example.com",
-          phone: "+91 9876543210",
-          tier: "GOLD",
-          is_active: true,
-          kyc_status: "VERIFIED"
-        };
-        
-        // Simulating network delay
-        setTimeout(() => {
-          login(mockToken, mockUser);
+        const response = await api.post("/auth/login", {
+          user_id: username,
+          password: password,
+        });
+
+        if (response.data && response.data.access_token) {
+          const { access_token, user } = response.data;
+          
+          // Map backend fields to frontend context expectations
+          const memberUser = {
+            id: user.id,
+            mnr_id: user.id, // backend returns id as the mnr_id
+            name: user.name,
+            email: user.email,
+            wallet_balance: user.wallet_balance || 0,
+            kyc_status: user.kyc_status,
+            coupon_status: user.coupon_status,
+            account_status: user.account_status || 'Active',
+            is_active: user.account_status === 'Active'
+          };
+
+          login(access_token, memberUser);
           router.push("/member/dashboard");
-        }, 800);
+        }
       } else {
         setError("Please enter your VGK ID and password.");
         setLoading(false);
       }
-    } catch (err) {
-      setError("An unexpected error occurred. Please try again.");
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || "Invalid credentials or network error.";
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -103,7 +109,7 @@ export default function MemberLoginPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm bg-gray-50 focus:bg-white transition-colors"
-                  placeholder="e.g. VGK00123"
+                  placeholder="e.g. MNR182364369"
                 />
               </div>
             </div>
@@ -117,13 +123,22 @@ export default function MemberLoginPage() {
                   <i className="fas fa-lock text-gray-400"></i>
                 </div>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm bg-gray-50 focus:bg-white transition-colors"
+                  className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm bg-gray-50 focus:bg-white transition-colors"
                   placeholder="••••••••"
                 />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-gray-400 hover:text-gray-500 focus:outline-none focus:text-amber-500 transition-colors"
+                  >
+                    <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                  </button>
+                </div>
               </div>
             </div>
 

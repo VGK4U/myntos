@@ -1,18 +1,41 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSuperAdminAuth } from "@/contexts/SuperAdminAuthContext";
+import { getApiUrl } from "@/lib/api";
 
 export default function SuperAdminPlacementApprovals() {
-  const { user } = useSuperAdminAuth();
+  const { user, token } = useSuperAdminAuth();
 
   const [activeTab, setActiveTab] = useState("pending");
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const pendingRequests = [
-    { id: 'REQ-8891', member: 'Rahul Sharma (VGK00214)', sponsor: 'Amit Jain (VGK00005)', requestedPos: 'Left Leg (Outer)', date: '2026-08-14T09:30:00', status: 'PENDING' },
-    { id: 'REQ-8892', member: 'Priya Desai (VGK00388)', sponsor: 'Meera Reddy (VGK00012)', requestedPos: 'Right Leg (Inner)', date: '2026-08-14T10:15:00', status: 'PENDING' },
-    { id: 'REQ-8894', member: 'Vikram Singh (VGK00412)', sponsor: 'Suresh Pillai (VGK00001)', requestedPos: 'Right Leg (Outer)', date: '2026-08-14T11:45:00', status: 'PENDING' },
-  ];
+  useEffect(() => {
+    if (!token) return;
+    
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`${getApiUrl()}/api/v1/super-admin/network/approvals`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success) {
+            setData(json.data);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [token]);
+
+  const pendingRequests = data?.approvals || [];
 
   return (
     <div className="p-6 max-w-7xl mx-auto flex flex-col h-[calc(100vh-64px)]">
@@ -58,6 +81,11 @@ export default function SuperAdminPlacementApprovals() {
           </button>
         </div>
 
+        {loading ? (
+          <div className="flex-1 flex justify-center items-center">
+            <i className="fas fa-circle-notch fa-spin text-3xl text-gray-400"></i>
+          </div>
+        ) : (
         <div className="flex-1 overflow-auto">
           <table className="w-full text-left">
             <thead className="bg-white sticky top-0 z-10">
@@ -71,26 +99,26 @@ export default function SuperAdminPlacementApprovals() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               
-              {activeTab === 'pending' && pendingRequests.map((req, idx) => (
+              {activeTab === 'pending' && pendingRequests.map((req: any, idx: number) => (
                 <tr key={idx} className="hover:bg-gray-50 transition-colors group">
                   <td className="p-4">
                     <p className="font-mono text-xs font-bold text-gray-900">{req.id}</p>
-                    <p className="text-[10px] text-gray-500 mt-1 uppercase">{new Date(req.date).toLocaleString([], { hour: '2-digit', minute:'2-digit', month:'short', day:'numeric' })}</p>
+                    <p className="text-[10px] text-gray-500 mt-1 uppercase">{new Date(req.requestDate).toLocaleString([], { hour: '2-digit', minute:'2-digit', month:'short', day:'numeric' })}</p>
                   </td>
                   <td className="p-4">
                     <div className="flex items-center">
                       <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs mr-3">
                         <i className="fas fa-user-plus"></i>
                       </div>
-                      <span className="text-sm font-bold text-gray-900">{req.member}</span>
+                      <span className="text-sm font-bold text-gray-900">{req.memberName}</span>
                     </div>
                   </td>
                   <td className="p-4">
-                    <span className="text-sm font-bold text-gray-700">{req.sponsor}</span>
+                    <span className="text-sm font-bold text-gray-700">{req.sponsorName}</span>
                   </td>
                   <td className="p-4">
                     <span className="bg-gray-100 text-gray-800 text-xs font-bold px-3 py-1 rounded uppercase tracking-wider border border-gray-200">
-                      {req.requestedPos}
+                      {req.requestedPosition}
                     </span>
                   </td>
                   <td className="p-4 text-right space-x-2">
@@ -104,6 +132,15 @@ export default function SuperAdminPlacementApprovals() {
                 </tr>
               ))}
               
+              {activeTab === 'pending' && pendingRequests.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="p-16 text-center text-gray-500">
+                    <i className="fas fa-check-circle text-4xl mb-4 text-green-300"></i>
+                    <p className="text-sm font-bold uppercase tracking-widest text-gray-400">All caught up! No pending approvals.</p>
+                  </td>
+                </tr>
+              )}
+
               {activeTab === 'history' && (
                 <tr>
                   <td colSpan={5} className="p-16 text-center text-gray-500">
@@ -115,6 +152,7 @@ export default function SuperAdminPlacementApprovals() {
             </tbody>
           </table>
         </div>
+        )}
       </div>
     </div>
   );

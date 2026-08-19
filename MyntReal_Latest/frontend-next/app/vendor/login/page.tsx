@@ -3,13 +3,13 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useVendorAuth } from "@/contexts/VendorAuthContext";
+import api from "@/lib/api";
 
 export default function VendorLoginPage() {
-  const [vendorId, setVendorId] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  
   const { login } = useVendorAuth();
   const router = useRouter();
 
@@ -19,101 +19,114 @@ export default function VendorLoginPage() {
     setLoading(true);
 
     try {
-      if (vendorId && password) {
-        // Mock successful login
-        const mockToken = "mock_vendor_jwt_token";
-        const mockUser = {
-          id: 501,
-          vendor_id: "V-9942",
-          business_name: "Super Electronics Ltd",
-          owner_name: "Ramesh Kumar",
-          category: "Electronics",
-          email: "contact@superelectronics.com",
-          phone: "+91 9876500000",
-          is_active: true,
-        };
-        
-        setTimeout(() => {
-          login(mockToken, mockUser);
+      if (username && password) {
+        const response = await api.post("/vendor/auth/login", {
+          username: username,
+          password: password,
+        });
+
+        if (response.data && response.data.success) {
+          const { access_token, vendor } = response.data;
+          
+          const vendorUser = {
+            id: vendor.id,
+            vendor_id: vendor.vendor_code,
+            business_name: vendor.vendor_name,
+            owner_name: vendor.vendor_name, // Mapping vendor_name as fallback
+            category: vendor.category_name,
+            email: vendor.email || '',
+            phone: vendor.phone || '',
+            is_active: vendor.status === 'Active' || vendor.status === 'Approved'
+          };
+
+          login(access_token, vendorUser);
           router.push("/vendor/dashboard");
-        }, 800);
+        } else {
+          setError(response.data.message || "Invalid credentials.");
+        }
       } else {
-        setError("Please enter Vendor ID and password.");
-        setLoading(false);
+        setError("Please enter your Vendor ID and password.");
       }
     } catch (err) {
-      setError("An unexpected error occurred.");
+      const error = err as { response?: { data?: { message?: string, detail?: string } } };
+      const errorMessage = error.response?.data?.message || error.response?.data?.detail || "An unexpected error occurred.";
+      setError(errorMessage);
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
       
       {/* Background decoration */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-sky-500 opacity-20 blur-[120px]"></div>
-      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-600 opacity-20 blur-[120px]"></div>
+      <div className="absolute top-0 right-0 w-[50%] h-[50%] rounded-bl-[100%] bg-blue-100 opacity-50 blur-[80px]"></div>
+      <div className="absolute bottom-0 left-0 w-[50%] h-[50%] rounded-tr-[100%] bg-blue-200 opacity-50 blur-[80px]"></div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="flex justify-center mb-6">
-          <div className="w-16 h-16 bg-gradient-to-tr from-sky-400 to-blue-600 rounded-2xl flex items-center justify-center font-bold text-4xl shadow-xl text-white border border-white/20">
+          <div className="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-4xl shadow-lg text-white">
             <i className="fas fa-store"></i>
           </div>
         </div>
-        <h2 className="text-center text-3xl font-extrabold text-white tracking-tight">
-          Vendor Partner Login
+        <h2 className="text-center text-3xl font-extrabold text-gray-900 tracking-tight">
+          Vendor Portal
         </h2>
-        <p className="mt-2 text-center text-sm text-slate-400">
-          Access the VGK Vendor network to scan coupons and track sales
+        <p className="mt-2 text-center text-sm text-gray-600">
+          Sign in to manage your orders and inventory
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <div className="bg-white/10 backdrop-blur-xl py-8 px-4 shadow-2xl sm:rounded-2xl sm:px-10 border border-white/10">
+        <div className="bg-white py-8 px-4 shadow-xl sm:rounded-xl sm:px-10 border border-gray-100">
           <form className="space-y-6" onSubmit={handleLogin}>
             
             {error && (
-              <div className="bg-red-500/20 border border-red-500/50 p-4 rounded-lg">
-                <div className="flex items-center">
-                  <i className="fas fa-exclamation-circle text-red-400 mr-3 text-lg"></i>
-                  <p className="text-sm text-red-200 font-medium">{error}</p>
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <i className="fas fa-exclamation-circle text-red-500"></i>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-700 font-medium">{error}</p>
+                  </div>
                 </div>
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-slate-300">
-                Vendor ID (e.g., V-1234)
+              <label className="block text-sm font-medium text-gray-700">
+                Vendor ID / Email
               </label>
               <div className="mt-1 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <i className="fas fa-id-badge text-slate-400"></i>
+                  <i className="fas fa-user text-gray-400"></i>
                 </div>
                 <input
                   type="text"
                   required
-                  value={vendorId}
-                  onChange={(e) => setVendorId(e.target.value)}
-                  className="appearance-none block w-full pl-10 pr-3 py-3 border border-slate-600 rounded-xl shadow-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent sm:text-sm bg-slate-800/50 text-white transition-colors"
-                  placeholder="V-0000"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 focus:bg-white transition-colors"
+                  placeholder="e.g. V-0012"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300">
+              <label className="block text-sm font-medium text-gray-700">
                 Password
               </label>
               <div className="mt-1 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <i className="fas fa-lock text-slate-400"></i>
+                  <i className="fas fa-lock text-gray-400"></i>
                 </div>
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full pl-10 pr-3 py-3 border border-slate-600 rounded-xl shadow-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent sm:text-sm bg-slate-800/50 text-white transition-colors"
+                  className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 focus:bg-white transition-colors"
                   placeholder="••••••••"
                 />
               </div>
@@ -123,15 +136,17 @@ export default function VendorLoginPage() {
               <div className="flex items-center">
                 <input
                   id="remember-me"
+                  name="remember-me"
                   type="checkbox"
-                  className="h-4 w-4 text-sky-500 focus:ring-sky-500 border-slate-600 rounded bg-slate-800 cursor-pointer"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
                 />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-300 cursor-pointer">
-                  Remember device
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 cursor-pointer">
+                  Remember me
                 </label>
               </div>
+
               <div className="text-sm">
-                <a href="#" className="font-medium text-sky-400 hover:text-sky-300">
+                <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
                   Forgot password?
                 </a>
               </div>
@@ -141,14 +156,14 @@ export default function VendorLoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-sky-500 disabled:opacity-70 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-70 transition-colors"
               >
                 {loading ? (
                   <span className="flex items-center">
-                    <i className="fas fa-circle-notch fa-spin mr-2"></i> Verifying...
+                    <i className="fas fa-circle-notch fa-spin mr-2"></i> Authenticating...
                   </span>
                 ) : (
-                  "Secure Vendor Login"
+                  "Sign In"
                 )}
               </button>
             </div>

@@ -2,46 +2,83 @@
 
 import React, { useState } from "react";
 import { useVendorAuth } from "@/contexts/VendorAuthContext";
+import api from "@/lib/api";
+import { Scanner } from '@yudiel/react-qr-scanner';
+
+interface ScanResult {
+  memberId: string;
+  memberName: string;
+  tier: string;
+  couponCode: string;
+  discountPercentage: number;
+  maxDiscount: number;
+  validity: string;
+}
 
 export default function VendorScanPage() {
-  const { user } = useVendorAuth();
+  const { } = useVendorAuth();
   
   const [scanMode, setScanMode] = useState<'camera' | 'manual'>('camera');
   const [manualCode, setManualCode] = useState("");
-  const [scanResult, setScanResult] = useState<any>(null);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSimulateScan = () => {
+  const [billAmount, setBillAmount] = useState("");
+
+  const handleSimulateScan = async (code: string) => {
+    if (!code) return;
     setLoading(true);
-    // Simulate API delay for scanning
-    setTimeout(() => {
+    try {
+      const res = await api.get(`/vendor/me/verify-member?code=${code}`);
+      if (res.data && res.data.success) {
+        setScanResult(res.data.data);
+      } else {
+        alert("Invalid or inactive member.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.detail || "Failed to verify member code.");
+    } finally {
       setLoading(false);
-      setScanResult({
-        memberId: 'VGK00214',
-        memberName: 'Rahul Sharma',
-        tier: 'Platinum',
-        couponCode: 'CPN-VGK-001',
-        discountPercentage: 10,
-        maxDiscount: 5000,
-        validity: 'Valid'
-      });
-    }, 1500);
+    }
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualCode) return;
-    handleSimulateScan();
+    handleSimulateScan(manualCode);
   };
 
   const resetScan = () => {
     setScanResult(null);
     setManualCode("");
+    setBillAmount("");
   };
 
-  const handleProcessTransaction = () => {
-    alert("Transaction Processed Successfully!");
-    resetScan();
+  const handleProcessTransaction = async () => {
+    if (!scanResult) return;
+    const amount = parseFloat(billAmount);
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid bill amount before processing.");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const res = await api.post(`/vendor/me/process-scan`, {
+        memberId: scanResult.memberId,
+        amount: amount
+      });
+      if (res.data && res.data.success) {
+        alert(`Transaction Processed! TXN: ${res.data.txn_number}. Discount Applied: ₹${res.data.discount_amount}`);
+        resetScan();
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.detail || "Failed to process transaction.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -49,7 +86,7 @@ export default function VendorScanPage() {
       <div className="flex justify-between items-end mb-6 shrink-0">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Scan Coupon</h1>
-          <p className="text-sm text-slate-500 mt-2">Scan a VGK Member's QR Code or manually enter their code to apply discounts.</p>
+          <p className="text-sm text-slate-500 mt-2">Scan a VGK Member&apos;s QR Code or manually enter their code to apply discounts.</p>
         </div>
       </div>
 
@@ -76,24 +113,25 @@ export default function VendorScanPage() {
             <div className="p-8">
               {scanMode === 'camera' ? (
                 <div className="flex flex-col items-center">
-                  <div className="w-64 h-64 border-4 border-dashed border-sky-300 rounded-2xl flex items-center justify-center bg-sky-50 relative overflow-hidden">
-                    {loading ? (
-                      <div className="text-center">
-                        <i className="fas fa-spinner fa-spin text-4xl text-sky-500 mb-2"></i>
-                        <p className="text-sm font-bold text-sky-700">Scanning...</p>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="absolute top-0 left-0 w-full h-1 bg-sky-500 animate-scan"></div>
-                        <i className="fas fa-qrcode text-6xl text-sky-200"></i>
-                      </>
-                    )}
+                  <div className="w-64 h-64 rounded-2xl overflow-hidden relative border-4 border-dashed border-sky-300">
+                    <Scanner
+                      onScan={(result) => {
+                        if (result && result.length > 0) {
+                          handleSimulateScan(result[0].rawValue);
+                        }
+                      }}
+                      components={{
+                        audio: false,
+                        onOff: true,
+                        finder: false,
+                      }}
+                    />
                   </div>
                   <p className="text-center text-sm text-slate-500 mt-6">
-                    Position the member's QR code within the frame to scan automatically.
+                    Position the member&apos;s QR code within the frame to scan automatically.
                   </p>
                   <button 
-                    onClick={handleSimulateScan}
+                    onClick={() => handleSimulateScan('VGK00214')}
                     className="mt-6 px-6 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg text-sm hover:bg-slate-200 transition-colors"
                   >
                     (Dev) Simulate Scan
@@ -159,6 +197,17 @@ export default function VendorScanPage() {
                   <span className="text-slate-600 font-medium">Maximum Cap</span>
                   <span className="font-bold text-slate-900">₹{scanResult.maxDiscount.toLocaleString()}</span>
                 </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="text-sm font-bold text-slate-700 mb-2 block">Bill Amount (₹)</label>
+                <input 
+                  type="number" 
+                  value={billAmount}
+                  onChange={(e) => setBillAmount(e.target.value)}
+                  placeholder="Enter total bill amount"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl font-bold text-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none"
+                />
               </div>
 
               <div className="flex gap-3">

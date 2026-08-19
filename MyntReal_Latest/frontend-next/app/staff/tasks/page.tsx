@@ -26,17 +26,23 @@ export default function TaskTrackerPage() {
   useEffect(() => {
     // Simulating API fetch
     const fetchTasks = async () => {
-      setLoading(true);
-      setTimeout(() => {
-        setTasks([
-          { id: 1, title: "Prepare Q3 Sales Report", description: "Compile data from all CRM leads for Q3 and create presentation.", assigned_to: "Me", assigned_by: "Manager", priority: "HIGH", status: "IN_PROGRESS", due_date: "2026-08-16", project: "Quarterly Review" },
-          { id: 2, title: "Follow up with Solar Leads", description: "Call the 15 new leads from Meta Ads campaign.", assigned_to: "Me", assigned_by: "System", priority: "MEDIUM", status: "TODO", due_date: "2026-08-14", project: "Sales" },
-          { id: 3, title: "Submit Expense Receipts", description: "Upload hotel receipts for the Pune trip.", assigned_to: "Me", assigned_by: "HR", priority: "LOW", status: "TODO", due_date: "2026-08-20" },
-          { id: 4, title: "Review New Marketing Collateral", description: "Check the brochure designs.", assigned_to: "Me", assigned_by: "Manager", priority: "MEDIUM", status: "REVIEW", due_date: "2026-08-15", project: "Marketing" },
-          { id: 5, title: "Onboard EcoDrive Motors", description: "Help them set up their vendor profile.", assigned_to: "Priya Desai", assigned_by: "Me", priority: "HIGH", status: "IN_PROGRESS", due_date: "2026-08-14", project: "VGK Network" },
-        ]);
+      try {
+        const tokenStr = typeof window !== "undefined" ? localStorage.getItem("staff_token") : "";
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/staff/tasks`, {
+          headers: { Authorization: `Bearer ${tokenStr}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTasks(data.items || []);
+        } else {
+          setTasks([]);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch tasks", err);
+        setTasks([]);
+      } finally {
         setLoading(false);
-      }, 500);
+      }
     };
 
     fetchTasks();

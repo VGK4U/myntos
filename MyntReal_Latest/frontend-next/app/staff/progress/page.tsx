@@ -1,24 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 export default function ProgressDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Mock data for the Premium Light Theme preview
-  const kpis = [
-    { label: "Overall Completion", value: "84%", trend: "+5%", status: "success" },
-    { label: "Tasks Pending", value: "12", trend: "-2", status: "warning" },
-    { label: "KRA Score", value: "4.2/5", trend: "+0.1", status: "success" },
-    { label: "Hours Logged", value: "38.5h", trend: "This Week", status: "neutral" },
-  ];
+  const [kpis, setKpis] = useState<any[]>([]);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const recentActivities = [
-    { id: 1, title: "Completed Q3 Financial Review", time: "2 hours ago", type: "task" },
-    { id: 2, title: "Updated Monthly Lead Tracker", time: "5 hours ago", type: "update" },
-    { id: 3, title: "Manager approved Leave Request", time: "1 day ago", type: "hr" },
-    { id: 4, title: "Missed Deadline: Server Maintenance", time: "2 days ago", type: "alert" },
-  ];
+  useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        const token = typeof window !== "undefined" ? localStorage.getItem("staff_token") : "";
+        if (!token) return;
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/staff/progress/dashboard`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.kpis) setKpis(data.kpis);
+          if (data.recentActivities) setRecentActivities(data.recentActivities);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch progress data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProgress();
+  }, []);
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">

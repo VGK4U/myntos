@@ -8,21 +8,38 @@ export default function IncentivesDashboardPage() {
   const { hasRole } = useStaffAuth();
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Mock Data
-  const stats = {
-    totalPoints: 1250,
-    redeemed: 800,
-    balance: 450,
-    rank: 4,
-    currencyValue: 4500 // 1 point = ₹10
-  };
+  const [stats, setStats] = useState({
+    totalPoints: 0,
+    redeemed: 0,
+    balance: 0,
+    rank: 0,
+    currencyValue: 0
+  });
+  const [history, setHistory] = useState<any[]>([]);
+  const { token } = useStaffAuth();
+  const [loading, setLoading] = useState(true);
 
-  const history = [
-    { id: 1, date: "2026-08-10", source: "Lead Converted: Rahul Sharma", points: 50, type: "CREDIT" },
-    { id: 2, date: "2026-08-05", source: "Amazon Gift Card (₹1000)", points: -100, type: "DEBIT" },
-    { id: 3, date: "2026-07-28", source: "Exceeded Q2 Target", points: 250, type: "CREDIT" },
-    { id: 4, date: "2026-07-15", source: "Solar Vendor Onboarding", points: 20, type: "CREDIT" },
-  ];
+  useEffect(() => {
+    if (!token) return;
+    const fetchIncentives = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/staff/hr/incentives`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.stats) setStats(data.stats);
+          if (data.history) setHistory(data.history);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch incentives", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchIncentives();
+  }, [token]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto flex flex-col h-[calc(100vh-80px)]">

@@ -23,19 +23,25 @@ export default function ServiceTrackingPage() {
   useEffect(() => {
     if (!token) return;
     
-    // Simulating fetching active service jobs
     const fetchJobs = async () => {
-      setLoading(true);
-      setTimeout(() => {
-        setJobs([
-          { id: 1, job_number: "JOB-2041", ticket_number: "T-1045", vehicle_model: "EV Scooter Pro", technician: "Rajesh K.", stage: "INTAKE", estimated_completion: "2026-08-15" },
-          { id: 2, job_number: "JOB-2038", ticket_number: "T-1042", vehicle_model: "Solar Inverter 5kW", technician: "Amit S.", stage: "DIAGNOSIS", estimated_completion: "2026-08-14" },
-          { id: 3, job_number: "JOB-2035", ticket_number: "T-1038", vehicle_model: "EV Battery Pack", technician: "Manoj D.", stage: "WAITING_PARTS", estimated_completion: "2026-08-18" },
-          { id: 4, job_number: "JOB-2030", ticket_number: "T-1030", vehicle_model: "EV Scooter Lite", technician: "Rajesh K.", stage: "REPAIRING", estimated_completion: "2026-08-14" },
-          { id: 5, job_number: "JOB-2025", ticket_number: "T-1022", vehicle_model: "Solar Panel 400W", technician: "Suresh P.", stage: "QC", estimated_completion: "2026-08-14" },
-        ]);
+      try {
+        setLoading(true);
+        const res = await fetch(`${getApiUrl()}/api/v1/staff/service/tracking`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setJobs(data.items || []);
+        } else {
+          setJobs([]);
+        }
+      } catch (err: any) {
+        console.warn("Failed to fetch jobs", err);
+        setJobs([]);
+      } finally {
         setLoading(false);
-      }, 500);
+      }
     };
 
     fetchJobs();

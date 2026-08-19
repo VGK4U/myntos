@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useStaffAuth } from "@/contexts/StaffAuthContext";
-import { getApiUrl } from "@/lib/api";
+import api from "@/lib/api";
 
 interface AuditLog {
   id: number;
@@ -23,19 +23,16 @@ export default function StaffAuditLogsPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    // Simulating API fetch for user's personal audit logs
     const fetchLogs = async () => {
       setLoading(true);
-      setTimeout(() => {
-        setLogs([
-          { id: 1, action: "Updated Profile Settings", module: "Settings", ip_address: "192.168.1.42", user_agent: "Chrome / Windows 11", timestamp: new Date().toISOString(), status: "SUCCESS" },
-          { id: 2, action: "Viewed Lead #L-9042", module: "CRM", ip_address: "192.168.1.42", user_agent: "Chrome / Windows 11", timestamp: new Date(Date.now() - 3600000).toISOString(), status: "SUCCESS" },
-          { id: 3, action: "Failed Login Attempt", module: "Authentication", ip_address: "104.28.21.14", user_agent: "Safari / iOS", timestamp: new Date(Date.now() - 86400000).toISOString(), status: "FAILED" },
-          { id: 4, action: "Downloaded Leads Report CSV", module: "CRM", ip_address: "192.168.1.42", user_agent: "Chrome / Windows 11", timestamp: new Date(Date.now() - 172800000).toISOString(), status: "WARNING" },
-          { id: 5, action: "Created Ticket #T-1045", module: "Service", ip_address: "192.168.1.42", user_agent: "Chrome / Windows 11", timestamp: new Date(Date.now() - 259200000).toISOString(), status: "SUCCESS" },
-        ]);
+      try {
+        const res = await api.get('/staff/settings/audit-logs');
+        setLogs(res.data);
+      } catch (error) {
+        console.error("Failed to fetch logs", error);
+      } finally {
         setLoading(false);
-      }, 800);
+      }
     };
 
     fetchLogs();

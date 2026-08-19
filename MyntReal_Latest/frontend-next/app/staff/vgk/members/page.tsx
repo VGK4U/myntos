@@ -41,13 +41,7 @@ export default function VGKMembersPage() {
           const data = await res.json();
           setMembers(data.items || []);
         } else {
-          // Fallback mockup data
-          setMembers([
-            { id: 1, vgk_id: "VGK-8921", name: "Anil Kumar", phone: "+91 9876543210", level: "GOLD", join_date: "2025-06-12", total_referrals: 14, wallet_balance: 4500, status: "ACTIVE" },
-            { id: 2, vgk_id: "VGK-8922", name: "Priya Desai", phone: "+91 8765432109", level: "PLATINUM", join_date: "2025-01-15", total_referrals: 42, wallet_balance: 12500, status: "ACTIVE" },
-            { id: 3, vgk_id: "VGK-8923", name: "Suresh P", phone: "+91 7654321098", level: "BRONZE", join_date: "2026-02-10", total_referrals: 2, wallet_balance: 150, status: "ACTIVE" },
-            { id: 4, vgk_id: "VGK-8924", name: "Vikram S", phone: "+91 6543210987", level: "SILVER", join_date: "2025-11-05", total_referrals: 8, wallet_balance: 1200, status: "INACTIVE" },
-          ]);
+          setMembers([]);
         }
       } catch (err) {
         console.warn("Failed to fetch members", err);
@@ -87,20 +81,22 @@ export default function VGKMembersPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 p-5 rounded-xl shadow-sm text-white">
           <p className="text-xs font-bold uppercase opacity-80">Total Members</p>
-          <p className="text-3xl font-bold mt-1">4,250</p>
+          <p className="text-3xl font-bold mt-1">{members.length}</p>
         </div>
         <div className="bg-gradient-to-br from-gray-700 to-gray-900 p-5 rounded-xl shadow-sm text-white relative overflow-hidden">
           <i className="fas fa-crown absolute right-[-10px] bottom-[-10px] text-5xl opacity-10"></i>
           <p className="text-xs font-bold uppercase opacity-80">Platinum Members</p>
-          <p className="text-3xl font-bold mt-1">125</p>
+          <p className="text-3xl font-bold mt-1">{members.filter(m => m.level === "PLATINUM").length}</p>
         </div>
         <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
           <p className="text-xs font-bold text-gray-500 uppercase">Avg Referrals/Member</p>
-          <p className="text-3xl font-bold text-indigo-600 mt-1">3.4</p>
+          <p className="text-3xl font-bold text-indigo-600 mt-1">
+            {members.length > 0 ? (members.reduce((acc, m) => acc + m.total_referrals, 0) / members.length).toFixed(1) : "0.0"}
+          </p>
         </div>
         <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
           <p className="text-xs font-bold text-gray-500 uppercase">Total Wallet Liability</p>
-          <p className="text-3xl font-bold text-green-600 mt-1">₹ 2.4M</p>
+          <p className="text-3xl font-bold text-green-600 mt-1">₹ {members.reduce((acc, m) => acc + m.wallet_balance, 0).toLocaleString()}</p>
         </div>
       </div>
 

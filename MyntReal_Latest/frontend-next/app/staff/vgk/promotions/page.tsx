@@ -42,13 +42,7 @@ export default function VGKPromotionsPage() {
           const data = await res.json();
           setPromos(data.items || []);
         } else {
-          // Fallback mockup data
-          setPromos([
-            { id: 1, code: "WELCOME500", type: "FLAT", value: 500, min_purchase: 2000, max_discount: null, valid_from: "2026-01-01", valid_until: "2026-12-31", usage_limit: 1000, times_used: 452, status: "ACTIVE" },
-            { id: 2, code: "SUMMER10", type: "PERCENTAGE", value: 10, min_purchase: 5000, max_discount: 1500, valid_from: "2026-05-01", valid_until: "2026-08-31", usage_limit: 500, times_used: 480, status: "ACTIVE" },
-            { id: 3, code: "FLASH20", type: "PERCENTAGE", value: 20, min_purchase: 1000, max_discount: 500, valid_from: "2026-08-01", valid_until: "2026-08-05", usage_limit: 100, times_used: 100, status: "EXPIRED" },
-            { id: 4, code: "DIWALIBONUS", type: "FLAT", value: 2000, min_purchase: 10000, max_discount: null, valid_from: "2025-10-01", valid_until: "2025-11-15", usage_limit: 5000, times_used: 3412, status: "EXPIRED" },
-          ]);
+          setPromos([]);
         }
       } catch (err) {
         console.warn("Failed to fetch promos", err);

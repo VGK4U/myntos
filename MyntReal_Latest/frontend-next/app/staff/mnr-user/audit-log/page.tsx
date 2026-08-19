@@ -7,15 +7,26 @@ export default function AuditLogPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock initial load
-    setTimeout(() => {
-      setLogs([
-        { id: 1, staff_name: "Anil Kumar", emp_code: "EMP-001", action_type: "view", mnr_id: "MNR10025", page: "Profile Dashboard", created_at: "2023-10-15T10:30:00Z" },
-        { id: 2, staff_name: "Ramesh Singh", emp_code: "EMP-042", action_type: "export", mnr_id: "MNR10025", page: "Financial Statement", created_at: "2023-10-15T09:15:00Z" },
-        { id: 3, staff_name: "Priya Sharma", emp_code: "EMP-015", action_type: "search", mnr_id: "MNR88210", page: "Global Search", created_at: "2023-10-14T16:45:00Z" },
-      ]);
-      setLoading(false);
-    }, 800);
+    const fetchAuditLogs = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/staff/mnr-user/audit-log`, {
+          headers: { Authorization: `Bearer ${typeof window !== "undefined" ? localStorage.getItem("staff_token") : ""}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setLogs(data.logs || []);
+        } else {
+          setLogs([]);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch audit logs", err);
+        setLogs([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAuditLogs();
   }, []);
 
   return (

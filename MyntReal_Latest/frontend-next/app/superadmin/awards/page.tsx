@@ -1,16 +1,66 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSuperAdminAuth } from "@/contexts/SuperAdminAuthContext";
+import { getApiUrl } from "@/lib/api";
 
 export default function SuperAdminAwardsPage() {
-  const { user } = useSuperAdminAuth();
+  const { user, token } = useSuperAdminAuth();
 
-  const awards = [
-    { id: 'AWD-001', memberId: 'VGK00214', memberName: 'Rahul Sharma', awardType: 'Gold Coin (10g)', requirement: '100 Directs', status: 'PENDING_PROCUREMENT', requestDate: '2026-08-10' },
-    { id: 'AWD-002', memberId: 'VGK00441', memberName: 'Anita Patel', awardType: 'Tata Tiago EV', requirement: '25 Sales', status: 'READY_FOR_DELIVERY', requestDate: '2026-08-01' },
-    { id: 'AWD-003', memberId: 'VGK00012', memberName: 'Meera Reddy', awardType: 'Platinum Trophy', requirement: '200 Directs', status: 'DELIVERED', requestDate: '2026-07-15' },
-  ];
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!token) return;
+    
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`${getApiUrl()}/api/v1/super-admin/awards`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success) {
+            setData(json.data);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [token]);
+
+  const awards = data?.awards || [];
+
+  const handleUpdateStatus = async (awardId: string, awardType: string, newStatus: string) => {
+    if (!newStatus) return;
+    const rawId = awardId.replace('AWD-', '');
+    const typeStr = awardType === 'Dynamic Award' ? 'direct' : awardType.toLowerCase();
+    
+    try {
+      const res = await fetch(`${getApiUrl()}/api/v1/rvz/awards/${typeStr}/${rawId}/override`, {
+        method: 'POST',
+        headers: { 
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ new_status: newStatus, reason: "Superadmin manual update" })
+      });
+      if (res.ok) {
+        alert("Status updated successfully");
+        window.location.reload();
+      } else {
+        alert("Failed to update status");
+      }
+    } catch(err) {
+      console.error(err);
+      alert("Error updating status");
+    }
+  };
 
   return (
     <div className="p-6 max-w-7xl mx-auto flex flex-col h-[calc(100vh-64px)]">
@@ -30,33 +80,38 @@ export default function SuperAdminAwardsPage() {
         <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Pending Procurement</p>
           <div className="flex justify-between items-end">
-            <h3 className="text-3xl font-black text-gray-900">1</h3>
+            <h3 className="text-3xl font-black text-gray-900">{data?.metrics?.pending || 0}</h3>
             <i className="fas fa-box-open text-2xl text-gray-300"></i>
           </div>
         </div>
         <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 border-b-4 border-b-blue-500">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Ready For Delivery</p>
           <div className="flex justify-between items-end">
-            <h3 className="text-3xl font-black text-gray-900">1</h3>
+            <h3 className="text-3xl font-black text-gray-900">{data?.metrics?.ready || 0}</h3>
             <i className="fas fa-truck text-2xl text-blue-200"></i>
           </div>
         </div>
         <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 border-b-4 border-b-green-500">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Delivered (YTD)</p>
           <div className="flex justify-between items-end">
-            <h3 className="text-3xl font-black text-gray-900">42</h3>
+            <h3 className="text-3xl font-black text-gray-900">{data?.metrics?.delivered || 0}</h3>
             <i className="fas fa-check-circle text-2xl text-green-200"></i>
           </div>
         </div>
         <div className="bg-[#111827] p-5 rounded-lg shadow-sm border border-gray-800">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Procurement Cost</p>
           <div className="flex justify-between items-end">
-            <h3 className="text-xl font-black text-white mt-1">₹ 24.5L</h3>
+            <h3 className="text-xl font-black text-white mt-1">₹ {data?.metrics?.total_cost || '0'}</h3>
             <i className="fas fa-rupee-sign text-2xl text-gray-600"></i>
           </div>
         </div>
       </div>
 
+      {loading ? (
+        <div className="flex-1 flex justify-center items-center">
+          <i className="fas fa-circle-notch fa-spin text-3xl text-gray-400"></i>
+        </div>
+      ) : (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex-1 overflow-hidden flex flex-col min-h-0">
         <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
           <div className="flex space-x-2">
@@ -81,7 +136,7 @@ export default function SuperAdminAwardsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {awards.map((award, idx) => (
+              {awards.map((award: any, idx: number) => (
                 <tr key={idx} className="hover:bg-gray-50 transition-colors">
                   <td className="p-4">
                     <p className="font-mono text-xs font-bold text-gray-900">{award.id}</p>
@@ -112,19 +167,31 @@ export default function SuperAdminAwardsPage() {
                     </span>
                   </td>
                   <td className="p-4 text-right">
-                    <select className="text-[10px] font-black uppercase tracking-widest border border-gray-300 rounded px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-indigo-500">
-                      <option>Update Status...</option>
-                      <option>Mark Procured</option>
-                      <option>Mark Shipped</option>
-                      <option>Mark Delivered</option>
+                    <select 
+                      className="text-[10px] font-black uppercase tracking-widest border border-gray-300 rounded px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-indigo-500"
+                      onChange={(e) => handleUpdateStatus(award.id, award.awardType, e.target.value)}
+                      defaultValue=""
+                    >
+                      <option value="" disabled>Update Status...</option>
+                      <option value="Procured">Mark Procured</option>
+                      <option value="Processed for Dispatch">Mark Dispatched</option>
+                      <option value="Delivered">Mark Delivered</option>
                     </select>
                   </td>
                 </tr>
               ))}
+              {awards.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-gray-500 text-sm font-bold uppercase tracking-wider">
+                    No awards found
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
+      )}
     </div>
   );
 }

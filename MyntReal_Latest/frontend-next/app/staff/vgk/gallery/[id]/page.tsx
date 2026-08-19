@@ -114,7 +114,7 @@ export default function GalleryDetailPage() {
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{gallery.title}</h1>
-            <p className="text-sm text-gray-500 mt-1">{gallery.description || "No description"} • {gallery.files.length} items</p>
+            <p className="text-sm text-gray-500 mt-1">{gallery.description || "No description"} ï¿½ {gallery.files.length} items</p>
           </div>
         </div>
         

@@ -63,13 +63,7 @@ export default function VGKIncomePage() {
           const data = await res.json();
           setTransactions(data.items || []);
         } else {
-          // Fallback mockup data
-          setTransactions([
-            { id: 1, transaction_id: "TXN-90214", member_id: "VGK-8921", member_name: "Anil Kumar", source: "REFERRAL", amount: 500, date: "2026-08-14T10:30:00", status: "CREDITED" },
-            { id: 2, transaction_id: "TXN-90213", member_id: "VGK-8922", member_name: "Priya Desai", source: "VENDOR_COMMISSION", amount: 1250, date: "2026-08-13T14:15:00", status: "CREDITED" },
-            { id: 3, transaction_id: "TXN-90212", member_id: "VGK-8924", member_name: "Vikram S", source: "REFERRAL", amount: 500, date: "2026-08-12T09:45:00", status: "PENDING" },
-            { id: 4, transaction_id: "TXN-90211", member_id: "VGK-8922", member_name: "Priya Desai", source: "BONUS", amount: 2000, date: "2026-08-11T16:20:00", status: "CREDITED" },
-          ]);
+          setTransactions([]);
         }
       } catch (err) {
         console.warn("Failed to fetch income data", err);

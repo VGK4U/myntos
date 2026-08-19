@@ -1,17 +1,40 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSuperAdminAuth } from "@/contexts/SuperAdminAuthContext";
+import { getApiUrl } from "@/lib/api";
 
 export default function SuperAdminCashLedgerPage() {
-  const { user } = useSuperAdminAuth();
+  const { user, token } = useSuperAdminAuth();
+  
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const transactions = [
-    { id: 'CSH-0912', type: 'IN', source: 'Property Advance (Cash)', amount: 50000, date: '2026-08-14', handler: 'Ajay Clerk', location: 'HQ Chennai' },
-    { id: 'CSH-0911', type: 'OUT', source: 'Petty Cash - Office Supplies', amount: 4500, date: '2026-08-13', handler: 'Srinivas', location: 'HQ Chennai' },
-    { id: 'CSH-0910', type: 'IN', source: 'Site Visit Booking Fee', amount: 10000, date: '2026-08-13', handler: 'Rahul Agent', location: 'Site B' },
-    { id: 'CSH-0909', type: 'OUT', source: 'Vendor Payment (Decor)', amount: 15000, date: '2026-08-11', handler: 'Ajay Clerk', location: 'HQ Chennai' },
-  ];
+  useEffect(() => {
+    if (!token) return;
+    
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`${getApiUrl()}/api/v1/super-admin/finance/cash-ledger`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success) {
+            setData(json.data);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [token]);
+
+  const transactions = data?.transactions || [];
 
   return (
     <div className="p-6 max-w-7xl mx-auto flex flex-col h-[calc(100vh-64px)]">
@@ -27,23 +50,29 @@ export default function SuperAdminCashLedgerPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 shrink-0">
-        <div className="bg-[#111827] p-6 rounded-lg shadow-lg border border-gray-800">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Physical Vault Balance (HQ)</p>
-          <h3 className="text-4xl font-black text-white mt-1">₹ 4,25,500</h3>
-          <p className="text-[10px] text-gray-500 font-mono mt-2">Last reconciled: Today, 09:00 AM</p>
+      {loading ? (
+        <div className="flex-1 flex justify-center items-center">
+          <i className="fas fa-circle-notch fa-spin text-3xl text-gray-400"></i>
         </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 shrink-0">
+            <div className="bg-[#111827] p-6 rounded-lg shadow-lg border border-gray-800">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Physical Vault Balance (HQ)</p>
+              <h3 className="text-4xl font-black text-white mt-1">₹ {data?.vault_balance?.toLocaleString('en-IN') || 0}</h3>
+              <p className="text-[10px] text-gray-500 font-mono mt-2">Last reconciled: {data?.last_reconciled ? new Date(data.last_reconciled).toLocaleString() : 'N/A'}</p>
+            </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 border-t-4 border-t-green-500">
-          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Cash In (MTD)</p>
-          <h3 className="text-2xl font-black text-gray-900 mt-1">₹ 8,40,000</h3>
-        </div>
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 border-t-4 border-t-green-500">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Cash In (MTD)</p>
+              <h3 className="text-2xl font-black text-gray-900 mt-1">₹ {data?.cash_in_mtd?.toLocaleString('en-IN') || 0}</h3>
+            </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 border-t-4 border-t-red-500">
-          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Cash Out (MTD)</p>
-          <h3 className="text-2xl font-black text-gray-900 mt-1">₹ 1,12,000</h3>
-        </div>
-      </div>
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 border-t-4 border-t-red-500">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Cash Out (MTD)</p>
+              <h3 className="text-2xl font-black text-gray-900 mt-1">₹ {data?.cash_out_mtd?.toLocaleString('en-IN') || 0}</h3>
+            </div>
+          </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex-1 overflow-hidden flex flex-col min-h-0">
         <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
@@ -65,7 +94,7 @@ export default function SuperAdminCashLedgerPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {transactions.map((tx, idx) => (
+              {transactions.map((tx: any, idx: number) => (
                 <tr key={idx} className="hover:bg-gray-50 transition-colors">
                   <td className="p-4">
                     <p className="font-mono text-xs font-bold text-gray-900">{tx.id}</p>
@@ -79,23 +108,32 @@ export default function SuperAdminCashLedgerPage() {
                     </span>
                   </td>
                   <td className="p-4">
-                    <p className="font-bold text-gray-900 text-sm">{tx.source}</p>
+                    <p className="text-xs font-bold text-gray-900">{tx.source}</p>
                   </td>
-                  <td className="p-4">
-                    <p className="text-xs font-bold text-gray-700">{tx.handler}</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5"><i className="fas fa-map-marker-alt mr-1"></i>{tx.location}</p>
+                  <td className="p-4 text-xs text-gray-500">
+                    <p className="font-bold">{tx.handler}</p>
+                    <p className="text-[10px] mt-0.5">{tx.location}</p>
                   </td>
                   <td className="p-4 text-right">
-                    <span className={`font-black text-lg ${tx.type === 'IN' ? 'text-green-600' : 'text-red-600'}`}>
-                      {tx.type === 'IN' ? '+' : '-'} ₹ {tx.amount.toLocaleString('en-IN')}
-                    </span>
+                    <p className={`text-sm font-black ${tx.type === 'IN' ? 'text-green-600' : 'text-gray-900'}`}>
+                      {tx.type === 'IN' ? '+' : '-'} ₹ {tx.amount.toLocaleString()}
+                    </p>
                   </td>
                 </tr>
               ))}
+              {transactions.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-gray-500 text-sm font-bold uppercase tracking-wider">
+                    No transactions found
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

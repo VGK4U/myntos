@@ -3,25 +3,70 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useMemberAuth } from "@/contexts/MemberAuthContext";
+import api from "@/lib/api";
 
 export default function MemberDashboardPage() {
   const { user } = useMemberAuth();
-  
-  // Mock Data
-  const stats = {
-    walletBalance: 42500,
-    totalEarnings: 154000,
-    directReferrals: 12,
-    matchingPairs: 8,
-    pendingWithdrawals: 5000,
-  };
+  const [stats, setStats] = useState({
+    walletBalance: 0,
+    totalEarnings: 0,
+    directReferrals: 0,
+    matchingPairs: 0,
+    pendingWithdrawals: 0,
+  });
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const recentTransactions = [
-    { id: 1, type: 'CREDIT', amount: 5000, desc: 'Matching Bonus (Pair: L3-R3)', date: '2026-08-13' },
-    { id: 2, type: 'DEBIT', amount: 15000, desc: 'Withdrawal to Bank Account', date: '2026-08-10' },
-    { id: 3, type: 'CREDIT', amount: 12500, desc: 'Direct Referral (VGK00214)', date: '2026-08-05' },
-    { id: 4, type: 'CREDIT', amount: 2500, desc: 'Guru Dakshina Bonus', date: '2026-08-01' },
-  ];
+  useEffect(() => {
+    if (!user || !user.mnr_id) return;
+
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        // Fetch comprehensive stats
+        const res = await api.get(`/user/${user.mnr_id}/comprehensive`);
+        if (res.data && res.data.success) {
+          const dash = res.data.dashboard;
+          setStats({
+            walletBalance: dash.wallet_balance || user.wallet_balance || 0,
+            totalEarnings: dash.total_income || dash.total_earnings || 0,
+            directReferrals: dash.direct_referrals_count || 0,
+            matchingPairs: dash.matching_pairs_count || 0,
+            pendingWithdrawals: dash.pending_withdrawals || 0,
+          });
+        }
+
+        // Fetch recent transactions
+        const finRes = await api.get(`/user/${user.mnr_id}/financial-summary`);
+        if (finRes.data && finRes.data.success) {
+          const txs = finRes.data.recent_transactions || [];
+          setRecentTransactions(
+            txs.slice(0, 5).map((tx: any) => ({
+              id: tx.id || Math.random(),
+              type: tx.amount > 0 ? 'CREDIT' : 'DEBIT',
+              amount: Math.abs(tx.amount || 0),
+              desc: tx.description || tx.transaction_type || 'Transaction',
+              date: tx.date || tx.created_at || new Date().toISOString()
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("Failed to fetch dashboard data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <i className="fas fa-circle-notch fa-spin text-3xl text-amber-500"></i>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto">

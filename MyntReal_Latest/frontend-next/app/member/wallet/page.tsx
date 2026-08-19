@@ -9,16 +9,45 @@ export default function MemberWalletPage() {
 
   const [activeTab, setActiveTab] = useState("all");
 
-  const walletBalance = 42500;
-  const pendingClearance = 5000;
-  
-  const transactions = [
-    { id: 'TXN8914', date: "2026-08-13", desc: "Matching Bonus (Pair: L3-R3)", amount: 5000, type: "CREDIT", status: "CLEARED" },
-    { id: 'TXN8902', date: "2026-08-10", desc: "Bank Withdrawal (HDFC Bank)", amount: -15000, type: "DEBIT", status: "CLEARED" },
-    { id: 'TXN8876', date: "2026-08-08", desc: "Direct Commission (Property Sale)", amount: 12500, type: "CREDIT", status: "CLEARED" },
-    { id: 'TXN8855', date: "2026-08-05", desc: "Guru Dakshina Bonus", amount: 2500, type: "CREDIT", status: "CLEARED" },
-    { id: 'TXN8812', date: "2026-07-28", desc: "Admin Correction", amount: -500, type: "DEBIT", status: "CLEARED" },
-  ];
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [pendingClearance, setPendingClearance] = useState(0);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user || !user.mnr_id) return;
+
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get(`/user/${user.mnr_id}/comprehensive`);
+        if (res.data && res.data.success) {
+          setWalletBalance(res.data.dashboard?.wallet_balance || 0);
+          setPendingClearance(res.data.dashboard?.pending_withdrawals || 0);
+        }
+
+        const finRes = await api.get(`/user/${user.mnr_id}/financial-summary`);
+        if (finRes.data && finRes.data.success) {
+          const txs = finRes.data.recent_transactions || [];
+          setTransactions(
+            txs.map((tx: any) => ({
+              id: tx.id || Math.random().toString(),
+              date: tx.date || tx.created_at || new Date().toISOString(),
+              desc: tx.description || tx.transaction_type || 'Transaction',
+              amount: tx.amount || 0,
+              type: (tx.amount || 0) > 0 ? 'CREDIT' : 'DEBIT',
+              status: tx.status || 'CLEARED'
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("Failed to fetch wallet data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [user]);
 
   const filteredTx = activeTab === "all" ? transactions : transactions.filter(t => t.type.toLowerCase() === activeTab);
 

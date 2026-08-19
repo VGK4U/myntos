@@ -131,7 +131,7 @@ function MemberSidebar() {
 }
 
 function MemberLayoutContent({ children }: { children: React.ReactNode }) {
-  const { isLoading, token } = useMemberAuth();
+  const { isLoading, token, user } = useMemberAuth();
   const pathname = usePathname();
 
   // If on a public/auth route inside member, don't show sidebar
@@ -170,6 +170,16 @@ function MemberLayoutContent({ children }: { children: React.ReactNode }) {
               <i className="fas fa-headset mr-2 text-gray-400"></i>
               Support
             </button>
+            <div className="h-8 w-px bg-gray-200 mx-2"></div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-sm font-bold text-gray-900">{user?.first_name} {user?.last_name}</p>
+                <p className="text-xs text-gray-500">{user?.vgk_id}</p>
+              </div>
+              <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-sm border border-amber-200">
+                {user?.first_name?.charAt(0)}{user?.last_name?.charAt(0)}
+              </div>
+            </div>
           </div>
         </header>
 

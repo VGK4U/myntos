@@ -10,7 +10,6 @@ export default function VGKConfigPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // If we had a real API, we'd fetch these configs. Using state for UI mockup.
   const [tierConfig, setTierConfig] = useState({
     bronze: { req_referrals: 0, platform_fee: 10 },
     silver: { req_referrals: 5, platform_fee: 8 },
@@ -18,14 +17,46 @@ export default function VGKConfigPage() {
     platinum: { req_referrals: 30, platform_fee: 4 }
   });
 
-  const handleSave = () => {
+  React.useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const token = typeof window !== "undefined" ? localStorage.getItem("staff_token") : "";
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/staff/vgk/config`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.tierConfig) setTierConfig(data.tierConfig);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch VGK config", err);
+      }
+    };
+    fetchConfig();
+  }, []);
+
+  const handleSave = async () => {
     setIsSaving(true);
     setSaved(false);
-    setTimeout(() => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("staff_token") : "";
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/staff/vgk/config`, {
+        method: 'POST',
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ tierConfig })
+      });
+      if (res.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      }
+    } catch (err) {
+      console.error("Failed to save VGK config", err);
+    } finally {
       setIsSaving(false);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    }, 1000);
+    }
   };
 
   return (

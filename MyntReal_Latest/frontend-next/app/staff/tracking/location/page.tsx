@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useStaffAuth } from "@/contexts/StaffAuthContext";
+import { getApiUrl } from "@/lib/api";
 
 interface LocationPoint {
   id: number;
@@ -20,19 +21,38 @@ export default function LocationHistoryPage() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
-    // Simulating API fetch for location history
     const fetchLocations = async () => {
-      setLoading(true);
-      setTimeout(() => {
-        setPoints([
-          { id: 1, latitude: 19.0760, longitude: 72.8777, timestamp: "2026-08-14T09:00:00", accuracy: 12, battery_level: 100 },
-          { id: 2, latitude: 19.0800, longitude: 72.8800, timestamp: "2026-08-14T10:30:00", accuracy: 8, battery_level: 92 },
-          { id: 3, latitude: 19.0950, longitude: 72.8900, timestamp: "2026-08-14T12:15:00", accuracy: 15, battery_level: 78 },
-          { id: 4, latitude: 19.1000, longitude: 72.9000, timestamp: "2026-08-14T14:45:00", accuracy: 5, battery_level: 65 },
-          { id: 5, latitude: 19.0760, longitude: 72.8777, timestamp: "2026-08-14T18:00:00", accuracy: 10, battery_level: 45 },
-        ]);
+      if (!token) return;
+      try {
+        setLoading(true);
+        const res = await fetch(`${getApiUrl()}/api/v1/staff/attendance/location/my/history?date=${selectedDate}`, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Map backend location format to LocationPoint
+          // Assuming backend returns a list of items or an object with items
+          const items = Array.isArray(data) ? data : (data.items || data.data || []);
+          const mapped = items.map((item: any, index: number) => ({
+            id: item.id || index + 1,
+            latitude: item.latitude || 0,
+            longitude: item.longitude || 0,
+            timestamp: item.timestamp || item.created_at || new Date().toISOString(),
+            accuracy: item.accuracy || 10,
+            battery_level: item.battery_level || 100
+          }));
+          setPoints(mapped);
+        } else {
+          setPoints([]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch location history", err);
+        setPoints([]);
+      } finally {
         setLoading(false);
-      }, 500);
+      }
     };
 
     fetchLocations();

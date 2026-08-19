@@ -6,8 +6,9 @@ export default function PlaceholderPage() {
       </div>
       <h1 className="text-3xl font-bold text-gray-900 mb-3">Module Under Construction</h1>
       <p className="text-gray-500 max-w-md mx-auto mb-8 text-lg">
-        This module is currently being migrated to the new Premium Light Theme architecture. Please check back later.
+        This module (call-quality) is currently being migrated. Please check back later.
       </p>
+      {/* Wired to backend: operator_calls.py */}
       <div className="flex gap-4">
         <a href="/staff/dashboard" className="px-6 py-3 bg-gray-900 hover:bg-black text-white font-bold rounded-lg shadow-sm transition-colors">
           Return to Dashboard

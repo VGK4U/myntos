@@ -1,16 +1,39 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSuperAdminAuth } from "@/contexts/SuperAdminAuthContext";
+import { getApiUrl } from "@/lib/api";
 
 export default function SuperAdminDashboard() {
   const { user } = useSuperAdminAuth();
 
   const [dbStatus, setDbStatus] = useState("ONLINE");
   const [redisStatus, setRedisStatus] = useState("ONLINE");
-  const [activeUsers, setActiveUsers] = useState(142);
+  const [activeUsers, setActiveUsers] = useState(0);
   const [cpuLoad, setCpuLoad] = useState(24);
   const [memoryUsage, setMemoryUsage] = useState(62);
+  const { token } = useSuperAdminAuth();
+
+  useEffect(() => {
+    if (!token) return;
+    const fetchDashboard = async () => {
+      try {
+        const res = await fetch(`${getApiUrl()}/api/v1/super-admin/dashboard`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data) {
+            setActiveUsers(json.data.users?.active || json.data.users?.total || 0);
+            setDbStatus(json.data.system?.database_status === "Connected" ? "ONLINE" : "OFFLINE");
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchDashboard();
+  }, [token]);
 
   const securityLogs = [
     { time: '14:23:41', level: 'INFO', event: 'Database backup completed successfully.' },

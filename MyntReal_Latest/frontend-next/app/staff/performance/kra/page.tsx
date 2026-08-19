@@ -20,18 +20,24 @@ export default function KRADashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulating API fetch
     const fetchKRAs = async () => {
-      setLoading(true);
-      setTimeout(() => {
-        setKras([
-          { id: 1, title: "New Lead Conversions", weight: 40, target: 15, achieved: 12, unit: "closed deals", status: "ON_TRACK" },
-          { id: 2, title: "Client Meetings", weight: 20, target: 40, achieved: 45, unit: "meetings", status: "ACHIEVED" },
-          { id: 3, title: "Revenue Generation", weight: 30, target: 5000000, achieved: 3200000, unit: "INR", status: "AT_RISK" },
-          { id: 4, title: "Documentation Compliance", weight: 10, target: 100, achieved: 95, unit: "%", status: "ON_TRACK" },
-        ]);
+      try {
+        const tokenStr = typeof window !== "undefined" ? localStorage.getItem("staff_token") : "";
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/staff/performance/kra`, {
+          headers: { Authorization: `Bearer ${tokenStr}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setKras(data.items || []);
+        } else {
+          setKras([]);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch KRA data", err);
+        setKras([]);
+      } finally {
         setLoading(false);
-      }, 500);
+      }
     };
 
     fetchKRAs();

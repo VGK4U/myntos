@@ -56,7 +56,7 @@ export default function GeneralLedgerPage() {
             <i className="fas fa-book text-indigo-600"></i>
             General Ledger
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Day Book · Chart of Accounts · Bank Accounts · Transaction Accounts</p>
+          <p className="text-sm text-gray-500 mt-1">Day Book ï¿½ Chart of Accounts ï¿½ Bank Accounts ï¿½ Transaction Accounts</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Link href="/staff/accounts/journal-voucher" className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow hover:bg-green-700 transition-colors flex items-center gap-2 text-sm">

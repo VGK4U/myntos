@@ -65,25 +65,23 @@ function UserLookupTab() {
     if (!searchId.trim()) return;
     setLoading(true);
     
-    // Simulate API call based on legacy structure
-    setTimeout(() => {
-      setUserData({
-        member_info: { name: "Anil Kumar", id: searchId.toUpperCase(), package: "DIAMOND", status: "Active" },
-        summary: { achieved: 2, received: 1, pending: 1 },
-        awards_direct: [
-          { rank_name: "Star", award_item: "Smart Watch", required_referrals: 5, current_referrals: 5, achieved: true, remaining: 0, processed_status: "Delivered", status_color: "success" },
-          { rank_name: "Silver", award_item: "Tablet", required_referrals: 15, current_referrals: 8, achieved: false, remaining: 7, processed_status: null, status_color: "secondary" },
-        ],
-        awards_matching: [
-          { rank_name: "Gold", award_item: "Laptop", required_matches: 50, current_matches: 50, achieved: true, remaining: 0, processed_status: "Pending Approval", status_color: "warning" },
-          { rank_name: "Platinum", award_item: "Car Fund", required_matches: 250, current_matches: 120, achieved: false, remaining: 130, processed_status: null, status_color: "secondary" },
-        ],
-        bonanzas: [
-          { bonanza_name: "Diwali Dhamaka", reward_name: "Dubai Trip", reward_value: 50000, claimed_date: "2023-11-15", processed_status: "Approved", status_color: "primary" }
-        ]
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("staff_token") : "";
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/staff/mnr-user/awards/${searchId}`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
+      if (res.ok) {
+        const data = await res.json();
+        setUserData(data);
+      } else {
+        setUserData(null);
+      }
+    } catch (err) {
+      console.warn("Failed to fetch awards", err);
+      setUserData(null);
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (
@@ -181,9 +179,9 @@ function UserLookupTab() {
           {/* Tables */}
           <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
             <div className="overflow-x-auto">
-              {subTab === "direct" && <AwardsTable awards={userData.awards_direct} isMatching={false} />}
-              {subTab === "matching" && <AwardsTable awards={userData.awards_matching} isMatching={true} />}
-              {subTab === "bonanza" && <BonanzaTable bonanzas={userData.bonanzas} />}
+              {subTab === "direct" && <AwardsTable awards={userData.awards_direct || []} isMatching={false} />}
+              {subTab === "matching" && <AwardsTable awards={userData.awards_matching || []} isMatching={true} />}
+              {subTab === "bonanza" && <BonanzaTable bonanzas={userData.bonanzas || []} />}
             </div>
           </div>
         </div>

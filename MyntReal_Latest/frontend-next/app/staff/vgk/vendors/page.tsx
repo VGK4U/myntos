@@ -41,13 +41,7 @@ export default function VGKVendorsPage() {
           const data = await res.json();
           setVendors(data.items || []);
         } else {
-          // Fallback mockup data
-          setVendors([
-            { id: 1, business_name: "EcoDrive Motors", category: "AUTOMOTIVE", contact_person: "Ramesh Singh", phone: "+91 9123456780", location: "Mumbai Central", commission_rate: 15, status: "ACTIVE", total_sales: 1250000 },
-            { id: 2, business_name: "SunPower Solutions", category: "ENERGY", contact_person: "Anita Desai", phone: "+91 9234567801", location: "Pune West", commission_rate: 12, status: "ACTIVE", total_sales: 850000 },
-            { id: 3, business_name: "TechFix Center", category: "ELECTRONICS", contact_person: "Vikas P", phone: "+91 9345678012", location: "Andheri East", commission_rate: 10, status: "PENDING", total_sales: 0 },
-            { id: 4, business_name: "GreenLife Grocers", category: "RETAIL", contact_person: "Meena K", phone: "+91 9456780123", location: "Bandra", commission_rate: 5, status: "ACTIVE", total_sales: 45000 },
-          ]);
+          setVendors([]);
         }
       } catch (err) {
         console.warn("Failed to fetch vendors", err);

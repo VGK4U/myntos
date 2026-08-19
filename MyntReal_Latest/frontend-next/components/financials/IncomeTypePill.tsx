@@ -5,7 +5,7 @@ interface IncomeTypePillProps {
 }
 
 export default function IncomeTypePill({ type }: IncomeTypePillProps) {
-  let baseClasses = "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ";
+  const baseClasses = "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ";
   let colorClasses = "";
 
   const t = type.toLowerCase();

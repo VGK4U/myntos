@@ -52,19 +52,7 @@ export default function ServiceDashboardPage() {
           const data = await res.json();
           setStats(data);
         } else {
-          // Fallback dummy data if API not fully wired
-          setStats({
-            open_tickets: 42,
-            unassigned_tickets: 15,
-            avg_resolution_time: "4.2 hrs",
-            csat_score: 4.8,
-            tickets_by_status: {
-              "OPEN": 42,
-              "IN_PROGRESS": 28,
-              "WAITING": 12,
-              "RESOLVED": 156
-            }
-          });
+          setStats(null);
         }
       } catch (err: any) {
         console.warn("Failed to fetch Service stats", err);
@@ -195,13 +183,7 @@ export default function ServiceDashboardPage() {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
           <h2 className="text-lg font-bold text-gray-900 mb-4">Recent Activity</h2>
           <div className="flex-1 overflow-y-auto pr-2 space-y-4">
-            {[
-              { id: 1, action: "Ticket #T-1042 Resolved", user: "Amit Kumar", time: "10 mins ago", color: "green" },
-              { id: 2, action: "New Ticket #T-1045 Raised", user: "Customer Portal", time: "25 mins ago", color: "indigo" },
-              { id: 3, action: "Ticket #T-1040 Escalated", user: "Priya Desai", time: "1 hour ago", color: "red" },
-              { id: 4, action: "Part dispatched for #T-1038", user: "Inventory Sys", time: "2 hours ago", color: "amber" },
-              { id: 5, action: "Ticket #T-1035 Resolved", user: "Rahul Sharma", time: "3 hours ago", color: "green" },
-            ].map(activity => (
+            {(stats?.recent_activity || []).map((activity: any) => (
               <div key={activity.id} className="flex gap-3">
                 <div className={`mt-1 w-2 h-2 rounded-full bg-${activity.color}-500 shrink-0`}></div>
                 <div>
