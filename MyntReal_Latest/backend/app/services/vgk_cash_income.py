@@ -78,11 +78,26 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
         logger.info(f'[VGK-CI] Lead {lead.id} has no associated_partner_id — skipping cash income')
         return 0
 
+    # DC-STRICT-COMM-GATE-2026: Final Commission (COMMISSION kind) entries must ONLY be generated when:
+    # 1. Lead status is strictly in ('subsidy_pending', 'completed', 'completed_paid')
+    # 2. AND all deal payments/transactions are confirmed (deal_value_balance <= 0 or deal_value_received >= deal_value_total)
+    lead_st = (lead.status or '').strip().lower()
+    valid_statuses = ('subsidy_pending', 'completed', 'completed_paid')
+    is_status_valid = lead_st in valid_statuses or (getattr(lead, 'complete_date', None) is not None and lead_st != 'cancelled')
+
+    _dvr_val = float(lead.deal_value_received or 0)
+    _total_val = float(lead.deal_value_total or 0)
+    _bal_val = float(lead.deal_value_balance or 0) if lead.deal_value_balance is not None else (_total_val - _dvr_val)
+
+    is_payment_confirmed = (_bal_val <= 0) or (_dvr_val >= _total_val and _total_val > 0)
+
+    if not (is_status_valid and is_payment_confirmed):
+        logger.info(f'[VGK-CI] Lead {lead.id} (status="{lead_st}", comp_date={getattr(lead, "complete_date", None)}, dvr={_dvr_val}, bal={_bal_val}) is NOT eligible for Final Commission drafts yet.')
+        return 0
+
     company_id = lead.company_id
     category_id = lead.category_id
     deal_total  = Decimal(str(lead.deal_value_total or 0))
-    # DC Protocol: commission is always calculated on the OVERALL deal value (inc. tax).
-    # deal_value_excl_tax is stored in the entry for audit only — not used in calculation.
     deal_ex_tax = Decimal(str(lead.deal_value_excl_tax or 0))
 
     # DC-COMM-DVR-001 (Jun 2026): Commission base = deal_value_received (DVR) for ALL categories.
@@ -1092,37 +1107,41 @@ def _ensure_marketing_support_ledgers(db: Session, product_co_id: int, member_co
     member_name  = _company_name(db, member_co_id)
     product_name = _company_name(db, product_co_id)
 
-    db.execute(text("""
-        INSERT INTO account_ledger_masters
-          (company_id, account_type, account_name, account_code, parent_group,
-           description, is_active, created_at, updated_at)
-        VALUES
-          (:cid, 'LIABILITY', :name, :code,
-           'Current Liabilities/Provisions',
-           :desc, TRUE, NOW(), NOW())
-        ON CONFLICT (company_id, account_type, account_name) DO NOTHING
-    """), {
-        'cid':  product_co_id,
-        'name': f'Marketing Support Payable \u2014 {member_name}',
-        'code': f'MSP-{member_co_id}',
-        'desc': f'Marketing support fee payable to {member_name} (VGK commission channel)',
-    })
+    msp_name = f'Marketing Support Payable \u2014 {member_name}'
+    existing_msp = db.execute(text("SELECT id FROM account_ledger_masters WHERE company_id = :cid AND account_type = 'LIABILITY' AND account_name = :name LIMIT 1"), {'cid': product_co_id, 'name': msp_name}).fetchone()
+    if not existing_msp:
+        db.execute(text("""
+            INSERT INTO account_ledger_masters
+              (company_id, account_type, account_name, account_code, parent_group,
+               description, is_active, created_at, updated_at)
+            VALUES
+              (:cid, 'LIABILITY', :name, :code,
+               'Current Liabilities/Provisions',
+               :desc, TRUE, NOW(), NOW())
+        """), {
+            'cid':  product_co_id,
+            'name': msp_name,
+            'code': f'MSP-{member_co_id}',
+            'desc': f'Marketing support fee payable to {member_name} (VGK commission channel)',
+        })
 
-    db.execute(text("""
-        INSERT INTO account_ledger_masters
-          (company_id, account_type, account_name, account_code, parent_group,
-           description, is_active, created_at, updated_at)
-        VALUES
-          (:cid, 'ASSET', :name, :code,
-           'Current Assets/Loans & Advances (Asset)',
-           :desc, TRUE, NOW(), NOW())
-        ON CONFLICT (company_id, account_type, account_name) DO NOTHING
-    """), {
-        'cid':  member_co_id,
-        'name': f'Marketing Support Receivable \u2014 {product_name}',
-        'code': f'MSR-{product_co_id}',
-        'desc': f'Marketing support fee receivable from {product_name} (VGK commission channel)',
-    })
+    msr_name = f'Marketing Support Receivable \u2014 {product_name}'
+    existing_msr = db.execute(text("SELECT id FROM account_ledger_masters WHERE company_id = :cid AND account_type = 'ASSET' AND account_name = :name LIMIT 1"), {'cid': member_co_id, 'name': msr_name}).fetchone()
+    if not existing_msr:
+        db.execute(text("""
+            INSERT INTO account_ledger_masters
+              (company_id, account_type, account_name, account_code, parent_group,
+               description, is_active, created_at, updated_at)
+            VALUES
+              (:cid, 'ASSET', :name, :code,
+               'Current Assets/Loans & Advances (Asset)',
+               :desc, TRUE, NOW(), NOW())
+        """), {
+            'cid':  member_co_id,
+            'name': msr_name,
+            'code': f'MSR-{product_co_id}',
+            'desc': f'Marketing support fee receivable from {product_name} (VGK commission channel)',
+        })
     logger.info(
         f'[VGK-JV] Mktg-support ledgers ensured: '
         f'co#{product_co_id}\u2192Payable / co#{member_co_id}\u2190Receivable'
@@ -1221,7 +1240,6 @@ def ensure_bank_ledger_master(db: Session, company_id: int, bank_account_id: int
            'Auto-created from company_bank_accounts', :bn, :an, :ifsc,
            0, 'DEBIT',
            TRUE, NOW(), NOW())
-        ON CONFLICT (company_id, account_type, account_name) DO UPDATE SET updated_at = NOW()
         RETURNING id
     """), {
         'cid': company_id, 'name': name,
@@ -1259,7 +1277,6 @@ def ensure_cash_ledger_master(db: Session, company_id: int, staff_id: int) -> di
           (:cid, 'CASH', :name, :code, 'Current Assets/Cash-in-hand',
            'Auto-created for staff cash float', 0, 'DEBIT',
            TRUE, NOW(), NOW())
-        ON CONFLICT (company_id, account_type, account_name) DO UPDATE SET updated_at = NOW()
         RETURNING id
     """), {
         'cid': company_id, 'name': name, 'code': f'CASH-EMP-{s.id}',
@@ -2220,7 +2237,6 @@ def seed_default_income_ledgers(db: Session, company_id: int) -> dict:
               (:cid, :t, :n, :code, :pg,
                'Auto-seeded by VGK income pipeline bootstrap', 0, 'DEBIT',
                TRUE, NOW(), NOW())
-            ON CONFLICT (company_id, account_type, account_name) DO NOTHING
         """), {
             'cid': company_id, 't': acct_type, 'n': acct_name,
             'code': f'{acct_code}-{company_id}', 'pg': parent_group,

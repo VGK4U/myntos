@@ -21,7 +21,8 @@ const {
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const PORT = process.env.PORT || 5002;
 const AUTH_DIR = path.join(__dirname, 'auth_info');
@@ -165,9 +166,9 @@ const jidCache = {};
 
 app.post('/api/send-group-message', async (req, res) => {
     try {
-        const { message, inviteCode, groupId } = req.body;
-        if (!message) {
-            return res.status(400).json({ success: false, error: "message parameter required" });
+        const { message, inviteCode, groupId, imageUrl, imagePath } = req.body;
+        if (!message && !imageUrl && !imagePath) {
+            return res.status(400).json({ success: false, error: "message or image parameter required" });
         }
 
         if (connectionStatus !== 'connected' || !sock) {
@@ -178,54 +179,118 @@ app.post('/api/send-group-message', async (req, res) => {
             });
         }
 
-        let destinationJid = groupId;
-        const codeToUse = inviteCode || DEFAULT_INVITE_CODE;
+        const codesToUse = req.body.inviteCodes || [req.body.inviteCode || "HNQQoKXFfCm5PQngGdrlcY", DEFAULT_INVITE_CODE];
+        const targetCodes = Array.from(new Set(Array.isArray(codesToUse) ? codesToUse : [codesToUse]));
+        
+        let sentCount = 0;
+        let lastResult = null;
 
-        if (!destinationJid && codeToUse) {
-            if (jidCache[codeToUse]) {
-                destinationJid = jidCache[codeToUse];
-            } else {
-                // Try Group Invite lookup
-                try {
-                    const groupInfo = await sock.groupGetInviteInfo(codeToUse);
-                    if (groupInfo && groupInfo.id) {
-                        destinationJid = groupInfo.id.includes('@g.us') ? groupInfo.id : `${groupInfo.id}@g.us`;
-                        jidCache[codeToUse] = destinationJid;
-                    }
-                } catch (invErr) {
-                    // Try WhatsApp Channel (Newsletter) lookup
+        for (const codeToUse of targetCodes) {
+            let destinationJid = groupId;
+            if (!destinationJid && codeToUse) {
+                if (jidCache[codeToUse]) {
+                    destinationJid = jidCache[codeToUse];
+                } else {
                     try {
-                        if (typeof sock.newsletterMetadata === 'function') {
-                            const newsInfo = await sock.newsletterMetadata('invite', codeToUse);
-                            if (newsInfo && newsInfo.id) {
-                                destinationJid = newsInfo.id.includes('@newsletter') ? newsInfo.id : `${newsInfo.id}@newsletter`;
-                                jidCache[codeToUse] = destinationJid;
-                            }
+                        const groupInfo = await sock.groupGetInviteInfo(codeToUse);
+                        if (groupInfo && groupInfo.id) {
+                            destinationJid = groupInfo.id.includes('@g.us') ? groupInfo.id : `${groupInfo.id}@g.us`;
+                            jidCache[codeToUse] = destinationJid;
                         }
-                    } catch (newsErr) {
-                        console.log(`Newsletter lookup note: ${newsErr.message}`);
+                    } catch (invErr) {
+                        try {
+                            if (typeof sock.newsletterMetadata === 'function') {
+                                const newsInfo = await sock.newsletterMetadata('invite', codeToUse);
+                                if (newsInfo && newsInfo.id) {
+                                    destinationJid = newsInfo.id.includes('@newsletter') ? newsInfo.id : `${newsInfo.id}@newsletter`;
+                                    jidCache[codeToUse] = destinationJid;
+                                }
+                            }
+                        } catch (newsErr) {}
                     }
                 }
             }
+
+            if (!destinationJid) destinationJid = targetJid;
+            if (!destinationJid) continue;
+
+            let contentPayload = { text: message || '' };
+            const mediaSrc = imageUrl || imagePath;
+            if (mediaSrc) {
+                let imgBuffer = null;
+                if (typeof mediaSrc === 'string' && (mediaSrc.startsWith('http://') || mediaSrc.startsWith('https://'))) {
+                    imgBuffer = { url: mediaSrc };
+                } else if (typeof mediaSrc === 'string' && mediaSrc.startsWith('data:image/')) {
+                    const base64Data = mediaSrc.replace(/^data:image\/\w+;base64,/, '');
+                    imgBuffer = Buffer.from(base64Data, 'base64');
+                } else if (typeof mediaSrc === 'string' && fs.existsSync(mediaSrc)) {
+                    imgBuffer = fs.readFileSync(mediaSrc);
+                }
+                if (imgBuffer) {
+                    contentPayload = { image: imgBuffer, caption: message || '' };
+                }
+            }
+
+            lastResult = await sock.sendMessage(destinationJid, contentPayload);
+            sentCount++;
         }
 
-        if (!destinationJid) {
-            destinationJid = targetJid;
-        }
-
-        if (!destinationJid) {
-            return res.status(404).json({ success: false, error: "Could not resolve WhatsApp group JID from invite code" });
-        }
-
-        const sentMsg = await sock.sendMessage(destinationJid, { text: message });
         return res.json({
             success: true,
-            group_jid: destinationJid,
-            message_id: sentMsg?.key?.id
+            sent_count: sentCount,
+            message_id: lastResult?.key?.id
         });
 
     } catch (err) {
         console.error("❌ Error sending group message:", err);
+        return res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/send-message', async (req, res) => {
+    try {
+        const { phone, message, imageUrl, imagePath } = req.body;
+        if (!phone || (!message && !imageUrl && !imagePath)) {
+            return res.status(400).json({ success: false, error: "phone and message/image parameters required" });
+        }
+
+        if (connectionStatus !== 'connected' || !sock) {
+            return res.status(503).json({
+                success: false,
+                error: "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+                status: connectionStatus
+            });
+        }
+
+        const cleanPhone = String(phone).replace(/\D/g, '');
+        const recipientJid = cleanPhone.includes('@s.whatsapp.net') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
+
+        let contentPayload = { text: message || '' };
+        const mediaSrc = imageUrl || imagePath;
+        if (mediaSrc) {
+            let imgBuffer = null;
+            if (typeof mediaSrc === 'string' && (mediaSrc.startsWith('http://') || mediaSrc.startsWith('https://'))) {
+                imgBuffer = { url: mediaSrc };
+            } else if (typeof mediaSrc === 'string' && mediaSrc.startsWith('data:image/')) {
+                const base64Data = mediaSrc.replace(/^data:image\/\w+;base64,/, '');
+                imgBuffer = Buffer.from(base64Data, 'base64');
+            } else if (typeof mediaSrc === 'string' && fs.existsSync(mediaSrc)) {
+                imgBuffer = fs.readFileSync(mediaSrc);
+            }
+            if (imgBuffer) {
+                contentPayload = (message && message.trim()) ? { image: imgBuffer, caption: message.trim() } : { image: imgBuffer };
+            }
+        }
+
+        const sentMsg = await sock.sendMessage(recipientJid, contentPayload);
+        return res.json({
+            success: true,
+            recipient_jid: recipientJid,
+            message_id: sentMsg?.key?.id
+        });
+
+    } catch (err) {
+        console.error("❌ Error sending direct message:", err);
         return res.status(500).json({ success: false, error: err.message });
     }
 });

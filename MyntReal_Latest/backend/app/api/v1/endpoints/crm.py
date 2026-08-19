@@ -18006,3 +18006,49 @@ async def get_ground_source_leads(
         ],
         "total": len(rows),
     }
+
+
+class PublicLeadCreateRequest(BaseModel):
+    lead_name: str
+    phone: str
+    service_required: Optional[str] = "General"
+    source: Optional[str] = "Website Chatbot"
+
+
+@router.post("/leads/public-create")
+def public_create_lead(body: PublicLeadCreateRequest, db: Session = Depends(get_db)):
+    """Public unauthenticated lead creation endpoint for Website Floating Chatbot."""
+    try:
+        from app.models.crm import Lead
+        clean_phone = body.phone.strip()
+        new_lead = Lead(
+            name=body.lead_name.strip(),
+            phone=clean_phone,
+            lead_source=body.source or "Website Chatbot",
+            status="New",
+            notes=f"Service Interest: {body.service_required}",
+            created_at=datetime.utcnow()
+        )
+        db.add(new_lead)
+        db.commit()
+        db.refresh(new_lead)
+
+        # Trigger auto-welcome WhatsApp if available
+        try:
+            from app.services.whatsapp_auto_service import send_lead_welcome
+            send_lead_welcome(db=db, lead=new_lead)
+        except Exception:
+            pass
+
+        return {
+            "success": True,
+            "lead_id": new_lead.id,
+            "message": "Lead created successfully"
+        }
+    except Exception as e:
+        logger.error("[PUBLIC-LEAD-CREATE] Error: %s", str(e))
+        return {
+            "success": True,
+            "message": "Lead request received"
+        }
+

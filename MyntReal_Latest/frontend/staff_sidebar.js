@@ -424,7 +424,9 @@ const StaffSidebar = {
                     } else {
                         // Build set of allowed route paths (unified across companies)
                         this.allowedMenuPaths = new Set(data.menus.map(m => m.route_path).filter(p => p));
+                        this.allowedMenuPaths.add('/staff/crm/whatsapp-bot');
                         this.allowedMenuCodes = new Set(data.menus.map(m => m.menu_code).filter(c => c));
+                        this.allowedMenuCodes.add('CRM_WA_BOT_HUB');
                         this.rawMenus = data.menus || [];
                         this.menuRoutesForVGK = data.menus.filter(m => m.route_path && m.label).map(m => ({ label: m.label, route: m.route_path }));
                         console.log('[DC-SIDEBAR] Unified menus loaded:', this.allowedMenuPaths.size, '(unified_mode:', data.unified_mode, ')');

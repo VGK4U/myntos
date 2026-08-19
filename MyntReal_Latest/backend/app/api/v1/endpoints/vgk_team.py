@@ -379,9 +379,19 @@ def list_vgk_members(
             reg_from = today.replace(day=1).isoformat()
             reg_to = today.isoformat()
     if isinstance(reg_from, str) and reg_from.strip():
-        query = query.filter(OfficialPartner.created_at >= datetime.strptime(reg_from.strip(), '%Y-%m-%d'))
+        try:
+            rf_norm = _normalize_date_str(reg_from)
+            if rf_norm:
+                query = query.filter(OfficialPartner.created_at >= datetime.strptime(rf_norm, '%Y-%m-%d'))
+        except Exception:
+            pass
     if isinstance(reg_to, str) and reg_to.strip():
-        query = query.filter(OfficialPartner.created_at <= datetime.strptime(reg_to.strip() + 'T23:59:59', '%Y-%m-%dT%H:%M:%S'))
+        try:
+            rt_norm = _normalize_date_str(reg_to)
+            if rt_norm:
+                query = query.filter(OfficialPartner.created_at <= datetime.strptime(rt_norm + 'T23:59:59', '%Y-%m-%dT%H:%M:%S'))
+        except Exception:
+            pass
     # DC_CP_CARD_001: computed fields that require full-dataset Python sort/filter
     _COMPUTED_SORT_FIELDS = {'downline_count', 'src_revenue', 'leads_total', 'leads_won', 'leads_lost'}
     _sb_str = sort_by if isinstance(sort_by, str) else ''
@@ -4106,6 +4116,22 @@ def vgk_executive_dashboard(
 
 
 # ── DC-VGK-MEMBER-EARN-001: Member-wise earnings + points dashboard ────────────
+def _normalize_date_str(d_str: Optional[str]) -> Optional[str]:
+    if not d_str or not isinstance(d_str, str):
+        return None
+    s = d_str.strip()
+    if not s:
+        return None
+    if '/' in s:
+        parts = s.split('/')
+        if len(parts) == 3 and len(parts[2]) == 4:
+            return f"{parts[2]}-{int(parts[1]):02d}-{int(parts[0]):02d}"
+    elif '-' in s:
+        parts = s.split('-')
+        if len(parts) == 3 and len(parts[0]) == 2 and len(parts[2]) == 4:
+            return f"{parts[2]}-{int(parts[1]):02d}-{int(parts[0]):02d}"
+    return s
+
 @router.get("/dashboard/member-earnings")
 def member_earnings_dashboard(
     search: Optional[str] = Query(None),
@@ -4124,6 +4150,7 @@ def member_earnings_dashboard(
     partner_code: Optional[str] = Query(None, description="Filter by specific partner code"),
     community_only: bool = Query(False, description="Filter only community service entries"),
     community_service_id: Optional[int] = Query(None, description="Filter by specific community service ID"),
+    partner_id: Optional[int] = Query(None, description="Filter by specific partner ID"),
     hide_vgk_support: bool = Query(True, description="Hide VGK Support entries and totals"),
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
@@ -4134,8 +4161,14 @@ def member_earnings_dashboard(
     """
     from sqlalchemy import or_ as _or
 
+    norm_df = _normalize_date_str(date_from)
+    norm_dt = _normalize_date_str(date_to)
+
     query = db.query(OfficialPartner).filter(OfficialPartner.category == 'VGK_TEAM')
-    if hide_vgk_support:
+    if partner_id:
+        query = query.filter(OfficialPartner.id == partner_id)
+        earners_only = False
+    if hide_vgk_support and not partner_id:
         query = query.filter(OfficialPartner.partner_code != 'VGK07102207', OfficialPartner.id != 31, OfficialPartner.partner_name.not_ilike('%VGK Support%'))
     if partner_code and isinstance(partner_code, str):
         query = query.filter(OfficialPartner.partner_code == partner_code.strip())
@@ -4166,12 +4199,12 @@ def member_earnings_dashboard(
     # Build date + status WHERE clauses for income SQL
     date_params: dict = {}
     date_clauses = []
-    if date_from and isinstance(date_from, str):
-        date_clauses.append("AND e.created_at::date >= :df")
-        date_params['df'] = date_from.strip()
-    if date_to and isinstance(date_to, str):
-        date_clauses.append("AND e.created_at::date <= :dt")
-        date_params['dt'] = date_to.strip()
+    if norm_df:
+        date_clauses.append("AND e.created_at::date >= CAST(:df AS DATE)")
+        date_params['df'] = norm_df
+    if norm_dt:
+        date_clauses.append("AND e.created_at::date <= CAST(:dt AS DATE)")
+        date_params['dt'] = norm_dt
     # DC-VGK-CUST-AGG-001: when customer_search is active, restrict aggregate SQL to matching leads
     cust_join_sql = ""
     if customer_search and isinstance(customer_search, str):
@@ -4383,9 +4416,9 @@ def member_earnings_dashboard(
     if parent_ids:
         try:
             p_rows = db.execute(text(
-                "SELECT id, partner_code, partner_name FROM official_partners WHERE id = ANY(:ids)"
+                "SELECT id, partner_code, partner_name, phone FROM official_partners WHERE id = ANY(:ids)"
             ), {"ids": parent_ids}).fetchall()
-            p_info = {r[0]: {"code": r[1], "name": r[2]} for r in p_rows}
+            p_info = {r[0]: {"code": r[1], "name": r[2], "phone": r[3]} for r in p_rows}
             
             p_inc_rows = db.execute(text(
                 "SELECT e.partner_id, COALESCE(SUM(e.commission_amount),0) AS gross "
@@ -4401,6 +4434,7 @@ def member_earnings_dashboard(
                 info = p_info.get(pid, {})
                 parent_map[pid] = {
                     "partner_name": info.get("name"),
+                    "phone": info.get("phone"),
                     "gross_earned": p_earnings.get(pid, 0.0),
                     "passport_photo": passport_photo_map.get(pid),
                     "potential_earned": float(p_pot_map.get(pid, 0.0))
@@ -4514,10 +4548,15 @@ def member_earnings_dashboard(
             kind = e["kind"]
             e_gross = e["gross"]
             adv_paid = 0.0
-            if kind == 'COMMISSION' and e["source_lead_id"] and e["level"] is not None:
+            if kind not in ('ADVANCE', 'DVR_ADVANCE') and e["source_lead_id"] and e["level"] is not None:
                 adv_paid = adv_map_bulk.get((int(e["source_lead_id"]), int(e["level"])), 0.0)
             bal_gross = max(0.0, e_gross - adv_paid)
-            e_net = round(bal_gross * 0.90, 2)
+            if adv_paid > 0:
+                adm = round(bal_gross * 0.08, 2)
+                tds = round((bal_gross - adm) * 0.02, 2)
+                e_net = max(0.0, round(bal_gross - adm - tds, 2))
+            else:
+                e_net = e["net"] if (e["net"] > 0) else max(0.0, round(bal_gross * 0.90, 2))
             net_earning += e_net
             if st in ("DRAFT", "PENDING", "STAGE1_APPROVED"):
                 pending_amt += e_net
@@ -4530,12 +4569,15 @@ def member_earnings_dashboard(
         
         items.append({
             "id":                     m.id,
+            "parent_partner_id":        m.parent_partner_id,
             "partner_code":           m.partner_code,
             "partner_name":           m.partner_name,
+            "phone":                  m.phone,
             "is_active":              m.is_active,
             "logo_path":              m.logo_path,
             "passport_photo":         passport_photo_map.get(m.id),
             "senior_name":            senior_info.get("partner_name"),
+            "senior_phone":           senior_info.get("phone"),
             "senior_earning":         senior_info.get("gross_earned"),
             "senior_potential_earned": senior_info.get("potential_earned"),
             "senior_photo":           senior_info.get("passport_photo"),
@@ -4635,12 +4677,14 @@ def member_income_entries_detail(
     _extra_where = ""
     _extra_params: dict = {"pid": partner_id}
     # DC-IE-DATE-FILTER-001: date range filter on created_at::date
-    if isinstance(date_from, str) and date_from.strip():
+    ie_df = _normalize_date_str(date_from)
+    ie_dt = _normalize_date_str(date_to)
+    if ie_df:
         _extra_where += " AND e.created_at::date >= CAST(:ie_date_from AS DATE)"
-        _extra_params["ie_date_from"] = date_from.strip()
-    if isinstance(date_to, str) and date_to.strip():
+        _extra_params["ie_date_from"] = ie_df
+    if ie_dt:
         _extra_where += " AND e.created_at::date <= CAST(:ie_date_to AS DATE)"
-        _extra_params["ie_date_to"] = date_to.strip()
+        _extra_params["ie_date_to"] = ie_dt
     if isinstance(community_only, bool) and community_only:
         _extra_where += " AND e.source_lead_id IN (SELECT id FROM crm_leads WHERE community_id IS NOT NULL)"
     if isinstance(community_service_id, int) and community_service_id > 0:
@@ -4681,7 +4725,7 @@ def member_income_entries_detail(
     try:
         rows = db.execute(text(
             "SELECT e.id, e.entry_number, e.status, e.kind, e.level, "
-            "  e.created_at::date::text                    AS entry_date, "
+            "  COALESCE(e.income_date::text, e.created_at::date::text, e.confirmed_at::date::text) AS entry_date, "
             "  COALESCE(e.commission_pct, 0)::float        AS commission_pct, "
             "  COALESCE(e.commission_amount, 0)::float     AS commission_amount, "
             "  COALESCE(e.admin_charges, 0)::float         AS admin_charges, "
@@ -4693,6 +4737,7 @@ def member_income_entries_detail(
             "  COALESCE(e.confirmed_final_value, 0)::float AS cfv_raw, "
             "  COALESCE(e.deal_value_total, 0)::float      AS dvt_raw "
             "FROM vgk_cash_income_entries e "
+            "LEFT JOIN crm_leads l ON e.source_lead_id = l.id "
             f"WHERE e.partner_id = :pid{_extra_where} "
             "ORDER BY e.created_at DESC"
         ), _extra_params).fetchall()
@@ -4749,6 +4794,8 @@ def member_income_entries_detail(
                 "ORDER BY a.created_at DESC"
             ), _vsca_params).fetchall()
         except Exception:
+            try: db.rollback()
+            except: pass
             vsca_rows = []
 
     # DC-BONANZA-EARNINGS-001 (Jul 2026): Fetch BonanzaProgress records for cash/bonus/extra_commission
@@ -4821,6 +4868,8 @@ def member_income_entries_detail(
                 "ORDER BY bp.created_at DESC"
             ), _bp_params).fetchall()
         except Exception:
+            try: db.rollback()
+            except: pass
             bp_rows = []
 
     # Batch-resolve client names + mobile numbers from CRM in one query (VCI + VSCA + BP)
@@ -4853,7 +4902,8 @@ def member_income_entries_detail(
                 "solar_brand_id": r.solar_brand_id,
             } for r in lr}
         except Exception:
-            pass
+            try: db.rollback()
+            except: pass
 
     # Batch-resolve prior advances (ADVANCE + DVR_ADVANCE) for each (lead_id, level)
     adv_map: dict = {}
@@ -4885,7 +4935,7 @@ def member_income_entries_detail(
                 "  SUM(COALESCE(a.advance_amount, 0)) AS total_adv "
                 "FROM vgk_solar_cibil_advances a "
                 "WHERE a.lead_id = ANY(:lids) "
-                "  AND a.status IN ('PENDING', 'RELEASED') "
+                "  AND a.status IN ('PENDING', 'RELEASED', 'PAID') "
                 "  AND NOT EXISTS ( "
                 "    SELECT 1 FROM vgk_cash_income_entries vci "
                 "    WHERE vci.source_lead_id = a.lead_id "
@@ -4902,6 +4952,8 @@ def member_income_entries_detail(
                     cur["total"]  += float(ar.total_adv or 0)
                     adv_map[key] = cur
         except Exception as _exc:
+            try: db.rollback()
+            except: pass
             print(f"[ERROR-ADV-MAP] Failed to compute adv_map: {_exc}")
 
     # Fetch commission configs & solar brand incentive configs for accurate potential calculations

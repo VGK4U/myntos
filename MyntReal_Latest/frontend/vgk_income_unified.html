@@ -121,9 +121,9 @@ textarea:focus,input[type=text]:focus,select:focus{border-color:#059669}
 
 <div class="summary-row" id="summaryRow"></div>
 
-<div class="filter-row">
+<div class="filter-row" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:8px 10px;position:relative;z-index:100">
   <span class="lbl">Status:</span>
-  <select id="fStatus" onchange="loadList()">
+  <select id="fStatus" onchange="loadList()" style="display:none">
     <option value="">All Statuses</option>
     <option value="DRAFT">DRAFT</option>
     <option value="PENDING">PENDING</option>
@@ -132,8 +132,26 @@ textarea:focus,input[type=text]:focus,select:focus{border-color:#059669}
     <option value="PAID">PAID</option>
     <option value="CANCELLED">CANCELLED</option>
   </select>
+  <div style="position:relative;display:inline-block">
+    <button type="button" id="fStatusBtn" onclick="toggleStatusDrop()" style="border:1.5px solid #d1fae5;border-radius:7px;padding:6px 10px;font-size:12px;background:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-width:140px;justify-content:space-between">
+      <span id="fStatusBtnTxt">All Statuses</span>
+      <i class="fas fa-chevron-down" style="font-size:10px;color:#6b7280"></i>
+    </button>
+    <div id="fStatusDrop" style="display:none;position:absolute;top:calc(100% + 4px);left:0;background:#fff;border:1.5px solid #a7f3d0;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,0.2);z-index:9999;padding:6px;min-width:170px">
+      <label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;cursor:pointer;border-bottom:1px solid #f0fdf4">
+        <input type="checkbox" id="st_ALL" onchange="toggleAllStatuses(this)"> <strong>All Statuses</strong>
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;cursor:pointer"><input type="checkbox" class="st-ck" value="DRAFT" onchange="onStatusCkChange()"> DRAFT</label>
+      <label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;cursor:pointer"><input type="checkbox" class="st-ck" value="PENDING" onchange="onStatusCkChange()"> PENDING</label>
+      <label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;cursor:pointer"><input type="checkbox" class="st-ck" value="RELEASED" onchange="onStatusCkChange()"> RELEASED</label>
+      <label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;cursor:pointer"><input type="checkbox" class="st-ck" value="STAGE1_APPROVED" onchange="onStatusCkChange()"> STAGE1 APPROVED</label>
+      <label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;cursor:pointer"><input type="checkbox" class="st-ck" value="PAID" onchange="onStatusCkChange()"> PAID</label>
+      <label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;cursor:pointer"><input type="checkbox" class="st-ck" value="CANCELLED" onchange="onStatusCkChange()"> CANCELLED</label>
+    </div>
+  </div>
+
   <span class="lbl">Type:</span>
-  <select id="fKind" onchange="loadList()">
+  <select id="fKind" onchange="loadList()" style="font-size:12px;padding:5px 8px">
     <option value="">All</option>
     <option value="COMMISSION">Commission</option>
     <option value="ADVANCE">Solar Advance</option>
@@ -141,39 +159,47 @@ textarea:focus,input[type=text]:focus,select:focus{border-color:#059669}
     <option value="BONANZA">Bonanza</option>
     <option value="FIELD_ALLOWANCE">Field Allowance</option>
   </select>
+
   <span class="lbl">Month:</span>
-  <input type="month" id="fMonth" onchange="loadList()" style="max-width:140px">
+  <input type="month" id="fMonth" onchange="loadList()" style="max-width:125px;font-size:12px;padding:5px 6px">
+
   <span class="lbl">From:</span>
-  <input type="date" id="fDateFrom" onchange="loadList()" style="max-width:140px" title="Income date from">
+  <input type="date" id="fDateFrom" onchange="loadList()" style="max-width:125px;font-size:12px;padding:5px 6px" title="Income date from">
+
   <span class="lbl">To:</span>
-  <input type="date" id="fDateTo" onchange="loadList()" style="max-width:140px" title="Income date to">
-  <div class="date-quick-btns" style="display:inline-flex;gap:4px;margin-left:4px">
-    <button class="btn-act" onclick="setDateFilter('today')" style="background:#e0f2fe;color:#0369a1;border:1.5px solid #bae6fd;padding:4px 8px;font-size:11px;margin:0" title="Today">Today</button>
-    <button class="btn-act" onclick="setDateFilter('yesterday')" style="background:#fef3c7;color:#b45309;border:1.5px solid #fde68a;padding:4px 8px;font-size:11px;margin:0" title="Yesterday">Yesterday</button>
-    <button class="btn-act" onclick="setDateFilter('week')" style="background:#e0e7ff;color:#4338ca;border:1.5px solid #c7d2fe;padding:4px 8px;font-size:11px;margin:0" title="This Week">This Week</button>
-    <button class="btn-act" onclick="setDateFilter('month')" style="background:#ede9fe;color:#6d28d9;border:1.5px solid #ddd6fe;padding:4px 8px;font-size:11px;margin:0" title="This Month">This Month</button>
-    <button class="btn-act" onclick="setDateFilter('all')" style="background:#f3f4f6;color:#374151;border:1.5px solid #e5e7eb;padding:4px 8px;font-size:11px;margin:0" title="All Time">All Time</button>
+  <input type="date" id="fDateTo" onchange="loadList()" style="max-width:125px;font-size:12px;padding:5px 6px" title="Income date to">
+
+  <div class="date-quick-btns" style="display:inline-flex;gap:3px">
+    <button class="btn-act" onclick="setDateFilter('today')" style="background:#e0f2fe;color:#0369a1;border:1.5px solid #bae6fd;padding:4px 7px;font-size:11px" title="Today">Today</button>
+    <button class="btn-act" onclick="setDateFilter('yesterday')" style="background:#fef3c7;color:#b45309;border:1.5px solid #fde68a;padding:4px 7px;font-size:11px" title="Yesterday">Yesterday</button>
+    <button class="btn-act" onclick="setDateFilter('week')" style="background:#e0e7ff;color:#4338ca;border:1.5px solid #c7d2fe;padding:4px 7px;font-size:11px" title="This Week">This Week</button>
+    <button class="btn-act" onclick="setDateFilter('month')" style="background:#ede9fe;color:#6d28d9;border:1.5px solid #ddd6fe;padding:4px 7px;font-size:11px" title="This Month">This Month</button>
+    <button class="btn-act" onclick="setDateFilter('all')" style="background:#f3f4f6;color:#374151;border:1.5px solid #e5e7eb;padding:4px 7px;font-size:11px" title="All Time">All Time</button>
   </div>
+
   <span class="lbl">Search:</span>
-  <div style="position:relative;display:inline-flex;align-items:center;min-width:240px">
-    <input type="text" id="fSearch" placeholder="Partner / entry / name…" style="width:100%;padding-right:28px" oninput="_onSearchInput()" onkeydown="_onSearchKey(event)" autocomplete="off">
-    <button id="fSearchClear" title="Clear partner filter" onclick="_clearPartner()" style="display:none;position:absolute;right:6px;background:none;border:none;cursor:pointer;color:#059669;font-size:15px;line-height:1;padding:0"><i class="fas fa-times-circle"></i></button>
+  <div style="position:relative;display:inline-flex;align-items:center;min-width:200px">
+    <input type="text" id="fSearch" placeholder="Partner / entry / name…" style="width:100%;padding-right:26px;font-size:12px;padding-top:5px;padding-bottom:5px" oninput="_onSearchInput()" onkeydown="_onSearchKey(event)" autocomplete="off">
+    <button id="fSearchClear" title="Clear partner filter" onclick="_clearPartner()" style="display:none;position:absolute;right:6px;background:none;border:none;cursor:pointer;color:#059669;font-size:14px;line-height:1;padding:0"><i class="fas fa-times-circle"></i></button>
     <div id="fSearchDrop" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:100%;background:#fff;border:1.5px solid #d1fae5;border-radius:9px;box-shadow:0 8px 28px rgba(0,0,0,.13);z-index:2000;max-height:260px;overflow-y:auto"></div>
   </div>
+
   <span class="lbl">Points:</span>
-  <select id="fPoints" onchange="loadList()">
+  <select id="fPoints" onchange="loadList()" style="font-size:12px;padding:5px 6px">
     <option value="">All</option>
-    <option value="available">✅ Available</option>
-    <option value="not_available">❌ Not Available</option>
+    <option value="available">Available</option>
+    <option value="not_available">Not Available</option>
   </select>
-  <button class="btn-act" onclick="clearDateFilter()" style="background:#f3f4f6;color:#6b7280;border:1.5px solid #d1fae5" title="Clear date filters"><i class="fas fa-times"></i></button>
-  <button class="btn-act" id="btnGroupToggle" onclick="toggleGroupView()" style="background:#e0e7ff;color:#3730a3;border:1.5px solid #c7d2fe"><i class="fas fa-sitemap me-1"></i>3-Level Accordion View</button>
-  <button class="btn-act btn-confirm" onclick="loadList()" style="margin-left:auto"><i class="fas fa-redo"></i> Refresh</button>
+
+  <button class="btn-act" onclick="clearDateFilter()" style="background:#f3f4f6;color:#6b7280;border:1.5px solid #d1fae5;padding:4px 8px;font-size:11px" title="Clear date filters"><i class="fas fa-times"></i></button>
+  <button class="btn-act" id="btnGroupToggle" onclick="toggleGroupView()" style="background:#e0e7ff;color:#3730a3;border:1.5px solid #c7d2fe;padding:4px 8px;font-size:11px"><i class="fas fa-sitemap me-1"></i>3-Level Accordion View</button>
+  <button class="btn-act btn-confirm" onclick="loadList()" style="padding:4px 10px;font-size:11px"><i class="fas fa-redo me-1"></i> Refresh</button>
 </div>
 
 <div class="table-wrap">
   <table>
     <thead><tr>
+      <th style="width:32px;text-align:center"><input type="checkbox" id="chkSelectAll" onchange="toggleSelectAll(this)" title="Select all rows"></th>
       <th>Date</th>
       <th>Entry #</th>
       <th>Type</th>
@@ -182,6 +208,8 @@ textarea:focus,input[type=text]:focus,select:focus{border-color:#059669}
       <th style="text-align:right">Deal Value Recd ₹</th>
       <th style="text-align:right">% Incentive</th>
       <th style="text-align:right">Gross ₹</th>
+      <th style="text-align:right">Already Paid ₹</th>
+      <th style="text-align:right">Balance Gross ₹</th>
       <th style="text-align:right">Admin</th>
       <th style="text-align:right">TDS</th>
       <th style="text-align:right">Net ₹</th>
@@ -191,8 +219,18 @@ textarea:focus,input[type=text]:focus,select:focus{border-color:#059669}
       <th>Stage 2 / Paid</th>
       <th style="text-align:center">Actions</th>
     </tr></thead>
-    <tbody id="tableBody"><tr><td colspan="16" class="empty-state"><i class="fas fa-spinner fa-spin"></i><br>Loading…</td></tr></tbody>
+    <tbody id="tableBody"><tr><td colspan="19" class="empty-state"><i class="fas fa-spinner fa-spin"></i><br>Loading…</td></tr></tbody>
   </table>
+</div>
+
+<div id="bulkBar" class="bulk-action-bar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:12px 24px;border-radius:40px;box-shadow:0 12px 35px rgba(0,0,0,0.4);z-index:99999;align-items:center;gap:16px;border:1.5px solid #3b82f6">
+  <span id="bulkCountTxt" style="font-weight:700;color:#38bdf8;font-size:14px">0 Selected</span>
+  <span id="bulkNetTxt" style="font-size:13px;color:#a7f3d0;font-weight:600">Net Payable: ₹0</span>
+  <div style="display:inline-flex;gap:10px">
+    <button type="button" id="btnBulkConfirm" class="btn-act btn-confirm" onclick="submitBulkAction('confirm')" style="padding:7px 14px;font-size:12px"><i class="fas fa-check"></i> Confirm Selected</button>
+    <button type="button" id="btnBulkPay" class="btn-act btn-pay" onclick="openBulkPayModal()" style="padding:7px 14px;font-size:12px"><i class="fas fa-rupee-sign"></i> Mark Paid Selected</button>
+  </div>
+  <button type="button" onclick="clearRowSelections()" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;margin-left:6px" title="Clear selection"><i class="fas fa-times"></i></button>
 </div>
 
 <div class="modal-overlay" id="actModal">
@@ -234,9 +272,13 @@ textarea:focus,input[type=text]:focus,select:focus{border-color:#059669}
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script>
-const TOK = (function(){
+function getAuthToken(){
   try { return localStorage.getItem('staff_token') || (window.STAFF_TOKEN_MANAGER && window.STAFF_TOKEN_MANAGER.getToken && window.STAFF_TOKEN_MANAGER.getToken()) || ''; } catch(e){ return ''; }
-})();
+}
+const TOK = getAuthToken();
+const API_BASE = (location.port === '5001' || location.port === '5500' || location.port === '3000')
+  ? location.protocol + '//' + location.hostname + ':8000/api/v1'
+  : '/api/v1';
 let CO = 2, ROLE = {}, RATES = {admin_pct:8, tds_pct:2}, ROWS = [], CURRENT = null, MODE = 'BANK';
 let CURFILTER_STATUS = '';
 let VGK_MODE = false;
@@ -437,8 +479,64 @@ function normalizeFaRow(r) {
   };
 }
 
+function toggleStatusDrop(){
+  const d = document.getElementById('fStatusDrop');
+  const btn = document.getElementById('fStatusBtn');
+  if (d && btn) {
+    const isHidden = (d.style.display === 'none' || !d.style.display);
+    if (isHidden) {
+      const rect = btn.getBoundingClientRect();
+      d.style.position = 'fixed';
+      d.style.top = (rect.bottom + 4) + 'px';
+      d.style.left = rect.left + 'px';
+      d.style.zIndex = '999999';
+      d.style.display = 'block';
+    } else {
+      d.style.display = 'none';
+    }
+  }
+}
+document.addEventListener('click', function(e){
+  const btn = document.getElementById('fStatusBtn');
+  const drop = document.getElementById('fStatusDrop');
+  if (btn && drop && !btn.contains(e.target) && !drop.contains(e.target)) {
+    drop.style.display = 'none';
+  }
+});
+function toggleAllStatuses(allCk){
+  const cks = document.querySelectorAll('.st-ck');
+  cks.forEach(c => c.checked = allCk.checked);
+  updateStatusBtnTxt();
+  loadList();
+}
+function onStatusCkChange(){
+  const cks = Array.from(document.querySelectorAll('.st-ck'));
+  const allCk = document.getElementById('st_ALL');
+  if (allCk) allCk.checked = cks.every(c => c.checked);
+  updateStatusBtnTxt();
+  loadList();
+}
+function getSelectedStatuses(){
+  const cks = Array.from(document.querySelectorAll('.st-ck'));
+  const selected = cks.filter(c => c.checked).map(c => c.value);
+  return selected.join(',');
+}
+function updateStatusBtnTxt(){
+  const cks = Array.from(document.querySelectorAll('.st-ck'));
+  const sel = cks.filter(c => c.checked).map(c => c.value);
+  const txtEl = document.getElementById('fStatusBtnTxt');
+  if (!txtEl) return;
+  if (sel.length === 0 || sel.length === cks.length) {
+    txtEl.textContent = 'All Statuses';
+  } else if (sel.length === 1) {
+    txtEl.textContent = sel[0];
+  } else {
+    txtEl.textContent = `${sel.length} Selected`;
+  }
+}
+
 async function loadList(){
-  const statusVal   = document.getElementById('fStatus').value || CURFILTER_STATUS;
+  const statusVal   = getSelectedStatuses() || CURFILTER_STATUS;
   const kindVal     = document.getElementById('fKind').value;
   const monthVal    = document.getElementById('fMonth').value;  // YYYY-MM
   const search      = document.getElementById('fSearch').value.trim();
@@ -446,13 +544,17 @@ async function loadList(){
   tb.innerHTML = `<tr><td colspan="16" class="empty-state"><i class="fas fa-spinner fa-spin"></i><br>Loading…</td></tr>`;
 
   // Build income query params
-  const pointsVal   = document.getElementById('fPoints').value;
+  const dateFrom  = document.getElementById('fDateFrom').value;
+  const dateTo    = document.getElementById('fDateTo').value;
+  const pointsVal = document.getElementById('fPoints').value;
   const qp = VGK_MODE
     ? new URLSearchParams({ vgk_mode: 'true', per_page: '200' })
     : new URLSearchParams({ company_id: String(CO), per_page: '200' });
   if(statusVal) qp.set('status', statusVal);
   if(kindVal && !['BONANZA','FIELD_ALLOWANCE'].includes(kindVal)) qp.set('kind', kindVal);
   if(pointsVal) qp.set('points_filter', pointsVal);
+  if(dateFrom) qp.set('date_from', dateFrom);
+  if(dateTo) qp.set('date_to', dateTo);
 
   const fetchIncome  = !kindVal || !['BONANZA','FIELD_ALLOWANCE'].includes(kindVal);
   const bnzStatusOk  = !statusVal || statusVal === 'RELEASED' || statusVal === 'PAID' || statusVal === 'PENDING' || statusVal === 'STAGE1_APPROVED';
@@ -466,18 +568,27 @@ async function loadList(){
   if(monthVal) faQp.set('month_year', monthVal.replace('-','').substring(2));  // YYMM
   if(search) faQp.set('search', search);
 
+const API_BASE = (location.port === '5001' || location.port === '5500' || location.port === '3000')
+  ? location.protocol + '//' + location.hostname + ':8000/api/v1'
+  : '/api/v1';
+
   try {
-    const [incomeRes, bnzRes, faRes] = await Promise.all([
+    const currentTok = getAuthToken();
+    const results = await Promise.allSettled([
       fetchIncome
-        ? fetch(`/api/v1/vgk/staff/vgk/cash-income/unified-list?${qp.toString()}`, { headers: { 'Authorization': 'Bearer '+TOK } })
+        ? fetch(`${API_BASE}/vgk/staff/vgk/cash-income/unified-list?${qp.toString()}`, { headers: { 'Authorization': 'Bearer '+currentTok } })
         : Promise.resolve(null),
       fetchBonanza
-        ? fetch('/api/v1/bonanza/vgk/pending-payments?stage=all', { headers: { 'Authorization': 'Bearer '+TOK } })
+        ? fetch(`${API_BASE}/bonanza/vgk/pending-payments?stage=all`, { headers: { 'Authorization': 'Bearer '+currentTok } })
         : Promise.resolve(null),
       fetchFA
-        ? fetch(`/api/v1/vgk/staff/vgk/field-allowances?${faQp.toString()}`, { headers: { 'Authorization': 'Bearer '+TOK } })
+        ? fetch(`${API_BASE}/vgk/staff/vgk/field-allowances?${faQp.toString()}`, { headers: { 'Authorization': 'Bearer '+currentTok } })
         : Promise.resolve(null),
     ]);
+
+    const incomeRes = (results[0].status === 'fulfilled') ? results[0].value : null;
+    const bnzRes    = (results[1].status === 'fulfilled') ? results[1].value : null;
+    const faRes     = (results[2].status === 'fulfilled') ? results[2].value : null;
 
     let incomeData = { success: true, data: [], summary: [], role: {}, rates: {} };
     if(incomeRes){
@@ -504,7 +615,13 @@ async function loadList(){
         bnzSumMap[r.status].net   += r.net_payout;
       }
       bnzSummaryItems = Object.values(bnzSumMap);
-      if(statusVal) bnzRows = bnzRows.filter(r => r.status === statusVal || (statusVal === 'STAGE1_APPROVED' && r.status === 'Stage1Approved') || (statusVal === 'PAID' && r.status === 'Payout Completed'));
+      if(statusVal) {
+        const stList = statusVal.split(',').map(s => s.trim().toUpperCase());
+        bnzRows = bnzRows.filter(r => {
+          const rSt = (r.status || '').toUpperCase();
+          return stList.includes(rSt) || (stList.includes('STAGE1_APPROVED') && rSt === 'STAGE1APPROVED') || (stList.includes('PAID') && rSt === 'PAYOUT COMPLETED');
+        });
+      }
       ROWS = [...ROWS, ...bnzRows];
     }
 
@@ -523,18 +640,24 @@ async function loadList(){
         faSumMap[key].net   += r.net_payout;
       }
       faSummaryItems = Object.values(faSumMap);
-      if(statusVal) faRows = faRows.filter(r => r.status === statusVal || r._raw_fa.status === statusVal || (statusVal === 'STAGE1_APPROVED' && (r.status === 'Stage1Approved' || r._raw_fa.status === 'Stage1Approved')));
+      if(statusVal) {
+        const stList = statusVal.split(',').map(s => s.trim().toUpperCase());
+        faRows = faRows.filter(r => {
+          const rSt = (r.status || '').toUpperCase();
+          return stList.includes(rSt) || (stList.includes('STAGE1_APPROVED') && rSt === 'STAGE1APPROVED');
+        });
+      }
       ROWS = [...ROWS, ...faRows];
     }
 
-    // Client-side status filter normalization across merged sources
+    // Client-side multi-status filter normalization across merged sources
     if(statusVal){
-      const stNorm = statusVal.toUpperCase();
+      const stList = statusVal.split(',').map(s => s.trim().toUpperCase());
       ROWS = ROWS.filter(r => {
         const rSt = (r.status || '').toUpperCase();
-        if (stNorm === 'STAGE1_APPROVED') return rSt === 'STAGE1_APPROVED' || rSt === 'STAGE1APPROVED';
-        if (stNorm === 'PAID') return rSt === 'PAID' || rSt === 'PAYOUT COMPLETED';
-        return rSt === stNorm;
+        if (stList.includes('STAGE1_APPROVED') && (rSt === 'STAGE1_APPROVED' || rSt === 'STAGE1APPROVED')) return true;
+        if (stList.includes('PAID') && (rSt === 'PAID' || rSt === 'PAYOUT COMPLETED')) return true;
+        return stList.includes(rSt);
       });
     }
 
@@ -619,7 +742,17 @@ function renderSummary(summary){
 
 function filterStatus(st){
   CURFILTER_STATUS = (CURFILTER_STATUS === st) ? '' : st;
-  document.getElementById('fStatus').value = CURFILTER_STATUS;
+  const cks = document.querySelectorAll('.st-ck');
+  cks.forEach(c => {
+    if (st) {
+      c.checked = (c.value === st);
+    } else {
+      c.checked = false;
+    }
+  });
+  const allCk = document.getElementById('st_ALL');
+  if (allCk) allCk.checked = false;
+  updateStatusBtnTxt();
   loadList();
 }
 
@@ -699,6 +832,29 @@ function setDateFilter(preset) {
   loadList();
 }
 
+function calcRowMetrics(r){
+  if(!r) return { grossAmt: 0, advPaid: 0, balGross: 0, adminVal: 0, tdsVal: 0, netVal: 0 };
+  const grossAmt = parseFloat(r.commission_amount || 0);
+  const advPaid  = parseFloat(r.advance_paid || ((r.stage1_adv || 0) + (r.stage2_adv || 0)) || 0);
+  const balGross = (r.balance_gross !== undefined && r.balance_gross !== null)
+    ? parseFloat(r.balance_gross)
+    : Math.max(0, grossAmt - advPaid);
+
+  let adminVal = 0, tdsVal = 0, netVal = 0;
+  if(advPaid > 0){
+    adminVal = parseFloat((balGross * 0.08).toFixed(2));
+    tdsVal   = parseFloat(((balGross - adminVal) * 0.02).toFixed(2));
+    netVal   = Math.max(0, parseFloat((balGross - adminVal - tdsVal).toFixed(2)));
+  } else {
+    adminVal = r.admin_charges ? parseFloat(r.admin_charges) : parseFloat((balGross * 0.08).toFixed(2));
+    tdsVal   = r.tds_amount ? parseFloat(r.tds_amount) : parseFloat(((balGross - adminVal) * 0.02).toFixed(2));
+    netVal   = (r.net_payout !== undefined && r.net_payout !== null && r.net_payout > 0)
+      ? parseFloat(r.net_payout)
+      : Math.max(0, parseFloat((balGross - adminVal - tdsVal).toFixed(2)));
+  }
+  return { grossAmt, advPaid, balGross, adminVal, tdsVal, netVal };
+}
+
 // DC-SEARCH-SUM-001: compute summary cards from filtered ROWS array
 function _summaryFromRows(rows){
   const agg = {};
@@ -707,9 +863,10 @@ function _summaryFromRows(rows){
              : r.status === 'Stage1Approved'   ? 'STAGE1_APPROVED'
              : (r.status || 'DRAFT');
     if(!agg[st]) agg[st] = { status: st, count: 0, gross: 0, net: 0 };
+    const m = calcRowMetrics(r);
     agg[st].count++;
-    agg[st].gross += +(r.commission_amount || 0);
-    agg[st].net   += +(r.net_payout || 0);
+    agg[st].gross += m.balGross;
+    agg[st].net   += m.netVal;
   }
   return Object.values(agg);
 }
@@ -753,33 +910,27 @@ function renderRowHtml(r, extraClass=''){
     ? (r._raw_fa.stage_2_paid_by ? `<small><i class="fas fa-check" style="color:#15803d"></i> ${r._raw_fa.stage_2_paid_by}<br>${fmtDt(r._raw_fa.stage_2_paid_at)}</small>` : '—')
     : (r.paid_at ? `<small><i class="fas fa-check" style="color:#15803d"></i> ${fmtDt(r.paid_at)}${r.payment_mode?'<br><span style="color:#374151">'+r.payment_mode+'</span>':''}${r.payment_utr?'<br><span style="color:#6b7280">'+r.payment_utr+'</span>':''}</small>` : '—');
 
-  const netCell = (function(){
-    if((r.net_payout||0) > 0) return fmt(r.net_payout);
-    if(r.status==='DRAFT'||r.status==='PENDING'){
-      const g=+(r.commission_amount||0);
-      const adm=+(g*0.08).toFixed(2);
-      const pay=g-adm;
-      const tds=+(pay*0.02).toFixed(2);
-      return '<span style="color:#d97706;font-size:11px" title="Estimated — deductions not yet applied">≈ '+fmt(pay-tds)+'</span>';
-    }
-    return fmt(0);
-  })();
+  const m = calcRowMetrics(r);
+  const netCell = m.netVal > 0 ? fmt(m.netVal) : fmt(0);
 
   const incomeDate = r.income_date || r.created_at || null;
   return `<tr class="${extraClass}">
+    <td style="text-align:center"><input type="checkbox" class="row-chk" value="${r.id}" data-net="${r.net_payout||0}" data-partner="${r.partner_id||''}" onchange="onRowChkChange()"></td>
     <td style="white-space:nowrap;color:#374151;font-size:12px"><strong>${fmtDate(incomeDate)}</strong></td>
     <td><strong>${r.entry_number || ('#'+r.id)}</strong>${r.skip_reason ? `<br><small style="color:#7c3aed" title="${r.skip_reason}"><i class="fas fa-bolt"></i> skip</small>`:''}</td>
     <td><span class="kind-pill ${kindCss(r.kind)}">${kindLabel(r.kind, r.level)}</span></td>
-    <td>${r.partner_name||'-'}<br><small class="text-muted">${r.partner_code||''}</small></td>
+    <td><div style="display:inline-flex;align-items:center;gap:6px"><span>${r.partner_name||'-'}</span><button onclick="event.stopPropagation(); generateMemberPoster('${r.partner_id || r.partner_code || r.id}')" style="width:22px;height:22px;border-radius:5px;border:1px solid #d1fae5;background:#ecfdf5;cursor:pointer;font-size:10px;color:#059669;display:inline-flex;align-items:center;justify-content:center" title="Generate Achievement Poster"><i class="fas fa-image"></i></button></div><br><small class="text-muted">${r.partner_code||''}</small></td>
     <td><small>${r.client_name||'—'}</small></td>
     <td style="text-align:right;color:#1e40af;font-weight:600">${r.kind==='ADVANCE' ? '<span style="color:#9ca3af">—</span>' : (r.deal_value_received ? fmt(r.deal_value_received) : '<span style="color:#9ca3af">—</span>')}</td>
-    <td style="text-align:right;color:#7c3aed;font-weight:600">${r.kind==='ADVANCE' ? '<span style="color:#9ca3af">—</span>' : (r.commission_pct > 0 ? r.commission_pct.toFixed(2)+'%' : (r.deal_value_received && r.commission_amount ? (r.commission_amount/r.deal_value_received*100).toFixed(2)+'%' : '<span style="color:#9ca3af">—</span>'))}</td>
-    <td style="text-align:right;color:#059669;font-weight:600">${fmt(r.commission_amount)}</td>
-    <td style="text-align:right;color:#d97706">${r.admin_charges ? fmt(r.admin_charges) : '—'}</td>
-    <td style="text-align:right;color:#dc2626">${r.tds_amount ? fmt(r.tds_amount) : '—'}</td>
+    <td style="text-align:right;color:#7c3aed;font-weight:600">${r.kind==='ADVANCE' ? '<span style="color:#9ca3af">—</span>' : (r.commission_pct > 0 ? r.commission_pct.toFixed(2)+'%' : (r.deal_value_received && m.grossAmt ? (m.grossAmt/r.deal_value_received*100).toFixed(2)+'%' : '<span style="color:#9ca3af">—</span>'))}</td>
+    <td style="text-align:right;color:#059669;font-weight:600">${fmt(m.grossAmt)}</td>
+    <td style="text-align:right;color:#d97706;font-weight:600">${m.advPaid > 0 ? '₹'+fmt(m.advPaid) : '<span style="color:#9ca3af">—</span>'}</td>
+    <td style="text-align:right;color:#0284c7;font-weight:700">₹${fmt(m.balGross)}</td>
+    <td style="text-align:right;color:#d97706">${m.adminVal ? fmt(m.adminVal) : '—'}</td>
+    <td style="text-align:right;color:#dc2626">${m.tdsVal ? fmt(m.tdsVal) : '—'}</td>
     <td style="text-align:right;color:#15803d;font-weight:700">${netCell}</td>
     <td>${statusBadge}</td>
-    <td style="text-align:center">${r.kind==='ADVANCE' || r.kind==='SLAB_BONUS' || r.kind==='SENIOR_COMM' ? pointsBalanceBadge(r) : '<small class="text-muted">—</small>'}</td>
+    <td style="text-align:center">${pointsBalanceBadge(r)}</td>
     <td>${stage1Col}</td>
     <td>${stage2Col}</td>
     <td style="text-align:center;white-space:nowrap">${acts}${paidBtns}${(!acts && !paidBtns) ? '<small class="text-muted">—</small>' : ''}</td>
@@ -789,7 +940,7 @@ function renderRowHtml(r, extraClass=''){
 function renderTable(rows){
   const tb = document.getElementById('tableBody');
   if(!rows.length){
-    tb.innerHTML = `<tr><td colspan="16" class="empty-state"><i class="fas fa-inbox"></i><br>No income records.</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="18" class="empty-state"><i class="fas fa-inbox"></i><br>No income records.</td></tr>`;
     return;
   }
 
@@ -805,25 +956,28 @@ function renderTable(rows){
     const dateKey = getDateKey(rawDt);
     const dateDisplay = fmtDate(rawDt);
 
+    const m = calcRowMetrics(r);
+
     if(!dateMap[dateKey]){
       dateMap[dateKey] = { key: dateKey, dateDisplay, net: 0, gross: 0, count: 0, partners: {} };
     }
-    dateMap[dateKey].net += +(r.net_payout || 0);
-    dateMap[dateKey].gross += +(r.commission_amount || 0);
+    dateMap[dateKey].net += m.netVal;
+    dateMap[dateKey].gross += m.grossAmt;
     dateMap[dateKey].count++;
 
     const partnerKey = (r.partner_code || r.partner_name || 'UNASSIGNED').replace(/[^a-zA-Z0-9]/g, '_');
     const partnerName = r.partner_name || r.partner_code || 'Unassigned';
     const partnerCode = r.partner_code || '';
+    const partnerId = r.partner_id || r.partner_code || r.id;
 
     if(!dateMap[dateKey].partners[partnerKey]){
       dateMap[dateKey].partners[partnerKey] = {
-        key: partnerKey, name: partnerName, code: partnerCode,
+        key: partnerKey, name: partnerName, code: partnerCode, partnerId: partnerId,
         net: 0, gross: 0, count: 0, entries: []
       };
     }
-    dateMap[dateKey].partners[partnerKey].net += +(r.net_payout || 0);
-    dateMap[dateKey].partners[partnerKey].gross += +(r.commission_amount || 0);
+    dateMap[dateKey].partners[partnerKey].net += m.netVal;
+    dateMap[dateKey].partners[partnerKey].gross += m.grossAmt;
     dateMap[dateKey].partners[partnerKey].count++;
     dateMap[dateKey].partners[partnerKey].entries.push(r);
   }
@@ -835,7 +989,7 @@ function renderTable(rows){
     const dCls = 'd-group-' + dKey.replace(/[^a-zA-Z0-9]/g, '_');
 
     html += `<tr style="background:#ecfdf5;cursor:pointer;border-top:2px solid #a7f3d0;" onclick="toggleAcc('${dCls}')">
-      <td colspan="16" style="padding:10px 14px;font-weight:800;color:#064e3b;font-size:13px;">
+      <td colspan="19" style="padding:10px 14px;font-weight:800;color:#064e3b;font-size:13px;">
         <i class="fas fa-chevron-down me-2" style="font-size:11px;"></i><i class="fas fa-calendar-day me-2" style="color:#059669"></i> ${dGroup.dateDisplay}
         <span class="badge bg-success ms-2">${dGroup.count} items</span>
         <span class="ms-3" style="color:#047857;">Net Payout: ${fmt(dGroup.net)}</span>
@@ -848,8 +1002,10 @@ function renderTable(rows){
       const pCls = 'p-group-' + dKey.replace(/[^a-zA-Z0-9]/g, '_') + '-' + pKey;
 
       html += `<tr class="${dCls}" style="background:#f0f9ff;cursor:pointer;" onclick="toggleAcc('${pCls}')">
-        <td colspan="16" style="padding:8px 14px 8px 32px;font-weight:700;color:#0369a1;font-size:12.5px;">
+        <td colspan="19" style="padding:8px 14px 8px 16px;font-weight:700;color:#0369a1;font-size:12.5px;">
+          <input type="checkbox" class="grp-chk me-2" onclick="event.stopPropagation(); toggleGroupCheckboxes(this, '${pCls}')" title="Select all entries for this member">
           <i class="fas fa-chevron-down me-2" style="font-size:10px;"></i><i class="fas fa-user-circle me-2" style="color:#0284c7"></i> ${pGroup.name} ${pGroup.code ? '<small style="color:#64748b">('+pGroup.code+')</small>' : ''}
+          <button onclick="event.stopPropagation(); generateMemberPoster('${pGroup.partnerId || pGroup.code}')" style="margin-left:8px;padding:2px 8px;border-radius:6px;border:1px solid #a7f3d0;background:#ecfdf5;cursor:pointer;font-size:11px;font-weight:700;color:#065f46" title="Generate Achievement Poster"><i class="fas fa-image me-1"></i>Generate Achievement Poster</button>
           <span class="badge bg-info text-dark ms-2">${pGroup.count} entries</span>
           <span class="ms-3" style="color:#0369a1;">Net Payout: ${fmt(pGroup.net)}</span>
         </td>
@@ -873,6 +1029,130 @@ function pointsBalanceBadge(r){
   const icon  = ok ? '✅' : '❌';
   const label = ok ? 'Available' : 'Not Available';
   return `<span style="color:${color};font-size:12px;font-weight:600">${icon} ${label}</span><br><small style="color:#6b7280">${avail.toLocaleString('en-IN',{maximumFractionDigits:0})} pts</small>`;
+}
+
+function toggleSelectAll(master){
+  const chks = document.querySelectorAll('.row-chk');
+  chks.forEach(c => c.checked = master.checked);
+  onRowChkChange();
+}
+
+function toggleGroupCheckboxes(master, pCls){
+  const chks = document.querySelectorAll('.' + pCls + ' .row-chk');
+  chks.forEach(c => c.checked = master.checked);
+  onRowChkChange();
+}
+
+function getSelectedRowIds(){
+  const chks = document.querySelectorAll('.row-chk:checked');
+  return Array.from(chks).map(c => parseInt(c.value)).filter(Boolean);
+}
+
+function onRowChkChange(){
+  const selectedIds = getSelectedRowIds();
+  const bar = document.getElementById('bulkBar');
+  if(!bar) return;
+  if(selectedIds.length === 0){
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = 'flex';
+  document.getElementById('bulkCountTxt').textContent = `${selectedIds.length} Selected`;
+  
+  let totalNet = 0;
+  let hasDraft = false;
+  let hasPendingOrApproved = false;
+
+  for(const id of selectedIds){
+    const r = ROWS.find(x => x.id === id);
+    if(r){
+      const st = (r.status || '').toUpperCase();
+      if(st === 'DRAFT') hasDraft = true;
+      if(st === 'PENDING' || st === 'STAGE1_APPROVED' || st === 'STAGE1APPROVED' || st === 'RELEASED') hasPendingOrApproved = true;
+
+      const m = calcRowMetrics(r);
+      totalNet += m.netVal;
+    }
+  }
+  document.getElementById('bulkNetTxt').textContent = `Net Payable: ${fmt(totalNet)}`;
+
+  const btnConfirm = document.getElementById('btnBulkConfirm');
+  const btnPay     = document.getElementById('btnBulkPay');
+
+  if(btnConfirm){
+    btnConfirm.disabled = !hasDraft;
+    btnConfirm.style.opacity = hasDraft ? '1' : '0.4';
+    btnConfirm.style.cursor  = hasDraft ? 'pointer' : 'not-allowed';
+    btnConfirm.title = hasDraft ? 'Confirm selected DRAFT entries' : 'Selected entries are already confirmed';
+  }
+
+  if(btnPay){
+    btnPay.disabled = !hasPendingOrApproved;
+    btnPay.style.opacity = hasPendingOrApproved ? '1' : '0.4';
+    btnPay.style.cursor  = hasPendingOrApproved ? 'pointer' : 'not-allowed';
+    btnPay.title = hasPendingOrApproved ? 'Mark selected entries as Paid' : 'Selected entries must be confirmed before marking paid';
+  }
+}
+
+function clearRowSelections(){
+  document.querySelectorAll('.row-chk, #chkSelectAll, .grp-chk').forEach(c => c.checked = false);
+  onRowChkChange();
+}
+
+async function submitBulkAction(action){
+  const selectedIds = getSelectedRowIds();
+  if(!selectedIds.length){ toast('Select at least one entry', 'error'); return; }
+  const label = action === 'confirm' ? 'Confirm' : action === 'stage1_approve' ? 'Stage 1 Approve' : action;
+  if(!confirm(`Are you sure you want to ${label} ${selectedIds.length} selected entries?`)) return;
+
+  toast(`Processing ${selectedIds.length} entries…`, 'success');
+  try {
+    const r = await fetch(`${API_BASE}/vgk/staff/vgk/cash-income/unified-action?company_id=${CO}`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + TOK, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entry_ids: selectedIds, action: action })
+    });
+    const d = await r.json();
+    if(!r.ok || !d.success) throw new Error(d.detail || d.error || 'Batch action failed');
+    toast(`✅ Batch ${label} complete!`, 'success');
+    clearRowSelections();
+    loadList();
+  } catch(e){
+    toast('Batch error: ' + e.message, 'error');
+  }
+}
+
+async function openBulkPayModal(){
+  const selectedIds = getSelectedRowIds();
+  if(!selectedIds.length){ toast('Select at least one entry to pay', 'error'); return; }
+  const firstId = selectedIds[0];
+  await openAct(firstId, 'mark_paid');
+  CURRENT._is_bulk_pay = true;
+  CURRENT._bulk_ids = selectedIds;
+  document.getElementById('actTitle').innerHTML = `<i class="fas fa-money-bill-wave"></i> BATCH MARK PAID — ${selectedIds.length} ENTRIES`;
+
+  if(selectedIds.length > 1){
+    let totBalGross = 0, totAdmin = 0, totTds = 0, totNet = 0, totAdvPaid = 0;
+    let partners = new Set();
+    selectedIds.forEach(id => {
+      const r = ROWS.find(x => x.id === id);
+      if(r){
+        if(r.partner_name) partners.add(r.partner_name);
+        const m = calcRowMetrics(r);
+        totBalGross += m.balGross;
+        totAdmin    += m.adminVal;
+        totTds      += m.tdsVal;
+        totNet      += m.netVal;
+        totAdvPaid  += m.advPaid;
+      }
+    });
+    const partnerTxt = Array.from(partners).join(', ') || 'Selected Partners';
+    const advTxt = totAdvPaid > 0 ? ` <small style="color:#d97706">(Adv ₹${fmt(totAdvPaid)} paid)</small>` : '';
+    document.getElementById('actInfo').innerHTML = `
+      <div class="info-item"><div class="lab">Selected Count</div><div class="val">${selectedIds.length} Entries<br><small style="color:#6b7280">${partnerTxt}</small></div></div>
+      <div class="info-item"><div class="lab">Total Gross / Net</div><div class="val">${fmt(totBalGross)}${advTxt}<br><small style="color:#15803d">Net ${fmt(totNet)}</small></div></div>
+      <div class="info-item"><div class="lab">Total Admin / TDS</div><div class="val"><small style="color:#d97706">${fmt(totAdmin)}</small><br><small style="color:#dc2626">${fmt(totTds)}</small></div></div>`;
+  }
 }
 
 function actBtn(r, a){
@@ -914,7 +1194,7 @@ function actBtn(r, a){
 async function approveBnz(claimId){
   if(!confirm('Release this bonanza payment? Wallet will be credited after 10% admin deduction.')) return;
   try {
-    const r = await fetch(`/api/v1/bonanza/vgk/claims/${claimId}/status`, {
+    const r = await fetch(`${API_BASE}/bonanza/vgk/claims/${claimId}/status`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer '+TOK, 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'Payment Released' })
@@ -952,7 +1232,7 @@ function openBnzPayModal(claimId, gross, partnerName, bonanzaName){
 async function faStage1(faId){
   if(!confirm('Approve this field allowance (Stage 1)?')) return;
   try {
-    const r = await fetch(`/api/v1/vgk/staff/vgk/field-allowances/${faId}/stage1-approve`, {
+    const r = await fetch(`${API_BASE}/vgk/staff/vgk/field-allowances/${faId}/stage1-approve`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer '+TOK, 'Content-Type': 'application/json' },
       body: JSON.stringify({})
@@ -970,7 +1250,7 @@ async function faStage1(faId){
 async function faStage2(faId){
   if(!confirm('Mark this field allowance as Paid (Stage 2)?')) return;
   try {
-    const r = await fetch(`/api/v1/vgk/staff/vgk/field-allowances/${faId}/stage2-mark-paid`, {
+    const r = await fetch(`${API_BASE}/vgk/staff/vgk/field-allowances/${faId}/stage2-mark-paid`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer '+TOK, 'Content-Type': 'application/json' },
       body: JSON.stringify({})
@@ -985,9 +1265,9 @@ async function faStage2(faId){
 }
 
 async function sendWA(entryId, companyCo){
-  if(!confirm('Send WhatsApp congratulations to this member?')) return;
+  toast('Sending WhatsApp message…', 'success');
   try {
-    const r = await fetch(`/api/v1/vgk/staff/vgk/cash-income/${entryId}/send-whatsapp?company_id=${companyCo}`, {
+    const r = await fetch(`${API_BASE}/vgk/staff/vgk/cash-income/${entryId}/send-wa-ack?company_id=${companyCo}`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + TOK },
     });
@@ -1019,7 +1299,7 @@ async function openWAWeb(entryId){
   window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
   try {
     const co = r.company_id || CO;
-    const resp = await fetch(`/api/v1/vgk/staff/vgk/cash-income/${entryId}/earner-card?company_id=${co}`,
+    const resp = await fetch(`${API_BASE}/vgk/staff/vgk/cash-income/${entryId}/earner-card?company_id=${co}`,
       { headers: { 'Authorization': 'Bearer ' + TOK } });
     if(resp.ok){
       const blob = await resp.blob();
@@ -1035,7 +1315,7 @@ async function openWAWeb(entryId){
 async function downloadCard(entryId, companyCo){
   toast('Generating earner card…', 'success');
   try {
-    const r = await fetch(`/api/v1/vgk/staff/vgk/cash-income/${entryId}/earner-card?company_id=${companyCo}`, {
+    const r = await fetch(`${API_BASE}/vgk/staff/vgk/cash-income/${entryId}/earner-card?company_id=${companyCo}`, {
       headers: { 'Authorization': 'Bearer ' + TOK },
     });
     if(!r.ok) {
@@ -1060,11 +1340,13 @@ async function downloadCard(entryId, companyCo){
 async function openAct(entryId, action){
   CURRENT = { entry_id: entryId, action: action, row: ROWS.find(r=>r.id===entryId) };
   const r = CURRENT.row;
+  const m = calcRowMetrics(r);
   document.getElementById('actTitle').innerHTML = `<i class="fas fa-${action==='reject'?'times':'check-circle'}"></i> ${action.replace('_',' ').toUpperCase()} — ${r.entry_number}`;
+  const advNote = m.advPaid > 0 ? `<br><small style="color:#d97706">(Adv ₹${fmt(m.advPaid)} paid)</small>` : '';
   document.getElementById('actInfo').innerHTML = `
     <div class="info-item"><div class="lab">Partner</div><div class="val">${r.partner_name || '-'}<br><small style="color:#6b7280">${r.partner_code||''}</small></div></div>
-    <div class="info-item"><div class="lab">Gross / Net</div><div class="val">${fmt(r.commission_amount)}<br><small style="color:#15803d">Net ${fmt(r.net_payout)}</small></div></div>
-    <div class="info-item"><div class="lab">Admin / TDS</div><div class="val"><small style="color:#d97706">${fmt(r.admin_charges)}</small><br><small style="color:#dc2626">${fmt(r.tds_amount)}</small></div></div>`;
+    <div class="info-item"><div class="lab">Gross / Net</div><div class="val">${fmt(m.balGross)}${advNote}<br><small style="color:#15803d">Net ${fmt(m.netVal)}</small></div></div>
+    <div class="info-item"><div class="lab">Admin / TDS</div><div class="val"><small style="color:#d97706">${fmt(m.adminVal)}</small><br><small style="color:#dc2626">${fmt(m.tdsVal)}</small></div></div>`;
   document.getElementById('payFields').style.display = (action==='mark_paid') ? '' : 'none';
   document.getElementById('rejFields').style.display = (action==='reject') ? '' : 'none';
   document.getElementById('goBtn').className = 'btn-go' + (action==='reject' ? ' danger' : '');
@@ -1090,7 +1372,7 @@ function setMode(m){
 
 let ALL_BANKS = [];
 async function loadPaymentOptions(){
-  const r = await fetch(`/api/v1/vgk/staff/vgk/cash-income/payment-options`, { headers: {'Authorization':'Bearer '+TOK}});
+  const r = await fetch(`${API_BASE}/vgk/staff/vgk/cash-income/payment-options`, { headers: {'Authorization':'Bearer '+TOK}});
   const d = await r.json();
   ALL_BANKS = d.banks || [];
   const cmpSel = document.getElementById('companySel');
@@ -1125,7 +1407,7 @@ async function submitAct(){
     const btn = document.getElementById('goBtn');
     btn.disabled = true;
     try {
-      const r = await fetch(`/api/v1/bonanza/vgk/claims/${CURRENT.claim_id}/status`, {
+      const r = await fetch(`${API_BASE}/bonanza/vgk/claims/${CURRENT.claim_id}/status`, {
         method: 'POST',
         headers: { 'Authorization': 'Bearer '+TOK, 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'Paid', payment_mode: 'BANK', payment_reference: notes || 'Manual' })
@@ -1146,6 +1428,10 @@ async function submitAct(){
   // Standard VCI action
   const action = CURRENT.action;
   const body = { entry_id: CURRENT.entry_id, action: action };
+  if (CURRENT && CURRENT._is_bulk_pay && CURRENT._bulk_ids) {
+    body.entry_ids = CURRENT._bulk_ids;
+    delete body.entry_id;
+  }
   const notes = document.getElementById('actNotes').value.trim();
   if(notes) body.notes = notes;
 
@@ -1172,7 +1458,7 @@ async function submitAct(){
   document.getElementById('goBtn').disabled = true;
   try {
     const entryCo = (CURRENT && CURRENT.row && CURRENT.row.company_id) ? CURRENT.row.company_id : CO;
-    let r = await fetch(`/api/v1/vgk/staff/vgk/cash-income/unified-action?company_id=${entryCo}`, {
+    let r = await fetch(`${API_BASE}/vgk/staff/vgk/cash-income/unified-action?company_id=${entryCo}`, {
       method: 'POST',
       headers: { 'Authorization':'Bearer '+TOK, 'Content-Type':'application/json' },
       body: JSON.stringify(body),
@@ -1196,7 +1482,7 @@ Skip times remaining: ${remain} skip(s) available.
 Do you want to PROCEED (skip the cap and mark as paid) or HOLD?`;
         if (confirm(confirmMsg)) {
           body.bypass = true;
-          r = await fetch(`/api/v1/vgk/staff/vgk/cash-income/unified-action?company_id=${entryCo}`, {
+          r = await fetch(`${API_BASE}/vgk/staff/vgk/cash-income/unified-action?company_id=${entryCo}`, {
             method: 'POST',
             headers: { 'Authorization':'Bearer '+TOK, 'Content-Type':'application/json' },
             body: JSON.stringify(body),
@@ -1215,15 +1501,59 @@ Do you want to PROCEED (skip the cap and mark as paid) or HOLD?`;
       }
     }
     
-    let msg = `${action.toUpperCase()} OK on ${CURRENT.row.entry_number}`;
+    let msg = `${action.toUpperCase()} OK on ${CURRENT.row ? CURRENT.row.entry_number : 'Selected Entries'}`;
     if((d.skipped_states||[]).length){ msg += ` (skip-level: ${d.skipped_states.join(' → ')})`; }
     toast(msg, 'success');
+    
+    const isPaidAction = (action === 'mark_paid');
+    const targetPartnerId = (CURRENT && CURRENT.row) ? CURRENT.row.partner_id : null;
+    
     closeAct();
     loadList();
+
+    if (isPaidAction && targetPartnerId) {
+      setTimeout(() => {
+        showShareProgressPrompt(targetPartnerId);
+      }, 500);
+    }
   } catch(e){
     toast('Error: ' + e.message, 'error');
   } finally {
     document.getElementById('goBtn').disabled = false;
+  }
+}
+
+function showShareProgressPrompt(partnerId) {
+  const old = document.getElementById('shareProgressPromptModal');
+  if (old) old.remove();
+  const modal = document.createElement('div');
+  modal.id = 'shareProgressPromptModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:24px;max-width:440px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.5)">
+      <div style="font-size:44px;margin-bottom:8px">🎉</div>
+      <h4 style="font-size:18px;font-weight:800;color:#111827;margin-bottom:6px">Payment Completed Successfully!</h4>
+      <p style="font-size:13px;color:#4b5563;margin-bottom:20px;line-height:1.4">Would you like to share the member's achievement poster across VGK4U Channel & Elite Members Groups?</p>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button onclick="document.getElementById('shareProgressPromptModal').remove()" style="padding:9px 18px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:8px;font-weight:600;cursor:pointer">Later</button>
+        <button onclick="openPosterFromUnified('${partnerId}')" style="padding:9px 20px;background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px">
+          <i class="fas fa-image"></i> Share Progress (Open Poster)
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function openPosterFromUnified(partnerId) {
+  const promptModal = document.getElementById('shareProgressPromptModal');
+  if (promptModal) promptModal.remove();
+  if (window.parent && typeof window.parent.generateMemberPoster === 'function') {
+    window.parent.generateMemberPoster(partnerId);
+  } else if (typeof generateMemberPoster === 'function') {
+    generateMemberPoster(partnerId);
+  } else {
+    window.location.href = `/staff_vgk_members.html?openPoster=${partnerId}`;
   }
 }
 
@@ -1239,6 +1569,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 </script>
 <script src="/staff_sidebar.js"></script>
 <script src="/staff_header.js"></script>
+<script src="/public/js/poster-modal-core.js"></script>
+<script src="/public/js/website-chatbot.js"></script>
 </div>
 </body>
 </html>

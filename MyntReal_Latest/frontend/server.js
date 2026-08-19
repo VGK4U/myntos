@@ -5091,18 +5091,27 @@ function getUserRole(sessionToken) {
 // Uses lastIndexOf('</body>') — same safe pattern as NDA injection.
 function injectVgkAssistant(html) {
   if (!html) return html;
-  const lastBodyIdx = html.lastIndexOf('</body>');
-  if (lastBodyIdx === -1) return html;
+  let targetIdx = html.lastIndexOf('</body>');
+  let closingTag = '</body>';
+  if (targetIdx === -1) {
+    targetIdx = html.lastIndexOf('</html>');
+    closingTag = '</html>';
+  }
+  if (targetIdx === -1) return html;
+
   const toInject = [];
+  const isStaffOrLogin = html.includes('staff_sidebar.js') || html.includes('staff_login') || html.includes('login') || html.includes('staffSidebar');
+  if (!isStaffOrLogin && !html.includes('/public/js/website-chatbot.js')) {
+    toInject.push('<script src="/public/js/website-chatbot.js"></script>');
+  }
   if (!html.includes('/vgk_assistant.js')) {
     toInject.push('<script src="/vgk_assistant.js"></script>');
   }
-  // DC-DRAFT-001: inject universal draft-manager on every page (skip login/public pages)
   if (!html.includes('/public/js/dc-draft-manager.js')) {
     toInject.push('<script src="/public/js/dc-draft-manager.js"></script>');
   }
   if (toInject.length === 0) return html;
-  return html.slice(0, lastBodyIdx) + toInject.join('\n') + '\n</body>' + html.slice(lastBodyIdx + 7);
+  return html.slice(0, targetIdx) + toInject.join('\n') + '\n' + closingTag + html.slice(targetIdx + closingTag.length);
 }
 
 // DC Protocol (Dec 05, 2025): NDA Enforcement Script Injection Helper
@@ -7962,11 +7971,8 @@ const server = http.createServer(async (req, res) => {
     let lastError = null;
     const requestId = `${Date.now()}-${Math.random()}`;
     
-    // DC Protocol Feb 2026: Detect multipart requests - these cannot be retried
-    // because the request stream can only be consumed once
     const contentType = req.headers['content-type'] || '';
     const isMultipart = contentType.includes('multipart/form-data');
-    // DC Protocol Feb 2026: Login endpoints get 3 retries (was 1) — enough to survive a brief backend restart
     const isLoginCall = url.endsWith('/auth/login') || url.includes('/auth/login?');
     const maxRetries = isMultipart ? 0 : (isLoginCall ? 3 : 4);
     let clientAborted = false;
@@ -7977,6 +7983,8 @@ const server = http.createServer(async (req, res) => {
       }
     });
     
+    let bodyBuffer = null;
+
     function attemptProxy(hostIndex = 0, retryCount = 0) {
       if (clientAborted) {
         return;
@@ -8000,23 +8008,19 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       
-      
-      // DC Protocol: Inject Authorization header from session cookie if missing or invalid
-      // Fix (Dec 05, 2025): Also check for empty bearer token ('Bearer ' or 'Bearer  ')
-      // Fix (Apr 2026): In staff context, ALWAYS use the cookie's staff_token — it is the
-      //   authoritative source (token-manager writes both localStorage and cookie on refresh).
-      //   This prevents stale localStorage tokens from causing 401s on staff pages.
       const proxyHeaders = { ...req.headers };
+      if (bodyBuffer !== null) {
+        proxyHeaders['content-length'] = String(bodyBuffer.length);
+        delete proxyHeaders['transfer-encoding'];
+      }
+
       const authHeader = proxyHeaders.authorization || '';
       const isInvalidAuth = !authHeader || 
                            authHeader === 'Bearer null' || 
                            authHeader === 'Bearer undefined' ||
                            authHeader === 'Bearer ' ||
                            authHeader.trim() === 'Bearer';
-      // DC Protocol Feb 2026: Never inject auth tokens into login endpoints — login is unauthenticated by design
       const isAuthLoginEndpoint = url.endsWith('/auth/login') || url.includes('/auth/login?');
-      // DC_PDF_PARTNER_001 (Apr 2026): PDF/download URLs carry token in ?Authorization= query param —
-      // do NOT override with any cookie-based header so the backend can read the correct partner token.
       const hasAuthQueryParam = url.includes('Authorization=') || url.includes('authorization=');
       const cookieStr = req.headers.cookie || '';
       const referer = req.headers.referer || '';
@@ -8024,19 +8028,11 @@ const server = http.createServer(async (req, res) => {
       const isPartnerContext = referer.includes('/partner/') || referer.includes('/partner-');
       const isMnrContext = !isStaffContext && !isPartnerContext;
 
-      if (url.includes('/marketplace/')) {
-        console.log(`[DC-PROXY-API-MKT-${requestId}] url=${url} referer=${referer} isStaffContext=${isStaffContext} hasCookie=${!!cookieStr}`);
-        if (cookieStr) {
-          console.log(`[DC-PROXY-API-MKT-${requestId}] cookieStr=${cookieStr.substring(0, 200)}`);
-        }
-      }
-
       const staffTokenMatch = cookieStr.match(/staff_token=([^;]+)/);
       const partnerTokenMatch = cookieStr.match(/partner_token=([^;]+)/);
       const sessionTokenMatch = cookieStr.match(/session_token=([^;]+)/);
       const sessionMatch = cookieStr.match(/session=([^;]+)/);
 
-      // DC Protocol Rule: Preserve valid client Authorization header; use cookie staff_token ONLY as fallback when header is missing/null
       const cookieStaffToken = staffTokenMatch && staffTokenMatch[1] ? decodeURIComponent(staffTokenMatch[1]) : null;
       if (!isAuthLoginEndpoint && !hasAuthQueryParam && isStaffContext) {
         if (isInvalidAuth && cookieStaffToken) {
@@ -8044,18 +8040,15 @@ const server = http.createServer(async (req, res) => {
           console.log(`[DC-PROXY-API-${requestId}] ⚡ Injected auth from staff_token cookie (header missing/invalid)`);
         }
       } else if (isInvalidAuth && !isAuthLoginEndpoint && !hasAuthQueryParam) {
-        // Context-aware token priority for non-staff contexts (or when no staff cookie available)
         let tokenValue = null;
         let source = null;
         
         if (isPartnerContext) {
-          // Partner context: prefer partner_token
           if (partnerTokenMatch && partnerTokenMatch[1]) {
             tokenValue = decodeURIComponent(partnerTokenMatch[1]);
             source = 'partner_token';
           }
         } else if (isMnrContext) {
-          // MNR context: prefer session_token/session
           if (sessionTokenMatch && sessionTokenMatch[1]) {
             tokenValue = decodeURIComponent(sessionTokenMatch[1]);
             source = 'session_token';
@@ -8065,7 +8058,6 @@ const server = http.createServer(async (req, res) => {
           }
         }
         
-        // Fallback: if no context-appropriate token, try any available token
         if (!tokenValue) {
           if (staffTokenMatch && staffTokenMatch[1]) {
             tokenValue = decodeURIComponent(staffTokenMatch[1]);
@@ -8088,14 +8080,12 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
-      // DC Protocol: Redirect auth/me to auth/me-hybrid for unified token handling
       let proxyUrl = url;
       if (url === '/api/v1/auth/me' || url.startsWith('/api/v1/auth/me?')) {
         proxyUrl = url.replace('/api/v1/auth/me', '/api/v1/auth/me-hybrid');
         console.log(`[DC-PROXY-API-${requestId}] 🔄 Redirected auth/me to me-hybrid`);
       }
       const backendUrl = `http://${BACKEND_HOSTS[hostIndex]}${proxyUrl}`;
-      // DC Protocol Mar 2026: Long-running endpoints (file uploads, AI processing) need extended timeout
       const isLongRunning = isMultipart ||
         proxyUrl.includes('/brochure-extract') ||
         proxyUrl.includes('/knowledge-chat') ||
@@ -8145,14 +8135,38 @@ const server = http.createServer(async (req, res) => {
         proxyReq.destroy();
       });
       
-      req.on('error', (err) => {
-        console.warn(`[DC-PROXY-API-${requestId}] ⚠️ req stream error: ${err.message}`);
-        proxyReq.destroy();
-      });
-      req.pipe(proxyReq);
+      if (bodyBuffer !== null) {
+        proxyReq.end(bodyBuffer);
+      } else {
+        req.on('error', (err) => {
+          console.warn(`[DC-PROXY-API-${requestId}] ⚠️ req stream error: ${err.message}`);
+          proxyReq.destroy();
+        });
+        req.pipe(proxyReq);
+      }
     }
-    
-    attemptProxy();
+
+    if (req.method !== 'GET' && req.method !== 'HEAD' && !isMultipart) {
+      if (req.readableEnded) {
+        const remaining = req.read();
+        bodyBuffer = remaining ? (Buffer.isBuffer(remaining) ? remaining : Buffer.from(remaining)) : Buffer.alloc(0);
+        attemptProxy();
+      } else {
+        const chunks = [];
+        req.on('data', chunk => chunks.push(chunk));
+        req.on('end', () => {
+          bodyBuffer = Buffer.concat(chunks);
+          attemptProxy();
+        });
+        req.on('error', (err) => {
+          console.warn(`[DC-PROXY-API-${requestId}] ⚠️ req read error: ${err.message}`);
+          attemptProxy();
+        });
+        req.resume();
+      }
+    } else {
+      attemptProxy();
+    }
     return;
   }
 
@@ -8663,10 +8677,15 @@ const server = http.createServer(async (req, res) => {
     const extname = path.extname(filePath);
     // Determine content type
     const contentTypes = {
+      '.html': 'text/html; charset=utf-8',
+      '.htm': 'text/html; charset=utf-8',
       '.js': 'application/javascript',
       '.css': 'text/css',
       '.png': 'image/png',
       '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.webp': 'image/webp',
+      '.gif': 'image/gif',
       '.svg': 'image/svg+xml',
       '.json': 'application/json'
     };
@@ -19397,7 +19416,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.end(html);
     });
     return;
-  } else if (url.startsWith('/staff/vgk/members')) {
+  } else if (url.startsWith('/staff/vgk/members') || url.startsWith('/staff_vgk_members.html')) {
     const filePath = path.join(__dirname, 'staff_vgk_members.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Members page not found'); return; }
@@ -19439,7 +19458,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.end(html);
     });
     return;
-  } else if (url.startsWith('/staff/vgk/income-unified')) {
+  } else if (url.startsWith('/staff/vgk/income-unified') || url.startsWith('/vgk_income_unified.html')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
     // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'vgk_income_unified.html');
@@ -20002,6 +20021,15 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     // Unified WhatsApp Center replaces both monitor and config pages
     res.writeHead(302, { 'Location': '/staff/whatsapp-config' });
     res.end();
+    return;
+  } else if (url.startsWith('/staff/crm/whatsapp-bot')) {
+    const filePath = path.join(__dirname, 'staff_crm_whatsapp_bot.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('WhatsApp Bot Hub not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
     return;
   } else if (url.startsWith('/staff/crm/whatsapp-inbox') || url.startsWith('/staff/crm/wa-inbox')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
@@ -24758,7 +24786,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
 
 </body>
 </html>`;
-    res.writeHead(200);
+    res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
     res.end(loginHTML);
     return;
   } else if (url === '/api/auth/login' && req.method === 'POST') {
@@ -30071,6 +30099,15 @@ async function processAction(id, action){
       });
       res.end(data);
     });
+  } else if (url.startsWith('/staff/crm/whatsapp-bot')) {
+    const filePath = path.join(__dirname, 'staff_crm_whatsapp_bot.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('WhatsApp Bot Hub not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
   } else if (url.startsWith('/staff/crm/whatsapp-inbox') || url.startsWith('/staff/crm/wa-inbox')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
     // DC Protocol: Client-side LocalStorage token authentication handles user validation
@@ -30563,8 +30600,8 @@ server.listen(port, hostname, () => {
         secServer.on('error', (e) => {
           if (e.code !== 'EADDRINUSE') console.error(`Secondary server (${altPort}) error:`, e.message);
         });
-        secServer.listen(altPort, hostname, () => {
-          console.log(`✅ Secondary static server running at http://${hostname}:${altPort}/`);
+        secServer.listen(altPort, () => {
+          console.log(`✅ Secondary static server running at http://localhost:${altPort}/`);
         });
       } catch (e) {
         /* ignore */

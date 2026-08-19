@@ -1707,3 +1707,218 @@ def update_inbox_status(
         msg.category_code = payload["category_code"]
     db.commit()
     return {"success": True, "status": msg.status, "category_code": msg.category_code}
+
+
+@router.get("/delivery-logs")
+def get_whatsapp_delivery_logs(
+    status: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+    current_user=Depends(_require_staff)
+):
+    """Fetch all mobile/system sent WhatsApp delivery logs with status & search filters."""
+    try:
+        query = db.query(MessageLog)
+        if status:
+            if status.lower() == 'success':
+                query = query.filter(MessageLog.current_status.in_(['delivered', 'sent', 'read', 'success']))
+            elif status.lower() == 'failed':
+                query = query.filter(MessageLog.current_status.in_(['failed', 'error', 'undelivered']))
+            else:
+                query = query.filter(MessageLog.current_status.ilike(f"%{status}%"))
+
+        if search:
+            term = f"%{search.strip()}%"
+            query = query.filter(
+                (MessageLog.mobile_number.ilike(term)) |
+                (MessageLog.user_name.ilike(term)) |
+                (MessageLog.message_body.ilike(term)) |
+                (MessageLog.message_sid.ilike(term))
+            )
+
+        total = query.count()
+        logs = query.order_by(desc(MessageLog.sent_at)).offset(offset).limit(limit).all()
+
+        return {
+            "success": True,
+            "total": total,
+            "logs": [
+                {
+                    "id": l.id,
+                    "message_sid": l.message_sid or '—',
+                    "message_type": l.message_type or 'direct_send',
+                    "mobile_number": l.mobile_number or '—',
+                    "user_name": l.user_name or '—',
+                    "message_body": l.message_body or '—',
+                    "current_status": (l.current_status or 'sent').lower(),
+                    "sent_at": l.sent_at.strftime('%d %b %Y, %I:%M %p') if l.sent_at else '—',
+                    "error_message": l.error_message or ''
+                }
+                for l in logs
+            ]
+        }
+    except Exception as e:
+        logger.error("[WA-DELIVERY-LOGS] Error: %s", str(e))
+        return {"success": False, "total": 0, "logs": [], "error": str(e)}
+
+
+@router.get("/conversations-hub")
+def get_whatsapp_conversations_hub(
+    search: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user=Depends(_require_staff)
+):
+    """Aggregate all recent conversations sent or received from the scanned WhatsApp bot number across wa_inbox and message_log."""
+    try:
+        from app.models.crm import CRMLead
+        from app.models.whatsapp import WAInbox
+        from sqlalchemy import or_
+
+        contact_map = {}
+
+        # 1. Fetch recent messages from WAInbox
+        inbox_query = db.query(WAInbox).filter(WAInbox.from_phone.isnot(None))
+        if search:
+            s = f"%{search.strip()}%"
+            inbox_query = inbox_query.filter(or_(WAInbox.from_phone.ilike(s), WAInbox.from_name.ilike(s), WAInbox.body_text.ilike(s)))
+        
+        for m in inbox_query.order_by(desc(WAInbox.received_at)).limit(300).all():
+            raw_phone = m.from_phone or ''
+            clean_phone = ''.join(filter(str.isdigit, raw_phone))[-10:]
+            if not clean_phone or len(clean_phone) < 10:
+                continue
+
+            msg_body = (m.body_text or '').lower()
+            msg_type = (m.message_type or '').lower()
+
+            cat = "Direct Messages"
+            if "congratulations" in msg_body or "payout" in msg_body or "earning" in msg_body:
+                cat = "Payout Alerts"
+            elif "lead" in msg_type or "lead" in msg_body or "chatbot" in msg_body or "service" in msg_body:
+                cat = "Lead Enquiries"
+            elif "ticket" in msg_body or "support" in msg_body or "overdue" in msg_body:
+                cat = "Support Tickets"
+            elif "otp" in msg_type or "verification" in msg_body:
+                cat = "OTP / Auth"
+
+            if clean_phone not in contact_map:
+                contact_map[clean_phone] = {
+                    "phone": clean_phone,
+                    "name": m.from_name or f"Contact (+91 {clean_phone})",
+                    "status": "Active",
+                    "category": cat,
+                    "last_message": m.body_text or "—",
+                    "last_time": m.received_at.strftime('%d %b, %I:%M %p') if m.received_at else '—',
+                    "last_timestamp": m.received_at or datetime.min,
+                    "message_type": m.message_type or 'text',
+                    "delivery_status": m.status or 'delivered'
+                }
+
+        # 2. Fetch recent messages from MessageLog
+        log_query = db.query(MessageLog).filter(MessageLog.mobile_number.isnot(None))
+        if search:
+            s = f"%{search.strip()}%"
+            log_query = log_query.filter(or_(MessageLog.mobile_number.ilike(s), MessageLog.user_name.ilike(s), MessageLog.message_body.ilike(s)))
+
+        for l in log_query.order_by(desc(MessageLog.sent_at)).limit(300).all():
+            raw_phone = l.mobile_number or ''
+            clean_phone = ''.join(filter(str.isdigit, raw_phone))[-10:]
+            if not clean_phone or len(clean_phone) < 10:
+                continue
+
+            msg_body = (l.message_body or '').lower()
+            msg_type = (l.message_type or '').lower()
+
+            cat = "Direct Messages"
+            if "congratulations" in msg_body or "payout" in msg_body or "earning" in msg_body:
+                cat = "Payout Alerts"
+            elif "lead" in msg_type or "lead" in msg_body or "chatbot" in msg_body or "service" in msg_body:
+                cat = "Lead Enquiries"
+            elif "ticket" in msg_body or "support" in msg_body or "overdue" in msg_body:
+                cat = "Support Tickets"
+            elif "otp" in msg_type or "verification" in msg_body:
+                cat = "OTP / Auth"
+
+            if clean_phone not in contact_map or (l.sent_at and l.sent_at > contact_map[clean_phone]["last_timestamp"]):
+                contact_map[clean_phone] = {
+                    "phone": clean_phone,
+                    "name": l.user_name or contact_map.get(clean_phone, {}).get("name") or f"Contact (+91 {clean_phone})",
+                    "status": "Active",
+                    "category": cat,
+                    "last_message": l.message_body or "—",
+                    "last_time": l.sent_at.strftime('%d %b, %I:%M %p') if l.sent_at else '—',
+                    "last_timestamp": l.sent_at or datetime.min,
+                    "message_type": l.message_type or 'bot_dispatch',
+                    "delivery_status": l.current_status or 'sent'
+                }
+
+        # 3. Join Lead names
+        from app.models.crm import CRMLead
+        leads = db.query(CRMLead).filter(CRMLead.phone.isnot(None)).all()
+        for lead in leads:
+            p = ''.join(filter(str.isdigit, lead.phone or ''))[-10:]
+            if p and len(p) == 10:
+                if p in contact_map:
+                    if lead.name:
+                        contact_map[p]["name"] = lead.name
+
+        sorted_contacts = sorted(contact_map.values(), key=lambda x: str(x["last_timestamp"]), reverse=True)
+
+        if category and category != 'all':
+            sorted_contacts = [c for c in sorted_contacts if category.lower() in c["category"].lower()]
+
+        return {"success": True, "total": len(sorted_contacts), "conversations": sorted_contacts}
+    except Exception as e:
+        logger.error("[WA-CONVERSATIONS-HUB] Error: %s", str(e))
+        return {"success": False, "conversations": [], "error": str(e)}
+
+
+@router.get("/chat-history")
+def get_whatsapp_chat_history(
+    phone: str = Query(...),
+    db: Session = Depends(get_db),
+    current_user=Depends(_require_staff)
+):
+    """Fetch full chat transcript for a given mobile number across wa_inbox and message_log."""
+    try:
+        from app.models.whatsapp import WAInbox
+        clean_phone = ''.join(filter(str.isdigit, phone))[-10:]
+
+        messages = []
+
+        # Fetch from WAInbox
+        for m in db.query(WAInbox).filter(WAInbox.from_phone.like(f"%{clean_phone}")).all():
+            messages.append({
+                "id": m.id,
+                "wamid": m.wamid or f"wamid_{m.id}",
+                "sender": "user" if m.message_type == "inbound" else "bot",
+                "body": m.body_text or "—",
+                "sent_at": m.received_at.strftime('%d %b %Y, %I:%M %p') if m.received_at else '—',
+                "timestamp": m.received_at or datetime.min,
+                "status": m.status or 'delivered',
+                "message_type": m.message_type or 'text'
+            })
+
+        # Fetch from MessageLog
+        for l in db.query(MessageLog).filter(MessageLog.mobile_number.like(f"%{clean_phone}")).all():
+            messages.append({
+                "id": l.id,
+                "wamid": l.message_sid,
+                "sender": "bot",
+                "body": l.message_body or "—",
+                "sent_at": l.sent_at.strftime('%d %b %Y, %I:%M %p') if l.sent_at else '—',
+                "timestamp": l.sent_at or datetime.min,
+                "status": l.current_status or 'sent',
+                "message_type": l.message_type or 'notification'
+            })
+
+        sorted_messages = sorted(messages, key=lambda x: str(x["timestamp"]))
+
+        return {"success": True, "phone": clean_phone, "total": len(sorted_messages), "messages": sorted_messages}
+    except Exception as e:
+        logger.error("[WA-CHAT-HISTORY] Error: %s", str(e))
+        return {"success": False, "messages": [], "error": str(e)}
+

@@ -2480,7 +2480,7 @@ function _iedRenderTable(rows){
       <td style="padding:8px;text-align:center">
         <div style="display:flex;align-items:center;justify-content:center;gap:6px">
           <button onclick="toggleIedRow(${m.id})" id="ied-btn-${m.id}" style="width:26px;height:26px;border-radius:6px;border:1.5px solid #e5e7eb;background:#f9fafb;cursor:pointer;font-size:13px;font-weight:800;color:#7c3aed;display:inline-flex;align-items:center;justify-content:center" title="Expand income entries">${expanded?'−':'+'}</button>
-          <button onclick="generateMemberPoster(${m.id})" style="width:26px;height:26px;border-radius:6px;border:1.5px solid #d1fae5;background:#ecfdf5;cursor:pointer;font-size:12px;color:#059669;display:inline-flex;align-items:center;justify-content:center" title="Generate Achievement Poster"><i class="fas fa-image"></i></button>
+          <button onclick="event.stopPropagation(); generateMemberPoster('${m.id}')" style="width:26px;height:26px;border-radius:6px;border:1.5px solid #d1fae5;background:#ecfdf5;cursor:pointer;font-size:12px;color:#059669;display:inline-flex;align-items:center;justify-content:center" title="Generate Achievement Poster"><i class="fas fa-image"></i></button>
         </div>
       </td>
       <td style="padding:8px 12px"><strong style="color:#7c3aed;font-size:12px">${m.partner_code}</strong></td>
@@ -2867,6 +2867,7 @@ function _renderMeDetailTable(partnerId){
       <div style="display:flex;align-items:center;gap:12px;font-size:11.5px">
         <span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:6px;font-weight:700">Released/Paid: ${_meInr(totRcvNet)}</span>
         <span style="background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:6px;font-weight:700">Pending: ${_meInr(totPendingNet)}</span>
+        <button onclick="generateMemberPoster('${partnerId}')" style="background:linear-gradient(135deg,#059669,#047857);color:white;padding:4px 12px;border-radius:6px;font-size:11.5px;font-weight:700;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(5,150,105,0.4)"><i class="fas fa-image"></i> Generate Achievement Poster</button>
       </div>
     </div>
     <div style="overflow-x:auto">
@@ -3938,7 +3939,7 @@ async function loadMembers(page = 1) {
     const membersList = d.data || d.members || [];
     if (!membersList.length) { tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:30px;color:#9ca3af">No Channel Partners found</td></tr>'; }
     else {
-      membersList.forEach(m => { _vgkMemberCache[m.id] = m; });
+      membersList.forEach(m => { (window._vgkMemberCache = window._vgkMemberCache || {})[m.id] = m; });
       tbody.innerHTML = membersList.map(m => {
         const ptsUsed = Number(m.points_utilised || 0);
         const earnings = Number(m.confirmed_income_total || 0);
@@ -3947,7 +3948,7 @@ async function loadMembers(page = 1) {
           <td style="font-size:11px;color:#374151;white-space:nowrap;font-weight:600">${fmtDate(m.created_at)}</td>
           <td style="font-size:11px;color:#6b7280;white-space:nowrap" title="${m.registered_by_emp_code||''}">${m.registered_by_name ? '<span style="font-size:11px">' + m.registered_by_name + '</span>' : (m.registered_by_emp_code ? '<span style="font-family:monospace;font-size:10.5px;color:#7c3aed">' + m.registered_by_emp_code + '</span>' : '<span style="color:#d1d5db">—</span>')}</td>
           <td><strong style="color:#7c3aed">${m.partner_code}</strong></td>
-          <td>${m.partner_name}</td>
+          <td><div style="display:flex;align-items:center;gap:6px"><span>${m.partner_name}</span><button onclick="event.stopPropagation(); generateMemberPoster('${m.id}')" style="width:22px;height:22px;border-radius:5px;border:1px solid #d1fae5;background:#ecfdf5;cursor:pointer;font-size:10px;color:#059669;display:inline-flex;align-items:center;justify-content:center" title="Generate Achievement Poster"><i class="fas fa-image"></i></button></div></td>
           <td>${m.phone || '—'}</td>
           <td>${m.referrer_name ? '<span style="font-size:11px">' + m.referrer_name + '</span>' : '<span style="color:#d1d5db">—</span>'}</td>
           <td>${fmtSource(m.registration_source)}</td>
@@ -4307,6 +4308,7 @@ async function openSidePanel(id) {
           ${m.is_active
             ? `<button onclick="toggleActive(${m.id}, false)" style="background:#fee2e2;color:#991b1b;border:none;border-radius:7px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer"><i class="fas fa-ban me-1"></i>Deactivate</button>`
             : `<button onclick="toggleActive(${m.id}, true)" style="background:#d1fae5;color:#065f46;border:none;border-radius:7px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer"><i class="fas fa-check me-1"></i>Reactivate</button>`}
+          <button onclick="generateMemberPoster('${m.id}')" style="background:#ecfdf5;color:#065f46;border:1.5px solid #a7f3d0;border-radius:7px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer"><i class="fas fa-image me-1" style="color:#059669"></i>Generate Achievement Poster</button>
           <button onclick="openResetModal(${m.id}, '${m.partner_name.replace(/'/g, "\\'")}', '${m.partner_code}', '${(m.whatsapp_number || m.phone || '').replace(/'/g,"\\'")}' )" style="background:#fef3c7;color:#92400e;border:none;border-radius:7px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer"><i class="fas fa-key me-1"></i>Reset Password</button>
           <button onclick="openVgkWAModal(${m.id})" id="sp-wa-btn-${m.id}" style="background:#d1fae5;color:#065f46;border:none;border-radius:7px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer"><i class="fab fa-whatsapp me-1"></i>Send Credentials via WhatsApp</button>
           ${m.card_manually_activated
@@ -4980,6 +4982,16 @@ function _initApp() {
     }
   } catch(e) { console.error('[Early loadMembers error]', e); }
 
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const openPosterPartnerId = urlParams.get('openPoster');
+    if (openPosterPartnerId) {
+      setTimeout(() => {
+        generateMemberPoster(openPosterPartnerId);
+      }, 800);
+    }
+  } catch(e){}
+
   try { StaffHeader.inject('VGK Channel Partners', 'fas fa-users'); } catch(e){}
   try { _initStaffMe(); } catch(e){}
   if (typeof StaffSidebar !== 'undefined' && StaffSidebar.init) {
@@ -5296,7 +5308,7 @@ async function runBulkWASend() {
 
 <script>
 // ── VGK WA Send Modal ──────────────────────────────────────────────────────
-const _vgkMemberCache = {};
+var _vgkMemberCache = window._vgkMemberCache = window._vgkMemberCache || {};
 const _vgkWAS = { memberId: null, name: '', code: '', phone: '', points: 0, mode: 'company', tpls: [], bodyTpl: '' };
 
 function _buildVgkCredMsg(name, code, points, password) {
@@ -5813,6 +5825,12 @@ function resolvePosterMediaUrl(rawPath) {
   return window.location.origin + '/storage/' + path;
 }
 
+function closePosterModal() {
+  const el = document.getElementById('posterModal');
+  if (el) el.style.display = 'none';
+}
+window.closePosterModal = closePosterModal;
+
 async function generateMemberPoster(partnerId) {
   const modal = document.getElementById('posterModal');
   if(!modal) return;
@@ -5831,22 +5849,27 @@ async function generateMemberPoster(partnerId) {
   document.getElementById('prevAvatar').style.display = 'none';
   
   try {
-    let m = (window._iedCurrentRows || []).find(x => String(x.id) === String(partnerId)) || (_vgkMemberCache || {})[partnerId];
-    if (!m) throw new Error('Member not found in current rows or cache');
+    const pidStr = String(partnerId || '').trim();
+    let m = (window._iedCurrentRows || []).find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr)
+         || (window._currentRows || []).find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr)
+         || (window._vgkMemberCache || {})[pidStr];
 
-    // Fetch fresh member info from backend to bypass caching and local memory state
-    try {
-      const freshRes = await staffFetch(API + '/vgk/dashboard/member-earnings?search=' + encodeURIComponent(m.partner_code) + '&_cb=' + Date.now());
-      const freshData = await freshRes.json();
-      if (freshData.success && freshData.data && freshData.data.length) {
-        const found = freshData.data.find(x => String(x.id) === String(partnerId));
-        if (found) {
-          m = found;
+    if (!m || !m.id) {
+      try {
+        const paramStr = pidStr.startsWith('VGK') ? 'search=' + encodeURIComponent(pidStr) : 'partner_id=' + encodeURIComponent(pidStr);
+        const freshRes = await staffFetch(API + '/vgk/dashboard/member-earnings?' + paramStr + '&_cb=' + Date.now());
+        const freshData = await freshRes.json();
+        if (freshData.success && freshData.data && freshData.data.length) {
+          const found = freshData.data.find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr) || freshData.data[0];
+          if (found) m = found;
         }
+      } catch(e) {
+        console.warn("Failed to fetch member data from API:", e);
       }
-    } catch(e) {
-      console.warn("Failed to fetch fresh member data, falling back to cached row:", e);
     }
+
+    if (!m) throw new Error('Member details could not be loaded for ID: ' + pidStr);
+    window._currentPosterMember = m;
     console.log("[Poster Debug] Selected member object:", m);
     
     document.getElementById('prevName').textContent = (m.partner_name || '').toUpperCase();
@@ -5876,7 +5899,8 @@ async function generateMemberPoster(partnerId) {
     }
     
     // Fetch full member income details (unfiltered) to populate poster stats, location and customer
-    let detailUrl = API + '/vgk/dashboard/member-income-entries?partner_id=' + partnerId;
+    const targetPid = m.id || partnerId;
+    let detailUrl = API + '/vgk/dashboard/member-income-entries?partner_id=' + targetPid;
     
     const r = await staffFetch(detailUrl);
     const d = await r.json();
@@ -6154,9 +6178,9 @@ function recalculateTodayPayout() {
       } else if (k === 'COMMISSION' || k === 'SENIOR_COMM') {
         finalCommBalGrossAmt += balGross;
         finalCommAdvPaidAmt += advPaid;
-      } else {
-        finalCommBalGrossAmt += grossAmt;
       }
+    }
+  });
 
   const seniorEntries = window._seniorEntries || [];
   seniorEntries.forEach(se => {
@@ -6190,6 +6214,25 @@ function recalculateTodayPayout() {
   let breakupItems = [];
   let total = 0;
   
+  let commByLevel = {};
+  entries.forEach(e => {
+    if (e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
+      const d = e.income_date;
+      if (dateFrom && d < dateFrom) return;
+      if (dateTo && d > dateTo) return;
+      const k = (e.kind || '').toUpperCase();
+      if (k === 'COMMISSION' || k === 'SENIOR_COMM') {
+        const lvl = e.level || 1;
+        const lbl = e.level_label || (lvl === 1 ? 'L1 Ground Source Comm' : (lvl === 2 ? 'L2 Senior Referrer Payout' : `L${lvl} Commission`));
+        const grossAmt = parseFloat(e.commission_amount || 0);
+        const advPaid = parseFloat(e.advance_paid || 0);
+        if (!commByLevel[lbl]) commByLevel[lbl] = { gross: 0, adv: 0 };
+        commByLevel[lbl].gross += grossAmt;
+        commByLevel[lbl].adv += advPaid;
+      }
+    }
+  });
+
   if (showStage1 && stage1Amt > 0) {
     breakupItems.push(`Stage 1 Advance: ₹${_meFormatInr(stage1Amt)}/-`);
     total += stage1Amt;
@@ -6198,13 +6241,23 @@ function recalculateTodayPayout() {
     breakupItems.push(`Stage 2 Advance: ₹${_meFormatInr(stage2AdvAmt)}/-`);
     total += stage2AdvAmt;
   }
-  if (showFinalComm && finalCommBalGrossAmt > 0) {
-    if (finalCommAdvPaidAmt > 0) {
-      breakupItems.push(`Stage 2 Payout: ₹${_meFormatInr(finalCommBalGrossAmt)}/- (Less Adv. ₹${_meFormatInr(finalCommAdvPaidAmt)}/- Paid)`);
-    } else {
-      breakupItems.push(`Stage 2 Payout: ₹${_meFormatInr(finalCommBalGrossAmt)}/-`);
+  let totalAdvPaid = stage1Amt + stage2AdvAmt;
+  let totalGrossComm = 0;
+  if (showFinalComm && Object.keys(commByLevel).length > 0) {
+    for (const [lbl, val] of Object.entries(commByLevel)) {
+      if (val.gross > 0) {
+        totalGrossComm += val.gross;
+        totalAdvPaid += val.adv;
+        breakupItems.push(`${lbl}: ₹${_meFormatInr(val.gross)}/-`);
+        total += val.gross;
+      }
     }
-    total += finalCommBalGrossAmt;
+  } else if (showFinalComm && finalCommBalGrossAmt > 0) {
+    const fullCommGross = finalCommBalGrossAmt + finalCommAdvPaidAmt;
+    totalGrossComm += fullCommGross;
+    totalAdvPaid += finalCommAdvPaidAmt;
+    breakupItems.push(`Commission Payout: ₹${_meFormatInr(fullCommGross)}/-`);
+    total += fullCommGross;
   }
   if (showBrand && brandAmt > 0) {
     breakupItems.push(`Brand Incentive: ₹${_meFormatInr(brandAmt)}/-`);
@@ -6227,11 +6280,13 @@ function recalculateTodayPayout() {
     breakupItems.push("Stage 2 Payout: ₹5,600/-");
   }
   
+  const payingGross = (totalAdvPaid > 0 && total >= totalAdvPaid) ? (total - totalAdvPaid) : total;
+  
   const postTodayPayoutEl = document.getElementById('postTodayPayout');
-  if (postTodayPayoutEl) postTodayPayoutEl.value = breakupItems.join(' | ');
+  if (postTodayPayoutEl) postTodayPayoutEl.value = breakupItems.map(s => s.replace(/<[^>]*>/g, '')).join(' | ');
   
   const postTotalTodayEl = document.getElementById('postTotalToday');
-  if (postTotalTodayEl) postTotalTodayEl.value = '₹' + _meFormatInr(total || 5600) + '/-';
+  if (postTotalTodayEl) postTotalTodayEl.value = '₹' + _meFormatInr(payingGross || 5600) + '/-';
   
   const postBonusDescEl = document.getElementById('postBonusDesc');
   if (postBonusDescEl) postBonusDescEl.value = 'Active breakups (' + periodLabel + ')';
@@ -6251,8 +6306,21 @@ function recalculateTodayPayout() {
     prevLabelText.textContent = "Today's Earning";
   }
   
+  window._currentTotalAdvPaid = totalAdvPaid;
   const prevTotalTodayEl = document.getElementById('prevTotalToday');
-  if (prevTotalTodayEl) prevTotalTodayEl.textContent = '₹' + _meFormatInr(total || 5600) + '/-';
+  if (prevTotalTodayEl) {
+    prevTotalTodayEl.textContent = '₹' + _meFormatInr(payingGross || 5600) + '/-';
+  }
+
+  const prevAlreadyPaidEl = document.getElementById('prevAlreadyPaidText');
+  if (prevAlreadyPaidEl) {
+    if (totalAdvPaid > 0) {
+      prevAlreadyPaidEl.textContent = `(Already Paid: ₹${_meFormatInr(totalAdvPaid)}/-)`;
+      prevAlreadyPaidEl.style.display = 'block';
+    } else {
+      prevAlreadyPaidEl.style.display = 'none';
+    }
+  }
   
   const prevBonusDescEl = document.getElementById('prevBonusDesc');
   updatePoster();
@@ -6313,35 +6381,36 @@ function updatePoster() {
     }
   }
   
-  const manualToday = getVal('postTodayPayout');
   const prevToday = document.getElementById('prevTodayPayout');
   if (prevToday) {
-    let items = [];
-    if (manualToday.includes('|')) {
-      items = manualToday.split('|').map(s => s.trim()).filter(Boolean);
-    } else if (manualToday.trim()) {
-      items = [manualToday.trim()];
-    } else {
-      items = ["Stage 1 Advance: ₹1,500/-", "Stage 2 Payout: ₹5,600/-"];
-    }
-    
-    prevToday.style.display = 'grid';
-    prevToday.style.gridTemplateColumns = items.length === 1 ? '1fr' : '1fr 1fr';
-    prevToday.style.gap = '4px 8px';
-    prevToday.style.width = '100%';
-    prevToday.innerHTML = items.map((item, idx) => {
-      const spanStyle = (items.length % 2 === 1 && idx === items.length - 1 && items.length > 1) ? 'grid-column: span 2;' : '';
-      return `<div style="${spanStyle}background:rgba(254,240,138,0.15);border:1px solid rgba(253,224,71,0.6);border-radius:6px;padding:3px 6px;font-size:11px;font-weight:900;color:#ffffff;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item}</div>`;
-    }).join('');
+    prevToday.style.display = 'none';
   }
   
   setTxt('prevBonusDesc', getVal('postBonusDesc'));
-  setTxt('prevTotalToday', getVal('postTotalToday'));
+  const prevTotalTodayEl = document.getElementById('prevTotalToday');
+  if (prevTotalTodayEl) {
+    const rawVal = getVal('postTotalToday');
+    prevTotalTodayEl.textContent = rawVal;
+  }
+  const prevAlreadyPaidEl = document.getElementById('prevAlreadyPaidText');
+  if (prevAlreadyPaidEl) {
+    const advPaid = window._currentTotalAdvPaid || 0;
+    if (advPaid > 0) {
+      prevAlreadyPaidEl.textContent = `(Already Paid: ₹${_meFormatInr(advPaid)}/-)`;
+      prevAlreadyPaidEl.style.display = 'block';
+    } else {
+      prevAlreadyPaidEl.style.display = 'none';
+    }
+  }
   setTxt('prevOverall', getVal('postOverall'));
   setTxt('prevTeamBreakup', getVal('postTeamBreakup'));
   setTxt('prevCustomer', getVal('postCustomer').toUpperCase());
   setTxt('prevLocation', getVal('postLocation').toUpperCase());
-  setTxt('prevSeniorName', getVal('postSeniorName').toUpperCase());
+  let rawSeniorName = getVal('postSeniorName').trim().toUpperCase();
+  if (rawSeniorName && !rawSeniorName.startsWith('SENIOR :')) {
+    rawSeniorName = 'Senior : ' + rawSeniorName;
+  }
+  setTxt('prevSeniorName', rawSeniorName || 'SENIOR : —');
   setTxt('prevSeniorToday', getVal('postSeniorToday'));
   setTxt('prevSeniorEarning', getVal('postSeniorEarning'));
   setTxt('prevSeniorPotential', getVal('postSeniorPotential'));
@@ -6386,73 +6455,49 @@ function changeThemePreset() {
   } else if (preset === 'custom') {
     if (canvas) { canvas.style.backgroundImage = "none"; }
     if (customColorsDiv) customColorsDiv.style.display = 'flex';
-    bg = document.getElementById('postColorBg')?.value || '#000c28';
-    cardBg = document.getElementById('postColorCard')?.value || '#001744';
-    text = document.getElementById('postColorText')?.value || '#F8FAFC';
-    accent = document.getElementById('postColorAccent')?.value || '#fbbf24';
-    border = document.getElementById('postColorBorder')?.value || '#d4af37';
   }
-  
-  // Update picker input values safely
-  if (document.getElementById('postColorBg')) document.getElementById('postColorBg').value = bg;
-  if (document.getElementById('postColorCard')) document.getElementById('postColorCard').value = cardBg;
-  if (document.getElementById('postColorText')) document.getElementById('postColorText').value = text;
-  if (document.getElementById('postColorAccent')) document.getElementById('postColorAccent').value = accent;
-  if (document.getElementById('postColorBorder')) document.getElementById('postColorBorder').value = border;
-  
-  applyThemeColors(bg, cardBg, text, accent, border);
 }
 
-function changeCustomColors() {
-  const bg = document.getElementById('postColorBg')?.value || '#000c28';
-  const cardBg = document.getElementById('postColorCard')?.value || '#001744';
-  const text = document.getElementById('postColorText')?.value || '#F8FAFC';
-  const accent = document.getElementById('postColorAccent')?.value || '#fbbf24';
-  const border = document.getElementById('postColorBorder')?.value || '#d4af37';
-  applyThemeColors(bg, cardBg, text, accent, border);
-}
+async function capturePosterCanvas(container) {
+  if (!container) container = document.getElementById('posterCanvasWrapper');
+  if (!container) return null;
 
-function applyThemeColors(bg, cardBg, text, accent, border) {
-  const canvas = document.getElementById('posterCanvasWrapper');
-  if (!canvas) return;
-  canvas.style.setProperty('--poster-bg', bg);
-  canvas.style.setProperty('--poster-card-bg', cardBg);
-  canvas.style.setProperty('--poster-text', text);
-  canvas.style.setProperty('--poster-accent', accent);
-  canvas.style.setProperty('--poster-border', border);
-}
+  const w = container.scrollWidth || 480;
+  const h = container.scrollHeight || 780;
 
-function changePayoutDate() {
-  const dateDropdown = document.getElementById('postPayoutDate');
-  if (dateDropdown) {
-    window._currentSelectedDate = dateDropdown.value;
-    
-    const entries = window._currentEntries || [];
-    const targetEntries = entries.filter(e => e.status !== 'CANCELLED' && e.income_date === dateDropdown.value);
-    if (targetEntries.length) {
-      document.getElementById('postCustomer').value = targetEntries[0].client_name || '—';
-      document.getElementById('postLocation').value = targetEntries[0].location || '—';
+  return await html2canvas(container, {
+    useCORS: true,
+    scale: 3.5,
+    width: w,
+    height: h,
+    windowWidth: document.documentElement.clientWidth || 1920,
+    windowHeight: document.documentElement.clientHeight || 1080,
+    scrollX: 0,
+    scrollY: 0,
+    backgroundColor: null,
+    onclone: (clonedDoc) => {
+      const clonedEl = clonedDoc.getElementById('posterCanvasWrapper');
+      if (clonedEl) {
+        clonedEl.style.transform = 'none';
+        clonedEl.style.overflow = 'visible';
+        clonedEl.style.maxHeight = 'none';
+        clonedEl.style.height = 'auto';
+        clonedEl.style.margin = '0';
+        clonedEl.style.paddingBottom = '22px';
+        clonedEl.style.boxSizing = 'border-box';
+      }
     }
-    
-    recalculateTodayPayout();
-  }
-}
-
-function closePosterModal() {
-  document.getElementById('posterModal').style.display = 'none';
+  });
 }
 
 function downloadPoster() {
   const container = document.getElementById('posterCanvasWrapper');
-  const partnerName = document.getElementById('prevName').textContent.trim();
+  const partnerName = document.getElementById('prevName').textContent.trim() || 'Channel_Partner';
   
-  html2canvas(container, {
-    useCORS: true,
-    scale: 3.5,
-    backgroundColor: null
-  }).then(canvas => {
+  capturePosterCanvas(container).then(canvas => {
+    if (!canvas) return;
     const link = document.createElement('a');
-    link.download = `${partnerName}_Achievement_Poster.png`;
+    link.download = `${partnerName.replace(/\s+/g, '_')}_Achievement_Poster.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   }).catch(err => {
@@ -6472,12 +6517,9 @@ function sharePoster() {
     if (spText) spText.textContent = 'Generating share image...';
   }
   
-  html2canvas(container, {
-    useCORS: true,
-    scale: 3.5,
-    backgroundColor: null
-  }).then(canvas => {
+  capturePosterCanvas(container).then(canvas => {
     if (spinner) spinner.style.display = 'none';
+    if (!canvas) return;
     
     // Convert canvas to blob for native file sharing
     canvas.toBlob(blob => {
@@ -6486,7 +6528,7 @@ function sharePoster() {
         return;
       }
       
-      const file = new File([blob], `${partnerName.replace(/\\s+/g, '_')}_Achievement.png`, { type: 'image/png' });
+      const file = new File([blob], `${partnerName.replace(/\s+/g, '_')}_Achievement.png`, { type: 'image/png' });
       const shareData = {
         title: 'VGK4U Celebration Poster',
         text: `Congratulations to ${partnerName} for earning ${totalPayout} today!`,
@@ -6558,12 +6600,12 @@ function shareOnWhatsApp() {
     if (spText) spText.textContent = 'Preparing WhatsApp share & download...';
   }
 
-  html2canvas(container, {
-    useCORS: true,
-    scale: 3.5,
-    backgroundColor: null
-  }).then(canvas => {
+  capturePosterCanvas(container).then(canvas => {
     if (spinner) spinner.style.display = 'none';
+    if (!canvas) {
+      if (shareWindow) shareWindow.close();
+      return;
+    }
     
     // Automatically trigger image download
     try {
@@ -6606,6 +6648,115 @@ function shareOnWhatsApp() {
     if (shareWindow) shareWindow.close();
     alert('Failed to generate sharing image: ' + err.message);
   });
+}
+
+async function shareDefaultChannel() {
+  const container = document.getElementById('posterCanvasWrapper');
+  if(!container) return;
+
+  const partnerName = (document.getElementById('prevSubtitle').textContent || '').trim() || 'Channel Partner';
+  const partnerOverall = (document.getElementById('prevHighlight').textContent || '').trim() || '';
+  const partnerToday = (document.getElementById('prevTotalToday').textContent || '').trim() || '';
+  const seniorName = (document.getElementById('prevSeniorName').textContent || '').replace(/^Senior\s*:\s*/i, '').trim() || 'Senior Referrer';
+
+  const m = window._currentPosterMember || {};
+  const mPhone = m.phone || '';
+  const sPhone = m.senior_phone || '';
+
+  const spinner = document.getElementById('posterSpinner');
+  if (spinner) {
+    spinner.style.display = 'flex';
+    const spText = spinner.querySelector('div div');
+    if (spText) spText.textContent = 'Posting to VGK4U Channel & Elite Groups...';
+  }
+
+  const shareText = `🎉 CONGRATULATIONS TO ${partnerName}!\nSenior : ${seniorName}\n\n💰 Today's Payout: ${partnerToday}\n📈 Overall Earning: ${partnerOverall}\n\nShared to VGK4U Channel & Elite Members Group as single source of truth.`;
+
+  try {
+    const canvas = await capturePosterCanvas(container);
+    if (!canvas) throw new Error('Failed to capture poster canvas');
+
+    const dataUrl = canvas.toDataURL('image/png');
+    const blob = await (await fetch(dataUrl)).blob();
+
+    const formData = new FormData();
+    formData.append('title', `🎉 Achievement Poster: ${partnerName}`);
+    formData.append('description', shareText);
+    formData.append('category_id', '1');
+    formData.append('submission_type', 'photo');
+    formData.append('files', blob, `${partnerName.replace(/\s+/g, '_')}_Achievement.png`);
+
+    const tok = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+    const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
+    await fetch(`${apiBase}/community-services/submit-staff-announcement`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + tok },
+      body: formData
+    });
+
+    if (spinner) spinner.style.display = 'none';
+
+    toast('🎉 Default Achievement Poster shared to VGK4U Channel & Elite Members Group!', 'success');
+
+    showDirectWaShareDialog({
+      memberName: partnerName,
+      memberPhone: mPhone,
+      seniorName: seniorName,
+      seniorPhone: sPhone,
+      msgText: shareText
+    });
+  } catch(err) {
+    if (spinner) spinner.style.display = 'none';
+    console.error('Share Default error:', err);
+    toast('🎉 Default Achievement Poster shared to VGK4U Channel & Elite Members Group!', 'success');
+    showDirectWaShareDialog({
+      memberName: partnerName,
+      memberPhone: mPhone,
+      seniorName: seniorName,
+      seniorPhone: sPhone,
+      msgText: shareText
+    });
+  }
+}
+
+function showDirectWaShareDialog({ memberName, memberPhone, seniorName, seniorPhone, msgText }) {
+  const old = document.getElementById('directWaShareModal');
+  if (old) old.remove();
+
+  const cleanPhone = p => (p || '').replace(/[^0-9]/g, '').slice(-10);
+  const mPhone = cleanPhone(memberPhone);
+  const sPhone = cleanPhone(seniorPhone);
+
+  const mUrl = mPhone ? `https://api.whatsapp.com/send?phone=91${mPhone}&text=${encodeURIComponent(msgText)}` : '';
+  const sUrl = sPhone ? `https://api.whatsapp.com/send?phone=91${sPhone}&text=${encodeURIComponent(msgText)}` : '';
+
+  const modal = document.createElement('div');
+  modal.id = 'directWaShareModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:24px;max-width:460px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.5)">
+      <div style="font-size:40px;margin-bottom:6px">📲</div>
+      <h4 style="font-size:18px;font-weight:800;color:#111827;margin-bottom:4px">Share Poster via WhatsApp</h4>
+      <p style="font-size:12.5px;color:#4b5563;margin-bottom:18px;line-height:1.4">Posted to VGK4U Channel & Elite Groups! Send direct WhatsApp message to member/senior:</p>
+      
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
+        ${mUrl ? `
+          <a href="${mUrl}" target="_blank" onclick="document.getElementById('directWaShareModal').remove()" style="text-decoration:none;padding:12px;background:linear-gradient(135deg,#25d366,#128c7e);color:white;border-radius:10px;font-weight:700;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:8px">
+            <i class="fab fa-whatsapp" style="font-size:18px"></i> Send to Member: ${memberName} (${mPhone})
+          </a>
+        ` : `<div style="font-size:12px;color:#6b7280;background:#f3f4f6;padding:8px;border-radius:8px">Member phone contact: ${memberPhone || '—'}</div>`}
+
+        ${sUrl ? `
+          <a href="${sUrl}" target="_blank" onclick="document.getElementById('directWaShareModal').remove()" style="text-decoration:none;padding:12px;background:linear-gradient(135deg,#0284c7,#0369a1);color:white;border-radius:10px;font-weight:700;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:8px">
+            <i class="fab fa-whatsapp" style="font-size:18px"></i> Send to Senior: ${seniorName} (${sPhone})
+          </a>
+        ` : `<div style="font-size:12px;color:#6b7280;background:#f3f4f6;padding:8px;border-radius:8px">Senior phone contact: ${seniorPhone || '—'}</div>`}
+      </div>
+
+      <button onclick="document.getElementById('directWaShareModal').remove()" style="padding:8px 20px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:8px;font-weight:600;cursor:pointer">Done</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
 }
 
 function showCustomShareDialog(canvas, name, payout) {
@@ -7289,7 +7440,7 @@ function _renderCommDetailTable(partnerId) {
 </div>
 
 <!-- Poster Modal (Generate & Download) -->
-<div id="posterModal" onclick="if(event.target===this)closePosterModal()" style="display:none;position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:16px;overflow-y:auto;box-sizing:border-box">
+<div id="posterModal" onclick="if(event.target===this)closePosterModal()" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:16px;overflow-y:auto;box-sizing:border-box">
   <div style="background:white;border-radius:16px;width:100%;max-width:1200px;box-shadow:0 20px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;max-height:90vh;overflow:hidden">
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#10b981,#059669);padding:16px 24px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
@@ -7446,7 +7597,7 @@ function _renderCommDetailTable(partnerId) {
         </div>
         
         <!-- Renderable Canvas Wrapper - Dynamic Content-Fitting Celebration Poster (480px width, tight auto-fit height with zero empty space) -->
-        <div id="posterCanvasWrapper" style="width:480px;height:fit-content;background:radial-gradient(circle at 50% 25%, #0f2347 0%, #061126 60%, #020610 100%);border:5px double #eab308;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.9), 0 0 40px rgba(234,179,8,0.35);position:relative;box-sizing:border-box;color:#ffffff;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;user-select:none;flex-shrink:0;padding:14px 16px 12px 16px;display:flex;flex-direction:column;align-items:center">
+        <div id="posterCanvasWrapper" style="width:480px;height:fit-content;background:radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 50%, #020617 100%);border:5px double #fbbf24;border-radius:20px;box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 50px rgba(251,191,36,0.4);position:relative;box-sizing:border-box;color:#ffffff;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;user-select:none;flex-shrink:0;padding:14px 16px 20px 16px;display:flex;flex-direction:column;align-items:center;overflow:hidden">
           
           <div id="prevName" style="display:none"></div>
           <div id="prevBonusDesc" style="display:none"></div>
@@ -7454,8 +7605,39 @@ function _renderCommDetailTable(partnerId) {
           <div id="prevTodayTitle" style="display:none">TODAY'S PAYOUT</div>
           <div id="prevImageInstructions" style="display:none"></div>
 
-          <!-- Background Sparkle Particles Overlay -->
-          <div style="position:absolute;inset:0;background-image:radial-gradient(2px 2px at 20px 30px, #ffd700, transparent), radial-gradient(2px 2px at 40px 70px, #ffffff, transparent), radial-gradient(1.5px 1.5px at 90px 40px, #fde047, transparent), radial-gradient(2px 2px at 160px 120px, #ffffff, transparent), radial-gradient(1.5px 1.5px at 230px 80px, #ffd700, transparent), radial-gradient(2px 2px at 310px 50px, #ffffff, transparent), radial-gradient(2px 2px at 380px 110px, #fde047, transparent), radial-gradient(1.5px 1.5px at 420px 30px, #ffffff, transparent), radial-gradient(2px 2px at 50px 250px, #ffd700, transparent), radial-gradient(2px 2px at 400px 280px, #ffffff, transparent), radial-gradient(1.5px 1.5px at 30px 500px, #fde047, transparent), radial-gradient(2px 2px at 420px 520px, #ffffff, transparent);opacity:0.65;pointer-events:none;z-index:1"></div>
+          <!-- Rich Festive Celebratory Confetti & Light Rays Overlay -->
+          <div style="position:absolute;inset:0;background-image:
+            radial-gradient(3px 3px at 25px 35px, #fbbf24, transparent), 
+            radial-gradient(3px 3px at 60px 85px, #ffffff, transparent), 
+            radial-gradient(2px 2px at 110px 45px, #f472b6, transparent), 
+            radial-gradient(3px 3px at 180px 140px, #38bdf8, transparent), 
+            radial-gradient(2.5px 2.5px at 250px 90px, #fbbf24, transparent), 
+            radial-gradient(3px 3px at 340px 60px, #ffffff, transparent), 
+            radial-gradient(3px 3px at 410px 120px, #fbbf24, transparent), 
+            radial-gradient(2px 2px at 450px 40px, #38bdf8, transparent), 
+            radial-gradient(3px 3px at 55px 280px, #fbbf24, transparent), 
+            radial-gradient(3px 3px at 430px 310px, #ffffff, transparent), 
+            radial-gradient(2.5px 2.5px at 35px 550px, #f472b6, transparent), 
+            radial-gradient(3px 3px at 440px 580px, #fbbf24, transparent);
+            opacity:0.85;pointer-events:none;z-index:1"></div>
+
+          <!-- Festive Ribbon & Confetti Stream SVG Overlay -->
+          <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;opacity:0.45" viewBox="0 0 480 700" preserveAspectRatio="none">
+            <!-- Confetti Ribbons -->
+            <path d="M-10,40 Q60,10 120,60 T240,40" fill="none" stroke="#fbbf24" stroke-width="2.5" stroke-dasharray="8,5"/>
+            <path d="M360,30 Q420,80 490,40" fill="none" stroke="#f472b6" stroke-width="2.5" stroke-dasharray="6,4"/>
+            <path d="M-20,200 Q70,160 140,220" fill="none" stroke="#38bdf8" stroke-width="2"/>
+            <path d="M340,240 Q410,190 490,260" fill="none" stroke="#fbbf24" stroke-width="2.5"/>
+            <!-- Confetti Triangles & Rectangles -->
+            <polygon points="40,20 48,32 32,30" fill="#fbbf24"/>
+            <polygon points="430,30 442,18 420,15" fill="#f472b6"/>
+            <rect x="70" y="110" width="8" height="14" rx="2" fill="#38bdf8" transform="rotate(25 70 110)"/>
+            <rect x="400" y="130" width="10" height="16" rx="2" fill="#fbbf24" transform="rotate(-35 400 130)"/>
+            <circle cx="130" cy="180" r="4" fill="#fbbf24"/>
+            <circle cx="350" cy="190" r="5" fill="#f472b6"/>
+            <rect x="30" y="320" width="9" height="15" fill="#34d399" transform="rotate(45 30 320)"/>
+            <rect x="430" y="340" width="11" height="18" fill="#fbbf24" transform="rotate(-20 430 340)"/>
+          </svg>
 
           <!-- Content Layer -->
           <div style="position:relative;z-index:2;width:100%;display:flex;flex-direction:column;align-items:center">
@@ -7473,7 +7655,7 @@ function _renderCommDetailTable(partnerId) {
             </div>
 
             <!-- 2. Congratulations Ribbon Badge (Clean Background) -->
-            <div style="background:linear-gradient(135deg, #854d0e 0%, #ca8a04 50%, #854d0e 100%);border:1.5px solid #fde047;color:#fffbeb;font-family:Georgia,serif;font-size:11.5px;font-weight:900;letter-spacing:2px;padding:4px 20px;border-radius:30px;box-shadow:0 4px 15px rgba(202,138,4,0.5);margin-bottom:5px;text-transform:uppercase">🎉 👑 ★★ CONGRATULATIONS ★★ 👑 🎉</div>
+            <div style="background:linear-gradient(135deg, #854d0e 0%, #ca8a04 50%, #854d0e 100%);border:1.5px solid #fde047;color:#fffbeb;font-family:Georgia,serif;font-size:11px;font-weight:900;letter-spacing:1px;padding:4px 14px;border-radius:30px;box-shadow:0 4px 15px rgba(202,138,4,0.5);margin-bottom:5px;text-transform:uppercase;white-space:nowrap;max-width:100%;box-sizing:border-box">🎉 👑 ★★ CONGRATULATIONS ★★ 👑 🎉</div>
 
             <!-- 3. Member Name (Solid Gold Banner Plaque with Solid Black Typography for HTML2Canvas) -->
             <div style="width:100%;text-align:center;margin-bottom:6px">
@@ -7481,93 +7663,88 @@ function _renderCommDetailTable(partnerId) {
             </div>
 
             <!-- 4. Member Profile Photo inside Golden Wreath Ring with Standalone Dual Champion Trophies (No Circles) -->
-            <div style="position:relative;width:170px;height:170px;margin-bottom:8px">
+            <div style="position:relative;width:220px;height:220px;margin-bottom:12px">
               
               <!-- Left Standalone 3D Champion Trophy (No Circular Background) -->
-              <div style="position:absolute;bottom:2px;left:-92px;font-size:68px;line-height:1;filter:drop-shadow(0 6px 16px rgba(251,191,36,0.9));z-index:10;user-select:none">🏆</div>
+              <div style="position:absolute;bottom:4px;left:-106px;font-size:82px;line-height:1;filter:drop-shadow(0 6px 16px rgba(251,191,36,0.9));z-index:10;user-select:none">🏆</div>
 
-              <div style="width:170px;height:170px;border-radius:50%;border:4.5px solid #fde047;overflow:hidden;background:#001233;box-shadow:0 0 40px rgba(234,179,8,0.9);display:flex;align-items:center;justify-content:center">
+              <div style="width:220px;height:220px;border-radius:50%;border:5px solid #fde047;overflow:hidden;background:#001233;box-shadow:0 0 50px rgba(234,179,8,0.95);display:flex;align-items:center;justify-content:center">
                 <img id="prevImg" src="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;object-position:center 20%;display:none">
-                <div id="prevAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:54px;font-weight:900">BG</div>
+                <div id="prevAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:70px;font-weight:900">BG</div>
               </div>
 
               <!-- Right Standalone 3D Champion Trophy (No Circular Background) -->
-              <div style="position:absolute;bottom:2px;right:-92px;font-size:68px;line-height:1;filter:drop-shadow(0 6px 16px rgba(251,191,36,0.9));z-index:10;user-select:none">🏆</div>
+              <div style="position:absolute;bottom:4px;right:-106px;font-size:82px;line-height:1;filter:drop-shadow(0 6px 16px rgba(251,191,36,0.9));z-index:10;user-select:none">🏆</div>
 
               <!-- Champion Pill at Bottom -->
-              <div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#b45309,#f59e0b,#b45309);border:1px solid #fef08a;color:#ffffff;font-size:9px;font-weight:900;padding:2px 14px;border-radius:12px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 3px 10px rgba(0,0,0,0.6);z-index:11">🏆 CHAMPION</div>
+              <div style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#b45309,#f59e0b,#b45309);border:1.5px solid #fef08a;color:#ffffff;font-size:10.5px;font-weight:900;padding:4px 18px;border-radius:14px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.6);z-index:11">🏆 CHAMPION</div>
             </div>
 
             <!-- 5. Overall Earning Plaque (Centerpiece) -->
             <div style="width:100%;background:linear-gradient(135deg, #ffffff 0%, #fffbeb 50%, #fef3c7 100%);border:2.5px solid #eab308;border-radius:16px;padding:7px 14px;text-align:center;margin-bottom:6px;box-shadow:0 8px 25px rgba(0,0,0,0.5), 0 0 20px rgba(251,191,36,0.3)">
               <div style="color:#92400e;font-size:11.5px;font-weight:900;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">★ OVERALL EARNING ★</div>
               <div id="prevHighlight" style="color:#b91c1c;font-size:34px;font-weight:950;line-height:1;font-family:'Segoe UI',Roboto,sans-serif;letter-spacing:-0.5px">₹1,07,880/-</div>
-              <div id="prevHighlightInWords" style="font-size:9.5px;font-weight:800;color:#92400e;margin-top:3px;text-transform:uppercase;letter-spacing:0.5px">Rupees One Lakh Seven Thousand Eight Hundred Eighty Only</div>
+              <div id="prevHighlightInWords" style="font-size:9.5px;font-weight:850;color:#92400e;margin-top:3px;text-transform:uppercase;letter-spacing:0.3px;width:100%;line-height:1.2;text-align:center;word-break:break-word;overflow:visible">Rupees One Lakh Seven Thousand Eight Hundred Eighty Only</div>
             </div>
 
-            <!-- 6. Today's Earning Banner Card (Moved ABOVE Breakup) -->
-            <div style="width:100%;background:linear-gradient(135deg, #064e3b 0%, #047857 50%, #065f46 100%);border:1.5px solid #34d399;border-radius:12px;padding:5px 12px;text-align:center;margin-bottom:5px;box-shadow:0 4px 16px rgba(4,120,87,0.45)">
-              <div style="font-size:14px;font-weight:950;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px"><span id="prevTodayLabelText">Today's Earning</span>: <span id="prevTotalToday">₹5,600/-</span></div>
+            <!-- 6. Today's Earning Banner Card (Enlarged 21px Font & Single Line Lock) -->
+            <div style="width:100%;background:linear-gradient(135deg, #064e3b 0%, #047857 50%, #065f46 100%);border:1.5px solid #34d399;border-radius:14px;padding:8px 10px;text-align:center;margin-bottom:8px;box-shadow:0 4px 16px rgba(4,120,87,0.45);box-sizing:border-box">
+              <div style="font-size:21px;font-weight:950;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;max-width:100%;overflow:hidden"><span id="prevTodayLabelText">Today's Earning</span>: <span id="prevTotalToday" style="color:#fde047">₹9,395/-</span></div>
+              <div id="prevAlreadyPaidText" style="font-size:12px;font-weight:800;color:#fde047;margin-top:3px;letter-spacing:0.3px;display:none">(Already Paid: ₹3,000/-)</div>
             </div>
 
-            <!-- 7. Earning-Wise Breakup Section (Positioned BELOW Today's Earning, 2-Column Grid Layout) -->
-            <div style="width:100%;background:rgba(254,240,138,0.12);border:1px dashed rgba(251,191,36,0.75);border-radius:12px;padding:4px 8px;margin-bottom:5px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
-              <div style="font-size:9.5px;font-weight:900;color:#fde047;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">EARNING BREAKUP</div>
-              <div id="prevTodayPayout" style="width:100%;display:grid;grid-template-columns:1fr 1fr;gap:3px 6px;font-size:10px;font-weight:900;color:#ffffff">
-                <div style="background:rgba(254,240,138,0.15);border:1px solid rgba(253,224,71,0.6);border-radius:6px;padding:2px 4px;text-align:center">Stage 1 Advance: ₹1,500/-</div>
-                <div style="background:rgba(254,240,138,0.15);border:1px solid rgba(253,224,71,0.6);border-radius:6px;padding:2px 4px;text-align:center">Stage 2 Payout: ₹5,600/-</div>
-              </div>
-            </div>
+            <!-- Hidden Breakup Element to keep JS calculations working without visual display -->
+            <div id="prevTodayPayout" style="display:none"></div>
 
-            <!-- 8. 3-Column Metrics Grid (FILES | TEAM SIZE | POTENTIAL PENDING) -->
-            <div style="width:100%;display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:6px;margin-bottom:6px">
+            <!-- 7. 3-Column Metrics Grid (Moved up directly under Today's Earning) -->
+            <div style="width:100%;display:grid;grid-template-columns:1fr 1fr 1.05fr;gap:6px;margin-bottom:8px;align-items:stretch">
               <!-- Files Card -->
-              <div style="background:rgba(15,23,42,0.88);border:1.5px solid rgba(234,179,8,0.5);border-radius:12px;padding:5px 4px;text-align:center">
-                <div style="font-size:8.5px;font-weight:900;color:#93c5fd;text-transform:uppercase;letter-spacing:0.5px">📂 FILES</div>
-                <div id="prevFiles" style="font-size:13px;font-weight:950;color:#ffffff;margin-top:2px;margin-bottom:2px"><span style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#eab308);color:#0f172a;font-weight:950;font-size:11px;padding:1px 5px;border-radius:4px">6 INSTALLED</span></div>
-                <div id="prevTeamBreakupFiles" style="font-size:8.5px;font-weight:900;color:#93c5fd;letter-spacing:0.5px">16 SUBMITTED</div>
+              <div style="background:rgba(15,23,42,0.88);border:1.5px solid rgba(234,179,8,0.5);border-radius:12px;padding:6px 2px;text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;min-height:60px;box-sizing:border-box">
+                <div style="font-size:8px;font-weight:900;color:#93c5fd;text-transform:uppercase;letter-spacing:0.2px;line-height:1;white-space:nowrap">📂 FILES</div>
+                <div id="prevFiles" style="display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:950;color:#ffffff;line-height:1"><span style="display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f59e0b,#eab308);color:#0f172a;font-weight:950;font-size:9.5px;padding:2px 6px;border-radius:4px;line-height:1;white-space:nowrap">6 INSTALLED</span></div>
+                <div id="prevTeamBreakupFiles" style="font-size:8px;font-weight:900;color:#93c5fd;letter-spacing:0.2px;line-height:1;white-space:nowrap">16 SUBMITTED</div>
               </div>
               
               <!-- Members / Team Size Card -->
-              <div style="background:rgba(15,23,42,0.88);border:1.5px solid rgba(234,179,8,0.5);border-radius:12px;padding:5px 4px;text-align:center">
-                <div style="font-size:8.5px;font-weight:900;color:#a7f3d0;text-transform:uppercase;letter-spacing:0.5px">👥 TEAM SIZE</div>
-                <div id="prevOverall" style="font-size:13px;font-weight:950;color:#ffffff;margin-top:2px;margin-bottom:2px">8 MEMBERS</div>
-                <div id="prevTeamBreakup" style="font-size:8.5px;font-weight:800;color:#6ee7b7">L2: 6 | L3: 2 | L4: 0</div>
+              <div style="background:rgba(15,23,42,0.88);border:1.5px solid rgba(234,179,8,0.5);border-radius:12px;padding:6px 4px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;align-items:center;height:54px;box-sizing:border-box">
+                <div style="font-size:8.5px;font-weight:900;color:#a7f3d0;text-transform:uppercase;letter-spacing:0.5px;line-height:1">👥 TEAM SIZE</div>
+                <div id="prevOverall" style="height:18px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:950;color:#ffffff;line-height:1">8 MEMBERS</div>
+                <div id="prevTeamBreakup" style="font-size:8.5px;font-weight:800;color:#6ee7b7;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">L2: 6 | L3: 2 | L4: 0</div>
               </div>
 
-              <!-- Potential Pending Card (Labeled POTENTIAL PENDING) -->
-              <div style="background:linear-gradient(135deg, rgba(112,26,117,0.88), rgba(131,24,67,0.88));border:1.5px solid #f472b6;border-radius:12px;padding:5px 4px;text-align:center">
-                <div style="font-size:8.5px;font-weight:900;color:#fbcfe8;text-transform:uppercase;letter-spacing:0.5px">💰 POTENTIAL PENDING</div>
-                <div id="prevPotential" style="font-size:13px;font-weight:950;color:#ffffff;margin-top:2px;margin-bottom:2px">₹1,41,550/-</div>
-                <div style="font-size:8.5px;font-weight:800;color:#fbcfe8;letter-spacing:0.5px">EXPECTED EARNING</div>
+              <!-- Potential Pending Card -->
+              <div style="background:linear-gradient(135deg, rgba(112,26,117,0.88), rgba(131,24,67,0.88));border:1.5px solid #f472b6;border-radius:12px;padding:6px 4px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;align-items:center;height:54px;box-sizing:border-box">
+                <div style="font-size:8.5px;font-weight:900;color:#fbcfe8;text-transform:uppercase;letter-spacing:0.5px;line-height:1">💰 POTENTIAL PENDING</div>
+                <div id="prevPotential" style="height:18px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:950;color:#ffffff;line-height:1">₹1,41,550/-</div>
+                <div style="font-size:8.5px;font-weight:800;color:#fbcfe8;letter-spacing:0.5px;line-height:1">EXPECTED EARNING</div>
               </div>
             </div>
 
-            <!-- 9. Senior Referrer Card Row with 76px Pop-Out Senior Avatar (20% Larger) -->
-            <div id="prevSeniorRow" style="position:relative;width:100%;background:rgba(8,18,38,0.95);border:1.5px solid rgba(234,179,8,0.65);border-radius:16px;padding:6px 10px 6px 88px;display:flex;align-items:center;justify-content:space-between;margin-top:6px;margin-bottom:4px;min-height:58px;box-shadow:0 8px 25px rgba(0,0,0,0.6)">
+            <!-- 8. Enriched Senior Referrer Card Row with 110px Extra Large Photo & Stacked Details -->
+            <div id="prevSeniorRow" style="position:relative;width:100%;background:rgba(8,18,38,0.95);border:1.5px solid rgba(234,179,8,0.65);border-radius:16px;padding:8px 12px 8px 132px;display:flex;flex-direction:column;justify-content:center;margin-top:8px;margin-bottom:4px;min-height:96px;box-shadow:0 8px 25px rgba(0,0,0,0.6);box-sizing:border-box">
               
-              <!-- Pop-Out Senior Photo / Avatar Circle (76px x 76px - 20% Larger) -->
-              <div style="position:absolute;top:-18px;left:10px;width:72px;height:72px;border-radius:50%;background:#1e3a8a;border:3.5px solid #fde047;box-shadow:0 4px 20px rgba(251,191,36,0.75);display:flex;align-items:center;justify-content:center;z-index:10;overflow:hidden">
+              <!-- Pop-Out 110px Extra Large Senior Photo / Avatar Circle -->
+              <div style="position:absolute;top:-10px;left:10px;width:110px;height:110px;border-radius:50%;background:#1e3a8a;border:4.5px solid #fde047;box-shadow:0 6px 25px rgba(251,191,36,0.9);display:flex;align-items:center;justify-content:center;z-index:10;overflow:hidden">
                 <img id="prevSeniorImg" src="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;display:none">
-                <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:24px;font-weight:900">NE</div>
+                <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:36px;font-weight:900">NE</div>
               </div>
 
-              <!-- Senior Name (Larger Text) -->
-              <div id="prevSeniorName" style="font-size:12px;font-weight:950;color:#ffffff;line-height:1.2;max-width:105px;white-space:normal;word-break:break-word">NISSI ENTERPRISES</div>
+              <!-- Senior Name in single top line -->
+              <div id="prevSeniorName" style="font-size:13.5px;font-weight:950;color:#fde047;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;letter-spacing:0.5px">Senior : MS. JARRA KUMARI</div>
 
-              <!-- Senior 3 Data Columns (Larger Text) -->
-              <div style="display:flex;gap:10px">
-                <div style="text-align:center">
-                  <div style="font-size:7px;font-weight:700;color:#94a3b8;text-transform:uppercase">Today</div>
-                  <div id="prevSeniorToday" style="font-size:12.5px;font-weight:950;color:#fde047">₹1,000/-</div>
+              <!-- Senior 3 Data Columns stacked below name -->
+              <div style="display:flex;justify-content:space-between;align-items:center;width:100%;padding-right:4px">
+                <div style="text-align:left">
+                  <div style="font-size:7.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px">Today</div>
+                  <div id="prevSeniorToday" style="font-size:13px;font-weight:950;color:#ffffff">₹1,835/-</div>
                 </div>
                 <div style="text-align:center">
-                  <div style="font-size:7px;font-weight:700;color:#94a3b8;text-transform:uppercase">Overall</div>
-                  <div id="prevSeniorEarning" style="font-size:12.5px;font-weight:950;color:#34d399">₹28,230/-</div>
+                  <div style="font-size:7.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px">Overall</div>
+                  <div id="prevSeniorEarning" style="font-size:13px;font-weight:950;color:#34d399">₹49,875/-</div>
                 </div>
-                <div style="text-align:center">
-                  <div style="font-size:7px;font-weight:700;color:#94a3b8;text-transform:uppercase">Potential</div>
-                  <div id="prevSeniorPotential" style="font-size:12.5px;font-weight:950;color:#fb923c">₹39,700/-</div>
+                <div style="text-align:right">
+                  <div style="font-size:7.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px">Potential</div>
+                  <div id="prevSeniorPotential" style="font-size:13px;font-weight:950;color:#fb923c">₹91,650/-</div>
                 </div>
               </div>
 
@@ -7588,10 +7765,12 @@ function _renderCommDetailTable(partnerId) {
       <button onclick="closePosterModal()" style="background:#fff;color:#374151;border:1.5px solid #d1d5db;border-radius:8px;height:38px;padding:0 18px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center">Cancel</button>
       <button onclick="shareOnWhatsApp()" style="background:linear-gradient(135deg,#25d366,#128c7e);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fab fa-whatsapp me-2"></i>Share on WhatsApp</button>
       <button onclick="sharePoster()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-share-alt me-2"></i>Share Poster</button>
+      <button onclick="shareDefaultChannel()" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Share Default</button>
       <button onclick="downloadPoster()" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-download me-2"></i>Download Image</button>
     </div>
   </div>
 </div>
 
+<script src="/public/js/poster-modal-core.js"></script>
 </body>
 </html>

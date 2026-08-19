@@ -1507,11 +1507,19 @@ def add_vgk_cash_income_schema():
                 "ON vgk_cash_income_entries(company_id, source_lead_id)"
             ))
             conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS idx_vgk_cash_income_partner "
+                "ON public.vgk_cash_income_entries(partner_id)"
+            ))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS idx_pub_op_category "
+                "ON public.official_partners(category)"
+            ))
+            conn.execute(text(
                 "ALTER TABLE official_partners "
                 "ADD COLUMN IF NOT EXISTS vgk_cash_wallet NUMERIC(15,2) NOT NULL DEFAULT 0"
             ))
             conn.commit()
-        print("[DC-VGK-CASH] ✅ vgk_cash_income_entries table + vgk_cash_wallet column created", flush=True)
+        print("[DC-VGK-CASH] ✅ vgk_cash_income_entries table + vgk_cash_wallet column + indexes created", flush=True)
     except Exception as e:
         print(f"[DC-VGK-CASH] ⚠️  Cash income schema migration failed (non-fatal): {e}", flush=True)
 
@@ -2773,16 +2781,19 @@ def create_marketplace_tables():
                                     "c": cid, "mc": code,
                                     "sec_code": sec_code, "sec_title": sec_title, "sec_order": sec_order
                                 })
-                    conn.execute(text("""
-                        INSERT INTO staff_employee_menu_settings (employee_id, menu_id, can_view, can_edit, created_at, updated_at)
-                        SELECT e.id, smm.id, TRUE, TRUE, NOW(), NOW()
-                        FROM staff_employees e
-                        CROSS JOIN staff_menu_master smm
-                        WHERE smm.sidebar_section = 'meta_ads'
-                          AND e.status = 'active'
-                        ON CONFLICT (employee_id, menu_id)
-                        DO UPDATE SET can_view = TRUE, can_edit = TRUE, updated_at = NOW()
-                    """))
+                    _c_menu_ids = [r[0] for r in conn.execute(text("SELECT id FROM staff_menu_master WHERE sidebar_section = 'meta_ads'")).fetchall()]
+                    if _c_menu_ids:
+                        for _m_id in _c_menu_ids:
+                            conn.execute(text("""
+                                INSERT INTO staff_employee_menu_settings (employee_id, menu_id, can_view, can_edit, created_at, updated_at)
+                                SELECT e.id, :mid, TRUE, TRUE, NOW(), NOW()
+                                FROM staff_employees e
+                                WHERE e.status = 'active'
+                                  AND NOT EXISTS (
+                                    SELECT 1 FROM staff_employee_menu_settings s
+                                    WHERE s.employee_id = e.id AND s.menu_id = :mid
+                                  )
+                            """, {'mid': _m_id}))
                     conn.commit()
                     logging.info("[DC-META-ADS-BOOTSTRAP] ✅ Meta Ads menus and permissions bootstrapped across all companies")
                 except Exception as _meta_boot_err:
@@ -11414,15 +11425,16 @@ def _startup_worker():
             # 3. Seed Capital ledger master for each active company (one per company)
             _companies_r = _c.execute(text("SELECT id, company_name FROM associated_companies WHERE is_active = TRUE ORDER BY id")).fetchall()
             for _co_r in _companies_r:
-                _c.execute(text("""
-                    INSERT INTO account_ledger_masters
-                        (company_id, account_type, account_name, account_code, description, parent_group,
-                         opening_balance, opening_balance_type, is_active, created_at, updated_at)
-                    VALUES
-                        (:cid, 'CAPITAL', 'Capital Account', 'CAP-001', 'Owner capital / equity account', 'Capital Account',
-                         0, 'CREDIT', TRUE, NOW(), NOW())
-                    ON CONFLICT (company_id, account_type, account_name) DO NOTHING
-                """), {"cid": _co_r[0]})
+                existing_cap = _c.execute(text("SELECT id FROM account_ledger_masters WHERE company_id = :cid AND account_type = 'CAPITAL' AND account_name = 'Capital Account' LIMIT 1"), {"cid": _co_r[0]}).fetchone()
+                if not existing_cap:
+                    _c.execute(text("""
+                        INSERT INTO account_ledger_masters
+                            (company_id, account_type, account_name, account_code, description, parent_group,
+                             opening_balance, opening_balance_type, is_active, created_at, updated_at)
+                        VALUES
+                            (:cid, 'CAPITAL', 'Capital Account', 'CAP-001', 'Owner capital / equity account', 'Capital Account',
+                             0, 'CREDIT', TRUE, NOW(), NOW())
+                    """), {"cid": _co_r[0]})
 
             # 4. Register consolidated reports menu code in staff_menu_registry (global, no company_id)
             # Task #47 (May 2026): Four separate pages collapsed into a single tabbed page at /staff/consolidated.
@@ -16436,6 +16448,16 @@ async def health_check():
     }
 
 
+@app.get("/staff/crm/whatsapp-bot", include_in_schema=False)
+async def serve_staff_crm_whatsapp_bot():
+    from fastapi.responses import FileResponse
+    _workspace_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    target_file = os.path.join(_workspace_root, "frontend", "staff_crm_whatsapp_bot.html")
+    if os.path.exists(target_file):
+        return FileResponse(target_file, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
 @app.get("/mobile.apk", include_in_schema=False)
 @app.get("/mobile.app", include_in_schema=False)
 @app.get("/download/mobile.apk", include_in_schema=False)
@@ -20638,15 +20660,21 @@ async def serve_storage_file(request: Request, file_path: str):
     file_data: bytes | None = storage_service.download_file(file_path)
 
     if file_data is None:
+        clean_file_path = file_path.lstrip('/')
         local_storage_root = Path(__file__).parent.parent.parent / "frontend" / "storage"
-        local_path = local_storage_root / file_path
+        local_path = local_storage_root / clean_file_path
         if local_path.exists() and local_path.is_file():
             file_data = local_path.read_bytes()
         else:
             try:
-                uploads_path = Path(UPLOADS_DIR) / file_path
+                rel_upload_path = clean_file_path[len("uploads/"):] if clean_file_path.startswith("uploads/") else clean_file_path
+                uploads_path = Path(UPLOADS_DIR) / rel_upload_path
                 if uploads_path.exists() and uploads_path.is_file():
                     file_data = uploads_path.read_bytes()
+                else:
+                    alt_path = Path(__file__).parent.parent / clean_file_path
+                    if alt_path.exists() and alt_path.is_file():
+                        file_data = alt_path.read_bytes()
             except Exception:
                 pass
 
@@ -20665,6 +20693,9 @@ async def serve_storage_file(request: Request, file_path: str):
         else "no-cache, no-store, must-revalidate"
     )
     base_headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
         "Accept-Ranges": "bytes",
         "Content-Type": content_type,
         "Cache-Control": _cache,
