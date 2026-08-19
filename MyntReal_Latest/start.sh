@@ -21,7 +21,7 @@ echo ""
 echo "Checking environment variables..."
 if [ -z "$SECRET_KEY" ]; then
     echo "Warning: SECRET_KEY not set, using fallback"
-    export SECRET_KEY="production-fallback-key-$(date +%s)"
+    export SECRET_KEY="mnr-production-secure-jwt-key-2026"
 fi
 
 if [ -z "$DATABASE_URL" ] && [ -z "$PROD_DATABASE_URL" ]; then

@@ -2,10 +2,10 @@ import os
 import zipfile
 import yaml
 
-source_dir = 'C:/Desktop/VGK4U/MyntReal_Latest'
-output_zip_temp = 'C:/Desktop/VGK4U/MyntReal_Latest/temp_deploy.zip'
-old_zip = 'C:/Desktop/VGK4U/MyntReal_Latest/MyntReal_AWS_Deploy.zip'
-env_file_path = 'C:/Desktop/VGK4U/MyntReal_Latest/backend/.env'
+source_dir = os.path.dirname(os.path.abspath(__file__))
+output_zip_temp = os.path.join(source_dir, 'temp_deploy.zip')
+old_zip = os.path.join(source_dir, 'MyntReal_AWS_Deploy.zip')
+env_file_path = os.path.join(source_dir, 'backend', '.env')
 
 # Minimal exclusions to ensure we don't accidentally remove anything the user needs.
 # Excluding git, node_modules, pycache, venv, and large PGSQL local databases.
@@ -14,11 +14,12 @@ exclusions = [
     '.pytest_cache', 'venv', 'ENV', 'test_env', 'media_backup',
     '.canvas', '.next', '.cache', 'playwright-report', 'test-results',
     'pgsql', 'pgsql16', 'postgres_data', 'mobile', 'tests', 'docs',
-    'frontend-next', 'uploads', 'uploaded_files', 'catalog'
+    'frontend-next', 'uploads', 'uploaded_files', 'catalog', 'storage'
 ]
 
 files_to_exclude = [
-    'MyntReal.apk', 'mobile.apk', 'mobile.app', 'mnr-catalog.pdf', 'mnr-catalog-web.pdf'
+    'MyntReal.apk', 'mobile.apk', 'mobile.app', 'mnr-catalog.pdf', 'mnr-catalog-web.pdf',
+    'git_push.log', 'node.log', 'uvicorn.log', 'servers.log', '.DS_Store'
 ]
 
 env_files_to_exclude = ['.env', 'backend/.env', 'frontend/.env']
@@ -38,27 +39,30 @@ if os.path.exists(env_file_path):
 
 # 2. Extract and parse old .ebextensions/01_env.config
 eb_yaml = None
-with zipfile.ZipFile(old_zip, 'r') as z_old:
-    if '.ebextensions/01_env.config' in z_old.namelist():
-        eb_content = z_old.read('.ebextensions/01_env.config').decode('utf-8')
-        eb_yaml = yaml.safe_load(eb_content)
+if os.path.exists(old_zip):
+    with zipfile.ZipFile(old_zip, 'r') as z_old:
+        if '.ebextensions/01_env.config' in z_old.namelist():
+            eb_content = z_old.read('.ebextensions/01_env.config').decode('utf-8')
+            eb_yaml = yaml.safe_load(eb_content)
 
 if eb_yaml:
     env_section = eb_yaml.get('option_settings', {}).get('aws:elasticbeanstalk:application:environment', {})
     
-    # 3. Inject missing keys
-    keys_to_inject = ['GEMINI_API_KEY', 'META_APP_ID', 'META_AD_ACCOUNT_ID', 'META_APP_SECRET', 'META_SYSTEM_USER_TOKEN']
+    # 3. Inject non-sensitive public environment configs if needed
+    keys_to_inject = ['META_APP_ID']
     for key in keys_to_inject:
         if key in local_env:
             env_section[key] = local_env[key]
-            print(f'Injected {key} into ebextensions config.')
             
-    # Explicitly inject the 4 core variables required for production hardening
+    # Explicitly remove any hardcoded SECRET_KEY or sensitive secrets from ebextensions config
+    if 'SECRET_KEY' in env_section:
+        del env_section['SECRET_KEY']
+
+    # Inject core environment configuration (No hardcoded secrets)
     env_section['ENVIRONMENT'] = 'production'
     env_section['AWS_S3_BUCKET_NAME'] = 'myntreal-media-vault'
     env_section['AWS_REGION'] = 'ap-south-2'
-    env_section['SECRET_KEY'] = 'fuBL-l737--J8d88tFMlcOE5g94Mj2L33sy0gcFLJKg'
-    print('Injected ENVIRONMENT, AWS_S3_BUCKET_NAME, AWS_REGION, and SECRET_KEY explicitly.')
+    print('Configured ENVIRONMENT, AWS_S3_BUCKET_NAME, and AWS_REGION. SECRET_KEY removed for security.')
             
     eb_yaml['option_settings']['aws:elasticbeanstalk:application:environment'] = env_section
     new_eb_content = yaml.dump(eb_yaml, default_flow_style=False, default_style='"')
@@ -85,13 +89,16 @@ with zipfile.ZipFile(output_zip_temp, 'w', zipfile.ZIP_DEFLATED) as z:
             # Skip .env files and explicit exclusions
             if rel_path in env_files_to_exclude or file == '.env' or file in files_to_exclude:
                 continue
+
+            # Skip storage, uploaded files, or catalog media
+            if 'storage/' in rel_path or 'uploaded_files/' in rel_path or 'public/catalog/' in rel_path or 'public/marketplace/' in rel_path:
+                continue
                 
-            # DC Protocol: Dynamically exclude heavy image assets > 500KB to prevent zip bloat
+            # DC Protocol: Dynamically exclude heavy image assets > 150KB to prevent zip bloat
             # since they are safely handled by the frontend S3 302 Redirect fallback
             if file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
                 size_mb = os.path.getsize(file_path) / (1024 * 1024)
-                if size_mb > 0.5:
-                    print(f"Skipping heavy asset ({size_mb:.1f}MB): {rel_path}")
+                if size_mb > 0.15:
                     continue
                     
             # Skip any stray user-uploaded backend storage files
