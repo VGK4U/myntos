@@ -137,7 +137,7 @@ export default function SuperAdminDashboard() {
           </h2>
           <div className="space-y-3 flex-1 overflow-auto pr-2">
             {[
-              { label: 'Awards Override', href: '/superadmin/awards', icon:  color: 'text-amber-600', bg: 'bg-amber-50' },
+              { label: 'Awards Override', href: '/superadmin/awards', icon: Activity, color: 'text-amber-600', bg: 'bg-amber-50' },
               { label: 'Network Approvals', href: '/superadmin/network/approvals', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50' },
               { label: 'Supreme Finance', href: '/superadmin/finance/supreme', icon: CreditCard, color: 'text-emerald-600', bg: 'bg-emerald-50' },
               { label: 'Global Config', href: '/superadmin/config/popups', icon: Shield, color: 'text-rose-600', bg: 'bg-rose-50' }
