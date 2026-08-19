@@ -2070,18 +2070,15 @@ async def download_comment_attachment(
     import io
     
     storage_path = attachment.get("storage_path") or f"comment_attachments/{filename}"
-    file_data = storage_service.download_file(storage_path)
     
-    if file_data:
-        return StreamingResponse(
-            io.BytesIO(file_data),
-            media_type=attachment.get("file_type", "application/octet-stream"),
-            headers={
-                "Content-Disposition": f'attachment; filename="{attachment.get("filename", filename)}"'
-            }
-        )
+    from fastapi.responses import RedirectResponse
+    from app.services.s3_storage import s3_storage_service
+    file_url = s3_storage_service.get_file_url(storage_path)
     
-    # Fallback: Try local storage (legacy files)
+    if file_url.startswith("http"):
+        return RedirectResponse(url=file_url, status_code=307)
+        
+    # Fallback for local dev
     file_path = COMMENT_UPLOAD_DIR / filename
     if file_path.exists():
         return FileResponse(
@@ -2089,7 +2086,7 @@ async def download_comment_attachment(
             filename=attachment.get("filename", filename),
             media_type=attachment.get("file_type", "application/octet-stream")
         )
-    
+        
     raise HTTPException(status_code=404, detail="File not found")
 
 

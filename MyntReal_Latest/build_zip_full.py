@@ -14,7 +14,7 @@ exclusions = [
     '.pytest_cache', 'venv', 'ENV', 'test_env', 'media_backup',
     '.canvas', '.next', '.cache', 'playwright-report', 'test-results',
     'pgsql', 'pgsql16', 'postgres_data', 'mobile', 'tests', 'docs',
-    'frontend-next'
+    'frontend-next', 'uploads', 'uploaded_files'
 ]
 
 env_files_to_exclude = ['.env', 'backend/.env', 'frontend/.env']

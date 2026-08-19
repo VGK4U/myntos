@@ -20601,9 +20601,16 @@ async def serve_storage_file(request: Request, file_path: str):
     DC Protocol: Implements RFC 7233 Range requests so HTML5 <video> can seek,
     buffer partially, and show duration. Required for MP4/WebM/PDF playback.
     """
-    from fastapi.responses import Response
+    from fastapi.responses import Response, RedirectResponse
+    from app.services.s3_storage import s3_storage_service
     from app.services.object_storage import storage_service
     from pathlib import Path
+
+    # FAST PATH: If AWS S3 is fully configured, redirect immediately to S3!
+    # This completely bypasses the backend and uses S3's native streaming and Range support.
+    s3_url = s3_storage_service.get_file_url(file_path)
+    if s3_url.startswith("http"):
+        return RedirectResponse(url=s3_url, status_code=307)
 
     # ── Content-Type detection ────────────────────────────────────────
     content_type = "application/octet-stream"
