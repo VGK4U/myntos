@@ -15,13 +15,13 @@ export default function MemberAwardsPage() {
   useEffect(() => {
     if (!user || !user.mnr_id) return;
 
-    api.get(`/unified-awards/list?user_id_search=${user.mnr_id}`)
+    api.get(`/api/v1/awards/my-awards?audience=vgk4u`)
       .then(res => {
         if (res.data && res.data.awards) {
            const fetched = res.data.awards.map((aw: any, idx: number) => ({
-             id: aw.award_id || idx,
+             id: aw.award_id || aw.id || idx,
              title: aw.award_name || aw.gift_name || aw.award_type || 'Award',
-             date: aw.achievement_date || new Date().toISOString(),
+             date: aw.achievement_date || aw.created_at || new Date().toISOString(),
              type: aw.award_type || 'Milestone',
              status: aw.status || 'PENDING',
              icon: aw.status === 'Completed' || aw.status === 'Delivered' ? 'fa-trophy' : 'fa-medal',
@@ -33,18 +33,7 @@ export default function MemberAwardsPage() {
       .catch(err => console.error("Failed to fetch awards", err))
       .finally(() => setLoading(false));
 
-    api.get(`/unified-awards/leaderboard/direct-awards`)
-      .then(res => {
-        if (res.data && res.data.direct_awards_leaderboard) {
-          setLeaderboard(res.data.direct_awards_leaderboard.map((item: any) => ({
-             name: item.user_name || item.name || 'Unknown',
-             points: item.total_sales || item.points || item.award_count || 0,
-             tier: item.tier || 'Gold',
-             initials: (item.user_name || item.name || 'U').substring(0, 2).toUpperCase()
-          })));
-        }
-      })
-      .catch(err => console.error("Failed to fetch leaderboard", err));
+    // Leaderboard might be a separate API or included, for now just keeping it functional or mock if backend doesn't support it directly on this route
   }, [user]);
 
   return (

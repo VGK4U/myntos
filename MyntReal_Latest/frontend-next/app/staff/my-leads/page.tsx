@@ -37,7 +37,7 @@ export default function MyLeadsPage() {
     setError(null);
     try {
       // Backend expects company_id as per DC protocol for data siloing
-      const res = await api.get(`/crm/my-leads?company_id=1&page=${page}&limit=50`);
+      const res = await api.get(`/api/v1/crm/unified-my-leads/search-partner?q=${encodeURIComponent("")}`);
       
       if (res.data && res.data.leads) {
         setLeads(res.data.leads);

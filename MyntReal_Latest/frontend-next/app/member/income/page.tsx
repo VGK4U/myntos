@@ -49,7 +49,7 @@ export default function MemberIncomePage() {
     const fetchFinancialData = async () => {
       try {
         setLoading(true);
-        const res = await api.get(`/user/${user.mnr_id}/financial-summary`);
+        const res = await api.get(`/api/v1/income/summary?audience=vgk4u`);
         if (res.data && res.data.success) {
           const summary = res.data.income_summary?.income_streams || {};
           const financialTotals = res.data.financial_totals || {};

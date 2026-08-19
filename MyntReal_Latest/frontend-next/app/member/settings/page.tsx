@@ -16,7 +16,7 @@ export default function MemberSettingsPage() {
   useEffect(() => {
     if (!user) return;
     
-    api.get('/profile')
+    api.get(`/api/v1/vgk-member/settings?audience=vgk4u`)
       .then(res => {
          setProfile(res.data);
       })

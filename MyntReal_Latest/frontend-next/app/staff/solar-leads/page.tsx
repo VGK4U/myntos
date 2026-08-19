@@ -18,7 +18,7 @@ export default function GenericCRMPage() {
     const fetchData = async () => {
       try {
         // Wire to unified_lead_view (using lead_id 1 as placeholder)
-        const res = await api.get("/crm/leads/1/unified-timeline");
+        const res = await api.get(`/api/v1/crm/unified-my-leads/search-partner?q=${encodeURIComponent("")}`);
         if (res.data) {
           setTimeline(res.data);
         }

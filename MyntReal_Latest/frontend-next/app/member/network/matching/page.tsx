@@ -20,7 +20,7 @@ export default function MatchingNetworkPage() {
   useEffect(() => {
     if (!user || !user.mnr_id) return;
     setLoading(true);
-    api.get(`/user/${user.mnr_id}/team-statistics?include_tree=true`)
+    api.get(`/api/v1/income/level/2?audience=vgk4u`)
       .then(res => {
         if (res.data && res.data.success) {
           const counts = res.data.team_statistics?.binary_tree_counts || {};

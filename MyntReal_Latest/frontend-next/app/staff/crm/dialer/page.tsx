@@ -16,7 +16,7 @@ export default function TelecallingDialerPage() {
   useEffect(() => {
     const fetchQueue = async () => {
       try {
-        const res = await api.get('/staff/crm/dialer/queue');
+        const res = await api.get(`/api/v1`);
         setQueue(res.data?.items || []);
       } catch (err) {
         console.warn("Failed to fetch dialer queue", err);

@@ -18,7 +18,7 @@ export default function DirectReferralsPage() {
     
     setLoading(true);
     
-    api.get('/users/team')
+    api.get(`/api/v1/income/level/1?audience=vgk4u`)
       .then(res => {
         if (res.data && res.data.success && res.data.data) {
           const fetchedTeam = res.data.data.direct_referrals || [];

@@ -24,7 +24,7 @@ export default function MemberDashboardPage() {
       try {
         setLoading(true);
         // Fetch comprehensive stats
-        const res = await api.get(`/user/${user.mnr_id}/comprehensive`);
+        const res = await api.get(`/api/v1/vgk/auth/me`);
         if (res.data && res.data.success) {
           const dash = res.data.dashboard;
           setStats({

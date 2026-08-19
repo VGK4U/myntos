@@ -120,11 +120,6 @@ export default function VendorScanPage() {
                           handleSimulateScan(result[0].rawValue);
                         }
                       }}
-                      components={{
-                        audio: false,
-                        onOff: true,
-                        finder: false,
-                      }}
                     />
                   </div>
                   <p className="text-center text-sm text-slate-500 mt-6">

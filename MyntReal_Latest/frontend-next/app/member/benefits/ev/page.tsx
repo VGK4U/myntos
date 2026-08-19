@@ -20,7 +20,7 @@ export default function EVSchemePage() {
     
     setLoading(true);
     Promise.all([
-      api.get('/users/team').catch(() => ({ data: [] })),
+      api.get(`/api/v1/ev/benefits?audience=vgk4u`).catch(() => ({ data: [] })),
       api.get('/ev-scooter-claims/my-claims').catch(() => ({ data: { claims: [] } }))
     ]).then(([teamRes, claimsRes]) => {
       if (teamRes.data && Array.isArray(teamRes.data)) {

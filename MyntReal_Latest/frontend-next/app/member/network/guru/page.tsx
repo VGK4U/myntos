@@ -24,7 +24,7 @@ export default function GuruEarningsPage() {
         setLoading(true);
         
         // Fetch team for active count
-        const teamRes = await api.get('/users/team');
+        const teamRes = await api.get(`/api/v1/income/level/3?audience=vgk4u`);
         let activeCount = 0;
         if (teamRes.data && teamRes.data.success && teamRes.data.data) {
            activeCount = (teamRes.data.data.direct_referrals || []).filter((r: any) => r.is_active).length;

@@ -14,7 +14,7 @@ export default function MemberCouponsPage() {
   useEffect(() => {
     if (!user) return;
 
-    api.get('/coupon-transfers/my-available-coupons')
+    api.get(`/api/v1/vgk-member/coupons/activate?audience=vgk4u`)
       .then(res => {
         if (res.data && res.data.success && res.data.data) {
           const { legacy_coupons = [], enhanced_coupons = [] } = res.data.data;
