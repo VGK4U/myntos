@@ -8461,7 +8461,7 @@ const server = http.createServer(async (req, res) => {
     
     if (!fs.existsSync(filePath)) {
       const s3FallbackUrl = 'https://myntreal-media-vault.s3.ap-south-2.amazonaws.com' + urlPath.replace(/\\\\/g, '/');
-      console.log([S3 FALLBACK] Redirecting  to );
+      console.log("[S3 FALLBACK] Redirecting " + urlPath + " to " + s3FallbackUrl);
       res.writeHead(302, { 'Location': s3FallbackUrl, 'Cache-Control': 'public, max-age=86400' });
       return res.end();
     }
@@ -8706,6 +8706,12 @@ const server = http.createServer(async (req, res) => {
         res.end('File not found');
       }
       return;
+    }
+    if (!fs.existsSync(filePath)) {
+      const s3FallbackUrl = 'https://myntreal-media-vault.s3.ap-south-2.amazonaws.com' + urlPath.replace(/\\\\/g, '/');
+      console.log("[S3 FALLBACK] Redirecting " + urlPath + " to " + s3FallbackUrl);
+      res.writeHead(302, { 'Location': s3FallbackUrl, 'Cache-Control': 'public, max-age=86400' });
+      return res.end();
     }
     fs.readFile(filePath, (err, data) => {
       if (err) {
