@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useSuperAdminAuth } from "@/contexts/SuperAdminAuthContext";
+import { ShieldAlert, AlertTriangle, Flag, Ban, Search, UserMinus, MoreVertical, ScanSearch } from "lucide-react";
 
 export default function SuperAdminRedIDOversight() {
   const { user } = useSuperAdminAuth();
@@ -13,104 +14,107 @@ export default function SuperAdminRedIDOversight() {
   ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto flex flex-col h-[calc(100vh-64px)]">
-      <div className="flex justify-between items-end mb-6 shrink-0">
+    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-[calc(100vh-64px)]">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight uppercase">Red ID Oversight</h1>
-          <p className="text-xs text-gray-500 mt-2 font-bold uppercase tracking-widest">Identify, Manage, and Purge Inactive or Non-Compliant Members</p>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Red ID Oversight</h1>
+          <p className="text-sm text-slate-500 mt-1">Identify, Manage, and Purge Inactive or Non-Compliant Members</p>
         </div>
-        <div className="flex space-x-3">
-          <button className="px-4 py-2 bg-red-600 text-white font-bold rounded shadow-sm hover:bg-red-700 transition-colors uppercase text-xs tracking-wider">
-            <i className="fas fa-trash-alt mr-2"></i> Purge Selected (0)
+        <div className="flex items-center gap-3">
+          <button className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-rose-600 text-white hover:bg-rose-700 h-9 px-4 py-2 shadow">
+            <UserMinus className="mr-2 h-4 w-4" /> Purge Selected (0)
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 shrink-0">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between border-l-4 border-l-yellow-500">
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-xl border border-l-4 border-l-amber-500 bg-white shadow-sm flex items-center justify-between p-6">
           <div>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Warning State</p>
-            <h3 className="text-3xl font-black text-gray-900">45</h3>
+            <h3 className="text-sm font-medium text-slate-500 mb-1">Warning State</h3>
+            <div className="text-4xl font-bold text-slate-900">45</div>
           </div>
-          <i className="fas fa-exclamation-triangle text-4xl text-yellow-100"></i>
+          <AlertTriangle className="h-12 w-12 text-amber-100" />
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between border-l-4 border-l-red-500">
+        <div className="rounded-xl border border-l-4 border-l-rose-500 bg-white shadow-sm flex items-center justify-between p-6">
           <div>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Flagged (Red IDs)</p>
-            <h3 className="text-3xl font-black text-gray-900">12</h3>
+            <h3 className="text-sm font-medium text-slate-500 mb-1">Flagged (Red IDs)</h3>
+            <div className="text-4xl font-bold text-slate-900">12</div>
           </div>
-          <i className="fas fa-flag text-4xl text-red-100"></i>
+          <Flag className="h-12 w-12 text-rose-100" />
         </div>
 
-        <div className="bg-[#111827] p-6 rounded-lg shadow-sm flex items-center justify-between border-l-4 border-l-gray-600">
+        <div className="rounded-xl border border-l-4 border-l-slate-600 bg-slate-900 shadow-sm flex items-center justify-between p-6">
           <div>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Suspended Accounts</p>
-            <h3 className="text-3xl font-black text-white">3</h3>
+            <h3 className="text-sm font-medium text-slate-400 mb-1">Suspended Accounts</h3>
+            <div className="text-4xl font-bold text-white">3</div>
           </div>
-          <i className="fas fa-ban text-4xl text-gray-800"></i>
+          <Ban className="h-12 w-12 text-slate-800" />
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex-1 overflow-hidden flex flex-col min-h-0">
-        <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Flagged Roster</h3>
-          <button className="text-gray-500 hover:text-gray-900 text-xs font-bold uppercase tracking-wider bg-white border border-gray-300 px-3 py-1.5 rounded">
-            Run ID Audit Scan
+      <div className="rounded-xl border bg-white text-slate-950 shadow-sm overflow-hidden flex flex-col">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-6 border-b gap-4 bg-slate-50/50">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5 text-rose-500" />
+            <h3 className="font-semibold text-slate-800">Flagged Roster</h3>
+          </div>
+          <button className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-slate-200 bg-white hover:bg-slate-100 hover:text-slate-900 h-9 px-4 py-2">
+            <ScanSearch className="mr-2 h-4 w-4" /> Run ID Audit Scan
           </button>
         </div>
 
-        <div className="flex-1 overflow-auto p-0">
-          <table className="w-full text-left">
-            <thead className="bg-white sticky top-0 z-10">
-              <tr className="border-b border-gray-200">
-                <th className="p-4 w-12 text-center">
-                  <input type="checkbox" className="rounded border-gray-300 text-red-600 focus:ring-red-500" />
+        <div className="relative w-full overflow-auto">
+          <table className="w-full caption-bottom text-sm">
+            <thead className="[&_tr]:border-b">
+              <tr className="border-b transition-colors hover:bg-slate-50">
+                <th className="h-12 px-6 w-12 text-center align-middle">
+                  <input type="checkbox" className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 h-4 w-4" />
                 </th>
-                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">Member Info</th>
-                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">Flag Reason</th>
-                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">Risk Level</th>
-                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">System Status</th>
-                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-right">Actions</th>
+                <th className="h-12 px-6 text-left align-middle font-medium text-slate-500">Member Info</th>
+                <th className="h-12 px-6 text-left align-middle font-medium text-slate-500">Flag Reason</th>
+                <th className="h-12 px-6 text-left align-middle font-medium text-slate-500">Risk Level</th>
+                <th className="h-12 px-6 text-left align-middle font-medium text-slate-500">System Status</th>
+                <th className="h-12 px-6 text-right align-middle font-medium text-slate-500">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="[&_tr:last-child]:border-0">
               {redIds.map((member, idx) => (
-                <tr key={idx} className="hover:bg-red-50/30 transition-colors">
-                  <td className="p-4 text-center">
-                    <input type="checkbox" className="rounded border-gray-300 text-red-600 focus:ring-red-500" />
+                <tr key={idx} className="border-b transition-colors hover:bg-rose-50/30">
+                  <td className="p-6 text-center align-middle">
+                    <input type="checkbox" className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 h-4 w-4" />
                   </td>
-                  <td className="p-4">
-                    <p className="font-bold text-gray-900">{member.name}</p>
-                    <div className="flex gap-2 mt-1">
-                      <p className="text-[10px] text-gray-500 font-mono bg-gray-100 px-1.5 rounded">{member.id}</p>
-                      <p className="text-[10px] text-gray-500">Joined: {new Date(member.joinDate).toLocaleDateString()}</p>
+                  <td className="p-6 align-middle">
+                    <div className="font-semibold text-slate-900">{member.name}</div>
+                    <div className="flex gap-2 mt-1 items-center">
+                      <div className="text-xs text-slate-700 font-mono bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">{member.id}</div>
+                      <div className="text-xs text-slate-500">Joined: {new Date(member.joinDate).toLocaleDateString()}</div>
                     </div>
                   </td>
-                  <td className="p-4 text-sm font-bold text-gray-700">
-                    {member.reason}
+                  <td className="p-6 align-middle">
+                    <div className="font-medium text-slate-700">{member.reason}</div>
                   </td>
-                  <td className="p-4">
-                    <span className={`text-[9px] font-black px-2 py-1 rounded uppercase tracking-wider ${
-                      member.riskLevel === 'CRITICAL' ? 'bg-red-100 text-red-700 border border-red-200' :
-                      member.riskLevel === 'HIGH' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
-                      'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                  <td className="p-6 align-middle">
+                    <div className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                      member.riskLevel === 'CRITICAL' ? 'bg-rose-100 text-rose-800 border border-rose-200' :
+                      member.riskLevel === 'HIGH' ? 'bg-orange-100 text-orange-800 border border-orange-200' :
+                      'bg-amber-100 text-amber-800 border border-amber-200'
                     }`}>
                       {member.riskLevel}
-                    </span>
+                    </div>
                   </td>
-                  <td className="p-4">
-                    <span className={`text-[9px] font-black px-2 py-1 rounded uppercase tracking-wider ${
-                      member.status === 'SUSPENDED' ? 'bg-gray-800 text-white' :
-                      member.status === 'FLAGGED' ? 'bg-red-600 text-white' :
-                      'bg-gray-200 text-gray-600'
+                  <td className="p-6 align-middle">
+                    <div className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                      member.status === 'SUSPENDED' ? 'bg-slate-800 text-white' :
+                      member.status === 'FLAGGED' ? 'bg-rose-600 text-white' :
+                      'bg-slate-200 text-slate-700'
                     }`}>
-                      {member.status}
-                    </span>
+                      {member.status.replace('_', ' ')}
+                    </div>
                   </td>
-                  <td className="p-4 text-right">
-                    <button className="text-gray-400 hover:text-gray-900 px-2 py-1">
-                      <i className="fas fa-ellipsis-v"></i>
+                  <td className="p-6 align-middle text-right">
+                    <button className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-slate-100 h-8 w-8 text-slate-500 hover:text-slate-900">
+                      <MoreVertical className="h-4 w-4" />
                     </button>
                   </td>
                 </tr>
