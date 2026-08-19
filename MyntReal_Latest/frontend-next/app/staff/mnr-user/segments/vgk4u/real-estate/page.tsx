@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useStaffAuth } from '@/contexts/StaffAuthContext';
 import { toast } from 'react-hot-toast';
 
-export default function SegmentsVgk4uReal-estatePage() {
+export default function SegmentsVgk4uRealestatePage() {
   const [searchId, setSearchId] = useState("");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);

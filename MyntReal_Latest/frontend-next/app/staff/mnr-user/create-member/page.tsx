@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useStaffAuth } from '@/contexts/StaffAuthContext';
 import { toast } from 'react-hot-toast';
 
-export default function Create-memberPage() {
+export default function CreatememberPage() {
   const [searchId, setSearchId] = useState("");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
