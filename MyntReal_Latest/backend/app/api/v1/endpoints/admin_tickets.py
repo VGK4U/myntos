@@ -42,89 +42,47 @@ async def get_support_tickets(
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
-    Get support tickets for admin review
-    Using mock data structure since tickets model needs to be created
+    Get support tickets for admin review from live DB
     """
     try:
-        # For now, generate representative ticket data based on user issues
-        # In production, you'd query a proper Ticket model
+        from app.models.ticket import ServiceTicket
         
-        # Get users with potential issues (recent registrations, KYC pending, etc.)
-        users_with_issues = db.query(User).filter(
-            or_(
-                User.kyc_status == 'Pending',
-                User.kyc_status == 'Rejected',
-                User.wallet_balance == 0
-            )
-        ).limit(limit).all()
+        query = db.query(ServiceTicket)
+        
+        if status_filter:
+            query = query.filter(ServiceTicket.status == status_filter)
+        if priority_filter:
+            query = query.filter(ServiceTicket.priority == priority_filter)
+        if category_filter:
+            query = query.filter(ServiceTicket.category == category_filter)
+            
+        total_tickets = query.count()
+        tickets = query.order_by(desc(ServiceTicket.created_at)).offset(offset).limit(limit).all()
         
         tickets_data = []
-        ticket_id_counter = 1
+        for t in tickets:
+            # We fetch creator dynamically if we need it
+            creator_name = "User"
+            if t.customer_id:
+                user = db.query(User).filter(User.id == t.customer_id).first()
+                if user:
+                    creator_name = user.name
+            
+            tickets_data.append({
+                "id": t.ticket_number or f"TKT{t.id:03d}",
+                "user_id": t.customer_id,
+                "user_name": creator_name,
+                "subject": t.title,
+                "description": t.description,
+                "priority": t.priority or "Medium",
+                "status": t.status or "Open",
+                "category": t.category or "General",
+                "created_at": t.created_at.isoformat() if t.created_at else None,
+                "updated_at": t.updated_at.isoformat() if hasattr(t, 'updated_at') and t.updated_at else None
+            })
         
-        for user in users_with_issues:
-            # Generate ticket based on user status
-            if user.kyc_status == 'Pending':
-                ticket = {
-                    "id": f"TKT{ticket_id_counter:03d}",
-                    "user_id": user.id,
-                    "user_name": user.name,
-                    "subject": "KYC Document Review Required",
-                    "description": f"KYC documents submitted by {user.name} require admin review and approval.",
-                    "priority": "Medium",
-                    "status": "Open",
-                    "category": "KYC",
-                    "created_at": (datetime.now() - timedelta(days=ticket_id_counter)).isoformat(),
-                    "updated_at": (datetime.now() - timedelta(days=ticket_id_counter)).isoformat(),
-                    "assigned_to": "KYC Team"
-                }
-            elif user.kyc_status == 'Rejected':
-                ticket = {
-                    "id": f"TKT{ticket_id_counter:03d}",
-                    "user_id": user.id,
-                    "user_name": user.name,
-                    "subject": "KYC Rejection Appeal",
-                    "description": f"User {user.name} is requesting clarification on KYC rejection reasons.",
-                    "priority": "High",
-                    "status": "Open", 
-                    "category": "KYC",
-                    "created_at": (datetime.now() - timedelta(days=ticket_id_counter)).isoformat(),
-                    "updated_at": (datetime.now() - timedelta(days=ticket_id_counter)).isoformat()
-                }
-            else:
-                ticket = {
-                    "id": f"TKT{ticket_id_counter:03d}",
-                    "user_id": user.id,
-                    "user_name": user.name,
-                    "subject": "Account Setup Assistance",
-                    "description": f"User {user.name} needs help with initial account setup and PIN activation.",
-                    "priority": "Low",
-                    "status": "Open",
-                    "category": "General",
-                    "created_at": (datetime.now() - timedelta(days=ticket_id_counter)).isoformat(),
-                    "updated_at": (datetime.now() - timedelta(days=ticket_id_counter)).isoformat()
-                }
-            
-            # Apply filters
-            include_ticket = True
-            if status_filter and ticket["status"] != status_filter:
-                include_ticket = False
-            if priority_filter and ticket["priority"] != priority_filter:
-                include_ticket = False
-            if category_filter and ticket["category"] != category_filter:
-                include_ticket = False
-            
-            if include_ticket:
-                tickets_data.append(ticket)
-            
-            ticket_id_counter += 1
-            
-            if len(tickets_data) >= limit:
-                break
-        
-        # Calculate statistics
-        total_tickets = len(tickets_data)
-        open_tickets = len([t for t in tickets_data if t["status"] == "Open"])
-        high_priority = len([t for t in tickets_data if t["priority"] == "High"])
+        open_tickets = db.query(ServiceTicket).filter(ServiceTicket.status == "Open").count()
+        high_priority = db.query(ServiceTicket).filter(ServiceTicket.priority == "High").count()
         
         return {
             "success": True,
@@ -133,16 +91,15 @@ async def get_support_tickets(
                 "total_tickets": total_tickets,
                 "open_tickets": open_tickets,
                 "high_priority_tickets": high_priority,
-                "avg_response_time": "2.5 hours"
+                "avg_response_time": "N/A"
             },
             "pagination": {
                 "total": total_tickets,
                 "limit": limit,
                 "offset": offset,
-                "has_next": False  # Mock data, no real pagination
+                "has_next": (offset + limit) < total_tickets
             }
-        }
-        
+        }        
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

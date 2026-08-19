@@ -1484,6 +1484,100 @@ def _extract_vendor_token(request: Request) -> str:
     raise HTTPException(status_code=401, detail="Authorization header missing")
 
 
+@router.get("/vendor/me/verify-member")
+def vendor_verify_member(
+    code: str,
+    db: Session = Depends(get_db),
+    request: Request = None
+):
+    """Vendor verifies a member's QR code or ID."""
+    token = _extract_vendor_token(request)
+    vl, vendor = _get_vendor_auth(token, db)
+    
+    from app.models.auth import OfficialPartner
+    
+    code = code.strip().upper()
+    # Find member by VGK ID or MNR ID
+    member = db.query(OfficialPartner).filter(
+        (OfficialPartner.vgk_id == code) | (OfficialPartner.mnr_id == code)
+    ).first()
+    
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+        
+    if member.status != 'active':
+        raise HTTPException(status_code=400, detail="Member account is not active")
+        
+    return {
+        "success": True,
+        "data": {
+            "memberId": member.vgk_id or member.mnr_id,
+            "memberName": f"{member.first_name} {member.last_name}".strip(),
+            "tier": member.tier or "Bronze",
+            "couponCode": f"CPN-VGK-{member.id}",
+            "discountPercentage": float(vendor.flat_discount_pct) if vendor.flat_discount_pct else 0.0,
+            "maxDiscount": 5000,
+            "validity": "Valid"
+        }
+    }
+
+@router.post("/vendor/me/process-scan")
+def vendor_process_scan(
+    payload: dict = Body(...),
+    db: Session = Depends(get_db),
+    request: Request = None
+):
+    """Vendor processes a transaction using a member's code."""
+    token = _extract_vendor_token(request)
+    vl, vendor = _get_vendor_auth(token, db)
+    
+    from app.models.auth import OfficialPartner
+    from app.models.vgk_vendor import VGKVendorTransaction
+    from app.models.base import get_indian_time
+    
+    member_code = (payload.get("memberId") or "").strip().upper()
+    amount = Decimal(str(payload.get("amount") or 0))
+    
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be greater than 0")
+        
+    member = db.query(OfficialPartner).filter(
+        (OfficialPartner.vgk_id == member_code) | (OfficialPartner.mnr_id == member_code)
+    ).first()
+    
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+        
+    discount_pct = vendor.flat_discount_pct or Decimal('0')
+    discount_amount = (amount * discount_pct / 100).quantize(Decimal('0.01'))
+    
+    txn_number = f"VTXN-{int(get_indian_time().timestamp())}-{vendor.id}"
+    
+    txn = VGKVendorTransaction(
+        company_id=1,
+        txn_number=txn_number,
+        vendor_id=vendor.id,
+        vendor_name=vendor.vendor_name,
+        member_partner_id=member.id,
+        invoice_number=f"INV-{txn_number}",
+        invoice_date=get_indian_time(),
+        amount_excl_tax=amount,
+        amount_total=amount,
+        discount_pct=discount_pct,
+        discount_amount=discount_amount,
+        status='APPROVED'
+    )
+    
+    db.add(txn)
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": "Transaction processed successfully",
+        "txn_number": txn_number,
+        "discount_amount": discount_amount
+    }
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  MEMBER — QR SCAN & DIRECTORY
 # ─────────────────────────────────────────────────────────────────────────────
