@@ -14,7 +14,11 @@ exclusions = [
     '.pytest_cache', 'venv', 'ENV', 'test_env', 'media_backup',
     '.canvas', '.next', '.cache', 'playwright-report', 'test-results',
     'pgsql', 'pgsql16', 'postgres_data', 'mobile', 'tests', 'docs',
-    'frontend-next', 'uploads', 'uploaded_files'
+    'frontend-next', 'uploads', 'uploaded_files', 'catalog'
+]
+
+files_to_exclude = [
+    'MyntReal.apk', 'mobile.apk', 'mobile.app', 'mnr-catalog.pdf', 'mnr-catalog-web.pdf'
 ]
 
 env_files_to_exclude = ['.env', 'backend/.env', 'frontend/.env']
@@ -78,8 +82,8 @@ with zipfile.ZipFile(output_zip_temp, 'w', zipfile.ZIP_DEFLATED) as z:
             if file.endswith('.zip') or file.endswith('.sqlite') or file.endswith('.db') or file.endswith('.dump') or file == 'database_backup (1).sql':
                 continue
                 
-            # Skip .env files
-            if rel_path in env_files_to_exclude or file == '.env':
+            # Skip .env files and heavy static assets
+            if rel_path in env_files_to_exclude or file == '.env' or file in files_to_exclude:
                 continue
                 
             # Read and process file
