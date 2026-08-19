@@ -1,4 +1,23 @@
-"use client";
+import os
+
+base_dir = r"C:\Desktop\VGK4U\MyntReal_Latest\frontend-next\app\staff\vgk"
+
+pages = {
+    "bonanza-claims": ("Bonanza Claims", "Manage and process bonanza claims efficiently.", "Trophy", ["Claim ID", "User", "Amount", "Status", "Date"]),
+    "bonanza-management": ("Bonanza Management", "Create and manage bonanza programs.", "Gift", ["Bonanza ID", "Name", "Start Date", "End Date", "Status"]),
+    "cash-income/accounts": ("Cash Income Accounts", "Monitor cash income accounts.", "Wallet", ["Account ID", "User", "Balance", "Last Updated", "Status"]),
+    "cash-income/sales": ("Cash Income Sales", "Track cash income from sales.", "TrendingUp", ["Sale ID", "Product", "Amount", "Date", "Status"]),
+    "config": ("System Configuration", "Manage VGK system settings.", "Settings", ["Config Key", "Value", "Description", "Last Updated", "Action"]),
+    "coupons/available": ("Available Coupons", "Manage available discount coupons.", "Ticket", ["Coupon Code", "Discount", "Expiry Date", "Usage Limit", "Status"]),
+    "gallery": ("Media Gallery", "View and manage media gallery items.", "Image", ["Image ID", "Title", "Uploaded By", "Date", "Visibility"]),
+    "income": ("Income Tracking", "Track overall income sources.", "DollarSign", ["Transaction ID", "Source", "Amount", "Date", "Status"]),
+    "income-unified": ("Unified Income", "Unified view of all income streams.", "PieChart", ["Stream ID", "Category", "Total", "Period", "Status"]),
+    "media": ("Media Library", "Manage all uploaded media assets.", "Film", ["Media ID", "Type", "Size", "Uploaded At", "Action"]),
+    "members": ("Members", "Manage and view all registered members.", "Users", ["Member ID", "Name", "Email", "Joined Date", "Status"]),
+    "partner-kyc-review": ("Partner KYC Review", "Review and verify partner KYC documents.", "FileText", ["KYC ID", "Partner Name", "Document Type", "Submitted On", "Status"])
+}
+
+template = """\"use client\";
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -6,9 +25,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Ticket as Icon, Search, Plus, MoreHorizontal } from 'lucide-react';
+import { %s as Icon, Search, Plus, MoreHorizontal } from 'lucide-react';
 
-export default function AvailableCouponsPage() {
+export default function %sPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   return (
@@ -17,10 +36,10 @@ export default function AvailableCouponsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Icon className="h-8 w-8 text-primary" />
-            Available Coupons
+            %s
           </h1>
           <p className="text-muted-foreground mt-1">
-            Manage available discount coupons.
+            %s
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -37,7 +56,7 @@ export default function AvailableCouponsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">1,234</div>
-            <p className="text-xs text-muted-foreground">+20% from last month</p>
+            <p className="text-xs text-muted-foreground">+20%% from last month</p>
           </CardContent>
         </Card>
         <Card>
@@ -46,7 +65,7 @@ export default function AvailableCouponsPage() {
             <Icon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">98%</div>
+            <div className="text-2xl font-bold">98%%</div>
             <p className="text-xs text-muted-foreground">Normal operating level</p>
           </CardContent>
         </Card>
@@ -85,7 +104,7 @@ export default function AvailableCouponsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Coupon Code</TableHead>\n                  <TableHead>Discount</TableHead>\n                  <TableHead>Expiry Date</TableHead>\n                  <TableHead>Usage Limit</TableHead>\n                  <TableHead>Status</TableHead>
+                  %s
                   <TableHead className="w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -96,7 +115,7 @@ export default function AvailableCouponsPage() {
                     <TableCell>Sample Data {item}</TableCell>
                     <TableCell>Value {item}</TableCell>
                     <TableCell>2023-10-0{item}</TableCell>
-                    <TableCell><Badge variant={item % 2 === 0 ? "default" : "secondary"}>Active</Badge></TableCell>
+                    <TableCell><Badge variant={item %% 2 === 0 ? "default" : "secondary"}>Active</Badge></TableCell>
                     <TableCell>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
                         <MoreHorizontal className="h-4 w-4" />
@@ -112,3 +131,27 @@ export default function AvailableCouponsPage() {
     </div>
   );
 }
+"""
+
+for path, info in pages.items():
+    title, subtitle, icon, headers = info
+    component_name = ''.join(word.capitalize() for word in title.split())
+    
+    headers_html = '\\n                  '.join(f'<TableHead>{h}</TableHead>' for h in headers)
+    
+    content = template % (
+        icon,
+        component_name,
+        title,
+        subtitle,
+        headers_html
+    )
+    
+    full_dir = os.path.join(base_dir, path)
+    os.makedirs(full_dir, exist_ok=True)
+    file_path = os.path.join(full_dir, 'page.tsx')
+    
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+print('Successfully updated 12 pages.')
