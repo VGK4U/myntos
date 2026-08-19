@@ -1428,7 +1428,7 @@
                             </thead>
                             <tbody>`;
                     g.leads.forEach((l, idx) => {
-                        const lVal = l.deal_value ? `₹${(l.deal_value / 100000).toFixed(2)}L` : '—';
+                        const lVal = l.deal_value ? ('₹' + (l.deal_value / 100000).toFixed(2) + 'L') : '—';
                         const gsStaffName = l.ground_support_name || l.field_staff_name || '—';
                         const stageLabel = l.solar_pipeline_stage || l.stage || (currentMainTab === 'balance-pending' ? 'Bal Pending' : 'At Bank');
                         html += `<tr>
@@ -1570,7 +1570,7 @@
                             </thead>
                             <tbody>`;
                     g.leads.forEach((l, idx) => {
-                        const lVal = l.deal_value ? `₹${(l.deal_value / 100000).toFixed(2)}L` : '—';
+                        const lVal = l.deal_value ? ('₹' + (l.deal_value / 100000).toFixed(2) + 'L') : '—';
                         const gsStaffName = l.ground_support_name || l.field_staff_name || '—';
                         const stageLabel = l.solar_pipeline_stage || l.stage || (currentMainTab === 'balance-pending' ? 'Bal Pending' : 'At Bank');
                         html += `<tr>
@@ -1587,6 +1587,9 @@
                     });
                     html += `</tbody></table></div>`;
                 }
+
+                html += `</div></div>`;
+            });
 
             container.innerHTML = html;
         }
