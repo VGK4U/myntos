@@ -8458,11 +8458,25 @@ const server = http.createServer(async (req, res) => {
       '.webp': 'image/webp'
     };
     const contentType = contentTypes[extname] || 'application/octet-stream';
+    
+    if (!fs.existsSync(filePath)) {
+      const s3FallbackUrl = 'https://myntreal-media-vault.s3.ap-south-2.amazonaws.com' + urlPath.replace(/\\\\/g, '/');
+      console.log([S3 FALLBACK] Redirecting  to );
+      res.writeHead(302, { 'Location': s3FallbackUrl, 'Cache-Control': 'public, max-age=86400' });
+      return res.end();
+    }
     fs.readFile(filePath, (err, data) => {
+
       if (err) {
         console.error(`Asset file not found: ${filePath}`);
-        res.writeHead(404);
-        res.end('Asset not found');
+        console.error(`❌ Static file not found locally: ${filePath}. Redirecting to AWS S3 fallback...`);
+        // S3 Fallback for heavy assets excluded from the deployment zip
+        const s3FallbackUrl = `https://myntreal-media-vault.s3.ap-south-2.amazonaws.com${urlPath}`;
+        res.writeHead(302, {
+          'Location': s3FallbackUrl,
+          'Cache-Control': 'public, max-age=86400'
+        });
+        res.end();
       } else {
         console.log(`Serving asset: ${url}`);
         res.writeHead(200, { 

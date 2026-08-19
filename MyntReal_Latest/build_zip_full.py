@@ -82,8 +82,20 @@ with zipfile.ZipFile(output_zip_temp, 'w', zipfile.ZIP_DEFLATED) as z:
             if file.endswith('.zip') or file.endswith('.sqlite') or file.endswith('.db') or file.endswith('.dump') or file == 'database_backup (1).sql':
                 continue
                 
-            # Skip .env files and heavy static assets
+            # Skip .env files and explicit exclusions
             if rel_path in env_files_to_exclude or file == '.env' or file in files_to_exclude:
+                continue
+                
+            # DC Protocol: Dynamically exclude heavy image assets > 500KB to prevent zip bloat
+            # since they are safely handled by the frontend S3 302 Redirect fallback
+            if file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+                size_mb = os.path.getsize(file_path) / (1024 * 1024)
+                if size_mb > 0.5:
+                    print(f"Skipping heavy asset ({size_mb:.1f}MB): {rel_path}")
+                    continue
+                    
+            # Skip any stray user-uploaded backend storage files
+            if 'backend/frontend/storage' in rel_path.replace('\\\\', '/'):
                 continue
                 
             # Read and process file
