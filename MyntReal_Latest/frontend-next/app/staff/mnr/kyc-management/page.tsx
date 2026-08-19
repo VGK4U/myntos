@@ -44,7 +44,7 @@ export default function CustomPage() {
       <Card className="shadow-sm border-gray-200">
         <CardHeader className="bg-white border-b border-gray-100">
           <CardTitle>Data Overview</CardTitle>
-          <CardDescription>Manage your {title.toLowerCase()} records here.</CardDescription>
+          <CardDescription>Manage your data records here.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">

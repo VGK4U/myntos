@@ -16,7 +16,7 @@ export default function RunsPage() {
     setTimeout(() => setIsRefreshing(false), 1000);
   };
 
-  const pageTitle = "Runs";
+  const pageTitle: string = "Runs";
 
   return (
     <div className="flex flex-col w-full space-y-6 p-8 bg-slate-50 min-h-screen">

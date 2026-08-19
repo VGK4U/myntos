@@ -16,7 +16,7 @@ export default function EmployeesPage() {
     setTimeout(() => setIsRefreshing(false), 1000);
   };
 
-  const pageTitle = "Employees";
+  const pageTitle: string = "Employees";
 
   return (
     <div className="flex flex-col w-full space-y-6 p-8 bg-slate-50 min-h-screen">
