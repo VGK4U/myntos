@@ -86,7 +86,7 @@ function SuperAdminSidebar() {
           </div>
           <div className="flex-1 truncate">
             <p className="text-xs font-bold text-white truncate">{user?.username || 'SysAdmin'}</p>
-            <p className="text-[10px] text-gray-500 truncate">{user?.role || 'Root Access'}</p>
+            <p className="text-[10px] text-gray-500 truncate">{typeof user?.role === 'object' ? ((user?.role as any)?.role_name || (user?.role as any)?.role_code || 'Root Access') : (String(user?.role || 'Root Access'))}</p>
           </div>
         </div>
         <button

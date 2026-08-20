@@ -56,9 +56,10 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
         LEFT JOIN staff_departments d ON d.id = e.department_id
         LEFT JOIN staff_employee_departments ed ON ed.employee_id = e.id
         LEFT JOIN staff_departments ad ON ad.id = ed.department_id
-        WHERE (LOWER(d.name) = 'tele sales' OR LOWER(ad.name) = 'tele sales')
+        WHERE (LOWER(d.name) LIKE '%sales%' OR LOWER(ad.name) LIKE '%sales%')
           AND (e.status IS NULL OR e.status = 'active')
           AND (e.is_deleted IS NOT TRUE)
+          AND e.full_name IS NOT NULL
           AND e.full_name != ''
         GROUP BY e.id, e.full_name
     """)).fetchall()

@@ -1,5 +1,19 @@
 import { useStaffAuth } from '@/contexts/StaffAuthContext';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+
+/**
+ * Resolves a URL to the correct backend base.
+ * - If the URL starts with 'http', it's already absolute → use as-is
+ * - Otherwise, it's a backend relative path → prepend API_BASE_URL
+ */
+function resolveBackendUrl(url: string): string {
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return `${API_BASE_URL}${url.startsWith('/') ? url : '/' + url}`;
+}
+
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
 
@@ -16,7 +30,7 @@ export function useStaffFetch() {
     
     refreshPromise = (async () => {
       try {
-        const response = await fetch('/api/v1/staff/auth/refresh', {
+        const response = await fetch(resolveBackendUrl('/api/v1/staff/auth/refresh'), {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${currentToken}`,
@@ -51,15 +65,21 @@ export function useStaffFetch() {
   };
 
   const staffFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+    // Resolve relative paths to the backend base URL
+    const resolvedUrl = resolveBackendUrl(url);
+
     // 100% Coverage: Automatically attach token
     const currentToken = localStorage.getItem('staff_token');
     
     const headers = new Headers(options.headers || {});
+    if (!headers.has('Content-Type') && options.body) {
+      headers.set('Content-Type', 'application/json');
+    }
     if (currentToken && !headers.has('Authorization')) {
       headers.set('Authorization', `Bearer ${currentToken}`);
     }
 
-    let response = await fetch(url, { ...options, headers });
+    let response = await fetch(resolvedUrl, { ...options, headers });
 
     // Handle 401 Expiration transparently
     if (response.status === 401) {
@@ -67,7 +87,7 @@ export function useStaffFetch() {
       
       if (newToken) {
         headers.set('Authorization', `Bearer ${newToken}`);
-        response = await fetch(url, { ...options, headers });
+        response = await fetch(resolvedUrl, { ...options, headers });
       } else {
         logout();
       }

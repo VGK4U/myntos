@@ -9187,6 +9187,526 @@ async def capital_transactions_endpoint(
         return handle_accounts_error(e)
 
 
+@router.get("/loans-summary")
+@router.get("/loans/summary")
+async def loans_summary_endpoint(
+    company_id: Optional[int] = Query(None),
+    from_date: Optional[str] = Query(None),
+    to_date: Optional[str] = Query(None),
+    as_on_date: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC-LOANS-001: Loans & Borrowings summary per company per ledger.
+    Shows Secured Loans, Unsecured Loans, Bank OD/CC, Director Loans breakdown.
+    Opening Balance + Period Activity (Credits - Debits) = Closing Balance.
+    Matches Loans (Liability) line in Consolidated Balance Sheet.
+    """
+    from app.services.staff_accounts_service import validate_accounts_access, _get_companies_map
+    from sqlalchemy import text as _text
+    from datetime import date as _date
+    from collections import defaultdict
+    validate_accounts_access(current_user)
+    try:
+        _to = to_date or as_on_date
+        date_to   = _date.fromisoformat(_to) if _to else _date.today()
+        date_from = _date.fromisoformat(from_date) if from_date else None
+
+        cid = company_id if company_id else 0
+        companies = _get_companies_map(db, cid, current_user)
+        co_ids = [c["id"] for c in companies]
+        if not co_ids:
+            return {
+                "success": True,
+                "companies": [],
+                "total_loans": "0.00",
+                "total_secured": "0.00",
+                "total_unsecured": "0.00",
+                "total_bank_od": "0.00",
+                "total_other": "0.00"
+            }
+
+        placeholders = ",".join(str(c) for c in co_ids)
+        co_map = {c["id"]: c.get("company_name") or c.get("name", "") for c in companies}
+
+        # All LOAN ledger masters
+        ledger_rows = db.execute(_text(f"""
+            SELECT id, company_id, account_name, account_code, parent_group,
+                   COALESCE(opening_balance, 0)            AS opening_balance,
+                   COALESCE(opening_balance_type, 'CREDIT') AS opening_balance_type
+            FROM account_ledger_masters
+            WHERE company_id IN ({placeholders})
+              AND account_type = 'LOAN'
+              AND is_active = true
+            ORDER BY company_id, account_code, account_name
+        """)).fetchall()
+
+        # Period transactions from account_ledger
+        date_params: dict = {"date_to": date_to}
+        date_from_clause = ""
+        if date_from:
+            date_from_clause = "AND al.transaction_date >= :date_from"
+            date_params["date_from"] = date_from
+
+        txn_rows = db.execute(_text(f"""
+            SELECT al.company_id, al.account_name,
+                   COALESCE(SUM(al.debit_amount),  0) AS total_debit,
+                   COALESCE(SUM(al.credit_amount), 0) AS total_credit,
+                   COUNT(*)                            AS txn_count
+            FROM account_ledger al
+            WHERE al.company_id IN ({placeholders})
+              AND al.account_type = 'LOAN'
+              AND al.transaction_date <= :date_to
+              {date_from_clause}
+            GROUP BY al.company_id, al.account_name
+        """), date_params).fetchall()
+
+        txn_map = {(r.company_id, r.account_name): r for r in txn_rows}
+
+        co_ledgers: dict = defaultdict(list)
+        for lr in ledger_rows:
+            ob      = float(lr.opening_balance)
+            ob_type = lr.opening_balance_type or "CREDIT"
+            # Loan is credit-nature → CREDIT OB = positive, DEBIT OB = negative
+            ob_signed = ob if ob_type == "CREDIT" else -ob
+
+            txn = txn_map.get((lr.company_id, lr.account_name))
+            period_debit  = float(txn.total_debit)  if txn else 0.0
+            period_credit = float(txn.total_credit) if txn else 0.0
+            txn_count     = int(txn.txn_count)       if txn else 0
+
+            # Closing = OB + Credits − Debits
+            closing = ob_signed + period_credit - period_debit
+
+            co_ledgers[lr.company_id].append({
+                "id":               lr.id,
+                "ledger_name":      lr.account_name,
+                "account_code":     lr.account_code  or "",
+                "parent_group":     lr.parent_group   or "",
+                "opening_balance":  f"{ob_signed:.2f}",
+                "period_debit":     f"{period_debit:.2f}",
+                "period_credit":    f"{period_credit:.2f}",
+                "closing_balance":  f"{closing:.2f}",
+                "txn_count":        txn_count,
+            })
+
+        result_cos = []
+        grand_total = 0.0
+        total_secured = 0.0
+        total_unsecured = 0.0
+        total_bank_od = 0.0
+        total_other = 0.0
+
+        for coid in co_ids:
+            ledgers   = co_ledgers.get(coid, [])
+            co_total  = sum(float(l["closing_balance"]) for l in ledgers)
+            grand_total += co_total
+            for l in ledgers:
+                cb = float(l["closing_balance"])
+                pg = (l.get("parent_group") or "").lower()
+                nm = (l.get("ledger_name") or "").lower()
+                if "secured" in pg or "secured" in nm or "term loan" in nm or "vehicle" in nm:
+                    total_secured += cb
+                elif "unsecured" in pg or "unsecured" in nm or "director" in nm or "promoter" in nm:
+                    total_unsecured += cb
+                elif "od" in pg or "od" in nm or "overdraft" in pg or "overdraft" in nm or "cc" in nm or "cash credit" in nm:
+                    total_bank_od += cb
+                else:
+                    total_other += cb
+
+            result_cos.append({
+                "company_id":    coid,
+                "company_name":  co_map.get(coid, ""),
+                "ledgers":       ledgers,
+                "total_loans":   f"{co_total:.2f}",
+            })
+
+        return {
+            "success":         True,
+            "as_on":           str(date_to),
+            "from_date":       str(date_from) if date_from else None,
+            "companies":       result_cos,
+            "total_loans":     f"{grand_total:.2f}",
+            "total_secured":   f"{total_secured:.2f}",
+            "total_unsecured": f"{total_unsecured:.2f}",
+            "total_bank_od":   f"{total_bank_od:.2f}",
+            "total_other":     f"{total_other:.2f}"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        return handle_accounts_error(e)
+
+
+@router.get("/loans-transactions")
+@router.get("/loans/transactions")
+async def loans_transactions_endpoint(
+    company_id: Optional[int] = Query(None),
+    from_date: Optional[str] = Query(None),
+    to_date: Optional[str] = Query(None),
+    ledger_name: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC-LOANS-002: Loans & Borrowings transaction history from account_ledger.
+    Returns individual debit/credit entries for all LOAN type accounts.
+    """
+    from app.services.staff_accounts_service import validate_accounts_access, _get_companies_map
+    from sqlalchemy import text as _text
+    from datetime import date as _date
+    validate_accounts_access(current_user)
+    try:
+        date_to   = _date.fromisoformat(to_date)   if to_date   else _date.today()
+        date_from = _date.fromisoformat(from_date)  if from_date else None
+
+        cid = company_id if company_id else 0
+        companies = _get_companies_map(db, cid, current_user)
+        co_ids    = [c["id"] for c in companies]
+        if not co_ids:
+            return {"success": True, "transactions": [], "count": 0}
+
+        placeholders = ",".join(str(c) for c in co_ids)
+        co_map = {c["id"]: c.get("company_name") or c.get("name", "") for c in companies}
+
+        params: dict = {"date_to": date_to}
+        extra = ""
+        if date_from:
+            extra += " AND al.transaction_date >= :date_from"
+            params["date_from"] = date_from
+        if ledger_name:
+            extra += " AND al.account_name = :ledger_name"
+            params["ledger_name"] = ledger_name
+
+        rows = db.execute(_text(f"""
+            SELECT al.id, al.company_id, al.account_name, al.transaction_date,
+                   al.entry_type, al.debit_amount, al.credit_amount,
+                   al.reference_type, al.reference_number,
+                   al.narration, al.voucher_type, al.particulars
+            FROM account_ledger al
+            WHERE al.company_id IN ({placeholders})
+              AND al.account_type = 'LOAN'
+              AND al.transaction_date <= :date_to
+              {extra}
+            ORDER BY al.transaction_date DESC, al.id DESC
+            LIMIT 500
+        """), params).fetchall()
+
+        txns = [{
+            "id":               r.id,
+            "company_id":       r.company_id,
+            "company_name":     co_map.get(r.company_id, ""),
+            "account_name":     r.account_name,
+            "date":             str(r.transaction_date),
+            "entry_type":       r.entry_type,
+            "debit":            f"{float(r.debit_amount):.2f}",
+            "credit":           f"{float(r.credit_amount):.2f}",
+            "reference_type":   r.reference_type   or "",
+            "reference_number": r.reference_number or "",
+            "narration":        r.narration         or "",
+            "voucher_type":     r.voucher_type      or "",
+            "particulars":      r.particulars        or "",
+        } for r in rows]
+
+        return {"success": True, "transactions": txns, "count": len(txns)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        return handle_accounts_error(e)
+
+
+# ==================== FIXED ASSETS SUMMARY & TRANSACTIONS (DC-FA-001) ====================
+
+@router.get("/fixed-assets-summary")
+@router.get("/fixed-assets/summary")
+async def fixed_assets_summary_endpoint(
+    company_id: Optional[int] = Query(None),
+    from_date: Optional[str] = Query(None),
+    to_date: Optional[str] = Query(None),
+    as_on_date: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC-FA-001: Fixed Assets summary per company per ledger.
+    Shows Plant & Machinery, Furniture & Fixtures, IT Equipment, Vehicles, Buildings breakdown.
+    Opening Balance (Debit) + Additions (Debits) - Depreciation/Disposals (Credits) = Closing Balance.
+    Matches Fixed Assets line in Consolidated Balance Sheet and DAR.
+    """
+    from app.services.staff_accounts_service import validate_accounts_access, _get_companies_map
+    from sqlalchemy import text as _text
+    from datetime import date as _date
+    from collections import defaultdict
+    validate_accounts_access(current_user)
+    try:
+        _to = to_date or as_on_date
+        date_to   = _date.fromisoformat(_to) if _to else _date.today()
+        date_from = _date.fromisoformat(from_date) if from_date else None
+
+        cid = company_id if company_id else 0
+        companies = _get_companies_map(db, cid, current_user)
+        co_ids = [c["id"] for c in companies]
+        if not co_ids:
+            return {
+                "success": True,
+                "companies": [],
+                "total_fixed_assets": "0.00",
+                "total_opening": "0.00",
+                "total_additions": "0.00",
+                "total_depreciation": "0.00",
+                "categories": {}
+            }
+
+        placeholders = ",".join(str(c) for c in co_ids)
+        co_map = {c["id"]: c.get("company_name") or c.get("name", "") for c in companies}
+
+        # All FIXED ASSET ledger masters
+        ledger_rows = db.execute(_text(f"""
+            SELECT id, company_id, account_name, account_code, parent_group, description,
+                   COALESCE(opening_balance, 0)           AS opening_balance,
+                   COALESCE(opening_balance_type, 'DEBIT') AS opening_balance_type
+            FROM account_ledger_masters
+            WHERE company_id IN ({placeholders})
+              AND (
+                UPPER(account_type) IN ('FIXED_ASSET','FIXED_ASSETS','FIXEDASSET')
+                OR (UPPER(account_type) = 'ASSET' AND (parent_group ILIKE '%fixed%' OR account_name ILIKE '%fixed%'))
+              )
+              AND is_active = true
+            ORDER BY company_id, account_code, account_name
+        """)).fetchall()
+
+        # Extract account names
+        fixed_names = list(set([r.account_name for r in ledger_rows]))
+        name_clause = ""
+        date_params: dict = {"date_to": date_to}
+        if fixed_names:
+            escaped_names = "','".join(n.replace("'", "''") for n in fixed_names)
+            name_clause = f"OR al.account_name IN ('{escaped_names}')"
+
+        date_from_clause = ""
+        if date_from:
+            date_from_clause = "AND al.transaction_date >= :date_from"
+            date_params["date_from"] = date_from
+
+        txn_rows = db.execute(_text(f"""
+            SELECT al.company_id, al.account_name,
+                   COALESCE(SUM(al.debit_amount),  0) AS total_debit,
+                   COALESCE(SUM(al.credit_amount), 0) AS total_credit,
+                   COUNT(*)                            AS txn_count
+            FROM account_ledger al
+            WHERE al.company_id IN ({placeholders})
+              AND (
+                UPPER(al.account_type) IN ('FIXED_ASSET','FIXED_ASSETS','FIXEDASSET')
+                {name_clause}
+              )
+              AND al.transaction_date <= :date_to
+              {date_from_clause}
+            GROUP BY al.company_id, al.account_name
+        """), date_params).fetchall()
+
+        txn_map = {(r.company_id, r.account_name): r for r in txn_rows}
+
+        co_ledgers: dict = defaultdict(list)
+        categories: dict = {
+            "Plant & Machinery": 0.0,
+            "Furniture & Fixtures": 0.0,
+            "IT & Electronics": 0.0,
+            "Vehicles": 0.0,
+            "Land & Buildings": 0.0,
+            "Office Equipment": 0.0,
+            "Other Assets": 0.0
+        }
+
+        grand_total = 0.0
+        grand_opening = 0.0
+        grand_additions = 0.0
+        grand_depreciation = 0.0
+
+        for lr in ledger_rows:
+            ob      = float(lr.opening_balance)
+            ob_type = lr.opening_balance_type or "DEBIT"
+            # Fixed Asset is debit-nature → DEBIT OB = positive, CREDIT OB = negative
+            ob_signed = ob if ob_type == "DEBIT" else -ob
+
+            txn = txn_map.get((lr.company_id, lr.account_name))
+            period_debit  = float(txn.total_debit)  if txn else 0.0
+            period_credit = float(txn.total_credit) if txn else 0.0
+            txn_count     = int(txn.txn_count)       if txn else 0
+
+            # Closing = OB + Debits (Additions) − Credits (Depreciation/Disposal)
+            closing = ob_signed + period_debit - period_credit
+
+            grand_opening += ob_signed
+            grand_additions += period_debit
+            grand_depreciation += period_credit
+            grand_total += closing
+
+            # Classify category
+            nm = (lr.account_name or "").lower()
+            pg = (lr.parent_group or "").lower()
+            desc = (lr.description or "").lower()
+            combined = f"{nm} {pg} {desc}"
+
+            cat = "Other Assets"
+            if any(k in combined for k in ["machin", "plant", "equipment", "tool", "inverter", "panel"]):
+                cat = "Plant & Machinery"
+            elif any(k in combined for k in ["furnitur", "fixture", "desk", "chair", "table", "cabinet"]):
+                cat = "Furniture & Fixtures"
+            elif any(k in combined for k in ["computer", "laptop", "server", "printer", "software", "electronic", "mobile", "phone"]):
+                cat = "IT & Electronics"
+            elif any(k in combined for k in ["vehicle", "car", "bike", "truck", "scooter", "auto"]):
+                cat = "Vehicles"
+            elif any(k in combined for k in ["land", "building", "office space", "property", "premises"]):
+                cat = "Land & Buildings"
+            elif any(k in combined for k in ["office equip", "ac", "air condition", "refrigerator"]):
+                cat = "Office Equipment"
+
+            categories[cat] = categories.get(cat, 0.0) + closing
+
+            co_ledgers[lr.company_id].append({
+                "id":               lr.id,
+                "ledger_name":      lr.account_name,
+                "account_code":     lr.account_code  or "",
+                "parent_group":     lr.parent_group   or "Fixed Assets",
+                "category":         cat,
+                "description":      lr.description or "",
+                "opening_balance":  f"{ob_signed:.2f}",
+                "period_debit":     f"{period_debit:.2f}",
+                "period_credit":    f"{period_credit:.2f}",
+                "closing_balance":  f"{closing:.2f}",
+                "txn_count":        txn_count,
+            })
+
+        result_cos = []
+        for coid in co_ids:
+            ledgers   = co_ledgers.get(coid, [])
+            co_total  = sum(float(l["closing_balance"]) for l in ledgers)
+            co_additions = sum(float(l["period_debit"]) for l in ledgers)
+            co_depreciation = sum(float(l["period_credit"]) for l in ledgers)
+            result_cos.append({
+                "company_id":         coid,
+                "company_name":       co_map.get(coid, ""),
+                "ledgers":            ledgers,
+                "total_fixed_assets": f"{co_total:.2f}",
+                "total_additions":    f"{co_additions:.2f}",
+                "total_depreciation": f"{co_depreciation:.2f}",
+            })
+
+        return {
+            "success":            True,
+            "as_on":              str(date_to),
+            "from_date":          str(date_from) if date_from else None,
+            "companies":          result_cos,
+            "total_fixed_assets": f"{grand_total:.2f}",
+            "total_opening":      f"{grand_opening:.2f}",
+            "total_additions":    f"{grand_additions:.2f}",
+            "total_depreciation": f"{grand_depreciation:.2f}",
+            "categories":         {k: f"{v:.2f}" for k, v in categories.items()}
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        return handle_accounts_error(e)
+
+
+@router.get("/fixed-assets-transactions")
+@router.get("/fixed-assets/transactions")
+async def fixed_assets_transactions_endpoint(
+    company_id: Optional[int] = Query(None),
+    from_date: Optional[str] = Query(None),
+    to_date: Optional[str] = Query(None),
+    ledger_name: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC-FA-002: Fixed Assets transaction history from account_ledger.
+    Returns individual debit/credit entries for all FIXED ASSET type accounts.
+    """
+    from app.services.staff_accounts_service import validate_accounts_access, _get_companies_map
+    from sqlalchemy import text as _text
+    from datetime import date as _date
+    validate_accounts_access(current_user)
+    try:
+        date_to   = _date.fromisoformat(to_date)   if to_date   else _date.today()
+        date_from = _date.fromisoformat(from_date)  if from_date else None
+
+        cid = company_id if company_id else 0
+        companies = _get_companies_map(db, cid, current_user)
+        co_ids    = [c["id"] for c in companies]
+        if not co_ids:
+            return {"success": True, "transactions": [], "count": 0}
+
+        placeholders = ",".join(str(c) for c in co_ids)
+        co_map = {c["id"]: c.get("company_name") or c.get("name", "") for c in companies}
+
+        # Find fixed asset account names
+        fa_names_rows = db.execute(_text(f"""
+            SELECT DISTINCT account_name
+            FROM account_ledger_masters
+            WHERE company_id IN ({placeholders})
+              AND (
+                UPPER(account_type) IN ('FIXED_ASSET','FIXED_ASSETS','FIXEDASSET')
+                OR (UPPER(account_type) = 'ASSET' AND (parent_group ILIKE '%fixed%' OR account_name ILIKE '%fixed%'))
+              )
+        """)).fetchall()
+        fa_names = [r.account_name for r in fa_names_rows]
+        name_clause = ""
+        if fa_names:
+            escaped = "','".join(n.replace("'", "''") for n in fa_names)
+            name_clause = f"OR al.account_name IN ('{escaped}')"
+
+        params: dict = {"date_to": date_to}
+        extra = ""
+        if date_from:
+            extra += " AND al.transaction_date >= :date_from"
+            params["date_from"] = date_from
+        if ledger_name:
+            extra += " AND al.account_name = :ledger_name"
+            params["ledger_name"] = ledger_name
+
+        rows = db.execute(_text(f"""
+            SELECT al.id, al.company_id, al.account_name, al.transaction_date,
+                   al.entry_type, al.debit_amount, al.credit_amount,
+                   al.reference_type, al.reference_number,
+                   al.narration, al.voucher_type, al.particulars
+            FROM account_ledger al
+            WHERE al.company_id IN ({placeholders})
+              AND (
+                UPPER(al.account_type) IN ('FIXED_ASSET','FIXED_ASSETS','FIXEDASSET')
+                {name_clause}
+              )
+              AND al.transaction_date <= :date_to
+              {extra}
+            ORDER BY al.transaction_date DESC, al.id DESC
+            LIMIT 500
+        """), params).fetchall()
+
+        txns = [{
+            "id":               r.id,
+            "company_id":       r.company_id,
+            "company_name":     co_map.get(r.company_id, ""),
+            "account_name":     r.account_name,
+            "date":             str(r.transaction_date),
+            "entry_type":       r.entry_type,
+            "debit":            f"{float(r.debit_amount):.2f}",
+            "credit":           f"{float(r.credit_amount):.2f}",
+            "reference_type":   r.reference_type   or "",
+            "reference_number": r.reference_number or "",
+            "narration":        r.narration         or "",
+            "voucher_type":     r.voucher_type      or "",
+            "particulars":      r.particulars        or "",
+        } for r in rows]
+
+        return {"success": True, "transactions": txns, "count": len(txns)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        return handle_accounts_error(e)
+
+
+
 @router.get("/cash-in-hand-summary")
 async def cash_in_hand_summary_endpoint(
     company_id: Optional[int] = Query(None, description="Filter by company (0=all)"),

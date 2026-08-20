@@ -4,15 +4,15 @@ Handles file validation, storage, and size/format checks
 """
 
 import os
-import shutil
 from pathlib import Path
 from typing import Optional, Dict, Any
 from fastapi import UploadFile, HTTPException
 from datetime import datetime
 import uuid
+from app.services.s3_storage import s3_storage_service
 
 class FileUploadService:
-    """Service for handling file uploads with validation"""
+    """Service for handling file uploads with validation and AWS S3 storage"""
     
     # File size limits (in bytes)
     PROFILE_PHOTO_MAX_SIZE = 500 * 1024  # 500 KB
@@ -22,18 +22,12 @@ class FileUploadService:
     IMAGE_FORMATS = {'jpg', 'jpeg', 'png'}
     DOCUMENT_FORMATS = {'jpg', 'jpeg', 'png', 'pdf'}
     
-    # Upload directories
-    BASE_UPLOAD_DIR = Path("uploaded_files")
-    PROFILE_PHOTO_DIR = BASE_UPLOAD_DIR / "profile_photos"
-    KYC_DOCUMENTS_DIR = BASE_UPLOAD_DIR / "kyc_documents"
-    
     def __init__(self):
-        """Initialize upload directories"""
-        self.PROFILE_PHOTO_DIR.mkdir(parents=True, exist_ok=True)
-        self.KYC_DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
+        """Initialize upload service"""
+        pass
     
-    def validate_file_size(self, file: UploadFile, max_size: int, file_type: str) -> None:
-        """Validate file size"""
+    def validate_file_size(self, file: UploadFile, max_size: int, file_type: str) -> int:
+        """Validate file size and return it"""
         # Read file to check size
         file.file.seek(0, 2)  # Move to end of file
         file_size = file.file.tell()  # Get current position (file size)
@@ -45,6 +39,7 @@ class FileUploadService:
                 status_code=400,
                 detail=f"{file_type} exceeds maximum size of {max_size_kb:.0f} KB"
             )
+        return file_size
     
     def validate_file_format(self, filename: str, allowed_formats: set) -> str:
         """Validate and return file extension"""
@@ -64,32 +59,33 @@ class FileUploadService:
         user_id: str
     ) -> Dict[str, Any]:
         """
-        Save profile photo with validation
+        Save profile photo to AWS S3
         Max size: 500 KB, Formats: JPG, PNG
         """
         # Validate size
-        self.validate_file_size(file, self.PROFILE_PHOTO_MAX_SIZE, "Profile photo")
+        file_size = self.validate_file_size(file, self.PROFILE_PHOTO_MAX_SIZE, "Profile photo")
         
         # Validate format
         ext = self.validate_file_format(file.filename, self.IMAGE_FORMATS)
         
-        # Generate unique filename
+        # Generate unique filename and S3 key
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         unique_filename = f"{user_id}_{timestamp}.{ext}"
-        file_path = self.PROFILE_PHOTO_DIR / unique_filename
+        s3_key = f"profile_photos/{unique_filename}"
         
-        # Save file
+        # Read file into memory and upload to S3
         try:
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
+            file_data = file.file.read()
+            success = s3_storage_service.upload_file(s3_key, file_data)
+            if not success:
+                raise Exception("AWS S3 upload rejected")
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
-        
-        # Get file size
-        file_size = os.path.getsize(file_path)
+            raise HTTPException(status_code=500, detail=f"Failed to save file to S3: {str(e)}")
+        finally:
+            file.file.seek(0)
         
         return {
-            "file_path": str(file_path),
+            "file_path": s3_key,
             "file_name": unique_filename,
             "file_size": file_size,
             "file_format": ext
@@ -102,43 +98,47 @@ class FileUploadService:
         document_type: str
     ) -> Dict[str, Any]:
         """
-        Save KYC document with validation
+        Save KYC document to AWS S3
         Max size: 1 MB, Formats: JPG, PNG, PDF
         """
         # Validate size
-        self.validate_file_size(file, self.KYC_DOCUMENT_MAX_SIZE, "KYC document")
+        file_size = self.validate_file_size(file, self.KYC_DOCUMENT_MAX_SIZE, "KYC document")
         
         # Validate format
         ext = self.validate_file_format(file.filename, self.DOCUMENT_FORMATS)
         
-        # Generate unique filename
+        # Generate unique filename and S3 key
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         unique_filename = f"{user_id}_{document_type}_{timestamp}.{ext}"
-        file_path = self.KYC_DOCUMENTS_DIR / unique_filename
+        s3_key = f"kyc_documents/{unique_filename}"
         
-        # Save file
+        # Read file into memory and upload to S3
         try:
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
+            file_data = file.file.read()
+            success = s3_storage_service.upload_file(s3_key, file_data)
+            if not success:
+                raise Exception("AWS S3 upload rejected")
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
-        
-        # Get file size
-        file_size = os.path.getsize(file_path)
+            raise HTTPException(status_code=500, detail=f"Failed to save file to S3: {str(e)}")
+        finally:
+            file.file.seek(0)
         
         return {
-            "file_path": str(file_path),
+            "file_path": s3_key,
             "file_name": unique_filename,
             "file_size": file_size,
             "file_format": ext
         }
     
     def delete_file(self, file_path: str) -> bool:
-        """Delete a file if it exists"""
+        """Delete a file from AWS S3"""
         try:
+            # First check if the file_path is actually a local path (legacy fallback)
             if os.path.exists(file_path):
                 os.remove(file_path)
                 return True
-            return False
+            
+            # Otherwise, delete from S3
+            return s3_storage_service.delete_file(file_path)
         except Exception:
             return False
