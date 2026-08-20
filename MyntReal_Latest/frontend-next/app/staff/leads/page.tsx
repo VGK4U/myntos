@@ -14,7 +14,7 @@ import { CRMLeadEditor } from '@/components/CRMLeadEditor';
 import { WALeadModal } from '@/components/WALeadModal';
 import { 
   Users, PhoneCall, UserCheck, Search, Filter, RefreshCcw, 
-  DollarSign, Calendar, Clock, CheckCircle, Trophy, 
+  DollarSign, Calendar, Clock, CheckCircle, Trophy, Phone, Mail,
   Handshake, AlertTriangle, UserPlus, PauseCircle, Building, Edit
 } from 'lucide-react';
 
