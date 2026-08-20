@@ -14495,6 +14495,25 @@ async def create_lead_unified(
         updated_at=get_indian_time()
     )
     
+    if lead_data.source_ref_type:
+        new_lead.source_ref_type = lead_data.source_ref_type
+    if lead_data.source_ref_id:
+        new_lead.source_ref_id = str(lead_data.source_ref_id)
+    if lead_data.source_ref_name:
+        new_lead.source_ref_name = lead_data.source_ref_name
+
+    # If Ground Source / Sourced By staff is selected, sync created_by_id to trigger staff incentive
+    if lead_data.source_ref_type in ('staff', 'mn_staff', 'mynt_real') and lead_data.source_ref_id:
+        try:
+            s_id = int(lead_data.source_ref_id)
+            st_emp = db.query(StaffEmployee).filter(StaffEmployee.id == s_id).first()
+            if st_emp and st_emp.emp_code:
+                new_lead.created_by_id = st_emp.emp_code
+                new_lead.created_by_type = 'staff'
+        except (ValueError, TypeError):
+            new_lead.created_by_id = str(lead_data.source_ref_id)
+            new_lead.created_by_type = 'staff'
+
     # Staff users can assign telecaller, field_staff, partner, vendor
     if is_staff:
         if lead_data.telecaller_id:
@@ -15154,6 +15173,18 @@ async def update_lead_full(
             lead.associated_partner_id = None
         elif not source_ref_id:
             lead.associated_partner_id = None
+
+        # Keep created_by_id in sync when source is a Staff member
+        if source_ref_type in ('staff', 'mn_staff', 'mynt_real') and source_ref_id:
+            try:
+                s_id = int(source_ref_id)
+                st_emp = db.query(StaffEmployee).filter(StaffEmployee.id == s_id).first()
+                if st_emp and st_emp.emp_code:
+                    lead.created_by_id = st_emp.emp_code
+                    lead.created_by_type = 'staff'
+            except (ValueError, TypeError):
+                lead.created_by_id = str(source_ref_id)
+                lead.created_by_type = 'staff'
 
     # DC Protocol: Auto-populate uplines (L2, L3, L4) based on Ground Source (mnr_handler_id)
     if lead.mnr_handler_id:
