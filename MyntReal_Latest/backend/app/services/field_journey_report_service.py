@@ -37,7 +37,7 @@ def _format_minutes_to_hm(total_minutes: float) -> str:
 
 def get_today_field_journey_stats(db: Session) -> Dict[str, Any]:
     """
-    Aggregates today's field staff journey statistics and calculates distance deltas.
+    Aggregates today's field staff journey statistics and calculates distance deltas + GPS locations.
     """
     ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
     date_str = ist_now.strftime("%Y-%m-%d")
@@ -61,10 +61,17 @@ def get_today_field_journey_stats(db: Session) -> Dict[str, Any]:
             j.total_duration_minutes,
             j.start_time,
             j.end_time,
+            j.start_latitude,
+            j.start_longitude,
+            j.start_address,
+            j.end_latitude,
+            j.end_longitude,
+            j.end_address,
             j.lead_id,
             l.name as lead_name,
             l.phone as lead_phone,
             l.area as lead_area,
+            l.city as lead_city,
             (
                 SELECT COUNT(c.id) 
                 FROM staff_journey_checkins c 
@@ -74,7 +81,55 @@ def get_today_field_journey_stats(db: Session) -> Dict[str, Any]:
                 SELECT MAX(c.created_at) 
                 FROM staff_journey_checkins c 
                 WHERE c.journey_id = j.id
-            ) as latest_photo_time
+            ) as latest_photo_time,
+            (
+                SELECT c.address 
+                FROM staff_journey_checkins c 
+                WHERE c.journey_id = j.id AND c.address IS NOT NULL AND c.address != ''
+                ORDER BY c.created_at DESC 
+                LIMIT 1
+            ) as latest_checkin_address,
+            (
+                SELECT c.latitude 
+                FROM staff_journey_checkins c 
+                WHERE c.journey_id = j.id AND c.latitude IS NOT NULL
+                ORDER BY c.created_at DESC 
+                LIMIT 1
+            ) as latest_checkin_lat,
+            (
+                SELECT c.longitude 
+                FROM staff_journey_checkins c 
+                WHERE c.journey_id = j.id AND c.longitude IS NOT NULL
+                ORDER BY c.created_at DESC 
+                LIMIT 1
+            ) as latest_checkin_lng,
+            (
+                SELECT t.address 
+                FROM staff_journey_track_points t 
+                WHERE t.journey_id = j.id AND t.address IS NOT NULL AND t.address != ''
+                ORDER BY t.timestamp DESC 
+                LIMIT 1
+            ) as latest_track_address,
+            (
+                SELECT t.latitude 
+                FROM staff_journey_track_points t 
+                WHERE t.journey_id = j.id AND t.latitude IS NOT NULL
+                ORDER BY t.timestamp DESC 
+                LIMIT 1
+            ) as latest_track_lat,
+            (
+                SELECT t.longitude 
+                FROM staff_journey_track_points t 
+                WHERE t.journey_id = j.id AND t.longitude IS NOT NULL
+                ORDER BY t.timestamp DESC 
+                LIMIT 1
+            ) as latest_track_lng,
+            (
+                SELECT att.gps_status
+                FROM staff_attendance att
+                WHERE att.employee_id = j.employee_id AND att.date = j.date
+                LIMIT 1
+            ) as live_gps_status
         FROM staff_journeys j
         JOIN staff_employees e ON e.id = j.employee_id
         LEFT JOIN staff_employees mgr ON mgr.id = e.reporting_manager_id
@@ -155,6 +210,25 @@ def get_today_field_journey_stats(db: Session) -> Dict[str, Any]:
                 alert_flag = f"⚠️ Photo check-in pending (>2h)"
                 needs_warning_alert = True
 
+        # GPS Location Resolution
+        lat = r.latest_checkin_lat or r.latest_track_lat or r.start_latitude or r.end_latitude
+        lng = r.latest_checkin_lng or r.latest_track_lng or r.start_longitude or r.end_longitude
+
+        lead_loc = ", ".join(filter(None, [getattr(r, 'lead_area', None), getattr(r, 'lead_city', None)]))
+        location_address = (
+            r.latest_checkin_address or 
+            r.latest_track_address or 
+            r.start_address or 
+            r.end_address or 
+            lead_loc or 
+            ""
+        ).strip()
+
+        if not location_address and lat and lng:
+            location_address = f"GPS ({round(float(lat), 4)}, {round(float(lng), 4)})"
+
+        maps_url = f"https://maps.google.com/?q={lat},{lng}" if (lat and lng) else ""
+
         journey_list.append({
             "journey_id": r.journey_id,
             "employee_id": r.employee_id,
@@ -176,7 +250,12 @@ def get_today_field_journey_stats(db: Session) -> Dict[str, Any]:
             "latest_photo_formatted": latest_photo_formatted,
             "photo_inactivity_mins": photo_inactivity_mins,
             "alert_flag": alert_flag,
-            "needs_warning_alert": needs_warning_alert
+            "needs_warning_alert": needs_warning_alert,
+            "location_address": location_address,
+            "latitude": float(lat) if lat else None,
+            "longitude": float(lng) if lng else None,
+            "maps_url": maps_url,
+            "gps_status": r.live_gps_status or "ENABLED"
         })
 
     # Save new snapshot
@@ -240,6 +319,17 @@ def format_field_journey_whatsapp_message(stats: Dict[str, Any]) -> str:
             
             lines.append(f"{prefix} *{name_code}* — *{j['distance_km']} KMs*{delta_str} | {j['duration_formatted']}")
             lines.append(f"   📍 Lead: *{j['lead_name']}* ({j['purpose'].replace('_', ' ').title()})")
+            
+            # GPS Location & Live Map Link
+            gps_status = j.get('gps_status') or 'ACTIVE'
+            if j.get('maps_url'):
+                loc_title = j.get('location_address') or "Live Tracked"
+                lines.append(f"   🗺️ GPS Loc: {loc_title} (📍 {j['maps_url']})")
+            elif j.get('location_address'):
+                lines.append(f"   🗺️ GPS Loc: {j['location_address']}")
+            else:
+                lines.append(f"   🗺️ GPS Loc: Active ({j['distance_km']} KMs tracked)")
+                
             lines.append(f"   📸 Photos: {j['photo_count']} (Latest: {j['latest_photo_formatted']}) | {j['status_text']}")
             if j['alert_flag']:
                 lines.append(f"   {j['alert_flag']}")
