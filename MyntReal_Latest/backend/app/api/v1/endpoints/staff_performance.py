@@ -2413,7 +2413,8 @@ def incentive_achievements_drilldown(
                     ) THEN TRUE ELSE FALSE END AS is_direct,
                     ARRAY_REMOVE(ARRAY[
                         CASE WHEN l.telecaller_id::text = :emp_id   THEN 'Telecaller'  END,
-                        CASE WHEN l.field_staff_id::text = :emp_id  THEN 'Field Staff' END
+                        CASE WHEN l.field_staff_id::text = :emp_id  THEN 'Field Staff' END,
+                        CASE WHEN (l.created_by_id = :emp_code OR l.source_ref_id = :emp_id OR l.primary_owner_id::text = :emp_id) THEN 'Lead By' END
                     ], NULL) AS roles
                 FROM crm_leads l
                 LEFT JOIN official_partners op ON op.id = l.associated_partner_id
@@ -2424,12 +2425,15 @@ def incentive_achievements_drilldown(
                   AND (
                       l.telecaller_id::text = :emp_id
                       OR l.field_staff_id::text = :emp_id
+                      OR l.created_by_id = :emp_code
+                      OR l.source_ref_id = :emp_id
+                      OR l.primary_owner_id::text = :emp_id
                   ) {_co_clause}
                 ORDER BY l.id, l.updated_at DESC
             """)
             p = {'cat_ids': cat_ids, 'df': date_from, 'dt': date_to,
                  'df_d': df_d, 'dt_d': dt_d,
-                 'emp_id': str(emp_db_id)}
+                 'emp_id': str(emp_db_id), 'emp_code': str(emp_code)}
             if not all_companies:
                 p['co'] = company_id
             for r in db.execute(crm_q, p).fetchall():
@@ -2630,7 +2634,8 @@ def incentive_achievements_drilldown(
                     ) THEN TRUE ELSE FALSE END AS is_direct,
                     ARRAY_REMOVE(ARRAY[
                         CASE WHEN l.telecaller_id::text = :emp_id   THEN 'Telecaller'  END,
-                        CASE WHEN l.field_staff_id::text = :emp_id  THEN 'Field Staff' END
+                        CASE WHEN l.field_staff_id::text = :emp_id  THEN 'Field Staff' END,
+                        CASE WHEN (l.created_by_id = :emp_code OR l.source_ref_id = :emp_id OR l.primary_owner_id::text = :emp_id) THEN 'Lead By' END
                     ], NULL) AS roles,
                     (CASE WHEN l.associated_partner_id IS NOT NULL AND EXISTS (
                         SELECT 1 FROM crm_leads l2
@@ -2656,11 +2661,14 @@ def incentive_achievements_drilldown(
                   AND (
                       l.telecaller_id::text = :emp_id
                       OR l.field_staff_id::text = :emp_id
+                      OR l.created_by_id = :emp_code
+                      OR l.source_ref_id = :emp_id
+                      OR l.primary_owner_id::text = :emp_id
                   ) {_co_clause}
                 ORDER BY l.id, l.updated_at DESC
             """)
             p = {'cat_ids': cat_ids, 'df': date_from, 'dt': date_to,
-                 'b2b_cids': _b2b_cids, 'emp_id': str(emp_db_id)}
+                 'b2b_cids': _b2b_cids, 'emp_id': str(emp_db_id), 'emp_code': str(emp_code)}
             if not all_companies:
                 p['co'] = company_id
             for r in db.execute(crm_q, p).fetchall():
