@@ -514,7 +514,7 @@ def generate_quotation(
         '<b>Accessories:</b> 4Sq. Copper AC Cable,<br/>'
         '&nbsp;&nbsp;&nbsp;4Sq. Copper DC cable<br/>'
         '&nbsp;&nbsp;&nbsp;GI Mounting Structure<br/>'
-        '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(North Pole&#8211;6 Feet, South Pole&#8211;4 Feet)<br/>'
+        '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(North Pole&#8211;5 Feet, South Pole&#8211;3 Feet)<br/>'
         '&nbsp;&nbsp;&nbsp;AC-DCDB, Earthing,<br/>'
         '&nbsp;&nbsp;&nbsp;1" PVC Pipe, Flexible PVC Pipe<br/>'
         '&nbsp;&nbsp;&nbsp;GI/SS Nuts, Bolts &amp; Hardware',
@@ -759,7 +759,7 @@ def generate_invoice(
         '<b>Accessories:</b> 4Sq. Copper AC Cable,<br/>'
         '&nbsp;&nbsp;&nbsp;4Sq. Copper DC cable<br/>'
         '&nbsp;&nbsp;&nbsp;GI Mounting Structure<br/>'
-        '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(North Pole&#8211;6 Feet, South Pole&#8211;4 Feet)<br/>'
+        '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(North Pole&#8211;5 Feet, South Pole&#8211;3 Feet)<br/>'
         '&nbsp;&nbsp;&nbsp;AC-DCDB, Earthing, 1" PVC Pipe<br/>'
         '&nbsp;&nbsp;&nbsp;GI/SS Nuts, Bolts &amp; Hardware',
     ]
@@ -1029,7 +1029,7 @@ def generate_co_applicant_quotation(
         '<b>Accessories:</b> 4Sq. Copper AC Cable,<br/>'
         '&nbsp;&nbsp;&nbsp;4Sq. Copper DC cable<br/>'
         '&nbsp;&nbsp;&nbsp;GI Mounting Structure<br/>'
-        '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(North Pole&#8211;6 Feet, South Pole&#8211;4 Feet)<br/>'
+        '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(North Pole&#8211;5 Feet, South Pole&#8211;3 Feet)<br/>'
         '&nbsp;&nbsp;&nbsp;AC-DCDB, Earthing,<br/>'
         '&nbsp;&nbsp;&nbsp;1" PVC Pipe, Flexible PVC Pipe<br/>'
         '&nbsp;&nbsp;&nbsp;GI/SS Nuts, Bolts &amp; Hardware',
