@@ -14850,7 +14850,8 @@ async def update_unified_lead_mnr_assignment(
 @router.put("/unified-my-leads/{lead_id}/full-update")
 async def update_lead_full(
     lead_id: int,
-    company_id: int = Query(..., description="Company ID - must match lead's current company"),
+    company_id: Optional[int] = Query(None, description="Current view company ID"),
+    body_company_id: Optional[int] = Body(None, alias="company_id"),
     status: Optional[str] = Body(None),
     name: Optional[str] = Body(None),
     phone: Optional[str] = Body(None),
@@ -14896,24 +14897,15 @@ async def update_lead_full(
     current_user = Depends(get_current_user_hybrid)
 ):
     """
-    DC Protocol (Dec 31, 2025): Full lead update endpoint for unified CRM Lead Editor.
-    Updates all assignment fields: MNR Handler, Guru, Adi Guru, Tele Caller, Field Staff, Partner.
-    Also updates lead details, next follow-up date, and deal values.
+    DC Protocol (Dec 31, 2025 - Updated Mar 2026): Full lead update endpoint for unified CRM Lead Editor.
+    Allows editing company_id, category_id, assignment fields, follow-up dates, and lead details.
     """
     from app.models.staff import StaffEmployee
     
-    # DC Protocol (Jan 23, 2026): Query by lead_id only, validate company separately
     lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
     
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
-    
-    # DC Protocol: Validate company_id matches lead's current company
-    if lead.company_id != company_id:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Company mismatch: Lead belongs to company {lead.company_id}, but request specified company {company_id}"
-        )
     
     def _clean_body_param(val):
         if val is None or (hasattr(val, '__class__') and 'fastapi' in getattr(val.__class__, '__module__', '')):
@@ -15094,11 +15086,17 @@ async def update_lead_full(
         lead.budget_min = budget_min
     if budget_max is not None:
         lead.budget_max = budget_max
+    body_company_id = _clean_body_param(body_company_id)
+    if body_company_id and body_company_id > 0:
+        lead.company_id = body_company_id
+
     if category_id is not None:
         if category_id:
             category = db.query(SignupCategory).filter(SignupCategory.id == category_id).first()
             if not category:
                 raise HTTPException(status_code=400, detail="Invalid category")
+            if category.company_id:
+                lead.company_id = category.company_id
         lead.category_id = category_id if category_id else None
     
     # DC_CAT_ALIGN_001: Re-align category_id if looking_for was updated or present
