@@ -25,6 +25,24 @@ from app.models.crm import CRMLead, CRMLeadFollowUp
 logger = logging.getLogger(__name__)
 
 IST = pytz.timezone('Asia/Kolkata')
+def get_effective_token(db: Optional[Session] = None) -> str:
+    tok = os.getenv('MYOPERATOR_API_TOKEN', '')
+    if tok:
+        return tok
+    if db:
+        try:
+            from app.models.system_control import SystemControl
+            sc = db.query(SystemControl).filter(SystemControl.feature_name == 'myoperator_api_token').first()
+            if sc and sc.settings_data:
+                data = json.loads(sc.settings_data) if isinstance(sc.settings_data, str) else sc.settings_data
+                t = data.get('token', '')
+                if t:
+                    os.environ['MYOPERATOR_API_TOKEN'] = t
+                    return t
+        except Exception:
+            pass
+    return ''
+
 MYOPERATOR_API_TOKEN = os.getenv('MYOPERATOR_API_TOKEN', '')
 
 # ── Last sync result cache (in-process) ──────────────────────────────────────
@@ -39,15 +57,16 @@ _last_sync: dict = {
     'token_configured': bool(os.getenv('MYOPERATOR_API_TOKEN', '')),
 }
 
-
 MYOPERATOR_X_API_KEY = os.getenv('MYOPERATOR_X_API_KEY', '')
 MYOPERATOR_API_COMPANY_ID = os.getenv('MYOPERATOR_API_COMPANY_ID', '')
 MYOPERATOR_COMPANY_ID = int(os.getenv('MYOPERATOR_COMPANY_ID', '1'))
 MYOPERATOR_BASE_URL = 'https://developers.myoperator.co'
 
 
-def get_last_sync_status() -> dict:
-    return dict(_last_sync)
+def get_last_sync_status(db: Optional[Session] = None) -> dict:
+    status = dict(_last_sync)
+    status['token_configured'] = bool(get_effective_token(db))
+    return status
 
 
 def get_ist_now():
@@ -283,7 +302,7 @@ def _normalize_source_record(source: dict) -> dict:
     }
 
 
-def _fetch_myoperator_logs(ts_from: int, ts_to: int) -> list:
+def _fetch_myoperator_logs(ts_from: int, ts_to: int, db: Optional[Session] = None) -> list:
     """
     Fetch call logs from MyOperator Search API.
     URL: POST https://developers.myoperator.co/search
@@ -291,7 +310,8 @@ def _fetch_myoperator_logs(ts_from: int, ts_to: int) -> list:
     Pagination: log_from (offset), page_size (max 100).
     Returns list of normalized call records or empty list on failure.
     """
-    if not MYOPERATOR_API_TOKEN:
+    token = get_effective_token(db)
+    if not token:
         logger.warning('[OPERATOR_SYNC] MYOPERATOR_API_TOKEN not set — skipping API fetch')
         return []
 
@@ -303,7 +323,7 @@ def _fetch_myoperator_logs(ts_from: int, ts_to: int) -> list:
 
     for _ in range(max_iterations):
         payload = {
-            'token': MYOPERATOR_API_TOKEN,
+            'token': token,
             'from': ts_from,
             'to': ts_to,
             'page_size': page_size,
@@ -365,7 +385,7 @@ def sync_myoperator_logs(db: Optional[Session] = None, days_back: Optional[int] 
     followups_created = 0
 
     try:
-        records = _fetch_myoperator_logs(ts_from, ts_to)
+        records = _fetch_myoperator_logs(ts_from, ts_to, db=db)
 
         for rec in records:
             call_id = rec.get('call_id') or ''

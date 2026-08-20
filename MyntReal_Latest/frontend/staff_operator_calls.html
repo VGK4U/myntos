@@ -393,6 +393,7 @@
             <h5 id="table-title">All Calls</h5>
             <div style="display:flex;align-items:center;gap:10px;">
                 <span id="table-sync-badge" style="font-size:11px;color:#6b7280;"></span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="promptSetMyOperatorToken()" style="font-size:11px;padding:3px 8px;" title="Set MyOperator API Token"><i class="fas fa-key"></i> Set API Token</button>
                 <button class="btn-refresh" onclick="loadCalls(true)"><i class="fas fa-sync-alt"></i> Refresh</button>
             </div>
         </div>
@@ -1666,10 +1667,31 @@ async function loadSyncStatus() {
                 const msg = `✅ Last sync: ${ts} — ${summary}`;
                 if (banner) { banner.textContent = msg; banner.style.background = ''; }
                 if (badge) badge.textContent = `Synced ${ts}`;
-            }
-        }
     } catch (e) {
         // non-critical
+    }
+}
+
+async function promptSetMyOperatorToken() {
+    const token = prompt('Enter your MyOperator API Token (found in MyOperator Dashboard > Manage > Integrations):');
+    if (!token) return;
+    const t = token.trim();
+    if (!t) return;
+    try {
+        const res = await fetch(`${API_BASE}/operator-calls/set-api-token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify({ token: t })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            alert('✅ MyOperator API Token saved successfully! Triggering sync now...');
+            loadCalls(true);
+        } else {
+            alert('❌ Failed to save token: ' + (data.detail || data.message || 'Unknown error'));
+        }
+    } catch (e) {
+        alert('❌ Connection error: ' + e.message);
     }
 }
 

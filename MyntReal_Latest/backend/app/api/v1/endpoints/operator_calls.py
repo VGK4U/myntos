@@ -277,6 +277,37 @@ def _create_auto_followup(db: Session, call: OperatorCall) -> Optional[CRMLeadFo
     return fu
 
 
+@router.post("/set-api-token")
+def set_myoperator_api_token(
+    payload: dict,
+    db: Session = Depends(get_db),
+    me: StaffEmployee = Depends(get_current_staff)
+):
+    """Save or update MyOperator API token in SystemControl database."""
+    token = (payload.get("token") or "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="Token parameter is required")
+
+    from app.models.system_control import SystemControl
+    sc = db.query(SystemControl).filter(SystemControl.feature_name == 'myoperator_api_token').first()
+    if not sc:
+        sc = SystemControl(
+            feature_name='myoperator_api_token',
+            is_paused=False,
+            controlled_by_user_id=str(getattr(me, 'emp_code', None) or me.id),
+            settings_data=json.dumps({"token": token}),
+            notes="MyOperator API Token for periodic call sync"
+        )
+        db.add(sc)
+    else:
+        sc.settings_data = json.dumps({"token": token})
+        sc.controlled_by_user_id = str(getattr(me, 'emp_code', None) or me.id)
+        sc.updated_at = datetime.utcnow()
+    db.commit()
+    
+    os.environ['MYOPERATOR_API_TOKEN'] = token
+    return {"success": True, "message": "MyOperator API Token saved successfully!"}
+
 # ── Webhook ────────────────────────────────────────────────────────────────────
 
 def _verify_webhook_auth(request: Request, raw_body: bytes, payload: dict) -> bool:
