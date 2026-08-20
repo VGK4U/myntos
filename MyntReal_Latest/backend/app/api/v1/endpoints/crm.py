@@ -16849,6 +16849,51 @@ def get_invoice_prefill(
     }
 
 
+@router.get("/leads/system-search")
+def system_search_leads(
+    q: str = Query(..., min_length=2, description="Mobile number, Area, Name, or Lead ID"),
+    limit: int = Query(20, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC Protocol: System-wide lead search for field staff journey tagging.
+    Searches across all leads by mobile number, area, name, or ID.
+    """
+    from app.models.crm import CRMLead
+    search_term = f"%{q.strip()}%"
+    
+    # Search by ID if digits only
+    filters = [
+        CRMLead.phone.ilike(search_term),
+        CRMLead.area.ilike(search_term),
+        CRMLead.name.ilike(search_term),
+        CRMLead.city.ilike(search_term)
+    ]
+    if q.strip().isdigit():
+        filters.append(CRMLead.id == int(q.strip()))
+        
+    leads = db.query(CRMLead).filter(or_(*filters)).order_by(CRMLead.id.desc()).limit(limit).all()
+    
+    return {
+        "success": True,
+        "count": len(leads),
+        "leads": [
+            {
+                "id": l.id,
+                "name": l.name,
+                "phone": l.phone,
+                "area": l.area or "",
+                "city": l.city or "",
+                "status": l.status,
+                "company_id": l.company_id,
+                "display_label": f"#{l.id} - {l.name} ({l.phone}) - {l.area or l.city or 'N/A'}"
+            }
+            for l in leads
+        ]
+    }
+
+
 @router.get("/solar-brands")
 def get_active_solar_brands(
     company_id: Optional[int] = Query(None),

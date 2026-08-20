@@ -28,6 +28,7 @@ class JourneyApprovalStatus(enum.Enum):
 class JourneyPurpose(enum.Enum):
     CLIENT_VISIT = "client_visit"
     SITE_INSPECTION = "site_inspection"
+    INSTALLATION = "installation"
     MEETING = "meeting"
     DELIVERY = "delivery"
     COLLECTION = "collection"
@@ -45,6 +46,7 @@ class StaffJourney(Base):
     employee_id = Column(Integer, ForeignKey("staff_employees.id"), nullable=False, index=True)
     attendance_id = Column(Integer, ForeignKey("staff_attendance.id"), nullable=True, index=True)
     company_id = Column(Integer, ForeignKey("associated_companies.id"), nullable=True, index=True)
+    lead_id = Column(Integer, ForeignKey("crm_leads.id"), nullable=True, index=True)
     date = Column(Date, nullable=False, index=True)
     
     purpose = Column(SQLEnum(JourneyPurpose), default=JourneyPurpose.OTHER)

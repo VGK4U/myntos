@@ -53,6 +53,7 @@ const TRANSPORT_MODES = [
 const PURPOSES = [
   { id: 'client_visit', name: 'Client Visit', icon: '👥' },
   { id: 'site_inspection', name: 'Site Inspection', icon: '🔍' },
+  { id: 'installation', name: 'Installation', icon: '🔧' },
   { id: 'meeting', name: 'Meeting', icon: '🤝' },
   { id: 'delivery', name: 'Delivery', icon: '📦' },
   { id: 'collection', name: 'Collection', icon: '💰' },

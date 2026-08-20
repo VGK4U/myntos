@@ -137,6 +137,7 @@ class StartJourneyRequest(BaseModel):
     purpose_description: Optional[str] = None
     client_name: Optional[str] = None
     client_address: Optional[str] = None
+    lead_id: Optional[int] = None
     transport_mode: str = "bike"
     company_id: Optional[int] = None
     kra_instance_id: Optional[int] = None
@@ -148,7 +149,7 @@ class StartJourneyRequest(BaseModel):
 
     @validator('purpose')
     def validate_purpose(cls, v):
-        valid = ['client_visit', 'site_inspection', 'meeting', 'delivery', 'collection', 'other']
+        valid = ['client_visit', 'site_inspection', 'installation', 'meeting', 'delivery', 'collection', 'other']
         if v not in valid:
             raise ValueError(f"Invalid purpose. Must be one of: {valid}")
         return v
@@ -341,6 +342,7 @@ async def start_journey(
         employee_id=current_user.id,
         attendance_id=attendance.id if attendance else None,
         company_id=request_data.company_id,
+        lead_id=request_data.lead_id,
         date=today,
         purpose=JourneyPurpose(request_data.purpose),
         purpose_description=request_data.purpose_description,
@@ -1822,4 +1824,141 @@ async def force_stop_journey(
             "final_duration_minutes": round(journey.total_duration_minutes or 0, 2),
             "final_reimbursement": round(journey.reimbursement_amount or 0, 2) if journey.is_reimbursable else 0
         }
+    }
+
+
+# ── DC_JOURNEY_CHECKIN_001: Bi-Hourly Photo Checkin & Manager Inspection ───
+
+@router.post("/{journey_id}/checkin-photo")
+async def upload_journey_checkin_photo(
+    journey_id: int,
+    file: Optional[UploadFile] = File(None),
+    photo_data: Optional[str] = Form(None),  # Base64 data URL
+    latitude: Optional[float] = Form(None),
+    longitude: Optional[float] = Form(None),
+    accuracy: Optional[float] = Form(None),
+    address: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Upload periodic bi-hourly photo check-in for an active journey.
+    Supports file upload or Base64 camera canvas with burned-in location stamp.
+    WebP compression applied automatically via UniversalUploadService.
+    """
+    from app.models.staff_journey_checkin import StaffJourneyCheckin
+    from app.services.universal_upload_service import universal_upload_service
+
+    journey = db.query(StaffJourney).filter(StaffJourney.id == journey_id).first()
+    if not journey:
+        raise HTTPException(status_code=404, detail="Journey not found")
+
+    if journey.employee_id != current_user.id and current_user.staff_type not in ('VGK_ADMIN', 'ADMIN', 'SUPERADMIN'):
+        raise HTTPException(status_code=403, detail="Not authorized for this journey")
+
+    file_bytes = None
+    filename = f"journey_checkin_{journey_id}_{int(datetime.utcnow().timestamp())}.webp"
+
+    if file:
+        file_bytes = await file.read()
+        filename = file.filename or filename
+    elif photo_data:
+        import base64
+        try:
+            if "," in photo_data:
+                _, encoded = photo_data.split(",", 1)
+            else:
+                encoded = photo_data
+            file_bytes = base64.b64decode(encoded)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid base64 photo data: {e}")
+
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Photo file or base64 photo_data is required")
+
+    # Universal Upload Service handles storage + WebP compression (target <70KB)
+    upload_res = universal_upload_service.upload_file(
+        file_bytes=file_bytes,
+        filename=filename,
+        module="journey_photos",
+        entity_id=str(journey_id),
+        employee_code=current_user.emp_code
+    )
+
+    photo_path = upload_res.get("relative_path") or upload_res.get("file_path") or upload_res.get("url", "")
+    compressed_path = upload_res.get("compressed_path") or photo_path
+
+    checkin = StaffJourneyCheckin(
+        journey_id=journey_id,
+        employee_id=current_user.id,
+        photo_path=photo_path,
+        compressed_photo_path=compressed_path,
+        photo_size_bytes=len(file_bytes),
+        latitude=latitude,
+        longitude=longitude,
+        accuracy=accuracy,
+        address=address,
+        wvv_compliant=(accuracy is None or accuracy <= 100),
+        notes=notes,
+        created_at=datetime.utcnow()
+    )
+    db.add(checkin)
+    
+    # Update main journey photo fields for compatibility
+    journey.photo_path = photo_path
+    journey.photo_uploaded_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(checkin)
+
+    return {
+        "success": True,
+        "message": "Check-in photo uploaded successfully",
+        "checkin": checkin.to_dict()
+    }
+
+
+@router.get("/{journey_id}/checkins")
+def get_journey_checkins(
+    journey_id: int,
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Fetch all check-in photos for a specific journey (for Manager Inspection Gallery).
+    """
+    from app.models.staff_journey_checkin import StaffJourneyCheckin
+
+    journey = db.query(StaffJourney).filter(StaffJourney.id == journey_id).first()
+    if not journey:
+        raise HTTPException(status_code=404, detail="Journey not found")
+
+    # Check access permission: owner, reporting manager, or admin
+    accessible_ids = get_accessible_employee_ids(db, current_user)
+    if journey.employee_id not in accessible_ids:
+        raise HTTPException(status_code=403, detail="Not authorized to view these journey check-ins")
+
+    checkins = db.query(StaffJourneyCheckin).filter(StaffJourneyCheckin.journey_id == journey_id).order_by(StaffJourneyCheckin.created_at.desc()).all()
+
+    return {
+        "success": True,
+        "count": len(checkins),
+        "checkins": [c.to_dict() for c in checkins]
+    }
+
+
+@router.post("/field-report/trigger")
+def trigger_field_journey_report(
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Manually trigger bi-hourly field journey performance report & inactivity alerts.
+    """
+    from app.services.field_journey_report_service import dispatch_field_journey_whatsapp_reports_and_alerts
+    res = dispatch_field_journey_whatsapp_reports_and_alerts(db)
+    return {
+        "success": True,
+        "result": res
     }
