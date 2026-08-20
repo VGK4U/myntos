@@ -371,7 +371,8 @@ def sync_myoperator_logs(db: Optional[Session] = None, days_back: Optional[int] 
 
     now = get_ist_now()
     now_utc = datetime.utcnow()
-    ts_to = int(now_utc.timestamp())
+    # Add 1 day buffer to ts_to so IST calls occurring today are never excluded by UTC time offset
+    ts_to = int((now_utc + timedelta(days=1)).timestamp())
     if days_back and days_back > 0:
         ts_from = int((now_utc - timedelta(days=days_back)).timestamp())
         logger.info('[OPERATOR_SYNC] Backfill mode: last %d days', days_back)
@@ -440,7 +441,7 @@ def sync_myoperator_logs(db: Optional[Session] = None, days_back: Optional[int] 
                         followups_created += 1
                     try:
                         from app.services.whatsapp_missed_call_service import handle_missed_call_whatsapp_ack
-                        handle_missed_call_whatsapp_ack(db, existing.caller_number, existing.handled_by, existing.crm_lead_id, call_type=existing.call_type)
+                        handle_missed_call_whatsapp_ack(db, existing.caller_number, caller_name=None, lead_id=existing.crm_lead_id, call_type=existing.call_type)
                     except Exception as _mc_e:
                         logger.warning(f"[OPERATOR_SYNC] Could not send missed call WA ACK: {_mc_e}")
                 updated += 1
@@ -477,7 +478,7 @@ def sync_myoperator_logs(db: Optional[Session] = None, days_back: Optional[int] 
                             followups_created += 1
                         try:
                             from app.services.whatsapp_missed_call_service import handle_missed_call_whatsapp_ack
-                            handle_missed_call_whatsapp_ack(db, call.caller_number, call.handled_by, call.crm_lead_id, call_type=call.call_type)
+                            handle_missed_call_whatsapp_ack(db, call.caller_number, caller_name=None, lead_id=call.crm_lead_id, call_type=call.call_type)
                         except Exception as _mc_e:
                             logger.warning(f"[OPERATOR_SYNC] Could not send missed call WA ACK: {_mc_e}")
                     created += 1

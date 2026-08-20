@@ -245,13 +245,13 @@ def format_field_journey_whatsapp_message(stats: Dict[str, Any]) -> str:
                 lines.append(f"   {j['alert_flag']}")
             lines.append("")
 
-    lines.append("💬 _Auto-generated bi-hourly field operations update_")
+    lines.append("💬 _Auto-generated hourly field operations update_")
     return "\n".join(lines)
 
 
 def dispatch_field_journey_whatsapp_reports_and_alerts(db: Session) -> Dict[str, Any]:
     """
-    Main trigger function executed bi-hourly:
+    Main trigger function executed hourly:
     1. Sends Group Summary Report to target WhatsApp group.
     2. Sends direct 2-Hour Photo Inactivity Warning alerts to Employee AND Reporting Manager.
     """
@@ -269,6 +269,21 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(db: Session) -> Dict[str,
         logger.info("[FIELD-REPORT] Successfully posted report to WhatsApp group BctONtnv8431uxxybKBEtS")
     else:
         logger.warning("[FIELD-REPORT] Group bot response: %s", group_res)
+
+    # Log execution into MessageLog table for scheduler matrix tracking
+    try:
+        from app.models.whatsapp import MessageLog
+        log_entry = MessageLog(
+            mobile_number="GROUP:Field Updates",
+            message_type="field_journey",
+            content=report_msg[:500],
+            status="SENT" if group_result else "FAILED",
+            sent_at=datetime.datetime.utcnow()
+        )
+        db.add(log_entry)
+        db.commit()
+    except Exception as log_e:
+        logger.warning("[FIELD-REPORT] Failed to write MessageLog: %s", log_e)
 
     # 2. Dispatch Individual Inactivity Alerts to Employee AND Reporting Manager for active journeys
     alerts_sent = 0

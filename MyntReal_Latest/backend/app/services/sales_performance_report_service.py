@@ -47,55 +47,68 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
     start_of_today_utc = start_of_today_ist - timedelta(hours=5, minutes=30)
     date_str = ist_now.strftime("%Y-%m-%d")
 
-    # 1. Total Calls, Talk Time & Missed Calls for Tele Sales Department staff
-    stats_row = db.execute(text("""
-        SELECT 
-            COUNT(c.id) as total_calls,
-            COALESCE(SUM(c.duration_seconds), 0) as total_talk_sec,
-            COUNT(CASE WHEN UPPER(c.call_type) IN ('MISSED', 'REJECTED', 'NO_ANSWER') THEN 1 END) as missed_calls
+    from app.models.operator_calls import OperatorCall
+
+    # 1. Tele Sales Department Staff
+    staff_rows = db.execute(text("""
+        SELECT e.id, e.full_name
         FROM staff_employees e
         LEFT JOIN staff_departments d ON d.id = e.department_id
         LEFT JOIN staff_employee_departments ed ON ed.employee_id = e.id
         LEFT JOIN staff_departments ad ON ad.id = ed.department_id
-        LEFT JOIN staff_call_logs c ON c.staff_id = e.id AND c.call_date = :d
-        WHERE (LOWER(d.name) = 'tele sales' OR LOWER(ad.name) = 'tele sales')
-          AND (e.status IS NULL OR e.status = 'active')
-          AND (e.is_deleted IS NOT TRUE)
-    """), {"d": date_str}).fetchone()
-
-    total_calls = stats_row.total_calls if stats_row else 0
-    total_talk_seconds = stats_row.total_talk_sec if stats_row else 0
-    missed_calls = stats_row.missed_calls if stats_row else 0
-
-    # 2. Leaderboard strictly for Tele Sales department staff
-    users_rows = db.execute(text("""
-        SELECT 
-            e.full_name as handled_by,
-            COUNT(c.id) as call_count,
-            COUNT(CASE WHEN UPPER(c.call_type) IN ('MISSED', 'REJECTED', 'NO_ANSWER') THEN 1 END) as missed_count,
-            COALESCE(SUM(c.duration_seconds), 0) as talk_seconds
-        FROM staff_employees e
-        LEFT JOIN staff_departments d ON d.id = e.department_id
-        LEFT JOIN staff_employee_departments ed ON ed.employee_id = e.id
-        LEFT JOIN staff_departments ad ON ad.id = ed.department_id
-        LEFT JOIN staff_call_logs c ON c.staff_id = e.id AND c.call_date = :d
         WHERE (LOWER(d.name) = 'tele sales' OR LOWER(ad.name) = 'tele sales')
           AND (e.status IS NULL OR e.status = 'active')
           AND (e.is_deleted IS NOT TRUE)
           AND e.full_name != ''
         GROUP BY e.id, e.full_name
-        ORDER BY COUNT(c.id) DESC, COALESCE(SUM(c.duration_seconds), 0) DESC
-    """), {"d": date_str}).fetchall()
+    """)).fetchall()
 
     leaderboard = []
-    for row in users_rows:
+    total_calls = 0
+    total_talk_seconds = 0
+    missed_calls = 0
+
+    for s in staff_rows:
+        # Mobile call logs (Call Tracker App)
+        m_row = db.execute(text("""
+            SELECT COUNT(id) as cnt, COALESCE(SUM(duration_seconds), 0) as dur,
+                   COUNT(CASE WHEN UPPER(call_type) IN ('MISSED', 'REJECTED', 'NO_ANSWER') THEN 1 END) as missed
+            FROM staff_call_logs WHERE staff_id = :sid AND call_date = :d
+        """), {"sid": s.id, "d": date_str}).fetchone()
+
+        m_cnt = m_row.cnt if m_row else 0
+        m_dur = int(m_row.dur or 0) if m_row else 0
+        m_missed = m_row.missed if m_row else 0
+
+        # Operator Cloud Calls (MyOperator virtual numbers)
+        words = [w for w in s.full_name.replace('.', ' ').split() if len(w) >= 3 and w.lower() not in ('ms', 'mrs', 'mr', 'dr')]
+        filters = [OperatorCall.handled_by.ilike(f'%{w}%') for w in words]
+        op_calls = db.query(OperatorCall).filter(
+            OperatorCall.started_at >= start_of_today_utc,
+            or_(*filters)
+        ).all() if filters else []
+
+        op_cnt = len(op_calls)
+        op_dur = sum(c.duration_seconds or 0 for c in op_calls if c.status == 'answered')
+        op_missed = sum(1 for c in op_calls if c.status == 'missed')
+
+        staff_tot_calls = m_cnt + op_cnt
+        staff_tot_talk = m_dur + op_dur
+        staff_tot_missed = m_missed + op_missed
+
+        total_calls += staff_tot_calls
+        total_talk_seconds += staff_tot_talk
+        missed_calls += staff_tot_missed
+
         leaderboard.append({
-            "handled_by": row.handled_by,
-            "call_count": row.call_count or 0,
-            "missed_count": row.missed_count or 0,
-            "talk_seconds": int(row.talk_seconds or 0),
-            "talk_time_formatted": _format_seconds_to_hm(row.talk_seconds or 0)
+            "handled_by": s.full_name,
+            "call_count": staff_tot_calls,
+            "missed_count": staff_tot_missed,
+            "talk_seconds": staff_tot_talk,
+            "talk_time_formatted": _format_seconds_to_hm(staff_tot_talk)
         })
+
+    leaderboard.sort(key=lambda x: (x["call_count"], x["talk_seconds"]), reverse=True)
 
     # 3. New Leads Intake Today
     new_leads = db.query(func.count(CRMLead.id)).filter(

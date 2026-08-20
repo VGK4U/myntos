@@ -4799,9 +4799,9 @@ def init_scheduler():
     )
     logger.info("   🛠️ Service 7:30PM IST daily summary report scheduled")
 
-    # DC_FIELD_JOURNEY_REPORT_001: Bi-hourly Field Staff Journey Performance Report (10 AM - 6 PM IST)
+    # DC_FIELD_JOURNEY_REPORT_001: Hourly Field Staff Journey Performance Report (9 AM - 7 PM IST)
     try:
-        def run_field_journey_bi_hourly_job():
+        def run_field_journey_hourly_job():
             logger.info("🚜 [FIELD-JOURNEY-REPORT] Executing field journey report & check-in audit...")
             db = SessionLocal()
             try:
@@ -4814,16 +4814,16 @@ def init_scheduler():
                 db.close()
 
         scheduler.add_job(
-            run_field_journey_bi_hourly_job,
-            trigger=CronTrigger(hour='10,12,14,16,18', minute=0, timezone='Asia/Kolkata'),
-            id='wa_bi_hourly_field_journey_report',
-            name='WhatsApp: Bi-Hourly Field Journey Performance Report (10AM-6PM IST)',
+            run_field_journey_hourly_job,
+            trigger=CronTrigger(hour='9-19', minute=0, timezone='Asia/Kolkata'),
+            id='wa_hourly_field_journey_report',
+            name='WhatsApp: Hourly Field Journey Performance Report (9AM-7PM IST)',
             replace_existing=True,
             misfire_grace_time=600,
             max_instances=1,
         )
         scheduler.add_job(
-            run_field_journey_bi_hourly_job,
+            run_field_journey_hourly_job,
             trigger=CronTrigger(minute='15,45', timezone='Asia/Kolkata'),
             id='wa_field_journey_inactivity_check',
             name='WhatsApp: 30-Min Active Journey Photo Check-in Audit',
@@ -4831,7 +4831,7 @@ def init_scheduler():
             misfire_grace_time=300,
             max_instances=1,
         )
-        logger.info("   🚜 Field staff journey bi-hourly report & inactivity audit scheduled")
+        logger.info("   🚜 Field staff journey hourly report & inactivity audit scheduled")
     except Exception as _fj_e:
         logger.warning(f"[DC-FIELD-JOURNEY] Could not schedule report job: {_fj_e}")
 

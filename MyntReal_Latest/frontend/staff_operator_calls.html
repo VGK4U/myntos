@@ -730,9 +730,12 @@ async function loadCalls(reset = false) {
     const tbody = document.getElementById('calls-tbody');
     tbody.innerHTML = '<tr class="loading-row"><td colspan="12"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
 
-    document.getElementById('calls-section')?.style && (document.getElementById('calls-section').style.display = '');
-    document.getElementById('followups-section').style.display = 'none';
-    document.getElementById('filter-card')?.style && (document.getElementById('filter-card').style.display = '');
+    const cs = document.getElementById('calls-section');
+    if (cs) cs.style.display = '';
+    const fs = document.getElementById('followups-section');
+    if (fs) fs.style.display = 'none';
+    const fc = document.getElementById('filter-card');
+    if (fc) fc.style.display = '';
 
     const phone = document.getElementById('filter-phone').value.trim();
     const callType = document.getElementById('filter-type').value;
@@ -1640,6 +1643,7 @@ async function matchLeadManual(callId) {
 // ── Sync & Bulk Match ───────────────────────────────────────────────────────
 
 async function loadSyncStatus() {
+    try {
         const res = await staffFetch(`${API_BASE}/sync-status`);
         if (!res.ok) {
             const banner = document.getElementById('sync-info');
@@ -1676,6 +1680,8 @@ async function loadSyncStatus() {
                 const msg = `✅ Last sync: ${ts} — ${summary}`;
                 if (banner) { banner.textContent = msg; banner.style.background = ''; }
                 if (badge) badge.textContent = `Synced ${ts}`;
+            }
+        }
     } catch (e) {
         // non-critical
     }
