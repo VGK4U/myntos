@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Calendar, BriefcaseMedical, Star, CalendarX2, Plus, Eye, X, Loader2, UmbrellaBeach, History, AlertTriangle, Paperclip } from "lucide-react";
+import { Calendar, BriefcaseMedical, Star, CalendarX2, Plus, Eye, X, Loader2, Umbrella, History, AlertTriangle, Paperclip } from "lucide-react";
 
 interface LeaveBalance {
   leave_type_id: number;
@@ -137,7 +137,7 @@ export default function MyLeavesPage() {
 
   const getBalanceIcon = (code: string) => {
     switch (code) {
-      case "casual_leave": return <UmbrellaBeach className="w-5 h-5 text-emerald-600" />;
+      case "casual_leave": return <Umbrella className="w-5 h-5 text-emerald-600" />;
       case "sick_leave": return <BriefcaseMedical className="w-5 h-5 text-red-600" />;
       case "approved_leave": return <Star className="w-5 h-5 text-blue-600" />;
       case "unpaid_leave": return <CalendarX2 className="w-5 h-5 text-gray-600" />;
