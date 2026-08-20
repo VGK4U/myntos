@@ -179,7 +179,7 @@ app.post('/api/send-group-message', async (req, res) => {
             });
         }
 
-        const codesToUse = req.body.inviteCodes || [req.body.inviteCode || "HNQQoKXFfCm5PQngGdrlcY", DEFAULT_INVITE_CODE];
+        const codesToUse = req.body.inviteCodes || (req.body.inviteCode ? [req.body.inviteCode] : [DEFAULT_INVITE_CODE]);
         const targetCodes = Array.from(new Set(Array.isArray(codesToUse) ? codesToUse : [codesToUse]));
         
         let sentCount = 0;
