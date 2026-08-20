@@ -191,35 +191,46 @@ app.post('/api/send-group-message', async (req, res) => {
                 if (jidCache[codeToUse]) {
                     destinationJid = jidCache[codeToUse];
                 } else {
+                    const withTimeout = (promise, ms = 4000) => Promise.race([
+                        promise,
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Invite resolution timeout')), ms))
+                    ]);
+
                     try {
-                        const groupInfo = await sock.groupGetInviteInfo(codeToUse);
+                        const groupInfo = await withTimeout(sock.groupGetInviteInfo(codeToUse), 4000);
                         if (groupInfo && groupInfo.id) {
                             destinationJid = groupInfo.id.includes('@g.us') ? groupInfo.id : `${groupInfo.id}@g.us`;
                             jidCache[codeToUse] = destinationJid;
                         }
                     } catch (invErr) {
-                        console.log(`[WA-BOT] groupGetInviteInfo failed for ${codeToUse}: ${invErr.message}`);
+                        console.log(`[WA-BOT] groupGetInviteInfo note for ${codeToUse}: ${invErr.message}`);
                     }
-                    try {
-                        const joinedJid = await sock.groupAcceptInvite(codeToUse);
-                        if (joinedJid) {
-                            destinationJid = joinedJid.includes('@g.us') ? joinedJid : `${joinedJid}@g.us`;
-                            jidCache[codeToUse] = destinationJid;
-                            console.log(`[WA-BOT] Successfully joined group via invite code ${codeToUse}: ${destinationJid}`);
-                        }
-                    } catch (accErr) {
-                        console.log(`[WA-BOT] groupAcceptInvite note: ${accErr.message}`);
-                    }
+
                     if (!destinationJid) {
                         try {
-                            const groups = await sock.groupFetchAllParticipating();
-                            const gList = Object.values(groups);
+                            const joinedJid = await withTimeout(sock.groupAcceptInvite(codeToUse), 4000);
+                            if (joinedJid) {
+                                destinationJid = joinedJid.includes('@g.us') ? joinedJid : `${joinedJid}@g.us`;
+                                jidCache[codeToUse] = destinationJid;
+                                console.log(`[WA-BOT] Successfully joined group via invite code ${codeToUse}: ${destinationJid}`);
+                            }
+                        } catch (accErr) {
+                            console.log(`[WA-BOT] groupAcceptInvite note: ${accErr.message}`);
+                        }
+                    }
+
+                    if (!destinationJid) {
+                        try {
+                            const groups = await withTimeout(sock.groupFetchAllParticipating(), 4000);
+                            const gList = Object.values(groups || {});
                             if (gList.length > 0) {
                                 destinationJid = gList[0].id;
                                 jidCache[codeToUse] = destinationJid;
                                 console.log(`[WA-BOT] Fallback destinationJid: ${destinationJid} (${gList[0].subject})`);
                             }
-                        } catch (partErr) {}
+                        } catch (fErr) {
+                            console.log(`[WA-BOT] groupFetchAllParticipating note: ${fErr.message}`);
+                        }
                     }
                 }
             }
