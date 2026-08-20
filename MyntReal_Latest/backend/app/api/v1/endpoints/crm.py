@@ -14884,6 +14884,53 @@ async def update_lead_full(
             detail=f"Company mismatch: Lead belongs to company {lead.company_id}, but request specified company {company_id}"
         )
     
+    def _clean_body_param(val):
+        if val is None or (hasattr(val, '__class__') and 'fastapi' in getattr(val.__class__, '__module__', '')):
+            return None
+        return val
+
+    status = _clean_body_param(status)
+    name = _clean_body_param(name)
+    phone = _clean_body_param(phone)
+    email = _clean_body_param(email)
+    priority = _clean_body_param(priority)
+    source = _clean_body_param(source)
+    next_followup_date = _clean_body_param(next_followup_date)
+    description = _clean_body_param(description)
+    looking_for = _clean_body_param(looking_for)
+    recent_comments = _clean_body_param(recent_comments)
+    city = _clean_body_param(city)
+    area = _clean_body_param(area)
+    state = _clean_body_param(state)
+    pincode = _clean_body_param(pincode)
+    budget_min = _clean_body_param(budget_min)
+    budget_max = _clean_body_param(budget_max)
+    category_id = _clean_body_param(category_id)
+    mnr_handler_id = _clean_body_param(mnr_handler_id)
+    guru_id = _clean_body_param(guru_id)
+    z_guru_id = _clean_body_param(z_guru_id)
+    adi_guru_id = _clean_body_param(adi_guru_id)
+    team_senior_partner_id = _clean_body_param(team_senior_partner_id)
+    team_extended_partner_id = _clean_body_param(team_extended_partner_id)
+    team_core_partner_id = _clean_body_param(team_core_partner_id)
+    source_ref_type = _clean_body_param(source_ref_type)
+    source_ref_id = _clean_body_param(source_ref_id)
+    source_ref_name = _clean_body_param(source_ref_name)
+    field_support_ref_type = _clean_body_param(field_support_ref_type)
+    field_support_ref_id = _clean_body_param(field_support_ref_id)
+    field_support_ref_name = _clean_body_param(field_support_ref_name)
+    technical_id = _clean_body_param(technical_id)
+    support_staff_id = _clean_body_param(support_staff_id)
+    technical_staff1_id = _clean_body_param(technical_staff1_id)
+    support_staff_supported = _clean_body_param(support_staff_supported)
+    technical_staff1_supported = _clean_body_param(technical_staff1_supported)
+    telecaller_id = _clean_body_param(telecaller_id)
+    field_staff_id = _clean_body_param(field_staff_id)
+    associated_partner_id = _clean_body_param(associated_partner_id)
+    deal_value_total = _clean_body_param(deal_value_total)
+    deal_value_received = _clean_body_param(deal_value_received)
+    deal_value_balance = _clean_body_param(deal_value_balance)
+
     is_staff = isinstance(current_user, StaffEmployee)
     is_partner = hasattr(current_user, 'partner_code')  # or isinstance(current_user, OfficialPartner)
     
@@ -14892,12 +14939,21 @@ async def update_lead_full(
     if is_staff:
         staff_id = current_user.id
         
-        # Check 1: Direct ownership
+        _staff_type = (getattr(current_user, 'staff_type', '') or '').upper()
+        is_admin = (
+            is_vgk_admin(_staff_type) or 
+            _staff_type in ('MYNT_REAL', 'TELECALLER', 'TELECALLER_ADMIN', 'SALES_MANAGER', 'MANAGER', 'STAFF', 'FIELD_STAFF') or
+            getattr(current_user, 'can_view_all_leads', False) or
+            getattr(current_user, 'is_manager', False)
+        )
+        
+        # Check 1: Direct ownership or Admin bypass
         is_owner = (
-            lead.telecaller_id == staff_id or
-            lead.field_staff_id == staff_id or
-            (lead.primary_owner_type == 'staff' and lead.primary_owner_id == staff_id) or
-            lead.created_by == current_user.emp_code
+            is_admin or
+            (lead.telecaller_id and int(lead.telecaller_id) == staff_id) or
+            (lead.field_staff_id and int(lead.field_staff_id) == staff_id) or
+            (lead.primary_owner_type == 'staff' and lead.primary_owner_id and int(lead.primary_owner_id) == staff_id) or
+            (lead.created_by_type == 'staff' and str(lead.created_by_id) in (current_user.emp_code, str(staff_id)))
         )
         
         # Check 2: Team leader authority - can edit leads assigned to their direct reports
@@ -14974,17 +15030,18 @@ async def update_lead_full(
         lead.priority = priority
     if source is not None:
         lead.source = source if source else None
-    if next_followup_date is not None:
-        if next_followup_date:
+    if next_followup_date is not None and isinstance(next_followup_date, str):
+        _nf_str = next_followup_date.strip()
+        if _nf_str:
             try:
                 from dateutil.parser import parse as dateutil_parse
-                lead.next_followup_date = _to_ist_naive(dateutil_parse(next_followup_date))
-            except (ValueError, ImportError):
+                lead.next_followup_date = _to_ist_naive(dateutil_parse(_nf_str))
+            except Exception:
                 try:
                     lead.next_followup_date = _to_ist_naive(
-                        datetime.fromisoformat(next_followup_date.replace('Z', '+00:00'))
+                        datetime.fromisoformat(_nf_str.replace('Z', '+00:00'))
                     )
-                except ValueError:
+                except Exception:
                     raise HTTPException(status_code=400, detail="Invalid next_followup_date format")
         else:
             lead.next_followup_date = None
