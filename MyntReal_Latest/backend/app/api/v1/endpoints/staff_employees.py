@@ -30,8 +30,8 @@ from app.models.staff_accounts import AssociatedCompany
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
 
 # ============= DOCUMENT UPLOAD CONSTANTS (MNR Standard) =============
+# DC Protocol: Local fallback directory for dev (No automatic mkdir to prevent Beanstalk bloat)
 STAFF_KYC_UPLOAD_DIR = Path("uploaded_files/staff_kyc")
-STAFF_KYC_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # File size limits (matching MNR user profile)
 PROFILE_PHOTO_MAX_SIZE = 500 * 1024  # 500 KB

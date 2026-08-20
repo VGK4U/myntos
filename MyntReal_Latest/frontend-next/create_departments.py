@@ -1,4 +1,9 @@
-"use client";
+import os
+
+FILE_PATH = r"C:\Desktop\VGK4U\MyntReal_Latest\frontend-next\app\staff\departments\page.tsx"
+os.makedirs(os.path.dirname(FILE_PATH), exist_ok=True)
+
+CONTENT = """\"\"\"use client\"\"\";
 
 import React, { useState, useEffect } from 'react';
 import api from '@/lib/api';
@@ -9,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Building, CheckCircle, Users, Plus, Edit, Ban, Check, List } from 'lucide-react';
+import { Building, CheckCircle, Users, Plus, Edit, Ban, Check } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function DepartmentsPage() {
@@ -229,3 +234,7 @@ export default function DepartmentsPage() {
     </div>
   );
 }
+"""
+with open(FILE_PATH, 'w', encoding='utf-8') as f:
+    f.write(CONTENT)
+print("Departments page created")

@@ -1,4 +1,9 @@
-"use client";
+import os
+
+FILE_PATH = r"C:\Desktop\VGK4U\MyntReal_Latest\frontend-next\app\staff\employees\page.tsx"
+os.makedirs(os.path.dirname(FILE_PATH), exist_ok=True)
+
+CONTENT = """\"\"\"use client\"\"\";
 
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '@/lib/api';
@@ -10,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Users, UserCheck, UserX, UserMinus, Building, Search, Edit, Trash, Key, PauseCircle, PlayCircle, List, Network, Plus } from 'lucide-react';
+import { Users, UserCheck, UserX, UserMinus, Building, Search, Edit, Trash, Key, PauseCircle, PlayCircle, List, Network } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function EmployeesPage() {
@@ -435,3 +440,7 @@ export default function EmployeesPage() {
     </div>
   );
 }
+"""
+with open(FILE_PATH, 'w', encoding='utf-8') as f:
+    f.write(CONTENT)
+print("Employees page created")
