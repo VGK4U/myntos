@@ -95,13 +95,21 @@ async function startWhatsAppBot() {
 
         if (connection === 'close') {
             connectionStatus = 'disconnected';
+            currentQr = null;
             const errDetail = lastDisconnect?.error?.message || lastDisconnect?.error;
             const statusCode = lastDisconnect?.error?.output?.statusCode;
-            const shouldReconnect = (statusCode !== DisconnectReason.loggedOut);
-            console.log(`⚠️ Connection closed (Status: ${statusCode}, Err: ${errDetail}). Reconnecting: ${shouldReconnect}`);
-            if (shouldReconnect) {
-                setTimeout(startWhatsAppBot, 5000);
+            const isLoggedOut = (statusCode === DisconnectReason.loggedOut || statusCode === 401);
+            console.log(`⚠️ Connection closed (Status: ${statusCode}, Err: ${errDetail}). Reconnecting...`);
+            
+            if (isLoggedOut) {
+                console.log("🧹 Clearing stale auth_info session credentials to generate fresh QR code...");
+                try {
+                    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                } catch (e) {
+                    console.error("Error clearing auth_info:", e.message);
+                }
             }
+            setTimeout(startWhatsAppBot, 3000);
         }
     });
 }
@@ -122,7 +130,20 @@ app.get('/qr', (req, res) => {
         return res.send(`<h2>✅ WhatsApp Web Bot is already CONNECTED and ACTIVE!</h2><p>Group JID: ${targetJid || 'Ready'}</p>`);
     }
     if (!currentQr) {
-        return res.send(`<h2>⏳ Generating QR Code... Please refresh in 5 seconds.</h2>`);
+        return res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Generating WhatsApp Bot QR</title>
+                <meta http-equiv="refresh" content="3">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 40px; background: #f4f6f9; color: #1e293b;">
+                <h2>⏳ Generating QR Code... Please wait a moment.</h2>
+                <p style="color: #64748b;">The page will automatically refresh in 3 seconds...</p>
+            </body>
+            </html>
+        `);
     }
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(currentQr)}`;
     return res.send(`
