@@ -322,10 +322,40 @@ def _resolve_company_from_category(db, category_id, fallback_company_id: int) ->
     if not category_id:
         return fallback_company_id
     from app.models.signup_category import SignupCategory as _SC
-    cat = db.query(_SC).filter(_SC.id == category_id).first()
-    if cat and cat.company_id:
-        return cat.company_id
     return fallback_company_id
+
+
+def _auto_align_category_from_looking_for(db, company_id: int, looking_for: Optional[str], current_cat_id: Optional[int]) -> Optional[int]:
+    """
+    DC_CAT_ALIGN_001: Automatic category_id resolution based on looking_for text.
+    Prevents category mismatch (e.g. ETC Training text with Solar category_id).
+    """
+    if not looking_for:
+        return current_cat_id
+    
+    txt = str(looking_for).strip().lower()
+    from app.models.signup_category import SignupCategory as _SC
+    
+    # 1. ETC / Training intent
+    if 'etc' in txt or 'training' in txt:
+        q = db.query(_SC).filter(_SC.name.ilike('%etc%'))
+        if company_id:
+            q = q.filter(_SC.company_id == company_id)
+        cat = q.first()
+        if cat:
+            return cat.id
+
+    # 2. Solar intent
+    if 'solar' in txt:
+        q = db.query(_SC).filter(_SC.name.ilike('%solar%'))
+        if company_id:
+            q = q.filter(_SC.company_id == company_id)
+        cat = q.first()
+        if cat:
+            return cat.id
+
+    return current_cat_id
+
 
 
 class LeadCreate(BaseModel):
@@ -14431,6 +14461,7 @@ async def create_lead_unified(
                 }
             )
 
+    effective_cat_id = _auto_align_category_from_looking_for(db, company_id, lead_data.looking_for or lead_data.requirements, lead_data.category_id)
     new_lead = CRMLead(
         company_id=company_id,
         name=lead_data.name,
@@ -14438,7 +14469,7 @@ async def create_lead_unified(
         phone_primary_whatsapp=lead_data.phone_primary_whatsapp or False,
         alternate_phone=lead_data.alternate_phone,
         email=lead_data.email,
-        category_id=lead_data.category_id,
+        category_id=effective_cat_id,
         priority=lead_data.priority or 'medium',
         status=lead_data.status or 'new',
         source=lead_data.source,
@@ -15069,6 +15100,10 @@ async def update_lead_full(
             if not category:
                 raise HTTPException(status_code=400, detail="Invalid category")
         lead.category_id = category_id if category_id else None
+    
+    # DC_CAT_ALIGN_001: Re-align category_id if looking_for was updated or present
+    if lead.looking_for or lead.requirements:
+        lead.category_id = _auto_align_category_from_looking_for(db, lead.company_id, lead.looking_for or lead.requirements, lead.category_id)
     
     if mnr_handler_id is not None:
         if mnr_handler_id:
