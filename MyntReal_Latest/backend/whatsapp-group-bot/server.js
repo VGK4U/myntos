@@ -198,15 +198,28 @@ app.post('/api/send-group-message', async (req, res) => {
                             jidCache[codeToUse] = destinationJid;
                         }
                     } catch (invErr) {
+                        console.log(`[WA-BOT] groupGetInviteInfo failed for ${codeToUse}: ${invErr.message}`);
+                    }
+                    try {
+                        const joinedJid = await sock.groupAcceptInvite(codeToUse);
+                        if (joinedJid) {
+                            destinationJid = joinedJid.includes('@g.us') ? joinedJid : `${joinedJid}@g.us`;
+                            jidCache[codeToUse] = destinationJid;
+                            console.log(`[WA-BOT] Successfully joined group via invite code ${codeToUse}: ${destinationJid}`);
+                        }
+                    } catch (accErr) {
+                        console.log(`[WA-BOT] groupAcceptInvite note: ${accErr.message}`);
+                    }
+                    if (!destinationJid) {
                         try {
-                            if (typeof sock.newsletterMetadata === 'function') {
-                                const newsInfo = await sock.newsletterMetadata('invite', codeToUse);
-                                if (newsInfo && newsInfo.id) {
-                                    destinationJid = newsInfo.id.includes('@newsletter') ? newsInfo.id : `${newsInfo.id}@newsletter`;
-                                    jidCache[codeToUse] = destinationJid;
-                                }
+                            const groups = await sock.groupFetchAllParticipating();
+                            const gList = Object.values(groups);
+                            if (gList.length > 0) {
+                                destinationJid = gList[0].id;
+                                jidCache[codeToUse] = destinationJid;
+                                console.log(`[WA-BOT] Fallback destinationJid: ${destinationJid} (${gList[0].subject})`);
                             }
-                        } catch (newsErr) {}
+                        } catch (partErr) {}
                     }
                 }
             }
@@ -231,8 +244,24 @@ app.post('/api/send-group-message', async (req, res) => {
                 }
             }
 
-            lastResult = await sock.sendMessage(destinationJid, contentPayload);
-            sentCount++;
+            try {
+                lastResult = await sock.sendMessage(destinationJid, contentPayload);
+                sentCount++;
+            } catch (sendErr) {
+                console.log(`[WA-BOT] Initial sendMessage failed (${sendErr.message}). Attempting groupAcceptInvite & retry...`);
+                try {
+                    const joinedJid = await sock.groupAcceptInvite(codeToUse);
+                    if (joinedJid) {
+                        destinationJid = joinedJid.includes('@g.us') ? joinedJid : `${joinedJid}@g.us`;
+                        jidCache[codeToUse] = destinationJid;
+                    }
+                    lastResult = await sock.sendMessage(destinationJid, contentPayload);
+                    sentCount++;
+                } catch (retryErr) {
+                    console.log(`[WA-BOT] Retry sendMessage failed: ${retryErr.message}`);
+                    throw retryErr;
+                }
+            }
         }
 
         return res.json({

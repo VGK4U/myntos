@@ -255,23 +255,20 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(db: Session) -> Dict[str,
     1. Sends Group Summary Report to target WhatsApp group.
     2. Sends direct 2-Hour Photo Inactivity Warning alerts to Employee AND Reporting Manager.
     """
-    from app.services.whatsapp_service import send_whatsapp_message
+    from app.services.whatsapp_group_alert_service import send_group_bot_message
+    from app.services.whatsapp_auto_service import send_direct_whatsapp
 
     stats = get_today_field_journey_stats(db)
     report_msg = format_field_journey_whatsapp_message(stats)
 
-    # 1. Post to Group
+    # 1. Post to Target WhatsApp Group (BctONtnv8431uxxybKBEtS)
     group_result = False
-    try:
-        # Send to specified group URL / JID target
-        res = send_whatsapp_message(
-            recipient=FIELD_REPORT_GROUP_INVITE,
-            message=report_msg
-        )
+    group_res = send_group_bot_message(message_text=report_msg, invite_code="BctONtnv8431uxxybKBEtS")
+    if group_res.get("success"):
         group_result = True
-        logger.info("[FIELD-REPORT] Successfully posted report to target group")
-    except Exception as exc:
-        logger.error("[FIELD-REPORT] Failed to post to target WhatsApp group: %s", exc)
+        logger.info("[FIELD-REPORT] Successfully posted report to WhatsApp group BctONtnv8431uxxybKBEtS")
+    else:
+        logger.warning("[FIELD-REPORT] Group bot response: %s", group_res)
 
     # 2. Dispatch Individual Inactivity Alerts to Employee AND Reporting Manager for active journeys
     alerts_sent = 0
@@ -291,7 +288,7 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(db: Session) -> Dict[str,
             # Send to Employee
             if staff_phone:
                 try:
-                    send_whatsapp_message(recipient=staff_phone, message=alert_msg)
+                    send_direct_whatsapp(db=db, phone=staff_phone, message=alert_msg)
                     alerts_sent += 1
                 except Exception as e:
                     logger.warning("[FIELD-REPORT] Could not send alert to staff %s: %s", staff_phone, e)
@@ -306,7 +303,7 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(db: Session) -> Dict[str,
                     f"A reminder has been dispatched to the employee."
                 )
                 try:
-                    send_whatsapp_message(recipient=mgr_phone, message=mgr_alert_msg)
+                    send_direct_whatsapp(db=db, phone=mgr_phone, message=mgr_alert_msg)
                     alerts_sent += 1
                 except Exception as e:
                     logger.warning("[FIELD-REPORT] Could not send alert to manager %s: %s", mgr_phone, e)
@@ -314,6 +311,7 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(db: Session) -> Dict[str,
     return {
         "success": True,
         "group_posted": group_result,
+        "group_response": group_res,
         "alerts_sent": alerts_sent,
         "active_journeys_count": stats.get("total_active", 0)
     }
