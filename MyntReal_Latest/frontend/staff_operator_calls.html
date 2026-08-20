@@ -1678,7 +1678,7 @@ async function promptSetMyOperatorToken() {
     const t = token.trim();
     if (!t) return;
     try {
-        const res = await fetch(`${API_BASE}/operator-calls/set-api-token`, {
+        const res = await fetch(`${API_BASE}/set-api-token`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...authHeaders() },
             body: JSON.stringify({ token: t })
@@ -2094,9 +2094,9 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 });
 
+setCallsQF('overall');
 loadStaffList();
 loadHandledByList();
-loadCalls(true);
 loadSyncStatus();
 
 autoRefreshTimer = setInterval(() => {
