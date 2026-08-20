@@ -30559,7 +30559,8 @@ server.on('upgrade', (req, socket, head) => {
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    const nextPort = (err.port || port) + 1;
+    let nextPort = (err.port || port) + 1;
+    if (nextPort === 5002) nextPort = 5003; // Preserve 5002 for WhatsApp Group Bot Gateway
     console.log(`⚠️ Port ${err.port || port} occupied, retrying on http://${hostname}:${nextPort}/...`);
     port = nextPort;
     setTimeout(() => {

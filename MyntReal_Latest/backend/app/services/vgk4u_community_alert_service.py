@@ -51,9 +51,9 @@ def send_vgk4u_group_bot_message(message_text: str, invite_code: str = ELITE_GRO
         return {"success": False, "error": str(exc)}
 
 
-def dispatch_daily_vgk4u_morning_wish(db: Session, invite_code: str = VGK4U_CHANNEL_INVITE_CODE) -> Dict[str, Any]:
+def dispatch_daily_vgk4u_morning_wish(db: Session, invite_code: str = ELITE_GROUP_INVITE_CODE) -> Dict[str, Any]:
     """
-    Dispatches daily 8:00 AM random inspiring morning wish to VGK4U Channel & Group.
+    Dispatches daily 8:00 AM random inspiring morning wish to VGK4U Elite Group.
     """
     quote = random.choice(MORNING_QUOTES)
     logger.info("🌅 Dispatching daily VGK4U 8 AM morning wish...")
