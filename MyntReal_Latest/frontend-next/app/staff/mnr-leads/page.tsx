@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import React, { useState, useEffect, useCallback } from "react";
 import api from "@/lib/api";
 import { useStaffAuth } from "@/contexts/StaffAuthContext";
@@ -35,7 +35,7 @@ export default function Page() {
       params.set("per_page", String(perPage));
       
       
-      const res = await api.get(/crm/master-leads?\);
+      const res = await api.get(`/crm/master-leads?${params.toString()}`);
       const data = res.data;
       setLeads(data?.leads || data?.data || data?.items || (Array.isArray(data) ? data : []));
       setTotalCount(data?.total || data?.count || 0);

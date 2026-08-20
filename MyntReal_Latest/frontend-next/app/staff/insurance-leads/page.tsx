@@ -35,7 +35,7 @@ export default function Page() {
       params.set("per_page", String(perPage));
       params.set("scope", "all");
       params.set("category", "Insurance");
-      const res = await api.get(/crm/my-leads?\);
+      const res = await api.get(`/crm/my-leads?${params.toString()}`);
       const data = res.data;
       setLeads(data?.leads || data?.data || data?.items || (Array.isArray(data) ? data : []));
       setTotalCount(data?.total || data?.count || 0);

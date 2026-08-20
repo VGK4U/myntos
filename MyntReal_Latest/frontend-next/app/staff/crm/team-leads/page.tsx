@@ -35,7 +35,7 @@ export default function Page() {
       params.set("per_page", String(perPage));
       params.set("scope", "team");
       
-      const res = await api.get(/crm/team-leads?\);
+      const res = await api.get(`/crm/team-leads?${params.toString()}`);
       const data = res.data;
       setLeads(data?.leads || data?.data || data?.items || (Array.isArray(data) ? data : []));
       setTotalCount(data?.total || data?.count || 0);
