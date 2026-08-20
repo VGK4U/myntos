@@ -2784,6 +2784,9 @@ def incentive_achievements_drilldown(
                 
             r['incentive_amount'] = round(calc_inc, 2)
 
+        r['min_target'] = f"{fmtNum(emp_min_target)} {'Units' if cfg['min_target_unit'] == 'count' else '₹'}" if emp_min_target > 0 else "0"
+        r['target_met'] = "Yes" if target_met else "No"
+
     incentive_total = sum(r.get('incentive_count', 1) for r in results)
     return {
         'success': True, 'data': results, 'count': len(results),

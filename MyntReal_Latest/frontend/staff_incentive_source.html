@@ -279,13 +279,20 @@ function renderTable(d) {
       : (r.record_type === 'service_ticket'
          ? `<a class="view-link" href="/staff/progress" target="_blank" title="View Tickets"><i class="fa fa-external-link-alt"></i></a>`
          : '—');
-      
+
+    const minTgt = r.min_target || '—';
+    const tgtMetBadge = r.target_met === 'Yes'
+      ? '<span class="badge" style="background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;font-size:0.7rem;padding:2px 6px;border-radius:4px;">Yes</span>'
+      : '<span class="badge" style="background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;font-size:0.7rem;padding:2px 6px;border-radius:4px;">No</span>';
+
     return `<tr>
       <td class="sno">${i+1}</td>
       <td><div class="name-cell" title="${esc(r.name||'')}">${esc(r.name||'—')}${cntBadge}</div></td>
       <td style="font-weight:600;color:#475569;">${esc(catShort)}</td>
       <td>${typeBadge}</td>
       <td class="role-cell">${rolesMapped}</td>
+      <td style="text-align:center;font-weight:600;color:#334155;">${esc(minTgt)}</td>
+      <td style="text-align:center;">${tgtMetBadge}</td>
       <td class="source-cell" title="${esc(r.source||'')}">${esc(r.source||'—')}</td>
       ${isPrivileged ? `
         <td class="amount-cell" style="color:#2563eb;">${dv}</td>
@@ -309,6 +316,8 @@ function renderTable(d) {
           <th>Cat</th>
           <th>Type</th>
           <th>Role</th>
+          <th style="text-align:center;">Min Target</th>
+          <th style="text-align:center;">Target Met</th>
           <th>Source</th>
           ${isPrivileged ? `
             <th style="text-align:right;">Deal Value</th>
