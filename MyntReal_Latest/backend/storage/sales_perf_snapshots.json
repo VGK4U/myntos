@@ -45,5 +45,73 @@
         "talk_time_formatted": "0m"
       }
     ]
+  },
+  "2026-08-20": {
+    "timestamp_ist": "2026-08-20 18:33:20",
+    "date_str": "20 August 2026",
+    "time_str": "06:33 PM",
+    "total_calls": 212,
+    "total_talk_seconds": 12076,
+    "total_talk_formatted": "03h 21m 16s",
+    "missed_calls": 29,
+    "new_leads": 18,
+    "leaderboard": [
+      {
+        "handled_by": "Ms. Anusha Moyyi",
+        "call_count": 92,
+        "missed_count": 15,
+        "talk_seconds": 3988,
+        "talk_time_formatted": "01h 06m"
+      },
+      {
+        "handled_by": "Ms. Bhoolakshmi Pathakamsetti",
+        "call_count": 79,
+        "missed_count": 9,
+        "talk_seconds": 6157,
+        "talk_time_formatted": "01h 42m"
+      },
+      {
+        "handled_by": "Mrs. Sontayana Appala Nookalakshmi",
+        "call_count": 39,
+        "missed_count": 3,
+        "talk_seconds": 1931,
+        "talk_time_formatted": "32m"
+      },
+      {
+        "handled_by": "Mr. Hema Chandra Prasad Adigarla",
+        "call_count": 1,
+        "missed_count": 1,
+        "talk_seconds": 0,
+        "talk_time_formatted": "0m"
+      },
+      {
+        "handled_by": "Ms. Oleti Gayatri Nandana",
+        "call_count": 1,
+        "missed_count": 1,
+        "talk_seconds": 0,
+        "talk_time_formatted": "0m"
+      },
+      {
+        "handled_by": "Mr. Padma Rao",
+        "call_count": 0,
+        "missed_count": 0,
+        "talk_seconds": 0,
+        "talk_time_formatted": "0m"
+      },
+      {
+        "handled_by": "Mr. G.P. A Raju",
+        "call_count": 0,
+        "missed_count": 0,
+        "talk_seconds": 0,
+        "talk_time_formatted": "0m"
+      },
+      {
+        "handled_by": "Ms. Anushka Karri",
+        "call_count": 0,
+        "missed_count": 0,
+        "talk_seconds": 0,
+        "talk_time_formatted": "0m"
+      }
+    ]
   }
 }

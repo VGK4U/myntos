@@ -13,31 +13,53 @@ from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
+import os
+import logging
+import requests
+import datetime
+from typing import Dict, Any, Optional
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+
 logger = logging.getLogger(__name__)
 
 SERVICE_GROUP_INVITE_CODE = "EyuAwaVoF6E6nQqC0QfiBe"
-BOT_API_URL = "http://localhost:5002/api/send-group-message"
 
 
 def send_service_group_bot_message(message_text: str) -> Dict[str, Any]:
     """
-    Dispatches message payload to Service WhatsApp Group via local bot gateway (port 5002).
+    Dispatches message payload to Service WhatsApp Group via bot gateway with IPv4/IPv6 & env-var fallback.
     """
-    try:
-        payload = {
-            "message": message_text,
-            "inviteCode": SERVICE_GROUP_INVITE_CODE
-        }
-        resp = requests.post(BOT_API_URL, json=payload, timeout=8)
-        raw = resp.json()
-        if resp.status_code == 200 and raw.get("success"):
-            return {"success": True, "data": raw}
-        else:
-            logger.warning(f"Service Group Bot API response: {resp.status_code} - {resp.text}")
-            return {"success": False, "error": raw.get("error") or resp.text}
-    except Exception as exc:
-        logger.warning(f"Could not connect to Service Group Bot Gateway (port 5002): {exc}")
-        return {"success": False, "error": str(exc)}
+    payload = {
+        "message": message_text,
+        "inviteCode": SERVICE_GROUP_INVITE_CODE
+    }
+    
+    env_url = os.getenv("WHATSAPP_BOT_URL") or os.getenv("WA_BOT_URL") or os.getenv("WA_GROUP_BOT_URL")
+    urls = []
+    if env_url:
+        urls.append(env_url)
+    urls.extend([
+        "http://127.0.0.1:5002/api/send-group-message",
+        "http://localhost:5002/api/send-group-message"
+    ])
+    
+    last_exc = None
+    for url in urls:
+        try:
+            resp = requests.post(url, json=payload, timeout=8)
+            raw = resp.json()
+            if resp.status_code == 200 and raw.get("success"):
+                return {"success": True, "data": raw}
+            else:
+                logger.warning(f"Service Group Bot API response from {url}: {resp.status_code} - {resp.text}")
+                return {"success": False, "error": raw.get("error") or resp.text}
+        except Exception as exc:
+            last_exc = exc
+            continue
+
+    logger.warning(f"Could not connect to Service Group Bot Gateway: {last_exc}")
+    return {"success": False, "error": str(last_exc)}
 
 
 def send_instant_service_ticket_alert(db: Session, ticket_db_id: int) -> Dict[str, Any]:

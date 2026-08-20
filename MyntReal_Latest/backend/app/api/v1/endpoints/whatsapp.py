@@ -2142,7 +2142,7 @@ def trigger_wa_job_manual(
             res = dispatch_field_journey_whatsapp_reports_and_alerts(db)
             if isinstance(res, dict) and res.get("group_posted") is False:
                 err_text = (res.get("group_response") or {}).get("error") or "WhatsApp Bot Gateway disconnected"
-                return {"success": False, "error": f"WhatsApp message dispatch failed: {err_text}. Please scan QR code at http://localhost:5002/qr"}
+                return {"success": False, "error": f"WhatsApp message dispatch failed: {err_text}. Please scan QR code at /qr"}
             return {"success": True, "message": "Field Journey Performance & Leaderboard Report dispatched to WhatsApp group", "detail": res}
 
         elif job_id == "missed_call_ack":

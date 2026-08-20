@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 ELITE_GROUP_INVITE_CODE = "HNQQoKXFfCm5PQngGdrlcY"  # VGK4U Elite Community Group
 VGK4U_CHANNEL_INVITE_CODE = "0029Vb7Vb5f9cDDXf3zWtf0m"  # VGK4U Official WhatsApp Channel
-BOT_API_URL = "http://localhost:5002/api/send-group-message"
 
 MORNING_QUOTES = [
     "🌅 *శుభోదయం / Good Morning VGK4U Family!* ☀️\n\n_\"విజయం అనేది ప్రతిరోజూ మనం చేసే చిన్న ప్రయత్నాల కలయిక!\"_\n\nTeam *VGK4U & MyntReal* wishes all our Elite Members and Partners a high-energy, successful, and profitable day ahead! 🚀⚡",
@@ -32,23 +31,38 @@ MORNING_QUOTES = [
 
 def send_vgk4u_group_bot_message(message_text: str, invite_code: str = ELITE_GROUP_INVITE_CODE) -> Dict[str, Any]:
     """
-    Dispatches message payload to VGK4U Elite WhatsApp Group via local bot gateway (port 5002).
+    Dispatches message payload to VGK4U Elite WhatsApp Group via bot gateway with IPv4/IPv6 & env-var fallback.
     """
-    try:
-        payload = {
-            "message": message_text,
-            "inviteCode": invite_code
-        }
-        resp = requests.post(BOT_API_URL, json=payload, timeout=8)
-        raw = resp.json()
-        if resp.status_code == 200 and raw.get("success"):
-            return {"success": True, "data": raw}
-        else:
-            logger.warning(f"VGK4U Group Bot API response: {resp.status_code} - {resp.text}")
-            return {"success": False, "error": raw.get("error") or resp.text}
-    except Exception as exc:
-        logger.warning(f"Could not connect to VGK4U Group Bot Gateway (port 5002): {exc}")
-        return {"success": False, "error": str(exc)}
+    payload = {
+        "message": message_text,
+        "inviteCode": invite_code
+    }
+    
+    env_url = os.getenv("WHATSAPP_BOT_URL") or os.getenv("WA_BOT_URL") or os.getenv("WA_GROUP_BOT_URL")
+    urls = []
+    if env_url:
+        urls.append(env_url)
+    urls.extend([
+        "http://127.0.0.1:5002/api/send-group-message",
+        "http://localhost:5002/api/send-group-message"
+    ])
+    
+    last_exc = None
+    for url in urls:
+        try:
+            resp = requests.post(url, json=payload, timeout=8)
+            raw = resp.json()
+            if resp.status_code == 200 and raw.get("success"):
+                return {"success": True, "data": raw}
+            else:
+                logger.warning(f"VGK4U Group Bot API response from {url}: {resp.status_code} - {resp.text}")
+                return {"success": False, "error": raw.get("error") or resp.text}
+        except Exception as exc:
+            last_exc = exc
+            continue
+
+    logger.warning(f"Could not connect to VGK4U Group Bot Gateway: {last_exc}")
+    return {"success": False, "error": str(last_exc)}
 
 
 def dispatch_daily_vgk4u_morning_wish(db: Session, invite_code: str = ELITE_GROUP_INVITE_CODE) -> Dict[str, Any]:

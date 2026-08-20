@@ -9,31 +9,52 @@ import datetime
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 
+import os
+import logging
+import requests
+import datetime
+from typing import Dict, Any, Optional
+from sqlalchemy.orm import Session
+
 logger = logging.getLogger(__name__)
 
-BOT_API_URL = "http://localhost:5002/api/send-group-message"
 DEFAULT_INVITE_CODE = "LfX8mGootXa7SpwNIz7P5C"
 
 
 def send_group_bot_message(message_text: str, invite_code: str = DEFAULT_INVITE_CODE) -> Dict[str, Any]:
     """
-    Sends message payload to local WhatsApp Web Group Bot Gateway (port 5002).
+    Sends message payload to WhatsApp Web Group Bot Gateway with IPv4/IPv6 & env-var fallback.
     """
-    try:
-        payload = {
-            "message": message_text,
-            "inviteCode": invite_code
-        }
-        resp = requests.post(BOT_API_URL, json=payload, timeout=8)
-        raw = resp.json()
-        if resp.status_code == 200 and raw.get("success"):
-            return {"success": True, "data": raw}
-        else:
-            logger.warning(f"Group Bot API response: {resp.status_code} - {resp.text}")
-            return {"success": False, "error": raw.get("error") or resp.text}
-    except Exception as exc:
-        logger.warning(f"Could not connect to WhatsApp Group Bot Gateway (port 5002): {exc}")
-        return {"success": False, "error": str(exc)}
+    payload = {
+        "message": message_text,
+        "inviteCode": invite_code
+    }
+    
+    env_url = os.getenv("WHATSAPP_BOT_URL") or os.getenv("WA_BOT_URL") or os.getenv("WA_GROUP_BOT_URL")
+    urls = []
+    if env_url:
+        urls.append(env_url)
+    urls.extend([
+        "http://127.0.0.1:5002/api/send-group-message",
+        "http://localhost:5002/api/send-group-message"
+    ])
+    
+    last_exc = None
+    for url in urls:
+        try:
+            resp = requests.post(url, json=payload, timeout=8)
+            raw = resp.json()
+            if resp.status_code == 200 and raw.get("success"):
+                return {"success": True, "data": raw}
+            else:
+                logger.warning(f"Group Bot API response from {url}: {resp.status_code} - {resp.text}")
+                return {"success": False, "error": raw.get("error") or resp.text}
+        except Exception as exc:
+            last_exc = exc
+            continue
+
+    logger.warning(f"Could not connect to WhatsApp Group Bot Gateway: {last_exc}")
+    return {"success": False, "error": str(last_exc)}
 
 
 def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, Any]:

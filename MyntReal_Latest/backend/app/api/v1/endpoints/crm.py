@@ -10009,8 +10009,7 @@ def update_lead(
             if _wa_phone:
                 _cat_name = "Solar / Green Energy"
                 if getattr(lead, 'category_id', None):
-                    from app.models.crm import SignupCategory
-                    _cat_obj = db.query(SignupCategory).get(lead.category_id)
+                    _cat_obj = db.query(SignupCategory).filter(SignupCategory.id == lead.category_id).first()
                     if _cat_obj and _cat_obj.name:
                         _cat_name = _cat_obj.name
 
