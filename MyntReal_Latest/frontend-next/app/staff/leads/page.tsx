@@ -109,7 +109,9 @@ export default function StaffLeadsPage() {
       if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
 
       const res = await api.get(url);
-      setLeads(res.data?.leads || res.data || []);
+      const d = res.data;
+      const extracted = d?.leads ?? d?.data ?? d?.items ?? (Array.isArray(d) ? d : null);
+      setLeads(Array.isArray(extracted) ? extracted : []);
     } catch (err) {
       console.error('Error fetching leads:', err);
     } finally {
