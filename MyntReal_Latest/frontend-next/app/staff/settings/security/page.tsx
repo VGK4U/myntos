@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useStaffAuth } from "@/contexts/StaffAuthContext";
-import { getApiUrl } from "@/lib/api";
+import api from "@/lib/api";
 
 export default function StaffSecuritySettingsPage() {
   const { token } = useStaffAuth();
@@ -43,13 +43,23 @@ export default function StaffSecuritySettingsPage() {
     setLoading(true);
     setSuccess(false);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const res = await api.post('/staff/profile/change-password', {
+        current_password: passwords.current_password,
+        new_password: passwords.new_password
+      });
+      
+      if (res.status === 200) {
+        setSuccess(true);
+        setPasswords({ current_password: "", new_password: "", confirm_password: "" });
+        setTimeout(() => setSuccess(false), 3000);
+      }
+    } catch (err: any) {
+      console.error("Failed to update password", err);
+      setError(err.response?.data?.detail || "Failed to update password");
+    } finally {
       setLoading(false);
-      setSuccess(true);
-      setPasswords({ current_password: "", new_password: "", confirm_password: "" });
-      setTimeout(() => setSuccess(false), 3000);
-    }, 1200);
+    }
   };
 
   return (

@@ -4273,14 +4273,6 @@ def list_vgk_pending_payments(
         JOIN official_partners op ON op.id = bp.partner_id
         WHERE {_where}
           AND (b.is_monetary = true OR b.reward_type = 'slab_wise')
-          AND NOT (
-            b.reward_type = 'slab_wise'
-            AND EXISTS (
-              SELECT 1 FROM vgk_solar_cibil_advances a
-              WHERE a.partner_id     = bp.partner_id
-                AND a.slab_bonus_paid = TRUE
-            )
-          )
         ORDER BY bp.achieved_date DESC NULLS LAST, bp.id DESC
     """), _params).fetchall()
 

@@ -22,15 +22,23 @@ export default function TravelJourneysPage() {
 
   useEffect(() => {
     const fetchJourneys = async () => {
-      setLoading(true);
-      setTimeout(() => {
-        setJourneys([
-          { id: 1, start_location: "Office (Andheri)", end_location: "Client Site (Bandra)", start_time: "2026-08-14T10:00:00", end_time: "2026-08-14T10:45:00", distance_km: 12.5, purpose: "Solar Installation Site Visit", status: "COMPLETED" },
-          { id: 2, start_location: "Client Site (Bandra)", end_location: "Meeting Hub (BKC)", start_time: "2026-08-14T12:00:00", end_time: "2026-08-14T12:20:00", distance_km: 4.2, purpose: "Lunch Meeting with Vendor", status: "COMPLETED" },
-          { id: 3, start_location: "Meeting Hub (BKC)", end_location: "Pending...", start_time: "2026-08-14T14:30:00", end_time: "", distance_km: 0, purpose: "Return to Office", status: "IN_PROGRESS" },
-        ]);
+      try {
+        const tokenStr = typeof window !== "undefined" ? localStorage.getItem("staff_token") : "";
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/staff/tracking/journeys`, {
+          headers: { Authorization: `Bearer ${tokenStr}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setJourneys(data.items || []);
+        } else {
+          setJourneys([]);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch journeys", err);
+        setJourneys([]);
+      } finally {
         setLoading(false);
-      }, 600);
+      }
     };
 
     fetchJourneys();

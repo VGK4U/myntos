@@ -70,9 +70,7 @@ export default function AddLeadPage() {
         });
         
         // Optional: Redirect to My Leads after a brief delay
-        setTimeout(() => {
-          router.push('/staff/my-leads');
-        }, 1500);
+        router.push('/staff/my-leads');
       }
     } catch (err: any) {
       console.error("Error creating lead:", err);

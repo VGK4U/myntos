@@ -1,148 +1,180 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSuperAdminAuth } from "@/contexts/SuperAdminAuthContext";
+import { getApiUrl } from "@/lib/api";
+import { TrendingUp, TrendingDown, Wallet, Building2, Sun, Users, FileText, Send, RefreshCcw, PieChart } from "lucide-react";
 
 export default function SupremeFinanceDashboard() {
+  const { user, token } = useSuperAdminAuth();
   const [timeframe, setTimeframe] = useState("YTD");
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!token) return;
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`${getApiUrl()}/api/v1/super-admin/finance/supreme-analytics`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success) setData(json.data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [token]);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto flex flex-col h-[calc(100vh-64px)]">
-      <div className="flex justify-between items-end mb-6 shrink-0">
+    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-[calc(100vh-64px)]">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight uppercase">Supreme Finance</h1>
-          <p className="text-xs text-gray-500 mt-2 font-bold uppercase tracking-widest">Master Financial Overview & Executive Ledger</p>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Supreme Finance</h1>
+          <p className="text-sm text-slate-500 mt-1">Master Financial Overview & Executive Ledger</p>
         </div>
-        <div className="flex space-x-2">
-          <button onClick={() => setTimeframe('MTD')} className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded border ${timeframe === 'MTD' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}>MTD</button>
-          <button onClick={() => setTimeframe('QTD')} className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded border ${timeframe === 'QTD' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}>QTD</button>
-          <button onClick={() => setTimeframe('YTD')} className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded border ${timeframe === 'YTD' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}>YTD</button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 shrink-0">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-blue-600">
-          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Total Gross Revenue</p>
-          <h3 className="text-3xl font-black text-gray-900 mb-1">₹ 4.5Cr</h3>
-          <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider"><i className="fas fa-arrow-up mr-1"></i> 14% vs Last Year</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-red-600">
-          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Total Payouts (Commissions)</p>
-          <h3 className="text-3xl font-black text-gray-900 mb-1">₹ 1.2Cr</h3>
-          <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider"><i className="fas fa-arrow-up mr-1"></i> 8% vs Last Year</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-yellow-500">
-          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Operating Expenses</p>
-          <h3 className="text-3xl font-black text-gray-900 mb-1">₹ 45.2L</h3>
-          <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider"><i className="fas fa-arrow-down mr-1"></i> 2% vs Last Year</p>
-        </div>
-
-        <div className="bg-[#111827] p-6 rounded-lg shadow-lg border border-gray-800 border-l-4 border-l-green-500 relative overflow-hidden">
-          <div className="absolute right-[-10px] bottom-[-10px] opacity-10">
-            <i className="fas fa-piggy-bank text-7xl text-white"></i>
-          </div>
-          <div className="relative z-10">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Net Cash Reserves</p>
-            <h3 className="text-3xl font-black text-white mb-1">₹ 2.84Cr</h3>
-            <p className="text-[10px] font-bold text-green-400 uppercase tracking-wider">Available Liquidity</p>
-          </div>
+        <div className="flex items-center bg-white rounded-md border border-slate-200 p-1 shadow-sm">
+          {['MTD', 'QTD', 'YTD'].map((t) => (
+            <button 
+              key={t}
+              onClick={() => setTimeframe(t)} 
+              className={`px-4 py-1.5 text-sm font-medium rounded transition-colors ${timeframe === t ? 'bg-slate-900 text-white shadow' : 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
+            >
+              {t}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
-        
-        {/* Revenue Breakdown */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col p-6">
-          <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6 border-b border-gray-100 pb-2 flex justify-between">
-            <span>Revenue Sources (YTD)</span>
-            <i className="fas fa-chart-pie text-gray-400"></i>
-          </h3>
-          
-          <div className="flex-1 flex flex-col justify-center">
-            <div className="space-y-6">
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="font-bold text-gray-700">Real Estate Sales</span>
-                  <span className="font-black text-gray-900">₹ 3.2Cr (71%)</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-3">
-                  <div className="bg-blue-600 h-3 rounded-full" style={{ width: '71%' }}></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="font-bold text-gray-700">Solar Installations</span>
-                  <span className="font-black text-gray-900">₹ 85.5L (19%)</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-3">
-                  <div className="bg-yellow-500 h-3 rounded-full" style={{ width: '19%' }}></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="font-bold text-gray-700">Vendor Partnerships</span>
-                  <span className="font-black text-gray-900">₹ 44.5L (10%)</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-3">
-                  <div className="bg-purple-600 h-3 rounded-full" style={{ width: '10%' }}></div>
-                </div>
-              </div>
-            </div>
-          </div>
+      {loading ? (
+        <div className="flex h-64 items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
         </div>
-
-        {/* Action Center */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col">
-          <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-            <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Financial Operations</h3>
-          </div>
-          
-          <div className="p-6 space-y-4">
-            <div className="p-4 rounded-lg border border-gray-200 hover:border-blue-500 hover:shadow-md transition-all cursor-pointer group flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="w-12 h-12 bg-blue-50 rounded text-blue-600 flex items-center justify-center text-xl mr-4">
-                  <i className="fas fa-file-invoice"></i>
-                </div>
-                <div>
-                  <h4 className="font-bold text-gray-900">Generate Master Audit Report</h4>
-                  <p className="text-xs text-gray-500 mt-1">Export full PDF ledger for external auditors.</p>
-                </div>
+      ) : (
+        <>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-l-4 border-l-blue-500 bg-white shadow-sm p-6">
+              <h3 className="text-sm font-medium text-slate-500 mb-2">Total Gross Revenue</h3>
+              <div className="text-3xl font-bold text-slate-900 mb-2">{data?.metrics?.[0]?.value || '₹ 0'}</div>
+              <div className="inline-flex items-center text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+                <TrendingUp className="mr-1 h-3 w-3" /> {data?.metrics?.[0]?.trend || '0%'} vs Last Year
               </div>
-              <i className="fas fa-chevron-right text-gray-300 group-hover:text-blue-500"></i>
             </div>
 
-            <div className="p-4 rounded-lg border border-gray-200 hover:border-red-500 hover:shadow-md transition-all cursor-pointer group flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="w-12 h-12 bg-red-50 rounded text-red-600 flex items-center justify-center text-xl mr-4">
-                  <i className="fas fa-money-check-alt"></i>
-                </div>
-                <div>
-                  <h4 className="font-bold text-gray-900">Process Bulk Payouts</h4>
-                  <p className="text-xs text-gray-500 mt-1">Initiate NEFT/RTGS transfers for all pending withdrawals.</p>
-                </div>
+            <div className="rounded-xl border border-l-4 border-l-rose-500 bg-white shadow-sm p-6">
+              <h3 className="text-sm font-medium text-slate-500 mb-2">Total Payouts / Expenses</h3>
+              <div className="text-3xl font-bold text-slate-900 mb-2">{data?.metrics?.[1]?.value || '₹ 0'}</div>
+              <div className="inline-flex items-center text-xs font-semibold text-rose-600 bg-rose-50 px-2 py-1 rounded-full">
+                <TrendingUp className="mr-1 h-3 w-3" /> {data?.metrics?.[1]?.trend || '0%'} vs Last Year
               </div>
-              <i className="fas fa-chevron-right text-gray-300 group-hover:text-red-500"></i>
             </div>
 
-            <div className="p-4 rounded-lg border border-gray-200 hover:border-green-500 hover:shadow-md transition-all cursor-pointer group flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="w-12 h-12 bg-green-50 rounded text-green-600 flex items-center justify-center text-xl mr-4">
-                  <i className="fas fa-university"></i>
-                </div>
-                <div>
-                  <h4 className="font-bold text-gray-900">Reconcile Bank Statements</h4>
-                  <p className="text-xs text-gray-500 mt-1">Upload CSV from bank to auto-match internal ledger.</p>
-                </div>
+            <div className="rounded-xl border border-l-4 border-l-amber-500 bg-white shadow-sm p-6">
+              <h3 className="text-sm font-medium text-slate-500 mb-2">Net Profit</h3>
+              <div className="text-3xl font-bold text-slate-900 mb-2">{data?.metrics?.[2]?.value || '₹ 0'}</div>
+              <div className="inline-flex items-center text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+                <TrendingDown className="mr-1 h-3 w-3" /> {data?.metrics?.[2]?.trend || '0%'} vs Last Year
               </div>
-              <i className="fas fa-chevron-right text-gray-300 group-hover:text-green-500"></i>
+            </div>
+
+            <div className="rounded-xl border border-l-4 border-l-emerald-500 bg-slate-900 shadow-sm p-6 relative overflow-hidden">
+              <Wallet className="absolute right-[-10px] bottom-[-10px] h-32 w-32 text-slate-800 opacity-50" />
+              <div className="relative z-10">
+                <h3 className="text-sm font-medium text-slate-400 mb-2">Net Profit Margin</h3>
+                <div className="text-3xl font-bold text-white mb-2">{data?.net_profit_margin || '0'}%</div>
+                <div className="text-xs font-semibold text-emerald-400">{data?.runway_months || '0'} Months Runway</div>
+              </div>
             </div>
           </div>
-        </div>
 
-      </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <div className="rounded-xl border bg-white shadow-sm flex flex-col p-6">
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                  <PieChart className="h-5 w-5 text-slate-400" /> Revenue Sources (YTD)
+                </h3>
+              </div>
+              
+              <div className="flex-1 flex flex-col justify-center space-y-8">
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="font-medium text-slate-700 flex items-center gap-2"><Building2 className="h-4 w-4 text-blue-500" /> Real Estate Sales</span>
+                    <span className="font-bold text-slate-900">₹ 3.2Cr <span className="text-slate-400 font-normal ml-1">(71%)</span></span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: '71%' }}></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="font-medium text-slate-700 flex items-center gap-2"><Sun className="h-4 w-4 text-amber-500" /> Solar Installations</span>
+                    <span className="font-bold text-slate-900">₹ 85.5L <span className="text-slate-400 font-normal ml-1">(19%)</span></span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-full bg-amber-500 rounded-full" style={{ width: '19%' }}></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="font-medium text-slate-700 flex items-center gap-2"><Users className="h-4 w-4 text-purple-500" /> Vendor Partnerships</span>
+                    <span className="font-bold text-slate-900">₹ 44.5L <span className="text-slate-400 font-normal ml-1">(10%)</span></span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-full bg-purple-500 rounded-full" style={{ width: '10%' }}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border bg-white shadow-sm flex flex-col">
+              <div className="p-6 border-b border-slate-100 bg-slate-50/50 rounded-t-xl">
+                <h3 className="font-semibold text-slate-900">Financial Operations</h3>
+              </div>
+              
+              <div className="p-6 flex flex-col gap-4">
+                <button className="flex items-center text-left p-4 rounded-xl border border-slate-200 hover:border-blue-500 hover:shadow-md transition-all group">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-blue-50 text-blue-600 mr-4 shrink-0">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-slate-900">Generate Master Audit Report</h4>
+                    <p className="text-sm text-slate-500 mt-1">Export full PDF ledger for external auditors.</p>
+                  </div>
+                </button>
+
+                <button className="flex items-center text-left p-4 rounded-xl border border-slate-200 hover:border-rose-500 hover:shadow-md transition-all group">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-rose-50 text-rose-600 mr-4 shrink-0">
+                    <Send className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-slate-900">Process Bulk Payouts</h4>
+                    <p className="text-sm text-slate-500 mt-1">Initiate NEFT/RTGS transfers for all pending withdrawals.</p>
+                  </div>
+                </button>
+
+                <button className="flex items-center text-left p-4 rounded-xl border border-slate-200 hover:border-emerald-500 hover:shadow-md transition-all group">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-emerald-50 text-emerald-600 mr-4 shrink-0">
+                    <RefreshCcw className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-slate-900">Reconcile Bank Statements</h4>
+                    <p className="text-sm text-slate-500 mt-1">Upload CSV from bank to auto-match internal ledger.</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </>
+      )}
     </div>
   );
 }

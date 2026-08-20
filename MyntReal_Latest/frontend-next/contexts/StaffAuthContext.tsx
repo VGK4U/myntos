@@ -15,6 +15,9 @@ export interface Employee {
   department_name: string | null;
   is_active: boolean;
   requires_password_change?: boolean;
+  company_id?: number;
+  base_company_id?: number;
+  [key: string]: any;
 }
 
 interface AuthContextType {
@@ -24,6 +27,7 @@ interface AuthContextType {
   user: Employee | null;
   logout: () => void;
   login: (token: string, userData: Employee) => void;
+  hasRole: (roleName: string | string[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,7 +57,7 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
         if (cookieMatch) {
           storedToken = cookieMatch.split('=')[1];
           if (storedToken) {
-            try { storedToken = decodeURIComponent(storedToken); } catch(e) {}
+            try { storedToken = decodeURIComponent(storedToken); } catch {}
           }
         }
       }
@@ -135,8 +139,16 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
     router.push('/login');
   };
 
+  const hasRole = (roleName: string | string[]) => {
+    if (!user) return false;
+    if (Array.isArray(roleName)) {
+      return roleName.includes(user.role_name);
+    }
+    return user.role_name === roleName;
+  };
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isLoading, token, user, logout, login }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, token, user, logout, login, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

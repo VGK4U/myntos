@@ -8,15 +8,25 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate registration
-    setTimeout(() => {
-      localStorage.setItem("staff_token", "dummy.jwt.token");
-      router.push("/staff/dashboard");
-    }, 1500);
+    try {
+      // In a real scenario, extract form values here.
+      // We will make a placeholder request that could be wired later
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ /* form data */ })
+      });
+      // We'll just redirect to login for now
+      router.push("/login");
+    } catch (err) {
+      console.warn("Failed signup", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

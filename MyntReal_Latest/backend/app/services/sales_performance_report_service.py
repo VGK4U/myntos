@@ -38,55 +38,82 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
     """
     Aggregates today's sales performance statistics up to the current moment.
     """
-    from app.models.operator_calls import OperatorCall
+    from sqlalchemy import text
     from app.models.crm import CRMLead
 
     # IST Today Range (+5:30)
     ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
     start_of_today_ist = ist_now.replace(hour=0, minute=0, second=0, microsecond=0)
     start_of_today_utc = start_of_today_ist - timedelta(hours=5, minutes=30)
+    date_str = ist_now.strftime("%Y-%m-%d")
 
-    # 1. Total Calls Handled Today
-    total_calls = db.query(func.count(OperatorCall.id)).filter(
-        OperatorCall.started_at >= start_of_today_utc
-    ).scalar() or 0
+    from app.models.operator_calls import OperatorCall
 
-    # 2. Total Talk Time Today (seconds)
-    total_talk_seconds = db.query(func.sum(OperatorCall.duration_seconds)).filter(
-        OperatorCall.started_at >= start_of_today_utc,
-        OperatorCall.status == 'answered'
-    ).scalar() or 0
+    # 1. Tele Sales Department Staff
+    staff_rows = db.execute(text("""
+        SELECT e.id, e.full_name
+        FROM staff_employees e
+        LEFT JOIN staff_departments d ON d.id = e.department_id
+        LEFT JOIN staff_employee_departments ed ON ed.employee_id = e.id
+        LEFT JOIN staff_departments ad ON ad.id = ed.department_id
+        WHERE (LOWER(d.name) = 'tele sales' OR LOWER(ad.name) = 'tele sales')
+          AND (e.status IS NULL OR e.status = 'active')
+          AND (e.is_deleted IS NOT TRUE)
+          AND e.full_name != ''
+        GROUP BY e.id, e.full_name
+    """)).fetchall()
 
-    # 3. Missed Calls Today
-    missed_calls = db.query(func.count(OperatorCall.id)).filter(
-        OperatorCall.started_at >= start_of_today_utc,
-        OperatorCall.status == 'missed'
-    ).scalar() or 0
+    leaderboard = []
+    total_calls = 0
+    total_talk_seconds = 0
+    missed_calls = 0
 
-    # 4. New Leads Today
+    for s in staff_rows:
+        # Mobile call logs (Call Tracker App)
+        m_row = db.execute(text("""
+            SELECT COUNT(id) as cnt, COALESCE(SUM(duration_seconds), 0) as dur,
+                   COUNT(CASE WHEN UPPER(call_type) IN ('MISSED', 'REJECTED', 'NO_ANSWER') THEN 1 END) as missed
+            FROM staff_call_logs WHERE staff_id = :sid AND call_date = :d
+        """), {"sid": s.id, "d": date_str}).fetchone()
+
+        m_cnt = m_row.cnt if m_row else 0
+        m_dur = int(m_row.dur or 0) if m_row else 0
+        m_missed = m_row.missed if m_row else 0
+
+        # Operator Cloud Calls (MyOperator virtual numbers)
+        words = [w for w in s.full_name.replace('.', ' ').split() if len(w) >= 3 and w.lower() not in ('ms', 'mrs', 'mr', 'dr')]
+        filters = [OperatorCall.handled_by.ilike(f'%{w}%') for w in words]
+        op_calls = db.query(OperatorCall).filter(
+            OperatorCall.started_at >= start_of_today_utc,
+            or_(*filters)
+        ).all() if filters else []
+
+        op_cnt = len(op_calls)
+        op_dur = sum(c.duration_seconds or 0 for c in op_calls if c.status == 'answered')
+        op_missed = sum(1 for c in op_calls if c.status == 'missed')
+
+        staff_tot_calls = m_cnt + op_cnt
+        staff_tot_talk = m_dur + op_dur
+        staff_tot_missed = m_missed + op_missed
+
+        total_calls += staff_tot_calls
+        total_talk_seconds += staff_tot_talk
+        missed_calls += staff_tot_missed
+
+        leaderboard.append({
+            "handled_by": s.full_name,
+            "call_count": staff_tot_calls,
+            "missed_count": staff_tot_missed,
+            "talk_seconds": staff_tot_talk,
+            "talk_time_formatted": _format_seconds_to_hm(staff_tot_talk)
+        })
+
+    leaderboard.sort(key=lambda x: (x["call_count"], x["talk_seconds"]), reverse=True)
+
+    # 3. New Leads Intake Today
     new_leads = db.query(func.count(CRMLead.id)).filter(
         CRMLead.created_at >= start_of_today_utc
     ).scalar() or 0
-
-    # 5. Top Staff Telecallers Leaderboard
-    staff_stats_query = db.query(
-        OperatorCall.handled_by,
-        func.count(OperatorCall.id).label('call_count'),
-        func.sum(OperatorCall.duration_seconds).label('talk_seconds')
-    ).filter(
-        OperatorCall.started_at >= start_of_today_utc,
-        OperatorCall.handled_by.isnot(None),
-        OperatorCall.handled_by != ''
-    ).group_by(OperatorCall.handled_by).order_by(func.count(OperatorCall.id).desc()).all()
-
-    leaderboard = []
-    for row in staff_stats_query:
-        leaderboard.append({
-            "handled_by": row.handled_by,
-            "call_count": row.call_count or 0,
-            "talk_seconds": int(row.talk_seconds or 0),
-            "talk_time_formatted": _format_seconds_to_hm(row.talk_seconds or 0)
-        })
 
     return {
         "timestamp_ist": ist_now.strftime("%Y-%m-%d %H:%M:%S"),
@@ -158,15 +185,42 @@ def generate_bi_hourly_performance_message(db: Session, slot_name: str = "Bi-Hou
     delta_missed_str = f" *(+{delta_missed} since last update)*" if previous_stats and delta_missed > 0 else ""
     delta_leads_str = f" *(📈 +{delta_leads} since last update)*" if previous_stats and delta_leads >= 0 else ""
 
-    # Build Top 3 Leaderboard
+    # Build per-staff previous talk time map for deltas
+    prev_staff_map = {}
+    if previous_stats and isinstance(previous_stats.get("leaderboard"), list):
+        for p_item in previous_stats["leaderboard"]:
+            prev_staff_map[p_item.get("handled_by")] = p_item.get("talk_seconds", 0)
+
+    # Build Tele Sales Leaderboard & Team Member List
     lb = current_stats["leaderboard"]
     medals = ["🥇", "🥈", "🥉"]
     lb_text_lines = []
-    for idx, item in enumerate(lb[:3]):
-        medal = medals[idx] if idx < 3 else "🏅"
-        lb_text_lines.append(f"{idx+1}. {medal} *{item['handled_by']}* — {item['call_count']} Calls | {item['talk_time_formatted']} Talk Time")
+    
+    active_staff = [item for item in lb if item['call_count'] > 0]
+    idle_staff = [item for item in lb if item['call_count'] == 0]
 
-    lb_formatted = "\n".join(lb_text_lines) if lb_text_lines else "*(No staff calls recorded yet today)*"
+    for idx, item in enumerate(active_staff):
+        medal = medals[idx] if idx < 3 else "🏅"
+        staff_name = item['handled_by']
+        prev_talk_sec = prev_staff_map.get(staff_name)
+        staff_delta_str = ""
+        if previous_stats and prev_talk_sec is not None:
+            s_diff = item['talk_seconds'] - prev_talk_sec
+            if s_diff >= 0:
+                staff_delta_str = f" *(📈 +{_format_seconds_to_hm(s_diff)} since last update)*"
+
+        missed_str = f" *(🔴 {item['missed_count']} Missed)*" if item.get('missed_count', 0) > 0 else ""
+        lb_text_lines.append(f"{idx+1}. {medal} *{staff_name}* — {item['call_count']} Calls{missed_str} | {item['talk_time_formatted']} Talk Time{staff_delta_str}")
+
+    if not active_staff:
+        lb_text_lines.append("*(No staff calls recorded yet today)*")
+
+    if idle_staff:
+        lb_text_lines.append("\n📋 *TELE SALES TEAM MEMBERS (0 Calls Today)*:")
+        for item in idle_staff:
+            lb_text_lines.append(f"• *{item['handled_by']}* — 0 Calls | 00m Talk Time")
+
+    lb_formatted = "\n".join(lb_text_lines)
 
     is_evening_closing = "07:30" in slot_name or "Closing" in slot_name or ist_now.hour >= 19
     header_title = "📊 *DAILY SALES FINAL CLOSING REPORT*" if is_evening_closing else f"📊 *SALES TEAM 2-HOUR UPDATE ({current_stats['time_str']})*"

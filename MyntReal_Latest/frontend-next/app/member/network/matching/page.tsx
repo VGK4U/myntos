@@ -1,10 +1,42 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useMemberAuth } from "@/contexts/MemberAuthContext";
+import api from "@/lib/api";
 
 export default function MatchingNetworkPage() {
   const { user } = useMemberAuth();
+
+  const [stats, setStats] = useState<any>({
+    leftMembers: 0,
+    leftVolume: 0,
+    leftCarryForward: 0,
+    rightMembers: 0,
+    rightVolume: 0,
+    rightCarryForward: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user || !user.mnr_id) return;
+    setLoading(true);
+    api.get(`/api/v1/income/level/2?audience=vgk4u`)
+      .then(res => {
+        if (res.data && res.data.success) {
+          const counts = res.data.team_statistics?.binary_tree_counts || {};
+          setStats({
+            leftMembers: counts.left_members || 0,
+            leftVolume: counts.left_pv || 0,
+            leftCarryForward: counts.left_carry_forward || 0,
+            rightMembers: counts.right_members || 0,
+            rightVolume: counts.right_pv || 0,
+            rightCarryForward: counts.right_carry_forward || 0,
+          });
+        }
+      })
+      .catch(err => console.error("Failed to fetch matching tree", err))
+      .finally(() => setLoading(false));
+  }, [user]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto flex flex-col h-[calc(100vh-80px)]">
@@ -30,15 +62,15 @@ export default function MatchingNetworkPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-xs text-blue-600 uppercase font-bold tracking-wider mb-1">Total Members</p>
-              <p className="text-2xl font-bold text-gray-900">145</p>
+              <p className="text-2xl font-bold text-gray-900">{loading ? '...' : stats.leftMembers}</p>
             </div>
             <div>
               <p className="text-xs text-blue-600 uppercase font-bold tracking-wider mb-1">Total Volume (PV)</p>
-              <p className="text-2xl font-bold text-gray-900">42,500</p>
+              <p className="text-2xl font-bold text-gray-900">{loading ? '...' : stats.leftVolume.toLocaleString('en-IN')}</p>
             </div>
             <div className="col-span-2 mt-2 pt-2 border-t border-blue-100/50">
               <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Carry Forward Volume</p>
-              <p className="text-lg font-bold text-blue-700">12,500 PV</p>
+              <p className="text-lg font-bold text-blue-700">{loading ? '...' : stats.leftCarryForward.toLocaleString('en-IN')} PV</p>
             </div>
           </div>
         </div>
@@ -50,15 +82,15 @@ export default function MatchingNetworkPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-xs text-purple-600 uppercase font-bold tracking-wider mb-1">Total Members</p>
-              <p className="text-2xl font-bold text-gray-900">89</p>
+              <p className="text-2xl font-bold text-gray-900">{loading ? '...' : stats.rightMembers}</p>
             </div>
             <div>
               <p className="text-xs text-purple-600 uppercase font-bold tracking-wider mb-1">Total Volume (PV)</p>
-              <p className="text-2xl font-bold text-gray-900">30,000</p>
+              <p className="text-2xl font-bold text-gray-900">{loading ? '...' : stats.rightVolume.toLocaleString('en-IN')}</p>
             </div>
             <div className="col-span-2 mt-2 pt-2 border-t border-purple-100/50">
               <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Carry Forward Volume</p>
-              <p className="text-lg font-bold text-purple-700">0 PV</p>
+              <p className="text-lg font-bold text-purple-700">{loading ? '...' : stats.rightCarryForward.toLocaleString('en-IN')} PV</p>
             </div>
           </div>
         </div>

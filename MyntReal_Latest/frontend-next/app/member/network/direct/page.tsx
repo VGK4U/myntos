@@ -1,26 +1,58 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useMemberAuth } from "@/contexts/MemberAuthContext";
+import api from "@/lib/api";
 
 export default function DirectReferralsPage() {
   const { user } = useMemberAuth();
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [directReferrals, setDirectReferrals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalDirectComm, setTotalDirectComm] = useState(0);
 
-  const directReferrals = [
-    { id: 'VGK00214', name: 'Rahul Sharma', joinDate: '2026-07-15', status: 'ACTIVE', properties: 1, totalSales: 4500000, commissionEarned: 225000 },
-    { id: 'VGK00388', name: 'Priya Desai', joinDate: '2026-07-22', status: 'ACTIVE', properties: 0, totalSales: 0, commissionEarned: 0 },
-    { id: 'VGK00412', name: 'Vikram Singh', joinDate: '2026-08-01', status: 'INACTIVE', properties: 0, totalSales: 0, commissionEarned: 0 },
-    { id: 'VGK00441', name: 'Anita Patel', joinDate: '2026-08-05', status: 'ACTIVE', properties: 2, totalSales: 8500000, commissionEarned: 425000 },
-    { id: 'VGK00502', name: 'Sanjay Gupta', joinDate: '2026-08-10', status: 'ACTIVE', properties: 0, totalSales: 0, commissionEarned: 0 },
-  ];
+  useEffect(() => {
+    if (!user || !user.mnr_id) return;
+    
+    setLoading(true);
+    
+    api.get(`/api/v1/income/level/1?audience=vgk4u`)
+      .then(res => {
+        if (res.data && res.data.success && res.data.data) {
+          const fetchedTeam = res.data.data.direct_referrals || [];
+          setDirectReferrals(fetchedTeam.map((member: any) => ({
+            id: member.mnr_id || member.id,
+            name: member.name || 'Unknown',
+            joinDate: member.registration_date || new Date().toISOString(),
+            status: member.is_active ? 'ACTIVE' : 'INACTIVE',
+            properties: member.properties || member.sales_count || 0,
+            totalSales: member.total_sales || member.sales_volume || 0,
+            commissionEarned: member.commission_earned || member.commission || 0
+          })));
+        }
+      })
+      .catch(err => console.error("Failed to fetch direct referrals", err))
+      .finally(() => setLoading(false));
+
+    api.get(`/user/${user.mnr_id}/financial-summary`)
+      .then(res => {
+        if (res.data && res.data.success) {
+           const summary = res.data.income_summary?.income_streams || {};
+           setTotalDirectComm(summary.direct_referral?.total_income || 0);
+        }
+      })
+      .catch(err => console.error("Failed to fetch financial summary", err));
+  }, [user]);
 
   const filteredReferrals = directReferrals.filter(ref => 
     ref.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     ref.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const totalDirects = directReferrals.length;
+  const activeDirects = directReferrals.filter(r => r.status === 'ACTIVE').length;
 
   return (
     <div className="p-6 max-w-7xl mx-auto flex flex-col h-[calc(100vh-80px)]">
@@ -43,7 +75,7 @@ export default function DirectReferralsPage() {
           </div>
           <div>
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Total Directs</p>
-            <h3 className="text-3xl font-bold text-gray-900">5</h3>
+            <h3 className="text-3xl font-bold text-gray-900">{loading ? '...' : totalDirects}</h3>
           </div>
         </div>
 
@@ -53,7 +85,7 @@ export default function DirectReferralsPage() {
           </div>
           <div>
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Active Directs</p>
-            <h3 className="text-3xl font-bold text-gray-900">4</h3>
+            <h3 className="text-3xl font-bold text-gray-900">{loading ? '...' : activeDirects}</h3>
           </div>
         </div>
         
@@ -63,7 +95,7 @@ export default function DirectReferralsPage() {
           </div>
           <div>
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Total Direct Comm.</p>
-            <h3 className="text-3xl font-bold text-gray-900">₹6.5L</h3>
+            <h3 className="text-3xl font-bold text-gray-900">₹{totalDirectComm.toLocaleString('en-IN')}</h3>
           </div>
         </div>
       </div>
@@ -87,6 +119,9 @@ export default function DirectReferralsPage() {
         </div>
 
         <div className="flex-1 overflow-auto">
+          {loading ? (
+             <div className="p-12 flex justify-center"><i className="fas fa-circle-notch fa-spin text-2xl text-amber-500"></i></div>
+          ) : (
           <table className="w-full text-left">
             <thead className="bg-white sticky top-0 z-10">
               <tr className="border-b border-gray-200">
@@ -123,7 +158,7 @@ export default function DirectReferralsPage() {
                   </td>
                   <td className="p-4">
                     <span className="font-bold text-gray-900">{ref.properties}</span>
-                    <p className="text-[10px] text-gray-500 uppercase mt-1">₹ {(ref.totalSales/100000).toFixed(1)}L Volume</p>
+                    {ref.properties > 0 && <p className="text-[10px] text-gray-500 uppercase mt-1">₹ {(ref.totalSales/100000).toFixed(1)}L Volume</p>}
                   </td>
                   <td className="p-4 text-right">
                     <span className={`font-bold ${ref.commissionEarned > 0 ? 'text-green-600' : 'text-gray-400'}`}>
@@ -143,6 +178,7 @@ export default function DirectReferralsPage() {
               )}
             </tbody>
           </table>
+          )}
         </div>
       </div>
     </div>

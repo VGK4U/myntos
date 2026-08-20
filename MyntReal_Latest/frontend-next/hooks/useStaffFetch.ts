@@ -4,7 +4,7 @@ let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
 
 export function useStaffFetch() {
-  const { token, logout } = useStaffAuth();
+  const { logout } = useStaffAuth();
 
   const handleSilentRefresh = async (): Promise<string | null> => {
     if (isRefreshing) return refreshPromise;
@@ -52,7 +52,7 @@ export function useStaffFetch() {
 
   const staffFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
     // 100% Coverage: Automatically attach token
-    let currentToken = localStorage.getItem('staff_token');
+    const currentToken = localStorage.getItem('staff_token');
     
     const headers = new Headers(options.headers || {});
     if (currentToken && !headers.has('Authorization')) {

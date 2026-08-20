@@ -66,6 +66,7 @@ from app.models.staff_journey import (
     StaffJourney, StaffJourneyTrackPoint, StaffJourneyApproval,
     JourneyStatus, JourneyApprovalStatus, JourneyPurpose
 )
+from app.models.staff_journey_checkin import StaffJourneyCheckin
 
 # Staff Timesheet Entry Models (DC Protocol Compliant)
 from app.models.staff_timesheet import (

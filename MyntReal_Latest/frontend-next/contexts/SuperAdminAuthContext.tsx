@@ -2,12 +2,12 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getApiUrl } from "@/lib/api";
+import api from "@/lib/api";
 
 interface SuperAdminUser {
   id: number;
   username: string;
-  role: string; // 'SUPER_ADMIN', 'FINANCE_DIRECTOR'
+  role: string;
   permissions: string[];
 }
 
@@ -28,23 +28,42 @@ export function SuperAdminAuthProvider({ children }: { children: React.ReactNode
   const router = useRouter();
 
   useEffect(() => {
-    // Check localStorage for token on initial load
-    const storedToken = localStorage.getItem("superadmin_token");
-    const storedUserStr = localStorage.getItem("superadmin_user");
-    
-    if (storedToken && storedUserStr) {
-      try {
-        const storedUser = JSON.parse(storedUserStr);
+    const initializeAuth = async () => {
+      const storedToken = localStorage.getItem("superadmin_token");
+      const storedUserStr = localStorage.getItem("superadmin_user");
+      
+      if (storedToken && storedUserStr) {
         setToken(storedToken);
-        setUser(storedUser);
-      } catch (e) {
-        console.error("Failed to parse stored superadmin user", e);
-        localStorage.removeItem("superadmin_token");
-        localStorage.removeItem("superadmin_user");
+        try {
+          setUser(JSON.parse(storedUserStr));
+        } catch {
+          console.error("Failed to parse superadmin user");
+        }
+        
+        // Optionally fetch fresh admin details
+        try {
+          const res = await api.get("/staff/auth/me", {
+            headers: { Authorization: `Bearer ${storedToken}` }
+          });
+          if (res.data.success) {
+            const adminUser = {
+              id: res.data.employee.id,
+              username: res.data.employee.emp_code,
+              role: res.data.employee.role_name,
+              permissions: ['all'] // This could be populated from backend
+            };
+            setUser(adminUser);
+            localStorage.setItem("superadmin_user", JSON.stringify(adminUser));
+          }
+        } catch (err) {
+          console.error("SuperAdmin session invalid", err);
+          // Don't auto-logout here, let interceptor handle if 401
+        }
       }
-    }
-    
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    initializeAuth();
   }, []);
 
   const login = (newToken: string, newUser: SuperAdminUser) => {

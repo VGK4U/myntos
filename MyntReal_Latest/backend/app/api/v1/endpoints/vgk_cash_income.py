@@ -17,7 +17,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from typing import Optional
+from typing import Optional, List
 
 from app.core.database import get_db
 from app.models.staff_accounts import OfficialPartner
@@ -105,6 +105,7 @@ def _enrich_entry_bulk(
     lead_map: dict,
     cat_map: dict,
     co_map: dict,
+    adv_map: dict = None,
 ) -> dict:
     """DC-BULK-ENRICH-001: O(1) enrichment using pre-fetched in-memory maps.
 
@@ -150,6 +151,21 @@ def _enrich_entry_bulk(
         d['deal_value_received'] = float(dvr) if dvr else None
 
     d['category_name'] = cat_map.get(entry.category_id, '—') if entry.category_id else '—'
+
+    # Advance resolution (Solar Advance / CIBIL Advance)
+    if adv_map and entry.source_lead_id and entry.level and (entry.kind or '').upper() not in ('ADVANCE', 'DVR_ADVANCE'):
+        adv_info = adv_map.get((int(entry.source_lead_id), int(entry.level)), {})
+        d['stage1_adv']    = float(adv_info.get('stage1', 0.0))
+        d['stage2_adv']    = float(adv_info.get('stage2', 0.0))
+        d['advance_paid']  = float(adv_info.get('total', 0.0))
+        gross_amt          = float(entry.commission_amount or 0)
+        d['balance_gross'] = max(0.0, round(gross_amt - d['advance_paid'], 2))
+    else:
+        d['stage1_adv']    = 0.0
+        d['stage2_adv']    = 0.0
+        d['advance_paid']  = 0.0
+        d['balance_gross'] = float(entry.commission_amount or 0)
+
     return d
 
 
@@ -892,14 +908,12 @@ def unified_list(
     """
     from app.services.vgk_cash_income import is_super_skip_user
 
+    _vgk_team_pids = [r[0] for r in db.execute(text("SELECT id FROM official_partners WHERE category = 'VGK_TEAM'")).fetchall()]
+
     if vgk_mode:
-        # VGK programme view: join on official_partners and filter by VGK_TEAM category.
+        # VGK programme view: filter by VGK_TEAM partner IDs.
         # This surfaces VGK income regardless of which product-company the entry sits under.
-        q = (
-            db.query(VGKCashIncomeEntry)
-            .join(OfficialPartner, OfficialPartner.id == VGKCashIncomeEntry.partner_id)
-            .filter(OfficialPartner.category == 'VGK_TEAM')
-        )
+        q = db.query(VGKCashIncomeEntry).filter(VGKCashIncomeEntry.partner_id.in_(_vgk_team_pids))
     else:
         if company_id is None:
             from fastapi import HTTPException
@@ -907,9 +921,8 @@ def unified_list(
         # Exclude VGK_TEAM partners from company tabs — VGK entries belong on the Zynova/VGK-All tab
         q = (
             db.query(VGKCashIncomeEntry)
-            .join(OfficialPartner, OfficialPartner.id == VGKCashIncomeEntry.partner_id)
             .filter(VGKCashIncomeEntry.company_id == company_id)
-            .filter(OfficialPartner.category != 'VGK_TEAM')
+            .filter(~VGKCashIncomeEntry.partner_id.in_(_vgk_team_pids))
         )
     if status:
         if status.upper() == 'BALANCE_RECEIVED_PLUS':
@@ -1034,8 +1047,59 @@ def unified_list(
         ).fetchall():
             _cat_map[_row.id] = _row.name
 
+    # Query 5: prior advances for (source_lead_id, level)
+    _adv_map: dict = {}
+    if _uniq_lead_ids:
+        try:
+            int_lead_ids = [int(x) for x in _uniq_lead_ids if x is not None]
+            adv_vci = db.execute(text(
+                "SELECT source_lead_id, level, "
+                "  SUM(CASE WHEN kind = 'ADVANCE' THEN COALESCE(commission_amount, 0) ELSE 0 END) AS stage1_adv, "
+                "  SUM(CASE WHEN kind = 'DVR_ADVANCE' THEN COALESCE(commission_amount, 0) ELSE 0 END) AS stage2_adv, "
+                "  SUM(COALESCE(commission_amount, 0)) AS total_adv "
+                "FROM vgk_cash_income_entries "
+                "WHERE source_lead_id = ANY(:lids) "
+                "  AND kind IN ('ADVANCE', 'DVR_ADVANCE') AND status != 'CANCELLED' "
+                "GROUP BY source_lead_id, level"
+            ), {"lids": int_lead_ids}).fetchall()
+            for ar in adv_vci:
+                if ar.source_lead_id is not None and ar.level is not None:
+                    _adv_map[(int(ar.source_lead_id), int(ar.level))] = {
+                        "stage1": float(ar.stage1_adv or 0),
+                        "stage2": float(ar.stage2_adv or 0),
+                        "total":  float(ar.total_adv or 0)
+                    }
+
+            adv_vsca = db.execute(text(
+                "SELECT a.lead_id, a.level, "
+                "  SUM(CASE WHEN a.kind = 'ADVANCE' THEN COALESCE(a.advance_amount, 0) ELSE 0 END) AS stage1_adv, "
+                "  SUM(CASE WHEN a.kind = 'DVR_ADVANCE' THEN COALESCE(a.advance_amount, 0) ELSE 0 END) AS stage2_adv, "
+                "  SUM(COALESCE(a.advance_amount, 0)) AS total_adv "
+                "FROM vgk_solar_cibil_advances a "
+                "WHERE a.lead_id = ANY(:lids) "
+                "  AND a.status IN ('PENDING', 'RELEASED', 'PAID') "
+                "  AND NOT EXISTS ( "
+                "    SELECT 1 FROM vgk_cash_income_entries vci "
+                "    WHERE vci.source_lead_id = a.lead_id "
+                "      AND vci.level = a.level AND vci.kind = a.kind AND vci.status != 'CANCELLED' "
+                "  ) "
+                "GROUP BY a.lead_id, a.level"
+            ), {"lids": int_lead_ids}).fetchall()
+            for ar in adv_vsca:
+                if ar.lead_id is not None and ar.level is not None:
+                    key = (int(ar.lead_id), int(ar.level))
+                    cur = _adv_map.get(key, {"stage1": 0.0, "stage2": 0.0, "total": 0.0})
+                    cur["stage1"] += float(ar.stage1_adv or 0)
+                    cur["stage2"] += float(ar.stage2_adv or 0)
+                    cur["total"]  += float(ar.total_adv or 0)
+                    _adv_map[key] = cur
+        except Exception as _adv_err:
+            try: db.rollback()
+            except: pass
+            logger.warning(f"[VGK-ADV-MAP] Non-fatal adv_map error: {_adv_err}")
+
     def _enrich_full(e):
-        d = _enrich_entry_bulk(e, _p_map, _lead_map, _cat_map, _co_map)
+        d = _enrich_entry_bulk(e, _p_map, _lead_map, _cat_map, _co_map, _adv_map)
         d['available_actions'] = _actions_for(e)
         return d
 
@@ -1049,10 +1113,9 @@ def unified_list(
               COALESCE(SUM(e.tds_amount),0)        AS tds,
               COALESCE(SUM(e.net_payout),0)        AS net
             FROM vgk_cash_income_entries e
-            JOIN official_partners p ON p.id = e.partner_id
-            WHERE p.category = 'VGK_TEAM'
+            WHERE e.partner_id = ANY(:pids)
             GROUP BY e.status, e.kind
-        """), {}).fetchall()
+        """), {'pids': _vgk_team_pids}).fetchall()
     else:
         summary = db.execute(text("""
             SELECT
@@ -1063,9 +1126,9 @@ def unified_list(
               COALESCE(SUM(tds_amount),0)        AS tds,
               COALESCE(SUM(net_payout),0)        AS net
             FROM vgk_cash_income_entries
-            WHERE company_id=:cid
+            WHERE company_id=:cid AND NOT (partner_id = ANY(:pids))
             GROUP BY status, kind
-        """), {'cid': company_id}).fetchall()
+        """), {'cid': company_id, 'pids': _vgk_team_pids}).fetchall()
 
     return {
         'success': True,
@@ -1159,7 +1222,8 @@ def payment_options(
 @router.post('/staff/vgk/cash-income/unified-action')
 def unified_action(
     company_id: int = Query(...),
-    entry_id: int = Body(..., embed=True),
+    entry_id: Optional[int] = Body(None, embed=True),
+    entry_ids: Optional[List[int]] = Body(None, embed=True),
     action: str = Body(..., embed=True),
     notes: Optional[str] = Body(None, embed=True),
     rejection_reason: Optional[str] = Body(None, embed=True),
@@ -1173,8 +1237,8 @@ def unified_action(
 ):
     """
     Unified state-machine endpoint.
-    action: 'confirm' | 'release' | 'mark_paid' | 'reject'
-    Skip-level (EA / MR10001 / VGK4U_SUPREME) can run any forward action from any state.
+    action: 'confirm' | 'release' | 'mark_paid' | 'reject' | 'stage1_approve'
+    Supports single `entry_id` or batch `entry_ids: List[int]`.
     """
     from app.services.vgk_cash_income import (
         confirm_cash_income, release_cash_income, reject_cash_income,
@@ -1186,203 +1250,191 @@ def unified_action(
     if act not in ('confirm', 'release', 'mark_paid', 'reject', 'stage1_approve'):
         raise HTTPException(status_code=400, detail="action must be confirm|release|mark_paid|reject|stage1_approve")
 
-    # DC-FIX-2605-002: In vgk_mode the entry's company_id (product co, e.g. 4=MyntReal)
-    # differs from the tab's company_id (2=Zynova). Accept entry by id alone and verify
-    # the caller has access (is_super check happens below; non-super can only act on
-    # entries whose company_id matches their own company or the tab company).
-    entry = db.query(VGKCashIncomeEntry).filter(
-        VGKCashIncomeEntry.id == entry_id,
-    ).first()
-    if not entry:
-        raise HTTPException(status_code=404, detail='Entry not found')
-    # Access guard: entry must belong to the requested tab-company OR the entry's own company
-    if entry.company_id != company_id:
-        # Allow if the caller is a super-skip user or if the entry sits under the same
-        # product group as the tab (vgk_mode: entry.company_id may differ from CO).
-        # For now, any authenticated staff may act on VGK entries cross-company.
-        pass  # VGK programme entries are accessible from the Zynova tab
+    ids_to_process = []
+    if entry_ids and isinstance(entry_ids, list):
+        ids_to_process = [int(x) for x in entry_ids if x is not None]
+    elif entry_id is not None:
+        ids_to_process = [int(entry_id)]
 
+    if not ids_to_process:
+        raise HTTPException(status_code=400, detail="entry_id or entry_ids required")
+
+    results = []
     is_super = is_super_skip_user(current_employee)
-    skipped_states = []
-    result = {}
 
-    try:
-        if act == 'reject':
-            now = _get_ist()
-            if entry.status in ('PAID', 'CANCELLED'):
-                raise HTTPException(status_code=400, detail=f'Cannot reject — already {entry.status}')
-            # post reversal if any prior JV
-            try:
-                post_jv_reject_reversal(db, entry, current_employee.id)
-            except Exception as e:
-                logger.warning(f'[VGK-UNIFIED] reversal failed: {e}')
-            entry.status = 'CANCELLED'
-            entry.rejection_reason = rejection_reason or 'Rejected'
-            entry.updated_at = now
-            result = {'success': True, 'status': 'CANCELLED', 'entry_number': entry.entry_number}
+    for target_id in ids_to_process:
+        entry = db.query(VGKCashIncomeEntry).filter(
+            VGKCashIncomeEntry.id == target_id,
+        ).first()
+        if not entry:
+            if len(ids_to_process) == 1:
+                raise HTTPException(status_code=404, detail=f'Entry {target_id} not found')
+            continue
 
-        elif act == 'confirm':
-            if entry.status == 'DRAFT':
-                # DC-FIX-2605-003: use entry.company_id so VGK entries (co=4) resolve correctly
-                inner = confirm_cash_income(db, entry_id, entry.company_id, current_employee.id, notes)
-                if not inner.get('success'):
-                    raise HTTPException(status_code=400, detail=inner.get('error', 'Confirm failed'))
-                # Post JV-B
-                post_jv_confirm(db, entry, current_employee.id)
-                entry.ledger_posted = True
-                result = inner
-            elif is_super:
-                # Skip-level confirm-equivalent on out-of-state row
-                raise HTTPException(status_code=400, detail=f'Already {entry.status}; use a higher action')
-            else:
-                raise HTTPException(status_code=400, detail=f'Entry is {entry.status}, not DRAFT')
+        skipped_states = []
+        result = {}
 
-        elif act == 'release':
-            # DC-NO-RELEASE-001: Release concept removed. Use stage1_approve instead.
-            raise HTTPException(status_code=410, detail='Release action removed. Use Stage 1 Approve (stage1_approve) instead.')
-
-        elif act == 'stage1_approve':
-            # DC-NO-RELEASE-001 / DC-VGK-STAGE1-001:
-            # Stage 1 Approve now handles BOTH PENDING and RELEASED (legacy) entries.
-            # For non-ADVANCE PENDING entries: runs wallet deduction + JV (previously at Release).
-            if entry.status not in ('PENDING', 'RELEASED'):
-                raise HTTPException(status_code=400, detail=f'Entry must be PENDING or RELEASED to approve (got {entry.status})')
-
-            # For non-ADVANCE/non-SLAB_BONUS entries coming from PENDING: apply admin/TDS/wallet deduction now
-            # ADVANCE and SLAB_BONUS pre-compute wallet at creation; no deduction needed here.
-            if entry.kind not in ('ADVANCE', 'SLAB_BONUS', 'DVR_ADVANCE') and entry.status == 'PENDING':
-                inner_rel = release_cash_income(db, entry_id, entry.company_id, current_employee.id, notes)
-                if not inner_rel.get('success'):
-                    raise HTTPException(status_code=400, detail=inner_rel.get('error', 'Wallet deduction at Stage1 failed'))
-                post_jv_release(db, entry, current_employee.id)
-                db.flush(); db.refresh(entry)
-            elif entry.kind in ('ADVANCE', 'DVR_ADVANCE') and entry.status in ('PENDING', 'RELEASED'):
-                if entry.kind == 'ADVANCE':
-                    from app.services.vgk_solar_advance import release_advance as _rel_adv
-                    inner_rel = _rel_adv(
-                        db=db, lead_id=entry.source_lead_id,
-                        released_by_id=current_employee.id,
-                        notes=notes, _level=entry.level
-                    )
-                else:
-                    from app.services.vgk_solar_advance import release_dvr_advance as _rel_dvr
-                    inner_rel = _rel_dvr(
-                        db=db, lead_id=entry.source_lead_id,
-                        partner_id=entry.partner_id, level=entry.level,
-                        released_by_id=current_employee.id, notes=notes
-                    )
-                if not inner_rel.get('success') and not inner_rel.get('already_released'):
-                    raise HTTPException(status_code=400, detail=inner_rel.get('error', 'Advance release failed'))
-                db.flush(); db.refresh(entry)
-
-            _now = _get_ist()
-            entry.status              = 'STAGE1_APPROVED'
-            entry.stage_1_approved_by = (getattr(current_employee, 'full_name', '') or getattr(current_employee, 'name', '') or current_employee.emp_code or '').strip() or current_employee.emp_code
-            entry.stage_1_approved_at = _now
-            entry.updated_at          = _now
-            entry.ledger_posted       = True
-            if notes:
-                entry.notes = ((entry.notes or '') + f' | Stage1: {notes}').strip(' |')
-            result = {'success': True, 'status': 'STAGE1_APPROVED', 'entry_number': entry.entry_number}
-
-        elif act == 'mark_paid':
-            # Skip-level cascade (DC-NO-RELEASE-001: no intermediate RELEASED step)
-            if entry.status == 'DRAFT' and is_super:
-                inner1 = confirm_cash_income(db, entry_id, entry.company_id, current_employee.id, notes)
-                if not inner1.get('success'):
-                    raise HTTPException(status_code=400, detail=inner1.get('error', 'Auto-confirm failed'))
-                post_jv_confirm(db, entry, current_employee.id)
-                skipped_states.append('DRAFT->PENDING (super-skip)')
-                db.flush(); db.refresh(entry)
-            if entry.status in ('PENDING', 'RELEASED') and is_super:
-                # DC-NO-RELEASE-001: bypass release; for non-ADVANCE/non-SLAB_BONUS apply wallet deduction
-                if entry.kind not in ('ADVANCE', 'SLAB_BONUS'):
-                    inner2 = release_cash_income(db, entry_id, entry.company_id, current_employee.id, notes)
-                    if not inner2.get('success'):
-                        raise HTTPException(status_code=400, detail=inner2.get('error', 'Auto wallet-deduction failed'))
-                    post_jv_release(db, entry, current_employee.id)
-                _now_s1 = _get_ist()
-                entry.status = 'STAGE1_APPROVED'
-                entry.stage_1_approved_by = (getattr(current_employee, 'full_name', '') or current_employee.emp_code or '').strip() or current_employee.emp_code
-                entry.stage_1_approved_at = _now_s1
-                db.flush(); db.refresh(entry)
-                skipped_states.append('PENDING->STAGE1_APPROVED (super-skip)')
-            # DC-VGK-STAGE1-001: Stage 1 is mandatory for ALL; legacy RELEASED auto-promoted above
-            if entry.status == 'RELEASED' and is_super:
-                _now_s1 = _get_ist()
-                entry.status = 'STAGE1_APPROVED'
-                entry.stage_1_approved_by = (getattr(current_employee, 'full_name', '') or current_employee.emp_code or '').strip() or current_employee.emp_code
-                entry.stage_1_approved_at = _now_s1
-                db.flush(); db.refresh(entry)
-                skipped_states.append('RELEASED->STAGE1_APPROVED (super-skip)')
-            if entry.status != 'STAGE1_APPROVED':
-                raise HTTPException(status_code=400, detail=f'Entry must be STAGE1_APPROVED to mark paid (got {entry.status})')
-
-            inner = mark_paid_cash_income(
-                db, entry_id, entry.company_id,
-                paid_by_id=current_employee.id,
-                payment_mode=(payment_mode or '').upper(),
-                bank_ledger_id=bank_ledger_id,
-                cash_staff_id=cash_staff_id,
-                utr=payment_utr,
-                notes=notes,
-                bypass=bool(bypass),
-            )
-            if not inner.get('success'):
-                if inner.get('error') == 'CAPPED_WARNING':
-                    return inner
-                raise HTTPException(status_code=400, detail=inner.get('error', 'Mark-paid failed'))
-            if skipped_states:
-                entry.skip_reason = (entry.skip_reason or '') + ' | ' + '; '.join(skipped_states)
-            result = inner
-
-        # Audit trail — wrapped in SAVEPOINT so any failure never poisons the outer transaction
         try:
-            db.execute(text("SAVEPOINT sp_audit"))
-            db.execute(text("""
-                INSERT INTO staff_audit_log
-                  (employee_id, action, resource_type, resource_id, ip_address)
-                VALUES
-                  (:eid, :ac, 'VGK_CASH_INCOME', :rid, :ip)
-            """), {
-                'eid': current_employee.id,
-                'ac':  f'B2B-VGK-INCOME-{act.upper()}' + ('-SKIP' if skipped_states else ''),
-                'rid': entry.id, 'ip': '127.0.0.1',
-            })
-            db.execute(text("RELEASE SAVEPOINT sp_audit"))
-        except Exception as _ae:
-            try:
-                db.execute(text("ROLLBACK TO SAVEPOINT sp_audit"))
-            except Exception:
-                pass
-            logger.warning(f'[VGK-UNIFIED] audit log failed (non-fatal): {_ae}')
+            if act == 'reject':
+                now = _get_ist()
+                if entry.status in ('PAID', 'CANCELLED'):
+                    raise HTTPException(status_code=400, detail=f'Cannot reject — already {entry.status}')
+                try:
+                    post_jv_reject_reversal(db, entry, current_employee.id)
+                except Exception as e:
+                    logger.warning(f'[VGK-UNIFIED] reversal failed: {e}')
+                entry.status = 'CANCELLED'
+                entry.rejection_reason = rejection_reason or 'Rejected'
+                entry.updated_at = now
+                result = {'success': True, 'status': 'CANCELLED', 'entry_number': entry.entry_number}
 
-        db.commit()
+            elif act == 'confirm':
+                if entry.status == 'DRAFT':
+                    inner = confirm_cash_income(db, target_id, entry.company_id, current_employee.id, notes)
+                    if not inner.get('success'):
+                        raise HTTPException(status_code=400, detail=inner.get('error', 'Confirm failed'))
+                    post_jv_confirm(db, entry, current_employee.id)
+                    entry.ledger_posted = True
+                    result = inner
+                elif entry.status in ('PENDING', 'RELEASED', 'STAGE1_APPROVED', 'PAID'):
+                    result = {'success': True, 'status': entry.status, 'entry_number': entry.entry_number, 'already_confirmed': True}
+                else:
+                    raise HTTPException(status_code=400, detail=f'Entry is {entry.status}, cannot confirm')
 
-        # ── Post-payment celebration (non-fatal background thread) ─────────
-        if act == 'mark_paid' and result.get('success') and not result.get('idempotent'):
-            try:
-                import threading
-                from app.services.vgk_earner_card import run_earner_celebration
-                t = threading.Thread(
-                    target=run_earner_celebration,
-                    args=(entry_id,),
-                    daemon=True,
-                    name=f'earner-card-{entry_id}',
+            elif act == 'stage1_approve':
+                if entry.status not in ('PENDING', 'RELEASED'):
+                    raise HTTPException(status_code=400, detail=f'Entry must be PENDING or RELEASED to approve (got {entry.status})')
+
+                if entry.kind not in ('ADVANCE', 'SLAB_BONUS', 'DVR_ADVANCE') and entry.status == 'PENDING':
+                    inner_rel = release_cash_income(db, target_id, entry.company_id, current_employee.id, notes)
+                    if not inner_rel.get('success'):
+                        raise HTTPException(status_code=400, detail=inner_rel.get('error', 'Wallet deduction at Stage1 failed'))
+                    post_jv_release(db, entry, current_employee.id)
+                    db.flush(); db.refresh(entry)
+                elif entry.kind in ('ADVANCE', 'DVR_ADVANCE') and entry.status in ('PENDING', 'RELEASED'):
+                    if entry.kind == 'ADVANCE':
+                        from app.services.vgk_solar_advance import release_advance as _rel_adv
+                        inner_rel = _rel_adv(
+                            db=db, lead_id=entry.source_lead_id,
+                            released_by_id=current_employee.id,
+                            notes=notes, _level=entry.level
+                        )
+                    else:
+                        from app.services.vgk_solar_advance import release_dvr_advance as _rel_dvr
+                        inner_rel = _rel_dvr(
+                            db=db, lead_id=entry.source_lead_id,
+                            partner_id=entry.partner_id, level=entry.level,
+                            released_by_id=current_employee.id, notes=notes
+                        )
+                    if not inner_rel.get('success') and not inner_rel.get('already_released'):
+                        raise HTTPException(status_code=400, detail=inner_rel.get('error', 'Advance release failed'))
+                    db.flush(); db.refresh(entry)
+
+                _now = _get_ist()
+                entry.status              = 'STAGE1_APPROVED'
+                entry.stage_1_approved_by = (getattr(current_employee, 'full_name', '') or getattr(current_employee, 'name', '') or current_employee.emp_code or '').strip() or current_employee.emp_code
+                entry.stage_1_approved_at = _now
+                entry.updated_at          = _now
+                entry.ledger_posted       = True
+                if notes:
+                    entry.notes = ((entry.notes or '') + f' | Stage1: {notes}').strip(' |')
+                result = {'success': True, 'status': 'STAGE1_APPROVED', 'entry_number': entry.entry_number}
+
+            elif act == 'mark_paid':
+                if entry.status == 'DRAFT' and is_super:
+                    inner1 = confirm_cash_income(db, target_id, entry.company_id, current_employee.id, notes)
+                    if not inner1.get('success'):
+                        raise HTTPException(status_code=400, detail=inner1.get('error', 'Auto-confirm failed'))
+                    post_jv_confirm(db, entry, current_employee.id)
+                    skipped_states.append('DRAFT->PENDING (super-skip)')
+                    db.flush(); db.refresh(entry)
+                if entry.status in ('PENDING', 'RELEASED'):
+                    if entry.kind not in ('ADVANCE', 'SLAB_BONUS'):
+                        try:
+                            inner2 = release_cash_income(db, target_id, entry.company_id, current_employee.id, notes)
+                            if inner2.get('success'):
+                                post_jv_release(db, entry, current_employee.id)
+                        except Exception as _rel_err:
+                            logger.warning(f'[VGK-MARK-PAID] Auto-release notice: {_rel_err}')
+                    _now_s1 = _get_ist()
+                    entry.status = 'STAGE1_APPROVED'
+                    entry.stage_1_approved_by = (getattr(current_employee, 'full_name', '') or current_employee.emp_code or '').strip() or current_employee.emp_code
+                    entry.stage_1_approved_at = _now_s1
+                    db.flush(); db.refresh(entry)
+                    skipped_states.append('PENDING->STAGE1_APPROVED')
+
+                if entry.status == 'PAID':
+                    results.append({'success': True, 'status': 'PAID', 'entry_number': entry.entry_number, 'already_paid': True})
+                    continue
+
+                if entry.status != 'STAGE1_APPROVED':
+                    raise HTTPException(status_code=400, detail=f'Entry must be PENDING, RELEASED or STAGE1_APPROVED to mark paid (got {entry.status})')
+
+                inner = mark_paid_cash_income(
+                    db, target_id, entry.company_id,
+                    paid_by_id=current_employee.id,
+                    payment_mode=(payment_mode or '').upper(),
+                    bank_ledger_id=bank_ledger_id,
+                    cash_staff_id=cash_staff_id,
+                    utr=payment_utr,
+                    notes=notes,
+                    bypass=bool(bypass),
                 )
-                t.start()
-            except Exception as _ce:
-                logger.warning(f'[VGK-UNIFIED] earner celebration thread failed to start: {_ce}')
+                if not inner.get('success'):
+                    if inner.get('error') == 'CAPPED_WARNING':
+                        return inner
+                    raise HTTPException(status_code=400, detail=inner.get('error', 'Mark-paid failed'))
+                if skipped_states:
+                    entry.skip_reason = (entry.skip_reason or '') + ' | ' + '; '.join(skipped_states)
+                result = inner
 
-        return {'success': True, 'action': act, 'skipped_states': skipped_states, 'result': result}
+            # Audit trail
+            try:
+                db.execute(text("SAVEPOINT sp_audit"))
+                db.execute(text("""
+                    INSERT INTO staff_audit_log
+                      (employee_id, action, resource_type, resource_id, ip_address)
+                    VALUES
+                      (:eid, :ac, 'VGK_CASH_INCOME', :rid, :ip)
+                """), {
+                    'eid': current_employee.id,
+                    'ac':  f'B2B-VGK-INCOME-{act.upper()}' + ('-SKIP' if skipped_states else ''),
+                    'rid': entry.id, 'ip': '127.0.0.1',
+                })
+                db.execute(text("RELEASE SAVEPOINT sp_audit"))
+            except Exception as _ae:
+                try:
+                    db.execute(text("ROLLBACK TO SAVEPOINT sp_audit"))
+                except Exception:
+                    pass
 
-    except HTTPException:
-        db.rollback()
-        raise
-    except Exception as e:
-        db.rollback()
-        logger.exception(f'[VGK-UNIFIED] action={act} entry={entry_id} failed')
-        raise HTTPException(status_code=500, detail=f'{type(e).__name__}: {e}')
+            db.commit()
+
+            if act == 'mark_paid' and result.get('success') and not result.get('idempotent'):
+                try:
+                    import threading
+                    from app.services.vgk_earner_card import run_earner_celebration
+                    t = threading.Thread(
+                        target=run_earner_celebration,
+                        args=(target_id,),
+                        daemon=True,
+                        name=f'earner-card-{target_id}',
+                    )
+                    t.start()
+                except Exception as _ce:
+                    logger.warning(f'[VGK-UNIFIED] earner celebration thread failed to start: {_ce}')
+
+            results.append(result)
+
+        except HTTPException:
+            db.rollback()
+            raise
+        except Exception as e:
+            db.rollback()
+            logger.exception(f'[VGK-UNIFIED] action={act} entry={target_id} failed')
+            raise HTTPException(status_code=500, detail=f'{type(e).__name__}: {e}')
+
+    return {'success': True, 'action': act, 'processed': len(results), 'result': results[0] if len(results) == 1 else None, 'results': results}
 
 
 # ════════════════════════════════════════════════════════════════════════════

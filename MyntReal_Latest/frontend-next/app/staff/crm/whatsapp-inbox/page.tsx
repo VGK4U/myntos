@@ -1,36 +1,38 @@
 "use client";
 
-import { useState } from "react";
-
-// Mock Data
-const MOCK_CONVERSATIONS = [
-  { id: 1, name: "Ramesh Sharma", phone: "+91 98765 43210", lastMessage: "Yes, I am interested in the 3BHK flat.", time: "10:45 AM", unread: 2, online: true, avatar: "R" },
-  { id: 2, name: "Sunita Verma", phone: "+91 99887 76655", lastMessage: "Can you send the location pin?", time: "Yesterday", unread: 0, online: false, avatar: "S" },
-  { id: 3, name: "Anil Kumar", phone: "+91 91234 56789", lastMessage: "Thanks for the brochure.", time: "Monday", unread: 0, online: true, avatar: "A" },
-  { id: 4, name: "Meera Reddy", phone: "+91 98888 77777", lastMessage: "I will call you tomorrow morning.", time: "Aug 10", unread: 0, online: false, avatar: "M" },
-];
-
-const MOCK_MESSAGES = [
-  { id: 1, sender: "bot", text: "Hi Ramesh, thank you for your interest in MyntReal properties. Are you looking for flats or plots?", time: "10:30 AM" },
-  { id: 2, sender: "user", text: "Yes, I am interested in the 3BHK flat.", time: "10:45 AM" },
-];
+import { useState, useEffect } from "react";
+import { getApiUrl } from "@/lib/api";
+import { useStaffAuth } from "@/contexts/StaffAuthContext";
 
 export default function WhatsAppInboxPage() {
-  const [activeChat, setActiveChat] = useState(MOCK_CONVERSATIONS[0]);
+  const { token } = useStaffAuth();
+  const [activeChat, setActiveChat] = useState<any>(null);
   const [messageText, setMessageText] = useState("");
-  const [messages, setMessages] = useState(MOCK_MESSAGES);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${getApiUrl()}/api/v1/staff/crm/whatsapp-inbox`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setConversations(data.conversations || []);
+          if (data.conversations?.length > 0) setActiveChat(data.conversations[0]);
+        }
+      })
+      .catch(err => {
+        console.warn("Failed to fetch conversations", err);
+        setConversations([]);
+      });
+  }, [token]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!messageText.trim()) return;
-
-    // Add message to mock list
-    setMessages([...messages, { 
-      id: Date.now(), 
-      sender: "agent", 
-      text: messageText, 
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-    }]);
+    // Send to API
     setMessageText("");
   };
 
@@ -66,13 +68,13 @@ export default function WhatsAppInboxPage() {
           
           <div className="flex-1 overflow-y-auto">
             <ul className="divide-y divide-gray-100">
-              {MOCK_CONVERSATIONS.map((chat) => (
+              {conversations.map((chat) => (
                 <li 
                   key={chat.id}
                   onClick={() => setActiveChat(chat)}
-                  className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${activeChat.id === chat.id ? 'bg-emerald-50 hover:bg-emerald-50 relative' : ''}`}
+                  className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${activeChat?.id === chat.id ? 'bg-emerald-50 hover:bg-emerald-50 relative' : ''}`}
                 >
-                  {activeChat.id === chat.id && (
+                  {activeChat?.id === chat.id && (
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500"></div>
                   )}
                   <div className="flex items-center gap-3">
@@ -86,7 +88,7 @@ export default function WhatsAppInboxPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-baseline mb-1">
-                        <h4 className={`text-sm truncate ${activeChat.id === chat.id ? 'font-bold text-gray-900' : 'font-medium text-gray-900'}`}>
+                        <h4 className={`text-sm truncate ${activeChat?.id === chat.id ? 'font-bold text-gray-900' : 'font-medium text-gray-900'}`}>
                           {chat.name}
                         </h4>
                         <span className={`text-xs ${chat.unread > 0 ? 'text-emerald-600 font-bold' : 'text-gray-400'}`}>
@@ -114,6 +116,7 @@ export default function WhatsAppInboxPage() {
         {/* Right Main Area - Chat Window */}
         <div className="w-2/3 flex flex-col bg-[#efeae2]">
           {/* Chat Header */}
+          {activeChat ? (
           <div className="h-16 px-6 border-b border-gray-200 bg-white flex items-center justify-between shrink-0 shadow-sm z-10">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold">
@@ -130,6 +133,11 @@ export default function WhatsAppInboxPage() {
               <button className="hover:text-gray-600 transition-colors"><i className="fas fa-ellipsis-v"></i></button>
             </div>
           </div>
+          ) : (
+          <div className="h-16 px-6 border-b border-gray-200 bg-white flex items-center justify-between shrink-0 shadow-sm z-10">
+             <h3 className="font-bold text-gray-900 leading-tight">No active conversation</h3>
+          </div>
+          )}
 
           {/* Chat Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[url('https://i.pinimg.com/736x/8c/98/99/8c98994518b575bfd8c949e91d20548b.jpg')] bg-cover bg-center">

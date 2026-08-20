@@ -113,6 +113,117 @@
 
         /* Mobile Card Layout */
         .mobile-card { background: white; border-radius: 6px; padding: 10px; margin-bottom: 10px; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
+        /* Solar Docs Modal & Share Link Styles */
+        .sdoc-open-btn{padding:2px 9px;border-radius:5px;font-size:10.5px;font-weight:600;border:none;cursor:pointer;background:#e0e7ff;color:#4338ca;display:inline-flex;align-items:center;gap:4px;transition:background .15s}
+        .sdoc-open-btn:hover{background:#c7d2fe}
+        .sdoc-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9100;display:none;align-items:flex-start;justify-content:center;padding:30px 15px;overflow-y:auto}
+        .sdoc-modal-overlay.open{display:flex}
+        .sdoc-modal{background:white;border-radius:14px;width:100%;max-width:820px;margin:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden}
+        .sdoc-modal-header{background:linear-gradient(135deg,#1e3a5f,#0f2440);padding:14px 18px;display:flex;align-items:flex-start;justify-content:space-between;color:white;gap:10px}
+        .sdoc-modal-header h4{margin:0;font-size:14px;font-weight:700}
+        .sdoc-modal-header p{margin:2px 0 0;font-size:11px;opacity:.75}
+        .sdoc-close-btn{background:rgba(255,255,255,.2);border:none;color:white;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+        .sdoc-close-btn:hover{background:rgba(255,255,255,.35)}
+        .sdoc-tabs{display:flex;background:#f8fafc;border-bottom:1px solid #e5e7eb;padding:0 14px;gap:2px;overflow-x:auto}
+        .sdoc-tab{padding:9px 14px;font-size:11.5px;font-weight:600;color:#6b7280;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+        .sdoc-tab.active{color:#1e3a5f;border-bottom-color:#1e3a5f}
+        .sdoc-tab-count{display:inline-block;background:#f3f4f6;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px}
+        .sdoc-tab.active .sdoc-tab-count{background:#dbeafe;color:#1d4ed8}
+        .sdoc-tab[data-tab="bank_link"].active{color:#1d4ed8;border-bottom-color:#1d4ed8}
+        .sdoc-tab[data-tab="discom_link"].active{color:#b45309;border-bottom-color:#b45309}
+        .sdoc-bundle-stats{display:flex;gap:0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:12px}
+        .sdoc-bundle-stat{flex:1;padding:8px 0;text-align:center;background:#f9fafb;border-right:1px solid #e5e7eb}
+        .sdoc-bundle-stat:last-child{border-right:none}
+        .sdoc-bundle-stat-num{font-size:20px;font-weight:700;line-height:1.1}
+        .sdoc-bundle-stat-lbl{font-size:10px;color:#6b7280;margin-top:1px}
+        .sdoc-bundle-actions{display:flex;gap:8px;margin-bottom:12px}
+        .sdoc-bundle-btn{flex:1;padding:9px 0;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:opacity .15s}
+        .sdoc-bundle-btn:hover{opacity:.85}.sdoc-bundle-btn:disabled{opacity:.5;cursor:not-allowed}
+        .sdoc-bundle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid #e5e7eb;border-radius:7px;margin-bottom:5px;background:#fff}
+        .sdoc-bundle-row.uploaded{border-color:#d1fae5;background:#f0fdf4}
+        .sdoc-bundle-row.pending{border-color:#fee2e2;background:#fff7f7}
+        .sdoc-bundle-label{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#111827}
+        .sdoc-bundle-pending-tag{font-size:10px;color:#dc2626;background:#fee2e2;padding:1px 6px;border-radius:10px;margin-left:4px}
+        .bundle-share-popup{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9500;display:none;align-items:center;justify-content:center}
+        .bundle-share-popup.open{display:flex}
+        .bundle-share-card{background:#fff;border-radius:14px;padding:20px 22px;width:92%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+        .bsp-title{font-size:14px;font-weight:700;color:#1e3a5f;margin:0 0 2px}
+        .bsp-sub{font-size:11px;color:#6b7280;margin:0 0 14px}
+        .bsp-url{width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:7px;font-size:11px;color:#374151;background:#f9fafb;word-break:break-all;margin-bottom:10px;box-sizing:border-box;user-select:all}
+        .bsp-actions{display:flex;gap:8px}
+        .bsp-btn{flex:1;padding:9px 0;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+        .sdoc-body{padding:14px;max-height:66vh;overflow-y:auto}
+        .sdoc-group{margin-bottom:16px}
+        .sdoc-group-title{font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;padding:4px 0;border-bottom:1px solid #e5e7eb;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+        .sdoc-g-count{background:#f3f4f6;border-radius:8px;padding:1px 6px;font-size:9px;color:#9ca3af}
+        .sdoc-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;padding:8px 10px;border-radius:8px;background:#f9fafb;margin-bottom:5px;border:1px solid #f0f0f0}
+        .sdoc-row.uploaded{background:#f0fdf4;border-color:#bbf7d0}
+        .sdoc-info{display:flex;flex-direction:column;gap:3px;min-width:0}
+        .sdoc-label{font-size:11.5px;font-weight:600;color:#1f2937;display:flex;align-items:center;gap:6px}
+        .sdoc-status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+        .sdoc-status-dot.uploaded{background:#22c55e}.sdoc-status-dot.pending{background:#d1d5db}
+        .sdoc-meta{font-size:9.5px;color:#9ca3af;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:2px}
+        .sdoc-number-row{display:flex;align-items:center;gap:5px;margin-top:4px}
+        .sdoc-number-row label{font-size:9.5px;color:#6b7280;font-weight:600;white-space:nowrap}
+        .sdoc-num-input{font-size:11px;padding:3px 7px;border-radius:5px;border:1px solid #e5e7eb;width:175px;color:#1f2937}
+        .sdoc-num-input:focus{border-color:#1e3a5f;outline:none;box-shadow:0 0 0 2px rgba(30,58,95,.1)}
+        .sdoc-num-save{background:#1e3a5f;color:#fff;border:none;border-radius:5px;padding:3px 7px;font-size:10px;cursor:pointer;line-height:1.4;transition:background .2s}
+        .sdoc-num-save:hover{background:#2d5a8e}.sdoc-num-save:disabled{opacity:.6;cursor:not-allowed}
+        .sdoc-actions{display:flex;flex-direction:column;gap:4px;align-items:flex-end;min-width:90px;padding-top:2px}
+        .sdoc-btn{padding:4px 10px;border-radius:5px;font-size:10.5px;font-weight:600;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;transition:background .15s;text-decoration:none}
+        .sdoc-btn.upload{background:#1e3a5f;color:white}.sdoc-btn.upload:hover{background:#163058}
+        .sdoc-btn.reupload{background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe}.sdoc-btn.reupload:hover{background:#dbeafe}
+        .sdoc-btn.view{background:#f0fdf4;color:#15803d}.sdoc-btn.view:hover{background:#dcfce7}
+        .sdoc-btn.del{background:#fff1f2;color:#e11d48}.sdoc-btn.del:hover{background:#ffe4e6}
+        .sdoc-btn:disabled{opacity:.5;cursor:not-allowed}
+        .sdoc-footer{padding:10px 16px;border-top:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:#f8fafc}
+        .sdoc-footer-prog{font-size:11px;color:#6b7280}.sdoc-footer-prog b{color:#1e3a5f}
+        .sdoc-upload-bar{display:none;height:3px;background:#dbeafe;border-radius:2px;overflow:hidden;width:160px}
+        .sdoc-upload-bar .sdoc-bar{height:100%;background:#2563eb;width:0%;transition:width .3s}
+        .share-link-btn{padding:2px 7px;border-radius:5px;font-size:10px;font-weight:600;border:none;cursor:pointer;background:#fef3c7;color:#b45309;display:inline-flex;align-items:center;gap:3px;transition:background .15s;margin-left:3px}
+        .share-link-btn:hover{background:#fde68a}
+        .share-link-btn.busy{opacity:.5;cursor:wait}
+        .slk-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9200;display:none;align-items:center;justify-content:center;padding:20px}
+        .slk-overlay.open{display:flex}
+        .slk-box{background:white;border-radius:14px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden}
+        .slk-header{background:linear-gradient(135deg,#1e3a5f,#0f2440);padding:13px 18px;display:flex;align-items:center;justify-content:space-between;color:white}
+        .slk-header h4{margin:0;font-size:13px;font-weight:700}
+        .slk-close{background:rgba(255,255,255,.2);border:none;color:white;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:12px}
+        .slk-close:hover{background:rgba(255,255,255,.35)}
+        .slk-body{padding:18px}
+        .slk-label{font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+        .slk-url-row{display:flex;gap:8px;align-items:center}
+        .slk-url-input{flex:1;font-size:11px;padding:8px 10px;border-radius:7px;border:1.5px solid #e5e7eb;color:#1f2937;font-family:monospace;background:#f9fafb;min-width:0;word-break:break-all}
+        .slk-copy-btn{padding:7px 14px;border-radius:7px;border:none;cursor:pointer;background:#1e3a5f;color:white;font-size:11.5px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:background .15s}
+        .slk-copy-btn:hover{background:#163058}
+        .slk-copy-btn.copied{background:#059669}
+        .slk-expiry{margin-top:12px;font-size:11px;color:#6b7280;display:flex;align-items:center;gap:6px;background:#fff7ed;border-radius:8px;padding:8px 12px;border:1px solid #fed7aa}
+        .slk-expiry b{color:#d97706}
+        .slk-lead-name{font-size:11px;color:rgba(255,255,255,.7);margin-top:2px;font-weight:400}
+        .slk-mode-row{display:flex;flex-direction:column;gap:7px;margin:8px 0 4px}
+        .slk-radio{display:flex;align-items:center;gap:9px;font-size:12px;cursor:pointer;padding:9px 11px;border-radius:8px;border:1.5px solid #e5e7eb;transition:border-color .15s,background .15s}
+        .slk-radio:has(input:checked){background:#eff6ff;border-color:#93c5fd}
+        .slk-radio b{font-size:12px;color:#1f2937}
+        .slk-radio input{cursor:pointer;accent-color:#1e3a5f;width:14px;height:14px;flex-shrink:0}
+        .slk-doc-checklist{border:1.5px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-top:10px}
+        .slk-chk-header{display:flex;align-items:center;gap:6px;padding:7px 11px;background:#f8fafc;border-bottom:1px solid #f0f0f0;font-size:10px;color:#6b7280}
+        .slk-chk-header span{flex:1;font-weight:600}
+        .slk-chk-all-btn{padding:2px 8px;border-radius:4px;border:1px solid #e5e7eb;background:white;cursor:pointer;font-size:10px;color:#374151}
+        .slk-chk-all-btn:hover{background:#f3f4f6}
+        .slk-doc-checklist-inner{max-height:240px;overflow-y:auto;padding:8px}
+        .slk-doc-group{margin-bottom:10px}
+        .slk-doc-group-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;padding:2px 0 5px;border-bottom:1px solid #f0f0f0;margin-bottom:4px}
+        .slk-doc-check{display:flex;align-items:center;gap:8px;padding:4px 3px;border-radius:5px;cursor:pointer;font-size:11.5px;color:#374151;-webkit-user-select:none;user-select:none}
+        .slk-doc-check:hover{background:#f3f4f6}
+        .slk-doc-check input{cursor:pointer;accent-color:#1e3a5f;width:13px;height:13px;flex-shrink:0}
+        .slk-action-row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+        .slk-cancel-btn{padding:7px 14px;border-radius:7px;border:1.5px solid #e5e7eb;background:white;cursor:pointer;font-size:12px;color:#6b7280}
+        .slk-cancel-btn:hover{background:#f9fafb}
+        .slk-gen-btn{padding:7px 16px;border-radius:7px;border:none;background:#1e3a5f;color:white;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s}
+        .slk-gen-btn:hover{background:#163058}
+        #toast{position:fixed;bottom:20px;right:20px;background:#1f2937;color:white;padding:10px 16px;border-radius:8px;font-size:12.5px;display:none;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+        #toast.success{background:#059669}#toast.error{background:#dc2626}
     </style>
 </head>
 <body>
@@ -336,6 +447,7 @@
               <th style="color:#a7f3d0;min-width:160px" onclick="sortTableByHeader('bank_branch')">Branch <span id="sicon_bank_branch" class="sort-icon">⇅</span></th>
               <th style="color:#ffffff;min-width:200px" onclick="sortTableByHeader('customer_name')">Lead Name <span id="sicon_customer_name" class="sort-icon">⇅</span></th>
               <th style="min-width:130px" onclick="sortTableByHeader('phone_number')">Contact <span id="sicon_phone_number" class="sort-icon">⇅</span></th>
+              <th style="color:#fbbf24;min-width:280px"><i class="fas fa-folder-open me-1"></i>Solar Documents & Links</th>
               <th style="color:#34d399;min-width:180px" onclick="sortTableByHeader('ground_support_name')"><i class="fas fa-user-gear me-1"></i>Ground Support <span id="sicon_ground_support_name" class="sort-icon">⇅</span></th>
               <th style="color:#c084fc;min-width:180px" onclick="sortTableByHeader('uport_staff_name')"><i class="fas fa-user-tie me-1"></i>Up-port Staff <span id="sicon_uport_staff_name" class="sort-icon">⇅</span></th>
               <th style="color:#60a5fa;min-width:100px" onclick="sortTableByHeader('stage')">Stage <span id="sicon_stage" class="sort-icon">⇅</span></th>
@@ -376,13 +488,15 @@
         let currentHeaderCol = 'ground_source_name';
         let currentHeaderDir = 'asc';
 
-        document.addEventListener("DOMContentLoaded", async function() {
-            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
-            StaffHeader.inject('Field staff leads', 'fas fa-users-gear');
-            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
-            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
-
+        document.addEventListener("DOMContentLoaded", function() {
             loadBankLeads();
+
+            if (typeof StaffSidebar !== 'undefined') StaffSidebar.init();
+            if (typeof StaffHeader !== 'undefined') {
+                StaffHeader.inject('Field staff leads', 'fas fa-users-gear');
+                StaffHeader.init();
+            }
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
         });
 
         let expandedSummaryGroups = new Set();
@@ -571,8 +685,8 @@
                     document.getElementById('bankTableBody').innerHTML = `
                         <tr><td colspan="16" class="text-center text-danger py-5">
                             <i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>
-                            <strong>${escapeHtml(errorMsg)}</strong><br>
-                            <button class="btn btn-sm btn-outline-danger mt-2" onclick="fetchBankLeads()">
+                            <strong>${esc(errorMsg)}</strong><br>
+                            <button class="btn btn-sm btn-outline-danger mt-2" onclick="loadBankLeads()">
                                 <i class="fas fa-sync-alt me-1"></i>Retry
                             </button>
                         </td></tr>`;
@@ -584,8 +698,8 @@
                     <tr><td colspan="16" class="text-center text-danger py-5">
                         <i class="fas fa-exclamation-circle fa-2x mb-2"></i><br>
                         <strong>Network or Server Error</strong><br>
-                        <small class="text-muted">Unable to connect to bank leads service.</small><br>
-                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="fetchBankLeads()">
+                        <small class="text-muted">${esc(err.message || 'Unable to connect to bank leads service.')}</small><br>
+                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="loadBankLeads()">
                             <i class="fas fa-sync-alt me-1"></i>Retry
                         </button>
                     </td></tr>`;
@@ -1032,6 +1146,14 @@
                         <span class="clickable-label" onclick="applyCustomFilter('search', '${escJs(l.customer_name)}')" title="Click to filter by Lead Name: ${esc(l.customer_name)}">${esc(l.customer_name)}</span>
                     </td>
                     <td><a href="tel:${esc(l.phone_number)}" style="color:#2563eb;text-decoration:none;font-weight:600"><i class="fas fa-phone-alt me-1"></i>${esc(l.phone_number)}</a></td>
+                    <td style="white-space:nowrap">
+                        <button class="btn btn-sm btn-outline-success py-0 px-2 text-nowrap" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'discom_link')" title="DISCOM Document Link" style="font-size:10.5px;font-weight:700">
+                            <i class="fas fa-bolt me-1"></i>DISCOM
+                        </button>
+                        <button class="btn btn-sm btn-outline-info py-0 px-2 text-nowrap ms-1" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'bank_link')" title="Bank Document Link" style="font-size:10.5px;font-weight:700">
+                            <i class="fas fa-university me-1"></i>Bank
+                        </button>
+                    </td>
                     <td style="color:#059669;font-weight:600">
                         <i class="fas fa-user-gear me-1"></i><span class="clickable-label" onclick="applyCustomFilter('groundSupport', '${escJs(gsStaffName)}')" title="Click to filter by Ground Support: ${esc(gsStaffName)}">${esc(gsStaffName)}</span>${gsSupportCallBtn}
                     </td>
@@ -1101,9 +1223,10 @@
                     </div>
 
                     <div class="d-flex flex-wrap gap-1 pt-2 border-top">
-                        <a href="tel:${esc(l.phone_number)}" class="btn btn-sm btn-outline-primary py-1 px-2 flex-grow-1" style="font-size:11px"><i class="fas fa-phone-alt me-1"></i>Call Lead</a>
-                        ${l.ground_source_phone ? `<a href="tel:${esc(l.ground_source_phone)}" class="btn btn-sm btn-outline-warning py-1 px-2 flex-grow-1" style="font-size:11px"><i class="fas fa-phone-alt me-1"></i>Call Source (${esc(l.ground_source_phone)})</a>` : ''}
-                        ${l.ground_support_phone ? `<a href="tel:${esc(l.ground_support_phone)}" class="btn btn-sm btn-outline-success py-1 px-2 flex-grow-1" style="font-size:11px"><i class="fas fa-phone-alt me-1"></i>Call Support (${esc(l.ground_support_phone)})</a>` : ''}
+                        <button class="btn btn-sm btn-outline-success py-1 px-2 flex-grow-1" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'discom_link')" style="font-size:11px;font-weight:700"><i class="fas fa-bolt me-1"></i>DISCOM</button>
+                        <button class="btn btn-sm btn-outline-info py-1 px-2 flex-grow-1" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'bank_link')" style="font-size:11px;font-weight:700"><i class="fas fa-university me-1"></i>Bank</button>
+                        <a href="tel:${esc(l.phone_number)}" class="btn btn-sm btn-outline-primary py-1 px-2 flex-grow-1" style="font-size:11px"><i class="fas fa-phone-alt me-1"></i>Call</a>
+                        ${l.ground_source_phone ? `<a href="tel:${esc(l.ground_source_phone)}" class="btn btn-sm btn-outline-warning py-1 px-2 flex-grow-1" style="font-size:11px"><i class="fas fa-phone-alt me-1"></i>Source</a>` : ''}
                         <a href="${l.google_maps_url}" target="_blank" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size:11px"><i class="fas fa-map-marker-alt me-1"></i>Map</a>
                     </div>
                 </div>`;
@@ -1295,13 +1418,14 @@
                                     <th>Stage Days</th>
                                     <th>Lead Name</th>
                                     <th>Contact</th>
+                                    <th style="color:#fbbf24">Documents & Links</th>
                                     <th>Stage</th>
                                     <th class="text-end">Deal Value</th>
                                 </tr>
                             </thead>
                             <tbody>`;
                     g.leads.forEach((l, idx) => {
-                        const lVal = l.deal_value ? `₹${(l.deal_value / 100000).toFixed(2)}L` : '—';
+                        const lVal = l.deal_value ? ('₹' + (l.deal_value / 100000).toFixed(2) + 'L') : '—';
                         const gsStaffName = l.ground_support_name || l.field_staff_name || '—';
                         const stageLabel = l.solar_pipeline_stage || l.stage || (currentMainTab === 'balance-pending' ? 'Bal Pending' : 'At Bank');
                         html += `<tr>
@@ -1312,6 +1436,10 @@
                             <td><span class="badge bg-secondary">${l.stage_days}d</span></td>
                             <td class="fw-bold text-dark">${esc(l.customer_name)}</td>
                             <td><a href="tel:${esc(l.phone_number)}" class="text-decoration-none fw-semibold"><i class="fas fa-phone-alt me-1"></i>${esc(l.phone_number)}</a></td>
+                            <td style="white-space:nowrap">
+                                <button class="btn btn-sm btn-outline-success py-0 px-2 text-nowrap" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'discom_link')" title="DISCOM Document Link" style="font-size:10px;font-weight:700"><i class="fas fa-bolt me-1"></i>DISCOM</button>
+                                <button class="btn btn-sm btn-outline-info py-0 px-2 text-nowrap ms-1" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'bank_link')" title="Bank Document Link" style="font-size:10px;font-weight:700"><i class="fas fa-university me-1"></i>Bank</button>
+                            </td>
                             <td><span class="badge bg-info text-dark px-2 py-1" style="font-size:10px;font-weight:700">${esc(stageLabel)}</span></td>
                             <td class="text-end fw-bold text-success">${lVal}</td>
                         </tr>`;
@@ -1435,6 +1563,7 @@
                                     <th>Bank & Branch</th>
                                     <th>Lead Name</th>
                                     <th>Contact</th>
+                                    <th style="color:#fbbf24">Documents & Links</th>
                                     <th>Stage Days</th>
                                     <th>Ground Support</th>
                                     <th>Stage</th>
@@ -1443,7 +1572,7 @@
                             </thead>
                             <tbody>`;
                     g.leads.forEach((l, idx) => {
-                        const lVal = l.deal_value ? `₹${(l.deal_value / 100000).toFixed(2)}L` : '—';
+                        const lVal = l.deal_value ? ('₹' + (l.deal_value / 100000).toFixed(2) + 'L') : '—';
                         const gsStaffName = l.ground_support_name || l.field_staff_name || '—';
                         const stageLabel = l.solar_pipeline_stage || l.stage || (currentMainTab === 'balance-pending' ? 'Bal Pending' : 'At Bank');
                         html += `<tr>
@@ -1452,6 +1581,10 @@
                             <td class="fw-bold text-success">${esc(l.bank_name || '—')} (${esc(l.bank_branch || 'N/A')})</td>
                             <td class="fw-bold text-dark">${esc(l.customer_name)}</td>
                             <td><a href="tel:${esc(l.phone_number)}" class="text-decoration-none fw-semibold"><i class="fas fa-phone-alt me-1"></i>${esc(l.phone_number)}</a></td>
+                            <td style="white-space:nowrap">
+                                <button class="btn btn-sm btn-outline-success py-0 px-2 text-nowrap" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'discom_link')" title="DISCOM Document Link" style="font-size:10px;font-weight:700"><i class="fas fa-bolt me-1"></i>DISCOM</button>
+                                <button class="btn btn-sm btn-outline-info py-0 px-2 text-nowrap ms-1" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'bank_link')" title="Bank Document Link" style="font-size:10px;font-weight:700"><i class="fas fa-university me-1"></i>Bank</button>
+                            </td>
                             <td><span class="badge bg-secondary">${l.stage_days}d</span></td>
                             <td class="fw-semibold text-success">${esc(gsStaffName)}</td>
                             <td><span class="badge bg-info text-dark px-2 py-1" style="font-size:10px;font-weight:700">${esc(stageLabel)}</span></td>
@@ -1466,6 +1599,584 @@
 
             container.innerHTML = html;
         }
+
+        // ── Solar Document Management JS ──────────────────────────────────────────────
+        const JPEG_DL_TYPES = new Set(['adhar','passport_photo','signature','bank_book']);
+        const SDOC_GROUPS = {
+          consumer:[
+            {group:'Identity & Ownership',docs:[
+              {type:'adhar',label:'Aadhaar Card'},
+              {type:'passport_photo',label:'Passport Photo'},
+              {type:'signature',label:'Signature Document'},
+              {type:'pan',label:'PAN Card'},
+              {type:'powerbill',label:'Electricity Bill (Powerbill)'},
+            ]},
+            {group:'Financial',docs:[
+              {type:'bank_book',label:'Bank Book'},
+              {type:'bank_statement',label:'Bank Statement'},
+              {type:'bank_submission_letter',label:'Bank Submission Letter'},
+              {type:'house_tax',label:'House Tax Receipt'},
+              {type:'bank_loan_application',label:'Bank Loan Application'},
+            ]},
+            {group:'Site & Technical',docs:[
+              {type:'roof_top_photo',label:'Roof Top Photo'},
+              {type:'geotagging_photo',label:'Geo Solar Photo'},
+              {type:'geo_location_photo',label:'Geo Location Photo'},
+              {type:'solar_rooftop_registration',label:'Solar Rooftop Registration'},
+              {type:'technical_installation_details',label:'Technical Installation Details'},
+            ]},
+            {group:'Application & Process',docs:[
+              {type:'quotation',label:'Quotation'},
+              {type:'feasibility_letter',label:'Feasibility Letter'},
+              {type:'etoken',label:'Etoken'},
+              {type:'acknowledgement',label:'Acknowledgement'},
+              {type:'net_meter_agreement',label:'Net Meter Agreement'},
+              {type:'net_meter_application',label:'Net Meter Application'},
+            ]},
+            {group:'Certificates & Completion',docs:[
+              {type:'dcr_certificate',label:'DCR Certificate'},
+              {type:'invoice',label:'Invoice'},
+              {type:'installation_certificate',label:'Installation Certificate'},
+              {type:'annexure_a',label:'Annexure-A'},
+              {type:'annexure_c',label:'Annexure-C (Project Completion)'},
+              {type:'annexure_c_technical',label:'Annexure-C (Technical Details)'},
+              {type:'synchronisation_certificate',label:'Synchronisation Certificate'},
+              {type:'commissioning_test_report',label:'Commissioning Test Report: Solar Project 3KW'},
+              {type:'annexure_iv',label:'Annexure-IV Work Completion Report'},
+            ]},
+          ],
+          co_applicant:[
+            {group:'Co-Applicant Documents',docs:[
+              {type:'co_adhar',label:'Aadhaar Card'},
+              {type:'co_pan',label:'PAN Card'},
+              {type:'co_bank_statement',label:'Bank Statement'},
+            ]},
+          ],
+        };
+
+        const SDOC_BUNDLE = {
+          bank_link:{label:'Bank Documents',section:'bank',docs:[
+            {type:'adhar',label:'Aadhaar Card'},
+            {type:'pan',label:'PAN Card'},
+            {type:'powerbill',label:'Electricity Bill'},
+            {type:'bank_book',label:'Bank Book'},
+            {type:'house_tax',label:'House Tax Receipt'},
+            {type:'quotation',label:'Quotation'},
+            {type:'feasibility_letter',label:'Feasibility Letter'},
+          ]},
+          discom_link:{label:'DISCOM Documents',section:'discom',docs:[
+            {type:'annexure_a',label:'Annexure-A'},
+            {type:'annexure_c',label:'Annexure-C (Project Completion)'},
+            {type:'annexure_c_technical',label:'Annexure-C (Technical Details)'},
+            {type:'synchronisation_certificate',label:'Synchronisation Certificate'},
+            {type:'dcr_certificate',label:'DCR Certificate'},
+            {type:'geotagging_photo',label:'Geo Tagging Photo'},
+          ]},
+        };
+
+        let _sdocLeadId = null, _sdocLeadName = '', _sdocCache = [], _sdocTab = 'consumer', _sdocBusy = false;
+
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('toast');
+            if (!t) return alert(msg);
+            t.textContent = msg; t.className = type; t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 3500);
+        }
+
+        function openSolarDocs(leadId, leadName) {
+          _sdocLeadId = leadId; _sdocLeadName = leadName || ('Lead #' + leadId);
+          _sdocTab = 'bank_link'; _sdocCache = [];
+          document.getElementById('sdocOverlay').classList.add('open');
+          document.getElementById('sdocModalTitle').textContent = _sdocLeadName;
+          document.querySelectorAll('.sdoc-tab').forEach(t => t.classList.remove('active'));
+          const bTab = document.querySelector('.sdoc-tab[data-tab="bank_link"]');
+          if (bTab) bTab.classList.add('active');
+          loadSdocs();
+        }
+
+        function openSolarDocsDirectTab(leadId, leadName, tabName) {
+          _sdocLeadId = leadId; _sdocLeadName = leadName || ('Lead #' + leadId);
+          _sdocTab = tabName; _sdocCache = [];
+          document.getElementById('sdocOverlay').classList.add('open');
+          document.getElementById('sdocModalTitle').textContent = _sdocLeadName;
+          document.querySelectorAll('.sdoc-tab').forEach(t => t.classList.remove('active'));
+          const targetTab = document.querySelector(`.sdoc-tab[data-tab="${tabName}"]`);
+          if (targetTab) targetTab.classList.add('active');
+          loadSdocs();
+        }
+
+        function closeSolarDocs() { document.getElementById('sdocOverlay').classList.remove('open'); _sdocLeadId = null; _sdocCache = []; }
+
+        async function loadSdocs() {
+          if (!_sdocLeadId) return;
+          const fetchFn = (typeof staffFetch === 'function') ? staffFetch : fetch;
+          document.getElementById('sdocBody').innerHTML = '<div style="text-align:center;padding:30px;color:#9ca3af;font-size:12px"><i class="fas fa-spinner fa-spin"></i> Loading documents...</div>';
+          try {
+            const r = await fetchFn('/api/v1/crm/leads/' + _sdocLeadId + '/solar-docs');
+            const d = await r.json();
+            _sdocCache = d.docs || [];
+            renderSdocs();
+          } catch(e) {
+            document.getElementById('sdocBody').innerHTML = '<div style="text-align:center;padding:30px;color:#ef4444;font-size:12px"><i class="fas fa-exclamation-circle"></i> Failed to load documents</div>';
+          }
+        }
+
+        function renderSdocs() {
+          const um = {}; _sdocCache.forEach(d => { um[d.doc_type] = d; });
+
+          ['consumer','co_applicant'].forEach(tab => {
+            const gs = SDOC_GROUPS[tab] || []; let tot = 0, upl = 0;
+            gs.forEach(g => g.docs.forEach(d => { tot++; if (um[d.type]) upl++; }));
+            const el = document.getElementById('sdoc_cnt_' + tab); if (el) el.textContent = upl + '/' + tot;
+          });
+
+          ['bank_link','discom_link'].forEach(tab => {
+            const bd = SDOC_BUNDLE[tab]; if (!bd) return;
+            const upl = bd.docs.filter(d => um[d.type]).length;
+            const el = document.getElementById('sdoc_cnt_' + tab);
+            if (el) el.textContent = upl + '/' + bd.docs.length;
+          });
+
+          if (_sdocTab === 'bank_link' || _sdocTab === 'discom_link') { renderBundleTab(_sdocTab, um); return; }
+
+          const groups = SDOC_GROUPS[_sdocTab] || [];
+          let gTot = 0, gUpl = 0; groups.forEach(g => g.docs.forEach(d => { gTot++; if (um[d.type]) gUpl++; }));
+          document.getElementById('sdocFooterProg').innerHTML = '<b>' + gUpl + '</b> of <b>' + gTot + '</b> documents uploaded in this tab';
+          const cat = _sdocTab === 'consumer' ? 'consumer' : 'co_applicant';
+          const html = groups.map(g => {
+            const cnt = g.docs.filter(d => um[d.type]).length;
+            const rows = g.docs.map(doc => buildSdocRow(doc, um[doc.type], cat)).join('');
+            return '<div class="sdoc-group"><div class="sdoc-group-title">' + esc(g.group) + '<span class="sdoc-g-count">' + cnt + '/' + g.docs.length + '</span></div>' + rows + '</div>';
+          }).join('');
+          document.getElementById('sdocBody').innerHTML = html || '<div style="text-align:center;padding:20px;color:#9ca3af">No documents</div>';
+        }
+
+        function renderBundleTab(tab, um) {
+          const bd = SDOC_BUNDLE[tab];
+          const tot = bd.docs.length, avail = bd.docs.filter(d => um[d.type]).length, pending = tot - avail;
+          const hasAny = avail > 0;
+          document.getElementById('sdocFooterProg').innerHTML = '<b>' + avail + '</b> of <b>' + tot + '</b> documents ready · <b>' + pending + '</b> pending';
+          const statsHtml = '<div class="sdoc-bundle-stats">'
+            + '<div class="sdoc-bundle-stat"><div class="sdoc-bundle-stat-num" style="color:#1e3a5f">' + tot + '</div><div class="sdoc-bundle-stat-lbl">Required</div></div>'
+            + '<div class="sdoc-bundle-stat"><div class="sdoc-bundle-stat-num" style="color:#16a34a">' + avail + '</div><div class="sdoc-bundle-stat-lbl">Available</div></div>'
+            + '<div class="sdoc-bundle-stat"><div class="sdoc-bundle-stat-num" style="color:' + (pending > 0 ? '#dc2626' : '#9ca3af') + '">' + pending + '</div><div class="sdoc-bundle-stat-lbl">Pending</div></div>'
+            + '</div>';
+          const actionsHtml = '<div class="sdoc-bundle-actions">'
+            + '<button class="sdoc-bundle-btn" id="sdocBundleDlBtn" style="background:#1e3a5f;color:#fff" onclick="downloadSdocBundle(\'' + bd.section + '\')"' + (hasAny ? '' : ' disabled') + '><i class="fas fa-file-pdf"></i> Download All as PDF</button>'
+            + '<button class="sdoc-bundle-btn" id="sdocBundleShareBtn" style="background:#16a34a;color:#fff" onclick="shareSdocBundle(\'' + tab + '\')"' + (hasAny ? '' : ' disabled') + '><i class="fas fa-share-alt"></i> Share Link</button>'
+            + '</div>';
+          const rowsHtml = bd.docs.map(doc => {
+            const ud = um[doc.type]; const isUp = !!ud;
+            const viewBtn = isUp && ud.view_url ? '<a href="' + esc(ud.view_url) + '" target="_blank" class="sdoc-btn view" style="font-size:11px;padding:4px 10px"><i class="fas fa-eye"></i> View / Download</a>' : '';
+            const badge = isUp ? '' : `<span class="sdoc-bundle-pending-tag">Pending</span>`;
+            return '<div class="sdoc-bundle-row ' + (isUp ? 'uploaded' : 'pending') + '"><div class="sdoc-bundle-label"><span class="sdoc-status-dot ' + (isUp ? 'uploaded' : 'pending') + '"></span>' + esc(doc.label) + badge + '</div>' + viewBtn + '</div>';
+          }).join('');
+          document.getElementById('sdocBody').innerHTML = statsHtml + actionsHtml + rowsHtml;
+        }
+
+        async function downloadSdocBundle(section) {
+          const fetchFn = (typeof staffFetch === 'function') ? staffFetch : fetch;
+          const btn = document.getElementById('sdocBundleDlBtn');
+          if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparing PDF…'; }
+          try {
+            const r = await fetchFn('/api/v1/crm/leads/' + _sdocLeadId + '/solar-docs/bundle?section=' + section);
+            if (!r.ok) { const d = await r.json().catch(() => ({})); showToast(d.detail || 'Download failed', 'error'); return; }
+            const blob = await r.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = _sdocLeadName.replace(/[^a-z0-9]/gi, '_') + '_' + section + '_docs.pdf';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('PDF downloaded successfully', 'success');
+          } catch(e) { showToast('Download failed: ' + e.message, 'error'); }
+          finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf"></i> Download All as PDF'; } }
+        }
+
+        async function shareSdocBundle(tab) {
+          const fetchFn = (typeof staffFetch === 'function') ? staffFetch : fetch;
+          const bd = SDOC_BUNDLE[tab]; if (!bd) return;
+          const btn = document.getElementById('sdocBundleShareBtn');
+          if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…'; }
+          try {
+            const docTypes = bd.docs.map(d => d.type);
+            const r = await fetchFn('/api/v1/crm/leads/' + _sdocLeadId + '/share-link', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ doc_types: docTypes })
+            });
+            const d = await r.json();
+            if (!d.success) throw new Error(d.detail || 'Failed');
+            showBundleSharePopup(bd.label, d.share_url, d.expires_at);
+          } catch(e) { showToast('Share link failed: ' + e.message, 'error'); }
+          finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-share-alt"></i> Share Link'; } }
+        }
+
+        function showBundleSharePopup(sectionLabel, url, expiresAt) {
+          document.getElementById('bspTitle').textContent = sectionLabel + ' – Share Link';
+          const exp = new Date(expiresAt);
+          document.getElementById('bspExpiry').textContent = 'Valid until ' + exp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + ', ' + exp.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+          const urlEl = document.getElementById('bspUrl'); urlEl.textContent = url; urlEl.dataset.url = url;
+          document.getElementById('bspCopyBtn').innerHTML = '<i class="fas fa-copy"></i> Copy Link';
+          document.getElementById('bspCopyBtn').style.background = '';
+          document.getElementById('bundleSharePopup').classList.add('open');
+        }
+
+        function closeBundleSharePopup() { document.getElementById('bundleSharePopup').classList.remove('open'); }
+
+        function copyBundleShareUrl() {
+          const url = document.getElementById('bspUrl').dataset.url || document.getElementById('bspUrl').textContent;
+          if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(url).then(() => {
+              const btn = document.getElementById('bspCopyBtn');
+              btn.innerHTML = '<i class="fas fa-check"></i> Copied!'; btn.style.background = '#16a34a';
+              setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copy Link'; btn.style.background = ''; }, 2000);
+            });
+          } else {
+            const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+            showToast('Link copied', 'success');
+          }
+        }
+
+        function whatsappBundleShare() {
+          const url = document.getElementById('bspUrl').dataset.url || document.getElementById('bspUrl').textContent;
+          const msg = encodeURIComponent('Please find the document link below.\nYou can view all documents and download them as a single PDF file:\n\n' + url);
+          window.open('https://web.whatsapp.com/send?text=' + msg, '_blank');
+        }
+
+        function buildSdocRow(doc, ud, cat) {
+          const isUp = !!ud;
+          const iid = 'sdnum_' + doc.type;
+          const numVal = ud ? (ud.doc_number || '') : '';
+          const saveBtn = isUp ? '<button class="sdoc-num-save" data-doc-id="' + ud.id + '" onclick="saveSdocNumber(' + ud.id + ',\'' + iid + '\')" title="Save number"><i class="fas fa-save"></i></button>' : '';
+          const numRow = '<div class="sdoc-number-row"><label>Doc No.:</label><input class="sdoc-num-input" id="' + iid + '" type="text" placeholder="' + esc(doc.label) + ' number" value="' + esc(numVal) + '" onkeypress="if(event.key===\'Enter\'&&' + isUp + ')saveSdocNumber(' + (ud ? ud.id : 0) + ',\'' + iid + '\')">' + saveBtn + '</div>';
+          const meta = isUp ? '<div class="sdoc-meta"><span><i class="fas fa-file-alt" style="font-size:8px"></i> ' + esc(ud.original_name || '') + '</span><span><i class="fas fa-user" style="font-size:8px"></i> ' + esc(ud.uploaded_by_name || '') + '</span><span><i class="fas fa-clock" style="font-size:8px"></i> ' + (ud.uploaded_at ? new Date(ud.uploaded_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : '') + ' </span></div>' : '';
+          const upBtn = '<button class="sdoc-btn ' + (isUp ? 'reupload' : 'upload') + '" onclick="triggerSdocUpload(\'' + doc.type + '\',\'' + cat + '\',\'' + iid + '\',this)"' + (_sdocBusy ? ' disabled' : '') + '><i class="fas fa-' + (isUp ? 'sync' : 'upload') + '"></i> ' + (isUp ? 'Re-upload' : 'Upload') + '</button>';
+          const viewBtn = isUp && ud.view_url ? '<a href="' + esc(ud.view_url) + '" target="_blank" class="sdoc-btn view"><i class="fas fa-eye"></i> View / Download</a>' : '';
+          const delBtn = isUp ? '<button class="sdoc-btn del" onclick="deleteSdoc(' + ud.id + ',\'' + esc(doc.label) + '\')"><i class="fas fa-trash"></i></button>' : '';
+          return '<div class="sdoc-row' + (isUp ? ' uploaded' : '') + '" id="sdoc_row_' + doc.type + '"><div class="sdoc-info"><div class="sdoc-label"><span class="sdoc-status-dot ' + (isUp ? 'uploaded' : 'pending') + '"></span>' + esc(doc.label) + '</div>' + numRow + meta + '</div><div class="sdoc-actions">' + upBtn + viewBtn + delBtn + '</div></div>';
+        }
+
+        async function saveSdocNumber(docId, iid) {
+          const fetchFn = (typeof staffFetch === 'function') ? staffFetch : fetch;
+          const val = (document.getElementById(iid)?.value || '').trim();
+          const btn = document.querySelector('[data-doc-id="' + docId + '"]');
+          if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+          try {
+            const r = await fetchFn('/api/v1/crm/solar-docs/' + docId + '/number', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ doc_number: val }) });
+            const d = await r.json();
+            if (d.success) {
+              const cached = _sdocCache.find(c => c.id === docId); if (cached) cached.doc_number = val;
+              showToast('Document number saved', 'success');
+              await loadSdocs();
+            } else showToast(d.detail || 'Save failed', 'error');
+          } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
+          finally { if (btn) { btn.disabled = false; } }
+        }
+
+        function switchSdocTab(tab) {
+          _sdocTab = tab;
+          document.querySelectorAll('.sdoc-tab').forEach(t => t.classList.remove('active'));
+          document.querySelector('.sdoc-tab[data-tab="' + tab + '"]').classList.add('active');
+          renderSdocs();
+        }
+
+        function triggerSdocUpload(docType, cat, iid, btn) {
+          if (_sdocBusy) return;
+          const fi = document.getElementById('sdocFileInput');
+          fi.onchange = async () => {
+            if (!fi.files.length) return;
+            const docNum = document.getElementById(iid)?.value?.trim() || '';
+            await doSdocUpload(docType, cat, docNum, fi.files[0]);
+            fi.value = '';
+          };
+          fi.click();
+        }
+
+        async function doSdocUpload(docType, cat, docNum, file) {
+          if (!_sdocLeadId || _sdocBusy) return;
+          const fetchFn = (typeof staffFetch === 'function') ? staffFetch : fetch;
+          _sdocBusy = true;
+          document.querySelectorAll('.sdoc-btn.upload,.sdoc-btn.reupload').forEach(b => b.disabled = true);
+          const bar = document.getElementById('sdocUploadBar'); const fill = document.getElementById('sdocBar');
+          if (bar) { bar.style.display = 'block'; fill.style.width = '30%'; }
+          try {
+            const fd = new FormData();
+            fd.append('doc_type', docType); fd.append('doc_category', cat); fd.append('doc_number', docNum); fd.append('file', file);
+            if (fill) fill.style.width = '60%';
+            const r = await fetchFn('/api/v1/crm/leads/' + _sdocLeadId + '/solar-docs/upload', { method: 'POST', body: fd });
+            const d = await r.json();
+            if (fill) fill.style.width = '100%';
+            if (d.success) { showToast('Document uploaded successfully', 'success'); await loadSdocs(); }
+            else showToast(d.detail || 'Upload failed', 'error');
+          } catch(e) { showToast('Upload failed: ' + e.message, 'error'); }
+          finally {
+            _sdocBusy = false;
+            document.querySelectorAll('.sdoc-btn.upload,.sdoc-btn.reupload').forEach(b => b.disabled = false);
+            if (bar) { setTimeout(() => { bar.style.display = 'none'; if (fill) fill.style.width = '0%'; }, 800); }
+          }
+        }
+
+        async function deleteSdoc(docId, docLabel) {
+          if (!confirm('Delete "' + docLabel + '"? This cannot be undone.')) return;
+          const fetchFn = (typeof staffFetch === 'function') ? staffFetch : fetch;
+          try {
+            const r = await fetchFn('/api/v1/crm/solar-docs/' + docId, { method: 'DELETE' });
+            const d = await r.json();
+            if (d.success) { showToast('Document deleted', 'success'); await loadSdocs(); }
+            else showToast(d.detail || 'Delete failed', 'error');
+          } catch(e) { showToast('Delete failed: ' + e.message, 'error'); }
+        }
+
+        // ── Custom Share Link Modal JS ────────────────────────────────────────────────────
+        const _SLK_GROUPS = [
+          {group:'Identity & Ownership', docs:[
+            {type:'adhar',label:'Aadhaar Card'},{type:'passport_photo',label:'Passport Photo'},
+            {type:'pan',label:'PAN Card'},{type:'powerbill',label:'Electricity Bill'},
+          ]},
+          {group:'Financial', docs:[
+            {type:'bank_book',label:'Bank Book'},{type:'bank_statement',label:'Bank Statement'},
+            {type:'bank_submission_letter',label:'Bank Submission Letter'},
+          ]},
+          {group:'Site & Technical', docs:[
+            {type:'roof_top_photo',label:'Roof Top Photo'},
+            {type:'geotagging_photo',label:'Geo Solar Photo'},
+            {type:'geo_location_photo',label:'Geo Location Photo'},
+            {type:'solar_rooftop_registration',label:'Solar Rooftop Registration'},
+            {type:'technical_installation_details',label:'Technical Installation Details'},
+          ]},
+          {group:'Application & Process', docs:[
+            {type:'quotation',label:'Quotation'},
+            {type:'feasibility_letter',label:'Feasibility Letter'},
+            {type:'etoken',label:'Etoken'},
+            {type:'acknowledgement',label:'Acknowledgement'},
+            {type:'net_meter_agreement',label:'Net Meter Agreement'},
+            {type:'net_meter_application',label:'Net Meter Application'},
+          ]},
+          {group:'Certificates & Completion', docs:[
+            {type:'dcr_certificate',label:'DCR Certificate'},
+            {type:'invoice',label:'Invoice'},
+            {type:'installation_certificate',label:'Installation Certificate'},
+            {type:'annexure_a',label:'Annexure-A'},
+            {type:'annexure_c',label:'Annexure-C (Project Completion)'},
+            {type:'annexure_c_technical',label:'Annexure-C (Technical Details)'},
+            {type:'annexure_iv',label:'Annexure-IV Work Completion'},
+            {type:'synchronisation_certificate',label:'Synchronisation Certificate'},
+            {type:'commissioning_test_report',label:'Commissioning Test Report'},
+          ]},
+          {group:'Co-Applicant Documents', docs:[
+            {type:'co_adhar',label:'Aadhaar Card (Co-App)'},
+            {type:'co_pan',label:'PAN Card (Co-App)'},
+            {type:'co_bank_statement',label:'Bank Statement (Co-App)'},
+          ]},
+        ];
+        let _slkLeadId = null;
+        function _buildSlkChecklist() {
+          return _SLK_GROUPS.map(g => {
+            const checks = g.docs.map(d =>
+              `<label class="slk-doc-check"><input type="checkbox" class="slk-doc-chk" value="${d.type}" checked onchange="slkUpdateSelCount()"> ${d.label}</label>`
+            ).join('');
+            return `<div class="slk-doc-group"><div class="slk-doc-group-title">${g.group}</div>${checks}</div>`;
+          }).join('');
+        }
+
+        function createShareLink(leadId, leadName) {
+          _slkLeadId = leadId;
+          document.getElementById('slkLeadName').textContent = leadName;
+          const inner = document.getElementById('slkDocChecklistInner');
+          if (!inner.dataset.built) { inner.innerHTML = _buildSlkChecklist(); inner.dataset.built = '1'; }
+          document.getElementById('slkPhase1').style.display = '';
+          document.getElementById('slkPhase2').style.display = 'none';
+          document.querySelectorAll('[name="slkMode"]').forEach(r => { r.checked = r.value === 'all'; });
+          document.getElementById('slkDocChecklist').style.display = 'none';
+          document.querySelectorAll('.slk-doc-chk').forEach(c => c.checked = true);
+          slkUpdateSelCount();
+          const btn = document.getElementById('slkGenBtn');
+          btn.disabled = false; btn.innerHTML = '<i class="fas fa-link"></i> Generate Link';
+          document.getElementById('slkOverlay').classList.add('open');
+        }
+
+        function slkOnModeChange() {
+          const mode = document.querySelector('[name="slkMode"]:checked')?.value;
+          document.getElementById('slkDocChecklist').style.display = mode === 'selected' ? '' : 'none';
+        }
+
+        function slkUpdateSelCount() {
+          const total = document.querySelectorAll('.slk-doc-chk').length;
+          const checked = document.querySelectorAll('.slk-doc-chk:checked').length;
+          const el = document.getElementById('slkSelCount');
+          if (el) el.textContent = `${checked} of ${total} selected`;
+        }
+
+        function slkSelectAll(val) {
+          document.querySelectorAll('.slk-doc-chk').forEach(c => c.checked = val);
+          slkUpdateSelCount();
+        }
+
+        async function slkGenerate() {
+          const fetchFn = (typeof staffFetch === 'function') ? staffFetch : fetch;
+          const mode = document.querySelector('[name="slkMode"]:checked')?.value;
+          let docTypes = null;
+          if (mode === 'selected') {
+            docTypes = Array.from(document.querySelectorAll('.slk-doc-chk:checked')).map(c => c.value);
+            if (!docTypes.length) { showToast('Please select at least one document type.', 'error'); return; }
+          }
+          const btn = document.getElementById('slkGenBtn');
+          btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…';
+          try {
+            const body = docTypes ? { doc_types: docTypes } : {};
+            const r = await fetchFn(`/api/v1/crm/leads/${_slkLeadId}/share-link`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+            });
+            const d = await r.json();
+            if (!d.success) throw new Error(d.detail || 'Failed');
+            document.getElementById('slkUrlInput').value = d.share_url;
+            document.getElementById('slkCopyBtn').classList.remove('copied');
+            document.getElementById('slkCopyBtn').innerHTML = '<i class="fas fa-copy"></i> Copy';
+            const exp = new Date(d.expires_at);
+            document.getElementById('slkExpiryTime').textContent =
+              exp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + ', ' +
+              exp.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+            const noteEl = document.getElementById('slkShareNote');
+            const total = document.querySelectorAll('.slk-doc-chk').length;
+            if (docTypes && docTypes.length < total) {
+              noteEl.style.display = '';
+              noteEl.innerHTML = `<i class="fas fa-filter" style="color:#d97706"></i> <b>${docTypes.length} of ${total}</b> document types included in this link`;
+            } else { noteEl.style.display = 'none'; }
+            document.getElementById('slkPhase1').style.display = 'none';
+            document.getElementById('slkPhase2').style.display = '';
+          } catch(e) {
+            showToast('Share link failed: ' + e.message, 'error');
+          } finally {
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-link"></i> Generate Link';
+          }
+        }
+
+        function slkBack() {
+          document.getElementById('slkPhase1').style.display = '';
+          document.getElementById('slkPhase2').style.display = 'none';
+        }
+
+        function closeShareModal() {
+          document.getElementById('slkOverlay').classList.remove('open');
+        }
+
+        function copyShareLink() {
+          const inp = document.getElementById('slkUrlInput');
+          const btn = document.getElementById('slkCopyBtn');
+          navigator.clipboard.writeText(inp.value).then(() => {
+            btn.classList.add('copied'); btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2500);
+          }).catch(() => { inp.select(); document.execCommand('copy'); showToast('Link copied!', 'success'); });
+        }
+
+        function slkShareWhatsApp() {
+          const url = document.getElementById('slkUrlInput')?.value;
+          if (!url) { showToast('Generate a link first', 'error'); return; }
+          const leadName = document.getElementById('slkLeadName')?.textContent || '';
+          const msg = 'Solar Documents – ' + leadName + '\n' + url;
+          window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+        }
     </script>
+
+    <!-- Solar Documents Modal -->
+    <div class="sdoc-modal-overlay" id="sdocOverlay" onclick="if(event.target===this)closeSolarDocs()">
+      <div class="sdoc-modal">
+        <div class="sdoc-modal-header">
+          <div>
+            <h4><i class="fas fa-folder-open" style="margin-right:6px"></i>Solar Documents &mdash; <span id="sdocModalTitle"></span></h4>
+            <p>Upload and manage required solar documents for this lead</p>
+          </div>
+          <button class="sdoc-close-btn" onclick="closeSolarDocs()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="sdoc-tabs">
+          <div class="sdoc-tab active" data-tab="bank_link" onclick="switchSdocTab('bank_link')">🏦 Link for Bank <span class="sdoc-tab-count" id="sdoc_cnt_bank_link">0/7</span></div>
+          <div class="sdoc-tab" data-tab="discom_link" onclick="switchSdocTab('discom_link')">⚡ Link for DISCOM <span class="sdoc-tab-count" id="sdoc_cnt_discom_link">0/6</span></div>
+        </div>
+        <div class="sdoc-body" id="sdocBody">
+          <div style="text-align:center;padding:30px;color:#9ca3af;font-size:12px"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+        </div>
+        <div class="sdoc-footer">
+          <div class="sdoc-footer-prog" id="sdocFooterProg">—</div>
+          <div class="sdoc-upload-bar" id="sdocUploadBar"><div class="sdoc-bar" id="sdocBar"></div></div>
+        </div>
+      </div>
+    </div>
+    <input type="file" id="sdocFileInput" style="display:none" accept=".pdf,image/*">
+
+    <!-- Bank / DISCOM Share Popup -->
+    <div class="bundle-share-popup" id="bundleSharePopup" onclick="if(event.target===this)closeBundleSharePopup()">
+      <div class="bundle-share-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+          <div>
+            <p class="bsp-title" id="bspTitle">Document Share Link</p>
+            <p class="bsp-sub" id="bspExpiry"></p>
+          </div>
+          <button onclick="closeBundleSharePopup()" style="background:none;border:none;font-size:18px;color:#6b7280;cursor:pointer;padding:0 0 0 10px;line-height:1"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="bsp-url" id="bspUrl" onclick="this.style.background='#f0fdf4'" style="cursor:text;min-height:38px"></div>
+        <p style="font-size:10.5px;color:#6b7280;margin:0 0 12px;display:flex;align-items:center;gap:5px"><i class="fas fa-info-circle" style="color:#3b82f6"></i> Recipient can view all documents and download them as a single PDF file. Link expires in 6 hours.</p>
+        <div class="bsp-actions">
+          <button class="bsp-btn" id="bspCopyBtn" onclick="copyBundleShareUrl()" style="background:#1e3a5f;color:#fff"><i class="fas fa-copy"></i> Copy Link</button>
+          <button class="bsp-btn" onclick="whatsappBundleShare()" style="background:#25d366;color:#fff"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Share Link Modal -->
+    <div class="slk-overlay" id="slkOverlay" onclick="if(event.target===this)closeShareModal()">
+      <div class="slk-box">
+        <div class="slk-header">
+          <div>
+            <h4><i class="fas fa-share-alt" style="margin-right:6px"></i>Generate Document Share Link</h4>
+            <div class="slk-lead-name" id="slkLeadName"></div>
+          </div>
+          <button class="slk-close" onclick="closeShareModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="slk-body" id="slkPhase1">
+          <div class="slk-label">Select Document Sharing Mode</div>
+          <div class="slk-mode-row">
+            <label class="slk-radio">
+              <input type="radio" name="slkMode" value="all" checked onchange="slkOnModeChange()">
+              <div><b>Share All Available Documents</b><br><small style="color:#6b7280">Recipient gets 6-hour access to all uploaded documents for this lead</small></div>
+            </label>
+            <label class="slk-radio">
+              <input type="radio" name="slkMode" value="selected" onchange="slkOnModeChange()">
+              <div><b>Select Specific Document Types</b><br><small style="color:#6b7280">Restrict access to specific document categories only</small></div>
+            </label>
+          </div>
+          <div class="slk-doc-checklist" id="slkDocChecklist" style="display:none">
+            <div class="slk-chk-header">
+              <span id="slkSelCount">0 selected</span>
+              <button class="slk-chk-all-btn" onclick="slkSelectAll(true)">Select All</button>
+              <button class="slk-chk-all-btn" onclick="slkSelectAll(false)">Clear All</button>
+            </div>
+            <div class="slk-doc-checklist-inner" id="slkDocChecklistInner"></div>
+          </div>
+          <div class="slk-action-row">
+            <button class="slk-cancel-btn" onclick="closeShareModal()">Cancel</button>
+            <button class="slk-gen-btn" id="slkGenBtn" onclick="slkGenerate()"><i class="fas fa-link"></i> Generate Link</button>
+          </div>
+        </div>
+        <div class="slk-body" id="slkPhase2" style="display:none">
+          <div class="slk-label">Share Link (expires in 6 hours)</div>
+          <div class="slk-url-row">
+            <input type="text" class="slk-url-input" id="slkUrlInput" readonly onclick="this.select()">
+            <button class="slk-copy-btn" id="slkCopyBtn" onclick="copyShareLink()">
+              <i class="fas fa-copy"></i> Copy
+            </button>
+          </div>
+          <div class="slk-expiry">
+            <i class="fas fa-clock" style="color:#d97706"></i>
+            <span>Read-only access to lead details + documents. Expires at <b id="slkExpiryTime">—</b>.</span>
+          </div>
+          <div class="slk-doc-note" id="slkShareNote" style="display:none"></div>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button class="slk-back-btn btn btn-sm btn-outline-secondary" onclick="slkBack()"><i class="fas fa-arrow-left me-1"></i> Generate New Link</button>
+            <a class="slk-wa-btn" onclick="slkShareWhatsApp()" style="display:inline-flex;align-items:center;gap:6px;background:#25d366;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none"><i class="fab fa-whatsapp"></i> Share on WhatsApp</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" style="display:none"></div>
 </body>
 </html>

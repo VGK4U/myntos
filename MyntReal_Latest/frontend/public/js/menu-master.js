@@ -88,7 +88,8 @@ const MENU_MASTER = [
       { menu_code: "CALL_QUALITY_REVIEW", label: "Call Quality Review", route: "/staff/call-quality", audience: ["STAFF"] },
       { menu_code: "STAFF_OPERATOR_CALLS", label: "Operator Calls", route: "/staff/operator-calls", audience: ["STAFF"] },
       { menu_code: "CRM_SALES_REPORT", label: "Sales Team Report", route: "/staff/crm/sales-report", audience: ["STAFF"] },
-      { menu_code: "CRM_WA_INBOX", label: "WA Inbox (CRM)", route: "/staff/crm/whatsapp-inbox", icon: "fab fa-whatsapp", audience: ["STAFF"] }
+      { menu_code: "CRM_WA_INBOX", label: "WA Inbox (CRM)", route: "/staff/crm/whatsapp-inbox", icon: "fab fa-whatsapp", audience: ["STAFF"] },
+      { menu_code: "CRM_WA_BOT_HUB", label: "WhatsApp Bot Hub", route: "/staff/crm/whatsapp-bot", icon: "fab fa-whatsapp", audience: ["STAFF"] }
     ]
   },
   {

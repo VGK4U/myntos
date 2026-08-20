@@ -1,25 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import api from "@/lib/api";
 
 export default function CRMImportPage() {
   const [loading, setLoading] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
+  const [sheetUrl, setSheetUrl] = useState("");
 
-  const handlePreview = () => {
+  const handlePreview = async () => {
+    if (!sheetUrl) return;
     setLoading(true);
-    setTimeout(() => {
-      setPreviewData({
-        totalRows: 145, columns: 8, mapped: 6,
-        mappedFields: ["name", "phone", "city", "email", "source", "date"],
-        unmapped: ["utm_campaign", "timestamp"],
-        previewRows: [
-          { name: "Rahul Sharma", phone: "9876543210", city: "Hyderabad" },
-          { name: "Priya Patel", phone: "8765432109", city: "Bangalore" }
-        ]
-      });
+    try {
+      const res = await api.post('/staff/crm/import/preview', { url: sheetUrl });
+      setPreviewData(res.data);
+    } catch (err) {
+      console.error("Preview failed", err);
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -74,7 +73,13 @@ export default function CRMImportPage() {
         <div className="p-6 space-y-6">
           <div>
             <label className="block text-sm font-bold text-gray-900 mb-2">Google Sheet URL <span className="text-rose-500">*</span></label>
-            <input type="url" className="w-full bg-gray-50 border border-gray-300 rounded-lg py-3 px-4 text-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-inner" placeholder="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit..." />
+            <input 
+              type="url" 
+              value={sheetUrl}
+              onChange={(e) => setSheetUrl(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-300 rounded-lg py-3 px-4 text-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-inner" 
+              placeholder="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit..." 
+            />
             <p className="text-xs text-gray-500 mt-2">Paste the full Google Sheets URL. The sheet must be shared as "Anyone with the link can view".</p>
           </div>
           

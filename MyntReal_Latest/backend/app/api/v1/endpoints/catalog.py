@@ -103,24 +103,17 @@ async def get_catalog_brochure(request: Request):
     Supports HEAD requests for link pre-flight checks and HTTP clients.
     Cache-Control: 7 days — catalog is stable; update file to refresh.
     """
-    from fastapi.responses import Response as PlainResponse
-    catalog_path = os.path.normpath(CATALOG_PDF_PATH)
-    if not os.path.isfile(catalog_path):
-        raise HTTPException(
-            status_code=404,
-            detail="Catalog brochure not available. Please contact admin."
-        )
-    _headers = {
-        "Cache-Control": "public, max-age=604800, immutable",
-        "Content-Disposition": "inline; filename=MNR-Business-Catalog.pdf",
-        "X-DC-Source": "local-storage",
-    }
+    from fastapi.responses import RedirectResponse, Response as PlainResponse
+    
+    # DC Protocol: Redirect directly to S3 to save 82MB backend RAM/Bandwidth
+    s3_catalog_url = "https://myntreal-media-vault.s3.ap-south-2.amazonaws.com/private/catalogs/v2.0.4/mnr-catalog-master.pdf"
+    
     if request.method == "HEAD":
-        return PlainResponse(
-            headers={**_headers, "Content-Type": "application/pdf",
-                     "Content-Length": str(os.path.getsize(catalog_path))},
-        )
-    return FileResponse(catalog_path, media_type="application/pdf", headers=_headers)
+        # We can't fetch S3 filesize instantly without boto3 head_object, 
+        # so just redirect HEAD requests too, most clients will follow.
+        return PlainResponse(status_code=307, headers={"Location": s3_catalog_url})
+        
+    return RedirectResponse(url=s3_catalog_url, status_code=307)
 
 
 @router.post("/public/hit", summary="Record a catalog page view (public)")

@@ -3,13 +3,28 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useStaffAuth } from "@/contexts/StaffAuthContext";
-import { getApiUrl } from "@/lib/api";
+import api from "@/lib/api";
 
 export default function TelecallingDialerPage() {
   const { token } = useStaffAuth();
   const [activeCall, setActiveCall] = useState<any>(null);
   const [callStatus, setCallStatus] = useState("IDLE"); // IDLE, DIALING, CONNECTED
   const [callDuration, setCallDuration] = useState(0);
+
+  const [queue, setQueue] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchQueue = async () => {
+      try {
+        const res = await api.get(`/api/v1`);
+        setQueue(res.data?.items || []);
+      } catch (err) {
+        console.warn("Failed to fetch dialer queue", err);
+        setQueue([]);
+      }
+    };
+    fetchQueue();
+  }, [token]);
 
   // Timer for active calls
   useEffect(() => {
@@ -30,21 +45,29 @@ export default function TelecallingDialerPage() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const handleDial = (lead: any) => {
+  const handleDial = async (lead: any) => {
     setActiveCall(lead);
     setCallStatus("DIALING");
     
-    // Simulate connection after 2 seconds
-    setTimeout(() => {
+    try {
+      await api.post('/staff/crm/dialer/call', { lead_id: lead.id });
       setCallStatus("CONNECTED");
-    }, 2000);
+    } catch (err) {
+      console.error("Dial failed", err);
+      setCallStatus("IDLE");
+      setActiveCall(null);
+    }
   };
 
-  const handleHangup = () => {
-    setCallStatus("IDLE");
-    setTimeout(() => {
+  const handleHangup = async () => {
+    try {
+      await api.post('/staff/crm/dialer/hangup', { lead_id: activeCall?.id });
+    } catch (err) {
+      console.error("Hangup failed", err);
+    } finally {
+      setCallStatus("IDLE");
       setActiveCall(null);
-    }, 1000);
+    }
   };
 
   return (
@@ -64,19 +87,14 @@ export default function TelecallingDialerPage() {
           </div>
           
           <div className="divide-y divide-gray-100">
-            {[
-              { id: 1, name: "Priya Desai", phone: "+91 8765432109", type: "Follow up", time: "10:00 AM" },
-              { id: 2, name: "Rahul Sharma", phone: "+91 9876543210", type: "First Contact", time: "11:30 AM" },
-              { id: 3, name: "Sneha Patel", phone: "+91 6543210987", type: "Negotiation", time: "2:00 PM" },
-              { id: 4, name: "Amit Kumar", phone: "+91 7654321098", type: "Follow up", time: "4:30 PM" }
-            ].map(lead => (
+            {queue.map((lead: any) => (
               <div key={lead.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                 <div className="flex flex-col">
                   <span className="font-bold text-gray-900">{lead.name}</span>
                   <span className="text-sm text-gray-500">{lead.phone} • {lead.type}</span>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <span className="text-xs font-medium text-gray-400">{lead.time}</span>
+                  <span className="text-xs font-medium text-gray-400">{lead.time || "Anytime"}</span>
                   <button 
                     onClick={() => handleDial(lead)}
                     disabled={callStatus !== "IDLE"}
@@ -89,6 +107,11 @@ export default function TelecallingDialerPage() {
                 </div>
               </div>
             ))}
+            {queue.length === 0 && (
+              <div className="p-8 text-center text-gray-500">
+                No leads in the queue today.
+              </div>
+            )}
           </div>
         </div>
       </div>

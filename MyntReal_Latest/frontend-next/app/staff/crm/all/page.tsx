@@ -1,23 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useStaffAuth } from "@/contexts/StaffAuthContext";
+import { getApiUrl } from "@/lib/api";
 
-// Mock data
-const MOCK_LEADS = [
-  { id: "L-9082", name: "Ramesh Sharma", phone: "+91 98765 43210", source: "Meta Ads", product: "Flats (3BHK)", status: "New", assignedTo: "Unassigned", date: "Today, 10:45 AM" },
-  { id: "L-9081", name: "Sunita Verma", phone: "+91 99887 76655", source: "Website", product: "Plots (Premium)", status: "Contacted", assignedTo: "Priya S.", date: "Today, 09:15 AM" },
-  { id: "L-9080", name: "Anil Kumar", phone: "+91 91234 56789", source: "Referral", product: "Commercial", status: "Site Visit", assignedTo: "Rahul K.", date: "Yesterday" },
-  { id: "L-9079", name: "Meera Reddy", phone: "+91 98888 77777", source: "WhatsApp", product: "Flats (2BHK)", status: "Negotiation", assignedTo: "Anita", date: "Yesterday" },
-  { id: "L-9078", name: "Vikram Singh", phone: "+91 95555 44444", source: "Meta Ads", product: "Plots (Standard)", status: "Closed Won", assignedTo: "Rahul K.", date: "Aug 10, 2026" },
-  { id: "L-9077", name: "Pooja Patel", phone: "+91 92222 11111", source: "Walk-in", product: "Flats (3BHK)", status: "Lost", assignedTo: "Priya S.", date: "Aug 09, 2026" },
-];
+interface Lead {
+  id: string | number;
+  name: string;
+  phone: string;
+  source: string;
+  product: string;
+  status: string;
+  assignedTo: string;
+  date: string;
+}
 
 export default function CRMAllLeadsPage() {
+  const { token, user } = useStaffAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredLeads = MOCK_LEADS.filter(lead => {
+  useEffect(() => {
+    if (!token || !user) return;
+    const fetchLeads = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${getApiUrl()}/api/v1/crm/leads?company_id=${user.company_id || 1}&limit=100`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data) {
+            setLeads(json.data.map((l: any) => ({
+              id: l.uid || `L-${l.id}`,
+              name: l.customer_name || 'Unknown',
+              phone: l.mobile_number || 'N/A',
+              source: l.source || 'Direct',
+              product: l.sub_source || 'General',
+              status: l.lead_status || 'New',
+              assignedTo: l.assigned_to_name || 'Unassigned',
+              date: l.created_at ? new Date(l.created_at).toLocaleDateString() : 'N/A'
+            })));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch leads", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLeads();
+  }, [token, user]);
+
+  const filteredLeads = leads.filter(lead => {
     const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase()) || lead.phone.includes(searchTerm);
     const matchesStatus = statusFilter === "All" || lead.status === statusFilter;
     return matchesSearch && matchesStatus;

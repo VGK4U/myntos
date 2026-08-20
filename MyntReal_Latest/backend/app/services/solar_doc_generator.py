@@ -489,9 +489,8 @@ def generate_quotation(
 
     # System Description + Pricing side by side
     # DC-SOLAR-PANEL-BRAND-001: brand from modal param takes priority;
-    # fallback to vendor default; never show a hardcoded placeholder.
-    if not panel_brand.strip():
-        panel_brand = vendor.get('panel_make_default', '') or ''
+    # do not fallback to hardcoded vendor panel make default.
+    panel_brand = (panel_brand or '').strip()
     if panel_brand.strip().upper() == 'DCR SOLAR PANEL':
         panel_brand = ''
     inv_make = vendor.get('inverter_make_default', '') or f'{kw_size.replace("KW","").replace("kw","").strip()}kVa Grid Tie Solar Inverter (IEC/BIS Approved)'
@@ -514,7 +513,7 @@ def generate_quotation(
         '<b>Accessories:</b> 4Sq. Copper AC Cable,<br/>'
         '&nbsp;&nbsp;&nbsp;4Sq. Copper DC cable<br/>'
         '&nbsp;&nbsp;&nbsp;GI Mounting Structure<br/>'
-        '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(North Pole&#8211;6 Feet, South Pole&#8211;4 Feet)<br/>'
+        '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(North Pole&#8211;5 Feet, South Pole&#8211;3 Feet)<br/>'
         '&nbsp;&nbsp;&nbsp;AC-DCDB, Earthing,<br/>'
         '&nbsp;&nbsp;&nbsp;1" PVC Pipe, Flexible PVC Pipe<br/>'
         '&nbsp;&nbsp;&nbsp;GI/SS Nuts, Bolts &amp; Hardware',
@@ -759,7 +758,7 @@ def generate_invoice(
         '<b>Accessories:</b> 4Sq. Copper AC Cable,<br/>'
         '&nbsp;&nbsp;&nbsp;4Sq. Copper DC cable<br/>'
         '&nbsp;&nbsp;&nbsp;GI Mounting Structure<br/>'
-        '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(North Pole&#8211;6 Feet, South Pole&#8211;4 Feet)<br/>'
+        '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(North Pole&#8211;5 Feet, South Pole&#8211;3 Feet)<br/>'
         '&nbsp;&nbsp;&nbsp;AC-DCDB, Earthing, 1" PVC Pipe<br/>'
         '&nbsp;&nbsp;&nbsp;GI/SS Nuts, Bolts &amp; Hardware',
     ]
@@ -1029,7 +1028,7 @@ def generate_co_applicant_quotation(
         '<b>Accessories:</b> 4Sq. Copper AC Cable,<br/>'
         '&nbsp;&nbsp;&nbsp;4Sq. Copper DC cable<br/>'
         '&nbsp;&nbsp;&nbsp;GI Mounting Structure<br/>'
-        '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(North Pole&#8211;6 Feet, South Pole&#8211;4 Feet)<br/>'
+        '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(North Pole&#8211;5 Feet, South Pole&#8211;3 Feet)<br/>'
         '&nbsp;&nbsp;&nbsp;AC-DCDB, Earthing,<br/>'
         '&nbsp;&nbsp;&nbsp;1" PVC Pipe, Flexible PVC Pipe<br/>'
         '&nbsp;&nbsp;&nbsp;GI/SS Nuts, Bolts &amp; Hardware',

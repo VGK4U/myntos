@@ -27,7 +27,7 @@ ChartJS.register(
 );
 
 export default function CRMDashboardPage() {
-  const { token, hasRole } = useStaffAuth();
+  const { user, token, hasRole } = useStaffAuth();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -38,7 +38,8 @@ export default function CRMDashboardPage() {
       try {
         setLoading(true);
         // Using generic CRM endpoint
-        const res = await fetch(`${getApiUrl()}/api/v1/staff/crm/dashboard`, {
+        const companyId = user?.company_id || user?.base_company_id || 1;
+        const res = await fetch(`${getApiUrl()}/api/v1/staff/crm/dashboard?company_id=${companyId}`, {
           headers: {
             "Authorization": `Bearer ${token}`
           }
@@ -48,27 +49,7 @@ export default function CRMDashboardPage() {
           const data = await res.json();
           setStats(data);
         } else {
-          // Fallback dummy data if API not fully wired
-          setStats({
-            total_leads: 1450,
-            new_today: 45,
-            converted_this_month: 120,
-            conversion_rate: 8.5,
-            pipeline_value: 2450000,
-            leads_by_status: {
-              "NEW": 250,
-              "CONTACTED": 450,
-              "INTERESTED": 350,
-              "NEGOTIATION": 100,
-              "CONVERTED": 300
-            },
-            leads_by_source: {
-              "Meta Ads": 45,
-              "Google Search": 25,
-              "Referrals": 20,
-              "Walk-ins": 10
-            }
-          });
+          setStats(null);
         }
       } catch (err: any) {
         console.warn("Failed to fetch CRM stats", err);

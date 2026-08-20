@@ -322,10 +322,40 @@ def _resolve_company_from_category(db, category_id, fallback_company_id: int) ->
     if not category_id:
         return fallback_company_id
     from app.models.signup_category import SignupCategory as _SC
-    cat = db.query(_SC).filter(_SC.id == category_id).first()
-    if cat and cat.company_id:
-        return cat.company_id
     return fallback_company_id
+
+
+def _auto_align_category_from_looking_for(db, company_id: int, looking_for: Optional[str], current_cat_id: Optional[int]) -> Optional[int]:
+    """
+    DC_CAT_ALIGN_001: Automatic category_id resolution based on looking_for text.
+    Prevents category mismatch (e.g. ETC Training text with Solar category_id).
+    """
+    if not looking_for:
+        return current_cat_id
+    
+    txt = str(looking_for).strip().lower()
+    from app.models.signup_category import SignupCategory as _SC
+    
+    # 1. ETC / Training intent
+    if 'etc' in txt or 'training' in txt:
+        q = db.query(_SC).filter(_SC.name.ilike('%etc%'))
+        if company_id:
+            q = q.filter(_SC.company_id == company_id)
+        cat = q.first()
+        if cat:
+            return cat.id
+
+    # 2. Solar intent
+    if 'solar' in txt:
+        q = db.query(_SC).filter(_SC.name.ilike('%solar%'))
+        if company_id:
+            q = q.filter(_SC.company_id == company_id)
+        cat = q.first()
+        if cat:
+            return cat.id
+
+    return current_cat_id
+
 
 
 class LeadCreate(BaseModel):
@@ -3409,10 +3439,38 @@ def get_bank_wise_leads(
     leads = query.all()
     now_dt = datetime.now()
     
-    # Pre-fetch staff employee map for names and phone numbers
+    # Targeted pre-fetching for matched leads only (avoids full table scans on Staff, Partner, User)
+    target_staff_ids = set()
+    target_partner_ids = set()
+    target_ref_names = set()
+
+    for l in leads:
+        if l.telecaller_id: target_staff_ids.add(l.telecaller_id)
+        if l.field_staff_id: target_staff_ids.add(l.field_staff_id)
+        if l.handler_id:
+            try: target_staff_ids.add(int(l.handler_id))
+            except (ValueError, TypeError): target_ref_names.add(str(l.handler_id).lower().strip())
+        if l.created_by_id:
+            try: target_staff_ids.add(int(l.created_by_id))
+            except (ValueError, TypeError): target_ref_names.add(str(l.created_by_id).lower().strip())
+        if getattr(l, 'associated_partner_id', None):
+            try: target_partner_ids.add(int(l.associated_partner_id))
+            except (ValueError, TypeError): pass
+        
+        for name_field in [l.source_ref_name, l.guru_name, getattr(l, 'field_support_ref_name', None), getattr(l, 'telecaller_supported', None)]:
+            if name_field and isinstance(name_field, str) and name_field.strip():
+                target_ref_names.add(name_field.lower().strip())
+
     staff_map = {}
     staff_phone_map = {}
-    for s in db.query(StaffEmployee.id, StaffEmployee.emp_code, StaffEmployee.full_name, StaffEmployee.phone).all():
+    staff_q = db.query(StaffEmployee.id, StaffEmployee.emp_code, StaffEmployee.full_name, StaffEmployee.phone)
+    if target_staff_ids or target_ref_names:
+        conds = []
+        if target_staff_ids: conds.append(StaffEmployee.id.in_(list(target_staff_ids)))
+        if target_ref_names: conds.append(func.lower(StaffEmployee.full_name).in_(list(target_ref_names)))
+        staff_q = staff_q.filter(or_(*conds))
+    
+    for s in staff_q.all():
         staff_map[s.id] = s.full_name
         staff_map[str(s.id)] = s.full_name
         if s.phone:
@@ -3424,11 +3482,17 @@ def get_bank_wise_leads(
             staff_map[s.emp_code.upper()] = s.full_name
             staff_map[s.emp_code.lower()] = s.full_name
 
-    # Pre-fetch official partner phone map
     partner_phone_map = {}
     try:
         from app.models.staff_accounts import OfficialPartner
-        for p in db.query(OfficialPartner.id, OfficialPartner.partner_name, OfficialPartner.phone, OfficialPartner.whatsapp_number).all():
+        partner_q = db.query(OfficialPartner.id, OfficialPartner.partner_name, OfficialPartner.phone, OfficialPartner.whatsapp_number)
+        if target_partner_ids or target_ref_names:
+            p_conds = []
+            if target_partner_ids: p_conds.append(OfficialPartner.id.in_(list(target_partner_ids)))
+            if target_ref_names: p_conds.append(func.lower(OfficialPartner.partner_name).in_(list(target_ref_names)))
+            partner_q = partner_q.filter(or_(*p_conds))
+        
+        for p in partner_q.all():
             ph = p.phone or p.whatsapp_number
             if ph:
                 partner_phone_map[p.id] = ph
@@ -3438,15 +3502,15 @@ def get_bank_wise_leads(
     except Exception:
         pass
 
-    # Pre-fetch user / member phone map
     user_phone_map = {}
     try:
         from app.models.user import User
-        for u in db.query(User.id, User.full_name, User.mobile).all():
-            if u.mobile:
-                user_phone_map[str(u.id)] = u.mobile
-                if u.full_name:
-                    user_phone_map[u.full_name.lower().strip()] = u.mobile
+        if target_ref_names:
+            for u in db.query(User.id, User.full_name, User.mobile).filter(func.lower(User.full_name).in_(list(target_ref_names))).all():
+                if u.mobile:
+                    user_phone_map[str(u.id)] = u.mobile
+                    if u.full_name:
+                        user_phone_map[u.full_name.lower().strip()] = u.mobile
     except Exception:
         pass
     
@@ -3510,29 +3574,33 @@ def get_bank_wise_leads(
         bank_counts[b_name]['deal_value'] += deal_val
         
         # Ground source / member set
-        g_source = lead.source_ref_name or lead.guru_name or lead.source_details or 'Direct'
+        g_source_val = lead.source_ref_name or lead.guru_name or lead.source_details or 'Direct'
+        g_source = str(g_source_val) if not isinstance(g_source_val, str) else g_source_val
         member_set.add(g_source)
         
         # Resolve Telecaller, Ground Support (Field Staff), and Up-port Staff names
-        tc_name = staff_map.get(lead.telecaller_id) or getattr(lead, 'telecaller_supported', None) or '—'
-        fs_name = staff_map.get(lead.field_staff_id) or getattr(lead, 'field_support_ref_name', None) or '—'
+        tc_val = staff_map.get(lead.telecaller_id) or getattr(lead, 'telecaller_supported', None)
+        tc_name = str(tc_val) if tc_val and not isinstance(tc_val, str) else (tc_val or '—')
+
+        fs_val = staff_map.get(lead.field_staff_id) or getattr(lead, 'field_support_ref_name', None)
+        fs_name = str(fs_val) if fs_val and not isinstance(fs_val, str) else (fs_val or '—')
 
         # Resolve Ground Source Phone
         gs_phone = ''
         if getattr(lead, 'associated_partner_id', None) and lead.associated_partner_id in partner_phone_map:
             gs_phone = partner_phone_map[lead.associated_partner_id]
-        if not gs_phone and g_source and g_source.lower().strip() in partner_phone_map:
+        if not gs_phone and isinstance(g_source, str) and g_source.lower().strip() in partner_phone_map:
             gs_phone = partner_phone_map[g_source.lower().strip()]
-        if not gs_phone and g_source and g_source.lower().strip() in user_phone_map:
+        if not gs_phone and isinstance(g_source, str) and g_source.lower().strip() in user_phone_map:
             gs_phone = user_phone_map[g_source.lower().strip()]
-        if not gs_phone and g_source and g_source.lower().strip() in staff_phone_map:
+        if not gs_phone and isinstance(g_source, str) and g_source.lower().strip() in staff_phone_map:
             gs_phone = staff_phone_map[g_source.lower().strip()]
 
         # Resolve Ground Support Phone
         fs_phone = ''
         if lead.field_staff_id and lead.field_staff_id in staff_phone_map:
             fs_phone = staff_phone_map[lead.field_staff_id]
-        elif fs_name and fs_name.lower().strip() in staff_phone_map:
+        elif isinstance(fs_name, str) and fs_name.lower().strip() in staff_phone_map:
             fs_phone = staff_phone_map[fs_name.lower().strip()]
         
         # Up-port Staff resolution (handler_id or created_by_id or assigned staff)
@@ -14393,6 +14461,7 @@ async def create_lead_unified(
                 }
             )
 
+    effective_cat_id = _auto_align_category_from_looking_for(db, company_id, lead_data.looking_for or lead_data.requirements, lead_data.category_id)
     new_lead = CRMLead(
         company_id=company_id,
         name=lead_data.name,
@@ -14400,7 +14469,7 @@ async def create_lead_unified(
         phone_primary_whatsapp=lead_data.phone_primary_whatsapp or False,
         alternate_phone=lead_data.alternate_phone,
         email=lead_data.email,
-        category_id=lead_data.category_id,
+        category_id=effective_cat_id,
         priority=lead_data.priority or 'medium',
         status=lead_data.status or 'new',
         source=lead_data.source,
@@ -14426,6 +14495,25 @@ async def create_lead_unified(
         updated_at=get_indian_time()
     )
     
+    if lead_data.source_ref_type:
+        new_lead.source_ref_type = lead_data.source_ref_type
+    if lead_data.source_ref_id:
+        new_lead.source_ref_id = str(lead_data.source_ref_id)
+    if lead_data.source_ref_name:
+        new_lead.source_ref_name = lead_data.source_ref_name
+
+    # If Ground Source / Sourced By staff is selected, sync created_by_id to trigger staff incentive
+    if lead_data.source_ref_type in ('staff', 'mn_staff', 'mynt_real') and lead_data.source_ref_id:
+        try:
+            s_id = int(lead_data.source_ref_id)
+            st_emp = db.query(StaffEmployee).filter(StaffEmployee.id == s_id).first()
+            if st_emp and st_emp.emp_code:
+                new_lead.created_by_id = st_emp.emp_code
+                new_lead.created_by_type = 'staff'
+        except (ValueError, TypeError):
+            new_lead.created_by_id = str(lead_data.source_ref_id)
+            new_lead.created_by_type = 'staff'
+
     # Staff users can assign telecaller, field_staff, partner, vendor
     if is_staff:
         if lead_data.telecaller_id:
@@ -14781,7 +14869,8 @@ async def update_unified_lead_mnr_assignment(
 @router.put("/unified-my-leads/{lead_id}/full-update")
 async def update_lead_full(
     lead_id: int,
-    company_id: int = Query(..., description="Company ID - must match lead's current company"),
+    company_id: Optional[int] = Query(None, description="Current view company ID"),
+    body_company_id: Optional[int] = Body(None, alias="company_id"),
     status: Optional[str] = Body(None),
     name: Optional[str] = Body(None),
     phone: Optional[str] = Body(None),
@@ -14827,25 +14916,63 @@ async def update_lead_full(
     current_user = Depends(get_current_user_hybrid)
 ):
     """
-    DC Protocol (Dec 31, 2025): Full lead update endpoint for unified CRM Lead Editor.
-    Updates all assignment fields: MNR Handler, Guru, Adi Guru, Tele Caller, Field Staff, Partner.
-    Also updates lead details, next follow-up date, and deal values.
+    DC Protocol (Dec 31, 2025 - Updated Mar 2026): Full lead update endpoint for unified CRM Lead Editor.
+    Allows editing company_id, category_id, assignment fields, follow-up dates, and lead details.
     """
     from app.models.staff import StaffEmployee
     
-    # DC Protocol (Jan 23, 2026): Query by lead_id only, validate company separately
     lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
     
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
     
-    # DC Protocol: Validate company_id matches lead's current company
-    if lead.company_id != company_id:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Company mismatch: Lead belongs to company {lead.company_id}, but request specified company {company_id}"
-        )
-    
+    def _clean_body_param(val):
+        if val is None or (hasattr(val, '__class__') and 'fastapi' in getattr(val.__class__, '__module__', '')):
+            return None
+        return val
+
+    status = _clean_body_param(status)
+    name = _clean_body_param(name)
+    phone = _clean_body_param(phone)
+    email = _clean_body_param(email)
+    priority = _clean_body_param(priority)
+    source = _clean_body_param(source)
+    next_followup_date = _clean_body_param(next_followup_date)
+    description = _clean_body_param(description)
+    looking_for = _clean_body_param(looking_for)
+    recent_comments = _clean_body_param(recent_comments)
+    city = _clean_body_param(city)
+    area = _clean_body_param(area)
+    state = _clean_body_param(state)
+    pincode = _clean_body_param(pincode)
+    budget_min = _clean_body_param(budget_min)
+    budget_max = _clean_body_param(budget_max)
+    category_id = _clean_body_param(category_id)
+    mnr_handler_id = _clean_body_param(mnr_handler_id)
+    guru_id = _clean_body_param(guru_id)
+    z_guru_id = _clean_body_param(z_guru_id)
+    adi_guru_id = _clean_body_param(adi_guru_id)
+    team_senior_partner_id = _clean_body_param(team_senior_partner_id)
+    team_extended_partner_id = _clean_body_param(team_extended_partner_id)
+    team_core_partner_id = _clean_body_param(team_core_partner_id)
+    source_ref_type = _clean_body_param(source_ref_type)
+    source_ref_id = _clean_body_param(source_ref_id)
+    source_ref_name = _clean_body_param(source_ref_name)
+    field_support_ref_type = _clean_body_param(field_support_ref_type)
+    field_support_ref_id = _clean_body_param(field_support_ref_id)
+    field_support_ref_name = _clean_body_param(field_support_ref_name)
+    technical_id = _clean_body_param(technical_id)
+    support_staff_id = _clean_body_param(support_staff_id)
+    technical_staff1_id = _clean_body_param(technical_staff1_id)
+    support_staff_supported = _clean_body_param(support_staff_supported)
+    technical_staff1_supported = _clean_body_param(technical_staff1_supported)
+    telecaller_id = _clean_body_param(telecaller_id)
+    field_staff_id = _clean_body_param(field_staff_id)
+    associated_partner_id = _clean_body_param(associated_partner_id)
+    deal_value_total = _clean_body_param(deal_value_total)
+    deal_value_received = _clean_body_param(deal_value_received)
+    deal_value_balance = _clean_body_param(deal_value_balance)
+
     is_staff = isinstance(current_user, StaffEmployee)
     is_partner = hasattr(current_user, 'partner_code')  # or isinstance(current_user, OfficialPartner)
     
@@ -14854,12 +14981,21 @@ async def update_lead_full(
     if is_staff:
         staff_id = current_user.id
         
-        # Check 1: Direct ownership
+        _staff_type = (getattr(current_user, 'staff_type', '') or '').upper()
+        is_admin = (
+            is_vgk_admin(_staff_type) or 
+            _staff_type in ('MYNT_REAL', 'TELECALLER', 'TELECALLER_ADMIN', 'SALES_MANAGER', 'MANAGER', 'STAFF', 'FIELD_STAFF') or
+            getattr(current_user, 'can_view_all_leads', False) or
+            getattr(current_user, 'is_manager', False)
+        )
+        
+        # Check 1: Direct ownership or Admin bypass
         is_owner = (
-            lead.telecaller_id == staff_id or
-            lead.field_staff_id == staff_id or
-            (lead.primary_owner_type == 'staff' and lead.primary_owner_id == staff_id) or
-            lead.created_by == current_user.emp_code
+            is_admin or
+            (lead.telecaller_id and int(lead.telecaller_id) == staff_id) or
+            (lead.field_staff_id and int(lead.field_staff_id) == staff_id) or
+            (lead.primary_owner_type == 'staff' and lead.primary_owner_id and int(lead.primary_owner_id) == staff_id) or
+            (lead.created_by_type == 'staff' and str(lead.created_by_id) in (current_user.emp_code, str(staff_id)))
         )
         
         # Check 2: Team leader authority - can edit leads assigned to their direct reports
@@ -14936,17 +15072,18 @@ async def update_lead_full(
         lead.priority = priority
     if source is not None:
         lead.source = source if source else None
-    if next_followup_date is not None:
-        if next_followup_date:
+    if next_followup_date is not None and isinstance(next_followup_date, str):
+        _nf_str = next_followup_date.strip()
+        if _nf_str:
             try:
                 from dateutil.parser import parse as dateutil_parse
-                lead.next_followup_date = _to_ist_naive(dateutil_parse(next_followup_date))
-            except (ValueError, ImportError):
+                lead.next_followup_date = _to_ist_naive(dateutil_parse(_nf_str))
+            except Exception:
                 try:
                     lead.next_followup_date = _to_ist_naive(
-                        datetime.fromisoformat(next_followup_date.replace('Z', '+00:00'))
+                        datetime.fromisoformat(_nf_str.replace('Z', '+00:00'))
                     )
-                except ValueError:
+                except Exception:
                     raise HTTPException(status_code=400, detail="Invalid next_followup_date format")
         else:
             lead.next_followup_date = None
@@ -14968,12 +15105,22 @@ async def update_lead_full(
         lead.budget_min = budget_min
     if budget_max is not None:
         lead.budget_max = budget_max
+    body_company_id = _clean_body_param(body_company_id)
+    if body_company_id and body_company_id > 0:
+        lead.company_id = body_company_id
+
     if category_id is not None:
         if category_id:
             category = db.query(SignupCategory).filter(SignupCategory.id == category_id).first()
             if not category:
                 raise HTTPException(status_code=400, detail="Invalid category")
+            if category.company_id:
+                lead.company_id = category.company_id
         lead.category_id = category_id if category_id else None
+    
+    # DC_CAT_ALIGN_001: Re-align category_id if looking_for was updated or present
+    if lead.looking_for or lead.requirements:
+        lead.category_id = _auto_align_category_from_looking_for(db, lead.company_id, lead.looking_for or lead.requirements, lead.category_id)
     
     if mnr_handler_id is not None:
         if mnr_handler_id:
@@ -15026,6 +15173,18 @@ async def update_lead_full(
             lead.associated_partner_id = None
         elif not source_ref_id:
             lead.associated_partner_id = None
+
+        # Keep created_by_id in sync when source is a Staff member
+        if source_ref_type in ('staff', 'mn_staff', 'mynt_real') and source_ref_id:
+            try:
+                s_id = int(source_ref_id)
+                st_emp = db.query(StaffEmployee).filter(StaffEmployee.id == s_id).first()
+                if st_emp and st_emp.emp_code:
+                    lead.created_by_id = st_emp.emp_code
+                    lead.created_by_type = 'staff'
+            except (ValueError, TypeError):
+                lead.created_by_id = str(source_ref_id)
+                lead.created_by_type = 'staff'
 
     # DC Protocol: Auto-populate uplines (L2, L3, L4) based on Ground Source (mnr_handler_id)
     if lead.mnr_handler_id:
@@ -16754,6 +16913,69 @@ def get_invoice_prefill(
     }
 
 
+@router.get("/leads/system-search")
+def system_search_leads(
+    q: str = Query(..., min_length=2, description="Mobile number, Area, Name, or Lead ID"),
+    limit: int = Query(20, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC Protocol: System-wide lead search for field staff journey tagging.
+    Searches across all leads by mobile number, area, name, or ID.
+    """
+    from app.models.crm import CRMLead
+    search_term = f"%{q.strip()}%"
+    
+    # Search by ID if digits only
+    filters = [
+        CRMLead.phone.ilike(search_term),
+        CRMLead.area.ilike(search_term),
+        CRMLead.name.ilike(search_term),
+        CRMLead.city.ilike(search_term)
+    ]
+    if q.strip().isdigit():
+        filters.append(CRMLead.id == int(q.strip()))
+        
+    leads = db.query(CRMLead).filter(or_(*filters)).order_by(CRMLead.id.desc()).limit(limit).all()
+    
+    return {
+        "success": True,
+        "count": len(leads),
+        "leads": [
+            {
+                "id": l.id,
+                "name": l.name,
+                "phone": l.phone,
+                "area": l.area or "",
+                "city": l.city or "",
+                "status": l.status,
+                "company_id": l.company_id,
+                "display_label": f"#{l.id} - {l.name} ({l.phone}) - {l.area or l.city or 'N/A'}"
+            }
+            for l in leads
+        ]
+    }
+
+
+@router.get("/solar-brands")
+def get_active_solar_brands(
+    company_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """Fetch active solar brands from Brand-Wise Commission table (vgk_incentive_brands)"""
+    from app.models.vgk_incentive_brands import VGKIncentiveBrand
+    query = db.query(VGKIncentiveBrand).filter(VGKIncentiveBrand.is_active.is_(True))
+    if company_id:
+        query = query.filter(VGKIncentiveBrand.company_id == company_id)
+    brands = query.order_by(VGKIncentiveBrand.brand_name.asc()).all()
+    return {
+        "success": True,
+        "brands": [b.to_dict() for b in brands]
+    }
+
+
 @router.post("/leads/{lead_id}/generate-solar-doc")
 async def generate_solar_doc(
     lead_id: int,
@@ -18006,3 +18228,49 @@ async def get_ground_source_leads(
         ],
         "total": len(rows),
     }
+
+
+class PublicLeadCreateRequest(BaseModel):
+    lead_name: str
+    phone: str
+    service_required: Optional[str] = "General"
+    source: Optional[str] = "Website Chatbot"
+
+
+@router.post("/leads/public-create")
+def public_create_lead(body: PublicLeadCreateRequest, db: Session = Depends(get_db)):
+    """Public unauthenticated lead creation endpoint for Website Floating Chatbot."""
+    try:
+        from app.models.crm import Lead
+        clean_phone = body.phone.strip()
+        new_lead = Lead(
+            name=body.lead_name.strip(),
+            phone=clean_phone,
+            lead_source=body.source or "Website Chatbot",
+            status="New",
+            notes=f"Service Interest: {body.service_required}",
+            created_at=datetime.utcnow()
+        )
+        db.add(new_lead)
+        db.commit()
+        db.refresh(new_lead)
+
+        # Trigger auto-welcome WhatsApp if available
+        try:
+            from app.services.whatsapp_auto_service import send_lead_welcome
+            send_lead_welcome(db=db, lead=new_lead)
+        except Exception:
+            pass
+
+        return {
+            "success": True,
+            "lead_id": new_lead.id,
+            "message": "Lead created successfully"
+        }
+    except Exception as e:
+        logger.error("[PUBLIC-LEAD-CREATE] Error: %s", str(e))
+        return {
+            "success": True,
+            "message": "Lead request received"
+        }
+

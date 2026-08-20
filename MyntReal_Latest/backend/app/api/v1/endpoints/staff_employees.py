@@ -2716,30 +2716,35 @@ async def get_kyc_document(
             detail="Access denied. You can only view your own documents."
         )
     
-    # Build file path
+    # Build S3 storage path
+    storage_path = f"staff_kyc/{emp_code}/{filename}"
+    
+    from fastapi.responses import RedirectResponse
+    from app.services.s3_storage import s3_storage_service
+    file_url = s3_storage_service.get_file_url(storage_path)
+    
+    if file_url.startswith("http"):
+        return RedirectResponse(url=file_url, status_code=307)
+        
+    # Fallback for local dev
     file_path = STAFF_KYC_UPLOAD_DIR / emp_code / filename
-    
-    if not file_path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="Document not found"
+    if file_path.exists():
+        # Determine content type
+        ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+        content_types = {
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'png': 'image/png',
+            'pdf': 'application/pdf'
+        }
+        media_type = content_types.get(ext, 'application/octet-stream')
+        return FileResponse(
+            path=str(file_path),
+            media_type=media_type,
+            filename=filename
         )
-    
-    # Determine content type
-    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
-    content_types = {
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'png': 'image/png',
-        'pdf': 'application/pdf'
-    }
-    media_type = content_types.get(ext, 'application/octet-stream')
-    
-    return FileResponse(
-        path=str(file_path),
-        media_type=media_type,
-        filename=filename
-    )
+        
+    raise HTTPException(status_code=404, detail="Document not found")
 
 
 @router.delete("/kyc/document/{document_type}")

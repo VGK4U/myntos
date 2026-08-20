@@ -20,8 +20,8 @@ export PYTHONPATH="$SCRIPT_DIR/backend:$SCRIPT_DIR:${PYTHONPATH}"
 echo ""
 echo "Checking environment variables..."
 if [ -z "$SECRET_KEY" ]; then
-    echo "Warning: SECRET_KEY not set, using fallback"
-    export SECRET_KEY="production-fallback-key-$(date +%s)"
+    echo "WARNING: SECRET_KEY is not set in AWS environment variables! Please configure SECRET_KEY in Elastic Beanstalk Console."
+    export SECRET_KEY="${ENV_SECRET_KEY:-default-mnr-system-secret-key-change-in-eb}"
 fi
 
 if [ -z "$DATABASE_URL" ] && [ -z "$PROD_DATABASE_URL" ]; then

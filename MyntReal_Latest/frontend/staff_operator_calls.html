@@ -393,6 +393,7 @@
             <h5 id="table-title">All Calls</h5>
             <div style="display:flex;align-items:center;gap:10px;">
                 <span id="table-sync-badge" style="font-size:11px;color:#6b7280;"></span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="promptSetMyOperatorToken()" style="font-size:11px;padding:3px 8px;" title="Set MyOperator API Token"><i class="fas fa-key"></i> Set API Token</button>
                 <button class="btn-refresh" onclick="loadCalls(true)"><i class="fas fa-sync-alt"></i> Refresh</button>
             </div>
         </div>
@@ -729,9 +730,12 @@ async function loadCalls(reset = false) {
     const tbody = document.getElementById('calls-tbody');
     tbody.innerHTML = '<tr class="loading-row"><td colspan="12"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
 
-    document.getElementById('calls-section')?.style && (document.getElementById('calls-section').style.display = '');
-    document.getElementById('followups-section').style.display = 'none';
-    document.getElementById('filter-card')?.style && (document.getElementById('filter-card').style.display = '');
+    const cs = document.getElementById('calls-section');
+    if (cs) cs.style.display = '';
+    const fs = document.getElementById('followups-section');
+    if (fs) fs.style.display = 'none';
+    const fc = document.getElementById('filter-card');
+    if (fc) fc.style.display = '';
 
     const phone = document.getElementById('filter-phone').value.trim();
     const callType = document.getElementById('filter-type').value;
@@ -754,6 +758,12 @@ async function loadCalls(reset = false) {
 
     try {
         const res = await staffFetch(url);
+        if (res.status === 401) {
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="12"><div style="padding:24px;text-align:center;"><i class="fas fa-lock" style="font-size:32px;color:#ef4444;margin-bottom:10px;display:block;"></i><strong style="color:#1e293b;font-size:15px;">Session Expired or Not Logged In</strong><br><span style="color:#64748b;font-size:13px;">Please log into the Staff Portal to view Operator Calls.</span><br><br><a href="/staff/login" class="btn btn-sm btn-primary" style="background:#7c3aed;border:none;padding:8px 20px;font-weight:600;"><i class="fas fa-sign-in-alt me-1"></i> Log In Now</a></div></td></tr>';
+            const banner = document.getElementById('sync-info');
+            if (banner) banner.textContent = '⚠️ Please log in to view status';
+            return;
+        }
         const data = await res.json();
 
         if (!data.success) {
@@ -1635,7 +1645,11 @@ async function matchLeadManual(callId) {
 async function loadSyncStatus() {
     try {
         const res = await staffFetch(`${API_BASE}/sync-status`);
-        if (!res.ok) return;
+        if (!res.ok) {
+            const banner = document.getElementById('sync-info');
+            if (banner && res.status === 401) banner.textContent = '⚠️ Not logged in — Session required';
+            return;
+        }
         const data = await res.json();
         if (data.success && data.sync_status) {
             const s = data.sync_status;
@@ -1670,6 +1684,29 @@ async function loadSyncStatus() {
         }
     } catch (e) {
         // non-critical
+    }
+}
+
+async function promptSetMyOperatorToken() {
+    const token = prompt('Enter your MyOperator API Token (found in MyOperator Dashboard > Manage > Integrations):');
+    if (!token) return;
+    const t = token.trim();
+    if (!t) return;
+    try {
+        const res = await fetch(`${API_BASE}/set-api-token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify({ token: t })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            alert('✅ MyOperator API Token saved successfully! Triggering sync now...');
+            loadCalls(true);
+        } else {
+            alert('❌ Failed to save token: ' + (data.detail || data.message || 'Unknown error'));
+        }
+    } catch (e) {
+        alert('❌ Connection error: ' + e.message);
     }
 }
 
@@ -2072,9 +2109,9 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 });
 
+setCallsQF('overall');
 loadStaffList();
 loadHandledByList();
-loadCalls(true);
 loadSyncStatus();
 
 autoRefreshTimer = setInterval(() => {

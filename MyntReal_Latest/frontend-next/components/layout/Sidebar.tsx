@@ -23,8 +23,14 @@ export default function Sidebar() {
       });
     });
 
-    if (activeSubsectionCode && !openSections.includes(activeSubsectionCode)) {
-      setOpenSections((prev) => [...prev, activeSubsectionCode]);
+    if (activeSubsectionCode) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOpenSections((prev) => {
+        if (!prev.includes(activeSubsectionCode)) {
+          return [...prev, activeSubsectionCode];
+        }
+        return prev;
+      });
     }
   }, [pathname]);
 

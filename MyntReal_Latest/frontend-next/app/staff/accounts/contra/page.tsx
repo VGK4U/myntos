@@ -202,8 +202,8 @@ export default function ContraEntriesPage() {
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase mb-2">Transaction Type *</label>
                 <select className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:border-teal-500 focus:ring-2 focus:ring-teal-200 transition-all outline-none">
-                  <option value="CASH_DEPOSIT">Cash Deposit (Cash -> Bank)</option>
-                  <option value="CASH_WITHDRAWAL">Cash Withdrawal (Bank -> Cash)</option>
+                  <option value="CASH_DEPOSIT">Cash Deposit (Cash to Bank)</option>
+                  <option value="CASH_WITHDRAWAL">Cash Withdrawal (Bank to Cash)</option>
                   <option value="BANK_TRANSFER">Bank to Bank Transfer</option>
                   <option value="PETTY_CASH">Transfer to Petty Cash</option>
                 </select>

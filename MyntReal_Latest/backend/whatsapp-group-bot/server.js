@@ -15,12 +15,14 @@ const {
     default: makeWASocket,
     useMultiFileAuthState,
     DisconnectReason,
-    fetchLatestBaileysVersion
+    fetchLatestBaileysVersion,
+    Browsers
 } = require('@whiskeysockets/baileys');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const PORT = process.env.PORT || 5002;
 const AUTH_DIR = path.join(__dirname, 'auth_info');
@@ -30,6 +32,14 @@ let sock = null;
 let currentQr = null;
 let connectionStatus = 'disconnected';
 let targetJid = null;
+
+// Prevent process exit on background Baileys socket disconnection (1006 / connection reset)
+process.on('unhandledRejection', (reason, promise) => {
+    console.log('⚠️ Process captured unhandledRejection (socket reset/reconnect):', reason?.message || reason);
+});
+process.on('uncaughtException', (err) => {
+    console.log('⚠️ Process captured uncaughtException:', err?.message || err);
+});
 
 async function startWhatsAppBot() {
     if (!fs.existsSync(AUTH_DIR)) {
@@ -44,7 +54,7 @@ async function startWhatsAppBot() {
         auth: state,
         logger: pino({ level: 'silent' }),
         printQRInTerminal: false,
-        browser: ['MyntOS Gateway', 'Chrome', '120.0.0.0'],
+        browser: Browsers.macOS('Desktop'),
         syncFullHistory: false,
         connectTimeoutMs: 60000,
         keepAliveIntervalMs: 25000,
@@ -85,10 +95,12 @@ async function startWhatsAppBot() {
 
         if (connection === 'close') {
             connectionStatus = 'disconnected';
-            const shouldReconnect = (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut);
-            console.log(`⚠️ Connection closed. Reconnecting: ${shouldReconnect}`);
+            const errDetail = lastDisconnect?.error?.message || lastDisconnect?.error;
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            const shouldReconnect = (statusCode !== DisconnectReason.loggedOut);
+            console.log(`⚠️ Connection closed (Status: ${statusCode}, Err: ${errDetail}). Reconnecting: ${shouldReconnect}`);
             if (shouldReconnect) {
-                setTimeout(startWhatsAppBot, 3000);
+                setTimeout(startWhatsAppBot, 5000);
             }
         }
     });
@@ -150,11 +162,13 @@ app.get('/qr', (req, res) => {
     `);
 });
 
+const jidCache = {};
+
 app.post('/api/send-group-message', async (req, res) => {
     try {
-        const { message, inviteCode, groupId } = req.body;
-        if (!message) {
-            return res.status(400).json({ success: false, error: "message parameter required" });
+        const { message, inviteCode, groupId, imageUrl, imagePath } = req.body;
+        if (!message && !imageUrl && !imagePath) {
+            return res.status(400).json({ success: false, error: "message or image parameter required" });
         }
 
         if (connectionStatus !== 'connected' || !sock) {
@@ -165,40 +179,158 @@ app.post('/api/send-group-message', async (req, res) => {
             });
         }
 
-        let destinationJid = groupId || targetJid;
+        const codesToUse = req.body.inviteCodes || (req.body.inviteCode ? [req.body.inviteCode] : [DEFAULT_INVITE_CODE]);
+        const targetCodes = Array.from(new Set(Array.isArray(codesToUse) ? codesToUse : [codesToUse]));
+        
+        let sentCount = 0;
+        let lastResult = null;
 
-        // Resolve invite code if JID not cached
-        const codeToUse = inviteCode || DEFAULT_INVITE_CODE;
-        if (!destinationJid && codeToUse) {
-            try {
-                const groupInfo = await sock.groupGetInviteInfo(codeToUse);
-                if (groupInfo && groupInfo.id) {
-                    destinationJid = groupInfo.id.includes('@g.us') ? groupInfo.id : `${groupInfo.id}@g.us`;
-                    targetJid = destinationJid;
+        for (const codeToUse of targetCodes) {
+            let destinationJid = groupId;
+            if (!destinationJid && codeToUse) {
+                if (jidCache[codeToUse]) {
+                    destinationJid = jidCache[codeToUse];
+                } else {
+                    const withTimeout = (promise, ms = 4000) => Promise.race([
+                        promise,
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Invite resolution timeout')), ms))
+                    ]);
+
+                    try {
+                        const groupInfo = await withTimeout(sock.groupGetInviteInfo(codeToUse), 4000);
+                        if (groupInfo && groupInfo.id) {
+                            destinationJid = groupInfo.id.includes('@g.us') ? groupInfo.id : `${groupInfo.id}@g.us`;
+                            jidCache[codeToUse] = destinationJid;
+                        }
+                    } catch (invErr) {
+                        console.log(`[WA-BOT] groupGetInviteInfo note for ${codeToUse}: ${invErr.message}`);
+                    }
+
+                    if (!destinationJid) {
+                        try {
+                            const joinedJid = await withTimeout(sock.groupAcceptInvite(codeToUse), 4000);
+                            if (joinedJid) {
+                                destinationJid = joinedJid.includes('@g.us') ? joinedJid : `${joinedJid}@g.us`;
+                                jidCache[codeToUse] = destinationJid;
+                                console.log(`[WA-BOT] Successfully joined group via invite code ${codeToUse}: ${destinationJid}`);
+                            }
+                        } catch (accErr) {
+                            console.log(`[WA-BOT] groupAcceptInvite note: ${accErr.message}`);
+                        }
+                    }
+
+                    if (!destinationJid) {
+                        try {
+                            const groups = await withTimeout(sock.groupFetchAllParticipating(), 4000);
+                            const gList = Object.values(groups || {});
+                            if (gList.length > 0) {
+                                destinationJid = gList[0].id;
+                                jidCache[codeToUse] = destinationJid;
+                                console.log(`[WA-BOT] Fallback destinationJid: ${destinationJid} (${gList[0].subject})`);
+                            }
+                        } catch (fErr) {
+                            console.log(`[WA-BOT] groupFetchAllParticipating note: ${fErr.message}`);
+                        }
+                    }
                 }
-            } catch (invErr) {
-                // If bot is already in group, joinGroupViaInviteCode will succeed
+            }
+
+            if (!destinationJid) destinationJid = targetJid;
+            if (!destinationJid) continue;
+
+            let contentPayload = { text: message || '' };
+            const mediaSrc = imageUrl || imagePath;
+            if (mediaSrc) {
+                let imgBuffer = null;
+                if (typeof mediaSrc === 'string' && (mediaSrc.startsWith('http://') || mediaSrc.startsWith('https://'))) {
+                    imgBuffer = { url: mediaSrc };
+                } else if (typeof mediaSrc === 'string' && mediaSrc.startsWith('data:image/')) {
+                    const base64Data = mediaSrc.replace(/^data:image\/\w+;base64,/, '');
+                    imgBuffer = Buffer.from(base64Data, 'base64');
+                } else if (typeof mediaSrc === 'string' && fs.existsSync(mediaSrc)) {
+                    imgBuffer = fs.readFileSync(mediaSrc);
+                }
+                if (imgBuffer) {
+                    contentPayload = { image: imgBuffer, caption: message || '' };
+                }
+            }
+
+            try {
+                lastResult = await sock.sendMessage(destinationJid, contentPayload);
+                sentCount++;
+            } catch (sendErr) {
+                console.log(`[WA-BOT] Initial sendMessage failed (${sendErr.message}). Attempting groupAcceptInvite & retry...`);
                 try {
-                    destinationJid = await sock.groupAcceptInvite(codeToUse);
-                } catch (acceptErr) {
-                    console.log(`Invite accept note: ${acceptErr.message}`);
+                    const joinedJid = await sock.groupAcceptInvite(codeToUse);
+                    if (joinedJid) {
+                        destinationJid = joinedJid.includes('@g.us') ? joinedJid : `${joinedJid}@g.us`;
+                        jidCache[codeToUse] = destinationJid;
+                    }
+                    lastResult = await sock.sendMessage(destinationJid, contentPayload);
+                    sentCount++;
+                } catch (retryErr) {
+                    console.log(`[WA-BOT] Retry sendMessage failed: ${retryErr.message}`);
+                    throw retryErr;
                 }
             }
         }
 
-        if (!destinationJid) {
-            return res.status(404).json({ success: false, error: "Could not resolve WhatsApp group JID from invite code" });
-        }
-
-        const sentMsg = await sock.sendMessage(destinationJid, { text: message });
         return res.json({
             success: true,
-            group_jid: destinationJid,
-            message_id: sentMsg?.key?.id
+            sent_count: sentCount,
+            message_id: lastResult?.key?.id
         });
 
     } catch (err) {
         console.error("❌ Error sending group message:", err);
+        return res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/send-message', async (req, res) => {
+    try {
+        const { phone, message, imageUrl, imagePath } = req.body;
+        if (!phone || (!message && !imageUrl && !imagePath)) {
+            return res.status(400).json({ success: false, error: "phone and message/image parameters required" });
+        }
+
+        if (connectionStatus !== 'connected' || !sock) {
+            return res.status(503).json({
+                success: false,
+                error: "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+                status: connectionStatus
+            });
+        }
+
+        const cleanPhone = String(phone).replace(/\D/g, '');
+        const recipientJid = cleanPhone.includes('@s.whatsapp.net') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
+
+        let contentPayload = { text: message || '' };
+        const mediaSrc = imageUrl || imagePath;
+        if (mediaSrc) {
+            let imgBuffer = null;
+            if (typeof mediaSrc === 'string' && (mediaSrc.startsWith('http://') || mediaSrc.startsWith('https://'))) {
+                imgBuffer = { url: mediaSrc };
+            } else if (typeof mediaSrc === 'string' && mediaSrc.startsWith('data:image/')) {
+                const base64Data = mediaSrc.replace(/^data:image\/\w+;base64,/, '');
+                imgBuffer = Buffer.from(base64Data, 'base64');
+            } else if (typeof mediaSrc === 'string' && fs.existsSync(mediaSrc)) {
+                imgBuffer = fs.readFileSync(mediaSrc);
+            }
+            if (imgBuffer) {
+                contentPayload = (message && message.trim()) ? { image: imgBuffer, caption: message.trim() } : { image: imgBuffer };
+            }
+        }
+
+        const sentMsg = await sock.sendMessage(recipientJid, contentPayload);
+        return res.json({
+            success: true,
+            recipient_jid: recipientJid,
+            message_id: sentMsg?.key?.id
+        });
+
+    } catch (err) {
+        console.error("❌ Error sending direct message:", err);
         return res.status(500).json({ success: false, error: err.message });
     }
 });

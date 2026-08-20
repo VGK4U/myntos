@@ -11,21 +11,28 @@ export default function CouponsPage() {
   const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState<any>(null);
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!searchId.trim()) return;
     setLoading(true);
-    // Mocking API call based on legacy structure
-    setTimeout(() => {
-      setUserData({
-        member_info: { name: "Anil Kumar", id: searchId.toUpperCase(), status: "Active" },
-        summary: {
-          total_requests: 12, pending: 1, approved: 9, fulfilled: 9, rejected: 2, total_value: 145000,
-          total_coupons: 15, available: 4, used: 8, transferred: 3,
-          total_incoming: 2, total_outgoing: 5, available_for_transfer: 4
-        }
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("staff_token") : "";
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/staff/mnr-user/coupons/${searchId}`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
+      if (res.ok) {
+        const data = await res.json();
+        setUserData(data);
+      } else {
+        setUserData(null);
+        toast.error("Member not found or has no coupons");
+      }
+    } catch (err) {
+      console.warn("Failed to fetch coupons", err);
+      setUserData(null);
+      toast.error("Failed to fetch coupons");
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (
@@ -135,11 +142,11 @@ export default function CouponsPage() {
           )}
 
           {/* Tab Content Areas */}
-          {activeTab === 'purchased' && <PurchasedTab />}
-          {activeTab === 'usage' && <UsageTab />}
-          {activeTab === 'transfers' && <TransfersTab />}
-          {activeTab === 'activate' && <ActivateTab />}
-          {activeTab === 'buy' && <BuyTab />}
+          {activeTab === 'purchased' && <PurchasedTab data={userData.purchased} />}
+          {activeTab === 'usage' && <UsageTab data={userData.usage_inventory} />}
+          {activeTab === 'transfers' && <TransfersTab data={userData.transfers} />}
+          {activeTab === 'activate' && <ActivateTab data={userData.activate} />}
+          {activeTab === 'buy' && <BuyTab data={userData.packages} />}
 
         </div>
       )}
@@ -180,22 +187,26 @@ function StatCard({ label, value, color = "text-gray-900" }: { label: string, va
   );
 }
 
-function PurchasedTab() {
+function PurchasedTab({ data }: { data: any }) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
       <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
         <h3 className="font-bold text-gray-900"><i className="fas fa-history text-gray-400 mr-2"></i>Purchase History</h3>
         <button className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"><i className="fas fa-filter mr-1"></i>Filter</button>
       </div>
-      <div className="p-12 text-center text-gray-400">
-        <i className="fas fa-shopping-cart fa-2x mb-3 text-gray-300"></i>
-        <p>No purchase records found for this member.</p>
-      </div>
+      {(!data || data.length === 0) ? (
+        <div className="p-12 text-center text-gray-400">
+          <i className="fas fa-shopping-cart fa-2x mb-3 text-gray-300"></i>
+          <p>No purchase records found for this member.</p>
+        </div>
+      ) : (
+        <div className="p-4 text-center">Data available</div>
+      )}
     </div>
   );
 }
 
-function UsageTab() {
+function UsageTab({ data }: { data: any }) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
       <div className="p-4 border-b border-gray-200 bg-gray-50">
@@ -213,20 +224,19 @@ function UsageTab() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            <tr className="hover:bg-gray-50 transition-colors">
-              <td className="px-6 py-4 font-medium text-gray-900">#CPN-9821-PLT</td>
-              <td className="px-6 py-4"><span className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs rounded font-medium border border-indigo-100">PLATINUM</span></td>
-              <td className="px-6 py-4"><span className="px-2 py-1 bg-emerald-50 text-emerald-700 text-xs rounded font-medium border border-emerald-100">Available</span></td>
-              <td className="px-6 py-4 text-gray-500">Oct 12, 2023</td>
-              <td className="px-6 py-4"><button className="text-brand-warning hover:text-amber-600 font-medium">View</button></td>
-            </tr>
-            <tr className="hover:bg-gray-50 transition-colors">
-              <td className="px-6 py-4 font-medium text-gray-900">#CPN-7734-DMD</td>
-              <td className="px-6 py-4"><span className="px-2 py-1 bg-sky-50 text-sky-700 text-xs rounded font-medium border border-sky-100">DIAMOND</span></td>
-              <td className="px-6 py-4"><span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded font-medium border border-gray-200">Used</span></td>
-              <td className="px-6 py-4 text-gray-500">Sep 05, 2023</td>
-              <td className="px-6 py-4"><button className="text-brand-warning hover:text-amber-600 font-medium">View</button></td>
-            </tr>
+            {(!data || data.length === 0) ? (
+              <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-400">No coupons found.</td></tr>
+            ) : (
+              data.map((cpn: any, idx: number) => (
+                <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-gray-900">{cpn.id}</td>
+                  <td className="px-6 py-4"><span className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs rounded font-medium border border-indigo-100">{cpn.package}</span></td>
+                  <td className="px-6 py-4"><span className="px-2 py-1 bg-emerald-50 text-emerald-700 text-xs rounded font-medium border border-emerald-100">{cpn.status}</span></td>
+                  <td className="px-6 py-4 text-gray-500">{cpn.date}</td>
+                  <td className="px-6 py-4"><button className="text-brand-warning hover:text-amber-600 font-medium">View</button></td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -234,7 +244,7 @@ function UsageTab() {
   );
 }
 
-function TransfersTab() {
+function TransfersTab({ data }: { data: any }) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
       <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
@@ -243,15 +253,19 @@ function TransfersTab() {
           Initiate Transfer
         </button>
       </div>
-      <div className="p-12 text-center text-gray-400">
-        <i className="fas fa-exchange-alt fa-2x mb-3 text-gray-300"></i>
-        <p>No transfers recorded for this member.</p>
-      </div>
+      {(!data || data.length === 0) ? (
+        <div className="p-12 text-center text-gray-400">
+          <i className="fas fa-exchange-alt fa-2x mb-3 text-gray-300"></i>
+          <p>No transfers recorded for this member.</p>
+        </div>
+      ) : (
+        <div className="p-4 text-center">Data available</div>
+      )}
     </div>
   );
 }
 
-function ActivateTab() {
+function ActivateTab({ data }: { data: any }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
@@ -299,7 +313,7 @@ function ActivateTab() {
   );
 }
 
-function BuyTab() {
+function BuyTab({ data }: { data: any }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">

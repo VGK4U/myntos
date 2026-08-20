@@ -7,7 +7,7 @@ Includes 368 auto-generated route scaffolds for complete migration
 from fastapi import APIRouter
 from app.api.v1.endpoints import (
     auth, dashboard, users, admin, admin_pins, admin_earnings, 
-    admin_tickets, admin_bulk, admin_password_reset, admin_members_search, rvz, rvz_supreme, rvz_awards_config, rvz_awards_regenerate, rvz_expenses, rvz_department_management, finance_admin, finance_awards_procurement, super_admin, team_management,
+    admin_tickets, admin_bulk, admin_password_reset, admin_members_search, rvz, rvz_supreme, rvz_awards_config, rvz_awards_regenerate, rvz_expenses, rvz_department_management, finance_admin, finance_awards_procurement, super_admin, super_admin_network, super_admin_awards, super_admin_config, team_management,
     income_verification, award_management, award_processing, awards_fast, financial_operations, profile, bank_kyc_admin, coupon_transfers, banners, tickets, ev_discount, whatsapp, password_reset, bonanza, financial_reports, expense_management, red_coupon_voting, secondary_verification, withdrawal, award_price_management, user_management_comprehensive, system_controls, rate_configuration, system_configuration, daily_ceiling, emergency_wallet, expense_categories, log_reports, testing, rvz_production_reset, ev_scooter_claims, training_claims, admin_data_access, rvz_recovery, rvz_password_change, user_update_controls, dc_protocol, compliance, company_earnings, feedback, gift_wise_status, unified_awards_lifecycle,
     staff_auth, staff_employees, staff_departments, staff_nda, staff_tasks, staff_day_plans, staff_time_tracker, staff_kra,
     staff_field_work, staff_work_intervals, staff_journeys, staff_timesheet, staff_accounts, staff_snapshot,
@@ -72,6 +72,11 @@ api_router.include_router(admin_members_search.router, tags=["Admin Members Sear
 api_router.include_router(finance_admin.router, tags=["Finance Admin"])
 api_router.include_router(finance_awards_procurement.router, tags=["Finance Admin - Awards & Bonanza Procurement (WV/DC)"])
 api_router.include_router(super_admin.router, tags=["Super Admin"])
+from app.api.v1.endpoints import super_admin_finance
+api_router.include_router(super_admin_finance.router, tags=["Super Admin Finance"])
+api_router.include_router(super_admin_network.router, tags=["Super Admin Network"])
+api_router.include_router(super_admin_awards.router, tags=["Super Admin Awards"])
+api_router.include_router(super_admin_config.router, tags=["Super Admin Config"])
 # REMOVED: api_router.include_router(rvz.router, tags=["RVZ ID Supreme Admin"]) - Duplicate registration (already in main.py)
 api_router.include_router(rvz_supreme.router, tags=["RVZ Supreme Withdrawal Management"])
 api_router.include_router(rvz_awards_config.router, tags=["RVZ Awards Configuration - Master Data"])

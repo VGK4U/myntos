@@ -490,6 +490,7 @@
                                 <th>Category</th>
                                 <th>Role</th>
                                 <th>Company</th>
+                                <th>Source</th>
                                 <th>Status</th>
                                 <th>Priority</th>
                                 <th>Lead Owner</th>
@@ -2656,6 +2657,7 @@
                     <td>${lead.category_name || '-'}</td>
                     <td>${formatMyRole(lead)}</td>
                     <td><span class="text-muted" style="font-size: 11px;">${lead.company_name || '-'}</span></td>
+                    <td><span class="badge bg-light text-dark border" style="font-size: 10px;">${lead.source_name || lead.source || 'Direct Enquiry'}</span></td>
                     <td><span class="status-badge status-${lead.status}">${formatStatus(lead.status)}</span></td>
                     <td><span class="priority-badge priority-${lead.priority}">${lead.priority}</span></td>
                     <td>${formatLeadOwner(lead)}</td>

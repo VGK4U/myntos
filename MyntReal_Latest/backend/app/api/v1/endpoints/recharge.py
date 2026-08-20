@@ -287,57 +287,6 @@ def a1topup_callback(txid: str, status: str, opid: str, db: Session = Depends(ge
 
 # ── EXECUTIVE LEVEL DASHBOARDS FOR RAZORPAY AND A1TOP ──────────────────
 
-def seed_mock_recharge_data(db: Session):
-    count = db.query(RechargeTransaction).count()
-    if count >= 15:
-        return
-    
-    operators = ["JIO", "AIRTEL", "VI", "BSNL"]
-    circles = ["Andhra Pradesh", "Telangana", "Karnataka", "Tamil Nadu", "Maharashtra"]
-    statuses = ["Paid", "Failed", "Pending"]
-    api_statuses = ["Success", "Failed", "Pending"]
-    names = ["Ramesh Kumar", "Suresh Kumar", "Ganesh Mandal", "Aarav Sharma", "Pooja Patel", "Amit Singh", "Sneha Rao"]
-    emails = ["ramesh@gmail.com", "suresh@gmail.com", "ganesh@gmail.com", "aarav@gmail.com", "pooja@gmail.com", "amit@gmail.com", "sneha@gmail.com"]
-    amounts = [19.0, 155.0, 199.0, 239.0, 299.0, 666.0, 719.0, 999.0]
-    
-    for i in range(40):
-        days_ago = random.randint(0, 30)
-        created_dt = datetime.utcnow() - timedelta(days=days_ago, hours=random.randint(0, 23), minutes=random.randint(0, 59))
-        
-        pay_status = random.choices(statuses, weights=[80, 15, 5])[0]
-        if pay_status == "Paid":
-            api_stat = random.choices(api_statuses, weights=[85, 10, 5])[0]
-        else:
-            api_stat = "Failed"
-            
-        mobile = f"{random.choice([9, 8, 7, 6])}{random.randint(100000000, 999999999)}"
-        amount = random.choice(amounts)
-        operator = random.choice(operators)
-        circle = random.choice(circles)
-        user_idx = f"VGK071{random.randint(10000, 99999)}"
-        
-        ord_id = f"order_mock_{random.randint(100000, 999999)}"
-        pay_id = f"pay_mock_{random.randint(100000, 999999)}" if pay_status == "Paid" else None
-        
-        tx = RechargeTransaction(
-            user_id=user_idx,
-            guest_email=random.choice(emails),
-            guest_name=random.choice(names),
-            mobile_number=mobile,
-            operator=operator,
-            circle=circle,
-            amount=amount,
-            razorpay_order_id=ord_id,
-            razorpay_payment_id=pay_id,
-            payment_status=pay_status,
-            api_status=api_stat,
-            api_tx_id=f"a1_tx_{random.randint(100000, 999999)}" if api_stat == "Success" else None,
-            api_operator_id=f"op_ref_{random.randint(100000, 999999)}" if api_stat == "Success" else None,
-            created_at=created_dt,
-            updated_at=created_dt
-        )
-        db.add(tx)
-    db.commit()
 
 @router.get("/admin/razorpay/dashboard")
 def get_razorpay_admin_dashboard(
@@ -360,8 +309,6 @@ def get_razorpay_admin_dashboard(
             status_code=403,
             detail="Access denied. Accessible only for MR10001 or Accounts department."
         )
-
-    seed_mock_recharge_data(db)
     
     query = db.query(RechargeTransaction)
     if status:
@@ -469,8 +416,6 @@ def get_a1top_admin_dashboard(
             status_code=403,
             detail="Access denied. Accessible only for MR10001 or Accounts department."
         )
-
-    seed_mock_recharge_data(db)
     
     query = db.query(RechargeTransaction)
     if operator:

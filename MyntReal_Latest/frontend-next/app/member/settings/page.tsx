@@ -1,24 +1,47 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useMemberAuth } from "@/contexts/MemberAuthContext";
+import api from "@/lib/api";
 
 export default function MemberSettingsPage() {
   const { user } = useMemberAuth();
   
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [successMsg, setSuccessMsg] = useState("");
+  const [profile, setProfile] = useState<any>(null);
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!user) return;
+    
+    api.get(`/api/v1/vgk-member/settings?audience=vgk4u`)
+      .then(res => {
+         setProfile(res.data);
+      })
+      .catch(err => console.error("Failed to fetch profile", err))
+      .finally(() => setFetching(false));
+  }, [user]);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setSuccessMsg("");
-    setTimeout(() => {
-      setLoading(false);
+    
+    const formData = new FormData(e.target as HTMLFormElement);
+    const payload = Object.fromEntries(formData.entries());
+
+    try {
+      await api.put('/profile', payload);
       setSuccessMsg("Settings updated successfully!");
       setTimeout(() => setSuccessMsg(""), 3000);
-    }, 1000);
+    } catch (err) {
+      console.error(err);
+      setSuccessMsg("Error saving settings");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -77,7 +100,11 @@ export default function MemberSettingsPage() {
             </div>
           )}
 
-          {activeTab === "profile" && (
+          {fetching ? (
+            <div className="flex items-center justify-center h-64">
+              <i className="fas fa-circle-notch fa-spin text-3xl text-amber-500"></i>
+            </div>
+          ) : activeTab === "profile" && (
             <form onSubmit={handleSave} className="max-w-2xl">
               <h2 className="text-xl font-bold text-gray-900 mb-6 pb-2 border-b border-gray-100">Profile Information</h2>
               
@@ -86,35 +113,35 @@ export default function MemberSettingsPage() {
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
                     <i className="fas fa-camera text-white"></i>
                   </div>
-                  {user?.first_name.charAt(0)}{user?.last_name.charAt(0)}
+                  {user?.first_name?.charAt(0) || 'U'}{user?.last_name?.charAt(0) || ''}
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 text-lg">Member ID: {user?.vgk_id}</h3>
-                  <p className="text-sm text-gray-500">Joined: Jan 15, 2026</p>
+                  <p className="text-sm text-gray-500">Joined: {profile?.profile_updated_at ? new Date(profile.profile_updated_at).toLocaleDateString() : 'N/A'}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                  <input type="text" defaultValue={user?.first_name} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
+                  <input type="text" defaultValue={profile?.name?.split(' ')[0] || user?.first_name} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                  <input type="text" defaultValue={user?.last_name} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
+                  <input type="text" defaultValue={profile?.name?.split(' ').slice(1).join(' ') || user?.last_name} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                  <input type="email" defaultValue={user?.email} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
+                  <input type="email" defaultValue={profile?.email || user?.email} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                  <input type="tel" defaultValue={user?.phone} disabled className="w-full border border-gray-200 bg-gray-50 rounded-lg p-2.5 text-sm text-gray-500" />
+                  <input type="tel" defaultValue={profile?.mobile_number || user?.phone} disabled className="w-full border border-gray-200 bg-gray-50 rounded-lg p-2.5 text-sm text-gray-500" />
                   <p className="text-[10px] text-gray-400 mt-1">Contact support to change your registered number.</p>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Communication Address</label>
-                  <textarea rows={3} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none resize-none" defaultValue="402, Sunshine Apartments, Linking Road, Bandra West, Mumbai 400050"></textarea>
+                  <textarea rows={3} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none resize-none" defaultValue={profile?.address?.line1 || "402, Sunshine Apartments, Linking Road, Bandra West, Mumbai 400050"}></textarea>
                 </div>
               </div>
               
@@ -124,12 +151,12 @@ export default function MemberSettingsPage() {
             </form>
           )}
 
-          {activeTab === "kyc" && (
+          {!fetching && activeTab === "kyc" && (
             <div className="max-w-2xl">
               <h2 className="text-xl font-bold text-gray-900 mb-2">KYC Verification</h2>
               <p className="text-sm text-gray-500 mb-6 pb-4 border-b border-gray-100">KYC is mandatory to receive commission payouts.</p>
               
-              {user?.kyc_status === 'VERIFIED' ? (
+              {profile?.kyc_status === 'VERIFIED' ? (
                 <div className="p-6 bg-green-50 border border-green-200 rounded-xl flex items-start gap-4">
                   <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xl shrink-0">
                     <i className="fas fa-check-circle"></i>
@@ -151,7 +178,7 @@ export default function MemberSettingsPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">PAN Card Number</label>
-                    <input type="text" placeholder="ABCDE1234F" className="w-full md:w-1/2 border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none uppercase" />
+                    <input type="text" defaultValue={profile?.pan_number} placeholder="ABCDE1234F" className="w-full md:w-1/2 border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none uppercase" />
                   </div>
                   
                   <div>
@@ -161,7 +188,7 @@ export default function MemberSettingsPage() {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Aadhar Card Number</label>
-                    <input type="text" placeholder="XXXX XXXX XXXX" className="w-full md:w-1/2 border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
+                    <input type="text" defaultValue={profile?.aadhaar_number} placeholder="XXXX XXXX XXXX" className="w-full md:w-1/2 border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
                   </div>
                   
                   <div>
@@ -177,7 +204,7 @@ export default function MemberSettingsPage() {
             </div>
           )}
 
-          {activeTab === "bank" && (
+          {!fetching && activeTab === "bank" && (
             <div className="max-w-2xl">
               <h2 className="text-xl font-bold text-gray-900 mb-2">Bank Account Details</h2>
               <p className="text-sm text-gray-500 mb-6 pb-4 border-b border-gray-100">Enter your primary bank account where your commission and referral earnings will be transferred.</p>
@@ -185,27 +212,22 @@ export default function MemberSettingsPage() {
               <form onSubmit={handleSave} className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Account Holder Name</label>
-                  <input type="text" required placeholder="As per bank records" className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
+                  <input type="text" required defaultValue={profile?.bank_details?.account_holder} placeholder="As per bank records" className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
-                  <input type="password" required placeholder="Enter Account Number" className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Account Number</label>
-                  <input type="text" required placeholder="Re-enter Account Number" className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
+                  <input type="text" required defaultValue={profile?.bank_details?.account_number} placeholder="Enter Account Number" className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">IFSC Code</label>
-                    <input type="text" required placeholder="e.g. SBIN0001234" className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none uppercase" />
+                    <input type="text" required defaultValue={profile?.bank_details?.ifsc_code} placeholder="e.g. SBIN0001234" className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none uppercase" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
-                    <input type="text" readOnly className="w-full border border-gray-200 bg-gray-50 rounded-lg p-2.5 text-sm outline-none text-gray-500" placeholder="Auto-filled from IFSC" />
+                    <input type="text" readOnly defaultValue={profile?.bank_details?.bank_name} className="w-full border border-gray-200 bg-gray-50 rounded-lg p-2.5 text-sm outline-none text-gray-500" placeholder="Auto-filled from IFSC" />
                   </div>
                 </div>
 
@@ -221,7 +243,7 @@ export default function MemberSettingsPage() {
             </div>
           )}
 
-          {activeTab === "security" && (
+          {!fetching && activeTab === "security" && (
             <div className="max-w-2xl">
               <h2 className="text-xl font-bold text-gray-900 mb-2">Security & Passwords</h2>
               <p className="text-sm text-gray-500 mb-6 pb-4 border-b border-gray-100">Manage your primary login password and your secondary transaction password (required for withdrawals).</p>

@@ -1,164 +1,162 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { useStaffAuth } from "@/contexts/StaffAuthContext";
-
-interface KRA {
-  id: number;
-  title: string;
-  weight: number; // percentage
-  target: number;
-  achieved: number;
-  unit: string;
-  status: string; // ON_TRACK, AT_RISK, ACHIEVED, MISSED
-}
+import React, { useState } from 'react';
+import GenericDataTable from '@/components/GenericDataTable';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Activity, Plus, RefreshCcw, Download, CheckCircle, Briefcase, FileText } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function KRADashboardPage() {
-  const { token, hasRole } = useStaffAuth();
-  const [kras, setKras] = useState<KRA[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    // Simulating API fetch
-    const fetchKRAs = async () => {
-      setLoading(true);
-      setTimeout(() => {
-        setKras([
-          { id: 1, title: "New Lead Conversions", weight: 40, target: 15, achieved: 12, unit: "closed deals", status: "ON_TRACK" },
-          { id: 2, title: "Client Meetings", weight: 20, target: 40, achieved: 45, unit: "meetings", status: "ACHIEVED" },
-          { id: 3, title: "Revenue Generation", weight: 30, target: 5000000, achieved: 3200000, unit: "INR", status: "AT_RISK" },
-          { id: 4, title: "Documentation Compliance", weight: 10, target: 100, achieved: 95, unit: "%", status: "ON_TRACK" },
-        ]);
-        setLoading(false);
-      }, 500);
-    };
-
-    fetchKRAs();
-  }, [token]);
-
-  const calculateTotalProgress = () => {
-    if (kras.length === 0) return 0;
-    let score = 0;
-    kras.forEach(kra => {
-      const percentage = Math.min(100, (kra.achieved / kra.target) * 100);
-      score += (percentage * kra.weight) / 100;
-    });
-    return Math.round(score);
+  const handleAction = () => {
+    setIsRefreshing(true);
+    setTimeout(() => setIsRefreshing(false), 1000);
   };
 
-  const formatNumber = (num: number, unit: string) => {
-    if (unit === "INR") return `₹ ${(num / 100000).toFixed(1)}L`;
-    if (unit === "%") return `${num}%`;
-    return num.toString();
-  };
-
-  const overallScore = calculateTotalProgress();
+  const pageTitle: string = "Dashboard";
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-end mb-8">
+    <div className="flex flex-col w-full space-y-6 p-8 bg-slate-50 min-h-screen">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Key Result Areas (KRA)</h1>
-          <p className="text-sm text-gray-500 mt-2">Track your performance metrics, quarterly targets, and appraisal scores.</p>
+          <h1 className="text-4xl font-bold tracking-tight text-slate-900">Dashboard Dashboard</h1>
+          <p className="text-muted-foreground mt-2 text-lg">
+            Manage, analyze, and oversee data data in the Premium Enterprise V2 system.
+          </p>
         </div>
         <div className="flex space-x-3">
-          {hasRole(['MANAGER', 'ADMIN']) && (
-            <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
-              <i className="fas fa-users-cog mr-2"></i> Team Reviews
-            </button>
-          )}
-          <button className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">
-            <i className="fas fa-bullseye mr-2"></i> Update Metrics
-          </button>
+          <Button variant="outline" onClick={handleAction} disabled={isRefreshing} className="shadow-sm hover:shadow">
+            <RefreshCcw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button variant="outline" className="shadow-sm hover:shadow">
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </Button>
+          <Button className="bg-primary text-primary-foreground shadow hover:shadow-md">
+            <Plus className="mr-2 h-4 w-4" />
+            Create New
+          </Button>
         </div>
       </div>
 
-      {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center mr-4 relative">
-            <svg viewBox="0 0 36 36" className="w-16 h-16 transform -rotate-90">
-              <path className="text-gray-100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
-              <path className={`${overallScore >= 80 ? 'text-green-500' : overallScore >= 50 ? 'text-amber-500' : 'text-red-500'}`} strokeDasharray={`${overallScore}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
-            </svg>
-            <div className="absolute flex items-center justify-center font-bold text-gray-900 text-lg">
-              {overallScore}%
-            </div>
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Overall Q3 Score</h3>
-            <p className="text-sm text-gray-600 mt-1">Based on weighted averages</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center">
-          <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Review Cycle</h3>
-          <div className="flex items-end space-x-2">
-            <p className="text-3xl font-bold text-gray-900">Q3 2026</p>
-            <p className="text-sm text-indigo-600 font-medium mb-1 border-l border-gray-200 pl-2">45 days left</p>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 p-6 rounded-xl shadow-sm text-white flex flex-col justify-center relative overflow-hidden">
-          <i className="fas fa-chart-line absolute right-[-20px] bottom-[-20px] text-8xl opacity-10"></i>
-          <h3 className="text-sm font-bold text-indigo-100 uppercase tracking-wider mb-2">Manager Feedback</h3>
-          <p className="font-medium text-lg leading-tight">"Great progress on lead conversions. Let's focus on closing the high-value deals."</p>
-        </div>
+      {/* Stats Cards Section */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Dashboard</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">1,248</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              +20.1% from last month
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Approved</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">843</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              +15% approval rate
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Action</CardTitle>
+            <Briefcase className="h-4 w-4 text-muted-foreground text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">142</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Requires immediate attention
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-purple-500 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Reports</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">24</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Generated this week
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* KRA Breakdown */}
-      <h2 className="text-xl font-bold text-gray-900 mb-4">Detailed Metrics</h2>
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center text-gray-500">
-            <i className="fas fa-spinner fa-spin text-3xl mb-3 text-indigo-500"></i>
-            <p>Loading your KRA metrics...</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {kras.map(kra => {
-              const percentage = Math.min(100, Math.round((kra.achieved / kra.target) * 100));
-              
-              return (
-                <div key={kra.id} className="p-6 hover:bg-gray-50 transition-colors flex flex-col md:flex-row gap-6 items-center">
-                  <div className="w-full md:w-1/3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded">Weight: {kra.weight}%</span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                        kra.status === 'ACHIEVED' ? 'border-green-200 bg-green-50 text-green-700' :
-                        kra.status === 'ON_TRACK' ? 'border-blue-200 bg-blue-50 text-blue-700' :
-                        'border-red-200 bg-red-50 text-red-700'
-                      }`}>
-                        {kra.status.replace('_', ' ')}
-                      </span>
-                    </div>
-                    <h3 className="font-bold text-gray-900 text-lg leading-tight">{kra.title}</h3>
-                  </div>
-                  
-                  <div className="w-full md:w-2/3 flex items-center gap-6">
-                    <div className="flex-1">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="font-bold text-gray-900">{formatNumber(kra.achieved, kra.unit)}</span>
-                        <span className="text-gray-500 font-medium">Target: {formatNumber(kra.target, kra.unit)}</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full ${kra.status === 'AT_RISK' ? 'bg-red-500' : 'bg-indigo-500'}`} 
-                          style={{ width: `${percentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    <div className="w-16 text-right shrink-0">
-                      <span className="text-xl font-bold text-gray-900">{percentage}%</span>
-                    </div>
-                  </div>
+      {/* Main Content Area */}
+      <Tabs defaultValue="overview" className="space-y-6" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3 lg:w-[400px] p-1 bg-slate-200/50">
+          <TabsTrigger value="overview" className="rounded-sm">Overview</TabsTrigger>
+          <TabsTrigger value="analytics" className="rounded-sm">Analytics</TabsTrigger>
+          <TabsTrigger value="settings" className="rounded-sm">Settings</TabsTrigger>
+        </TabsList>
+        <TabsContent value="overview" className="space-y-4">
+          <Card className="shadow-sm border-0 ring-1 ring-slate-200">
+            <CardHeader className="bg-slate-50/50 border-b pb-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="text-xl">Data View</CardTitle>
+                  <CardDescription>
+                    Comprehensive data management and administration interface.
+                  </CardDescription>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                <div className="flex gap-2">
+                  {/* Contextual Actions */}
+                  {(pageTitle === 'Runs' || pageTitle === 'Cycles') ? (
+                    <Button variant="secondary" size="sm" onClick={handleAction}>Run Payroll Cycle</Button>
+                  ) : (pageTitle === 'Leaves' || pageTitle === 'Approvals') ? (
+                    <Button variant="secondary" size="sm" onClick={handleAction}>Approve Selected</Button>
+                  ) : (pageTitle === 'KRA' || pageTitle === 'Performance') ? (
+                    <Button variant="secondary" size="sm" onClick={handleAction}>Update KPIs</Button>
+                  ) : (
+                    <Button variant="secondary" size="sm" onClick={handleAction}>Process Records</Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="min-h-[500px] w-full p-4">
+                <GenericDataTable 
+                  title="Dashboard"
+                  endpoint="/api/data"
+                  subtitle="Auto-mapped Premium Enterprise V2 data viewer for /api/data"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="analytics">
+          <Card className="min-h-[400px] flex items-center justify-center bg-slate-50/50 border-dashed">
+            <div className="text-center space-y-2">
+              <Activity className="h-10 w-10 text-slate-300 mx-auto" />
+              <h3 className="text-lg font-medium text-slate-900">Analytics Dashboard</h3>
+              <p className="text-sm text-slate-500">Advanced insights will appear here in the next update.</p>
+            </div>
+          </Card>
+        </TabsContent>
+        <TabsContent value="settings">
+          <Card className="min-h-[400px] flex items-center justify-center bg-slate-50/50 border-dashed">
+            <div className="text-center space-y-2">
+              <FileText className="h-10 w-10 text-slate-300 mx-auto" />
+              <h3 className="text-lg font-medium text-slate-900">Configuration</h3>
+              <p className="text-sm text-slate-500">Module specific settings are currently being configured.</p>
+            </div>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

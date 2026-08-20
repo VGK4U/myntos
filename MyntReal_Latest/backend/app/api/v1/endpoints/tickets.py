@@ -643,30 +643,13 @@ async def get_ticket_attachment(
     if not attachment:
         raise HTTPException(status_code=404, detail="Attachment not found")
     
-    # Build file path
-    file_path = Path(attachment.file_path)
+    from app.services.object_storage import storage_service
+    from fastapi.responses import RedirectResponse
     
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Attachment file not found")
+    # Get S3 URL (presigned or public)
+    file_url = storage_service.get_file_url(attachment.file_path)
     
-    # Determine content type
-    ext = attachment.original_filename.rsplit('.', 1)[-1].lower() if '.' in attachment.original_filename else ''
-    content_types = {
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'png': 'image/png',
-        'pdf': 'application/pdf',
-        'doc': 'application/msword',
-        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'txt': 'text/plain'
-    }
-    media_type = content_types.get(ext, attachment.mime_type)
-    
-    return FileResponse(
-        path=str(file_path),
-        media_type=media_type,
-        filename=attachment.original_filename
-    )
+    return RedirectResponse(url=file_url)
 
 
 @router.get("/{ticket_id}/attachments")
@@ -2173,7 +2156,8 @@ async def upload_spare_media(
         raise HTTPException(status_code=400, detail="Maximum 10 images allowed")
     
     media_dir = f"uploads/spare_media/{spare_id}"
-    os.makedirs(media_dir, exist_ok=True)
+    
+    from app.services.object_storage import storage_service
     
     media_files = spare.media_files or []
     uploaded = []
@@ -2184,9 +2168,8 @@ async def upload_spare_media(
             filename = f"{uuid.uuid4().hex}{ext}"
             filepath = f"{media_dir}/{filename}"
             
-            with open(filepath, 'wb') as f:
-                content = await img.read()
-                f.write(content)
+            content = await img.read()
+            storage_service.upload_file(filepath, content)
             
             media_files.append({
                 'type': 'image',
@@ -2206,8 +2189,7 @@ async def upload_spare_media(
         filename = f"video_{uuid.uuid4().hex}{ext}"
         filepath = f"{media_dir}/{filename}"
         
-        with open(filepath, 'wb') as f:
-            f.write(content)
+        storage_service.upload_file(filepath, content)
         
         media_files.append({
             'type': 'video',
@@ -2266,11 +2248,14 @@ async def serve_spare_media(
     media = media_files[media_index]
     filepath = media.get('path')
     
-    if not filepath or not os.path.exists(filepath):
-        raise HTTPException(status_code=404, detail="File not found")
+    if not filepath:
+        raise HTTPException(status_code=404, detail="File path not found")
+        
+    from app.services.object_storage import storage_service
+    from fastapi.responses import RedirectResponse
     
-    media_type = 'image/jpeg' if media.get('type') == 'image' else 'video/mp4'
-    return FileResponse(filepath, media_type=media_type)
+    file_url = storage_service.get_file_url(filepath)
+    return RedirectResponse(url=file_url)
 
 
 @router.post("/service/spares/{spare_id}/acknowledge")

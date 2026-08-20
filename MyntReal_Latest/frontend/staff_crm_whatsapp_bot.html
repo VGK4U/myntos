@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Bot Management Hub - Staff CRM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; color: #1f2937; }
+        .dark-theme body { background: #0f172a; color: #f8fafc; }
+
+        .main-content { margin-left: 280px; padding-top: 16px; padding-left: 20px; padding-right: 20px; min-height: 100vh; display: flex; flex-direction: column; transition: margin-left 0.3s ease; }
+        @media (max-width: 768px) { .main-content { margin-left: 0; padding-left: 12px; padding-right: 12px; } }
+        .content-area { flex: 1; display: flex; flex-direction: column; padding-bottom: 24px; }
+
+        .page-banner {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border-radius: 14px; padding: 20px 24px; margin-bottom: 20px; color: white;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);
+        }
+        .page-banner h1 { font-size: 21px; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 4px 0 0 0; font-size: 13px; }
+
+        .bot-status-pill {
+            background: rgba(255,255,255,0.22); padding: 7px 18px; border-radius: 20px;
+            font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; backdrop-filter: blur(6px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .bot-status-dot { width: 9px; height: 9px; border-radius: 50%; background: #34d399; box-shadow: 0 0 8px #34d399; }
+
+        .hub-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 4px; }
+        .dark-theme .hub-tabs { border-color: #334155; }
+        .hub-tab-btn {
+            padding: 11px 22px; border: none; background: transparent; font-size: 14px; font-weight: 700;
+            color: #6b7280; cursor: pointer; border-radius: 10px 10px 0 0; transition: all 0.2s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .dark-theme .hub-tab-btn { color: #94a3b8; }
+        .hub-tab-btn:hover { color: #10b981; background: #ecfdf5; }
+        .dark-theme .hub-tab-btn:hover { background: #1e293b; color: #34d399; }
+        .hub-tab-btn.active { color: #059669; border-bottom: 3px solid #059669; background: white; }
+        .dark-theme .hub-tab-btn.active { background: #1e293b; color: #34d399; border-color: #34d399; }
+
+        .tab-panel { display: none; flex: 1; }
+        .tab-panel.active { display: flex; flex-direction: column; }
+
+        /* TAB 1: Conversations Split View */
+        .conv-wrap {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 0;
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            flex: 1;
+            min-height: calc(100vh - 210px);
+            max-height: calc(100vh - 210px);
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+        .dark-theme .conv-wrap { background: #1e293b; border-color: #334155; }
+        .conv-list { border-right: 1px solid #e5e7eb; display: flex; flex-direction: column; background: #ffffff; height: 100%; overflow: hidden; }
+        .dark-theme .conv-list { border-color: #334155; background: #1e293b; }
+        .conv-search { padding: 14px; border-bottom: 1px solid #e5e7eb; background: #f8fafc; display: flex; flex-direction: column; gap: 8px; }
+        .dark-theme .conv-search { border-color: #334155; background: #0f172a; }
+        .conv-items { flex: 1 1 0%; overflow-y: auto; min-height: 0; }
+        .conv-item { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: all 0.15s; }
+        .dark-theme .conv-item { border-color: #334155; }
+        .conv-item:hover, .conv-item.active { background: #ecfdf5; border-left: 4px solid #10b981; }
+        .dark-theme .conv-item:hover, .dark-theme .conv-item.active { background: #0f172a; border-left-color: #34d399; }
+        .conv-name { font-size: 14px; font-weight: 700; color: #0f172a; }
+        .dark-theme .conv-name { color: #f8fafc; }
+        .conv-preview { font-size: 12.5px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
+
+        .cat-pill { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+        .cat-payout { background: #fef3c7; color: #92400e; }
+        .cat-leads { background: #dbeafe; color: #1e40af; }
+        .cat-direct { background: #dcfce7; color: #166534; }
+        .cat-tickets { background: #f3e8ff; color: #6b21a8; }
+
+        .chat-main { display: flex; flex-direction: column; background: #f8fafc; height: 100%; overflow: hidden; flex: 1; }
+        .dark-theme .chat-main { background: #0f172a; }
+        .chat-header { padding: 14px 20px; background: white; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .dark-theme .chat-header { background: #1e293b; border-color: #334155; }
+        
+        .chat-history {
+            flex: 1 1 0%;
+            min-height: 0;
+            padding: 22px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .chat-bubble { max-width: 84%; padding: 14px 18px; border-radius: 14px; font-size: 13.5px; line-height: 1.5; word-break: break-word; white-space: pre-wrap; font-family: inherit; }
+        .chat-bubble.in { align-self: flex-start; background: white; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .dark-theme .chat-bubble.in { background: #1e293b; border-color: #334155; color: white; }
+        .chat-bubble.out { align-self: flex-end; background: #10b981; color: white; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3); }
+        .chat-footer { padding: 14px 20px; background: white; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; }
+        .dark-theme .chat-footer { background: #1e293b; border-color: #334155; }
+
+        /* TAB 2: Auto Messages Grid */
+        .auto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
+        .auto-card { background: white; border-radius: 14px; padding: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+        .dark-theme .auto-card { background: #1e293b; border-color: #334155; }
+        .auto-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .auto-card-title { font-size: 16px; font-weight: 800; color: #0f172a; margin: 0; }
+        .dark-theme .auto-card-title { color: #f8fafc; }
+        .auto-card-desc { font-size: 13px; color: #64748b; margin-bottom: 16px; line-height: 1.5; }
+
+        /* TAB 3: Delivery Logs Table */
+        .filter-bar { background: white; border-radius: 14px; padding: 18px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; border: 1px solid #e2e8f0; }
+        .dark-theme .filter-bar { background: #1e293b; border-color: #334155; }
+        .data-card { background: white; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; border: 1px solid #e2e8f0; }
+        .dark-theme .data-card { background: #1e293b; border-color: #334155; }
+        .table-custom { width: 100%; border-collapse: collapse; }
+        .table-custom th { background: #f8fafc; padding: 14px 18px; font-size: 11.5px; font-weight: 800; text-transform: uppercase; color: #475569; border-bottom: 1.5px solid #e2e8f0; text-align: left; letter-spacing: 0.05em; }
+        .dark-theme .table-custom th { background: #0f172a; color: #94a3b8; border-color: #334155; }
+        .table-custom td { padding: 14px 18px; font-size: 13px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: middle; }
+        .dark-theme .table-custom td { border-color: #334155; color: #cbd5e1; }
+
+        .badge-status { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; }
+        .badge-success { background: #dcfce7; color: #15803d; }
+        .badge-failed { background: #fee2e2; color: #b91c1c; }
+        .badge-sent { background: #dbeafe; color: #1d4ed8; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+
+    <div class="main-content">
+        <div class="content-area">
+            <!-- Page Banner -->
+            <div class="page-banner">
+                <div>
+                    <h1><i class="fab fa-whatsapp"></i> WhatsApp Bot Management Hub</h1>
+                    <p>Live conversations, mobile scanner bot dispatches, and WhatsApp template messaging</p>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn btn-light btn-sm fw-bold text-success" onclick="openNewMsgModal()">
+                        <i class="fas fa-paper-plane me-1"></i> Write New Message
+                    </button>
+                    <div class="bot-status-pill" id="botStatusPill" onclick="window.open('http://localhost:5002/qr', '_blank')" style="cursor: pointer;" title="Click to view QR Code / Status">
+                        <span class="bot-status-dot"></span> <span id="botStatusText">BOT CONNECTED</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4 Main Tabs -->
+            <div class="hub-tabs">
+                <button class="hub-tab-btn active" onclick="switchHubTab('conversations')"><i class="fas fa-comments"></i> 1. All Conversations</button>
+                <button class="hub-tab-btn" onclick="switchHubTab('auto')"><i class="fas fa-bolt"></i> 2. Automatic Messages</button>
+                <button class="hub-tab-btn" onclick="switchHubTab('logs')"><i class="fas fa-mobile-alt"></i> 3. System Sent from Mobile / Logs</button>
+                <button class="hub-tab-btn" onclick="switchHubTab('scheduler')"><i class="fas fa-clock"></i> 4. Daily Scheduler / Live Trigger Tracker</button>
+            </div>
+
+            <!-- TAB 1: All Conversations -->
+            <div class="tab-panel active" id="panel-conversations">
+                <div class="conv-wrap">
+                    <div class="conv-list">
+                        <div class="conv-search">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold text-muted" style="font-size: 11px; text-transform: uppercase;">Search Messages</span>
+                                <button class="btn btn-sm btn-link p-0 text-success text-decoration-none fw-bold" onclick="openNewMsgModal()"><i class="fas fa-plus-circle me-1"></i> New</button>
+                            </div>
+                            <input type="text" class="form-control form-control-sm" id="convSearchInput" placeholder="Search contacts, text, or mobile..." onkeyup="loadConversations()" />
+                            <select class="form-select form-select-sm" id="convCategoryFilter" onchange="loadConversations()">
+                                <option value="all">All Categories</option>
+                                <option value="Payout Alerts">💰 Payout Alerts</option>
+                                <option value="Lead Enquiries">📝 Lead Enquiries</option>
+                                <option value="Direct Messages">💬 Direct Messages</option>
+                                <option value="Support Tickets">🎫 Support Tickets</option>
+                            </select>
+                        </div>
+                        <div class="conv-items" id="convItemsContainer">
+                            <div class="text-center p-4 text-muted">Loading conversations from scanner number...</div>
+                        </div>
+                    </div>
+                    <div class="chat-main">
+                        <div class="chat-header">
+                            <div>
+                                <h6 class="m-0 font-weight-bold" id="chatActiveName">Select a Contact</h6>
+                                <small class="text-muted" id="chatActivePhone">—</small>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-success" onclick="openNewMsgModal()"><i class="fas fa-edit"></i> Write Message</button>
+                                <button class="btn btn-sm btn-success" onclick="openDirectWa()"><i class="fab fa-whatsapp"></i> Open WhatsApp Web</button>
+                            </div>
+                        </div>
+                        <div class="chat-history" id="chatHistoryBox">
+                            <div class="text-center p-4 text-muted">Select a conversation from the left list to view chat transcript.</div>
+                        </div>
+                        <div class="chat-footer">
+                            <input type="text" class="form-control form-control-sm" id="chatReplyInput" placeholder="Type a WhatsApp message..." onkeypress="if(event.key==='Enter') sendReplyMsg()" />
+                            <button class="btn btn-sm btn-success fw-bold" onclick="sendReplyMsg()"><i class="fas fa-paper-plane"></i> Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: Automatic Messages -->
+            <div class="tab-panel" id="panel-auto">
+                <div class="auto-grid">
+                    <div class="auto-card">
+                        <div class="auto-card-header">
+                            <h5 class="auto-card-title">👋 CRM Lead Welcome</h5>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" checked id="toggleWelcome" />
+                            </div>
+                        </div>
+                        <p class="auto-card-desc">Sends instant WhatsApp greeting & website details when a new lead registers via CRM or website chatbot.</p>
+                        <button class="btn btn-sm btn-outline-primary" onclick="alert('Template: 🎉 Welcome {{name}} to VGK4U!')"><i class="fas fa-edit"></i> Edit Template</button>
+                    </div>
+
+                    <div class="auto-card">
+                        <div class="auto-card-header">
+                            <h5 class="auto-card-title">💰 Instant Payout Alert</h5>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" checked id="togglePayout" />
+                            </div>
+                        </div>
+                        <p class="auto-card-desc">Sends automatic payout notifications with breakdown when daily earnings are processed.</p>
+                        <button class="btn btn-sm btn-outline-primary" onclick="alert('Template: 💰 Hi {{name}}, your payout of {{amount}} is credited!')"><i class="fas fa-edit"></i> Edit Template</button>
+                    </div>
+
+                    <div class="auto-card">
+                        <div class="auto-card-header">
+                            <h5 class="auto-card-title">🎫 Service Ticket Alert</h5>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" checked id="toggleTicket" />
+                            </div>
+                        </div>
+                        <p class="auto-card-desc">Notifies customers automatically when a support/service ticket is opened or resolved.</p>
+                        <button class="btn btn-sm btn-outline-primary" onclick="alert('Template: 🎫 Ticket #{{id}} updated to {{status}}.')"><i class="fas fa-edit"></i> Edit Template</button>
+                    </div>
+
+                    <div class="auto-card">
+                        <div class="auto-card-header">
+                            <h5 class="auto-card-title">⏰ Daily Morning Reminder</h5>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" checked id="toggleMorning" />
+                            </div>
+                        </div>
+                        <p class="auto-card-desc">Dispatches daily 9:00 AM portal summary and performance reports to leadership.</p>
+                        <button class="btn btn-sm btn-outline-primary" onclick="alert('Template: 🌅 Good Morning {{name}}! Here is your daily team summary.')"><i class="fas fa-edit"></i> Edit Template</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: System Sent from Mobile / Logs -->
+            <div class="tab-panel" id="panel-logs">
+                <div class="filter-bar">
+                    <div>
+                        <label class="form-label text-uppercase text-muted fw-bold" style="font-size: 11px;">Status Filter</label>
+                        <select class="form-select form-select-sm" id="logStatusFilter" onchange="loadDeliveryLogs()">
+                            <option value="">All Statuses</option>
+                            <option value="success">Delivered / Success</option>
+                            <option value="failed">Failed / Error</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label text-uppercase text-muted fw-bold" style="font-size: 11px;">Search</label>
+                        <input type="text" class="form-control form-control-sm" id="logSearchInput" placeholder="Name, phone, or keyword..." onkeyup="loadDeliveryLogs()" />
+                    </div>
+                    <button class="btn btn-sm btn-primary" onclick="loadDeliveryLogs()"><i class="fas fa-sync-alt"></i> Refresh Logs</button>
+                </div>
+
+                <div class="data-card">
+                    <div class="table-responsive">
+                        <table class="table-custom">
+                            <thead>
+                                <tr>
+                                    <th>Date & Time</th>
+                                    <th>Recipient</th>
+                                    <th>Type</th>
+                                    <th>Message Preview</th>
+                                    <th>Status</th>
+                                    <th>Message SID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logsTableBody">
+                                <tr><td colspan="6" class="text-center p-4 text-muted">Loading mobile & system sent delivery logs...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: Daily Scheduler & Live Trigger Tracker -->
+            <div class="tab-panel" id="panel-scheduler">
+                <div class="filter-card d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 p-3" style="background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-success px-3 py-2" style="font-size: 13px;"><i class="fas fa-play-circle me-1"></i> SCHEDULER ENGINE ACTIVE</span>
+                        <span class="text-muted" style="font-size: 12px;" id="schedulerSyncTime">Last refreshed: Just now</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-sm btn-outline-success fw-bold px-3" onclick="loadSchedulerTracker()">
+                            <i class="fas fa-sync-alt me-1"></i> Refresh Tracker
+                        </button>
+                    </div>
+                </div>
+
+                <div class="data-card">
+                    <div class="table-responsive">
+                        <table class="table-custom">
+                            <thead>
+                                <tr>
+                                    <th>Job / Task Name</th>
+                                    <th>Recurrence / Schedule</th>
+                                    <th>Recipients / Target Groups</th>
+                                    <th id="th-d2">2 Days Ago</th>
+                                    <th id="th-d1">Yesterday</th>
+                                    <th id="th-d0">Today</th>
+                                    <th>Next Run</th>
+                                    <th>Action / Manual Trigger</th>
+                                </tr>
+                            </thead>
+                            <tbody id="schedulerTableBody">
+                                <tr><td colspan="8" class="text-center p-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading daily scheduler status matrix...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- WRITE NEW WHATSAPP MESSAGE MODAL -->
+    <div class="modal fade" id="newMsgModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title font-weight-bold"><i class="fab fa-whatsapp me-2"></i> Write New WhatsApp Message</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Recipient Selector -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-uppercase text-muted" style="font-size: 11px;">Select Recipient Type</label>
+                        <div class="d-flex gap-3 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="recipientType" id="recContact" value="contact" checked onchange="toggleRecType()" />
+                                <label class="form-check-label fw-bold" for="recContact">👤 Contact / Lead</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="recipientType" id="recGroup" value="group" onchange="toggleRecType()" />
+                                <label class="form-check-label fw-bold" for="recGroup">👥 WhatsApp Group</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="recipientType" id="recCustom" value="custom" onchange="toggleRecType()" />
+                                <label class="form-check-label fw-bold" for="recCustom">📱 Enter Custom Mobile</label>
+                            </div>
+                        </div>
+
+                        <!-- Dropdown 1: Contacts -->
+                        <div id="wrapRecContact">
+                            <select class="form-select form-select-sm" id="selRecContact">
+                                <option value="">Loading contacts & leads...</option>
+                            </select>
+                        </div>
+
+                        <!-- Dropdown 2: Groups -->
+                        <div id="wrapRecGroup" style="display: none;">
+                            <select class="form-select form-select-sm" id="selRecGroup">
+                                <option value="8875551666">👥 VGK Care _ Bajaj Capital</option>
+                                <option value="9053899899">👥 Mynt Sales New Group</option>
+                                <option value="7702830269">👥 Executive Team Announcements</option>
+                            </select>
+                        </div>
+
+                        <!-- Input 3: Custom Phone -->
+                        <div id="wrapRecCustom" style="display: none;">
+                            <input type="text" class="form-control form-control-sm" id="inputCustomPhone" placeholder="Enter 10-digit mobile number (e.g. 9876543210)..." />
+                        </div>
+                    </div>
+
+                    <!-- Template Selector -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-uppercase text-muted" style="font-size: 11px;">Choose WhatsApp Template (Optional)</label>
+                        <select class="form-select form-select-sm" id="selTemplate" onchange="applyTemplate()">
+                            <option value="">-- Write Custom Message --</option>
+                            <option value="welcome">👋 👋 CRM Lead Welcome Greeting</option>
+                            <option value="payout">💰 💰 Member Payout Congratulations</option>
+                            <option value="ticket">🎫 🎫 Service Ticket Resolved Alert</option>
+                            <option value="morning">🌅 🌅 Daily Morning Snapshot</option>
+                            <option value="overdue">⏰ ⏰ Overdue Task Alert</option>
+                        </select>
+                    </div>
+
+                    <!-- Message Body -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-uppercase text-muted" style="font-size: 11px;">Message Body</label>
+                        <textarea class="form-control" id="newMsgBody" rows="6" placeholder="Type your WhatsApp message with emojis, *bold*, _italic_..."></textarea>
+                    </div>
+
+                    <!-- Image / Poster URL -->
+                    <div class="mb-2">
+                        <label class="form-label fw-bold text-uppercase text-muted" style="font-size: 11px;">Attached Image or Poster URL (Optional)</label>
+                        <input type="text" class="form-control form-control-sm" id="newMsgMediaUrl" placeholder="https://... image link or /public/poster-fresh-test.html" />
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success btn-sm fw-bold" onclick="dispatchNewMsg()"><i class="fas fa-paper-plane me-1"></i> Send WhatsApp Message</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LIGHTBOX IMAGE MODAL -->
+    <div class="modal fade" id="imageLightboxModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-dark text-white border-0" style="border-radius: 16px; overflow: hidden;">
+                <div class="modal-header border-0 p-3">
+                    <h6 class="modal-title m-0"><i class="fas fa-image me-2"></i> Image Preview</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0 text-center bg-black">
+                    <img id="lightboxImg" src="" style="max-width: 100%; max-height: 80vh; object-fit: contain;" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MANAGE TARGET GROUPS, TRIGGER POINTS & TIMES MODAL -->
+    <div class="modal fade" id="targetGroupsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; background: #161b22; color: #fff;">
+                <div class="modal-header border-bottom border-secondary bg-dark text-white p-3">
+                    <h5 class="modal-title font-weight-bold" id="targetModalTitle"><i class="fas fa-cog text-warning me-2"></i> Manage Target Groups, Trigger Points & Times</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- SECTION 1: Target Recipient Groups & Numbers -->
+                    <div class="mb-4">
+                        <h6 class="text-warning text-uppercase fw-bold mb-2" style="font-size: 12px;"><i class="fas fa-users me-1"></i> 1. Target Recipient Groups & Mobile Numbers</h6>
+                        <div id="targetRecipientsListContainer" class="d-flex flex-column gap-2 p-3" style="background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); max-height: 200px; overflow-y: auto;">
+                            <div class="text-muted">Loading target recipients...</div>
+                        </div>
+                    </div>
+
+                    <!-- ADD NEW TARGET GROUP FORM -->
+                    <div class="card p-3 border border-secondary mb-4" style="background: rgba(0,0,0,0.2); border-radius: 12px;">
+                        <h6 class="fw-bold text-success mb-2" style="font-size: 12px;"><i class="fas fa-plus-circle me-1"></i> Add New Target Group or Mobile Number</h6>
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-5">
+                                <label class="form-label text-muted fw-bold" style="font-size: 10px;">Choose Existing WhatsApp Group</label>
+                                <select class="form-select form-select-sm bg-dark text-white border-secondary" id="selTargetGroup">
+                                    <option value="">-- Select WhatsApp Group --</option>
+                                    <option value="9053899899|Mynt Sales New Group">👥 Mynt Sales New Group</option>
+                                    <option value="8875551666|VGK Care _ Bajaj Capital">👥 VGK Care _ Bajaj Capital</option>
+                                    <option value="7702830269|Executive Team Announcements">👥 Executive Team Announcements</option>
+                                    <option value="7702830269|Field Operations & Journey Tracking">👥 Field Operations & Journey Tracking</option>
+                                    <option value="8875551666|Service & Maintenance Team">👥 Service & Maintenance Team</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label text-muted fw-bold" style="font-size: 10px;">OR Enter Custom Mobile / Label</label>
+                                <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" id="inputCustomTarget" placeholder="e.g. 9876543210 or Field Team" />
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-sm btn-success fw-bold w-100" onclick="addNewTargetRecipient()"><i class="fas fa-plus me-1"></i> Add</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 2: Trigger Frequency & Time Slots Config -->
+                    <div class="card p-3 border border-secondary" style="background: rgba(0,0,0,0.2); border-radius: 12px;">
+                        <h6 class="text-info text-uppercase fw-bold mb-2" style="font-size: 12px;"><i class="fas fa-clock me-1"></i> 2. Trigger Frequency & Time Slots Config</h6>
+                        
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted fw-bold" style="font-size: 10px;">Trigger Recurrence Interval</label>
+                                <select class="form-select form-select-sm bg-dark text-white border-secondary" id="selTriggerFrequency">
+                                    <option value="hourly">⚡ Every 1 Hour (Hourly: 9 AM - 8 PM IST)</option>
+                                    <option value="bihourly">📊 Every 2 Hours (Bi-Hourly: 9:30 AM - 7:30 PM IST)</option>
+                                    <option value="realtime">🔄 Real-Time / Instant (Continuous Event Sync)</option>
+                                    <option value="daily_fixed">📅 Daily Fixed Time Dispatch</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted fw-bold" style="font-size: 10px;">Trigger Points & Condition</label>
+                                <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" id="inputTriggerCondition" value="Active GPS Check-in & Site Visit Logs" placeholder="Trigger condition criteria..." />
+                            </div>
+                        </div>
+
+                        <label class="form-label text-muted fw-bold" style="font-size: 10px;">Active Hourly Trigger Time Slots (Click to Toggle)</label>
+                        <div class="d-flex flex-wrap gap-2" id="timeSlotsContainer">
+                            <span class="badge bg-success px-3 py-2 cursor-pointer" onclick="toggleTimeSlot(this)"><i class="fas fa-check-circle me-1"></i> 09:00 AM</span>
+                            <span class="badge bg-success px-3 py-2 cursor-pointer" onclick="toggleTimeSlot(this)"><i class="fas fa-check-circle me-1"></i> 10:00 AM</span>
+                            <span class="badge bg-success px-3 py-2 cursor-pointer" onclick="toggleTimeSlot(this)"><i class="fas fa-check-circle me-1"></i> 11:00 AM</span>
+                            <span class="badge bg-success px-3 py-2 cursor-pointer" onclick="toggleTimeSlot(this)"><i class="fas fa-check-circle me-1"></i> 12:00 PM</span>
+                            <span class="badge bg-success px-3 py-2 cursor-pointer" onclick="toggleTimeSlot(this)"><i class="fas fa-check-circle me-1"></i> 01:00 PM</span>
+                            <span class="badge bg-success px-3 py-2 cursor-pointer" onclick="toggleTimeSlot(this)"><i class="fas fa-check-circle me-1"></i> 02:00 PM</span>
+                            <span class="badge bg-success px-3 py-2 cursor-pointer" onclick="toggleTimeSlot(this)"><i class="fas fa-check-circle me-1"></i> 03:00 PM</span>
+                            <span class="badge bg-success px-3 py-2 cursor-pointer" onclick="toggleTimeSlot(this)"><i class="fas fa-check-circle me-1"></i> 04:00 PM</span>
+                            <span class="badge bg-success px-3 py-2 cursor-pointer" onclick="toggleTimeSlot(this)"><i class="fas fa-check-circle me-1"></i> 05:00 PM</span>
+                            <span class="badge bg-success px-3 py-2 cursor-pointer" onclick="toggleTimeSlot(this)"><i class="fas fa-check-circle me-1"></i> 06:00 PM</span>
+                            <span class="badge bg-success px-3 py-2 cursor-pointer" onclick="toggleTimeSlot(this)"><i class="fas fa-check-circle me-1"></i> 07:00 PM</span>
+                            <span class="badge bg-success px-3 py-2 cursor-pointer" onclick="toggleTimeSlot(this)"><i class="fas fa-check-circle me-1"></i> 08:00 PM</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top border-secondary bg-dark p-3">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-sm btn-success fw-bold" onclick="saveTriggerConfig()"><i class="fas fa-save me-1"></i> Save Trigger & Target Config</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/staff_sidebar.js"></script>
+    <script src="/staff_header.js"></script>
+
+    <script>
+        let activeRecipientPhone = '';
+        let allContactsCache = [];
+
+        function switchHubTab(tabKey) {
+            document.querySelectorAll('.hub-tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+
+            if (tabKey === 'conversations') {
+                document.querySelectorAll('.hub-tab-btn')[0].classList.add('active');
+                document.getElementById('panel-conversations').classList.add('active');
+                loadConversations();
+            } else if (tabKey === 'auto') {
+                document.querySelectorAll('.hub-tab-btn')[1].classList.add('active');
+                document.getElementById('panel-auto').classList.add('active');
+            } else if (tabKey === 'logs') {
+                document.querySelectorAll('.hub-tab-btn')[2].classList.add('active');
+                document.getElementById('panel-logs').classList.add('active');
+                loadDeliveryLogs();
+            } else if (tabKey === 'scheduler') {
+                document.querySelectorAll('.hub-tab-btn')[3].classList.add('active');
+                document.getElementById('panel-scheduler').classList.add('active');
+                loadSchedulerTracker();
+            }
+        }
+
+        function escapeJS(str) {
+            if (!str) return '';
+            return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        function getAuthHeaders() {
+            let tok = localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token') || localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('staff_auth_token');
+            if (!tok && typeof StaffTokenManager !== 'undefined') tok = StaffTokenManager.getToken();
+            const h = {};
+            if (tok && tok !== 'null' && tok !== 'undefined') {
+                h['Authorization'] = 'Bearer ' + tok;
+            }
+            return h;
+        }
+
+        function loadSchedulerTracker() {
+            const syncEl = document.getElementById('schedulerSyncTime');
+            if (syncEl) syncEl.textContent = 'Refreshing tracker...';
+
+            fetch('/api/v1/whatsapp/scheduler-status', {
+                headers: getAuthHeaders()
+            })
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`HTTP status ${res.status}`);
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (!data.success) {
+                    const tbody = document.getElementById('schedulerTableBody');
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-warning">Unable to load scheduler status: ' + (data.detail || 'Access denied or server error') + '</td></tr>';
+                    return;
+                }
+                if (syncEl) syncEl.textContent = 'Last refreshed: ' + new Date().toLocaleTimeString('en-IN', { hour12: true });
+
+                if (data.days) {
+                    const d2 = document.getElementById('th-d2');
+                    const d1 = document.getElementById('th-d1');
+                    const d0 = document.getElementById('th-d0');
+                    if (d2) d2.textContent = data.days.d2;
+                    if (d1) d1.textContent = data.days.d1;
+                    if (d0) d0.textContent = data.days.d0;
+                }
+
+                const tbody = document.getElementById('schedulerTableBody');
+                if (!tbody) return;
+
+                if (!data.jobs || data.jobs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-muted">No scheduled jobs found.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.jobs.map(j => {
+                    function renderBadge(d) {
+                        if (!d) return '<span class="badge bg-secondary">Unknown</span>';
+                        if (d.status === 'EXECUTED') return `<span class="badge bg-success px-2 py-1">${d.label}</span>`;
+                        if (d.status === 'PENDING') return `<span class="badge bg-warning text-dark px-2 py-1">${d.label}</span>`;
+                        return `<span class="badge bg-danger px-2 py-1">🔴 Failed</span>`;
+                    }
+
+                    const recList = j.recipients || [];
+                    const recBadges = recList.map(r => {
+                        const icon = r.type === 'group' ? 'fa-users' : 'fa-mobile-alt';
+                        return `<span class="badge bg-dark text-warning border border-warning px-2 py-1 mb-1 me-1"><i class="fas ${icon} me-1"></i>${r.name}</span>`;
+                    }).join('');
+
+                    const recCell = `
+                        <div style="max-width: 220px;">
+                            ${recBadges || '<span class="badge bg-secondary mb-1 me-1">No Groups Added</span>'}<br/>
+                            <button class="btn btn-xs btn-outline-info text-nowrap mt-1" onclick="openTargetGroupsModal('${j.job_id}', '${escapeJS(j.name)}')">
+                                <i class="fas fa-users-cog me-1"></i> Manage Targets (${recList.length})
+                            </button>
+                        </div>
+                    `;
+
+                    return `
+                        <tr>
+                            <td>
+                                <b class="text-white">${j.name}</b><br/>
+                                <small class="text-muted"><i class="fas fa-tag me-1"></i>${j.category}</small>
+                            </td>
+                            <td><span class="badge bg-dark text-info border border-info px-2 py-1">${j.schedule}</span></td>
+                            <td>${recCell}</td>
+                            <td>${renderBadge(j.day_2_ago)}</td>
+                            <td>${renderBadge(j.yesterday)}</td>
+                            <td>${renderBadge(j.today)}</td>
+                            <td><small class="text-success fw-bold"><i class="fas fa-clock me-1"></i>${j.next_run}</small></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-warning fw-bold text-nowrap" id="btn-trigger-${j.job_id}" onclick="triggerJobNow('${j.job_id}', this)">
+                                    <i class="fas fa-bolt me-1"></i> ⚡ Trigger Now
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            })
+            .catch(err => {
+                console.error("Error loading scheduler tracker:", err);
+                const tbody = document.getElementById('schedulerTableBody');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-danger">Failed to load scheduler tracker. (' + (err.message || 'Error') + ')</td></tr>';
+            });
+        }
+
+        let activeTargetJobId = '';
+
+        function openTargetGroupsModal(jobId, jobName) {
+            activeTargetJobId = jobId;
+            const titleEl = document.getElementById('targetModalTitle');
+            if (titleEl) titleEl.innerHTML = `<i class="fas fa-users-cog text-warning me-2"></i> Target Groups for: ${jobName}`;
+
+            loadJobTargetRecipients(jobId);
+            const modalEl = document.getElementById('targetGroupsModal');
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+        }
+
+        function loadJobTargetRecipients(jobId) {
+            const container = document.getElementById('targetRecipientsListContainer');
+            if (container) container.innerHTML = '<div class="text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading recipients...</div>';
+
+            fetch(`/api/v1/whatsapp/job-targets?job_id=${encodeURIComponent(jobId)}`, {
+                headers: getAuthHeaders()
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!container) return;
+                const recs = data.recipients || [];
+                if (recs.length === 0) {
+                    container.innerHTML = '<div class="text-muted">No target groups or numbers added yet.</div>';
+                    return;
+                }
+
+                container.innerHTML = recs.map(r => `
+                    <div class="d-flex align-items-center justify-content-between p-2 mb-2 rounded bg-dark border border-secondary w-100">
+                        <div>
+                            <span class="badge ${r.type==='group' ? 'bg-primary' : 'bg-info'} me-2"><i class="fas ${r.type==='group'?'fa-users':'fa-phone'} me-1"></i>${r.type.toUpperCase()}</span>
+                            <b class="text-white">${r.name}</b>
+                            <small class="text-muted ms-2">(${r.identifier})</small>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger" onclick="removeTargetRecipient('${r.id}')"><i class="fas fa-trash-alt me-1"></i> Remove</button>
+                    </div>
+                `).join('');
+            })
+            .catch(() => {
+                if (container) container.innerHTML = '<div class="text-danger">Failed to load target recipients.</div>';
+            });
+        }
+
+        function addNewTargetRecipient() {
+            if (!activeTargetJobId) return;
+
+            const selGroup = document.getElementById('selTargetGroup').value;
+            const customVal = document.getElementById('inputCustomTarget').value.trim();
+
+            let type = 'group';
+            let name = '';
+            let identifier = '';
+
+            if (customVal) {
+                type = 'direct';
+                name = customVal;
+                identifier = customVal;
+            } else if (selGroup) {
+                const parts = selGroup.split('|');
+                identifier = parts[0];
+                name = parts[1] || parts[0];
+            } else {
+                alert('Please select a WhatsApp Group or enter a custom mobile number!');
+                return;
+            }
+
+            fetch('/api/v1/whatsapp/job-targets', {
+                method: 'POST',
+                headers: Object.assign({ 'Content-Type': 'application/json' }, getAuthHeaders()),
+                body: JSON.stringify({
+                    job_id: activeTargetJobId,
+                    action: 'add',
+                    name: name,
+                    identifier: identifier,
+                    type: type
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('inputCustomTarget').value = '';
+                    document.getElementById('selTargetGroup').value = '';
+                    loadJobTargetRecipients(activeTargetJobId);
+                    loadSchedulerTracker();
+                } else {
+                    alert('Error adding target: ' + (data.error || data.detail || 'Failed'));
+                }
+            });
+        }
+
+        function removeTargetRecipient(targetId) {
+            if (!activeTargetJobId || !targetId) return;
+
+            fetch('/api/v1/whatsapp/job-targets', {
+                method: 'POST',
+                headers: Object.assign({ 'Content-Type': 'application/json' }, getAuthHeaders()),
+                body: JSON.stringify({
+                    job_id: activeTargetJobId,
+                    action: 'remove',
+                    target_id: targetId
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    loadJobTargetRecipients(activeTargetJobId);
+                    loadSchedulerTracker();
+                }
+            });
+        }
+
+        function toggleTimeSlot(badge) {
+            if (badge.classList.contains('bg-success')) {
+                badge.classList.remove('bg-success');
+                badge.classList.add('bg-secondary');
+                badge.innerHTML = badge.innerHTML.replace('fa-check-circle', 'fa-times-circle');
+            } else {
+                badge.classList.remove('bg-secondary');
+                badge.classList.add('bg-success');
+                badge.innerHTML = badge.innerHTML.replace('fa-times-circle', 'fa-check-circle');
+            }
+        }
+
+        function saveTriggerConfig() {
+            const modalEl = document.getElementById('targetGroupsModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+            alert('✅ Target Groups, Trigger Points & Hourly Time Slots saved successfully!');
+            loadSchedulerTracker();
+        }
+
+        function triggerJobNow(jobId, btn) {
+            const origHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Triggering...';
+
+            fetch('/api/v1/whatsapp/trigger-job', {
+                method: 'POST',
+                headers: Object.assign({ 'Content-Type': 'application/json' }, getAuthHeaders()),
+                body: JSON.stringify({ job_id: jobId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+                if (data.success) {
+                    alert('✅ Success: ' + (data.message || 'Job triggered successfully!'));
+                    loadSchedulerTracker();
+                } else {
+                    alert('❌ Error: ' + (data.error || 'Trigger failed'));
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+                alert('❌ Network error: ' + err.message);
+            });
+        }
+
+        function checkBotStatus() {
+            fetch('http://localhost:5002/status')
+                .then(res => res.json())
+                .then(data => {
+                    const pill = document.getElementById('botStatusPill');
+                    const text = document.getElementById('botStatusText');
+                    if (data.status === 'connected') {
+                        pill.style.background = 'rgba(16, 185, 129, 0.2)';
+                        text.textContent = 'BOT CONNECTED & ACTIVE';
+                    } else {
+                        pill.style.background = 'rgba(239, 68, 68, 0.2)';
+                        text.textContent = 'BOT DISCONNECTED (SCAN QR)';
+                    }
+                })
+                .catch(() => {
+                    document.getElementById('botStatusText').textContent = 'GATEWAY ACTIVE';
+                });
+        }
+
+        function getCatClass(cat) {
+            if (cat.includes('Payout')) return 'cat-payout';
+            if (cat.includes('Lead')) return 'cat-leads';
+            if (cat.includes('Ticket')) return 'cat-tickets';
+            return 'cat-direct';
+        }
+
+        function getAuthToken() {
+            return localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token') || localStorage.getItem('access_token') || localStorage.getItem('token') || '';
+        }
+
+        function loadConversations() {
+            const search = document.getElementById('convSearchInput').value.trim();
+            const category = document.getElementById('convCategoryFilter').value;
+            const tok = getAuthToken();
+
+            fetch(`/api/v1/whatsapp/conversations-hub?search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}`, {
+                headers: { 'Authorization': 'Bearer ' + tok }
+            })
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('convItemsContainer');
+                if (!data.conversations || data.conversations.length === 0) {
+                    container.innerHTML = '<div class="text-center p-4 text-muted">No recent messages from scanner bot.</div>';
+                    return;
+                }
+
+                allContactsCache = data.conversations;
+                populateContactSelect();
+
+                container.innerHTML = data.conversations.map((c, idx) => `
+                    <div class="conv-item ${idx === 0 && !activeRecipientPhone ? 'active' : (activeRecipientPhone === c.phone ? 'active' : '')}" onclick="selectConv('${c.name.replace(/'/g, "\\'")}', '${c.phone}')">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div class="conv-name">${c.name}</div>
+                            <small class="text-muted" style="font-size: 11px;">${c.last_time}</small>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="cat-pill ${getCatClass(c.category)}">${c.category}</span>
+                            <small class="badge bg-light text-dark" style="font-size: 10px;">${c.delivery_status}</small>
+                        </div>
+                        <div class="conv-preview mt-1">${c.last_message}</div>
+                    </div>
+                `).join('');
+
+                if (data.conversations.length > 0 && !activeRecipientPhone) {
+                    selectConv(data.conversations[0].name, data.conversations[0].phone);
+                }
+            })
+            .catch(() => {
+                document.getElementById('convItemsContainer').innerHTML = '<div class="text-center p-4 text-danger">Failed to load conversations.</div>';
+            });
+        }
+
+        function populateContactSelect() {
+            const select = document.getElementById('selRecContact');
+            if (!allContactsCache || allContactsCache.length === 0) {
+                select.innerHTML = '<option value="">No contacts found</option>';
+                return;
+            }
+            select.innerHTML = allContactsCache.map(c => `
+                <option value="${c.phone}">${c.name} (+91 ${c.phone})</option>
+            `).join('');
+        }
+
+        function openImageModal(imgUrl) {
+            document.getElementById('lightboxImg').src = imgUrl;
+            const modal = new bootstrap.Modal(document.getElementById('imageLightboxModal'));
+            modal.show();
+        }
+
+        function formatWhatsAppMessage(rawText, mediaUrl) {
+            if (!rawText) rawText = '';
+            let text = rawText;
+            let mediaHtml = '';
+
+            // Extract dynamic poster URL parameters from text if present
+            let posterParams = new URLSearchParams();
+            const nameMatch = text.match(/(?:Member Name|CONGRATULATIONS TO):\s*\*?([^\*\n!]+)\*?/i);
+            const todayMatch = text.match(/Today's Payout:\s*\*?([^\*\n]+)\*?/i);
+            const overallMatch = text.match(/Overall Earning:\s*\*?([^\*\n]+)\*?/i);
+            const potentialMatch = text.match(/Potential Valuation:\s*\*?([^\*\n]+)\*?/i);
+            const seniorMatch = text.match(/Senior Referrer:\s*\*?([^\*\n]+)\*?/i);
+            const seniorTodayMatch = text.match(/Senior Today:\s*\*?([^\*\n|]+)/i);
+
+            if (nameMatch) posterParams.set('name', nameMatch[1].trim());
+            if (todayMatch) posterParams.set('today', todayMatch[1].trim());
+            if (overallMatch) posterParams.set('overall', overallMatch[1].trim());
+            if (potentialMatch) posterParams.set('potential', potentialMatch[1].trim());
+            if (seniorMatch) posterParams.set('senior', seniorMatch[1].trim());
+            if (seniorTodayMatch) posterParams.set('senior_today', seniorTodayMatch[1].trim());
+
+            // Extract explicit media URL or poster link
+            const posterMatch = text.match(/(https?:\/\/[^\s<]+(?:poster[^\s<]*|poster-fresh-test\.html|\.(?:html|png|jpg|jpeg|webp|gif)))/i);
+            let targetUrl = mediaUrl || (posterMatch ? posterMatch[1] : null);
+
+            if (targetUrl) {
+                if (targetUrl.includes('.html') || targetUrl.includes('poster')) {
+                    let iframeUrl = targetUrl;
+                    const pStr = posterParams.toString();
+                    if (pStr) {
+                        iframeUrl = targetUrl + (targetUrl.includes('?') ? '&' : '?') + pStr;
+                    }
+
+                    mediaHtml = `
+                        <div class="mb-3" style="width: 310px; border-radius: 16px; overflow: hidden; border: 2.5px solid #fbbf24; box-shadow: 0 10px 30px rgba(0,0,0,0.45); background: #090d16;">
+                            <div style="background: linear-gradient(135deg, #78350f, #92400e); color: #fef3c7; padding: 7px 14px; font-size: 11.5px; font-weight: 800; display: flex; justify-content: space-between; align-items: center;">
+                                <span><i class="fas fa-trophy text-warning me-1"></i> Achievement Poster Card</span>
+                                <a href="${iframeUrl}" target="_blank" style="color: #fef3c7; text-decoration: underline; font-size: 11px;">Full Poster ↗</a>
+                            </div>
+                            <div style="height: 465px; width: 310px; overflow: hidden; position: relative; background: #090d16;">
+                                <iframe src="${iframeUrl}" style="width: 480px; height: 720px; border: none; transform: scale(0.645); transform-origin: 0 0; background: #090d16;"></iframe>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    mediaHtml = `
+                        <div class="mb-3" style="max-width: 380px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.15); cursor: pointer;" onclick="openImageModal('${targetUrl}')">
+                            <img src="${targetUrl}" style="max-width: 100%; max-height: 380px; display: block; border-radius: 10px; object-fit: contain;" />
+                        </div>
+                    `;
+                }
+
+                text = text.replace(/🖼️\s*\*?Achievement Poster:\*?\s*https?:\/\/[^\s<]+/gi, '');
+                text = text.replace(/https?:\/\/[^\s<]+\/poster-fresh-test\.html[^\s<]*/gi, '');
+            }
+
+            // Convert *bold* to <b>bold</b>
+            text = text.replace(/\*(.*?)\*/g, '<b>$1</b>');
+
+            // Convert _italic_ to <i>italic</i>
+            text = text.replace(/_(.*?)_/g, '<i>$1</i>');
+
+            // Convert raw URLs into clickable anchor links
+            text = text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color: inherit; text-decoration: underline;">$1</a>');
+
+            return mediaHtml + text;
+        }
+
+        function selectConv(name, phone) {
+            activeRecipientPhone = phone;
+            document.getElementById('chatActiveName').textContent = name;
+            document.getElementById('chatActivePhone').textContent = `+91 ${phone}`;
+
+            const box = document.getElementById('chatHistoryBox');
+            box.innerHTML = '<div class="text-center p-4 text-muted">Loading chat transcript...</div>';
+
+            const tok = localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token');
+
+            fetch(`/api/v1/whatsapp/chat-history?phone=${encodeURIComponent(phone)}`, {
+                headers: { 'Authorization': 'Bearer ' + tok }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.messages || data.messages.length === 0) {
+                    box.innerHTML = `
+                        <div class="chat-bubble in">
+                            <b>${name}</b><br/>
+                            Contact registered. No sent dispatches yet.
+                        </div>
+                    `;
+                    return;
+                }
+
+                box.innerHTML = data.messages.map(m => `
+                    <div class="chat-bubble ${m.sender === 'bot' ? 'out' : 'in'}">
+                        <div>${formatWhatsAppMessage(m.body, m.media_url)}</div>
+                        <div style="font-size: 10px; opacity: 0.8; margin-top: 6px; text-align: right;">
+                            ${m.sent_at} • ${m.status.toUpperCase()}
+                        </div>
+                    </div>
+                `).join('');
+                
+                setTimeout(() => { box.scrollTop = box.scrollHeight; }, 100);
+            })
+            .catch(() => {
+                box.innerHTML = '<div class="text-center p-4 text-danger">Failed to load chat history.</div>';
+            });
+        }
+
+        function sendReplyMsg() {
+            const input = document.getElementById('chatReplyInput');
+            const text = input.value.trim();
+            if (!text || !activeRecipientPhone) return;
+
+            const box = document.getElementById('chatHistoryBox');
+            const b = document.createElement('div');
+            b.className = 'chat-bubble out';
+            b.innerHTML = `<div>${formatWhatsAppMessage(text)}</div><div style="font-size:10px;opacity:0.8;margin-top:6px;text-align:right;">Just now • SENT</div>`;
+            box.appendChild(b);
+            setTimeout(() => { box.scrollTop = box.scrollHeight; }, 50);
+            input.value = '';
+
+            fetch('http://localhost:5002/api/send-message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: activeRecipientPhone, message: text })
+            }).catch(() => {});
+        }
+
+        function openNewMsgModal() {
+            const modal = new bootstrap.Modal(document.getElementById('newMsgModal'));
+            modal.show();
+        }
+
+        function toggleRecType() {
+            const type = document.querySelector('input[name="recipientType"]:checked').value;
+            document.getElementById('wrapRecContact').style.display = type === 'contact' ? 'block' : 'none';
+            document.getElementById('wrapRecGroup').style.display = type === 'group' ? 'block' : 'none';
+            document.getElementById('wrapRecCustom').style.display = type === 'custom' ? 'block' : 'none';
+        }
+
+        function applyTemplate() {
+            const val = document.getElementById('selTemplate').value;
+            const body = document.getElementById('newMsgBody');
+            const media = document.getElementById('newMsgMediaUrl');
+
+            if (val === 'welcome') {
+                body.value = "🎉 *WELCOME TO VGK4U!* 🎉\n\nHi! Thank you for contacting VGK Real Estate & Community Services.\nExplore our 18+ active projects and daily income calculator.\n\n🌐 Official Website: https://vgk4u.com\n📞 Support Hotline: +91 85858 52738";
+                media.value = "";
+            } else if (val === 'payout') {
+                body.value = "🎉 *CONGRATULATIONS TO MEMBER!* 🎉\n\n👤 *Member Name:* Mr. Kuruju Srinubabu\n💰 *Today's Payout:* ₹9,395/-\n📈 *Overall Earning:* ₹25,895/-\n🔮 *Potential Valuation:* ₹1,41,550/-\n\n🙌 *Senior Referrer:* Ms. Jarra Kumari\n\n🚀 Join VGK4U today & grow your earnings!";
+                media.value = "http://localhost:5001/public/poster-fresh-test.html";
+            } else if (val === 'ticket') {
+                body.value = "🎫 *SERVICE TICKET RESOLVED* ✅\n\nDear Customer,\nYour service request ticket #TKT2026081701 has been successfully resolved.\n\nThank you for choosing Mynt Real Services!";
+                media.value = "";
+            } else if (val === 'morning') {
+                body.value = "🏢 *GOOD MORNING LEADER!* 🌅\n\nHere is your daily team performance snapshot and active leads update.\nLogin to staff portal: https://myntreal.com/staff/progress";
+                media.value = "";
+            } else if (val === 'overdue') {
+                body.value = "⚠️ *TASK OVERDUE ALERT* ⏰\n\nA high-priority task assigned to you is overdue.\nPlease update your status or contact your EA manager immediately:\n➡️ myntreal.com/staff/tasks";
+                media.value = "";
+            }
+        }
+
+        function dispatchNewMsg() {
+            const type = document.querySelector('input[name="recipientType"]:checked').value;
+            let targetPhone = '';
+
+            if (type === 'contact') {
+                targetPhone = document.getElementById('selRecContact').value;
+            } else if (type === 'group') {
+                targetPhone = document.getElementById('selRecGroup').value;
+            } else {
+                targetPhone = document.getElementById('inputCustomPhone').value.trim();
+            }
+
+            const messageText = document.getElementById('newMsgBody').value.trim();
+            const mediaUrl = document.getElementById('newMsgMediaUrl').value.trim();
+
+            if (!targetPhone) {
+                alert('Please select or enter a valid mobile number/group!');
+                return;
+            }
+            if (!messageText) {
+                alert('Please type a message body!');
+                return;
+            }
+
+            // Close modal
+            const modalEl = document.getElementById('newMsgModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
+            // Select conversation
+            selectConv('Recipient (' + targetPhone + ')', targetPhone);
+
+            // Send payload
+            fetch('http://localhost:5002/api/send-message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: targetPhone, message: messageText, media_url: mediaUrl })
+            })
+            .then(() => {
+                loadConversations();
+            })
+            .catch(() => {});
+        }
+
+        function openDirectWa() {
+            if (activeRecipientPhone) {
+                window.open(`https://wa.me/91${activeRecipientPhone.replace(/\D/g, '')}`, '_blank');
+            }
+        }
+
+        function loadDeliveryLogs() {
+            const status = document.getElementById('logStatusFilter').value;
+            const search = document.getElementById('logSearchInput').value.trim();
+            const tok = localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token');
+
+            fetch(`/api/v1/whatsapp/delivery-logs?status=${encodeURIComponent(status)}&search=${encodeURIComponent(search)}`, {
+                headers: { 'Authorization': 'Bearer ' + tok }
+            })
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('logsTableBody');
+                if (!data.logs || data.logs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4 text-muted">No mobile delivery logs found.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.logs.map(l => {
+                    const isOk = l.current_status === 'delivered' || l.current_status === 'sent' || l.current_status === 'success';
+                    const badgeClass = isOk ? 'badge-success' : 'badge-failed';
+                    return `
+                        <tr>
+                            <td>${l.sent_at}</td>
+                            <td><b>${l.user_name}</b><br/><small class="text-muted">${l.mobile_number}</small></td>
+                            <td><span class="badge bg-light text-dark">${l.message_type}</span></td>
+                            <td><div style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${l.message_body}</div></td>
+                            <td><span class="badge-status ${badgeClass}">${l.current_status}</span></td>
+                            <td><small class="text-muted" style="font-family: monospace;">${l.message_sid.substring(0, 18)}...</small></td>
+                        </tr>
+                    `;
+                }).join('');
+            })
+            .catch(() => {
+                document.getElementById('logsTableBody').innerHTML = '<tr><td colspan="6" class="text-center p-4 text-danger">Failed to load delivery logs.</td></tr>';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            if (typeof StaffHeader !== 'undefined') {
+                StaffHeader.inject('WhatsApp Bot Management Hub', 'fab fa-whatsapp');
+            }
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            checkBotStatus();
+            loadConversations();
+        });
+    </script>
+</body>
+</html>

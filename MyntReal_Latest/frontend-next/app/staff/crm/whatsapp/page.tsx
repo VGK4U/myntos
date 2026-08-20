@@ -6,7 +6,7 @@ import { useStaffAuth } from "@/contexts/StaffAuthContext";
 import { getApiUrl } from "@/lib/api";
 
 interface ChatContact {
-  id: number;
+  id: string; // from_phone
   phone: string;
   name: string;
   last_message: string;
@@ -26,17 +26,41 @@ export default function WhatsAppInboxPage() {
   useEffect(() => {
     if (!token) return;
     
-    // Simulating fetching WhatsApp conversations for the UI mockup
-    const dummyContacts: ChatContact[] = [
-      { id: 1, name: "Rahul Sharma", phone: "+91 9876543210", last_message: "Yes, I am interested in the solar plan.", last_message_time: "10:30 AM", unread_count: 2, is_online: true },
-      { id: 2, name: "Priya Desai", phone: "+91 8765432109", last_message: "Can you send the quotation?", last_message_time: "Yesterday", unread_count: 0, is_online: false },
-      { id: 3, name: "Amit Kumar", phone: "+91 7654321098", last_message: "Thanks for the information.", last_message_time: "Monday", unread_count: 0, is_online: true },
-      { id: 4, name: "Sneha Patel", phone: "+91 6543210987", last_message: "I will confirm by tomorrow.", last_message_time: "Sunday", unread_count: 1, is_online: false },
-    ];
+    const fetchInbox = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${getApiUrl()}/api/v1/whatsapp/inbox`, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.data) {
+            const mapped = json.data.map((item: any) => ({
+              id: item.from_phone,
+              phone: item.from_phone,
+              name: item.resolved_name || item.from_name || item.from_phone,
+              last_message: item.last_message || "Attachment / Media",
+              last_message_time: item.last_activity ? new Date(item.last_activity).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "",
+              unread_count: item.unread_count || 0,
+              is_online: false
+            }));
+            setContacts(mapped);
+            if (mapped.length > 0) {
+              setActiveChat(mapped[0]);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch inbox", error);
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    setContacts(dummyContacts);
-    setActiveChat(dummyContacts[0]);
-    setLoading(false);
+    fetchInbox();
   }, [token]);
 
   const filteredContacts = contacts.filter(c => 

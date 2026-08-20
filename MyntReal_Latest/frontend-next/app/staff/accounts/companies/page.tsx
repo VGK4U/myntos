@@ -30,10 +30,8 @@ export default function CompaniesPage() {
       if (!res.ok) throw new Error(data.detail || "Failed to fetch companies");
       setCompanies(data.companies || []);
     } catch (err: any) {
-      // Fallback for demo
-      setCompanies([
-        { id: 1, name: "MyntReal Tech", registration_number: "CIN12345678", gstin: "29AABCU9603R1ZX", pan: "AABCU9603R", is_active: true }
-      ]);
+      setError(err.message || "Failed to load companies");
+      setCompanies([]);
     } finally {
       setLoading(false);
     }

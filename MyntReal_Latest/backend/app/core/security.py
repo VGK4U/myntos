@@ -309,14 +309,18 @@ class SecurityManager:
     @staticmethod
     def authenticate_user(db: Session, user_id: str, password: str) -> Optional[User]:
         """
-        Authenticate user with MNR ID and password
-        SECURITY: Accepts both MNR ID formats (10 & 12 character), rejects email logins
-        DC Protocol Feb 2026: Dual-password support - checks both original and temp password
+        Authenticate user with MNR ID, Phone Number, and password
+        SECURITY: Accepts MNR ID formats, legacy MN IDs, and 10-digit phone numbers
         """
+        user_id = user_id.strip().upper()
         if not SecurityManager.is_valid_mnr_id(user_id):
             return None
         
-        user = db.query(User).filter(User.id == user_id).first()
+        # Check if user_id is a phone number (10 digits)
+        if user_id.isdigit() and len(user_id) == 10:
+            user = db.query(User).filter(User.phone_number == user_id).first()
+        else:
+            user = db.query(User).filter(User.id == user_id).first()
         
         if not user:
             return None
@@ -348,29 +352,33 @@ class SecurityManager:
         """
         Validate MNR ID format with backward compatibility
         Supports multiple formats:
-        - Original format: MNR1823XXXXX (MNR1823 + 5 digits = 12 chars)
-        - Legacy formats: MNR + 7-9 digits (10-12 chars for old users)
-        
-        New users receive MNR1823XXXXX format (e.g., MNR182345678)
+        - Original format: MNR1823XXXXX
+        - Legacy formats: MNR + digits, MN + digits
+        - Phone numbers: 10 digits
         """
         if not user_id or not isinstance(user_id, str):
             return False
         
-        # Must start with "MNR"
-        if not user_id.startswith('MNR'):
-            return False
+        user_id = user_id.strip().upper()
         
-        # Length must be 10-12 characters (backward compatibility)
+        # Allow 10-digit phone numbers
+        if user_id.isdigit() and len(user_id) == 10:
+            return True
+            
+        # Must start with "MN" or "MNR"
+        if not (user_id.startswith('MNR') or user_id.startswith('MN')):
+            return False
+            
+        # Relax length to accommodate older legacy IDs (e.g. MN10001)
         length = len(user_id)
-        if length < 10 or length > 12:
+        if length < 5 or length > 15:
             return False
         
-        # Everything after "MNR" must be digits
         import re
-        suffix = user_id[3:]
+        suffix = user_id[2:] if user_id.startswith('MN') and not user_id.startswith('MNR') else user_id[3:]
         if not re.match(r'^\d+$', suffix):
             return False
-        
+            
         return True
     
     @staticmethod

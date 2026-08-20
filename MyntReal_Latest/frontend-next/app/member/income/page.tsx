@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useMemberAuth } from "@/contexts/MemberAuthContext";
+import api from "@/lib/api";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -14,7 +15,7 @@ import {
   Legend,
   Filler
 } from 'chart.js';
-import { Line, Bar } from 'react-chartjs-2';
+import { Bar } from 'react-chartjs-2';
 
 ChartJS.register(
   CategoryScale,
@@ -31,6 +32,54 @@ ChartJS.register(
 export default function MemberIncomePage() {
   const { user } = useMemberAuth();
   const [activeTab, setActiveTab] = useState("overview");
+  const [loading, setLoading] = useState(true);
+  
+  const [totals, setTotals] = useState({
+    lifetimeEarned: 0,
+    direct: 0,
+    matching: 0,
+    other: 0
+  });
+  
+  const [incomeHistory, setIncomeHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!user || !user.mnr_id) return;
+
+    const fetchFinancialData = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get(`/api/v1/income/summary?audience=vgk4u`);
+        if (res.data && res.data.success) {
+          const summary = res.data.income_summary?.income_streams || {};
+          const financialTotals = res.data.financial_totals || {};
+          
+          setTotals({
+            lifetimeEarned: financialTotals.total_earned || res.data.income_summary?.total_monthly_income || 0,
+            direct: summary.direct_referral?.total_income || 0,
+            matching: summary.matching_referral?.total_income || 0,
+            other: (summary.ved_income?.ved_amount || 0) + (summary.guru_dakshina?.guru_dakshina_amount || 0)
+          });
+
+          const txs = res.data.recent_transactions || [];
+          setIncomeHistory(txs.map((tx: any) => ({
+            id: tx.id || Math.random(),
+            date: tx.date || tx.created_at || new Date().toISOString(),
+            type: tx.transaction_type || 'Income',
+            amount: Math.abs(tx.amount || 0),
+            ref: tx.description || 'Reference',
+            status: tx.status || 'CREDITED'
+          })));
+        }
+      } catch (err) {
+        console.error("Failed to fetch income data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFinancialData();
+  }, [user]);
 
   // Chart Data
   const monthlyData = {
@@ -38,12 +87,12 @@ export default function MemberIncomePage() {
     datasets: [
       {
         label: 'Direct Income',
-        data: [12000, 19000, 15000, 22000, 18000, 25000],
+        data: [0, 0, 0, 0, 0, totals.direct],
         backgroundColor: 'rgba(59, 130, 246, 0.5)',
       },
       {
         label: 'Matching Income',
-        data: [8000, 12000, 14000, 18000, 24000, 28000],
+        data: [0, 0, 0, 0, 0, totals.matching],
         backgroundColor: 'rgba(168, 85, 247, 0.5)',
       }
     ],
@@ -65,13 +114,13 @@ export default function MemberIncomePage() {
     }
   };
 
-  // Mock Transactions
-  const incomeHistory = [
-    { id: 1, date: "2026-08-13", type: "Matching Bonus", amount: 5000, ref: "Pair: L3-R3", status: "CREDITED" },
-    { id: 2, date: "2026-08-10", type: "Direct Commission", amount: 12500, ref: "Property Sale (VGK00214)", status: "CREDITED" },
-    { id: 3, date: "2026-08-05", type: "Guru Dakshina", amount: 2500, ref: "From: VGK00441", status: "CREDITED" },
-    { id: 4, date: "2026-07-28", type: "Performance Bonus", amount: 10000, ref: "Monthly Target Met", status: "CREDITED" },
-  ];
+  if (loading) {
+    return (
+      <div className="min-h-[calc(100vh-80px)] flex items-center justify-center">
+        <i className="fas fa-circle-notch fa-spin text-3xl text-amber-500"></i>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto flex flex-col h-[calc(100vh-80px)]">
@@ -90,19 +139,19 @@ export default function MemberIncomePage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 shrink-0">
         <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Total Lifetime Earned</p>
-          <h3 className="text-2xl font-bold text-gray-900">₹ 1,54,000</h3>
+          <h3 className="text-2xl font-bold text-gray-900">₹ {totals.lifetimeEarned.toLocaleString('en-IN')}</h3>
         </div>
         <div className="bg-blue-50 p-5 rounded-xl shadow-sm border border-blue-100 flex flex-col justify-between">
           <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Direct Commission</p>
-          <h3 className="text-2xl font-bold text-blue-900">₹ 45,000</h3>
+          <h3 className="text-2xl font-bold text-blue-900">₹ {totals.direct.toLocaleString('en-IN')}</h3>
         </div>
         <div className="bg-purple-50 p-5 rounded-xl shadow-sm border border-purple-100 flex flex-col justify-between">
           <p className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-1">Matching Bonus</p>
-          <h3 className="text-2xl font-bold text-purple-900">₹ 84,000</h3>
+          <h3 className="text-2xl font-bold text-purple-900">₹ {totals.matching.toLocaleString('en-IN')}</h3>
         </div>
         <div className="bg-amber-50 p-5 rounded-xl shadow-sm border border-amber-100 flex flex-col justify-between">
           <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-1">Other Bonuses</p>
-          <h3 className="text-2xl font-bold text-amber-900">₹ 25,000</h3>
+          <h3 className="text-2xl font-bold text-amber-900">₹ {totals.other.toLocaleString('en-IN')}</h3>
         </div>
       </div>
 
@@ -158,6 +207,9 @@ export default function MemberIncomePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
+                  {incomeHistory.length === 0 && (
+                     <tr><td colSpan={5} className="p-4 text-center text-sm text-gray-500">No recent transactions found.</td></tr>
+                  )}
                   {incomeHistory.map((row) => (
                     <tr key={row.id} className="hover:bg-gray-50 transition-colors">
                       <td className="p-4 text-sm text-gray-900">{new Date(row.date).toLocaleDateString()}</td>

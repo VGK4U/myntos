@@ -388,16 +388,14 @@ async def get_expense_bill(
     media_type = content_types.get(ext, 'application/octet-stream')
     
     storage_path = f"expense_bills/{filename}"
-    file_data = storage_service.download_file(storage_path)
     
-    if file_data:
-        return StreamingResponse(
-            io.BytesIO(file_data),
-            media_type=media_type,
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
-        )
-    
-    # Fallback: Try local storage (legacy files)
+    from fastapi.responses import RedirectResponse
+    from app.services.s3_storage import s3_storage_service
+    file_url = s3_storage_service.get_file_url(storage_path)
+    if file_url.startswith("http"):
+        return RedirectResponse(url=file_url, status_code=307)
+        
+    # Fallback for local dev
     file_path = Path(f"uploads/expense_bills/{expense_id}/{filename}")
     if file_path.exists():
         return FileResponse(
@@ -405,7 +403,6 @@ async def get_expense_bill(
             media_type=media_type,
             filename=filename
         )
-    
     raise HTTPException(status_code=404, detail="Bill file not found")
 
 

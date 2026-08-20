@@ -375,6 +375,12 @@
                                 </div>
                             </div>
                             <div class="col-4">
+                                <div class="purpose-option" data-purpose="installation" onclick="selectPurpose('installation')">
+                                    <i class="fas fa-tools fa-2x mb-2"></i><br>
+                                    <small>Installation</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
                                 <div class="purpose-option" data-purpose="meeting" onclick="selectPurpose('meeting')">
                                     <i class="fas fa-handshake fa-2x mb-2"></i><br>
                                     <small>Meeting</small>
@@ -432,6 +438,13 @@
                             <div class="invalid-feedback">Please select a company</div>
                         </div>
                         
+                        <div class="mt-3" style="position:relative">
+                            <label class="form-label">Tag CRM Lead (Search by Mobile No., Area, Name, or ID)</label>
+                            <input type="text" class="form-control" id="leadSearchInput" placeholder="🔍 Type Mobile No., Area, Name or Lead ID..." oninput="onLeadSearchInput()" autocomplete="off">
+                            <input type="hidden" id="selectedLeadId" value="">
+                            <div id="leadSearchResults" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:1050;max-height:200px;overflow-y:auto;background:white;border:1px solid #d1d5db;border-radius:0 0 6px 6px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1)"></div>
+                        </div>
+
                         <div class="mt-3">
                             <label class="form-label">Client/Location Name (Optional)</label>
                             <input type="text" class="form-control" id="clientName" placeholder="Enter client or location name">
@@ -836,6 +849,59 @@
             );
         }
         
+        let _leadSearchTimer = null;
+        async function onLeadSearchInput() {
+            const inp = document.getElementById('leadSearchInput');
+            const resDiv = document.getElementById('leadSearchResults');
+            const hiddenId = document.getElementById('selectedLeadId');
+            if (!inp || !resDiv) return;
+            
+            const query = (inp.value || '').trim();
+            if (hiddenId && query === '') hiddenId.value = '';
+            
+            if (query.length < 2) {
+                resDiv.style.display = 'none';
+                resDiv.innerHTML = '';
+                return;
+            }
+            
+            if (_leadSearchTimer) clearTimeout(_leadSearchTimer);
+            _leadSearchTimer = setTimeout(async () => {
+                try {
+                    const r = await staffFetch('/api/v1/crm/leads/system-search?q=' + encodeURIComponent(query));
+                    const d = r.ok ? await r.json() : {};
+                    if (d.success && d.leads && d.leads.length > 0) {
+                        let html = '';
+                        d.leads.forEach(l => {
+                            html += `<div style="padding:8px 12px;border-bottom:1px solid #f3f4f6;cursor:pointer;font-size:12px" onclick="selectTaggedLead(${l.id}, '${esc(l.name)}', '${esc(l.phone)}', '${esc(l.area || l.city || '')}')">
+                                <strong>#${l.id} - ${esc(l.name)}</strong> (${esc(l.phone)})
+                                <div style="color:#6b7280;font-size:11px">${esc(l.area || l.city || 'N/A')}</div>
+                            </div>`;
+                        });
+                        resDiv.innerHTML = html;
+                        resDiv.style.display = 'block';
+                    } else {
+                        resDiv.innerHTML = '<div style="padding:8px 12px;color:#9ca3af;font-size:12px">No matching leads found</div>';
+                        resDiv.style.display = 'block';
+                    }
+                } catch(e) {
+                    resDiv.style.display = 'none';
+                }
+            }, 250);
+        }
+
+        function selectTaggedLead(leadId, name, phone, area) {
+            const inp = document.getElementById('leadSearchInput');
+            const resDiv = document.getElementById('leadSearchResults');
+            const hiddenId = document.getElementById('selectedLeadId');
+            const clientNameInput = document.getElementById('clientName');
+            
+            if (hiddenId) hiddenId.value = leadId;
+            if (inp) inp.value = `#${leadId} - ${name} (${phone}) - ${area}`;
+            if (clientNameInput && !clientNameInput.value) clientNameInput.value = `${name} (${area})`;
+            if (resDiv) { resDiv.style.display = 'none'; resDiv.innerHTML = ''; }
+        }
+
         function selectPurpose(purpose) {
             selectedPurpose = purpose;
             document.querySelectorAll('.purpose-option').forEach(el => {
@@ -1429,10 +1495,12 @@
                 }
             }
             
+            const selectedLeadIdVal = document.getElementById('selectedLeadId')?.value;
             const payload = {
                 purpose: selectedPurpose,
                 purpose_description: document.getElementById('purposeDescription').value,
                 client_name: document.getElementById('clientName').value,
+                lead_id: selectedLeadIdVal ? parseInt(selectedLeadIdVal) : null,
                 transport_mode: selectedTransport,
                 company_id: selectedCompanyId,
                 gps_enabled: gpsEnabled,

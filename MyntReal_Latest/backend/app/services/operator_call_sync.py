@@ -25,6 +25,24 @@ from app.models.crm import CRMLead, CRMLeadFollowUp
 logger = logging.getLogger(__name__)
 
 IST = pytz.timezone('Asia/Kolkata')
+def get_effective_token(db: Optional[Session] = None) -> str:
+    tok = os.getenv('MYOPERATOR_API_TOKEN', '')
+    if tok:
+        return tok
+    if db:
+        try:
+            from app.models.system_control import SystemControl
+            sc = db.query(SystemControl).filter(SystemControl.feature_name == 'myoperator_api_token').first()
+            if sc and sc.settings_data:
+                data = json.loads(sc.settings_data) if isinstance(sc.settings_data, str) else sc.settings_data
+                t = data.get('token', '')
+                if t:
+                    os.environ['MYOPERATOR_API_TOKEN'] = t
+                    return t
+        except Exception:
+            pass
+    return ''
+
 MYOPERATOR_API_TOKEN = os.getenv('MYOPERATOR_API_TOKEN', '')
 
 # ── Last sync result cache (in-process) ──────────────────────────────────────
@@ -39,15 +57,16 @@ _last_sync: dict = {
     'token_configured': bool(os.getenv('MYOPERATOR_API_TOKEN', '')),
 }
 
-
 MYOPERATOR_X_API_KEY = os.getenv('MYOPERATOR_X_API_KEY', '')
 MYOPERATOR_API_COMPANY_ID = os.getenv('MYOPERATOR_API_COMPANY_ID', '')
 MYOPERATOR_COMPANY_ID = int(os.getenv('MYOPERATOR_COMPANY_ID', '1'))
 MYOPERATOR_BASE_URL = 'https://developers.myoperator.co'
 
 
-def get_last_sync_status() -> dict:
-    return dict(_last_sync)
+def get_last_sync_status(db: Optional[Session] = None) -> dict:
+    status = dict(_last_sync)
+    status['token_configured'] = bool(get_effective_token(db))
+    return status
 
 
 def get_ist_now():
@@ -198,8 +217,19 @@ def _normalize_source_record(source: dict) -> dict:
     except (TypeError, ValueError):
         status_code = 2
 
+    # Inspect leg disconnection status & call duration
+    log_details = source.get('log_details') or []
+    raw_ds = ''
+    if log_details and isinstance(log_details, list):
+        primary_leg = log_details[0] if log_details else {}
+        raw_ds = (primary_leg.get('_ds') or '').upper().strip()
+
     if status_code == 1:
-        status = 'answered'
+        # Reclassify false 'answered' calls as 'missed' if duration is 0 or leg status indicates disconnect
+        if dur_secs == 0 or raw_ds in ('CANCEL', 'NOANSWER', 'BUSY', 'REJECT'):
+            status = 'missed'
+        else:
+            status = 'answered'
     elif status_code == 3:
         status = 'voicemail'
     else:
@@ -272,7 +302,7 @@ def _normalize_source_record(source: dict) -> dict:
     }
 
 
-def _fetch_myoperator_logs(ts_from: int, ts_to: int) -> list:
+def _fetch_myoperator_logs(ts_from: int, ts_to: int, db: Optional[Session] = None) -> list:
     """
     Fetch call logs from MyOperator Search API.
     URL: POST https://developers.myoperator.co/search
@@ -280,7 +310,8 @@ def _fetch_myoperator_logs(ts_from: int, ts_to: int) -> list:
     Pagination: log_from (offset), page_size (max 100).
     Returns list of normalized call records or empty list on failure.
     """
-    if not MYOPERATOR_API_TOKEN:
+    token = get_effective_token(db)
+    if not token:
         logger.warning('[OPERATOR_SYNC] MYOPERATOR_API_TOKEN not set — skipping API fetch')
         return []
 
@@ -292,7 +323,7 @@ def _fetch_myoperator_logs(ts_from: int, ts_to: int) -> list:
 
     for _ in range(max_iterations):
         payload = {
-            'token': MYOPERATOR_API_TOKEN,
+            'token': token,
             'from': ts_from,
             'to': ts_to,
             'page_size': page_size,
@@ -340,7 +371,8 @@ def sync_myoperator_logs(db: Optional[Session] = None, days_back: Optional[int] 
 
     now = get_ist_now()
     now_utc = datetime.utcnow()
-    ts_to = int(now_utc.timestamp())
+    # Add 1 day buffer to ts_to so IST calls occurring today are never excluded by UTC time offset
+    ts_to = int((now_utc + timedelta(days=1)).timestamp())
     if days_back and days_back > 0:
         ts_from = int((now_utc - timedelta(days=days_back)).timestamp())
         logger.info('[OPERATOR_SYNC] Backfill mode: last %d days', days_back)
@@ -354,7 +386,7 @@ def sync_myoperator_logs(db: Optional[Session] = None, days_back: Optional[int] 
     followups_created = 0
 
     try:
-        records = _fetch_myoperator_logs(ts_from, ts_to)
+        records = _fetch_myoperator_logs(ts_from, ts_to, db=db)
 
         for rec in records:
             call_id = rec.get('call_id') or ''
@@ -409,7 +441,7 @@ def sync_myoperator_logs(db: Optional[Session] = None, days_back: Optional[int] 
                         followups_created += 1
                     try:
                         from app.services.whatsapp_missed_call_service import handle_missed_call_whatsapp_ack
-                        handle_missed_call_whatsapp_ack(db, existing.caller_number, existing.handled_by, existing.crm_lead_id, call_type=existing.call_type)
+                        handle_missed_call_whatsapp_ack(db, existing.caller_number, caller_name=None, lead_id=existing.crm_lead_id, call_type=existing.call_type)
                     except Exception as _mc_e:
                         logger.warning(f"[OPERATOR_SYNC] Could not send missed call WA ACK: {_mc_e}")
                 updated += 1
@@ -446,7 +478,7 @@ def sync_myoperator_logs(db: Optional[Session] = None, days_back: Optional[int] 
                             followups_created += 1
                         try:
                             from app.services.whatsapp_missed_call_service import handle_missed_call_whatsapp_ack
-                            handle_missed_call_whatsapp_ack(db, call.caller_number, call.handled_by, call.crm_lead_id, call_type=call.call_type)
+                            handle_missed_call_whatsapp_ack(db, call.caller_number, caller_name=None, lead_id=call.crm_lead_id, call_type=call.call_type)
                         except Exception as _mc_e:
                             logger.warning(f"[OPERATOR_SYNC] Could not send missed call WA ACK: {_mc_e}")
                     created += 1

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useStaffAuth } from "@/contexts/StaffAuthContext";
 import { toast } from "react-hot-toast";
 
@@ -68,36 +68,24 @@ function UserLookupTab() {
     if (!searchId.trim()) return;
     setLoading(true);
     
-    // Simulate API call based on legacy structure
-    // Original: fetch(`/api/v1/staff/mnr-user/allowances/${currentMnrId}`)
-    setTimeout(() => {
-      setUserData({
-        member_info: { name: "John Doe", id: searchId.toUpperCase() },
-        allowance_status: {
-          current_active: "standard",
-          standard_allowance: {
-            status: { overall_status: "Active", months_completed: 4, total_paid: 40000 },
-            initial_requirements: { direct_referrals: { current: 7, required: 7, progress_percentage: 100 } },
-            monthly_requirements: { matching_pairs: { current: 15, required: 20, progress_percentage: 75 } },
-            total_value: 180000
-          },
-          car_allowance: {
-            status: { overall_status: "Not Eligible", months_completed: 0, total_paid: 0 },
-            initial_requirements: { matching_points: { current: 120, required: 250, progress_percentage: 48 } },
-            monthly_requirements: { matching_pairs: { current: 0, required: 40, progress_percentage: 0 } },
-            total_value: 1800000
-          }
-        },
-        payment_history: [
-          { description: "Standard Field Allowance (Month 4)", timestamp: "2023-10-01", amount: 10000 },
-          { description: "Standard Field Allowance (Month 3)", timestamp: "2023-09-01", amount: 10000 },
-          { description: "Standard Field Allowance (Month 2)", timestamp: "2023-08-01", amount: 10000 },
-          { description: "Standard Field Allowance (Month 1)", timestamp: "2023-07-01", amount: 10000 },
-        ],
-        total_paid: 40000
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/staff/mnr-user/allowances/${searchId}`, {
+        headers: { "Authorization": `Bearer ${typeof window !== "undefined" ? localStorage.getItem("staff_token") : ""}` }
       });
+      if (res.ok) {
+        const data = await res.json();
+        setUserData(data);
+      } else {
+        // Fallback for mock environment if endpoint missing
+        throw new Error("Endpoint not found or failed");
+      }
+    } catch (err) {
+      console.warn("Failed to fetch allowances", err);
+      setUserData(null);
+      toast.error("Failed to find allowances for this user");
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (
@@ -284,23 +272,21 @@ function AllowanceCard({ title, subtitle, icon, type, data }: { title: string, s
 // ----------------------------------------------------------------------
 function AdminDashboardTab() {
   const [activeSubTab, setActiveSubTab] = useState<"eligibility" | "payouts">("eligibility");
-
-  // Mock data for Admin overview
-  const mockStats = {
-    total: 1245,
-    stdEligible: 850,
-    carEligible: 120,
-    stdActive: 600,
-    carActive: 85,
-    notEligible: 395
-  };
-
-  const mockUsers = [
-    { id: "MNR10001", name: "Rahul Sharma", pkg: "DIAMOND", stdProg: 100, carProg: 45, elig: "Pass", active: "Standard" },
-    { id: "MNR10002", name: "Priya Singh", pkg: "GOLD", stdProg: 80, carProg: 10, elig: "Partial", active: "None" },
-    { id: "MNR10003", name: "Amit Kumar", pkg: "PLATINUM", stdProg: 100, carProg: 100, elig: "Pass", active: "Car" },
-    { id: "MNR10004", name: "Neha Verma", pkg: "SILVER", stdProg: 40, carProg: 0, elig: "Fail", active: "None" },
-  ];
+  const [stats, setStats] = useState<any>({ total: 0, stdEligible: 0, carEligible: 0, stdActive: 0, carActive: 0, notEligible: 0 });
+  const [users, setUsers] = useState<any[]>([]);
+  const { token } = useStaffAuth();
+  
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/staff/mnr-user/allowances/admin/dashboard`, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).then(res => res.json()).then(data => {
+       if (data.stats) setStats(data.stats);
+       if (data.users) setUsers(data.users);
+    }).catch(err => {
+       console.warn("Failed to fetch admin allowances", err);
+    });
+  }, [token]);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -329,12 +315,12 @@ function AdminDashboardTab() {
         <div className="space-y-6 animate-in fade-in">
           {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <StatCard label="Total Users" value={mockStats.total} color="border-l-slate-400" />
-            <StatCard label="Std Eligible" value={mockStats.stdEligible} color="border-l-amber-500" />
-            <StatCard label="Car Eligible" value={mockStats.carEligible} color="border-l-sky-500" />
-            <StatCard label="Active Std" value={mockStats.stdActive} color="border-l-emerald-500" />
-            <StatCard label="Active Car" value={mockStats.carActive} color="border-l-emerald-500" />
-            <StatCard label="Not Eligible" value={mockStats.notEligible} color="border-l-rose-500" />
+            <StatCard label="Total Users" value={stats.total} color="border-l-slate-400" />
+            <StatCard label="Std Eligible" value={stats.stdEligible} color="border-l-amber-500" />
+            <StatCard label="Car Eligible" value={stats.carEligible} color="border-l-sky-500" />
+            <StatCard label="Active Std" value={stats.stdActive} color="border-l-emerald-500" />
+            <StatCard label="Active Car" value={stats.carActive} color="border-l-emerald-500" />
+            <StatCard label="Not Eligible" value={stats.notEligible} color="border-l-rose-500" />
           </div>
 
           {/* Filters */}
@@ -360,7 +346,7 @@ function AdminDashboardTab() {
           <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
             <div className="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
               <h3 className="font-bold text-gray-900"><i className="fas fa-users me-2 text-gray-500"></i>Eligibility Overview</h3>
-              <span className="text-xs text-gray-500">Total: {mockUsers.length} shown</span>
+              <span className="text-xs text-gray-500">Total: {users.length} shown</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -375,7 +361,7 @@ function AdminDashboardTab() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/50">
-                  {mockUsers.map((user) => (
+                  {users.map((user) => (
                     <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">{user.name}</div>

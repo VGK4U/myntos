@@ -24,15 +24,23 @@ export default function NDACompliancePage() {
   useEffect(() => {
     // Simulating API fetch
     const fetchNDAs = async () => {
-      setLoading(true);
-      setTimeout(() => {
-        setNdas([
-          { id: 1, title: "Employee Confidentiality Agreement", version: "v2.1", status: "ACCEPTED", assigned_date: "2025-01-15T10:00:00", due_date: "2025-01-30T23:59:59", accepted_date: "2025-01-16T14:30:00" },
-          { id: 2, title: "Client Data Privacy Policy (GDPR & DPDP)", version: "v1.4", status: "PENDING", assigned_date: "2026-08-10T09:00:00", due_date: "2026-08-25T23:59:59", accepted_date: null },
-          { id: 3, title: "Vendor Partnership Non-Compete", version: "v1.0", status: "ACCEPTED", assigned_date: "2025-06-01T10:00:00", due_date: "2025-06-15T23:59:59", accepted_date: "2025-06-02T11:15:00" },
-        ]);
+      try {
+        const tokenStr = typeof window !== "undefined" ? localStorage.getItem("staff_token") : "";
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/staff/compliance/nda`, {
+          headers: { Authorization: `Bearer ${tokenStr}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setNdas(data.items || []);
+        } else {
+          setNdas([]);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch NDA data", err);
+        setNdas([]);
+      } finally {
         setLoading(false);
-      }, 500);
+      }
     };
 
     fetchNDAs();
