@@ -5865,6 +5865,37 @@ function _populateVendorFilterDropdown(){
   sel.innerHTML='<option value="">All Vendors</option>'+_solarVendors.map(v=>`<option value="${v.id}"${String(v.id)===String(cur)?' selected':''}>${esc(v.vendor_name)} (${esc(v.vendor_code)})</option>`).join('');
 }
 
+let _solarBrandsCache = null;
+async function loadQuoteModalBrands() {
+  const bSel = document.getElementById('qmBrand');
+  if (!bSel) return;
+  if (_solarBrandsCache && _solarBrandsCache.length > 0) {
+    _renderBrandOptions(_solarBrandsCache);
+    return;
+  }
+  try {
+    const r = await staffFetch('/api/v1/crm/solar-brands');
+    const d = r.ok ? await r.json() : {};
+    if (d.success && d.brands) {
+      _solarBrandsCache = d.brands;
+      _renderBrandOptions(d.brands);
+    } else {
+      bSel.innerHTML = '<option value="">-- Select Brand (Optional) --</option>';
+    }
+  } catch (e) {
+    bSel.innerHTML = '<option value="">-- Select Brand (Optional) --</option>';
+  }
+}
+function _renderBrandOptions(brands) {
+  const bSel = document.getElementById('qmBrand');
+  if (!bSel) return;
+  let opts = '<option value="">-- Select Brand (Optional) --</option>';
+  brands.forEach(b => {
+    opts += `<option value="${esc(b.brand_name)}">${esc(b.brand_name)}</option>`;
+  });
+  bSel.innerHTML = opts;
+}
+
 let _quoteVendorId=null,_quoteRefNo='';
 function openQuoteModal(){
   const sel=document.getElementById('qmVendorSel');
@@ -5879,6 +5910,7 @@ function openQuoteModal(){
   if(!_sdocVendorId)document.getElementById('qmRefNo').value='';
   document.getElementById('qmDocLabel').textContent=_genDocLabel;
   const ph=document.getElementById('qmPanelHint');if(ph)ph.textContent='';
+  loadQuoteModalBrands();
   document.getElementById('quoteModal').classList.add('open');
 }
 function closeQuoteModal(){document.getElementById('quoteModal').classList.remove('open');}
@@ -6717,8 +6749,10 @@ async function saveCompleteDate(lid, val) {
       <input id="qmRefNo" type="text" placeholder="MNR-VENDOR-0001" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px"/></div>
       <div style="margin-bottom:6px">
         <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Panel Brand <span style="font-size:10.5px;font-weight:400;color:#9ca3af">(optional)</span></label>
-        <input id="qmBrand" type="text" placeholder="e.g. Vikram Solar, Adani, Waaree — leave blank to omit" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px"/>
-        <div style="font-size:10.5px;color:#9ca3af;margin-top:3px">If left blank, no brand will appear in the quotation.</div>
+        <select id="qmBrand" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+          <option value="">-- Select Brand (Optional) --</option>
+        </select>
+        <div style="font-size:10.5px;color:#9ca3af;margin-top:3px">Loaded from Brand-Wise Commission options. Leave blank to omit brand.</div>
       </div>
     </div>
     <div class="sdoc-footer" style="justify-content:flex-end;gap:8px">

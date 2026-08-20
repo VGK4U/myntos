@@ -16849,6 +16849,24 @@ def get_invoice_prefill(
     }
 
 
+@router.get("/solar-brands")
+def get_active_solar_brands(
+    company_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """Fetch active solar brands from Brand-Wise Commission table (vgk_incentive_brands)"""
+    from app.models.vgk_incentive_brands import VGKIncentiveBrand
+    query = db.query(VGKIncentiveBrand).filter(VGKIncentiveBrand.is_active.is_(True))
+    if company_id:
+        query = query.filter(VGKIncentiveBrand.company_id == company_id)
+    brands = query.order_by(VGKIncentiveBrand.brand_name.asc()).all()
+    return {
+        "success": True,
+        "brands": [b.to_dict() for b in brands]
+    }
+
+
 @router.post("/leads/{lead_id}/generate-solar-doc")
 async def generate_solar_doc(
     lead_id: int,

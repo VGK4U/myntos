@@ -489,9 +489,8 @@ def generate_quotation(
 
     # System Description + Pricing side by side
     # DC-SOLAR-PANEL-BRAND-001: brand from modal param takes priority;
-    # fallback to vendor default; never show a hardcoded placeholder.
-    if not panel_brand.strip():
-        panel_brand = vendor.get('panel_make_default', '') or ''
+    # do not fallback to hardcoded vendor panel make default.
+    panel_brand = (panel_brand or '').strip()
     if panel_brand.strip().upper() == 'DCR SOLAR PANEL':
         panel_brand = ''
     inv_make = vendor.get('inverter_make_default', '') or f'{kw_size.replace("KW","").replace("kw","").strip()}kVa Grid Tie Solar Inverter (IEC/BIS Approved)'
