@@ -290,7 +290,7 @@ export default function EmployeesPage() {
                       <td className="px-4 py-3">{emp.role_name || '-'}</td>
                       <td className="px-4 py-3">{emp.base_company_name || '-'}</td>
                       <td className="px-4 py-3 flex flex-wrap gap-1">
-                        {emp.data_companies?.length ? emp.data_companies.map((c:any) => <Badge key={c.id||c} variant="secondary">{c.company_name || c.name || `ID:${c.id||c}`}</Badge>) : '-'}
+                        {emp.data_companies?.length ? emp.data_companies.map((c:any, ci:number) => <Badge key={c.id != null ? String(c.id) : ci} variant="secondary">{c.company_name || c.name || (c.id ? `ID:${c.id}` : `#${ci}`)}</Badge>) : '-'}
                       </td>
                       <td className="px-4 py-3">{emp.department_name || '-'}</td>
                       <td className="px-4 py-3">{emp.reporting_manager_name || '-'}</td>
