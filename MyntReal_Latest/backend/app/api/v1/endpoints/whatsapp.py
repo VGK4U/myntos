@@ -1973,6 +1973,94 @@ def _save_targets_to_db(db: Session, targets_dict: dict) -> None:
     except Exception as e:
         logger.warning(f"Could not save targets file: {e}")
 
+EXEC_LOGS_FILE_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "wa_execution_logs.json")
+
+def _log_trigger_execution(
+    job_id: str,
+    job_name: str,
+    trigger_type: str,
+    triggered_by: str,
+    targets: list,
+    sent_count: int,
+    failed_count: int,
+    status: str,
+    error_message: str = None,
+    detail_data: dict = None
+):
+    try:
+        os.makedirs(os.path.dirname(EXEC_LOGS_FILE_PATH), exist_ok=True)
+        logs = []
+        if os.path.exists(EXEC_LOGS_FILE_PATH):
+            with open(EXEC_LOGS_FILE_PATH, "r") as f:
+                try:
+                    logs = json.load(f)
+                except Exception:
+                    logs = []
+                if not isinstance(logs, list):
+                    logs = []
+
+        import uuid
+        now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+
+        target_names = []
+        for t in (targets or []):
+            t_name = t.get("name") or t.get("identifier") or "Group"
+            target_names.append(t_name)
+        target_summary = ", ".join(target_names) if target_names else "Configured Targets"
+
+        entry = {
+            "id": f"log_{uuid.uuid4().hex[:8]}",
+            "job_id": job_id,
+            "job_name": job_name,
+            "trigger_type": trigger_type,
+            "triggered_by": triggered_by,
+            "timestamp": now_ist.strftime("%d %b %Y, %I:%M:%S %p IST"),
+            "iso_timestamp": now_ist.isoformat(),
+            "target_summary": target_summary,
+            "targets": targets or [],
+            "sent_count": sent_count,
+            "failed_count": failed_count,
+            "status": status,
+            "error_message": error_message,
+            "detail": detail_data or {}
+        }
+
+        logs.insert(0, entry)
+        logs = logs[:500]
+
+        with open(EXEC_LOGS_FILE_PATH, "w") as f:
+            json.dump(logs, f, indent=2)
+
+        return entry
+    except Exception as e:
+        logger.warning(f"Could not write execution log: {e}")
+        return None
+
+@router.get("/trigger-logs")
+def get_wa_trigger_execution_logs(
+    limit: int = Query(50, ge=1, le=200),
+    job_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user=Depends(_require_staff_optional)
+):
+    """Returns historical trigger execution audit logs."""
+    try:
+        if os.path.exists(EXEC_LOGS_FILE_PATH):
+            with open(EXEC_LOGS_FILE_PATH, "r") as f:
+                logs = json.load(f)
+                if isinstance(logs, list):
+                    if job_id:
+                        logs = [l for l in logs if l.get("job_id") == job_id]
+                    return {
+                        "success": True,
+                        "total": len(logs),
+                        "logs": logs[:limit]
+                    }
+    except Exception as e:
+        logger.warning(f"Could not read execution logs: {e}")
+
+    return {"success": True, "total": 0, "logs": []}
+
 async def _require_staff_optional(request: Request, db: Session = Depends(get_db)):
     try:
         from app.core.security import get_current_user_hybrid, get_current_staff_user_from_hybrid
@@ -2164,12 +2252,28 @@ def trigger_wa_job_manual(
     if not job_id:
         raise HTTPException(status_code=400, detail="job_id is required")
 
-    logger.info(f"⚡ [WA-SCHEDULER-TRIGGER] Manual trigger requested for job '{job_id}' by staff {current_user.emp_code}")
+    active_targets = _load_targets_from_db(db)
+    job_targets = active_targets.get(job_id, [])
+    staff_label = f"Staff {current_user.emp_code} ({getattr(current_user, 'first_name', '') or 'User'})"
 
     try:
         if job_id == "wa_bihourly_sales_perf_report":
             from app.services.sales_performance_report_service import dispatch_bi_hourly_sales_performance_report
             res = dispatch_bi_hourly_sales_performance_report(db, slot_name="Manual Live Trigger")
+            is_success = isinstance(res, dict) and res.get("success") is True
+            sent_cnt = (res.get("data") or {}).get("sent_count") or (1 if is_success else 0)
+            _log_trigger_execution(
+                job_id=job_id,
+                job_name="Sales Team 2-Hour Report & Leaderboard",
+                trigger_type="MANUAL",
+                triggered_by=staff_label,
+                targets=job_targets,
+                sent_count=sent_cnt,
+                failed_count=0 if is_success else 1,
+                status="SUCCESS" if is_success else "FAILED",
+                error_message=None if is_success else str(res),
+                detail_data=res
+            )
             return {"success": True, "message": "Sales Team Performance Report dispatched to WhatsApp group", "detail": res}
 
         elif job_id == "field_staff_journey_report":
@@ -2177,12 +2281,47 @@ def trigger_wa_job_manual(
             res = dispatch_field_journey_whatsapp_reports_and_alerts(db)
             if isinstance(res, dict) and res.get("group_posted") is False:
                 err_text = (res.get("group_response") or {}).get("error") or "WhatsApp Bot Gateway disconnected"
+                _log_trigger_execution(
+                    job_id=job_id,
+                    job_name="Field Journey Performance & Leaderboard Report",
+                    trigger_type="MANUAL",
+                    triggered_by=staff_label,
+                    targets=job_targets,
+                    sent_count=0,
+                    failed_count=1,
+                    status="FAILED",
+                    error_message=err_text,
+                    detail_data=res
+                )
                 return {"success": False, "error": f"WhatsApp message dispatch failed: {err_text}. Please scan QR code at http://localhost:5002/qr"}
+            _log_trigger_execution(
+                job_id=job_id,
+                job_name="Field Journey Performance & Leaderboard Report",
+                trigger_type="MANUAL",
+                triggered_by=staff_label,
+                targets=job_targets,
+                sent_count=1,
+                failed_count=0,
+                status="SUCCESS",
+                detail_data=res
+            )
             return {"success": True, "message": "Field Journey Performance & Leaderboard Report dispatched to WhatsApp group", "detail": res}
 
         elif job_id == "missed_call_ack":
             from app.services.operator_call_sync import sync_myoperator_logs
             res = sync_myoperator_logs(db, days_back=1)
+            sent_cnt = (res.get("updated") or 0) if isinstance(res, dict) else 1
+            _log_trigger_execution(
+                job_id=job_id,
+                job_name="Instant Missed Call Auto-ACK",
+                trigger_type="MANUAL",
+                triggered_by=staff_label,
+                targets=job_targets,
+                sent_count=sent_cnt,
+                failed_count=0,
+                status="SUCCESS",
+                detail_data=res
+            )
             return {"success": True, "message": "MyOperator Missed Call Sync & Auto-ACK triggered", "detail": res}
 
         elif job_id == "wa_daily_morning_wish":
@@ -2191,7 +2330,18 @@ def trigger_wa_job_manual(
                 from app.services.whatsapp_morning_wish_service import dispatch_daily_morning_wishes
                 _bg_db = SessionLocal()
                 try:
-                    dispatch_daily_morning_wishes(_bg_db)
+                    res_bg = dispatch_daily_morning_wishes(_bg_db)
+                    _log_trigger_execution(
+                        job_id=job_id,
+                        job_name="WhatsApp 8 AM Morning Wish Dispatch",
+                        trigger_type="MANUAL",
+                        triggered_by=staff_label,
+                        targets=job_targets,
+                        sent_count=res_bg.get("sent_count") or 0,
+                        failed_count=res_bg.get("failed_count") or 0,
+                        status="SUCCESS",
+                        detail_data=res_bg
+                    )
                 finally:
                     _bg_db.close()
 
@@ -2201,11 +2351,36 @@ def trigger_wa_job_manual(
         elif job_id == "vgk4u_morning_wish":
             from app.services.vgk4u_community_alert_service import dispatch_daily_vgk4u_morning_wish
             res = dispatch_daily_vgk4u_morning_wish(db)
+            is_success = isinstance(res, dict) and res.get("success") is True
+            sent_cnt = res.get("dispatched_groups") or (1 if is_success else 0)
+            _log_trigger_execution(
+                job_id=job_id,
+                job_name="VGK4U Elite Community Morning Wish",
+                trigger_type="MANUAL",
+                triggered_by=staff_label,
+                targets=job_targets,
+                sent_count=sent_cnt,
+                failed_count=0 if is_success else 1,
+                status="SUCCESS" if is_success else "FAILED",
+                detail_data=res
+            )
             return {"success": True, "message": "VGK4U Community Morning Wish dispatched", "detail": res}
 
         elif job_id == "service_summary":
             from app.services.service_group_alert_service import send_daily_service_summary_report
             res = send_daily_service_summary_report(db)
+            is_success = isinstance(res, dict) and res.get("success") is True
+            _log_trigger_execution(
+                job_id=job_id,
+                job_name="Daily 7:30 PM Service Ticket Summary",
+                trigger_type="MANUAL",
+                triggered_by=staff_label,
+                targets=job_targets,
+                sent_count=1 if is_success else 0,
+                failed_count=0 if is_success else 1,
+                status="SUCCESS" if is_success else "FAILED",
+                detail_data=res
+            )
             return {"success": True, "message": "Service Summary Report dispatched", "detail": res}
 
         else:

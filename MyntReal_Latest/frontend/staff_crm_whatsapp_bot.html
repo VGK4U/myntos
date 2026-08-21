@@ -151,12 +151,13 @@
                 </div>
             </div>
 
-            <!-- 4 Main Tabs -->
+            <!-- 5 Main Tabs -->
             <div class="hub-tabs">
                 <button class="hub-tab-btn active" onclick="switchHubTab('conversations')"><i class="fas fa-comments"></i> 1. All Conversations</button>
                 <button class="hub-tab-btn" onclick="switchHubTab('auto')"><i class="fas fa-bolt"></i> 2. Automatic Messages</button>
                 <button class="hub-tab-btn" onclick="switchHubTab('logs')"><i class="fas fa-mobile-alt"></i> 3. System Sent from Mobile / Logs</button>
                 <button class="hub-tab-btn" onclick="switchHubTab('scheduler')"><i class="fas fa-clock"></i> 4. Daily Scheduler / Live Trigger Tracker</button>
+                <button class="hub-tab-btn" onclick="switchHubTab('trigger-audit')"><i class="fas fa-history"></i> 5. Live Trigger Execution & Audit Log</button>
             </div>
 
             <!-- TAB 1: All Conversations -->
@@ -322,6 +323,49 @@
                             </thead>
                             <tbody id="schedulerTableBody">
                                 <tr><td colspan="8" class="text-center p-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading daily scheduler status matrix...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: Live Dispatch & Execution Audit Log -->
+            <div class="tab-panel" id="panel-trigger-audit">
+                <div class="filter-bar d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div>
+                            <label class="form-label text-uppercase text-muted fw-bold mb-1" style="font-size: 11px;">Filter by Task / Job</label>
+                            <select class="form-select form-select-sm" id="auditJobFilter" onchange="loadTriggerAuditLogs()">
+                                <option value="">All Tasks & Jobs</option>
+                                <option value="wa_bihourly_sales_perf_report">Sales Team 2-Hour Report & Leaderboard</option>
+                                <option value="field_staff_journey_report">Field Journey Performance & Leaderboard Report</option>
+                                <option value="missed_call_ack">Instant Missed Call Auto-ACK</option>
+                                <option value="wa_daily_morning_wish">WhatsApp 8 AM Morning Wish Dispatch</option>
+                                <option value="vgk4u_morning_wish">VGK4U Elite Community Morning Wish</option>
+                                <option value="service_summary">Daily 7:30 PM Service Ticket Summary</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-success fw-bold" onclick="loadTriggerAuditLogs()"><i class="fas fa-sync-alt me-1"></i> Refresh Audit Log</button>
+                </div>
+
+                <div class="data-card">
+                    <div class="table-responsive">
+                        <table class="table-custom">
+                            <thead>
+                                <tr>
+                                    <th>Date & Trigger Time (IST)</th>
+                                    <th>Task / Job Name</th>
+                                    <th>Trigger Type</th>
+                                    <th>Triggered By</th>
+                                    <th>Target Recipients / Groups</th>
+                                    <th>Sent Count</th>
+                                    <th>Failed Count</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="triggerAuditLogTable">
+                                <tr><td colspan="8" class="text-center p-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading live execution logs...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -541,7 +585,57 @@
                 document.querySelectorAll('.hub-tab-btn')[3].classList.add('active');
                 document.getElementById('panel-scheduler').classList.add('active');
                 loadSchedulerTracker();
+            } else if (tabKey === 'trigger-audit') {
+                document.querySelectorAll('.hub-tab-btn')[4].classList.add('active');
+                document.getElementById('panel-trigger-audit').classList.add('active');
+                loadTriggerAuditLogs();
             }
+        }
+
+        function loadTriggerAuditLogs() {
+            const jobFilter = document.getElementById('auditJobFilter') ? document.getElementById('auditJobFilter').value : '';
+            let url = '/api/v1/whatsapp/trigger-logs?limit=50';
+            if (jobFilter) url += '&job_id=' + encodeURIComponent(jobFilter);
+
+            fetch(url, { headers: getAuthHeaders() })
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('triggerAuditLogTable');
+                    if (!tbody) return;
+                    const logs = data.logs || [];
+                    if (logs.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-muted">No trigger execution logs recorded yet. Click <b>⚡ Trigger Now</b> on any task to test!</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = logs.map(l => {
+                        const isManual = l.trigger_type === 'MANUAL';
+                        const typeBadge = isManual 
+                            ? '<span class="badge bg-warning text-dark"><i class="fas fa-bolt me-1"></i>MANUAL</span>'
+                            : '<span class="badge bg-info"><i class="fas fa-clock me-1"></i>AUTO SCHEDULER</span>';
+                        
+                        const isSuccess = l.status === 'SUCCESS';
+                        const statusBadge = isSuccess
+                            ? '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>DELIVERED / SUCCESS</span>'
+                            : '<span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>FAILED</span>';
+
+                        return `
+                            <tr>
+                                <td><b class="text-white">${l.timestamp || '-'}</b></td>
+                                <td><span class="fw-bold text-info">${l.job_name || l.job_id}</span></td>
+                                <td>${typeBadge}</td>
+                                <td><small class="text-light">${l.triggered_by || 'System'}</small></td>
+                                <td><small class="text-muted">${l.target_summary || 'Configured Groups'}</small></td>
+                                <td><b class="text-success">${l.sent_count ?? 0} Sent</b></td>
+                                <td><b class="${(l.failed_count || 0) > 0 ? 'text-danger' : 'text-muted'}">${l.failed_count ?? 0} Failed</b></td>
+                                <td>${statusBadge}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                })
+                .catch(err => {
+                    const tbody = document.getElementById('triggerAuditLogTable');
+                    if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="text-danger p-4 text-center">Failed to load audit logs: ${err.message}</td></tr>`;
+                });
         }
 
         function escapeJS(str) {
