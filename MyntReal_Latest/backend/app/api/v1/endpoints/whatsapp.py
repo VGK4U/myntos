@@ -1979,9 +1979,11 @@ def get_wa_scheduler_status(
 
     from app.models.whatsapp import MessageLog
 
-    def _get_job_day_status(msg_type: str, date_str: str, default_label: str = "Executed"):
+    def _get_job_day_status(msg_types, date_str: str, default_label: str = "Executed"):
+        if isinstance(msg_types, str):
+            msg_types = [msg_types]
         count = db.query(MessageLog).filter(
-            MessageLog.message_type == msg_type,
+            MessageLog.message_type.in_(msg_types),
             MessageLog.sent_at >= datetime.strptime(date_str, '%Y-%m-%d'),
             MessageLog.sent_at < datetime.strptime(date_str, '%Y-%m-%d') + timedelta(days=1)
         ).count()
@@ -1997,9 +1999,9 @@ def get_wa_scheduler_status(
             "schedule": "Every 2 Hours (9:30 AM - 7:30 PM IST)",
             "next_run": "Today 01:30 PM IST" if now_ist.hour < 13 or (now_ist.hour == 13 and now_ist.minute < 30) else "Today 03:30 PM IST",
             "recipients": DEFAULT_JOB_TARGETS.get("wa_bihourly_sales_perf_report", []),
-            "day_2_ago": _get_job_day_status("sales_perf_report", d2_str),
-            "yesterday": _get_job_day_status("sales_perf_report", d1_str),
-            "today": _get_job_day_status("sales_perf_report", d0_str),
+            "day_2_ago": _get_job_day_status(["sales_perf_report", "auto_sales_perf_report", "sales_performance_report"], d2_str),
+            "yesterday": _get_job_day_status(["sales_perf_report", "auto_sales_perf_report", "sales_performance_report"], d1_str),
+            "today": _get_job_day_status(["sales_perf_report", "auto_sales_perf_report", "sales_performance_report"], d0_str),
             "is_active": True
         },
         {
@@ -2009,9 +2011,9 @@ def get_wa_scheduler_status(
             "schedule": "Every 1 Hour (09:00 AM - 08:00 PM IST / Active)",
             "next_run": f"Today {((now_ist.hour % 12) + 1):02d}:00 {'PM' if (now_ist.hour + 1) >= 12 else 'AM'} IST" if now_ist.hour < 20 else "Tomorrow 09:00 AM IST",
             "recipients": DEFAULT_JOB_TARGETS.get("field_staff_journey_report", []),
-            "day_2_ago": _get_job_day_status("field_journey", d2_str),
-            "yesterday": _get_job_day_status("field_journey", d1_str),
-            "today": _get_job_day_status("field_journey", d0_str),
+            "day_2_ago": _get_job_day_status(["field_journey", "field_staff_journey", "auto_field_journey"], d2_str),
+            "yesterday": _get_job_day_status(["field_journey", "field_staff_journey", "auto_field_journey"], d1_str),
+            "today": _get_job_day_status(["field_journey", "field_staff_journey", "auto_field_journey"], d0_str),
             "is_active": True
         },
         {
@@ -2021,9 +2023,9 @@ def get_wa_scheduler_status(
             "schedule": "Real-time / Every 30 mins auto-sync",
             "next_run": "Continuous / Instant",
             "recipients": DEFAULT_JOB_TARGETS.get("missed_call_ack", []),
-            "day_2_ago": _get_job_day_status("missed_call_ack", d2_str),
-            "yesterday": _get_job_day_status("missed_call_ack", d1_str),
-            "today": _get_job_day_status("missed_call_ack", d0_str),
+            "day_2_ago": _get_job_day_status(["missed_call_ack"], d2_str),
+            "yesterday": _get_job_day_status(["missed_call_ack"], d1_str),
+            "today": _get_job_day_status(["missed_call_ack"], d0_str),
             "is_active": True
         },
         {
@@ -2033,9 +2035,9 @@ def get_wa_scheduler_status(
             "schedule": "Daily 08:00 AM IST",
             "next_run": "Tomorrow 08:00 AM IST" if now_ist.hour >= 8 else "Today 08:00 AM IST",
             "recipients": DEFAULT_JOB_TARGETS.get("wa_daily_morning_wish", []),
-            "day_2_ago": _get_job_day_status("morning_wish", d2_str),
-            "yesterday": _get_job_day_status("morning_wish", d1_str),
-            "today": _get_job_day_status("morning_wish", d0_str),
+            "day_2_ago": _get_job_day_status(["morning_wish", "auto_staff_morning_leadership", "wa_daily_morning_wish"], d2_str),
+            "yesterday": _get_job_day_status(["morning_wish", "auto_staff_morning_leadership", "wa_daily_morning_wish"], d1_str),
+            "today": _get_job_day_status(["morning_wish", "auto_staff_morning_leadership", "wa_daily_morning_wish"], d0_str),
             "is_active": True
         },
         {
@@ -2045,9 +2047,9 @@ def get_wa_scheduler_status(
             "schedule": "Daily 08:00 AM IST",
             "next_run": "Tomorrow 08:00 AM IST" if now_ist.hour >= 8 else "Today 08:00 AM IST",
             "recipients": DEFAULT_JOB_TARGETS.get("vgk4u_morning_wish", []),
-            "day_2_ago": _get_job_day_status("vgk4u_wish", d2_str),
-            "yesterday": _get_job_day_status("vgk4u_wish", d1_str),
-            "today": _get_job_day_status("vgk4u_wish", d0_str),
+            "day_2_ago": _get_job_day_status(["vgk4u_wish", "vgk4u_morning_wish", "auto_community_approved"], d2_str),
+            "yesterday": _get_job_day_status(["vgk4u_wish", "vgk4u_morning_wish", "auto_community_approved"], d1_str),
+            "today": _get_job_day_status(["vgk4u_wish", "vgk4u_morning_wish", "auto_community_approved"], d0_str),
             "is_active": True
         },
         {
@@ -2057,9 +2059,9 @@ def get_wa_scheduler_status(
             "schedule": "Daily 07:30 PM IST",
             "next_run": "Today 07:30 PM IST" if now_ist.hour < 19 or (now_ist.hour == 19 and now_ist.minute < 30) else "Tomorrow 07:30 PM IST",
             "recipients": DEFAULT_JOB_TARGETS.get("service_summary", []),
-            "day_2_ago": _get_job_day_status("service_summary", d2_str),
-            "yesterday": _get_job_day_status("service_summary", d1_str),
-            "today": _get_job_day_status("service_summary", d0_str),
+            "day_2_ago": _get_job_day_status(["service_summary", "auto_ticket_created_customer", "auto_ticket_closed_customer"], d2_str),
+            "yesterday": _get_job_day_status(["service_summary", "auto_ticket_created_customer", "auto_ticket_closed_customer"], d1_str),
+            "today": _get_job_day_status(["service_summary", "auto_ticket_created_customer", "auto_ticket_closed_customer"], d0_str),
             "is_active": True
         }
     ]
