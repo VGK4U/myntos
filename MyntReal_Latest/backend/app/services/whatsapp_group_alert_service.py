@@ -15,14 +15,25 @@ BOT_API_URL = "http://localhost:5002/api/send-group-message"
 DEFAULT_INVITE_CODE = "LfX8mGootXa7SpwNIz7P5C"
 
 
+def extract_invite_code(url_or_code: str) -> str:
+    """Extract clean WhatsApp Group invite code from URL or raw string."""
+    if not url_or_code:
+        return ""
+    code = str(url_or_code).strip()
+    if 'chat.whatsapp.com/' in code:
+        code = code.split('chat.whatsapp.com/')[-1].split('?')[0].split('#')[0].strip('/')
+    return code
+
+
 def send_group_bot_message(message_text: str, invite_code: str = DEFAULT_INVITE_CODE) -> Dict[str, Any]:
     """
     Sends message payload to local WhatsApp Web Group Bot Gateway (port 5002).
     """
+    clean_code = extract_invite_code(invite_code)
     try:
         payload = {
             "message": message_text,
-            "inviteCode": invite_code
+            "inviteCode": clean_code
         }
         resp = requests.post(BOT_API_URL, json=payload, timeout=8)
         raw = resp.json()

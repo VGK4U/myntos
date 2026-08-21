@@ -706,9 +706,17 @@
             let identifier = '';
 
             if (customVal) {
-                type = 'direct';
-                name = customVal;
                 identifier = customVal;
+                if (customVal.includes('chat.whatsapp.com')) {
+                    type = 'group';
+                    name = 'WhatsApp Group Link';
+                } else if (customVal.includes('whatsapp.com/channel')) {
+                    type = 'channel';
+                    name = 'WhatsApp Channel (Broadcast)';
+                } else {
+                    type = 'direct';
+                    name = customVal;
+                }
             } else if (selGroup) {
                 const parts = selGroup.split('|');
                 identifier = parts[0];

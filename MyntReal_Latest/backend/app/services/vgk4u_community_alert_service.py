@@ -30,14 +30,25 @@ MORNING_QUOTES = [
 ]
 
 
+def extract_invite_code(url_or_code: str) -> str:
+    """Extract clean WhatsApp Group invite code from URL or raw string."""
+    if not url_or_code:
+        return ""
+    code = str(url_or_code).strip()
+    if 'chat.whatsapp.com/' in code:
+        code = code.split('chat.whatsapp.com/')[-1].split('?')[0].split('#')[0].strip('/')
+    return code
+
+
 def send_vgk4u_group_bot_message(message_text: str, invite_code: str = ELITE_GROUP_INVITE_CODE) -> Dict[str, Any]:
     """
     Dispatches message payload to VGK4U Elite WhatsApp Group via local bot gateway (port 5002).
     """
+    clean_code = extract_invite_code(invite_code)
     try:
         payload = {
             "message": message_text,
-            "inviteCode": invite_code
+            "inviteCode": clean_code
         }
         resp = requests.post(BOT_API_URL, json=payload, timeout=8)
         raw = resp.json()
@@ -56,11 +67,31 @@ def send_vgk4u_group_bot_message(message_text: str, invite_code: str = ELITE_GRO
 
 def dispatch_daily_vgk4u_morning_wish(db: Session, invite_code: str = ELITE_GROUP_INVITE_CODE) -> Dict[str, Any]:
     """
-    Dispatches daily 8:00 AM random inspiring morning wish to VGK4U Elite Group.
+    Dispatches daily 8:00 AM random inspiring morning wish to all configured VGK4U target groups.
     """
+    from app.api.v1.endpoints.whatsapp import DEFAULT_JOB_TARGETS
     quote = random.choice(MORNING_QUOTES)
     logger.info("🌅 Dispatching daily VGK4U 8 AM morning wish...")
-    return send_vgk4u_group_bot_message(quote, invite_code=invite_code)
+
+    target_groups = DEFAULT_JOB_TARGETS.get("vgk4u_morning_wish", [])
+    if not target_groups:
+        return send_vgk4u_group_bot_message(quote, invite_code=invite_code)
+
+    results = []
+    success_count = 0
+
+    for tg in target_groups:
+        ident = tg.get("identifier", "").strip()
+        if not ident or "channel" in ident.lower():
+            continue
+        res = send_vgk4u_group_bot_message(quote, invite_code=ident)
+        results.append(res)
+        if res.get("success"):
+            success_count += 1
+
+    if success_count > 0:
+        return {"success": True, "dispatched_groups": success_count, "results": results}
+    return results[0] if results else send_vgk4u_group_bot_message(quote, invite_code=invite_code)
 
 
 def send_partner_lead_added_congratulations(
