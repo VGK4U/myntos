@@ -1485,6 +1485,8 @@ export class LoginPage {
         await authService.saveCredentialsForBiometric(userId, password, this.selectedPortal);
       }
       this.stopAnnouncementRotation();
+      localStorage.removeItem('mnr_current_route');
+      localStorage.removeItem('mnr_pre_expiry_route');
       window.dispatchEvent(new CustomEvent('login-success'));
     } else {
       this.showError(result.error || 'Login failed');
@@ -1502,6 +1504,8 @@ export class LoginPage {
 
     if (result.success) {
       this.stopAnnouncementRotation();
+      localStorage.removeItem('mnr_current_route');
+      localStorage.removeItem('mnr_pre_expiry_route');
       window.dispatchEvent(new CustomEvent('login-success'));
     } else {
       this.showError(result.error || 'Biometric login failed');

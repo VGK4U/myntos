@@ -468,8 +468,10 @@ class RouterService {
       case 'vgk':
         this.currentRoute = 'vgk-member-hub';
         break;
+      case 'staff':
       default:
-        this.currentRoute = 'dashboard';
+        this.currentRoute = 'progress';
+        break;
     }
     this.history = [];
   }
