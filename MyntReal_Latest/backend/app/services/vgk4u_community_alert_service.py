@@ -30,38 +30,52 @@ MORNING_QUOTES = [
 ]
 
 
+import os
+
+POSTER_IMAGE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static", "poster-celebration-template.jpg"))
+
 def extract_invite_code(url_or_code: str) -> str:
-    """Extract clean WhatsApp Group invite code from URL or raw string."""
+    """Extract clean WhatsApp Group or Channel invite code from URL or raw string."""
     if not url_or_code:
         return ""
     code = str(url_or_code).strip()
-    if 'chat.whatsapp.com/' in code:
-        code = code.split('chat.whatsapp.com/')[-1].split('?')[0].split('#')[0].strip('/')
+    if 'whatsapp.com/channel/' in code:
+        code = code.split('whatsapp.com/channel/')[1].split('?')[0].split('#')[0].strip('/')
+    elif 'chat.whatsapp.com/' in code:
+        code = code.split('chat.whatsapp.com/')[1].split('?')[0].split('#')[0].strip('/')
     return code
 
 
-def send_vgk4u_group_bot_message(message_text: str, invite_code: str = ELITE_GROUP_INVITE_CODE) -> Dict[str, Any]:
+def send_vgk4u_group_bot_message(
+    message_text: str,
+    invite_code: str = ELITE_GROUP_INVITE_CODE,
+    image_path: Optional[str] = None
+) -> Dict[str, Any]:
     """
-    Dispatches message payload to VGK4U Elite WhatsApp Group via local bot gateway (port 5002).
+    Dispatches message payload to VGK4U Elite WhatsApp Group/Channel via local bot gateway (port 5002).
     """
     clean_code = extract_invite_code(invite_code)
+    img_to_use = image_path or (POSTER_IMAGE_PATH if os.path.exists(POSTER_IMAGE_PATH) else None)
     try:
         payload = {
             "message": message_text,
-            "inviteCode": clean_code
+            "inviteCode": clean_code or invite_code
         }
-        resp = requests.post(BOT_API_URL, json=payload, timeout=8)
+        if img_to_use:
+            payload["imagePath"] = img_to_use
+
+        resp = requests.post(BOT_API_URL, json=payload, timeout=12)
         raw = resp.json()
         if resp.status_code == 200 and raw.get("success"):
             return {"success": True, "data": raw}
         else:
-            logger.warning(f"VGK4U Group Bot API response: {resp.status_code} - {resp.text}")
-            return {"success": False, "error": raw.get("error") or resp.text}
+            logger.warning(f"VGK4U Group Bot API error: {resp.status_code} - {resp.text}")
+            return {"success": False, "error": raw.get("error") or resp.text, "data": raw}
     except requests.exceptions.ConnectionError:
-        logger.warning("Could not connect to VGK4U Group Bot Gateway — Service offline on port 5002")
-        return {"success": False, "error": "WhatsApp Group Bot service is currently offline on port 5002. Please start the WhatsApp Bot daemon on the server."}
+        logger.warning("Could not connect to VGK4U Group Bot Gateway (port 5002)")
+        return {"success": False, "error": "WhatsApp Group Bot service offline on port 5002."}
     except Exception as exc:
-        logger.warning(f"Could not connect to VGK4U Group Bot Gateway (port 5002): {exc}")
+        logger.warning(f"Error in VGK4U Group Bot call: {exc}")
         return {"success": False, "error": str(exc)}
 
 
@@ -69,16 +83,18 @@ def dispatch_daily_vgk4u_morning_wish(db: Session, invite_code: str = ELITE_GROU
     """
     Dispatches daily 8:00 AM random inspiring morning wish to all configured VGK4U target groups.
     """
-    from app.api.v1.endpoints.whatsapp import DEFAULT_JOB_TARGETS
+    from app.api.v1.endpoints.whatsapp import _load_targets_from_db
     quote = random.choice(MORNING_QUOTES)
-    logger.info("🌅 Dispatching daily VGK4U 8 AM morning wish...")
+    logger.info("🌅 Dispatching daily VGK4U 8 AM morning wish with image banner...")
 
-    target_groups = DEFAULT_JOB_TARGETS.get("vgk4u_morning_wish", [])
+    active_targets = _load_targets_from_db(db)
+    target_groups = active_targets.get("vgk4u_morning_wish", [])
     if not target_groups:
         return send_vgk4u_group_bot_message(quote, invite_code=invite_code)
 
     results = []
     success_count = 0
+    failed_count = 0
 
     for tg in target_groups:
         ident = tg.get("identifier", "").strip()
@@ -91,6 +107,10 @@ def dispatch_daily_vgk4u_morning_wish(db: Session, invite_code: str = ELITE_GROU
         results.append(res)
         if res.get("success"):
             success_count += 1
+        else:
+            failed_count += 1
+
+    overall_success = success_count > 0 and failed_count == 0
 
     if success_count > 0:
         try:
@@ -102,7 +122,7 @@ def dispatch_daily_vgk4u_morning_wish(db: Session, invite_code: str = ELITE_GROU
                 message_type="vgk4u_wish",
                 message_body=quote[:500],
                 initial_status="sent",
-                current_status="sent",
+                current_status="sent" if overall_success else "partial_failed",
                 sent_at=datetime.datetime.utcnow()
             )
             db.add(log_entry)
@@ -110,8 +130,12 @@ def dispatch_daily_vgk4u_morning_wish(db: Session, invite_code: str = ELITE_GROU
         except Exception as log_e:
             logger.warning("[VGK4U-WISH] Failed to write MessageLog: %s", log_e)
 
-        return {"success": True, "dispatched_groups": success_count, "results": results}
-    return results[0] if results else send_vgk4u_group_bot_message(quote, invite_code=invite_code)
+    return {
+        "success": overall_success,
+        "dispatched_groups": success_count,
+        "failed_groups": failed_count,
+        "results": results
+    }
 
 
 def send_partner_lead_added_congratulations(

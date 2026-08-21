@@ -197,6 +197,17 @@ app.get('/qr', (req, res) => {
 
 const jidCache = {};
 
+function cleanTargetCode(raw) {
+    if (!raw) return '';
+    let str = String(raw).trim();
+    if (str.includes('whatsapp.com/channel/')) {
+        str = str.split('whatsapp.com/channel/')[1].split('?')[0].split('#')[0].replace(/\/$/, '');
+    } else if (str.includes('chat.whatsapp.com/')) {
+        str = str.split('chat.whatsapp.com/')[1].split('?')[0].split('#')[0].replace(/\/$/, '');
+    }
+    return str;
+}
+
 app.post('/api/send-group-message', async (req, res) => {
     try {
         const { message, inviteCode, groupId, imageUrl, imagePath } = req.body;
@@ -216,10 +227,18 @@ app.post('/api/send-group-message', async (req, res) => {
         const targetCodes = Array.from(new Set(Array.isArray(codesToUse) ? codesToUse : [codesToUse]));
         
         let sentCount = 0;
-        let lastResult = null;
+        let failedCount = 0;
+        const results = [];
 
-        for (const codeToUse of targetCodes) {
+        for (const rawCode of targetCodes) {
+            const codeToUse = cleanTargetCode(rawCode);
             let destinationJid = groupId;
+            let targetType = 'group';
+
+            if (String(rawCode).includes('/channel/') || codeToUse.startsWith('0029') || codeToUse.includes('@newsletter')) {
+                targetType = 'channel';
+            }
+
             if (!destinationJid && codeToUse) {
                 if (jidCache[codeToUse]) {
                     destinationJid = jidCache[codeToUse];
@@ -229,7 +248,7 @@ app.post('/api/send-group-message', async (req, res) => {
                         new Promise((_, reject) => setTimeout(() => reject(new Error('Invite resolution timeout')), ms))
                     ]);
 
-                    if (codeToUse.startsWith('0029') || codeToUse.includes('@newsletter')) {
+                    if (targetType === 'channel') {
                         try {
                             const meta = await withTimeout(sock.newsletterMetadata('invite', codeToUse), 4000);
                             if (meta && meta.id) {
@@ -240,9 +259,7 @@ app.post('/api/send-group-message', async (req, res) => {
                         } catch (nlErr) {
                             console.log(`[WA-BOT] newsletterMetadata note for ${codeToUse}: ${nlErr.message}`);
                         }
-                    }
-
-                    if (!destinationJid) {
+                    } else {
                         try {
                             const groupInfo = await withTimeout(sock.groupGetInviteInfo(codeToUse), 4000);
                             if (groupInfo && groupInfo.id) {
@@ -252,55 +269,52 @@ app.post('/api/send-group-message', async (req, res) => {
                         } catch (invErr) {
                             console.log(`[WA-BOT] groupGetInviteInfo note for ${codeToUse}: ${invErr.message}`);
                         }
-                    }
 
-                    if (!destinationJid) {
-                        try {
-                            const joinedJid = await withTimeout(sock.groupAcceptInvite(codeToUse), 4000);
-                            if (joinedJid) {
-                                destinationJid = joinedJid.includes('@g.us') ? joinedJid : `${joinedJid}@g.us`;
-                                jidCache[codeToUse] = destinationJid;
-                                console.log(`[WA-BOT] Successfully joined group via invite code ${codeToUse}: ${destinationJid}`);
+                        if (!destinationJid) {
+                            try {
+                                const joinedJid = await withTimeout(sock.groupAcceptInvite(codeToUse), 4000);
+                                if (joinedJid) {
+                                    destinationJid = joinedJid.includes('@g.us') ? joinedJid : `${joinedJid}@g.us`;
+                                    jidCache[codeToUse] = destinationJid;
+                                }
+                            } catch (accErr) {
+                                console.log(`[WA-BOT] groupAcceptInvite note: ${accErr.message}`);
                             }
-                        } catch (accErr) {
-                            console.log(`[WA-BOT] groupAcceptInvite note: ${accErr.message}`);
-                        }
-                    }
-
-                    if (!destinationJid && req.body.groupName) {
-                        try {
-                            const groups = await withTimeout(sock.groupFetchAllParticipating(), 4000);
-                            const gList = Object.values(groups || {});
-                            const searchName = String(req.body.groupName).toLowerCase().trim();
-                            const matched = gList.find(g => g.subject && g.subject.toLowerCase().includes(searchName));
-                            if (matched) {
-                                destinationJid = matched.id;
-                                jidCache[req.body.groupName] = destinationJid;
-                                console.log(`[WA-BOT] Matched group by name '${req.body.groupName}': ${destinationJid} (${matched.subject})`);
-                            }
-                        } catch (nameErr) {
-                            console.log(`[WA-BOT] groupName lookup note: ${nameErr.message}`);
-                        }
-                    }
-
-                    if (!destinationJid) {
-                        try {
-                            const groups = await withTimeout(sock.groupFetchAllParticipating(), 4000);
-                            const gList = Object.values(groups || {});
-                            if (gList.length > 0) {
-                                destinationJid = gList[0].id;
-                                jidCache[codeToUse] = destinationJid;
-                                console.log(`[WA-BOT] Fallback destinationJid: ${destinationJid} (${gList[0].subject})`);
-                            }
-                        } catch (fErr) {
-                            console.log(`[WA-BOT] groupFetchAllParticipating note: ${fErr.message}`);
                         }
                     }
                 }
             }
 
-            if (!destinationJid) destinationJid = targetJid;
-            if (!destinationJid) continue;
+            // STRICT TARGET TYPE & RESOLUTION VALIDATION — NO SILENT FALLBACK!
+            if (!destinationJid) {
+                console.warn(`[WA-BOT] ❌ Target resolution failed for '${rawCode}' (Type: ${targetType}). Silent fallback disabled.`);
+                failedCount++;
+                results.push({
+                    intended_target: rawCode,
+                    clean_code: codeToUse,
+                    target_type: targetType,
+                    resolved_jid: null,
+                    success: false,
+                    error: "TARGET_RESOLUTION_FAILED",
+                    fallback_used: false
+                });
+                continue;
+            }
+
+            if (targetType === 'channel' && !destinationJid.includes('@newsletter')) {
+                console.warn(`[WA-BOT] ❌ Target type mismatch for Channel '${rawCode}'. Resolved JID '${destinationJid}' is not @newsletter.`);
+                failedCount++;
+                results.push({
+                    intended_target: rawCode,
+                    clean_code: codeToUse,
+                    target_type: targetType,
+                    resolved_jid: destinationJid,
+                    success: false,
+                    error: "TARGET_TYPE_MISMATCH",
+                    fallback_used: false
+                });
+                continue;
+            }
 
             let contentPayload = { text: message || '' };
             const mediaSrc = imageUrl || imagePath;
@@ -320,29 +334,39 @@ app.post('/api/send-group-message', async (req, res) => {
             }
 
             try {
-                lastResult = await sock.sendMessage(destinationJid, contentPayload);
+                const sendRes = await sock.sendMessage(destinationJid, contentPayload);
                 sentCount++;
+                results.push({
+                    intended_target: rawCode,
+                    clean_code: codeToUse,
+                    target_type: targetType,
+                    resolved_jid: destinationJid,
+                    message_id: sendRes?.key?.id,
+                    success: true,
+                    fallback_used: false
+                });
             } catch (sendErr) {
-                console.log(`[WA-BOT] Initial sendMessage failed (${sendErr.message}). Attempting groupAcceptInvite & retry...`);
-                try {
-                    const joinedJid = await sock.groupAcceptInvite(codeToUse);
-                    if (joinedJid) {
-                        destinationJid = joinedJid.includes('@g.us') ? joinedJid : `${joinedJid}@g.us`;
-                        jidCache[codeToUse] = destinationJid;
-                    }
-                    lastResult = await sock.sendMessage(destinationJid, contentPayload);
-                    sentCount++;
-                } catch (retryErr) {
-                    console.log(`[WA-BOT] Retry sendMessage failed: ${retryErr.message}`);
-                    throw retryErr;
-                }
+                console.error(`[WA-BOT] Send failed to ${destinationJid}: ${sendErr.message}`);
+                failedCount++;
+                results.push({
+                    intended_target: rawCode,
+                    clean_code: codeToUse,
+                    target_type: targetType,
+                    resolved_jid: destinationJid,
+                    success: false,
+                    error: sendErr.message,
+                    fallback_used: false
+                });
             }
         }
 
+        const isOverallSuccess = sentCount > 0 && failedCount === 0;
         return res.json({
-            success: true,
+            success: isOverallSuccess,
             sent_count: sentCount,
-            message_id: lastResult?.key?.id
+            failed_count: failedCount,
+            results: results,
+            message_id: results.find(r => r.message_id)?.message_id
         });
 
     } catch (err) {

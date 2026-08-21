@@ -1943,7 +1943,7 @@ DEFAULT_JOB_TARGETS = {
     ],
     "vgk4u_morning_wish": [
         {"id": "t_vgk_channel", "type": "channel", "name": "VGK4u Official Channel", "identifier": "https://whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m"},
-        {"id": "t_vgk_group", "type": "group", "name": "VGK4u Community Group", "identifier": "https://chat.whatsapp.com/HNQQoKXFfCm5PQngGdrIcY?s=cl&p=i&mlu=0"}
+        {"id": "t_vgk_group", "type": "group", "name": "VGK4u Community Group", "identifier": "https://chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY?s=cl&p=i&mlu=0"}
     ],
     "service_summary": [
         {"id": "t8", "type": "group", "name": "Service & Maintenance Team", "identifier": "8875551666"}
@@ -2355,7 +2355,9 @@ def trigger_wa_job_manual(
             from app.services.vgk4u_community_alert_service import dispatch_daily_vgk4u_morning_wish
             res = dispatch_daily_vgk4u_morning_wish(db)
             is_success = isinstance(res, dict) and res.get("success") is True
-            sent_cnt = res.get("dispatched_groups") or (1 if is_success else 0)
+            sent_cnt = (res.get("dispatched_groups") if isinstance(res, dict) else 0) or 0
+            failed_cnt = (res.get("failed_groups") if isinstance(res, dict) else 0) or 0
+            err_msg = res.get("error") or ("Dispatch failed to one or more targets" if not is_success else None)
             _log_trigger_execution(
                 job_id=job_id,
                 job_name="VGK4U Elite Community Morning Wish",
@@ -2363,11 +2365,14 @@ def trigger_wa_job_manual(
                 triggered_by=staff_label,
                 targets=job_targets,
                 sent_count=sent_cnt,
-                failed_count=0 if is_success else 1,
+                failed_count=failed_cnt,
                 status="SUCCESS" if is_success else "FAILED",
+                error_message=err_msg,
                 detail_data=res
             )
-            return {"success": True, "message": "VGK4U Community Morning Wish dispatched", "detail": res}
+            if not is_success:
+                return {"success": False, "error": err_msg or "Dispatch failed", "detail": res}
+            return {"success": True, "message": "VGK4U Community Morning Wish dispatched to all configured targets", "detail": res}
 
         elif job_id == "service_summary":
             from app.services.service_group_alert_service import send_daily_service_summary_report
