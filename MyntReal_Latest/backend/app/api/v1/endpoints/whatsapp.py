@@ -17,6 +17,7 @@ from typing import Optional, List
 from datetime import datetime
 import logging
 import os
+import json
 import requests
 
 logger = logging.getLogger(__name__)
@@ -1973,7 +1974,7 @@ def _save_targets_to_db(db: Session, targets_dict: dict) -> None:
     except Exception as e:
         logger.warning(f"Could not save targets file: {e}")
 
-EXEC_LOGS_FILE_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "wa_execution_logs.json")
+EXEC_LOGS_FILE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "wa_execution_logs.json"))
 
 def _log_trigger_execution(
     job_id: str,
@@ -2036,8 +2037,10 @@ def _log_trigger_execution(
         logger.warning(f"Could not write execution log: {e}")
         return None
 
-def _require_staff_optional(current_user=Depends(get_current_user_any), db: Session = Depends(get_db)):
+async def _require_staff_optional(request: Request, db: Session = Depends(get_db)):
     try:
+        from app.core.security import get_current_user_hybrid, get_current_staff_user_from_hybrid
+        current_user = await get_current_user_hybrid(request, db)
         return get_current_staff_user_from_hybrid(current_user, db)
     except Exception:
         return None
