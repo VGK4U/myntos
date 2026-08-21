@@ -679,16 +679,23 @@
                     return;
                 }
 
-                container.innerHTML = recs.map(r => `
+                container.innerHTML = recs.map(r => {
+                    const isChannel = r.type === 'channel' || (r.identifier && r.identifier.includes('channel'));
+                    const badgeClass = isChannel ? 'bg-warning text-dark' : (r.type === 'group' ? 'bg-primary' : 'bg-info');
+                    const badgeIcon = isChannel ? 'fa-bullhorn' : (r.type === 'group' ? 'fa-users' : 'fa-phone');
+                    const badgeLabel = isChannel ? 'CHANNEL' : r.type.toUpperCase();
+                    return `
                     <div class="d-flex align-items-center justify-content-between p-2 mb-2 rounded bg-dark border border-secondary w-100">
                         <div>
-                            <span class="badge ${r.type==='group' ? 'bg-primary' : 'bg-info'} me-2"><i class="fas ${r.type==='group'?'fa-users':'fa-phone'} me-1"></i>${r.type.toUpperCase()}</span>
+                            <span class="badge ${badgeClass} me-2"><i class="fas ${badgeIcon} me-1"></i>${badgeLabel}</span>
                             <b class="text-white">${r.name}</b>
                             <small class="text-muted ms-2">(${r.identifier})</small>
+                            ${isChannel ? '<div class="text-warning small mt-1"><i class="fas fa-info-circle me-1"></i> Note: Channels use 1-Way Broadcast API (Group bot delivers to Groups)</div>' : ''}
                         </div>
                         <button class="btn btn-sm btn-outline-danger" onclick="removeTargetRecipient('${r.id}')"><i class="fas fa-trash-alt me-1"></i> Remove</button>
                     </div>
-                `).join('');
+                    `;
+                }).join('');
             })
             .catch(() => {
                 if (container) container.innerHTML = '<div class="text-danger">Failed to load target recipients.</div>';
