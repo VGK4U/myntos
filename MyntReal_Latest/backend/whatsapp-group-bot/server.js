@@ -229,14 +229,29 @@ app.post('/api/send-group-message', async (req, res) => {
                         new Promise((_, reject) => setTimeout(() => reject(new Error('Invite resolution timeout')), ms))
                     ]);
 
-                    try {
-                        const groupInfo = await withTimeout(sock.groupGetInviteInfo(codeToUse), 4000);
-                        if (groupInfo && groupInfo.id) {
-                            destinationJid = groupInfo.id.includes('@g.us') ? groupInfo.id : `${groupInfo.id}@g.us`;
-                            jidCache[codeToUse] = destinationJid;
+                    if (codeToUse.startsWith('0029') || codeToUse.includes('@newsletter')) {
+                        try {
+                            const meta = await withTimeout(sock.newsletterMetadata('invite', codeToUse), 4000);
+                            if (meta && meta.id) {
+                                destinationJid = meta.id.includes('@newsletter') ? meta.id : `${meta.id}@newsletter`;
+                                jidCache[codeToUse] = destinationJid;
+                                console.log(`[WA-BOT] Resolved WhatsApp Channel JID: ${destinationJid} (${meta.name || 'Channel'})`);
+                            }
+                        } catch (nlErr) {
+                            console.log(`[WA-BOT] newsletterMetadata note for ${codeToUse}: ${nlErr.message}`);
                         }
-                    } catch (invErr) {
-                        console.log(`[WA-BOT] groupGetInviteInfo note for ${codeToUse}: ${invErr.message}`);
+                    }
+
+                    if (!destinationJid) {
+                        try {
+                            const groupInfo = await withTimeout(sock.groupGetInviteInfo(codeToUse), 4000);
+                            if (groupInfo && groupInfo.id) {
+                                destinationJid = groupInfo.id.includes('@g.us') ? groupInfo.id : `${groupInfo.id}@g.us`;
+                                jidCache[codeToUse] = destinationJid;
+                            }
+                        } catch (invErr) {
+                            console.log(`[WA-BOT] groupGetInviteInfo note for ${codeToUse}: ${invErr.message}`);
+                        }
                     }
 
                     if (!destinationJid) {

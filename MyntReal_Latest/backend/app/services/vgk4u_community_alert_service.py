@@ -82,9 +82,12 @@ def dispatch_daily_vgk4u_morning_wish(db: Session, invite_code: str = ELITE_GROU
 
     for tg in target_groups:
         ident = tg.get("identifier", "").strip()
-        if not ident or "channel" in ident.lower():
+        if not ident:
             continue
-        res = send_vgk4u_group_bot_message(quote, invite_code=ident)
+        clean_code = extract_invite_code(ident)
+        if not clean_code:
+            continue
+        res = send_vgk4u_group_bot_message(quote, invite_code=clean_code)
         results.append(res)
         if res.get("success"):
             success_count += 1
