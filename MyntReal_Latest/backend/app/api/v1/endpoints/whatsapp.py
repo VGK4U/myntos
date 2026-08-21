@@ -3,7 +3,7 @@ WhatsApp Messaging API Endpoints
 Handles WhatsApp OTP sending, message logging, and delivery tracking via Meta Cloud API
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, Query, Body, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from app.core.database import get_db
@@ -2121,6 +2121,7 @@ def update_wa_job_targets(
 @router.post("/trigger-job")
 def trigger_wa_job_manual(
     payload: dict = Body(...),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     db: Session = Depends(get_db),
     current_user=Depends(_require_staff)
 ):
@@ -2153,9 +2154,17 @@ def trigger_wa_job_manual(
             return {"success": True, "message": "MyOperator Missed Call Sync & Auto-ACK triggered", "detail": res}
 
         elif job_id == "wa_daily_morning_wish":
-            from app.services.whatsapp_auto_service import dispatch_daily_morning_wishes
-            res = dispatch_daily_morning_wishes(db)
-            return {"success": True, "message": "WhatsApp Morning Wishes dispatched", "detail": res}
+            def _bg_dispatch_wishes():
+                from app.core.database import SessionLocal
+                from app.services.whatsapp_morning_wish_service import dispatch_daily_morning_wishes
+                _bg_db = SessionLocal()
+                try:
+                    dispatch_daily_morning_wishes(_bg_db)
+                finally:
+                    _bg_db.close()
+
+            background_tasks.add_task(_bg_dispatch_wishes)
+            return {"success": True, "message": "WhatsApp Morning Wishes dispatch started in background for 4,000+ leads"}
 
         elif job_id == "vgk4u_morning_wish":
             from app.services.vgk4u_community_alert_service import dispatch_daily_vgk4u_morning_wish
