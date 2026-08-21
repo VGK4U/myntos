@@ -7714,7 +7714,7 @@ const server = http.createServer(async (req, res) => {
   const isApkPath = [
     '/mobile.app', '/mobile.apk', '/download/mobile.app', '/download/mobile.apk',
     '/download-app', '/download/apk', '/myntreal.apk', '/public/myntreal.apk',
-    '/app.apk', '/app.app', '/download/app', '/app', '/mobile', '/mobile-app',
+    '/app.apk', '/app.app', '/download/app', '/app', '/app/', '/mobile', '/mobile-app', '/mobile-app/',
     '/myntreal', '/apk', '/download', '/get-app'
   ].includes(reqPathLower);
 
