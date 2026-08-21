@@ -2036,6 +2036,12 @@ def _log_trigger_execution(
         logger.warning(f"Could not write execution log: {e}")
         return None
 
+def _require_staff_optional(current_user=Depends(get_current_user_any), db: Session = Depends(get_db)):
+    try:
+        return get_current_staff_user_from_hybrid(current_user, db)
+    except Exception:
+        return None
+
 @router.get("/trigger-logs")
 def get_wa_trigger_execution_logs(
     limit: int = Query(50, ge=1, le=200),
@@ -2060,14 +2066,6 @@ def get_wa_trigger_execution_logs(
         logger.warning(f"Could not read execution logs: {e}")
 
     return {"success": True, "total": 0, "logs": []}
-
-async def _require_staff_optional(request: Request, db: Session = Depends(get_db)):
-    try:
-        from app.core.security import get_current_user_hybrid, get_current_staff_user_from_hybrid
-        current_user = await get_current_user_hybrid(request, db)
-        return get_current_staff_user_from_hybrid(current_user, db)
-    except Exception:
-        return None
 
 @router.get("/scheduler-status")
 def get_wa_scheduler_status(
