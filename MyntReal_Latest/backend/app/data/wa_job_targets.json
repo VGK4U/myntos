@@ -1,0 +1,62 @@
+{
+  "wa_bihourly_sales_perf_report": [
+    {
+      "id": "t1",
+      "type": "group",
+      "name": "Mynt Sales New Group",
+      "identifier": "9053899899"
+    },
+    {
+      "id": "t2",
+      "type": "group",
+      "name": "Executive Team Announcements",
+      "identifier": "7702830269"
+    }
+  ],
+  "field_staff_journey_report": [
+    {
+      "id": "t3",
+      "type": "group",
+      "name": "Field Updates",
+      "identifier": "BctONtnv8431uxxybKBEtS"
+    }
+  ],
+  "missed_call_ack": [
+    {
+      "id": "t5",
+      "type": "direct",
+      "name": "Customer Direct WhatsApp ACK",
+      "identifier": "Direct Customer Mobile"
+    }
+  ],
+  "wa_daily_morning_wish": [
+    {
+      "id": "t6",
+      "type": "group",
+      "name": "Executive Team Announcements",
+      "identifier": "7702830269"
+    }
+  ],
+  "vgk4u_morning_wish": [
+    {
+      "id": "t_vgk_channel",
+      "type": "channel",
+      "name": "VGK4u Official Channel",
+      "identifier": "https://whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m"
+    },
+    {
+      "id": "t_vgk_group",
+      "type": "group",
+      "name": "VGK4u Community Group",
+      "identifier": "https://chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY?s=cl&p=i&mlu=0"
+    }
+  ],
+  "service_summary": [
+    {
+      "id": "t8",
+      "type": "group",
+      "name": "Service & Maintenance Team",
+      "identifier": "8875551666"
+    }
+  ]
+}

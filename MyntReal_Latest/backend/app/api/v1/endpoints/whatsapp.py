@@ -1941,43 +1941,37 @@ DEFAULT_JOB_TARGETS = {
         {"id": "t6", "type": "group", "name": "Executive Team Announcements", "identifier": "7702830269"}
     ],
     "vgk4u_morning_wish": [
-        {"id": "t7", "type": "group", "name": "VGK Care _ Bajaj Capital", "identifier": "8875551666"}
+        {"id": "t_vgk_channel", "type": "channel", "name": "VGK4u Official Channel", "identifier": "https://whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m"},
+        {"id": "t_vgk_group", "type": "group", "name": "VGK4u Community Group", "identifier": "https://chat.whatsapp.com/HNQQoKXFfCm5PQngGdrIcY?s=cl&p=i&mlu=0"}
     ],
     "service_summary": [
         {"id": "t8", "type": "group", "name": "Service & Maintenance Team", "identifier": "8875551666"}
     ]
 }
 
-import json
+TARGETS_FILE_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "wa_job_targets.json")
 
-def _load_targets_from_db(db: Session) -> dict:
+def _load_targets_from_db(db: Session = None) -> dict:
     try:
-        from app.models.system_control import AppSettings
-        setting = db.query(AppSettings).filter(AppSettings.key == "wa_job_targets_config").first()
-        if setting and setting.value:
-            loaded = json.loads(setting.value)
-            if isinstance(loaded, dict):
-                # Ensure all default keys exist
-                for k, v in DEFAULT_JOB_TARGETS.items():
-                    if k not in loaded:
-                        loaded[k] = v
-                return loaded
+        if os.path.exists(TARGETS_FILE_PATH):
+            with open(TARGETS_FILE_PATH, "r") as f:
+                loaded = json.load(f)
+                if isinstance(loaded, dict):
+                    for k, v in DEFAULT_JOB_TARGETS.items():
+                        if k not in loaded:
+                            loaded[k] = v
+                    return loaded
     except Exception as e:
-        logger.warning(f"Could not load targets from DB: {e}")
+        logger.warning(f"Could not load targets file: {e}")
     return DEFAULT_JOB_TARGETS
 
 def _save_targets_to_db(db: Session, targets_dict: dict) -> None:
     try:
-        from app.models.system_control import AppSettings
-        setting = db.query(AppSettings).filter(AppSettings.key == "wa_job_targets_config").first()
-        if not setting:
-            setting = AppSettings(key="wa_job_targets_config", value=json.dumps(targets_dict))
-            db.add(setting)
-        else:
-            setting.value = json.dumps(targets_dict)
-        db.commit()
+        os.makedirs(os.path.dirname(TARGETS_FILE_PATH), exist_ok=True)
+        with open(TARGETS_FILE_PATH, "w") as f:
+            json.dump(targets_dict, f, indent=2)
     except Exception as e:
-        logger.warning(f"Could not save targets to DB: {e}")
+        logger.warning(f"Could not save targets file: {e}")
 
 async def _require_staff_optional(request: Request, db: Session = Depends(get_db)):
     try:
