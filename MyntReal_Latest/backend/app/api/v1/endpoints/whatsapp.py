@@ -2060,6 +2060,8 @@ def get_wa_trigger_execution_logs(
                 if isinstance(logs, list):
                     if job_id:
                         logs = [l for l in logs if l.get("job_id") == job_id]
+                    # Ensure latest trigger is always on top
+                    logs.sort(key=lambda x: x.get("iso_timestamp", ""), reverse=True)
                     return {
                         "success": True,
                         "total": len(logs),
