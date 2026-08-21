@@ -1948,6 +1948,37 @@ DEFAULT_JOB_TARGETS = {
     ]
 }
 
+import json
+
+def _load_targets_from_db(db: Session) -> dict:
+    try:
+        from app.models.system_control import AppSettings
+        setting = db.query(AppSettings).filter(AppSettings.key == "wa_job_targets_config").first()
+        if setting and setting.value:
+            loaded = json.loads(setting.value)
+            if isinstance(loaded, dict):
+                # Ensure all default keys exist
+                for k, v in DEFAULT_JOB_TARGETS.items():
+                    if k not in loaded:
+                        loaded[k] = v
+                return loaded
+    except Exception as e:
+        logger.warning(f"Could not load targets from DB: {e}")
+    return DEFAULT_JOB_TARGETS
+
+def _save_targets_to_db(db: Session, targets_dict: dict) -> None:
+    try:
+        from app.models.system_control import AppSettings
+        setting = db.query(AppSettings).filter(AppSettings.key == "wa_job_targets_config").first()
+        if not setting:
+            setting = AppSettings(key="wa_job_targets_config", value=json.dumps(targets_dict))
+            db.add(setting)
+        else:
+            setting.value = json.dumps(targets_dict)
+        db.commit()
+    except Exception as e:
+        logger.warning(f"Could not save targets to DB: {e}")
+
 async def _require_staff_optional(request: Request, db: Session = Depends(get_db)):
     try:
         from app.core.security import get_current_user_hybrid, get_current_staff_user_from_hybrid
@@ -1991,6 +2022,8 @@ def get_wa_scheduler_status(
             return {"status": "EXECUTED", "count": count, "label": f"✅ {count} Sent"}
         return {"status": "PENDING", "count": 0, "label": "⏳ Scheduled / Pending"}
 
+    active_targets = _load_targets_from_db(db)
+
     jobs = [
         {
             "job_id": "wa_bihourly_sales_perf_report",
@@ -1998,7 +2031,7 @@ def get_wa_scheduler_status(
             "category": "Sales Reporting",
             "schedule": "Every 2 Hours (9:30 AM - 7:30 PM IST)",
             "next_run": "Today 01:30 PM IST" if now_ist.hour < 13 or (now_ist.hour == 13 and now_ist.minute < 30) else "Today 03:30 PM IST",
-            "recipients": DEFAULT_JOB_TARGETS.get("wa_bihourly_sales_perf_report", []),
+            "recipients": active_targets.get("wa_bihourly_sales_perf_report", []),
             "day_2_ago": _get_job_day_status(["sales_perf_report", "auto_sales_perf_report", "sales_performance_report"], d2_str),
             "yesterday": _get_job_day_status(["sales_perf_report", "auto_sales_perf_report", "sales_performance_report"], d1_str),
             "today": _get_job_day_status(["sales_perf_report", "auto_sales_perf_report", "sales_performance_report"], d0_str),
@@ -2010,7 +2043,7 @@ def get_wa_scheduler_status(
             "category": "Field Operations",
             "schedule": "Every 1 Hour (09:00 AM - 08:00 PM IST / Active)",
             "next_run": f"Today {((now_ist.hour % 12) + 1):02d}:00 {'PM' if (now_ist.hour + 1) >= 12 else 'AM'} IST" if now_ist.hour < 20 else "Tomorrow 09:00 AM IST",
-            "recipients": DEFAULT_JOB_TARGETS.get("field_staff_journey_report", []),
+            "recipients": active_targets.get("field_staff_journey_report", []),
             "day_2_ago": _get_job_day_status(["field_journey", "field_staff_journey", "auto_field_journey"], d2_str),
             "yesterday": _get_job_day_status(["field_journey", "field_staff_journey", "auto_field_journey"], d1_str),
             "today": _get_job_day_status(["field_journey", "field_staff_journey", "auto_field_journey"], d0_str),
@@ -2022,7 +2055,7 @@ def get_wa_scheduler_status(
             "category": "Customer Support",
             "schedule": "Real-time / Every 30 mins auto-sync",
             "next_run": "Continuous / Instant",
-            "recipients": DEFAULT_JOB_TARGETS.get("missed_call_ack", []),
+            "recipients": active_targets.get("missed_call_ack", []),
             "day_2_ago": _get_job_day_status(["missed_call_ack"], d2_str),
             "yesterday": _get_job_day_status(["missed_call_ack"], d1_str),
             "today": _get_job_day_status(["missed_call_ack"], d0_str),
@@ -2034,7 +2067,7 @@ def get_wa_scheduler_status(
             "category": "Team Engagement",
             "schedule": "Daily 08:00 AM IST",
             "next_run": "Tomorrow 08:00 AM IST" if now_ist.hour >= 8 else "Today 08:00 AM IST",
-            "recipients": DEFAULT_JOB_TARGETS.get("wa_daily_morning_wish", []),
+            "recipients": active_targets.get("wa_daily_morning_wish", []),
             "day_2_ago": _get_job_day_status(["morning_wish", "auto_staff_morning_leadership", "wa_daily_morning_wish"], d2_str),
             "yesterday": _get_job_day_status(["morning_wish", "auto_staff_morning_leadership", "wa_daily_morning_wish"], d1_str),
             "today": _get_job_day_status(["morning_wish", "auto_staff_morning_leadership", "wa_daily_morning_wish"], d0_str),
@@ -2046,7 +2079,7 @@ def get_wa_scheduler_status(
             "category": "Community Outreach",
             "schedule": "Daily 08:00 AM IST",
             "next_run": "Tomorrow 08:00 AM IST" if now_ist.hour >= 8 else "Today 08:00 AM IST",
-            "recipients": DEFAULT_JOB_TARGETS.get("vgk4u_morning_wish", []),
+            "recipients": active_targets.get("vgk4u_morning_wish", []),
             "day_2_ago": _get_job_day_status(["vgk4u_wish", "vgk4u_morning_wish", "auto_community_approved"], d2_str),
             "yesterday": _get_job_day_status(["vgk4u_wish", "vgk4u_morning_wish", "auto_community_approved"], d1_str),
             "today": _get_job_day_status(["vgk4u_wish", "vgk4u_morning_wish", "auto_community_approved"], d0_str),
@@ -2058,7 +2091,7 @@ def get_wa_scheduler_status(
             "category": "Service & Maintenance",
             "schedule": "Daily 07:30 PM IST",
             "next_run": "Today 07:30 PM IST" if now_ist.hour < 19 or (now_ist.hour == 19 and now_ist.minute < 30) else "Tomorrow 07:30 PM IST",
-            "recipients": DEFAULT_JOB_TARGETS.get("service_summary", []),
+            "recipients": active_targets.get("service_summary", []),
             "day_2_ago": _get_job_day_status(["service_summary", "auto_ticket_created_customer", "auto_ticket_closed_customer"], d2_str),
             "yesterday": _get_job_day_status(["service_summary", "auto_ticket_created_customer", "auto_ticket_closed_customer"], d1_str),
             "today": _get_job_day_status(["service_summary", "auto_ticket_created_customer", "auto_ticket_closed_customer"], d0_str),
@@ -2082,7 +2115,8 @@ def get_wa_job_targets(
     current_user=Depends(_require_staff_optional)
 ):
     """Returns currently configured target groups and numbers for a job."""
-    targets = DEFAULT_JOB_TARGETS.get(job_id, [])
+    active_targets = _load_targets_from_db(db)
+    targets = active_targets.get(job_id, [])
     return {"success": True, "job_id": job_id, "recipients": targets}
 
 
@@ -2098,8 +2132,10 @@ def update_wa_job_targets(
     if not job_id or not action:
         raise HTTPException(status_code=400, detail="job_id and action required")
 
-    if job_id not in DEFAULT_JOB_TARGETS:
-        DEFAULT_JOB_TARGETS[job_id] = []
+    active_targets = _load_targets_from_db(db)
+
+    if job_id not in active_targets:
+        active_targets[job_id] = []
 
     if action == "add":
         name = payload.get("name", "New Group")
@@ -2107,13 +2143,15 @@ def update_wa_job_targets(
         target_type = payload.get("type", "group")
         import uuid
         new_target = {"id": f"t_{uuid.uuid4().hex[:6]}", "type": target_type, "name": name, "identifier": identifier}
-        DEFAULT_JOB_TARGETS[job_id].append(new_target)
-        return {"success": True, "message": f"Added target '{name}'", "recipients": DEFAULT_JOB_TARGETS[job_id]}
+        active_targets[job_id].append(new_target)
+        _save_targets_to_db(db, active_targets)
+        return {"success": True, "message": f"Added target '{name}'", "recipients": active_targets[job_id]}
 
     elif action == "remove":
         target_id = payload.get("target_id")
-        DEFAULT_JOB_TARGETS[job_id] = [t for t in DEFAULT_JOB_TARGETS[job_id] if t.get("id") != target_id]
-        return {"success": True, "message": "Target removed successfully", "recipients": DEFAULT_JOB_TARGETS[job_id]}
+        active_targets[job_id] = [t for t in active_targets[job_id] if t.get("id") != target_id]
+        _save_targets_to_db(db, active_targets)
+        return {"success": True, "message": "Target removed successfully", "recipients": active_targets[job_id]}
 
     raise HTTPException(status_code=400, detail=f"Invalid action: {action}")
 
