@@ -273,11 +273,14 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(db: Session) -> Dict[str,
     # Log execution into MessageLog table for scheduler matrix tracking
     try:
         from app.models.whatsapp import MessageLog
+        import uuid
         log_entry = MessageLog(
+            message_sid=f"field_journey_{uuid.uuid4().hex[:12]}",
             mobile_number="GROUP:Field Updates",
             message_type="field_journey",
-            content=report_msg[:500],
-            status="SENT" if group_result else "FAILED",
+            message_body=report_msg[:500],
+            initial_status="sent" if group_result else "failed",
+            current_status="sent" if group_result else "failed",
             sent_at=datetime.datetime.utcnow()
         )
         db.add(log_entry)
