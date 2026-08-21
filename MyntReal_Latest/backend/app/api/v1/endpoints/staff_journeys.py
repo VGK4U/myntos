@@ -490,6 +490,38 @@ async def journey_heartbeat(
     if speed_kmh is None and request.location.speed:
         speed_kmh = request.location.speed * 3.6
 
+    # Preserve original mobile GPS timestamp for offline sync points
+    point_timestamp = now
+    req_loc_ts = getattr(request.location, 'timestamp', None) or getattr(request, 'timestamp', None)
+    if req_loc_ts:
+        try:
+            if isinstance(req_loc_ts, datetime):
+                point_timestamp = req_loc_ts
+            else:
+                ts_str = str(req_loc_ts).replace('Z', '+00:00')
+                point_timestamp = datetime.fromisoformat(ts_str)
+        except Exception as ts_err:
+            print(f"[DC_GPS_TIMESTAMP] Failed to parse request timestamp '{req_loc_ts}': {ts_err}")
+
+    # Idempotency / Duplicate Check: Avoid inserting exact same point multiple times during offline sync retries
+    existing_point = db.query(StaffJourneyTrackPoint).filter(
+        StaffJourneyTrackPoint.journey_id == journey_id,
+        StaffJourneyTrackPoint.latitude == request.location.latitude,
+        StaffJourneyTrackPoint.longitude == request.location.longitude,
+        StaffJourneyTrackPoint.timestamp == point_timestamp
+    ).first()
+
+    if existing_point:
+        return {
+            "success": True,
+            "duplicate": True,
+            "message": "Track point already recorded (idempotent duplicate response)",
+            "distance_km": round(journey.total_distance_km or 0, 2),
+            "reimbursable_distance_km": round(journey.reimbursable_distance_km or 0, 2),
+            "current_speed_kmh": round(speed_kmh, 1) if speed_kmh else 0,
+            "max_speed_kmh": round(journey.max_speed_kmh or 0, 1)
+        }
+
     # WVV Protocol Fix: Store track point with compliance flag
     # DC_JOURNEY_ADDRESS_001: Include address for stop point visualization
     track_point = StaffJourneyTrackPoint(
@@ -505,7 +537,7 @@ async def journey_heartbeat(
         wvv_compliant=wvv_compliant,
         compliance_reason=wvv_reason if not wvv_compliant else None,
         address=request.location.address,  # DC_JOURNEY_ADDRESS_001
-        timestamp=now
+        timestamp=point_timestamp
     )
     db.add(track_point)
 

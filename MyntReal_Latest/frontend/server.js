@@ -7629,6 +7629,7 @@ const server = http.createServer(async (req, res) => {
         res.setHeader('X-XSS-Protection', '1; mode=block');
         res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         res.setHeader('Server', 'MyntOS-Gateway');
+        res.setHeader('Access-Control-Allow-Origin', '*');
       } catch (e) {}
       return _origWriteHead(statusCode, headers);
     };
@@ -8233,6 +8234,26 @@ const server = http.createServer(async (req, res) => {
   // Object Storage Proxy - Forward /storage/* requests to backend on port 8000
   // DC Protocol: Same retry logic as API proxy
   if (url.startsWith('/storage/')) {
+    try {
+      const cleanPath = decodeURIComponent(url.split('?')[0].replace('/storage/', ''));
+      const localFilePath = path.join(__dirname, '../backend/storage', cleanPath);
+      if (fs.existsSync(localFilePath) && fs.statSync(localFilePath).isFile()) {
+        const ext = path.extname(localFilePath).toLowerCase();
+        const mimeTypes = {
+          '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+          '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+          '.pdf': 'application/pdf'
+        };
+        const contentType = mimeTypes[ext] || 'image/jpeg';
+        res.writeHead(200, {
+          'Content-Type': contentType,
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'public, max-age=86400'
+        });
+        return fs.createReadStream(localFilePath).pipe(res);
+      }
+    } catch (e) {}
+
     const BACKEND_HOSTS = RESOLVED_BACKEND_HOSTS;
     let proxySuccess = false;
     let lastError = null;

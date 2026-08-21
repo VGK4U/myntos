@@ -111,21 +111,37 @@ class OfflineQueueService {
     longitude: number, 
     accuracy_m: number, 
     journeyId?: number,
-    battery_percentage?: number
+    battery_percentage?: number,
+    originalTimestamp?: string
   ): Promise<string> {
-    return this.enqueue({
-      endpoint: journeyId 
-        ? `/staff/journeys/${journeyId}/track-point`
-        : '/staff/time-tracker/heartbeat',
-      method: 'POST',
-      body: {
+    const ts = originalTimestamp || new Date().toISOString();
+    const endpoint = journeyId 
+      ? `/staff/journeys/${journeyId}/heartbeat`
+      : '/staff/time-tracker/heartbeat';
+
+    const body = journeyId ? {
+      location: {
         latitude,
         longitude,
-        accuracy_m,
-        timestamp: new Date().toISOString(),
-        source: 'mobile_offline_sync',
-        battery_percentage
+        accuracy: accuracy_m,
+        timestamp: ts
       },
+      timestamp: ts,
+      source: 'mobile_offline_sync',
+      battery_percentage
+    } : {
+      latitude,
+      longitude,
+      accuracy_m,
+      timestamp: ts,
+      source: 'mobile_offline_sync',
+      battery_percentage
+    };
+
+    return this.enqueue({
+      endpoint,
+      method: 'POST',
+      body,
       priority: 'high',
       maxRetries: 5,
       category: 'location'

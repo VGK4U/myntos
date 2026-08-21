@@ -310,6 +310,7 @@
     
     <div style="background:#f3f4f6;padding:12px 24px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-shrink:0;height:62px;box-sizing:border-box;z-index:20">
       <button onclick="closePosterModal()" style="background:#fff;color:#374151;border:1.5px solid #d1d5db;border-radius:8px;height:38px;padding:0 18px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center">Cancel</button>
+      <button onclick="testShareToNumber()" style="background:linear-gradient(135deg,#0284c7,#0369a1);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-vial me-2"></i>Test Share (Custom No)</button>
       <button onclick="shareOnWhatsApp()" style="background:linear-gradient(135deg,#25d366,#128c7e);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fab fa-whatsapp me-2"></i>Share on WhatsApp</button>
       <button onclick="sharePoster()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-share-alt me-2"></i>Share Poster</button>
       <button onclick="shareDefaultChannel()" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Share Default</button>
@@ -340,6 +341,9 @@
     if (!path || path === 'None' || path === 'null') return '';
     if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
       return path;
+    }
+    if (path.startsWith('/storage/')) {
+      return window.location.origin + path;
     }
     if (path.startsWith('storage/')) {
       return window.location.origin + '/' + path;
@@ -408,6 +412,7 @@
       const photoPath = m.passport_photo || m.logo_path || m.profile_image || m.photo_url || m.avatar_url || m.id_card_photo || m.photo;
       const resolvedUrl = resolvePosterMediaUrl(photoPath);
       if (resolvedUrl && prevImg) {
+        prevImg.crossOrigin = "anonymous";
         prevImg.onload = () => {
           prevImg.style.display = 'block';
           if (prevAvatar) prevAvatar.style.display = 'none';
@@ -570,6 +575,7 @@
         const seniorPhotoPath = m.senior_photo || m.senior_passport_photo || m.senior_logo_path || m.senior_profile_image;
         const resolvedSeniorUrl = resolvePosterMediaUrl(seniorPhotoPath);
         if (resolvedSeniorUrl) {
+          seniorImg.crossOrigin = "anonymous";
           seniorImg.onload = () => { seniorImg.style.display = 'block'; if (seniorAvatar) seniorAvatar.style.display = 'none'; };
           seniorImg.onerror = () => { seniorImg.style.display = 'none'; if (seniorAvatar) seniorAvatar.style.display = 'flex'; };
           seniorImg.src = resolvedSeniorUrl.includes('?') ? resolvedSeniorUrl : (resolvedSeniorUrl + '?t=' + Date.now());
@@ -877,33 +883,118 @@
   async function capturePosterCanvas(container) {
     if (!container) container = document.getElementById('posterCanvasWrapper');
     if (!container) return null;
+
     const w = container.scrollWidth || 480;
     const h = container.scrollHeight || 780;
 
-    return await window.html2canvas(container, {
-      useCORS: true,
-      allowTaint: false,
-      scale: 2,
-      width: w,
-      height: h,
-      windowWidth: document.documentElement.clientWidth || 1920,
-      windowHeight: document.documentElement.clientHeight || 1080,
-      scrollX: 0,
-      scrollY: 0,
-      backgroundColor: null,
-      onclone: (clonedDoc) => {
-        const clonedEl = clonedDoc.getElementById('posterCanvasWrapper');
-        if (clonedEl) {
-          clonedEl.style.transform = 'none';
-          clonedEl.style.overflow = 'visible';
-          clonedEl.style.maxHeight = 'none';
-          clonedEl.style.height = 'auto';
-          clonedEl.style.margin = '0';
-          clonedEl.style.paddingBottom = '22px';
-          clonedEl.style.boxSizing = 'border-box';
+    try {
+      return await window.html2canvas(container, {
+        useCORS: true,
+        allowTaint: false,
+        scale: 2,
+        width: w,
+        height: h,
+        windowWidth: document.documentElement.clientWidth || 1920,
+        windowHeight: document.documentElement.clientHeight || 1080,
+        scrollX: 0,
+        scrollY: 0,
+        backgroundColor: null,
+        onclone: (clonedDoc) => {
+          const clonedEl = clonedDoc.getElementById('posterCanvasWrapper');
+          if (clonedEl) {
+            clonedEl.style.transform = 'none';
+            clonedEl.style.overflow = 'visible';
+            clonedEl.style.maxHeight = 'none';
+            clonedEl.style.height = 'auto';
+            clonedEl.style.margin = '0';
+            clonedEl.style.paddingBottom = '22px';
+            clonedEl.style.boxSizing = 'border-box';
+          }
+        }
+      });
+    } catch (err) {
+      console.warn("capturePosterCanvas html2canvas warning:", err);
+      return null;
+    }
+  }
+
+  async function testShareToNumber() {
+    const container = document.getElementById('posterCanvasWrapper');
+    if (!container) return;
+
+    const savedPhone = localStorage.getItem('last_test_wa_phone') || '';
+    const phoneInput = prompt('📲 ENTER TEST WHATSAPP NUMBER:\n----------------------------------------\nEnter the WhatsApp mobile number to test default broadcast & poster image before sending to all groups/members:', savedPhone || '91');
+
+    if (!phoneInput) return;
+    let cleanPhone = phoneInput.replace(/\D/g, '');
+    if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
+    if (cleanPhone.length < 10) {
+      alert('Please enter a valid 10-digit or 12-digit mobile number.');
+      return;
+    }
+
+    localStorage.setItem('last_test_wa_phone', cleanPhone);
+
+    const partnerName = (document.getElementById('prevSubtitle')?.textContent || '').trim() || 'Channel Partner';
+    const partnerOverall = (document.getElementById('prevHighlight')?.textContent || '').trim() || '';
+    const partnerToday = (document.getElementById('prevTotalToday')?.textContent || '').trim() || '';
+    const partnerPotential = (document.getElementById('prevPotential')?.textContent || '').trim() || '';
+
+    const seniorName = (document.getElementById('prevSeniorName')?.textContent || '').replace(/^Senior\s*:\s*/i, '').trim() || '';
+    const seniorToday = (document.getElementById('prevSeniorToday')?.textContent || '').trim() || '';
+    const seniorOverall = (document.getElementById('prevSeniorEarning')?.textContent || '').trim() || '';
+
+    const showSeniorInput = document.getElementById('postShowSenior');
+    const isSeniorVisible = showSeniorInput ? showSeniorInput.checked : (document.getElementById('prevSeniorRow')?.style.display !== 'none');
+
+    const spinner = document.getElementById('posterSpinner');
+    if (spinner) spinner.style.display = 'flex';
+
+    let shareText = `🎉 *[TEST BROADCAST] CONGRATULATIONS TO ${partnerName}!* 🎉\n\n` +
+      `👤 *Member Name:* ${partnerName}\n` +
+      `💰 *Today's Payout:* ${partnerToday}\n` +
+      `📈 *Overall Earning:* ${partnerOverall}\n` +
+      `🔮 *Potential Valuation:* ${partnerPotential}\n\n`;
+
+    if (isSeniorVisible && seniorName && seniorName !== '—' && seniorName !== 'NONE' && !seniorName.endsWith('—')) {
+      shareText += `🙌 *Senior Referrer:* ${seniorName}\n` +
+        `💰 *Senior Today:* ${seniorToday} | *Overall:* ${seniorOverall}\n\n`;
+    }
+
+    shareText += `🌐 *Official Website:* https://vgk4u.com\n\n` +
+      `🚀 Join VGK4U today & grow your earnings!`;
+
+    let dataUrl = null;
+    try {
+      const canvas = await capturePosterCanvas(container);
+      if (canvas) {
+        try {
+          dataUrl = canvas.toDataURL('image/png');
+        } catch (cErr) {
+          console.warn("Poster toDataURL failed:", cErr);
         }
       }
-    });
+    } catch (capErr) {
+      console.warn("capturePosterCanvas error:", capErr);
+    }
+
+    if (spinner) spinner.style.display = 'none';
+
+    try {
+      const res = await fetch('http://localhost:5002/api/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: cleanPhone, imageUrl: dataUrl, message: shareText })
+      });
+      const json = await res.json();
+      if (json.success) {
+        alert(`✅ TEST SHARE SENT SUCCESSFULLY!\n----------------------------------------\nRecipient: +91 ${cleanPhone.slice(-10)}\nImage: ${dataUrl ? 'Attached 🖼️' : 'Text Only'}\n\nPlease check your WhatsApp on +91 ${cleanPhone.slice(-10)} to verify!`);
+      } else {
+        alert(`❌ TEST SHARE FAILED: ${json.error || 'WhatsApp bot error'}`);
+      }
+    } catch (err) {
+      alert(`❌ TEST SHARE ERROR: Could not connect to WhatsApp Bot on port 5002.\n(${err.message})`);
+    }
   }
 
   function downloadPoster() {
@@ -959,9 +1050,12 @@
     const partnerPotential = document.getElementById('prevPotential')?.textContent?.trim() || '';
     const seniorPotential = document.getElementById('prevSeniorPotential')?.textContent?.trim() || '₹0/-';
 
+    const showSeniorInput = document.getElementById('postShowSenior');
+    const isSeniorVisible = showSeniorInput ? showSeniorInput.checked : (document.getElementById('prevSeniorRow')?.style.display !== 'none');
+
     let text = `🎉 *CONGRATULATIONS!* 🎉\n\n🌟 *Member Achievement:* 🌟\n👤 *Name:* ${partnerName}\n💰 *Today's Earning:* ${partnerToday}\n📈 *Overall Earning:* ${partnerOverall}\n🔮 *Potential Valuation:* ${partnerPotential}\n`;
 
-    if (seniorName && seniorName !== '—' && seniorName !== 'NONE') {
+    if (isSeniorVisible && seniorName && seniorName !== '—' && seniorName !== 'NONE' && !seniorName.endsWith('—')) {
       text += `\n----------------------------------\n\n🙌 *Senior Referrer Achievement:* 🙌\n👤 *Name:* ${seniorName}\n💰 *Today's Earning:* ${seniorToday}\n📈 *Overall Earning:* ${seniorOverall}\n🔮 *Potential Earning:* ${seniorPotential}\n`;
     }
 
@@ -1017,9 +1111,12 @@
     const seniorToday = (document.getElementById('prevSeniorToday')?.textContent || '').trim() || '';
     const seniorOverall = (document.getElementById('prevSeniorEarning')?.textContent || '').trim() || '';
 
+    const showSeniorInput = document.getElementById('postShowSenior');
+    const isSeniorVisible = showSeniorInput ? showSeniorInput.checked : (document.getElementById('prevSeniorRow')?.style.display !== 'none');
+
     const m = window._currentPosterMember || {};
     const mPhone = (m.phone || '').replace(/\D/g, '');
-    const sPhone = (m.senior_phone || '').replace(/\D/g, '');
+    const sPhone = isSeniorVisible ? (m.senior_phone || '').replace(/\D/g, '') : '';
 
     const spinner = document.getElementById('posterSpinner');
     if (spinner) spinner.style.display = 'flex';
@@ -1030,19 +1127,17 @@
       `📈 *Overall Earning:* ${partnerOverall}\n` +
       `🔮 *Potential Valuation:* ${partnerPotential}\n\n`;
 
-    if (seniorName && seniorName !== '—' && seniorName !== 'NONE') {
+    if (isSeniorVisible && seniorName && seniorName !== '—' && seniorName !== 'NONE' && !seniorName.endsWith('—')) {
       shareText += `🙌 *Senior Referrer:* ${seniorName}\n` +
         `💰 *Senior Today:* ${seniorToday} | *Overall:* ${seniorOverall}\n\n`;
     }
 
-    shareText += `📢 *Official Channel:* https://whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m\n` +
-      `👥 *Join WhatsApp Group:* https://chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY\n` +
-      `🌐 *Official Website:* https://vgk4u.com\n\n` +
+    shareText += `🌐 *Official Website:* https://vgk4u.com\n\n` +
       `🚀 Join VGK4U today & grow your earnings!`;
 
     const dispatchTargets = [
       { id: 'member', type: 'member', label: `Member: ${partnerName}`, target: mPhone ? `+91 ${mPhone.slice(-10)}` : 'No Phone', phone: mPhone, status: 'sending', msg: 'Broadcasting...' },
-      { id: 'senior', type: 'member', label: `Senior: ${seniorName || 'Referrer'}`, target: sPhone ? `+91 ${sPhone.slice(-10)}` : 'No Phone', phone: sPhone, status: sPhone ? 'sending' : 'skipped', msg: sPhone ? 'Broadcasting...' : 'No Senior Phone' },
+      { id: 'senior', type: 'member', label: `Senior: ${seniorName || 'Referrer'}`, target: !isSeniorVisible ? 'Excluded (Show Senior unchecked)' : (sPhone ? `+91 ${sPhone.slice(-10)}` : 'No Phone'), phone: sPhone, status: isSeniorVisible ? (sPhone ? 'sending' : 'skipped') : 'skipped', msg: !isSeniorVisible ? 'Excluded by toggle' : (sPhone ? 'Broadcasting...' : 'No Senior Phone') },
       { id: 'channel_official', type: 'group', label: 'VGK4U Official Channel', target: 'whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m', inviteCode: '0029Vb7Vb5f9cDDXf3zWtf0m', status: 'sending', msg: 'Broadcasting to channel...' },
       { id: 'group_main', type: 'group', label: 'VGK Community Group', target: 'chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY', inviteCode: 'HNQQoKXFfCm5PQngGdrlcY', status: 'sending', msg: 'Broadcasting to group...' },
       { id: 'group_exec', type: 'group', label: 'Executive Announcements', target: 'chat.whatsapp.com/LfX8mGootXa7SpwNIz7P5C', inviteCode: 'LfX8mGootXa7SpwNIz7P5C', status: 'sending', msg: 'Broadcasting to group...' },
@@ -1050,9 +1145,6 @@
       { id: 'group_mnr_gen', type: 'group', label: 'MNR General Group', target: 'MNR General Group', groupName: 'MNR General Group', status: 'sending', msg: 'Broadcasting to group...' },
       { id: 'portal_shoutout', type: 'portal', label: 'VGK4U Login Page Shoutout', target: 'vgk4u.com (Login Banner)', status: 'sending', msg: 'Publishing shoutout...' }
     ];
-
-    if (spinner) spinner.style.display = 'none';
-    showLiveDispatchStatusModal(dispatchTargets, partnerName);
 
     let dataUrl = null;
     let blob = null;
@@ -1070,6 +1162,9 @@
     } catch (capErr) {
       console.warn("capturePosterCanvas error:", capErr);
     }
+
+    if (spinner) spinner.style.display = 'none';
+    showLiveDispatchStatusModal(dispatchTargets, partnerName);
 
     const fetchWithTimeout = async (url, opts = {}, ms = 2500) => {
       const controller = new AbortController();
@@ -1136,7 +1231,7 @@
       }
 
       // 3. Senior Direct Send via Scanned Bot
-      if (sPhone) {
+      if (isSeniorVisible && sPhone) {
         try {
           const res = await fetchWithTimeout('http://localhost:5002/api/send-message', {
             method: 'POST',
@@ -1153,7 +1248,7 @@
           updateDispatchStatus('senior', 'error', 'WhatsApp Bot Offline');
         }
       } else {
-        updateDispatchStatus('senior', 'skipped', 'No Senior Phone');
+        updateDispatchStatus('senior', 'skipped', !isSeniorVisible ? 'Excluded by toggle' : 'No Senior Phone');
       }
 
       // 4. VGK4U Official Channel Send
@@ -1212,7 +1307,7 @@
         const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupName: 'Ev scooty. MNR (royal ev ) stars' })
+          body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupId: '120363405554009428@g.us', groupName: 'Ev scooty. MNR (royal ev ) stars' })
         });
         const json = await res.json();
         if (json.success) {
@@ -1229,7 +1324,7 @@
         const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupName: 'MNR General Group' })
+          body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupId: '120363423048458227@g.us', groupName: 'MNR General Group' })
         });
         const json = await res.json();
         if (json.success) {
@@ -1454,6 +1549,7 @@
   window.sharePoster = sharePoster;
   window.shareOnWhatsApp = shareOnWhatsApp;
   window.shareDefaultChannel = shareDefaultChannel;
+  window.testShareToNumber = testShareToNumber;
   window.postPosterAnnouncement = postPosterAnnouncement;
   window.showDirectWaShareDialog = showDirectWaShareDialog;
   window.changeThemePreset = changeThemePreset;

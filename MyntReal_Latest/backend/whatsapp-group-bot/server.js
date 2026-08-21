@@ -239,6 +239,25 @@ app.post('/api/send-group-message', async (req, res) => {
                 targetType = 'channel';
             }
 
+            const { groupName } = req.body;
+            if (!destinationJid && groupName) {
+                try {
+                    const participating = await sock.groupFetchAllParticipating();
+                    const matchedGroup = Object.values(participating).find(g =>
+                        g.subject && g.subject.trim().toLowerCase() === String(groupName).trim().toLowerCase()
+                    ) || Object.values(participating).find(g =>
+                        g.subject && g.subject.trim().toLowerCase().includes(String(groupName).trim().toLowerCase())
+                    );
+
+                    if (matchedGroup) {
+                        destinationJid = matchedGroup.id;
+                        console.log(`[WA-BOT] Resolved Group Name '${groupName}' to JID: ${destinationJid}`);
+                    }
+                } catch (gFetchErr) {
+                    console.warn(`[WA-BOT] groupFetchAllParticipating error:`, gFetchErr.message);
+                }
+            }
+
             if (!destinationJid && codeToUse) {
                 if (jidCache[codeToUse]) {
                     destinationJid = jidCache[codeToUse];
@@ -322,14 +341,14 @@ app.post('/api/send-group-message', async (req, res) => {
                 let imgBuffer = null;
                 if (typeof mediaSrc === 'string' && (mediaSrc.startsWith('http://') || mediaSrc.startsWith('https://'))) {
                     imgBuffer = { url: mediaSrc };
-                } else if (typeof mediaSrc === 'string' && mediaSrc.startsWith('data:image/')) {
-                    const base64Data = mediaSrc.replace(/^data:image\/\w+;base64,/, '');
+                } else if (typeof mediaSrc === 'string' && mediaSrc.includes(';base64,')) {
+                    const base64Data = mediaSrc.split(';base64,').pop().replace(/\s/g, '');
                     imgBuffer = Buffer.from(base64Data, 'base64');
                 } else if (typeof mediaSrc === 'string' && fs.existsSync(mediaSrc)) {
                     imgBuffer = fs.readFileSync(mediaSrc);
                 }
                 if (imgBuffer) {
-                    contentPayload = { image: imgBuffer, caption: message || '' };
+                    contentPayload = { image: imgBuffer, caption: message || '', mimetype: 'image/png' };
                 }
             }
 
@@ -390,7 +409,8 @@ app.post('/api/send-message', async (req, res) => {
             });
         }
 
-        const cleanPhone = String(phone).replace(/\D/g, '');
+        let cleanPhone = String(phone).replace(/\D/g, '');
+        if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
         const recipientJid = cleanPhone.includes('@s.whatsapp.net') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
 
         let contentPayload = { text: message || '' };
@@ -399,14 +419,14 @@ app.post('/api/send-message', async (req, res) => {
             let imgBuffer = null;
             if (typeof mediaSrc === 'string' && (mediaSrc.startsWith('http://') || mediaSrc.startsWith('https://'))) {
                 imgBuffer = { url: mediaSrc };
-            } else if (typeof mediaSrc === 'string' && mediaSrc.startsWith('data:image/')) {
-                const base64Data = mediaSrc.replace(/^data:image\/\w+;base64,/, '');
+            } else if (typeof mediaSrc === 'string' && mediaSrc.includes(';base64,')) {
+                const base64Data = mediaSrc.split(';base64,').pop().replace(/\s/g, '');
                 imgBuffer = Buffer.from(base64Data, 'base64');
             } else if (typeof mediaSrc === 'string' && fs.existsSync(mediaSrc)) {
                 imgBuffer = fs.readFileSync(mediaSrc);
             }
             if (imgBuffer) {
-                contentPayload = (message && message.trim()) ? { image: imgBuffer, caption: message.trim() } : { image: imgBuffer };
+                contentPayload = (message && message.trim()) ? { image: imgBuffer, caption: message.trim(), mimetype: 'image/png' } : { image: imgBuffer, mimetype: 'image/png' };
             }
         }
 
