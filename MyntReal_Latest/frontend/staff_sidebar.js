@@ -85,7 +85,7 @@ let _menuMasterReady = (function loadMenuMaster() {
 })();
 
 
-const StaffSidebar = {
+window.StaffSidebar = window.StaffSidebar || {
     // Allowed menus from /my-menus API (Zero-Default Access Policy)
     allowedMenuPaths: null,  // Set of allowed route_path values
     allowedMenuCodes: null,  // DC Protocol (Jan 22, 2026): Set of allowed menu_code values
@@ -140,6 +140,15 @@ const StaffSidebar = {
                     return;
                 }
             }
+        }
+        
+        if (!this.userData) {
+            try {
+                const rawUser = localStorage.getItem('staff_user');
+                if (rawUser) {
+                    this.userData = JSON.parse(rawUser);
+                }
+            } catch (_) {}
         }
         
         if (!this.userData) {
@@ -479,7 +488,7 @@ const StaffSidebar = {
             const cachedData = localStorage.getItem('staff_user');
             if (cachedData) {
                 const parsed = JSON.parse(cachedData);
-                if (parsed && parsed.freelancer_access_mode !== undefined && parsed.staff_type !== 'FREELANCER') {
+                if (parsed && (parsed.staff_type || parsed.employee_id || parsed.role_name)) {
                     this.userData = parsed;
                     return;
                 }
@@ -909,25 +918,39 @@ const StaffSidebar = {
         return `${safeRoleName}_${sectionBaseId}`;
     },
 
-    // Toggle sidebar visibility (mobile)
+    // Toggle sidebar visibility (desktop collapse + mobile drawer)
     toggleSidebar: function() {
         const sidebar = document.getElementById('staffSidebar');
         const backdrop = document.getElementById('sidebarBackdrop');
         const body = document.body;
         
         if (sidebar) {
-            const isOpen = sidebar.classList.contains('sidebar-open');
-            if (isOpen) {
-                sidebar.classList.remove('sidebar-open');
-                backdrop?.classList.remove('active');
-                body.classList.remove('sidebar-active');
+            if (window.innerWidth >= 992) {
+                // Desktop: Toggle collapsed mode
+                const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
+                if (isCollapsed) {
+                    sidebar.classList.remove('sidebar-collapsed');
+                    body.classList.remove('sidebar-collapsed-mode');
+                    localStorage.setItem('staff_sidebar_collapsed', 'false');
+                } else {
+                    sidebar.classList.add('sidebar-collapsed');
+                    body.classList.add('sidebar-collapsed-mode');
+                    localStorage.setItem('staff_sidebar_collapsed', 'true');
+                }
             } else {
-                sidebar.classList.add('sidebar-open');
-                backdrop?.classList.add('active');
-                body.classList.add('sidebar-active');
+                // Mobile / Tablet (<992px): Toggle off-canvas drawer
+                const isOpen = sidebar.classList.contains('sidebar-open');
+                if (isOpen) {
+                    sidebar.classList.remove('sidebar-open');
+                    backdrop?.classList.remove('active');
+                    body.classList.remove('sidebar-active');
+                } else {
+                    sidebar.classList.add('sidebar-open');
+                    backdrop?.classList.add('active');
+                    body.classList.add('sidebar-active');
+                }
+                localStorage.setItem('staff_sidebar_mobile_open', !isOpen);
             }
-            // Save mobile sidebar state
-            localStorage.setItem('staff_sidebar_mobile_open', !isOpen);
         }
     },
 
@@ -1655,6 +1678,7 @@ const StaffSidebar = {
         return div.innerHTML;
     }
 };
+var StaffSidebar = window.StaffSidebar;
 
 /**
  * Back Button Component
@@ -2527,8 +2551,8 @@ html {
     color: #1f2937;
 }
 
-/* Responsive - Mobile View */
-@media (max-width: 767px) {
+/* Responsive - Mobile & Tablet View (<992px) */
+@media (max-width: 991px) {
     /* Show mobile hamburger toggle */
     .sidebar-mobile-toggle {
         display: flex;
@@ -2610,9 +2634,12 @@ html {
         display: none;
     }
     
-    /* Main content full width on mobile */
+    /* Main content full width on mobile/tablet */
     .main-content {
         margin-left: 0 !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        box-sizing: border-box !important;
         padding-top: 60px;
     }
     
@@ -2632,18 +2659,37 @@ html {
     }
 }
 
-/* Tablet and Desktop - Hide mobile toggle */
-@media (min-width: 768px) {
-    .sidebar-mobile-toggle {
+/* Desktop View (>=992px) */
+@media (min-width: 992px) {
+    .sidebar-mobile-toggle, .sidebar-backdrop, .sidebar-close-btn {
         display: none !important;
     }
     
-    .sidebar-backdrop {
-        display: none !important;
+    #staffSidebar {
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 260px !important;
+        height: 100vh !important;
+        transform: none !important;
+        transition: width 0.3s ease !important;
+        z-index: 1000 !important;
     }
     
-    .sidebar-close-btn {
-        display: none !important;
+    #staffSidebar.sidebar-collapsed {
+        width: 70px !important;
+    }
+    
+    .main-content {
+        margin-left: 260px !important;
+        width: calc(100% - 260px) !important;
+        box-sizing: border-box !important;
+        transition: margin-left 0.3s ease, width 0.3s ease !important;
+    }
+    
+    body.sidebar-collapsed-mode .main-content {
+        margin-left: 70px !important;
+        width: calc(100% - 70px) !important;
     }
 }
 </style>

@@ -19,6 +19,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f0fdf4}
 .tab-bar button:last-child{border-right:none}
 .tab-bar button.active{background:#059669;color:#fff}
 .summary-row{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin-bottom:16px}
+@media (max-width: 991px) { .summary-row { grid-template-columns: repeat(2, 1fr) !important; } .main-content { padding: 10px !important; margin-left: 0 !important; } }
 .sum-card.stage1approved .value{color:#5b21b6}
 .sum-card{background:#fff;border-radius:10px;padding:12px 14px;border:1.5px solid #d1fae5;cursor:pointer;transition:all .15s}
 .sum-card:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(5,150,105,.15)}
@@ -229,6 +230,7 @@ textarea:focus,input[type=text]:focus,select:focus{border-color:#059669}
   <div style="display:inline-flex;gap:10px">
     <button type="button" id="btnBulkConfirm" class="btn-act btn-confirm" onclick="submitBulkAction('confirm')" style="padding:7px 14px;font-size:12px"><i class="fas fa-check"></i> Confirm Selected</button>
     <button type="button" id="btnBulkPay" class="btn-act btn-pay" onclick="openBulkPayModal()" style="padding:7px 14px;font-size:12px"><i class="fas fa-rupee-sign"></i> Mark Paid Selected</button>
+    <button type="button" id="btnPostShoutout" class="btn-act" onclick="openPostShoutoutModal()" style="padding:7px 14px;font-size:12px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700"><i class="fas fa-bullhorn"></i> Post Announcement / Shoutout</button>
   </div>
   <button type="button" onclick="clearRowSelections()" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;margin-left:6px" title="Clear selection"><i class="fas fa-times"></i></button>
 </div>
@@ -1152,6 +1154,65 @@ async function openBulkPayModal(){
       <div class="info-item"><div class="lab">Selected Count</div><div class="val">${selectedIds.length} Entries<br><small style="color:#6b7280">${partnerTxt}</small></div></div>
       <div class="info-item"><div class="lab">Total Gross / Net</div><div class="val">${fmt(totBalGross)}${advTxt}<br><small style="color:#15803d">Net ${fmt(totNet)}</small></div></div>
       <div class="info-item"><div class="lab">Total Admin / TDS</div><div class="val"><small style="color:#d97706">${fmt(totAdmin)}</small><br><small style="color:#dc2626">${fmt(totTds)}</small></div></div>`;
+  }
+}
+
+async function openPostShoutoutModal(){
+  const selectedIds = getSelectedRowIds();
+  if(!selectedIds.length){ toast('Select at least one payment entry to post announcement', 'error'); return; }
+  
+  let totGross = 0;
+  let partners = new Set();
+  let nonPaidCount = 0;
+
+  selectedIds.forEach(id => {
+    const r = ROWS.find(x => x.id === id);
+    if(r){
+      if(r.partner_name) partners.add(r.partner_name);
+      totGross += parseFloat(r.commission_amount || 0);
+      const st = (r.status || '').toUpperCase();
+      if(st !== 'PAID' && st !== 'STAGE1_APPROVED'){
+        nonPaidCount++;
+      }
+    }
+  });
+
+  const partnerTxt = Array.from(partners).join(', ') || 'Selected Partner';
+  if(confirm(`📣 POST ANNOUNCEMENT / SHOUTOUT PREVIEW
+--------------------------------------------------
+• Selected Entries: ${selectedIds.length}
+• Member(s): ${partnerTxt}
+• Combined Shoutout Earning: ${fmt(totGross)}
+
+This manual action will generate ONE combined earner celebration image and publish ONE announcement on the login screen.
+
+Do you want to PROCEED & PUBLISH this shoutout now?`)){
+    submitPostShoutout(selectedIds);
+  }
+}
+
+async function submitPostShoutout(selectedIds){
+  toast(`Publishing shoutout for ${selectedIds.length} selected entries…`, 'success');
+  try {
+    const r = await fetch(`${API_BASE}/vgk/staff/vgk/cash-income/post-shoutout`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + TOK, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entry_ids: selectedIds })
+    });
+    const d = await r.json();
+    if(!r.ok || !d.success) throw new Error(d.detail || d.error || 'Failed to post announcement');
+    
+    if(d.already_published){
+      alert(`⚠️ DUPLICATE PROTECTION NOTICE:\nAn announcement has ALREADY been published for these payment records (Announcement ID #${d.announcement_id || 'N/A'}). Duplicate announcement was prevented.`);
+      toast('Duplicate announcement prevented', 'error');
+    } else {
+      alert(`✅ ANNOUNCEMENT & SHOUTOUT PUBLISHED SUCCESSFULLY!\n--------------------------------------------------\nAnnouncement ID: #${d.announcement_id || 'N/A'}\nCombined Earning: ${fmt(d.results ? d.results[0]?.result?.batch_gross : 0)}\n\nThe shoutout card and announcement are now live on the login screen!`);
+      toast('✅ Shoutout published successfully!', 'success');
+    }
+    clearRowSelections();
+    loadList();
+  } catch(e){
+    toast('Shoutout error: ' + e.message, 'error');
   }
 }
 

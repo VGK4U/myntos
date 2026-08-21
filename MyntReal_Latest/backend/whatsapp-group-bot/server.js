@@ -117,14 +117,31 @@ app.get('/status', (req, res) => {
     });
 });
 
+app.get('/qr-data', (req, res) => {
+    return res.json({
+        status: connectionStatus,
+        qr: currentQr,
+        qr_url: currentQr ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(currentQr)}` : null
+    });
+});
+
 app.get('/qr', (req, res) => {
     if (connectionStatus === 'connected') {
-        return res.send(`<h2>✅ WhatsApp Web Bot is already CONNECTED and ACTIVE!</h2><p>Group JID: ${targetJid || 'Ready'}</p>`);
+        return res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head><title>WhatsApp Bot Connected</title><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+            <body style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 60px 15px; background: #f4f6f9; color: #1e293b;">
+                <h1 style="color: #10b981; font-size: 48px; margin-bottom: 12px;">✅</h1>
+                <h2 style="color: #065f46; margin: 0 0 8px 0;">WhatsApp Web Bot is CONNECTED & ACTIVE!</h2>
+                <p style="color: #64748b; font-size: 14px;">Target JID: ${targetJid || 'Ready'}</p>
+            </body>
+            </html>
+        `);
     }
-    if (!currentQr) {
-        return res.send(`<h2>⏳ Generating QR Code... Please refresh in 5 seconds.</h2>`);
-    }
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(currentQr)}`;
+
+    const initialQrUrl = currentQr ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(currentQr)}` : null;
+
     return res.send(`
         <!DOCTYPE html>
         <html>
@@ -135,27 +152,43 @@ app.get('/qr', (req, res) => {
         <body style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 30px 15px; background: #f4f6f9; color: #1e293b;">
             <h2 style="font-size: 22px; margin-bottom: 8px;">📱 Scan QR Code to Link WhatsApp Bot</h2>
             <p style="color: #64748b; font-size: 14px; margin-top: 0;">Open WhatsApp on phone ➔ Linked Devices ➔ Link a Device</p>
-            <div style="margin: 24px auto; background: white; display: inline-block; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08);">
-                <img id="qrImg" src="${qrUrl}" alt="QR Code" width="300" height="300" style="display:block; border-radius: 8px;" />
+            
+            <div id="qrContainer" style="margin: 24px auto; background: white; display: inline-block; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); min-width: 300px; min-height: 300px;">
+                ${initialQrUrl 
+                    ? `<img src="${initialQrUrl}" width="300" height="300" style="display:block; border-radius: 8px;" />`
+                    : `<div style="padding:100px 20px; font-size: 15px; color: #64748b; font-weight: 600;">⏳ Generating QR Code...<br><span style="font-size:12px; font-weight:400; color:#94a3b8">Will load automatically in a moment.</span></div>`
+                }
             </div>
-            <p id="statusMsg" style="font-size: 13px; font-weight: 600; color: #3b82f6;">🟢 QR Code Ready — Waiting for Phone Scan...</p>
+            
+            <p id="statusMsg" style="font-size: 13px; font-weight: 600; color: #3b82f6;">
+                ${initialQrUrl ? '🟢 QR Code Ready — Waiting for Phone Scan...' : '⏳ Initializing WhatsApp Socket...'}
+            </p>
+
             <script>
-                // Async status check — no full page reload so camera scanning is smooth & uninterrupted
-                setInterval(async () => {
+                async function checkStatus() {
                     try {
-                        const res = await fetch('/status');
+                        const res = await fetch('/qr-data');
                         const data = await res.json();
                         if (data.status === 'connected') {
                             document.body.innerHTML = \`
                                 <div style="padding-top: 60px;">
-                                    <h1 style="color: #10b981; font-size: 48px;">✅</h1>
-                                    <h2 style="color: #065f46;">WhatsApp Bot Successfully CONNECTED!</h2>
-                                    <p style="color: #374151;">Group Bot is active and ready to send WhatsApp alerts.</p>
+                                    <h1 style="color: #10b981; font-size: 48px; margin-bottom: 12px;">✅</h1>
+                                    <h2 style="color: #065f46; margin: 0 0 8px 0;">WhatsApp Bot Successfully CONNECTED!</h2>
+                                    <p style="color: #64748b; font-size: 14px;">Group Bot is active and ready to send WhatsApp alerts.</p>
                                 </div>
                             \`;
+                        } else if (data.qr_url) {
+                            const container = document.getElementById('qrContainer');
+                            if (container) {
+                                container.innerHTML = '<img src="' + data.qr_url + '" width="300" height="300" style="display:block; border-radius: 8px;" />';
+                            }
+                            const msg = document.getElementById('statusMsg');
+                            if (msg) msg.textContent = '🟢 QR Code Ready — Waiting for Phone Scan...';
                         }
                     } catch (e) {}
-                }, 3000);
+                }
+                setInterval(checkStatus, 1500);
+                checkStatus();
             </script>
         </body>
         </html>
@@ -216,6 +249,22 @@ app.post('/api/send-group-message', async (req, res) => {
                             }
                         } catch (accErr) {
                             console.log(`[WA-BOT] groupAcceptInvite note: ${accErr.message}`);
+                        }
+                    }
+
+                    if (!destinationJid && req.body.groupName) {
+                        try {
+                            const groups = await withTimeout(sock.groupFetchAllParticipating(), 4000);
+                            const gList = Object.values(groups || {});
+                            const searchName = String(req.body.groupName).toLowerCase().trim();
+                            const matched = gList.find(g => g.subject && g.subject.toLowerCase().includes(searchName));
+                            if (matched) {
+                                destinationJid = matched.id;
+                                jidCache[req.body.groupName] = destinationJid;
+                                console.log(`[WA-BOT] Matched group by name '${req.body.groupName}': ${destinationJid} (${matched.subject})`);
+                            }
+                        } catch (nameErr) {
+                            console.log(`[WA-BOT] groupName lookup note: ${nameErr.message}`);
                         }
                     }
 

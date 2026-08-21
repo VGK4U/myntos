@@ -1452,3 +1452,171 @@ def _do_celebration(db, entry_id: int):
         except Exception as e:
             db.rollback()
             logger.warning(f'[EARNER-CARD] note update failed: {e}')
+
+
+def run_earner_celebration_batch(db, partner_id: int, entry_ids: list) -> dict:
+    """
+    Generate ONE combined earner card image and ONE announcement for a batch of payment entries.
+    Prevents per-entry duplication when multiple payments are processed or published together.
+    """
+    if not entry_ids:
+        return {'success': False, 'error': 'No entry_ids provided'}
+
+    from sqlalchemy import text
+
+    # 1. Fetch entries
+    entries = db.execute(text("""
+        SELECT id, entry_number, partner_id, source_lead_id, level, kind, commission_amount, status, income_date, notes
+        FROM vgk_cash_income_entries
+        WHERE id IN :eids AND partner_id = :pid
+    """), {'eids': tuple(entry_ids), 'pid': partner_id}).fetchall()
+
+    if not entries:
+        return {'success': False, 'error': 'No matching payment entries found'}
+
+    # 2. Check Duplicate Protection across all batch entries
+    existing_sub_id = None
+    for e in entries:
+        notes_str = e.notes or ''
+        if '[announcement_id:' in notes_str:
+            import re
+            m_sub = re.search(r'\[announcement_id:(\d+)\]', notes_str)
+            if m_sub:
+                existing_sub_id = int(m_sub.group(1))
+                break
+
+    if existing_sub_id:
+        return {
+            'success': True,
+            'already_published': True,
+            'announcement_id': existing_sub_id,
+            'message': f'Announcement already published for this payment event (ID #{existing_sub_id})'
+        }
+
+    # 3. Calculate Batch Aggregates
+    batch_gross = sum(float(e.commission_amount or 0) for e in entries)
+    min_id = min(e.id for e in entries)
+    max_id = max(e.id for e in entries)
+    
+    # 4. Fetch Partner Info
+    p_row = db.execute(text("""
+        SELECT partner_name, partner_code, whatsapp_number, city, state, contact_person_1_designation, name_title, gender
+        FROM official_partners WHERE id = :pid
+    """), {'pid': partner_id}).fetchone()
+    
+    if not p_row:
+        return {'success': False, 'error': 'Partner record not found'}
+
+    partner_name = p_row[0] or 'VGK Member'
+    partner_code = p_row[1] or ''
+    whatsapp_number = p_row[2] or ''
+    city = p_row[3] or 'Visakhapatnam'
+    state = p_row[4] or ''
+    designation = p_row[5] or 'Channel Partner'
+    _name_title = p_row[6]
+    _gender = p_row[7]
+
+    location_parts = [p for p in [city, state] if p and str(p).strip()]
+    location = ', '.join(location_parts) or 'Visakhapatnam'
+
+    def _resolve_title(nt, g):
+        t = (nt or '').strip()
+        if t: return t
+        gv = (g or '').strip().lower()
+        if gv in ('male', 'm'): return 'Mr'
+        if gv in ('female', 'f'): return 'Ms'
+        return ''
+    name_title = _resolve_title(_name_title, _gender)
+
+    # 5. Fetch Overall Earnings
+    ov_row = db.execute(text("""
+        SELECT COALESCE(SUM(commission_amount), 0)
+        FROM vgk_cash_income_entries
+        WHERE partner_id = :pid AND status = 'PAID'
+    """), {'pid': partner_id}).fetchone()
+    overall = float(ov_row[0] or 0.0) if ov_row else batch_gross
+
+    # 6. Load KYC Photo
+    photo_bytes = _get_kyc_photo_bytes(db, partner_id)
+
+    # 7. Build Batch Earner Card Payload
+    todays_stage1_advance = sum(float(e.commission_amount or 0) for e in entries if e.kind in ('ADVANCE', 'DVR_ADVANCE'))
+    todays_extra_comm = sum(float(e.commission_amount or 0) for e in entries if e.kind not in ('ADVANCE', 'DVR_ADVANCE'))
+    
+    payload = {
+        "winner_title": designation.upper() if designation else "PROUD WINNER",
+        "member_name": f"{name_title.strip() + '. ' if name_title else ''}{partner_name.strip()}".upper(),
+        "payout_date": datetime.now().strftime('%d-%b-%Y'),
+        "todays_stage1_advance": todays_stage1_advance,
+        "todays_extra_comm": todays_extra_comm,
+        "todays_total_payout": batch_gross,
+        "overall_earnings": overall,
+        "total_completed_files": len(entries),
+        "company_disclaimer": "POTENTIAL EARNING IS BASED ON FINAL COMPLETION OF PROJECTS AND SUBJECT TO COMPANY TERMS."
+    }
+
+    # 8. Compose ONE combined image bytes
+    card_bytes = None
+    try:
+        card_bytes = compose_earner_card(
+            partner_name     = partner_name,
+            partner_code     = partner_code,
+            location         = location,
+            designation      = designation,
+            gross_amount     = batch_gross,
+            overall_earnings = overall,
+            photo_bytes      = photo_bytes,
+            name_title       = name_title,
+            payload          = payload
+        )
+    except Exception as err:
+        logger.error(f'[EARNER-CARD-BATCH] compose_earner_card failed: {err}')
+
+    # 9. Upload image
+    card_storage_key = ''
+    if card_bytes:
+        tmp_key = f'earner_cards/batch_{min_id}_{max_id}_p{partner_id}.png'
+        try:
+            ok = storage_service.upload_file(tmp_key, card_bytes)
+            if ok:
+                card_storage_key = tmp_key
+        except Exception as err:
+            logger.warning(f'[EARNER-CARD-BATCH] upload exception: {err}')
+
+    # 10. Publish ONE announcement
+    is_vgk = str(partner_code or '').upper().startswith('VGK')
+    shoutout_visible_to = 'vgk' if is_vgk else 'mnr'
+    shoutout_category_name = VGK_SHOUTOUT_CATEGORY_NAME if is_vgk else MNR_SHOUTOUT_CATEGORY_NAME
+    
+    system_uid = _ensure_system_user(db)
+    category_id = _ensure_shoutout_category(db, shoutout_category_name)
+
+    sub_id = _publish_shoutout(
+        db, min_id, category_id, system_uid,
+        partner_name, partner_code, batch_gross, card_storage_key,
+        visible_to=shoutout_visible_to
+    )
+    db.commit()
+
+    # 11. Stamp duplicate protection tags in notes
+    if sub_id:
+        for eid in entry_ids:
+            try:
+                db.execute(text("""
+                    UPDATE vgk_cash_income_entries
+                    SET notes = COALESCE(notes,'') || ' [announcement_id:' || :sub_id || ']' || ' [earner_card:' || :key || ']'
+                    WHERE id = :eid
+                """), {'eid': eid, 'sub_id': str(sub_id), 'key': card_storage_key})
+                db.commit()
+            except Exception:
+                pass
+
+    return {
+        'success': True,
+        'already_published': False,
+        'announcement_id': sub_id,
+        'image_key': card_storage_key,
+        'batch_gross': batch_gross,
+        'entry_count': len(entries)
+    }
+

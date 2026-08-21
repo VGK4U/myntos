@@ -1409,21 +1409,8 @@ def unified_action(
                     pass
 
             db.commit()
-
-            if act == 'mark_paid' and result.get('success') and not result.get('idempotent'):
-                try:
-                    import threading
-                    from app.services.vgk_earner_card import run_earner_celebration
-                    t = threading.Thread(
-                        target=run_earner_celebration,
-                        args=(target_id,),
-                        daemon=True,
-                        name=f'earner-card-{target_id}',
-                    )
-                    t.start()
-                except Exception as _ce:
-                    logger.warning(f'[VGK-UNIFIED] earner celebration thread failed to start: {_ce}')
-
+            # Note: Announcement/Shoutout auto-posting on mark_paid removed per specification.
+            # Announcements are now manually published via /staff/vgk/cash-income/post-shoutout endpoint.
             results.append(result)
 
         except HTTPException:
@@ -1792,6 +1779,64 @@ async def download_earner_card(
     except Exception as e:
         logger.exception(f'[VGK-EARNER-CARD] on-demand generate failed: {e}')
         raise HTTPException(status_code=500, detail=f'Card generation failed: {e}')
+
+
+@router.post('/staff/vgk/cash-income/post-shoutout')
+def post_shoutout(
+    entry_ids: List[int] = Body(..., embed=True),
+    notes: Optional[str] = Body(None, embed=True),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user),
+):
+    """
+    Manual Admin Action: Post Announcement / Shoutout for selected payment entries.
+    Groups selected entries by partner and generates ONE combined earner card image
+    and ONE announcement record per payment operation batch. Prevents duplicates.
+    """
+    from app.services.vgk_earner_card import run_earner_celebration_batch
+    from collections import defaultdict
+    from sqlalchemy import text as sa_text
+
+    if not entry_ids:
+        raise HTTPException(status_code=400, detail="entry_ids list is required")
+
+    clean_ids = list(set([int(x) for x in entry_ids if x is not None]))
+    if not clean_ids:
+        raise HTTPException(status_code=400, detail="No valid entry_ids provided")
+
+    # Fetch entries
+    entries = db.execute(sa_text("""
+        SELECT id, partner_id, status, commission_amount, notes
+        FROM vgk_cash_income_entries
+        WHERE id IN :eids
+    """), {'eids': tuple(clean_ids)}).fetchall()
+
+    if not entries:
+        raise HTTPException(status_code=404, detail="No matching payment entries found")
+
+    # Group entry IDs by partner_id
+    partner_groups = defaultdict(list)
+    for e in entries:
+        partner_groups[e.partner_id].append(e.id)
+
+    results = []
+    for pid, p_eids in partner_groups.items():
+        res = run_earner_celebration_batch(db, partner_id=pid, entry_ids=p_eids)
+        results.append({
+            'partner_id': pid,
+            'result': res
+        })
+
+    all_already = all(r['result'].get('already_published') for r in results)
+    first_ann_id = next((r['result'].get('announcement_id') for r in results if r['result'].get('announcement_id')), None)
+
+    return {
+        'success': True,
+        'already_published': all_already,
+        'announcement_id': first_ann_id,
+        'results': results,
+        'message': 'Announcement already published for these payment records' if all_already else 'Announcement & shoutout card created successfully'
+    }
 
 
 @router.post("/staff/vgk/cash-income/{entry_id}/send-whatsapp")

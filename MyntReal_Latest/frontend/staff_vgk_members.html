@@ -6719,6 +6719,69 @@ async function shareDefaultChannel() {
   }
 }
 
+async function postPosterAnnouncement() {
+  if (typeof window.postPosterAnnouncement === 'function' && window.postPosterAnnouncement !== postPosterAnnouncement) {
+    return await window.postPosterAnnouncement();
+  }
+  const container = document.getElementById('posterCanvasWrapper');
+  if(!container) { toast('Poster preview not ready', 'error'); return; }
+
+  const partnerName = (document.getElementById('prevSubtitle')?.textContent || '').trim() || 'Channel Partner';
+  const partnerOverall = (document.getElementById('prevHighlight')?.textContent || '').trim() || '';
+  const partnerToday = (document.getElementById('prevTotalToday')?.textContent || '').trim() || '';
+  const partnerPotential = (document.getElementById('prevPotential')?.textContent || '').trim() || '';
+
+  if(!confirm(`📣 POST ANNOUNCEMENT ON LOGIN SCREEN\n--------------------------------------------------\n• Member Name: ${partnerName}\n• Today's Earning: ${partnerToday}\n• Overall Earning: ${partnerOverall}\n\nDo you want to publish this Achievement Poster announcement to the Login Screen slideshow now?`)) return;
+
+  const spinner = document.getElementById('posterSpinner');
+  if (spinner) spinner.style.display = 'flex';
+
+  try {
+    const canvas = await capturePosterCanvas(container);
+    if (!canvas) throw new Error('Failed to capture poster canvas');
+
+    const dataUrl = canvas.toDataURL('image/png');
+    const blob = await (await fetch(dataUrl)).blob();
+
+    let shareText = `🎉 *CONGRATULATIONS TO ${partnerName}!* 🎉\n\n` +
+      `👤 *Member Name:* ${partnerName}\n` +
+      `💰 *Today's Payout:* ${partnerToday}\n` +
+      `📈 *Overall Earning:* ${partnerOverall}\n` +
+      `🔮 *Potential Valuation:* ${partnerPotential}\n\n` +
+      `🚀 Keep Leading. Keep Inspiring. Keep Growing! — Team VGK4U`;
+
+    const formData = new FormData();
+    formData.append('title', `🎉 Achievement Poster: ${partnerName}`);
+    formData.append('description', shareText);
+    formData.append('category_id', '1');
+    formData.append('submission_type', 'photo');
+    formData.append('files', blob, `${partnerName.replace(/\s+/g, '_')}_Achievement.png`);
+
+    const tok = localStorage.getItem('staff_token') || localStorage.getItem('access_token') || sessionStorage.getItem('staff_token') || sessionStorage.getItem('access_token');
+    const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
+
+    const r = await fetch(`${apiBase}/feedback/staff/submit`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + tok },
+      body: formData
+    });
+    const d = await r.json();
+
+    if (spinner) spinner.style.display = 'none';
+
+    if (!r.ok || (!d.success && d.status !== 'success')) {
+      throw new Error(d.detail || d.message || 'Failed to submit announcement');
+    }
+
+    alert(`✅ ANNOUNCEMENT POSTED SUCCESSFULLY!\n--------------------------------------------------\nMember: ${partnerName}\nAchievement poster announcement is now live on the login screen slideshow!`);
+    toast('✅ Announcement published to login screen!', 'success');
+  } catch(err) {
+    if (spinner) spinner.style.display = 'none';
+    console.error('Post Announcement error:', err);
+    toast('Failed to post announcement: ' + err.message, 'error');
+  }
+}
+
 function showDirectWaShareDialog({ memberName, memberPhone, seniorName, seniorPhone, msgText }) {
   const old = document.getElementById('directWaShareModal');
   if (old) old.remove();
@@ -7669,7 +7732,7 @@ function _renderCommDetailTable(partnerId) {
               <div style="position:absolute;bottom:4px;left:-106px;font-size:82px;line-height:1;filter:drop-shadow(0 6px 16px rgba(251,191,36,0.9));z-index:10;user-select:none">🏆</div>
 
               <div style="width:220px;height:220px;border-radius:50%;border:5px solid #fde047;overflow:hidden;background:#001233;box-shadow:0 0 50px rgba(234,179,8,0.95);display:flex;align-items:center;justify-content:center">
-                <img id="prevImg" src="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;object-position:center 20%;display:none">
+                <img id="prevImg" src="" style="width:100%;height:100%;object-fit:cover;object-position:center 20%;display:none">
                 <div id="prevAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:70px;font-weight:900">BG</div>
               </div>
 
@@ -7766,6 +7829,7 @@ function _renderCommDetailTable(partnerId) {
       <button onclick="shareOnWhatsApp()" style="background:linear-gradient(135deg,#25d366,#128c7e);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fab fa-whatsapp me-2"></i>Share on WhatsApp</button>
       <button onclick="sharePoster()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-share-alt me-2"></i>Share Poster</button>
       <button onclick="shareDefaultChannel()" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Share Default</button>
+      <button onclick="postPosterAnnouncement()" style="background:linear-gradient(135deg,#ec4899,#be185d);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Post Announcement</button>
       <button onclick="downloadPoster()" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-download me-2"></i>Download Image</button>
     </div>
   </div>
