@@ -90,6 +90,23 @@ def dispatch_daily_vgk4u_morning_wish(db: Session, invite_code: str = ELITE_GROU
             success_count += 1
 
     if success_count > 0:
+        try:
+            from app.models.whatsapp import MessageLog
+            import uuid
+            log_entry = MessageLog(
+                message_sid=f"vgk4u_{uuid.uuid4().hex[:12]}",
+                mobile_number="GROUP:VGK4U",
+                message_type="vgk4u_wish",
+                message_body=quote[:500],
+                initial_status="sent",
+                current_status="sent",
+                sent_at=datetime.datetime.utcnow()
+            )
+            db.add(log_entry)
+            db.commit()
+        except Exception as log_e:
+            logger.warning("[VGK4U-WISH] Failed to write MessageLog: %s", log_e)
+
         return {"success": True, "dispatched_groups": success_count, "results": results}
     return results[0] if results else send_vgk4u_group_bot_message(quote, invite_code=invite_code)
 
