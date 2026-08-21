@@ -618,15 +618,32 @@
                             ? '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>DELIVERED / SUCCESS</span>'
                             : '<span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>FAILED</span>';
 
+                        let targetHtml = '';
+                        if (l.targets && l.targets.length > 0) {
+                            targetHtml = l.targets.map(t => {
+                                const isChan = t.type === 'channel' || (t.identifier || '').includes('channel');
+                                const badgeClass = isChan ? 'bg-info text-dark' : 'bg-dark text-warning border border-warning';
+                                const icon = isChan ? '<i class="fas fa-bullhorn me-1"></i>' : '<i class="fas fa-users me-1"></i>';
+                                return `<span class="badge ${badgeClass} me-1 mb-1 px-2 py-1" style="font-size: 11px;">${icon}${escapeJS(t.name || t.identifier)}</span>`;
+                            }).join(' ');
+                        } else {
+                            targetHtml = `<span class="text-warning fw-bold" style="font-size: 12px;">${escapeJS(l.target_summary || 'Configured Groups')}</span>`;
+                        }
+
+                        const sentBadge = `<span class="badge bg-success text-white px-2 py-1" style="font-size: 11px;"><i class="fas fa-check me-1"></i>${l.sent_count ?? 0} Sent</span>`;
+                        const failedBadge = (l.failed_count || 0) > 0
+                            ? `<span class="badge bg-danger text-white px-2 py-1" style="font-size: 11px;"><i class="fas fa-exclamation-triangle me-1"></i>${l.failed_count} Failed</span>`
+                            : `<span class="badge bg-dark text-light border border-secondary px-2 py-1" style="font-size: 11px;">0 Failed</span>`;
+
                         return `
                             <tr>
-                                <td><b class="text-white">${l.timestamp || '-'}</b></td>
-                                <td><span class="fw-bold text-info">${l.job_name || l.job_id}</span></td>
+                                <td><b class="text-white" style="font-size: 12px;">${l.timestamp || '-'}</b></td>
+                                <td><span class="fw-bold text-info" style="font-size: 12px;">${l.job_name || l.job_id}</span></td>
                                 <td>${typeBadge}</td>
-                                <td><small class="text-light">${l.triggered_by || 'System'}</small></td>
-                                <td><small class="text-muted">${l.target_summary || 'Configured Groups'}</small></td>
-                                <td><b class="text-success">${l.sent_count ?? 0} Sent</b></td>
-                                <td><b class="${(l.failed_count || 0) > 0 ? 'text-danger' : 'text-muted'}">${l.failed_count ?? 0} Failed</b></td>
+                                <td><small class="text-white fw-semibold">${l.triggered_by || 'System'}</small></td>
+                                <td>${targetHtml}</td>
+                                <td>${sentBadge}</td>
+                                <td>${failedBadge}</td>
                                 <td>${statusBadge}</td>
                             </tr>
                         `;
