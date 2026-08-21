@@ -46,6 +46,34 @@ def extract_invite_code(url_or_code: str) -> str:
     return code
 
 
+def get_dynamic_time_wish_quote() -> str:
+    """Generates a dynamic greeting quote matching the current IST time of day (Morning/Afternoon/Evening)."""
+    now_utc = datetime.datetime.utcnow()
+    now_ist = now_utc + datetime.timedelta(hours=5, minutes=30)
+    hour = now_ist.hour
+
+    if 5 <= hour < 12:
+        greeting_head = "🌅 *శుభోదయం / Good Morning VGK4U Family!* ☀️"
+        sub_text = "May your day be filled with positive energy, new lead conversions, and prosperity!"
+    elif 12 <= hour < 17:
+        greeting_head = "☀️ *శుభ మధ్యాహ్నం / Good Afternoon VGK4U Family!* 🌤️"
+        sub_text = "Keep up the great momentum! Wishing all our Elite Partners maximum success and progress this afternoon!"
+    elif 17 <= hour < 22:
+        greeting_head = "🌆 *శుభ సాయంత్రం / Good Evening VGK4U Family!* 🌇"
+        sub_text = "Great work today! Team VGK4U celebrates your hard work and achievements today!"
+    else:
+        greeting_head = "🌟 *శుభ రాత్రి / Good Night / Evening Wishes VGK4U Family!* ✨"
+        sub_text = "Rest well and recharge for another inspiring and profitable day tomorrow!"
+
+    quotes_pool = [
+        f"{greeting_head}\n\n_\"విజయం అనేది ప్రతిరోజూ మనం చేసే చిన్న ప్రయత్నాల కలయిక!\"_\n\n{sub_text} Best wishes from *VGK4U & MyntReal*. 🚀⚡",
+        f"{greeting_head}\n\n_\"మీ ఆలోచనలే మీ గమ్యాన్ని నిర్దేశిస్తాయి.\"_\n\n{sub_text} Best wishes from *VGK4U*. 💡🌿",
+        f"{greeting_head}\n\n_\"పరిశుభ్రమైన సోలార్ శక్తితో మన సమాజానికి వెలుగును ఇద్దాం!\"_\n\n{sub_text} Let us lead the solar energy revolution together! ☀️🏆",
+        f"{greeting_head}\n\n_\"సాధించే ప్రతి విజయం మీ భవిష్యత్తుకు గొప్ప పునాది!\"_\n\n{sub_text} Team *VGK4U* is proud of our strong community of partners! 🚀💵"
+    ]
+    return random.choice(quotes_pool)
+
+
 def send_vgk4u_group_bot_message(
     message_text: str,
     invite_code: str = ELITE_GROUP_INVITE_CODE,
@@ -55,7 +83,7 @@ def send_vgk4u_group_bot_message(
     Dispatches message payload to VGK4U Elite WhatsApp Group/Channel via local bot gateway (port 5002).
     """
     clean_code = extract_invite_code(invite_code)
-    img_to_use = image_path or (POSTER_IMAGE_PATH if os.path.exists(POSTER_IMAGE_PATH) else None)
+    img_to_use = image_path  # Only send image if explicitly provided (e.g. payout celebrations)
     try:
         payload = {
             "message": message_text,
@@ -81,16 +109,16 @@ def send_vgk4u_group_bot_message(
 
 def dispatch_daily_vgk4u_morning_wish(db: Session, invite_code: str = ELITE_GROUP_INVITE_CODE) -> Dict[str, Any]:
     """
-    Dispatches daily 8:00 AM random inspiring morning wish to all configured VGK4U target groups.
+    Dispatches dynamic time-of-day wish (Morning / Afternoon / Evening) to all configured VGK4U targets.
     """
     from app.api.v1.endpoints.whatsapp import _load_targets_from_db
-    quote = random.choice(MORNING_QUOTES)
-    logger.info("🌅 Dispatching daily VGK4U 8 AM morning wish with image banner...")
+    quote = get_dynamic_time_wish_quote()
+    logger.info("🌅 Dispatching dynamic VGK4U time-of-day wish...")
 
     active_targets = _load_targets_from_db(db)
     target_groups = active_targets.get("vgk4u_morning_wish", [])
     if not target_groups:
-        return send_vgk4u_group_bot_message(quote, invite_code=invite_code)
+        return send_vgk4u_group_bot_message(quote, invite_code=invite_code, image_path=None)
 
     results = []
     success_count = 0
