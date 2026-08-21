@@ -245,15 +245,15 @@ def format_field_journey_whatsapp_message(stats: Dict[str, Any]) -> str:
                 lines.append(f"   {j['alert_flag']}")
             lines.append("")
 
-    lines.append("💬 _Auto-generated hourly field operations update_")
+    lines.append("💬 _Auto-generated bi-hourly field operations update_")
     return "\n".join(lines)
 
 
 def dispatch_field_journey_whatsapp_reports_and_alerts(db: Session) -> Dict[str, Any]:
     """
-    Main trigger function executed hourly:
+    Main trigger function executed bi-hourly (10 AM - 10 PM IST for active journeys):
     1. Sends Group Summary Report to target WhatsApp group.
-    2. Sends direct 2-Hour Photo Inactivity Warning alerts to Employee AND Reporting Manager.
+    2. Sends direct 2-Hour Photo Inactivity Warning alerts ONLY to employees currently in an active journey.
     """
     from app.services.whatsapp_group_alert_service import send_group_bot_message
     from app.services.whatsapp_auto_service import send_direct_whatsapp

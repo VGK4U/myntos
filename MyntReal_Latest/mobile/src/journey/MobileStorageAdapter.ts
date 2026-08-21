@@ -46,4 +46,32 @@ export class MobileStorageAdapter implements StorageAdapter {
         const { value } = await Preferences.get({ key: this.storageKey });
         return value !== null;
     }
+
+    // DC_JOURNEY_OFFLINE_QUEUE_001: Cache GPS points when network/OS throttles transmission
+    async pushOfflinePoint(point: any): Promise<void> {
+        try {
+            const queue = await this.getOfflineQueue();
+            queue.push(point);
+            await Preferences.set({
+                key: `${this.storageKey}_offline_queue`,
+                value: JSON.stringify(queue.slice(-100)) // keep last 100 points max
+            });
+        } catch (error) {
+            console.warn('[MobileStorageAdapter] Push offline point failed:', error);
+        }
+    }
+
+    async getOfflineQueue(): Promise<any[]> {
+        try {
+            const { value } = await Preferences.get({ key: `${this.storageKey}_offline_queue` });
+            if (!value) return [];
+            return JSON.parse(value);
+        } catch (error) {
+            return [];
+        }
+    }
+
+    async clearOfflineQueue(): Promise<void> {
+        await Preferences.remove({ key: `${this.storageKey}_offline_queue` });
+    }
 }
