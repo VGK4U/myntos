@@ -35,6 +35,9 @@ def send_service_group_bot_message(message_text: str) -> Dict[str, Any]:
         else:
             logger.warning(f"Service Group Bot API response: {resp.status_code} - {resp.text}")
             return {"success": False, "error": raw.get("error") or resp.text}
+    except requests.exceptions.ConnectionError:
+        logger.warning("Could not connect to Service Group Bot Gateway — Service offline on port 5002")
+        return {"success": False, "error": "WhatsApp Group Bot service is currently offline on port 5002. Please start the WhatsApp Bot daemon on the server."}
     except Exception as exc:
         logger.warning(f"Could not connect to Service Group Bot Gateway (port 5002): {exc}")
         return {"success": False, "error": str(exc)}
