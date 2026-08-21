@@ -7722,6 +7722,14 @@ const server = http.createServer(async (req, res) => {
     const apkCandidates = [
       path.join(__dirname, 'public', 'mobile.apk'),
       path.join(__dirname, 'public', 'MyntReal.apk'),
+      path.join(__dirname, 'mobile.apk'),
+      path.join(__dirname, 'MyntReal.apk'),
+      path.join(process.cwd(), 'public', 'mobile.apk'),
+      path.join(process.cwd(), 'public', 'MyntReal.apk'),
+      path.join(process.cwd(), 'frontend', 'public', 'mobile.apk'),
+      path.join(process.cwd(), 'frontend', 'public', 'MyntReal.apk'),
+      path.join(process.cwd(), 'MyntReal_Latest', 'frontend', 'public', 'mobile.apk'),
+      path.join(process.cwd(), 'MyntReal_Latest', 'frontend', 'public', 'MyntReal.apk'),
       path.join(__dirname, 'public', 'mobile.app'),
       path.join(__dirname, '../mobile/android/app/build/outputs/apk/debug/MyntReal-1.0-02-Aug-2026.apk')
     ];
@@ -7748,15 +7756,6 @@ const server = http.createServer(async (req, res) => {
           'Cache-Control': 'public, max-age=86400'
         });
         fs.createReadStream(selectedApk).pipe(res);
-        return;
-      } else {
-        // S3 Redirect Fallback: Redirect to canonical AWS S3 release binary
-        const s3ApkUrl = 'https://myntreal-media-vault.s3.ap-south-2.amazonaws.com/public/applications/v2.0.4/MyntReal.apk';
-        res.writeHead(302, {
-          'Location': s3ApkUrl,
-          'Cache-Control': 'no-cache'
-        });
-        res.end();
         return;
       }
     }
