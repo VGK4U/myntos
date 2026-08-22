@@ -4423,10 +4423,10 @@ def member_earnings_dashboard(
     if all_photo_ids:
         try:
             op_rows = db.execute(text(
-                "SELECT id, passport_photo, logo_path FROM official_partners WHERE id = ANY(:ids)"
+                "SELECT id, logo_path FROM official_partners WHERE id = ANY(:ids)"
             ), {"ids": all_photo_ids}).fetchall()
             for opr in op_rows:
-                p_photo = opr[1] or opr[2]
+                p_photo = opr[1]
                 if p_photo and str(p_photo).strip() not in ('', 'None', 'null'):
                     passport_photo_map[int(opr[0])] = p_photo
 
@@ -4447,9 +4447,9 @@ def member_earnings_dashboard(
     if parent_ids:
         try:
             p_rows = db.execute(text(
-                "SELECT id, partner_code, partner_name, phone FROM official_partners WHERE id = ANY(:ids)"
+                "SELECT id, partner_code, partner_name, phone, logo_path FROM official_partners WHERE id = ANY(:ids)"
             ), {"ids": parent_ids}).fetchall()
-            p_info = {r[0]: {"code": r[1], "name": r[2], "phone": r[3]} for r in p_rows}
+            p_info = {r[0]: {"code": r[1], "name": r[2], "phone": r[3], "logo_path": r[4]} for r in p_rows}
             
             p_inc_rows = db.execute(text(
                 "SELECT e.partner_id, COALESCE(SUM(e.commission_amount),0) AS gross "
