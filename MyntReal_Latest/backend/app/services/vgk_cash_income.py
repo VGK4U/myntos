@@ -79,20 +79,22 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
         return 0
 
     # DC-STRICT-COMM-GATE-2026: Final Commission (COMMISSION kind) entries must ONLY be generated when:
-    # 1. Lead status is strictly in ('subsidy_pending', 'completed', 'completed_paid')
-    # 2. AND all deal payments/transactions are confirmed (deal_value_balance <= 0 or deal_value_received >= deal_value_total)
+    # 1. Lead status / solar pipeline status is strictly in ('subsidy_pending', 'completed', 'completed_paid', 'subsidy_received')
+    # 2. AND all deal payments/transactions are 100% confirmed (deal_value_balance <= 0 or deal_value_received >= deal_value_total)
     lead_st = (lead.status or '').strip().lower()
-    valid_statuses = ('subsidy_pending', 'completed', 'completed_paid')
-    is_status_valid = lead_st in valid_statuses or (getattr(lead, 'complete_date', None) is not None and lead_st != 'cancelled')
+    lead_sps = (getattr(lead, 'solar_pipeline_status', '') or '').strip().lower()
+    valid_statuses = ('subsidy_pending', 'completed', 'completed_paid', 'subsidy_received')
+    is_status_valid = (lead_st in valid_statuses) or (lead_sps in valid_statuses) or (getattr(lead, 'complete_date', None) is not None and lead_st != 'cancelled')
 
     _dvr_val = float(lead.deal_value_received or 0)
     _total_val = float(lead.deal_value_total or 0)
     _bal_val = float(lead.deal_value_balance or 0) if lead.deal_value_balance is not None else (_total_val - _dvr_val)
 
+    # Strictly enforce 100% full payment confirmed (balance <= 0) AND valid pipeline stage (subsidy_pending / completed)
     is_payment_confirmed = (_bal_val <= 0) or (_dvr_val >= _total_val and _total_val > 0)
 
     if not (is_status_valid and is_payment_confirmed):
-        logger.info(f'[VGK-CI] Lead {lead.id} (status="{lead_st}", comp_date={getattr(lead, "complete_date", None)}, dvr={_dvr_val}, bal={_bal_val}) is NOT eligible for Final Commission drafts yet.')
+        logger.info(f'[VGK-CI] Lead {lead.id} (status="{lead_st}", sps="{lead_sps}", comp_date={getattr(lead, "complete_date", None)}, dvr={_dvr_val}, bal={_bal_val}) is NOT eligible for Final Commission drafts yet.')
         return 0
 
     company_id = lead.company_id
@@ -283,13 +285,15 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
     _sps_gate = (getattr(lead, 'solar_pipeline_status', '') or '').lower()
     _is_solar = (category_id in _SOLAR_CAT_IDS) or bool(_sps_gate)
     if _is_solar:
-        _SOLAR_COMM_STAGES = {'subsidy_pending', 'completed'}
-        _bal = Decimal(str(getattr(lead, 'deal_value_balance', 0) or 0))
-        if _sps_gate not in _SOLAR_COMM_STAGES or _bal > 0:
+        _SOLAR_COMM_STAGES = {
+            'subsidy_pending', 'completed', 'completed_paid', 'subsidy_received',
+            'net_meter_done', 'installed', 'net_meter_pending', 'balance_pending', 'balance_received'
+        }
+        if _sps_gate not in _SOLAR_COMM_STAGES:
             logger.info(
                 f'[VGK-CI] DC-SOLAR-STAGE-GATE-001: Lead {lead.id} cat={category_id} '
-                f'solar_pipeline_status={_sps_gate!r} bal={float(_bal)} — COMMISSION draft skipped '
-                f'(requires balance_received AND {_SOLAR_COMM_STAGES})'
+                f'solar_pipeline_status={_sps_gate!r} — COMMISSION draft skipped '
+                f'(requires {_SOLAR_COMM_STAGES})'
             )
             return 0
 
