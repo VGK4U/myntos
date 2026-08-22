@@ -761,8 +761,23 @@
     const postTotalTodayEl = document.getElementById('postTotalToday');
     if (postTotalTodayEl) postTotalTodayEl.value = '₹' + _meFormatInr(payingGross) + '/-';
 
+    // Senior Partner Today Earning calculation from window._seniorEntries for date range
+    seniorTodayAmt = 0;
+    if (window._seniorEntries && window._seniorEntries.length) {
+      window._seniorEntries.forEach(se => {
+        if (se.status !== 'CANCELLED' && se.income_date && se.income_date !== 'None') {
+          const sd = se.income_date;
+          if (dateFrom && sd < dateFrom) return;
+          if (dateTo && sd > dateTo) return;
+          seniorTodayAmt += parseFloat(se.commission_amount || se.amount || 0);
+        }
+      });
+    }
+
     const postSeniorToday = document.getElementById('postSeniorToday');
-    if (postSeniorToday) postSeniorToday.value = '₹0/-';
+    if (postSeniorToday) {
+      postSeniorToday.value = '₹' + _meFormatInr(seniorTodayAmt) + '/-';
+    }
 
     window._currentTotalAdvPaid = totalAdvPaid;
     const prevTotalTodayEl = document.getElementById('prevTotalToday');
@@ -1143,6 +1158,7 @@
       { id: 'group_exec', type: 'group', label: 'Executive Announcements', target: 'chat.whatsapp.com/LfX8mGootXa7SpwNIz7P5C', inviteCode: 'LfX8mGootXa7SpwNIz7P5C', status: 'sending', msg: 'Broadcasting to group...' },
       { id: 'group_ev_stars', type: 'group', label: 'Ev scooty. MNR (royal ev ) stars', target: 'Ev scooty. MNR (royal ev ) stars', groupName: 'Ev scooty. MNR (royal ev ) stars', status: 'sending', msg: 'Broadcasting to group...' },
       { id: 'group_mnr_gen', type: 'group', label: 'MNR General Group', target: 'MNR General Group', groupName: 'MNR General Group', status: 'sending', msg: 'Broadcasting to group...' },
+      { id: 'group_vgk_vjd', type: 'group', label: 'VGK4U - Vijayawada', target: 'VGK4U - Vijayawada', groupName: 'VGK4U - Vijayawada', status: 'sending', msg: 'Broadcasting to group...' },
       { id: 'portal_shoutout', type: 'portal', label: 'VGK4U Login Page Shoutout', target: 'vgk4u.com (Login Banner)', status: 'sending', msg: 'Publishing shoutout...' }
     ];
 
@@ -1334,6 +1350,23 @@
         }
       } catch (gErr) {
         updateDispatchStatus('group_mnr_gen', 'error', 'WhatsApp Bot Offline');
+      }
+
+      // 9. VGK4U - Vijayawada Group Send
+      try {
+        const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupName: 'VGK4U - Vijayawada' })
+        });
+        const json = await res.json();
+        if (json.success) {
+          updateDispatchStatus('group_vgk_vjd', 'sent', 'Delivered to Vijayawada Group');
+        } else {
+          updateDispatchStatus('group_vgk_vjd', 'error', json.error || 'Group Send Error');
+        }
+      } catch (gErr) {
+        updateDispatchStatus('group_vgk_vjd', 'error', 'WhatsApp Bot Offline');
       }
 
     } catch (err) {
