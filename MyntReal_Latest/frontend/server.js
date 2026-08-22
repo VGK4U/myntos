@@ -8585,6 +8585,25 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Serve Engineering AI Antigravity Dashboard (/engineering/)
+  if (url === '/engineering' || url === '/engineering/' || url.startsWith('/engineering/?')) {
+    const filePath = path.join(__dirname, 'public', 'engineering', 'index.html');
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(404);
+        res.end('Engineering AI dashboard not found');
+      } else {
+        console.log(`✅ Serving Engineering AI Antigravity Dashboard`);
+        res.writeHead(200, { 
+          'Content-Type': 'text/html',
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
+        });
+        res.end(data);
+      }
+    });
+    return;
+  }
+
   // Serve mobile app (Capacitor PWA)
   if (url === '/mobile/' || url.startsWith('/mobile/?')) {
     const filePath = path.join(__dirname, 'public', 'mobile', 'index.html');
@@ -20043,45 +20062,51 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     res.writeHead(302, { 'Location': '/staff/whatsapp-config' });
     res.end();
     return;
+  } else if (url.startsWith('/staff/whatsapp-center')) {
+    const filePath = path.join(__dirname, 'staff_whatsapp_center.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('WhatsApp Center not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
   } else if (url.startsWith('/staff/crm/whatsapp-bot')) {
-    const filePath = path.join(__dirname, 'staff_crm_whatsapp_bot.html');
+    const filePath = path.join(__dirname, 'staff_whatsapp_center.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('WhatsApp Bot Hub not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
-      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
     return;
   } else if (url.startsWith('/staff/crm/whatsapp-inbox') || url.startsWith('/staff/crm/wa-inbox')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    // DC Protocol: Client-side LocalStorage token authentication handles user validation
-    const filePath = path.join(__dirname, 'staff_crm_whatsapp_inbox.html');
+    const filePath = path.join(__dirname, 'staff_whatsapp_center.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('CRM WhatsApp Inbox not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
-      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
     return;
   } else if (url.startsWith('/staff/whatsapp-inbox')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    // DC Protocol: Client-side LocalStorage token authentication handles user validation
-    const filePath = path.join(__dirname, 'staff_whatsapp_inbox.html');
+    const filePath = path.join(__dirname, 'staff_whatsapp_center.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('WhatsApp Inbox not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
-      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
     return;
   } else if (url.startsWith('/staff/whatsapp-config')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    // DC Protocol: Client-side LocalStorage token authentication handles user validation
-    const filePath = path.join(__dirname, 'staff_whatsapp_config.html');
+    const filePath = path.join(__dirname, 'staff_whatsapp_center.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('WhatsApp Config not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
-      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
     return;

@@ -27,11 +27,11 @@ export class VGKMobileAssistant {
     this.render();
   }
 
-  private getEndpoint(): string | null {
+  private getEndpoint(): string {
     const portal = portalService.getPortal();
-    if (portal === 'staff') return '/api/v1/vgk/staff/process';
-    if (portal === 'partner') return '/api/v1/vgk/partner/process';
-    return null;
+    if (portal === 'partner') return '/api/v1/ai/command/process';
+    if (portal === 'staff') return '/api/v1/ai/command/process';
+    return '/api/v1/ai/command/process';
   }
 
   private render() {
