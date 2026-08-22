@@ -385,19 +385,18 @@
            || (window._currentRows || []).find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr)
            || (window._vgkMemberCache || {})[pidStr];
 
-      if (!m || !m.id) {
-        try {
-          const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
-          const paramStr = pidStr.startsWith('VGK') ? 'search=' + encodeURIComponent(pidStr) : 'partner_id=' + encodeURIComponent(pidStr);
-          const freshRes = await safeFetch(apiBase + '/vgk/dashboard/member-earnings?' + paramStr + '&_cb=' + Date.now());
-          const freshData = await freshRes.json();
-          if (freshData.success && freshData.data && freshData.data.length) {
-            const found = freshData.data.find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr) || freshData.data[0];
-            if (found) m = found;
-          }
-        } catch (e) {
-          console.warn("Failed to fetch member data from API:", e);
+      // DC Protocol: Always fetch fresh member data from API to merge latest photo paths & senior info
+      try {
+        const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
+        const paramStr = pidStr.startsWith('VGK') ? 'search=' + encodeURIComponent(pidStr) : 'partner_id=' + encodeURIComponent(pidStr);
+        const freshRes = await safeFetch(apiBase + '/vgk/dashboard/member-earnings?' + paramStr + '&_cb=' + Date.now());
+        const freshData = await freshRes.json();
+        if (freshData.success && freshData.data && freshData.data.length) {
+          const found = freshData.data.find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr) || freshData.data[0];
+          if (found) m = Object.assign({}, m || {}, found);
         }
+      } catch (e) {
+        console.warn("Failed to fetch fresh member data from API:", e);
       }
 
       if (!m) throw new Error('Member details could not be loaded for ID: ' + pidStr);
