@@ -739,9 +739,9 @@
     let stage1Amt = 0, stage2AdvAmt = 0, finalCommBalGrossAmt = 0, finalCommAdvPaidAmt = 0;
     let brandAmt = 0, bonanzaAmt = 0, extraAmt = 0, awardAmt = 0, seniorTodayAmt = 0;
 
-    // Ground-source L1 entries calculation only for the selected date context
+    // All partner income entries calculation for the selected date context (L1 to L6)
     entries.forEach(e => {
-      if (e.level === 1 && e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
+      if (e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
         const d = e.income_date;
         if (dateFrom && d < dateFrom) return;
         if (dateTo && d > dateTo) return;
@@ -774,7 +774,7 @@
     let commByLevel = {};
 
     entries.forEach(e => {
-      if (e.level === 1 && e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
+      if (e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
         const d = e.income_date;
         if (dateFrom && d < dateFrom) return;
         if (dateTo && d > dateTo) return;
