@@ -3779,7 +3779,13 @@ def list_leads(
     if is_restricted_freelancer:
         can_view_all = False
     
-    query = db.query(CRMLead).filter(CRMLead.company_id == company_id)
+    # DC Protocol (Aug 2026): Cross-company Solar category lead matching.
+    # Solar category IDs (6, 19, 36, 48) represent Solar leads regardless of company_id (1, 2, or 4).
+    is_solar_query = (category and 'solar' in str(category).lower()) or (category_id in [6, 19, 36, 48] if category_id else False)
+    if is_solar_query:
+        query = db.query(CRMLead).filter(or_(CRMLead.company_id == company_id, CRMLead.category_id.in_([6, 19, 36, 48])))
+    else:
+        query = db.query(CRMLead).filter(CRMLead.company_id == company_id)
     
     # VISIBILITY FILTER LOGIC:
     # The visibility filters (primary_owner, assigned_to_me) work for ALL users.
@@ -3806,7 +3812,7 @@ def list_leads(
                     CRMLead.field_staff_id == current_employee.id,
                     and_(
                         CRMLead.handler_type == 'unassigned',
-                        CRMLead.status == 'new',
+                        ~CRMLead.status.in_(['won', 'lost']),
                         CRMLead.primary_owner_id.is_(None),
                         CRMLead.telecaller_id.is_(None),
                         CRMLead.field_staff_id.is_(None),
@@ -3838,7 +3844,7 @@ def list_leads(
             CRMLead.handler_id == current_employee.emp_code,  # Legacy fallback
             # New/Unassigned leads visible to all for claiming
             and_(
-                CRMLead.status == 'new',
+                ~CRMLead.status.in_(['won', 'lost']),
                 CRMLead.handler_type == 'unassigned',
                 CRMLead.telecaller_id.is_(None),
                 CRMLead.field_staff_id.is_(None),
