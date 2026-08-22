@@ -409,7 +409,18 @@
       const initials = (m.partner_name || '').trim().split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase();
       if (prevAvatar) prevAvatar.textContent = initials;
 
-      const photoPath = m.passport_photo || m.logo_path || m.profile_image || m.photo_url || m.avatar_url || m.id_card_photo || m.photo;
+      function getValidPhotoPath(obj) {
+        if (!obj) return '';
+        const fields = [obj.passport_photo, obj.logo_path, obj.profile_image, obj.photo_url, obj.avatar_url, obj.id_card_photo, obj.photo];
+        for (const f of fields) {
+          if (f && f !== 'None' && f !== 'null' && f !== 'undefined' && String(f).trim() !== '') {
+            return f;
+          }
+        }
+        return '';
+      }
+
+      const photoPath = getValidPhotoPath(m);
       const resolvedUrl = resolvePosterMediaUrl(photoPath);
       if (resolvedUrl && prevImg) {
         prevImg.crossOrigin = "anonymous";
@@ -572,7 +583,11 @@
       const seniorImg = document.getElementById('prevSeniorImg');
       const seniorAvatar = document.getElementById('prevSeniorAvatar');
       if (seniorImg) {
-        const seniorPhotoPath = m.senior_photo || m.senior_passport_photo || m.senior_logo_path || m.senior_profile_image;
+        const seniorPhotoPath = getValidPhotoPath({
+          passport_photo: m.senior_photo,
+          logo_path: m.senior_passport_photo || m.senior_logo_path,
+          profile_image: m.senior_profile_image
+        });
         const resolvedSeniorUrl = resolvePosterMediaUrl(seniorPhotoPath);
         if (resolvedSeniorUrl) {
           seniorImg.crossOrigin = "anonymous";
