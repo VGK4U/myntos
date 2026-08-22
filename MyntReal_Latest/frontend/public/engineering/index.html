@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <title>MYNT OS — Antigravity Engineering AI (Phase 3.3)</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,18 +11,19 @@
   
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
+    html, body {
       font-family: 'Inter', -apple-system, sans-serif;
       background: #0f172a; color: #f8fafc;
-      min-height: 100vh; display: flex; flex-direction: column;
-      overflow: hidden;
+      min-height: 100vh; width: 100%;
+      overflow-x: auto; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     
     /* Top Header Bar */
     .eng-header {
       height: 56px; background: #1e293b; border-bottom: 1px solid #334155;
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0 20px;
+      padding: 0 20px; flex-wrap: wrap; gap: 10px;
     }
     .eng-title { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 16px; color: #38bdf8; }
     .eng-badge {
@@ -31,10 +32,10 @@
       border: 1px solid rgba(16, 185, 129, 0.3); display: flex; align-items: center; gap: 6px;
     }
     
-    /* 3-Pane Layout */
+    /* 3-Pane Desktop Layout */
     .eng-layout {
       flex: 1; display: grid; grid-template-columns: 280px 1fr 440px;
-      height: calc(100vh - 56px); overflow: hidden;
+      min-height: calc(100vh - 56px); width: 100%;
     }
     
     /* Pane 1: Left Repository Explorer */
@@ -50,11 +51,11 @@
     /* Pane 2: Center Conversation & Voice Drawer */
     .pane-chat {
       display: flex; flex-direction: column; background: #0f172a;
-      border-right: 1px solid #334155;
+      border-right: 1px solid #334155; min-height: 400px;
     }
     .chat-history {
       flex: 1; overflow-y: auto; padding: 20px; display: flex;
-      flex-direction: column; gap: 16px;
+      flex-direction: column; gap: 16px; -webkit-overflow-scrolling: touch;
     }
     .msg-card {
       background: #1e293b; border: 1px solid #334155; border-radius: 12px;
@@ -64,7 +65,7 @@
     .msg-card.ai { border-left: 4px solid #10b981; }
     .msg-card.uncertain { border-left: 4px solid #f59e0b; }
     .msg-header { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: #94a3b8; }
-    .msg-body { font-size: 14px; line-height: 1.6; color: #e2e8f0; }
+    .msg-body { font-size: 14px; line-height: 1.6; color: #e2e8f0; word-break: break-word; }
     
     /* Impact Breakdown Badge */
     .impact-grid {
@@ -78,14 +79,14 @@
       padding: 16px; background: #1e293b; border-top: 1px solid #334155;
       display: flex; flex-direction: column; gap: 10px;
     }
-    .input-wrapper { display: flex; align-items: center; gap: 10px; }
+    .input-wrapper { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .mode-select {
       height: 44px; background: #0f172a; border: 1px solid #334155; border-radius: 8px;
       padding: 0 12px; color: #38bdf8; font-weight: 600; font-size: 13px; outline: none;
       cursor: pointer;
     }
     .cmd-input {
-      flex: 1; background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+      flex: 1; min-width: 200px; background: #0f172a; border: 1px solid #334155; border-radius: 8px;
       padding: 12px 16px; color: #f8fafc; font-size: 14px; outline: none;
     }
     .cmd-input:focus { border-color: #38bdf8; }
@@ -109,7 +110,7 @@
     
     /* Pane 3: Right Diff Preview & Terminal Console */
     .pane-console {
-      background: #1e293b; display: flex; flex-direction: column;
+      background: #1e293b; display: flex; flex-direction: column; min-height: 300px;
     }
     .console-header {
       padding: 14px 16px; border-bottom: 1px solid #334155;
@@ -119,16 +120,34 @@
     .diff-view {
       flex: 1; font-family: 'Fira Code', monospace; font-size: 12px;
       background: #090d16; padding: 14px; overflow: auto; color: #cbd5e1;
-      white-space: pre-wrap; line-height: 1.5;
+      white-space: pre-wrap; line-height: 1.5; -webkit-overflow-scrolling: touch;
     }
     
+    /* Mobile Responsive Touch Scrolling Media Queries */
+    @media (max-width: 900px) {
+      body { overflow-x: auto; overflow-y: auto; height: auto; }
+      .eng-header { height: auto; padding: 12px 16px; }
+      .eng-layout {
+        display: flex; flex-direction: column;
+        height: auto; min-height: auto; overflow: visible;
+      }
+      .pane-repo, .pane-chat, .pane-console {
+        border-right: none; border-bottom: 1px solid #334155;
+        width: 100%; height: auto;
+      }
+      .chat-history { min-height: 350px; max-height: 500px; overflow-y: auto; }
+      .diff-view { min-height: 250px; max-height: 400px; overflow-x: auto; overflow-y: auto; }
+      .impact-grid { grid-template-columns: 1fr; }
+    }
+
     /* Interactive Modal */
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.75);
       z-index: 9999; display: none; align-items: center; justify-content: center;
+      padding: 16px;
     }
     .modal-card {
-      width: 600px; max-width: 90vw; background: #1e293b; border-radius: 16px;
+      width: 600px; max-width: 95vw; background: #1e293b; border-radius: 16px;
       border: 1px solid #334155; padding: 24px; display: flex; flex-direction: column; gap: 16px;
     }
     .btn-confirm { background: #10b981; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; }
@@ -137,15 +156,45 @@
 </head>
 <body>
 
+  <!-- Full-Screen Security Lock Authentication Overlay -->
+  <div class="security-lock-overlay" id="security-lock-overlay" style="position:fixed; inset:0; background:#090d16; z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;">
+    <div style="width:380px; max-width:92vw; background:#1e293b; border:1px solid #334155; border-radius:16px; padding:28px; display:flex; flex-direction:column; gap:16px; box-shadow:0 20px 50px rgba(0,0,0,0.6);">
+      <div style="text-align:center;">
+        <div style="width:60px; height:60px; background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239, 68, 68, 0.3); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 12px auto;">
+          <i class="fa-solid fa-lock" style="font-size:26px; color:#ef4444;"></i>
+        </div>
+        <h2 style="font-size:18px; color:#f8fafc; font-weight:700;">Engineering Terminal Locked</h2>
+        <p style="font-size:13px; color:#94a3b8; margin-top:4px;">Enter Authorized Engineering Credentials</p>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div>
+          <label style="font-size:12px; color:#cbd5e1; font-weight:600; display:block; margin-bottom:4px;">Username</label>
+          <input type="text" id="lock-username" placeholder="Username" style="width:100%; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:12px; color:#fff; font-size:14px; outline:none;">
+        </div>
+        <div>
+          <label style="font-size:12px; color:#cbd5e1; font-weight:600; display:block; margin-bottom:4px;">Password</label>
+          <input type="password" id="lock-password" placeholder="Password" style="width:100%; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:12px; color:#fff; font-size:14px; outline:none;">
+        </div>
+      </div>
+      <button id="btn-unlock" style="background:#10b981; color:white; border:none; padding:12px; border-radius:8px; font-weight:700; font-size:14px; cursor:pointer; margin-top:6px;">Unlock Terminal</button>
+      <div id="lock-error" style="font-size:12px; color:#ef4444; text-align:center; display:none; font-weight:600;">Invalid Username or Password. Access Denied.</div>
+    </div>
+  </div>
+
   <!-- Top Header -->
   <header class="eng-header">
     <div class="eng-title">
       <i class="fa-solid fa-code-branch"></i>
       <span>MYNT OS — Antigravity Engineering AI (Phase 3.3)</span>
     </div>
-    <div class="eng-badge">
-      <i class="fa-solid fa-shield-halved"></i>
-      <span>SUPER ADMIN AUTHENTICATED</span>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div class="eng-badge">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>SUPER ADMIN AUTHENTICATED</span>
+      </div>
+      <button id="btn-lock-session" style="background:#334155; border:none; color:#ef4444; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;" title="Lock Engineering Terminal">
+        <i class="fa-solid fa-lock"></i> Lock
+      </button>
     </div>
   </header>
 
@@ -237,7 +286,45 @@
     </div>
   </div>
 
-  <script style="display:none">
+  <script>
+    // Security Lock Authentication Handler (User 2207 / Pass 0710)
+    const lockOverlay = document.getElementById('security-lock-overlay');
+    const lockUsername = document.getElementById('lock-username');
+    const lockPassword = document.getElementById('lock-password');
+    const btnUnlock = document.getElementById('btn-unlock');
+    const lockError = document.getElementById('lock-error');
+    const btnLockSession = document.getElementById('btn-lock-session');
+
+    function checkSecurityLock() {
+      const isAuth = sessionStorage.getItem('eng_auth_unlocked') === 'true';
+      if (isAuth) {
+        lockOverlay.style.display = 'none';
+      } else {
+        lockOverlay.style.display = 'flex';
+      }
+    }
+
+    btnUnlock.addEventListener('click', () => {
+      const u = lockUsername.value.trim();
+      const p = lockPassword.value.trim();
+      if (u === '2207' && p === '0710') {
+        sessionStorage.setItem('eng_auth_unlocked', 'true');
+        localStorage.setItem('eng_auth_pass', '2207:0710');
+        lockError.style.display = 'none';
+        lockOverlay.style.display = 'none';
+      } else {
+        lockError.style.display = 'block';
+      }
+    });
+
+    btnLockSession.addEventListener('click', () => {
+      sessionStorage.removeItem('eng_auth_unlocked');
+      checkSecurityLock();
+    });
+
+    // Check lock state immediately on load
+    checkSecurityLock();
+
     let currentProposal = null;
     let activeNonce = null;
     let currentAttachment = null;
@@ -277,7 +364,10 @@
         const token = localStorage.getItem('mnr_token') || localStorage.getItem('staff_token') || '';
         const res = await fetch('/api/v1/engineering/ai/upload', {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` },
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'X-Engineering-Passcode': localStorage.getItem('eng_auth_pass') || '2207:0710'
+          },
           body: formData
         });
         const data = await res.json();
@@ -302,7 +392,11 @@
       try {
         const res = await fetch('/api/v1/engineering/ai/terminal/run', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'X-Engineering-Passcode': localStorage.getItem('eng_auth_pass') || '2207:0710'
+          },
           body: JSON.stringify({ command_key: key })
         });
         const data = await res.json();
@@ -316,7 +410,10 @@
       const token = localStorage.getItem('mnr_token') || localStorage.getItem('staff_token') || '';
       try {
         const res = await fetch('/api/v1/engineering/ai/release/checklist', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'X-Engineering-Passcode': localStorage.getItem('eng_auth_pass') || '2207:0710'
+          }
         });
         const data = await res.json();
         let checklistText = `=== PHASE 3.3 RELEASE VERIFICATION CHECKLIST ===\nOverall Status: ${data.overall_status}\n\n`;
@@ -382,18 +479,22 @@
           user_command: text,
           query_mode: selectedMode,
           input_method: 'text',
+          passcode: '2207:0710',
           attachment_name: currentAttachment ? currentAttachment.filename : null,
           attachment_url: currentAttachment ? currentAttachment.file_url : null
         };
 
-        // Reset attachment after payload construction
         currentAttachment = null;
         attachmentPreview.style.display = 'none';
         fileInput.value = '';
 
         const res = await fetch('/api/v1/engineering/ai/command/process', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'X-Engineering-Passcode': localStorage.getItem('eng_auth_pass') || '2207:0710'
+          },
           body: JSON.stringify(payload)
         });
         const data = await res.json();
@@ -460,8 +561,12 @@
         const token = localStorage.getItem('mnr_token') || localStorage.getItem('staff_token') || '';
         const res = await fetch('/api/v1/engineering/ai/command/execute', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ proposal_id: currentProposal.proposal_id, idempotency_nonce: activeNonce })
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'X-Engineering-Passcode': localStorage.getItem('eng_auth_pass') || '2207:0710'
+          },
+          body: JSON.stringify({ proposal_id: currentProposal.proposal_id, idempotency_nonce: activeNonce, passcode: '2207:0710' })
         });
         const data = await res.json();
         alert(data.message || 'Patch executed successfully.');
@@ -479,8 +584,12 @@
         const token = localStorage.getItem('mnr_token') || localStorage.getItem('staff_token') || '';
         const res = await fetch('/api/v1/engineering/ai/command/rollback', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ proposal_id: currentProposal.proposal_id, target_file: currentProposal.target_file })
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'X-Engineering-Passcode': localStorage.getItem('eng_auth_pass') || '2207:0710'
+          },
+          body: JSON.stringify({ proposal_id: currentProposal.proposal_id, target_file: currentProposal.target_file, passcode: '2207:0710' })
         });
         const data = await res.json();
         alert(data.message || 'Rollback executed successfully.');
