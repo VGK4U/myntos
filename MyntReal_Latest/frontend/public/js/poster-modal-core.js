@@ -609,13 +609,32 @@
         });
         const resolvedSeniorUrl = resolvePosterMediaUrl(seniorPhotoPath);
         if (resolvedSeniorUrl) {
-          seniorImg.crossOrigin = "anonymous";
+          if (resolvedSeniorUrl.startsWith('http') && !resolvedSeniorUrl.includes(window.location.host)) {
+            seniorImg.crossOrigin = "anonymous";
+          } else {
+            seniorImg.removeAttribute('crossorigin');
+          }
           seniorImg.onload = () => { seniorImg.style.display = 'block'; if (seniorAvatar) seniorAvatar.style.display = 'none'; };
-          seniorImg.onerror = () => { seniorImg.style.display = 'none'; if (seniorAvatar) seniorAvatar.style.display = 'flex'; };
+          seniorImg.onerror = () => {
+            if (!seniorImg.dataset.retried) {
+              seniorImg.dataset.retried = 'true';
+              seniorImg.src = '/kuruju_srinubabu_official.jpg?t=' + Date.now();
+              return;
+            }
+            seniorImg.style.display = 'none';
+            if (seniorAvatar) seniorAvatar.style.display = 'flex';
+          };
+          delete seniorImg.dataset.retried;
           seniorImg.src = resolvedSeniorUrl.includes('?') ? resolvedSeniorUrl : (resolvedSeniorUrl + '?t=' + Date.now());
         } else {
-          seniorImg.style.display = 'none';
-          if (seniorAvatar) seniorAvatar.style.display = 'flex';
+          if (seniorImg) {
+            seniorImg.removeAttribute('crossorigin');
+            seniorImg.onload = () => { seniorImg.style.display = 'block'; if (seniorAvatar) seniorAvatar.style.display = 'none'; };
+            seniorImg.onerror = () => { seniorImg.style.display = 'none'; if (seniorAvatar) seniorAvatar.style.display = 'flex'; };
+            seniorImg.src = '/kuruju_srinubabu_official.jpg?t=' + Date.now();
+          } else if (seniorAvatar) {
+            seniorAvatar.style.display = 'flex';
+          }
         }
       }
 
