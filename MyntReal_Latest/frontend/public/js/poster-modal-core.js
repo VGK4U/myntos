@@ -538,14 +538,15 @@
         location = entries[0].location || '—';
       }
 
-      const installedStages = ['completed', 'installation_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'stage 2', 'installed'];
+      const installedStages = ['completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed'];
       const installedSet = new Set();
       entries.forEach(e => {
         if (e.level === 1 && e.status !== 'CANCELLED' && e.source_lead_id) {
           const typeStr = (e.income_type || e.kind || '').toLowerCase();
           const stageStr = (e.stage_name || e.solar_pipeline_status || e.stage || '').toString().toLowerCase();
-          const isInst = installedStages.some(s => typeStr.includes(s) || stageStr.includes(s)) || (e.kind || '').toUpperCase() === 'DVR_ADVANCE' || (e.stage2_adv && e.stage2_adv > 0);
-          if (isInst) {
+          const hasInstDate = e.installation_date || (e.install_date && e.install_date !== 'None');
+          const isInst = hasInstDate || installedStages.some(s => typeStr.includes(s) || stageStr.includes(s));
+          if (isInst && !stageStr.includes('pending') && !stageStr.includes('loan')) {
             installedSet.add(e.source_lead_id);
           }
         }
