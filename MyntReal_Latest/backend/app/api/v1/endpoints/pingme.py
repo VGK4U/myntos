@@ -387,14 +387,36 @@ def _query_talk_time(employee_id: int, db: Session, language: str) -> Dict:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 _RB_KEYWORDS: Dict[str, List[str]] = {
+    "query_today_leads":     [
+        "what all new leads added today", "what new leads added today", "new leads added today",
+        "leads added today", "leads created today", "leads came today", "leads added", "what new leads",
+        "today leads", "today's leads", "today followup leads", "leads today",
+        "follow up today leads", "today crm", "due today", "leads due today",
+        "show today leads", "today's followup", "scheduled today",
+    ],
+    "query_open_leads":      [
+        "open leads", "new leads", "pending leads", "show open leads", "open crm",
+        "unassigned leads", "fresh leads", "status open", "leads not closed",
+        "show new leads", "view open leads", "my open leads", "active leads",
+    ],
+    "query_overdue_leads":   [
+        "overdue leads", "missed leads", "expired leads", "overdue followup",
+        "leads overdue", "past due leads", "missed followup leads",
+        "show overdue", "overdue crm", "leads not followed up", "lapsed leads",
+    ],
+    "query_walkin_leads":    [
+        "walkin leads", "walk-in leads", "walk in leads", "walkins", "walk-ins",
+        "show walkins", "walk in crm", "walk in customers", "showroom leads",
+        "show walk in leads", "walkin crm leads",
+    ],
+    "query_tasks":           ["my tasks", "pending task", "show tasks", "task list", "open task", "active tasks", "list tasks", "show my tasks", "what tasks"],
+    "query_talk_time":       ["talk time", "call stats", "my calls", "calls today", "call time", "call log", "call count", "how many calls"],
     "end_journey":           ["end journey", "stop journey", "finish journey", "complete journey", "end my journey", "journey end", "stop tracking"],
     "start_journey":         ["start journey", "begin journey", "start tracking", "start my journey", "journey start", "new journey", "go for journey"],
     "create_task":           ["create task", "new task", "assign task", "add task", "make task", "create activity", "can you create activity", "aquatic", "create a task", "assign a task"],
-    "create_lead":           ["create lead", "new lead", "add lead", "add contact", "new contact", "create contact", "lead for"],
+    "create_lead":           ["create lead", "add lead", "add contact", "create contact", "register lead"],
     "create_service_ticket": ["create ticket", "new ticket", "raise ticket", "service ticket", "technical ticket", "raise a ticket", "log ticket", "raise complaint", "open ticket"],
     "query_day_planner":     ["day plan", "my plan", "today plan", "progress today", "day planner", "show plan", "what is my plan", "show my plan", "daily plan"],
-    "query_tasks":           ["my tasks", "pending task", "show tasks", "task list", "open task", "active tasks", "list tasks", "show my tasks", "what tasks"],
-    "query_talk_time":       ["talk time", "call stats", "my calls", "calls today", "call time", "call log", "call count", "how many calls"],
     "marketplace_search":    [
         "search product", "search spare", "find spare", "find part", "search catalog",
         "spare part", "product search", "search market",
@@ -411,26 +433,6 @@ _RB_KEYWORDS: Dict[str, List[str]] = {
         "finance leads", "finance segment",
         "general leads", "all leads", "show leads", "crm leads",
         "show real", "show insurance", "show solar", "show ev", "show training",
-    ],
-    "query_open_leads":      [
-        "open leads", "new leads", "pending leads", "show open leads", "open crm",
-        "unassigned leads", "fresh leads", "status open", "leads not closed",
-        "show new leads", "view open leads", "my open leads", "active leads",
-    ],
-    "query_today_leads":     [
-        "today leads", "today's leads", "today followup leads", "leads today",
-        "follow up today leads", "today crm", "due today", "leads due today",
-        "show today leads", "today's followup", "scheduled today",
-    ],
-    "query_overdue_leads":   [
-        "overdue leads", "missed leads", "expired leads", "overdue followup",
-        "leads overdue", "past due leads", "missed followup leads",
-        "show overdue", "overdue crm", "leads not followed up", "lapsed leads",
-    ],
-    "query_walkin_leads":    [
-        "walkin leads", "walk-in leads", "walk in leads", "walkins", "walk-ins",
-        "show walkins", "walk in crm", "walk in customers", "showroom leads",
-        "show walk in leads", "walkin crm leads",
     ],
     "general_help":          ["help", "what can you do", "capabilities", "what are you", "hi", "hello", "hey vgk", "namaste"],
     "create_walkin":         ["create walkin", "new walkin", "add walkin", "walk in customer", "walkin customer",
@@ -461,15 +463,26 @@ def _rb_detect_intent(msg_lower: str, conversation_history: List[ConversationTur
     def _allowed(intent: str) -> bool:
         return not allowed or intent in allowed
 
+    is_question_query = any(msg_lower.strip().startswith(w) for w in (
+        'what', 'show', 'list', 'how', 'display', 'view', 'get', 'tell', 'count', 'fetch', 'check', 'report'
+    ))
+
+    WRITE_INTENTS = {"create_lead", "create_task", "create_service_ticket", "create_walkin"}
+
     # DC: Check CURRENT message first — prevents history bleeding
     for intent, kws in _RB_KEYWORDS.items():
+        if is_question_query and intent in WRITE_INTENTS:
+            continue
         if _allowed(intent) and any(kw in msg_lower for kw in kws):
             return intent
+
     # Fall back to most recent history turn only if current message has no match
     for turn in reversed(conversation_history):
         if turn.role == "user":
             tl = turn.text.lower()
             for intent, kws in _RB_KEYWORDS.items():
+                if is_question_query and intent in WRITE_INTENTS:
+                    continue
                 if _allowed(intent) and any(kw in tl for kw in kws):
                     return intent
             break  # Only check the last user turn
@@ -1011,18 +1024,42 @@ def _rb_query_open_leads(db: Session) -> Dict:
 
 
 def _rb_query_today_leads(db: Session) -> Dict:
-    """DC-ASSISTANT-LEADS-001: Return count of today's follow-up CRM leads and navigate URL."""
+    """DC-ASSISTANT-LEADS-001: Return count and list of today's new CRM leads and follow-ups."""
     try:
         from app.models.crm import CRMLead
-        today_date = today_ist().date()
-        count = db.query(CRMLead).filter(CRMLead.next_followup_date == today_date).count()
-    except Exception:
-        count = None
-    count_str = f"{count} leads due today" if count is not None else "leads due today"
-    reply = f"📋 Found {count_str}. Opening CRM with today's follow-up filter…"
-    speak = f"Found {count_str}. Opening now."
+        from sqlalchemy import or_
+        today_date = today_ist()
+        start_of_today_utc = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=5, minutes=30)
+
+        leads = db.query(CRMLead).filter(
+            or_(
+                CRMLead.created_at >= start_of_today_utc,
+                CRMLead.next_followup_date == today_date
+            )
+        ).order_by(CRMLead.created_at.desc()).all()
+
+        count = len(leads)
+        if count > 0:
+            lines = [f"📋 **Found {count} new/due leads today ({today_date.strftime('%d %b %Y')}):**\n"]
+            for idx, l in enumerate(leads[:15], 1):
+                st = (l.status or "new").upper()
+                stage = (l.solar_pipeline_status or "").replace("_", " ").title()
+                stage_str = f" | Stage: {stage}" if stage else ""
+                lines.append(f"{idx}. **{l.name}** (`{l.phone}`) — Status: **{st}**{stage_str}")
+            if count > 15:
+                lines.append(f"\n_...and {count - 15} more leads._")
+            reply = "\n".join(lines)
+            speak = f"Found {count} leads today. Here is the list."
+        else:
+            reply = "📋 No new leads added or due today."
+            speak = "No leads found for today."
+    except Exception as exc:
+        reply = f"Error retrieving today's leads: {exc}"
+        speak = "Error retrieving leads."
+        count = 0
+
     result = _rb_resp("query_today_leads", reply, speak, status="done")
-    result["route"] = f"/staff/crm/team-leads?date_from={today_ist().date().isoformat()}&date_to={today_ist().date().isoformat()}"
+    result["route"] = f"/staff/crm/team-leads?date_from={today_ist().isoformat()}&date_to={today_ist().isoformat()}"
     result["lead_count"] = count
     result["filter_label"] = "Today's Leads"
     return result
@@ -1033,7 +1070,7 @@ def _rb_query_overdue_leads(db: Session) -> Dict:
     try:
         from app.models.crm import CRMLead
         from sqlalchemy import and_
-        today_date = today_ist().date()
+        today_date = today_ist()
         count = db.query(CRMLead).filter(
             and_(
                 CRMLead.next_followup_date < today_date,
@@ -1046,7 +1083,7 @@ def _rb_query_overdue_leads(db: Session) -> Dict:
     reply = f"⚠️ Found {count_str} past their follow-up date. Opening CRM…"
     speak = f"Found {count_str} overdue. Opening now."
     result = _rb_resp("query_overdue_leads", reply, speak, status="done")
-    result["route"] = f"/staff/crm/team-leads?date_to={today_ist().date().isoformat()}&status=open"
+    result["route"] = f"/staff/crm/team-leads?date_to={today_ist().isoformat()}&status=open"
     result["lead_count"] = count
     result["filter_label"] = "Overdue Leads"
     return result
@@ -1072,7 +1109,7 @@ def _rb_query_walkin_leads(db: Session) -> Dict:
 def _query_partner_activity(partner_id: int, db: Session, language: str = "en") -> Dict:
     """DC: Return today's followup leads and walkins for a partner."""
     from sqlalchemy import text as sq_text
-    today = today_ist().date()
+    today = today_ist()
     lines: List[str] = []
 
     # ── CRM leads due today ────────────────────────────────────────────────────
@@ -1230,7 +1267,7 @@ def _rule_based_fallback(req: VGKRequest, portal_type: str, user_name: str,
     if intent == "query_attendance" and employee_id:
         try:
             from app.models.staff_attendance import StaffAttendance
-            today_date = today_ist().date()
+            today_date = today_ist()
             att = db.query(StaffAttendance).filter(
                 StaffAttendance.employee_id == employee_id,
                 StaffAttendance.date == today_date
@@ -1448,7 +1485,7 @@ async def _process(req: VGKRequest, portal_type: str, user_name: str,
     if employee_id is not None and intent == "query_attendance":
         try:
             from app.models.staff_attendance import StaffAttendance
-            today_date = today_ist().date()
+            today_date = today_ist()
             att = db.query(StaffAttendance).filter(
                 StaffAttendance.employee_id == employee_id,
                 StaffAttendance.date == today_date
