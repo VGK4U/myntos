@@ -49,19 +49,30 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
 
     from app.models.operator_calls import OperatorCall
 
-    # 1. Tele Sales Department Staff
+    # 1. Tele Sales / Telecaller Department Staff (Strictly excluding Freelancers & Non-Telecaller Departments)
     staff_rows = db.execute(text("""
-        SELECT e.id, e.full_name
+        SELECT e.id, e.full_name, e.emp_code
         FROM staff_employees e
         LEFT JOIN staff_departments d ON d.id = e.department_id
         LEFT JOIN staff_employee_departments ed ON ed.employee_id = e.id
         LEFT JOIN staff_departments ad ON ad.id = ed.department_id
-        WHERE (LOWER(d.name) LIKE '%sales%' OR LOWER(ad.name) LIKE '%sales%')
+        LEFT JOIN staff_roles r ON r.id = e.role_id
+        WHERE (
+            LOWER(d.name) LIKE '%tele%' 
+            OR LOWER(ad.name) LIKE '%tele%'
+            OR LOWER(COALESCE(r.role_code, '')) LIKE '%tele%'
+            OR LOWER(COALESCE(r.role_name, '')) LIKE '%tele%'
+          )
           AND (e.status IS NULL OR e.status = 'active')
           AND (e.is_deleted IS NOT TRUE)
           AND e.full_name IS NOT NULL
           AND e.full_name != ''
-        GROUP BY e.id, e.full_name
+          AND e.emp_code NOT ILIKE 'FL%'
+          AND e.emp_code NOT ILIKE 'FP%'
+          AND LOWER(COALESCE(e.employment_type, '')) NOT IN ('freelancer', 'external', 'partner_freelancer', 'contractor_freelancer', 'partner')
+          AND LOWER(COALESCE(r.role_code, '')) NOT LIKE '%freelancer%'
+          AND LOWER(COALESCE(r.role_name, '')) NOT LIKE '%freelancer%'
+        GROUP BY e.id, e.full_name, e.emp_code
     """)).fetchall()
 
     leaderboard = []
@@ -241,12 +252,39 @@ def generate_bi_hourly_performance_message(db: Session, slot_name: str = "Bi-Hou
     return msg
 
 
-def dispatch_bi_hourly_sales_performance_report(db: Session, slot_name: str = "Bi-Hourly Update") -> Dict[str, Any]:
+def dispatch_bi_hourly_sales_performance_report(
+    db: Session,
+    slot_name: str = "Bi-Hourly Update",
+    trigger_type: str = "AUTO_SCHEDULER",
+    triggered_by: str = "System Cron"
+) -> Dict[str, Any]:
     """
     Generates and dispatches the bi-hourly performance report to Sales WhatsApp Group.
     """
     from app.services.whatsapp_group_alert_service import send_group_bot_message
+    from app.services.whatsapp_audit_service import log_wa_trigger_execution
 
     msg = generate_bi_hourly_performance_message(db, slot_name=slot_name)
     logger.info(f"📊 Dispatching sales performance update for slot {slot_name}...")
-    return send_group_bot_message(msg)
+    res = send_group_bot_message(msg)
+    is_succ = isinstance(res, dict) and res.get("success") is True
+
+    targets = [
+        {"id": "t1", "type": "group", "name": "Mynt Sales New Group", "identifier": "9053899899"},
+        {"id": "t2", "type": "group", "name": "Executive Team Announcements", "identifier": "7702830269"}
+    ]
+
+    log_wa_trigger_execution(
+        job_id="wa_bihourly_sales_perf_report",
+        job_name="Sales Team 2-Hour Report & Leaderboard",
+        trigger_type=trigger_type,
+        triggered_by=triggered_by,
+        targets=targets,
+        sent_count=1 if is_succ else 0,
+        failed_count=0 if is_succ else 1,
+        status="SUCCESS" if is_succ else "FAILED",
+        error_message=res.get("error") if not is_succ else None,
+        detail_data=res
+    )
+
+    return res
