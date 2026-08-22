@@ -316,38 +316,139 @@ def _query_day_planner(employee_id: int, db: Session, language: str) -> Dict:
     return {"reply_text": txt, "speak_text": speak}
 
 
-def _query_tasks(employee_id: int, db: Session, language: str) -> Dict:
-    tasks = db.query(StaffTask).filter(
-        StaffTask.primary_assignee_id == employee_id,
-        StaffTask.status.in_(["pending", "in_progress", "on_hold"])
-    ).order_by(
-        desc(StaffTask.priority == "critical"),
-        desc(StaffTask.priority == "high"),
-        StaffTask.due_date
-    ).limit(5).all()
+def _query_attendance(employee_id: Optional[int], db: Session, language: str = "en", msg_lower: str = "") -> Dict:
+    """
+    DC_ATTENDANCE_QUERY_001 — Unified Staff & Team Attendance Engine.
+    Handles both individual and team-wide attendance queries.
+    """
+    try:
+        from app.models.staff_attendance import StaffAttendance
+        from app.models.staff import StaffEmployee
+        today_date = today_ist()
 
-    if not tasks:
-        msgs = {
-            "en": "Great news — you have no pending tasks right now!",
-            "hi": "बढ़िया! अभी आपके पास कोई लंबित कार्य नहीं है।",
-            "te": "మంచి వార్త — ఇప్పుడు మీకు పెండింగ్ పనులు లేవు!"
-        }
-        txt = msgs.get(language, msgs["en"])
-        return {"reply_text": txt, "speak_text": txt}
+        is_team_query = any(w in msg_lower for w in ["who", "all", "team", "staff", "present", "absent", "everyone"]) or not employee_id
 
-    lines = []
-    for t in tasks:
-        due = f" (due {t.due_date.strftime('%d %b')})" if t.due_date else ""
-        lines.append(f"• [{t.priority.upper()}] {t.title[:35]}{due}")
+        if is_team_query:
+            att_rows = db.query(StaffAttendance, StaffEmployee).join(
+                StaffEmployee, StaffEmployee.id == StaffAttendance.employee_id
+            ).filter(
+                StaffAttendance.date == today_date,
+                StaffEmployee.status == "active"
+            ).all()
 
-    hdrs = {
-        "en": f"You have {len(tasks)} active tasks:",
-        "hi": f"आपके {len(tasks)} सक्रिय कार्य हैं:",
-        "te": f"మీకు {len(tasks)} చురుకైన పనులు ఉన్నాయి:"
-    }
-    txt = hdrs.get(language, hdrs["en"]) + " " + "; ".join(lines)
-    speak = hdrs.get(language, hdrs["en"]) + f" Top: {tasks[0].title[:30]}"
-    return {"reply_text": txt, "speak_text": speak}
+            if att_rows:
+                present_list = []
+                half_day_list = []
+                absent_list = []
+
+                for att, emp in att_rows:
+                    ci = att.clock_in.strftime('%I:%M %p') if att.clock_in else 'Not clocked in'
+                    co = att.clock_out.strftime('%I:%M %p') if att.clock_out else 'Active'
+                    st = (att.status or "").lower()
+
+                    if st in ("present", "clocked_in", "completed"):
+                        present_list.append(f"• **{emp.full_name}** (`{emp.emp_code}`) — In: {ci} | Out: {co}")
+                    elif st in ("half_day", "partial"):
+                        half_day_list.append(f"• **{emp.full_name}** (`{emp.emp_code}`) — In: {ci}")
+                    else:
+                        absent_list.append(f"• **{emp.full_name}** (`{emp.emp_code}`)")
+
+                lines = [f"📋 **Today's Team Attendance Report ({today_date.strftime('%d %b %Y')}):**\n"]
+                if present_list:
+                    lines.append(f"🟢 **Present / Clocked In ({len(present_list)} Staff):**")
+                    lines.extend(present_list)
+                    lines.append("")
+                if half_day_list:
+                    lines.append(f"🌗 **Half Day ({len(half_day_list)} Staff):**")
+                    lines.extend(half_day_list)
+                    lines.append("")
+                if absent_list:
+                    lines.append(f"🔴 **Absent / Not Clocked In ({len(absent_list)} Staff):**")
+                    lines.extend(absent_list)
+
+                reply = "\n".join(lines)
+                speak = f"Found {len(present_list)} staff present today."
+                return {"reply_text": reply, "speak_text": speak}
+            else:
+                return {
+                    "reply_text": f"📋 No attendance records logged yet for today ({today_date.strftime('%d %b %Y')}).",
+                    "speak_text": "No attendance records logged for today."
+                }
+        else:
+            att = db.query(StaffAttendance).filter(
+                StaffAttendance.employee_id == employee_id,
+                StaffAttendance.date == today_date
+            ).first()
+            if att:
+                worked_h = round((att.worked_minutes or 0) / 60, 1)
+                ci = att.clock_in.strftime('%I:%M %p') if att.clock_in else 'Not clocked in'
+                co = att.clock_out.strftime('%I:%M %p') if att.clock_out else 'Not clocked out'
+                gps = (att.gps_status or 'unknown').replace('_', ' ').title()
+                reply = f"✅ **Today's Attendance Status:** Clocked in at {ci}, out: {co}. Worked: {worked_h}h. GPS: {gps}."
+            else:
+                reply = "⚠️ No attendance record for today. Please clock in from the attendance page."
+            return {"reply_text": reply, "speak_text": reply}
+
+    except Exception as exc:
+        logger.warning(f"[VGK] query_attendance error: {exc}")
+        return {"reply_text": "Error retrieving attendance status.", "speak_text": "Error retrieving attendance status."}
+
+
+def _query_tasks(employee_id: Optional[int], db: Session, language: str = "en", msg_lower: str = "") -> Dict:
+    """
+    DC_TASKS_QUERY_001 — Unified Staff & Team Task Engine.
+    """
+    try:
+        from app.models.staff_tasks import StaffTask
+        from app.models.staff import StaffEmployee
+        from sqlalchemy import desc
+
+        is_team_query = any(w in msg_lower for w in ["all", "team", "pending", "open", "show"]) or not employee_id
+
+        if is_team_query or (employee_id in (1, 28, 34, 47)):
+            tasks_query = db.query(StaffTask, StaffEmployee).outerjoin(
+                StaffEmployee, StaffEmployee.id == StaffTask.primary_assignee_id
+            ).filter(
+                StaffTask.status.in_(["pending", "in_progress", "on_hold"])
+            ).order_by(
+                desc(StaffTask.priority == "critical"),
+                desc(StaffTask.priority == "high"),
+                StaffTask.due_date
+            ).limit(10).all()
+
+            if tasks_query:
+                lines = [f"📋 **Active Team Tasks ({len(tasks_query)} items):**\n"]
+                for idx, (t, emp) in enumerate(tasks_query, 1):
+                    assignee_str = f" → assigned to *{emp.full_name}*" if emp else ""
+                    due_str = f" (due {t.due_date.strftime('%d %b')})" if t.due_date else ""
+                    lines.append(f"{idx}. **[{t.priority.upper()}]** {t.title}{assignee_str}{due_str} — Status: *{(t.status or 'pending').title()}*")
+                reply = "\n".join(lines)
+                speak = f"Found {len(tasks_query)} active team tasks."
+                return {"reply_text": reply, "speak_text": speak}
+
+        if employee_id:
+            tasks = db.query(StaffTask).filter(
+                StaffTask.primary_assignee_id == employee_id,
+                StaffTask.status.in_(["pending", "in_progress", "on_hold"])
+            ).order_by(
+                desc(StaffTask.priority == "critical"),
+                desc(StaffTask.priority == "high"),
+                StaffTask.due_date
+            ).limit(5).all()
+
+            if tasks:
+                lines = [f"📋 **Your Active Tasks ({len(tasks)} items):**\n"]
+                for idx, t in enumerate(tasks, 1):
+                    due_str = f" (due {t.due_date.strftime('%d %b')})" if t.due_date else ""
+                    lines.append(f"{idx}. **[{t.priority.upper()}]** {t.title}{due_str}")
+                reply = "\n".join(lines)
+                speak = f"You have {len(tasks)} active tasks."
+                return {"reply_text": reply, "speak_text": speak}
+
+        return {"reply_text": "Great news — no pending tasks right now!", "speak_text": "No pending tasks right now."}
+    except Exception as exc:
+        logger.warning(f"[VGK] query_tasks error: {exc}")
+        return {"reply_text": "Error retrieving tasks.", "speak_text": "Error retrieving tasks."}
 
 
 def _query_talk_time(employee_id: Optional[int], db: Session, language: str = "en") -> Dict:
@@ -441,7 +542,19 @@ _RB_KEYWORDS: Dict[str, List[str]] = {
         "show walkins", "walk in crm", "walk in customers", "showroom leads",
         "show walk in leads", "walkin crm leads",
     ],
-    "query_tasks":           ["my tasks", "pending task", "show tasks", "task list", "open task", "active tasks", "list tasks", "show my tasks", "what tasks"],
+    "query_attendance":      [
+        "who are present today", "who is present today", "who is present", "who are present",
+        "who is absent today", "who is absent", "who are absent", "attendance today", "staff attendance",
+        "today attendance", "present staff", "absent staff", "who clocked in", "who is in office",
+        "who is working today", "attendance report", "my attendance", "am i clocked in", "clock in status",
+        "present today", "absent today", "today present"
+    ],
+    "query_tasks":           [
+        "pending tasks", "show pending tasks", "all pending tasks", "open tasks",
+        "show open tasks", "my tasks", "pending task", "show tasks", "task list",
+        "open task", "active tasks", "list tasks", "show my tasks", "what tasks",
+        "tasks assigned", "team tasks"
+    ],
     "query_talk_time":       [
         "highest talk time", "who has done highest talk time", "who has dont highest talk time",
         "highest talk", "who talked most", "most talk time", "who has highest talk time",
@@ -1267,11 +1380,11 @@ def _rule_based_fallback(req: VGKRequest, portal_type: str, user_name: str,
     if intent == "query_day_planner" and employee_id:
         r = _query_day_planner(employee_id, db, req.language)
         return _rb_resp(intent, r["reply_text"], r["speak_text"], "done")
-    if intent == "query_tasks" and employee_id:
-        r = _query_tasks(employee_id, db, req.language)
+    if intent == "query_tasks":
+        r = _query_tasks(employee_id, db, req.language, msg_lower)
         return _rb_resp(intent, r["reply_text"], r["speak_text"], "done")
-    if intent == "query_talk_time":
-        r = _query_talk_time(employee_id, db, req.language)
+    if intent == "query_attendance":
+        r = _query_attendance(employee_id, db, req.language, msg_lower)
         return _rb_resp(intent, r["reply_text"], r["speak_text"], "done")
     if intent == "end_journey":
         return _rb_end_journey(employee_id, db)
@@ -1303,25 +1416,9 @@ def _rule_based_fallback(req: VGKRequest, portal_type: str, user_name: str,
         return _rb_resp("query_partner_activity",
                         "⚠️ Could not identify your partner account. Please log in again.",
                         "Partner account not found.", status="done")
-    if intent == "query_attendance" and employee_id:
-        try:
-            from app.models.staff_attendance import StaffAttendance
-            today_date = today_ist()
-            att = db.query(StaffAttendance).filter(
-                StaffAttendance.employee_id == employee_id,
-                StaffAttendance.date == today_date
-            ).first()
-            if att:
-                worked_h = round((att.worked_minutes or 0) / 60, 1)
-                ci = att.clock_in.strftime('%I:%M %p') if att.clock_in else 'Not clocked in'
-                co = att.clock_out.strftime('%I:%M %p') if att.clock_out else 'Not clocked out'
-                gps = (att.gps_status or 'unknown').replace('_', ' ').title()
-                reply = f"✅ Today's attendance: Clocked in at {ci}, out: {co}. Worked: {worked_h}h. GPS: {gps}."
-            else:
-                reply = "⚠️ No attendance record for today. Please clock in from the attendance page."
-            return _rb_resp("query_attendance", reply, reply[:60], status="done")
-        except Exception as _ae:
-            logger.warning(f"[VGK] rb query_attendance error: {_ae}")
+    if intent == "query_talk_time":
+        r = _query_talk_time(employee_id, db, req.language)
+        return _rb_resp(intent, r["reply_text"], r["speak_text"], "done")
     if intent == "edit_task":
         return _rb_resp("navigate", "To edit a task, please go to your Tasks page.",
                         "Opening tasks page.", status="done",
@@ -1423,8 +1520,15 @@ async def _process(req: VGKRequest, portal_type: str, user_name: str,
         status = "done"
         action_ready = False
 
-    if employee_id is not None and intent == "query_tasks" and status in ("done", "confirming"):
-        result = _query_tasks(employee_id, db, req.language)
+    if intent == "query_tasks" and status in ("done", "confirming"):
+        result = _query_tasks(employee_id, db, req.language, req.user_message.lower())
+        reply_text = result["reply_text"]
+        speak_text = result["speak_text"]
+        status = "done"
+        action_ready = False
+
+    if intent == "query_attendance" and status in ("done", "confirming"):
+        result = _query_attendance(employee_id, db, req.language, req.user_message.lower())
         reply_text = result["reply_text"]
         speak_text = result["speak_text"]
         status = "done"
