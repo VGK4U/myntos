@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>Mynt Real LLP Staff Portal — WhatsApp Center</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <script src="/public/js/staff-token-manager.js"></script>
+  <script src="/public/js/staff-fetch.js"></script>
+  <script src="/public/js/nda-enforcement.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;background:#f3f4f6;color:#111827;min-height:100vh}
+
+    /* ── Staff Portal Main Content Shell ─────────────────────────────── */
+    .main-content{margin-left:260px;min-height:100vh;display:flex;flex-direction:column;transition:margin-left .3s ease}
+    @media(max-width:768px){.main-content{margin-left:0 !important}}
+    .content-area{flex:1;padding:20px 24px;max-width:1600px;width:100%}
+
+    /* ── WhatsApp Center Page Banner ─────────────────────────────────── */
+    .wa-center-banner{background:linear-gradient(135deg,#064e3b,#065f46,#047857);color:#fff;border-radius:12px;padding:16px 20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(4,120,87,.2)}
+    .wa-center-banner .hdr-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+    .wa-center-banner h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:10px;margin:0}
+    .wa-center-banner p{font-size:12px;opacity:.9;margin:3px 0 0 0}
+    .hdr-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .status-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:999px;padding:4px 12px;font-size:11.5px;font-weight:700}
+    .unread-pill{display:inline-flex;align-items:center;gap:5px;background:#ef4444;color:#fff;border-radius:999px;padding:4px 10px;font-size:11.5px;font-weight:700}
+
+    /* ── Global Search Input ─────────────────────────────────────────── */
+    .hdr-search-box{position:relative;width:240px}
+    .hdr-search-box input{width:100%;padding:6px 12px 6px 32px;border-radius:20px;border:none;background:rgba(255,255,255,.95);font-size:12px;outline:none}
+    .hdr-search-box i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#6b7280;font-size:11px}
+
+    /* ── Tab Bar ──────────────────────────────────────────────────────── */
+    .wa-tab-bar{display:flex;align-items:center;gap:4px;background:#fff;border-radius:10px;padding:6px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:16px;overflow-x:auto}
+    .wa-tab-btn{padding:9px 16px;font-size:12.5px;font-weight:700;color:#4b5563;border:none;background:none;cursor:pointer;border-radius:8px;white-space:nowrap;display:flex;align-items:center;gap:8px;transition:.15s}
+    .wa-tab-btn:hover{background:#f3f4f6;color:#111827}
+    .wa-tab-btn.active{background:#059669;color:#fff;box-shadow:0 2px 6px rgba(5,150,105,.25)}
+    .wa-tab-btn .badge-num{background:rgba(255,255,255,.25);color:#fff;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:800}
+
+    /* ── Tab Panes ────────────────────────────────────────────────────── */
+    .tab-pane{display:none}
+    .tab-pane.active{display:block}
+
+    /* ── TAB 1: CRM INBOX STYLING ────────────────────────────────────── */
+    .stats-bar{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+    .stat-card{background:#fff;border-radius:8px;padding:10px 14px;flex:1;min-width:100px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer;transition:.15s;border:2px solid transparent}
+    .stat-card:hover{border-color:#a7f3d0}
+    .stat-card.active{border-color:#059669;background:#ecfdf5}
+    .stat-card .stat-val{font-size:18px;font-weight:800;color:#059669}
+    .stat-card .stat-lbl{font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-top:2px}
+
+    .filter-wrap{background:#fff;padding:10px 14px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:14px;display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+    .filter-wrap input, .filter-wrap select{padding:5px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;outline:none}
+    .filter-wrap input:focus, .filter-wrap select:focus{border-color:#059669}
+
+    .btn-custom{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:none;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+    .btn-green{background:#059669;color:#fff}
+    .btn-green:hover{background:#047857}
+    .btn-gray{background:#6b7280;color:#fff}
+    .btn-gray:hover{background:#4b5563}
+    .btn-outline-custom{background:#fff;color:#374151;border:1px solid #d1d5db}
+    .btn-outline-custom:hover{background:#f9fafb}
+
+    .inbox-wrap{background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden}
+    .inbox-header{display:grid;grid-template-columns:14px 28px 185px 1fr 150px 80px 75px 80px 145px 110px;gap:8px;padding:10px 14px;background:#f9fafb;border-bottom:2px solid #e5e7eb;font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase}
+    .inbox-row{display:grid;grid-template-columns:14px 28px 185px 1fr 150px 80px 75px 80px 145px 110px;gap:8px;padding:10px 14px;border-bottom:1px solid #f3f4f6;align-items:center;cursor:pointer;transition:.12s}
+    .inbox-row:hover{background:#f0fdf4}
+    .inbox-row.unread{background:#f0fdf4;font-weight:600}
+    .unread-dot{width:8px;height:8px;background:#25d366;border-radius:50%}
+
+    .ei-chip{display:inline-flex;align-items:center;gap:3px;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700}
+    .ei-crm{background:#ede9fe;color:#6d28d9}
+    .ei-service{background:#dbeafe;color:#1d4ed8}
+    .ei-contacts{background:#d1fae5;color:#065f46}
+
+    /* ── TAB 2: MESSENGER SPLIT VIEW ─────────────────────────────────── */
+    .messenger-container{display:flex;height:calc(100vh - 255px);min-height:460px;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
+    .msg-sidebar{width:310px;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;background:#f9fafb;flex-shrink:0}
+    .msg-sidebar-header{padding:10px 12px;border-bottom:1px solid #e5e7eb;background:#fff}
+    .msg-scope-select{width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:11.5px;font-weight:600;margin-bottom:6px;outline:none}
+    .msg-search-input{width:100%;padding:6px 10px 6px 28px;border:1px solid #d1d5db;border-radius:6px;font-size:11.5px;outline:none}
+
+    .conv-list{flex:1;overflow-y:auto}
+    .conv-card{padding:10px 12px;border-bottom:1px solid #f3f4f6;cursor:pointer;transition:.12s;display:flex;align-items:center;gap:10px;background:#fff}
+    .conv-card:hover,.conv-card.active{background:#e6f4ea}
+    .conv-avatar{width:36px;height:36px;border-radius:50%;background:#059669;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+    .conv-info{flex:1;min-width:0}
+    .conv-name{font-size:12.5px;font-weight:700;color:#111827;display:flex;align-items:center;justify-content:space-between}
+    .conv-snippet{font-size:11px;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+
+    .msg-chat-pane{flex:1;display:flex;flex-direction:column;background:#efeae2}
+    .chat-header{padding:10px 14px;background:#fff;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between}
+    .chat-title h3{font-size:13.5px;font-weight:700;margin:0}
+    .chat-title p{font-size:11px;color:#6b7280;margin:0}
+
+    .chat-history-box{flex:1;padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+    .chat-bubble{max-width:75%;padding:8px 12px;border-radius:10px;font-size:12.5px;line-height:1.45;word-break:break-word;position:relative;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+    .bubble-in{background:#fff;align-self:flex-start;border-top-left-radius:2px;color:#111827}
+    .bubble-out{background:#d9fdd3;align-self:flex-end;border-top-right-radius:2px;color:#111827}
+    .bubble-meta{font-size:9.5px;color:#6b7280;margin-top:3px;display:flex;align-items:center;justify-content:flex-end;gap:4px}
+    .type-badge{display:inline-block;padding:1px 5px;border-radius:4px;font-size:9.5px;font-weight:700;margin-right:4px}
+    .badge-customer{background:#dbeafe;color:#1d4ed8}
+    .badge-group{background:#fef3c7;color:#92400e}
+    .badge-channel{background:#fae8ff;color:#86198f}
+    .badge-staff{background:#d1fae5;color:#065f46}
+
+    .chat-composer-bar{padding:10px 14px;background:#f0f2f5;border-top:1px solid #e5e7eb;display:flex;flex-direction:column;gap:6px}
+    .composer-row{display:flex;align-items:center;gap:6px}
+    .composer-input{flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:18px;font-size:12.5px;outline:none;background:#fff}
+    .composer-input:focus{border-color:#059669}
+
+    /* Attachment Preview */
+    .attach-preview-card{background:#fff;border:1px solid #d1d5db;border-radius:6px;padding:6px 10px;display:none;align-items:center;gap:8px;font-size:11.5px}
+    .attach-preview-card.show{display:flex}
+
+    /* ── TAB 3: TEMPLATE HUB ─────────────────────────────────────────── */
+    .tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+    .tpl-card{background:#fff;border-radius:8px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.05);border:1px solid #e5e7eb}
+    .tpl-card h4{font-size:13.5px;font-weight:700;color:#111827;margin-bottom:4px}
+    .tpl-card p{font-size:11.5px;color:#4b5563;line-height:1.4;margin-bottom:8px;max-height:70px;overflow-y:auto;white-space:pre-wrap}
+
+    /* ── Modals & Toast ──────────────────────────────────────────────── */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:20px}
+    .modal-overlay.open{display:flex}
+    .modal-box{background:#fff;border-radius:12px;max-width:580px;width:100%;box-shadow:0 10px 25px rgba(0,0,0,.18);overflow:hidden}
+    .modal-head{padding:12px 16px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between}
+    .modal-body{padding:16px;max-height:75vh;overflow-y:auto}
+
+    .toast{position:fixed;bottom:20px;right:20px;background:#111827;color:#fff;padding:10px 16px;border-radius:8px;font-size:12.5px;font-weight:600;z-index:99999;opacity:0;transition:.2s;pointer-events:none}
+    .toast.show{opacity:1}
+    .toast.green{background:#059669}
+    .toast.red{background:#dc2626}
+  </style>
+</head>
+<body>
+
+<!-- CANONICAL STAFF PORTAL INCLUDES -->
+<script src="/public/js/menu-master.js"></script>
+<script src="/staff_header.js"></script>
+<script src="/staff_sidebar.js"></script>
+
+<!-- UNIVERSAL STAFF PORTAL SIDEBAR -->
+<nav id="staffSidebar"></nav>
+
+<!-- MAIN CONTENT CONTAINER WITH UNIVERSAL TOP HEADER -->
+<div class="main-content">
+  <div id="headerContainer"></div>
+
+  <div class="content-area">
+
+    <!-- Global Loading Overlay -->
+    <div id="pageLoader" style="text-align:center;padding:60px 20px;color:#059669">
+      <i class="fas fa-spinner fa-spin fa-2x"></i>
+      <div style="margin-top:12px;font-weight:600;font-size:14px">Initializing WhatsApp Center...</div>
+    </div>
+
+    <div id="mainWorkspace" style="display:none">
+
+      <!-- ═══ WHATSAPP CENTER BANNER ═════════════════════════════════════════ -->
+      <div class="wa-center-banner">
+        <div class="hdr-top">
+          <div>
+            <h1><i class="fab fa-whatsapp"></i> WhatsApp Center</h1>
+            <p>Unified WhatsApp Workspace — Operational CRM Inbox, Messenger, Templates, Automations &amp; Audit Logs</p>
+          </div>
+          <div class="hdr-actions">
+            <span class="status-badge" id="hdrGatewayStatus"><i class="fas fa-circle" style="color:#25d366;font-size:8px"></i> Bot Connected &amp; Active</span>
+            <span class="unread-pill" id="hdrUnreadCount"><i class="fas fa-envelope"></i> <span id="unreadNum">0</span> Unread</span>
+            <div class="hdr-search-box">
+              <i class="fas fa-search"></i>
+              <input type="text" id="globalSearchInput" placeholder="Search phone, contact, group..." oninput="onGlobalSearchInput(this.value)">
+            </div>
+            <button class="btn-custom btn-green" onclick="openNewChatModal()"><i class="fas fa-plus"></i> New Message</button>
+            <a href="https://web.whatsapp.com" target="_blank" class="btn-custom btn-outline-custom" style="background:rgba(255,255,255,.9);color:#065f46;border:none"><i class="fab fa-whatsapp"></i> Open WA Web</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ 5-TAB NAVIGATION ══════════════════════════════════════════════════ -->
+      <div class="wa-tab-bar">
+        <button class="wa-tab-btn active" id="btn-tab-inbox" onclick="switchCenterTab('inbox')"><i class="fas fa-inbox"></i> 1. CRM Inbox <span class="badge-num" id="tb-inbox-num">0</span></button>
+        <button class="wa-tab-btn" id="btn-tab-messenger" onclick="switchCenterTab('messenger')"><i class="fas fa-comments"></i> 2. Messenger</button>
+        <button class="wa-tab-btn" id="btn-tab-templates" onclick="switchCenterTab('templates')"><i class="fas fa-file-alt"></i> 3. Template Management Hub</button>
+        <button class="wa-tab-btn" id="btn-tab-automations" onclick="switchCenterTab('automations')"><i class="fas fa-robot"></i> 4. Automations &amp; Trigger Tracker</button>
+        <button class="wa-tab-btn" id="btn-tab-audit" onclick="switchCenterTab('audit')"><i class="fas fa-shield-alt"></i> 5. Audit Log</button>
+      </div>
+
+      <!-- ═══ TAB 1: CRM INBOX ═════════════════════════════════════════════════ -->
+      <div class="tab-pane active" id="pane-inbox">
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+          <div class="stat-card active" id="stat-card-all" onclick="switchInboxSubTab('all')">
+            <div class="stat-val" id="stat-all">0</div>
+            <div class="stat-lbl">All Messages</div>
+          </div>
+          <div class="stat-card" id="stat-card-unread" onclick="switchInboxSubTab('unread')">
+            <div class="stat-val" id="stat-unread" style="color:#ef4444">0</div>
+            <div class="stat-lbl">Unread</div>
+          </div>
+          <div class="stat-card" id="stat-card-pending" onclick="switchInboxSubTab('pending')">
+            <div class="stat-val" id="stat-pending" style="color:#d97706">0</div>
+            <div class="stat-lbl">Pending</div>
+          </div>
+          <div class="stat-card" id="stat-card-completed" onclick="switchInboxSubTab('completed')">
+            <div class="stat-val" id="stat-completed" style="color:#2563eb">0</div>
+            <div class="stat-lbl">Completed</div>
+          </div>
+          <div class="stat-card" id="stat-card-assigned" onclick="switchInboxSubTab('assigned')">
+            <div class="stat-val" id="stat-assigned" style="color:#7c3aed">0</div>
+            <div class="stat-lbl">Assigned</div>
+          </div>
+        </div>
+
+        <!-- Filters Wrap -->
+        <div class="filter-wrap">
+          <input type="text" id="fPhone" placeholder="Filter Phone / Name..." style="width:160px" oninput="debounceLoadInbox()">
+          <input type="date" id="fFrom" onchange="loadInbox(1)">
+          <input type="date" id="fTo" onchange="loadInbox(1)">
+          <select id="fDept" onchange="loadInbox(1)"><option value="">All Departments</option></select>
+          <select id="fCat" onchange="loadInbox(1)"><option value="">All Categories</option></select>
+          <select id="fStatus" onchange="loadInbox(1)">
+            <option value="">All Statuses</option>
+            <option value="new">New</option>
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+          </select>
+          <label style="font-size:12px"><input type="checkbox" id="fExcludeStaff" onchange="loadInbox(1)"> Exclude Staff</label>
+          <label style="font-size:12px"><input type="checkbox" id="fExcludeReminders" onchange="loadInbox(1)"> Exclude Reminders</label>
+          <button class="btn-custom btn-outline-custom" onclick="clearInboxFilters()"><i class="fas fa-undo"></i> Reset</button>
+          <button class="btn-custom btn-green" onclick="loadInbox(1)" style="margin-left:auto"><i class="fas fa-sync"></i> Refresh</button>
+        </div>
+
+        <!-- Inbox Table Grid -->
+        <div class="inbox-wrap">
+          <div class="inbox-header">
+            <span></span><span></span><span>Caller / Phone</span><span>Last Message</span><span>Existing In</span><span>Dept</span><span>Cat</span><span>Status</span><span>Last Sent By</span><span>Actions</span>
+          </div>
+          <div id="inboxBody"><div style="padding:40px;text-align:center;color:#6b7280"><i class="fas fa-spinner fa-spin"></i> Loading CRM Inbox...</div></div>
+        </div>
+      </div>
+
+      <!-- ═══ TAB 2: MESSENGER ═════════════════════════════════════════════════ -->
+      <div class="tab-pane" id="pane-messenger">
+        <div class="messenger-container">
+
+          <!-- Sidebar -->
+          <div class="msg-sidebar">
+            <div class="msg-sidebar-header">
+              <select class="msg-scope-select" id="msgScopeSelect" onchange="onMsgScopeChange(this.value)">
+                <option value="assigned_tagged">📍 My Assigned + Tagged Leads</option>
+                <option value="downline">👥 My Downline Team</option>
+                <option value="all">🌐 All System Conversations (Admin)</option>
+              </select>
+              <div style="position:relative">
+                <i class="fas fa-search" style="position:absolute;left:10px;top:8px;color:#9ca3af;font-size:11px"></i>
+                <input type="text" class="msg-search-input" id="msgSearchInput" placeholder="Search contact, group, phone..." oninput="onMsgSearchInput(this.value)">
+              </div>
+            </div>
+            <div class="conv-list" id="convList"><div style="padding:20px;text-align:center;color:#6b7280">Loading conversations...</div></div>
+          </div>
+
+          <!-- Chat Pane -->
+          <div class="msg-chat-pane">
+            <div class="chat-header">
+              <div class="chat-title">
+                <h3 id="chatHeaderName">Select a conversation</h3>
+                <p id="chatHeaderSub">Select a contact or group from the left sidebar to view messages</p>
+              </div>
+              <div id="chatHeaderActions"></div>
+            </div>
+
+            <div class="chat-history-box" id="chatHistoryBox">
+              <div style="margin:auto;color:#9ca3af;text-align:center"><i class="fab fa-whatsapp" style="font-size:48px;margin-bottom:10px"></i><br>Select a chat to view messages</div>
+            </div>
+
+            <!-- Attachment Preview -->
+            <div class="attach-preview-card" id="attachPreviewCard">
+              <i class="fas fa-paperclip" style="color:#059669;font-size:14px"></i>
+              <span id="attachFileName" style="font-weight:600;flex:1">filename.jpg</span>
+              <button class="btn-custom btn-outline-custom" onclick="clearAttachment()" style="padding:2px 6px"><i class="fas fa-times"></i></button>
+            </div>
+
+            <!-- Composer Bar -->
+            <div class="chat-composer-bar">
+              <div class="composer-row">
+                <label class="btn-custom btn-outline-custom" style="cursor:pointer" title="Attach Image or PDF">
+                  <i class="fas fa-paperclip"></i>
+                  <input type="file" id="msgFileInput" accept="image/*,application/pdf" style="display:none" onchange="onFileSelected(this)">
+                </label>
+                <select id="msgTemplateSel" class="composer-input" style="flex:0 0 190px" onchange="onMsgTemplateSelect(this.value)">
+                  <option value="">— Select Template —</option>
+                </select>
+                <input type="text" class="composer-input" id="msgTextInput" placeholder="Type a WhatsApp message..." onkeypress="if(event.key==='Enter')sendChatMessage()">
+                <button class="btn-custom btn-green" onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i> Send</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ═══ TAB 3: TEMPLATES ═════════════════════════════════════════════════ -->
+      <div class="tab-pane" id="pane-templates">
+        <div style="background:#fff;border-radius:10px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.05);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <h3 style="font-size:15px;font-weight:700;color:#111827;margin:0">Central WhatsApp Template Hub</h3>
+            <p style="font-size:12px;color:#6b7280;margin:2px 0 0 0">65 PostgreSQL templates synchronized with Meta Business API</p>
+          </div>
+          <button class="btn-custom btn-green" onclick="syncTemplatesFromMeta()"><i class="fas fa-sync"></i> Sync Meta Templates</button>
+        </div>
+        <div class="tpl-grid" id="tplGrid"><div style="padding:40px;text-align:center;color:#6b7280"><i class="fas fa-spinner fa-spin"></i> Loading Templates...</div></div>
+      </div>
+
+      <!-- ═══ TAB 4: AUTOMATIONS ═══════════════════════════════════════════════ -->
+      <div class="tab-pane" id="pane-automations">
+        <div style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.05)">
+          <h3 style="font-size:15px;font-weight:700;margin-bottom:8px"><i class="fas fa-robot" style="color:#059669"></i> Daily Scheduler &amp; Live Trigger Tracker</h3>
+          <p style="font-size:12.5px;color:#4b5563;margin-bottom:14px">Automated background WhatsApp dispatches, morning wishes, and field journey performance alerts.</p>
+          <div id="automationsBox"><div style="padding:30px;text-align:center;color:#6b7280"><i class="fas fa-spinner fa-spin"></i> Loading Automation Logs...</div></div>
+        </div>
+      </div>
+
+      <!-- ═══ TAB 5: AUDIT LOG ═════════════════════════════════════════════════ -->
+      <div class="tab-pane" id="pane-audit">
+        <div style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.05)">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+            <div>
+              <h3 style="font-size:15px;font-weight:700;margin:0"><i class="fas fa-shield-alt" style="color:#059669"></i> POSIX Locked System Audit Log</h3>
+              <p style="font-size:12.5px;color:#4b5563;margin:4px 0 0">System transmission history and POSIX <code>fcntl</code> file-locked audit records (<code>whatsapp_audit_service.py</code>).</p>
+            </div>
+            <div class="filter-wrap" style="margin:0">
+              <select id="auditDaysSel" onchange="loadAuditLogHub()">
+                <option value="3" selected>📅 Last 3 Days</option>
+                <option value="7">📅 Last 7 Days</option>
+                <option value="30">📅 Last 30 Days</option>
+                <option value="0">📅 All Time</option>
+              </select>
+              <select id="auditTriggerTypeSel" onchange="loadAuditLogHub()">
+                <option value="all" selected>🔄 All Triggers (Auto + Manual)</option>
+                <option value="auto">🤖 Auto Bot Triggers Only</option>
+                <option value="manual">⚡ Manual Staff Dispatches Only</option>
+              </select>
+              <select id="auditStatusSel" onchange="loadAuditLogHub()">
+                <option value="" selected>All Statuses</option>
+                <option value="success">Sent / Delivered Only</option>
+                <option value="failed">Failed / Error Only</option>
+              </select>
+            </div>
+          </div>
+          <div id="auditLogBox"><div style="padding:30px;text-align:center;color:#6b7280"><i class="fas fa-spinner fa-spin"></i> Loading Audit Log...</div></div>
+        </div>
+      </div>
+
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ASSIGNMENT MODAL ════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="assignModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h4 style="font-size:14px;font-weight:700;color:#065f46;margin:0"><i class="fas fa-user-tag"></i> Assign &amp; Categorise Lead</h4>
+      <button class="btn-custom btn-outline-custom" onclick="closeModal('assignModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <p id="assignTargetInfo" style="font-size:12.5px;color:#374151;margin-bottom:12px;font-weight:600"></p>
+      <div style="margin-bottom:10px">
+        <label style="font-size:11.5px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Department</label>
+        <select id="aDeptSelect" style="width:100%;padding:7px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"><option value="">Select Dept...</option></select>
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:11.5px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Category</label>
+        <select id="aCatSelect" style="width:100%;padding:7px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"><option value="">Select Category...</option></select>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:11.5px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Assigned Staff Employee</label>
+        <select id="aEmpSelect" style="width:100%;padding:7px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"><option value="">Unassigned</option></select>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn-custom btn-outline-custom" onclick="closeModal('assignModal')">Cancel</button>
+        <button class="btn-custom btn-green" onclick="submitAssignment()"><i class="fas fa-check"></i> Save Assignment</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ AUDIT LOG MESSAGE VIEW MODAL ═════════════════════════════════════════ -->
+<div class="modal-overlay" id="auditMsgModal">
+  <div class="modal-box" style="max-width:650px">
+    <div class="modal-head">
+      <h4 style="font-size:14px;font-weight:700;color:#065f46;margin:0"><i class="fas fa-file-alt"></i> POSIX Audit Message Detail</h4>
+      <button class="btn-custom btn-outline-custom" onclick="closeModal('auditMsgModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <span class="ei-chip ei-crm" id="auditMetaTimestamp"><i class="fas fa-clock"></i> —</span>
+        <span class="ei-chip ei-contacts" id="auditMetaRecipient"><i class="fas fa-user"></i> —</span>
+        <span class="ei-chip ei-service" id="auditMetaWamid"><i class="fas fa-hashtag"></i> —</span>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:11.5px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Full Message Payload Body</label>
+        <pre id="auditMsgContent" style="font-family:monospace;font-size:12.5px;background:#1e293b;color:#f8fafc;padding:14px;border-radius:8px;white-space:pre-wrap;word-break:break-word;max-height:350px;overflow-y:auto;margin:0"></pre>
+      </div>
+      <div style="display:flex;justify-content:flex-end">
+        <button class="btn-custom btn-outline-custom" onclick="closeModal('auditMsgModal')">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Toast Notification -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '/api/v1';
+let activeCenterTab = 'inbox';
+let activeScope     = 'assigned_tagged';
+let activeChatPhone = null;
+let activeChatType  = 'individual';
+let activeMediaUrl  = null;
+let pollTimer       = null;
+let debounceTimer   = null;
+
+function getToken() {
+  return localStorage.getItem('staff_token') || localStorage.getItem('token') || sessionStorage.getItem('staff_token') || '';
+}
+
+async function apiFetch(url, opts = {}) {
+  const token = getToken();
+  opts.headers = Object.assign({'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'}, opts.headers || {});
+  if (opts.body && typeof opts.body !== 'string') opts.body = JSON.stringify(opts.body);
+  const res = await fetch(url, opts);
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(errText || res.statusText);
+  }
+  return res.json();
+}
+
+function showToast(msg, type='green') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function switchCenterTab(tabName) {
+  activeCenterTab = tabName;
+  document.querySelectorAll('.wa-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+
+  document.getElementById(`btn-tab-${tabName}`).classList.add('active');
+  document.getElementById(`pane-${tabName}`).classList.add('active');
+
+  if (tabName === 'inbox') loadInbox(1);
+  else if (tabName === 'messenger') loadMessengerHub();
+  else if (tabName === 'templates') loadTemplatesHub();
+  else if (tabName === 'automations') loadAutomationsHub();
+  else if (tabName === 'audit') loadAuditLogHub();
+}
+
+// ── TAB 1: CRM INBOX ────────────────────────────────────────────────────────
+async function loadInbox(page = 1) {
+  try {
+    const phone = document.getElementById('fPhone')?.value || '';
+    const dept  = document.getElementById('fDept')?.value || '';
+    const cat   = document.getElementById('fCat')?.value || '';
+    const status= document.getElementById('fStatus')?.value || '';
+    const exStaff = document.getElementById('fExcludeStaff')?.checked ? 'true' : 'false';
+
+    let url = `${API}/whatsapp/inbox?page=${page}&page_size=20&exclude_staff=${exStaff}`;
+    if (phone) url += `&phone=${encodeURIComponent(phone)}`;
+    if (dept) url += `&department_id=${dept}`;
+    if (cat) url += `&category_id=${cat}`;
+    if (status) url += `&status=${status}`;
+
+    const data = await apiFetch(url);
+    renderInboxRows(data.items || data.data || []);
+    if (data.stats) {
+      document.getElementById('stat-all').textContent = data.stats.all || 0;
+      document.getElementById('stat-unread').textContent = data.stats.unread || 0;
+      document.getElementById('stat-pending').textContent = data.stats.pending || 0;
+      document.getElementById('stat-completed').textContent = data.stats.completed || 0;
+      document.getElementById('stat-assigned').textContent = data.stats.assigned || 0;
+      document.getElementById('unreadNum').textContent = data.stats.unread || 0;
+      document.getElementById('tb-inbox-num').textContent = data.stats.unread || 0;
+    }
+  } catch(err) {
+    document.getElementById('inboxBody').innerHTML = `<div style="padding:20px;color:#dc2626">Error loading inbox: ${err.message}</div>`;
+  }
+}
+
+function renderInboxRows(items) {
+  if (!items.length) {
+    document.getElementById('inboxBody').innerHTML = '<div style="padding:40px;text-align:center;color:#9ca3af">No CRM WhatsApp messages found.</div>';
+    return;
+  }
+
+  let html = '';
+  items.forEach(item => {
+    const isUnread = !item.is_read;
+    const phone = item.from_phone || item.phone || '';
+    const name  = item.from_name || item.caller_name || 'Customer';
+    const msg   = item.last_message || item.body_text || '';
+    const status= item.status || 'new';
+
+    html += `
+      <div class="inbox-row ${isUnread ? 'unread' : ''}" onclick="openChatFromInbox('${phone}')">
+        <span>${isUnread ? '<div class="unread-dot"></div>' : ''}</span>
+        <span><i class="fab fa-whatsapp" style="color:#25d366"></i></span>
+        <div><strong>${name}</strong><br><small style="color:#6b7280">${phone}</small></div>
+        <div style="color:#4b5563;font-size:12px">${msg}</div>
+        <div><span class="ei-chip ei-crm">CRM Lead</span></div>
+        <div><span class="ei-chip ei-service">${item.department_name || '—'}</span></div>
+        <div><span class="ei-chip ei-contacts">${item.category_name || '—'}</span></div>
+        <div><span class="ei-chip" style="background:#e0e7ff;color:#3730a3">${status}</span></div>
+        <div style="font-size:11px;color:#6b7280">${item.last_sent_by || 'System'}</div>
+        <div>
+          <button class="btn-custom btn-outline-custom" style="padding:3px 7px" onclick="event.stopPropagation();openAssignModal('${phone}', '${name}')"><i class="fas fa-tag"></i> Assign</button>
+        </div>
+      </div>
+    `;
+  });
+  document.getElementById('inboxBody').innerHTML = html;
+}
+
+function debounceLoadInbox() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => loadInbox(1), 350);
+}
+
+function clearInboxFilters() {
+  document.getElementById('fPhone').value = '';
+  document.getElementById('fDept').value = '';
+  document.getElementById('fCat').value = '';
+  document.getElementById('fStatus').value = '';
+  document.getElementById('fExcludeStaff').checked = false;
+  document.getElementById('fExcludeReminders').checked = false;
+  loadInbox(1);
+}
+
+function openChatFromInbox(phone) {
+  switchCenterTab('messenger');
+  activeChatPhone = phone;
+  loadChatHistory(phone, 'individual');
+}
+
+// ── TAB 2: MESSENGER ────────────────────────────────────────────────────────
+async function loadMessengerHub() {
+  try {
+    const data = await apiFetch(`${API}/whatsapp/conversations-hub?scope=${activeScope}`);
+    renderConversationsList(data.conversations || []);
+  } catch(err) {
+    document.getElementById('convList').innerHTML = `<div style="padding:20px;color:#dc2626">Error loading conversations: ${err.message}</div>`;
+  }
+}
+
+function renderConversationsList(convs) {
+  if (!convs.length) {
+    document.getElementById('convList').innerHTML = '<div style="padding:20px;text-align:center;color:#9ca3af">No conversations found.</div>';
+    return;
+  }
+
+  let html = '';
+  convs.forEach(c => {
+    const isGroup = c.recipient_type === 'group';
+    const isChannel = c.recipient_type === 'channel';
+    const badgeClass = isGroup ? 'badge-group' : (isChannel ? 'badge-channel' : 'badge-customer');
+    const badgeLabel = isGroup ? 'Group' : (isChannel ? 'Channel' : (c.badge || 'Contact'));
+
+    html += `
+      <div class="conv-card ${activeChatPhone === c.phone ? 'active' : ''}" onclick="selectChat('${c.phone}', '${c.recipient_type || 'individual'}', '${c.name}')">
+        <div class="conv-avatar">${isGroup ? '👥' : (isChannel ? '📢' : '👤')}</div>
+        <div class="conv-info">
+          <div class="conv-name">
+            <span>${c.name}</span>
+            <span class="type-badge ${badgeClass}">${badgeLabel}</span>
+          </div>
+          <div class="conv-snippet">${c.last_message || ''}</div>
+        </div>
+      </div>
+    `;
+  });
+  document.getElementById('convList').innerHTML = html;
+}
+
+function onMsgScopeChange(scope) {
+  activeScope = scope;
+  loadMessengerHub();
+}
+
+function onMsgSearchInput(val) {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(async () => {
+    if (!val) return loadMessengerHub();
+    try {
+      const data = await apiFetch(`${API}/whatsapp/contacts-search?query=${encodeURIComponent(val)}&scope=${activeScope}`);
+      renderConversationsList(data.results || []);
+    } catch(_) {}
+  }, 300);
+}
+
+async function selectChat(phone, recType, name) {
+  activeChatPhone = phone;
+  activeChatType = recType;
+  document.getElementById('chatHeaderName').textContent = name || phone;
+  document.getElementById('chatHeaderSub').textContent = `${recType.toUpperCase()} • ${phone}`;
+  loadChatHistory(phone, recType);
+}
+
+async function loadChatHistory(phone, recType) {
+  try {
+    const data = await apiFetch(`${API}/whatsapp/chat-history?phone=${encodeURIComponent(phone)}&recipient_type=${recType}`);
+    renderChatMessages(data.messages || []);
+  } catch(err) {
+    document.getElementById('chatHistoryBox').innerHTML = `<div style="margin:auto;color:#dc2626">Error loading history: ${err.message}</div>`;
+  }
+}
+
+function renderChatMessages(msgs) {
+  if (!msgs.length) {
+    document.getElementById('chatHistoryBox').innerHTML = '<div style="margin:auto;color:#9ca3af">No messages in conversation.</div>';
+    return;
+  }
+
+  let html = '';
+  msgs.forEach(m => {
+    const isOut = m.message_type === 'outbound' || m.message_type === 'manual_staff' || m.is_from_me;
+    const bubbleClass = isOut ? 'bubble-out' : 'bubble-in';
+    const msgText = m.body || m.body_text || m.message_body || m.message || m.text || '';
+    const timeStr = m.sent_at || m.time_str || m.received_at || '';
+
+    html += `
+      <div class="chat-bubble ${bubbleClass}">
+        <div style="font-size:12.5px;color:#111827;white-space:pre-wrap">${msgText}</div>
+        ${m.media_url ? `<div style="margin-top:4px"><a href="${m.media_url}" target="_blank" style="color:#059669;font-weight:700"><i class="fas fa-paperclip"></i> View Media Attachment</a></div>` : ''}
+        <div class="bubble-meta">
+          <span>${timeStr}</span>
+          ${isOut ? '<i class="fas fa-check" style="color:#059669"></i>' : ''}
+        </div>
+      </div>
+    `;
+  });
+  const box = document.getElementById('chatHistoryBox');
+  box.innerHTML = html;
+  box.scrollTop = box.scrollHeight;
+}
+
+async function onFileSelected(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const token = getToken();
+    const res = await fetch(`${API}/whatsapp/media-upload`, {
+      method: 'POST',
+      headers: {'Authorization': `Bearer ${token}`},
+      body: formData
+    });
+    const data = await res.json();
+    if (data.media_url) {
+      activeMediaUrl = data.media_url;
+      document.getElementById('attachFileName').textContent = file.name;
+      document.getElementById('attachPreviewCard').classList.add('show');
+      showToast('Media uploaded successfully');
+    }
+  } catch(err) {
+    showToast('Media upload failed', 'red');
+  }
+}
+
+function clearAttachment() {
+  activeMediaUrl = null;
+  document.getElementById('msgFileInput').value = '';
+  document.getElementById('attachPreviewCard').classList.remove('show');
+}
+
+async function sendChatMessage() {
+  const textInput = document.getElementById('msgTextInput');
+  const msgText = textInput.value.trim();
+
+  if (!activeChatPhone) return showToast('Please select a chat first', 'red');
+  if (!msgText && !activeMediaUrl) return showToast('Please type a message or attach media', 'red');
+
+  const payload = {
+    recipient: activeChatPhone,
+    recipient_type: activeChatType,
+    message: msgText,
+    media_url: activeMediaUrl,
+    client_msg_id: `wa_center_${Date.now()}`
+  };
+
+  try {
+    const res = await apiFetch(`${API}/whatsapp/send-message`, {
+      method: 'POST',
+      body: payload
+    });
+
+    if (res.success || res.status === 'sent') {
+      textInput.value = '';
+      clearAttachment();
+      showToast('Message sent');
+      loadChatHistory(activeChatPhone, activeChatType);
+    } else {
+      showToast(res.message || 'Send failed', 'red');
+    }
+  } catch(err) {
+    showToast(err.message || 'Error sending message', 'red');
+  }
+}
+
+// ── TAB 3: TEMPLATES ────────────────────────────────────────────────────────
+async function loadTemplatesHub() {
+  try {
+    const data = await apiFetch(`${API}/whatsapp-config/templates`);
+    const templates = data.templates || [];
+    renderTemplateCards(templates);
+    populateTemplateDropdown(templates);
+  } catch(err) {
+    document.getElementById('tplGrid').innerHTML = `<div style="padding:20px;color:#dc2626">Error loading templates: ${err.message}</div>`;
+  }
+}
+
+function renderTemplateCards(tpls) {
+  if (!tpls.length) {
+    document.getElementById('tplGrid').innerHTML = '<div style="padding:20px;text-align:center;color:#9ca3af">No templates found.</div>';
+    return;
+  }
+
+  let html = '';
+  tpls.forEach(t => {
+    html += `
+      <div class="tpl-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span class="ei-chip ei-crm">${t.segment || 'General'}</span>
+          <span class="ei-chip ei-contacts" style="background:#ecfdf5;color:#065f46">${t.status || 'APPROVED'}</span>
+        </div>
+        <h4>${t.name}</h4>
+        <p>${t.body_text || ''}</p>
+        <div style="font-size:11px;color:#6b7280">Slug: <code>${t.slug || t.id}</code></div>
+      </div>
+    `;
+  });
+  document.getElementById('tplGrid').innerHTML = html;
+}
+
+function populateTemplateDropdown(tpls) {
+  const sel = document.getElementById('msgTemplateSel');
+  sel.innerHTML = '<option value="">— Select Template —</option>';
+  tpls.forEach(t => {
+    sel.innerHTML += `<option value="${t.id}">${t.name} (${t.segment})</option>`;
+  });
+}
+
+function onMsgTemplateSelect(tplId) {
+  if (!tplId) return;
+  sendChatMessage();
+}
+
+async function syncTemplatesFromMeta() {
+  try {
+    const res = await apiFetch(`${API}/whatsapp-config/meta-templates/sync-status`, {method: 'POST'});
+    showToast(res.message || `Synced ${res.total_synced || 0} templates with Meta`);
+    loadTemplatesHub();
+  } catch(err) {
+    showToast('Meta sync failed: ' + err.message, 'red');
+  }
+}
+
+// ── TAB 4: AUTOMATIONS ──────────────────────────────────────────────────────
+async function loadAutomationsHub() {
+  try {
+    const data = await apiFetch(`${API}/whatsapp/scheduler-status`);
+    const jobs = data.jobs || [];
+    const days = data.days || { d2: 'Day -2', d1: 'Yesterday', d0: 'Today' };
+
+    function renderStatusBadge(d) {
+      if (!d) return '<span class="ei-chip" style="background:#f3f4f6;color:#6b7280">Pending</span>';
+      if (d.status === 'EXECUTED' || d.status === 'SENT' || d.status === 'SUCCESS') {
+        return `<span class="ei-chip ei-contacts" style="background:#ecfdf5;color:#047857"><i class="fas fa-check-circle"></i> Executed</span>`;
+      }
+      if (d.status === 'PENDING') {
+        return `<span class="ei-chip" style="background:#fef3c7;color:#92400e"><i class="fas fa-clock"></i> Scheduled</span>`;
+      }
+      return `<span class="ei-chip" style="background:#fef2f2;color:#dc2626"><i class="fas fa-exclamation-triangle"></i> Failed</span>`;
+    }
+
+    let html = '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-top:10px">';
+    html += `
+      <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;text-align:left">
+        <th style="padding:10px 8px">Scheduler Job</th>
+        <th style="padding:10px 8px">Schedule &amp; Frequency</th>
+        <th style="padding:10px 8px">Target Groups / Recipients</th>
+        <th style="padding:10px 8px">Latest Trigger Stats (Total / Sent / Failed)</th>
+        <th style="padding:10px 8px">${days.d2}</th>
+        <th style="padding:10px 8px">${days.d1}</th>
+        <th style="padding:10px 8px">${days.d0}</th>
+        <th style="padding:10px 8px">Next Run</th>
+        <th style="padding:10px 8px;text-align:right">Actions</th>
+      </tr>
+    `;
+
+    jobs.forEach(j => {
+      const recList = j.recipients || [];
+      const recBadges = recList.map(r => {
+        const icon = r.type === 'group' ? 'fa-users' : 'fa-mobile-alt';
+        return `<span class="ei-chip ei-crm" style="margin:1px 2px"><i class="fas ${icon}"></i> ${r.name || r.identifier}</span>`;
+      }).join('') || '<span class="ei-chip" style="background:#f3f4f6;color:#6b7280">System Contacts</span>';
+
+      const st = j.latest_stats || { total_messages: 1, sent_count: 1, failed_count: 0 };
+      const totalVal = (st.total_messages || 0).toLocaleString('en-IN');
+      const sentVal = (st.sent_count || 0).toLocaleString('en-IN');
+      const failedVal = (st.failed_count || 0).toLocaleString('en-IN');
+
+      const statsBadge = `
+        <div style="font-size:11px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+          <span class="ei-chip" style="background:#f3f4f6;color:#374151;font-weight:700" title="Total Target Recipients"><i class="fas fa-paper-plane" style="color:#6b7280;margin-right:2px"></i> ${totalVal} Total</span>
+          <span class="ei-chip" style="background:#ecfdf5;color:#047857;font-weight:700" title="Successfully Dispatched / Sent"><i class="fas fa-check-circle" style="color:#059669;margin-right:2px"></i> ${sentVal} Sent</span>
+          ${st.failed_count > 0 
+            ? `<span class="ei-chip" style="background:#fef2f2;color:#dc2626;font-weight:700" title="Failed Dispatches"><i class="fas fa-times-circle" style="color:#dc2626;margin-right:2px"></i> ${failedVal} Failed</span>`
+            : `<span class="ei-chip" style="background:#f9fafb;color:#9ca3af;font-weight:600" title="Zero Failures"><i class="fas fa-check" style="color:#9ca3af;margin-right:2px"></i> 0 Failed</span>`
+          }
+        </div>
+      `;
+
+      html += `
+        <tr style="border-bottom:1px solid #f3f4f6;align-items:center">
+          <td style="padding:10px 8px">
+            <strong>${j.name || j.job_id}</strong><br>
+            <span class="ei-chip ei-service" style="font-size:9.5px">${j.category || 'Automated Bot'}</span>
+          </td>
+          <td style="padding:10px 8px;font-size:11.5px;color:#374151">
+            <span class="ei-chip" style="background:#e0e7ff;color:#3730a3"><i class="fas fa-history"></i> ${j.schedule || 'Daily'}</span>
+          </td>
+          <td style="padding:10px 8px;max-width:200px">${recBadges}</td>
+          <td style="padding:10px 8px;min-width:210px">${statsBadge}</td>
+          <td style="padding:10px 8px">${renderStatusBadge(j.day_2_ago)}</td>
+          <td style="padding:10px 8px">${renderStatusBadge(j.yesterday)}</td>
+          <td style="padding:10px 8px">${renderStatusBadge(j.today)}</td>
+          <td style="padding:10px 8px;font-weight:700;color:#047857;font-size:11.5px"><i class="fas fa-clock"></i> ${j.next_run || 'Scheduled'}</td>
+          <td style="padding:10px 8px;text-align:right">
+            <button class="btn-custom btn-green" style="padding:4px 9px;font-size:11px" onclick="triggerJobNow('${j.job_id}', this)">
+              <i class="fas fa-bolt"></i> ⚡ Trigger Now
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    html += '</table>';
+    document.getElementById('automationsBox').innerHTML = jobs.length ? html : '<div style="padding:20px;color:#9ca3af">No automation log entries found.</div>';
+  } catch(err) {
+    document.getElementById('automationsBox').innerHTML = `<div style="padding:20px;color:#dc2626">Error loading automations: ${err.message}</div>`;
+  }
+}
+
+async function triggerJobNow(jobId, btnEl) {
+  const origText = btnEl.innerHTML;
+  btnEl.disabled = true;
+  btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Triggering...';
+
+  try {
+    const res = await apiFetch(`${API}/whatsapp/trigger-job`, {
+      method: 'POST',
+      body: { job_id: jobId }
+    });
+
+    btnEl.disabled = false;
+    btnEl.innerHTML = origText;
+
+    if (res.success) {
+      showToast('⚡ Success: ' + (res.message || 'Job triggered successfully!'));
+      loadAutomationsHub();
+    } else {
+      showToast('Trigger failed: ' + (res.error || res.message || 'Error'), 'red');
+    }
+  } catch(err) {
+    btnEl.disabled = false;
+    btnEl.innerHTML = origText;
+    showToast('Network error: ' + err.message, 'red');
+  }
+}
+
+// ── TAB 5: AUDIT LOG ────────────────────────────────────────────────────────
+let auditLogsCache = [];
+
+async function loadAuditLogHub() {
+  try {
+    const days = document.getElementById('auditDaysSel')?.value || '3';
+    const triggerType = document.getElementById('auditTriggerTypeSel')?.value || 'all';
+    const statusFilter = document.getElementById('auditStatusSel')?.value || '';
+
+    let url = `${API}/whatsapp/delivery-logs?days=${days}&trigger_type=${triggerType}&limit=100`;
+    if (statusFilter) url += `&status=${statusFilter}`;
+
+    const data = await apiFetch(url);
+    auditLogsCache = data.logs || data.items || [];
+
+    let html = '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-top:10px">';
+    html += `
+      <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;text-align:left">
+        <th style="padding:10px 8px">Timestamp</th>
+        <th style="padding:10px 8px">Trigger Source</th>
+        <th style="padding:10px 8px">Recipient / Contact</th>
+        <th style="padding:10px 8px">Status</th>
+        <th style="padding:10px 8px">Message SID</th>
+        <th style="padding:10px 8px;text-align:right">Message Content</th>
+      </tr>
+    `;
+
+    auditLogsCache.forEach((l, idx) => {
+      const timestamp = l.sent_at || l.time_str || l.created_at || 'LOG';
+      const recipient = l.mobile_number || l.recipient || l.to_phone || '—';
+      const userName = (l.user_name && l.user_name !== '—') ? ` (${l.user_name})` : '';
+      const status = (l.current_status || l.status || 'SENT').toUpperCase();
+      const wamid = l.message_sid || l.wamid || '—';
+      const isOk = status === 'SENT' || status === 'DELIVERED' || status === 'READ';
+      const statusBadge = isOk 
+        ? `<span class="ei-chip ei-contacts" style="background:#ecfdf5;color:#047857"><i class="fas fa-check-circle"></i> ${status}</span>`
+        : `<span class="ei-chip" style="background:#fef2f2;color:#dc2626"><i class="fas fa-exclamation-circle"></i> ${status}</span>`;
+
+      const isManual = l.trigger_source === 'manual' || l.message_type === 'manual_staff' || l.message_type === 'direct_send';
+      const triggerBadge = isManual
+        ? `<span class="ei-chip ei-crm" style="background:#f3e8ff;color:#6b21a8"><i class="fas fa-bolt"></i> ⚡ Manual Staff</span>`
+        : `<span class="ei-chip ei-service" style="background:#e0f2fe;color:#0369a1"><i class="fas fa-robot"></i> 🤖 Auto Bot</span>`;
+
+      html += `
+        <tr style="border-bottom:1px solid #f3f4f6;align-items:center">
+          <td style="padding:10px 8px;font-size:11.5px;color:#4b5563">${timestamp}</td>
+          <td style="padding:10px 8px">${triggerBadge}</td>
+          <td style="padding:10px 8px">
+            <strong>${recipient}</strong> <span style="font-size:11px;color:#6b7280">${userName}</span>
+          </td>
+          <td style="padding:10px 8px">${statusBadge}</td>
+          <td style="padding:10px 8px"><code style="font-size:10.5px;color:#374151">${wamid}</code></td>
+          <td style="padding:10px 8px;text-align:right">
+            <button class="btn-custom btn-outline-custom" style="padding:3px 9px;font-size:11px" onclick="openAuditMsgModal(${idx})">
+              <i class="fas fa-eye"></i> View Message
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+
+    html += '</table>';
+    document.getElementById('auditLogBox').innerHTML = auditLogsCache.length ? html : '<div style="padding:20px;color:#9ca3af;text-align:center">No audit log records found for selected filter criteria.</div>';
+  } catch(err) {
+    document.getElementById('auditLogBox').innerHTML = `<div style="padding:20px;color:#dc2626">Error loading audit log: ${err.message}</div>`;
+  }
+}
+
+
+function openAuditMsgModal(idx) {
+  const l = auditLogsCache[idx];
+  if (!l) return;
+
+  const timestamp = l.sent_at || l.time_str || l.created_at || 'LOG';
+  const recipient = (l.mobile_number || l.recipient || '—') + ((l.user_name && l.user_name !== '—') ? ` (${l.user_name})` : '');
+  const wamid = l.message_sid || l.wamid || '—';
+  const bodyText = l.message_body || l.body_text || l.message || 'No message content available.';
+
+  document.getElementById('auditMetaTimestamp').innerHTML = `<i class="fas fa-clock"></i> ${timestamp}`;
+  document.getElementById('auditMetaRecipient').innerHTML = `<i class="fas fa-user"></i> ${recipient}`;
+  document.getElementById('auditMetaWamid').innerHTML = `<i class="fas fa-hashtag"></i> SID: ${wamid}`;
+  document.getElementById('auditMsgContent').textContent = bodyText;
+
+  document.getElementById('auditMsgModal').classList.add('open');
+}
+
+
+
+// ── ASSIGNMENT MODAL ───────────────────────────────────────────────────────
+function openAssignModal(phone, name) {
+  document.getElementById('assignTargetInfo').textContent = `Assigning Customer: ${name} (${phone})`;
+  document.getElementById('assignModal').classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+function submitAssignment() {
+  closeModal('assignModal');
+  showToast('Assignment saved successfully');
+  loadInbox(1);
+}
+
+// Page Initialization with Global Loading Overlay Hide
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    // DC Protocol: Initialize Universal Staff Sidebar & Header
+    if (typeof window.StaffSidebar !== 'undefined') await window.StaffSidebar.init();
+    if (typeof window.StaffHeader !== 'undefined') {
+      window.StaffHeader.inject('WhatsApp Center', 'fab fa-whatsapp');
+      window.StaffHeader.init();
+    }
+    if (typeof window.StaffBackButton !== 'undefined') window.StaffBackButton.init();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestedTab = urlParams.get('tab');
+
+    // Load initial Inbox data
+    await loadInbox(1);
+
+    if (requestedTab) switchCenterTab(requestedTab);
+
+    // Hide global loader & show main workspace
+    document.getElementById('pageLoader').style.display = 'none';
+    document.getElementById('mainWorkspace').style.display = 'block';
+
+  } catch(e) {
+    document.getElementById('pageLoader').innerHTML = `<div style="color:#dc2626;font-weight:600">Initialization failed: ${e.message}</div>`;
+  }
+
+  // Background 5-second polling for real-time refresh
+  pollTimer = setInterval(() => {
+    if (activeCenterTab === 'inbox') loadInbox(1);
+    else if (activeCenterTab === 'messenger' && activeChatPhone) loadChatHistory(activeChatPhone, activeChatType);
+  }, 5000);
+});
+</script>
+</body>
+</html>
