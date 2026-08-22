@@ -28,7 +28,7 @@ router = APIRouter(prefix="/vgk", tags=["VGK Assistant"])
 
 IST = pytz.timezone("Asia/Kolkata")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
-GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_MODEL = "gemini-1.5-flash"
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1/models/"
     f"{GEMINI_MODEL}:generateContent?key={GOOGLE_API_KEY}"
@@ -350,35 +350,67 @@ def _query_tasks(employee_id: int, db: Session, language: str) -> Dict:
     return {"reply_text": txt, "speak_text": speak}
 
 
-def _query_talk_time(employee_id: int, db: Session, language: str) -> Dict:
-    today_str = today_ist().strftime("%Y-%m-%d")
-    logs = db.query(CallLog).filter(
-        CallLog.staff_id == employee_id,
-        CallLog.call_date == today_str
-    ).all()
+def _query_talk_time(employee_id: Optional[int], db: Session, language: str = "en") -> Dict:
+    """
+    DC_TALK_TIME_002 — Comprehensive Staff & Team Call Performance Engine.
+    Queries unified sales performance stats (Mobile + MyOperator Cloud Calls).
+    Returns team-wide talk time leaderboard & individual stats.
+    """
+    try:
+        from app.services.sales_performance_report_service import get_today_sales_performance_stats
+        stats = get_today_sales_performance_stats(db)
+        
+        lb = stats.get("leaderboard", [])
+        active_lb = [item for item in lb if item.get("call_count", 0) > 0 or item.get("talk_seconds", 0) > 0]
+        
+        if active_lb:
+            highest_talk = max(active_lb, key=lambda x: x.get("talk_seconds", 0))
+            highest_calls = max(active_lb, key=lambda x: x.get("call_count", 0))
+            
+            lines = [
+                f"📞 **Today's Team Telecalling & Talk Time Report ({stats.get('date_str', '')}):**\n",
+                f"• **Total Calls Handled**: {stats.get('total_calls', 0)} calls",
+                f"• **Total Team Talk Time**: {stats.get('total_talk_formatted', '0m')}",
+                f"• **Missed Calls**: {stats.get('missed_calls', 0)} calls\n",
+                f"🏆 **Highest Talk Time Today**: **{highest_talk['handled_by']}** with **{highest_talk['talk_time_formatted']}** ({highest_talk['call_count']} calls)\n",
+                f"🥇 **Highest Call Volume Today**: **{highest_calls['handled_by']}** with **{highest_calls['call_count']} calls** ({highest_calls['talk_time_formatted']})\n",
+                "📋 **Staff Performance Breakdown:**"
+            ]
+            
+            for idx, item in enumerate(active_lb, 1):
+                missed_str = f" (🔴 {item['missed_count']} Missed)" if item.get("missed_count", 0) > 0 else ""
+                lines.append(f"{idx}. **{item['handled_by']}** — {item['talk_time_formatted']} Talk Time | {item['call_count']} Calls{missed_str}")
+            
+            idle_lb = [item for item in lb if item.get("call_count", 0) == 0]
+            if idle_lb:
+                lines.append("\n📋 **Zero Calls Today:**")
+                for item in idle_lb:
+                    lines.append(f"• **{item['handled_by']}** — 0 Calls | 0m Talk Time")
+            
+            reply_text = "\n".join(lines)
+            speak_text = f"Highest talk time today is {highest_talk['handled_by']} with {highest_talk['talk_time_formatted']}."
+            return {"reply_text": reply_text, "speak_text": speak_text}
+            
+    except Exception as exc:
+        logger.warning(f"Failed to fetch team talk time stats: {exc}")
+        
+    if employee_id:
+        today_str = today_ist().strftime("%Y-%m-%d")
+        logs = db.query(CallLog).filter(
+            CallLog.staff_id == employee_id,
+            CallLog.call_date == today_str
+        ).all()
 
-    if not logs:
-        msgs = {
-            "en": "No calls recorded today yet.",
-            "hi": "आज अभी तक कोई कॉल दर्ज नहीं हुई।",
-            "te": "ఈరోజు ఇంకా కాల్స్ రికార్డ్ కాలేదు."
-        }
-        txt = msgs.get(language, msgs["en"])
-        return {"reply_text": txt, "speak_text": txt}
+        if logs:
+            total = len(logs)
+            total_sec = sum(l.duration_seconds or 0 for l in logs)
+            outgoing = sum(1 for l in logs if (l.call_type or "").lower() in ("outgoing", "out"))
+            incoming = sum(1 for l in logs if (l.call_type or "").lower() in ("incoming", "in"))
+            missed = total - outgoing - incoming
+            txt = f"Today: {total} calls, talk time {format_duration(total_sec)} — {outgoing} outgoing, {incoming} incoming, {missed} missed."
+            return {"reply_text": txt, "speak_text": txt}
 
-    total = len(logs)
-    total_sec = sum(l.duration_seconds or 0 for l in logs)
-    outgoing = sum(1 for l in logs if (l.call_type or "").lower() in ("outgoing", "out"))
-    incoming = sum(1 for l in logs if (l.call_type or "").lower() in ("incoming", "in"))
-    missed = total - outgoing - incoming
-
-    labels = {
-        "en": f"Today: {total} calls, talk time {format_duration(total_sec)} — {outgoing} outgoing, {incoming} incoming, {missed} missed.",
-        "hi": f"आज: {total} कॉल, बात का समय {format_duration(total_sec)} — {outgoing} आउटगोइंग, {incoming} इनकमिंग, {missed} मिस्ड।",
-        "te": f"ఈరోజు: {total} కాల్స్, మాటల సమయం {format_duration(total_sec)} — {outgoing} అవుట్‌గోయింగ్, {incoming} ఇన్‌కమింగ్, {missed} మిస్డ్."
-    }
-    txt = labels.get(language, labels["en"])
-    return {"reply_text": txt, "speak_text": txt}
+    return {"reply_text": "No calls recorded today yet.", "speak_text": "No calls recorded today yet."}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -410,7 +442,14 @@ _RB_KEYWORDS: Dict[str, List[str]] = {
         "show walk in leads", "walkin crm leads",
     ],
     "query_tasks":           ["my tasks", "pending task", "show tasks", "task list", "open task", "active tasks", "list tasks", "show my tasks", "what tasks"],
-    "query_talk_time":       ["talk time", "call stats", "my calls", "calls today", "call time", "call log", "call count", "how many calls"],
+    "query_talk_time":       [
+        "highest talk time", "who has done highest talk time", "who has dont highest talk time",
+        "highest talk", "who talked most", "most talk time", "who has highest talk time",
+        "highest calls", "who made most calls", "who has most calls", "most calls today",
+        "call leaderboard", "staff wise talk time", "staff talk time", "top telecaller",
+        "telecaller report", "talk time today", "talk time", "call stats", "my calls",
+        "calls today", "call time", "call log", "call count", "how many calls"
+    ],
     "end_journey":           ["end journey", "stop journey", "finish journey", "complete journey", "end my journey", "journey end", "stop tracking"],
     "start_journey":         ["start journey", "begin journey", "start tracking", "start my journey", "journey start", "new journey", "go for journey"],
     "create_task":           ["create task", "new task", "assign task", "add task", "make task", "create activity", "can you create activity", "aquatic", "create a task", "assign a task"],
@@ -1231,7 +1270,7 @@ def _rule_based_fallback(req: VGKRequest, portal_type: str, user_name: str,
     if intent == "query_tasks" and employee_id:
         r = _query_tasks(employee_id, db, req.language)
         return _rb_resp(intent, r["reply_text"], r["speak_text"], "done")
-    if intent == "query_talk_time" and employee_id:
+    if intent == "query_talk_time":
         r = _query_talk_time(employee_id, db, req.language)
         return _rb_resp(intent, r["reply_text"], r["speak_text"], "done")
     if intent == "end_journey":
@@ -1391,7 +1430,7 @@ async def _process(req: VGKRequest, portal_type: str, user_name: str,
         status = "done"
         action_ready = False
 
-    if employee_id is not None and intent == "query_talk_time" and status in ("done", "confirming"):
+    if intent == "query_talk_time" and status in ("done", "confirming"):
         result = _query_talk_time(employee_id, db, req.language)
         reply_text = result["reply_text"]
         speak_text = result["speak_text"]
