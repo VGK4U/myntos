@@ -3779,13 +3779,11 @@ def list_leads(
     if is_restricted_freelancer:
         can_view_all = False
     
-    # DC Protocol (Aug 2026): Cross-company Solar category lead matching.
-    # Solar category IDs (6, 19, 36, 48) represent Solar leads regardless of company_id (1, 2, or 4).
-    is_solar_query = (category and 'solar' in str(category).lower()) or (category_id in [6, 19, 36, 48] if category_id else False)
-    if is_solar_query:
-        query = db.query(CRMLead).filter(or_(CRMLead.company_id == company_id, CRMLead.category_id.in_([6, 19, 36, 48])))
-    else:
-        query = db.query(CRMLead).filter(CRMLead.company_id == company_id)
+    # DC Protocol (Aug 2026): CATEGORY-WISE LEAD QUERYING.
+    # MyntReal menus operate Category-wise across company accounts (1, 2, 3, 4).
+    # Allows category menus (Solar, EV B2C, EV B2B, ETC Training, Real Dreams, EV Spares, Insurance)
+    # to query all leads in that category across all company IDs.
+    query = db.query(CRMLead)
     
     # VISIBILITY FILTER LOGIC:
     # The visibility filters (primary_owner, assigned_to_me) work for ALL users.
