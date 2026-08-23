@@ -1325,17 +1325,34 @@ def get_inbox(
         fp_last10     = fp_digits[-10:] if len(fp_digits) >= 10 else fp_digits
 
         lsb_entry = last_sent_by_map.get(fp_last10)
-        sent_by_name = "System/Auto"
-        source_type = "API"
+        body_text_lc = (lm.get("body") or "").lower()
+        lm_type_lc = (lm.get("type") or "").lower()
+
+        # Determine BOT vs API vs MANUAL source & sender name
         if lsb_entry:
-            sent_by_name = lsb_entry.get("name") or "System/Auto"
             st_raw = str(lsb_entry.get("type") or "").upper()
-            if "BOT" in st_raw or "AI" in st_raw or "BAILEYS" in st_raw:
-                source_type = "BOT"
-            elif "STAFF" in st_raw or "MANUAL" in st_raw or "USER" in st_raw:
+            sn_raw = str(lsb_entry.get("name") or "").strip()
+            
+            if "STAFF" in st_raw or "MANUAL" in st_raw or "USER" in st_raw or (sn_raw and sn_raw not in ("System/Auto", "System", "Auto", "")):
                 source_type = "MANUAL"
-            else:
+                sent_by_name = sn_raw if sn_raw and sn_raw not in ("System/Auto", "System", "Auto") else "Staff"
+            elif "CRON" in st_raw or "WEBHOOK" in st_raw or "API" in st_raw or lm_type_lc in ("daily_snapshot", "system_report"):
                 source_type = "API"
+                sent_by_name = "API System"
+            else:
+                # Auto welcome dispatches, Baileys bot replies, PingMe AI bot dispatches
+                source_type = "BOT"
+                sent_by_name = "Mynt Bot" if sn_raw in ("System/Auto", "System", "Auto", "") else sn_raw
+        else:
+            if lm_type_lc.startswith("auto_") or "welcome" in body_text_lc or "నమస్కారం" in body_text_lc or "myntreal" in body_text_lc:
+                source_type = "BOT"
+                sent_by_name = "Mynt Bot"
+            elif lm_type_lc.startswith("api_") or "cron" in lm_type_lc:
+                source_type = "API"
+                sent_by_name = "API System"
+            else:
+                source_type = "BOT"
+                sent_by_name = "Mynt Bot"
 
         # Format IST Timestamp
         last_act_dt = r[3]
