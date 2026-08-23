@@ -1,5 +1,391 @@
 [
   {
+    "id": "log_3fcfb07d",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "23 Aug 2026, 04:00:01 PM IST",
+    "iso_timestamp": "2026-08-23T16:00:01.588481",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "success": false,
+      "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr"
+    }
+  },
+  {
+    "id": "log_084f2919",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Aug 2026, 04:00:01 PM IST",
+    "iso_timestamp": "2026-08-23T16:00:01.054998",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_7aad0ebd",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Aug 2026, 03:30:03 PM IST",
+    "iso_timestamp": "2026-08-23T15:30:03.856010",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 1
+    }
+  },
+  {
+    "id": "log_d753ae78",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "23 Aug 2026, 02:00:01 PM IST",
+    "iso_timestamp": "2026-08-23T14:00:01.674555",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "success": false,
+      "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr"
+    }
+  },
+  {
+    "id": "log_6ff162d9",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Aug 2026, 02:00:00 PM IST",
+    "iso_timestamp": "2026-08-23T14:00:00.963918",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 1
+    }
+  },
+  {
+    "id": "log_de59c1cf",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "23 Aug 2026, 02:00:00 PM IST",
+    "iso_timestamp": "2026-08-23T14:00:00.950767",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "group_posted": false,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_4726a63c",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "23 Aug 2026, 01:30:01 PM IST",
+    "iso_timestamp": "2026-08-23T13:30:01.826672",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "success": false,
+      "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr"
+    }
+  },
+  {
+    "id": "log_064bd2bd",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Aug 2026, 01:30:01 PM IST",
+    "iso_timestamp": "2026-08-23T13:30:01.378874",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 1
+    }
+  },
+  {
+    "id": "log_7a24733f",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "23 Aug 2026, 01:00:01 PM IST",
+    "iso_timestamp": "2026-08-23T13:00:01.425465",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "success": false,
+      "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr"
+    }
+  },
+  {
+    "id": "log_78607a93",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Aug 2026, 01:00:01 PM IST",
+    "iso_timestamp": "2026-08-23T13:00:01.263932",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 1
+    }
+  },
+  {
+    "id": "log_4ceebae7",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "23 Aug 2026, 12:30:01 PM IST",
+    "iso_timestamp": "2026-08-23T12:30:01.967838",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "success": false,
+      "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr"
+    }
+  },
+  {
+    "id": "log_306b2be5",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Aug 2026, 12:30:01 PM IST",
+    "iso_timestamp": "2026-08-23T12:30:01.107306",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 1
+    }
+  },
+  {
+    "id": "log_5d0435c9",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "23 Aug 2026, 12:30:00 PM IST",
+    "iso_timestamp": "2026-08-23T12:30:00.928446",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "group_posted": false,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
     "id": "log_f1062419",
     "job_id": "missed_call_ack",
     "job_name": "Instant Missed Call Auto-ACK",
