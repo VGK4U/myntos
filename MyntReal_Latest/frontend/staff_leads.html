@@ -2592,13 +2592,18 @@
                         }
                     }
                     
-                    // Aggregate all leads and sort by created_at desc
-                    let allLeads = [];
+                    // Aggregate all leads and deduplicate by lead.id
+                    let rawLeads = [];
                     results.forEach(result => {
                         if (result.success && result.data) {
-                            allLeads = allLeads.concat(result.data);
+                            rawLeads = rawLeads.concat(result.data);
                         }
                     });
+                    
+                    // Map by lead ID to eliminate duplicate objects
+                    const leadMap = new Map();
+                    rawLeads.forEach(l => { if (l && l.id && !leadMap.has(l.id)) leadMap.set(l.id, l); });
+                    let allLeads = Array.from(leadMap.values());
                     
                     // Sort by created_at descending
                     allLeads.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
@@ -2662,7 +2667,8 @@
                 const daysSince = calculateDaysSince(lead);
                 const cleanP = (lead.phone || '').replace(/\D/g, '').slice(-10);
                 const rowCallIcon = cleanP ? `<a href="tel:+91${cleanP}" onclick="event.stopPropagation()" class="btn btn-sm btn-outline-primary p-0 px-1 ms-1" style="font-size:10px;" title="Direct Call"><i class="fas fa-phone-alt"></i> Call</a>` : '';
-                const rowWAIcon = cleanP ? `<a href="https://wa.me/91${cleanP}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="btn btn-sm btn-outline-success p-0 px-1 ms-1" style="font-size:10px;" title="WhatsApp Chat"><i class="fab fa-whatsapp"></i> Chat</a>` : '';
+                const safeNameEsc = (lead.name || '').replace(/'/g, "\\'");
+                const rowWAIcon = cleanP ? `<button type="button" onclick="event.stopPropagation(); openLeadWAModal('${lead.id}', '${cleanP}', '${safeNameEsc}', ${leadCompanyIdParam})" class="btn btn-sm btn-outline-success p-0 px-1 ms-1" style="font-size:10px;" title="WhatsApp Chat & Scanned Bot"><i class="fab fa-whatsapp"></i> Chat</button>` : '';
 
                 return `
                 <tr onclick="viewLead(${lead.id}, ${leadCompanyIdParam})">
@@ -3236,8 +3242,10 @@
                 return;
             }
             const name = document.getElementById('leadName')?.value || phone;
-            if (typeof openLeadWAModal === 'function' && currentLeadId) {
-                openLeadWAModal(currentLeadId, phone.slice(-10), name, selectedLeadCompanyId);
+            const targetLeadId = document.getElementById('leadId')?.value || currentLeadId || 'new';
+            const targetCompanyId = document.getElementById('leadFormCompany')?.value || selectedLeadCompanyId || companyId;
+            if (typeof openLeadWAModal === 'function') {
+                openLeadWAModal(targetLeadId, phone.slice(-10), name, targetCompanyId);
             } else {
                 window.open(`https://wa.me/91${phone.slice(-10)}`, '_blank');
             }

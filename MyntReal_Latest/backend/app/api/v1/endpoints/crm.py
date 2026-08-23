@@ -3784,6 +3784,8 @@ def list_leads(
     # Allows category menus (Solar, EV B2C, EV B2B, ETC Training, Real Dreams, EV Spares, Insurance)
     # to query all leads in that category across all company IDs.
     query = db.query(CRMLead)
+    if company_id and not (category or category_id is not None):
+        query = query.filter(CRMLead.company_id == company_id)
     
     # VISIBILITY FILTER LOGIC:
     # The visibility filters (primary_owner, assigned_to_me) work for ALL users.
