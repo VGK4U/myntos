@@ -166,8 +166,19 @@ def row_to_crm_lead(row: List[str], col_map: Dict[str, int],
 
     source_details = f"{{'source': '{source_tag}', 'lead_id': '{lead_id}', 'ad': '{ad_name}'}}"
 
+    # Automatic Company Routing Engine based on Category & Product Interest
+    # Rules: Solar, EV, BEB, B2C -> MyntReal (4); Training, Insurance -> Zynova (2); Real Estate -> Real Dreams (1)
+    combined_ctx = f"{looking or ''} {ad_name or ''} {source_tag or ''}".lower()
+    target_company_id = company_id
+    if any(k in combined_ctx for k in ['solar', 'ev', 'electric vehicle', 'beb', 'b2c', 'energy', 'battery', 'har ghar solar']):
+        target_company_id = 4  # MyntReal LLP
+    elif any(k in combined_ctx for k in ['training', 'insurance', 'health', 'life', 'motor']):
+        target_company_id = 2  # Zynova Mobility
+    elif any(k in combined_ctx for k in ['real estate', 'property', 'plot', 'flat', 'apartment', 'villa', 'venture', 'land', 'real dreams']):
+        target_company_id = 1  # Real Dreams
+
     return {
-        'company_id':           company_id,
+        'company_id':           target_company_id,
         'name':                 name[:200],
         'phone':                phone[:20]  if phone else None,
         'email':                email[:200] if email else None,
