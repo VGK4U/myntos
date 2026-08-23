@@ -7656,9 +7656,16 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // WhatsApp QR Code & Group Bot Gateway Proxy Route (/qr, /whatsapp-qr, /status)
-  if (reqPathLower === '/qr' || reqPathLower === '/qr/' || reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/' || reqPathLower === '/status') {
-    const targetPath = (reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/') ? '/qr' : req.url;
+  // WhatsApp QR Code & Group Bot Gateway Proxy Route (/scan, /qr, /whatsapp-qr, /qr-data, /logout, /status)
+  if (
+    reqPathLower === '/scan' || reqPathLower === '/scan/' ||
+    reqPathLower === '/qr' || reqPathLower === '/qr/' ||
+    reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/' ||
+    reqPathLower === '/qr-data' || reqPathLower === '/qr-data/' ||
+    reqPathLower === '/logout' || reqPathLower === '/api/logout' ||
+    reqPathLower === '/status'
+  ) {
+    const targetPath = (reqPathLower === '/scan' || reqPathLower === '/scan/' || reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/') ? '/qr' : req.url;
     const proxyOptions = {
       hostname: '127.0.0.1',
       port: 5002,
