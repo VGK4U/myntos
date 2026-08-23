@@ -7656,8 +7656,55 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+let waBotProcess = null;
+let waBotStarting = false;
+
+function ensureWhatsAppBotRunning() {
+  if (waBotProcess || waBotStarting) return;
+
+  const botPathCandidates = [
+    path.join(__dirname, '../backend/whatsapp-group-bot/server.js'),
+    path.join(__dirname, 'backend/whatsapp-group-bot/server.js'),
+    path.join(process.cwd(), 'backend/whatsapp-group-bot/server.js'),
+    path.join(process.cwd(), 'MyntReal_Latest/backend/whatsapp-group-bot/server.js')
+  ];
+
+  let botScriptPath = null;
+  for (const p of botPathCandidates) {
+    if (fs.existsSync(p)) {
+      botScriptPath = p;
+      break;
+    }
+  }
+
+  if (!botScriptPath) {
+    console.warn('[DC-WA-BOT] Could not locate whatsapp-group-bot/server.js script');
+    return;
+  }
+
+  waBotStarting = true;
+  console.log(`[DC-WA-BOT] Auto-spawning WhatsApp Group Bot daemon on port 5002 from ${botScriptPath}...`);
+  try {
+    const { fork } = require('child_process');
+    waBotProcess = fork(botScriptPath, [], {
+      cwd: path.dirname(botScriptPath),
+      env: { ...process.env, PORT: '5002' },
+      stdio: 'inherit'
+    });
+    waBotProcess.on('exit', (code) => {
+      console.warn(`[DC-WA-BOT] WhatsApp bot daemon exited with code ${code}. Resetting for auto-respawn.`);
+      waBotProcess = null;
+      waBotStarting = false;
+    });
+  } catch (err) {
+    console.error('[DC-WA-BOT] Failed to spawn WhatsApp bot:', err.message);
+    waBotStarting = false;
+  }
+}
+
   // WhatsApp QR Code & Group Bot Gateway Proxy Route (/qr, /qr-data, /whatsapp-qr, /status)
   if (reqPathLower === '/qr' || reqPathLower === '/qr/' || reqPathLower === '/qr-data' || reqPathLower === '/qr-data/' || reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/' || reqPathLower === '/status') {
+    ensureWhatsAppBotRunning();
     const targetPath = (reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/') ? '/qr' : req.url;
     const proxyOptions = {
       hostname: '127.0.0.1',
@@ -7672,12 +7719,23 @@ const server = http.createServer(async (req, res) => {
     });
     proxyReq.on('error', (err) => {
       console.warn('[DC-PROXY-QR] WhatsApp bot service on port 5002 error:', err.message);
+      ensureWhatsAppBotRunning();
       res.writeHead(503, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(`
-        <div style="font-family:sans-serif;text-align:center;padding:40px">
-          <h2>📲 WhatsApp Bot Service Initializing</h2>
-          <p>The WhatsApp gateway service on port 5002 is starting up. Please refresh in a few seconds.</p>
-        </div>
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta http-equiv="refresh" content="3">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>WhatsApp Bot Service Initializing</title>
+        </head>
+        <body style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 50px 20px; background: #f4f6f9; color: #1e293b;">
+          <h2 style="font-size: 24px; margin-bottom: 8px;">📲 WhatsApp Bot Service Initializing</h2>
+          <p style="color: #64748b; font-size: 14px; margin-top: 0;">The WhatsApp gateway service on port 5002 is starting up automatically.</p>
+          <p style="color: #3b82f6; font-size: 13px; font-weight: 600; margin-top: 20px;">⏳ Auto-refreshing in 3 seconds...</p>
+        </body>
+        </html>
       `);
     });
     if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
