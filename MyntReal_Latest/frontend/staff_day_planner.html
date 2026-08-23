@@ -3892,15 +3892,34 @@
         }
 
         /* ── WhatsApp Sharing Functions for Day Plan & Finalized Report ── */
-        function shareDayPlanWhatsApp() {
+        async function shareDayPlanWhatsApp() {
             var user = (typeof StaffHeader !== 'undefined' && StaffHeader.user) ? StaffHeader.user : {};
             var empCode = user.emp_code || 'MR10001';
             var staffName = user.full_name || user.name || 'Staff Member';
             var dateStr = (typeof selectedDate !== 'undefined' && selectedDate) ? selectedDate : new Date().toISOString().split('T')[0];
 
+            var inTimeStr = '09:15 AM';
+            var locAreaStr = 'Office / Field Area';
+            try {
+                var mResp = await staffFetch(API_BASE + '/staff/day-plans/finalized-metrics?plan_date=' + dateStr);
+                if (mResp.ok) {
+                    var mData = await mResp.json();
+                    if (mData && mData.success) {
+                        if (mData.in_time) inTimeStr = mData.in_time;
+                        if (mData.clock_in_location_area) locAreaStr = mData.clock_in_location_area;
+                    }
+                }
+            } catch(e) { console.warn('[DC-PLANNER] Morning metrics fetch exception:', e); }
+
             var msg = '🌟 *DAILY TASK PLAN | ' + dateStr.toUpperCase() + '*\n';
             msg += '👤 *Staff Member:* ' + staffName + ' (' + empCode + ')\n';
             msg += '🏢 *Company:* MyntReal LLP\n\n';
+
+            msg += '=================================\n';
+            msg += '⏱️ *ATTENDANCE & LOCATION*\n';
+            msg += '=================================\n';
+            msg += '🟢 *Logged In:* ' + inTimeStr + '\n';
+            msg += '📍 *Area / Location:* ' + locAreaStr + '\n\n';
 
             msg += '=================================\n';
             msg += '📋 *TODAY\'S PLANNED ACTIVITIES (' + ((planItems || []).length) + ' Tasks)*\n';
@@ -3962,15 +3981,20 @@
             var staffName = user.full_name || user.name || 'Staff Member';
             var dateStr = (typeof selectedDate !== 'undefined' && selectedDate) ? selectedDate : new Date().toISOString().split('T')[0];
 
-            // Fetch comprehensive daily metrics (Attendance, Journeys, Appointments, KRA)
+            // Fetch comprehensive daily metrics
             var metrics = {
                 in_time: '09:15 AM',
                 out_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
                 duration: '8.5 hrs',
-                kms_travelled: '32.5 KM',
-                journey_time: '1h 45m',
-                appointments_attended: 3,
-                kra_score: '88%'
+                clock_in_location_area: 'Office / Field Area',
+                department_name: '',
+                kms_travelled: '0 KM',
+                journey_time: '0m',
+                appointments_attended: 0,
+                kra_score: '88%',
+                sales_metrics: { calls_made: 0, talk_time_formatted: '0m', talk_seconds: 0, leads_contacted: 0, has_data: false },
+                service_metrics: { tickets_handled: 0, tickets_resolved: 0, tat_pct: 100, has_data: false },
+                mobility_metrics: { kms_travelled: '0 KM', journey_time: '0m', appointments_attended: 0, has_data: false }
             };
 
             try {
@@ -4001,23 +4025,49 @@
             msg += '⏱️ *TIME REPORTED & ATTENDANCE*\n';
             msg += '=================================\n';
             msg += '🟢 *Logged In:* ' + metrics.in_time + '\n';
+            msg += '📍 *Area / Location:* ' + (metrics.clock_in_location_area || 'Office / Field Area') + '\n';
             msg += '🔴 *Logged Out:* ' + metrics.out_time + '\n';
             msg += '⏳ *Work Duration:* ' + metrics.duration + '\n';
             msg += '🎯 *KRA Score:* ' + metrics.kra_score + '\n\n';
 
-            msg += '=================================\n';
-            msg += '🚗 *MOBILITY & FIELD METRICS*\n';
-            msg += '=================================\n';
-            msg += '🛣️ *KMs Travelled:* ' + metrics.kms_travelled + '\n';
-            msg += '⏱️ *Journey Time:* ' + metrics.journey_time + '\n';
-            msg += '🤝 *Appointments Attended & Tagged:* ' + metrics.appointments_attended + ' Meeting(s)\n\n';
+            // Check department & data presence for dynamic section rendering
+            var dept = (metrics.department_name || '').toLowerCase();
+            var salesM = metrics.sales_metrics || {};
+            var serviceM = metrics.service_metrics || {};
+            var mobilityM = metrics.mobility_metrics || {};
 
-            msg += '=================================\n';
-            msg += '🛠️ *SERVICE TEAM TICKETS DATA*\n';
-            msg += '=================================\n';
-            msg += '🎫 *Service Tickets Handled:* ' + (metrics.service_tickets_handled || 0) + '\n';
-            msg += '✅ *Service Tickets Resolved:* ' + (metrics.service_tickets_resolved || 0) + '\n';
-            msg += '⏱️ *Within TAT Rate:* ' + (metrics.service_tat_pct || 100) + '%\n\n';
+            // 1. Sales & Telecalling Section (If Sales/Marketing/Telecalling department OR has call/lead data today)
+            var showSales = dept.includes('sales') || dept.includes('tele') || dept.includes('marketing') || dept.includes('crm') || salesM.has_data;
+            if (showSales) {
+                msg += '=================================\n';
+                msg += '📞 *SALES & TELECALLING PERFORMANCE*\n';
+                msg += '=================================\n';
+                msg += '📱 *Total Calls Made:* ' + (salesM.calls_made || 0) + '\n';
+                msg += '⏱️ *Total Talk Time:* ' + (salesM.talk_time_formatted || '0m') + '\n';
+                msg += '📋 *Leads Contacted / Updated:* ' + (salesM.leads_contacted || 0) + '\n\n';
+            }
+
+            // 2. Mobility & Field Metrics Section (If Field/Logistics/Ops department OR has mobility data today)
+            var showMobility = dept.includes('field') || dept.includes('ops') || dept.includes('logistics') || dept.includes('project') || mobilityM.has_data;
+            if (showMobility) {
+                msg += '=================================\n';
+                msg += '🚗 *MOBILITY & FIELD METRICS*\n';
+                msg += '=================================\n';
+                msg += '🛣️ *KMs Travelled:* ' + (metrics.kms_travelled || '0 KM') + '\n';
+                msg += '⏱️ *Journey Time:* ' + (metrics.journey_time || '0m') + '\n';
+                msg += '🤝 *Appointments Attended & Tagged:* ' + (metrics.appointments_attended || 0) + ' Meeting(s)\n\n';
+            }
+
+            // 3. Service Team Tickets Data Section (If Service/Technical/Support department OR has ticket data today)
+            var showService = dept.includes('service') || dept.includes('tech') || dept.includes('support') || serviceM.has_data;
+            if (showService) {
+                msg += '=================================\n';
+                msg += '🛠️ *SERVICE TEAM TICKETS DATA*\n';
+                msg += '=================================\n';
+                msg += '🎫 *Service Tickets Handled:* ' + (metrics.service_tickets_handled || 0) + '\n';
+                msg += '✅ *Service Tickets Resolved:* ' + (metrics.service_tickets_resolved || 0) + '\n';
+                msg += '⏱️ *Within TAT Rate:* ' + (metrics.service_tat_pct || 100) + '%\n\n';
+            }
 
             msg += '=================================\n';
             msg += '📊 *DAY SUMMARY STATISTICS*\n';
@@ -4050,7 +4100,7 @@
             msg += '\n=================================\n';
             msg += '💬 *CLOSING REMARKS*\n';
             msg += '=================================\n';
-            msg += '_"Daily goals progress finalized. Mobility and operational milestones achieved for today."_\n\n';
+            msg += '_"Daily goals progress finalized. Operational and performance milestones achieved for today."_\n\n';
             msg += '🚀 *MYNT OS Task Planner*';
 
             if (typeof openLeadWAModal === 'function') {

@@ -304,13 +304,35 @@ class FacebookLeadsService:
         phone   = fields.get('phone_number') or fields.get('phone') or None
         city    = fields.get('city') or fields.get('location') or None
         state   = fields.get('state') or None
+        pincode = fields.get('post_code') or fields.get('zip_code') or fields.get('pincode') or None
         looking = (fields.get('looking_for') or fields.get('interest') or
                    fields.get('enquiry_type') or None)
         req     = (fields.get('requirements') or fields.get('message') or
                    fields.get('comments') or None)
         budget  = fields.get('budget') or fields.get('budget_range') or None
 
-        # DC Protocol Apr 2026: Capture Facebook form extra fields
+        # Parse Meta created_time to IST datetime
+        meta_created_str = lead_data.get('created_time')
+        meta_created_dt = None
+        if meta_created_str:
+            try:
+                dt_utc = datetime.fromisoformat(meta_created_str.replace('+0000', '+00:00'))
+                indian_tz = pytz.timezone('Asia/Kolkata')
+                meta_created_dt = dt_utc.astimezone(indian_tz).replace(tzinfo=None)
+            except Exception as dt_err:
+                logger.warning(f"Could not parse Meta created_time {meta_created_str}: {dt_err}")
+
+        # Capture Facebook form extra fields & questions
+        electricity_bill = (
+            fields.get('what_is_your_monthly_electricity_bill?') or
+            fields.get('electricity_bill') or
+            fields.get('monthly_electricity_bill') or
+            fields.get('bill_amount') or None
+        )
+        property_type = (
+            fields.get('type_of_property') or
+            fields.get('property_type') or None
+        )
         investment_capacity = (
             fields.get('what_is_your_investment_capacity') or
             fields.get('investment_capacity') or
@@ -328,18 +350,19 @@ class FacebookLeadsService:
             fields.get('business_type') or None
         )
 
-        # Keys already extracted above — everything else is an "unknown" field
         _known_fb_keys = {
             'full_name', 'name', 'first_name', 'last_name',
-            'email', 'phone_number', 'phone', 'city', 'location', 'state',
+            'email', 'phone_number', 'phone', 'city', 'location', 'state', 'post_code', 'zip_code', 'pincode',
             'looking_for', 'interest', 'enquiry_type',
             'requirements', 'message', 'comments',
             'budget', 'budget_range',
+            'what_is_your_monthly_electricity_bill?', 'electricity_bill', 'monthly_electricity_bill', 'bill_amount',
+            'type_of_property', 'property_type',
             'what_is_your_investment_capacity', 'investment_capacity',
             'investment_range', 'investment capacity',
             'when_are_you_planning_to_start', 'planning_start', 'planned_start',
             'are_you_planning_this_as_a_full-time_business', 'full_time_business',
-            'business_type',
+            'business_type', 'phone_number_verified'
         }
         _extra_fields = {k: v for k, v in fields.items()
                          if k not in _known_fb_keys and v}
@@ -353,10 +376,13 @@ class FacebookLeadsService:
             'ad_id':        lead_data.get('ad_id'),
             'adset_id':     lead_data.get('adset_id'),
             'campaign_id':  lead_data.get('campaign_id'),
-            'created_time': lead_data.get('created_time'),
+            'created_time': meta_created_str,
+            'raw_fields':   fields,
         }
 
         desc_parts = [f"Facebook Lead — {page_name}" if page_name else "Online - M Lead"]
+        if electricity_bill:     desc_parts.append(f"Monthly Electricity Bill: {electricity_bill}")
+        if property_type:        desc_parts.append(f"Property Type: {property_type}")
         if looking:              desc_parts.append(f"Looking for: {looking}")
         if req:                  desc_parts.append(f"Message: {req}")
         if budget:               desc_parts.append(f"Budget: {budget}")
@@ -374,7 +400,6 @@ class FacebookLeadsService:
             'SOLAR':       'solar',
         }.get(page_segment, 'facebook_lead')
 
-        # Default company to 4 (MyntReal LLP) for Har Ghar Solar / Solar leads if not explicitly set
         target_company_id = company_id or 4
         target_category_id = category_id
         if not target_category_id:
@@ -388,12 +413,13 @@ class FacebookLeadsService:
             'email':               email[:200] if email else None,
             'phone':               phone[:20]  if phone else None,
             'source':              'Social Media',
-            'source_details':      str(source_details)[:1000],
+            'source_details':      json.dumps(source_details)[:1000],
             'status':              'new',
             'priority':            'high',
             'handler_type':        'unassigned',
             'city':                city[:100]  if city  else None,
             'state':               state[:100] if state else None,
+            'pincode':             pincode[:20] if pincode else None,
             'description':         '\n'.join(desc_parts)[:2000],
             'looking_for':         looking[:500]             if looking else None,
             'requirements':        req[:1000]                if req    else None,
@@ -402,6 +428,9 @@ class FacebookLeadsService:
             'created_by_type':     'system',
             'created_by_id':       'facebook_webhook',
         }
+        if meta_created_dt:
+            crm['created_at'] = meta_created_dt
+            crm['updated_at'] = meta_created_dt
         if category_id:
             crm['category_id'] = category_id
         return crm

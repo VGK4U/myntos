@@ -34,18 +34,33 @@ def _format_seconds_to_hm(total_seconds: int) -> str:
     return f"{minutes}m"
 
 
-def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
+def get_today_sales_performance_stats(db: Session, start_date=None, end_date=None, period_label="Today") -> Dict[str, Any]:
     """
-    Aggregates today's sales performance statistics up to the current moment.
+    Aggregates sales performance statistics for a date range or today.
     """
     from sqlalchemy import text
     from app.models.crm import CRMLead
 
     # IST Today Range (+5:30)
     ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
-    start_of_today_ist = ist_now.replace(hour=0, minute=0, second=0, microsecond=0)
-    start_of_today_utc = start_of_today_ist - timedelta(hours=5, minutes=30)
-    date_str = ist_now.strftime("%Y-%m-%d")
+    if not end_date:
+        end_date = ist_now.date()
+    if not start_date:
+        start_date = ist_now.date()
+
+    start_date_str = start_date.strftime("%Y-%m-%d")
+    end_date_str = end_date.strftime("%Y-%m-%d")
+
+    start_dt_utc = datetime.datetime.combine(start_date, datetime.time.min) - timedelta(hours=5, minutes=30)
+    end_dt_utc = datetime.datetime.combine(end_date, datetime.time.max) - timedelta(hours=5, minutes=30)
+
+    if start_date == end_date:
+        if start_date == ist_now.date():
+            date_display = ist_now.strftime("%d %B %Y")
+        else:
+            date_display = start_date.strftime("%d %B %Y")
+    else:
+        date_display = f"{start_date.strftime('%d %b %Y')} – {end_date.strftime('%d %b %Y')}"
 
     from app.models.operator_calls import OperatorCall
 
@@ -85,8 +100,8 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
         m_row = db.execute(text("""
             SELECT COUNT(id) as cnt, COALESCE(SUM(duration_seconds), 0) as dur,
                    COUNT(CASE WHEN UPPER(call_type) IN ('MISSED', 'REJECTED', 'NO_ANSWER') THEN 1 END) as missed
-            FROM staff_call_logs WHERE staff_id = :sid AND call_date = :d
-        """), {"sid": s.id, "d": date_str}).fetchone()
+            FROM staff_call_logs WHERE staff_id = :sid AND call_date >= :sd AND call_date <= :ed
+        """), {"sid": s.id, "sd": start_date_str, "ed": end_date_str}).fetchone()
 
         m_cnt = m_row.cnt if m_row else 0
         m_dur = int(m_row.dur or 0) if m_row else 0
@@ -96,7 +111,8 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
         words = [w for w in s.full_name.replace('.', ' ').split() if len(w) >= 3 and w.lower() not in ('ms', 'mrs', 'mr', 'dr')]
         filters = [OperatorCall.handled_by.ilike(f'%{w}%') for w in words]
         op_calls = db.query(OperatorCall).filter(
-            OperatorCall.started_at >= start_of_today_utc,
+            OperatorCall.started_at >= start_dt_utc,
+            OperatorCall.started_at <= end_dt_utc,
             or_(*filters)
         ).all() if filters else []
 
@@ -120,11 +136,12 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
             "talk_time_formatted": _format_seconds_to_hm(staff_tot_talk)
         })
 
-    leaderboard.sort(key=lambda x: (x["call_count"], x["talk_seconds"]), reverse=True)
+    leaderboard.sort(key=lambda x: (x["talk_seconds"], x["call_count"]), reverse=True)
 
-    # 3. New Leads Intake Today
+    # 3. New Leads Intake
     new_leads = db.query(func.count(CRMLead.id)).filter(
-        CRMLead.created_at >= start_of_today_utc
+        CRMLead.created_at >= start_dt_utc,
+        CRMLead.created_at <= end_dt_utc
     ).scalar() or 0
 
     return {

@@ -86,9 +86,13 @@ def send_vgk4u_group_bot_message(
     img_to_use = image_path  # Only send image if explicitly provided (e.g. payout celebrations)
     try:
         payload = {
-            "message": message_text,
-            "inviteCode": clean_code or invite_code
+            "message": message_text
         }
+        if clean_code and ('0029' in clean_code or len(clean_code) == 22 or 'chat.whatsapp.com' in invite_code or 'whatsapp.com/channel' in invite_code):
+            payload["inviteCode"] = clean_code
+        else:
+            payload["groupName"] = invite_code
+
         if img_to_use:
             payload["imagePath"] = img_to_use
 
@@ -107,18 +111,39 @@ def send_vgk4u_group_bot_message(
         return {"success": False, "error": str(exc)}
 
 
-def dispatch_daily_vgk4u_morning_wish(db: Session, invite_code: str = ELITE_GROUP_INVITE_CODE) -> Dict[str, Any]:
+def dispatch_daily_vgk4u_morning_wish(
+    db: Session,
+    invite_code: str = ELITE_GROUP_INVITE_CODE,
+    trigger_type: str = "AUTO_SCHEDULER",
+    triggered_by: str = "System Cron"
+) -> Dict[str, Any]:
     """
     Dispatches dynamic time-of-day wish (Morning / Afternoon / Evening) to all configured VGK4U targets.
     """
     from app.api.v1.endpoints.whatsapp import _load_targets_from_db
+    from app.services.whatsapp_audit_service import log_wa_trigger_execution
+
     quote = get_dynamic_time_wish_quote()
     logger.info("🌅 Dispatching dynamic VGK4U time-of-day wish...")
 
     active_targets = _load_targets_from_db(db)
     target_groups = active_targets.get("vgk4u_morning_wish", [])
     if not target_groups:
-        return send_vgk4u_group_bot_message(quote, invite_code=invite_code, image_path=None)
+        res = send_vgk4u_group_bot_message(quote, invite_code=invite_code, image_path=None)
+        is_succ = res.get("success") is True
+        log_wa_trigger_execution(
+            job_id="vgk4u_morning_wish",
+            job_name="VGK4U Elite Community Morning Wish",
+            trigger_type=trigger_type,
+            triggered_by=triggered_by,
+            targets=[{"type": "group", "name": "VGK4u Community Group", "identifier": invite_code}],
+            sent_count=1 if is_succ else 0,
+            failed_count=0 if is_succ else 1,
+            status="SUCCESS" if is_succ else "FAILED",
+            error_message=res.get("error") if not is_succ else None,
+            detail_data=res
+        )
+        return res
 
     results = []
     success_count = 0
@@ -157,6 +182,23 @@ def dispatch_daily_vgk4u_morning_wish(db: Session, invite_code: str = ELITE_GROU
             db.commit()
         except Exception as log_e:
             logger.warning("[VGK4U-WISH] Failed to write MessageLog: %s", log_e)
+
+    err_msg = None
+    if not overall_success:
+        err_msg = f"Dispatch failed ({failed_count} targets failed)"
+
+    log_wa_trigger_execution(
+        job_id="vgk4u_morning_wish",
+        job_name="VGK4U Elite Community Morning Wish",
+        trigger_type=trigger_type,
+        triggered_by=triggered_by,
+        targets=target_groups,
+        sent_count=success_count,
+        failed_count=failed_count,
+        status="SUCCESS" if overall_success else "FAILED",
+        error_message=err_msg,
+        detail_data={"dispatched_groups": success_count, "failed_groups": failed_count, "results": results}
+    )
 
     return {
         "success": overall_success,

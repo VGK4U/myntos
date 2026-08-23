@@ -10,12 +10,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: thin; scrollbar-color: #38bdf8 #1e293b; }
+    
+    /* Visible Scrollbars for Desktop & Mobile Browsers */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
+
     html, body {
       font-family: 'Inter', -apple-system, sans-serif;
       background: #0f172a; color: #f8fafc;
-      min-height: 100vh; width: 100%;
-      overflow-x: auto; overflow-y: auto;
+      height: 100vh; width: 100vw;
+      margin: 0; padding: 0; overflow: hidden;
       -webkit-overflow-scrolling: touch;
     }
     
@@ -23,7 +30,7 @@
     .eng-header {
       height: 56px; background: #1e293b; border-bottom: 1px solid #334155;
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0 20px; flex-wrap: wrap; gap: 10px;
+      padding: 0 20px; flex-wrap: wrap; gap: 10px; z-index: 10;
     }
     .eng-title { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 16px; color: #38bdf8; }
     .eng-badge {
@@ -32,16 +39,17 @@
       border: 1px solid rgba(16, 185, 129, 0.3); display: flex; align-items: center; gap: 6px;
     }
     
-    /* 3-Pane Desktop Layout */
+    /* 3-Pane Desktop Layout with Independent Pane Scrolling */
     .eng-layout {
-      flex: 1; display: grid; grid-template-columns: 280px 1fr 440px;
-      min-height: calc(100vh - 56px); width: 100%;
+      display: grid; grid-template-columns: 280px 1fr 440px;
+      height: calc(100vh - 56px); width: 100vw; overflow: hidden;
     }
     
     /* Pane 1: Left Repository Explorer */
     .pane-repo {
       background: #1e293b; border-right: 1px solid #334155;
       padding: 16px; display: flex; flex-direction: column; gap: 16px;
+      height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch;
     }
     .pane-title { font-size: 12px; text-transform: uppercase; tracking: 1px; color: #94a3b8; font-weight: 700; }
     .repo-tree { font-family: 'Fira Code', monospace; font-size: 13px; color: #cbd5e1; display: flex; flex-direction: column; gap: 8px; }
@@ -51,7 +59,7 @@
     /* Pane 2: Center Conversation & Voice Drawer */
     .pane-chat {
       display: flex; flex-direction: column; background: #0f172a;
-      border-right: 1px solid #334155; min-height: 400px;
+      border-right: 1px solid #334155; height: 100%; overflow: hidden;
     }
     .chat-history {
       flex: 1; overflow-y: auto; padding: 20px; display: flex;
@@ -77,7 +85,7 @@
     /* Voice & Input Controls */
     .input-box {
       padding: 16px; background: #1e293b; border-top: 1px solid #334155;
-      display: flex; flex-direction: column; gap: 10px;
+      display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;
     }
     .input-wrapper { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .mode-select {
@@ -110,12 +118,12 @@
     
     /* Pane 3: Right Diff Preview & Terminal Console */
     .pane-console {
-      background: #1e293b; display: flex; flex-direction: column; min-height: 300px;
+      background: #1e293b; display: flex; flex-direction: column; height: 100%; overflow: hidden;
     }
     .console-header {
       padding: 14px 16px; border-bottom: 1px solid #334155;
       font-weight: 600; font-size: 14px; color: #f8fafc;
-      display: flex; justify-content: space-between; align-items: center;
+      display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
     }
     .diff-view {
       flex: 1; font-family: 'Fira Code', monospace; font-size: 12px;
@@ -125,18 +133,37 @@
     
     /* Mobile Responsive Touch Scrolling Media Queries */
     @media (max-width: 900px) {
-      body { overflow-x: auto; overflow-y: auto; height: auto; }
+      html, body {
+        height: auto; min-height: 100vh;
+        overflow-x: hidden; overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
       .eng-header { height: auto; padding: 12px 16px; }
       .eng-layout {
         display: flex; flex-direction: column;
-        height: auto; min-height: auto; overflow: visible;
+        height: auto; width: 100%; overflow: visible;
       }
-      .pane-repo, .pane-chat, .pane-console {
+      .pane-repo {
         border-right: none; border-bottom: 1px solid #334155;
-        width: 100%; height: auto;
+        width: 100%; max-height: 250px; overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
-      .chat-history { min-height: 350px; max-height: 500px; overflow-y: auto; }
-      .diff-view { min-height: 250px; max-height: 400px; overflow-x: auto; overflow-y: auto; }
+      .pane-chat {
+        border-right: none; border-bottom: 1px solid #334155;
+        width: 100%; height: auto; overflow: visible;
+      }
+      .chat-history {
+        min-height: 380px; max-height: 60vh;
+        overflow-y: auto; -webkit-overflow-scrolling: touch;
+      }
+      .pane-console {
+        width: 100%; height: auto; overflow: visible;
+      }
+      .diff-view {
+        min-height: 220px; max-height: 45vh;
+        overflow-x: auto; overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
       .impact-grid { grid-template-columns: 1fr; }
     }
 
@@ -470,8 +497,20 @@
           <div class="msg-header"><span>You (${selectedMode.toUpperCase()})</span><span>Command</span></div>
           <div class="msg-body">${escapeHtml(text)}${attachTag}</div>
         </div>
+        <div class="msg-card ai loading-card" id="temp-loading-card" style="border-left-color:#38bdf8;">
+          <div class="msg-header" style="color:#38bdf8;">
+            <span>MYNT OS Engineering AI</span>
+            <span><i class="fa-solid fa-spinner fa-spin"></i> Processing...</span>
+          </div>
+          <div class="msg-body" style="color:#94a3b8; display:flex; align-items:center; gap:10px;">
+            <i class="fa-solid fa-circle-notch fa-spin" style="font-size:18px; color:#38bdf8;"></i>
+            <span>Analyzing command & querying database...</span>
+          </div>
+        </div>
       `;
       chatHistory.scrollTop = chatHistory.scrollHeight;
+      btnSend.disabled = true;
+      cmdInput.disabled = true;
 
       try {
         const token = localStorage.getItem('mnr_token') || localStorage.getItem('staff_token') || '';
@@ -499,29 +538,39 @@
         });
         const data = await res.json();
 
-        if (!res.ok) throw new Error(data.detail || 'Failed to process command');
+        const loadingCard = document.getElementById('temp-loading-card');
+        if (loadingCard) loadingCard.remove();
 
-        if (data.status === 'INTENT_UNCERTAIN') {
-          let optHtml = data.options.map(o => `<div>${escapeHtml(o)}</div>`).join('');
-          chatHistory.innerHTML += `
-            <div class="msg-card uncertain">
-              <div class="msg-header" style="color:#f59e0b"><span>MYNT OS Engineering AI</span><span>Clarification Required</span></div>
-              <div class="msg-body">
-                <strong>${escapeHtml(data.message)}</strong><br><br>
-                ${optHtml}
+        const imp = data.impact_report || {};
+        let optionsHtml = '';
+        if (data.options && data.options.length > 0) {
+          let buttons = data.options.map(opt => {
+            let label = typeof opt === 'object' ? (opt.label || opt.value) : opt;
+            let val = typeof opt === 'object' ? (opt.value || opt.label) : opt;
+            return `<button class="opt-btn" onclick="selectOption('${escapeJS(val)}')" style="background:#1e293b; border:1px solid #38bdf8; color:#38bdf8; padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s;">${escapeHtml(label)}</button>`;
+          }).join(' ');
+
+          optionsHtml = `
+            <div style="margin-top:14px; padding-top:12px; border-top:1px solid #334155;">
+              <div style="font-size:12px; color:#f59e0b; font-weight:700; text-transform:uppercase; margin-bottom:8px;">
+                <i class="fa-solid fa-list-check"></i> Select an Option or Type Custom Instruction:
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                ${buttons}
               </div>
             </div>
           `;
-          chatHistory.scrollTop = chatHistory.scrollHeight;
-          return;
         }
 
-        const imp = data.impact_report || {};
         chatHistory.innerHTML += `
-          <div class="msg-card ai">
-            <div class="msg-header"><span>MYNT OS Engineering AI</span><span>MODE: ${data.query_mode ? data.query_mode.toUpperCase() : 'CODEBASE'} | ${data.intent_classification}</span></div>
+          <div class="msg-card ai ${data.status === 'INTENT_UNCERTAIN' ? 'uncertain' : ''}">
+            <div class="msg-header" style="${data.status === 'INTENT_UNCERTAIN' ? 'color:#f59e0b;' : ''}">
+              <span>MYNT OS Engineering AI</span>
+              <span>MODE: ${data.query_mode ? data.query_mode.toUpperCase() : 'CODEBASE'} | ${data.intent_classification}</span>
+            </div>
             <div class="msg-body">
-              <strong>Result & Findings:</strong><br>${escapeHtml(data.current_findings)}
+              <strong>Result & Findings:</strong><br>${formatMarkdown(data.current_findings)}
+              ${optionsHtml}
               <div class="impact-grid">
                 <div>Backend: <span class="impact-tag">${escapeHtml(imp.backend_impact || 'None')}</span></div>
                 <div>Database: <span class="impact-tag">${escapeHtml(imp.database_impact || 'None')}</span></div>
@@ -540,12 +589,18 @@
           modalOverlay.style.display = 'flex';
         }
       } catch (err) {
+        const loadingCard = document.getElementById('temp-loading-card');
+        if (loadingCard) loadingCard.remove();
         chatHistory.innerHTML += `
           <div class="msg-card ai" style="border-left-color:#ef4444">
             <div class="msg-header" style="color:#ef4444"><span>Error</span></div>
             <div class="msg-body">${escapeHtml(err.message)}</div>
           </div>
         `;
+      } finally {
+        btnSend.disabled = false;
+        cmdInput.disabled = false;
+        cmdInput.focus();
       }
     }
 
@@ -601,6 +656,25 @@
 
     function escapeHtml(str) {
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function escapeJS(str) {
+      return String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+
+    function selectOption(val) {
+      cmdInput.value = val;
+      cmdInput.focus();
+      runCommand();
+    }
+
+    function formatMarkdown(str) {
+      if (!str) return '';
+      let html = escapeHtml(str);
+      html = html.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+      html = html.replace(/`([^`]+)`/g, '<code style="background:#334155; padding:2px 6px; border-radius:4px; font-family:monospace; font-size:12px; color:#38bdf8;">$1</code>');
+      html = html.replace(/\n/g, '<br>');
+      return html;
     }
   </script>
 </body>

@@ -86,11 +86,16 @@ def send_instant_service_ticket_alert(db: Session, ticket_db_id: int) -> Dict[st
     return send_service_group_bot_message(msg)
 
 
-def send_daily_service_summary_report(db: Session) -> Dict[str, Any]:
+def send_daily_service_summary_report(
+    db: Session,
+    trigger_type: str = "AUTO_SCHEDULER",
+    triggered_by: str = "System Cron"
+) -> Dict[str, Any]:
     """
     Generates and posts daily 7:30 PM service ticket summary to Service Group.
     """
     from app.models.ticket import ServiceTicket
+    from app.services.whatsapp_audit_service import log_wa_trigger_execution
 
     ist_now = datetime.datetime.utcnow() + datetime.timedelta(hours=5, minutes=30)
     start_of_today_utc = (ist_now.replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(hours=5, minutes=30))
@@ -116,4 +121,21 @@ def send_daily_service_summary_report(db: Session) -> Dict[str, Any]:
         f"Great dedication today team! Thank you for delivering excellent customer support! 🌟"
     )
 
-    return send_service_group_bot_message(msg)
+    res = send_service_group_bot_message(msg)
+    is_succ = isinstance(res, dict) and res.get("success") is True
+
+    targets = [{"type": "group", "name": "Service & Maintenance Team", "identifier": SERVICE_GROUP_INVITE_CODE}]
+    log_wa_trigger_execution(
+        job_id="service_summary",
+        job_name="Daily 7:30 PM Service Ticket Summary",
+        trigger_type=trigger_type,
+        triggered_by=triggered_by,
+        targets=targets,
+        sent_count=1 if is_succ else 0,
+        failed_count=0 if is_succ else 1,
+        status="SUCCESS" if is_succ else "FAILED",
+        error_message=res.get("error") if not is_succ else None,
+        detail_data=res
+    )
+
+    return res

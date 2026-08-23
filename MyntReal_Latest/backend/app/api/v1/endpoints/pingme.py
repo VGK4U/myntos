@@ -1129,170 +1129,285 @@ def _query_whatsapp(db: Session) -> Dict:
         return {"reply_text": "Error retrieving WhatsApp message log.", "speak_text": "Error retrieving WhatsApp message log."}
 
 
-def _query_time() -> Dict:
-    """Returns current date and time in IST."""
-    now = today_ist()
-    time_str = now.strftime('%I:%M:%S %p IST')
-    date_str = now.strftime('%A, %d %B %Y')
-    reply = f"🕒 **Current System Date & Time:**\n📅 **Date:** {date_str}\n⏰ **Time:** {time_str}"
-    speak = f"It is currently {now.strftime('%I:%M %p')} on {now.strftime('%A, %d %B %Y')}."
-    return {"reply_text": reply, "speak_text": speak}
-
-
 def _query_cash_statement(db: Session, query_lower: str = "") -> Dict:
     """
-    Query and format complete Financial Cash Statement:
-    Total Cash In, Cash Out, Bank In, Bank Out, and Category Breakups for Today, This Week, and Overall.
+    Query and format dynamic Financial Cash Statement & Employee Expense Report.
+    Supports specific date queries (e.g., '21st Aug cash statement', 'yesterday', 'this week', 'this month')
+    and employee-specific expense queries (e.g., 'MR10001 expenses', 'employee X expenses').
     """
     try:
-        from sqlalchemy import text
+        from sqlalchemy import text, func, or_
+        from datetime import date, timedelta
+        import re
 
-        # 1. Expenses (Disbursements / Cash & Bank Out)
-        exp_res = db.execute(text("""
+        today = today_ist()
+
+        # Parse employee & date range
+        target_emp = None
+        m_code = re.search(r'\b(mr\d{4,6}|fl\d{4,6}|mn\d{4,6})\b', query_lower)
+        if m_code:
+            code_str = m_code.group(1).upper()
+            from app.models.staff import StaffEmployee
+            target_emp = db.query(StaffEmployee).filter(StaffEmployee.emp_code == code_str).first()
+
+        if not target_emp and ("employee" in query_lower or "expenses" in query_lower or "staff" in query_lower):
+            words = [w for w in query_lower.split() if len(w) >= 3 and w not in {
+                'expense', 'expenses', 'cash', 'statement', 'report', 'this', 'week', 'month', 'today', 'yesterday',
+                'for', 'show', 'give', 'list', 'flow', 'bank', 'summary', 'breakup', 'breakups', 'employee', 'staff'
+            }]
+            for word in words:
+                from app.models.staff import StaffEmployee
+                emp = db.query(StaffEmployee).filter(
+                    or_(
+                        func.lower(StaffEmployee.full_name).contains(word),
+                        func.lower(StaffEmployee.first_name).contains(word)
+                    )
+                ).first()
+                if emp:
+                    target_emp = emp
+                    break
+
+        # Date Range Parsing
+        months = {
+            'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
+            'apr': 4, 'april': 4, 'may': 5, 'june': 6, 'jun': 6, 'july': 7, 'jul': 7,
+            'aug': 8, 'august': 8, 'sep': 9, 'september': 9, 'oct': 10, 'october': 10,
+            'nov': 11, 'november': 11, 'dec': 12, 'december': 12
+        }
+
+        start_date = None
+        end_date = None
+        period_label = None
+        is_specific_single_date = False
+
+        m1 = re.search(r'(\b\d{1,2})(?:st|nd|rd|th)?\s+([a-z]{3,9})(?:\s+(\d{4}))?', query_lower)
+        if m1:
+            day = int(m1.group(1))
+            m_name = m1.group(2)
+            yr = int(m1.group(3)) if m1.group(3) else today.year
+            if m_name in months:
+                try:
+                    dt = date(yr, months[m_name], day)
+                    start_date = dt
+                    end_date = dt
+                    period_label = f"{day} {m_name.capitalize()} {yr}"
+                    is_specific_single_date = True
+                except Exception:
+                    pass
+
+        if not start_date:
+            m2 = re.search(r'([a-z]{3,9})\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s+(\d{4}))?', query_lower)
+            if m2:
+                m_name = m2.group(1)
+                day = int(m2.group(2))
+                yr = int(m2.group(3)) if m2.group(3) else today.year
+                if m_name in months:
+                    try:
+                        dt = date(yr, months[m_name], day)
+                        start_date = dt
+                        end_date = dt
+                        period_label = f"{day} {m_name.capitalize()} {yr}"
+                        is_specific_single_date = True
+                    except Exception:
+                        pass
+
+        if not start_date:
+            if 'yesterday' in query_lower:
+                dt = today - timedelta(days=1)
+                start_date = dt
+                end_date = dt
+                period_label = f"Yesterday ({dt.strftime('%d %b %Y')})"
+                is_specific_single_date = True
+            elif 'this week' in query_lower or 'past 7 days' in query_lower or 'week' in query_lower:
+                start_date = today - timedelta(days=7)
+                end_date = today
+                period_label = f"This Week ({start_date.strftime('%d %b')} - {today.strftime('%d %b %Y')})"
+            elif 'last week' in query_lower:
+                start_date = today - timedelta(days=14)
+                end_date = today - timedelta(days=7)
+                period_label = f"Last Week ({start_date.strftime('%d %b')} - {end_date.strftime('%d %b %Y')})"
+            elif 'this month' in query_lower or 'august' in query_lower or 'month' in query_lower:
+                start_date = date(today.year, today.month, 1)
+                end_date = today
+                period_label = f"August {today.year}"
+
+        if not start_date:
+            start_date = today
+            end_date = today
+            period_label = f"Today ({today.strftime('%d %b %Y')})"
+            is_specific_single_date = True
+
+        # BRANCH A: SPECIFIC EMPLOYEE EXPENSES REPORT
+        if target_emp:
+            emp_name = target_emp.full_name or f"Employee #{target_emp.id}"
+            emp_code = target_emp.emp_code or ""
+
+            # Query expense_entries table
+            ee_rows = db.execute(text("""
+                SELECT 
+                    id, entry_number, expense_date, amount, payment_mode, vendor_name,
+                    narration, status, is_paid, custom_category_name
+                FROM expense_entries
+                WHERE created_by_id = :emp_id
+                  AND DATE(expense_date) >= :s_date AND DATE(expense_date) <= :e_date
+                ORDER BY expense_date DESC, id DESC
+                LIMIT 50
+            """), {"emp_id": target_emp.id, "s_date": start_date, "e_date": end_date}).fetchall()
+
+            # Summary totals
+            tot_exp = sum(float(r.amount or 0) for r in ee_rows)
+            app_exp = sum(float(r.amount or 0) for r in ee_rows if (r.status or '').upper() == 'APPROVED')
+            sub_exp = sum(float(r.amount or 0) for r in ee_rows if (r.status or '').upper() == 'SUBMITTED')
+            drf_exp = sum(float(r.amount or 0) for r in ee_rows if (r.status or '').upper() == 'DRAFT')
+            paid_exp = sum(float(r.amount or 0) for r in ee_rows if r.is_paid)
+
+            lines = [
+                f"👤 **Employee Expense Report: {emp_name} ({emp_code})**",
+                f"🗓️ **Period**: {period_label}\n",
+                f"💰 **Expense Summary:**",
+                f"• **Total Recorded Expenses**: ₹{tot_exp:,.2f} ({len(ee_rows)} entries)",
+                f"• **Approved Amount**: ₹{app_exp:,.2f}",
+                f"• **Pending Submitted**: ₹{sub_exp:,.2f}",
+                f"• **Draft Amount**: ₹{drf_exp:,.2f}",
+                f"• **Paid Out**: ₹{paid_exp:,.2f}\n"
+            ]
+
+            if ee_rows:
+                lines.append("📋 **Expense Records:**")
+                for r in ee_rows[:10]:
+                    dt_str = r.expense_date.strftime('%d-%b-%Y') if r.expense_date else '—'
+                    st_badge = (r.status or 'DRAFT').upper()
+                    vendor = r.vendor_name or '—'
+                    desc = r.narration or r.custom_category_name or 'Expense'
+                    lines.append(f"• **#{r.id}** ({dt_str}) | ₹{float(r.amount or 0):,.2f} | `{st_badge}` | Paid To: {vendor} | _{desc}_")
+                if len(ee_rows) > 10:
+                    lines.append(f"• ... and {len(ee_rows) - 10} more expense entries.")
+            else:
+                lines.append(f"• No expense records found for {emp_name} during {period_label}.")
+
+            options = [
+                {"label": f"📋 All {emp_code} Expenses", "value": f"{emp_code} expenses"},
+                {"label": "💵 Cash Statement", "value": "give me cash statement"},
+                {"label": "📊 Expense Categories", "value": "show expense category breakdown"}
+            ]
+
+            return {
+                "reply_text": "\n".join(lines),
+                "speak_text": f"Here is the expense report for {emp_name} for {period_label}.",
+                "options": options
+            }
+
+        # BRANCH B: COMPANY CASH STATEMENT (Specific Date or Range)
+        # Query Expenses for targeted date range
+        exp_tgt = db.execute(text("""
             SELECT 
                 payment_mode,
                 category,
-                COALESCE(SUM(CASE WHEN DATE(expense_date) = CURRENT_DATE OR DATE(created_at) = CURRENT_DATE THEN amount ELSE 0 END), 0) as today_amt,
-                COALESCE(SUM(CASE WHEN DATE(expense_date) >= CURRENT_DATE - INTERVAL '7 days' OR DATE(created_at) >= CURRENT_DATE - INTERVAL '7 days' THEN amount ELSE 0 END), 0) as week_amt,
                 COALESCE(SUM(amount), 0) as total_amt,
                 COUNT(*) as cnt
             FROM expense
             WHERE is_deleted = false AND (status = 'approved' OR status IS NULL)
+              AND (DATE(expense_date) >= :s_date AND DATE(expense_date) <= :e_date)
             GROUP BY payment_mode, category
-        """)).fetchall()
+        """), {"s_date": start_date, "e_date": end_date}).fetchall()
 
-        # 2. VGK Cash Income Entries (Inflows & Payouts)
-        vci_res = db.execute(text("""
+        # Query Income Entries for targeted date range
+        vci_tgt = db.execute(text("""
             SELECT 
                 payment_mode,
                 status,
-                COALESCE(SUM(CASE WHEN DATE(created_at) = CURRENT_DATE OR DATE(paid_at) = CURRENT_DATE THEN net_payout ELSE 0 END), 0) as today_amt,
-                COALESCE(SUM(CASE WHEN DATE(created_at) >= CURRENT_DATE - INTERVAL '7 days' OR DATE(paid_at) >= CURRENT_DATE - INTERVAL '7 days' THEN net_payout ELSE 0 END), 0) as week_amt,
                 COALESCE(SUM(net_payout), 0) as total_amt,
                 COUNT(*) as cnt
             FROM vgk_cash_income_entries
             WHERE status IN ('PAID', 'STAGE1_APPROVED', 'PENDING', 'DRAFT')
+              AND (DATE(created_at) >= :s_date AND DATE(created_at) <= :e_date OR DATE(paid_at) >= :s_date AND DATE(paid_at) <= :e_date)
             GROUP BY payment_mode, status
-        """)).fetchall()
+        """), {"s_date": start_date, "e_date": end_date}).fetchall()
 
-        # 3. Pending Income Summary
-        pi_res = db.execute(text("""
+        # Overall Cumulative Context
+        exp_cum = db.execute(text("""
             SELECT 
-                verification_status,
-                COALESCE(SUM(net_amount), 0) as net_amt,
-                COALESCE(SUM(gross_amount), 0) as gross_amt,
-                COUNT(*) as cnt
-            FROM pending_income
-            GROUP BY verification_status
+                payment_mode,
+                COALESCE(SUM(amount), 0) as total_amt
+            FROM expense
+            WHERE is_deleted = false AND (status = 'approved' OR status IS NULL)
+            GROUP BY payment_mode
         """)).fetchall()
 
-        today_cash_in = 0.0
-        today_cash_out = 0.0
-        today_bank_in = 0.0
-        today_bank_out = 0.0
+        vci_cum = db.execute(text("""
+            SELECT 
+                payment_mode,
+                COALESCE(SUM(net_payout), 0) as total_amt
+            FROM vgk_cash_income_entries
+            WHERE status IN ('PAID', 'STAGE1_APPROVED', 'PENDING', 'DRAFT')
+            GROUP BY payment_mode
+        """)).fetchall()
 
-        week_cash_in = 0.0
-        week_cash_out = 0.0
-        week_bank_in = 0.0
-        week_bank_out = 0.0
+        tgt_cash_in = 0.0
+        tgt_cash_out = 0.0
+        tgt_bank_in = 0.0
+        tgt_bank_out = 0.0
+        tgt_exp_categories = {}
 
-        total_cash_in = 0.0
-        total_cash_out = 0.0
-        total_bank_in = 0.0
-        total_bank_out = 0.0
-
-        exp_category_breakup = {}
-        income_status_breakup = {}
-
-        for r in exp_res:
+        for r in exp_tgt:
             pm = (r.payment_mode or "").lower()
             cat = r.category or "General Operations"
-            t_amt = float(r.today_amt or 0)
-            w_amt = float(r.week_amt or 0)
-            tot_amt = float(r.total_amt or 0)
-
+            amt = float(r.total_amt or 0)
             if "cash" in pm:
-                today_cash_out += t_amt
-                week_cash_out += w_amt
-                total_cash_out += tot_amt
+                tgt_cash_out += amt
             else:
-                today_bank_out += t_amt
-                week_bank_out += w_amt
-                total_bank_out += tot_amt
+                tgt_bank_out += amt
+            tgt_exp_categories[cat] = tgt_exp_categories.get(cat, 0.0) + amt
 
-            if cat not in exp_category_breakup:
-                exp_category_breakup[cat] = 0.0
-            exp_category_breakup[cat] += tot_amt
-
-        for r in vci_res:
+        for r in vci_tgt:
             pm = (r.payment_mode or "").lower()
-            st = r.status or "DRAFT"
-            t_amt = float(r.today_amt or 0)
-            w_amt = float(r.week_amt or 0)
-            tot_amt = float(r.total_amt or 0)
-
+            amt = float(r.total_amt or 0)
             if "cash" in pm:
-                today_cash_in += t_amt
-                week_cash_in += w_amt
-                total_cash_in += tot_amt
+                tgt_cash_in += amt
             else:
-                today_bank_in += t_amt
-                week_bank_in += w_amt
-                total_bank_in += tot_amt
+                tgt_bank_in += amt
 
-            if st not in income_status_breakup:
-                income_status_breakup[st] = 0.0
-            income_status_breakup[st] += tot_amt
+        cum_cash_in = sum(float(r.total_amt or 0) for r in vci_cum if "cash" in (r.payment_mode or "").lower())
+        cum_bank_in = sum(float(r.total_amt or 0) for r in vci_cum if "cash" not in (r.payment_mode or "").lower())
+        cum_cash_out = sum(float(r.total_amt or 0) for r in exp_cum if "cash" in (r.payment_mode or "").lower())
+        cum_bank_out = sum(float(r.total_amt or 0) for r in exp_cum if "cash" not in (r.payment_mode or "").lower())
 
-        pi_completed = 0.0
-        pi_pending = 0.0
-        for r in pi_res:
-            st = r.verification_status or "Pending"
-            if st in ("Completed", "Super Admin Verified", "Admin Verified"):
-                pi_completed += float(r.net_amt or 0)
-            else:
-                pi_pending += float(r.net_amt or 0)
+        title_hdr = f"📅 **Financial Cash Statement for {period_label}:**" if is_specific_single_date else f"🗓️ **Financial Cash Statement ({period_label}):**"
 
         lines = [
             "💵 **MYNT OS Financial Cash & Bank Statement:**\n",
-            f"📅 **Today's Cash Flow:**",
-            f"• **Cash In**: ₹{today_cash_in:,.2f} | **Cash Out**: ₹{today_cash_out:,.2f} ➔ **Net Cash**: ₹{(today_cash_in - today_cash_out):,.2f}",
-            f"• **Bank In**: ₹{today_bank_in:,.2f} | **Bank Out**: ₹{today_bank_out:,.2f} ➔ **Net Bank**: ₹{(today_bank_in - today_bank_out):,.2f}\n",
-            f"🗓️ **This Week (Past 7 Days) Summary:**",
-            f"• **Total Cash In**: ₹{week_cash_in:,.2f} | **Total Cash Out**: ₹{week_cash_out:,.2f}",
-            f"• **Total Bank In**: ₹{week_bank_in:,.2f} | **Total Bank Out**: ₹{week_bank_out:,.2f}",
-            f"• **Net Weekly Cash Flow**: ₹{((week_cash_in + week_bank_in) - (week_cash_out + week_bank_out)):,.2f}\n",
-            f"🏛️ **Overall Cumulative Cash Statement:**",
-            f"• **Total Cash In**: ₹{total_cash_in:,.2f} | **Total Cash Out**: ₹{total_cash_out:,.2f} ➔ **Net Cash Balance**: ₹{(total_cash_in - total_cash_out):,.2f}",
-            f"• **Total Bank/UPI In**: ₹{total_bank_in:,.2f} | **Total Bank/UPI Out**: ₹{total_bank_out:,.2f} ➔ **Net Bank Balance**: ₹{(total_bank_in - total_bank_out):,.2f}",
-            f"• **Overall Net Financial Position**: ₹{((total_cash_in + total_bank_in) - (total_cash_out + total_bank_out)):,.2f}\n",
-            f"📊 **Expense Category Breakups (Outflow):**"
+            title_hdr,
+            f"• **Cash In**: ₹{tgt_cash_in:,.2f} | **Cash Out**: ₹{tgt_cash_out:,.2f} ➔ **Net Cash**: ₹{(tgt_cash_in - tgt_cash_out):,.2f}",
+            f"• **Bank In**: ₹{tgt_bank_in:,.2f} | **Bank Out**: ₹{tgt_bank_out:,.2f} ➔ **Net Bank**: ₹{(tgt_bank_in - tgt_bank_out):,.2f}\n"
         ]
 
-        if exp_category_breakup:
-            for cat, amt in exp_category_breakup.items():
+        if is_specific_single_date and (tgt_cash_in == 0 and tgt_cash_out == 0 and tgt_bank_in == 0 and tgt_bank_out == 0):
+            lines.append(f"ℹ️ *No direct transactions were recorded on {period_label}. Below is the overall cumulative position:*\n")
+
+        lines.extend([
+            f"🏛️ **Overall Cumulative Position (To Date):**",
+            f"• **Total Cash In**: ₹{cum_cash_in:,.2f} | **Total Cash Out**: ₹{cum_cash_out:,.2f} ➔ **Net Cash Balance**: ₹{(cum_cash_in - cum_cash_out):,.2f}",
+            f"• **Total Bank/UPI In**: ₹{cum_bank_in:,.2f} | **Total Bank/UPI Out**: ₹{cum_bank_out:,.2f} ➔ **Net Bank Balance**: ₹{(cum_bank_in - cum_bank_out):,.2f}",
+            f"• **Overall Net Position**: ₹{((cum_cash_in + cum_bank_in) - (cum_cash_out + cum_bank_out)):,.2f}\n",
+            f"📊 **Expense Category Breakups ({period_label}):**"
+        ])
+
+        if tgt_exp_categories:
+            for cat, amt in tgt_exp_categories.items():
                 lines.append(f"• **{cat}**: ₹{amt:,.2f}")
         else:
-            lines.append("• No categorized expenses recorded.")
-
-        lines.append("\n💰 **Income & Revenue Breakups (Inflow & Verified):**")
-        lines.append(f"• **Completed Verified Incomes**: ₹{pi_completed:,.2f}")
-        lines.append(f"• **Pending / In-Validation Incomes**: ₹{pi_pending:,.2f}")
-        if income_status_breakup:
-            for st, amt in income_status_breakup.items():
-                lines.append(f"• **Direct Dispatches ({st})**: ₹{amt:,.2f}")
+            lines.append(f"• No categorized expenses recorded for {period_label}.")
 
         options = [
             {"label": "💵 Cash In & Out", "value": "give me cash in and cash out breakdown"},
             {"label": "🏦 Bank In & Out", "value": "give me bank in and bank out summary"},
             {"label": "📊 Expense Categories", "value": "show expense category breakdown"},
-            {"label": "📞 Telecalling Report", "value": "this week talk time analysis for tele callers"},
-            {"label": "🟢 Active Attendance", "value": "who is present today"}
+            {"label": "👤 MR10001 Expenses", "value": "MR10001 expenses for this month"}
         ]
 
         return {
             "reply_text": "\n".join(lines),
-            "speak_text": "Here is your total cash in, cash out, bank statement, and category breakups.",
+            "speak_text": f"Here is the cash statement for {period_label}.",
             "options": options
         }
     except Exception as exc:

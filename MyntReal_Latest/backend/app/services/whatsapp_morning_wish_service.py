@@ -212,6 +212,50 @@ def seed_and_submit_morning_wish_templates(db: Session) -> Dict[str, Any]:
     return {"success": True, "templates": results}
 
 
+def get_eligible_leads_for_morning_wish(db: Session) -> List[Any]:
+    """
+    Fetches leads eligible for the 8:00 AM morning wish:
+    1. New Leads (status == 'New')
+    2. Uncontacted for >20 days (last_contact_date < NOW - 20 days or NULL)
+    Excludes: Closed, Won, Lost, Junk, Opted-out, AND Staff Employee Phone Numbers.
+    """
+    from app.models.crm import CRMLead
+    from app.models.staff import StaffEmployee
+
+    ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
+    twenty_days_ago = ist_now - timedelta(days=20)
+
+    # Exclude non-active statuses
+    excluded_statuses = ('Closed', 'Won', 'Lost', 'Junk', 'Duplicate', 'Cancelled', 'Not Interested')
+
+    # Fetch staff employee phones to prevent staff from receiving customer lead wishes
+    staff_rows = db.query(StaffEmployee.phone).all()
+    staff_phones = set(''.join(c for c in (r[0] or '') if c.isdigit())[-10:] for r in staff_rows if r[0])
+
+    query = db.query(CRMLead).filter(
+        CRMLead.phone.isnot(None),
+        CRMLead.phone != '',
+        ~CRMLead.status.in_(excluded_statuses)
+    ).filter(
+        or_(
+            CRMLead.status == 'New',
+            CRMLead.last_contact_date < twenty_days_ago,
+            CRMLead.last_contact_date.is_(None)
+        )
+    )
+
+    leads = query.all()
+    
+    # Exclude staff numbers
+    filtered_leads = []
+    for l in leads:
+        ph_digits = ''.join(c for c in (l.phone or '') if c.isdigit())[-10:]
+        if ph_digits not in staff_phones:
+            filtered_leads.append(l)
+
+    return filtered_leads
+
+
 def get_current_rotation_template(db: Session) -> Dict[str, Any]:
     """
     Calculates current 4-day rotation template for today.
@@ -242,38 +286,13 @@ def get_current_rotation_template(db: Session) -> Dict[str, Any]:
     }
 
 
-def get_eligible_leads_for_morning_wish(db: Session) -> List[Any]:
-    """
-    Fetches leads eligible for the 8:00 AM morning wish:
-    1. New Leads (status == 'New')
-    2. Uncontacted for >20 days (last_contact_date < NOW - 20 days or NULL)
-    Excludes: Closed, Won, Lost, Junk, Opted-out
-    """
-    from app.models.crm import CRMLead
-
-    ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
-    twenty_days_ago = ist_now - timedelta(days=20)
-
-    # Exclude non-active statuses
-    excluded_statuses = ('Closed', 'Won', 'Lost', 'Junk', 'Duplicate', 'Cancelled', 'Not Interested')
-
-    query = db.query(CRMLead).filter(
-        CRMLead.phone.isnot(None),
-        CRMLead.phone != '',
-        ~CRMLead.status.in_(excluded_statuses)
-    ).filter(
-        or_(
-            CRMLead.status == 'New',
-            CRMLead.last_contact_date < twenty_days_ago,
-            CRMLead.last_contact_date.is_(None)
-        )
-    )
-
-    leads = query.all()
-    return leads
-
-
-def dispatch_daily_morning_wishes(db: Session, force_test: bool = False, limit_count: Optional[int] = None) -> Dict[str, Any]:
+def dispatch_daily_morning_wishes(
+    db: Session,
+    force_test: bool = False,
+    limit_count: Optional[int] = None,
+    trigger_type: str = "AUTO_SCHEDULER",
+    triggered_by: str = "System Cron"
+) -> Dict[str, Any]:
     """
     Executes the 8:00 AM morning wish dispatch:
     - Calculates today's rotation template
@@ -283,6 +302,7 @@ def dispatch_daily_morning_wishes(db: Session, force_test: bool = False, limit_c
     from app.models.whatsapp import MessageLog
     from app.services.whatsapp_auto_service import _is_valid_phone
     from app.services.wa_credentials import get_wa_credentials
+    from app.services.whatsapp_audit_service import log_wa_trigger_execution
 
     current_rot = get_current_rotation_template(db)
     rot_index = current_rot["rot_index"]
@@ -301,12 +321,20 @@ def dispatch_daily_morning_wishes(db: Session, force_test: bool = False, limit_c
     ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
     start_of_today = (ist_now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=5, minutes=30))
 
-    # Batch fetch all numbers sent today in 1 query for 100x speedup
-    sent_today_numbers = set(
-        r[0] for r in db.query(MessageLog.mobile_number).filter(
-            MessageLog.sent_at >= start_of_today
-        ).all() if r[0]
+    # Batch fetch all numbers sent today from MessageLog AND wa_inbox for 100% deduplication
+    msg_log_numbers = set(
+        ''.join(c for c in (r[0] or '') if c.isdigit())[-10:]
+        for r in db.query(MessageLog.mobile_number).filter(MessageLog.sent_at >= start_of_today).all() if r[0]
     )
+    
+    inbox_numbers = set()
+    try:
+        inbox_rows = db.execute(text("SELECT from_phone FROM wa_inbox WHERE received_at >= :t"), {"t": start_of_today}).fetchall()
+        inbox_numbers = set(''.join(c for c in (r[0] or '') if c.isdigit())[-10:] for r in inbox_rows if r[0])
+    except Exception:
+        pass
+
+    sent_today_numbers = msg_log_numbers.union(inbox_numbers)
 
     sent_count = 0
     skipped_count = 0
@@ -330,7 +358,8 @@ def dispatch_daily_morning_wishes(db: Session, force_test: bool = False, limit_c
             continue
 
         # Check if already sent today (instant O(1) set lookup)
-        if phone_formatted in sent_today_numbers and not force_test:
+        clean_10 = phone_digits[-10:]
+        if (clean_10 in sent_today_numbers or phone_formatted in sent_today_numbers) and not force_test:
             skipped_count += 1
             continue
 
@@ -397,6 +426,20 @@ def dispatch_daily_morning_wishes(db: Session, force_test: bool = False, limit_c
             "status": "sent" if sent_success else "failed",
             "error": error_msg
         })
+
+    is_overall_success = (sent_count > 0 or len(leads) == 0) and failed_count == 0
+    log_wa_trigger_execution(
+        job_id="wa_daily_morning_wish",
+        job_name="WhatsApp 8 AM Morning Wish Dispatch",
+        trigger_type=trigger_type,
+        triggered_by=triggered_by,
+        targets=[],
+        sent_count=sent_count,
+        failed_count=failed_count,
+        status="SUCCESS" if is_overall_success else "FAILED",
+        error_message=f"Failed {failed_count} sends" if failed_count > 0 else None,
+        detail_data={"total_eligible": len(leads), "sent_count": sent_count, "skipped_count": skipped_count}
+    )
 
     return {
         "success": True,

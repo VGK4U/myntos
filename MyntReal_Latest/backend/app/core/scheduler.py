@@ -4788,6 +4788,28 @@ def init_scheduler():
     )
     logger.info("   🌅 VGK4U 8AM IST daily morning wish scheduled")
 
+    # DC-VGK-MEMBER-STATEMENT-001: Daily 7:30 AM IST VGK Members Revenue Statement Dispatch
+    scheduler.add_job(
+        job_daily_vgk_member_morning_statement,
+        trigger=CronTrigger(hour=7, minute=30, timezone='Asia/Kolkata'),
+        id='wa_daily_vgk_member_statement_730am',
+        name='WhatsApp: Daily VGK Member 7:30AM Revenue Statement Dispatch',
+        replace_existing=True,
+        misfire_grace_time=600,
+    )
+    logger.info("   🌅 VGK Members 7:30AM IST daily revenue statement scheduled")
+
+    # DC-VGK-0LEAD-MOTIVATION-001: Daily 7:30 AM IST VGK 0-Lead Members Motivational Dispatch
+    scheduler.add_job(
+        job_daily_vgk_zero_lead_motivational,
+        trigger=CronTrigger(hour=7, minute=30, timezone='Asia/Kolkata'),
+        id='wa_daily_vgk_zero_lead_motivational_730am',
+        name='WhatsApp: Daily VGK 0-Lead 7:30AM Motivational Dispatch',
+        replace_existing=True,
+        misfire_grace_time=600,
+    )
+    logger.info("   🌅 VGK 0-Lead Members 7:30AM IST daily motivational dispatch scheduled")
+
     # DC-SERVICE-SUMMARY-001: Daily 7:30 PM IST Service Ticket Summary Report
     scheduler.add_job(
         job_daily_service_summary_report,
@@ -4799,39 +4821,73 @@ def init_scheduler():
     )
     logger.info("   🛠️ Service 7:30PM IST daily summary report scheduled")
 
-    # DC_FIELD_JOURNEY_REPORT_001: Bi-Hourly Field Staff Journey Performance Report (10 AM - 10 PM IST / Active Journeys)
+    # DC_FIELD_JOURNEY_REPORT_001: 90-Minute Field Staff Journey Performance Report (09:30 AM - 09:00 PM IST)
     try:
-        def run_field_journey_bi_hourly_job():
-            logger.info("🚜 [FIELD-JOURNEY-REPORT] Executing bi-hourly field journey report & check-in audit...")
+        def run_field_journey_scheduled_report_job():
+            logger.info("🚜 [FIELD-JOURNEY-REPORT] Executing scheduled 90-minute field journey report dispatch...")
             db = SessionLocal()
             try:
                 from app.services.field_journey_report_service import dispatch_field_journey_whatsapp_reports_and_alerts
                 res = dispatch_field_journey_whatsapp_reports_and_alerts(db)
-                logger.info("🚜 [FIELD-JOURNEY-REPORT] Execution complete: %s", res)
+                logger.info("🚜 [FIELD-JOURNEY-REPORT] Scheduled report execution complete: %s", res)
             except Exception as exc:
-                logger.error("🚜 [FIELD-JOURNEY-REPORT] Exception in job: %s", exc)
+                logger.error("🚜 [FIELD-JOURNEY-REPORT] Exception in scheduled report job: %s", exc)
             finally:
                 db.close()
 
-        # Bi-hourly updates every 2 hours (10:00 AM - 10:00 PM IST) for active journeys
+        def run_field_journey_inactivity_alerts_only_job():
+            logger.info("🚜 [FIELD-JOURNEY-INACTIVITY] Executing 30-min photo check-in audit (silent alerts only)...")
+            db = SessionLocal()
+            try:
+                from app.services.field_journey_report_service import dispatch_field_journey_photo_inactivity_alerts_only
+                res = dispatch_field_journey_photo_inactivity_alerts_only(db)
+                logger.info("🚜 [FIELD-JOURNEY-INACTIVITY] Silent inactivity audit complete: %s", res)
+            except Exception as exc:
+                logger.error("🚜 [FIELD-JOURNEY-INACTIVITY] Exception in inactivity audit job: %s", exc)
+            finally:
+                db.close()
+
+        # 90-Minute schedule: 09:30 AM, 11:00 AM, 12:30 PM, 02:00 PM, 03:30 PM, 05:00 PM, 06:30 PM, 08:00 PM IST
         scheduler.add_job(
-            run_field_journey_bi_hourly_job,
-            trigger=CronTrigger(hour='10,12,14,16,18,20,22', minute=0, timezone='Asia/Kolkata'),
-            id='wa_bi_hourly_field_journey_report',
-            name='WhatsApp: Bi-Hourly Field Journey Performance Report (10AM-10PM IST / Active)',
+            run_field_journey_scheduled_report_job,
+            trigger=CronTrigger(hour='9,12,15,18', minute=30, timezone='Asia/Kolkata'),
+            id='wa_90min_field_journey_report_half_past',
+            name='WhatsApp: 90-Min Field Journey Report (09:30, 12:30, 15:30, 18:30 IST)',
             replace_existing=True,
             misfire_grace_time=600,
             max_instances=1,
         )
         scheduler.add_job(
-            run_field_journey_bi_hourly_job,
+            run_field_journey_scheduled_report_job,
+            trigger=CronTrigger(hour='11,14,17,20', minute=0, timezone='Asia/Kolkata'),
+            id='wa_90min_field_journey_report_top_hour',
+            name='WhatsApp: 90-Min Field Journey Report (11:00, 14:00, 17:00, 20:00 IST)',
+            replace_existing=True,
+            misfire_grace_time=600,
+            max_instances=1,
+        )
+        # Daily Final Closing Report at 09:00 PM IST
+        scheduler.add_job(
+            run_field_journey_scheduled_report_job,
+            trigger=CronTrigger(hour=21, minute=0, timezone='Asia/Kolkata'),
+            id='wa_daily_closing_field_journey_report_9pm',
+            name='WhatsApp: Daily Final Closing Field Journey Performance Report (09:00 PM IST)',
+            replace_existing=True,
+            misfire_grace_time=600,
+            max_instances=1,
+        )
+
+        # 30-Min Active Journey Photo Check-in Audit (Silent alerts only - DOES NOT DISPATCH GROUP REPORT)
+        scheduler.add_job(
+            run_field_journey_inactivity_alerts_only_job,
             trigger=CronTrigger(minute='15,45', timezone='Asia/Kolkata'),
             id='wa_field_journey_inactivity_check',
-            name='WhatsApp: 30-Min Active Journey Photo Check-in Audit',
+            name='WhatsApp: 30-Min Active Journey Photo Check-in Audit (Alerts Only)',
             replace_existing=True,
             misfire_grace_time=300,
             max_instances=1,
         )
+
 
         # DC_JOURNEY_GAPS_002: 11:59 PM Overnight Safety Net — Auto-close forgotten IN_PROGRESS journeys
         def run_overnight_journey_autoclose_job():
@@ -5076,6 +5132,38 @@ def job_daily_vgk4u_morning_wish():
         logger.info(f"✅ DC-VGK4U-WISH-001: Morning wish result: {res}")
     except Exception as exc:
         logger.error(f"❌ DC-VGK4U-WISH-001: Failed to send VGK4U morning wish: {exc}")
+    finally:
+        db.close()
+
+
+# DC-VGK-MEMBER-STATEMENT-001: Daily 7:30 AM VGK Members Revenue Statement Dispatch
+def job_daily_vgk_member_morning_statement():
+    from app.core.database import SessionLocal
+    from app.services.vgk_member_morning_statement_service import run_vgk_member_daily_morning_statement_dispatch
+
+    logger.info("🌅 DC-VGK-MEMBER-STATEMENT-001: Triggering daily 7:30 AM VGK member revenue statement dispatch...")
+    db = SessionLocal()
+    try:
+        res = run_vgk_member_daily_morning_statement_dispatch(db)
+        logger.info(f"✅ DC-VGK-MEMBER-STATEMENT-001: Member statement dispatch result: {res}")
+    except Exception as exc:
+        logger.error(f"❌ DC-VGK-MEMBER-STATEMENT-001: Failed to send VGK member morning statement: {exc}")
+    finally:
+        db.close()
+
+
+# DC-VGK-0LEAD-MOTIVATION-001: Daily 7:30 AM VGK 0-Lead Partner Motivational Dispatch
+def job_daily_vgk_zero_lead_motivational():
+    from app.core.database import SessionLocal
+    from app.services.vgk_member_zero_lead_motivational_service import run_vgk_member_zero_lead_motivational_dispatch
+
+    logger.info("🌅 DC-VGK-0LEAD-MOTIVATION-001: Triggering daily 7:30 AM VGK 0-lead partner motivational dispatch...")
+    db = SessionLocal()
+    try:
+        res = run_vgk_member_zero_lead_motivational_dispatch(db)
+        logger.info(f"✅ DC-VGK-0LEAD-MOTIVATION-001: 0-Lead motivational dispatch result: {res}")
+    except Exception as exc:
+        logger.error(f"❌ DC-VGK-0LEAD-MOTIVATION-001: Failed to send 0-lead motivational dispatch: {exc}")
     finally:
         db.close()
 
