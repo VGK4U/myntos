@@ -1679,6 +1679,20 @@ def get_finalized_day_metrics(
     except Exception as e:
         print("[DC-METRICS] KRA lookup exception:", e)
 
+    # 5. Service Tickets Data (for Service Team / Technicians / Service Managers)
+    tickets_handled = 0
+    tickets_resolved = 0
+    tat_pct = 100
+    try:
+        from app.models.ticket import ServiceTicket
+        base_f = or_(ServiceTicket.service_manager_id == current_user.id, ServiceTicket.service_technician_id == current_user.id)
+        tickets_handled = int(db.query(func.count(ServiceTicket.id)).filter(base_f, func.date(ServiceTicket.created_date) == target_date).scalar() or 0)
+        tickets_resolved = int(db.query(func.count(ServiceTicket.id)).filter(base_f, ServiceTicket.status == 'Closed', func.date(ServiceTicket.closed_date) == target_date).scalar() or 0)
+        within_tat = int(db.query(func.count(ServiceTicket.id)).filter(base_f, ServiceTicket.status == 'Closed', func.date(ServiceTicket.closed_date) == target_date, ServiceTicket.tat_due_at.isnot(None), ServiceTicket.closed_date <= ServiceTicket.tat_due_at).scalar() or 0)
+        tat_pct = round((within_tat / tickets_resolved) * 100) if tickets_resolved > 0 else 100
+    except Exception as e:
+        print("[DC-METRICS] Service tickets lookup exception:", e)
+
     return {
         "success": True,
         "date": target_date.isoformat(),
@@ -1688,5 +1702,8 @@ def get_finalized_day_metrics(
         "kms_travelled": kms_str,
         "journey_time": j_time_str,
         "appointments_attended": appts_cnt,
-        "kra_score": kra_score_str
+        "kra_score": kra_score_str,
+        "service_tickets_handled": tickets_handled,
+        "service_tickets_resolved": tickets_resolved,
+        "service_tat_pct": tat_pct
     }

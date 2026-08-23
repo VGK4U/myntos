@@ -4013,6 +4013,13 @@
             msg += '🤝 *Appointments Attended & Tagged:* ' + metrics.appointments_attended + ' Meeting(s)\n\n';
 
             msg += '=================================\n';
+            msg += '🛠️ *SERVICE TEAM TICKETS DATA*\n';
+            msg += '=================================\n';
+            msg += '🎫 *Service Tickets Handled:* ' + (metrics.service_tickets_handled || 0) + '\n';
+            msg += '✅ *Service Tickets Resolved:* ' + (metrics.service_tickets_resolved || 0) + '\n';
+            msg += '⏱️ *Within TAT Rate:* ' + (metrics.service_tat_pct || 100) + '%\n\n';
+
+            msg += '=================================\n';
             msg += '📊 *DAY SUMMARY STATISTICS*\n';
             msg += '=================================\n';
             msg += '✅ *Planned Tasks:* ' + total + '\n';
