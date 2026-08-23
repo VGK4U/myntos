@@ -70,7 +70,8 @@ const MENU_MASTER = [
       { menu_code: "REVIEW_DASHBOARD", label: "Review Dashboard", route: "/staff/manager-review", audience: ["STAFF"] },
       { menu_code: "STAFF_MY_LEAD_INCENTIVES", label: "My Earnings", route: "/staff/my-lead-incentives", audience: ["STAFF"] },
       { menu_code: "MY_REIMBURSEMENT_CLAIMS", label: "My Reimbursement Claims", route: "/staff/accounts/my-reimbursements", audience: ["STAFF"] },
-      { menu_code: "REIMBURSEMENT_APPROVALS", label: "Reimbursement Approvals", route: "/staff/accounts/reimbursement-approvals", audience: ["STAFF"] }
+      { menu_code: "REIMBURSEMENT_APPROVALS", label: "Reimbursement Approvals", route: "/staff/accounts/reimbursement-approvals", audience: ["STAFF"] },
+      { menu_code: "EXPENSE_ENTRIES", label: "Expense Entries", route: "/staff/accounts/expense-entries", audience: ["STAFF"] }
     ]
   },
   {
