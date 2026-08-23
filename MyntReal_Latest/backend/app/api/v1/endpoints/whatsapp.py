@@ -1333,16 +1333,18 @@ def get_inbox(
             st_raw = str(lsb_entry.get("type") or "").upper()
             sn_raw = str(lsb_entry.get("name") or "").strip()
             
-            if "STAFF" in st_raw or "MANUAL" in st_raw or "USER" in st_raw or (sn_raw and sn_raw not in ("System/Auto", "System", "Auto", "")):
+            if "BOT" in st_raw or "BOT" in sn_raw.upper() or "AI" in st_raw or "BAILEYS" in st_raw:
+                source_type = "BOT"
+                sent_by_name = sn_raw if sn_raw and sn_raw not in ("System/Auto", "System", "Auto") else "Scanned Bot"
+            elif "STAFF" in st_raw or "MANUAL" in st_raw or "USER" in st_raw:
                 source_type = "MANUAL"
                 sent_by_name = sn_raw if sn_raw and sn_raw not in ("System/Auto", "System", "Auto") else "Staff"
             elif "CRON" in st_raw or "WEBHOOK" in st_raw or "API" in st_raw or lm_type_lc in ("daily_snapshot", "system_report"):
                 source_type = "API"
                 sent_by_name = "API System"
             else:
-                # Auto welcome dispatches, Baileys bot replies, PingMe AI bot dispatches
                 source_type = "BOT"
-                sent_by_name = "Mynt Bot" if sn_raw in ("System/Auto", "System", "Auto", "") else sn_raw
+                sent_by_name = sn_raw if sn_raw and sn_raw not in ("System/Auto", "System", "Auto") else "Scanned Bot"
         else:
             if lm_type_lc.startswith("auto_") or "welcome" in body_text_lc or "నమస్కారం" in body_text_lc or "myntreal" in body_text_lc:
                 source_type = "BOT"
@@ -1995,6 +1997,71 @@ def get_whatsapp_delivery_logs(
     except Exception as e:
         logger.error("[WA-DELIVERY-LOGS] Error: %s", str(e))
         return {"success": False, "total": 0, "logs": [], "error": str(e)}
+
+
+class LogBotDispatchPayload(BaseModel):
+    phone_or_target: str
+    message: str
+    target_name: Optional[str] = "Scanned Bot Alert"
+    sender_type: Optional[str] = "bot"
+    sent_by_name: Optional[str] = "Scanned Bot"
+
+
+@router.post("/log-bot-dispatch")
+def log_bot_dispatch(payload: LogBotDispatchPayload, db: Session = Depends(get_db)):
+    """
+    Logs dispatches sent by the Scanned WhatsApp Bot (port 5002) into wa_inbox and message_log.
+    """
+    from app.models.whatsapp import WAInbox, MessageLog
+    from datetime import datetime
+
+    now = datetime.utcnow()
+    clean_target = ''.join(filter(str.isdigit, payload.phone_or_target)) or payload.phone_or_target.strip()
+    if len(clean_target) == 10:
+        clean_target = '91' + clean_target
+
+    try:
+        inbox_row = WAInbox(
+            from_phone=clean_target,
+            from_name=payload.target_name or 'Scanned Bot Alert',
+            body_text=payload.message,
+            message_type='auto_staff_alert',
+            status='new',
+            is_read=True,
+            received_at=now
+        )
+        db.add(inbox_row)
+
+        msg_log = MessageLog(
+            mobile_number=clean_target,
+            message_body=payload.message,
+            message_type='auto_staff_alert',
+            sender_type=payload.sender_type or 'bot',
+            sent_by_name=payload.sent_by_name or 'Scanned Bot',
+            sent_at=now,
+            current_status='delivered'
+        )
+        db.add(msg_log)
+        db.commit()
+
+        # POSIX Audit Logger hook
+        try:
+            from app.services.whatsapp_audit_service import log_whatsapp_message
+            log_whatsapp_message(
+                recipient=clean_target,
+                message=payload.message,
+                status='DELIVERED',
+                wamid=f"scanned_bot_{int(now.timestamp())}",
+                meta={"source": "scanned_bot", "target_name": payload.target_name}
+            )
+        except Exception:
+            pass
+
+        return {"success": True, "logged": True}
+    except Exception as _e:
+        db.rollback()
+        logger.error(f"[LOG-BOT-DISPATCH] Failed: {_e}")
+        return {"success": False, "error": str(_e)}
 
 
 

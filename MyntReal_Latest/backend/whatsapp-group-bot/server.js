@@ -355,6 +355,7 @@ app.post('/api/send-group-message', async (req, res) => {
             try {
                 const sendRes = await sock.sendMessage(destinationJid, contentPayload);
                 sentCount++;
+                logDispatchToBackend(destinationJid, message || '[Media Attachment]', req.body.groupName || 'Sales Team Group');
                 results.push({
                     intended_target: rawCode,
                     clean_code: codeToUse,
@@ -394,6 +395,25 @@ app.post('/api/send-group-message', async (req, res) => {
     }
 });
 
+async function logDispatchToBackend(target, message, targetName = "Scanned Bot Alert") {
+    try {
+        const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:8000/api/v1/whatsapp/log-bot-dispatch";
+        await fetch(backendUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                phone_or_target: target,
+                message: message || "[Media Attachment]",
+                target_name: targetName,
+                sender_type: "bot",
+                sent_by_name: "Scanned Bot"
+            })
+        });
+    } catch (e) {
+        // Non-blocking log
+    }
+}
+
 app.post('/api/send-message', async (req, res) => {
     try {
         const { phone, message, imageUrl, imagePath } = req.body;
@@ -431,6 +451,8 @@ app.post('/api/send-message', async (req, res) => {
         }
 
         const sentMsg = await sock.sendMessage(recipientJid, contentPayload);
+        logDispatchToBackend(cleanPhone, message || '[Media Attachment]', req.body.recipientName || 'Staff Lead Dispatch');
+
         return res.json({
             success: true,
             recipient_jid: recipientJid,
