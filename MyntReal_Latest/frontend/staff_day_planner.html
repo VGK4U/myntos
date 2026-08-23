@@ -1161,7 +1161,7 @@
         function renderPlanItems() {
             const tbody = document.getElementById('planItemsBody');
             if (!planItems || planItems.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="11"><div class="empty-state"><i class="fas fa-calendar-plus"></i><p>No items in today\'s plan</p><p class="text-muted">Select tasks from the left panel and add them to your plan</p></div></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11"><div class="empty-state"><i class="fas fa-calendar-plus"></i><p>No items in today\'s plan</p><p class="text-muted">Select tasks from the right panel and add them to your plan</p></div></td></tr>';
                 return;
             }
             const sorted = [...planItems].sort((a, b) => (a.priority_order || 999) - (b.priority_order || 999));
