@@ -1324,11 +1324,37 @@ def get_inbox(
         fp_digits     = _re_phone.sub(r'[^\d]', '', from_phone)
         fp_last10     = fp_digits[-10:] if len(fp_digits) >= 10 else fp_digits
 
+        lsb_entry = last_sent_by_map.get(fp_last10)
+        sent_by_name = "System/Auto"
+        source_type = "API"
+        if lsb_entry:
+            sent_by_name = lsb_entry.get("name") or "System/Auto"
+            st_raw = str(lsb_entry.get("type") or "").upper()
+            if "BOT" in st_raw or "AI" in st_raw or "BAILEYS" in st_raw:
+                source_type = "BOT"
+            elif "STAFF" in st_raw or "MANUAL" in st_raw or "USER" in st_raw:
+                source_type = "MANUAL"
+            else:
+                source_type = "API"
+
+        # Format IST Timestamp
+        last_act_dt = r[3]
+        last_activity_ist = None
+        if last_act_dt:
+            from datetime import timezone, timedelta
+            ist_tz = timezone(timedelta(hours=5, minutes=30))
+            if last_act_dt.tzinfo is None:
+                dt_ist = last_act_dt.replace(tzinfo=timezone.utc).astimezone(ist_tz)
+            else:
+                dt_ist = last_act_dt.astimezone(ist_tz)
+            last_activity_ist = dt_ist.strftime("%d %b %Y, %I:%M %p")
+
         data.append({
             "from_phone":       from_phone,
             "message_count":    int(r[1] or 0),
             "unread_count":     int(r[2] or 0),
             "last_activity":    r[3].isoformat() if r[3] else None,
+            "last_activity_ist": last_activity_ist,
             "latest_msg_id":    latest_msg_id,
             "status":           r[5] or "new",
             "dept_code":        r[6],
@@ -1341,7 +1367,9 @@ def get_inbox(
             "last_message":     lm.get("body"),
             "last_message_type": lm.get("type"),
             "existing_in":      contact_info["existing_in"],
-            "last_sent_by":     last_sent_by_map.get(fp_last10),
+            "last_sent_by":     sent_by_name,
+            "last_sent_by_name": sent_by_name,
+            "source_type":      source_type
         })
 
     return {

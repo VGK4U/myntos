@@ -65,8 +65,8 @@
     .btn-outline-custom:hover{background:#f9fafb}
 
     .inbox-wrap{background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden}
-    .inbox-header{display:grid;grid-template-columns:14px 28px 185px 1fr 150px 80px 75px 80px 145px 110px;gap:8px;padding:10px 14px;background:#f9fafb;border-bottom:2px solid #e5e7eb;font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase}
-    .inbox-row{display:grid;grid-template-columns:14px 28px 185px 1fr 150px 80px 75px 80px 145px 110px;gap:8px;padding:10px 14px;border-bottom:1px solid #f3f4f6;align-items:center;cursor:pointer;transition:.12s}
+    .inbox-header{display:grid;grid-template-columns:14px 28px 140px 185px 1fr 85px 150px 80px 75px 80px 145px 110px;gap:8px;padding:10px 14px;background:#f9fafb;border-bottom:2px solid #e5e7eb;font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase}
+    .inbox-row{display:grid;grid-template-columns:14px 28px 140px 185px 1fr 85px 150px 80px 75px 80px 145px 110px;gap:8px;padding:10px 14px;border-bottom:1px solid #f3f4f6;align-items:center;cursor:pointer;transition:.12s}
     .inbox-row:hover{background:#f0fdf4}
     .inbox-row.unread{background:#f0fdf4;font-weight:600}
     .unread-dot{width:8px;height:8px;background:#25d366;border-radius:50%}
@@ -220,6 +220,12 @@
           <input type="text" id="fPhone" placeholder="Filter Phone / Name..." style="width:160px" oninput="debounceLoadInbox()">
           <input type="date" id="fFrom" onchange="loadInbox(1)">
           <input type="date" id="fTo" onchange="loadInbox(1)">
+          <select id="fSource" onchange="loadInbox(1)">
+            <option value="">All Sources (BOT / API / Manual)</option>
+            <option value="BOT">🤖 BOT Triggers</option>
+            <option value="API">⚡ API Automations</option>
+            <option value="MANUAL">👤 Manual Staff</option>
+          </select>
           <select id="fDept" onchange="loadInbox(1)"><option value="">All Departments</option></select>
           <select id="fCat" onchange="loadInbox(1)"><option value="">All Categories</option></select>
           <select id="fStatus" onchange="loadInbox(1)">
@@ -237,7 +243,7 @@
         <!-- Inbox Table Grid -->
         <div class="inbox-wrap">
           <div class="inbox-header">
-            <span></span><span></span><span>Caller / Phone</span><span>Last Message</span><span>Existing In</span><span>Dept</span><span>Cat</span><span>Status</span><span>Last Sent By</span><span>Actions</span>
+            <span></span><span></span><span>Date &amp; Time (IST)</span><span>Caller / Phone</span><span>Last Message</span><span>Source</span><span>Existing In</span><span>Dept</span><span>Cat</span><span>Status</span><span>Last Sent By</span><span>Actions</span>
           </div>
           <div id="inboxBody"><div style="padding:40px;text-align:center;color:#6b7280"><i class="fas fa-spinner fa-spin"></i> Loading CRM Inbox...</div></div>
         </div>
@@ -468,10 +474,11 @@ function switchCenterTab(tabName) {
 // ── TAB 1: CRM INBOX ────────────────────────────────────────────────────────
 async function loadInbox(page = 1) {
   try {
-    const phone = document.getElementById('fPhone')?.value || '';
-    const dept  = document.getElementById('fDept')?.value || '';
-    const cat   = document.getElementById('fCat')?.value || '';
-    const status= document.getElementById('fStatus')?.value || '';
+    const phone  = document.getElementById('fPhone')?.value || '';
+    const dept   = document.getElementById('fDept')?.value || '';
+    const cat    = document.getElementById('fCat')?.value || '';
+    const status = document.getElementById('fStatus')?.value || '';
+    const source = document.getElementById('fSource')?.value || '';
     const exStaff = document.getElementById('fExcludeStaff')?.checked ? 'true' : 'false';
 
     let url = `${API}/whatsapp/inbox?page=${page}&page_size=20&exclude_staff=${exStaff}`;
@@ -479,6 +486,7 @@ async function loadInbox(page = 1) {
     if (dept) url += `&department_id=${dept}`;
     if (cat) url += `&category_id=${cat}`;
     if (status) url += `&status=${status}`;
+    if (source) url += `&source=${source}`;
 
     const data = await apiFetch(url);
     renderInboxRows(data.items || data.data || []);
@@ -506,21 +514,41 @@ function renderInboxRows(items) {
   items.forEach(item => {
     const isUnread = !item.is_read;
     const phone = item.from_phone || item.phone || '';
-    const name  = item.from_name || item.caller_name || 'Customer';
+    const name  = item.resolved_name || item.from_name || item.caller_name || 'Customer';
     const msg   = item.last_message || item.body_text || '';
     const status= item.status || 'new';
+
+    // Format IST Timestamp
+    const timeIst = item.last_activity_ist || (item.last_activity ? new Date(item.last_activity).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : '—');
+
+    // Fix [object Object] Bug
+    let lastSentByName = 'System/Auto';
+    if (typeof item.last_sent_by === 'object' && item.last_sent_by !== null) {
+      lastSentByName = item.last_sent_by.name || item.last_sent_by.full_name || item.last_sent_by.emp_code || 'System/Auto';
+    } else if (typeof item.last_sent_by_name === 'string' && item.last_sent_by_name) {
+      lastSentByName = item.last_sent_by_name;
+    } else if (typeof item.last_sent_by === 'string' && item.last_sent_by) {
+      lastSentByName = item.last_sent_by;
+    }
+
+    // Source Chip (BOT / API / MANUAL)
+    const sourceType = (item.source_type || 'API').toUpperCase();
+    const sourceChipClass = sourceType === 'BOT' ? 'ei-service' : (sourceType === 'MANUAL' ? 'ei-crm' : 'ei-contacts');
+    const sourceIcon = sourceType === 'BOT' ? '🤖' : (sourceType === 'MANUAL' ? '👤' : '⚡');
 
     html += `
       <div class="inbox-row ${isUnread ? 'unread' : ''}" onclick="openChatFromInbox('${phone}')">
         <span>${isUnread ? '<div class="unread-dot"></div>' : ''}</span>
         <span><i class="fab fa-whatsapp" style="color:#25d366"></i></span>
+        <div style="font-size:11px;color:#374151;white-space:nowrap;font-weight:600">${timeIst}</div>
         <div><strong>${name}</strong><br><small style="color:#6b7280">${phone}</small></div>
-        <div style="color:#4b5563;font-size:12px">${msg}</div>
+        <div style="color:#4b5563;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${msg}</div>
+        <div><span class="ei-chip ${sourceChipClass}">${sourceIcon} ${sourceType}</span></div>
         <div><span class="ei-chip ei-crm">CRM Lead</span></div>
         <div><span class="ei-chip ei-service">${item.department_name || '—'}</span></div>
         <div><span class="ei-chip ei-contacts">${item.category_name || '—'}</span></div>
         <div><span class="ei-chip" style="background:#e0e7ff;color:#3730a3">${status}</span></div>
-        <div style="font-size:11px;color:#6b7280">${item.last_sent_by || 'System'}</div>
+        <div style="font-size:11px;color:#374151;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lastSentByName}</div>
         <div>
           <button class="btn-custom btn-outline-custom" style="padding:3px 7px" onclick="event.stopPropagation();openAssignModal('${phone}', '${name}')"><i class="fas fa-tag"></i> Assign</button>
         </div>
