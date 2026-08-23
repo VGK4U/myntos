@@ -7617,45 +7617,6 @@ const VGK_TOKEN_PROPAGATION_SCRIPT = `
 </script>
 `;
 
-const server = http.createServer(async (req, res) => {
-  // DC Protocol: Global error handler wrapper for production stability
-  try {
-    // Intercept writeHead to automatically append security headers
-    const _origWriteHead = res.writeHead.bind(res);
-    res.writeHead = function(statusCode, headers) {
-      try {
-        res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-        res.setHeader('X-Content-Type-Options', 'nosniff');
-        res.setHeader('X-XSS-Protection', '1; mode=block');
-        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-        res.setHeader('Server', 'MyntOS-Gateway');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-      } catch (e) {}
-      return _origWriteHead(statusCode, headers);
-    };
-
-    const url = req.url;
-    console.log(`[REQ] ${req.method} ${url}`);
-
-    // Reject literal JS template string placeholders crawler requests
-    const rawUrlDecoded = decodeURIComponent(url);
-    if (rawUrlDecoded.includes('embedUrl') || rawUrlDecoded.includes('fallbackUrl') || rawUrlDecoded.includes('short_name') || rawUrlDecoded.includes('escHtml') || rawUrlDecoded.includes('${') || rawUrlDecoded.includes('$%7B') || rawUrlDecoded.includes("' s.")) {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('Resource not found');
-      return;
-    }
-  const urlParts = new URL(url, `http://${getSafeHost(req)}`);
-  const reqPathLower = (urlParts.pathname || '').toLowerCase();
-
-  const userAgent = (req.headers['user-agent'] || '').toLowerCase();
-  const isElbHealthChecker = userAgent.includes('elb-healthchecker') || userAgent.includes('healthcheck');
-  // AWS ELB / Load Balancer Health Check Endpoint
-  if (isElbHealthChecker || reqPathLower === '/health' || reqPathLower === '/healthz' || reqPathLower === '/api/health' || reqPathLower === '/ping') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'ok', service: 'frontend', timestamp: new Date().toISOString() }));
-    return;
-  }
-
 let waBotProcess = null;
 let waBotStarting = false;
 function ensureWhatsAppBotRunning() {
@@ -7676,6 +7637,7 @@ function ensureWhatsAppBotRunning() {
   if (!botScriptPath) {
     console.warn('[DC-WA-BOT] Could not locate whatsapp-group-bot/server.js script');
     return;
+  }
   waBotStarting = true;
   console.log(`[DC-WA-BOT] Auto-spawning WhatsApp Group Bot daemon on port 5002 from ${botScriptPath}...`);
   try {
@@ -7690,15 +7652,31 @@ function ensureWhatsAppBotRunning() {
       waBotProcess = null;
       waBotStarting = false;
       setTimeout(ensureWhatsAppBotRunning, 5000);
-    });  } catch (err) {
+    });
+  } catch (err) {
     console.error('[DC-WA-BOT] Failed to spawn WhatsApp bot:', err.message);
     waBotStarting = false;
+  }
 }
 // Auto-start WhatsApp Bot daemon on server boot
-setTimeout(ensureWhatsAppBotRunning, 2000);  // WhatsApp QR Code & Group Bot Gateway Proxy Route (/qr, /qr-data, /whatsapp-qr, /status)
-  if (reqPathLower === '/qr' || reqPathLower === '/qr/' || reqPathLower === '/qr-data' || reqPathLower === '/qr-data/' || reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/' || reqPathLower === '/status') {
-    ensureWhatsAppBotRunning();
-    const targetPath = (reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/') ? '/qr' : req.url;
+setTimeout(ensureWhatsAppBotRunning, 2000);
+
+const server = http.createServer(async (req, res) => {
+  // DC Protocol: Global error handler wrapper for production stability
+  try {
+    const url = req.url;
+    const urlParts = new URL(url, `http://${getSafeHost(req)}`);
+    const reqPathLower = (urlParts.pathname || '').toLowerCase();
+
+    // AWS ELB / Load Balancer Health Check Endpoint
+    const userAgent = (req.headers['user-agent'] || '').toLowerCase();
+    const isElbHealthChecker = userAgent.includes('elb-healthchecker') || userAgent.includes('healthcheck');
+    if (isElbHealthChecker || reqPathLower === '/health' || reqPathLower === '/healthz' || reqPathLower === '/api/health' || reqPathLower === '/ping') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok', service: 'frontend', timestamp: new Date().toISOString() }));
+      return;
+    }
+
   // WhatsApp QR Code & Group Bot Gateway Proxy Route (/scan, /qr, /whatsapp-qr, /qr-data, /logout, /status)
   if (
     reqPathLower === '/scan' || reqPathLower === '/scan/' ||

@@ -51,8 +51,6 @@ EXCLUDE_FILES = {
     "node.log",
     "uvicorn.log",
     "bot.log",
-    "MyntReal.apk",
-    "mobile.apk",
     "mobile.app",
     "mnr-catalog.pdf",
     "mnr-catalog-web.pdf",
@@ -86,10 +84,10 @@ def should_exclude(rel_path: Path, abs_file: Path) -> bool:
     if abs_file.suffix.lower() in [".zip", ".sql", ".dump", ".sqlite", ".db"]:
         return True
 
-    # Limit static image/media assets > 0.5MB to maintain target ~41MB deployment package size
+    # Limit static image/media assets > 0.2MB (preserving MyntReal.apk) to maintain target ~41MB deployment package size
     if abs_file.suffix.lower() in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf"]:
         size_mb = abs_file.stat().st_size / (1024 * 1024)
-        if size_mb > 0.5:
+        if size_mb > 0.2 and abs_file.name != "MyntReal.apk":
             return True
             
     return False
