@@ -7656,8 +7656,8 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // WhatsApp QR Code & Group Bot Gateway Proxy Route (/qr, /whatsapp-qr, /status)
-  if (reqPathLower === '/qr' || reqPathLower === '/qr/' || reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/' || reqPathLower === '/status') {
+  // WhatsApp QR Code & Group Bot Gateway Proxy Route (/qr, /qr-data, /whatsapp-qr, /status)
+  if (reqPathLower === '/qr' || reqPathLower === '/qr/' || reqPathLower === '/qr-data' || reqPathLower === '/qr-data/' || reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/' || reqPathLower === '/status') {
     const targetPath = (reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/') ? '/qr' : req.url;
     const proxyOptions = {
       hostname: '127.0.0.1',
