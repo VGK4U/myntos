@@ -338,9 +338,14 @@
             <div class="card">
                 <div class="card-header">
                     <h5><i class="fas fa-calendar-check me-2"></i>Today's Plan</h5>
-                    <button class="btn btn-outline-secondary btn-sm" onclick="loadDayPlan()">
-                        <i class="fas fa-sync-alt me-1"></i>Refresh
-                    </button>
+                    <div>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadDayPlan()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                        <button class="btn btn-outline-success btn-sm ms-1" onclick="shareDayPlanWhatsApp()" title="Share Day Plan via WhatsApp">
+                            <i class="fab fa-whatsapp me-1"></i>Share Plan
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive plan-table-scroll">
@@ -374,6 +379,9 @@
                 <div class="finalize-bar" id="finalizeBar" style="display: none;">
                     <button class="btn btn-success" onclick="openFinalizeModal()">
                         <i class="fas fa-flag-checkered me-1"></i>Finalize Day
+                    </button>
+                    <button class="btn btn-outline-success ms-2" onclick="shareFinalizedDayWhatsApp()" title="Share Finalized Report via WhatsApp">
+                        <i class="fab fa-whatsapp me-1"></i>Share Finalized Report
                     </button>
                 </div>
             </div>
@@ -3882,6 +3890,137 @@
                 alert('Error pushing activity to day plan: ' + err.message);
             }
         }
+
+        /* ── WhatsApp Sharing Functions for Day Plan & Finalized Report ── */
+        function shareDayPlanWhatsApp() {
+            var user = (typeof StaffHeader !== 'undefined' && StaffHeader.user) ? StaffHeader.user : {};
+            var empCode = user.emp_code || 'MR10001';
+            var staffName = user.full_name || user.name || 'Staff Member';
+            var dateStr = (typeof selectedDate !== 'undefined' && selectedDate) ? selectedDate : new Date().toISOString().split('T')[0];
+
+            var msg = '🌟 *DAILY TASK PLAN | ' + dateStr.toUpperCase() + '*\n';
+            msg += '👤 *Staff Member:* ' + staffName + ' (' + empCode + ')\n';
+            msg += '🏢 *Company:* MyntReal LLP\n\n';
+
+            msg += '=================================\n';
+            msg += '📋 *TODAY\'S PLANNED ACTIVITIES (' + ((planItems || []).length) + ' Tasks)*\n';
+            msg += '=================================\n';
+
+            if (planItems && planItems.length > 0) {
+                planItems.forEach(function(item, idx) {
+                    var title = item.task_title || item.title || 'Task';
+                    var prio = (item.priority || item.task_priority || 'medium').toUpperCase();
+                    var daysP = item.days_pending || 0;
+                    var timesP = item.times_planned || 1;
+                    var status = (item.task_status || item.status || 'planned').toUpperCase();
+
+                    msg += (idx + 1) + '. 🔹 *' + title + '*\n';
+                    msg += '   • Priority: ' + prio + ' | Status: ' + status + '\n';
+                    msg += '   • Days Active/Pending: ' + daysP + 'd\n';
+                    msg += '   • Times Planned: Planned ' + timesP + ' time(s)\n';
+                });
+            } else {
+                msg += '• No tasks scheduled for today.\n';
+            }
+
+            var overdueItems = (typeof availableTasks !== 'undefined' && availableTasks) ? availableTasks.filter(function(t) { return (t.days_pending || 0) > 0 || (t.times_planned || 0) > 0; }) : [];
+            if (overdueItems && overdueItems.length > 0) {
+                msg += '\n=================================\n';
+                msg += '⚠️ *UNPLANNED & OVERDUE BACKLOG (' + overdueItems.length + ' Tasks)*\n';
+                msg += '=================================\n';
+                overdueItems.slice(0, 5).forEach(function(t) {
+                    var title = t.task_title || t.title || 'Task';
+                    var daysP = t.days_pending || 0;
+                    var timesP = t.times_planned || 0;
+                    msg += '• 🔻 *' + title + '* (' + daysP + ' days pending | Planned & missed ' + timesP + ' time(s))\n';
+                });
+                if (overdueItems.length > 5) {
+                    msg += '• ... and ' + (overdueItems.length - 5) + ' more pending backlog items.\n';
+                }
+            }
+
+            msg += '\n=================================\n';
+            msg += '💼 *EXECUTIVE COMMITMENT*\n';
+            msg += '=================================\n';
+            msg += '_"Focusing on high-impact execution, resolving legacy backlog items, and driving timely deliverables today."_\n\n';
+            msg += '🚀 *MYNT OS Task Planner*';
+
+            if (typeof openLeadWAModal === 'function') {
+                openLeadWAModal('task_plan', '', 'Day Plan - ' + empCode, null);
+                setTimeout(function() {
+                    var msgEl = document.getElementById('_lwaMsg');
+                    if (msgEl) msgEl.value = msg;
+                }, 300);
+            } else {
+                window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+            }
+        }
+
+        function shareFinalizedDayWhatsApp() {
+            var user = (typeof StaffHeader !== 'undefined' && StaffHeader.user) ? StaffHeader.user : {};
+            var empCode = user.emp_code || 'MR10001';
+            var staffName = user.full_name || user.name || 'Staff Member';
+            var dateStr = (typeof selectedDate !== 'undefined' && selectedDate) ? selectedDate : new Date().toISOString().split('T')[0];
+
+            var items = planItems || [];
+            var completed = 0, pending = 0;
+            items.forEach(function(item) {
+                var st = (item.eod_status || item.status || '').toLowerCase();
+                if (st === 'completed') completed++;
+                else pending++;
+            });
+            var total = items.length;
+            var pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            var msg = '🏁 *FINALIZED DAY PROGRESS REPORT | ' + dateStr.toUpperCase() + '*\n';
+            msg += '👤 *Staff Member:* ' + staffName + ' (' + empCode + ')\n';
+            msg += '🏢 *Company:* MyntReal LLP\n\n';
+
+            msg += '=================================\n';
+            msg += '📊 *DAY SUMMARY STATISTICS*\n';
+            msg += '=================================\n';
+            msg += '✅ *Planned Tasks:* ' + total + '\n';
+            msg += '🎉 *Completed:* ' + completed + '\n';
+            msg += '⏳ *Pending / In Progress:* ' + pending + '\n';
+            msg += '📈 *Day Completion Rate:* ' + pct + '%\n\n';
+
+            msg += '=================================\n';
+            msg += '✅ *ACTIVITIES PROGRESS & STAFF COMMENTS*\n';
+            msg += '=================================\n';
+
+            if (items.length > 0) {
+                items.forEach(function(item, idx) {
+                    var title = item.task_title || item.title || 'Task';
+                    var daysP = item.days_pending || 0;
+                    var timesP = item.times_planned || 1;
+                    var st = (item.eod_status || item.status || 'pending').toUpperCase();
+                    var remarks = item.eod_remarks || item.remarks || item.notes || 'Completed as scheduled.';
+
+                    msg += (idx + 1) + '. ' + (st === 'COMPLETED' ? '✔️' : '⏳') + ' *' + title + '*\n';
+                    msg += '   • Status: ' + st + ' (' + daysP + ' days pending | Planned ' + timesP + ' time(s))\n';
+                    msg += '   • *Staff Comment:* ' + remarks + '\n';
+                });
+            } else {
+                msg += '• No activities recorded for today.\n';
+            }
+
+            msg += '\n=================================\n';
+            msg += '💬 *CLOSING REMARKS*\n';
+            msg += '=================================\n';
+            msg += '_"Daily goals progress finalized. Operations aligned for tomorrow\'s key deliverables."_\n\n';
+            msg += '🚀 *MYNT OS Task Planner*';
+
+            if (typeof openLeadWAModal === 'function') {
+                openLeadWAModal('task_plan_finalized', '', 'Finalized Report - ' + empCode, null);
+                setTimeout(function() {
+                    var msgEl = document.getElementById('_lwaMsg');
+                    if (msgEl) msgEl.value = msg;
+                }, 300);
+            } else {
+                window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+            }
+        }
     </script>
+    <script src="/public/js/wa-lead-modal.js"></script>
 </body>
 </html>
