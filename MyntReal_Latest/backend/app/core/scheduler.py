@@ -4847,31 +4847,12 @@ def init_scheduler():
             finally:
                 db.close()
 
-        # 90-Minute schedule: 09:30 AM, 11:00 AM, 12:30 PM, 02:00 PM, 03:30 PM, 05:00 PM, 06:30 PM, 08:00 PM IST
+        # Hourly Schedule: 09:00 AM, 10:00 AM, 11:00 AM, 12:00 PM, 01:00 PM, 02:00 PM, 03:00 PM, 04:00 PM, 05:00 PM, 06:00 PM, 07:00 PM, 08:00 PM, 09:00 PM IST
         scheduler.add_job(
             run_field_journey_scheduled_report_job,
-            trigger=CronTrigger(hour='9,12,15,18', minute=30, timezone='Asia/Kolkata'),
-            id='wa_90min_field_journey_report_half_past',
-            name='WhatsApp: 90-Min Field Journey Report (09:30, 12:30, 15:30, 18:30 IST)',
-            replace_existing=True,
-            misfire_grace_time=600,
-            max_instances=1,
-        )
-        scheduler.add_job(
-            run_field_journey_scheduled_report_job,
-            trigger=CronTrigger(hour='11,14,17,20', minute=0, timezone='Asia/Kolkata'),
-            id='wa_90min_field_journey_report_top_hour',
-            name='WhatsApp: 90-Min Field Journey Report (11:00, 14:00, 17:00, 20:00 IST)',
-            replace_existing=True,
-            misfire_grace_time=600,
-            max_instances=1,
-        )
-        # Daily Final Closing Report at 09:00 PM IST
-        scheduler.add_job(
-            run_field_journey_scheduled_report_job,
-            trigger=CronTrigger(hour=21, minute=0, timezone='Asia/Kolkata'),
-            id='wa_daily_closing_field_journey_report_9pm',
-            name='WhatsApp: Daily Final Closing Field Journey Performance Report (09:00 PM IST)',
+            trigger=CronTrigger(hour='9,10,11,12,13,14,15,16,17,18,19,20,21', minute=0, timezone='Asia/Kolkata'),
+            id='wa_hourly_field_journey_report',
+            name='WhatsApp: Hourly Field Journey Report (09:00 AM - 09:00 PM IST, Top of Hour)',
             replace_existing=True,
             misfire_grace_time=600,
             max_instances=1,

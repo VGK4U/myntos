@@ -479,6 +479,31 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(
     from app.services.whatsapp_audit_service import log_wa_trigger_execution
 
     stats = get_today_field_journey_stats(db)
+
+    # Active staff check: For automated scheduler, skip sending if 0 staff active/logged journeys today
+    total_staff = stats.get("total_staff", 0)
+    total_active = stats.get("total_active", 0)
+    if trigger_type == "AUTO_SCHEDULER" and total_staff == 0 and total_active == 0:
+        logger.info("[FIELD-REPORT] No active field staff or journeys logged today. Skipping automated hourly report.")
+        log_wa_trigger_execution(
+            job_id="field_staff_journey_report",
+            job_name="Field Journey Performance & Leaderboard Report",
+            trigger_type=trigger_type,
+            triggered_by=triggered_by,
+            targets=[{"type": "group", "name": "Field Updates", "identifier": "BctONtnv8431uxxybKBEtS"}],
+            sent_count=0,
+            failed_count=0,
+            status="SKIPPED",
+            error_message="No active field staff or journeys today",
+            detail_data={"reason": "no_active_journeys"}
+        )
+        return {
+            "success": True,
+            "skipped": True,
+            "reason": "No active field staff or journeys today",
+            "active_journeys_count": 0
+        }
+
     report_msg = format_field_journey_whatsapp_message(stats)
 
     # 1. Post to Target WhatsApp Group (BctONtnv8431uxxybKBEtS)
