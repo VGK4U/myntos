@@ -49,7 +49,7 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
 
     from app.models.operator_calls import OperatorCall
 
-    # 1. Tele Sales Department Staff
+    # 1. Tele Sales Department Staff (Excluding Field Staff: Hema, Raju, Padma Rao)
     staff_rows = db.execute(text("""
         SELECT e.id, e.full_name
         FROM staff_employees e
@@ -61,6 +61,9 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
           AND (e.is_deleted IS NOT TRUE)
           AND e.full_name IS NOT NULL
           AND e.full_name != ''
+          AND LOWER(e.full_name) NOT LIKE '%hema%'
+          AND LOWER(e.full_name) NOT LIKE '%raju%'
+          AND LOWER(e.full_name) NOT LIKE '%padma%'
         GROUP BY e.id, e.full_name
     """)).fetchall()
 
