@@ -177,8 +177,20 @@ def row_to_crm_lead(row: List[str], col_map: Dict[str, int],
     elif any(k in combined_ctx for k in ['real estate', 'property', 'plot', 'flat', 'apartment', 'villa', 'venture', 'land', 'real dreams']):
         target_company_id = 1  # Real Dreams
 
+    # Automatic Category Resolution (Solar=19, EV B2C=15, Insurance=17, Real Dreams=18)
+    target_category_id = 19
+    if any(k in combined_ctx for k in ['solar', 'har ghar solar', 'hrs', 'sun', 'panel', 'electricity']):
+        target_category_id = 19  # Solar
+    elif any(k in combined_ctx for k in ['ev b2c', 'ev', 'vehicle', 'car', 'bike']):
+        target_category_id = 15  # EV B2C
+    elif any(k in combined_ctx for k in ['insurance', 'health', 'life', 'motor']):
+        target_category_id = 17  # Insurance
+    elif any(k in combined_ctx for k in ['real estate', 'property', 'plot', 'flat', 'apartment', 'villa']):
+        target_category_id = 18  # Real Dreams
+
     return {
         'company_id':           target_company_id,
+        'category_id':          target_category_id,
         'name':                 name[:200],
         'phone':                phone[:20]  if phone else None,
         'email':                email[:200] if email else None,
