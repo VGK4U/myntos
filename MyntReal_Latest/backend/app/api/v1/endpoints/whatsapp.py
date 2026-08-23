@@ -1743,8 +1743,79 @@ def get_inbox_thread(
     except Exception as _e:
         print(f"[WA-THREAD] replied_by_name lookup error: {_e}")
 
+    # ── Deduplication Engine & Single Outbound Bubble Alignment ────────────────
+    def _clean_body(b_text: Optional[str]) -> str:
+        if not b_text:
+            return ""
+        import re
+        return re.sub(r'[\s\*\_\~\`\:\,\.\-\!\?]', '', str(b_text)).lower()[:80]
+
+    seen_outbound_bodies = set()
+    deduped_msgs = []
+
+    # First add all outbound dispatches from message_log
+    for ml in ml_outbound:
+        c_body = _clean_body(ml.get("body_text"))
+        if c_body:
+            seen_outbound_bodies.add(c_body)
+        deduped_msgs.append(ml)
+
+    # Add wa_inbox messages, merging duplicates and preserving genuine inbound replies
+    for d in inbox_dicts:
+        c_body = _clean_body(d.get("body_text"))
+        m_type = str(d.get("message_type") or "").lower()
+        
+        is_auto_or_outbound = m_type == "outbound" or m_type.startswith("auto_") or c_body in seen_outbound_bodies
+        if is_auto_or_outbound:
+            # Skip if already logged via message_log to prevent duplicate rendering
+            if c_body and c_body in seen_outbound_bodies:
+                continue
+            d["message_type"] = "outbound"
+            deduped_msgs.append(d)
+        else:
+            deduped_msgs.append(d)
+
+    # Format IST Timestamps and Message Status Ticks (✓ / ✓✓ / ❌)
+    from datetime import datetime, timezone, timedelta
+    ist_tz = timezone(timedelta(hours=5, minutes=30))
+
+    for m in deduped_msgs:
+        rec_at = m.get("received_at")
+        if rec_at:
+            try:
+                if isinstance(rec_at, str):
+                    dt_obj = datetime.fromisoformat(rec_at.replace("Z", "+00:00"))
+                else:
+                    dt_obj = rec_at
+                if dt_obj.tzinfo is None:
+                    dt_ist = dt_obj.replace(tzinfo=timezone.utc).astimezone(ist_tz)
+                else:
+                    dt_ist = dt_obj.astimezone(ist_tz)
+                m["received_at_ist"] = dt_ist.strftime("%d %b %Y, %I:%M %p")
+            except Exception:
+                m["received_at_ist"] = str(rec_at)
+
+        # Status badge mapping (sent / delivered / read / failed)
+        raw_st = str(m.get("status") or "delivered").lower()
+        if "read" in raw_st:
+            m["status_ticks"] = "✓✓"
+            m["status_color"] = "#3b82f6"  # Blue double ticks
+            m["status_label"] = "Read"
+        elif "deliv" in raw_st:
+            m["status_ticks"] = "✓✓"
+            m["status_color"] = "#6b7280"  # Gray double ticks
+            m["status_label"] = "Delivered"
+        elif "failed" in raw_st or "error" in raw_st:
+            m["status_ticks"] = "❌"
+            m["status_color"] = "#dc2626"  # Red cross
+            m["status_label"] = "Failed"
+        else:
+            m["status_ticks"] = "✓"
+            m["status_color"] = "#6b7280"  # Single tick
+            m["status_label"] = "Sent"
+
     all_msgs = sorted(
-        inbox_dicts + ml_outbound,
+        deduped_msgs,
         key=lambda x: x.get("received_at") or ""
     )
 
@@ -2338,61 +2409,120 @@ def get_whatsapp_chat_history(
     db: Session = Depends(get_db),
     current_user=Depends(_require_staff)
 ):
-    """Fetch full chat transcript for a given phone or Group/Channel target across wa_inbox and message_log."""
+    """Fetch full chat transcript for a given phone or Group/Channel target across wa_inbox and message_log with strict IST timestamps, deduplication, and single-bubble outbound alignment."""
     try:
-        from app.models.whatsapp import WAInbox
+        from app.models.whatsapp import WAInbox, MessageLog
         from sqlalchemy import or_
+        from datetime import datetime, timezone, timedelta
+        import re
 
+        ist_tz = timezone(timedelta(hours=5, minutes=30))
         clean_phone = ''.join(filter(str.isdigit, phone))[-10:]
         search_target = clean_phone or phone
 
-        messages = []
+        def _clean_body(b_text: Optional[str]) -> str:
+            if not b_text:
+                return ""
+            return re.sub(r'[\s\*\_\~\`\:\,\.\-\!\?]', '', str(b_text)).lower()[:80]
 
-        # Fetch from WAInbox
-        inbox_q = db.query(WAInbox).filter(
-            or_(
-                WAInbox.from_phone.like(f"%{search_target}%"),
-                WAInbox.from_name.ilike(f"%{phone}%")
-            )
-        )
-        for m in inbox_q.all():
-            messages.append({
-                "id": m.id,
-                "wamid": m.wamid or f"wamid_{m.id}",
-                "sender": "user" if m.message_type == "inbound" else "bot",
-                "sender_name": m.from_name,
-                "body": m.body_text or "—",
-                "media_url": m.media_url,
-                "sent_at": m.received_at.strftime('%d %b %Y, %I:%M %p') if m.received_at else '—',
-                "timestamp": m.received_at or datetime.min,
-                "status": m.status or 'delivered',
-                "message_type": m.message_type or 'text'
-            })
+        def _to_ist_str(dt_val: Optional[datetime]) -> str:
+            if not dt_val:
+                return "—"
+            if dt_val.tzinfo is None:
+                dt_ist = dt_val.replace(tzinfo=timezone.utc).astimezone(ist_tz)
+            else:
+                dt_ist = dt_val.astimezone(ist_tz)
+            return dt_ist.strftime('%d %b %Y, %I:%M %p')
 
-        # Fetch from MessageLog
+        log_messages = []
+        seen_bodies = set()
+
+        # Fetch from MessageLog first (primary outbound log)
         log_q = db.query(MessageLog).filter(
             or_(
                 MessageLog.mobile_number.like(f"%{search_target}%"),
                 MessageLog.user_name.ilike(f"%{phone}%")
             )
-        )
-        for l in log_q.all():
-            messages.append({
-                "id": l.id,
+        ).all()
+
+        for l in log_q:
+            c_body = _clean_body(l.message_body)
+            if c_body:
+                seen_bodies.add(c_body)
+            
+            raw_st = str(l.current_status or 'sent').lower()
+            if "read" in raw_st:
+                ticks, color, lbl = "✓✓", "#3b82f6", "Read"
+            elif "deliv" in raw_st:
+                ticks, color, lbl = "✓✓", "#6b7280", "Delivered"
+            elif "fail" in raw_st or "err" in raw_st:
+                ticks, color, lbl = "❌", "#dc2626", "Failed"
+            else:
+                ticks, color, lbl = "✓", "#6b7280", "Sent"
+
+            log_messages.append({
+                "id": f"ml_{l.id}",
                 "wamid": l.message_sid,
                 "sender": "bot",
-                "sender_name": l.user_name,
+                "sender_name": l.sent_by_name or l.user_name or "Mynt Bot",
                 "body": l.message_body or "—",
-                "sent_at": l.sent_at.strftime('%d %b %Y, %I:%M %p') if l.sent_at else '—',
+                "sent_at": _to_ist_str(l.sent_at),
                 "timestamp": l.sent_at or datetime.min,
                 "status": l.current_status or 'sent',
-                "message_type": l.message_type or 'notification',
-                "sent_by_name": l.sent_by_name,
-                "sent_by_staff_id": l.sent_by_staff_id,
-                "sender_type": l.sender_type
+                "status_ticks": ticks,
+                "status_color": color,
+                "status_label": lbl,
+                "message_type": "outbound",
+                "sent_by_name": l.sent_by_name or "Mynt Bot",
+                "sender_type": l.sender_type or "bot"
             })
 
-        sorted_messages = sorted(messages, key=lambda x: str(x["timestamp"]))
+        # Fetch from WAInbox (deduplicating against seen_bodies)
+        inbox_messages = []
+        inbox_q = db.query(WAInbox).filter(
+            or_(
+                WAInbox.from_phone.like(f"%{search_target}%"),
+                WAInbox.from_name.ilike(f"%{phone}%")
+            )
+        ).all()
+
+        for m in inbox_q:
+            c_body = _clean_body(m.body_text)
+            m_type = str(m.message_type or 'text').lower()
+            is_outbound = m_type == 'outbound' or m_type.startswith('auto_') or c_body in seen_bodies
+
+            if is_outbound and c_body in seen_bodies:
+                # Deduplicate: already present from MessageLog
+                continue
+
+            raw_st = str(m.status or 'delivered').lower()
+            if "read" in raw_st:
+                ticks, color, lbl = "✓✓", "#3b82f6", "Read"
+            elif "deliv" in raw_st:
+                ticks, color, lbl = "✓✓", "#6b7280", "Delivered"
+            elif "fail" in raw_st or "err" in raw_st:
+                ticks, color, lbl = "❌", "#dc2626", "Failed"
+            else:
+                ticks, color, lbl = "✓", "#6b7280", "Sent"
+
+            inbox_messages.append({
+                "id": f"wa_{m.id}",
+                "wamid": m.wamid or f"wamid_{m.id}",
+                "sender": "bot" if is_outbound else "user",
+                "sender_name": "Mynt Bot" if is_outbound else (m.from_name or "Customer"),
+                "body": m.body_text or "—",
+                "media_url": m.media_url,
+                "sent_at": _to_ist_str(m.received_at),
+                "timestamp": m.received_at or datetime.min,
+                "status": m.status or 'delivered',
+                "status_ticks": ticks,
+                "status_color": color,
+                "status_label": lbl,
+                "message_type": "outbound" if is_outbound else "inbound"
+            })
+
+        combined = log_messages + inbox_messages
+        sorted_messages = sorted(combined, key=lambda x: x["timestamp"] if isinstance(x["timestamp"], datetime) else datetime.min)
 
         return {"success": True, "phone": phone, "total": len(sorted_messages), "messages": sorted_messages}
     except Exception as e:

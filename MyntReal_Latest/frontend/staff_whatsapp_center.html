@@ -659,18 +659,21 @@ function renderChatMessages(msgs) {
 
   let html = '';
   msgs.forEach(m => {
-    const isOut = m.message_type === 'outbound' || m.message_type === 'manual_staff' || m.is_from_me;
+    const isOut = m.message_type === 'outbound' || m.sender === 'bot' || m.sender_type === 'bot' || m.message_type === 'manual_staff' || m.is_from_me;
     const bubbleClass = isOut ? 'bubble-out' : 'bubble-in';
     const msgText = m.body || m.body_text || m.message_body || m.message || m.text || '';
-    const timeStr = m.sent_at || m.time_str || m.received_at || '';
+    const timeStr = m.sent_at || m.received_at_ist || m.time_str || m.received_at || '';
+    const ticks = m.status_ticks || (isOut ? '✓✓' : '');
+    const tickColor = m.status_color || '#3b82f6';
+    const statusLabel = m.status_label || (isOut ? 'Delivered' : '');
 
     html += `
       <div class="chat-bubble ${bubbleClass}">
         <div style="font-size:12.5px;color:#111827;white-space:pre-wrap">${msgText}</div>
         ${m.media_url ? `<div style="margin-top:4px"><a href="${m.media_url}" target="_blank" style="color:#059669;font-weight:700"><i class="fas fa-paperclip"></i> View Media Attachment</a></div>` : ''}
-        <div class="bubble-meta">
-          <span>${timeStr}</span>
-          ${isOut ? '<i class="fas fa-check" style="color:#059669"></i>' : ''}
+        <div class="bubble-meta" style="display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:4px">
+          <span style="font-size:10px;color:#6b7280;font-weight:500">${timeStr}</span>
+          ${isOut ? `<span style="font-size:11px;font-weight:bold;color:${tickColor}" title="${statusLabel}">${ticks}</span>` : ''}
         </div>
       </div>
     `;
