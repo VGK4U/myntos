@@ -56,8 +56,9 @@ async function startWhatsAppBot() {
         printQRInTerminal: false,
         browser: Browsers.macOS('Desktop'),
         syncFullHistory: false,
-        connectTimeoutMs: 60000,
-        keepAliveIntervalMs: 25000,
+        connectTimeoutMs: 180000,
+        qrTimeout: 180000,
+        keepAliveIntervalMs: 30000,
         emitOwnEvents: false
     });
 
@@ -116,6 +117,53 @@ async function startWhatsAppBot() {
 
 // ── API ENDPOINTS ─────────────────────────────────────────────────────────────
 
+async function logoutBotSession() {
+    try {
+        console.log("🚪 Logging out WhatsApp Bot session...");
+        connectionStatus = 'logging_out';
+        if (sock) {
+            try {
+                await sock.logout();
+            } catch (e) {
+                try { sock.end(new Error('Logout requested')); } catch (e2) {}
+            }
+            sock = null;
+        }
+        currentQr = null;
+        targetJid = null;
+
+        if (fs.existsSync(AUTH_DIR)) {
+            fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+            console.log("✅ Cleared auth_info session directory.");
+        }
+
+        connectionStatus = 'disconnected';
+        setTimeout(startWhatsAppBot, 1000);
+        return { success: true, message: "Logged out and reset session successfully." };
+    } catch (err) {
+        console.error("❌ Logout error:", err);
+        return { success: false, error: err.message || String(err) };
+    }
+}
+
+app.all(['/logout', '/api/logout'], async (req, res) => {
+    const result = await logoutBotSession();
+    if (req.headers.accept && req.headers.accept.includes('text/html')) {
+        return res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head><title>Logging out...</title><meta http-equiv="refresh" content="2;url=/qr"></head>
+            <body style="font-family: system-ui, sans-serif; text-align: center; padding: 60px 15px; background: #f4f6f9;">
+                <h2 style="color: #ef4444;">🚪 WhatsApp Bot Logged Out</h2>
+                <p style="color: #64748b;">Session cleared. Redirecting to QR code scanner...</p>
+                <a href="/qr" style="color: #3b82f6; font-weight: bold; text-decoration: none;">Click here if not redirected automatically</a>
+            </body>
+            </html>
+        `);
+    }
+    return res.json(result);
+});
+
 app.get('/status', (req, res) => {
     return res.json({
         status: connectionStatus,
@@ -138,11 +186,53 @@ app.get('/qr', (req, res) => {
         return res.send(`
             <!DOCTYPE html>
             <html>
-            <head><title>WhatsApp Bot Connected</title><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-            <body style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 60px 15px; background: #f4f6f9; color: #1e293b;">
-                <h1 style="color: #10b981; font-size: 48px; margin-bottom: 12px;">✅</h1>
-                <h2 style="color: #065f46; margin: 0 0 8px 0;">WhatsApp Web Bot is CONNECTED & ACTIVE!</h2>
-                <p style="color: #64748b; font-size: 14px;">Target JID: ${targetJid || 'Ready'}</p>
+            <head>
+                <title>WhatsApp Bot Connected</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 50px 15px; background: #f4f6f9; color: #1e293b;">
+                <div style="background: white; max-width: 480px; margin: 0 auto; padding: 36px 24px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+                    <h1 style="color: #10b981; font-size: 56px; margin: 0 0 12px 0;">✅</h1>
+                    <h2 style="color: #065f46; margin: 0 0 8px 0; font-size: 22px; font-weight: 800;">WhatsApp Web Bot is CONNECTED & ACTIVE!</h2>
+                    <p style="color: #64748b; font-size: 13.5px; margin-bottom: 24px;">Target JID: <code style="background: #f1f5f9; padding: 3px 8px; border-radius: 6px; font-weight: 600; color: #0f172a;">${targetJid || '120363410784518818@g.us'}</code></p>
+                    
+                    <div style="border-top: 1px solid #e2e8f0; margin-top: 24px; padding-top: 24px;">
+                        <button id="logoutBtn" onclick="doLogout()" style="background: #ef4444; color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3); transition: all 0.2s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">
+                            🚪 Logout & Disconnect WhatsApp Bot
+                        </button>
+                    </div>
+                    <p id="logoutMsg" style="margin-top: 16px; font-size: 13px; font-weight: 600; color: #64748b; display: none;"></p>
+                </div>
+
+                <script>
+                    async function doLogout() {
+                        if (!confirm("Are you sure you want to log out and disconnect the WhatsApp Web Bot session? You will need to scan the QR code again.")) return;
+                        const btn = document.getElementById('logoutBtn');
+                        const msg = document.getElementById('logoutMsg');
+                        btn.disabled = true;
+                        btn.style.opacity = '0.6';
+                        msg.style.display = 'block';
+                        msg.style.color = '#ef4444';
+                        msg.textContent = '⏳ Logging out and resetting WhatsApp session...';
+                        try {
+                            const res = await fetch('/api/logout', { method: 'POST' });
+                            const data = await res.json();
+                            if (data.success) {
+                                msg.style.color = '#10b981';
+                                msg.textContent = '✅ Logged out successfully! Loading new QR code...';
+                                setTimeout(() => { window.location.href = '/qr'; }, 1200);
+                            } else {
+                                msg.textContent = '❌ Logout error: ' + (data.error || 'Failed');
+                                btn.disabled = false;
+                                btn.style.opacity = '1';
+                            }
+                        } catch (err) {
+                            msg.textContent = '❌ Logout error: ' + err.message;
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                        }
+                    }
+                </script>
             </body>
             </html>
         `);
@@ -152,48 +242,68 @@ app.get('/qr', (req, res) => {
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Scan WhatsApp Group Bot QR</title>
+            <title>Scan WhatsApp Group Bot QR (3-Min Window)</title>
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                .timer-pill { background: #e0f2fe; color: #0369a1; padding: 6px 16px; border-radius: 20px; font-weight: 700; font-size: 13.5px; display: inline-flex; align-items: center; gap: 6px; }
+            </style>
         </head>
         <body style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 30px 15px; background: #f4f6f9; color: #1e293b;">
             <h2 style="font-size: 22px; margin-bottom: 8px;">📱 Scan QR Code to Link WhatsApp Bot</h2>
-            <p style="color: #64748b; font-size: 14px; margin-top: 0;">Open WhatsApp on phone ➔ Linked Devices ➔ Link a Device</p>
+            <p style="color: #64748b; font-size: 14px; margin-top: 0; margin-bottom: 12px;">Open WhatsApp on phone ➔ Linked Devices ➔ Link a Device</p>
+
+            <div class="timer-pill" id="timerBadge">
+                ⏳ QR Code Extended Window: <span id="timerText" style="font-family: monospace; font-size: 15px;">03:00</span>
+            </div>
             
-            <div id="qrContainer" style="margin: 24px auto; background: white; display: inline-block; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); min-width: 300px; min-height: 300px;">
+            <div id="qrContainer" style="margin: 20px auto; background: white; display: inline-block; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); min-width: 300px; min-height: 300px;">
                 ${initialQrUrl 
-                    ? `<img src="${initialQrUrl}" width="300" height="300" style="display:block; border-radius: 8px;" />`
+                    ? `<img id="qrImg" src="${initialQrUrl}" width="300" height="300" style="display:block; border-radius: 8px;" />`
                     : `<div style="padding:100px 20px; font-size: 15px; color: #64748b; font-weight: 600;">⏳ Generating QR Code...<br><span style="font-size:12px; font-weight:400; color:#94a3b8">Will load automatically in a moment.</span></div>`
                 }
             </div>
             
-            <p id="statusMsg" style="font-size: 13px; font-weight: 600; color: #3b82f6;">
-                ${initialQrUrl ? '🟢 QR Code Ready — Waiting for Phone Scan...' : '⏳ Initializing WhatsApp Socket...'}
+            <p id="statusMsg" style="font-size: 13.5px; font-weight: 600; color: #3b82f6;">
+                ${initialQrUrl ? '🟢 QR Code Ready — Take your time to scan (3-Minute Window)...' : '⏳ Initializing WhatsApp Socket...'}
             </p>
 
             <script>
+                let secondsLeft = 180;
+                let lastQrUrl = '${initialQrUrl || ''}';
+
+                function updateCountdown() {
+                    if (secondsLeft > 0) {
+                        secondsLeft--;
+                        const m = Math.floor(secondsLeft / 60);
+                        const s = secondsLeft % 60;
+                        document.getElementById('timerText').textContent = 
+                            String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+                    }
+                }
+
                 async function checkStatus() {
                     try {
                         const res = await fetch('/qr-data');
                         const data = await res.json();
                         if (data.status === 'connected') {
-                            document.body.innerHTML = \`
-                                <div style="padding-top: 60px;">
-                                    <h1 style="color: #10b981; font-size: 48px; margin-bottom: 12px;">✅</h1>
-                                    <h2 style="color: #065f46; margin: 0 0 8px 0;">WhatsApp Bot Successfully CONNECTED!</h2>
-                                    <p style="color: #64748b; font-size: 14px;">Group Bot is active and ready to send WhatsApp alerts.</p>
-                                </div>
-                            \`;
+                            window.location.reload();
                         } else if (data.qr_url) {
-                            const container = document.getElementById('qrContainer');
-                            if (container) {
-                                container.innerHTML = '<img src="' + data.qr_url + '" width="300" height="300" style="display:block; border-radius: 8px;" />';
+                            if (data.qr_url !== lastQrUrl) {
+                                lastQrUrl = data.qr_url;
+                                secondsLeft = 180; // Reset 3-minute timer on fresh QR
+                                const container = document.getElementById('qrContainer');
+                                if (container) {
+                                    container.innerHTML = '<img id="qrImg" src="' + data.qr_url + '" width="300" height="300" style="display:block; border-radius: 8px;" />';
+                                }
                             }
                             const msg = document.getElementById('statusMsg');
-                            if (msg) msg.textContent = '🟢 QR Code Ready — Waiting for Phone Scan...';
+                            if (msg) msg.textContent = '🟢 QR Code Ready — Take your time to scan (3-Minute Window)...';
                         }
                     } catch (e) {}
                 }
-                setInterval(checkStatus, 1500);
+
+                setInterval(checkStatus, 2000);
+                setInterval(updateCountdown, 1000);
                 checkStatus();
             </script>
         </body>
@@ -361,6 +471,7 @@ app.post('/api/send-group-message', async (req, res) => {
             try {
                 const sendRes = await sock.sendMessage(destinationJid, contentPayload);
                 sentCount++;
+                logDispatchToBackend(destinationJid, message || '[Media Attachment]', req.body.groupName || 'Sales Team Group');
                 results.push({
                     intended_target: rawCode,
                     clean_code: codeToUse,
@@ -400,6 +511,25 @@ app.post('/api/send-group-message', async (req, res) => {
     }
 });
 
+async function logDispatchToBackend(target, message, targetName = "Scanned Bot Alert") {
+    try {
+        const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:8000/api/v1/whatsapp/log-bot-dispatch";
+        await fetch(backendUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                phone_or_target: target,
+                message: message || "[Media Attachment]",
+                target_name: targetName,
+                sender_type: "bot",
+                sent_by_name: "Scanned Bot"
+            })
+        });
+    } catch (e) {
+        // Non-blocking log
+    }
+}
+
 app.post('/api/send-message', async (req, res) => {
     try {
         const { phone, message, imageUrl, imagePath } = req.body;
@@ -437,6 +567,8 @@ app.post('/api/send-message', async (req, res) => {
         }
 
         const sentMsg = await sock.sendMessage(recipientJid, contentPayload);
+        logDispatchToBackend(cleanPhone, message || '[Media Attachment]', req.body.recipientName || 'Staff Lead Dispatch');
+
         return res.json({
             success: true,
             recipient_jid: recipientJid,

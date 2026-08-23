@@ -3631,9 +3631,11 @@ async def get_my_menus(
             cat = (menu.menu_category or '').lower()
 
             # Global Directive: Remove META ADS, ACCOUNTS, CONFIGURATION, VGK SAAS, INTERNAL for all EXCEPT MR10001 and MR10025
+            # DC Protocol: Expense Entries is explicitly EXEMPTED so all active staff have self-service access
             if user_emp_code not in ('MR10001', 'MR10025'):
-                if any(x in sec_code or x in sec_title or x in cat for x in ['meta', 'account', 'config', 'saas', 'internal']):
-                    continue
+                if menu.menu_code not in ('sfms_expense_entries', 'staff_accounts_expense_entries'):
+                    if any(x in sec_code or x in sec_title or x in cat for x in ['meta', 'account', 'config', 'saas', 'internal']):
+                        continue
 
             # Additional Directive for MR10018: Remove NOT IN USE, MNR, NDA, ZYNOVA
             if user_emp_code == 'MR10018':

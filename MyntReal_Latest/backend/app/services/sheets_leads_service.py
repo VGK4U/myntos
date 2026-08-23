@@ -166,8 +166,31 @@ def row_to_crm_lead(row: List[str], col_map: Dict[str, int],
 
     source_details = f"{{'source': '{source_tag}', 'lead_id': '{lead_id}', 'ad': '{ad_name}'}}"
 
+    # Automatic Company Routing Engine based on Category & Product Interest
+    # Rules: Solar, EV, BEB, B2C -> MyntReal (4); Training, Insurance -> Zynova (2); Real Estate -> Real Dreams (1)
+    combined_ctx = f"{looking or ''} {ad_name or ''} {source_tag or ''}".lower()
+    target_company_id = company_id
+    if any(k in combined_ctx for k in ['solar', 'ev', 'electric vehicle', 'beb', 'b2c', 'energy', 'battery', 'har ghar solar']):
+        target_company_id = 4  # MyntReal LLP
+    elif any(k in combined_ctx for k in ['training', 'insurance', 'health', 'life', 'motor']):
+        target_company_id = 2  # Zynova Mobility
+    elif any(k in combined_ctx for k in ['real estate', 'property', 'plot', 'flat', 'apartment', 'villa', 'venture', 'land', 'real dreams']):
+        target_company_id = 1  # Real Dreams
+
+    # Automatic Category Resolution (Solar=19, EV B2C=15, Insurance=17, Real Dreams=18)
+    target_category_id = 19
+    if any(k in combined_ctx for k in ['solar', 'har ghar solar', 'hrs', 'sun', 'panel', 'electricity']):
+        target_category_id = 19  # Solar
+    elif any(k in combined_ctx for k in ['ev b2c', 'ev', 'vehicle', 'car', 'bike']):
+        target_category_id = 15  # EV B2C
+    elif any(k in combined_ctx for k in ['insurance', 'health', 'life', 'motor']):
+        target_category_id = 17  # Insurance
+    elif any(k in combined_ctx for k in ['real estate', 'property', 'plot', 'flat', 'apartment', 'villa']):
+        target_category_id = 18  # Real Dreams
+
     return {
-        'company_id':           company_id,
+        'company_id':           target_company_id,
+        'category_id':          target_category_id,
         'name':                 name[:200],
         'phone':                phone[:20]  if phone else None,
         'email':                email[:200] if email else None,

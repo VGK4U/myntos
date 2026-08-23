@@ -70,7 +70,8 @@ const MENU_MASTER = [
       { menu_code: "REVIEW_DASHBOARD", label: "Review Dashboard", route: "/staff/manager-review", audience: ["STAFF"] },
       { menu_code: "STAFF_MY_LEAD_INCENTIVES", label: "My Earnings", route: "/staff/my-lead-incentives", audience: ["STAFF"] },
       { menu_code: "MY_REIMBURSEMENT_CLAIMS", label: "My Reimbursement Claims", route: "/staff/accounts/my-reimbursements", audience: ["STAFF"] },
-      { menu_code: "REIMBURSEMENT_APPROVALS", label: "Reimbursement Approvals", route: "/staff/accounts/reimbursement-approvals", audience: ["STAFF"] }
+      { menu_code: "REIMBURSEMENT_APPROVALS", label: "Reimbursement Approvals", route: "/staff/accounts/reimbursement-approvals", audience: ["STAFF"] },
+      { menu_code: "EXPENSE_ENTRIES", label: "Expense Entries", route: "/staff/accounts/expense-entries", audience: ["STAFF"] }
     ]
   },
   {
@@ -88,8 +89,7 @@ const MENU_MASTER = [
       { menu_code: "CALL_QUALITY_REVIEW", label: "Call Quality Review", route: "/staff/call-quality", audience: ["STAFF"] },
       { menu_code: "STAFF_OPERATOR_CALLS", label: "Operator Calls", route: "/staff/operator-calls", audience: ["STAFF"] },
       { menu_code: "CRM_SALES_REPORT", label: "Sales Team Report", route: "/staff/crm/sales-report", audience: ["STAFF"] },
-      { menu_code: "CRM_WA_INBOX", label: "WA Inbox (CRM)", route: "/staff/crm/whatsapp-inbox", icon: "fab fa-whatsapp", audience: ["STAFF"] },
-      { menu_code: "CRM_WA_BOT_HUB", label: "WhatsApp Bot Hub", route: "/staff/crm/whatsapp-bot", icon: "fab fa-whatsapp", audience: ["STAFF"] }
+      { menu_code: "CRM_WA_INBOX", label: "WhatsApp Center", route: "/staff/whatsapp-center", icon: "fab fa-whatsapp", audience: ["STAFF"] }
     ]
   },
   {
@@ -260,7 +260,6 @@ const MENU_MASTER = [
       { menu_code: "staff_a1top_dashboard", label: "A1Top Executive", route: "/staff/configuration/a1top", audience: ["STAFF"] },
       { menu_code: "AI_CALLING", label: "AI Calling", route: "/staff/crm/ai-calling", audience: ["STAFF"] },
       { menu_code: "VGK_SAAS_MENU_ACCESS", label: "Menu Access Control", route: "/rvz/menu-access-config", icon: "fas fa-key", audience: ["STAFF", "VGK4U"] },
-      { menu_code: "WA_CONFIG", label: "WhatsApp Center", route: "/staff/whatsapp-config", icon: "fab fa-whatsapp", audience: ["STAFF"] },
       { menu_code: "SOLAR_VENDORS", label: "Solar Vendors", route: "/staff/solar-vendors", icon: "fas fa-solar-panel", audience: ["STAFF"] },
       { menu_code: "VGK_MEDIA_MANAGER", label: "Media Manager", route: "/staff/vgk/media", icon: "fas fa-globe", audience: ["STAFF"] },
       { menu_code: "MNR_VIEW_ANNOUNCEMENTS", label: "View Announcements", route: "/staff/mnr/announcements/view", icon: "fas fa-globe", audience: ["STAFF"] },

@@ -1,5 +1,4041 @@
 [
   {
+    "id": "log_f1062419",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Aug 2026, 11:30:02 AM IST",
+    "iso_timestamp": "2026-08-23T11:30:02.735130",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 1
+    }
+  },
+  {
+    "id": "log_a688badf",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "23 Aug 2026, 11:30:02 AM IST",
+    "iso_timestamp": "2026-08-23T11:30:02.143246",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "success": false,
+      "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr"
+    }
+  },
+  {
+    "id": "log_beafe0ce",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "23 Aug 2026, 11:29:56 AM IST",
+    "iso_timestamp": "2026-08-23T11:29:56.511863",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "success": false,
+      "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr"
+    }
+  },
+  {
+    "id": "log_fc53036c",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "MANUAL",
+    "triggered_by": "User Request Check",
+    "timestamp": "23 Aug 2026, 11:08:39 AM IST",
+    "iso_timestamp": "2026-08-23T11:08:39.518791",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "success": true,
+      "data": {
+        "success": true,
+        "sent_count": 1,
+        "failed_count": 0,
+        "results": [
+          {
+            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
+            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
+            "target_type": "group",
+            "resolved_jid": "120363410784518818@g.us",
+            "message_id": "3EB014E9A3DEAB64E0CCD8",
+            "success": true,
+            "fallback_used": false
+          }
+        ],
+        "message_id": "3EB014E9A3DEAB64E0CCD8"
+      }
+    }
+  },
+  {
+    "id": "log_ec16b420",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "23 Aug 2026, 11:00:03 AM IST",
+    "iso_timestamp": "2026-08-23T11:00:03.144036",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "group_posted": true,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_66c5b918",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Aug 2026, 11:00:01 AM IST",
+    "iso_timestamp": "2026-08-23T11:00:01.774796",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 1
+    }
+  },
+  {
+    "id": "log_ea0964d1",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Aug 2026, 10:30:01 AM IST",
+    "iso_timestamp": "2026-08-23T10:30:01.384966",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 1
+    }
+  },
+  {
+    "id": "log_270c771e",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Aug 2026, 09:30:00 AM IST",
+    "iso_timestamp": "2026-08-23T09:30:00.143171",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_acd7c16b",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Aug 2026, 09:00:15 AM IST",
+    "iso_timestamp": "2026-08-23T09:00:15.094738",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 73,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 73,
+      "created": 0,
+      "updated": 73,
+      "skipped": 0,
+      "followups_created": 63
+    }
+  },
+  {
+    "id": "log_9963bed0",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Aug 2026, 09:00:05 AM IST",
+    "iso_timestamp": "2026-08-23T09:00:05.319726",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 1
+    }
+  },
+  {
+    "id": "log_3b1b7618",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Aug 2026, 08:30:02 AM IST",
+    "iso_timestamp": "2026-08-23T08:30:02.617765",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 1
+    }
+  },
+  {
+    "id": "log_20260823073041_vgk_member_morning_statement",
+    "job_id": "vgk_member_morning_statement",
+    "job_name": "VGK Members Daily 8 AM Revenue Statement",
+    "timestamp": "2026-08-23T07:30:41.120790",
+    "status": "SUCCESS",
+    "triggered_by": "SYSTEM",
+    "payload": {
+      "qualifying_members_count": 24,
+      "dispatched_count": 23,
+      "failed_count": 1,
+      "detail": [
+        {
+          "member_id": 1,
+          "name": "MNR Mega Natural Resources",
+          "status": "SUCCESS",
+          "phone": "6300286103"
+        },
+        {
+          "member_id": 25,
+          "name": "Sri Lakshmi EV Solutions",
+          "status": "SUCCESS",
+          "phone": "9032418896"
+        },
+        {
+          "member_id": 31,
+          "name": "VGK Support",
+          "status": "FAILED",
+          "error": "invalid_phone_number"
+        },
+        {
+          "member_id": 32,
+          "name": "Geetharam Enterprises",
+          "status": "SUCCESS",
+          "phone": "9058121456"
+        },
+        {
+          "member_id": 33,
+          "name": "Velagas Enterprises",
+          "status": "SUCCESS",
+          "phone": "9849471128"
+        },
+        {
+          "member_id": 40,
+          "name": "K. V. Naidu",
+          "status": "SUCCESS",
+          "phone": "7702445685"
+        },
+        {
+          "member_id": 73,
+          "name": "MyntReal LLP",
+          "status": "SUCCESS",
+          "phone": "9032574588"
+        },
+        {
+          "member_id": 77,
+          "name": "Kalla Nookunaidu",
+          "status": "SUCCESS",
+          "phone": "8688269969"
+        },
+        {
+          "member_id": 83,
+          "name": "Geetharam Enterprises",
+          "status": "SUCCESS",
+          "phone": "9058121456"
+        },
+        {
+          "member_id": 97,
+          "name": "Velagas Enterprises",
+          "status": "SUCCESS",
+          "phone": "9849471128"
+        },
+        {
+          "member_id": 122,
+          "name": "Mr. Bandi Gangaraju",
+          "status": "SUCCESS",
+          "phone": "9494188948"
+        },
+        {
+          "member_id": 123,
+          "name": "Lochala Simhachalam",
+          "status": "SUCCESS",
+          "phone": "9391144684"
+        },
+        {
+          "member_id": 133,
+          "name": "Mr. Ramanadh Velaga",
+          "status": "SUCCESS",
+          "phone": "9290221042"
+        },
+        {
+          "member_id": 134,
+          "name": "Mr. Rohith Tangi",
+          "status": "SUCCESS",
+          "phone": "8688788680"
+        },
+        {
+          "member_id": 152,
+          "name": "Mr. Pothala Chiranjeevi",
+          "status": "SUCCESS",
+          "phone": "9010827917"
+        },
+        {
+          "member_id": 160,
+          "name": "Mr. Tharakaramarao Allu",
+          "status": "SUCCESS",
+          "phone": "9666679696"
+        },
+        {
+          "member_id": 175,
+          "name": "Mr. Jartha Musallayya",
+          "status": "SUCCESS",
+          "phone": "9676284460"
+        },
+        {
+          "member_id": 176,
+          "name": "Mr. Bhusari Balaraju",
+          "status": "SUCCESS",
+          "phone": "9666386133"
+        },
+        {
+          "member_id": 177,
+          "name": "Mr. Kudumula Suribabu",
+          "status": "SUCCESS",
+          "phone": "7382988020"
+        },
+        {
+          "member_id": 209,
+          "name": "Mr. Kuruju Srinubabu",
+          "status": "SUCCESS",
+          "phone": "9492249439"
+        },
+        {
+          "member_id": 216,
+          "name": "Mr. B Ramalakshmi",
+          "status": "SUCCESS",
+          "phone": "9550297657"
+        },
+        {
+          "member_id": 221,
+          "name": "Mr. Seeram reddy Thammu Naidu",
+          "status": "SUCCESS",
+          "phone": "8500926972"
+        },
+        {
+          "member_id": 230,
+          "name": "Mr. Tarum Nageswara Rao",
+          "status": "SUCCESS",
+          "phone": "9494545848"
+        },
+        {
+          "member_id": 233,
+          "name": "Mr. Jalumuri Trimurthulu",
+          "status": "SUCCESS",
+          "phone": "9490387083"
+        }
+      ]
+    },
+    "error_message": null
+  },
+  {
+    "id": "log_20260823073016_wa_daily_vgk_zero_lead_motivational_730am",
+    "job_id": "wa_daily_vgk_zero_lead_motivational_730am",
+    "job_name": "VGK Members Daily 7:30 AM 0-Lead Motivational Dispatch",
+    "timestamp": "2026-08-23T07:30:16.251817",
+    "status": "PARTIAL_SUCCESS",
+    "triggered_by": "SYSTEM",
+    "payload": {
+      "total_count": 11,
+      "total_eligible": 11,
+      "dispatched_count": 10,
+      "skipped_count": 0,
+      "failed_count": 1,
+      "active_partners_with_leads": 174,
+      "total_gross_earned": 7369610.0,
+      "theme_used": "\ud83c\udf05 *SUNDAY SPECIAL \u2014 \u0c2e\u0c40 \u0c38\u0c02\u0c2a\u0c3e\u0c26\u0c28 \u0c15\u0c32\u0c32\u0c28\u0c41 \u0c28\u0c46\u0c30\u0c35\u0c47\u0c30\u0c4d\u0c1a\u0c41\u0c15\u0c4b\u0c35\u0c21\u0c3e\u0c28\u0c3f\u0c15\u0c3f \u0c08\u0c30\u0c4b\u0c1c\u0c47 \u0c2e\u0c4a\u0c26\u0c1f\u0c3f \u0c05\u0c21\u0c41\u0c17\u0c41 \u0c35\u0c47\u0c2f\u0c02\u0c21\u0c3f!*",
+      "results": [
+        {
+          "member_id": 6,
+          "name": "Test Partner (VIEW ONLY)",
+          "status": "FAILED",
+          "error": "invalid_phone_number"
+        },
+        {
+          "member_id": 26,
+          "name": "Rajesh Sharma",
+          "status": "SUCCESS",
+          "phone": "9810012001"
+        },
+        {
+          "member_id": 27,
+          "name": "Priya Patel",
+          "status": "SUCCESS",
+          "phone": "9810012002"
+        },
+        {
+          "member_id": 28,
+          "name": "Amit Singh",
+          "status": "SUCCESS",
+          "phone": "9810012003"
+        },
+        {
+          "member_id": 29,
+          "name": "Sunita Verma",
+          "status": "SUCCESS",
+          "phone": "9810012004"
+        },
+        {
+          "member_id": 30,
+          "name": "Ravi Kumar",
+          "status": "SUCCESS",
+          "phone": "9810012005"
+        },
+        {
+          "member_id": 106,
+          "name": "Nissi Enterprises",
+          "status": "SUCCESS",
+          "phone": "9491114014"
+        },
+        {
+          "member_id": 111,
+          "name": "Visionera Pvt Ltd",
+          "status": "SUCCESS",
+          "phone": "9347475257"
+        },
+        {
+          "member_id": 170,
+          "name": "Sri Vijaya",
+          "status": "SUCCESS",
+          "phone": "8688788680"
+        },
+        {
+          "member_id": 246,
+          "name": "Mr. K Sravan",
+          "status": "SUCCESS",
+          "phone": "9000250716"
+        },
+        {
+          "member_id": 338,
+          "name": "Ganesh Mandal",
+          "status": "SUCCESS",
+          "phone": "9988776655"
+        }
+      ]
+    },
+    "error_message": null
+  },
+  {
+    "id": "log_ff902c63",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Aug 2026, 07:30:01 AM IST",
+    "iso_timestamp": "2026-08-23T07:30:01.254329",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_acf87958",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Aug 2026, 07:00:00 AM IST",
+    "iso_timestamp": "2026-08-23T07:00:00.482421",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_5bf8dcff",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 10:30:01 PM IST",
+    "iso_timestamp": "2026-08-22T22:30:01.003735",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_a8f38b6a",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "MANUAL",
+    "triggered_by": "Staff MR10001 (User)",
+    "timestamp": "22 Aug 2026, 10:21:42 PM IST",
+    "iso_timestamp": "2026-08-22T22:21:42.664543",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "HTTPConnectionPool(host='localhost', port=5002): Read timed out. (read timeout=8)",
+    "detail": {
+      "success": false,
+      "error": "HTTPConnectionPool(host='localhost', port=5002): Read timed out. (read timeout=8)"
+    }
+  },
+  {
+    "id": "log_17a95676",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 10:00:00 PM IST",
+    "iso_timestamp": "2026-08-22T22:00:00.419151",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_9e64b623",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "22 Aug 2026, 09:00:03 PM IST",
+    "iso_timestamp": "2026-08-22T21:00:03.236478",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "group_posted": true,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_fef503c8",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 09:00:01 PM IST",
+    "iso_timestamp": "2026-08-22T21:00:01.310826",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_021d2b68",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "MANUAL",
+    "triggered_by": "Staff MR10001 (User)",
+    "timestamp": "22 Aug 2026, 08:34:26 PM IST",
+    "iso_timestamp": "2026-08-22T20:34:26.066243",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "success": true,
+      "data": {
+        "success": true,
+        "sent_count": 1,
+        "failed_count": 0,
+        "results": [
+          {
+            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
+            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
+            "target_type": "group",
+            "resolved_jid": "120363410784518818@g.us",
+            "message_id": "3EB0AFA189018C2BA62733",
+            "success": true,
+            "fallback_used": false
+          }
+        ],
+        "message_id": "3EB0AFA189018C2BA62733"
+      }
+    }
+  },
+  {
+    "id": "log_2ff91d24",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 08:00:00 PM IST",
+    "iso_timestamp": "2026-08-22T20:00:00.838573",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_76ee3250",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "22 Aug 2026, 08:00:00 PM IST",
+    "iso_timestamp": "2026-08-22T20:00:00.645809",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "group_posted": false,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_dcdc058a",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "22 Aug 2026, 07:30:02 PM IST",
+    "iso_timestamp": "2026-08-22T19:30:02.971623",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "success": false,
+      "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr"
+    }
+  },
+  {
+    "id": "log_d18312fa",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 07:30:01 PM IST",
+    "iso_timestamp": "2026-08-22T19:30:01.060742",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_bf3462c4",
+    "job_id": "service_summary",
+    "job_name": "Daily 7:30 PM Service Ticket Summary",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "22 Aug 2026, 07:30:00 PM IST",
+    "iso_timestamp": "2026-08-22T19:30:00.884326",
+    "target_summary": "Service & Maintenance Team",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Service & Maintenance Team",
+        "identifier": "EyuAwaVoF6E6nQqC0QfiBe"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "success": false,
+      "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr"
+    }
+  },
+  {
+    "id": "log_a32d818e",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 07:04:35 PM IST",
+    "iso_timestamp": "2026-08-22T19:04:35.676722",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_0d2eef4a",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 04:30:00 PM IST",
+    "iso_timestamp": "2026-08-22T16:30:00.714298",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_a2f839e8",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 04:00:01 PM IST",
+    "iso_timestamp": "2026-08-22T16:00:01.023359",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_753f4fa5",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 03:00:01 PM IST",
+    "iso_timestamp": "2026-08-22T15:00:01.332433",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_a2b47ccb",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 02:00:01 PM IST",
+    "iso_timestamp": "2026-08-22T14:00:01.300832",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_0d64ea91",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "22 Aug 2026, 02:00:00 PM IST",
+    "iso_timestamp": "2026-08-22T14:00:00.834069",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "group_posted": false,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_8f44faf1",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "22 Aug 2026, 01:30:01 PM IST",
+    "iso_timestamp": "2026-08-22T13:30:01.764937",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "success": false,
+      "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr"
+    }
+  },
+  {
+    "id": "log_9b8591bc",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 01:30:01 PM IST",
+    "iso_timestamp": "2026-08-22T13:30:01.097783",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_13ce1c9a",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 01:00:01 PM IST",
+    "iso_timestamp": "2026-08-22T13:00:01.157560",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_1ca87816",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 12:30:00 PM IST",
+    "iso_timestamp": "2026-08-22T12:30:00.863989",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_bcf4c1cf",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "22 Aug 2026, 12:30:00 PM IST",
+    "iso_timestamp": "2026-08-22T12:30:00.789787",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "group_posted": false,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_a1737f09",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 12:00:01 PM IST",
+    "iso_timestamp": "2026-08-22T12:00:01.656445",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_c0d91799",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 11:00:01 AM IST",
+    "iso_timestamp": "2026-08-22T11:00:01.706022",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_76140f6d",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "22 Aug 2026, 11:00:01 AM IST",
+    "iso_timestamp": "2026-08-22T11:00:01.694530",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "group_posted": false,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_20260822104704_wa_daily_vgk_zero_lead_motivational_730am",
+    "job_id": "wa_daily_vgk_zero_lead_motivational_730am",
+    "job_name": "VGK Members Daily 7:30 AM 0-Lead Motivational Dispatch",
+    "timestamp": "2026-08-22T10:47:04.555610",
+    "status": "PARTIAL_SUCCESS",
+    "triggered_by": "SYSTEM",
+    "payload": {
+      "total_count": 11,
+      "total_eligible": 11,
+      "dispatched_count": 10,
+      "skipped_count": 0,
+      "failed_count": 1,
+      "active_partners_with_leads": 174,
+      "total_gross_earned": 7432170.0,
+      "theme_used": "\ud83c\udfc6 *SATURDAY VISION \u2014 \u0c2a\u0c4d\u0c2f\u0c3e\u0c38\u0c3f\u0c35\u0c4d \u0c07\u0c28\u0c4d\u200c\u0c15\u0c2e\u0c4d \u0c38\u0c4d\u0c1f\u0c4d\u0c30\u0c40\u0c2e\u0c4d\u200c\u0c28\u0c3f \u0c2c\u0c3f\u0c32\u0c4d\u0c21\u0c4d \u0c1a\u0c47\u0c38\u0c41\u0c15\u0c4b\u0c02\u0c21\u0c3f!*",
+      "results": [
+        {
+          "member_id": 6,
+          "name": "Test Partner (VIEW ONLY)",
+          "status": "FAILED",
+          "error": "invalid_phone_number"
+        },
+        {
+          "member_id": 26,
+          "name": "Rajesh Sharma",
+          "status": "SUCCESS",
+          "phone": "9810012001"
+        },
+        {
+          "member_id": 27,
+          "name": "Priya Patel",
+          "status": "SUCCESS",
+          "phone": "9810012002"
+        },
+        {
+          "member_id": 28,
+          "name": "Amit Singh",
+          "status": "SUCCESS",
+          "phone": "9810012003"
+        },
+        {
+          "member_id": 29,
+          "name": "Sunita Verma",
+          "status": "SUCCESS",
+          "phone": "9810012004"
+        },
+        {
+          "member_id": 30,
+          "name": "Ravi Kumar",
+          "status": "SUCCESS",
+          "phone": "9810012005"
+        },
+        {
+          "member_id": 106,
+          "name": "Nissi Enterprises",
+          "status": "SUCCESS",
+          "phone": "9491114014"
+        },
+        {
+          "member_id": 111,
+          "name": "Visionera Pvt Ltd",
+          "status": "SUCCESS",
+          "phone": "9347475257"
+        },
+        {
+          "member_id": 170,
+          "name": "Sri Vijaya",
+          "status": "SUCCESS",
+          "phone": "8688788680"
+        },
+        {
+          "member_id": 246,
+          "name": "Mr. K Sravan",
+          "status": "SUCCESS",
+          "phone": "9000250716"
+        },
+        {
+          "member_id": 338,
+          "name": "Ganesh Mandal",
+          "status": "SUCCESS",
+          "phone": "9988776655"
+        }
+      ]
+    },
+    "error_message": null
+  },
+  {
+    "id": "log_20260822104647_vgk_member_morning_statement",
+    "job_id": "vgk_member_morning_statement",
+    "job_name": "VGK Members Daily 8 AM Revenue Statement",
+    "timestamp": "2026-08-22T10:46:47.587175",
+    "status": "SUCCESS",
+    "triggered_by": "SYSTEM",
+    "payload": {
+      "qualifying_members_count": 24,
+      "dispatched_count": 23,
+      "failed_count": 1,
+      "detail": [
+        {
+          "member_id": 1,
+          "name": "MNR Mega Natural Resources",
+          "status": "SUCCESS",
+          "phone": "6300286103"
+        },
+        {
+          "member_id": 25,
+          "name": "Sri Lakshmi EV Solutions",
+          "status": "SUCCESS",
+          "phone": "9032418896"
+        },
+        {
+          "member_id": 31,
+          "name": "VGK Support",
+          "status": "FAILED",
+          "error": "invalid_phone_number"
+        },
+        {
+          "member_id": 32,
+          "name": "Geetharam Enterprises",
+          "status": "SUCCESS",
+          "phone": "9058121456"
+        },
+        {
+          "member_id": 33,
+          "name": "Velagas Enterprises",
+          "status": "SUCCESS",
+          "phone": "9849471128"
+        },
+        {
+          "member_id": 40,
+          "name": "K. V. Naidu",
+          "status": "SUCCESS",
+          "phone": "7702445685"
+        },
+        {
+          "member_id": 73,
+          "name": "MyntReal LLP",
+          "status": "SUCCESS",
+          "phone": "9032574588"
+        },
+        {
+          "member_id": 77,
+          "name": "Kalla Nookunaidu",
+          "status": "SUCCESS",
+          "phone": "8688269969"
+        },
+        {
+          "member_id": 83,
+          "name": "Geetharam Enterprises",
+          "status": "SUCCESS",
+          "phone": "9058121456"
+        },
+        {
+          "member_id": 97,
+          "name": "Velagas Enterprises",
+          "status": "SUCCESS",
+          "phone": "9849471128"
+        },
+        {
+          "member_id": 122,
+          "name": "Mr. Bandi Gangaraju",
+          "status": "SUCCESS",
+          "phone": "9494188948"
+        },
+        {
+          "member_id": 123,
+          "name": "Lochala Simhachalam",
+          "status": "SUCCESS",
+          "phone": "9391144684"
+        },
+        {
+          "member_id": 133,
+          "name": "Mr. Ramanadh Velaga",
+          "status": "SUCCESS",
+          "phone": "9290221042"
+        },
+        {
+          "member_id": 134,
+          "name": "Mr. Rohith Tangi",
+          "status": "SUCCESS",
+          "phone": "8688788680"
+        },
+        {
+          "member_id": 152,
+          "name": "Mr. Pothala Chiranjeevi",
+          "status": "SUCCESS",
+          "phone": "9010827917"
+        },
+        {
+          "member_id": 160,
+          "name": "Mr. Tharakaramarao Allu",
+          "status": "SUCCESS",
+          "phone": "9666679696"
+        },
+        {
+          "member_id": 175,
+          "name": "Mr. Jartha Musallayya",
+          "status": "SUCCESS",
+          "phone": "9676284460"
+        },
+        {
+          "member_id": 176,
+          "name": "Mr. Bhusari Balaraju",
+          "status": "SUCCESS",
+          "phone": "9666386133"
+        },
+        {
+          "member_id": 177,
+          "name": "Mr. Kudumula Suribabu",
+          "status": "SUCCESS",
+          "phone": "7382988020"
+        },
+        {
+          "member_id": 209,
+          "name": "Mr. Kuruju Srinubabu",
+          "status": "SUCCESS",
+          "phone": "9492249439"
+        },
+        {
+          "member_id": 216,
+          "name": "Mr. B Ramalakshmi",
+          "status": "SUCCESS",
+          "phone": "9550297657"
+        },
+        {
+          "member_id": 221,
+          "name": "Mr. Seeram reddy Thammu Naidu",
+          "status": "SUCCESS",
+          "phone": "8500926972"
+        },
+        {
+          "member_id": 230,
+          "name": "Mr. Tarum Nageswara Rao",
+          "status": "SUCCESS",
+          "phone": "9494545848"
+        },
+        {
+          "member_id": 233,
+          "name": "Mr. Jalumuri Trimurthulu",
+          "status": "SUCCESS",
+          "phone": "9490387083"
+        }
+      ]
+    },
+    "error_message": null
+  },
+  {
+    "id": "log_bd61f946",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "MANUAL",
+    "triggered_by": "Staff MR10001 (User)",
+    "timestamp": "22 Aug 2026, 10:43:09 AM IST",
+    "iso_timestamp": "2026-08-22T10:43:09.887588",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "group_posted": false,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_698f8215",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "MANUAL",
+    "triggered_by": "Staff MR10001 (User)",
+    "timestamp": "22 Aug 2026, 10:43:07 AM IST",
+    "iso_timestamp": "2026-08-22T10:43:07.699262",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "success": false,
+      "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr"
+    }
+  },
+  {
+    "id": "log_20260822104052_wa_daily_vgk_zero_lead_motivational_730am",
+    "job_id": "wa_daily_vgk_zero_lead_motivational_730am",
+    "job_name": "VGK Members Daily 7:30 AM 0-Lead Motivational Dispatch",
+    "timestamp": "2026-08-22T10:40:52.356314",
+    "status": "PARTIAL_SUCCESS",
+    "triggered_by": "Staff MR10001 (User)",
+    "payload": {
+      "dispatched_count": 0,
+      "skipped_count": 0,
+      "failed_count": 11,
+      "active_partners_with_leads": 174,
+      "total_gross_earned": 7432170.0,
+      "theme_used": "\ud83c\udfc6 *SATURDAY VISION \u2014 \u0c2a\u0c4d\u0c2f\u0c3e\u0c38\u0c3f\u0c35\u0c4d \u0c07\u0c28\u0c4d\u200c\u0c15\u0c2e\u0c4d \u0c38\u0c4d\u0c1f\u0c4d\u0c30\u0c40\u0c2e\u0c4d\u200c\u0c28\u0c3f \u0c2c\u0c3f\u0c32\u0c4d\u0c21\u0c4d \u0c1a\u0c47\u0c38\u0c41\u0c15\u0c4b\u0c02\u0c21\u0c3f!*",
+      "results": [
+        {
+          "member_id": 6,
+          "name": "Test Partner (VIEW ONLY)",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 26,
+          "name": "Rajesh Sharma",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 27,
+          "name": "Priya Patel",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 28,
+          "name": "Amit Singh",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 29,
+          "name": "Sunita Verma",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 30,
+          "name": "Ravi Kumar",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 106,
+          "name": "Nissi Enterprises",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 111,
+          "name": "Visionera Pvt Ltd",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 170,
+          "name": "Sri Vijaya",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 246,
+          "name": "Mr. K Sravan",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 338,
+          "name": "Ganesh Mandal",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        }
+      ]
+    },
+    "error_message": null
+  },
+  {
+    "id": "log_20260822104046_vgk_member_morning_statement",
+    "job_id": "vgk_member_morning_statement",
+    "job_name": "VGK Members Daily 8 AM Revenue Statement",
+    "timestamp": "2026-08-22T10:40:46.803051",
+    "status": "FAILED",
+    "triggered_by": "Staff MR10001 (User)",
+    "payload": {
+      "qualifying_members_count": 24,
+      "dispatched_count": 0,
+      "failed_count": 24,
+      "detail": [
+        {
+          "member_id": 1,
+          "name": "MNR Mega Natural Resources",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 25,
+          "name": "Sri Lakshmi EV Solutions",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 31,
+          "name": "VGK Support",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 32,
+          "name": "Geetharam Enterprises",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 33,
+          "name": "Velagas Enterprises",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 40,
+          "name": "K. V. Naidu",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 73,
+          "name": "MyntReal LLP",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 77,
+          "name": "Kalla Nookunaidu",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 83,
+          "name": "Geetharam Enterprises",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 97,
+          "name": "Velagas Enterprises",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 122,
+          "name": "Mr. Bandi Gangaraju",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 123,
+          "name": "Lochala Simhachalam",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 133,
+          "name": "Mr. Ramanadh Velaga",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 134,
+          "name": "Mr. Rohith Tangi",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 152,
+          "name": "Mr. Pothala Chiranjeevi",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 160,
+          "name": "Mr. Tharakaramarao Allu",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 175,
+          "name": "Mr. Jartha Musallayya",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 176,
+          "name": "Mr. Bhusari Balaraju",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 177,
+          "name": "Mr. Kudumula Suribabu",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 209,
+          "name": "Mr. Kuruju Srinubabu",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 216,
+          "name": "Mr. B Ramalakshmi",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 221,
+          "name": "Mr. Seeram reddy Thammu Naidu",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 230,
+          "name": "Mr. Tarum Nageswara Rao",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        },
+        {
+          "member_id": 233,
+          "name": "Mr. Jalumuri Trimurthulu",
+          "status": "FAILED",
+          "error": "HTTP 503"
+        }
+      ]
+    },
+    "error_message": null
+  },
+  {
+    "id": "log_20260822103904_wa_daily_vgk_zero_lead_motivational_730am",
+    "job_id": "wa_daily_vgk_zero_lead_motivational_730am",
+    "job_name": "VGK Members Daily 7:30 AM 0-Lead Motivational Dispatch",
+    "timestamp": "2026-08-22T10:39:04.161313",
+    "status": "PARTIAL_SUCCESS",
+    "triggered_by": "SYSTEM",
+    "payload": {
+      "dispatched_count": 8,
+      "skipped_count": 0,
+      "failed_count": 3,
+      "active_partners_with_leads": 174,
+      "total_gross_earned": 7432170.0,
+      "theme_used": "\ud83c\udfc6 *SATURDAY VISION \u2014 \u0c2a\u0c4d\u0c2f\u0c3e\u0c38\u0c3f\u0c35\u0c4d \u0c07\u0c28\u0c4d\u200c\u0c15\u0c2e\u0c4d \u0c38\u0c4d\u0c1f\u0c4d\u0c30\u0c40\u0c2e\u0c4d\u200c\u0c28\u0c3f \u0c2c\u0c3f\u0c32\u0c4d\u0c21\u0c4d \u0c1a\u0c47\u0c38\u0c41\u0c15\u0c4b\u0c02\u0c21\u0c3f!*",
+      "results": [
+        {
+          "member_id": 6,
+          "name": "Test Partner (VIEW ONLY)",
+          "status": "SUCCESS",
+          "phone": "9999999904"
+        },
+        {
+          "member_id": 26,
+          "name": "Rajesh Sharma",
+          "status": "SUCCESS",
+          "phone": "9810012001"
+        },
+        {
+          "member_id": 27,
+          "name": "Priya Patel",
+          "status": "SUCCESS",
+          "phone": "9810012002"
+        },
+        {
+          "member_id": 28,
+          "name": "Amit Singh",
+          "status": "SUCCESS",
+          "phone": "9810012003"
+        },
+        {
+          "member_id": 29,
+          "name": "Sunita Verma",
+          "status": "SUCCESS",
+          "phone": "9810012004"
+        },
+        {
+          "member_id": 30,
+          "name": "Ravi Kumar",
+          "status": "SUCCESS",
+          "phone": "9810012005"
+        },
+        {
+          "member_id": 106,
+          "name": "Nissi Enterprises",
+          "status": "SUCCESS",
+          "phone": "9491114014"
+        },
+        {
+          "member_id": 111,
+          "name": "Visionera Pvt Ltd",
+          "status": "SUCCESS",
+          "phone": "9347475257"
+        },
+        {
+          "member_id": 170,
+          "name": "Sri Vijaya",
+          "status": "FAILED",
+          "error": "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))"
+        },
+        {
+          "member_id": 246,
+          "name": "Mr. K Sravan",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 338,
+          "name": "Ganesh Mandal",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        }
+      ]
+    },
+    "error_message": null
+  },
+  {
+    "id": "log_20260822103452_wa_daily_vgk_zero_lead_motivational_730am",
+    "job_id": "wa_daily_vgk_zero_lead_motivational_730am",
+    "job_name": "VGK Members Daily 7:30 AM 0-Lead Motivational Dispatch",
+    "timestamp": "2026-08-22T10:34:52.799197",
+    "status": "SUCCESS",
+    "triggered_by": "SYSTEM",
+    "payload": {
+      "dispatched_count": 11,
+      "skipped_count": 0,
+      "failed_count": 0,
+      "active_partners_with_leads": 24,
+      "total_gross_earned": 7432170.0,
+      "theme_used": "\ud83c\udfc6 *SATURDAY VISION \u2014 BUILD YOUR PASSIVE INCOME STREAM!*",
+      "results": [
+        {
+          "member_id": 6,
+          "name": "Test Partner (VIEW ONLY)",
+          "status": "SUCCESS",
+          "phone": "9999999904"
+        },
+        {
+          "member_id": 26,
+          "name": "Rajesh Sharma",
+          "status": "SUCCESS",
+          "phone": "9810012001"
+        },
+        {
+          "member_id": 27,
+          "name": "Priya Patel",
+          "status": "SUCCESS",
+          "phone": "9810012002"
+        },
+        {
+          "member_id": 28,
+          "name": "Amit Singh",
+          "status": "SUCCESS",
+          "phone": "9810012003"
+        },
+        {
+          "member_id": 29,
+          "name": "Sunita Verma",
+          "status": "SUCCESS",
+          "phone": "9810012004"
+        },
+        {
+          "member_id": 30,
+          "name": "Ravi Kumar",
+          "status": "SUCCESS",
+          "phone": "9810012005"
+        },
+        {
+          "member_id": 106,
+          "name": "Nissi Enterprises",
+          "status": "SUCCESS",
+          "phone": "9491114014"
+        },
+        {
+          "member_id": 111,
+          "name": "Visionera Pvt Ltd",
+          "status": "SUCCESS",
+          "phone": "9347475257"
+        },
+        {
+          "member_id": 170,
+          "name": "Sri Vijaya",
+          "status": "SUCCESS",
+          "phone": "8688788680"
+        },
+        {
+          "member_id": 246,
+          "name": "Mr. K Sravan",
+          "status": "SUCCESS",
+          "phone": "9000250716"
+        },
+        {
+          "member_id": 338,
+          "name": "Ganesh Mandal",
+          "status": "SUCCESS",
+          "phone": "9988776655"
+        }
+      ]
+    },
+    "error_message": null
+  },
+  {
+    "id": "log_a89f48eb",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 10:30:01 AM IST",
+    "iso_timestamp": "2026-08-22T10:30:01.415378",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_a7c8715b",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "22 Aug 2026, 09:30:04 AM IST",
+    "iso_timestamp": "2026-08-22T09:30:04.221457",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "success": true,
+      "data": {
+        "success": true,
+        "sent_count": 1,
+        "failed_count": 0,
+        "results": [
+          {
+            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
+            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
+            "target_type": "group",
+            "resolved_jid": "120363410784518818@g.us",
+            "message_id": "3EB0E3889E6F2065DCDDFF",
+            "success": true,
+            "fallback_used": false
+          }
+        ],
+        "message_id": "3EB0E3889E6F2065DCDDFF"
+      }
+    }
+  },
+  {
+    "id": "log_99d55892",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "22 Aug 2026, 09:30:03 AM IST",
+    "iso_timestamp": "2026-08-22T09:30:03.612597",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "group_posted": true,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_d03f6ffe",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 09:30:00 AM IST",
+    "iso_timestamp": "2026-08-22T09:30:00.686130",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_20260822091048_vgk_member_morning_statement",
+    "job_id": "vgk_member_morning_statement",
+    "job_name": "VGK Members Daily 8 AM Revenue Statement",
+    "timestamp": "2026-08-22T09:10:48.336046",
+    "status": "SUCCESS",
+    "triggered_by": "SYSTEM",
+    "payload": {
+      "qualifying_members_count": 24,
+      "dispatched_count": 12,
+      "failed_count": 12,
+      "detail": [
+        {
+          "member_id": 1,
+          "name": "MNR Mega Natural Resources",
+          "status": "SUCCESS",
+          "phone": "6300286103"
+        },
+        {
+          "member_id": 25,
+          "name": "Sri Lakshmi EV Solutions",
+          "status": "SUCCESS",
+          "phone": "9032418896"
+        },
+        {
+          "member_id": 31,
+          "name": "VGK Support",
+          "status": "SUCCESS",
+          "phone": "9000000000"
+        },
+        {
+          "member_id": 32,
+          "name": "Geetharam Enterprises",
+          "status": "SUCCESS",
+          "phone": "9058121456"
+        },
+        {
+          "member_id": 33,
+          "name": "Velagas Enterprises",
+          "status": "SUCCESS",
+          "phone": "9849471128"
+        },
+        {
+          "member_id": 40,
+          "name": "K. V. Naidu",
+          "status": "SUCCESS",
+          "phone": "7702445685"
+        },
+        {
+          "member_id": 73,
+          "name": "MyntReal LLP",
+          "status": "SUCCESS",
+          "phone": "9032574588"
+        },
+        {
+          "member_id": 77,
+          "name": "Kalla Nookunaidu",
+          "status": "SUCCESS",
+          "phone": "8688269969"
+        },
+        {
+          "member_id": 83,
+          "name": "Geetharam Enterprises",
+          "status": "SUCCESS",
+          "phone": "9058121456"
+        },
+        {
+          "member_id": 97,
+          "name": "Velagas Enterprises",
+          "status": "SUCCESS",
+          "phone": "9849471128"
+        },
+        {
+          "member_id": 122,
+          "name": "Mr. Bandi Gangaraju",
+          "status": "SUCCESS",
+          "phone": "9494188948"
+        },
+        {
+          "member_id": 123,
+          "name": "Lochala Simhachalam",
+          "status": "SUCCESS",
+          "phone": "9391144684"
+        },
+        {
+          "member_id": 133,
+          "name": "Mr. Ramanadh Velaga",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 134,
+          "name": "Mr. Rohith Tangi",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 152,
+          "name": "Mr. Pothala Chiranjeevi",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 160,
+          "name": "Mr. Tharakaramarao Allu",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 175,
+          "name": "Mr. Jartha Musallayya",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 176,
+          "name": "Mr. Bhusari Balaraju",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 177,
+          "name": "Mr. Kudumula Suribabu",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 209,
+          "name": "Mr. Kuruju Srinubabu",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 216,
+          "name": "Mr. B Ramalakshmi",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 221,
+          "name": "Mr. Seeram reddy Thammu Naidu",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 230,
+          "name": "Mr. Tarum Nageswara Rao",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 233,
+          "name": "Mr. Jalumuri Trimurthulu",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        }
+      ]
+    },
+    "error_message": null
+  },
+  {
+    "id": "log_20260822090359_vgk_member_morning_statement",
+    "job_id": "vgk_member_morning_statement",
+    "job_name": "VGK Members Daily 8 AM Revenue Statement",
+    "timestamp": "2026-08-22T09:03:59.927719",
+    "status": "SUCCESS",
+    "triggered_by": "CLI_TEST",
+    "payload": {
+      "qualifying_members_count": 24,
+      "dispatched_count": 12,
+      "failed_count": 12,
+      "detail": [
+        {
+          "member_id": 1,
+          "name": "MNR Mega Natural Resources",
+          "status": "SUCCESS",
+          "phone": "6300286103"
+        },
+        {
+          "member_id": 25,
+          "name": "Sri Lakshmi EV Solutions",
+          "status": "SUCCESS",
+          "phone": "9032418896"
+        },
+        {
+          "member_id": 31,
+          "name": "VGK Support",
+          "status": "SUCCESS",
+          "phone": "9000000000"
+        },
+        {
+          "member_id": 32,
+          "name": "Geetharam Enterprises",
+          "status": "SUCCESS",
+          "phone": "9058121456"
+        },
+        {
+          "member_id": 33,
+          "name": "Velagas Enterprises",
+          "status": "SUCCESS",
+          "phone": "9849471128"
+        },
+        {
+          "member_id": 40,
+          "name": "K. V. Naidu",
+          "status": "SUCCESS",
+          "phone": "7702445685"
+        },
+        {
+          "member_id": 73,
+          "name": "MyntReal LLP",
+          "status": "SUCCESS",
+          "phone": "9032574588"
+        },
+        {
+          "member_id": 77,
+          "name": "Kalla Nookunaidu",
+          "status": "SUCCESS",
+          "phone": "8688269969"
+        },
+        {
+          "member_id": 83,
+          "name": "Geetharam Enterprises",
+          "status": "SUCCESS",
+          "phone": "9058121456"
+        },
+        {
+          "member_id": 97,
+          "name": "Velagas Enterprises",
+          "status": "SUCCESS",
+          "phone": "9849471128"
+        },
+        {
+          "member_id": 122,
+          "name": "Mr. Bandi Gangaraju",
+          "status": "SUCCESS",
+          "phone": "9494188948"
+        },
+        {
+          "member_id": 123,
+          "name": "Lochala Simhachalam",
+          "status": "SUCCESS",
+          "phone": "9391144684"
+        },
+        {
+          "member_id": 133,
+          "name": "Mr. Ramanadh Velaga",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 134,
+          "name": "Mr. Rohith Tangi",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 152,
+          "name": "Mr. Pothala Chiranjeevi",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 160,
+          "name": "Mr. Tharakaramarao Allu",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 175,
+          "name": "Mr. Jartha Musallayya",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 176,
+          "name": "Mr. Bhusari Balaraju",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 177,
+          "name": "Mr. Kudumula Suribabu",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 209,
+          "name": "Mr. Kuruju Srinubabu",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 216,
+          "name": "Mr. B Ramalakshmi",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 221,
+          "name": "Mr. Seeram reddy Thammu Naidu",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 230,
+          "name": "Mr. Tarum Nageswara Rao",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        },
+        {
+          "member_id": 233,
+          "name": "Mr. Jalumuri Trimurthulu",
+          "status": "FAILED",
+          "error": "HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        }
+      ]
+    },
+    "error_message": null
+  },
+  {
+    "id": "log_704c1800",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 09:00:09 AM IST",
+    "iso_timestamp": "2026-08-22T09:00:09.059368",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 72,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 72,
+      "created": 0,
+      "updated": 72,
+      "skipped": 0,
+      "followups_created": 63
+    }
+  },
+  {
+    "id": "log_f39dc457",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 09:00:00 AM IST",
+    "iso_timestamp": "2026-08-22T09:00:00.791128",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_50d88ffa",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "22 Aug 2026, 08:15:01 AM IST",
+    "iso_timestamp": "2026-08-22T08:15:01.538925",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "group_posted": true,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_50507daa",
+    "job_id": "vgk4u_morning_wish",
+    "job_name": "VGK4U Elite Community Morning Wish",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "22 Aug 2026, 08:00:04 AM IST",
+    "iso_timestamp": "2026-08-22T08:00:04.174847",
+    "target_summary": "VGK4u Official Channel, VGK4u Community Group",
+    "targets": [
+      {
+        "id": "t_vgk_channel",
+        "type": "channel",
+        "name": "VGK4u Official Channel",
+        "identifier": "https://whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m"
+      },
+      {
+        "id": "t_vgk_group",
+        "type": "group",
+        "name": "VGK4u Community Group",
+        "identifier": "https://chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY?s=cl&p=i&mlu=0"
+      }
+    ],
+    "sent_count": 2,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "dispatched_groups": 2,
+      "failed_groups": 0,
+      "results": [
+        {
+          "success": true,
+          "data": {
+            "success": true,
+            "sent_count": 1,
+            "failed_count": 0,
+            "results": [
+              {
+                "intended_target": "0029Vb7Vb5f9cDDXf3zWtf0m",
+                "clean_code": "0029Vb7Vb5f9cDDXf3zWtf0m",
+                "target_type": "channel",
+                "resolved_jid": "120363426686429374@newsletter",
+                "message_id": "3EB0AAB554FF486FB71D09",
+                "success": true,
+                "fallback_used": false
+              }
+            ],
+            "message_id": "3EB0AAB554FF486FB71D09"
+          }
+        },
+        {
+          "success": true,
+          "data": {
+            "success": true,
+            "sent_count": 1,
+            "failed_count": 0,
+            "results": [
+              {
+                "intended_target": "HNQQoKXFfCm5PQngGdrlcY",
+                "clean_code": "HNQQoKXFfCm5PQngGdrlcY",
+                "target_type": "group",
+                "resolved_jid": "120363424730418206@g.us",
+                "message_id": "3EB09C8C8683060072DD09",
+                "success": true,
+                "fallback_used": false
+              }
+            ],
+            "message_id": "3EB09C8C8683060072DD09"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "log_6a4bdee7",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 08:00:00 AM IST",
+    "iso_timestamp": "2026-08-22T08:00:00.582046",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_7bb06a9b",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "22 Aug 2026, 07:45:01 AM IST",
+    "iso_timestamp": "2026-08-22T07:45:01.819204",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "group_posted": true,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_793523c3",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 07:30:00 AM IST",
+    "iso_timestamp": "2026-08-22T07:30:00.888771",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_99ab4bd3",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "22 Aug 2026, 07:15:01 AM IST",
+    "iso_timestamp": "2026-08-22T07:15:01.615178",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "group_posted": true,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_d6e63a9d",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 07:00:00 AM IST",
+    "iso_timestamp": "2026-08-22T07:00:00.664300",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_d3f0d95c",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "22 Aug 2026, 06:45:01 AM IST",
+    "iso_timestamp": "2026-08-22T06:45:01.607444",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "group_posted": true,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_32f77661",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 06:30:00 AM IST",
+    "iso_timestamp": "2026-08-22T06:30:00.857197",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_87053865",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "22 Aug 2026, 06:15:01 AM IST",
+    "iso_timestamp": "2026-08-22T06:15:01.512886",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "group_posted": true,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_f0cef2d3",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 03:04:14 AM IST",
+    "iso_timestamp": "2026-08-22T03:04:14.733627",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_f57a737e",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "22 Aug 2026, 02:31:49 AM IST",
+    "iso_timestamp": "2026-08-22T02:31:49.143850",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_687e522c",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Aug 2026, 11:16:54 PM IST",
+    "iso_timestamp": "2026-08-21T23:16:54.127113",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "group_posted": false,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_461a89db",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Aug 2026, 10:15:27 PM IST",
+    "iso_timestamp": "2026-08-21T22:15:27.432705",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "group_posted": true,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_bf3f538f",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Aug 2026, 09:15:01 PM IST",
+    "iso_timestamp": "2026-08-21T21:15:01.399171",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "group_posted": true,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_c74023e4",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "21 Aug 2026, 09:00:00 PM IST",
+    "iso_timestamp": "2026-08-21T21:00:00.704465",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_ea942641",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "MANUAL",
+    "triggered_by": "Staff MR10016 (Yaswanth Kumar)",
+    "timestamp": "21 Aug 2026, 08:49:41 PM IST",
+    "iso_timestamp": "2026-08-21T20:49:41.214259",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "group_posted": true,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_bfac7fbc",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "MANUAL",
+    "triggered_by": "Staff MR10016 (Yaswanth Kumar)",
+    "timestamp": "21 Aug 2026, 08:45:41 PM IST",
+    "iso_timestamp": "2026-08-21T20:45:41.831536",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "success": true,
+      "data": {
+        "success": true,
+        "sent_count": 1,
+        "failed_count": 0,
+        "results": [
+          {
+            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
+            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
+            "target_type": "group",
+            "resolved_jid": "120363410784518818@g.us",
+            "message_id": "3EB070CA7D4F0815AB66CC",
+            "success": true,
+            "fallback_used": false
+          }
+        ],
+        "message_id": "3EB070CA7D4F0815AB66CC"
+      }
+    }
+  },
+  {
+    "id": "log_09df8879",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Aug 2026, 08:45:01 PM IST",
+    "iso_timestamp": "2026-08-21T20:45:01.572540",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "group_posted": true,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_a042d6ed",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "MANUAL",
+    "triggered_by": "Staff MR10016 (Yaswanth Kumar)",
+    "timestamp": "21 Aug 2026, 08:44:54 PM IST",
+    "iso_timestamp": "2026-08-21T20:44:54.768191",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "success": true,
+      "data": {
+        "success": true,
+        "sent_count": 1,
+        "failed_count": 0,
+        "results": [
+          {
+            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
+            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
+            "target_type": "group",
+            "resolved_jid": "120363410784518818@g.us",
+            "message_id": "3EB0B2DE10D16B5354A46D",
+            "success": true,
+            "fallback_used": false
+          }
+        ],
+        "message_id": "3EB0B2DE10D16B5354A46D"
+      }
+    }
+  },
+  {
+    "id": "log_56143d62",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "MANUAL",
+    "triggered_by": "Staff MR10016 (Yaswanth Kumar)",
+    "timestamp": "21 Aug 2026, 08:44:17 PM IST",
+    "iso_timestamp": "2026-08-21T20:44:17.530505",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "success": true,
+      "data": {
+        "success": true,
+        "sent_count": 1,
+        "failed_count": 0,
+        "results": [
+          {
+            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
+            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
+            "target_type": "group",
+            "resolved_jid": "120363410784518818@g.us",
+            "message_id": "3EB098B74E6BC212307281",
+            "success": true,
+            "fallback_used": false
+          }
+        ],
+        "message_id": "3EB098B74E6BC212307281"
+      }
+    }
+  },
+  {
+    "id": "log_afe4af9b",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "MANUAL",
+    "triggered_by": "Staff MR10016 (Yaswanth Kumar)",
+    "timestamp": "21 Aug 2026, 08:43:08 PM IST",
+    "iso_timestamp": "2026-08-21T20:43:08.935171",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "success": true,
+      "data": {
+        "success": true,
+        "sent_count": 1,
+        "failed_count": 0,
+        "results": [
+          {
+            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
+            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
+            "target_type": "group",
+            "resolved_jid": "120363410784518818@g.us",
+            "message_id": "3EB074835F1AC76DC7014C",
+            "success": true,
+            "fallback_used": false
+          }
+        ],
+        "message_id": "3EB074835F1AC76DC7014C"
+      }
+    }
+  },
+  {
+    "id": "log_e72f91ac",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "MANUAL",
+    "triggered_by": "Staff MR10001 (User)",
+    "timestamp": "21 Aug 2026, 08:40:57 PM IST",
+    "iso_timestamp": "2026-08-21T20:40:57.604285",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "success": true,
+      "data": {
+        "success": true,
+        "sent_count": 1,
+        "failed_count": 0,
+        "results": [
+          {
+            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
+            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
+            "target_type": "group",
+            "resolved_jid": "120363410784518818@g.us",
+            "message_id": "3EB0E912CAB26392A97B63",
+            "success": true,
+            "fallback_used": false
+          }
+        ],
+        "message_id": "3EB0E912CAB26392A97B63"
+      }
+    }
+  },
+  {
+    "id": "log_78aefc23",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "MANUAL",
+    "triggered_by": "Staff MR10016 (Yaswanth Kumar)",
+    "timestamp": "21 Aug 2026, 08:30:51 PM IST",
+    "iso_timestamp": "2026-08-21T20:30:51.818556",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "success": true,
+      "data": {
+        "success": true,
+        "sent_count": 1,
+        "failed_count": 0,
+        "results": [
+          {
+            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
+            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
+            "target_type": "group",
+            "resolved_jid": "120363410784518818@g.us",
+            "message_id": "3EB06F71AC6135F55B0E75",
+            "success": true,
+            "fallback_used": false
+          }
+        ],
+        "message_id": "3EB06F71AC6135F55B0E75"
+      }
+    }
+  },
+  {
+    "id": "log_6ff5f4e0",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "MANUAL",
+    "triggered_by": "Staff MR10016 (Yaswanth Kumar)",
+    "timestamp": "21 Aug 2026, 08:30:19 PM IST",
+    "iso_timestamp": "2026-08-21T20:30:19.021255",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "success": true,
+      "data": {
+        "success": true,
+        "sent_count": 1,
+        "failed_count": 0,
+        "results": [
+          {
+            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
+            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
+            "target_type": "group",
+            "resolved_jid": "120363410784518818@g.us",
+            "message_id": "3EB0F5677D6F70B06CD114",
+            "success": true,
+            "fallback_used": false
+          }
+        ],
+        "message_id": "3EB0F5677D6F70B06CD114"
+      }
+    }
+  },
+  {
+    "id": "log_5510a97a",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "21 Aug 2026, 08:30:00 PM IST",
+    "iso_timestamp": "2026-08-21T20:30:00.892123",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_538d55c7",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Aug 2026, 07:45:01 PM IST",
+    "iso_timestamp": "2026-08-21T19:45:01.046486",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "group_posted": true,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_7a274c80",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Aug 2026, 07:30:04 PM IST",
+    "iso_timestamp": "2026-08-21T19:30:04.215594",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "success": true,
+      "data": {
+        "success": true,
+        "sent_count": 1,
+        "failed_count": 0,
+        "results": [
+          {
+            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
+            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
+            "target_type": "group",
+            "resolved_jid": "120363410784518818@g.us",
+            "message_id": "3EB0E701F5F2788896A880",
+            "success": true,
+            "fallback_used": false
+          }
+        ],
+        "message_id": "3EB0E701F5F2788896A880"
+      }
+    }
+  },
+  {
+    "id": "log_bf2966e9",
+    "job_id": "service_summary",
+    "job_name": "Daily 7:30 PM Service Ticket Summary",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Aug 2026, 07:30:02 PM IST",
+    "iso_timestamp": "2026-08-21T19:30:02.536945",
+    "target_summary": "Service & Maintenance Team",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Service & Maintenance Team",
+        "identifier": "EyuAwaVoF6E6nQqC0QfiBe"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "success": true,
+      "data": {
+        "success": true,
+        "sent_count": 1,
+        "failed_count": 0,
+        "results": [
+          {
+            "intended_target": "EyuAwaVoF6E6nQqC0QfiBe",
+            "clean_code": "EyuAwaVoF6E6nQqC0QfiBe",
+            "target_type": "group",
+            "resolved_jid": "120363409580797123@g.us",
+            "message_id": "3EB0FC2F6A12046E3F3D81",
+            "success": true,
+            "fallback_used": false
+          }
+        ],
+        "message_id": "3EB0FC2F6A12046E3F3D81"
+      }
+    }
+  },
+  {
+    "id": "log_d25908ac",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "21 Aug 2026, 07:30:01 PM IST",
+    "iso_timestamp": "2026-08-21T19:30:01.586295",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 4,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 4,
+      "created": 0,
+      "updated": 4,
+      "skipped": 0,
+      "followups_created": 3
+    }
+  },
+  {
+    "id": "log_704d57c2",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "21 Aug 2026, 07:00:01 PM IST",
+    "iso_timestamp": "2026-08-21T19:00:01.317806",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 4,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 4,
+      "created": 0,
+      "updated": 4,
+      "skipped": 0,
+      "followups_created": 3
+    }
+  },
+  {
+    "id": "log_6f497cd6",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Aug 2026, 06:45:02 PM IST",
+    "iso_timestamp": "2026-08-21T18:45:02.389426",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "group_posted": true,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_42abb9a2",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Aug 2026, 06:15:01 PM IST",
+    "iso_timestamp": "2026-08-21T18:15:01.569369",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "group_posted": true,
+      "alerts_sent": 0,
+      "active_journeys": 0
+    }
+  },
+  {
+    "id": "log_11d9d1d0",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "21 Aug 2026, 06:00:00 PM IST",
+    "iso_timestamp": "2026-08-21T18:00:00.046556",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_dc8e1c44",
+    "job_id": "vgk4u_morning_wish",
+    "job_name": "VGK4U Elite Community Morning Wish",
+    "trigger_type": "MANUAL",
+    "triggered_by": "Staff MR10001 (VGK Mentor)",
+    "timestamp": "21 Aug 2026, 05:36:02 PM IST",
+    "iso_timestamp": "2026-08-21T17:36:02.098635",
+    "target_summary": "VGK4u Official Channel, VGK4u Community Group",
+    "targets": [
+      {
+        "id": "t_vgk_channel",
+        "type": "channel",
+        "name": "VGK4u Official Channel",
+        "identifier": "https://whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m"
+      },
+      {
+        "id": "t_vgk_group",
+        "type": "group",
+        "name": "VGK4u Community Group",
+        "identifier": "https://chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY?s=cl&p=i&mlu=0"
+      }
+    ],
+    "sent_count": 2,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "dispatched_groups": 2,
+      "failed_groups": 0,
+      "results": [
+        {
+          "success": true,
+          "data": {
+            "success": true,
+            "sent_count": 1,
+            "failed_count": 0,
+            "results": [
+              {
+                "intended_target": "0029Vb7Vb5f9cDDXf3zWtf0m",
+                "clean_code": "0029Vb7Vb5f9cDDXf3zWtf0m",
+                "target_type": "channel",
+                "resolved_jid": "120363426686429374@newsletter",
+                "message_id": "3EB03A7FF885FCA192AD13",
+                "success": true,
+                "fallback_used": false
+              }
+            ],
+            "message_id": "3EB03A7FF885FCA192AD13"
+          }
+        },
+        {
+          "success": true,
+          "data": {
+            "success": true,
+            "sent_count": 1,
+            "failed_count": 0,
+            "results": [
+              {
+                "intended_target": "HNQQoKXFfCm5PQngGdrlcY",
+                "clean_code": "HNQQoKXFfCm5PQngGdrlcY",
+                "target_type": "group",
+                "resolved_jid": "120363424730418206@g.us",
+                "message_id": "3EB0B8A52BF8CD42441F22",
+                "success": true,
+                "fallback_used": false
+              }
+            ],
+            "message_id": "3EB0B8A52BF8CD42441F22"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "log_36372739",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Aug 2026, 05:32:24 PM IST",
+    "iso_timestamp": "2026-08-21T17:32:24.339295",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "success": true,
+      "data": {
+        "success": true,
+        "sent_count": 1,
+        "failed_count": 0,
+        "results": [
+          {
+            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
+            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
+            "target_type": "group",
+            "resolved_jid": "120363410784518818@g.us",
+            "message_id": "3EB0BF0F1E6A60A95A50D4",
+            "success": true,
+            "fallback_used": false
+          }
+        ],
+        "message_id": "3EB0BF0F1E6A60A95A50D4"
+      }
+    }
+  },
+  {
+    "id": "log_8fdba91d",
+    "job_id": "vgk4u_morning_wish",
+    "job_name": "VGK4U Elite Community Morning Wish",
+    "trigger_type": "MANUAL",
+    "triggered_by": "Staff MR10001 (VGK Mentor)",
+    "timestamp": "21 Aug 2026, 05:32:23 PM IST",
+    "iso_timestamp": "2026-08-21T17:32:23.061269",
+    "target_summary": "VGK4u Official Channel, VGK4u Community Group",
+    "targets": [
+      {
+        "id": "t_vgk_channel",
+        "type": "channel",
+        "name": "VGK4u Official Channel",
+        "identifier": "https://whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m"
+      },
+      {
+        "id": "t_vgk_group",
+        "type": "group",
+        "name": "VGK4u Community Group",
+        "identifier": "https://chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY?s=cl&p=i&mlu=0"
+      }
+    ],
+    "sent_count": 2,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "dispatched_groups": 2,
+      "failed_groups": 0,
+      "results": [
+        {
+          "success": true,
+          "data": {
+            "success": true,
+            "sent_count": 1,
+            "failed_count": 0,
+            "results": [
+              {
+                "intended_target": "0029Vb7Vb5f9cDDXf3zWtf0m",
+                "clean_code": "0029Vb7Vb5f9cDDXf3zWtf0m",
+                "target_type": "channel",
+                "resolved_jid": "120363426686429374@newsletter",
+                "message_id": "3EB00C01A4D775B7D2E4EF",
+                "success": true,
+                "fallback_used": false
+              }
+            ],
+            "message_id": "3EB00C01A4D775B7D2E4EF"
+          }
+        },
+        {
+          "success": true,
+          "data": {
+            "success": true,
+            "sent_count": 1,
+            "failed_count": 0,
+            "results": [
+              {
+                "intended_target": "HNQQoKXFfCm5PQngGdrlcY",
+                "clean_code": "HNQQoKXFfCm5PQngGdrlcY",
+                "target_type": "group",
+                "resolved_jid": "120363424730418206@g.us",
+                "message_id": "3EB004E0D0E2ECC0D272DC",
+                "success": true,
+                "fallback_used": false
+              }
+            ],
+            "message_id": "3EB004E0D0E2ECC0D272DC"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "log_c514d0cf",
+    "job_id": "vgk4u_morning_wish",
+    "job_name": "VGK4U Elite Community Morning Wish",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Aug 2026, 05:32:22 PM IST",
+    "iso_timestamp": "2026-08-21T17:32:22.364909",
+    "target_summary": "VGK4u Official Channel, VGK4u Community Group",
+    "targets": [
+      {
+        "id": "t_vgk_channel",
+        "type": "channel",
+        "name": "VGK4u Official Channel",
+        "identifier": "https://whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m"
+      },
+      {
+        "id": "t_vgk_group",
+        "type": "group",
+        "name": "VGK4u Community Group",
+        "identifier": "https://chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY?s=cl&p=i&mlu=0"
+      }
+    ],
+    "sent_count": 2,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "dispatched_groups": 2,
+      "failed_groups": 0,
+      "results": [
+        {
+          "success": true,
+          "data": {
+            "success": true,
+            "sent_count": 1,
+            "failed_count": 0,
+            "results": [
+              {
+                "intended_target": "0029Vb7Vb5f9cDDXf3zWtf0m",
+                "clean_code": "0029Vb7Vb5f9cDDXf3zWtf0m",
+                "target_type": "channel",
+                "resolved_jid": "120363426686429374@newsletter",
+                "message_id": "3EB03679839AA7644B61B6",
+                "success": true,
+                "fallback_used": false
+              }
+            ],
+            "message_id": "3EB03679839AA7644B61B6"
+          }
+        },
+        {
+          "success": true,
+          "data": {
+            "success": true,
+            "sent_count": 1,
+            "failed_count": 0,
+            "results": [
+              {
+                "intended_target": "HNQQoKXFfCm5PQngGdrlcY",
+                "clean_code": "HNQQoKXFfCm5PQngGdrlcY",
+                "target_type": "group",
+                "resolved_jid": "120363424730418206@g.us",
+                "message_id": "3EB02911CD6C700B294104",
+                "success": true,
+                "fallback_used": false
+              }
+            ],
+            "message_id": "3EB02911CD6C700B294104"
+          }
+        }
+      ]
+    }
+  },
+  {
     "id": "log_vgk4u_21_1157",
     "job_id": "vgk4u_morning_wish",
     "job_name": "VGK4U Elite Community Morning Wish",

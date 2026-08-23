@@ -71,7 +71,10 @@ def send_group_bot_message(message_text: str, invite_code: str = DEFAULT_INVITE_
 def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, Any]:
     """
     Formats and dispatches instant New Lead notification into Sales WhatsApp Group.
+    DC Protocol Apr 2026: Uses Meta lead generation date/time (IST) and captures all form fields (Electricity Bill, Property Type, Pincode, etc.)
     """
+    import json
+    import pytz
     from app.models.crm import CRMLead
 
     lead = db.query(CRMLead).get(lead_id)
@@ -81,9 +84,62 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, An
     lead_name = (getattr(lead, 'first_name', '') or getattr(lead, 'name', '') or 'Valued Prospect').strip()
     phone = getattr(lead, 'phone', 'N/A') or 'N/A'
     city = getattr(lead, 'city', '') or getattr(lead, 'location', '') or 'Not Specified'
+    pincode = getattr(lead, 'pincode', '') or ''
     source = getattr(lead, 'source', '') or 'Direct Intake'
     interest = getattr(lead, 'product_interest', '') or getattr(lead, 'requirement', '') or 'Solar Rooftop (PM Surya Ghar)'
-    
+    description = getattr(lead, 'description', '') or ''
+
+    # Parse source_details for Meta created_time and raw_fields
+    source_details_raw = getattr(lead, 'source_details', '') or ''
+    sd = {}
+    if isinstance(source_details_raw, str) and source_details_raw.startswith('{'):
+        try:
+            sd = json.loads(source_details_raw)
+        except Exception:
+            pass
+    elif isinstance(source_details_raw, dict):
+        sd = source_details_raw
+
+    # Meta Lead Generation Time (IST)
+    meta_created_str = sd.get('created_time')
+    time_str = None
+    if meta_created_str:
+        try:
+            dt_utc = datetime.datetime.fromisoformat(meta_created_str.replace('+0000', '+00:00'))
+            indian_tz = pytz.timezone('Asia/Kolkata')
+            dt_ist = dt_utc.astimezone(indian_tz)
+            time_str = dt_ist.strftime("%d %b %Y, %I:%M %p IST")
+        except Exception:
+            pass
+
+    if not time_str:
+        created_at = getattr(lead, 'created_at', None)
+        if created_at:
+            time_str = created_at.strftime("%d %b %Y, %I:%M %p IST")
+        else:
+            ist_now = datetime.datetime.utcnow() + datetime.timedelta(hours=5, minutes=30)
+            time_str = ist_now.strftime("%d %b %Y, %I:%M %p IST")
+
+    # Extract form questions & answers
+    raw_fields = sd.get('raw_fields') or {}
+    electricity_bill = (
+        raw_fields.get('what_is_your_monthly_electricity_bill?') or
+        raw_fields.get('electricity_bill') or
+        raw_fields.get('monthly_electricity_bill') or
+        raw_fields.get('bill_amount') or None
+    )
+    property_type = (
+        raw_fields.get('type_of_property') or
+        raw_fields.get('property_type') or None
+    )
+    if not pincode:
+        pincode = raw_fields.get('post_code') or raw_fields.get('zip_code') or raw_fields.get('pincode') or ''
+
+    # Source page name fallback
+    page_name = sd.get('page_name') or ''
+    if page_name and 'Facebook' not in source:
+        source = f"Facebook Lead Ads ({page_name})"
+
     # Staff assignment
     assigned_name = "Unassigned / Telecaller Team"
     if getattr(lead, 'assigned_to_emp_id', None):
@@ -95,20 +151,45 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, An
         except Exception:
             pass
 
-    # Time formatting in IST (+5:30)
-    ist_now = datetime.datetime.utcnow() + datetime.timedelta(hours=5, minutes=30)
-    time_str = ist_now.strftime("%I:%M %p")
+    # Build structured alert text
+    msg_lines = [
+        "🚨 *NEW LEAD RECEIVED!* 🚨\n",
+        f"👤 *Customer Name*: {lead_name}",
+        f"📱 *Phone*: {phone}",
+        f"📍 *Location*: {city}" + (f" (PIN: {pincode})" if pincode else ""),
+    ]
 
-    message_text = (
-        "🚨 *NEW LEAD RECEIVED!* 🚨\n\n"
-        f"👤 *Customer Name*: {lead_name}\n"
-        f"📱 *Phone*: {phone}\n"
-        f"📍 *Location*: {city}\n"
-        f"⚡ *Interest*: {interest}\n"
-        f"🏷️ *Source*: {source}\n"
-        f"⏰ *Time*: Today at {time_str} IST\n\n"
-        f"👉 *Assigned Staff*: {assigned_name}\n"
-        f"🔗 *CRM Link*: https://myntreal.com/staff/leads"
-    )
+    if electricity_bill:
+        msg_lines.append(f"⚡ *Monthly Bill*: {electricity_bill}")
+    if property_type:
+        msg_lines.append(f"🏠 *Property Type*: {property_type}")
 
+    msg_lines.append(f"🏷️ *Source*: {source}")
+    msg_lines.append(f"⏰ *Lead Generated*: {time_str}")
+
+    # Build Q&A summary
+    qa_parts = []
+    if electricity_bill: qa_parts.append(f"• Monthly Electricity Bill: {electricity_bill}")
+    if property_type:    qa_parts.append(f"• Property Type: {property_type}")
+    if pincode:          qa_parts.append(f"• Pincode: {pincode}")
+
+    _known_keys = {
+        'full_name', 'name', 'first_name', 'last_name', 'email', 'phone_number', 'phone',
+        'city', 'location', 'state', 'post_code', 'zip_code', 'pincode', 'phone_number_verified',
+        'what_is_your_monthly_electricity_bill?', 'electricity_bill', 'monthly_electricity_bill', 'bill_amount',
+        'type_of_property', 'property_type'
+    }
+    for k, v in raw_fields.items():
+        if k not in _known_keys and v:
+            lbl = k.replace('_', ' ').replace('-', ' ').title()
+            qa_parts.append(f"• {lbl}: {v}")
+
+    if qa_parts:
+        msg_lines.append("\n📋 *Captured Form Details*:")
+        msg_lines.extend(qa_parts)
+
+    msg_lines.append(f"\n👉 *Assigned Staff*: {assigned_name}")
+    msg_lines.append("🔗 *CRM Link*: https://myntreal.com/staff/leads")
+
+    message_text = "\n".join(msg_lines)
     return send_group_bot_message(message_text)

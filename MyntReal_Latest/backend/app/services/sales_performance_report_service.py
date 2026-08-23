@@ -34,29 +34,50 @@ def _format_seconds_to_hm(total_seconds: int) -> str:
     return f"{minutes}m"
 
 
-def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
+def get_today_sales_performance_stats(db: Session, start_date=None, end_date=None, period_label="Today") -> Dict[str, Any]:
     """
-    Aggregates today's sales performance statistics up to the current moment.
+    Aggregates sales performance statistics for a date range or today.
     """
     from sqlalchemy import text
     from app.models.crm import CRMLead
 
     # IST Today Range (+5:30)
     ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
-    start_of_today_ist = ist_now.replace(hour=0, minute=0, second=0, microsecond=0)
-    start_of_today_utc = start_of_today_ist - timedelta(hours=5, minutes=30)
-    date_str = ist_now.strftime("%Y-%m-%d")
+    if not end_date:
+        end_date = ist_now.date()
+    if not start_date:
+        start_date = ist_now.date()
+
+    start_date_str = start_date.strftime("%Y-%m-%d")
+    end_date_str = end_date.strftime("%Y-%m-%d")
+
+    start_dt_utc = datetime.datetime.combine(start_date, datetime.time.min) - timedelta(hours=5, minutes=30)
+    end_dt_utc = datetime.datetime.combine(end_date, datetime.time.max) - timedelta(hours=5, minutes=30)
+
+    if start_date == end_date:
+        if start_date == ist_now.date():
+            date_display = ist_now.strftime("%d %B %Y")
+        else:
+            date_display = start_date.strftime("%d %B %Y")
+    else:
+        date_display = f"{start_date.strftime('%d %b %Y')} – {end_date.strftime('%d %b %Y')}"
 
     from app.models.operator_calls import OperatorCall
 
-    # 1. Tele Sales Department Staff (Excluding Field Staff: Hema, Raju, Padma Rao)
+    # 1. Tele Sales / Telecaller Department Staff (Strictly excluding Freelancers & Non-Telecaller Departments)
     staff_rows = db.execute(text("""
-        SELECT e.id, e.full_name
+        SELECT e.id, e.full_name, e.emp_code
         FROM staff_employees e
         LEFT JOIN staff_departments d ON d.id = e.department_id
         LEFT JOIN staff_employee_departments ed ON ed.employee_id = e.id
         LEFT JOIN staff_departments ad ON ad.id = ed.department_id
-        WHERE (LOWER(d.name) LIKE '%sales%' OR LOWER(ad.name) LIKE '%sales%')
+        LEFT JOIN staff_roles r ON r.id = e.role_id
+        WHERE (
+            LOWER(d.name) LIKE '%tele%' 
+            OR LOWER(ad.name) LIKE '%tele%'
+            OR LOWER(COALESCE(r.role_code, '')) LIKE '%tele%'
+            OR LOWER(COALESCE(r.role_name, '')) LIKE '%tele%'
+          )
           AND (e.status IS NULL OR e.status = 'active')
           AND (e.is_deleted IS NOT TRUE)
           AND e.full_name IS NOT NULL
@@ -65,7 +86,12 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
           AND LOWER(e.full_name) NOT LIKE '%raju%'
           AND LOWER(e.full_name) NOT LIKE '%padma%'
         GROUP BY e.id, e.full_name
-    """)).fetchall()
+          AND e.emp_code NOT ILIKE 'FL%'
+          AND e.emp_code NOT ILIKE 'FP%'
+          AND LOWER(COALESCE(e.employment_type, '')) NOT IN ('freelancer', 'external', 'partner_freelancer', 'contractor_freelancer', 'partner')
+          AND LOWER(COALESCE(r.role_code, '')) NOT LIKE '%freelancer%'
+          AND LOWER(COALESCE(r.role_name, '')) NOT LIKE '%freelancer%'
+        GROUP BY e.id, e.full_name, e.emp_code    """)).fetchall()
 
     leaderboard = []
     total_calls = 0
@@ -77,8 +103,8 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
         m_row = db.execute(text("""
             SELECT COUNT(id) as cnt, COALESCE(SUM(duration_seconds), 0) as dur,
                    COUNT(CASE WHEN UPPER(call_type) IN ('MISSED', 'REJECTED', 'NO_ANSWER') THEN 1 END) as missed
-            FROM staff_call_logs WHERE staff_id = :sid AND call_date = :d
-        """), {"sid": s.id, "d": date_str}).fetchone()
+            FROM staff_call_logs WHERE staff_id = :sid AND call_date >= :sd AND call_date <= :ed
+        """), {"sid": s.id, "sd": start_date_str, "ed": end_date_str}).fetchone()
 
         m_cnt = m_row.cnt if m_row else 0
         m_dur = int(m_row.dur or 0) if m_row else 0
@@ -88,7 +114,8 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
         words = [w for w in s.full_name.replace('.', ' ').split() if len(w) >= 3 and w.lower() not in ('ms', 'mrs', 'mr', 'dr')]
         filters = [OperatorCall.handled_by.ilike(f'%{w}%') for w in words]
         op_calls = db.query(OperatorCall).filter(
-            OperatorCall.started_at >= start_of_today_utc,
+            OperatorCall.started_at >= start_dt_utc,
+            OperatorCall.started_at <= end_dt_utc,
             or_(*filters)
         ).all() if filters else []
 
@@ -112,11 +139,12 @@ def get_today_sales_performance_stats(db: Session) -> Dict[str, Any]:
             "talk_time_formatted": _format_seconds_to_hm(staff_tot_talk)
         })
 
-    leaderboard.sort(key=lambda x: (x["call_count"], x["talk_seconds"]), reverse=True)
+    leaderboard.sort(key=lambda x: (x["talk_seconds"], x["call_count"]), reverse=True)
 
-    # 3. New Leads Intake Today
+    # 3. New Leads Intake
     new_leads = db.query(func.count(CRMLead.id)).filter(
-        CRMLead.created_at >= start_of_today_utc
+        CRMLead.created_at >= start_dt_utc,
+        CRMLead.created_at <= end_dt_utc
     ).scalar() or 0
 
     return {
@@ -244,12 +272,39 @@ def generate_bi_hourly_performance_message(db: Session, slot_name: str = "Bi-Hou
     return msg
 
 
-def dispatch_bi_hourly_sales_performance_report(db: Session, slot_name: str = "Bi-Hourly Update") -> Dict[str, Any]:
+def dispatch_bi_hourly_sales_performance_report(
+    db: Session,
+    slot_name: str = "Bi-Hourly Update",
+    trigger_type: str = "AUTO_SCHEDULER",
+    triggered_by: str = "System Cron"
+) -> Dict[str, Any]:
     """
     Generates and dispatches the bi-hourly performance report to Sales WhatsApp Group.
     """
     from app.services.whatsapp_group_alert_service import send_group_bot_message
+    from app.services.whatsapp_audit_service import log_wa_trigger_execution
 
     msg = generate_bi_hourly_performance_message(db, slot_name=slot_name)
     logger.info(f"📊 Dispatching sales performance update for slot {slot_name}...")
-    return send_group_bot_message(msg)
+    res = send_group_bot_message(msg)
+    is_succ = isinstance(res, dict) and res.get("success") is True
+
+    targets = [
+        {"id": "t1", "type": "group", "name": "Mynt Sales New Group", "identifier": "9053899899"},
+        {"id": "t2", "type": "group", "name": "Executive Team Announcements", "identifier": "7702830269"}
+    ]
+
+    log_wa_trigger_execution(
+        job_id="wa_bihourly_sales_perf_report",
+        job_name="Sales Team 2-Hour Report & Leaderboard",
+        trigger_type=trigger_type,
+        triggered_by=triggered_by,
+        targets=targets,
+        sent_count=1 if is_succ else 0,
+        failed_count=0 if is_succ else 1,
+        status="SUCCESS" if is_succ else "FAILED",
+        error_message=res.get("error") if not is_succ else None,
+        detail_data=res
+    )
+
+    return res

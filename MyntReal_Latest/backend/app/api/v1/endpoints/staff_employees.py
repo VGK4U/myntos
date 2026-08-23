@@ -1042,6 +1042,32 @@ async def create_employee(
             db.add(emp_dept)
             assigned_departments.append(dept.name)
     
+    # DC Protocol (Aug 2026): Auto-provision Task/Day Planner & default mandatory menus for new employee
+    try:
+        from app.models.staff import StaffMenuMaster, StaffEmployeeMenuSettings
+        default_menus = db.query(StaffMenuMaster).filter(
+            StaffMenuMaster.is_active == True,
+            (StaffMenuMaster.is_default_visible == True) | 
+            (StaffMenuMaster.menu_code.in_(["staff_tasks_day_planner", "staff_day_planner", "staff_tasks_assigned_to_me", "staff_tasks_tracker"])) |
+            (StaffMenuMaster.route_path.in_(["/staff/tasks/day-planner", "/staff/tasks/assigned-to-me", "/staff/tasks/tracker"]))
+        ).all()
+
+        for menu in default_menus:
+            db.add(StaffEmployeeMenuSettings(
+                company_id=menu.company_id or employee.base_company_id or 1,
+                employee_id=employee.id,
+                menu_id=menu.id,
+                can_view=True,
+                can_edit=True,
+                is_overridden=False,
+                set_by_id=current_user.id,
+                set_by_code=current_user.emp_code,
+                set_by_name=current_user.full_name
+            ))
+    except Exception as _menu_err:
+        import logging
+        logging.warning(f"[STAFF_CREATE] Failed to auto-provision default menus for employee {employee.id}: {_menu_err}")
+
     log_staff_audit(
         db, current_user.id, "CREATE", "employee",
         resource_id=employee.id,

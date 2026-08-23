@@ -385,19 +385,18 @@
            || (window._currentRows || []).find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr)
            || (window._vgkMemberCache || {})[pidStr];
 
-      if (!m || !m.id) {
-        try {
-          const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
-          const paramStr = pidStr.startsWith('VGK') ? 'search=' + encodeURIComponent(pidStr) : 'partner_id=' + encodeURIComponent(pidStr);
-          const freshRes = await safeFetch(apiBase + '/vgk/dashboard/member-earnings?' + paramStr + '&_cb=' + Date.now());
-          const freshData = await freshRes.json();
-          if (freshData.success && freshData.data && freshData.data.length) {
-            const found = freshData.data.find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr) || freshData.data[0];
-            if (found) m = found;
-          }
-        } catch (e) {
-          console.warn("Failed to fetch member data from API:", e);
+      // DC Protocol: Always fetch fresh member data from API to merge latest photo paths & senior info
+      try {
+        const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
+        const paramStr = pidStr.startsWith('VGK') ? 'search=' + encodeURIComponent(pidStr) : 'partner_id=' + encodeURIComponent(pidStr);
+        const freshRes = await safeFetch(apiBase + '/vgk/dashboard/member-earnings?' + paramStr + '&_cb=' + Date.now());
+        const freshData = await freshRes.json();
+        if (freshData.success && freshData.data && freshData.data.length) {
+          const found = freshData.data.find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr) || freshData.data[0];
+          if (found) m = Object.assign({}, m || {}, found);
         }
+      } catch (e) {
+        console.warn("Failed to fetch fresh member data from API:", e);
       }
 
       if (!m) throw new Error('Member details could not be loaded for ID: ' + pidStr);
@@ -409,21 +408,52 @@
       const initials = (m.partner_name || '').trim().split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase();
       if (prevAvatar) prevAvatar.textContent = initials;
 
-      const photoPath = m.passport_photo || m.logo_path || m.profile_image || m.photo_url || m.avatar_url || m.id_card_photo || m.photo;
+      function getValidPhotoPath(obj) {
+        if (!obj) return '';
+        const fields = [obj.passport_photo, obj.logo_path, obj.profile_image, obj.photo_url, obj.avatar_url, obj.id_card_photo, obj.photo];
+        for (const f of fields) {
+          if (f && f !== 'None' && f !== 'null' && f !== 'undefined' && String(f).trim() !== '') {
+            return f;
+          }
+        }
+        return '';
+      }
+
+      const photoPath = getValidPhotoPath(m);
       const resolvedUrl = resolvePosterMediaUrl(photoPath);
       if (resolvedUrl && prevImg) {
-        prevImg.crossOrigin = "anonymous";
+        if (resolvedUrl.startsWith('http') && !resolvedUrl.includes(window.location.host)) {
+          prevImg.crossOrigin = "anonymous";
+        } else {
+          prevImg.removeAttribute('crossorigin');
+        }
         prevImg.onload = () => {
           prevImg.style.display = 'block';
           if (prevAvatar) prevAvatar.style.display = 'none';
         };
         prevImg.onerror = () => {
+          if (!prevImg.dataset.retried) {
+            prevImg.dataset.retried = 'true';
+            prevImg.src = '/kuruju_srinubabu_official.jpg?t=' + Date.now();
+            return;
+          }
           prevImg.style.display = 'none';
           if (prevAvatar) prevAvatar.style.display = 'flex';
         };
+        delete prevImg.dataset.retried;
         prevImg.src = resolvedUrl.includes('?') ? resolvedUrl : (resolvedUrl + '?t=' + Date.now());
       } else if (prevAvatar) {
-        prevAvatar.style.display = 'flex';
+        if (prevImg && prevImg.src.includes('kuruju_srinubabu_official')) {
+          prevImg.style.display = 'block';
+          prevAvatar.style.display = 'none';
+        } else if (prevImg) {
+          prevImg.removeAttribute('crossorigin');
+          prevImg.onload = () => { prevImg.style.display = 'block'; if (prevAvatar) prevAvatar.style.display = 'none'; };
+          prevImg.onerror = () => { prevImg.style.display = 'none'; if (prevAvatar) prevAvatar.style.display = 'flex'; };
+          prevImg.src = '/kuruju_srinubabu_official.jpg?t=' + Date.now();
+        } else {
+          prevAvatar.style.display = 'flex';
+        }
       }
 
       const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
@@ -508,14 +538,15 @@
         location = entries[0].location || '—';
       }
 
-      const installedStages = ['completed', 'installation_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'stage 2', 'installed'];
+      const installedStages = ['completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed'];
       const installedSet = new Set();
       entries.forEach(e => {
         if (e.level === 1 && e.status !== 'CANCELLED' && e.source_lead_id) {
           const typeStr = (e.income_type || e.kind || '').toLowerCase();
           const stageStr = (e.stage_name || e.solar_pipeline_status || e.stage || '').toString().toLowerCase();
-          const isInst = installedStages.some(s => typeStr.includes(s) || stageStr.includes(s)) || (e.kind || '').toUpperCase() === 'DVR_ADVANCE' || (e.stage2_adv && e.stage2_adv > 0);
-          if (isInst) {
+          const hasInstDate = e.installation_date || (e.install_date && e.install_date !== 'None');
+          const isInst = hasInstDate || installedStages.some(s => typeStr.includes(s) || stageStr.includes(s));
+          if (isInst && !stageStr.includes('pending') && !stageStr.includes('loan')) {
             installedSet.add(e.source_lead_id);
           }
         }
@@ -572,16 +603,39 @@
       const seniorImg = document.getElementById('prevSeniorImg');
       const seniorAvatar = document.getElementById('prevSeniorAvatar');
       if (seniorImg) {
-        const seniorPhotoPath = m.senior_photo || m.senior_passport_photo || m.senior_logo_path || m.senior_profile_image;
+        const seniorPhotoPath = getValidPhotoPath({
+          passport_photo: m.senior_photo,
+          logo_path: m.senior_passport_photo || m.senior_logo_path,
+          profile_image: m.senior_profile_image
+        });
         const resolvedSeniorUrl = resolvePosterMediaUrl(seniorPhotoPath);
         if (resolvedSeniorUrl) {
-          seniorImg.crossOrigin = "anonymous";
+          if (resolvedSeniorUrl.startsWith('http') && !resolvedSeniorUrl.includes(window.location.host)) {
+            seniorImg.crossOrigin = "anonymous";
+          } else {
+            seniorImg.removeAttribute('crossorigin');
+          }
           seniorImg.onload = () => { seniorImg.style.display = 'block'; if (seniorAvatar) seniorAvatar.style.display = 'none'; };
-          seniorImg.onerror = () => { seniorImg.style.display = 'none'; if (seniorAvatar) seniorAvatar.style.display = 'flex'; };
+          seniorImg.onerror = () => {
+            if (!seniorImg.dataset.retried) {
+              seniorImg.dataset.retried = 'true';
+              seniorImg.src = '/kuruju_srinubabu_official.jpg?t=' + Date.now();
+              return;
+            }
+            seniorImg.style.display = 'none';
+            if (seniorAvatar) seniorAvatar.style.display = 'flex';
+          };
+          delete seniorImg.dataset.retried;
           seniorImg.src = resolvedSeniorUrl.includes('?') ? resolvedSeniorUrl : (resolvedSeniorUrl + '?t=' + Date.now());
         } else {
-          seniorImg.style.display = 'none';
-          if (seniorAvatar) seniorAvatar.style.display = 'flex';
+          if (seniorImg) {
+            seniorImg.removeAttribute('crossorigin');
+            seniorImg.onload = () => { seniorImg.style.display = 'block'; if (seniorAvatar) seniorAvatar.style.display = 'none'; };
+            seniorImg.onerror = () => { seniorImg.style.display = 'none'; if (seniorAvatar) seniorAvatar.style.display = 'flex'; };
+            seniorImg.src = '/kuruju_srinubabu_official.jpg?t=' + Date.now();
+          } else if (seniorAvatar) {
+            seniorAvatar.style.display = 'flex';
+          }
         }
       }
 
@@ -685,9 +739,9 @@
     let stage1Amt = 0, stage2AdvAmt = 0, finalCommBalGrossAmt = 0, finalCommAdvPaidAmt = 0;
     let brandAmt = 0, bonanzaAmt = 0, extraAmt = 0, awardAmt = 0, seniorTodayAmt = 0;
 
-    // Ground-source L1 entries calculation only for the selected date context
+    // All partner income entries calculation for the selected date context (L1 to L6)
     entries.forEach(e => {
-      if (e.level === 1 && e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
+      if (e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
         const d = e.income_date;
         if (dateFrom && d < dateFrom) return;
         if (dateTo && d > dateTo) return;
@@ -720,7 +774,7 @@
     let commByLevel = {};
 
     entries.forEach(e => {
-      if (e.level === 1 && e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
+      if (e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
         const d = e.income_date;
         if (dateFrom && d < dateFrom) return;
         if (dateTo && d > dateTo) return;
@@ -761,8 +815,23 @@
     const postTotalTodayEl = document.getElementById('postTotalToday');
     if (postTotalTodayEl) postTotalTodayEl.value = '₹' + _meFormatInr(payingGross) + '/-';
 
+    // Senior Partner Today Earning calculation from window._seniorEntries for date range
+    seniorTodayAmt = 0;
+    if (window._seniorEntries && window._seniorEntries.length) {
+      window._seniorEntries.forEach(se => {
+        if (se.status !== 'CANCELLED' && se.income_date && se.income_date !== 'None') {
+          const sd = se.income_date;
+          if (dateFrom && sd < dateFrom) return;
+          if (dateTo && sd > dateTo) return;
+          seniorTodayAmt += parseFloat(se.commission_amount || se.amount || 0);
+        }
+      });
+    }
+
     const postSeniorToday = document.getElementById('postSeniorToday');
-    if (postSeniorToday) postSeniorToday.value = '₹0/-';
+    if (postSeniorToday) {
+      postSeniorToday.value = '₹' + _meFormatInr(seniorTodayAmt) + '/-';
+    }
 
     window._currentTotalAdvPaid = totalAdvPaid;
     const prevTotalTodayEl = document.getElementById('prevTotalToday');
@@ -1143,6 +1212,7 @@
       { id: 'group_exec', type: 'group', label: 'Executive Announcements', target: 'chat.whatsapp.com/LfX8mGootXa7SpwNIz7P5C', inviteCode: 'LfX8mGootXa7SpwNIz7P5C', status: 'sending', msg: 'Broadcasting to group...' },
       { id: 'group_ev_stars', type: 'group', label: 'Ev scooty. MNR (royal ev ) stars', target: 'Ev scooty. MNR (royal ev ) stars', groupName: 'Ev scooty. MNR (royal ev ) stars', status: 'sending', msg: 'Broadcasting to group...' },
       { id: 'group_mnr_gen', type: 'group', label: 'MNR General Group', target: 'MNR General Group', groupName: 'MNR General Group', status: 'sending', msg: 'Broadcasting to group...' },
+      { id: 'group_vgk_vjd', type: 'group', label: 'VGK4U - Vijayawada', target: 'VGK4U - Vijayawada', groupName: 'VGK4U - Vijayawada', status: 'sending', msg: 'Broadcasting to group...' },
       { id: 'portal_shoutout', type: 'portal', label: 'VGK4U Login Page Shoutout', target: 'vgk4u.com (Login Banner)', status: 'sending', msg: 'Publishing shoutout...' }
     ];
 
@@ -1334,6 +1404,23 @@
         }
       } catch (gErr) {
         updateDispatchStatus('group_mnr_gen', 'error', 'WhatsApp Bot Offline');
+      }
+
+      // 9. VGK4U - Vijayawada Group Send
+      try {
+        const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupName: 'VGK4U - Vijayawada' })
+        });
+        const json = await res.json();
+        if (json.success) {
+          updateDispatchStatus('group_vgk_vjd', 'sent', 'Delivered to Vijayawada Group');
+        } else {
+          updateDispatchStatus('group_vgk_vjd', 'error', json.error || 'Group Send Error');
+        }
+      } catch (gErr) {
+        updateDispatchStatus('group_vgk_vjd', 'error', 'WhatsApp Bot Offline');
       }
 
     } catch (err) {

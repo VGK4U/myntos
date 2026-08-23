@@ -338,9 +338,14 @@
             <div class="card">
                 <div class="card-header">
                     <h5><i class="fas fa-calendar-check me-2"></i>Today's Plan</h5>
-                    <button class="btn btn-outline-secondary btn-sm" onclick="loadDayPlan()">
-                        <i class="fas fa-sync-alt me-1"></i>Refresh
-                    </button>
+                    <div>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadDayPlan()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                        <button class="btn btn-outline-success btn-sm ms-1" onclick="shareDayPlanWhatsApp()" title="Share Day Plan via WhatsApp">
+                            <i class="fab fa-whatsapp me-1"></i>Share Plan
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive plan-table-scroll">
@@ -374,6 +379,9 @@
                 <div class="finalize-bar" id="finalizeBar" style="display: none;">
                     <button class="btn btn-success" onclick="openFinalizeModal()">
                         <i class="fas fa-flag-checkered me-1"></i>Finalize Day
+                    </button>
+                    <button class="btn btn-outline-success ms-2" onclick="shareFinalizedDayWhatsApp()" title="Share Finalized Report via WhatsApp">
+                        <i class="fab fa-whatsapp me-1"></i>Share Finalized Report
                     </button>
                 </div>
             </div>
@@ -1161,7 +1169,7 @@
         function renderPlanItems() {
             const tbody = document.getElementById('planItemsBody');
             if (!planItems || planItems.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="11"><div class="empty-state"><i class="fas fa-calendar-plus"></i><p>No items in today\'s plan</p><p class="text-muted">Select tasks from the left panel and add them to your plan</p></div></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11"><div class="empty-state"><i class="fas fa-calendar-plus"></i><p>No items in today\'s plan</p><p class="text-muted">Select tasks from the right panel and add them to your plan</p></div></td></tr>';
                 return;
             }
             const sorted = [...planItems].sort((a, b) => (a.priority_order || 999) - (b.priority_order || 999));
@@ -3882,6 +3890,230 @@
                 alert('Error pushing activity to day plan: ' + err.message);
             }
         }
+
+        /* ── WhatsApp Sharing Functions for Day Plan & Finalized Report ── */
+        async function shareDayPlanWhatsApp() {
+            var user = (typeof StaffHeader !== 'undefined' && StaffHeader.user) ? StaffHeader.user : {};
+            var empCode = user.emp_code || 'MR10001';
+            var staffName = user.full_name || user.name || 'Staff Member';
+            var dateStr = (typeof selectedDate !== 'undefined' && selectedDate) ? selectedDate : new Date().toISOString().split('T')[0];
+
+            var inTimeStr = '09:15 AM';
+            var locAreaStr = 'Office / Field Area';
+            try {
+                var mResp = await staffFetch(API_BASE + '/staff/day-plans/finalized-metrics?plan_date=' + dateStr);
+                if (mResp.ok) {
+                    var mData = await mResp.json();
+                    if (mData && mData.success) {
+                        if (mData.in_time) inTimeStr = mData.in_time;
+                        if (mData.clock_in_location_area) locAreaStr = mData.clock_in_location_area;
+                    }
+                }
+            } catch(e) { console.warn('[DC-PLANNER] Morning metrics fetch exception:', e); }
+
+            var msg = '🌟 *DAILY TASK PLAN | ' + dateStr.toUpperCase() + '*\n';
+            msg += '👤 *Staff Member:* ' + staffName + ' (' + empCode + ')\n';
+            msg += '🏢 *Company:* MyntReal LLP\n\n';
+
+            msg += '=================================\n';
+            msg += '⏱️ *ATTENDANCE & LOCATION*\n';
+            msg += '=================================\n';
+            msg += '🟢 *Logged In:* ' + inTimeStr + '\n';
+            msg += '📍 *Area / Location:* ' + locAreaStr + '\n\n';
+
+            msg += '=================================\n';
+            msg += '📋 *TODAY\'S PLANNED ACTIVITIES (' + ((planItems || []).length) + ' Tasks)*\n';
+            msg += '=================================\n';
+
+            if (planItems && planItems.length > 0) {
+                planItems.forEach(function(item, idx) {
+                    var title = item.task_title || item.title || 'Task';
+                    var prio = (item.priority || item.task_priority || 'medium').toUpperCase();
+                    var daysP = item.days_pending || 0;
+                    var timesP = item.times_planned || 1;
+                    var status = (item.task_status || item.status || 'planned').toUpperCase();
+
+                    msg += (idx + 1) + '. 🔹 *' + title + '*\n';
+                    msg += '   • Priority: ' + prio + ' | Status: ' + status + '\n';
+                    msg += '   • Days Active/Pending: ' + daysP + 'd\n';
+                    msg += '   • Times Planned: Planned ' + timesP + ' time(s)\n';
+                });
+            } else {
+                msg += '• No tasks scheduled for today.\n';
+            }
+
+            var overdueItems = (typeof availableTasks !== 'undefined' && availableTasks) ? availableTasks.filter(function(t) { return (t.days_pending || 0) > 0 || (t.times_planned || 0) > 0; }) : [];
+            if (overdueItems && overdueItems.length > 0) {
+                msg += '\n=================================\n';
+                msg += '⚠️ *UNPLANNED & OVERDUE BACKLOG (' + overdueItems.length + ' Tasks)*\n';
+                msg += '=================================\n';
+                overdueItems.slice(0, 5).forEach(function(t) {
+                    var title = t.task_title || t.title || 'Task';
+                    var daysP = t.days_pending || 0;
+                    var timesP = t.times_planned || 0;
+                    msg += '• 🔻 *' + title + '* (' + daysP + ' days pending | Planned & missed ' + timesP + ' time(s))\n';
+                });
+                if (overdueItems.length > 5) {
+                    msg += '• ... and ' + (overdueItems.length - 5) + ' more pending backlog items.\n';
+                }
+            }
+
+            msg += '\n=================================\n';
+            msg += '💼 *EXECUTIVE COMMITMENT*\n';
+            msg += '=================================\n';
+            msg += '_"Focusing on high-impact execution, resolving legacy backlog items, and driving timely deliverables today."_\n\n';
+            msg += '🚀 *MYNT OS Task Planner*';
+
+            if (typeof openLeadWAModal === 'function') {
+                openLeadWAModal('task_plan', '', 'Day Plan - ' + empCode, null);
+                setTimeout(function() {
+                    var msgEl = document.getElementById('_lwaMsg');
+                    if (msgEl) msgEl.value = msg;
+                }, 300);
+            } else {
+                window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+            }
+        }
+
+        async function shareFinalizedDayWhatsApp() {
+            var user = (typeof StaffHeader !== 'undefined' && StaffHeader.user) ? StaffHeader.user : {};
+            var empCode = user.emp_code || 'MR10001';
+            var staffName = user.full_name || user.name || 'Staff Member';
+            var dateStr = (typeof selectedDate !== 'undefined' && selectedDate) ? selectedDate : new Date().toISOString().split('T')[0];
+
+            // Fetch comprehensive daily metrics
+            var metrics = {
+                in_time: '09:15 AM',
+                out_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                duration: '8.5 hrs',
+                clock_in_location_area: 'Office / Field Area',
+                department_name: '',
+                kms_travelled: '0 KM',
+                journey_time: '0m',
+                appointments_attended: 0,
+                kra_score: '88%',
+                sales_metrics: { calls_made: 0, talk_time_formatted: '0m', talk_seconds: 0, leads_contacted: 0, has_data: false },
+                service_metrics: { tickets_handled: 0, tickets_resolved: 0, tat_pct: 100, has_data: false },
+                mobility_metrics: { kms_travelled: '0 KM', journey_time: '0m', appointments_attended: 0, has_data: false }
+            };
+
+            try {
+                var mResp = await staffFetch(API_BASE + '/staff/day-plans/finalized-metrics?plan_date=' + dateStr);
+                if (mResp.ok) {
+                    var mData = await mResp.json();
+                    if (mData && mData.success) {
+                        metrics = mData;
+                    }
+                }
+            } catch(e) { console.warn('[DC-PLANNER] Metrics fetch exception:', e); }
+
+            var items = planItems || [];
+            var completed = 0, pending = 0;
+            items.forEach(function(item) {
+                var st = (item.eod_status || item.status || '').toLowerCase();
+                if (st === 'completed') completed++;
+                else pending++;
+            });
+            var total = items.length;
+            var pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            var msg = '🏁 *FINALIZED DAY PROGRESS REPORT | ' + dateStr.toUpperCase() + '*\n';
+            msg += '👤 *Staff Member:* ' + staffName + ' (' + empCode + ')\n';
+            msg += '🏢 *Company:* MyntReal LLP\n\n';
+
+            msg += '=================================\n';
+            msg += '⏱️ *TIME REPORTED & ATTENDANCE*\n';
+            msg += '=================================\n';
+            msg += '🟢 *Logged In:* ' + metrics.in_time + '\n';
+            msg += '📍 *Area / Location:* ' + (metrics.clock_in_location_area || 'Office / Field Area') + '\n';
+            msg += '🔴 *Logged Out:* ' + metrics.out_time + '\n';
+            msg += '⏳ *Work Duration:* ' + metrics.duration + '\n';
+            msg += '🎯 *KRA Score:* ' + metrics.kra_score + '\n\n';
+
+            // Check department & data presence for dynamic section rendering
+            var dept = (metrics.department_name || '').toLowerCase();
+            var salesM = metrics.sales_metrics || {};
+            var serviceM = metrics.service_metrics || {};
+            var mobilityM = metrics.mobility_metrics || {};
+
+            // 1. Sales & Telecalling Section (If Sales/Marketing/Telecalling department OR has call/lead data today)
+            var showSales = dept.includes('sales') || dept.includes('tele') || dept.includes('marketing') || dept.includes('crm') || salesM.has_data;
+            if (showSales) {
+                msg += '=================================\n';
+                msg += '📞 *SALES & TELECALLING PERFORMANCE*\n';
+                msg += '=================================\n';
+                msg += '📱 *Total Calls Made:* ' + (salesM.calls_made || 0) + '\n';
+                msg += '⏱️ *Total Talk Time:* ' + (salesM.talk_time_formatted || '0m') + '\n';
+                msg += '📋 *Leads Contacted / Updated:* ' + (salesM.leads_contacted || 0) + '\n\n';
+            }
+
+            // 2. Mobility & Field Metrics Section (If Field/Logistics/Ops department OR has mobility data today)
+            var showMobility = dept.includes('field') || dept.includes('ops') || dept.includes('logistics') || dept.includes('project') || mobilityM.has_data;
+            if (showMobility) {
+                msg += '=================================\n';
+                msg += '🚗 *MOBILITY & FIELD METRICS*\n';
+                msg += '=================================\n';
+                msg += '🛣️ *KMs Travelled:* ' + (metrics.kms_travelled || '0 KM') + '\n';
+                msg += '⏱️ *Journey Time:* ' + (metrics.journey_time || '0m') + '\n';
+                msg += '🤝 *Appointments Attended & Tagged:* ' + (metrics.appointments_attended || 0) + ' Meeting(s)\n\n';
+            }
+
+            // 3. Service Team Tickets Data Section (If Service/Technical/Support department OR has ticket data today)
+            var showService = dept.includes('service') || dept.includes('tech') || dept.includes('support') || serviceM.has_data;
+            if (showService) {
+                msg += '=================================\n';
+                msg += '🛠️ *SERVICE TEAM TICKETS DATA*\n';
+                msg += '=================================\n';
+                msg += '🎫 *Service Tickets Handled:* ' + (metrics.service_tickets_handled || 0) + '\n';
+                msg += '✅ *Service Tickets Resolved:* ' + (metrics.service_tickets_resolved || 0) + '\n';
+                msg += '⏱️ *Within TAT Rate:* ' + (metrics.service_tat_pct || 100) + '%\n\n';
+            }
+
+            msg += '=================================\n';
+            msg += '📊 *DAY SUMMARY STATISTICS*\n';
+            msg += '=================================\n';
+            msg += '✅ *Planned Tasks:* ' + total + '\n';
+            msg += '🎉 *Completed:* ' + completed + '\n';
+            msg += '⏳ *Pending / In Progress:* ' + pending + '\n';
+            msg += '📈 *Day Completion Rate:* ' + pct + '%\n\n';
+
+            msg += '=================================\n';
+            msg += '✅ *ACTIVITIES PROGRESS & STAFF COMMENTS*\n';
+            msg += '=================================\n';
+
+            if (items.length > 0) {
+                items.forEach(function(item, idx) {
+                    var title = item.task_title || item.title || 'Task';
+                    var daysP = item.days_pending || 0;
+                    var timesP = item.times_planned || 1;
+                    var st = (item.eod_status || item.status || 'pending').toUpperCase();
+                    var remarks = item.eod_remarks || item.remarks || item.notes || 'Completed as scheduled.';
+
+                    msg += (idx + 1) + '. ' + (st === 'COMPLETED' ? '✔️' : '⏳') + ' *' + title + '*\n';
+                    msg += '   • Status: ' + st + ' (' + daysP + ' days pending | Planned ' + timesP + ' time(s))\n';
+                    msg += '   • *Staff Comment:* ' + remarks + '\n';
+                });
+            } else {
+                msg += '• No activities recorded for today.\n';
+            }
+
+            msg += '\n=================================\n';
+            msg += '💬 *CLOSING REMARKS*\n';
+            msg += '=================================\n';
+            msg += '_"Daily goals progress finalized. Operational and performance milestones achieved for today."_\n\n';
+            msg += '🚀 *MYNT OS Task Planner*';
+
+            if (typeof openLeadWAModal === 'function') {
+                openLeadWAModal('task_plan_finalized', '', 'Finalized Report - ' + empCode, null);
+                setTimeout(function() {
+                    var msgEl = document.getElementById('_lwaMsg');
+                    if (msgEl) msgEl.value = msg;
+                }, 300);
+            } else {
+                window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+            }
+        }
     </script>
+    <script src="/public/js/wa-lead-modal.js"></script>
 </body>
 </html>

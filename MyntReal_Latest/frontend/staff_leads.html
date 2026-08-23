@@ -118,6 +118,19 @@
         .tab-pill { padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: white; color: #6b7280; cursor: pointer; font-size: 14px; transition: all 0.2s; }
         .tab-pill:hover { border-color: #0ea5e9; color: #0ea5e9; }
         .tab-pill.active { background: #0ea5e9; border-color: #0ea5e9; color: white; }
+
+        /* ── Mobile PWA & Modal Responsiveness ── */
+        @media (max-width: 768px) {
+            .modal-dialog { margin: 0; max-width: 100%; }
+            .modal-content { border-radius: 0; min-height: 100vh; }
+            .modal-body { padding: 16px; max-height: calc(100vh - 125px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+            .modal-footer { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+            .modal-footer .btn { flex: 1; min-height: 44px; font-size: .9rem; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
+            .input-group .btn { padding: 8px 12px; font-size: 0.85rem; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+            .input-group input { min-height: 44px; font-size: 0.95rem; }
+            .btn-call-direct { background: #0284c7; color: white !important; font-weight: 600; }
+            .btn-whatsapp-direct { background: #25D366; color: white !important; font-weight: 600; }
+        }
         
         .detail-section { margin-bottom: 20px; }
         .detail-section h6 { font-weight: 600; color: #374151; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; }
@@ -522,7 +535,7 @@
     </div>
     
     <div class="modal fade" id="leadModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="leadModalTitle"><i class="fas fa-user-plus me-2"></i>Add New Lead</h5>
@@ -553,27 +566,30 @@
                         </div>
                         
                         <div class="row mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-6 col-12 mb-2 mb-md-0">
                                 <label class="form-label">Name *</label>
                                 <input type="text" class="form-control" id="leadName" required minlength="2">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6 col-12">
                                 <label class="form-label">Category</label>
                                 <select class="form-select" id="leadCategory"></select>
                             </div>
                         </div>
                         
                         <div class="row mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-6 col-12 mb-2 mb-md-0">
                                 <label class="form-label">Email</label>
                                 <input type="email" class="form-control" id="leadEmail">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6 col-12">
                                 <label class="form-label">Phone (Primary)</label>
                                 <div class="input-group">
-                                    <input type="tel" class="form-control" id="leadPhone" placeholder="10-digit phone">
-                                    <button type="button" class="btn btn-outline-success btn-whatsapp" onclick="sendWhatsApp('leadPhone')" title="Send WhatsApp">
-                                        <i class="fab fa-whatsapp"></i>
+                                    <input type="tel" class="form-control" id="leadPhone" placeholder="10-digit phone" oninput="updateLeadModalCallLink(this.value)">
+                                    <a class="btn btn-outline-primary btn-call-direct" id="leadModalCallBtn" href="tel:" title="Direct Call">
+                                        <i class="fas fa-phone-alt me-1"></i> Call
+                                    </a>
+                                    <button type="button" class="btn btn-outline-success btn-whatsapp-direct" onclick="sendWhatsApp('leadPhone')" title="Send WhatsApp">
+                                        <i class="fab fa-whatsapp me-1"></i> Chat
                                     </button>
                                 </div>
                                 <div class="form-check mt-1">
@@ -1160,7 +1176,7 @@
     </div>
 
     <div class="modal fade" id="leadDetailModal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
+        <div class="modal-dialog modal-xl modal-fullscreen-sm-down">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="fas fa-user me-2"></i><span id="detailLeadName">Lead Details</span></h5>
@@ -2576,13 +2592,18 @@
                         }
                     }
                     
-                    // Aggregate all leads and sort by created_at desc
-                    let allLeads = [];
+                    // Aggregate all leads and deduplicate by lead.id
+                    let rawLeads = [];
                     results.forEach(result => {
                         if (result.success && result.data) {
-                            allLeads = allLeads.concat(result.data);
+                            rawLeads = rawLeads.concat(result.data);
                         }
                     });
+                    
+                    // Map by lead ID to eliminate duplicate objects
+                    const leadMap = new Map();
+                    rawLeads.forEach(l => { if (l && l.id && !leadMap.has(l.id)) leadMap.set(l.id, l); });
+                    let allLeads = Array.from(leadMap.values());
                     
                     // Sort by created_at descending
                     allLeads.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
@@ -2644,6 +2665,11 @@
                 const lastInteracted = lead.last_interacted_at ? formatDate(lead.last_interacted_at) : '-';
                 // DC Protocol (Jan 22, 2026): Calculate Days Since Interaction
                 const daysSince = calculateDaysSince(lead);
+                const cleanP = (lead.phone || '').replace(/\D/g, '').slice(-10);
+                const rowCallIcon = cleanP ? `<a href="tel:+91${cleanP}" onclick="event.stopPropagation()" class="btn btn-sm btn-outline-primary p-0 px-1 ms-1" style="font-size:10px;" title="Direct Call"><i class="fas fa-phone-alt"></i> Call</a>` : '';
+                const safeNameEsc = (lead.name || '').replace(/'/g, "\\'");
+                const rowWAIcon = cleanP ? `<button type="button" onclick="event.stopPropagation(); openLeadWAModal('${lead.id}', '${cleanP}', '${safeNameEsc}', ${leadCompanyIdParam})" class="btn btn-sm btn-outline-success p-0 px-1 ms-1" style="font-size:10px;" title="WhatsApp Chat & Scanned Bot"><i class="fab fa-whatsapp"></i> Chat</button>` : '';
+
                 return `
                 <tr onclick="viewLead(${lead.id}, ${leadCompanyIdParam})">
                     <td style="font-weight: 600; color: #6b7280; text-align: center;">${serialNumber}</td>
@@ -2651,7 +2677,7 @@
                     <td>
                         <div class="lead-name">${lead.name}</div>
                         <div class="lead-contact">
-                            ${lead.email || ''} ${lead.phone ? '| ' + lead.phone : ''}
+                            ${lead.email || ''} ${lead.phone ? '| <strong>' + lead.phone + '</strong>' + rowCallIcon + rowWAIcon : ''}
                         </div>
                     </td>
                     <td>${lead.category_name || '-'}</td>
@@ -2790,9 +2816,23 @@
             list.innerHTML = html;
         }
         
+        function updateLeadModalCallLink(phoneVal) {
+            const btn = document.getElementById('leadModalCallBtn');
+            if (!btn) return;
+            const digits = (phoneVal || '').replace(/[^0-9]/g, '');
+            const clean10 = digits.slice(-10);
+            if (clean10.length === 10) {
+                btn.href = 'tel:+91' + clean10;
+                btn.classList.remove('disabled');
+            } else {
+                btn.href = 'tel:';
+            }
+        }
+
         function openAddModal() {
             document.getElementById('leadModalTitle').innerHTML = '<i class="fas fa-user-plus me-2"></i>Add New Lead';
             document.getElementById('leadForm').reset();
+            updateLeadModalCallLink('');
             document.getElementById('leadId').value = '';
             document.getElementById('leadDependsOnStaffId').value = '';
             document.getElementById('pincodeStatus').innerHTML = '';
@@ -2965,6 +3005,7 @@
                     document.getElementById('leadName').value = lead.name;
                     document.getElementById('leadEmail').value = lead.email || '';
                     document.getElementById('leadPhone').value = lead.phone || '';
+                    updateLeadModalCallLink(lead.phone || '');
                     document.getElementById('leadPhonePrimaryWhatsapp').checked = lead.phone_primary_whatsapp || false;
                     document.getElementById('leadAlternatePhone').value = lead.alternate_phone || '';
                     document.getElementById('leadPhoneSecondaryWhatsapp').checked = lead.phone_secondary_whatsapp || false;
@@ -3201,8 +3242,10 @@
                 return;
             }
             const name = document.getElementById('leadName')?.value || phone;
-            if (typeof openLeadWAModal === 'function' && currentLeadId) {
-                openLeadWAModal(currentLeadId, phone.slice(-10), name, selectedLeadCompanyId);
+            const targetLeadId = document.getElementById('leadId')?.value || currentLeadId || 'new';
+            const targetCompanyId = document.getElementById('leadFormCompany')?.value || selectedLeadCompanyId || companyId;
+            if (typeof openLeadWAModal === 'function') {
+                openLeadWAModal(targetLeadId, phone.slice(-10), name, targetCompanyId);
             } else {
                 window.open(`https://wa.me/91${phone.slice(-10)}`, '_blank');
             }
@@ -4252,7 +4295,11 @@
                     document.getElementById('detailLeadName').textContent = lead.name;
                     document.getElementById('detailName').textContent = lead.name;
                     document.getElementById('detailEmail').textContent = lead.email || '-';
-                    document.getElementById('detailPhone').textContent = lead.phone || '-';
+                    const rawP = lead.phone || '';
+                    const cleanP10 = rawP.replace(/\D/g, '').slice(-10);
+                    const callBtnHtml = cleanP10 ? `<a class="btn btn-sm btn-outline-primary btn-call-direct ms-2" href="tel:+91${cleanP10}" title="Direct Call"><i class="fas fa-phone-alt me-1"></i> Call</a>` : '';
+                    const waBtnHtml = cleanP10 ? `<button type="button" class="btn btn-sm btn-outline-success btn-whatsapp-direct ms-1" onclick="openLeadWAModal('${lead.id}', '${cleanP10}', '${(lead.name || '').replace(/'/g, "\\'")}', '${lead.company_id}')" title="Send WhatsApp"><i class="fab fa-whatsapp me-1"></i> Chat</button>` : '';
+                    document.getElementById('detailPhone').innerHTML = `${rawP} ${callBtnHtml} ${waBtnHtml}`;
                     document.getElementById('detailCategory').textContent = lead.category_name || '-';
                     document.getElementById('detailSource').textContent = lead.source || '-';
                     document.getElementById('detailBudget').textContent = lead.budget_min || lead.budget_max ? 

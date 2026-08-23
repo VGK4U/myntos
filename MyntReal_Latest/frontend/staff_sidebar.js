@@ -830,7 +830,7 @@ window.StaffSidebar = window.StaffSidebar || {
                         });
                     }
                 }
-                if (isStaffDashboardSection && expenseInDashboard) {
+                if (isStaffDashboardSection) {
                     if (!sectionItems.some(i => i.href === '/staff/accounts/expense-entries')) {
                         sectionItems.push({
                             icon: 'fas fa-receipt',

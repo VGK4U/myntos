@@ -358,7 +358,12 @@ def _fetch_myoperator_logs(ts_from: int, ts_to: int, db: Optional[Session] = Non
     return all_records
 
 
-def sync_myoperator_logs(db: Optional[Session] = None, days_back: Optional[int] = None) -> dict:
+def sync_myoperator_logs(
+    db: Optional[Session] = None,
+    days_back: Optional[int] = None,
+    trigger_type: str = "AUTO_SCHEDULER",
+    triggered_by: str = "System Real-time Sync"
+) -> dict:
     """
     Sync MyOperator call logs.
     days_back=None → last 2 hours (routine); days_back=N → last N days (backfill).
@@ -524,6 +529,24 @@ def sync_myoperator_logs(db: Optional[Session] = None, days_back: Optional[int] 
             'error': None,
             **result,
         })
+
+        try:
+            from app.services.whatsapp_audit_service import log_wa_trigger_execution
+            targets = [{"id": "t5", "type": "direct", "name": "Customer Direct WhatsApp ACK", "identifier": "Direct Customer Mobile"}]
+            log_wa_trigger_execution(
+                job_id="missed_call_ack",
+                job_name="Instant Missed Call Auto-ACK",
+                trigger_type=trigger_type,
+                triggered_by=triggered_by,
+                targets=targets,
+                sent_count=updated + created,
+                failed_count=0,
+                status="SUCCESS",
+                detail_data=result
+            )
+        except Exception as _audit_err:
+            logger.warning('[OPERATOR_SYNC] Audit log error: %s', _audit_err)
+
         return result
 
     except Exception as e:
@@ -537,6 +560,23 @@ def sync_myoperator_logs(db: Optional[Session] = None, days_back: Optional[int] 
             'error': str(e),
             'synced': 0,
         })
+        try:
+            from app.services.whatsapp_audit_service import log_wa_trigger_execution
+            targets = [{"id": "t5", "type": "direct", "name": "Customer Direct WhatsApp ACK", "identifier": "Direct Customer Mobile"}]
+            log_wa_trigger_execution(
+                job_id="missed_call_ack",
+                job_name="Instant Missed Call Auto-ACK",
+                trigger_type=trigger_type,
+                triggered_by=triggered_by,
+                targets=targets,
+                sent_count=0,
+                failed_count=1,
+                status="FAILED",
+                error_message=str(e),
+                detail_data={'error': str(e)}
+            )
+        except Exception:
+            pass
         return {'error': str(e), 'synced': 0}
 
     finally:

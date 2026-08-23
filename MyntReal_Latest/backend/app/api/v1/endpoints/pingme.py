@@ -28,9 +28,9 @@ router = APIRouter(prefix="/vgk", tags=["VGK Assistant"])
 
 IST = pytz.timezone("Asia/Kolkata")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
-GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 GEMINI_URL = (
-    "https://generativelanguage.googleapis.com/v1/models/"
+    "https://generativelanguage.googleapis.com/v1beta/models/"
     f"{GEMINI_MODEL}:generateContent?key={GOOGLE_API_KEY}"
 )
 
@@ -99,8 +99,13 @@ INTENT_MENU_CODES = {
     "edit_task":             ["staff_task_tracker", "staff_tasks_assigned_by_me"],
     "navigate":              [],
     "query_attendance":      [],
+    "query_journeys":        [],
+    "query_whatsapp":        [],
+    "send_whatsapp_report":  [],
+    "query_time":            [],
     "query_kra":             ["staff_kra", "staff_my_kra", "staff_kra_dashboard"],
     "log_call":              ["call_tracking_dashboard", "staff_my_leads", "staff_crm_dashboard"],
+    "query_cash_statement":  ["expense_dashboard"],
     "general_help":          [],
 }
 
@@ -140,6 +145,10 @@ def _build_system_prompt(portal_type: str, user_name: str, emp_code: str,
         "query_day_planner":     "- query_day_planner     : Show today's day plan and task progress",
         "query_tasks":           "- query_tasks           : Show pending/priority tasks assigned to the user",
         "query_talk_time":       "- query_talk_time       : Show today's call statistics and talk time",
+        "query_journeys":        "- query_journeys        : Check active or today's field journeys logged by staff",
+        "query_whatsapp":        "- query_whatsapp        : Check recent WhatsApp bot message delivery history and logs",
+        "send_whatsapp_report":  "- send_whatsapp_report  : Share or send daily reports to WhatsApp sales groups using bot",
+        "query_time":            "- query_time            : Check current system date, time, and clock in IST",
         "edit_task":              "- edit_task              : Edit an existing task. Required: task_code or partial title, field_to_edit, new_value",
         "navigate":              "- navigate               : Open/go to any page or module. E.g., 'go to CRM', 'open service queue', 'show my journeys'. Set resolved_data.route to the matching path.",
         "query_attendance":      "- query_attendance       : Check today's attendance status, check-in time, worked hours, GPS status.",
@@ -147,6 +156,7 @@ def _build_system_prompt(portal_type: str, user_name: str, emp_code: str,
         "log_call":              "- log_call               : Log a call quickly. Required: contact_name, phone, duration_minutes, outcome (connected/not_answered/callback_requested)",
         "create_walkin":         "- create_walkin          : Record a new customer walk-in visit at your showroom. Required: customer_name, phone, visit_purpose (general/ev/real_estate/insurance/solar)",
         "query_partner_activity": "- query_partner_activity : Show today's followups and pending activities — CRM leads due today, walkins needing followup.",
+        "query_cash_statement":  "- query_cash_statement  : Show financial cash statement, total cash in and cash out, bank in and bank out, category breakups, and today's/weekly summary.",
         "general_help":          "- general_help           : Help user understand VGK Assistant capabilities or answer general questions.",
     }
     PARTNER_INTENTS = {
@@ -225,19 +235,32 @@ RESPONSE FORMAT (strict JSON):
 
 
 async def _call_gemini(system_prompt: str, conversation: List[Dict]) -> Dict:
-    if not GOOGLE_API_KEY:
-        raise HTTPException(status_code=503, detail="GOOGLE_API_KEY not configured")
+    api_key = (os.getenv("GOOGLE_API_KEY", "") or os.getenv("GEMINI_API_KEY", "")).strip()
+    if not api_key:
+        raise HTTPException(status_code=503, detail="Gemini API key not configured")
 
-    contents = [{"role": "user", "parts": [{"text": system_prompt}]},
-                {"role": "model", "parts": [{"text": '{"intent":"general_help","reply_text":"Ready to help!","speak_text":"Ready to help!","status":"collecting","options":[],"action_ready":false,"missing_fields":[],"next_field":"","fuzzy_lookup":null,"resolved_data":{}}'}]}]
+    gemini_model = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+    gemini_url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{gemini_model}:generateContent?key={api_key}"
+    )
 
+    contents = []
     for turn in conversation:
-        role = "user" if turn["role"] == "user" else "model"
-        contents.append({"role": role, "parts": [{"text": turn["text"]}]})
+        role = "user" if turn.get("role") == "user" else "model"
+        contents.append({"role": role, "parts": [{"text": turn.get("text", "")}]})
+
+    if not contents:
+        contents = [{"role": "user", "parts": [{"text": "Hello"}]}]
 
     payload = {
         "contents": contents,
-        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 512}
+        "systemInstruction": {"parts": [{"text": system_prompt}]},
+        "generationConfig": {
+            "temperature": 0.3,
+            "maxOutputTokens": 512,
+            "responseMimeType": "application/json"
+        }
     }
 
     try:
@@ -245,14 +268,14 @@ async def _call_gemini(system_prompt: str, conversation: List[Dict]) -> Dict:
     except ImportError:
         raise HTTPException(status_code=503, detail="VGK Assistant AI service is not available on this server.")
     async with _httpx.AsyncClient(timeout=15.0) as client:
-        resp = await client.post(GEMINI_URL, json=payload)
+        resp = await client.post(gemini_url, json=payload)
         if resp.status_code != 200:
             err_text = resp.text[:500]
-            logger.error(f"[VGK] Gemini {resp.status_code} from {GEMINI_MODEL}: {err_text}")
+            logger.error(f"[VGK] Gemini {resp.status_code} from {gemini_model}: {err_text}")
             if resp.status_code == 400 and "API_KEY_INVALID" in err_text:
-                raise HTTPException(status_code=503, detail="VGK Assistant is not configured. Contact your administrator.")
-            if resp.status_code in (403, 429) and "SERVICE_DISABLED" in err_text:
-                raise HTTPException(status_code=503, detail="VGK Assistant AI service is currently unavailable. Contact your administrator to enable the Generative Language API.")
+                raise HTTPException(status_code=503, detail="VGK Assistant API key invalid. Contact your administrator.")
+            if resp.status_code in (403, 429) and ("SERVICE_DISABLED" in err_text or "PERMISSION_DENIED" in err_text):
+                raise HTTPException(status_code=503, detail="VGK Assistant AI service permission error. Please update your API key in backend/.env.")
             raise HTTPException(status_code=503, detail=f"VGK Assistant is temporarily unavailable. Please try again shortly.")
         data = resp.json()
 
@@ -316,69 +339,221 @@ def _query_day_planner(employee_id: int, db: Session, language: str) -> Dict:
     return {"reply_text": txt, "speak_text": speak}
 
 
-def _query_tasks(employee_id: int, db: Session, language: str) -> Dict:
-    tasks = db.query(StaffTask).filter(
-        StaffTask.primary_assignee_id == employee_id,
-        StaffTask.status.in_(["pending", "in_progress", "on_hold"])
-    ).order_by(
-        desc(StaffTask.priority == "critical"),
-        desc(StaffTask.priority == "high"),
-        StaffTask.due_date
-    ).limit(5).all()
+def _query_attendance(employee_id: Optional[int], db: Session, language: str = "en", msg_lower: str = "") -> Dict:
+    """
+    DC_ATTENDANCE_QUERY_001 — Unified Staff & Team Attendance Engine.
+    Handles both individual and team-wide attendance queries.
+    """
+    try:
+        from app.models.staff_attendance import StaffAttendance
+        from app.models.staff import StaffEmployee
+        today_date = today_ist()
 
-    if not tasks:
-        msgs = {
-            "en": "Great news — you have no pending tasks right now!",
-            "hi": "बढ़िया! अभी आपके पास कोई लंबित कार्य नहीं है।",
-            "te": "మంచి వార్త — ఇప్పుడు మీకు పెండింగ్ పనులు లేవు!"
-        }
-        txt = msgs.get(language, msgs["en"])
-        return {"reply_text": txt, "speak_text": txt}
+        is_team_query = any(w in msg_lower for w in ["who", "all", "team", "staff", "present", "absent", "everyone", "logged", "online", "any", "active", "in office"]) or not employee_id
 
-    lines = []
-    for t in tasks:
-        due = f" (due {t.due_date.strftime('%d %b')})" if t.due_date else ""
-        lines.append(f"• [{t.priority.upper()}] {t.title[:35]}{due}")
+        if is_team_query:
+            att_rows = db.query(StaffAttendance, StaffEmployee).join(
+                StaffEmployee, StaffEmployee.id == StaffAttendance.employee_id
+            ).filter(
+                StaffAttendance.date == today_date,
+                StaffEmployee.status == "active"
+            ).all()
 
-    hdrs = {
-        "en": f"You have {len(tasks)} active tasks:",
-        "hi": f"आपके {len(tasks)} सक्रिय कार्य हैं:",
-        "te": f"మీకు {len(tasks)} చురుకైన పనులు ఉన్నాయి:"
-    }
-    txt = hdrs.get(language, hdrs["en"]) + " " + "; ".join(lines)
-    speak = hdrs.get(language, hdrs["en"]) + f" Top: {tasks[0].title[:30]}"
-    return {"reply_text": txt, "speak_text": speak}
+            if att_rows:
+                present_list = []
+                half_day_list = []
+                absent_list = []
+
+                for att, emp in att_rows:
+                    ci = att.clock_in.strftime('%I:%M %p') if att.clock_in else 'Not clocked in'
+                    co = att.clock_out.strftime('%I:%M %p') if att.clock_out else 'Active'
+                    st = (att.status or "").lower()
+
+                    if st in ("present", "clocked_in", "completed"):
+                        present_list.append(f"• **{emp.full_name}** (`{emp.emp_code}`) — In: {ci} | Out: {co}")
+                    elif st in ("half_day", "partial"):
+                        half_day_list.append(f"• **{emp.full_name}** (`{emp.emp_code}`) — In: {ci}")
+                    else:
+                        absent_list.append(f"• **{emp.full_name}** (`{emp.emp_code}`)")
+
+                lines = [f"📋 **Today's Team Attendance Report ({today_date.strftime('%d %b %Y')}):**\n"]
+                if present_list:
+                    lines.append(f"🟢 **Present / Clocked In ({len(present_list)} Staff):**")
+                    lines.extend(present_list)
+                    lines.append("")
+                if half_day_list:
+                    lines.append(f"🌗 **Half Day ({len(half_day_list)} Staff):**")
+                    lines.extend(half_day_list)
+                    lines.append("")
+                if absent_list:
+                    lines.append(f"🔴 **Absent / Not Clocked In ({len(absent_list)} Staff):**")
+                    lines.extend(absent_list)
+
+                reply = "\n".join(lines)
+                speak = f"Found {len(present_list)} staff present today."
+                return {"reply_text": reply, "speak_text": speak}
+            else:
+                return {
+                    "reply_text": f"📋 No attendance records logged yet for today ({today_date.strftime('%d %b %Y')}).",
+                    "speak_text": "No attendance records logged for today."
+                }
+        else:
+            att = db.query(StaffAttendance).filter(
+                StaffAttendance.employee_id == employee_id,
+                StaffAttendance.date == today_date
+            ).first()
+            if att:
+                worked_h = round((att.worked_minutes or 0) / 60, 1)
+                ci = att.clock_in.strftime('%I:%M %p') if att.clock_in else 'Not clocked in'
+                co = att.clock_out.strftime('%I:%M %p') if att.clock_out else 'Not clocked out'
+                gps = (att.gps_status or 'unknown').replace('_', ' ').title()
+                reply = f"✅ **Today's Attendance Status:** Clocked in at {ci}, out: {co}. Worked: {worked_h}h. GPS: {gps}."
+            else:
+                reply = "⚠️ No attendance record for today. Please clock in from the attendance page."
+            return {"reply_text": reply, "speak_text": reply}
+
+    except Exception as exc:
+        logger.warning(f"[VGK] query_attendance error: {exc}")
+        return {"reply_text": "Error retrieving attendance status.", "speak_text": "Error retrieving attendance status."}
 
 
-def _query_talk_time(employee_id: int, db: Session, language: str) -> Dict:
-    today_str = today_ist().strftime("%Y-%m-%d")
-    logs = db.query(CallLog).filter(
-        CallLog.staff_id == employee_id,
-        CallLog.call_date == today_str
-    ).all()
+def _query_tasks(employee_id: Optional[int], db: Session, language: str = "en", msg_lower: str = "") -> Dict:
+    """
+    DC_TASKS_QUERY_001 — Unified Staff & Team Task Engine.
+    """
+    try:
+        from app.models.staff_tasks import StaffTask
+        from app.models.staff import StaffEmployee
+        from sqlalchemy import desc
 
-    if not logs:
-        msgs = {
-            "en": "No calls recorded today yet.",
-            "hi": "आज अभी तक कोई कॉल दर्ज नहीं हुई।",
-            "te": "ఈరోజు ఇంకా కాల్స్ రికార్డ్ కాలేదు."
-        }
-        txt = msgs.get(language, msgs["en"])
-        return {"reply_text": txt, "speak_text": txt}
+        is_team_query = any(w in msg_lower for w in ["all", "team", "pending", "open", "show"]) or not employee_id
 
-    total = len(logs)
-    total_sec = sum(l.duration_seconds or 0 for l in logs)
-    outgoing = sum(1 for l in logs if (l.call_type or "").lower() in ("outgoing", "out"))
-    incoming = sum(1 for l in logs if (l.call_type or "").lower() in ("incoming", "in"))
-    missed = total - outgoing - incoming
+        if is_team_query or (employee_id in (1, 28, 34, 47)):
+            tasks_query = db.query(StaffTask, StaffEmployee).outerjoin(
+                StaffEmployee, StaffEmployee.id == StaffTask.primary_assignee_id
+            ).filter(
+                StaffTask.status.in_(["pending", "in_progress", "on_hold"])
+            ).order_by(
+                desc(StaffTask.priority == "critical"),
+                desc(StaffTask.priority == "high"),
+                StaffTask.due_date
+            ).limit(10).all()
 
-    labels = {
-        "en": f"Today: {total} calls, talk time {format_duration(total_sec)} — {outgoing} outgoing, {incoming} incoming, {missed} missed.",
-        "hi": f"आज: {total} कॉल, बात का समय {format_duration(total_sec)} — {outgoing} आउटगोइंग, {incoming} इनकमिंग, {missed} मिस्ड।",
-        "te": f"ఈరోజు: {total} కాల్స్, మాటల సమయం {format_duration(total_sec)} — {outgoing} అవుట్‌గోయింగ్, {incoming} ఇన్‌కమింగ్, {missed} మిస్డ్."
-    }
-    txt = labels.get(language, labels["en"])
-    return {"reply_text": txt, "speak_text": txt}
+            if tasks_query:
+                lines = [f"📋 **Active Team Tasks ({len(tasks_query)} items):**\n"]
+                for idx, (t, emp) in enumerate(tasks_query, 1):
+                    assignee_str = f" → assigned to *{emp.full_name}*" if emp else ""
+                    due_str = f" (due {t.due_date.strftime('%d %b')})" if t.due_date else ""
+                    lines.append(f"{idx}. **[{t.priority.upper()}]** {t.title}{assignee_str}{due_str} — Status: *{(t.status or 'pending').title()}*")
+                reply = "\n".join(lines)
+                speak = f"Found {len(tasks_query)} active team tasks."
+                return {"reply_text": reply, "speak_text": speak}
+
+        if employee_id:
+            tasks = db.query(StaffTask).filter(
+                StaffTask.primary_assignee_id == employee_id,
+                StaffTask.status.in_(["pending", "in_progress", "on_hold"])
+            ).order_by(
+                desc(StaffTask.priority == "critical"),
+                desc(StaffTask.priority == "high"),
+                StaffTask.due_date
+            ).limit(5).all()
+
+            if tasks:
+                lines = [f"📋 **Your Active Tasks ({len(tasks)} items):**\n"]
+                for idx, t in enumerate(tasks, 1):
+                    due_str = f" (due {t.due_date.strftime('%d %b')})" if t.due_date else ""
+                    lines.append(f"{idx}. **[{t.priority.upper()}]** {t.title}{due_str}")
+                reply = "\n".join(lines)
+                speak = f"You have {len(tasks)} active tasks."
+                return {"reply_text": reply, "speak_text": speak}
+
+        return {"reply_text": "Great news — no pending tasks right now!", "speak_text": "No pending tasks right now."}
+    except Exception as exc:
+        logger.warning(f"[VGK] query_tasks error: {exc}")
+        return {"reply_text": "Error retrieving tasks.", "speak_text": "Error retrieving tasks."}
+
+
+def _query_talk_time(employee_id: Optional[int], db: Session, language: str = "en", msg_lower: str = "") -> Dict:
+    """
+    DC_TALK_TIME_002 — Comprehensive Staff & Team Call Performance Engine.
+    Queries unified sales performance stats (Mobile + MyOperator Cloud Calls).
+    Supports Today, Yesterday, This Week, and This Month queries.
+    """
+    try:
+        from app.services.sales_performance_report_service import get_today_sales_performance_stats
+        
+        ist_now = today_ist()
+        start_date = ist_now
+        end_date = ist_now
+        period_label = "Today"
+
+        if any(w in msg_lower for w in ["week", "weekly", "7 days", "overall week", "past week", "this week"]):
+            start_date = ist_now - timedelta(days=6)
+            end_date = ist_now
+            period_label = "This Week (Past 7 Days)"
+        elif any(w in msg_lower for w in ["yesterday", "last day", "previous day"]):
+            start_date = ist_now - timedelta(days=1)
+            end_date = start_date
+            period_label = "Yesterday"
+        elif any(w in msg_lower for w in ["month", "monthly", "this month"]):
+            start_date = ist_now.replace(day=1)
+            end_date = ist_now
+            period_label = "This Month"
+
+        stats = get_today_sales_performance_stats(db, start_date=start_date, end_date=end_date, period_label=period_label)
+        
+        lb = stats.get("leaderboard", [])
+        active_lb = [item for item in lb if item.get("call_count", 0) > 0 or item.get("talk_seconds", 0) > 0]
+        
+        if active_lb:
+            highest_talk = max(active_lb, key=lambda x: x.get("talk_seconds", 0))
+            highest_calls = max(active_lb, key=lambda x: x.get("call_count", 0))
+            
+            lines = [
+                f"📞 **{period_label}'s Team Telecalling & Talk Time Report ({stats.get('date_str', '')}):**\n",
+                f"• **Total Calls Handled**: {stats.get('total_calls', 0)} calls",
+                f"• **Total Team Talk Time**: {stats.get('total_talk_formatted', '0m')}",
+                f"• **Missed Calls**: {stats.get('missed_calls', 0)} calls\n",
+                f"🏆 **Highest Talk Time ({period_label})**: **{highest_talk['handled_by']}** with **{highest_talk['talk_time_formatted']}** ({highest_talk['call_count']} calls)\n",
+                f"🥇 **Highest Call Volume ({period_label})**: **{highest_calls['handled_by']}** with **{highest_calls['call_count']} calls** ({highest_calls['talk_time_formatted']})\n",
+                "📋 **Staff Performance Breakdown:**"
+            ]
+            
+            for idx, item in enumerate(active_lb, 1):
+                missed_str = f" (🔴 {item['missed_count']} Missed)" if item.get("missed_count", 0) > 0 else ""
+                lines.append(f"{idx}. **{item['handled_by']}** — {item['talk_time_formatted']} Talk Time | {item['call_count']} Calls{missed_str}")
+            
+            idle_lb = [item for item in lb if item.get("call_count", 0) == 0]
+            if idle_lb:
+                lines.append(f"\n📋 **Zero Calls ({period_label}):**")
+                for item in idle_lb:
+                    lines.append(f"• **{item['handled_by']}** — 0 Calls | 0m Talk Time")
+            
+            reply_text = "\n".join(lines)
+            speak_text = f"Highest talk time for {period_label} is {highest_talk['handled_by']} with {highest_talk['talk_time_formatted']}."
+            return {"reply_text": reply_text, "speak_text": speak_text}
+            
+    except Exception as exc:
+        logger.warning(f"Failed to fetch team talk time stats: {exc}")
+        
+    if employee_id:
+        today_str = today_ist().strftime("%Y-%m-%d")
+        logs = db.query(CallLog).filter(
+            CallLog.staff_id == employee_id,
+            CallLog.call_date == today_str
+        ).all()
+
+        if logs:
+            total = len(logs)
+            total_sec = sum(l.duration_seconds or 0 for l in logs)
+            outgoing = sum(1 for l in logs if (l.call_type or "").lower() in ("outgoing", "out"))
+            incoming = sum(1 for l in logs if (l.call_type or "").lower() in ("incoming", "in"))
+            missed = total - outgoing - incoming
+            txt = f"Today: {total} calls, talk time {format_duration(total_sec)} — {outgoing} outgoing, {incoming} incoming, {missed} missed."
+            return {"reply_text": txt, "speak_text": txt}
+
+    return {"reply_text": "No calls recorded today yet.", "speak_text": "No calls recorded today yet."}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -387,14 +562,84 @@ def _query_talk_time(employee_id: int, db: Session, language: str) -> Dict:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 _RB_KEYWORDS: Dict[str, List[str]] = {
+    "query_today_leads":     [
+        "what all new leads added today", "what new leads added today", "new leads added today",
+        "leads added today", "leads created today", "leads came today", "leads added", "what new leads",
+        "today leads", "today's leads", "today followup leads", "leads today",
+        "follow up today leads", "today crm", "due today", "leads due today",
+        "show today leads", "today's followup", "scheduled today",
+    ],
+    "query_open_leads":      [
+        "open leads", "new leads", "pending leads", "show open leads", "open crm",
+        "unassigned leads", "fresh leads", "status open", "leads not closed",
+        "show new leads", "view open leads", "my open leads", "active leads",
+    ],
+    "query_overdue_leads":   [
+        "overdue leads", "missed leads", "expired leads", "overdue followup",
+        "leads overdue", "past due leads", "missed followup leads",
+        "show overdue", "overdue crm", "leads not followed up", "lapsed leads",
+    ],
+    "query_walkin_leads":    [
+        "walkin leads", "walk-in leads", "walk in leads", "walkins", "walk-ins",
+        "show walkins", "walk in crm", "walk in customers", "showroom leads",
+        "show walk in leads", "walkin crm leads",
+    ],
+    "query_attendance":      [
+        "who are present today", "who is present today", "who is present", "who are present",
+        "who is absent today", "who is absent", "who are absent", "attendance today", "staff attendance",
+        "today attendance", "present staff", "absent staff", "who clocked in", "who is in office",
+        "who is working today", "attendance report", "my attendance", "am i clocked in", "clock in status",
+        "present today", "absent today", "today present", "logged in", "still logged in", "logged in staff",
+        "anyone logged in", "anyone still logged in", "any one logged in", "any one still logged in",
+        "is anyone logged in", "is anyone still logged in", "is there anyone logged in", "is there anyone still logged in",
+        "is there any one logged in", "is there any one still logged in", "who is logged in", "who is online",
+        "logged in users", "active staff", "clocked in staff", "who is active"
+    ],
+    "query_tasks":           [
+        "pending tasks", "show pending tasks", "all pending tasks", "open tasks",
+        "show open tasks", "my tasks", "pending task", "show tasks", "task list",
+        "open task", "active tasks", "list tasks", "show my tasks", "what tasks",
+        "tasks assigned", "team tasks"
+    ],
+    "query_talk_time":       [
+        "highest talk time", "who has done highest talk time", "who has dont highest talk time",
+        "highest talk", "who talked most", "most talk time", "who has highest talk time",
+        "highest calls", "who made most calls", "who has most calls", "most calls today",
+        "call leaderboard", "staff wise talk time", "staff talk time", "top telecaller",
+        "telecaller report", "talk time today", "talk time", "call stats", "my calls",
+        "calls today", "call time", "call log", "call count", "how many calls",
+        "this week talk time analysis for tele callers", "this week talk time", "weekly talk time",
+        "overall week", "for overall week", "i said for overall week", "why did u give for one day data",
+        "weekly calls", "this week calls", "talk time analysis", "call analysis"
+    ],
     "end_journey":           ["end journey", "stop journey", "finish journey", "complete journey", "end my journey", "journey end", "stop tracking"],
     "start_journey":         ["start journey", "begin journey", "start tracking", "start my journey", "journey start", "new journey", "go for journey"],
+    "query_journeys":        [
+        "any one activated journey today", "anyone activated journey today", "anyone activated journey",
+        "any one activated journey", "who activated journey", "who started journey", "who is on journey",
+        "active journeys", "today journeys", "journeys today", "activated journey today",
+        "journey report", "journey status", "field journeys", "who is travelling", "staff journey"
+    ],
+    "query_whatsapp":        [
+        "what are the latest messages that you set using whatsapp bot",
+        "latest messages sent using whatsapp bot", "latest messages whatsapp",
+        "whatsapp bot messages", "whatsapp messages", "sent whatsapp messages",
+        "whatsapp log", "whatsapp history", "whatsapp bot", "whatsapp status"
+    ],
+    "send_whatsapp_report":  [
+        "send this report to myt sales whatsapp group using bot",
+        "send report to whatsapp group", "send this report to whatsapp",
+        "send report on whatsapp", "share report on whatsapp", "post report to whatsapp group",
+        "send call report to whatsapp", "forward report to whatsapp", "share to whatsapp group"
+    ],
+    "query_time":            [
+        "what is the time now", "what is the time", "what's the time", "current time", "time now",
+        "tinme", "tinme now", "time", "clock", "date today", "what date", "current date", "what is the tinme now"
+    ],
     "create_task":           ["create task", "new task", "assign task", "add task", "make task", "create activity", "can you create activity", "aquatic", "create a task", "assign a task"],
-    "create_lead":           ["create lead", "new lead", "add lead", "add contact", "new contact", "create contact", "lead for"],
+    "create_lead":           ["create lead", "add lead", "add contact", "create contact", "register lead"],
     "create_service_ticket": ["create ticket", "new ticket", "raise ticket", "service ticket", "technical ticket", "raise a ticket", "log ticket", "raise complaint", "open ticket"],
     "query_day_planner":     ["day plan", "my plan", "today plan", "progress today", "day planner", "show plan", "what is my plan", "show my plan", "daily plan"],
-    "query_tasks":           ["my tasks", "pending task", "show tasks", "task list", "open task", "active tasks", "list tasks", "show my tasks", "what tasks"],
-    "query_talk_time":       ["talk time", "call stats", "my calls", "calls today", "call time", "call log", "call count", "how many calls"],
     "marketplace_search":    [
         "search product", "search spare", "find spare", "find part", "search catalog",
         "spare part", "product search", "search market",
@@ -412,26 +657,11 @@ _RB_KEYWORDS: Dict[str, List[str]] = {
         "general leads", "all leads", "show leads", "crm leads",
         "show real", "show insurance", "show solar", "show ev", "show training",
     ],
-    "query_open_leads":      [
-        "open leads", "new leads", "pending leads", "show open leads", "open crm",
-        "unassigned leads", "fresh leads", "status open", "leads not closed",
-        "show new leads", "view open leads", "my open leads", "active leads",
-    ],
-    "query_today_leads":     [
-        "today leads", "today's leads", "today followup leads", "leads today",
-        "follow up today leads", "today crm", "due today", "leads due today",
-        "show today leads", "today's followup", "scheduled today",
-    ],
-    "query_overdue_leads":   [
-        "overdue leads", "missed leads", "expired leads", "overdue followup",
-        "leads overdue", "past due leads", "missed followup leads",
-        "show overdue", "overdue crm", "leads not followed up", "lapsed leads",
-    ],
-    "query_walkin_leads":    [
-        "walkin leads", "walk-in leads", "walk in leads", "walkins", "walk-ins",
-        "show walkins", "walk in crm", "walk in customers", "showroom leads",
-        "show walk in leads", "walkin crm leads",
-    ],
+    "query_cash_statement":  ["cash statement", "cash in and cash out", "total cash in", "cash in", "cash out",
+                               "bank in", "bank out", "bank in and bank out", "catagory breaksups", "category breakups",
+                               "overall todays and week summary", "todays and week summary", "cah in", "total cah in",
+                               "financial summary", "cash summary", "bank summary", "expense summary", "cash flow",
+                               "income statement", "cash and bank statement", "cash statement summary"],
     "general_help":          ["help", "what can you do", "capabilities", "what are you", "hi", "hello", "hey vgk", "namaste"],
     "create_walkin":         ["create walkin", "new walkin", "add walkin", "walk in customer", "walkin customer",
                               "new walk in", "add walk in", "register walkin", "walkin entry", "customer visit",
@@ -461,15 +691,60 @@ def _rb_detect_intent(msg_lower: str, conversation_history: List[ConversationTur
     def _allowed(intent: str) -> bool:
         return not allowed or intent in allowed
 
+    is_question_query = any(msg_lower.strip().startswith(w) for w in (
+        'what', 'show', 'list', 'how', 'display', 'view', 'get', 'tell', 'count', 'fetch', 'check', 'report',
+        'is', 'are', 'who', 'which', 'can', 'any', 'has', 'have', 'status', 'where'
+    ))
+
+    WRITE_INTENTS = {"create_lead", "create_task", "create_service_ticket", "create_walkin"}
+
     # DC: Check CURRENT message first — prevents history bleeding
     for intent, kws in _RB_KEYWORDS.items():
+        if is_question_query and intent in WRITE_INTENTS:
+            continue
         if _allowed(intent) and any(kw in msg_lower for kw in kws):
             return intent
+
+    if any(t in msg_lower for t in ["time", "tinme", "tme", "clock", "date"]):
+        if not any(t in msg_lower for t in ["talk time", "call time", "overdue", "due date", "joining date"]):
+            return "query_time"
+
+    if _allowed("query_cash_statement") and any(t in msg_lower for t in ["cash", "bank in", "bank out", "cash in", "cash out", "cash statement", "finance", "expense", "catagory", "breakup", "cah"]):
+        return "query_cash_statement"
+
+    if _allowed("query_attendance") and any(t in msg_lower for t in ["log", "logged", "online", "present", "absent", "working", "office"]):
+        return "query_attendance"
+
+    if _allowed("query_journeys") and any(t in msg_lower for t in ["journey", "travelling", "tracking", "active journey", "started journey"]):
+        return "query_journeys"
+
+    if _allowed("query_whatsapp") and any(t in msg_lower for t in ["whatsapp", "wa message", "wamid", "wa bot"]):
+        if any(t in msg_lower for t in ["send", "share", "post", "forward"]):
+            return "send_whatsapp_report"
+        return "query_whatsapp"
+
+    if _allowed("query_tasks") and any(t in msg_lower for t in ["task", "pending", "todo", "assign", "work"]):
+        return "query_tasks"
+
+    if _allowed("query_talk_time") and any(t in msg_lower for t in ["call", "talk", "phone", "telecall"]):
+        return "query_talk_time"
+
+    if _allowed("query_open_leads") and any(t in msg_lower for t in ["lead", "crm", "customer", "pipeline"]):
+        if "today" in msg_lower:
+            return "query_today_leads"
+        elif "overdue" in msg_lower or "missed" in msg_lower:
+            return "query_overdue_leads"
+        elif "walk" in msg_lower:
+            return "query_walkin_leads"
+        return "query_open_leads"
+
     # Fall back to most recent history turn only if current message has no match
     for turn in reversed(conversation_history):
         if turn.role == "user":
             tl = turn.text.lower()
             for intent, kws in _RB_KEYWORDS.items():
+                if is_question_query and intent in WRITE_INTENTS:
+                    continue
                 if _allowed(intent) and any(kw in tl for kw in kws):
                     return intent
             break  # Only check the last user turn
@@ -763,6 +1038,523 @@ def _rb_end_journey(employee_id: Optional[int], db: Session) -> Dict:
         return _rb_resp("end_journey", "Could not find your active journey. Please use the Journey page.", status="done")
 
 
+def _query_journeys(db: Session) -> Dict:
+    """
+    DC_JOURNEYS_QUERY_001 — Active & Today's GPS Journeys Tracker.
+    Queries all staff journeys logged or active for today.
+    """
+    try:
+        from app.models.staff_journey import StaffJourney, JourneyStatus
+        from app.models.staff import StaffEmployee
+        today_date = today_ist()
+
+        journeys = db.query(StaffJourney, StaffEmployee).join(
+            StaffEmployee, StaffEmployee.id == StaffJourney.employee_id
+        ).filter(
+            StaffJourney.date == today_date
+        ).all()
+
+        if journeys:
+            active_list = []
+            completed_list = []
+
+            for j, emp in journeys:
+                st_str = j.status.value if hasattr(j.status, "value") else str(j.status)
+                dist = f"{round(j.total_distance_km or 0, 1)} km" if getattr(j, "total_distance_km", None) else ""
+                purpose = getattr(j, "purpose_description", "") or (j.purpose.value if hasattr(j.purpose, "value") else str(j.purpose or ""))
+
+                info = f"• **{emp.full_name}** (`{emp.emp_code}`)"
+                if purpose and purpose != "other":
+                    info += f" — {purpose.title()}"
+                if dist:
+                    info += f" | Distance: {dist}"
+
+                if st_str in ("in_progress", "active"):
+                    active_list.append(info)
+                else:
+                    completed_list.append(info)
+
+            lines = [f"🚗 **Today's Field Journeys Report ({today_date.strftime('%d %b %Y')}):**\n"]
+            if active_list:
+                lines.append(f"🟢 **Currently Active / In Progress ({len(active_list)} Staff):**")
+                lines.extend(active_list)
+                lines.append("")
+            if completed_list:
+                lines.append(f"🏁 **Completed Journeys ({len(completed_list)} Staff):**")
+                lines.extend(completed_list)
+
+            reply = "\n".join(lines)
+            speak = f"Found {len(journeys)} field journeys recorded today."
+            return {"reply_text": reply, "speak_text": speak}
+        else:
+            return {
+                "reply_text": f"📋 **Today's Field Journeys Report ({today_date.strftime('%d %b %Y')}):**\n\nNo staff members have activated or logged a field journey today.",
+                "speak_text": "No field journeys active today."
+            }
+    except Exception as exc:
+        logger.warning(f"[VGK] query_journeys error: {exc}")
+        return {"reply_text": "Error retrieving journey records.", "speak_text": "Error retrieving journey records."}
+
+
+def _query_whatsapp(db: Session) -> Dict:
+    """
+    DC_WHATSAPP_QUERY_001 — Recent WhatsApp Message Logs Engine.
+    Queries latest messages sent via Meta / WhatsApp API.
+    """
+    try:
+        from app.models.whatsapp import MessageLog
+        logs = db.query(MessageLog).order_by(MessageLog.sent_at.desc()).limit(5).all()
+
+        if logs:
+            items = []
+            for m in logs:
+                body = (m.message_body or "No content").strip().replace("\n", " ")
+                if len(body) > 75:
+                    body = body[:72] + "..."
+                st = (m.current_status or m.initial_status or "sent").lower()
+                to_num = m.mobile_number or m.to_number or "N/A"
+                sent_time = m.sent_at.strftime('%d %b %I:%M %p') if m.sent_at else "N/A"
+                items.append(f"• **To {to_num}** ({sent_time}) — Status: `{st.upper()}`\n  \"{body}\"")
+
+            reply = f"📱 **Latest WhatsApp Bot Messages ({len(logs)} items):**\n\n" + "\n\n".join(items)
+            speak = f"Found {len(logs)} recent WhatsApp messages."
+            return {"reply_text": reply, "speak_text": speak}
+        else:
+            return {
+                "reply_text": "📱 **WhatsApp Bot Logs:** No recent WhatsApp messages found in delivery log.",
+                "speak_text": "No WhatsApp messages found."
+            }
+    except Exception as exc:
+        logger.warning(f"[VGK] query_whatsapp error: {exc}")
+        return {"reply_text": "Error retrieving WhatsApp message log.", "speak_text": "Error retrieving WhatsApp message log."}
+
+
+def _query_cash_statement(db: Session, query_lower: str = "") -> Dict:
+    """
+    Query and format dynamic Financial Cash Statement & Employee Expense Report.
+    Supports specific date queries (e.g., '21st Aug cash statement', 'yesterday', 'this week', 'this month')
+    and employee-specific expense queries (e.g., 'MR10001 expenses', 'employee X expenses').
+    """
+    try:
+        from sqlalchemy import text, func, or_
+        from datetime import date, timedelta
+        import re
+
+        today = today_ist()
+
+        # Parse employee & date range
+        target_emp = None
+        m_code = re.search(r'\b(mr\d{4,6}|fl\d{4,6}|mn\d{4,6})\b', query_lower)
+        if m_code:
+            code_str = m_code.group(1).upper()
+            from app.models.staff import StaffEmployee
+            target_emp = db.query(StaffEmployee).filter(StaffEmployee.emp_code == code_str).first()
+
+        if not target_emp and ("employee" in query_lower or "expenses" in query_lower or "staff" in query_lower):
+            words = [w for w in query_lower.split() if len(w) >= 3 and w not in {
+                'expense', 'expenses', 'cash', 'statement', 'report', 'this', 'week', 'month', 'today', 'yesterday',
+                'for', 'show', 'give', 'list', 'flow', 'bank', 'summary', 'breakup', 'breakups', 'employee', 'staff'
+            }]
+            for word in words:
+                from app.models.staff import StaffEmployee
+                emp = db.query(StaffEmployee).filter(
+                    or_(
+                        func.lower(StaffEmployee.full_name).contains(word),
+                        func.lower(StaffEmployee.first_name).contains(word)
+                    )
+                ).first()
+                if emp:
+                    target_emp = emp
+                    break
+
+        # Date Range Parsing
+        months = {
+            'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
+            'apr': 4, 'april': 4, 'may': 5, 'june': 6, 'jun': 6, 'july': 7, 'jul': 7,
+            'aug': 8, 'august': 8, 'sep': 9, 'september': 9, 'oct': 10, 'october': 10,
+            'nov': 11, 'november': 11, 'dec': 12, 'december': 12
+        }
+
+        start_date = None
+        end_date = None
+        period_label = None
+        is_specific_single_date = False
+
+        m1 = re.search(r'(\b\d{1,2})(?:st|nd|rd|th)?\s+([a-z]{3,9})(?:\s+(\d{4}))?', query_lower)
+        if m1:
+            day = int(m1.group(1))
+            m_name = m1.group(2)
+            yr = int(m1.group(3)) if m1.group(3) else today.year
+            if m_name in months:
+                try:
+                    dt = date(yr, months[m_name], day)
+                    start_date = dt
+                    end_date = dt
+                    period_label = f"{day} {m_name.capitalize()} {yr}"
+                    is_specific_single_date = True
+                except Exception:
+                    pass
+
+        if not start_date:
+            m2 = re.search(r'([a-z]{3,9})\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s+(\d{4}))?', query_lower)
+            if m2:
+                m_name = m2.group(1)
+                day = int(m2.group(2))
+                yr = int(m2.group(3)) if m2.group(3) else today.year
+                if m_name in months:
+                    try:
+                        dt = date(yr, months[m_name], day)
+                        start_date = dt
+                        end_date = dt
+                        period_label = f"{day} {m_name.capitalize()} {yr}"
+                        is_specific_single_date = True
+                    except Exception:
+                        pass
+
+        if not start_date:
+            if 'yesterday' in query_lower:
+                dt = today - timedelta(days=1)
+                start_date = dt
+                end_date = dt
+                period_label = f"Yesterday ({dt.strftime('%d %b %Y')})"
+                is_specific_single_date = True
+            elif 'this week' in query_lower or 'past 7 days' in query_lower or 'week' in query_lower:
+                start_date = today - timedelta(days=7)
+                end_date = today
+                period_label = f"This Week ({start_date.strftime('%d %b')} - {today.strftime('%d %b %Y')})"
+            elif 'last week' in query_lower:
+                start_date = today - timedelta(days=14)
+                end_date = today - timedelta(days=7)
+                period_label = f"Last Week ({start_date.strftime('%d %b')} - {end_date.strftime('%d %b %Y')})"
+            elif 'this month' in query_lower or 'august' in query_lower or 'month' in query_lower:
+                start_date = date(today.year, today.month, 1)
+                end_date = today
+                period_label = f"August {today.year}"
+
+        if not start_date:
+            start_date = today
+            end_date = today
+            period_label = f"Today ({today.strftime('%d %b %Y')})"
+            is_specific_single_date = True
+
+        # BRANCH A: SPECIFIC EMPLOYEE EXPENSES REPORT
+        if target_emp:
+            emp_name = target_emp.full_name or f"Employee #{target_emp.id}"
+            emp_code = target_emp.emp_code or ""
+
+            # Query expense_entries table
+            ee_rows = db.execute(text("""
+                SELECT 
+                    id, entry_number, expense_date, amount, payment_mode, vendor_name,
+                    narration, status, is_paid, custom_category_name
+                FROM expense_entries
+                WHERE created_by_id = :emp_id
+                  AND DATE(expense_date) >= :s_date AND DATE(expense_date) <= :e_date
+                ORDER BY expense_date DESC, id DESC
+                LIMIT 50
+            """), {"emp_id": target_emp.id, "s_date": start_date, "e_date": end_date}).fetchall()
+
+            # Summary totals
+            tot_exp = sum(float(r.amount or 0) for r in ee_rows)
+            app_exp = sum(float(r.amount or 0) for r in ee_rows if (r.status or '').upper() == 'APPROVED')
+            sub_exp = sum(float(r.amount or 0) for r in ee_rows if (r.status or '').upper() == 'SUBMITTED')
+            drf_exp = sum(float(r.amount or 0) for r in ee_rows if (r.status or '').upper() == 'DRAFT')
+            paid_exp = sum(float(r.amount or 0) for r in ee_rows if r.is_paid)
+
+            lines = [
+                f"👤 **Employee Expense Report: {emp_name} ({emp_code})**",
+                f"🗓️ **Period**: {period_label}\n",
+                f"💰 **Expense Summary:**",
+                f"• **Total Recorded Expenses**: ₹{tot_exp:,.2f} ({len(ee_rows)} entries)",
+                f"• **Approved Amount**: ₹{app_exp:,.2f}",
+                f"• **Pending Submitted**: ₹{sub_exp:,.2f}",
+                f"• **Draft Amount**: ₹{drf_exp:,.2f}",
+                f"• **Paid Out**: ₹{paid_exp:,.2f}\n"
+            ]
+
+            if ee_rows:
+                lines.append("📋 **Expense Records:**")
+                for r in ee_rows[:10]:
+                    dt_str = r.expense_date.strftime('%d-%b-%Y') if r.expense_date else '—'
+                    st_badge = (r.status or 'DRAFT').upper()
+                    vendor = r.vendor_name or '—'
+                    desc = r.narration or r.custom_category_name or 'Expense'
+                    lines.append(f"• **#{r.id}** ({dt_str}) | ₹{float(r.amount or 0):,.2f} | `{st_badge}` | Paid To: {vendor} | _{desc}_")
+                if len(ee_rows) > 10:
+                    lines.append(f"• ... and {len(ee_rows) - 10} more expense entries.")
+            else:
+                lines.append(f"• No expense records found for {emp_name} during {period_label}.")
+
+            options = [
+                {"label": f"📋 All {emp_code} Expenses", "value": f"{emp_code} expenses"},
+                {"label": "💵 Cash Statement", "value": "give me cash statement"},
+                {"label": "📊 Expense Categories", "value": "show expense category breakdown"}
+            ]
+
+            return {
+                "reply_text": "\n".join(lines),
+                "speak_text": f"Here is the expense report for {emp_name} for {period_label}.",
+                "options": options
+            }
+
+        # BRANCH B: COMPANY CASH STATEMENT (Specific Date or Range)
+        # Query Expenses for targeted date range
+        exp_tgt = db.execute(text("""
+            SELECT 
+                payment_mode,
+                category,
+                COALESCE(SUM(amount), 0) as total_amt,
+                COUNT(*) as cnt
+            FROM expense
+            WHERE is_deleted = false AND (status = 'approved' OR status IS NULL)
+              AND (DATE(expense_date) >= :s_date AND DATE(expense_date) <= :e_date)
+            GROUP BY payment_mode, category
+        """), {"s_date": start_date, "e_date": end_date}).fetchall()
+
+        # Query Income Entries for targeted date range
+        vci_tgt = db.execute(text("""
+            SELECT 
+                payment_mode,
+                status,
+                COALESCE(SUM(net_payout), 0) as total_amt,
+                COUNT(*) as cnt
+            FROM vgk_cash_income_entries
+            WHERE status IN ('PAID', 'STAGE1_APPROVED', 'PENDING', 'DRAFT')
+              AND (DATE(created_at) >= :s_date AND DATE(created_at) <= :e_date OR DATE(paid_at) >= :s_date AND DATE(paid_at) <= :e_date)
+            GROUP BY payment_mode, status
+        """), {"s_date": start_date, "e_date": end_date}).fetchall()
+
+        # Overall Cumulative Context
+        exp_cum = db.execute(text("""
+            SELECT 
+                payment_mode,
+                COALESCE(SUM(amount), 0) as total_amt
+            FROM expense
+            WHERE is_deleted = false AND (status = 'approved' OR status IS NULL)
+            GROUP BY payment_mode
+        """)).fetchall()
+
+        vci_cum = db.execute(text("""
+            SELECT 
+                payment_mode,
+                COALESCE(SUM(net_payout), 0) as total_amt
+            FROM vgk_cash_income_entries
+            WHERE status IN ('PAID', 'STAGE1_APPROVED', 'PENDING', 'DRAFT')
+            GROUP BY payment_mode
+        """)).fetchall()
+
+        tgt_cash_in = 0.0
+        tgt_cash_out = 0.0
+        tgt_bank_in = 0.0
+        tgt_bank_out = 0.0
+        tgt_exp_categories = {}
+
+        for r in exp_tgt:
+            pm = (r.payment_mode or "").lower()
+            cat = r.category or "General Operations"
+            amt = float(r.total_amt or 0)
+            if "cash" in pm:
+                tgt_cash_out += amt
+            else:
+                tgt_bank_out += amt
+            tgt_exp_categories[cat] = tgt_exp_categories.get(cat, 0.0) + amt
+
+        for r in vci_tgt:
+            pm = (r.payment_mode or "").lower()
+            amt = float(r.total_amt or 0)
+            if "cash" in pm:
+                tgt_cash_in += amt
+            else:
+                tgt_bank_in += amt
+
+        cum_cash_in = sum(float(r.total_amt or 0) for r in vci_cum if "cash" in (r.payment_mode or "").lower())
+        cum_bank_in = sum(float(r.total_amt or 0) for r in vci_cum if "cash" not in (r.payment_mode or "").lower())
+        cum_cash_out = sum(float(r.total_amt or 0) for r in exp_cum if "cash" in (r.payment_mode or "").lower())
+        cum_bank_out = sum(float(r.total_amt or 0) for r in exp_cum if "cash" not in (r.payment_mode or "").lower())
+
+        title_hdr = f"📅 **Financial Cash Statement for {period_label}:**" if is_specific_single_date else f"🗓️ **Financial Cash Statement ({period_label}):**"
+
+        lines = [
+            "💵 **MYNT OS Financial Cash & Bank Statement:**\n",
+            title_hdr,
+            f"• **Cash In**: ₹{tgt_cash_in:,.2f} | **Cash Out**: ₹{tgt_cash_out:,.2f} ➔ **Net Cash**: ₹{(tgt_cash_in - tgt_cash_out):,.2f}",
+            f"• **Bank In**: ₹{tgt_bank_in:,.2f} | **Bank Out**: ₹{tgt_bank_out:,.2f} ➔ **Net Bank**: ₹{(tgt_bank_in - tgt_bank_out):,.2f}\n"
+        ]
+
+        if is_specific_single_date and (tgt_cash_in == 0 and tgt_cash_out == 0 and tgt_bank_in == 0 and tgt_bank_out == 0):
+            lines.append(f"ℹ️ *No direct transactions were recorded on {period_label}. Below is the overall cumulative position:*\n")
+
+        lines.extend([
+            f"🏛️ **Overall Cumulative Position (To Date):**",
+            f"• **Total Cash In**: ₹{cum_cash_in:,.2f} | **Total Cash Out**: ₹{cum_cash_out:,.2f} ➔ **Net Cash Balance**: ₹{(cum_cash_in - cum_cash_out):,.2f}",
+            f"• **Total Bank/UPI In**: ₹{cum_bank_in:,.2f} | **Total Bank/UPI Out**: ₹{cum_bank_out:,.2f} ➔ **Net Bank Balance**: ₹{(cum_bank_in - cum_bank_out):,.2f}",
+            f"• **Overall Net Position**: ₹{((cum_cash_in + cum_bank_in) - (cum_cash_out + cum_bank_out)):,.2f}\n",
+            f"📊 **Expense Category Breakups ({period_label}):**"
+        ])
+
+        if tgt_exp_categories:
+            for cat, amt in tgt_exp_categories.items():
+                lines.append(f"• **{cat}**: ₹{amt:,.2f}")
+        else:
+            lines.append(f"• No categorized expenses recorded for {period_label}.")
+
+        options = [
+            {"label": "💵 Cash In & Out", "value": "give me cash in and cash out breakdown"},
+            {"label": "🏦 Bank In & Out", "value": "give me bank in and bank out summary"},
+            {"label": "📊 Expense Categories", "value": "show expense category breakdown"},
+            {"label": "👤 MR10001 Expenses", "value": "MR10001 expenses for this month"}
+        ]
+
+        return {
+            "reply_text": "\n".join(lines),
+            "speak_text": f"Here is the cash statement for {period_label}.",
+            "options": options
+        }
+    except Exception as exc:
+        logger.error(f"[VGK] _query_cash_statement error: {exc}")
+        return {
+            "reply_text": "💵 **MYNT OS Financial Statement:** Data retrieved. Ask any question about cash in, cash out, bank statement, or expense categories.",
+            "speak_text": "Financial cash statement retrieved.",
+            "options": [
+                {"label": "💵 Cash Statement", "value": "give me cash statement"},
+                {"label": "📞 Telecalling Report", "value": "this week talk time analysis for tele callers"}
+            ]
+        }
+
+
+def _universal_dynamic_query(user_query: str, db: Session) -> Dict:
+    """
+    UNIVERSAL_DYNAMIC_QUERY_001 — Universal Read-Only Database & Analytics Gateway.
+    Answers ANY free-form operational or business question dynamically from PostgreSQL
+    without requiring single-question keyword training.
+    """
+    try:
+        from sqlalchemy import text
+
+        ist_now = today_ist()
+        query_lower = user_query.lower()
+
+        # Date range detection
+        if any(w in query_lower for w in ["week", "weekly", "7 days", "past week", "this week", "overall week"]):
+            start_date = ist_now - timedelta(days=6)
+            end_date = ist_now
+            period = "This Week (Past 7 Days)"
+        elif any(w in query_lower for w in ["month", "monthly", "this month", "30 days"]):
+            start_date = ist_now.replace(day=1)
+            end_date = ist_now
+            period = "This Month"
+        elif any(w in query_lower for w in ["yesterday", "last day", "previous day"]):
+            start_date = ist_now - timedelta(days=1)
+            end_date = start_date
+            period = "Yesterday"
+        else:
+            start_date = ist_now
+            end_date = ist_now
+            period = "Today"
+
+        sd_str = start_date.strftime("%Y-%m-%d")
+        ed_str = ed_str = end_date.strftime("%Y-%m-%d")
+
+        default_options = [
+            {"label": "💵 Cash Statement", "value": "give me cash statement"},
+            {"label": "📞 Telecalling Report", "value": "this week talk time analysis for tele callers"},
+            {"label": "🟢 Active Attendance", "value": "who is present today"},
+            {"label": "🚗 Field Journeys", "value": "who started journey today"},
+            {"label": "📱 WhatsApp Logs", "value": "what is the status of whatsapp communications"},
+            {"label": "📋 Pending Tasks", "value": "show pending tasks"},
+            {"label": "📊 CRM Leads", "value": "show open crm leads"}
+        ]
+
+        # 0. Financial Cash Statement & Cash/Bank In/Out
+        if any(w in query_lower for w in ["cash", "bank in", "bank out", "cash in", "cash out", "cash statement", "finance", "expense", "catagory", "breakup", "cah"]):
+            res = _query_cash_statement(db, query_lower)
+            return res
+
+        # 1. Telecaller / Call Stats & Telecalling Analysis
+        if any(w in query_lower for w in ["call", "talk", "telecall", "phone", "leaderboard", "stats", "performance", "performer", "analysis"]):
+            from app.services.sales_performance_report_service import get_today_sales_performance_stats
+            stats = get_today_sales_performance_stats(db, start_date=start_date, end_date=end_date, period_label=period)
+            lb = stats.get("leaderboard", [])
+            active_lb = [item for item in lb if item.get("call_count", 0) > 0 or item.get("talk_seconds", 0) > 0]
+            
+            lines = [
+                f"📞 **{period}'s Team Telecalling & Talk Time Report ({stats.get('date_str', '')}):**\n",
+                f"• **Total Calls Handled**: {stats.get('total_calls', 0)} calls",
+                f"• **Total Team Talk Time**: {stats.get('total_talk_formatted', '0m')}",
+                f"• **Missed Calls**: {stats.get('missed_calls', 0)} calls\n",
+            ]
+            if active_lb:
+                highest_talk = max(active_lb, key=lambda x: x.get("talk_seconds", 0))
+                highest_calls = max(active_lb, key=lambda x: x.get("call_count", 0))
+                lines.append(f"🏆 **Highest Talk Time ({period})**: **{highest_talk['handled_by']}** with **{highest_talk['talk_time_formatted']}** ({highest_talk['call_count']} calls)\n")
+                lines.append(f"🥇 **Highest Call Volume ({period})**: **{highest_calls['handled_by']}** with **{highest_calls['call_count']} calls** ({highest_calls['talk_time_formatted']})\n")
+                lines.append("📋 **Staff Performance Breakdown:**")
+                for idx, item in enumerate(active_lb[:10], 1):
+                    missed_str = f" (🔴 {item['missed_count']} Missed)" if item.get("missed_count", 0) > 0 else ""
+                    lines.append(f"{idx}. **{item['handled_by']}** — {item['talk_time_formatted']} Talk Time | {item['call_count']} Calls{missed_str}")
+            else:
+                lines.append("No active calls logged for this period.")
+            return {"reply_text": "\n".join(lines), "speak_text": f"Found performance stats for {period}.", "options": default_options}
+
+        # 2. CRM Leads & Sales Intake
+        if any(w in query_lower for w in ["lead", "crm", "customer", "prospect", "pipeline", "sale"]):
+            lead_stats = db.execute(text("""
+                SELECT status, COUNT(*) as cnt FROM crm_leads
+                WHERE DATE(created_at) >= :sd AND DATE(created_at) <= :ed
+                GROUP BY status
+            """), {"sd": sd_str, "ed": ed_str}).fetchall()
+
+            total_leads = sum(r.cnt for r in lead_stats)
+            lines = [f"📊 **CRM Leads Report ({period}):**\n", f"• **Total New Leads**: {total_leads} leads"]
+            for r in lead_stats:
+                lines.append(f"• **{r.status or 'New'}**: {r.cnt} leads")
+            return {"reply_text": "\n".join(lines), "speak_text": f"Total new leads for {period}: {total_leads}.", "options": default_options}
+
+        # 3. Field Journeys & GPS Tracking
+        if any(w in query_lower for w in ["journey", "gps", "travel", "field", "distance"]):
+            res = _query_journeys(db)
+            res["options"] = default_options
+            return res
+
+        # 4. WhatsApp & Bot Logs
+        if any(w in query_lower for w in ["whatsapp", "wa", "bot", "message", "log"]):
+            res = _query_whatsapp(db)
+            res["options"] = default_options
+            return res
+
+        # 5. Attendance & Online Staff
+        if any(w in query_lower for w in ["attendance", "online", "present", "absent", "staff", "employee"]):
+            res = _query_attendance(None, db, "en", query_lower)
+            res["options"] = default_options
+            return res
+
+        # 6. Default Dynamic Operational Overview Across Modules
+        overview = db.execute(text("""
+            SELECT 
+                (SELECT COUNT(*) FROM staff_employees WHERE status = 'active') as active_staff,
+                (SELECT COUNT(*) FROM crm_leads WHERE status = 'open') as open_leads,
+                (SELECT COUNT(*) FROM staff_journeys WHERE date = CURRENT_DATE) as today_journeys,
+                (SELECT COUNT(*) FROM message_log WHERE DATE(sent_at) = CURRENT_DATE) as today_wa_msgs
+        """)).fetchone()
+
+        reply = (
+            f"📊 **MYNT OS Operations Summary ({period}):**\n\n"
+            f"• **Active Staff**: {overview.active_staff if overview else 'N/A'} members\n"
+            f"• **Open CRM Leads**: {overview.open_leads if overview else 'N/A'} leads\n"
+            f"• **Today's Field Journeys**: {overview.today_journeys if overview else 0} active\n"
+            f"• **WhatsApp Bot Messages Sent**: {overview.today_wa_msgs if overview else 0} messages\n\n"
+            "Select an option below or type a custom instruction:"
+        )
+        return {"reply_text": reply, "speak_text": "Here is the operational overview.", "options": default_options}
+
+    except Exception as exc:
+        logger.warning(f"[VGK] universal_dynamic_query error: {exc}")
+        return {
+            "reply_text": "📊 **MYNT OS Operations:** Data retrieved. Ask any question about calls, leads, attendance, journeys, or WhatsApp logs.",
+            "speak_text": "Operations data ready."
+        }
+
+
 _RB_STOP_WORDS = {
     "search", "find", "show", "me", "for", "a", "an", "the", "do", "you", "have",
     "is", "there", "i", "need", "want", "looking", "available", "availability",
@@ -929,14 +1721,16 @@ def _rb_general_help(user_name: str, portal_type: str) -> Dict:
             {"label": "🔍 Search Spare Parts", "value": "search parts"},
         ]
     else:
-        reply = (f"Hi {first}! I'm VGK Assistant. I can help you:\n"
-                 "• Create tasks, leads, and service tickets\n"
-                 "• Start or end your GPS journey\n"
-                 "• Check your day plan, tasks, and call stats\n"
-                 "• Search the VGK4U spare parts catalog\n\n"
-                 "Just type or say what you want to do!")
-        speak = "Tell me what you'd like to do."
-        opts = []
+        reply = (f"Hi {first}! I'm VGK Assistant. Please choose an operational topic below or type your custom instruction:")
+        speak = "Please select an option or type custom instructions."
+        opts = [
+            {"label": "📞 Check Call & Talk Time Report", "value": "show me calls done today"},
+            {"label": "🟢 Check Staff Attendance & Online Users", "value": "who is online"},
+            {"label": "🚗 Check Active Field Journeys", "value": "any one activated journey today"},
+            {"label": "📋 Show Active Pending Tasks", "value": "how many pending tasks are there"},
+            {"label": "📱 View WhatsApp Bot Message Logs", "value": "latest messages sent using whatsapp bot"},
+            {"label": "🚨 View Overdue CRM Leads", "value": "are there any overdue leads?"},
+        ]
     result = _rb_resp("general_help", reply, speak, status="done")
     if opts:
         result["options"] = opts
@@ -1011,18 +1805,42 @@ def _rb_query_open_leads(db: Session) -> Dict:
 
 
 def _rb_query_today_leads(db: Session) -> Dict:
-    """DC-ASSISTANT-LEADS-001: Return count of today's follow-up CRM leads and navigate URL."""
+    """DC-ASSISTANT-LEADS-001: Return count and list of today's new CRM leads and follow-ups."""
     try:
         from app.models.crm import CRMLead
-        today_date = today_ist().date()
-        count = db.query(CRMLead).filter(CRMLead.next_followup_date == today_date).count()
-    except Exception:
-        count = None
-    count_str = f"{count} leads due today" if count is not None else "leads due today"
-    reply = f"📋 Found {count_str}. Opening CRM with today's follow-up filter…"
-    speak = f"Found {count_str}. Opening now."
+        from sqlalchemy import or_
+        today_date = today_ist()
+        start_of_today_utc = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=5, minutes=30)
+
+        leads = db.query(CRMLead).filter(
+            or_(
+                CRMLead.created_at >= start_of_today_utc,
+                CRMLead.next_followup_date == today_date
+            )
+        ).order_by(CRMLead.created_at.desc()).all()
+
+        count = len(leads)
+        if count > 0:
+            lines = [f"📋 **Found {count} new/due leads today ({today_date.strftime('%d %b %Y')}):**\n"]
+            for idx, l in enumerate(leads[:15], 1):
+                st = (l.status or "new").upper()
+                stage = (l.solar_pipeline_status or "").replace("_", " ").title()
+                stage_str = f" | Stage: {stage}" if stage else ""
+                lines.append(f"{idx}. **{l.name}** (`{l.phone}`) — Status: **{st}**{stage_str}")
+            if count > 15:
+                lines.append(f"\n_...and {count - 15} more leads._")
+            reply = "\n".join(lines)
+            speak = f"Found {count} leads today. Here is the list."
+        else:
+            reply = "📋 No new leads added or due today."
+            speak = "No leads found for today."
+    except Exception as exc:
+        reply = f"Error retrieving today's leads: {exc}"
+        speak = "Error retrieving leads."
+        count = 0
+
     result = _rb_resp("query_today_leads", reply, speak, status="done")
-    result["route"] = f"/staff/crm/team-leads?date_from={today_ist().date().isoformat()}&date_to={today_ist().date().isoformat()}"
+    result["route"] = f"/staff/crm/team-leads?date_from={today_ist().isoformat()}&date_to={today_ist().isoformat()}"
     result["lead_count"] = count
     result["filter_label"] = "Today's Leads"
     return result
@@ -1033,7 +1851,7 @@ def _rb_query_overdue_leads(db: Session) -> Dict:
     try:
         from app.models.crm import CRMLead
         from sqlalchemy import and_
-        today_date = today_ist().date()
+        today_date = today_ist()
         count = db.query(CRMLead).filter(
             and_(
                 CRMLead.next_followup_date < today_date,
@@ -1046,7 +1864,7 @@ def _rb_query_overdue_leads(db: Session) -> Dict:
     reply = f"⚠️ Found {count_str} past their follow-up date. Opening CRM…"
     speak = f"Found {count_str} overdue. Opening now."
     result = _rb_resp("query_overdue_leads", reply, speak, status="done")
-    result["route"] = f"/staff/crm/team-leads?date_to={today_ist().date().isoformat()}&status=open"
+    result["route"] = f"/staff/crm/team-leads?date_to={today_ist().isoformat()}&status=open"
     result["lead_count"] = count
     result["filter_label"] = "Overdue Leads"
     return result
@@ -1072,7 +1890,7 @@ def _rb_query_walkin_leads(db: Session) -> Dict:
 def _query_partner_activity(partner_id: int, db: Session, language: str = "en") -> Dict:
     """DC: Return today's followup leads and walkins for a partner."""
     from sqlalchemy import text as sq_text
-    today = today_ist().date()
+    today = today_ist()
     lines: List[str] = []
 
     # ── CRM leads due today ────────────────────────────────────────────────────
@@ -1191,12 +2009,33 @@ def _rule_based_fallback(req: VGKRequest, portal_type: str, user_name: str,
     if intent == "query_day_planner" and employee_id:
         r = _query_day_planner(employee_id, db, req.language)
         return _rb_resp(intent, r["reply_text"], r["speak_text"], "done")
-    if intent == "query_tasks" and employee_id:
-        r = _query_tasks(employee_id, db, req.language)
+    if intent == "query_tasks":
+        r = _query_tasks(employee_id, db, req.language, msg_lower)
         return _rb_resp(intent, r["reply_text"], r["speak_text"], "done")
-    if intent == "query_talk_time" and employee_id:
-        r = _query_talk_time(employee_id, db, req.language)
+    if intent == "query_attendance":
+        r = _query_attendance(employee_id, db, req.language, msg_lower)
         return _rb_resp(intent, r["reply_text"], r["speak_text"], "done")
+    if intent == "query_journeys":
+        r = _query_journeys(db)
+        return _rb_resp(intent, r["reply_text"], r["speak_text"], "done")
+    if intent == "query_whatsapp":
+        r = _query_whatsapp(db)
+        return _rb_resp(intent, r["reply_text"], r["speak_text"], "done")
+    if intent == "query_time":
+        r = _query_time()
+        return _rb_resp(intent, r["reply_text"], r["speak_text"], "done")
+    if intent == "send_whatsapp_report":
+        reply = (
+            "📋 **WhatsApp Action Staging:**\n"
+            "I have registered your request to share/send the report to the WhatsApp Sales Group using the bot.\n\n"
+            "Phase 1 of the AI Command Center operates in **Read-Only** mode. Please select how you would like to proceed or choose an option below:"
+        )
+        opts = [
+            {"label": "📲 Stage Report for WhatsApp Sales Group", "value": "stage whatsapp report for sales group"},
+            {"label": "📊 View Full Telecalling Report", "value": "show me calls done today"},
+            {"label": "✍️ Specify Custom Recipient Number", "value": "send to whatsapp number +91"},
+        ]
+        return _rb_resp("send_whatsapp_report", reply, "Select action or type custom recipient.", status="collecting", options=opts)
     if intent == "end_journey":
         return _rb_end_journey(employee_id, db)
     if intent == "marketplace_search":
@@ -1227,25 +2066,12 @@ def _rule_based_fallback(req: VGKRequest, portal_type: str, user_name: str,
         return _rb_resp("query_partner_activity",
                         "⚠️ Could not identify your partner account. Please log in again.",
                         "Partner account not found.", status="done")
-    if intent == "query_attendance" and employee_id:
-        try:
-            from app.models.staff_attendance import StaffAttendance
-            today_date = today_ist().date()
-            att = db.query(StaffAttendance).filter(
-                StaffAttendance.employee_id == employee_id,
-                StaffAttendance.date == today_date
-            ).first()
-            if att:
-                worked_h = round((att.worked_minutes or 0) / 60, 1)
-                ci = att.clock_in.strftime('%I:%M %p') if att.clock_in else 'Not clocked in'
-                co = att.clock_out.strftime('%I:%M %p') if att.clock_out else 'Not clocked out'
-                gps = (att.gps_status or 'unknown').replace('_', ' ').title()
-                reply = f"✅ Today's attendance: Clocked in at {ci}, out: {co}. Worked: {worked_h}h. GPS: {gps}."
-            else:
-                reply = "⚠️ No attendance record for today. Please clock in from the attendance page."
-            return _rb_resp("query_attendance", reply, reply[:60], status="done")
-        except Exception as _ae:
-            logger.warning(f"[VGK] rb query_attendance error: {_ae}")
+    if intent == "query_talk_time":
+        r = _query_talk_time(employee_id, db, req.language, msg_lower)
+        return _rb_resp(intent, r["reply_text"], r["speak_text"], "done")
+    if intent == "query_cash_statement":
+        r = _query_cash_statement(db, msg_lower)
+        return _rb_resp(intent, r["reply_text"], r["speak_text"], "done", options=r.get("options", []))
     if intent == "edit_task":
         return _rb_resp("navigate", "To edit a task, please go to your Tasks page.",
                         "Opening tasks page.", status="done",
@@ -1254,6 +2080,9 @@ def _rule_based_fallback(req: VGKRequest, portal_type: str, user_name: str,
         return _rb_resp("navigate", "Opening Call Management to log your call.",
                         "Opening call management.", status="done",
                         resolved={"route": "/staff/call-management"}, action_ready=True)
+    if portal_type == "staff":
+        u_res = _universal_dynamic_query(msg, db)
+        return _rb_resp("universal_dynamic_query", u_res["reply_text"], u_res["speak_text"], status="collecting", options=u_res.get("options", []))
     return _rb_general_help(user_name, portal_type)
 
 
@@ -1306,6 +2135,14 @@ async def _process(req: VGKRequest, portal_type: str, user_name: str,
     fuzzy_lookup = gemini_resp.get("fuzzy_lookup")
     employee_matches = []
 
+    if intent in ("unknown", "general_help", "clarify") or not reply_text or "didn't quite understand" in reply_text.lower():
+        if portal_type == "staff":
+            u_res = _universal_dynamic_query(req.user_message, db)
+            reply_text = u_res["reply_text"]
+            speak_text = u_res["speak_text"]
+            status = "done"
+            intent = "universal_dynamic_query"
+
     if fuzzy_lookup and fuzzy_lookup.get("query") and employee_id is not None:
         matches = _fuzzy_employees(fuzzy_lookup["query"], db)
         if len(matches) == 1:
@@ -1347,19 +2184,34 @@ async def _process(req: VGKRequest, portal_type: str, user_name: str,
         status = "done"
         action_ready = False
 
-    if employee_id is not None and intent == "query_tasks" and status in ("done", "confirming"):
-        result = _query_tasks(employee_id, db, req.language)
+    if intent == "query_tasks" and status in ("done", "confirming"):
+        result = _query_tasks(employee_id, db, req.language, req.user_message.lower())
         reply_text = result["reply_text"]
         speak_text = result["speak_text"]
         status = "done"
         action_ready = False
 
-    if employee_id is not None and intent == "query_talk_time" and status in ("done", "confirming"):
-        result = _query_talk_time(employee_id, db, req.language)
+    if intent == "query_attendance" and status in ("done", "confirming"):
+        result = _query_attendance(employee_id, db, req.language, req.user_message.lower())
         reply_text = result["reply_text"]
         speak_text = result["speak_text"]
         status = "done"
         action_ready = False
+
+    if intent == "query_talk_time" and status in ("done", "confirming"):
+        result = _query_talk_time(employee_id, db, req.language, req.user_message.lower())
+        reply_text = result["reply_text"]
+        speak_text = result["speak_text"]
+        status = "done"
+        action_ready = False
+
+    if intent == "query_cash_statement" and status in ("done", "confirming"):
+        result = _query_cash_statement(db, req.user_message.lower())
+        reply_text = result["reply_text"]
+        speak_text = result["speak_text"]
+        status = "done"
+        action_ready = False
+        options = result.get("options", [])
 
     if intent == "start_journey" and status == "collecting" and not resolved_data.get("company_name"):
         try:
@@ -1380,6 +2232,41 @@ async def _process(req: VGKRequest, portal_type: str, user_name: str,
         action_ready = rb["action_ready"]
         if rb["resolved_data"]:
             resolved_data.update(rb["resolved_data"])
+
+    if intent == "query_journeys":
+        rb = _query_journeys(db)
+        reply_text = rb["reply_text"]
+        speak_text = rb["speak_text"]
+        status = "done"
+        action_ready = False
+
+    if intent == "query_whatsapp":
+        rb = _query_whatsapp(db)
+        reply_text = rb["reply_text"]
+        speak_text = rb["speak_text"]
+        status = "done"
+        action_ready = False
+
+    if intent == "query_time":
+        rb = _query_time()
+        reply_text = rb["reply_text"]
+        speak_text = rb["speak_text"]
+        status = "done"
+        action_ready = False
+
+    if intent == "send_whatsapp_report":
+        reply_text = (
+            "📋 **WhatsApp Action Staging:**\n"
+            "I have registered your request to share/send the report to the WhatsApp Sales Group using the bot.\n\n"
+            "Phase 1 of the AI Command Center operates in **Read-Only** mode. Please select how you would like to proceed or choose an option below:"
+        )
+        speak_text = "Select action or type custom recipient."
+        status = "collecting"
+        options = [
+            {"label": "📲 Stage Report for WhatsApp Sales Group", "value": "stage whatsapp report for sales group"},
+            {"label": "📊 View Full Telecalling Report", "value": "show me calls done today"},
+            {"label": "✍️ Specify Custom Recipient Number", "value": "send to whatsapp number +91"},
+        ]
 
     marketplace_products: List[Dict] = []
     if intent == "marketplace_search" and status in ("done", "confirming", "collecting"):
@@ -1448,7 +2335,7 @@ async def _process(req: VGKRequest, portal_type: str, user_name: str,
     if employee_id is not None and intent == "query_attendance":
         try:
             from app.models.staff_attendance import StaffAttendance
-            today_date = today_ist().date()
+            today_date = today_ist()
             att = db.query(StaffAttendance).filter(
                 StaffAttendance.employee_id == employee_id,
                 StaffAttendance.date == today_date

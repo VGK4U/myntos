@@ -411,7 +411,8 @@ def _do_sync(db: Session, config: CRMLeadSyncConfig, employees: list,
 
     for row in data_rows:
         # Pad row to max detected column index + safety buffer
-        max_col = max(C.values()) + 1
+        valid_cols = [v for v in C.values() if isinstance(v, int)]
+        max_col = (max(valid_cols) + 1) if valid_cols else 17
         while len(row) < max(17, max_col):
             row.append('')
 
@@ -835,14 +836,16 @@ def cleanup_duplicate_leads(
     if not (_role_code in _admin_role_codes or 'vgk4u' in _role_code):
         raise HTTPException(status_code=403, detail='Admin access required for duplicate cleanup')
 
-    # DC Protocol: Deduplication SQL — uses JOIN UPDATE (scales to any row count)
-    # Common subquery that identifies which IDs are duplicates and who their keeper is
+    # DC Protocol: Deduplication SQL — partitions by clean 10-digit phone number
     _KEEPER_CTE = """
         SELECT
-            id   AS dup_id,
-            MIN(id) OVER (PARTITION BY phone) AS keeper_id
+            id AS dup_id,
+            MIN(id) OVER (
+                PARTITION BY RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10)
+            ) AS keeper_id
         FROM crm_leads
-        WHERE phone IS NOT NULL AND TRIM(phone) != ''
+        WHERE phone IS NOT NULL 
+          AND LENGTH(REGEXP_REPLACE(phone, '[^0-9]', '', 'g')) >= 10
     """
 
     try:

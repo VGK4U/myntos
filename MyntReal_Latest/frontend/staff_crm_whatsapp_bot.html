@@ -52,16 +52,19 @@
         /* TAB 1: Conversations Split View */
         .conv-wrap {
             display: grid;
-            grid-template-columns: 340px 1fr;
+            grid-template-columns: 350px 1fr;
             gap: 0;
             background: white;
             border-radius: 14px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.06);
             flex: 1;
-            min-height: calc(100vh - 210px);
-            max-height: calc(100vh - 210px);
+            min-height: calc(100vh - 170px);
+            max-height: calc(100vh - 170px);
             overflow: hidden;
             border: 1px solid #e2e8f0;
+        }
+        @media (max-width: 991px) {
+            .conv-wrap { grid-template-columns: 1fr; min-height: 600px; max-height: none; }
         }
         .dark-theme .conv-wrap { background: #1e293b; border-color: #334155; }
         .conv-list { border-right: 1px solid #e5e7eb; display: flex; flex-direction: column; background: #ffffff; height: 100%; overflow: hidden; }
@@ -69,13 +72,13 @@
         .conv-search { padding: 14px; border-bottom: 1px solid #e5e7eb; background: #f8fafc; display: flex; flex-direction: column; gap: 8px; }
         .dark-theme .conv-search { border-color: #334155; background: #0f172a; }
         .conv-items { flex: 1 1 0%; overflow-y: auto; min-height: 0; }
-        .conv-item { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: all 0.15s; }
+        .conv-item { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: all 0.15s; }
         .dark-theme .conv-item { border-color: #334155; }
         .conv-item:hover, .conv-item.active { background: #ecfdf5; border-left: 4px solid #10b981; }
         .dark-theme .conv-item:hover, .dark-theme .conv-item.active { background: #0f172a; border-left-color: #34d399; }
-        .conv-name { font-size: 14px; font-weight: 700; color: #0f172a; }
+        .conv-name { font-size: 13.5px; font-weight: 700; color: #0f172a; }
         .dark-theme .conv-name { color: #f8fafc; }
-        .conv-preview { font-size: 12.5px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
+        .conv-preview { font-size: 12px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
 
         .cat-pill { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
         .cat-payout { background: #fef3c7; color: #92400e; }
@@ -83,26 +86,43 @@
         .cat-direct { background: #dcfce7; color: #166534; }
         .cat-tickets { background: #f3e8ff; color: #6b21a8; }
 
-        .chat-main { display: flex; flex-direction: column; background: #f8fafc; height: 100%; overflow: hidden; flex: 1; }
+        .type-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; }
+        .badge-contact { background: #e0f2fe; color: #0369a1; }
+        .badge-staff { background: #fef3c7; color: #92400e; }
+        .badge-user { background: #f3e8ff; color: #6b21a8; }
+        .badge-group { background: #dcfce7; color: #15803d; }
+        .badge-channel { background: #ffedd5; color: #c2410c; }
+        .search-result-item { transition: background 0.15s; }
+        .search-result-item:hover { background: #f0fdf4 !important; }
+        .bg-purple { background-color: #8b5cf6 !important; }
+
+        .chat-main { display: flex; flex-direction: column; background: #f8fafc; height: 100%; overflow: hidden; flex: 1; position: relative; }
         .dark-theme .chat-main { background: #0f172a; }
-        .chat-header { padding: 14px 20px; background: white; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .chat-header { padding: 14px 20px; background: white; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 4px rgba(0,0,0,0.03); z-index: 5; }
         .dark-theme .chat-header { background: #1e293b; border-color: #334155; }
         
         .chat-history {
             flex: 1 1 0%;
             min-height: 0;
-            padding: 22px;
+            padding: 20px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 12px;
+            background-color: #f1f5f9;
         }
-        .chat-bubble { max-width: 84%; padding: 14px 18px; border-radius: 14px; font-size: 13.5px; line-height: 1.5; word-break: break-word; white-space: pre-wrap; font-family: inherit; }
-        .chat-bubble.in { align-self: flex-start; background: white; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .dark-theme .chat-bubble.in { background: #1e293b; border-color: #334155; color: white; }
-        .chat-bubble.out { align-self: flex-end; background: #10b981; color: white; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3); }
-        .chat-footer { padding: 14px 20px; background: white; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; }
+        .dark-theme .chat-history { background-color: #0b1120; }
+        .chat-bubble { max-width: 78%; padding: 12px 16px; border-radius: 14px; font-size: 13.5px; line-height: 1.5; word-break: break-word; white-space: pre-wrap; font-family: inherit; position: relative; }
+        .chat-bubble.in { align-self: flex-start; background: white; border: 1px solid #e2e8f0; color: #1e293b; border-bottom-left-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+        .dark-theme .chat-bubble.in { background: #1e293b; border-color: #334155; color: #f8fafc; }
+        .chat-bubble.out { align-self: flex-end; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-bottom-right-radius: 2px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25); }
+        .chat-bubble.failed-bubble { background: #fee2e2 !important; color: #991b1b !important; border: 1px solid #fca5a5 !important; }
+        
+        .chat-footer { padding: 12px 16px; background: white; border-top: 1px solid #e5e7eb; display: flex; flex-direction: column; gap: 8px; z-index: 5; }
         .dark-theme .chat-footer { background: #1e293b; border-color: #334155; }
+        .composer-bar { display: flex; gap: 10px; align-items: flex-end; }
+        .composer-textarea { resize: none; border-radius: 10px; padding: 10px 14px; font-size: 13.5px; border: 1px solid #cbd5e1; }
+        .dark-theme .composer-textarea { background: #0f172a; color: white; border-color: #334155; }
 
         /* TAB 2: Auto Messages Grid */
         .auto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
@@ -148,13 +168,16 @@
                     <div class="bot-status-pill" id="botStatusPill" onclick="window.open('http://localhost:5002/qr', '_blank')" style="cursor: pointer;" title="Click to view QR Code / Status">
                         <span class="bot-status-dot"></span> <span id="botStatusText">BOT CONNECTED</span>
                     </div>
+                    <button class="btn btn-danger btn-sm fw-bold text-white shadow-sm" onclick="logoutWhatsAppBot()" title="Logout and Disconnect WhatsApp Web Bot Session">
+                        <i class="fas fa-sign-out-alt me-1"></i> Logout Bot
+                    </button>
                 </div>
             </div>
 
             <!-- 5 Main Tabs -->
             <div class="hub-tabs">
                 <button class="hub-tab-btn active" onclick="switchHubTab('conversations')"><i class="fas fa-comments"></i> 1. All Conversations</button>
-                <button class="hub-tab-btn" onclick="switchHubTab('auto')"><i class="fas fa-bolt"></i> 2. Automatic Messages</button>
+                <button class="hub-tab-btn" onclick="switchHubTab('auto')"><i class="fas fa-layer-group"></i> 2. Template Management Hub</button>
                 <button class="hub-tab-btn" onclick="switchHubTab('logs')"><i class="fas fa-mobile-alt"></i> 3. System Sent from Mobile / Logs</button>
                 <button class="hub-tab-btn" onclick="switchHubTab('scheduler')"><i class="fas fa-clock"></i> 4. Daily Scheduler / Live Trigger Tracker</button>
                 <button class="hub-tab-btn" onclick="switchHubTab('trigger-audit')"><i class="fas fa-history"></i> 5. Live Trigger Execution & Audit Log</button>
@@ -166,10 +189,20 @@
                     <div class="conv-list">
                         <div class="conv-search">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="fw-bold text-muted" style="font-size: 11px; text-transform: uppercase;">Search Messages</span>
-                                <button class="btn btn-sm btn-link p-0 text-success text-decoration-none fw-bold" onclick="openNewMsgModal()"><i class="fas fa-plus-circle me-1"></i> New</button>
+                                <span class="fw-bold text-muted" style="font-size: 11px; text-transform: uppercase;">Message Scope</span>
+                                <button class="btn btn-sm btn-link p-0 text-success text-decoration-none fw-bold" onclick="openNewMsgModal()"><i class="fas fa-plus-circle me-1"></i> New Chat</button>
                             </div>
-                            <input type="text" class="form-control form-control-sm" id="convSearchInput" placeholder="Search contacts, text, or mobile..." onkeyup="loadConversations()" />
+                            <select class="form-select form-select-sm mb-2 font-weight-bold" id="convScopeFilter" onchange="loadConversations()" style="border-color: #10b981; background-color: #f0fdf4; color: #047857;">
+                                <option value="assigned_tagged" selected>🎯 My Assigned + Tagged Leads</option>
+                                <option value="downline">👥 My Downline Team</option>
+                                <option value="all" id="optScopeAll" style="display: none;">🌐 All System Messages (Admin Only)</option>
+                            </select>
+                            <div class="position-relative mb-1">
+                                <input type="text" class="form-control form-control-sm" id="convSearchInput" placeholder="🔍 Search contact, phone, or start chat..." oninput="handleSidebarSearchInput(event)" onkeydown="handleSidebarSearchKeyDown(event)" autocomplete="off" />
+                                <div id="searchResultsOverlay" class="search-overlay-card shadow-lg" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 1050; background: #ffffff; border: 1.5px solid #10b981; border-radius: 10px; max-height: 340px; overflow-y: auto; margin-top: 2px;">
+                                    <!-- Dynamic inline search results rendered here -->
+                                </div>
+                            </div>
                             <select class="form-select form-select-sm" id="convCategoryFilter" onchange="loadConversations()">
                                 <option value="all">All Categories</option>
                                 <option value="Payout Alerts">💰 Payout Alerts</option>
@@ -179,76 +212,169 @@
                             </select>
                         </div>
                         <div class="conv-items" id="convItemsContainer">
-                            <div class="text-center p-4 text-muted">Loading conversations from scanner number...</div>
+                            <div class="text-center p-4 text-muted">Loading conversations...</div>
                         </div>
                     </div>
                     <div class="chat-main">
                         <div class="chat-header">
                             <div>
-                                <h6 class="m-0 font-weight-bold" id="chatActiveName">Select a Contact</h6>
+                                <div class="d-flex align-items-center gap-2">
+                                    <h6 class="m-0 font-weight-bold" id="chatActiveName">Select a Contact</h6>
+                                    <span id="chatActiveTypeBadge" class="type-badge badge-contact"><i class="fas fa-user me-1"></i> Customer</span>
+                                </div>
                                 <small class="text-muted" id="chatActivePhone">—</small>
                             </div>
                             <div class="d-flex gap-2">
-                                <button class="btn btn-sm btn-outline-success" onclick="openNewMsgModal()"><i class="fas fa-edit"></i> Write Message</button>
-                                <button class="btn btn-sm btn-success" onclick="openDirectWa()"><i class="fab fa-whatsapp"></i> Open WhatsApp Web</button>
+                                <button class="btn btn-sm btn-outline-success" onclick="openNewMsgModal()"><i class="fas fa-edit me-1"></i> New Chat</button>
+                                <button class="btn btn-sm btn-success" onclick="openDirectWa()"><i class="fab fa-whatsapp me-1"></i> Open WhatsApp Web</button>
                             </div>
                         </div>
                         <div class="chat-history" id="chatHistoryBox">
                             <div class="text-center p-4 text-muted">Select a conversation from the left list to view chat transcript.</div>
                         </div>
                         <div class="chat-footer">
-                            <input type="text" class="form-control form-control-sm" id="chatReplyInput" placeholder="Type a WhatsApp message..." onkeypress="if(event.key==='Enter') sendReplyMsg()" />
-                            <button class="btn btn-sm btn-success fw-bold" onclick="sendReplyMsg()"><i class="fas fa-paper-plane"></i> Send</button>
+                            <div id="composerStatusAlert" class="alert alert-danger p-2 mb-2" style="display: none; font-size: 12px;"></div>
+                            
+                            <!-- Central Template Selector & Variable Inputs -->
+                            <div class="p-2 mb-2 bg-light rounded border" id="chatTplContainer">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label fw-bold text-uppercase text-muted m-0" style="font-size: 10.5px;">Choose Template (Database Registry)</label>
+                                    <span class="badge bg-secondary" id="selectedTplSlugBadge" style="font-size: 9px; display: none;">Custom Message</span>
+                                </div>
+                                <select class="form-select form-select-sm mb-1" id="chatTemplateSelect" onchange="handleChatTemplateChange()">
+                                    <option value="">✍️ Write Custom Message</option>
+                                </select>
+                                <div id="tplVarsContainer" style="display: none;" class="mt-2 p-2 bg-white rounded border">
+                                    <div class="fw-bold text-dark mb-1" style="font-size: 11px;"><i class="fas fa-sliders-h me-1 text-primary"></i> Template Variables:</div>
+                                    <div id="tplVarsFields" class="d-flex flex-wrap gap-2"></div>
+                                </div>
+                            </div>
+
+                            <!-- Attachment Preview Card -->
+                            <div class="d-flex align-items-center justify-content-between p-2 mb-2 bg-light border rounded" id="attachmentPreviewCard" style="display: none !important; max-width: 380px;">
+                                <div class="d-flex align-items-center gap-2 text-truncate">
+                                    <div id="attachmentIconBox">
+                                        <img id="imgAttachmentThumbnail" src="" style="width: 42px; height: 42px; object-fit: cover; border-radius: 6px; display: none;" />
+                                        <i id="pdfAttachmentIcon" class="fas fa-file-pdf text-danger fa-2x" style="display: none;"></i>
+                                    </div>
+                                    <div class="text-truncate">
+                                        <div class="fw-bold text-dark text-truncate" style="font-size: 12px;" id="txtAttachmentName">filename.jpg</div>
+                                        <small class="text-muted" style="font-size: 10.5px;" id="txtAttachmentSize">245 KB</small>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-link text-danger p-1 text-decoration-none" onclick="clearAttachment()" title="Remove attachment">
+                                    <i class="fas fa-times-circle fs-5"></i>
+                                </button>
+                            </div>
+
+                            <input type="file" id="chatFileInput" style="display: none;" accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf" onchange="handleFileSelected(event)" />
+
+                            <div class="composer-bar d-flex gap-2 align-items-center">
+                                <button class="btn btn-light border text-muted px-3" id="btnAttachFile" type="button" onclick="triggerFilePicker()" title="Attach Image or PDF" style="height: 52px; border-radius: 10px;">
+                                    <i class="fas fa-paperclip fs-5"></i>
+                                </button>
+                                <textarea class="form-control composer-textarea flex-grow-1" id="chatReplyInput" rows="2" placeholder="Type a message... (Press Enter to send, Shift+Enter for new line)" onkeydown="handleReplyKeyDown(event)"></textarea>
+                                <button class="btn btn-success fw-bold px-4 py-2" id="btnSendReply" onclick="sendReplyMsg()" style="height: 52px; border-radius: 10px;">
+                                    <i class="fas fa-paper-plane me-1"></i> Send
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- TAB 2: Automatic Messages -->
+            <!-- TAB 2: Central Template Management Hub -->
             <div class="tab-panel" id="panel-auto">
-                <div class="auto-grid">
-                    <div class="auto-card">
-                        <div class="auto-card-header">
-                            <h5 class="auto-card-title">👋 CRM Lead Welcome</h5>
-                            <div class="form-check form-switch m-0">
-                                <input class="form-check-input" type="checkbox" checked id="toggleWelcome" />
-                            </div>
-                        </div>
-                        <p class="auto-card-desc">Sends instant WhatsApp greeting & website details when a new lead registers via CRM or website chatbot.</p>
-                        <button class="btn btn-sm btn-outline-primary" onclick="alert('Template: 🎉 Welcome {{name}} to VGK4U!')"><i class="fas fa-edit"></i> Edit Template</button>
+                <!-- Banner Action Bar -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-3 mb-3 bg-white rounded border shadow-sm">
+                    <div>
+                        <h5 class="m-0 fw-bold text-dark"><i class="fas fa-layer-group text-success me-2"></i> Central WhatsApp Template Registry</h5>
+                        <small class="text-muted">Manage Meta WABA approved templates, internal messenger templates, segment categories, dynamic variables, and test sends.</small>
                     </div>
-
-                    <div class="auto-card">
-                        <div class="auto-card-header">
-                            <h5 class="auto-card-title">💰 Instant Payout Alert</h5>
-                            <div class="form-check form-switch m-0">
-                                <input class="form-check-input" type="checkbox" checked id="togglePayout" />
-                            </div>
-                        </div>
-                        <p class="auto-card-desc">Sends automatic payout notifications with breakdown when daily earnings are processed.</p>
-                        <button class="btn btn-sm btn-outline-primary" onclick="alert('Template: 💰 Hi {{name}}, your payout of {{amount}} is credited!')"><i class="fas fa-edit"></i> Edit Template</button>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-sm btn-success fw-bold px-3" id="btnCreateTemplate" onclick="openCreateTemplateModal()" style="display: none;">
+                            <i class="fas fa-plus-circle me-1"></i> Create Template
+                        </button>
+                        <button class="btn btn-sm btn-outline-info fw-bold px-3" id="btnSyncMeta" onclick="syncMetaTemplates()" style="display: none;">
+                            <i class="fas fa-sync-alt me-1"></i> Sync Meta WABA Templates
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning fw-bold px-3" onclick="openTestSendModal()">
+                            <i class="fas fa-vial me-1"></i> Test Send
+                        </button>
                     </div>
+                </div>
 
-                    <div class="auto-card">
-                        <div class="auto-card-header">
-                            <h5 class="auto-card-title">🎫 Service Ticket Alert</h5>
-                            <div class="form-check form-switch m-0">
-                                <input class="form-check-input" type="checkbox" checked id="toggleTicket" />
-                            </div>
-                        </div>
-                        <p class="auto-card-desc">Notifies customers automatically when a support/service ticket is opened or resolved.</p>
-                        <button class="btn btn-sm btn-outline-primary" onclick="alert('Template: 🎫 Ticket #{{id}} updated to {{status}}.')"><i class="fas fa-edit"></i> Edit Template</button>
+                <!-- Filter & Search Controls -->
+                <div class="filter-bar d-flex flex-wrap align-items-end gap-3 mb-3 p-3 bg-white rounded border">
+                    <div style="flex: 1; min-width: 180px;">
+                        <label class="form-label text-uppercase text-muted fw-bold mb-1" style="font-size: 11px;">Search Templates</label>
+                        <input type="text" class="form-control form-control-sm" id="tplSearchInput" placeholder="Name, slug, or message body..." onkeyup="filterTemplatesLive()" />
                     </div>
+                    <div style="width: 150px;">
+                        <label class="form-label text-uppercase text-muted fw-bold mb-1" style="font-size: 11px;">Segment Category</label>
+                        <select class="form-select form-select-sm" id="tplSegmentFilter" onchange="filterTemplatesLive()">
+                            <option value="">All Segments</option>
+                            <option value="general">General</option>
+                            <option value="leads">Leads</option>
+                            <option value="staff">Staff</option>
+                            <option value="partner">Partner</option>
+                            <option value="vgk">VGK</option>
+                            <option value="solar">Solar</option>
+                            <option value="ev_b2c">EV B2C</option>
+                            <option value="ev_b2b">EV B2B</option>
+                            <option value="real_estate">Real Estate</option>
+                            <option value="etc_training">Training</option>
+                            <option value="system">System</option>
+                        </select>
+                    </div>
+                    <div style="width: 150px;">
+                        <label class="form-label text-uppercase text-muted fw-bold mb-1" style="font-size: 11px;">Usage Scope</label>
+                        <select class="form-select form-select-sm" id="tplUsageScopeFilter" onchange="filterTemplatesLive()">
+                            <option value="">All Scopes</option>
+                            <option value="meta">Meta Approved</option>
+                            <option value="internal">Internal Messenger</option>
+                            <option value="both">Both</option>
+                        </select>
+                    </div>
+                    <div style="width: 150px;">
+                        <label class="form-label text-uppercase text-muted fw-bold mb-1" style="font-size: 11px;">Meta Status</label>
+                        <select class="form-select form-select-sm" id="tplMetaStatusFilter" onchange="filterTemplatesLive()">
+                            <option value="">All Statuses</option>
+                            <option value="APPROVED">APPROVED</option>
+                            <option value="PENDING">PENDING</option>
+                            <option value="REJECTED">REJECTED</option>
+                            <option value="INTERNAL_ONLY">INTERNAL_ONLY</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="loadTemplatesList()"><i class="fas fa-sync-alt me-1"></i> Refresh</button>
+                    </div>
+                </div>
 
-                    <div class="auto-card">
-                        <div class="auto-card-header">
-                            <h5 class="auto-card-title">⏰ Daily Morning Reminder</h5>
-                            <div class="form-check form-switch m-0">
-                                <input class="form-check-input" type="checkbox" checked id="toggleMorning" />
-                            </div>
-                        </div>
-                        <p class="auto-card-desc">Dispatches daily 9:00 AM portal summary and performance reports to leadership.</p>
-                        <button class="btn btn-sm btn-outline-primary" onclick="alert('Template: 🌅 Good Morning {{name}}! Here is your daily team summary.')"><i class="fas fa-edit"></i> Edit Template</button>
+                <!-- Template Statistics Bar -->
+                <div class="d-flex justify-content-between align-items-center mb-3 px-1">
+                    <span class="text-muted fw-semibold" style="font-size: 12px;" id="tplStatsCounter">Loading template registry...</span>
+                    <span id="tplSyncStatusBadge" class="badge bg-light text-dark border" style="font-size: 11px;"><i class="fas fa-database me-1 text-success"></i> PostgreSQL Registry Active</span>
+                </div>
+
+                <!-- Template Registry Structured Table Container -->
+                <div class="card border shadow-sm rounded-3 overflow-hidden bg-white">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 13px;">
+                            <thead class="table-dark text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">
+                                <tr>
+                                    <th style="width: 140px;">Category</th>
+                                    <th style="width: 220px;">Template Name & Slug</th>
+                                    <th style="width: 160px;">Applicable For</th>
+                                    <th style="width: 150px;">Meta Status</th>
+                                    <th>Message Content Preview</th>
+                                    <th style="width: 150px;" class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tplCardsContainer">
+                                <tr><td colspan="6" class="text-center p-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading template registry table...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -314,6 +440,7 @@
                                     <th>Job / Task Name</th>
                                     <th>Recurrence / Schedule</th>
                                     <th>Recipients / Target Groups</th>
+                                    <th>Latest Trigger Stats (Total / Sent / Failed)</th>
                                     <th id="th-d2">2 Days Ago</th>
                                     <th id="th-d1">Yesterday</th>
                                     <th id="th-d0">Today</th>
@@ -322,7 +449,7 @@
                                 </tr>
                             </thead>
                             <tbody id="schedulerTableBody">
-                                <tr><td colspan="8" class="text-center p-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading daily scheduler status matrix...</td></tr>
+                                <tr><td colspan="9" class="text-center p-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading daily scheduler status matrix...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -380,47 +507,54 @@
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
                 <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title font-weight-bold"><i class="fab fa-whatsapp me-2"></i> Write New WhatsApp Message</h5>
+                    <h5 class="modal-title font-weight-bold"><i class="fab fa-whatsapp me-2"></i> Start New WhatsApp Conversation</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <!-- Recipient Selector -->
+                    <!-- Recipient Type Radios -->
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-uppercase text-muted" style="font-size: 11px;">Select Recipient Type</label>
-                        <div class="d-flex gap-3 mb-2">
+                        <label class="form-label fw-bold text-uppercase text-muted" style="font-size: 11px;">1. Select Recipient Category</label>
+                        <div class="d-flex flex-wrap gap-3 mb-2 p-2 bg-light rounded border">
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="recipientType" id="recContact" value="contact" checked onchange="toggleRecType()" />
-                                <label class="form-check-label fw-bold" for="recContact">👤 Contact / Lead</label>
+                                <label class="form-check-label fw-bold" for="recContact">👤 Customer / Lead</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="recipientType" id="recStaff" value="staff" onchange="toggleRecType()" />
+                                <label class="form-check-label fw-bold" for="recStaff">👔 Staff Member</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="recipientType" id="recUser" value="user" onchange="toggleRecType()" />
+                                <label class="form-check-label fw-bold" for="recUser">⭐ Member</label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="recipientType" id="recGroup" value="group" onchange="toggleRecType()" />
-                                <label class="form-check-label fw-bold" for="recGroup">👥 WhatsApp Group</label>
+                                <label class="form-check-label fw-bold" for="recGroup">👥 Group</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="recipientType" id="recChannel" value="channel" onchange="toggleRecType()" />
+                                <label class="form-check-label fw-bold" for="recChannel">📢 Channel</label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="recipientType" id="recCustom" value="custom" onchange="toggleRecType()" />
-                                <label class="form-check-label fw-bold" for="recCustom">📱 Enter Custom Mobile</label>
+                                <label class="form-check-label fw-bold" for="recCustom">📱 Phone Number</label>
                             </div>
                         </div>
 
-                        <!-- Dropdown 1: Contacts -->
+                        <!-- Dropdown 1: Contact Search -->
                         <div id="wrapRecContact">
-                            <select class="form-select form-select-sm" id="selRecContact">
-                                <option value="">Loading contacts & leads...</option>
+                            <input type="text" class="form-control form-control-sm mb-2" id="searchContactInput" placeholder="Search by name, phone number, or ID..." onkeyup="searchRecipientsLive()" />
+                            <select class="form-select form-select-sm" id="selRecContact" size="4" style="max-height: 120px;">
+                                <option value="">Loading contacts...</option>
                             </select>
                         </div>
 
-                        <!-- Dropdown 2: Groups -->
-                        <div id="wrapRecGroup" style="display: none;">
-                            <select class="form-select form-select-sm" id="selRecGroup">
-                                <option value="8875551666">👥 VGK Care _ Bajaj Capital</option>
-                                <option value="9053899899">👥 Mynt Sales New Group</option>
-                                <option value="7702830269">👥 Executive Team Announcements</option>
-                            </select>
-                        </div>
-
-                        <!-- Input 3: Custom Phone -->
+                        <!-- Input 2: Custom Phone -->
                         <div id="wrapRecCustom" style="display: none;">
-                            <input type="text" class="form-control form-control-sm" id="inputCustomPhone" placeholder="Enter 10-digit mobile number (e.g. 9876543210)..." />
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text fw-bold">+91</span>
+                                <input type="text" class="form-control form-control-sm" id="inputCustomPhone" placeholder="Enter 10-digit WhatsApp number (e.g. 9876543210)..." />
+                            </div>
                         </div>
                     </div>
 
@@ -559,6 +693,197 @@
         </div>
     </div>
 
+    <!-- CREATE / EDIT TEMPLATE MODAL -->
+    <div class="modal fade" id="templateModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold" id="templateModalTitle"><i class="fas fa-layer-group me-2"></i> Create WhatsApp Template</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="templateForm" onsubmit="event.preventDefault(); saveTemplateForm();">
+                        <input type="hidden" id="tplFormId" value="" />
+                        <div id="tplModalAlert" class="alert alert-danger p-2 mb-3" style="display: none; font-size: 12px;"></div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-uppercase text-muted" style="font-size: 11px;">Template Name *</label>
+                                <input type="text" class="form-control form-control-sm" id="tplFormName" placeholder="e.g. Lead Welcome Greeting" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-uppercase text-muted" style="font-size: 11px;">Segment Category *</label>
+                                <select class="form-select form-select-sm" id="tplFormSegment" required>
+                                    <option value="general">General</option>
+                                    <option value="leads">Leads</option>
+                                    <option value="staff">Staff</option>
+                                    <option value="partner">Partner</option>
+                                    <option value="vgk">VGK</option>
+                                    <option value="solar">Solar</option>
+                                    <option value="ev_b2c">EV B2C</option>
+                                    <option value="ev_b2b">EV B2B</option>
+                                    <option value="real_estate">Real Estate</option>
+                                    <option value="etc_training">Training</option>
+                                    <option value="system">System</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-uppercase text-muted" style="font-size: 11px;">Template Type</label>
+                                <select class="form-select form-select-sm" id="tplFormType">
+                                    <option value="custom">Custom Message</option>
+                                    <option value="marketing">Marketing</option>
+                                    <option value="utility">Utility</option>
+                                    <option value="authentication">Authentication</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-uppercase text-muted" style="font-size: 11px;">Usage Scope</label>
+                                <select class="form-select form-select-sm" id="tplFormUsageScope">
+                                    <option value="both">Both (Meta + Internal)</option>
+                                    <option value="meta">Meta WABA Only</option>
+                                    <option value="internal">Internal Messenger Only</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-uppercase text-muted" style="font-size: 11px;">Header Type</label>
+                                <select class="form-select form-select-sm" id="tplFormHeaderType">
+                                    <option value="none">None</option>
+                                    <option value="text">Text Header</option>
+                                    <option value="image">Image Header</option>
+                                    <option value="document">Document Header</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-uppercase text-muted" style="font-size: 11px;">Message Body Text *</label>
+                            <textarea class="form-control" id="tplFormBody" rows="5" placeholder="Enter template text with variables e.g. Hi {{name}}, welcome to VGK4U! Your ID is {{1}}." required></textarea>
+                            <small class="text-muted" style="font-size: 11px;">Tip: Use {{1}}, {{2}} or {{name}}, {{phone}} placeholders. They will automatically be converted to inputs.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-uppercase text-muted" style="font-size: 11px;">Footer Text (Optional)</label>
+                            <input type="text" class="form-control form-control-sm" id="tplFormFooter" placeholder="e.g. MyntReal — Green Energy & Insurance Solutions" />
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success btn-sm fw-bold" id="btnSaveTplForm" onclick="saveTemplateForm()"><i class="fas fa-save me-1"></i> Save Template</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TEST SEND MODAL -->
+    <div class="modal fade" id="testSendModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-vial me-2"></i> WhatsApp Test Send Dispatch</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div id="testSendAlert" class="alert alert-danger p-2 mb-3" style="display: none; font-size: 12px;"></div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-uppercase text-muted" style="font-size: 11px;">Destination Mobile Number *</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text fw-bold">+91</span>
+                                <input type="text" class="form-control" id="testSendPhone" placeholder="Enter 10-digit mobile number..." />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-uppercase text-muted" style="font-size: 11px;">Choose Template *</label>
+                            <select class="form-select form-select-sm" id="testSendTplSelect" onchange="handleTestSendTemplateChange()">
+                                <option value="">Loading templates...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Variables Input Container -->
+                    <div id="testSendVarsContainer" class="p-3 mb-3 bg-light rounded border" style="display: none;">
+                        <label class="form-label fw-bold text-uppercase text-dark mb-2" style="font-size: 11px;"><i class="fas fa-sliders-h text-primary me-1"></i> Fill Template Variable Placeholders</label>
+                        <div id="testSendVarsFields" class="d-flex flex-wrap gap-2"></div>
+                    </div>
+
+                    <!-- Live Message Preview -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-uppercase text-muted" style="font-size: 11px;">Resolved Message Preview</label>
+                        <div class="p-3 rounded border bg-white" id="testSendPreviewText" style="font-family: inherit; font-size: 13px; white-space: pre-wrap; min-height: 80px; color: #1e293b;">
+                            Select a template above to generate variable fields and preview resolved message.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning btn-sm fw-bold text-dark" id="btnDispatchTestSend" onclick="dispatchTestSend()"><i class="fas fa-paper-plane me-1"></i> Dispatch Test Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW / EDIT SCHEDULER JOB TEMPLATE MODAL -->
+    <div class="modal fade" id="jobTemplateEditModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; background: #161b22; color: #fff;">
+                <div class="modal-header border-bottom border-secondary bg-dark text-white p-3">
+                    <h5 class="modal-title font-weight-bold" id="jobTplEditTitle"><i class="fas fa-edit text-info me-2"></i> View & Edit Message Template</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div id="jobTplSaveProgressAlert" class="alert alert-info p-2 mb-3" style="display: none; font-size: 12px;"></div>
+
+                    <div class="row g-3">
+                        <!-- Main Text Editor Column -->
+                        <div class="col-lg-7">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <label class="form-label fw-bold text-uppercase text-light m-0" style="font-size: 12px; letter-spacing: 0.5px;">
+                                    <i class="fas fa-pen text-info me-1"></i> Message Template Text & Format
+                                </label>
+                                <small class="text-muted" style="font-size: 11px;">Supports WhatsApp Markdown: *bold*, _italic_, ~strike~</small>
+                            </div>
+                            <textarea class="form-control bg-dark text-white border-secondary font-monospace p-3" id="jobTplEditorTextarea" rows="16" style="font-size: 12.5px; line-height: 1.5; border-radius: 10px;" oninput="updateJobTplPreview()" placeholder="Type WhatsApp message template here..."></textarea>
+                        </div>
+
+                        <!-- Variables & Live Preview Column -->
+                        <div class="col-lg-5">
+                            <!-- Dynamic Variables Insertion Palette -->
+                            <div class="card bg-dark border-secondary p-3 mb-3" style="border-radius: 12px;">
+                                <label class="form-label fw-bold text-uppercase text-warning mb-2" style="font-size: 11px;">
+                                    <i class="fas fa-magic me-1"></i> Available Dynamic Variables (Click to Insert)
+                                </label>
+                                <div id="jobTplVarsContainer" class="d-flex flex-wrap gap-1" style="max-height: 120px; overflow-y: auto;">
+                                    <!-- Rendered dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- Live Resolved Message Preview -->
+                            <div class="card bg-dark border-secondary p-3" style="border-radius: 12px;">
+                                <label class="form-label fw-bold text-uppercase text-success mb-2" style="font-size: 11px;">
+                                    <i class="fab fa-whatsapp me-1"></i> Live Resolved WhatsApp Message Preview
+                                </label>
+                                <div class="p-3 rounded bg-black text-light border border-secondary" id="jobTplPreview" style="font-family: inherit; font-size: 12px; white-space: pre-wrap; max-height: 250px; overflow-y: auto; color: #e2e8f0;">
+                                    Message preview will appear here...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top border-secondary bg-dark p-3">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-info btn-sm fw-bold text-dark" id="btnSaveJobTemplate" onclick="saveJobTemplateText()">
+                        <i class="fas fa-save me-1"></i> Save Template Config
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="/staff_sidebar.js"></script>
     <script src="/staff_header.js"></script>
 
@@ -574,22 +899,521 @@
                 document.querySelectorAll('.hub-tab-btn')[0].classList.add('active');
                 document.getElementById('panel-conversations').classList.add('active');
                 loadConversations();
-            } else if (tabKey === 'auto') {
-                document.querySelectorAll('.hub-tab-btn')[1].classList.add('active');
-                document.getElementById('panel-auto').classList.add('active');
-            } else if (tabKey === 'logs') {
-                document.querySelectorAll('.hub-tab-btn')[2].classList.add('active');
-                document.getElementById('panel-logs').classList.add('active');
-                loadDeliveryLogs();
-            } else if (tabKey === 'scheduler') {
-                document.querySelectorAll('.hub-tab-btn')[3].classList.add('active');
-                document.getElementById('panel-scheduler').classList.add('active');
-                loadSchedulerTracker();
-            } else if (tabKey === 'trigger-audit') {
-                document.querySelectorAll('.hub-tab-btn')[4].classList.add('active');
-                document.getElementById('panel-trigger-audit').classList.add('active');
-                loadTriggerAuditLogs();
+                startMessengerPolling();
+            } else {
+                stopMessengerPolling();
+                if (tabKey === 'auto') {
+                    document.querySelectorAll('.hub-tab-btn')[1].classList.add('active');
+                    document.getElementById('panel-auto').classList.add('active');
+                    initTemplatesTab();
+                } else if (tabKey === 'logs') {
+                    document.querySelectorAll('.hub-tab-btn')[2].classList.add('active');
+                    document.getElementById('panel-logs').classList.add('active');
+                    loadDeliveryLogs();
+                } else if (tabKey === 'scheduler') {
+                    document.querySelectorAll('.hub-tab-btn')[3].classList.add('active');
+                    document.getElementById('panel-scheduler').classList.add('active');
+                    loadSchedulerTracker();
+                } else if (tabKey === 'trigger-audit') {
+                    document.querySelectorAll('.hub-tab-btn')[4].classList.add('active');
+                    document.getElementById('panel-trigger-audit').classList.add('active');
+                    loadTriggerAuditLogs();
+                }
             }
+        }
+
+        // ===== TAB 2: CENTRAL TEMPLATE MANAGEMENT HUB JS =====
+        let allTemplatesCache = [];
+        let isConfigAdmin = false;
+
+        function initTemplatesTab() {
+            loadTemplatesList();
+            checkConfigAdminAccess();
+        }
+
+        function checkConfigAdminAccess() {
+            fetch('/api/v1/staff/auth/me', { headers: getAuthHeaders() })
+                .then(r => r.ok ? r.json() : {})
+                .then(userData => {
+                    const role = (userData.role_code || userData.role || '').toLowerCase();
+                    const level = userData.hierarchy_level || 0;
+                    const isAuthRole = ["vgk4u", "vgk4u_supreme", "key_leadership", "ea", "leadership_role", "admin", "super_admin"].includes(role);
+                    isConfigAdmin = isAuthRole || level >= 80;
+
+                    const btnCreate = document.getElementById('btnCreateTemplate');
+                    const btnSync = document.getElementById('btnSyncMeta');
+                    if (btnCreate) btnCreate.style.display = isConfigAdmin ? 'inline-block' : 'none';
+                    if (btnSync) btnSync.style.display = isConfigAdmin ? 'inline-block' : 'none';
+                })
+                .catch(() => {
+                    isConfigAdmin = false;
+                });
+        }
+
+        function loadTemplatesList() {
+            const container = document.getElementById('tplCardsContainer');
+            if (container) {
+                container.innerHTML = '<div class="col-12 text-center p-5 text-muted"><i class="fas fa-spinner fa-spin fa-2x me-2"></i> Loading template registry from database...</div>';
+            }
+
+            fetch('/api/v1/whatsapp-config/templates?is_active=true', { headers: getAuthHeaders() })
+                .then(res => res.json())
+                .then(data => {
+                    allTemplatesCache = data.templates || [];
+                    filterTemplatesLive();
+                })
+                .catch(err => {
+                    if (container) {
+                        container.innerHTML = `<div class="col-12 text-center p-4 text-danger"><i class="fas fa-exclamation-circle me-2"></i> Failed to load templates: ${err.message}</div>`;
+                    }
+                });
+        }
+
+        function filterTemplatesLive() {
+            const searchInput = document.getElementById('tplSearchInput');
+            const search = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            const segment = (document.getElementById('tplSegmentFilter')?.value || '').toLowerCase();
+            const scope = (document.getElementById('tplUsageScopeFilter')?.value || '').toLowerCase();
+            const status = (document.getElementById('tplMetaStatusFilter')?.value || '').toUpperCase();
+
+            let filtered = allTemplatesCache.filter(t => {
+                if (search) {
+                    const matchName = (t.name || '').toLowerCase().includes(search);
+                    const matchSlug = (t.slug || '').toLowerCase().includes(search);
+                    const matchBody = (t.body_text || '').toLowerCase().includes(search);
+                    if (!matchName && !matchSlug && !matchBody) return false;
+                }
+                if (segment && (t.segment || '').toLowerCase() !== segment) return false;
+                if (scope && (t.usage_scope || '').toLowerCase() !== scope) return false;
+                if (status) {
+                    if (status === 'APPROVED' && t.meta_approval_status !== 'APPROVED') return false;
+                    if (status === 'PENDING' && t.meta_approval_status !== 'PENDING') return false;
+                    if (status === 'REJECTED' && t.meta_approval_status !== 'REJECTED') return false;
+                    if (status === 'INTERNAL_ONLY' && (t.meta_approval_status === 'APPROVED' || t.is_meta_approved)) return false;
+                }
+                return true;
+            });
+
+            renderTemplateCards(filtered);
+
+            const counter = document.getElementById('tplStatsCounter');
+            if (counter) {
+                const approvedCount = allTemplatesCache.filter(t => t.is_meta_approved || t.meta_approval_status === 'APPROVED').length;
+                const internalCount = allTemplatesCache.length - approvedCount;
+                counter.innerHTML = `Showing <b>${filtered.length}</b> of <b>${allTemplatesCache.length        function renderTemplateCards(templates) {
+            const container = document.getElementById('tplCardsContainer');
+            if (!container) return;
+
+            if (templates.length === 0) {
+                container.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center p-5 text-muted">
+                            <i class="fas fa-search fa-2x text-muted mb-2"></i>
+                            <h6 class="fw-bold text-dark">No Templates Found</h6>
+                            <p class="text-muted small m-0">No WhatsApp templates match the selected filter criteria.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            container.innerHTML = templates.map(t => {
+                const isSys = t.is_system;
+                const isApproved = t.is_meta_approved || t.meta_approval_status === 'APPROVED';
+                
+                let metaBadge = '<span class="badge bg-secondary" style="font-size: 10px;">INTERNAL ONLY</span>';
+                if (t.meta_approval_status === 'APPROVED' || isApproved) {
+                    metaBadge = '<span class="badge bg-success" style="font-size: 10px;"><i class="fas fa-check-circle me-1"></i>META APPROVED</span>';
+                } else if (t.meta_approval_status === 'PENDING') {
+                    metaBadge = '<span class="badge bg-warning text-dark" style="font-size: 10px;"><i class="fas fa-clock me-1"></i>META PENDING</span>';
+                } else if (t.meta_approval_status === 'REJECTED') {
+                    metaBadge = '<span class="badge bg-danger" style="font-size: 10px;"><i class="fas fa-times-circle me-1"></i>META REJECTED</span>';
+                }
+
+                const segName = (t.segment || 'general').toUpperCase();
+                const scopeName = (t.usage_scope || 'both').toUpperCase();
+                const sysBadge = isSys ? '<span class="badge bg-dark text-warning border border-secondary" style="font-size: 10px;"><i class="fas fa-lock me-1"></i>SYSTEM</span>' : '';
+
+                // Applicable For / Target Audience Resolution
+                let applicableFor = 'All Audience';
+                if (segName.includes('PARTNER') || segName.includes('VGK')) applicableFor = '👥 Channel Partners & Members';
+                else if (segName.includes('LEAD') || segName.includes('SOLAR')) applicableFor = '🎯 CRM Leads & Customers';
+                else if (segName.includes('STAFF')) applicableFor = '👔 Staff & Internal Team';
+                else if (segName.includes('EV')) applicableFor = '⚡ EV B2C / B2B Clients';
+                else if (segName.includes('SYSTEM')) applicableFor = '🤖 Automated Schedulers';
+
+                // Extract {{vars}}
+                const matches = (t.body_text || '').match(/\{\{([a-zA-Z0-9_ ]+)\}\}/g) || [];
+                const uniqueVars = Array.from(new Set(matches));
+
+                // Body preview
+                let bodyPreview = escapeJS(t.body_text || '');
+                if (bodyPreview.length > 180) {
+                    bodyPreview = bodyPreview.substring(0, 180) + '...';
+                }
+                bodyPreview = bodyPreview.replace(/\{\{([a-zA-Z0-9_ ]+)\}\}/g, '<mark class="bg-warning text-dark px-1 rounded font-monospace" style="font-size: 11px;">{{$1}}</mark>');
+
+                // Button controls
+                let editBtn = '';
+                if (isSys) {
+                    editBtn = `<button class="btn btn-sm btn-light text-muted border p-1 px-2" disabled title="System Protected"><i class="fas fa-lock"></i></button>`;
+                } else if (isConfigAdmin) {
+                    editBtn = `<button class="btn btn-sm btn-outline-primary fw-bold p-1 px-2" onclick="openEditTemplateModal(${t.id})" title="Edit Template"><i class="fas fa-edit"></i> Edit</button>`;
+                } else {
+                    editBtn = `<button class="btn btn-sm btn-outline-secondary p-1 px-2" disabled><i class="fas fa-lock"></i></button>`;
+                }
+
+                const testSendBtn = `<button class="btn btn-sm btn-outline-warning text-dark fw-bold p-1 px-2 me-1" onclick="openTestSendModal(${t.id})" title="Test Send"><i class="fas fa-vial"></i> Test</button>`;
+
+                return `
+                    <tr>
+                        <td>
+                            <span class="badge bg-primary px-2 py-1" style="font-size: 10.5px;">${segName}</span>
+                            <div class="mt-1"><small class="text-muted" style="font-size: 10px;">${scopeName}</small></div>
+                        </td>
+                        <td>
+                            <strong class="text-dark d-block" style="font-size: 13.5px;">${escapeJS(t.name)}</strong>
+                            <code class="text-muted" style="font-size: 11px;">${escapeJS(t.slug || '-')}</code>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border px-2 py-1">${applicableFor}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-column gap-1 align-items-start">
+                                ${metaBadge}
+                                ${sysBadge}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="p-2 rounded bg-light border text-dark font-monospace" style="font-size: 11.5px; line-height: 1.4; max-height: 90px; overflow-y: auto; white-space: pre-wrap;">
+                                ${bodyPreview}
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <div class="d-flex justify-content-end gap-1">
+                                ${testSendBtn}
+                                ${editBtn}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }                  </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openCreateTemplateModal() {
+            document.getElementById('tplFormId').value = '';
+            document.getElementById('templateForm').reset();
+            document.getElementById('tplModalAlert').style.display = 'none';
+            document.getElementById('templateModalTitle').innerHTML = '<i class="fas fa-plus-circle me-2"></i> Create WhatsApp Template';
+            new bootstrap.Modal(document.getElementById('templateModal')).show();
+        }
+
+        function openEditTemplateModal(id) {
+            const t = allTemplatesCache.find(x => x.id === id);
+            if (!t) return;
+            if (t.is_system) {
+                alert(`Protected System Template: '${t.name}' is a system template and cannot be edited.`);
+                return;
+            }
+
+            document.getElementById('tplFormId').value = t.id;
+            document.getElementById('tplFormName').value = t.name || '';
+            document.getElementById('tplFormSegment').value = t.segment || 'general';
+            document.getElementById('tplFormType').value = t.template_type || 'custom';
+            document.getElementById('tplFormUsageScope').value = t.usage_scope || 'both';
+            document.getElementById('tplFormHeaderType').value = t.header_type || 'none';
+            document.getElementById('tplFormBody').value = t.body_text || '';
+            document.getElementById('tplFormFooter').value = t.footer_text || '';
+            document.getElementById('tplModalAlert').style.display = 'none';
+            document.getElementById('templateModalTitle').innerHTML = `<i class="fas fa-edit me-2"></i> Edit Template: ${escapeJS(t.name)}`;
+            new bootstrap.Modal(document.getElementById('templateModal')).show();
+        }
+
+        function saveTemplateForm() {
+            const id = document.getElementById('tplFormId').value;
+            const name = document.getElementById('tplFormName').value.trim();
+            const segment = document.getElementById('tplFormSegment').value;
+            const template_type = document.getElementById('tplFormType').value;
+            const usage_scope = document.getElementById('tplFormUsageScope').value;
+            const header_type = document.getElementById('tplFormHeaderType').value;
+            const body_text = document.getElementById('tplFormBody').value.trim();
+            const footer_text = document.getElementById('tplFormFooter').value.trim();
+
+            const alertEl = document.getElementById('tplModalAlert');
+
+            if (!name || !body_text) {
+                alertEl.textContent = 'Please fill in required fields (Template Name and Message Body Text).';
+                alertEl.style.display = 'block';
+                return;
+            }
+
+            const payload = { name, segment, template_type, usage_scope, header_type, body_text, footer_text };
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/api/v1/whatsapp-config/templates/${id}` : '/api/v1/whatsapp-config/templates';
+
+            const btnSave = document.getElementById('btnSaveTplForm');
+            btnSave.disabled = true;
+            btnSave.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+
+            fetch(url, {
+                method: method,
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json().then(data => ({ status: res.status, ok: res.ok, data })))
+            .then(res => {
+                btnSave.disabled = false;
+                btnSave.innerHTML = '<i class="fas fa-save me-1"></i> Save Template';
+
+                if (!res.ok || !res.data.success) {
+                    alertEl.textContent = res.data.detail || res.data.message || `Error saving template (HTTP ${res.status})`;
+                    alertEl.style.display = 'block';
+                    return;
+                }
+
+                bootstrap.Modal.getInstance(document.getElementById('templateModal')).hide();
+                loadTemplatesList();
+            })
+            .catch(err => {
+                btnSave.disabled = false;
+                btnSave.innerHTML = '<i class="fas fa-save me-1"></i> Save Template';
+                alertEl.textContent = 'Save failed: ' + err.message;
+                alertEl.style.display = 'block';
+            });
+        }
+
+        function deleteTemplate(id) {
+            const t = allTemplatesCache.find(x => x.id === id);
+            if (!t) return;
+            if (t.is_system) {
+                alert(`Protected System Template: '${t.name}' is a system template and cannot be deleted.`);
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete template '${t.name}'? This action cannot be undone.`)) {
+                return;
+            }
+
+            fetch(`/api/v1/whatsapp-config/templates/${id}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            })
+            .then(res => res.json().then(data => ({ status: res.status, ok: res.ok, data })))
+            .then(res => {
+                if (!res.ok || !res.data.success) {
+                    alert('❌ Delete failed: ' + (res.data.detail || res.data.message || 'Permission denied or server error'));
+                    return;
+                }
+                loadTemplatesList();
+            })
+            .catch(err => {
+                alert('❌ Delete failed: ' + err.message);
+            });
+        }
+
+        function syncMetaTemplates() {
+            const btn = document.getElementById('btnSyncMeta');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Syncing Meta WABA...';
+            }
+
+            fetch('/api/v1/whatsapp-config/meta-templates/sync-status', {
+                method: 'POST',
+                headers: getAuthHeaders()
+            })
+            .then(res => res.json().then(data => ({ status: res.status, ok: res.ok, data })))
+            .then(res => {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Sync Meta WABA Templates';
+                }
+
+                if (!res.ok || !res.data.success) {
+                    alert('❌ Meta Sync Failed: ' + (res.data.detail || res.data.message || 'Server returned error'));
+                    return;
+                }
+
+                const d = res.data;
+                alert(`✅ Meta WABA Templates Synced Successfully!\n\n` +
+                      `Total Synced: ${d.total_synced || 0}\n` +
+                      `Newly Approved: ${d.newly_approved || 0}\n` +
+                      `Orphans Captured: ${(d.orphans_captured || []).length}\n` +
+                      `Not Found on Meta: ${d.not_found_on_meta || 0}`);
+
+                loadTemplatesList();
+            })
+            .catch(err => {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Sync Meta WABA Templates';
+                }
+                alert('❌ Meta Sync Network Error: ' + err.message);
+            });
+        }
+
+        function openTestSendModal(templateId) {
+            const select = document.getElementById('testSendTplSelect');
+            if (!select) return;
+
+            select.innerHTML = '<option value="">-- Choose Template --</option>' + 
+                allTemplatesCache.map(t => `<option value="${t.id}">${escapeJS(t.name)} (${t.segment || 'general'})</option>`).join('');
+
+            if (templateId) select.value = templateId;
+            document.getElementById('testSendPhone').value = '';
+            document.getElementById('testSendAlert').style.display = 'none';
+
+            handleTestSendTemplateChange();
+            new bootstrap.Modal(document.getElementById('testSendModal')).show();
+        }
+
+        function handleTestSendTemplateChange() {
+            const select = document.getElementById('testSendTplSelect');
+            const tplId = parseInt(select.value);
+            const t = allTemplatesCache.find(x => x.id === tplId);
+
+            const varsContainer = document.getElementById('testSendVarsContainer');
+            const varsFields = document.getElementById('testSendVarsFields');
+            const previewEl = document.getElementById('testSendPreviewText');
+
+            if (!t) {
+                if (varsContainer) varsContainer.style.display = 'none';
+                if (previewEl) previewEl.textContent = 'Select a template above to generate variable fields and preview resolved message.';
+                return;
+            }
+
+            const rawBody = t.body_text || '';
+            const matches = rawBody.match(/\{\{([a-zA-Z0-9_ ]+)\}\}/g) || [];
+            const uniqueVars = Array.from(new Set(matches.map(m => m.replace(/[\{\}]/g, '').trim())));
+
+            if (uniqueVars.length === 0) {
+                varsContainer.style.display = 'none';
+                previewEl.textContent = rawBody;
+                return;
+            }
+
+            varsContainer.style.display = 'block';
+            varsFields.innerHTML = uniqueVars.map(v => `
+                <div style="flex: 1 1 200px;">
+                    <label class="form-label text-muted fw-bold mb-1" style="font-size: 11px;">Variable {{${escapeJS(v)}}}</label>
+                    <input type="text" class="form-control form-control-sm test-send-var-input" data-var-key="${escapeJS(v)}" placeholder="Value for {{${escapeJS(v)}}}..." onkeyup="updateTestSendPreview()" />
+                </div>
+            `).join('');
+
+            updateTestSendPreview();
+        }
+
+        function updateTestSendPreview() {
+            const select = document.getElementById('testSendTplSelect');
+            const tplId = parseInt(select.value);
+            const t = allTemplatesCache.find(x => x.id === tplId);
+            const previewEl = document.getElementById('testSendPreviewText');
+            if (!t || !previewEl) return;
+
+            let resolved = t.body_text || '';
+            document.querySelectorAll('.test-send-var-input').forEach(inp => {
+                const key = inp.getAttribute('data-var-key');
+                const val = inp.value.trim();
+                if (key && val) {
+                    const regex = new RegExp('\\{\\{\\s*' + key + '\\s*\\}\\}', 'gi');
+                    resolved = resolved.replace(regex, val);
+                }
+            });
+
+            previewEl.textContent = resolved;
+        }
+
+        function dispatchTestSend() {
+            const phoneInput = document.getElementById('testSendPhone').value.trim();
+            const select = document.getElementById('testSendTplSelect');
+            const tplId = parseInt(select.value);
+            const alertEl = document.getElementById('testSendAlert');
+
+            const digits = phoneInput.replace(/\D/g, '');
+            if (!digits || digits.length < 10) {
+                alertEl.textContent = '❌ Please enter a valid 10-digit mobile number.';
+                alertEl.style.display = 'block';
+                return;
+            }
+            const cleanPhone = digits.slice(-10);
+
+            if (!tplId) {
+                alertEl.textContent = '❌ Please select a template to test send.';
+                alertEl.style.display = 'block';
+                return;
+            }
+
+            const t = allTemplatesCache.find(x => x.id === tplId);
+            const rawBody = t ? (t.body_text || '') : '';
+            const matches = rawBody.match(/\{\{([a-zA-Z0-9_ ]+)\}\}/g) || [];
+            const uniqueVars = Array.from(new Set(matches.map(m => m.replace(/[\{\}]/g, '').trim())));
+
+            const varsMap = {};
+            let missingVar = null;
+
+            document.querySelectorAll('.test-send-var-input').forEach(inp => {
+                const key = inp.getAttribute('data-var-key');
+                const val = inp.value.trim();
+                if (!val && !missingVar) {
+                    missingVar = key;
+                }
+                varsMap[key] = val;
+            });
+
+            if (missingVar) {
+                alertEl.textContent = `❌ Missing Variable: Please fill in a value for placeholder {{${missingVar}}} before sending test dispatch.`;
+                alertEl.style.display = 'block';
+                return;
+            }
+
+            alertEl.style.display = 'none';
+            const btn = document.getElementById('btnDispatchTestSend');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Dispatching...';
+
+            const payload = {
+                phone: cleanPhone,
+                template_id: tplId,
+                context_vars: varsMap,
+                send_type: 'meta'
+            };
+
+            fetch('/api/v1/whatsapp-config/test-send', {
+                method: 'POST',
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json().then(data => ({ status: res.status, ok: res.ok, data })))
+            .then(res => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Dispatch Test Send';
+
+                if (!res.ok || !res.data.success) {
+                    alertEl.textContent = '❌ Test send failed: ' + (res.data.detail || res.data.reason || res.data.message || 'Server error');
+                    alertEl.className = 'alert alert-danger p-2 mb-3';
+                    alertEl.style.display = 'block';
+                    return;
+                }
+
+                alertEl.className = 'alert alert-success p-2 mb-3';
+                alertEl.textContent = `✅ Test send dispatched successfully! Message SID / WAMID: ${res.data.wamid || 'Sent'}`;
+                alertEl.style.display = 'block';
+
+                setTimeout(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('testSendModal')).hide();
+                }, 2000);
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Dispatch Test Send';
+                alertEl.className = 'alert alert-danger p-2 mb-3';
+                alertEl.textContent = '❌ Test send network error: ' + err.message;
+                alertEl.style.display = 'block';
+            });
         }
 
         function loadTriggerAuditLogs() {
@@ -731,6 +1555,22 @@
                         </div>
                     `;
 
+                    const st = j.latest_stats || { total_messages: 1, sent_count: 1, failed_count: 0 };
+                    const totalVal = (st.total_messages || 0).toLocaleString('en-IN');
+                    const sentVal = (st.sent_count || 0).toLocaleString('en-IN');
+                    const failedVal = (st.failed_count || 0).toLocaleString('en-IN');
+
+                    const statsCell = `
+                        <div class="d-flex flex-wrap gap-1 align-items-center" style="font-size:11px">
+                            <span class="badge bg-secondary text-light fw-bold" title="Total Target Recipients"><i class="fas fa-paper-plane me-1"></i>${totalVal} Total</span>
+                            <span class="badge bg-success text-white fw-bold" title="Successfully Dispatched / Sent"><i class="fas fa-check-circle me-1"></i>${sentVal} Sent</span>
+                            ${st.failed_count > 0 
+                                ? `<span class="badge bg-danger text-white fw-bold" title="Failed Dispatches"><i class="fas fa-times-circle me-1"></i>${failedVal} Failed</span>`
+                                : `<span class="badge bg-dark text-muted fw-normal" title="Zero Failures"><i class="fas fa-check me-1"></i>0 Failed</span>`
+                            }
+                        </div>
+                    `;
+
                     return `
                         <tr>
                             <td>
@@ -739,14 +1579,20 @@
                             </td>
                             <td><span class="badge bg-dark text-info border border-info px-2 py-1">${j.schedule}</span></td>
                             <td>${recCell}</td>
+                            <td>${statsCell}</td>
                             <td>${renderBadge(j.day_2_ago)}</td>
                             <td>${renderBadge(j.yesterday)}</td>
                             <td>${renderBadge(j.today)}</td>
                             <td><small class="text-success fw-bold"><i class="fas fa-clock me-1"></i>${j.next_run}</small></td>
                             <td>
-                                <button class="btn btn-sm btn-outline-warning fw-bold text-nowrap" id="btn-trigger-${j.job_id}" onclick="triggerJobNow('${j.job_id}', this)">
-                                    <i class="fas fa-bolt me-1"></i> ⚡ Trigger Now
-                                </button>
+                                <div class="d-flex flex-column gap-1">
+                                    <button class="btn btn-sm btn-outline-warning fw-bold text-nowrap" id="btn-trigger-${j.job_id}" onclick="triggerJobNow('${j.job_id}', this)">
+                                        <i class="fas fa-bolt me-1"></i> ⚡ Trigger Now
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info fw-bold text-nowrap" onclick="openViewEditTemplateModal('${j.job_id}', '${escapeJS(j.name)}')">
+                                        <i class="fas fa-edit me-1"></i> ✏️ View / Edit Template
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     `;
@@ -755,7 +1601,7 @@
             .catch(err => {
                 console.error("Error loading scheduler tracker:", err);
                 const tbody = document.getElementById('schedulerTableBody');
-                if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-danger">Failed to load scheduler tracker. (' + (err.message || 'Error') + ')</td></tr>';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="text-center p-4 text-danger">Failed to load scheduler tracker. (' + (err.message || 'Error') + ')</td></tr>';
             });
         }
 
@@ -937,6 +1783,139 @@
             });
         }
 
+        let currentEditJobId = '';
+
+        function openViewEditTemplateModal(jobId, jobName) {
+            currentEditJobId = jobId;
+            document.getElementById('jobTplEditTitle').innerHTML = `<i class="fas fa-edit text-info me-2"></i> View & Edit Message Template — ${jobName}`;
+            const modalEl = document.getElementById('jobTemplateEditModal');
+            const modal = new bootstrap.Modal(modalEl);
+            
+            document.getElementById('jobTplSaveProgressAlert').style.display = 'none';
+            document.getElementById('jobTplEditorTextarea').value = 'Loading template content...';
+            document.getElementById('jobTplPreview').textContent = 'Loading preview...';
+            document.getElementById('jobTplVarsContainer').innerHTML = 'Loading variables...';
+
+            modal.show();
+
+            fetch(`/api/v1/whatsapp/scheduler-templates/${jobId}`, { headers: getAuthHeaders() })
+            .then(r => r.json())
+            .then(d => {
+                if (!d.success) throw new Error(d.detail || 'Failed to fetch template.');
+                
+                document.getElementById('jobTplEditorTextarea').value = d.template_text;
+                updateJobTplPreview();
+
+                // Render available variables
+                const vars = d.available_variables || [];
+                if (vars.length > 0) {
+                    document.getElementById('jobTplVarsContainer').innerHTML = vars.map(v => 
+                        `<span class="badge bg-dark text-warning border border-warning me-1 mb-1 p-2" style="cursor:pointer" onclick="insertTplVar('${v}')" title="Click to insert variable"><i class="fas fa-plus-circle me-1"></i>${v}</span>`
+                    ).join('');
+                } else {
+                    document.getElementById('jobTplVarsContainer').innerHTML = '<small class="text-muted">No dynamic variables for this job.</small>';
+                }
+            })
+            .catch(err => {
+                document.getElementById('jobTplSaveProgressAlert').className = 'alert alert-danger p-2 mb-3';
+                document.getElementById('jobTplSaveProgressAlert').style.display = 'block';
+                document.getElementById('jobTplSaveProgressAlert').textContent = `Error: ${err.message}`;
+            });
+        }
+
+        function insertTplVar(v) {
+            const ta = document.getElementById('jobTplEditorTextarea');
+            const start = ta.selectionStart;
+            const end = ta.selectionEnd;
+            const text = ta.value;
+            ta.value = text.substring(0, start) + v + text.substring(end);
+            ta.focus();
+            ta.selectionStart = ta.selectionEnd = start + v.length;
+            updateJobTplPreview();
+        }
+
+        function updateJobTplPreview() {
+            const text = document.getElementById('jobTplEditorTextarea').value || '';
+            // Sample variable replacement for live visual preview
+            const sampleResolved = text
+                .replace(/\{member_name\}/g, "Mr. Tharakaramarao Allu")
+                .replace(/\{user_code\}/g, "VGK07105186")
+                .replace(/\{phone\}/g, "+91 9876543210")
+                .replace(/\{designation\}/g, "Channel Partner")
+                .replace(/\{payout_status_label\}/g, "🟢 Eligible for Payout Disbursal")
+                .replace(/\{overall_gross_earned\}/g, "31,692")
+                .replace(/\{earned_till_date_net\}/g, "28,522.80")
+                .replace(/\{potential_earnings\}/g, "42,750")
+                .replace(/\{bonus_extra_value\}/g, "11,000")
+                .replace(/\{active_files_advance_paid\}/g, "10,000")
+                .replace(/\{gross_pending\}/g, "12,692")
+                .replace(/\{lost_lead_adv_deducted_pending\}/g, "1,000")
+                .replace(/\{net_pending\}/g, "10,522.80")
+                .replace(/\{total_files\}/g, "15")
+                .replace(/\{stage1_files\}/g, "8")
+                .replace(/\{stage1_total_adv\}/g, "8,000")
+                .replace(/\{stage2_files\}/g, "2")
+                .replace(/\{stage2_total_adv\}/g, "2,000")
+                .replace(/\{stage3_completed_files\}/g, "2")
+                .replace(/\{stage3_total_comm\}/g, "10,692")
+                .replace(/\{bonus_entries_count\}/g, "7")
+                .replace(/\{bonus_total_amt\}/g, "11,000")
+                .replace(/\{customer_name\}/g, "Badakala Shanthamma")
+                .replace(/\{active_earning_partners\}/g, "24")
+                .replace(/\{total_gross_earned\}/g, "12,50,000")
+                .replace(/\{total_pipeline_val\}/g, "45,000,000")
+                .replace(/\{theme_header\}/g, "🌅 *START YOUR SUNDAY WITH PURPOSE — IGNITE YOUR PASSION!*")
+                .replace(/\{theme_quote\}/g, "“The secret of getting ahead is getting started.”")
+                .replace(/\{theme_focus\}/g, "Share your referral link today.");
+
+            document.getElementById('jobTplPreview').textContent = sampleResolved;
+        }
+
+        function saveJobTemplateText() {
+            if (!currentEditJobId) return;
+            const btn = document.getElementById('btnSaveJobTemplate');
+            const alert = document.getElementById('jobTplSaveProgressAlert');
+            const ttext = document.getElementById('jobTplEditorTextarea').value;
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i> Saving & Updating Records...`;
+            
+            alert.className = 'alert alert-info p-2 mb-3';
+            alert.style.display = 'block';
+            alert.innerHTML = `<i class="fas fa-sync fa-spin me-1"></i> Updating job template config and refreshing all target recipient records...`;
+
+            fetch(`/api/v1/whatsapp/scheduler-templates/${currentEditJobId}`, {
+                method: 'POST',
+                headers: Object.assign({ 'Content-Type': 'application/json' }, getAuthHeaders()),
+                body: JSON.stringify({ template_text: ttext })
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (!d.success) throw new Error(d.detail || d.error || 'Failed to save template.');
+
+                alert.className = 'alert alert-success p-2 mb-3';
+                alert.innerHTML = `<i class="fas fa-check-circle me-1"></i> <strong>Template Saved Successfully!</strong> All relevant recipient records updated with the new template config.`;
+                
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fas fa-save me-1"></i> Save Template Config`;
+
+                // Refresh live tracker UI automatically
+                loadSchedulerTracker();
+
+                setTimeout(() => {
+                    const modalEl = document.getElementById('jobTemplateEditModal');
+                    const instance = bootstrap.Modal.getInstance(modalEl);
+                    if (instance) instance.hide();
+                }, 1500);
+            })
+            .catch(err => {
+                alert.className = 'alert alert-danger p-2 mb-3';
+                alert.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i> Error: ${err.message}`;
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fas fa-save me-1"></i> Save Template Config`;
+            });
+        }
+
         function checkBotStatus() {
             fetch('http://localhost:5002/status')
                 .then(res => res.json())
@@ -956,6 +1935,141 @@
                 });
         }
 
+        let dbTemplatesCache = [];
+
+        function initMessengerUI() {
+            const tok = getAuthToken();
+
+            // Load Centralized DB Templates from /api/v1/whatsapp-config/templates
+            fetch('/api/v1/whatsapp-config/templates?is_active=true', {
+                headers: { 'Authorization': 'Bearer ' + tok }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.templates && data.templates.length > 0) {
+                    dbTemplatesCache = data.templates;
+                    populateCentralTemplateSelect(data.templates);
+                }
+            })
+            .catch(err => console.log('Template fetch fallback:', err));
+
+            // Check if staff has Admin access for scope='all'
+            fetch('/api/v1/whatsapp/conversations-hub?scope=all&limit=1', {
+                headers: { 'Authorization': 'Bearer ' + tok }
+            })
+            .then(res => {
+                if (res.ok) {
+                    const optAll = document.getElementById('optScopeAll');
+                    if (optAll) optAll.style.display = 'block';
+                }
+            })
+            .catch(() => {});
+        }
+
+        function populateCentralTemplateSelect(templates) {
+            const select = document.getElementById('chatTemplateSelect');
+            if (!select) return;
+
+            // Group templates by segment
+            const groups = {};
+            templates.forEach(t => {
+                const seg = (t.segment || 'General').toUpperCase();
+                if (!groups[seg]) groups[seg] = [];
+                groups[seg].push(t);
+            });
+
+            let html = '<option value="">✍️ Write Custom Message</option>';
+            for (const [segName, tplList] of Object.entries(groups)) {
+                html += `<optgroup label="📋 ${segName}">`;
+                tplList.forEach(t => {
+                    html += `<option value="${t.id}" data-slug="${t.slug}" data-meta="${t.is_meta_approved ? '1':'0'}">${t.name} ${t.is_meta_approved ? '✓ (Meta Approved)' : ''}</option>`;
+                });
+                html += `</optgroup>`;
+            }
+            select.innerHTML = html;
+        }
+
+        function handleChatTemplateChange() {
+            const select = document.getElementById('chatTemplateSelect');
+            const tplId = select.value;
+            const badge = document.getElementById('selectedTplSlugBadge');
+            const varsContainer = document.getElementById('tplVarsContainer');
+            const varsFields = document.getElementById('tplVarsFields');
+            const textarea = document.getElementById('chatReplyInput');
+
+            if (!tplId) {
+                badge.style.display = 'none';
+                varsContainer.style.display = 'none';
+                textarea.value = '';
+                textarea.readOnly = false;
+                return;
+            }
+
+            const tpl = dbTemplatesCache.find(t => String(t.id) === String(tplId));
+            if (!tpl) return;
+
+            badge.style.display = 'inline-block';
+            badge.textContent = `Template: ${tpl.slug}`;
+            badge.className = tpl.is_meta_approved ? 'badge bg-success' : 'badge bg-info text-dark';
+
+            let body = tpl.body_text || '';
+            const matches = body.match(/\{\{\s*([^}]+)\s*\}\}/g) || [];
+            const uniqueVars = [...new Set(matches.map(m => m.replace(/[\{\}\s]/g, '')))];
+
+            if (uniqueVars.length === 0) {
+                varsContainer.style.display = 'none';
+                textarea.value = body;
+            } else {
+                varsContainer.style.display = 'block';
+                varsFields.innerHTML = uniqueVars.map(v => {
+                    let defaultVal = '';
+                    const vLower = v.toLowerCase();
+                    if (['name', 'customer_name', 'lead_name', '1'].includes(vLower)) {
+                        defaultVal = document.getElementById('chatActiveName').textContent || '';
+                    } else if (['phone', 'mobile_number', '2'].includes(vLower)) {
+                        defaultVal = activeRecipientPhone || '';
+                    }
+                    return `
+                        <div class="d-flex align-items-center gap-1" style="font-size: 11px;">
+                            <span class="fw-bold text-muted">{{${v}}}:</span>
+                            <input type="text" class="form-control form-control-sm tpl-var-input" data-var="${v}" value="${defaultVal}" onkeyup="updateTemplatePreview()" style="width: 140px; font-size: 11px; padding: 2px 6px;" />
+                        </div>
+                    `;
+                }).join('');
+                updateTemplatePreview();
+            }
+        }
+
+        function updateTemplatePreview() {
+            const select = document.getElementById('chatTemplateSelect');
+            const tplId = select.value;
+            const textarea = document.getElementById('chatReplyInput');
+
+            const tpl = dbTemplatesCache.find(t => String(t.id) === String(tplId));
+            if (!tpl) return;
+
+            let body = tpl.body_text || '';
+            const inputs = document.querySelectorAll('.tpl-var-input');
+
+            inputs.forEach(inp => {
+                const varName = inp.getAttribute('data-var');
+                const val = inp.value.trim() || `{{${varName}}}`;
+                const regex = new RegExp(`\\{\\{\\s*${varName}\\s*\\}\\}`, 'gi');
+                body = body.replace(regex, val);
+            });
+
+            textarea.value = body;
+        }
+
+        function getTypeBadge(type) {
+            const t = (type || 'contact').toLowerCase();
+            if (t === 'staff') return '<span class="type-badge badge-staff"><i class="fas fa-user-tie me-1"></i> Staff</span>';
+            if (t === 'user') return '<span class="type-badge badge-user"><i class="fas fa-star me-1"></i> Member</span>';
+            if (t === 'group') return '<span class="type-badge badge-group"><i class="fas fa-users me-1"></i> Group</span>';
+            if (t === 'channel') return '<span class="type-badge badge-channel"><i class="fas fa-bullhorn me-1"></i> Channel</span>';
+            return '<span class="type-badge badge-contact"><i class="fas fa-user me-1"></i> Customer</span>';
+        }
+
         function getCatClass(cat) {
             if (cat.includes('Payout')) return 'cat-payout';
             if (cat.includes('Lead')) return 'cat-leads';
@@ -967,57 +2081,374 @@
             return localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token') || localStorage.getItem('access_token') || localStorage.getItem('token') || '';
         }
 
-        function loadConversations() {
-            const search = document.getElementById('convSearchInput').value.trim();
-            const category = document.getElementById('convCategoryFilter').value;
+        // ===== PHASE 4B: INLINE CONTACT SEARCH & NEW CHAT WORKFLOW =====
+        let searchDebounceTimer = null;
+
+        function handleSidebarSearchInput(event) {
+            const query = (event.target.value || '').trim();
+            const overlay = document.getElementById('searchResultsOverlay');
+            if (!overlay) return;
+
+            if (!query) {
+                overlay.style.display = 'none';
+                overlay.innerHTML = '';
+                if (allContactsCache.length > 0) {
+                    renderConversationsList(allContactsCache, false);
+                }
+                return;
+            }
+
+            if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+
+            searchDebounceTimer = setTimeout(() => {
+                const scopeEl = document.getElementById('convScopeFilter');
+                const scope = scopeEl ? scopeEl.value : 'assigned_tagged';
+                const tok = getAuthToken();
+
+                fetch(`/api/v1/whatsapp/contacts-search?query=${encodeURIComponent(query)}&scope=${encodeURIComponent(scope)}`, {
+                    headers: { 'Authorization': 'Bearer ' + tok }
+                })
+                .then(res => {
+                    if (res.status === 403) {
+                        return { success: false, error: '⚠️ Access Denied: Scope "All Messages" is restricted to Admin & EA authorization.' };
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    if (!data) return;
+                    if (!data.success && data.error) {
+                        overlay.innerHTML = `<div class="p-3 text-danger small"><i class="fas fa-exclamation-triangle me-1"></i> ${escapeJS(data.error)}</div>`;
+                        overlay.style.display = 'block';
+                        return;
+                    }
+
+                    const contacts = data.contacts || [];
+
+                    // Check for invalid phone warning if raw number typed
+                    const cleanDigits = query.replace(/\D/g, '');
+                    let invalidPhoneNotice = '';
+                    if (cleanDigits.length > 0 && cleanDigits.length < 10) {
+                        invalidPhoneNotice = `<div class="p-2 text-warning border-bottom bg-light" style="font-size: 10.5px;"><i class="fas fa-info-circle me-1"></i> Enter full 10-digit mobile number to start new chat</div>`;
+                    } else if (cleanDigits.length >= 10 && !['6','7','8','9'].includes(cleanDigits.slice(-10)[0])) {
+                        invalidPhoneNotice = `<div class="p-2 text-danger border-bottom bg-light" style="font-size: 10.5px;"><i class="fas fa-times-circle me-1"></i> Invalid Indian mobile number (must start with 6-9)</div>`;
+                    }
+
+                    if (contacts.length === 0) {
+                        overlay.innerHTML = `
+                            ${invalidPhoneNotice}
+                            <div class="p-3 text-center text-muted small">
+                                <i class="fas fa-search me-1"></i> No matching contacts found.
+                            </div>
+                        `;
+                        overlay.style.display = 'block';
+                        return;
+                    }
+
+                    overlay.innerHTML = invalidPhoneNotice + contacts.map(c => `
+                        <div class="p-2 border-bottom search-result-item" style="cursor: pointer;" onclick="selectSearchResult({name: '${c.name.replace(/'/g, "\\'")}', phone: '${c.phone}', type: '${c.type || 'contact'}'})">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <div class="fw-bold text-dark text-truncate" style="font-size: 12.5px; max-width: 200px;">
+                                    ${escapeJS(c.name)}
+                                </div>
+                                <span class="badge ${getSearchResultBadgeClass(c.type)}" style="font-size: 9.5px;">${c.badge || c.type}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center text-muted" style="font-size: 11px;">
+                                <span>${c.phone ? (c.phone.includes('http') || c.phone.includes('@') ? escapeJS(c.phone) : '+91 ' + c.phone) : 'No Phone'}</span>
+                                <small>${escapeJS(c.details || '')}</small>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    overlay.style.display = 'block';
+                })
+                .catch(() => {
+                    overlay.innerHTML = '<div class="p-3 text-center text-danger small">Failed to search contacts.</div>';
+                    overlay.style.display = 'block';
+                });
+            }, 200);
+        }
+
+        function handleSidebarSearchKeyDown(event) {
+            if (event.key === 'Escape') {
+                const overlay = document.getElementById('searchResultsOverlay');
+                if (overlay) overlay.style.display = 'none';
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            const overlay = document.getElementById('searchResultsOverlay');
+            const searchInput = document.getElementById('convSearchInput');
+            if (overlay && searchInput && !overlay.contains(e.target) && !searchInput.contains(e.target)) {
+                overlay.style.display = 'none';
+            }
+        });
+
+        function getSearchResultBadgeClass(type) {
+            switch ((type || '').toUpperCase()) {
+                case 'STAFF': return 'bg-info text-dark';
+                case 'USER': return 'bg-warning text-dark';
+                case 'GROUP': return 'bg-primary text-white';
+                case 'CHANNEL': return 'bg-purple text-white';
+                case 'PHONE': return 'bg-success text-white';
+                default: return 'bg-secondary text-white';
+            }
+        }
+
+        function selectSearchResult(item) {
+            const overlay = document.getElementById('searchResultsOverlay');
+            if (overlay) overlay.style.display = 'none';
+
+            const searchInput = document.getElementById('convSearchInput');
+            if (searchInput) searchInput.value = '';
+
+            const existing = allContactsCache.find(c => c.phone === item.phone);
+            if (existing) {
+                selectConv(existing.name, existing.phone, existing.contact_type || item.type);
+                return;
+            }
+
+            // Open new chat state
+            activeRecipientPhone = item.phone;
+            localUnreadState[item.phone] = 0;
+
+            document.getElementById('chatActiveName').textContent = item.name;
+            document.getElementById('chatActivePhone').textContent = item.phone.includes('http') || item.phone.includes('@') ? item.phone : `+91 ${item.phone}`;
+            document.getElementById('chatActiveTypeBadge').innerHTML = getTypeBadge(item.type || 'contact');
+
+            document.getElementById('composerStatusAlert').style.display = 'none';
+
+            const box = document.getElementById('chatHistoryBox');
+            box.innerHTML = `
+                <div class="d-flex flex-column align-items-center justify-content-center h-100 p-4 text-center my-auto">
+                    <div class="avatar-circle mb-3" style="width: 64px; height: 64px; background: linear-gradient(135deg, #10b981, #059669); color: white; font-size: 26px; font-weight: 700; display: flex; align-items: center; justify-content: center; border-radius: 50%; box-shadow: 0 4px 20px rgba(16,185,129,0.3);">
+                        ${(item.name || 'C').charAt(0).toUpperCase()}
+                    </div>
+                    <h6 class="fw-bold text-dark mb-1">${escapeJS(item.name)}</h6>
+                    <p class="text-muted small mb-2">${item.phone.includes('http') || item.phone.includes('@') ? escapeJS(item.phone) : `+91 ${escapeJS(item.phone)}`}</p>
+                    <span class="badge bg-light text-success border border-success border-opacity-25 px-3 py-1 mb-3" style="font-size: 11px; border-radius: 12px;">
+                        <i class="fab fa-whatsapp me-1"></i> Start New Conversation
+                    </span>
+                    <p class="text-muted small mx-auto mb-0" style="max-width: 340px;">
+                        Type a custom message below or select a Meta-approved template from the launcher above to send your first message.
+                    </p>
+                </div>
+            `;
+
+            // Focus composer input
+            setTimeout(() => {
+                const input = document.getElementById('chatReplyInput');
+                if (input) input.focus();
+            }, 100);
+        }
+
+        // ===== PHASE 4A: REAL-TIME MESSENGER REFRESH & UNREAD STATE =====
+        let messengerPollTimer = null;
+        let isPollingActive = false;
+        let consecutivePollFailures = 0;
+        let localUnreadState = {};
+        let lastMessageCountMap = {};
+
+        function startMessengerPolling() {
+            if (messengerPollTimer) clearInterval(messengerPollTimer);
+            messengerPollTimer = setInterval(() => {
+                if (!document.hidden) {
+                    pollMessengerData();
+                }
+            }, 5000);
+        }
+
+        function stopMessengerPolling() {
+            if (messengerPollTimer) {
+                clearInterval(messengerPollTimer);
+                messengerPollTimer = null;
+            }
+        }
+
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                stopMessengerPolling();
+            } else {
+                pollMessengerData();
+                startMessengerPolling();
+            }
+        });
+
+        function pollMessengerData() {
+            if (isPollingActive) return;
+
+            // If user is currently typing a search query, pause background list re-rendering
+            const searchInput = document.getElementById('convSearchInput');
+            const isSearching = searchInput && searchInput.value.trim().length > 0;
+            if (isSearching) return;
+
+            isPollingActive = true;
+
+            const search = searchInput ? searchInput.value.trim() : '';
+            const category = document.getElementById('convCategoryFilter')?.value || 'all';
+            const scopeEl = document.getElementById('convScopeFilter');
+            const scope = scopeEl ? scopeEl.value : 'assigned_tagged';
             const tok = getAuthToken();
 
-            fetch(`/api/v1/whatsapp/conversations-hub?search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}`, {
+            fetch(`/api/v1/whatsapp/conversations-hub?scope=${encodeURIComponent(scope)}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}`, {
                 headers: { 'Authorization': 'Bearer ' + tok }
             })
-            .then(res => res.json())
+            .then(res => {
+                if (res.status === 401 || res.status === 403) {
+                    stopMessengerPolling();
+                    isPollingActive = false;
+                    return null;
+                }
+                return res.json();
+            })
             .then(data => {
-                const container = document.getElementById('convItemsContainer');
-                if (!data.conversations || data.conversations.length === 0) {
-                    container.innerHTML = '<div class="text-center p-4 text-muted">No recent messages from scanner bot.</div>';
+                isPollingActive = false;
+                if (!data || !data.success) {
+                    consecutivePollFailures++;
+                    if (consecutivePollFailures > 5) stopMessengerPolling();
                     return;
                 }
 
-                allContactsCache = data.conversations;
-                populateContactSelect();
+                consecutivePollFailures = 0;
+                const conversations = data.conversations || [];
+                allContactsCache = conversations;
 
-                container.innerHTML = data.conversations.map((c, idx) => `
-                    <div class="conv-item ${idx === 0 && !activeRecipientPhone ? 'active' : (activeRecipientPhone === c.phone ? 'active' : '')}" onclick="selectConv('${c.name.replace(/'/g, "\\'")}', '${c.phone}')">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <div class="conv-name">${c.name}</div>
-                            <small class="text-muted" style="font-size: 11px;">${c.last_time}</small>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="cat-pill ${getCatClass(c.category)}">${c.category}</span>
-                            <small class="badge bg-light text-dark" style="font-size: 10px;">${c.delivery_status}</small>
-                        </div>
-                        <div class="conv-preview mt-1">${c.last_message}</div>
-                    </div>
-                `).join('');
+                renderConversationsList(conversations, true);
 
-                if (data.conversations.length > 0 && !activeRecipientPhone) {
-                    selectConv(data.conversations[0].name, data.conversations[0].phone);
+                if (activeRecipientPhone) {
+                    refreshActiveChatTranscript(true);
+                } else if (conversations.length > 0) {
+                    selectConv(conversations[0].name, conversations[0].phone, conversations[0].contact_type);
                 }
             })
             .catch(() => {
-                document.getElementById('convItemsContainer').innerHTML = '<div class="text-center p-4 text-danger">Failed to load conversations.</div>';
+                isPollingActive = false;
+                consecutivePollFailures++;
+                if (consecutivePollFailures > 5) stopMessengerPolling();
             });
         }
 
-        function populateContactSelect() {
-            const select = document.getElementById('selRecContact');
-            if (!allContactsCache || allContactsCache.length === 0) {
-                select.innerHTML = '<option value="">No contacts found</option>';
+        function loadConversations() {
+            pollMessengerData();
+        }
+
+        function renderConversationsList(conversations, isBackgroundRefresh) {
+            const container = document.getElementById('convItemsContainer');
+            if (!container) return;
+
+            if (conversations.length === 0) {
+                container.innerHTML = '<div class="text-center p-4 text-muted"><i class="fas fa-info-circle me-1"></i> No conversations found under current scope.</div>';
                 return;
             }
-            select.innerHTML = allContactsCache.map(c => `
-                <option value="${c.phone}">${c.name} (+91 ${c.phone})</option>
-            `).join('');
+
+            container.innerHTML = conversations.map((c, idx) => {
+                const isActive = activeRecipientPhone === c.phone || (idx === 0 && !activeRecipientPhone);
+                const unreadCount = isActive ? 0 : (localUnreadState[c.phone] !== undefined ? localUnreadState[c.phone] : (c.unread_count || 0));
+                
+                const unreadBadge = unreadCount > 0 
+                    ? `<span class="badge bg-danger rounded-pill ms-2 px-2 py-1" style="font-size: 10px;">${unreadCount}</span>`
+                    : '';
+
+                return `
+                    <div class="conv-item ${isActive ? 'active' : ''}" onclick="selectConv('${c.name.replace(/'/g, "\\'")}', '${c.phone}', '${c.contact_type || 'contact'}')">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div class="conv-name text-truncate d-flex align-items-center" style="max-width: 200px;">
+                                <span class="fw-bold">${escapeJS(c.name)}</span>
+                                ${unreadBadge}
+                            </div>
+                            <small class="text-muted" style="font-size: 11px;">${c.last_time || ''}</small>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            ${getTypeBadge(c.contact_type)}
+                            <span class="cat-pill ${getCatClass(c.category || '')}">${c.category || 'General'}</span>
+                        </div>
+                        <div class="conv-preview mt-1 ${unreadCount > 0 ? 'fw-bold text-dark' : ''}">${escapeJS(c.last_message || '—')}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ===== PHASE 4C: MEDIA ATTACHMENTS & FILE SEND WORKFLOW =====
+        let selectedAttachmentFile = null;
+        let selectedAttachmentUrl = null;
+
+        function triggerFilePicker() {
+            const input = document.getElementById('chatFileInput');
+            if (input) input.click();
+        }
+
+        function handleFileSelected(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const alertBox = document.getElementById('composerStatusAlert');
+            alertBox.style.display = 'none';
+
+            const ext = file.name.split('.').pop().toLowerCase();
+            const isImage = ['jpg', 'jpeg', 'png', 'webp'].includes(ext);
+            const isPdf = ext === 'pdf';
+
+            if (!isImage && !isPdf) {
+                alertBox.style.display = 'block';
+                alertBox.innerHTML = '⚠️ <b>Unsupported File Type:</b> Allowed formats are JPG, PNG, WEBP, and PDF.';
+                event.target.value = '';
+                return;
+            }
+
+            if (file.size === 0) {
+                alertBox.style.display = 'block';
+                alertBox.innerHTML = '⚠️ <b>Corrupt File:</b> The selected file is empty (0 bytes).';
+                event.target.value = '';
+                return;
+            }
+
+            const maxBytes = isImage ? (5 * 1024 * 1024) : (10 * 1024 * 1024);
+            if (file.size > maxBytes) {
+                const limitMb = isImage ? 5 : 10;
+                alertBox.style.display = 'block';
+                alertBox.innerHTML = `⚠️ <b>File Size Limit Exceeded:</b> File size (${(file.size / (1024 * 1024)).toFixed(1)} MB) exceeds maximum limit of ${limitMb} MB for ${ext.toUpperCase()} files.`;
+                event.target.value = '';
+                return;
+            }
+
+            selectedAttachmentFile = file;
+            selectedAttachmentUrl = null;
+
+            const card = document.getElementById('attachmentPreviewCard');
+            const nameEl = document.getElementById('txtAttachmentName');
+            const sizeEl = document.getElementById('txtAttachmentSize');
+            const imgEl = document.getElementById('imgAttachmentThumbnail');
+            const pdfIcon = document.getElementById('pdfAttachmentIcon');
+
+            nameEl.textContent = file.name;
+            sizeEl.textContent = formatBytes(file.size);
+
+            if (isImage) {
+                imgEl.src = URL.createObjectURL(file);
+                imgEl.style.display = 'block';
+                pdfIcon.style.display = 'none';
+            } else {
+                imgEl.style.display = 'none';
+                pdfIcon.style.display = 'block';
+            }
+
+            card.style.setProperty('display', 'flex', 'important');
+        }
+
+        function clearAttachment() {
+            selectedAttachmentFile = null;
+            selectedAttachmentUrl = null;
+            const fileInput = document.getElementById('chatFileInput');
+            if (fileInput) fileInput.value = '';
+            const card = document.getElementById('attachmentPreviewCard');
+            if (card) card.style.setProperty('display', 'none', 'important');
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         }
 
         function openImageModal(imgUrl) {
@@ -1031,28 +2462,36 @@
             let text = rawText;
             let mediaHtml = '';
 
-            // Extract dynamic poster URL parameters from text if present
             let posterParams = new URLSearchParams();
             const nameMatch = text.match(/(?:Member Name|CONGRATULATIONS TO):\s*\*?([^\*\n!]+)\*?/i);
             const todayMatch = text.match(/Today's Payout:\s*\*?([^\*\n]+)\*?/i);
             const overallMatch = text.match(/Overall Earning:\s*\*?([^\*\n]+)\*?/i);
             const potentialMatch = text.match(/Potential Valuation:\s*\*?([^\*\n]+)\*?/i);
-            const seniorMatch = text.match(/Senior Referrer:\s*\*?([^\*\n]+)\*?/i);
-            const seniorTodayMatch = text.match(/Senior Today:\s*\*?([^\*\n|]+)/i);
 
             if (nameMatch) posterParams.set('name', nameMatch[1].trim());
             if (todayMatch) posterParams.set('today', todayMatch[1].trim());
             if (overallMatch) posterParams.set('overall', overallMatch[1].trim());
             if (potentialMatch) posterParams.set('potential', potentialMatch[1].trim());
-            if (seniorMatch) posterParams.set('senior', seniorMatch[1].trim());
-            if (seniorTodayMatch) posterParams.set('senior_today', seniorTodayMatch[1].trim());
 
-            // Extract explicit media URL or poster link
-            const posterMatch = text.match(/(https?:\/\/[^\s<]+(?:poster[^\s<]*|poster-fresh-test\.html|\.(?:html|png|jpg|jpeg|webp|gif)))/i);
+            const posterMatch = text.match(/(https?:\/\/[^\s<]+(?:poster[^\s<]*|poster-fresh-test\.html|\.(?:html|png|jpg|jpeg|webp|gif|pdf)))/i);
             let targetUrl = mediaUrl || (posterMatch ? posterMatch[1] : null);
 
             if (targetUrl) {
-                if (targetUrl.includes('.html') || targetUrl.includes('poster')) {
+                const lowerTarget = targetUrl.toLowerCase();
+                if (lowerTarget.endsWith('.pdf') || lowerTarget.includes('.pdf')) {
+                    const pdfName = targetUrl.split('/').pop().split('?')[0] || 'Document.pdf';
+                    mediaHtml = `
+                        <div class="mb-2 p-2 bg-white text-dark rounded border d-flex align-items-center gap-2" style="max-width: 320px;">
+                            <i class="fas fa-file-pdf text-danger fa-2x"></i>
+                            <div class="text-truncate flex-grow-1" style="font-size: 12px;">
+                                <div class="fw-bold text-truncate">${escapeJS(pdfName)}</div>
+                                <a href="${targetUrl}" target="_blank" class="text-primary text-decoration-none fw-bold" style="font-size: 11px;">
+                                    <i class="fas fa-download me-1"></i> Open / Download PDF
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                } else if (lowerTarget.includes('.html') || lowerTarget.includes('poster')) {
                     let iframeUrl = targetUrl;
                     const pStr = posterParams.toString();
                     if (pStr) {
@@ -1082,89 +2521,342 @@
                 text = text.replace(/https?:\/\/[^\s<]+\/poster-fresh-test\.html[^\s<]*/gi, '');
             }
 
-            // Convert *bold* to <b>bold</b>
             text = text.replace(/\*(.*?)\*/g, '<b>$1</b>');
-
-            // Convert _italic_ to <i>italic</i>
             text = text.replace(/_(.*?)_/g, '<i>$1</i>');
-
-            // Convert raw URLs into clickable anchor links
             text = text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color: inherit; text-decoration: underline;">$1</a>');
 
             return mediaHtml + text;
         }
 
-        function selectConv(name, phone) {
-            activeRecipientPhone = phone;
-            document.getElementById('chatActiveName').textContent = name;
-            document.getElementById('chatActivePhone').textContent = `+91 ${phone}`;
+        function getDateLabel(isoString, sentAtStr) {
+            if (!isoString && !sentAtStr) return 'Recent Messages';
+            let d = isoString ? new Date(isoString) : new Date();
+            if (isNaN(d.getTime()) && sentAtStr) {
+                d = new Date(sentAtStr);
+            }
+            if (isNaN(d.getTime())) return 'Recent Messages';
+
+            const now = new Date();
+            const todayStr = now.toDateString();
+
+            const yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+            const yesterdayStr = yesterday.toDateString();
+
+            if (d.toDateString() === todayStr) return 'Today';
+            if (d.toDateString() === yesterdayStr) return 'Yesterday';
+
+            return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function renderChatTranscript(messages, box, isBackgroundRefresh) {
+            if (!messages || messages.length === 0) {
+                box.innerHTML = `
+                    <div class="chat-bubble in">
+                        <b>${escapeJS(document.getElementById('chatActiveName').textContent)}</b><br/>
+                        No transcript dispatches recorded yet for this recipient.
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            let lastDateLabel = '';
+
+            messages.forEach(m => {
+                const isOut = m.sender === 'bot' || m.message_type === 'outbound' || m.message_type === 'manual_staff';
+                const st = (m.status || 'sent').toUpperCase();
+                const statusIcon = st === 'FAILED' ? '❌ FAILED' : (st === 'DELIVERED' ? '✓✓ DELIVERED' : '✓ SENT');
+
+                const currentDateLabel = getDateLabel(m.timestamp, m.sent_at);
+                if (currentDateLabel !== lastDateLabel) {
+                    html += `
+                        <div class="text-center my-3">
+                            <span class="badge bg-light text-muted border px-3 py-1 fw-bold" style="font-size: 11px; border-radius: 12px; background-color: #f8fafc !important;">
+                                <i class="far fa-calendar-alt me-1 text-primary"></i> ${currentDateLabel}
+                            </span>
+                        </div>
+                    `;
+                    lastDateLabel = currentDateLabel;
+                }
+
+                let staffAttribution = '';
+                if (isOut && m.sent_by_name) {
+                    staffAttribution = `<span class="fst-italic me-1 text-muted" style="font-size: 9.5px;" title="Staff Member"><i class="fas fa-user-tie me-1"></i>Sent by ${escapeJS(m.sent_by_name)}</span> • `;
+                }
+
+                let senderHeader = '';
+                if (!isOut && m.sender_name && m.sender_name !== activeRecipientPhone) {
+                    senderHeader = `<div class="fw-bold text-primary mb-1" style="font-size: 11px;"><i class="fas fa-user-circle me-1"></i>${escapeJS(m.sender_name)}</div>`;
+                }
+
+                html += `
+                    <div class="chat-bubble ${isOut ? 'out' : 'in'} ${st === 'FAILED' ? 'failed-bubble' : ''}" data-msg-id="${m.id || m.wamid || ''}">
+                        ${senderHeader}
+                        <div>${formatWhatsAppMessage(m.body || m.message_body || '', m.media_url || null)}</div>
+                        <div style="font-size: 10px; opacity: 0.85; margin-top: 6px; text-align: right; display: flex; justify-content: flex-end; align-items: center; gap: 6px;">
+                            ${staffAttribution}
+                            <span>${escapeJS(m.sent_at || '')}</span> • 
+                            <span class="fw-bold">${statusIcon}</span>
+                            ${st === 'FAILED' ? `<button class="btn btn-xs btn-light text-danger fw-bold ms-1" style="font-size: 9px; padding: 1px 6px;" onclick="sendReplyMsg('${m.body.replace(/'/g, "\\'")}')">Retry</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            const isNearBottom = (box.scrollHeight - box.scrollTop - box.clientHeight) < 120;
+            box.innerHTML = html;
+
+            if (!isBackgroundRefresh || isNearBottom) {
+                setTimeout(() => { box.scrollTop = box.scrollHeight; }, 50);
+            }
+        }
+
+        function refreshActiveChatTranscript(isBackgroundRefresh) {
+            if (!activeRecipientPhone) return;
 
             const box = document.getElementById('chatHistoryBox');
-            box.innerHTML = '<div class="text-center p-4 text-muted">Loading chat transcript...</div>';
+            if (!box) return;
 
-            const tok = localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token');
+            const tok = getAuthToken();
 
-            fetch(`/api/v1/whatsapp/chat-history?phone=${encodeURIComponent(phone)}`, {
+            fetch(`/api/v1/whatsapp/chat-history?phone=${encodeURIComponent(activeRecipientPhone)}`, {
                 headers: { 'Authorization': 'Bearer ' + tok }
             })
             .then(res => res.json())
             .then(data => {
-                if (!data.messages || data.messages.length === 0) {
-                    box.innerHTML = `
-                        <div class="chat-bubble in">
-                            <b>${name}</b><br/>
-                            Contact registered. No sent dispatches yet.
-                        </div>
-                    `;
+                const messages = data.messages || [];
+                const lastCount = lastMessageCountMap[activeRecipientPhone] || 0;
+
+                if (!isBackgroundRefresh || messages.length !== lastCount) {
+                    lastMessageCountMap[activeRecipientPhone] = messages.length;
+                    renderChatTranscript(messages, box, isBackgroundRefresh);
+                }
+            })
+            .catch(() => {});
+        }
+
+        function selectConv(name, phone, contactType) {
+            activeRecipientPhone = phone;
+            localUnreadState[phone] = 0;
+
+            const typeUpper = (contactType || '').toUpperCase();
+            document.getElementById('chatActiveName').textContent = name;
+
+            let displayPhone = phone;
+            if (typeUpper === 'GROUP') {
+                displayPhone = '👥 WhatsApp Group • Operational Broadcast';
+            } else if (typeUpper === 'CHANNEL') {
+                displayPhone = '📢 WhatsApp Channel • Broadcast';
+            } else {
+                displayPhone = phone.includes('http') || phone.includes('@') ? phone : `+91 ${phone}`;
+            }
+            document.getElementById('chatActivePhone').textContent = displayPhone;
+            document.getElementById('chatActiveTypeBadge').innerHTML = getTypeBadge(contactType || 'contact');
+
+            const alertBox = document.getElementById('composerStatusAlert');
+            alertBox.style.display = 'none';
+
+            if (typeUpper === 'CHANNEL') {
+                alertBox.style.display = 'block';
+                alertBox.innerHTML = '📢 <b>WhatsApp Channel:</b> Broadcast channel dispatches are read-only for standard staff dispatches.';
+            }
+
+            const box = document.getElementById('chatHistoryBox');
+            box.innerHTML = '<div class="text-center p-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading chat transcript...</div>';
+
+            refreshActiveChatTranscript(false);
+
+            // Re-render conversation list to reflect cleared unread badge
+            if (allContactsCache.length > 0) {
+                renderConversationsList(allContactsCache, false);
+            }
+        }
+
+        function handleReplyKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendReplyMsg();
+            }
+        }
+
+        async function sendReplyMsg(retryText) {
+            const input = document.getElementById('chatReplyInput');
+            const text = (retryText || input.value).trim();
+            const alertBox = document.getElementById('composerStatusAlert');
+            alertBox.style.display = 'none';
+
+            if (!text && !selectedAttachmentFile && !retryText) return;
+
+            if (!activeRecipientPhone) {
+                alertBox.style.display = 'block';
+                alertBox.innerHTML = '⚠️ Please select a recipient from the left list or search box first.';
+                return;
+            }
+
+            const btnSend = document.getElementById('btnSendReply');
+            btnSend.disabled = true;
+            const tok = getAuthToken();
+
+            // STEP 1: Upload Media if attachment selected
+            let mediaUrl = selectedAttachmentUrl;
+            if (selectedAttachmentFile && !mediaUrl) {
+                btnSend.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Uploading...';
+                try {
+                    const formData = new FormData();
+                    formData.append('file', selectedAttachmentFile);
+
+                    const upRes = await fetch('/api/v1/whatsapp/media-upload', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + tok },
+                        body: formData
+                    });
+
+                    const upData = await upRes.json();
+                    if (upRes.status !== 200 || !upData.success) {
+                        alertBox.style.display = 'block';
+                        alertBox.innerHTML = `⚠️ <b>Media Upload Failed:</b> ${escapeJS(upData.detail || upData.error || 'Failed to upload media')}`;
+                        btnSend.disabled = false;
+                        btnSend.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Send';
+                        return;
+                    }
+
+                    mediaUrl = upData.media_url;
+                    selectedAttachmentUrl = mediaUrl;
+                } catch (err) {
+                    alertBox.style.display = 'block';
+                    alertBox.innerHTML = `⚠️ <b>Media Upload Error:</b> ${escapeJS(err.message)}`;
+                    btnSend.disabled = false;
+                    btnSend.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Send';
                     return;
                 }
+            }
 
-                box.innerHTML = data.messages.map(m => `
-                    <div class="chat-bubble ${m.sender === 'bot' ? 'out' : 'in'}">
-                        <div>${formatWhatsAppMessage(m.body, m.media_url)}</div>
-                        <div style="font-size: 10px; opacity: 0.8; margin-top: 6px; text-align: right;">
-                            ${m.sent_at} • ${m.status.toUpperCase()}
-                        </div>
-                    </div>
-                `).join('');
-                
-                setTimeout(() => { box.scrollTop = box.scrollHeight; }, 100);
+            btnSend.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sending...';
+
+            // STEP 2: Gather variable values if template selected
+            const selectTpl = document.getElementById('chatTemplateSelect');
+            const tplId = selectTpl ? selectTpl.value : null;
+            const varValues = {};
+            document.querySelectorAll('.tpl-var-input').forEach(inp => {
+                const vKey = inp.getAttribute('data-var');
+                varValues[vKey] = inp.value.trim();
+            });
+
+            // Check for unresolved variables in text
+            const unresolvedMatches = text.match(/\{\{\s*([^}]+)\s*\}\}/g);
+            if (unresolvedMatches && unresolvedMatches.length > 0) {
+                alertBox.style.display = 'block';
+                alertBox.innerHTML = `⚠️ <b>Unresolved Variables:</b> Please fill in values for ${unresolvedMatches.join(', ')} before sending.`;
+                btnSend.disabled = false;
+                btnSend.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Send';
+                return;
+            }
+
+            const clientMsgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+
+            // Optimistic bubble
+            const box = document.getElementById('chatHistoryBox');
+            const tempBubble = document.createElement('div');
+            tempBubble.className = 'chat-bubble out';
+            tempBubble.id = `bubble_${clientMsgId}`;
+            tempBubble.innerHTML = `
+                <div>${formatWhatsAppMessage(text, mediaUrl)}</div>
+                <div style="font-size: 10px; opacity: 0.85; margin-top: 6px; text-align: right;">
+                    Just now • <span class="fst-italic"><i class="fas fa-spinner fa-spin me-1"></i> SENDING...</span>
+                </div>
+            `;
+            box.appendChild(tempBubble);
+            setTimeout(() => { box.scrollTop = box.scrollHeight; }, 50);
+
+            if (!retryText) input.value = '';
+            clearAttachment();
+
+            fetch('/api/v1/whatsapp/send-message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + tok
+                },
+                body: JSON.stringify({
+                    recipient: activeRecipientPhone,
+                    message: text,
+                    media_url: mediaUrl || null,
+                    recipient_type: 'individual',
+                    recipient_name: document.getElementById('chatActiveName').textContent,
+                    client_msg_id: clientMsgId,
+                    template_id: tplId ? parseInt(tplId) : null,
+                    variable_values: Object.keys(varValues).length > 0 ? varValues : null
+                })
             })
-            .catch(() => {
-                box.innerHTML = '<div class="text-center p-4 text-danger">Failed to load chat history.</div>';
+            .then(res => res.json())
+            .then(data => {
+                btnSend.disabled = false;
+                btnSend.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Send';
+
+                if (data.success) {
+                    const bubbleEl = document.getElementById(`bubble_${clientMsgId}`);
+                    if (bubbleEl) {
+                        bubbleEl.innerHTML = `
+                            <div>${formatWhatsAppMessage(text, mediaUrl)}</div>
+                            <div style="font-size: 10px; opacity: 0.85; margin-top: 6px; text-align: right;">
+                                ${data.timestamp || 'Just now'} • <span class="fw-bold">✓ SENT</span>
+                            </div>
+                        `;
+                    }
+                    refreshActiveChatTranscript(true);
+                } else {
+                    const errText = data.error || data.detail || 'Dispatch failed';
+                    const bubbleEl = document.getElementById(`bubble_${clientMsgId}`);
+                    if (bubbleEl) {
+                        bubbleEl.className = 'chat-bubble out failed-bubble';
+                        bubbleEl.innerHTML = `
+                            <div>${formatWhatsAppMessage(text)}</div>
+                            <div style="font-size: 10px; opacity: 0.9; margin-top: 6px; text-align: right; color: #991b1b;">
+                                ❌ FAILED (${errText})
+                            </div>
+                        `;
+                    }
+                    alertBox.style.display = 'block';
+                    alertBox.innerHTML = `❌ <b>Dispatch Failed:</b> ${errText}. <button class="btn btn-sm btn-outline-danger fw-bold ms-2" onclick="sendReplyMsg('${text.replace(/'/g, "\\'")}')">Retry Send</button>`;
+                    input.value = text;
+                }
+            })
+            .catch(err => {
+                btnSend.disabled = false;
+                btnSend.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Send';
+                alertBox.style.display = 'block';
+                alertBox.innerHTML = `❌ <b>Connection Error:</b> Could not reach backend API server. <button class="btn btn-sm btn-outline-danger fw-bold ms-2" onclick="sendReplyMsg('${text.replace(/'/g, "\\'")}')">Retry Send</button>`;
+                input.value = text;
             });
         }
 
-        function sendReplyMsg() {
-            const input = document.getElementById('chatReplyInput');
-            const text = input.value.trim();
-            if (!text || !activeRecipientPhone) return;
-
-            const box = document.getElementById('chatHistoryBox');
-            const b = document.createElement('div');
-            b.className = 'chat-bubble out';
-            b.innerHTML = `<div>${formatWhatsAppMessage(text)}</div><div style="font-size:10px;opacity:0.8;margin-top:6px;text-align:right;">Just now • SENT</div>`;
-            box.appendChild(b);
-            setTimeout(() => { box.scrollTop = box.scrollHeight; }, 50);
-            input.value = '';
-
-            fetch('http://localhost:5002/api/send-message', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone: activeRecipientPhone, message: text })
-            }).catch(() => {});
-        }
-
-        function openNewMsgModal() {
-            const modal = new bootstrap.Modal(document.getElementById('newMsgModal'));
-            modal.show();
-        }
-
-        function toggleRecType() {
+        function searchRecipientsLive() {
             const type = document.querySelector('input[name="recipientType"]:checked').value;
-            document.getElementById('wrapRecContact').style.display = type === 'contact' ? 'block' : 'none';
-            document.getElementById('wrapRecGroup').style.display = type === 'group' ? 'block' : 'none';
-            document.getElementById('wrapRecCustom').style.display = type === 'custom' ? 'block' : 'none';
+            const query = document.getElementById('searchContactInput').value.trim();
+            const scopeEl = document.getElementById('convScopeFilter');
+            const scope = scopeEl ? scopeEl.value : 'assigned_tagged';
+            const select = document.getElementById('selRecContact');
+            const tok = getAuthToken();
+
+            select.innerHTML = '<option value="">Searching recipients...</option>';
+
+            fetch(`/api/v1/whatsapp/contacts-search?type=${encodeURIComponent(type)}&scope=${encodeURIComponent(scope)}&query=${encodeURIComponent(query)}`, {
+                headers: { 'Authorization': 'Bearer ' + tok }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.contacts || data.contacts.length === 0) {
+                    select.innerHTML = '<option value="">No matching recipients found</option>';
+                    return;
+                }
+                select.innerHTML = data.contacts.map(c => `
+                    <option value="${c.phone}" data-type="${c.type}" data-name="${c.name}">${c.badge} ${c.name} (${c.phone}) - ${c.details}</option>
+                `).join('');
+            })
+            .catch(() => {
+                select.innerHTML = '<option value="">Failed to load recipients</option>';
+            });
         }
 
         function applyTemplate() {
@@ -1193,45 +2885,64 @@
         function dispatchNewMsg() {
             const type = document.querySelector('input[name="recipientType"]:checked').value;
             let targetPhone = '';
+            let targetName = '';
 
-            if (type === 'contact') {
-                targetPhone = document.getElementById('selRecContact').value;
-            } else if (type === 'group') {
-                targetPhone = document.getElementById('selRecGroup').value;
-            } else {
+            if (type === 'custom') {
                 targetPhone = document.getElementById('inputCustomPhone').value.trim();
+                targetName = `Recipient (+91 ${targetPhone})`;
+            } else {
+                const select = document.getElementById('selRecContact');
+                targetPhone = select.value;
+                const selOption = select.options[select.selectedIndex];
+                targetName = selOption ? (selOption.getAttribute('data-name') || selOption.text) : targetPhone;
             }
 
             const messageText = document.getElementById('newMsgBody').value.trim();
             const mediaUrl = document.getElementById('newMsgMediaUrl').value.trim();
 
             if (!targetPhone) {
-                alert('Please select or enter a valid mobile number/group!');
+                alert('Please select or enter a valid mobile number, group, or channel!');
                 return;
             }
-            if (!messageText) {
-                alert('Please type a message body!');
+            if (!messageText && !mediaUrl) {
+                alert('Please type a message body or attach a media URL!');
                 return;
             }
 
-            // Close modal
-            const modalEl = document.getElementById('newMsgModal');
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            if (modal) modal.hide();
+            const clientMsgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+            const tok = getAuthToken();
 
-            // Select conversation
-            selectConv('Recipient (' + targetPhone + ')', targetPhone);
-
-            // Send payload
-            fetch('http://localhost:5002/api/send-message', {
+            fetch('/api/v1/whatsapp/send-message', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone: targetPhone, message: messageText, media_url: mediaUrl })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + tok
+                },
+                body: JSON.stringify({
+                    recipient: targetPhone,
+                    message: messageText,
+                    media_url: mediaUrl,
+                    recipient_type: type,
+                    recipient_name: targetName,
+                    client_msg_id: clientMsgId
+                })
             })
-            .then(() => {
-                loadConversations();
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const modalEl = document.getElementById('newMsgModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+
+                    selectConv(targetName, targetPhone, type);
+                    loadConversations();
+                } else {
+                    alert('❌ WhatsApp Message Dispatch Failed: ' + (data.error || 'Gateway offline'));
+                }
             })
-            .catch(() => {});
+            .catch(err => {
+                alert('❌ Connection Error: Could not reach backend server');
+            });
         }
 
         function openDirectWa() {
@@ -1276,6 +2987,23 @@
             });
         }
 
+        async function logoutWhatsAppBot() {
+            if (!confirm("Are you sure you want to log out and disconnect the WhatsApp Web Bot session? You will need to scan the QR code again.")) return;
+            try {
+                const res = await fetch('http://localhost:5002/api/logout', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    alert("✅ WhatsApp Bot Logged Out successfully! Opening QR scanner page...");
+                    window.open('http://localhost:5002/qr', '_blank');
+                    if (typeof checkBotStatus === 'function') checkBotStatus();
+                } else {
+                    alert("❌ Logout error: " + (data.error || 'Failed to logout'));
+                }
+            } catch (err) {
+                alert("❌ Error connecting to WhatsApp Bot Service (port 5002): " + err.message);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', async function() {
             if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
             if (typeof StaffHeader !== 'undefined') {
@@ -1283,7 +3011,9 @@
             }
             if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
             checkBotStatus();
+            initMessengerUI();
             loadConversations();
+            startMessengerPolling();
         });
     </script>
 </body>

@@ -196,9 +196,11 @@ async def process_facebook_lead(
         db.rollback()
         logger.warning(f"Meta attribution creation non-fatal error: {att_err}")
 
-    # ── Auto WhatsApp Welcome Message ───────────────────────────────────────────
+    # ── Auto WhatsApp Welcome Message & Group Alert ───────────────────────────
     try:
         from app.services.whatsapp_auto_service import send_lead_welcome
+        from app.services.whatsapp_group_alert_service import send_instant_new_lead_group_alert
+
         if crm_lead.phone:
             send_lead_welcome(
                 db=db,
@@ -206,8 +208,11 @@ async def process_facebook_lead(
                 lead_name=crm_lead.name,
                 lead_id=crm_lead.id
             )
+
+        # Trigger instant Sales Group Alert
+        send_instant_new_lead_group_alert(db, crm_lead.id)
     except Exception as wa_err:
-        logger.warning(f"Auto welcome WhatsApp trigger exception for lead {crm_lead.id}: {wa_err}")
+        logger.warning(f"Auto WhatsApp triggers exception for lead {crm_lead.id}: {wa_err}")
 
     logger.info(f"CRM lead {crm_lead.id} created from FB lead {lead_id} | page: {page_name} | segment: {page_segment}")
     return crm_lead
@@ -232,9 +237,10 @@ async def get_facebook_config(
         "is_configured": is_configured,
         "verify_token": facebook_leads_service.verify_token if is_configured else None,
         "api_version": facebook_leads_service.api_version,
-        "has_page_token": bool(facebook_leads_service.page_access_token),
+        "has_page_token": bool(facebook_leads_service._legacy_token),
         "has_app_secret": bool(facebook_leads_service.app_secret),
         "webhook_url": "/api/v1/facebook-leads/webhook",
+
         "setup_instructions": {
             "step_1": "Go to Facebook Developer Console (developers.facebook.com)",
             "step_2": "Create or select your Facebook App",

@@ -868,6 +868,27 @@ def bulk_send_preview(
     return {"success": True, "target_filter": target_filter, "count": count}
 
 
+@router.get("/members/{member_id}/executive-summary")
+def get_vgk_member_exec_summary(
+    member_id: str,
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    from app.api.v1.endpoints.vgk_cash_income import get_member_executive_summary
+    return get_member_executive_summary(partner_id=member_id, db=db, current_employee=current_user)
+
+
+@router.post("/members/{member_id}/send-whatsapp-statement")
+def send_vgk_member_whatsapp_statement(
+    member_id: str,
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    from app.api.v1.endpoints.vgk_cash_income import send_member_whatsapp_statement
+    return send_member_whatsapp_statement(member_id=member_id, db=db, current_employee=current_user)
+
+
+
 @router.get("/members/{member_id}")
 def get_vgk_member(
     member_id: int = Path(...),
@@ -4396,18 +4417,28 @@ def member_earnings_dashboard(
     # Bulk: Parent partner IDs
     parent_ids = list({m.parent_partner_id for m in members if m.parent_partner_id})
     
-    # Bulk: passport_photo from kyc_document table for member and parent KYC photos
+    # Bulk: passport_photo from official_partners / kyc_document table for member and parent KYC photos
     passport_photo_map: dict = {}
     all_photo_ids = list(set(member_ids + parent_ids))
     if all_photo_ids:
         try:
+            op_rows = db.execute(text(
+                "SELECT id, logo_path FROM official_partners WHERE id = ANY(:ids)"
+            ), {"ids": all_photo_ids}).fetchall()
+            for opr in op_rows:
+                p_photo = opr[1]
+                if p_photo and str(p_photo).strip() not in ('', 'None', 'null'):
+                    passport_photo_map[int(opr[0])] = p_photo
+
             photo_rows = db.execute(text(
                 "SELECT DISTINCT ON (partner_id) partner_id, file_path "
                 "FROM kyc_document "
                 "WHERE partner_id = ANY(:ids) AND document_type = 'passport_photo' AND is_current_version = true "
                 "ORDER BY partner_id, uploaded_at DESC"
             ), {"ids": all_photo_ids}).fetchall()
-            passport_photo_map = {int(r[0]): r[1] for r in photo_rows}
+            for r in photo_rows:
+                if r[1]:
+                    passport_photo_map[int(r[0])] = r[1]
         except Exception:
             pass
 
@@ -4416,9 +4447,9 @@ def member_earnings_dashboard(
     if parent_ids:
         try:
             p_rows = db.execute(text(
-                "SELECT id, partner_code, partner_name, phone FROM official_partners WHERE id = ANY(:ids)"
+                "SELECT id, partner_code, partner_name, phone, logo_path FROM official_partners WHERE id = ANY(:ids)"
             ), {"ids": parent_ids}).fetchall()
-            p_info = {r[0]: {"code": r[1], "name": r[2], "phone": r[3]} for r in p_rows}
+            p_info = {r[0]: {"code": r[1], "name": r[2], "phone": r[3], "logo_path": r[4]} for r in p_rows}
             
             p_inc_rows = db.execute(text(
                 "SELECT e.partner_id, COALESCE(SUM(e.commission_amount),0) AS gross "
@@ -4506,7 +4537,7 @@ def member_earnings_dashboard(
     if member_ids:
         try:
             _me_sql = (
-                "SELECT e.partner_id, e.status, e.kind, e.level, e.source_lead_id, COALESCE(e.commission_amount,0)::float as gross, COALESCE(e.net_payout,0)::float as net "
+                "SELECT e.partner_id, e.status, e.kind, e.level, e.source_lead_id, COALESCE(e.commission_amount,0)::float as gross, COALESCE(e.net_payout,0)::float as net, e.id "
                 "FROM vgk_cash_income_entries e " + cust_join_sql +
                 " WHERE e.partner_id = ANY(:ids) AND e.status != 'CANCELLED' "
                 + date_sql + (" " + status_sql if status_val else "")
@@ -4517,6 +4548,7 @@ def member_earnings_dashboard(
                 if pid not in raw_member_entries_map:
                     raw_member_entries_map[pid] = []
                 raw_member_entries_map[pid].append({
+                    "id": int(r[7]),
                     "status": r[1],
                     "kind": (r[2] or '').upper(),
                     "level": r[3],
@@ -4543,6 +4575,57 @@ def member_earnings_dashboard(
         
         pending_amt = 0.0
         net_earning = 0.0
+        
+        # Query lost lead advance pool for member to subtract lost lead advance deductions
+        m_lost_adv_rows = []
+        try:
+            m_lost_adv_rows = db.execute(text("""
+                SELECT c.id AS lead_id, c.name, c.status, c.solar_pipeline_status, c.updated_at AS rejected_at,
+                       COALESCE(SUM(v.commission_amount), 0) AS adv_paid
+                FROM crm_leads c
+                JOIN vgk_cash_income_entries v ON v.source_lead_id = c.id
+                WHERE (c.associated_partner_id = :pid OR c.primary_owner_id = :pid OR v.partner_id = :pid)
+                  AND (c.status IN ('lost', 'cancelled', 'rejected') OR c.solar_pipeline_status IN ('loan_rejected', 'bank_loan_rejected', 'rejected', 'cancelled', 'different_vendor', 'opted_out'))
+                  AND v.kind IN ('ADVANCE', 'DVR_ADVANCE', 'STAGE1_ADVANCE', 'STAGE2_ADVANCE', 'COMMISSION')
+                  AND (v.status IS NULL OR v.status NOT IN ('CANCELLED', 'REJECTED'))
+                GROUP BY c.id, c.name, c.status, c.solar_pipeline_status, c.updated_at
+            """), {"pid": m.id}).fetchall()
+        except Exception:
+            pass
+
+        m_all_entries = []
+        try:
+            m_all_entries = db.execute(text("""
+                SELECT id, kind, commission_amount, created_at, status
+                FROM vgk_cash_income_entries
+                WHERE partner_id = :pid AND status != 'CANCELLED'
+                ORDER BY created_at ASC, id ASC
+            """), {"pid": m.id}).fetchall()
+        except Exception:
+            pass
+
+        m_lost_ded_map = {}
+        for pe in m_all_entries:
+            pe_id = int(pe.id)
+            pe_gross = float(pe.commission_amount or 0)
+            pe_kind = (pe.kind or '').upper()
+            pe_created = pe.created_at
+
+            pe_lost_pool = 0.0
+            for lr in m_lost_adv_rows:
+                rej_t = lr.rejected_at or getattr(lr, 'created_at', None)
+                if (pe_created and rej_t and pe_created >= rej_t) or getattr(pe, 'status', '') == 'PENDING':
+                    pe_lost_pool += float(lr.adv_paid or 0)
+
+            pe_ded = 0.0
+            if pe_lost_pool > 0 and pe_kind not in ('SLAB_BONUS', 'BONANZA_BONUS', 'EXTRA_COMMISSION', 'REFERRAL_BONUS'):
+                prior_ded = sum(m_lost_ded_map.get(prev.id, 0.0) for prev in m_all_entries if prev.created_at < pe_created or (prev.created_at == pe_created and prev.id < pe_id))
+                avail = max(0.0, pe_lost_pool - prior_ded)
+                if avail > 0 and pe_gross > 0:
+                    cap_50 = round(pe_gross * 0.50, 2)
+                    pe_ded = round(min(avail, cap_50), 2)
+            m_lost_ded_map[pe_id] = pe_ded
+
         for e in m_entries:
             st = e["status"]
             kind = e["kind"]
@@ -4550,13 +4633,17 @@ def member_earnings_dashboard(
             adv_paid = 0.0
             if kind not in ('ADVANCE', 'DVR_ADVANCE') and e["source_lead_id"] and e["level"] is not None:
                 adv_paid = adv_map_bulk.get((int(e["source_lead_id"]), int(e["level"])), 0.0)
-            bal_gross = max(0.0, e_gross - adv_paid)
-            if adv_paid > 0:
+            
+            lost_ded = m_lost_ded_map.get(e.get("id"), 0.0)
+            bal_gross = max(0.0, e_gross - adv_paid - lost_ded)
+            
+            if adv_paid > 0 or lost_ded > 0:
                 adm = round(bal_gross * 0.08, 2)
-                tds = round((bal_gross - adm) * 0.02, 2)
+                tds = round(bal_gross * 0.02, 2)
                 e_net = max(0.0, round(bal_gross - adm - tds, 2))
             else:
                 e_net = e["net"] if (e["net"] > 0) else max(0.0, round(bal_gross * 0.90, 2))
+            
             net_earning += e_net
             if st in ("DRAFT", "PENDING", "STAGE1_APPROVED"):
                 pending_amt += e_net
@@ -4931,7 +5018,7 @@ def member_income_entries_detail(
             adv_vsca = db.execute(text(
                 "SELECT a.lead_id, a.level, "
                 "  SUM(CASE WHEN a.kind = 'ADVANCE' THEN COALESCE(a.advance_amount, 0) ELSE 0 END) AS stage1_adv, "
-                "  SUM(CASE WHEN a.kind = 'DVR_ADVANCE' THEN COALESCE(a.advance_amount, 0) ELSE 0 END) AS stage2_adv, "
+"  SUM(CASE WHEN a.kind = 'DVR_ADVANCE' THEN COALESCE(a.advance_amount, 0) ELSE 0 END) AS stage2_adv, "
                 "  SUM(COALESCE(a.advance_amount, 0)) AS total_adv "
                 "FROM vgk_solar_cibil_advances a "
                 "WHERE a.lead_id = ANY(:lids) "
@@ -4955,6 +5042,51 @@ def member_income_entries_detail(
             try: db.rollback()
             except: pass
             print(f"[ERROR-ADV-MAP] Failed to compute adv_map: {_exc}")
+
+    # Compute lost lead advance deductions for partner across all income entries
+    lost_ded_map = {}
+    try:
+        lost_adv_rows = db.execute(text("""
+            SELECT c.id AS lead_id, c.name, c.status, c.solar_pipeline_status, c.updated_at AS rejected_at,
+                   COALESCE(SUM(v.commission_amount), 0) AS adv_paid
+            FROM crm_leads c
+            JOIN vgk_cash_income_entries v ON v.source_lead_id = c.id
+            WHERE (c.associated_partner_id = :pid OR c.primary_owner_id = :pid OR v.partner_id = :pid)
+              AND (c.status IN ('lost', 'cancelled', 'rejected') OR c.solar_pipeline_status IN ('loan_rejected', 'bank_loan_rejected', 'rejected', 'cancelled', 'different_vendor', 'opted_out'))
+              AND v.kind IN ('ADVANCE', 'DVR_ADVANCE', 'STAGE1_ADVANCE', 'STAGE2_ADVANCE', 'COMMISSION')
+              AND (v.status IS NULL OR v.status NOT IN ('CANCELLED', 'REJECTED'))
+            GROUP BY c.id, c.name, c.status, c.solar_pipeline_status, c.updated_at
+        """), {"pid": partner_id}).fetchall()
+
+        all_partner_entries = db.execute(text("""
+            SELECT id, kind, commission_amount, created_at, status
+            FROM vgk_cash_income_entries
+            WHERE partner_id = :pid AND status != 'CANCELLED'
+            ORDER BY created_at ASC, id ASC
+        """), {"pid": partner_id}).fetchall()
+
+        for pe in all_partner_entries:
+            pe_id = int(pe.id)
+            pe_gross = float(pe.commission_amount or 0)
+            pe_kind = (pe.kind or '').upper()
+            pe_created = pe.created_at
+
+            pe_lost_pool = 0.0
+            for lr in lost_adv_rows:
+                rej_t = lr.rejected_at or getattr(lr, 'created_at', None)
+                if (pe_created and rej_t and pe_created >= rej_t) or getattr(pe, 'status', '') == 'PENDING':
+                    pe_lost_pool += float(lr.adv_paid or 0)
+
+            pe_ded = 0.0
+            if pe_lost_pool > 0 and pe_kind not in ('SLAB_BONUS', 'BONANZA_BONUS', 'EXTRA_COMMISSION', 'REFERRAL_BONUS'):
+                prior_ded = sum(lost_ded_map.get(prev.id, 0.0) for prev in all_partner_entries if prev.created_at < pe_created or (prev.created_at == pe_created and prev.id < pe_id))
+                avail = max(0.0, pe_lost_pool - prior_ded)
+                if avail > 0 and pe_gross > 0:
+                    cap_50 = round(pe_gross * 0.50, 2)
+                    pe_ded = round(min(avail, cap_50), 2)
+            lost_ded_map[pe_id] = pe_ded
+    except Exception as _ex_lost:
+        print(f"[WARN-LOST-DED-CALC] Failed to compute lost lead deduction: {_ex_lost}")
 
     # Fetch commission configs & solar brand incentive configs for accurate potential calculations
     try:
@@ -5044,8 +5176,10 @@ def member_income_entries_detail(
                     potential_type = config.showroom_type or 'PCT'
                     potential_flat = float(config.showroom_amt or 0)
                     
-                if potential_type == 'AMOUNT':
+                if potential_type == 'FLAT':
                     potential_amount = potential_flat
+                elif potential_type == 'PCT':
+                    potential_amount = round(lead_val * potential_pct / 100.0, 2)
                 else:
                     potential_amount = round(lead_val * potential_pct / 100.0, 2)
             else:
@@ -5081,7 +5215,19 @@ def member_income_entries_detail(
             stage2_adv = float(adv_info.get("stage2", 0.0))
             adv_paid   = float(adv_info.get("total", 0.0))
         gross_amt = float(r.commission_amount)
-        bal_gross = max(0.0, round(gross_amt - adv_paid, 2))
+        
+        lost_lead_deduction = lost_ded_map.get(int(r.id), 0.0)
+        tot_adv_deducted = adv_paid + lost_lead_deduction
+        bal_gross = max(0.0, round(gross_amt - tot_adv_deducted, 2))
+
+        if lost_lead_deduction > 0 or adv_paid > 0:
+            admin_charges = round(bal_gross * 0.08, 2)
+            tds_amount = round(bal_gross * 0.02, 2)
+            net_payout = max(0.0, round(bal_gross - admin_charges - tds_amount, 2))
+        else:
+            admin_charges = float(r.admin_charges)
+            tds_amount = float(r.tds_amount)
+            net_payout = float(r.net_payout)
 
         return {
             "id":                int(r.id),
@@ -5099,11 +5245,13 @@ def member_income_entries_detail(
             "commission_amount": gross_amt,
             "stage1_adv":        stage1_adv,
             "stage2_adv":        stage2_adv,
+            "lost_lead_deduction": lost_lead_deduction,
+            "lost_lead_adv_deduction": lost_lead_deduction,
             "advance_paid":      adv_paid,
             "balance_gross":     bal_gross,
-            "admin_charges":     float(r.admin_charges),
-            "tds_amount":        float(r.tds_amount),
-            "net_payout":        float(r.net_payout),
+            "admin_charges":     admin_charges,
+            "tds_amount":        tds_amount,
+            "net_payout":        net_payout,
             "client_name":       client,
             "client_mobile":     mobile,
             "location":          location,

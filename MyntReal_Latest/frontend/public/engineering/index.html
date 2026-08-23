@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title>MYNT OS — Antigravity Engineering AI (Phase 3.3)</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: thin; scrollbar-color: #38bdf8 #1e293b; }
+    
+    /* Visible Scrollbars for Desktop & Mobile Browsers */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
+
+    html, body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #0f172a; color: #f8fafc;
+      height: 100vh; width: 100vw;
+      margin: 0; padding: 0; overflow: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Top Header Bar */
+    .eng-header {
+      height: 56px; background: #1e293b; border-bottom: 1px solid #334155;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; flex-wrap: wrap; gap: 10px; z-index: 10;
+    }
+    .eng-title { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 16px; color: #38bdf8; }
+    .eng-badge {
+      background: rgba(16, 185, 129, 0.15); color: #10b981;
+      padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;
+      border: 1px solid rgba(16, 185, 129, 0.3); display: flex; align-items: center; gap: 6px;
+    }
+    
+    /* 3-Pane Desktop Layout with Independent Pane Scrolling */
+    .eng-layout {
+      display: grid; grid-template-columns: 280px 1fr 440px;
+      height: calc(100vh - 56px); width: 100vw; overflow: hidden;
+    }
+    
+    /* Pane 1: Left Repository Explorer */
+    .pane-repo {
+      background: #1e293b; border-right: 1px solid #334155;
+      padding: 16px; display: flex; flex-direction: column; gap: 16px;
+      height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    }
+    .pane-title { font-size: 12px; text-transform: uppercase; tracking: 1px; color: #94a3b8; font-weight: 700; }
+    .repo-tree { font-family: 'Fira Code', monospace; font-size: 13px; color: #cbd5e1; display: flex; flex-direction: column; gap: 8px; }
+    .tree-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+    .tree-item:hover { background: #334155; }
+    
+    /* Pane 2: Center Conversation & Voice Drawer */
+    .pane-chat {
+      display: flex; flex-direction: column; background: #0f172a;
+      border-right: 1px solid #334155; height: 100%; overflow: hidden;
+    }
+    .chat-history {
+      flex: 1; overflow-y: auto; padding: 20px; display: flex;
+      flex-direction: column; gap: 16px; -webkit-overflow-scrolling: touch;
+    }
+    .msg-card {
+      background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+      padding: 16px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .msg-card.user { border-left: 4px solid #38bdf8; background: #1a2436; }
+    .msg-card.ai { border-left: 4px solid #10b981; }
+    .msg-card.uncertain { border-left: 4px solid #f59e0b; }
+    .msg-header { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: #94a3b8; }
+    .msg-body { font-size: 14px; line-height: 1.6; color: #e2e8f0; word-break: break-word; }
+    
+    /* Impact Breakdown Badge */
+    .impact-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px;
+      font-size: 12px; background: #0f172a; padding: 12px; border-radius: 8px;
+    }
+    .impact-tag { color: #38bdf8; font-weight: 600; }
+    
+    /* Voice & Input Controls */
+    .input-box {
+      padding: 16px; background: #1e293b; border-top: 1px solid #334155;
+      display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;
+    }
+    .input-wrapper { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .mode-select {
+      height: 44px; background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+      padding: 0 12px; color: #38bdf8; font-weight: 600; font-size: 13px; outline: none;
+      cursor: pointer;
+    }
+    .cmd-input {
+      flex: 1; min-width: 200px; background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+      padding: 12px 16px; color: #f8fafc; font-size: 14px; outline: none;
+    }
+    .cmd-input:focus { border-color: #38bdf8; }
+    .btn-action {
+      width: 44px; height: 44px; border-radius: 8px; border: none;
+      background: #3b82f6; color: white; cursor: pointer; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .2s;
+    }
+    .btn-action:hover { background: #2563eb; }
+    .btn-mic.recording { background: #ef4444; animation: pulse 1.2s infinite; }
+    .btn-send {
+      padding: 0 20px; height: 44px; border-radius: 8px; border: none;
+      background: #10b981; color: white; font-weight: 600; cursor: pointer;
+    }
+    .attachment-preview {
+      display: none; align-items: center; gap: 8px; background: #334155;
+      padding: 4px 10px; border-radius: 6px; font-size: 12px; color: #38bdf8;
+    }
+    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+    
+    /* Pane 3: Right Diff Preview & Terminal Console */
+    .pane-console {
+      background: #1e293b; display: flex; flex-direction: column; height: 100%; overflow: hidden;
+    }
+    .console-header {
+      padding: 14px 16px; border-bottom: 1px solid #334155;
+      font-weight: 600; font-size: 14px; color: #f8fafc;
+      display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+    }
+    .diff-view {
+      flex: 1; font-family: 'Fira Code', monospace; font-size: 12px;
+      background: #090d16; padding: 14px; overflow: auto; color: #cbd5e1;
+      white-space: pre-wrap; line-height: 1.5; -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Mobile Responsive Touch Scrolling Media Queries */
+    @media (max-width: 900px) {
+      html, body {
+        height: auto; min-height: 100vh;
+        overflow-x: hidden; overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .eng-header { height: auto; padding: 12px 16px; }
+      .eng-layout {
+        display: flex; flex-direction: column;
+        height: auto; width: 100%; overflow: visible;
+      }
+      .pane-repo {
+        border-right: none; border-bottom: 1px solid #334155;
+        width: 100%; max-height: 250px; overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .pane-chat {
+        border-right: none; border-bottom: 1px solid #334155;
+        width: 100%; height: auto; overflow: visible;
+      }
+      .chat-history {
+        min-height: 380px; max-height: 60vh;
+        overflow-y: auto; -webkit-overflow-scrolling: touch;
+      }
+      .pane-console {
+        width: 100%; height: auto; overflow: visible;
+      }
+      .diff-view {
+        min-height: 220px; max-height: 45vh;
+        overflow-x: auto; overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .impact-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Interactive Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      z-index: 9999; display: none; align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .modal-card {
+      width: 600px; max-width: 95vw; background: #1e293b; border-radius: 16px;
+      border: 1px solid #334155; padding: 24px; display: flex; flex-direction: column; gap: 16px;
+    }
+    .btn-confirm { background: #10b981; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-cancel { background: #475569; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <!-- Full-Screen Security Lock Authentication Overlay -->
+  <div class="security-lock-overlay" id="security-lock-overlay" style="position:fixed; inset:0; background:#090d16; z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;">
+    <div style="width:380px; max-width:92vw; background:#1e293b; border:1px solid #334155; border-radius:16px; padding:28px; display:flex; flex-direction:column; gap:16px; box-shadow:0 20px 50px rgba(0,0,0,0.6);">
+      <div style="text-align:center;">
+        <div style="width:60px; height:60px; background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239, 68, 68, 0.3); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 12px auto;">
+          <i class="fa-solid fa-lock" style="font-size:26px; color:#ef4444;"></i>
+        </div>
+        <h2 style="font-size:18px; color:#f8fafc; font-weight:700;">Engineering Terminal Locked</h2>
+        <p style="font-size:13px; color:#94a3b8; margin-top:4px;">Enter Authorized Engineering Credentials</p>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div>
+          <label style="font-size:12px; color:#cbd5e1; font-weight:600; display:block; margin-bottom:4px;">Username</label>
+          <input type="text" id="lock-username" placeholder="Username" style="width:100%; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:12px; color:#fff; font-size:14px; outline:none;">
+        </div>
+        <div>
+          <label style="font-size:12px; color:#cbd5e1; font-weight:600; display:block; margin-bottom:4px;">Password</label>
+          <input type="password" id="lock-password" placeholder="Password" style="width:100%; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:12px; color:#fff; font-size:14px; outline:none;">
+        </div>
+      </div>
+      <button id="btn-unlock" style="background:#10b981; color:white; border:none; padding:12px; border-radius:8px; font-weight:700; font-size:14px; cursor:pointer; margin-top:6px;">Unlock Terminal</button>
+      <div id="lock-error" style="font-size:12px; color:#ef4444; text-align:center; display:none; font-weight:600;">Invalid Username or Password. Access Denied.</div>
+    </div>
+  </div>
+
+  <!-- Top Header -->
+  <header class="eng-header">
+    <div class="eng-title">
+      <i class="fa-solid fa-code-branch"></i>
+      <span>MYNT OS — Antigravity Engineering AI (Phase 3.3)</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div class="eng-badge">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>SUPER ADMIN AUTHENTICATED</span>
+      </div>
+      <button id="btn-lock-session" style="background:#334155; border:none; color:#ef4444; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;" title="Lock Engineering Terminal">
+        <i class="fa-solid fa-lock"></i> Lock
+      </button>
+    </div>
+  </header>
+
+  <!-- 3-Pane Workspace -->
+  <main class="eng-layout">
+    
+    <!-- Pane 1: Repository Explorer -->
+    <aside class="pane-repo">
+      <div class="pane-title">Repository Modules</div>
+      <div class="repo-tree">
+        <div class="tree-item"><i class="fa-solid fa-folder-closed" style="color:#38bdf8"></i> backend/ (FastAPI)</div>
+        <div class="tree-item"><i class="fa-solid fa-folder-closed" style="color:#f59e0b"></i> frontend/ (Web SPA)</div>
+        <div class="tree-item"><i class="fa-solid fa-folder-closed" style="color:#10b981"></i> mobile/ (PWA / iOS / Android)</div>
+        <div class="tree-item"><i class="fa-solid fa-folder-closed" style="color:#a855f7"></i> shared/ (Journey Core)</div>
+      </div>
+      <div class="pane-title" style="margin-top:20px;">Terminal & Release Toolchain</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button id="btn-git-status" style="background:#334155; color:#38bdf8; border:none; padding:6px 10px; border-radius:6px; font-size:11px; cursor:pointer; text-align:left;"><i class="fa-solid fa-terminal"></i> git status</button>
+        <button id="btn-git-diff" style="background:#334155; color:#38bdf8; border:none; padding:6px 10px; border-radius:6px; font-size:11px; cursor:pointer; text-align:left;"><i class="fa-solid fa-terminal"></i> git diff</button>
+        <button id="btn-pytest" style="background:#334155; color:#10b981; border:none; padding:6px 10px; border-radius:6px; font-size:11px; cursor:pointer; text-align:left;"><i class="fa-solid fa-vial"></i> Run pytest</button>
+        <button id="btn-release" style="background:#334155; color:#f59e0b; border:none; padding:6px 10px; border-radius:6px; font-size:11px; cursor:pointer; text-align:left;"><i class="fa-solid fa-rocket"></i> Release Checklist</button>
+      </div>
+    </aside>
+
+    <!-- Pane 2: Conversation Drawer & Voice Commands -->
+    <section class="pane-chat">
+      <div class="chat-history" id="chat-history">
+        <div class="msg-card ai">
+          <div class="msg-header">
+            <span>MYNT OS Engineering AI</span>
+            <span>Universal Command Interpreter</span>
+          </div>
+          <div class="msg-body">
+            Welcome to Phase 3.3 of the MYNT OS Engineering AI Command Center!
+            <br><br>
+            Use the dropdown below to select scope:
+            <br>
+            • <b>Codebase Mode</b>: Analyze code architecture, search symbols, evaluate diffs, stage patches, run tests.
+            <br>
+            • <b>Operations Mode</b>: Ask live business data questions (e.g. <i>"staff wise talk time today?"</i>, <i>"pending tasks"</i>, <i>"attendance"</i>).
+          </div>
+        </div>
+      </div>
+
+      <div class="input-box">
+        <div class="attachment-preview" id="attachment-preview">
+          <i class="fa-solid fa-paperclip"></i>
+          <span id="attached-filename">screenshot.png</span>
+          <i class="fa-solid fa-xmark" id="btn-remove-attachment" style="cursor:pointer; color:#ef4444"></i>
+        </div>
+        <div class="input-wrapper">
+          <select class="mode-select" id="mode-select" title="Select AI Command Scope">
+            <option value="operations" selected>📊 Operations</option>
+            <option value="codebase">💻 Codebase</option>
+          </select>
+          <button class="btn-action btn-mic" id="btn-mic" title="Voice Command Input (Speech-to-Text)">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+          <button class="btn-action" id="btn-attach" title="Attach Screenshot or File">
+            <i class="fa-solid fa-paperclip"></i>
+          </button>
+          <input type="file" id="file-input" style="display:none" accept="image/*,.txt,.log,.json,.py,.ts,.js">
+          <input type="text" class="cmd-input" id="cmd-input" placeholder="Type or speak command...">
+          <button class="btn-send" id="btn-send">Run</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pane 3: Diff Preview & Terminal Console -->
+    <section class="pane-console">
+      <div class="console-header">
+        <span><i class="fa-solid fa-terminal"></i> Live Diff & Release Console</span>
+        <button id="btn-rollback" style="background:#ef4444; border:none; color:white; padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; display:none;">1-Click Rollback</button>
+      </div>
+      <div class="diff-view" id="diff-view">// Live diff, terminal output, and release verification preview...</div>
+    </section>
+
+  </main>
+
+  <!-- Confirmation Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-card">
+      <h3 style="color:#38bdf8"><i class="fa-solid fa-triangle-exclamation"></i> Change Proposal Confirmation</h3>
+      <p id="modal-desc" style="font-size:14px; color:#cbd5e1"></p>
+      <div style="display:flex; gap:12px; margin-top:12px;">
+        <button class="btn-confirm" id="btn-confirm-execute" style="flex:1">Confirm & Apply Patch</button>
+        <button class="btn-cancel" id="btn-cancel-execute" style="flex:1">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Security Lock Authentication Handler (User 2207 / Pass 0710)
+    const lockOverlay = document.getElementById('security-lock-overlay');
+    const lockUsername = document.getElementById('lock-username');
+    const lockPassword = document.getElementById('lock-password');
+    const btnUnlock = document.getElementById('btn-unlock');
+    const lockError = document.getElementById('lock-error');
+    const btnLockSession = document.getElementById('btn-lock-session');
+
+    function checkSecurityLock() {
+      const isAuth = sessionStorage.getItem('eng_auth_unlocked') === 'true';
+      if (isAuth) {
+        lockOverlay.style.display = 'none';
+      } else {
+        lockOverlay.style.display = 'flex';
+      }
+    }
+
+    btnUnlock.addEventListener('click', () => {
+      const u = lockUsername.value.trim();
+      const p = lockPassword.value.trim();
+      if (u === '2207' && p === '0710') {
+        sessionStorage.setItem('eng_auth_unlocked', 'true');
+        localStorage.setItem('eng_auth_pass', '2207:0710');
+        lockError.style.display = 'none';
+        lockOverlay.style.display = 'none';
+      } else {
+        lockError.style.display = 'block';
+      }
+    });
+
+    btnLockSession.addEventListener('click', () => {
+      sessionStorage.removeItem('eng_auth_unlocked');
+      checkSecurityLock();
+    });
+
+    // Check lock state immediately on load
+    checkSecurityLock();
+
+    let currentProposal = null;
+    let activeNonce = null;
+    let currentAttachment = null;
+
+    const modeSelect = document.getElementById('mode-select');
+    const cmdInput = document.getElementById('cmd-input');
+    const btnSend = document.getElementById('btn-send');
+    const btnMic = document.getElementById('btn-mic');
+    const btnAttach = document.getElementById('btn-attach');
+    const fileInput = document.getElementById('file-input');
+    const attachmentPreview = document.getElementById('attachment-preview');
+    const attachedFilename = document.getElementById('attached-filename');
+    const btnRemoveAttachment = document.getElementById('btn-remove-attachment');
+
+    const chatHistory = document.getElementById('chat-history');
+    const diffView = document.getElementById('diff-view');
+    const modalOverlay = document.getElementById('modal-overlay');
+    const btnConfirm = document.getElementById('btn-confirm-execute');
+    const btnCancel = document.getElementById('btn-cancel-execute');
+    const btnRollback = document.getElementById('btn-rollback');
+
+    // Terminal Buttons
+    document.getElementById('btn-git-status').addEventListener('click', () => runTerminal('git_status'));
+    document.getElementById('btn-git-diff').addEventListener('click', () => runTerminal('git_diff'));
+    document.getElementById('btn-pytest').addEventListener('click', () => runTerminal('pytest'));
+    document.getElementById('btn-release').addEventListener('click', fetchReleaseChecklist);
+
+    // Attachment File Upload Handler
+    btnAttach.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async () => {
+      if (!fileInput.files.length) return;
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const token = localStorage.getItem('mnr_token') || localStorage.getItem('staff_token') || '';
+        const res = await fetch('/api/v1/engineering/ai/upload', {
+          method: 'POST',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'X-Engineering-Passcode': localStorage.getItem('eng_auth_pass') || '2207:0710'
+          },
+          body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentAttachment = data;
+          attachedFilename.textContent = data.filename;
+          attachmentPreview.style.display = 'flex';
+        }
+      } catch (err) {
+        alert('File upload failed: ' + err.message);
+      }
+    });
+
+    btnRemoveAttachment.addEventListener('click', () => {
+      currentAttachment = null;
+      attachmentPreview.style.display = 'none';
+      fileInput.value = '';
+    });
+
+    async function runTerminal(key) {
+      const token = localStorage.getItem('mnr_token') || localStorage.getItem('staff_token') || '';
+      try {
+        const res = await fetch('/api/v1/engineering/ai/terminal/run', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'X-Engineering-Passcode': localStorage.getItem('eng_auth_pass') || '2207:0710'
+          },
+          body: JSON.stringify({ command_key: key })
+        });
+        const data = await res.json();
+        diffView.textContent = `=== TERMINAL RUNNER: ${data.command_str} ===\n\nSTDOUT:\n${data.stdout}\n\nSTDERR:\n${data.stderr}`;
+      } catch (err) {
+        diffView.textContent = 'Terminal Error: ' + err.message;
+      }
+    }
+
+    async function fetchReleaseChecklist() {
+      const token = localStorage.getItem('mnr_token') || localStorage.getItem('staff_token') || '';
+      try {
+        const res = await fetch('/api/v1/engineering/ai/release/checklist', {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'X-Engineering-Passcode': localStorage.getItem('eng_auth_pass') || '2207:0710'
+          }
+        });
+        const data = await res.json();
+        let checklistText = `=== PHASE 3.3 RELEASE VERIFICATION CHECKLIST ===\nOverall Status: ${data.overall_status}\n\n`;
+        data.checklist.forEach(item => {
+          checklistText += `[${item.status}] ${item.check}\n  Evidence: ${item.evidence}\n\n`;
+        });
+        diffView.textContent = checklistText;
+      } catch (err) {
+        diffView.textContent = 'Release Checklist Error: ' + err.message;
+      }
+    }
+
+    // Speech Recognition Listener
+    let recognition = null;
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => { btnMic.classList.add('recording'); };
+      recognition.onend = () => { btnMic.classList.remove('recording'); };
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        cmdInput.value = transcript;
+        
+        if (currentProposal && modalOverlay.style.display === 'flex') {
+          if (transcript.toLowerCase().includes('confirm') || transcript.toLowerCase().includes('approve') || transcript.toLowerCase().includes('yes')) {
+            btnConfirm.click();
+          }
+        }
+      };
+    }
+
+    btnMic.addEventListener('click', () => {
+      if (recognition) {
+        btnMic.classList.contains('recording') ? recognition.stop() : recognition.start();
+      } else {
+        alert('Voice input is not supported in this browser.');
+      }
+    });
+
+    async function runCommand() {
+      const text = cmdInput.value.trim();
+      if (!text) return;
+      const selectedMode = modeSelect.value;
+      cmdInput.value = '';
+
+      let attachTag = currentAttachment ? `<br><small style="color:#38bdf8">📎 Attached: ${escapeHtml(currentAttachment.filename)}</small>` : '';
+
+      chatHistory.innerHTML += `
+        <div class="msg-card user">
+          <div class="msg-header"><span>You (${selectedMode.toUpperCase()})</span><span>Command</span></div>
+          <div class="msg-body">${escapeHtml(text)}${attachTag}</div>
+        </div>
+        <div class="msg-card ai loading-card" id="temp-loading-card" style="border-left-color:#38bdf8;">
+          <div class="msg-header" style="color:#38bdf8;">
+            <span>MYNT OS Engineering AI</span>
+            <span><i class="fa-solid fa-spinner fa-spin"></i> Processing...</span>
+          </div>
+          <div class="msg-body" style="color:#94a3b8; display:flex; align-items:center; gap:10px;">
+            <i class="fa-solid fa-circle-notch fa-spin" style="font-size:18px; color:#38bdf8;"></i>
+            <span>Analyzing command & querying database...</span>
+          </div>
+        </div>
+      `;
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+      btnSend.disabled = true;
+      cmdInput.disabled = true;
+
+      try {
+        const token = localStorage.getItem('mnr_token') || localStorage.getItem('staff_token') || '';
+        const payload = {
+          user_command: text,
+          query_mode: selectedMode,
+          input_method: 'text',
+          passcode: '2207:0710',
+          attachment_name: currentAttachment ? currentAttachment.filename : null,
+          attachment_url: currentAttachment ? currentAttachment.file_url : null
+        };
+
+        currentAttachment = null;
+        attachmentPreview.style.display = 'none';
+        fileInput.value = '';
+
+        const res = await fetch('/api/v1/engineering/ai/command/process', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'X-Engineering-Passcode': localStorage.getItem('eng_auth_pass') || '2207:0710'
+          },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        const loadingCard = document.getElementById('temp-loading-card');
+        if (loadingCard) loadingCard.remove();
+
+        const imp = data.impact_report || {};
+        let optionsHtml = '';
+        if (data.options && data.options.length > 0) {
+          let buttons = data.options.map(opt => {
+            let label = typeof opt === 'object' ? (opt.label || opt.value) : opt;
+            let val = typeof opt === 'object' ? (opt.value || opt.label) : opt;
+            return `<button class="opt-btn" onclick="selectOption('${escapeJS(val)}')" style="background:#1e293b; border:1px solid #38bdf8; color:#38bdf8; padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s;">${escapeHtml(label)}</button>`;
+          }).join(' ');
+
+          optionsHtml = `
+            <div style="margin-top:14px; padding-top:12px; border-top:1px solid #334155;">
+              <div style="font-size:12px; color:#f59e0b; font-weight:700; text-transform:uppercase; margin-bottom:8px;">
+                <i class="fa-solid fa-list-check"></i> Select an Option or Type Custom Instruction:
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                ${buttons}
+              </div>
+            </div>
+          `;
+        }
+
+        chatHistory.innerHTML += `
+          <div class="msg-card ai ${data.status === 'INTENT_UNCERTAIN' ? 'uncertain' : ''}">
+            <div class="msg-header" style="${data.status === 'INTENT_UNCERTAIN' ? 'color:#f59e0b;' : ''}">
+              <span>MYNT OS Engineering AI</span>
+              <span>MODE: ${data.query_mode ? data.query_mode.toUpperCase() : 'CODEBASE'} | ${data.intent_classification}</span>
+            </div>
+            <div class="msg-body">
+              <strong>Result & Findings:</strong><br>${formatMarkdown(data.current_findings)}
+              ${optionsHtml}
+              <div class="impact-grid">
+                <div>Backend: <span class="impact-tag">${escapeHtml(imp.backend_impact || 'None')}</span></div>
+                <div>Database: <span class="impact-tag">${escapeHtml(imp.database_impact || 'None')}</span></div>
+                <div>Web / PWA: <span class="impact-tag">${escapeHtml(imp.web_impact || 'None')}</span></div>
+                <div>Risk Level: <span class="impact-tag" style="color:${imp.regression_risk === 'HIGH' ? '#ef4444' : '#10b981'}">${escapeHtml(imp.regression_risk || 'LOW')}</span></div>
+              </div>
+            </div>
+          </div>
+        `;
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+
+        if (data.proposal) {
+          currentProposal = data.proposal;
+          diffView.textContent = data.proposal.diff_preview;
+          document.getElementById('modal-desc').textContent = `Proposal #${data.proposal.proposal_id}: Apply patch to '${data.proposal.target_file}'? (Risk: ${data.proposal.risk_level})`;
+          modalOverlay.style.display = 'flex';
+        }
+      } catch (err) {
+        const loadingCard = document.getElementById('temp-loading-card');
+        if (loadingCard) loadingCard.remove();
+        chatHistory.innerHTML += `
+          <div class="msg-card ai" style="border-left-color:#ef4444">
+            <div class="msg-header" style="color:#ef4444"><span>Error</span></div>
+            <div class="msg-body">${escapeHtml(err.message)}</div>
+          </div>
+        `;
+      } finally {
+        btnSend.disabled = false;
+        cmdInput.disabled = false;
+        cmdInput.focus();
+      }
+    }
+
+    btnSend.addEventListener('click', runCommand);
+    cmdInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') runCommand(); });
+
+    btnConfirm.addEventListener('click', async () => {
+      if (!currentProposal) return;
+      modalOverlay.style.display = 'none';
+      activeNonce = 'nonce_' + Date.now();
+
+      try {
+        const token = localStorage.getItem('mnr_token') || localStorage.getItem('staff_token') || '';
+        const res = await fetch('/api/v1/engineering/ai/command/execute', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'X-Engineering-Passcode': localStorage.getItem('eng_auth_pass') || '2207:0710'
+          },
+          body: JSON.stringify({ proposal_id: currentProposal.proposal_id, idempotency_nonce: activeNonce, passcode: '2207:0710' })
+        });
+        const data = await res.json();
+        alert(data.message || 'Patch executed successfully.');
+        btnRollback.style.display = 'inline-block';
+      } catch (e) {
+        alert('Execution failed: ' + e.message);
+      }
+    });
+
+    btnCancel.addEventListener('click', () => { modalOverlay.style.display = 'none'; });
+
+    btnRollback.addEventListener('click', async () => {
+      if (!currentProposal) return;
+      try {
+        const token = localStorage.getItem('mnr_token') || localStorage.getItem('staff_token') || '';
+        const res = await fetch('/api/v1/engineering/ai/command/rollback', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'X-Engineering-Passcode': localStorage.getItem('eng_auth_pass') || '2207:0710'
+          },
+          body: JSON.stringify({ proposal_id: currentProposal.proposal_id, target_file: currentProposal.target_file, passcode: '2207:0710' })
+        });
+        const data = await res.json();
+        alert(data.message || 'Rollback executed successfully.');
+        btnRollback.style.display = 'none';
+      } catch (e) {
+        alert('Rollback failed: ' + e.message);
+      }
+    });
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function escapeJS(str) {
+      return String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+
+    function selectOption(val) {
+      cmdInput.value = val;
+      cmdInput.focus();
+      runCommand();
+    }
+
+    function formatMarkdown(str) {
+      if (!str) return '';
+      let html = escapeHtml(str);
+      html = html.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+      html = html.replace(/`([^`]+)`/g, '<code style="background:#334155; padding:2px 6px; border-radius:4px; font-family:monospace; font-size:12px; color:#38bdf8;">$1</code>');
+      html = html.replace(/\n/g, '<br>');
+      return html;
+    }
+  </script>
+</body>
+</html>

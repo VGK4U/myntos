@@ -3779,7 +3779,13 @@ def list_leads(
     if is_restricted_freelancer:
         can_view_all = False
     
-    query = db.query(CRMLead).filter(CRMLead.company_id == company_id)
+    # DC Protocol (Aug 2026): CATEGORY-WISE LEAD QUERYING.
+    # MyntReal menus operate Category-wise across company accounts (1, 2, 3, 4).
+    # Allows category menus (Solar, EV B2C, EV B2B, ETC Training, Real Dreams, EV Spares, Insurance)
+    # to query all leads in that category across all company IDs.
+    query = db.query(CRMLead)
+    if company_id and not (category or category_id is not None):
+        query = query.filter(CRMLead.company_id == company_id)
     
     # VISIBILITY FILTER LOGIC:
     # The visibility filters (primary_owner, assigned_to_me) work for ALL users.
@@ -3806,7 +3812,7 @@ def list_leads(
                     CRMLead.field_staff_id == current_employee.id,
                     and_(
                         CRMLead.handler_type == 'unassigned',
-                        CRMLead.status == 'new',
+                        ~CRMLead.status.in_(['won', 'lost']),
                         CRMLead.primary_owner_id.is_(None),
                         CRMLead.telecaller_id.is_(None),
                         CRMLead.field_staff_id.is_(None),
@@ -3838,7 +3844,7 @@ def list_leads(
             CRMLead.handler_id == current_employee.emp_code,  # Legacy fallback
             # New/Unassigned leads visible to all for claiming
             and_(
-                CRMLead.status == 'new',
+                ~CRMLead.status.in_(['won', 'lost']),
                 CRMLead.handler_type == 'unassigned',
                 CRMLead.telecaller_id.is_(None),
                 CRMLead.field_staff_id.is_(None),

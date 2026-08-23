@@ -7658,17 +7658,14 @@ const server = http.createServer(async (req, res) => {
 
 let waBotProcess = null;
 let waBotStarting = false;
-
 function ensureWhatsAppBotRunning() {
   if (waBotProcess || waBotStarting) return;
-
   const botPathCandidates = [
     path.join(__dirname, '../backend/whatsapp-group-bot/server.js'),
     path.join(__dirname, 'backend/whatsapp-group-bot/server.js'),
     path.join(process.cwd(), 'backend/whatsapp-group-bot/server.js'),
     path.join(process.cwd(), 'MyntReal_Latest/backend/whatsapp-group-bot/server.js')
   ];
-
   let botScriptPath = null;
   for (const p of botPathCandidates) {
     if (fs.existsSync(p)) {
@@ -7676,12 +7673,9 @@ function ensureWhatsAppBotRunning() {
       break;
     }
   }
-
   if (!botScriptPath) {
     console.warn('[DC-WA-BOT] Could not locate whatsapp-group-bot/server.js script');
     return;
-  }
-
   waBotStarting = true;
   console.log(`[DC-WA-BOT] Auto-spawning WhatsApp Group Bot daemon on port 5002 from ${botScriptPath}...`);
   try {
@@ -7695,18 +7689,24 @@ function ensureWhatsAppBotRunning() {
       console.warn(`[DC-WA-BOT] WhatsApp bot daemon exited with code ${code}. Resetting for auto-respawn.`);
       waBotProcess = null;
       waBotStarting = false;
-    });
   } catch (err) {
     console.error('[DC-WA-BOT] Failed to spawn WhatsApp bot:', err.message);
     waBotStarting = false;
-  }
 }
-
   // WhatsApp QR Code & Group Bot Gateway Proxy Route (/qr, /qr-data, /whatsapp-qr, /status)
   if (reqPathLower === '/qr' || reqPathLower === '/qr/' || reqPathLower === '/qr-data' || reqPathLower === '/qr-data/' || reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/' || reqPathLower === '/status') {
     ensureWhatsAppBotRunning();
     const targetPath = (reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/') ? '/qr' : req.url;
-    const proxyOptions = {
+  // WhatsApp QR Code & Group Bot Gateway Proxy Route (/scan, /qr, /whatsapp-qr, /qr-data, /logout, /status)
+  if (
+    reqPathLower === '/scan' || reqPathLower === '/scan/' ||
+    reqPathLower === '/qr' || reqPathLower === '/qr/' ||
+    reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/' ||
+    reqPathLower === '/qr-data' || reqPathLower === '/qr-data/' ||
+    reqPathLower === '/logout' || reqPathLower === '/api/logout' ||
+    reqPathLower === '/status'
+  ) {
+    const targetPath = (reqPathLower === '/scan' || reqPathLower === '/scan/' || reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/') ? '/qr' : req.url;    const proxyOptions = {
       hostname: '127.0.0.1',
       port: 5002,
       path: targetPath,
@@ -8639,6 +8639,25 @@ function ensureWhatsAppBotRunning() {
   if (url.startsWith('/mobile?')) {
     res.writeHead(302, { 'Location': '/mobile/' + url.substring(7) });
     res.end();
+    return;
+  }
+
+  // Serve Engineering AI Antigravity Dashboard (/engineering/)
+  if (url === '/engineering' || url === '/engineering/' || url.startsWith('/engineering/?')) {
+    const filePath = path.join(__dirname, 'public', 'engineering', 'index.html');
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(404);
+        res.end('Engineering AI dashboard not found');
+      } else {
+        console.log(`✅ Serving Engineering AI Antigravity Dashboard`);
+        res.writeHead(200, { 
+          'Content-Type': 'text/html',
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
+        });
+        res.end(data);
+      }
+    });
     return;
   }
 
@@ -20100,45 +20119,51 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     res.writeHead(302, { 'Location': '/staff/whatsapp-config' });
     res.end();
     return;
+  } else if (url.startsWith('/staff/whatsapp-center')) {
+    const filePath = path.join(__dirname, 'staff_whatsapp_center.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('WhatsApp Center not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
   } else if (url.startsWith('/staff/crm/whatsapp-bot')) {
-    const filePath = path.join(__dirname, 'staff_crm_whatsapp_bot.html');
+    const filePath = path.join(__dirname, 'staff_whatsapp_center.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('WhatsApp Bot Hub not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
-      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
     return;
   } else if (url.startsWith('/staff/crm/whatsapp-inbox') || url.startsWith('/staff/crm/wa-inbox')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    // DC Protocol: Client-side LocalStorage token authentication handles user validation
-    const filePath = path.join(__dirname, 'staff_crm_whatsapp_inbox.html');
+    const filePath = path.join(__dirname, 'staff_whatsapp_center.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('CRM WhatsApp Inbox not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
-      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
     return;
   } else if (url.startsWith('/staff/whatsapp-inbox')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    // DC Protocol: Client-side LocalStorage token authentication handles user validation
-    const filePath = path.join(__dirname, 'staff_whatsapp_inbox.html');
+    const filePath = path.join(__dirname, 'staff_whatsapp_center.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('WhatsApp Inbox not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
-      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
     return;
   } else if (url.startsWith('/staff/whatsapp-config')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    // DC Protocol: Client-side LocalStorage token authentication handles user validation
-    const filePath = path.join(__dirname, 'staff_whatsapp_config.html');
+    const filePath = path.join(__dirname, 'staff_whatsapp_center.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('WhatsApp Config not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
-      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
     return;

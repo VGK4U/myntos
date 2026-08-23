@@ -1963,3 +1963,460 @@ def seed_income_ledgers(
         raise HTTPException(status_code=403, detail='Super / EA access required')
     result = seed_default_income_ledgers(db, company_id)
     return {'success': True, **result}
+
+
+@router.get("/staff/vgk/member-executive-summary/{partner_id}")
+def get_member_executive_summary(
+    partner_id: str,
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user),
+):
+    """
+    [DC-VGK-EXEC-SUMMARY-001] Executive-Level Member Earning & Progress Breakdown
+    Includes:
+    - Stage-wise files breakup (Stage 1, Stage 2, Stage 3, Active, Lost)
+    - Financial buckets (Overall Earned, Earned Till Date, Potential, Active Advance, Lost Lead Advance)
+    - 50% Capped Lost Lead Advance Deduction & Carry-Forward Ledger
+    - Payout Eligibility Status (Eligible / Under Warning / Blocked)
+    """
+    from app.models.staff_accounts import OfficialPartner
+    from app.models.crm import CRMLead
+    from app.models.staff import StaffEmployee
+    from sqlalchemy import text
+
+    # Locate partner
+    partner = None
+    if str(partner_id).isdigit():
+        partner = db.query(OfficialPartner).filter(OfficialPartner.id == int(partner_id)).first()
+    if not partner:
+        partner = db.query(OfficialPartner).filter(OfficialPartner.partner_code == str(partner_id).strip()).first()
+    
+    if not partner:
+        raise HTTPException(status_code=404, detail="Channel Partner not found")
+
+    p_id = partner.id
+    p_code = getattr(partner, 'partner_code', None) or f"VGK{partner.id:06d}"
+
+    # Load potential earnings from earner card service
+    from app.services.vgk_earner_card import get_bulk_partner_potential_earning
+    pot_map = get_bulk_partner_potential_earning(db, [p_id], exclude_l1=False)
+    potential_earnings = float(pot_map.get(p_id, 0.0))
+
+    # Load partner leads
+    leads = db.execute(text("""
+        SELECT id, name, phone, city, status, solar_pipeline_status, submit_date, created_at, updated_at, deal_value
+        FROM crm_leads
+        WHERE (associated_partner_id = :pid OR primary_owner_id = :pid OR source_ref_id = CAST(:pid AS VARCHAR) OR id IN (
+            SELECT source_lead_id FROM vgk_cash_income_entries WHERE partner_id = :pid AND source_lead_id IS NOT NULL
+        ))
+        ORDER BY created_at DESC
+    """), {"pid": p_id}).fetchall()
+
+    # Load NON-CANCELLED income entries from vgk_cash_income_entries
+    income_rows = db.execute(text("""
+        SELECT 
+            id, entry_number, source_lead_id, level, partner_id, kind,
+            commission_amount AS gross_amount, 
+            status, created_at, commission_pct AS calc_pct
+        FROM vgk_cash_income_entries
+        WHERE partner_id = :pid AND (status IS NULL OR status NOT IN ('CANCELLED', 'REJECTED'))
+        ORDER BY created_at DESC
+    """), {"pid": p_id}).fetchall()
+
+    total_files = len(leads)
+    stage1_count = 0
+    stage1_total_adv = 0.0
+    stage2_count = 0
+    stage2_total_adv = 0.0
+    stage3_count = 0
+    stage3_total_comm = 0.0
+    active_count = 0
+    lost_count = 0
+    lost_lead_advances_paid = 0.0
+
+    lost_leads_ledger = []
+
+    # Separate advances chronologically by lead: 1st advance = Stage 1, 2nd+ advance = Stage 2
+    adv_by_lead = {}
+    stage3_count = 0
+    stage3_total_comm = 0.0
+    bonus_count = 0
+    bonus_total_amt = 0.0
+
+    for r in income_rows:
+        k = (r.kind or '').upper()
+        amt = float(r.gross_amount or 0)
+        lid = r.source_lead_id
+        
+        if k in ('ADVANCE', 'DVR_ADVANCE', 'STAGE1_ADVANCE', 'STAGE2_ADVANCE', 'STAGE_2_ADVANCE'):
+            if lid not in adv_by_lead:
+                adv_by_lead[lid] = []
+            adv_by_lead[lid].append((amt, r))
+        elif k in ('COMMISSION', 'SENIOR_COMM', 'BRAND_COMMISSION'):
+            stage3_count += 1
+            stage3_total_comm += amt
+        elif k in ('SLAB_BONUS', 'BONANZA_BONUS', 'EXTRA_COMMISSION', 'REFERRAL_BONUS'):
+            bonus_count += 1
+            bonus_total_amt += amt
+
+    stage1_count = 0
+    stage1_total_adv = 0.0
+    stage2_count = 0
+    stage2_total_adv = 0.0
+
+    for lid, adv_list in adv_by_lead.items():
+        stage1_count += 1
+        stage1_total_adv += adv_list[0][0]
+        if len(adv_list) > 1:
+            for extra_adv in adv_list[1:]:
+                stage2_count += 1
+                stage2_total_adv += extra_adv[0]
+
+    from datetime import date as date_cls
+    today_dt = date_cls.today()
+
+    b_10 = {'cnt': 0, 'deal_val': 0.0, 'potential': 0.0}
+    b_20 = {'cnt': 0, 'deal_val': 0.0, 'potential': 0.0}
+    b_30 = {'cnt': 0, 'deal_val': 0.0, 'potential': 0.0}
+    b_over30 = {'cnt': 0, 'deal_val': 0.0, 'potential': 0.0}
+
+    stg_sub = {'cnt': 0, 'deal_val': 0.0, 'potential': 0.0}
+    stg_bnk = {'cnt': 0, 'deal_val': 0.0, 'potential': 0.0}
+    stg_pnd = {'cnt': 0, 'deal_val': 0.0, 'potential': 0.0}
+    stg_cmp = {'cnt': 0, 'deal_val': 0.0, 'potential': 0.0}
+    stg_rst = {'cnt': 0, 'deal_val': 0.0, 'potential': 0.0}
+
+    for l in leads:
+        st = (l.status or '').lower()
+        pipe_st = (getattr(l, 'solar_pipeline_status', None) or '').lower()
+        
+        sub_dt = getattr(l, 'submit_date', None) or getattr(l, 'created_at', None) or today_dt
+        if hasattr(sub_dt, 'date'):
+            sub_dt = sub_dt.date()
+        elif isinstance(sub_dt, str):
+            try: sub_dt = datetime.strptime(sub_dt[:10], '%Y-%m-%d').date()
+            except: sub_dt = today_dt
+            
+        age_days = max(0, (today_dt - sub_dt).days)
+        val = float(getattr(l, 'deal_value', 198000) or 198000)
+        pot = round(val * 0.04, 2)
+        
+        if age_days <= 10:
+            b_10['cnt'] += 1; b_10['deal_val'] += val; b_10['potential'] += pot
+        elif age_days <= 20:
+            b_20['cnt'] += 1; b_20['deal_val'] += val; b_20['potential'] += pot
+        elif age_days <= 30:
+            b_30['cnt'] += 1; b_30['deal_val'] += val; b_30['potential'] += pot
+        else:
+            b_over30['cnt'] += 1; b_over30['deal_val'] += val; b_over30['potential'] += pot
+            
+        # Solar Pipeline Stage Classification based on actual workflow stage
+        if pipe_st in ('loan_rejected', 'bank_loan_rejected', 'rejected', 'cancelled', 'different_vendor', 'opted_out') or st in ('lost', 'cancelled', 'rejected', 'loan_rejected', 'bank_loan_rejected'):
+            stg_rst['cnt'] += 1; stg_rst['deal_val'] += val; stg_rst['potential'] += pot
+            lost_count += 1
+        elif pipe_st in ('completed', 'installed', 'subsidy_pending', 'subsidy_claimed', 'commissioned', 'work_completed') or st == 'completed':
+            stg_cmp['cnt'] += 1; stg_cmp['deal_val'] += val; stg_cmp['potential'] += pot
+        elif pipe_st in ('installation_pending', 'material_dispatch', 'work_in_progress', 'net_meter_pending', 'net_metering_pending') or st in ('in_progress', 'installation'):
+            stg_pnd['cnt'] += 1; stg_pnd['deal_val'] += val; stg_pnd['potential'] += pot
+            active_count += 1
+        elif pipe_st in ('pending_with_bank', 'bank_loan_process', 'loan_submitted', 'bank_process', 'sanction_pending') or st in ('loan_process', 'pending_with_bank'):
+            stg_bnk['cnt'] += 1; stg_bnk['deal_val'] += val; stg_bnk['potential'] += pot
+            active_count += 1
+        else:
+            stg_sub['cnt'] += 1; stg_sub['deal_val'] += val; stg_sub['potential'] += pot
+            active_count += 1
+
+    # Check for lost leads where advance was paid (checking both status AND solar_pipeline_status)
+    lost_lead_rows = db.execute(text("""
+        SELECT c.id AS lead_id, c.name, c.phone, c.status, c.solar_pipeline_status, c.created_at, c.submit_date,
+               COALESCE(SUM(v.commission_amount), 0) AS adv_paid
+        FROM crm_leads c
+        JOIN vgk_cash_income_entries v ON v.source_lead_id = c.id
+        WHERE (c.associated_partner_id = :pid OR c.primary_owner_id = :pid OR v.partner_id = :pid)
+          AND (c.status IN ('lost', 'cancelled', 'rejected') OR c.solar_pipeline_status IN ('loan_rejected', 'bank_loan_rejected', 'rejected', 'cancelled', 'different_vendor', 'opted_out'))
+          AND v.kind IN ('ADVANCE', 'DVR_ADVANCE', 'STAGE1_ADVANCE', 'STAGE2_ADVANCE', 'COMMISSION')
+          AND (v.status IS NULL OR v.status NOT IN ('CANCELLED', 'REJECTED'))
+        GROUP BY c.id, c.name, c.phone, c.status, c.solar_pipeline_status, c.created_at, c.submit_date
+    """), {"pid": p_id}).fetchall()
+
+    for l in lost_lead_rows:
+        tot_adv = float(l.adv_paid or 0)
+        if tot_adv > 0:
+            lost_lead_advances_paid += tot_adv
+            pipe_st_str = (l.solar_pipeline_status or '').lower()
+            reason_label = (l.solar_pipeline_status or l.status or "Rejected / Lost").replace("_", " ").title()
+            if "loan_rejected" in pipe_st_str:
+                reason_label = "Loan Rejected by Bank"
+            elif "different_vendor" in pipe_st_str:
+                reason_label = "Selected Different Vendor"
+
+            lost_leads_ledger.append({
+                "lead_id": l.lead_id,
+                "customer_name": l.name or f"Lead #{l.lead_id}",
+                "phone": l.phone or "—",
+                "status": l.status,
+                "pipeline_status": l.solar_pipeline_status or l.status or "lost",
+                "rejection_reason": reason_label,
+                "submitted_date": (l.submit_date or l.created_at).strftime("%Y-%m-%d") if (l.submit_date or l.created_at) else "—",
+                "stage1_adv": tot_adv,
+                "stage2_adv": 0.0,
+                "total_lost_adv_paid": tot_adv,
+                "deducted_so_far": 0.0,
+                "remaining_balance": tot_adv
+            })
+
+    # Compute 50% capping lost lead advance deduction across income entries (applied chronologically after lead rejection date, excluding bonuses)
+    total_lost_adv_deducted = 0.0
+    itemized_income_breakdown = []
+
+    gross_overall_earned = sum(float(r.gross_amount or 0) for r in income_rows)
+    earned_till_date_net = round(gross_overall_earned * 0.90, 2)
+
+    # Track lost advance pool dynamically per rejection date
+    for r in income_rows:
+        gross = float(r.gross_amount or 0)
+        k = (r.kind or '').upper()
+        s1 = gross if k in ('ADVANCE', 'DVR_ADVANCE', 'STAGE1_ADVANCE') else 0.0
+        s2 = gross if k in ('STAGE2_ADVANCE', 'STAGE_2_ADVANCE') else 0.0
+        entry_created = getattr(r, 'created_at', None) or today_dt
+
+        # Calculate lost advance pool available at the time of entry creation
+        active_lost_pool = 0.0
+        for lr in lost_lead_rows:
+            rejection_time = getattr(lr, 'updated_at', None) or getattr(lr, 'created_at', None) or today_dt
+            if (entry_created and rejection_time and entry_created >= rejection_time) or getattr(r, 'status', '') == 'PENDING':
+                active_lost_pool += float(lr.adv_paid or 0)
+
+        lost_lead_deduction = 0.0
+        if active_lost_pool > 0 and k not in ('SLAB_BONUS', 'BONANZA_BONUS', 'EXTRA_COMMISSION', 'REFERRAL_BONUS'):
+            # Calculate prior lost lead advance deductions applied on entries created after rejection time
+            prior_ded_sum = 0.0
+            for prev_item in itemized_income_breakdown:
+                prev_k = (prev_item.get('kind') or '').upper()
+                if prev_k not in ('SLAB_BONUS', 'BONANZA_BONUS', 'EXTRA_COMMISSION', 'REFERRAL_BONUS'):
+                    prior_ded_sum += float(prev_item.get('lost_lead_deduction', 0.0))
+
+            avail_pool = max(0.0, active_lost_pool - prior_ded_sum)
+            if avail_pool > 0 and gross > 0:
+                max_50_cap = round(gross * 0.50, 2)
+                lost_lead_deduction = round(min(avail_pool, max_50_cap), 2)
+                total_lost_adv_deducted += lost_lead_deduction
+
+        total_adv_paid = lost_lead_deduction
+        bal_gross = max(0.0, round(gross - total_adv_paid, 2))
+        admin_fee = round(bal_gross * 0.08, 2)
+        tds_fee = round(bal_gross * 0.02, 2)
+        net_payable = round(bal_gross * 0.90, 2)
+
+        itemized_income_breakdown.append({
+            "entry_id": r.id,
+            "entry_number": getattr(r, 'entry_number', None) or f"VCI-{r.id}",
+            "created_at": r.created_at.strftime("%Y-%m-%d") if getattr(r, 'created_at', None) else "—",
+            "client_name": getattr(r, 'client_name', '—') or "—",
+            "kind": getattr(r, 'kind', 'COMMISSION'),
+            "gross_amount": gross,
+            "stage1_adv": s1,
+            "stage2_adv": s2,
+            "lost_lead_deduction": lost_lead_deduction,
+            "advance_paid_total": total_adv_paid,
+            "balance_gross": bal_gross,
+            "admin_fee": admin_fee,
+            "tds_fee": tds_fee,
+            "net_amount": net_payable,
+            "status": r.status or "Pending"
+        })
+
+    # Update lost leads ledger deduction details
+    remaining_lost_carry_forward = lost_lead_advances_paid - total_lost_adv_deducted
+    running_ded = total_lost_adv_deducted
+    for item in lost_leads_ledger:
+        adv = item["total_lost_adv_paid"]
+        ded = min(adv, running_ded)
+        running_ded -= ded
+        item["deducted_so_far"] = round(ded, 2)
+        item["remaining_balance"] = round(adv - ded, 2)
+
+    # 20-Day Inactivity Check: Count leads submitted in last 20 days (< 10 Days + 11-20 Days)
+    recent_leads_in_20_days = b_10['cnt'] + b_20['cnt']
+
+    p_status = str(getattr(partner, 'status', None) or ('ACTIVE' if getattr(partner, 'is_active', True) else 'INACTIVE')).lower()
+    if p_status in ['inactive', 'blocked', 'suspended', 'disabled']:
+        payout_status = "BLOCKED"
+        payout_status_label = "🔴 Blocked / Administrative Hold"
+    elif remaining_lost_carry_forward > 0 and recent_leads_in_20_days == 0:
+        payout_status = "WARNING"
+        payout_status_label = "⚠️ Under Warning / Inactive (No Leads in 20 Days) & Lost Lead Carry-Forward"
+    elif remaining_lost_carry_forward > 0:
+        payout_status = "WARNING"
+        payout_status_label = "⚠️ Under Warning / Lost Lead Advance Carry-Forward"
+    elif recent_leads_in_20_days == 0:
+        payout_status = "WARNING"
+        payout_status_label = "⚠️ Under Warning / Inactive Pipeline (No Leads Submitted in Last 20 Days)"
+    else:
+        payout_status = "ELIGIBLE"
+        payout_status_label = "🟢 Eligible for Payout Disbursal"
+
+    p_name = getattr(partner, 'partner_name', None) or getattr(partner, 'full_name', None) or getattr(partner, 'name', 'Channel Partner')
+    p_code = getattr(partner, 'partner_code', None) or getattr(partner, 'user_code', None) or f"VGK{partner.id:06d}"
+    reg_date = getattr(partner, 'created_at', None) or getattr(partner, 'registered_at', None)
+
+    # Compute Gross Pending, Lost Lead Deductions (Pending), and Net Pending Payable
+    gross_pending = sum(
+        float(r.get('gross_amount', 0))
+        for r in itemized_income_breakdown
+        if str(r.get('status', '')).upper() in ('DRAFT', 'PENDING', 'STAGE1_APPROVED')
+    )
+    lost_ded_pending = sum(
+        float(r.get('lost_lead_deduction', 0))
+        for r in itemized_income_breakdown
+        if str(r.get('status', '')).upper() in ('DRAFT', 'PENDING', 'STAGE1_APPROVED')
+    )
+    net_pending = sum(
+        float(r.get('net_amount', 0))
+        for r in itemized_income_breakdown
+        if str(r.get('status', '')).upper() in ('DRAFT', 'PENDING', 'STAGE1_APPROVED')
+    )
+
+    return {
+        "success": True,
+        "member_id": partner.id,
+        "member_name": p_name,
+        "user_code": p_code,
+        "phone": getattr(partner, 'phone', '—') or "—",
+        "designation": getattr(partner, 'designation_label', '') or getattr(partner, 'category', '') or "Channel Partner",
+        "registered_at": reg_date.strftime("%Y-%m-%d") if reg_date else "—",
+        "payout_status": payout_status,
+        "payout_status_label": payout_status_label,
+        "files_summary": {
+            "total_files": total_files,
+            "stage1_files": stage1_count,
+            "stage1_total_adv": round(stage1_total_adv, 2),
+            "stage2_files": stage2_count,
+            "stage2_total_adv": round(stage2_total_adv, 2),
+            "stage3_completed_files": stage3_count,
+            "stage3_total_comm": round(stage3_total_comm, 2),
+            "bonus_entries_count": bonus_count,
+            "bonus_total_amt": round(bonus_total_amt, 2),
+            "active_pipeline_files": active_count,
+            "potential_earnings": round(potential_earnings, 2),
+            "lost_files": lost_count,
+            "lost_lead_advances_paid": round(lost_lead_advances_paid, 2)
+        },
+        "financial_buckets": {
+            "overall_gross_earned": round(gross_overall_earned, 2),
+            "earned_till_date_net": round(earned_till_date_net, 2),
+            "potential_earnings": round(potential_earnings, 2),
+            "active_files_advance_paid": round(stage1_total_adv + stage2_total_adv, 2),
+            "bonus_extra_value": round(bonus_total_amt, 2),
+            "lost_lead_advances_paid": round(lost_lead_advances_paid, 2),
+            "total_lost_adv_deducted": round(total_lost_adv_deducted, 2),
+            "remaining_lost_carry_forward": round(remaining_lost_carry_forward, 2),
+            "gross_pending": round(gross_pending, 2),
+            "lost_lead_adv_deducted_pending": round(lost_ded_pending, 2),
+            "net_pending": round(net_pending, 2),
+            "max_deduction_cap_pct": "50%"
+        },
+        "leads_ageing_breakup": {
+            "under_10_days": {"files": b_10['cnt'], "deal_valuation": round(b_10['deal_val'], 2), "potential_earning": round(b_10['potential'], 2)},
+            "days_11_to_20": {"files": b_20['cnt'], "deal_valuation": round(b_20['deal_val'], 2), "potential_earning": round(b_20['potential'], 2)},
+            "days_21_to_30": {"files": b_30['cnt'], "deal_valuation": round(b_30['deal_val'], 2), "potential_earning": round(b_30['potential'], 2)},
+            "over_30_days":  {"files": b_over30['cnt'], "deal_valuation": round(b_over30['deal_val'], 2), "potential_earning": round(b_over30['potential'], 2)}
+        },
+        "pipeline_stage_breakup": {
+            "submitted":     {"files": stg_sub['cnt'], "deal_valuation": round(stg_sub['deal_val'], 2), "potential_earning": round(stg_sub['potential'], 2)},
+            "at_bank":       {"files": stg_bnk['cnt'], "deal_valuation": round(stg_bnk['deal_val'], 2), "potential_earning": round(stg_bnk['potential'], 2)},
+            "net_pending":   {"files": stg_pnd['cnt'], "deal_valuation": round(stg_pnd['deal_val'], 2), "potential_earning": round(stg_pnd['potential'], 2)},
+            "completed":     {"files": stg_cmp['cnt'], "deal_valuation": round(stg_cmp['deal_val'], 2), "potential_earning": round(stg_cmp['potential'], 2)},
+            "rejected_lost": {"files": stg_rst['cnt'], "deal_valuation": round(stg_rst['deal_val'], 2), "potential_earning": round(stg_rst['potential'], 2)}
+        },
+        "lost_leads_adjustment_ledger": lost_leads_ledger,
+        "itemized_breakdown": itemized_income_breakdown
+    }
+
+
+@router.post("/members/{member_id}/send-whatsapp-statement")
+@router.post("/staff/vgk/member-executive-summary/{member_id}/send-whatsapp")
+def send_member_whatsapp_statement(
+    member_id: str,
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Dispatches member revenue breakup statement directly to member's WhatsApp phone via local WhatsApp Bot Gateway (port 5002).
+    Does NOT use direct wa.me link. Returns immediate on-screen status confirmation.
+    """
+    import requests
+    
+    # 1. Fetch executive summary for this member
+    summary = get_member_executive_summary(partner_id=member_id, db=db, current_employee=current_employee)
+    
+    m_name = summary.get("member_name", "Channel Partner")
+    m_code = summary.get("user_code", "VGK")
+    phone = summary.get("phone", "").strip()
+    desig = summary.get("designation", "Channel Partner")
+    st_lbl = summary.get("payout_status_label", "🟢 Eligible for Payout Disbursal")
+    
+    b = summary.get("financial_buckets", {})
+    f = summary.get("files_summary", {})
+
+    clean_phone = "".join(ch for ch in phone if ch.isdigit())
+    if not clean_phone:
+        raise HTTPException(status_code=400, detail="Member does not have a valid WhatsApp phone number registered.")
+
+    # 2. Format clean revenue statement text
+    msg_text = (
+        f"🌅 *GOOD MORNING! YOUR VGK4U DAILY REVENUE & PROGRESS UPDATE*\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"👤 *Member*: {m_name} ({m_code})\n"
+        f"📱 *Phone*: {phone}\n"
+        f"🏷️ *Designation*: {desig}\n"
+        f"📌 *Payout Status*: {st_lbl}\n\n"
+        f"💰 *FINANCIAL REVENUE BREAKUP*\n"
+        f"• Overall Earned (Gross): ₹{int(b.get('overall_gross_earned', 0)):,}\n"
+        f"• Earned Till Date (Released): ₹{int(b.get('earned_till_date_net', 0)):,}\n"
+        f"• Potential Earnings: ₹{int(b.get('potential_earnings', 0)):,}\n"
+        f"• L0 Bonus & Extra Value: ₹{int(b.get('bonus_extra_value', 0)):,}\n"
+        f"• Active Files Advance: ₹{int(b.get('active_files_advance_paid', 0)):,}\n"
+        f"• Gross Pending (Draft + Pending): ₹{int(b.get('gross_pending', 0)):,}\n"
+        f"• Lost Lead Adv. Deductions: ₹{int(b.get('lost_lead_adv_deducted_pending', 0) or b.get('total_lost_adv_deducted', 0)):,}\n"
+        f"• Net Pending Payable: ₹{int(b.get('net_pending', 0)):,}\n\n"
+        f"📂 *STAGE-WISE FILE BREAKUP*\n"
+        f"• Total Sourced Files: {f.get('total_files', 0)}\n"
+        f"• Stage 1 Adv. Paid: {f.get('stage1_files', 0)} files (₹{int(f.get('stage1_total_adv', 0)):,})\n"
+        f"• Stage 2 Adv. Paid: {f.get('stage2_files', 0)} files (₹{int(f.get('stage2_total_adv', 0)):,})\n"
+        f"• Stage 3 Completed: {f.get('stage3_completed_files', 0)} files (₹{int(f.get('stage3_total_comm', 0)):,})\n"
+        f"• L0 Bonus & Extra Entries: {f.get('bonus_entries_count', 0)} entries (₹{int(f.get('bonus_total_amt', 0)):,})\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"🌟 _Wishing you a productive and successful day ahead!_\n"
+        f"💬 _Auto-generated VGK4U Executive Member Revenue Report_"
+    )
+
+    # 3. Send payload via local WhatsApp Bot Gateway (http://localhost:5002/api/send-message)
+    bot_url = "http://localhost:5002/api/send-message"
+    bot_payload = {
+        "phone": clean_phone,
+        "message": msg_text
+    }
+
+    try:
+        resp = requests.post(bot_url, json=bot_payload, timeout=8)
+        res_json = resp.json() if resp.status_code == 200 else {}
+        if resp.status_code == 200 and res_json.get("success"):
+            return {
+                "success": True,
+                "message": f"Revenue statement successfully sent to {m_name} ({phone}) via WhatsApp Bot!",
+                "member_name": m_name,
+                "phone": phone,
+                "bot_message_id": res_json.get("message_id") or res_json.get("wamid")
+            }
+        else:
+            err = res_json.get("error") or f"Bot returned HTTP {resp.status_code}"
+            raise HTTPException(status_code=500, detail=f"WhatsApp Bot dispatch failed: {err}")
+    except requests.exceptions.ConnectionError:
+        raise HTTPException(status_code=503, detail="WhatsApp Bot is currently offline on port 5002. Please ensure the Bot daemon is running.")
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise exc
+        raise HTTPException(status_code=500, detail=str(exc))
+
+

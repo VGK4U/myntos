@@ -49,6 +49,12 @@
       "type": "group",
       "name": "VGK4u Community Group",
       "identifier": "https://chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY?s=cl&p=i&mlu=0"
+    },
+    {
+      "id": "t_vgk_vijayawada",
+      "type": "group",
+      "name": "VGK4U - Vijayawada",
+      "identifier": "VGK4U - Vijayawada"
     }
   ],
   "service_summary": [
