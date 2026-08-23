@@ -232,7 +232,7 @@
               <div style="position:absolute;bottom:4px;left:-106px;font-size:82px;line-height:1;filter:drop-shadow(0 6px 16px rgba(251,191,36,0.9));z-index:10;user-select:none">🏆</div>
 
               <div style="width:220px;height:220px;border-radius:50%;border:5px solid #fde047;overflow:hidden;background:#001233;box-shadow:0 0 50px rgba(234,179,8,0.95);display:flex;align-items:center;justify-content:center">
-                <img id="prevImg" src="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;object-position:center 20%;display:none">
+                <img id="prevImg" src="" style="width:100%;height:100%;object-fit:cover;object-position:center 20%;display:none">
                 <div id="prevAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:70px;font-weight:900">BG</div>
               </div>
 
@@ -278,7 +278,7 @@
 
             <div id="prevSeniorRow" style="position:relative;width:100%;background:rgba(8,18,38,0.95);border:1.5px solid rgba(234,179,8,0.65);border-radius:16px;padding:8px 12px 8px 132px;display:flex;flex-direction:column;justify-content:center;margin-top:8px;margin-bottom:4px;min-height:96px;box-shadow:0 8px 25px rgba(0,0,0,0.6);box-sizing:border-box">
               <div style="position:absolute;top:-10px;left:10px;width:110px;height:110px;border-radius:50%;background:#1e3a8a;border:4.5px solid #fde047;box-shadow:0 6px 25px rgba(251,191,36,0.9);display:flex;align-items:center;justify-content:center;z-index:10;overflow:hidden">
-                <img id="prevSeniorImg" src="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;display:none">
+                <img id="prevSeniorImg" src="" style="width:100%;height:100%;object-fit:cover;display:none">
                 <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:36px;font-weight:900">NE</div>
               </div>
 
@@ -310,9 +310,11 @@
     
     <div style="background:#f3f4f6;padding:12px 24px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-shrink:0;height:62px;box-sizing:border-box;z-index:20">
       <button onclick="closePosterModal()" style="background:#fff;color:#374151;border:1.5px solid #d1d5db;border-radius:8px;height:38px;padding:0 18px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center">Cancel</button>
+      <button onclick="testShareToNumber()" style="background:linear-gradient(135deg,#0284c7,#0369a1);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-vial me-2"></i>Test Share (Custom No)</button>
       <button onclick="shareOnWhatsApp()" style="background:linear-gradient(135deg,#25d366,#128c7e);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fab fa-whatsapp me-2"></i>Share on WhatsApp</button>
       <button onclick="sharePoster()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-share-alt me-2"></i>Share Poster</button>
       <button onclick="shareDefaultChannel()" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Share Default</button>
+      <button onclick="postPosterAnnouncement()" style="background:linear-gradient(135deg,#ec4899,#be185d);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Post Announcement</button>
       <button onclick="downloadPoster()" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-download me-2"></i>Download Image</button>
     </div>
   </div>
@@ -339,6 +341,9 @@
     if (!path || path === 'None' || path === 'null') return '';
     if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
       return path;
+    }
+    if (path.startsWith('/storage/')) {
+      return window.location.origin + path;
     }
     if (path.startsWith('storage/')) {
       return window.location.origin + '/' + path;
@@ -451,20 +456,23 @@
       });
       const activeFiles = uniqueL1Leads.size;
 
-      const uniqueLeads = {};
+      // Potential Earning: Total potential earning irrespective of level
+      const uniquePotentialLeads = {};
       entries.forEach(e => {
         if (e.status !== 'CANCELLED') {
           const leadId = e.source_lead_id || 0;
           const lvl = e.level !== null && e.level !== undefined ? e.level : -1;
           const key = `${leadId}_${lvl}`;
           const val = e.potential_overall_earning || e.commission_amount || 0;
-          if (!uniqueLeads[key] || val > uniqueLeads[key]) uniqueLeads[key] = val;
+          if (!uniquePotentialLeads[key] || val > uniquePotentialLeads[key]) {
+            uniquePotentialLeads[key] = val;
+          }
         }
       });
-      const potentialEarning = Object.values(uniqueLeads).reduce((a, b) => a + b, 0);
+      const potentialEarning = Object.values(uniquePotentialLeads).reduce((a, b) => a + b, 0);
 
       const todayStr = new Date().toISOString().split('T')[0];
-      const validDates = entries.filter(e => e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None').map(e => e.income_date).sort();
+      const validDates = entries.filter(e => e.level === 1 && e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None').map(e => e.income_date).sort();
       const lastEarningDate = validDates.length > 0 ? validDates[validDates.length - 1] : todayStr;
 
       const mainDateFrom = (document.getElementById('meDateFrom')?.value || '').trim();
@@ -491,7 +499,7 @@
       const seniorEarning = m.senior_earning !== null && m.senior_earning !== undefined ? '₹' + _meFormatInr(m.senior_earning) + '/-' : '—';
 
       let customerName = '—', location = '—';
-      const targetEntries = entries.filter(e => e.status !== 'CANCELLED' && (!initFrom || e.income_date >= initFrom) && (!initTo || e.income_date <= initTo));
+      const targetEntries = entries.filter(e => e.level === 1 && e.status !== 'CANCELLED' && (!initFrom || e.income_date >= initFrom) && (!initTo || e.income_date <= initTo));
       if (targetEntries.length) {
         customerName = targetEntries[0].client_name || '—';
         location = targetEntries[0].location || '—';
@@ -500,20 +508,20 @@
         location = entries[0].location || '—';
       }
 
+      const installedStages = ['completed', 'installation_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'stage 2', 'installed'];
       const installedSet = new Set();
       entries.forEach(e => {
         if (e.level === 1 && e.status !== 'CANCELLED' && e.source_lead_id) {
-          const typeStr = (e.income_type || '').toLowerCase();
-          if (typeStr.includes('stage 2') || typeStr.includes('installed') || typeStr.includes('completed') || (e.stage && e.stage >= 2)) {
+          const typeStr = (e.income_type || e.kind || '').toLowerCase();
+          const stageStr = (e.stage_name || e.solar_pipeline_status || e.stage || '').toString().toLowerCase();
+          const isInst = installedStages.some(s => typeStr.includes(s) || stageStr.includes(s)) || (e.kind || '').toUpperCase() === 'DVR_ADVANCE' || (e.stage2_adv && e.stage2_adv > 0);
+          if (isInst) {
             installedSet.add(e.source_lead_id);
           }
         }
       });
       let installedFiles = installedSet.size;
-      if (installedFiles === 0 && activeFiles > 0) {
-        installedFiles = m.installed_files_count || m.installed_files || Math.min(6, activeFiles);
-      }
-      const filesDisplay = (installedFiles > 0 ? `${installedFiles}/${activeFiles}` : `${activeFiles}`) + ' FILES';
+      const filesDisplay = (installedFiles > 0 ? `${installedFiles}/${activeFiles}` : `0/${activeFiles}`) + ' FILES';
 
       const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
       const setChecked = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
@@ -521,7 +529,7 @@
       setVal('postTitle', 'CONGRATULATIONS');
       setVal('postSubtitle', m.partner_name || '');
 
-      // DC-ALLTIME-OVERALL-001: OVERALL EARNING plaque must ALWAYS reflect the partner's All-Time Cumulative Total
+      // Overall Earning: Total cumulative earnings irrespective of level
       const allTimeSum = entries.reduce((sum, e) => {
         if (e.status === 'CANCELLED') return sum;
         if (e.entry_number && String(e.entry_number).startsWith('VSCA-')) return sum;
@@ -531,9 +539,10 @@
       const overallVal = (allTimeSum > 0) ? allTimeSum : ((m.all_time_gross_earned !== undefined && m.all_time_gross_earned !== null) ? m.all_time_gross_earned : ((m.gross_earned !== undefined && m.gross_earned !== null) ? m.gross_earned : (m.received || 0)));
       setVal('postHighlight', '₹' + _meFormatInr(overallVal) + '/-');
       setVal('postFiles', filesDisplay);
-      setVal('postOverall', (m.total_team_size || 0) + ' MEMBERS');
-      setVal('postTeamBreakup', `L2: ${m.team_l2_count || 0} | L3: ${m.team_l3_count || 0} | L4: ${m.team_l4_count || 0}`);
-      setVal('postPotential', '₹' + _meFormatInr(potentialEarning) + '/-');
+      setVal('postOverall', (activeFiles || m.ground_leads_count || 0) + ' LEADS');
+      setVal('postTeamBreakup', `L1 Ground-Source Business Only`);
+      const potVal = (m && m.potential_earning !== undefined && m.potential_earning !== null) ? m.potential_earning : potentialEarning;
+      setVal('postPotential', '₹' + _meFormatInr(potVal) + '/-');
       setVal('postCustomer', customerName);
       setVal('postLocation', location);
       setVal('postSeniorName', seniorName);
@@ -543,7 +552,14 @@
 
       const seniorNameUpper = (seniorName || '').toUpperCase().trim();
       const isVgkSupport = seniorNameUpper.includes('VGK SUPPORT') || seniorNameUpper.includes('SUPPORT') || seniorNameUpper === 'NONE' || seniorNameUpper === '—' || !seniorNameUpper;
+      
+      // VGK Support MUST ALWAYS BE HIDDEN on the Achievement Poster
       setChecked('postShowSenior', !isVgkSupport);
+      const postShowSeniorEl = document.getElementById('postShowSenior');
+      if (postShowSeniorEl && isVgkSupport) {
+        postShowSeniorEl.checked = false;
+        postShowSeniorEl.disabled = true;
+      }
 
       setChecked('payTypeStage1', true);
       setChecked('payTypeStage2Adv', true);
@@ -615,7 +631,7 @@
       toStr = todayStr;
     } else if (period === 'all') {
       const entries = window._currentEntries || [];
-      const validDates = entries.filter(e => e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None').map(e => e.income_date).sort();
+      const validDates = entries.filter(e => e.level === 1 && e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None').map(e => e.income_date).sort();
       if (validDates.length > 0) {
         fromStr = validDates[0];
         toStr = validDates[validDates.length - 1];
@@ -669,15 +685,19 @@
     let stage1Amt = 0, stage2AdvAmt = 0, finalCommBalGrossAmt = 0, finalCommAdvPaidAmt = 0;
     let brandAmt = 0, bonanzaAmt = 0, extraAmt = 0, awardAmt = 0, seniorTodayAmt = 0;
 
+    // Ground-source L1 entries calculation only for the selected date context
     entries.forEach(e => {
-      if (e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
+      if (e.level === 1 && e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
         const d = e.income_date;
         if (dateFrom && d < dateFrom) return;
         if (dateTo && d > dateTo) return;
 
         const grossAmt = parseFloat(e.commission_amount || 0);
-        const advPaid = parseFloat(e.advance_paid || 0);
-        const balGross = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, grossAmt - advPaid);
+        
+        // Actual cash payment status check: only count advance_paid or paid if explicitly paid out
+        const isPaidOut = e.status === 'PAID' || Boolean(e.paid_at) || Boolean(e.paid_bank_ledger_id) || Boolean(e.paid_cash_staff_id);
+        const advPaid = isPaidOut ? parseFloat(e.commission_amount || e.advance_paid || 0) : 0;
+        const balGross = Math.max(0, grossAmt - advPaid);
 
         const k = (e.kind || '').toUpperCase();
         const typeStr = (e.income_type || '').toLowerCase();
@@ -695,50 +715,22 @@
       }
     });
 
-    const seniorEntries = window._seniorEntries || [];
-    seniorEntries.forEach(se => {
-      if (se.status !== 'CANCELLED' && se.income_date && se.income_date !== 'None') {
-        const d = se.income_date;
-        if (dateFrom && d < dateFrom) return;
-        if (dateTo && d > dateTo) return;
-        const sGross = parseFloat(se.commission_amount || 0);
-        const sAdv = parseFloat(se.advance_paid || 0);
-        const sBal = (se.balance_gross !== undefined && se.balance_gross !== null) ? parseFloat(se.balance_gross) : Math.max(0, sGross - sAdv);
-        seniorTodayAmt += (sBal > 0 ? sBal : sGross);
-      }
-    });
-
-    if (seniorTodayAmt === 0) {
-      entries.forEach(e => {
-        if (e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
-          const d = e.income_date;
-          if (dateFrom && d < dateFrom) return;
-          if (dateTo && d > dateTo) return;
-          if (e.level === 2 || (e.kind || '').toUpperCase() === 'SENIOR_COMM') {
-            const sGross = parseFloat(e.commission_amount || 0);
-            const sAdv = parseFloat(e.advance_paid || 0);
-            const sBal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, sGross - sAdv);
-            seniorTodayAmt += (sBal > 0 ? sBal : sGross);
-          }
-        }
-      });
-    }
-
     let breakupItems = [];
     let total = 0;
     let commByLevel = {};
 
     entries.forEach(e => {
-      if (e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
+      if (e.level === 1 && e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
         const d = e.income_date;
         if (dateFrom && d < dateFrom) return;
         if (dateTo && d > dateTo) return;
         const k = (e.kind || '').toUpperCase();
         if (k === 'COMMISSION' || k === 'SENIOR_COMM') {
           const lvl = e.level || 1;
-          const lbl = e.level_label || (lvl === 1 ? 'L1 Ground Source Comm' : (lvl === 2 ? 'L2 Senior Referrer Payout' : `L${lvl} Commission`));
+          const lbl = e.level_label || (lvl === 1 ? 'L1 Ground Source Comm' : `L${lvl} Commission`);
           const grossAmt = parseFloat(e.commission_amount || 0);
-          const advPaid = parseFloat(e.advance_paid || 0);
+          const isPaidOut = e.status === 'PAID' || Boolean(e.paid_at);
+          const advPaid = isPaidOut ? grossAmt : 0;
           if (!commByLevel[lbl]) commByLevel[lbl] = { gross: 0, adv: 0 };
           commByLevel[lbl].gross += grossAmt;
           commByLevel[lbl].adv += advPaid;
@@ -749,43 +741,32 @@
     if (showStage1 && stage1Amt > 0) { breakupItems.push(`Stage 1 Advance: ₹${_meFormatInr(stage1Amt)}/-`); total += stage1Amt; }
     if (showStage2Adv && stage2AdvAmt > 0) { breakupItems.push(`Stage 2 Advance: ₹${_meFormatInr(stage2AdvAmt)}/-`); total += stage2AdvAmt; }
 
-    let totalAdvPaid = stage1Amt + stage2AdvAmt;
-    if (showFinalComm && Object.keys(commByLevel).length > 0) {
-      for (const [lbl, val] of Object.entries(commByLevel)) {
-        if (val.gross > 0) {
-          totalAdvPaid += val.adv;
-          breakupItems.push(`${lbl}: ₹${_meFormatInr(val.gross)}/-`);
-          total += val.gross;
+    let totalAdvPaid = 0; // Actual cash paid out
+    entries.forEach(e => {
+      if (e.level === 1 && e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
+        const d = e.income_date;
+        if (dateFrom && d < dateFrom) return;
+        if (dateTo && d > dateTo) return;
+        if (e.status === 'PAID' || Boolean(e.paid_at)) {
+          totalAdvPaid += parseFloat(e.commission_amount || e.amount || 0);
         }
       }
-    } else if (showFinalComm && finalCommBalGrossAmt > 0) {
-      const fullCommGross = finalCommBalGrossAmt + finalCommAdvPaidAmt;
-      totalAdvPaid += finalCommAdvPaidAmt;
-      breakupItems.push(`Commission Payout: ₹${_meFormatInr(fullCommGross)}/-`);
-      total += fullCommGross;
-    }
+    });
 
-    if (showBrand && brandAmt > 0) { breakupItems.push(`Brand Incentive: ₹${_meFormatInr(brandAmt)}/-`); total += brandAmt; }
-    if (showBonanza && bonanzaAmt > 0) { breakupItems.push(`Bonanza Bonus: ₹${_meFormatInr(bonanzaAmt)}/-`); total += bonanzaAmt; }
-    if (showExtra && extraAmt > 0) { breakupItems.push(`Extra Comm: ₹${_meFormatInr(extraAmt)}/-`); total += extraAmt; }
-    if (showAward && awardAmt > 0) { breakupItems.push(`Award Incentive: ₹${_meFormatInr(awardAmt)}/-`); total += awardAmt; }
-
-    if (breakupItems.length === 0) breakupItems.push("Stage 2 Payout: ₹5,600/-");
-
-    const payingGross = (totalAdvPaid > 0 && total >= totalAdvPaid) ? (total - totalAdvPaid) : total;
+    const payingGross = total;
 
     const postTodayPayoutEl = document.getElementById('postTodayPayout');
     if (postTodayPayoutEl) postTodayPayoutEl.value = breakupItems.map(s => s.replace(/<[^>]*>/g, '')).join(' | ');
 
     const postTotalTodayEl = document.getElementById('postTotalToday');
-    if (postTotalTodayEl) postTotalTodayEl.value = '₹' + _meFormatInr(payingGross || 5600) + '/-';
+    if (postTotalTodayEl) postTotalTodayEl.value = '₹' + _meFormatInr(payingGross) + '/-';
 
     const postSeniorToday = document.getElementById('postSeniorToday');
-    if (postSeniorToday) postSeniorToday.value = '₹' + _meFormatInr(seniorTodayAmt) + '/-';
+    if (postSeniorToday) postSeniorToday.value = '₹0/-';
 
     window._currentTotalAdvPaid = totalAdvPaid;
     const prevTotalTodayEl = document.getElementById('prevTotalToday');
-    if (prevTotalTodayEl) prevTotalTodayEl.textContent = '₹' + _meFormatInr(payingGross || 5600) + '/-';
+    if (prevTotalTodayEl) prevTotalTodayEl.textContent = '₹' + _meFormatInr(payingGross) + '/-';
 
     const prevAlreadyPaidEl = document.getElementById('prevAlreadyPaidText');
     if (prevAlreadyPaidEl) {
@@ -793,7 +774,9 @@
         prevAlreadyPaidEl.textContent = `(Already Paid: ₹${_meFormatInr(totalAdvPaid)}/-)`;
         prevAlreadyPaidEl.style.display = 'block';
       } else {
+        // HIDE COMPLETELY WHEN ACTUAL PAYMENT = 0
         prevAlreadyPaidEl.style.display = 'none';
+        prevAlreadyPaidEl.textContent = '';
       }
     }
 
@@ -900,32 +883,118 @@
   async function capturePosterCanvas(container) {
     if (!container) container = document.getElementById('posterCanvasWrapper');
     if (!container) return null;
+
     const w = container.scrollWidth || 480;
     const h = container.scrollHeight || 780;
 
-    return await window.html2canvas(container, {
-      useCORS: true,
-      scale: 3.5,
-      width: w,
-      height: h,
-      windowWidth: document.documentElement.clientWidth || 1920,
-      windowHeight: document.documentElement.clientHeight || 1080,
-      scrollX: 0,
-      scrollY: 0,
-      backgroundColor: null,
-      onclone: (clonedDoc) => {
-        const clonedEl = clonedDoc.getElementById('posterCanvasWrapper');
-        if (clonedEl) {
-          clonedEl.style.transform = 'none';
-          clonedEl.style.overflow = 'visible';
-          clonedEl.style.maxHeight = 'none';
-          clonedEl.style.height = 'auto';
-          clonedEl.style.margin = '0';
-          clonedEl.style.paddingBottom = '22px';
-          clonedEl.style.boxSizing = 'border-box';
+    try {
+      return await window.html2canvas(container, {
+        useCORS: true,
+        allowTaint: false,
+        scale: 2,
+        width: w,
+        height: h,
+        windowWidth: document.documentElement.clientWidth || 1920,
+        windowHeight: document.documentElement.clientHeight || 1080,
+        scrollX: 0,
+        scrollY: 0,
+        backgroundColor: null,
+        onclone: (clonedDoc) => {
+          const clonedEl = clonedDoc.getElementById('posterCanvasWrapper');
+          if (clonedEl) {
+            clonedEl.style.transform = 'none';
+            clonedEl.style.overflow = 'visible';
+            clonedEl.style.maxHeight = 'none';
+            clonedEl.style.height = 'auto';
+            clonedEl.style.margin = '0';
+            clonedEl.style.paddingBottom = '22px';
+            clonedEl.style.boxSizing = 'border-box';
+          }
+        }
+      });
+    } catch (err) {
+      console.warn("capturePosterCanvas html2canvas warning:", err);
+      return null;
+    }
+  }
+
+  async function testShareToNumber() {
+    const container = document.getElementById('posterCanvasWrapper');
+    if (!container) return;
+
+    const savedPhone = localStorage.getItem('last_test_wa_phone') || '';
+    const phoneInput = prompt('📲 ENTER TEST WHATSAPP NUMBER:\n----------------------------------------\nEnter the WhatsApp mobile number to test default broadcast & poster image before sending to all groups/members:', savedPhone || '91');
+
+    if (!phoneInput) return;
+    let cleanPhone = phoneInput.replace(/\D/g, '');
+    if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
+    if (cleanPhone.length < 10) {
+      alert('Please enter a valid 10-digit or 12-digit mobile number.');
+      return;
+    }
+
+    localStorage.setItem('last_test_wa_phone', cleanPhone);
+
+    const partnerName = (document.getElementById('prevSubtitle')?.textContent || '').trim() || 'Channel Partner';
+    const partnerOverall = (document.getElementById('prevHighlight')?.textContent || '').trim() || '';
+    const partnerToday = (document.getElementById('prevTotalToday')?.textContent || '').trim() || '';
+    const partnerPotential = (document.getElementById('prevPotential')?.textContent || '').trim() || '';
+
+    const seniorName = (document.getElementById('prevSeniorName')?.textContent || '').replace(/^Senior\s*:\s*/i, '').trim() || '';
+    const seniorToday = (document.getElementById('prevSeniorToday')?.textContent || '').trim() || '';
+    const seniorOverall = (document.getElementById('prevSeniorEarning')?.textContent || '').trim() || '';
+
+    const showSeniorInput = document.getElementById('postShowSenior');
+    const isSeniorVisible = showSeniorInput ? showSeniorInput.checked : (document.getElementById('prevSeniorRow')?.style.display !== 'none');
+
+    const spinner = document.getElementById('posterSpinner');
+    if (spinner) spinner.style.display = 'flex';
+
+    let shareText = `🎉 *[TEST BROADCAST] CONGRATULATIONS TO ${partnerName}!* 🎉\n\n` +
+      `👤 *Member Name:* ${partnerName}\n` +
+      `💰 *Today's Payout:* ${partnerToday}\n` +
+      `📈 *Overall Earning:* ${partnerOverall}\n` +
+      `🔮 *Potential Valuation:* ${partnerPotential}\n\n`;
+
+    if (isSeniorVisible && seniorName && seniorName !== '—' && seniorName !== 'NONE' && !seniorName.endsWith('—')) {
+      shareText += `🙌 *Senior Referrer:* ${seniorName}\n` +
+        `💰 *Senior Today:* ${seniorToday} | *Overall:* ${seniorOverall}\n\n`;
+    }
+
+    shareText += `🌐 *Official Website:* https://vgk4u.com\n\n` +
+      `🚀 Join VGK4U today & grow your earnings!`;
+
+    let dataUrl = null;
+    try {
+      const canvas = await capturePosterCanvas(container);
+      if (canvas) {
+        try {
+          dataUrl = canvas.toDataURL('image/png');
+        } catch (cErr) {
+          console.warn("Poster toDataURL failed:", cErr);
         }
       }
-    });
+    } catch (capErr) {
+      console.warn("capturePosterCanvas error:", capErr);
+    }
+
+    if (spinner) spinner.style.display = 'none';
+
+    try {
+      const res = await fetch('http://localhost:5002/api/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: cleanPhone, imageUrl: dataUrl, message: shareText })
+      });
+      const json = await res.json();
+      if (json.success) {
+        alert(`✅ TEST SHARE SENT SUCCESSFULLY!\n----------------------------------------\nRecipient: +91 ${cleanPhone.slice(-10)}\nImage: ${dataUrl ? 'Attached 🖼️' : 'Text Only'}\n\nPlease check your WhatsApp on +91 ${cleanPhone.slice(-10)} to verify!`);
+      } else {
+        alert(`❌ TEST SHARE FAILED: ${json.error || 'WhatsApp bot error'}`);
+      }
+    } catch (err) {
+      alert(`❌ TEST SHARE ERROR: Could not connect to WhatsApp Bot on port 5002.\n(${err.message})`);
+    }
   }
 
   function downloadPoster() {
@@ -981,9 +1050,12 @@
     const partnerPotential = document.getElementById('prevPotential')?.textContent?.trim() || '';
     const seniorPotential = document.getElementById('prevSeniorPotential')?.textContent?.trim() || '₹0/-';
 
+    const showSeniorInput = document.getElementById('postShowSenior');
+    const isSeniorVisible = showSeniorInput ? showSeniorInput.checked : (document.getElementById('prevSeniorRow')?.style.display !== 'none');
+
     let text = `🎉 *CONGRATULATIONS!* 🎉\n\n🌟 *Member Achievement:* 🌟\n👤 *Name:* ${partnerName}\n💰 *Today's Earning:* ${partnerToday}\n📈 *Overall Earning:* ${partnerOverall}\n🔮 *Potential Valuation:* ${partnerPotential}\n`;
 
-    if (seniorName && seniorName !== '—' && seniorName !== 'NONE') {
+    if (isSeniorVisible && seniorName && seniorName !== '—' && seniorName !== 'NONE' && !seniorName.endsWith('—')) {
       text += `\n----------------------------------\n\n🙌 *Senior Referrer Achievement:* 🙌\n👤 *Name:* ${seniorName}\n💰 *Today's Earning:* ${seniorToday}\n📈 *Overall Earning:* ${seniorOverall}\n🔮 *Potential Earning:* ${seniorPotential}\n`;
     }
 
@@ -1039,9 +1111,12 @@
     const seniorToday = (document.getElementById('prevSeniorToday')?.textContent || '').trim() || '';
     const seniorOverall = (document.getElementById('prevSeniorEarning')?.textContent || '').trim() || '';
 
+    const showSeniorInput = document.getElementById('postShowSenior');
+    const isSeniorVisible = showSeniorInput ? showSeniorInput.checked : (document.getElementById('prevSeniorRow')?.style.display !== 'none');
+
     const m = window._currentPosterMember || {};
     const mPhone = (m.phone || '').replace(/\D/g, '');
-    const sPhone = (m.senior_phone || '').replace(/\D/g, '');
+    const sPhone = isSeniorVisible ? (m.senior_phone || '').replace(/\D/g, '') : '';
 
     const spinner = document.getElementById('posterSpinner');
     if (spinner) spinner.style.display = 'flex';
@@ -1052,35 +1127,59 @@
       `📈 *Overall Earning:* ${partnerOverall}\n` +
       `🔮 *Potential Valuation:* ${partnerPotential}\n\n`;
 
-    if (seniorName && seniorName !== '—' && seniorName !== 'NONE') {
+    if (isSeniorVisible && seniorName && seniorName !== '—' && seniorName !== 'NONE' && !seniorName.endsWith('—')) {
       shareText += `🙌 *Senior Referrer:* ${seniorName}\n` +
         `💰 *Senior Today:* ${seniorToday} | *Overall:* ${seniorOverall}\n\n`;
     }
 
-    shareText += `📢 *Official Channel:* https://whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m\n` +
-      `👥 *Join WhatsApp Group:* https://chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY\n` +
-      `🌐 *Official Website:* https://vgk4u.com\n\n` +
+    shareText += `🌐 *Official Website:* https://vgk4u.com\n\n` +
       `🚀 Join VGK4U today & grow your earnings!`;
 
     const dispatchTargets = [
       { id: 'member', type: 'member', label: `Member: ${partnerName}`, target: mPhone ? `+91 ${mPhone.slice(-10)}` : 'No Phone', phone: mPhone, status: 'sending', msg: 'Broadcasting...' },
-      { id: 'senior', type: 'member', label: `Senior: ${seniorName || 'Referrer'}`, target: sPhone ? `+91 ${sPhone.slice(-10)}` : 'No Phone', phone: sPhone, status: sPhone ? 'sending' : 'skipped', msg: sPhone ? 'Broadcasting...' : 'No Senior Phone' },
+      { id: 'senior', type: 'member', label: `Senior: ${seniorName || 'Referrer'}`, target: !isSeniorVisible ? 'Excluded (Show Senior unchecked)' : (sPhone ? `+91 ${sPhone.slice(-10)}` : 'No Phone'), phone: sPhone, status: isSeniorVisible ? (sPhone ? 'sending' : 'skipped') : 'skipped', msg: !isSeniorVisible ? 'Excluded by toggle' : (sPhone ? 'Broadcasting...' : 'No Senior Phone') },
       { id: 'channel_official', type: 'group', label: 'VGK4U Official Channel', target: 'whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m', inviteCode: '0029Vb7Vb5f9cDDXf3zWtf0m', status: 'sending', msg: 'Broadcasting to channel...' },
       { id: 'group_main', type: 'group', label: 'VGK Community Group', target: 'chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY', inviteCode: 'HNQQoKXFfCm5PQngGdrlcY', status: 'sending', msg: 'Broadcasting to group...' },
       { id: 'group_exec', type: 'group', label: 'Executive Announcements', target: 'chat.whatsapp.com/LfX8mGootXa7SpwNIz7P5C', inviteCode: 'LfX8mGootXa7SpwNIz7P5C', status: 'sending', msg: 'Broadcasting to group...' },
+      { id: 'group_ev_stars', type: 'group', label: 'Ev scooty. MNR (royal ev ) stars', target: 'Ev scooty. MNR (royal ev ) stars', groupName: 'Ev scooty. MNR (royal ev ) stars', status: 'sending', msg: 'Broadcasting to group...' },
+      { id: 'group_mnr_gen', type: 'group', label: 'MNR General Group', target: 'MNR General Group', groupName: 'MNR General Group', status: 'sending', msg: 'Broadcasting to group...' },
       { id: 'portal_shoutout', type: 'portal', label: 'VGK4U Login Page Shoutout', target: 'vgk4u.com (Login Banner)', status: 'sending', msg: 'Publishing shoutout...' }
     ];
+
+    let dataUrl = null;
+    let blob = null;
+
+    try {
+      const canvas = await capturePosterCanvas(container);
+      if (canvas) {
+        try {
+          dataUrl = canvas.toDataURL('image/png');
+          blob = await (await fetch(dataUrl)).blob();
+        } catch (cErr) {
+          console.warn("Poster toDataURL failed:", cErr);
+        }
+      }
+    } catch (capErr) {
+      console.warn("capturePosterCanvas error:", capErr);
+    }
 
     if (spinner) spinner.style.display = 'none';
     showLiveDispatchStatusModal(dispatchTargets, partnerName);
 
+    const fetchWithTimeout = async (url, opts = {}, ms = 2500) => {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), ms);
+      try {
+        const r = await fetch(url, { ...opts, signal: controller.signal });
+        clearTimeout(tid);
+        return r;
+      } catch (e) {
+        clearTimeout(tid);
+        throw e;
+      }
+    };
+
     try {
-      const canvas = await capturePosterCanvas(container);
-      if (!canvas) throw new Error('Failed to capture poster canvas');
-
-      const dataUrl = canvas.toDataURL('image/png');
-      const blob = await (await fetch(dataUrl)).blob();
-
       // 1. Submit Portal Shoutout
       try {
         const formData = new FormData();
@@ -1088,17 +1187,24 @@
         formData.append('description', shareText);
         formData.append('category_id', '1');
         formData.append('submission_type', 'photo');
-        formData.append('files', blob, `${partnerName.replace(/\s+/g, '_')}_Achievement.png`);
+        if (blob) {
+          formData.append('files', blob, `${partnerName.replace(/\s+/g, '_')}_Achievement.png`);
+        }
 
         const tok = localStorage.getItem('staff_token') || localStorage.getItem('access_token') || sessionStorage.getItem('staff_token') || sessionStorage.getItem('access_token');
         const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
         
-        await fetch(`${apiBase}/feedback/submit-staff-announcement`, {
+        const res = await fetch(`${apiBase}/feedback/submit-staff-announcement`, {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + tok },
           body: formData
         });
-        updateDispatchStatus('portal_shoutout', 'sent', 'Published on Login Page');
+        const d = await res.json();
+        if (d && d.duplicate) {
+          updateDispatchStatus('portal_shoutout', 'skipped', 'STOPPED ⏸️ Already Posted Today');
+        } else {
+          updateDispatchStatus('portal_shoutout', 'sent', 'Published on Login Page');
+        }
       } catch (pErr) {
         updateDispatchStatus('portal_shoutout', 'error', pErr.message || 'Portal Submit Error');
       }
@@ -1106,7 +1212,7 @@
       // 2. Member Direct Send via Scanned Bot
       if (mPhone) {
         try {
-          const res = await fetch('http://localhost:5002/api/send-message', {
+          const res = await fetchWithTimeout('http://localhost:5002/api/send-message', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone: mPhone, imageUrl: dataUrl, message: shareText })
@@ -1125,9 +1231,9 @@
       }
 
       // 3. Senior Direct Send via Scanned Bot
-      if (sPhone) {
+      if (isSeniorVisible && sPhone) {
         try {
-          const res = await fetch('http://localhost:5002/api/send-message', {
+          const res = await fetchWithTimeout('http://localhost:5002/api/send-message', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone: sPhone, imageUrl: dataUrl, message: shareText })
@@ -1141,11 +1247,13 @@
         } catch (sErr) {
           updateDispatchStatus('senior', 'error', 'WhatsApp Bot Offline');
         }
+      } else {
+        updateDispatchStatus('senior', 'skipped', !isSeniorVisible ? 'Excluded by toggle' : 'No Senior Phone');
       }
 
       // 4. VGK4U Official Channel Send
       try {
-        const res = await fetch('http://localhost:5002/api/send-group-message', {
+        const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageUrl: dataUrl, message: shareText, inviteCode: '0029Vb7Vb5f9cDDXf3zWtf0m' })
@@ -1162,7 +1270,7 @@
 
       // 5. Main Community Group Send
       try {
-        const res = await fetch('http://localhost:5002/api/send-group-message', {
+        const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageUrl: dataUrl, message: shareText, inviteCode: 'HNQQoKXFfCm5PQngGdrlcY' })
@@ -1179,7 +1287,7 @@
 
       // 6. Exec Group Send
       try {
-        const res = await fetch('http://localhost:5002/api/send-group-message', {
+        const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageUrl: dataUrl, message: shareText, inviteCode: 'LfX8mGootXa7SpwNIz7P5C' })
@@ -1194,9 +1302,115 @@
         updateDispatchStatus('group_exec', 'error', 'WhatsApp Bot Offline');
       }
 
+      // 7. EV Scooty MNR Stars Group Send
+      try {
+        const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupId: '120363405554009428@g.us', groupName: 'Ev scooty. MNR (royal ev ) stars' })
+        });
+        const json = await res.json();
+        if (json.success) {
+          updateDispatchStatus('group_ev_stars', 'sent', 'Delivered to EV Stars Group');
+        } else {
+          updateDispatchStatus('group_ev_stars', 'error', json.error || 'Group Send Error');
+        }
+      } catch (gErr) {
+        updateDispatchStatus('group_ev_stars', 'error', 'WhatsApp Bot Offline');
+      }
+
+      // 8. MNR General Group Send
+      try {
+        const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupId: '120363423048458227@g.us', groupName: 'MNR General Group' })
+        });
+        const json = await res.json();
+        if (json.success) {
+          updateDispatchStatus('group_mnr_gen', 'sent', 'Delivered to MNR General Group');
+        } else {
+          updateDispatchStatus('group_mnr_gen', 'error', json.error || 'Group Send Error');
+        }
+      } catch (gErr) {
+        updateDispatchStatus('group_mnr_gen', 'error', 'WhatsApp Bot Offline');
+      }
+
     } catch (err) {
       if (spinner) spinner.style.display = 'none';
-      console.warn("Poster capture error:", err);
+      console.warn("Share default dispatch error:", err);
+      dispatchTargets.forEach(t => updateDispatchStatus(t.id, 'error', 'Dispatch Error'));
+    }
+  }
+
+  async function postPosterAnnouncement() {
+    const container = document.getElementById('posterCanvasWrapper');
+    if (!container) {
+      if (typeof toast === 'function') toast('Poster preview not ready', 'error');
+      else alert('Poster preview not ready');
+      return;
+    }
+
+    const partnerName = (document.getElementById('prevSubtitle')?.textContent || '').trim() || 'Channel Partner';
+    const partnerOverall = (document.getElementById('prevHighlight')?.textContent || '').trim() || '';
+    const partnerToday = (document.getElementById('prevTotalToday')?.textContent || '').trim() || '';
+    const partnerPotential = (document.getElementById('prevPotential')?.textContent || '').trim() || '';
+
+    if (!confirm(`📣 POST ANNOUNCEMENT ON LOGIN SCREEN\n--------------------------------------------------\n• Member Name: ${partnerName}\n• Today's Earning: ${partnerToday}\n• Overall Earning: ${partnerOverall}\n\nDo you want to publish this Achievement Poster announcement to the Login Screen slideshow now?`)) {
+      return;
+    }
+
+    const spinner = document.getElementById('posterSpinner');
+    if (spinner) spinner.style.display = 'flex';
+
+    try {
+      const canvas = await capturePosterCanvas(container);
+      if (!canvas) throw new Error('Failed to capture poster canvas');
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const blob = await (await fetch(dataUrl)).blob();
+
+      let shareText = `🎉 *CONGRATULATIONS TO ${partnerName}!* 🎉\n\n` +
+        `👤 *Member Name:* ${partnerName}\n` +
+        `💰 *Today's Payout:* ${partnerToday}\n` +
+        `📈 *Overall Earning:* ${partnerOverall}\n` +
+        `🔮 *Potential Valuation:* ${partnerPotential}\n\n` +
+        `🚀 Keep Leading. Keep Inspiring. Keep Growing! — Team VGK4U`;
+
+      const formData = new FormData();
+      formData.append('title', `🎉 Achievement Poster: ${partnerName}`);
+      formData.append('description', shareText);
+      formData.append('category_id', '1');
+      formData.append('submission_type', 'photo');
+      formData.append('files', blob, `${partnerName.replace(/\s+/g, '_')}_Achievement.png`);
+
+      const tok = localStorage.getItem('staff_token') || localStorage.getItem('access_token') || sessionStorage.getItem('staff_token') || sessionStorage.getItem('access_token');
+      const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
+
+      const r = await fetch(`${apiBase}/feedback/staff/submit`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + tok },
+        body: formData
+      });
+      const d = await r.json();
+
+      if (spinner) spinner.style.display = 'none';
+
+      if (!r.ok || (!d.success && d.status !== 'success')) {
+        throw new Error(d.detail || d.message || 'Failed to submit announcement');
+      }
+
+      if (d && d.duplicate) {
+        alert(`⏸️ ANNOUNCEMENT ALREADY POSTED TODAY!\n--------------------------------------------------\nMember: ${partnerName}\nAnnouncement is already published and live on the login screen slideshow!`);
+        if (typeof toast === 'function') toast('⏸️ Announcement already live on login page today', 'info');
+      } else {
+        alert(`✅ ANNOUNCEMENT POSTED SUCCESSFULLY!\n--------------------------------------------------\nMember: ${partnerName}\nAchievement poster announcement is now live on the login screen slideshow!`);
+        if (typeof toast === 'function') toast('✅ Announcement published to login screen!', 'success');
+      }
+    } catch (err) {
+      if (spinner) spinner.style.display = 'none';
+      console.error('Post Announcement error:', err);
+      alert('Failed to post announcement: ' + err.message);
     }
   }
 
@@ -1335,6 +1549,8 @@
   window.sharePoster = sharePoster;
   window.shareOnWhatsApp = shareOnWhatsApp;
   window.shareDefaultChannel = shareDefaultChannel;
+  window.testShareToNumber = testShareToNumber;
+  window.postPosterAnnouncement = postPosterAnnouncement;
   window.showDirectWaShareDialog = showDirectWaShareDialog;
   window.changeThemePreset = changeThemePreset;
   window.setPosterPresetPeriod = setPosterPresetPeriod;

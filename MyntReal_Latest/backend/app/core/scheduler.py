@@ -4799,10 +4799,10 @@ def init_scheduler():
     )
     logger.info("   🛠️ Service 7:30PM IST daily summary report scheduled")
 
-    # DC_FIELD_JOURNEY_REPORT_001: Hourly Field Staff Journey Performance Report (9 AM - 7 PM IST)
+    # DC_FIELD_JOURNEY_REPORT_001: Bi-Hourly Field Staff Journey Performance Report (10 AM - 10 PM IST / Active Journeys)
     try:
-        def run_field_journey_hourly_job():
-            logger.info("🚜 [FIELD-JOURNEY-REPORT] Executing field journey report & check-in audit...")
+        def run_field_journey_bi_hourly_job():
+            logger.info("🚜 [FIELD-JOURNEY-REPORT] Executing bi-hourly field journey report & check-in audit...")
             db = SessionLocal()
             try:
                 from app.services.field_journey_report_service import dispatch_field_journey_whatsapp_reports_and_alerts
@@ -4813,17 +4813,18 @@ def init_scheduler():
             finally:
                 db.close()
 
+        # Bi-hourly updates every 2 hours (10:00 AM - 10:00 PM IST) for active journeys
         scheduler.add_job(
-            run_field_journey_hourly_job,
-            trigger=CronTrigger(hour='9-19', minute=0, timezone='Asia/Kolkata'),
-            id='wa_hourly_field_journey_report',
-            name='WhatsApp: Hourly Field Journey Performance Report (9AM-7PM IST)',
+            run_field_journey_bi_hourly_job,
+            trigger=CronTrigger(hour='10,12,14,16,18,20,22', minute=0, timezone='Asia/Kolkata'),
+            id='wa_bi_hourly_field_journey_report',
+            name='WhatsApp: Bi-Hourly Field Journey Performance Report (10AM-10PM IST / Active)',
             replace_existing=True,
             misfire_grace_time=600,
             max_instances=1,
         )
         scheduler.add_job(
-            run_field_journey_hourly_job,
+            run_field_journey_bi_hourly_job,
             trigger=CronTrigger(minute='15,45', timezone='Asia/Kolkata'),
             id='wa_field_journey_inactivity_check',
             name='WhatsApp: 30-Min Active Journey Photo Check-in Audit',
@@ -4831,7 +4832,64 @@ def init_scheduler():
             misfire_grace_time=300,
             max_instances=1,
         )
-        logger.info("   🚜 Field staff journey hourly report & inactivity audit scheduled")
+
+        # DC_JOURNEY_GAPS_002: 11:59 PM Overnight Safety Net — Auto-close forgotten IN_PROGRESS journeys
+        def run_overnight_journey_autoclose_job():
+            logger.info("🌙 [JOURNEY-AUTOCLOSE] Executing 11:59 PM overnight journey auto-closure...")
+            db = SessionLocal()
+            try:
+                from datetime import datetime
+                import pytz
+                ist = pytz.timezone('Asia/Kolkata')
+                now_ist = datetime.now(ist)
+
+                from sqlalchemy import text
+                rows = db.execute(text("""
+                    SELECT j.id, j.employee_id, j.date, e.full_name
+                    FROM staff_journeys j
+                    JOIN staff_employees e ON e.id = j.employee_id
+                    WHERE LOWER(j.status) LIKE '%progress%'
+                """)).fetchall()
+
+                closed_count = 0
+                for r in rows:
+                    jid = r.id
+                    last_pt = db.execute(text("""
+                        SELECT timestamp FROM staff_journey_track_points
+                        WHERE journey_id = :jid ORDER BY id DESC LIMIT 1
+                    """), {"jid": jid}).fetchone()
+
+                    end_ts = last_pt.timestamp if last_pt and last_pt.timestamp else now_ist.replace(tzinfo=None)
+
+                    db.execute(text("""
+                        UPDATE staff_journeys
+                        SET status = 'COMPLETED',
+                            end_time = :end_ts,
+                            notes = COALESCE(notes, '') || ' [System Auto-Closed at Midnight 23:59 IST]'
+                        WHERE id = :jid
+                    """), {"jid": jid, "end_ts": end_ts})
+                    closed_count += 1
+                    logger.info(f"🌙 [JOURNEY-AUTOCLOSE] Auto-closed journey #{jid} for {r.full_name}")
+
+                db.commit()
+                logger.info(f"🌙 [JOURNEY-AUTOCLOSE] Auto-closed {closed_count} overnight stuck journeys.")
+            except Exception as exc:
+                logger.error(f"🌙 [JOURNEY-AUTOCLOSE] Error in job: {exc}")
+                db.rollback()
+            finally:
+                db.close()
+
+        scheduler.add_job(
+            run_overnight_journey_autoclose_job,
+            trigger=CronTrigger(hour=23, minute=59, timezone='Asia/Kolkata'),
+            id='wa_overnight_journey_autoclose',
+            name='Field Operations: Midnight 23:59 IST Journey Auto-Closure Safety Net',
+            replace_existing=True,
+            misfire_grace_time=1800,
+            max_instances=1,
+        )
+
+        logger.info("   🚜 Field staff journey bi-hourly report (10AM-10PM IST), inactivity audit & midnight auto-close scheduled")
     except Exception as _fj_e:
         logger.warning(f"[DC-FIELD-JOURNEY] Could not schedule report job: {_fj_e}")
 

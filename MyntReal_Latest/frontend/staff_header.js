@@ -392,32 +392,40 @@ window.StaffHeader = window.StaffHeader || {
                 }
             }
             
-            @media (max-width: 768px) {
+            @media (max-width: 991px) {
                 .top-header {
                     height: 60px;
-                    padding: 0 16px;
+                    padding: 0 12px;
+                    max-width: 100vw;
+                    box-sizing: border-box;
+                    overflow: hidden;
                 }
                 .user-info-header {
-                    display: none;
+                    display: none !important;
                 }
                 .header-divider {
-                    display: none;
+                    display: none !important;
                 }
                 .header-logo {
-                    height: 32px;
+                    height: 30px;
                 }
                 .btn-logout span {
                     display: none;
                 }
                 .header-search-container {
-                    display: none;
+                    display: none !important;
                 }
                 .btn-back span {
                     display: none;
                 }
+                #activeCommunitySevaBadges, .header-live-counter, .header-community-banner {
+                    display: none !important;
+                }
                 .main-content {
                     margin-left: 0 !important;
-                    padding: 10px !important;
+                    width: 100% !important;
+                    max-width: 100vw !important;
+                    box-sizing: border-box !important;
                 }
             }
             
@@ -748,6 +756,9 @@ window.StaffHeader = window.StaffHeader || {
         return `
             <header class="top-header" id="topHeader">
                 <div class="header-left">
+                    <button class="header-hamburger" onclick="if(typeof StaffSidebar!=='undefined'&&StaffSidebar.toggleSidebar)StaffSidebar.toggleSidebar()" aria-label="Toggle Menu" style="background:transparent;border:none;color:white;font-size:18px;cursor:pointer;padding:4px 8px;margin-right:6px;display:flex;align-items:center;">
+                        <i class="fas fa-bars"></i>
+                    </button>
                     <img src="/assets/logos/myntreal_logo_new.png" alt="MyntReal" class="header-logo" onerror="this.style.display='none'">
                     <div class="header-divider"></div>
                     ${showBack ? `

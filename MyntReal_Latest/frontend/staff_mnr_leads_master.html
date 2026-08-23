@@ -484,7 +484,7 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
     <div class="filter-panel" id="filterPanelCrm">
       <div class="filter-toggle-bar" id="filterToggleBar" onclick="toggleFilters()">
         <span><i class="fas fa-filter"></i> Filters <span class="active-count" id="filterCount" style="display:none">0</span></span>
-        <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <div class="fgroup" style="flex-direction:row;align-items:center;gap:5px">
             <input type="text" id="quickSearch" placeholder="Quick search…" style="font-size:11.5px;padding:4px 8px;border-radius:6px;border:1px solid #e5e7eb;width:180px" onkeydown="if(event.key==='Enter')applyFilters()" oninput="scheduleSearch()" onclick="event.stopPropagation()">
           </div>
@@ -5325,6 +5325,7 @@ const SDOC_BUNDLE={
     {type:'house_tax',label:'House Tax Receipt'},
     {type:'quotation',label:'Quotation'},
     {type:'feasibility_letter',label:'Feasibility Letter'},
+    {type:'invoice',label:'Invoice'},
   ]},
   discom_link:{label:'DISCOM Documents',section:'discom',docs:[
     {type:'annexure_a',label:'Annexure-A'},
@@ -7860,7 +7861,7 @@ async function toggleGsExpand(btn, gsId, gsType, gsName) {
 
     const subtotalsHtml = stageRows.length === 0 ? '' : `
       <div style="padding:8px 10px;background:#071220;border-bottom:1px solid #1e3a5f;overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:10.5px;min-width:520px">
+        <div class="table-responsive"><table style="width:100%;border-collapse:collapse;font-size:10.5px;min-width:520px">
           <thead>
             <tr style="color:#475569;text-transform:uppercase;letter-spacing:.4px;font-size:9.5px">
               <th style="padding:4px 8px;text-align:left;font-weight:600">Stage</th>

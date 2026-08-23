@@ -2242,17 +2242,19 @@
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="/staff_sidebar.js?v=20260602c"></script>
     <script src="/shared/staff_inactivity_manager.js"></script>
-    <script src="/staff_header.js"></script>
+    <script src="/staff_header.js?v=20260821a"></script>
     <script>
         let currentUser = null;
         let progressData = null;
         let currentTab = 'day_progress';
 
         document.addEventListener('DOMContentLoaded', async function() {
-            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
-            StaffHeader.inject('Progress', 'fas fa-chart-line');
-            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
-            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            if (typeof window.StaffSidebar !== 'undefined') await window.StaffSidebar.init();
+            if (typeof window.StaffHeader !== 'undefined') {
+                window.StaffHeader.inject('Progress', 'fas fa-chart-line');
+                window.StaffHeader.init();
+            }
+            if (typeof window.StaffBackButton !== 'undefined') window.StaffBackButton.init();
             
             const today = getISTToday();
             const mtdStart = today.slice(0,7) + '-01';

@@ -2,19 +2,22 @@ import os
 import sys
 import zipfile
 import hashlib
-import tempfile
+import shutil
 from pathlib import Path
 
 SOURCE_DIR = Path(__file__).resolve().parent.parent
-OUTPUT_ZIP = SOURCE_DIR / "MyntReal_AWS_Deploy_Full.zip"
+OUTPUT_ZIP = SOURCE_DIR / "MyntReal_AWS_Deploy.zip"
+ALIAS_ZIP = SOURCE_DIR / "deployment.zip"
 
 EXCLUDE_DIRS = {
     ".git",
     "node_modules",
     "venv",
+    "ENV",
     "test_env",
     "postgres_data",
     ".next",
+    ".cache",
     ".pytest_cache",
     "__pycache__",
     "test-results",
@@ -22,6 +25,9 @@ EXCLUDE_DIRS = {
     ".replit_integration_files",
     "artifacts",
     "scratch",
+    "storage",
+    "uploaded_files",
+    "uploads",
     "media_backup",
     "mobile",
     "tests",
@@ -29,7 +35,9 @@ EXCLUDE_DIRS = {
     ".agents",
     ".canvas",
     "pgsql",
-    "pgsql16"
+    "pgsql16",
+    "frontend-next",
+    "catalog"
 }
 
 EXCLUDE_FILES = {
@@ -41,30 +49,52 @@ EXCLUDE_FILES = {
     "servers.log",
     "node.log",
     "uvicorn.log",
+    "bot.log",
+    "MyntReal.apk",
+    "mobile.apk",
+    "mobile.app",
+    "mnr-catalog.pdf",
+    "mnr-catalog-web.pdf",
+    "database_backup (1).sql",
+    "final_production_backup.dump",
+    "final_replit_backup.dump",
     "MyntReal_AWS_Deploy_Full.zip",
     "MyntReal_AWS_Deploy.zip",
     "MyntReal_AWS_Deploy_Slim.zip",
+    "MyntReal_v2.0.4_Deploy_20260812_072613.zip",
+    "MyntReal_v2.0.4_AWS_Deploy.zip",
+    "MyntReal_Release_v204.zip",
     "deployment.zip",
     "modified_changes.zip",
     "modified_files.zip"
 }
 
-def should_exclude(rel_path: Path) -> bool:
+def should_exclude(rel_path: Path, abs_file: Path) -> bool:
     parts = rel_path.parts
     for part in parts:
         if part in EXCLUDE_DIRS or part == "__pycache__":
             return True
-    
+            
     if rel_path.name in EXCLUDE_FILES:
         return True
-    
-    if rel_path.suffix.lower() in [".zip", ".sql", ".dump"]:
+        
+    rel_str = str(rel_path).replace("\\", "/")
+    if "storage/" in rel_str or "uploaded_files/" in rel_str or "public/catalog/" in rel_str or "public/marketplace/" in rel_str:
         return True
         
+    if abs_file.suffix.lower() in [".zip", ".sql", ".dump", ".sqlite", ".db"]:
+        return True
+
+    # Exclude heavy static images > 150KB (handled via S3 / CDN) to keep deployment zip < 50MB
+    if abs_file.suffix.lower() in [".png", ".jpg", ".jpeg", ".gif", ".webp"]:
+        size_mb = abs_file.stat().st_size / (1024 * 1024)
+        if size_mb > 0.15:
+            return True
+            
     return False
 
 def build_zip():
-    print(f"📦 Packaging AWS Deploy Zip from: {SOURCE_DIR}")
+    print(f"📦 Packaging Slim AWS Deploy Zip (< 50MB) from: {SOURCE_DIR}")
     
     if OUTPUT_ZIP.exists():
         OUTPUT_ZIP.unlink()
@@ -80,7 +110,7 @@ def build_zip():
                 abs_file = Path(root) / f
                 rel_path = abs_file.relative_to(SOURCE_DIR)
                 
-                if should_exclude(rel_path):
+                if should_exclude(rel_path, abs_file):
                     continue
                 
                 try:
@@ -91,9 +121,9 @@ def build_zip():
                     print(f"Warning skipping file {rel_path}: {err}")
                     
         # Dynamically inject the .env variables securely into the zip without writing to disk
-        env_path = SOURCE_DIR / '.env'
+        env_path = SOURCE_DIR / 'backend' / '.env'
         if not env_path.exists():
-            env_path = SOURCE_DIR / 'backend' / '.env'
+            env_path = SOURCE_DIR / '.env'
             
         if env_path.exists():
             env_config_lines = ["option_settings:", "  aws:elasticbeanstalk:application:environment:"]
@@ -102,13 +132,17 @@ def build_zip():
                     line = line.strip()
                     if line and not line.startswith('#') and '=' in line:
                         key, val = line.split('=', 1)
-                        # Remove surrounding quotes if present
                         val = val.strip().strip('\'"')
-                        env_config_lines.append(f"    {key.strip()}: \"{val}\"")
+                        if key.strip() != "SECRET_KEY":  # Exclude sensitive raw secret key from config
+                            env_config_lines.append(f"    {key.strip()}: \"{val}\"")
             
             env_config_content = '\n'.join(env_config_lines) + '\n'
             zf.writestr('.ebextensions/01_env.config', env_config_content)
             print(f"✅ Successfully injected secure environment variables from {env_path.name} into the ZIP as .ebextensions/01_env.config")
+
+    # Copy to deployment.zip and MyntReal_AWS_Deploy_Full.zip
+    shutil.copyfile(OUTPUT_ZIP, ALIAS_ZIP)
+    shutil.copyfile(OUTPUT_ZIP, SOURCE_DIR / "MyntReal_AWS_Deploy_Full.zip")
 
     compressed_size = OUTPUT_ZIP.stat().st_size
     
@@ -119,8 +153,9 @@ def build_zip():
             hasher.update(chunk)
     sha256_checksum = hasher.hexdigest()
 
-    print(f"\n✅ ZIP CREATION SUCCESSFUL!")
+    print(f"\n✅ SLIM ZIP CREATION SUCCESSFUL (< 50MB)!")
     print(f"📍 Location: {OUTPUT_ZIP}")
+    print(f"📍 Deployment Alias: {ALIAS_ZIP}")
     print(f"📊 Total Files Included: {file_count}")
     print(f"📦 Compressed Size: {compressed_size / (1024*1024):.2f} MB ({compressed_size:,} bytes)")
     print(f"📂 Uncompressed Size: {total_uncompressed / (1024*1024):.2f} MB ({total_uncompressed:,} bytes)")

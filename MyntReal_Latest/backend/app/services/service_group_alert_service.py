@@ -59,7 +59,7 @@ def send_service_group_bot_message(message_text: str) -> Dict[str, Any]:
             continue
 
     logger.warning(f"Could not connect to Service Group Bot Gateway: {last_exc}")
-    return {"success": False, "error": str(last_exc)}
+    return {"success": False, "error": f"WhatsApp Group Bot service is currently offline on port 5002 ({last_exc}). Please start the WhatsApp Bot daemon on the server."}
 
 
 def send_instant_service_ticket_alert(db: Session, ticket_db_id: int) -> Dict[str, Any]:

@@ -843,14 +843,16 @@ class GpsService {
         
         // DC_OFFLINE_001: Queue for offline sync if API fails
         if (this.isOfflineMode) {
-          await offlineQueueService.enqueueLocation(loc.latitude, loc.longitude, loc.accuracy_m, undefined, batteryPct);
+          const originalTs = loc.timestamp ? new Date(loc.timestamp).toISOString() : new Date().toISOString();
+          await offlineQueueService.enqueueLocation(loc.latitude, loc.longitude, loc.accuracy_m, undefined, batteryPct, originalTs);
           if (GPS_DEBUG()) console.log('[DC_GPS] Heartbeat queued for offline sync');
         }
       }
     } catch (error) {
       console.error('[DC_GPS] Heartbeat error:', error);
       
-      await offlineQueueService.enqueueLocation(loc.latitude, loc.longitude, loc.accuracy_m, undefined, batteryPct);
+      const originalTs = loc.timestamp ? new Date(loc.timestamp).toISOString() : new Date().toISOString();
+      await offlineQueueService.enqueueLocation(loc.latitude, loc.longitude, loc.accuracy_m, undefined, batteryPct, originalTs);
       if (GPS_DEBUG()) console.log('[DC_GPS] Heartbeat queued for offline sync');
     }
   }
@@ -946,14 +948,16 @@ class GpsService {
         }
       } else {
         if (this.isOfflineMode) {
-          await offlineQueueService.enqueueLocation(loc.latitude, loc.longitude, loc.accuracy_m, journeyId, batteryPct);
+          const originalTs = loc.timestamp ? new Date(loc.timestamp).toISOString() : new Date().toISOString();
+          await offlineQueueService.enqueueLocation(loc.latitude, loc.longitude, loc.accuracy_m, journeyId, batteryPct, originalTs);
           if (GPS_DEBUG()) console.log('[DC_GPS] Track point queued for offline sync');
         }
       }
     } catch (error) {
       console.error('[DC_GPS] Track point error:', error);
       
-      await offlineQueueService.enqueueLocation(loc.latitude, loc.longitude, loc.accuracy_m, journeyId, batteryPct);
+      const originalTs = loc.timestamp ? new Date(loc.timestamp).toISOString() : new Date().toISOString();
+      await offlineQueueService.enqueueLocation(loc.latitude, loc.longitude, loc.accuracy_m, journeyId, batteryPct, originalTs);
       if (GPS_DEBUG()) console.log('[DC_GPS] Track point queued for offline sync');
     }
   }

@@ -3,7 +3,7 @@ WhatsApp Messaging API Endpoints
 Handles WhatsApp OTP sending, message logging, and delivery tracking via Meta Cloud API
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, Query, Body, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from app.core.database import get_db
@@ -17,6 +17,7 @@ from typing import Optional, List
 from datetime import datetime
 import logging
 import os
+import json
 import requests
 
 logger = logging.getLogger(__name__)
@@ -1941,12 +1942,100 @@ DEFAULT_JOB_TARGETS = {
         {"id": "t6", "type": "group", "name": "Executive Team Announcements", "identifier": "7702830269"}
     ],
     "vgk4u_morning_wish": [
-        {"id": "t7", "type": "group", "name": "VGK Care _ Bajaj Capital", "identifier": "8875551666"}
+        {"id": "t_vgk_channel", "type": "channel", "name": "VGK4u Official Channel", "identifier": "https://whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m"},
+        {"id": "t_vgk_group", "type": "group", "name": "VGK4u Community Group", "identifier": "https://chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY?s=cl&p=i&mlu=0"}
     ],
     "service_summary": [
         {"id": "t8", "type": "group", "name": "Service & Maintenance Team", "identifier": "8875551666"}
     ]
 }
+
+TARGETS_FILE_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "wa_job_targets.json")
+
+def _load_targets_from_db(db: Session = None) -> dict:
+    try:
+        if os.path.exists(TARGETS_FILE_PATH):
+            with open(TARGETS_FILE_PATH, "r") as f:
+                loaded = json.load(f)
+                if isinstance(loaded, dict):
+                    for k, v in DEFAULT_JOB_TARGETS.items():
+                        if k not in loaded:
+                            loaded[k] = v
+                    return loaded
+    except Exception as e:
+        logger.warning(f"Could not load targets file: {e}")
+    return DEFAULT_JOB_TARGETS
+
+def _save_targets_to_db(db: Session, targets_dict: dict) -> None:
+    try:
+        os.makedirs(os.path.dirname(TARGETS_FILE_PATH), exist_ok=True)
+        with open(TARGETS_FILE_PATH, "w") as f:
+            json.dump(targets_dict, f, indent=2)
+    except Exception as e:
+        logger.warning(f"Could not save targets file: {e}")
+
+EXEC_LOGS_FILE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "wa_execution_logs.json"))
+
+def _log_trigger_execution(
+    job_id: str,
+    job_name: str,
+    trigger_type: str,
+    triggered_by: str,
+    targets: list,
+    sent_count: int,
+    failed_count: int,
+    status: str,
+    error_message: str = None,
+    detail_data: dict = None
+):
+    try:
+        os.makedirs(os.path.dirname(EXEC_LOGS_FILE_PATH), exist_ok=True)
+        logs = []
+        if os.path.exists(EXEC_LOGS_FILE_PATH):
+            with open(EXEC_LOGS_FILE_PATH, "r") as f:
+                try:
+                    logs = json.load(f)
+                except Exception:
+                    logs = []
+                if not isinstance(logs, list):
+                    logs = []
+
+        import uuid
+        now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+
+        target_names = []
+        for t in (targets or []):
+            t_name = t.get("name") or t.get("identifier") or "Group"
+            target_names.append(t_name)
+        target_summary = ", ".join(target_names) if target_names else "Configured Targets"
+
+        entry = {
+            "id": f"log_{uuid.uuid4().hex[:8]}",
+            "job_id": job_id,
+            "job_name": job_name,
+            "trigger_type": trigger_type,
+            "triggered_by": triggered_by,
+            "timestamp": now_ist.strftime("%d %b %Y, %I:%M:%S %p IST"),
+            "iso_timestamp": now_ist.isoformat(),
+            "target_summary": target_summary,
+            "targets": targets or [],
+            "sent_count": sent_count,
+            "failed_count": failed_count,
+            "status": status,
+            "error_message": error_message,
+            "detail": detail_data or {}
+        }
+
+        logs.insert(0, entry)
+        logs = logs[:500]
+
+        with open(EXEC_LOGS_FILE_PATH, "w") as f:
+            json.dump(logs, f, indent=2)
+
+        return entry
+    except Exception as e:
+        logger.warning(f"Could not write execution log: {e}")
+        return None
 
 async def _require_staff_optional(request: Request, db: Session = Depends(get_db)):
     try:
@@ -1955,6 +2044,33 @@ async def _require_staff_optional(request: Request, db: Session = Depends(get_db
         return get_current_staff_user_from_hybrid(current_user, db)
     except Exception:
         return None
+
+@router.get("/trigger-logs")
+def get_wa_trigger_execution_logs(
+    limit: int = Query(50, ge=1, le=200),
+    job_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user=Depends(_require_staff_optional)
+):
+    """Returns historical trigger execution audit logs."""
+    try:
+        if os.path.exists(EXEC_LOGS_FILE_PATH):
+            with open(EXEC_LOGS_FILE_PATH, "r") as f:
+                logs = json.load(f)
+                if isinstance(logs, list):
+                    if job_id:
+                        logs = [l for l in logs if l.get("job_id") == job_id]
+                    # Ensure latest trigger is always on top
+                    logs.sort(key=lambda x: x.get("iso_timestamp", ""), reverse=True)
+                    return {
+                        "success": True,
+                        "total": len(logs),
+                        "logs": logs[:limit]
+                    }
+    except Exception as e:
+        logger.warning(f"Could not read execution logs: {e}")
+
+    return {"success": True, "total": 0, "logs": []}
 
 @router.get("/scheduler-status")
 def get_wa_scheduler_status(
@@ -1979,15 +2095,19 @@ def get_wa_scheduler_status(
 
     from app.models.whatsapp import MessageLog
 
-    def _get_job_day_status(msg_type: str, date_str: str, default_label: str = "Executed"):
+    def _get_job_day_status(msg_types, date_str: str, default_label: str = "Executed"):
+        if isinstance(msg_types, str):
+            msg_types = [msg_types]
         count = db.query(MessageLog).filter(
-            MessageLog.message_type == msg_type,
+            MessageLog.message_type.in_(msg_types),
             MessageLog.sent_at >= datetime.strptime(date_str, '%Y-%m-%d'),
             MessageLog.sent_at < datetime.strptime(date_str, '%Y-%m-%d') + timedelta(days=1)
         ).count()
         if count > 0:
             return {"status": "EXECUTED", "count": count, "label": f"✅ {count} Sent"}
         return {"status": "PENDING", "count": 0, "label": "⏳ Scheduled / Pending"}
+
+    active_targets = _load_targets_from_db(db)
 
     jobs = [
         {
@@ -1996,22 +2116,22 @@ def get_wa_scheduler_status(
             "category": "Sales Reporting",
             "schedule": "Every 2 Hours (9:30 AM - 7:30 PM IST)",
             "next_run": "Today 01:30 PM IST" if now_ist.hour < 13 or (now_ist.hour == 13 and now_ist.minute < 30) else "Today 03:30 PM IST",
-            "recipients": DEFAULT_JOB_TARGETS.get("wa_bihourly_sales_perf_report", []),
-            "day_2_ago": _get_job_day_status("sales_perf_report", d2_str),
-            "yesterday": _get_job_day_status("sales_perf_report", d1_str),
-            "today": _get_job_day_status("sales_perf_report", d0_str),
+            "recipients": active_targets.get("wa_bihourly_sales_perf_report", []),
+            "day_2_ago": _get_job_day_status(["sales_perf_report", "auto_sales_perf_report", "sales_performance_report"], d2_str),
+            "yesterday": _get_job_day_status(["sales_perf_report", "auto_sales_perf_report", "sales_performance_report"], d1_str),
+            "today": _get_job_day_status(["sales_perf_report", "auto_sales_perf_report", "sales_performance_report"], d0_str),
             "is_active": True
         },
         {
             "job_id": "field_staff_journey_report",
             "name": "Field Journey Performance & Leaderboard Report",
             "category": "Field Operations",
-            "schedule": "Every 1 Hour (9:00 AM - 7:00 PM IST)",
-            "next_run": "Today 02:00 PM IST" if now_ist.hour < 14 else ("Today 03:00 PM IST" if now_ist.hour < 15 else ("Today 04:00 PM IST" if now_ist.hour < 16 else ("Today 05:00 PM IST" if now_ist.hour < 17 else ("Today 06:00 PM IST" if now_ist.hour < 18 else ("Today 07:00 PM IST" if now_ist.hour < 19 else "Tomorrow 09:00 AM IST"))))),
-            "recipients": DEFAULT_JOB_TARGETS.get("field_staff_journey_report", []),
-            "day_2_ago": _get_job_day_status("field_journey", d2_str),
-            "yesterday": _get_job_day_status("field_journey", d1_str),
-            "today": _get_job_day_status("field_journey", d0_str),
+            "schedule": "Every 1 Hour (09:00 AM - 08:00 PM IST / Active)",
+            "next_run": f"Today {((now_ist.hour % 12) + 1):02d}:00 {'PM' if (now_ist.hour + 1) >= 12 else 'AM'} IST" if now_ist.hour < 20 else "Tomorrow 09:00 AM IST",
+            "recipients": active_targets.get("field_staff_journey_report", []),
+            "day_2_ago": _get_job_day_status(["field_journey", "field_staff_journey", "auto_field_journey"], d2_str),
+            "yesterday": _get_job_day_status(["field_journey", "field_staff_journey", "auto_field_journey"], d1_str),
+            "today": _get_job_day_status(["field_journey", "field_staff_journey", "auto_field_journey"], d0_str),
             "is_active": True
         },
         {
@@ -2020,10 +2140,10 @@ def get_wa_scheduler_status(
             "category": "Customer Support",
             "schedule": "Real-time / Every 30 mins auto-sync",
             "next_run": "Continuous / Instant",
-            "recipients": DEFAULT_JOB_TARGETS.get("missed_call_ack", []),
-            "day_2_ago": _get_job_day_status("missed_call_ack", d2_str),
-            "yesterday": _get_job_day_status("missed_call_ack", d1_str),
-            "today": _get_job_day_status("missed_call_ack", d0_str),
+            "recipients": active_targets.get("missed_call_ack", []),
+            "day_2_ago": _get_job_day_status(["missed_call_ack"], d2_str),
+            "yesterday": _get_job_day_status(["missed_call_ack"], d1_str),
+            "today": _get_job_day_status(["missed_call_ack"], d0_str),
             "is_active": True
         },
         {
@@ -2032,10 +2152,10 @@ def get_wa_scheduler_status(
             "category": "Team Engagement",
             "schedule": "Daily 08:00 AM IST",
             "next_run": "Tomorrow 08:00 AM IST" if now_ist.hour >= 8 else "Today 08:00 AM IST",
-            "recipients": DEFAULT_JOB_TARGETS.get("wa_daily_morning_wish", []),
-            "day_2_ago": _get_job_day_status("morning_wish", d2_str),
-            "yesterday": _get_job_day_status("morning_wish", d1_str),
-            "today": _get_job_day_status("morning_wish", d0_str),
+            "recipients": active_targets.get("wa_daily_morning_wish", []),
+            "day_2_ago": _get_job_day_status(["morning_wish", "auto_staff_morning_leadership", "wa_daily_morning_wish"], d2_str),
+            "yesterday": _get_job_day_status(["morning_wish", "auto_staff_morning_leadership", "wa_daily_morning_wish"], d1_str),
+            "today": _get_job_day_status(["morning_wish", "auto_staff_morning_leadership", "wa_daily_morning_wish"], d0_str),
             "is_active": True
         },
         {
@@ -2044,10 +2164,10 @@ def get_wa_scheduler_status(
             "category": "Community Outreach",
             "schedule": "Daily 08:00 AM IST",
             "next_run": "Tomorrow 08:00 AM IST" if now_ist.hour >= 8 else "Today 08:00 AM IST",
-            "recipients": DEFAULT_JOB_TARGETS.get("vgk4u_morning_wish", []),
-            "day_2_ago": _get_job_day_status("vgk4u_wish", d2_str),
-            "yesterday": _get_job_day_status("vgk4u_wish", d1_str),
-            "today": _get_job_day_status("vgk4u_wish", d0_str),
+            "recipients": active_targets.get("vgk4u_morning_wish", []),
+            "day_2_ago": _get_job_day_status(["vgk4u_wish", "vgk4u_morning_wish", "auto_community_approved"], d2_str),
+            "yesterday": _get_job_day_status(["vgk4u_wish", "vgk4u_morning_wish", "auto_community_approved"], d1_str),
+            "today": _get_job_day_status(["vgk4u_wish", "vgk4u_morning_wish", "auto_community_approved"], d0_str),
             "is_active": True
         },
         {
@@ -2056,10 +2176,10 @@ def get_wa_scheduler_status(
             "category": "Service & Maintenance",
             "schedule": "Daily 07:30 PM IST",
             "next_run": "Today 07:30 PM IST" if now_ist.hour < 19 or (now_ist.hour == 19 and now_ist.minute < 30) else "Tomorrow 07:30 PM IST",
-            "recipients": DEFAULT_JOB_TARGETS.get("service_summary", []),
-            "day_2_ago": _get_job_day_status("service_summary", d2_str),
-            "yesterday": _get_job_day_status("service_summary", d1_str),
-            "today": _get_job_day_status("service_summary", d0_str),
+            "recipients": active_targets.get("service_summary", []),
+            "day_2_ago": _get_job_day_status(["service_summary", "auto_ticket_created_customer", "auto_ticket_closed_customer"], d2_str),
+            "yesterday": _get_job_day_status(["service_summary", "auto_ticket_created_customer", "auto_ticket_closed_customer"], d1_str),
+            "today": _get_job_day_status(["service_summary", "auto_ticket_created_customer", "auto_ticket_closed_customer"], d0_str),
             "is_active": True
         }
     ]
@@ -2080,7 +2200,8 @@ def get_wa_job_targets(
     current_user=Depends(_require_staff_optional)
 ):
     """Returns currently configured target groups and numbers for a job."""
-    targets = DEFAULT_JOB_TARGETS.get(job_id, [])
+    active_targets = _load_targets_from_db(db)
+    targets = active_targets.get(job_id, [])
     return {"success": True, "job_id": job_id, "recipients": targets}
 
 
@@ -2096,8 +2217,10 @@ def update_wa_job_targets(
     if not job_id or not action:
         raise HTTPException(status_code=400, detail="job_id and action required")
 
-    if job_id not in DEFAULT_JOB_TARGETS:
-        DEFAULT_JOB_TARGETS[job_id] = []
+    active_targets = _load_targets_from_db(db)
+
+    if job_id not in active_targets:
+        active_targets[job_id] = []
 
     if action == "add":
         name = payload.get("name", "New Group")
@@ -2105,13 +2228,15 @@ def update_wa_job_targets(
         target_type = payload.get("type", "group")
         import uuid
         new_target = {"id": f"t_{uuid.uuid4().hex[:6]}", "type": target_type, "name": name, "identifier": identifier}
-        DEFAULT_JOB_TARGETS[job_id].append(new_target)
-        return {"success": True, "message": f"Added target '{name}'", "recipients": DEFAULT_JOB_TARGETS[job_id]}
+        active_targets[job_id].append(new_target)
+        _save_targets_to_db(db, active_targets)
+        return {"success": True, "message": f"Added target '{name}'", "recipients": active_targets[job_id]}
 
     elif action == "remove":
         target_id = payload.get("target_id")
-        DEFAULT_JOB_TARGETS[job_id] = [t for t in DEFAULT_JOB_TARGETS[job_id] if t.get("id") != target_id]
-        return {"success": True, "message": "Target removed successfully", "recipients": DEFAULT_JOB_TARGETS[job_id]}
+        active_targets[job_id] = [t for t in active_targets[job_id] if t.get("id") != target_id]
+        _save_targets_to_db(db, active_targets)
+        return {"success": True, "message": "Target removed successfully", "recipients": active_targets[job_id]}
 
     raise HTTPException(status_code=400, detail=f"Invalid action: {action}")
 
@@ -2119,6 +2244,7 @@ def update_wa_job_targets(
 @router.post("/trigger-job")
 def trigger_wa_job_manual(
     payload: dict = Body(...),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     db: Session = Depends(get_db),
     current_user=Depends(_require_staff)
 ):
@@ -2129,12 +2255,28 @@ def trigger_wa_job_manual(
     if not job_id:
         raise HTTPException(status_code=400, detail="job_id is required")
 
-    logger.info(f"⚡ [WA-SCHEDULER-TRIGGER] Manual trigger requested for job '{job_id}' by staff {current_user.emp_code}")
+    active_targets = _load_targets_from_db(db)
+    job_targets = active_targets.get(job_id, [])
+    staff_label = f"Staff {current_user.emp_code} ({getattr(current_user, 'first_name', '') or 'User'})"
 
     try:
         if job_id == "wa_bihourly_sales_perf_report":
             from app.services.sales_performance_report_service import dispatch_bi_hourly_sales_performance_report
             res = dispatch_bi_hourly_sales_performance_report(db, slot_name="Manual Live Trigger")
+            is_success = isinstance(res, dict) and res.get("success") is True
+            sent_cnt = (res.get("data") or {}).get("sent_count") or (1 if is_success else 0)
+            _log_trigger_execution(
+                job_id=job_id,
+                job_name="Sales Team 2-Hour Report & Leaderboard",
+                trigger_type="MANUAL",
+                triggered_by=staff_label,
+                targets=job_targets,
+                sent_count=sent_cnt,
+                failed_count=0 if is_success else 1,
+                status="SUCCESS" if is_success else "FAILED",
+                error_message=None if is_success else str(res),
+                detail_data=res
+            )
             return {"success": True, "message": "Sales Team Performance Report dispatched to WhatsApp group", "detail": res}
 
         elif job_id == "field_staff_journey_report":
@@ -2142,27 +2284,111 @@ def trigger_wa_job_manual(
             res = dispatch_field_journey_whatsapp_reports_and_alerts(db)
             if isinstance(res, dict) and res.get("group_posted") is False:
                 err_text = (res.get("group_response") or {}).get("error") or "WhatsApp Bot Gateway disconnected"
+                _log_trigger_execution(
+                    job_id=job_id,
+                    job_name="Field Journey Performance & Leaderboard Report",
+                    trigger_type="MANUAL",
+                    triggered_by=staff_label,
+                    targets=job_targets,
+                    sent_count=0,
+                    failed_count=1,
+                    status="FAILED",
+                    error_message=err_text,
+                    detail_data=res
+                )
                 return {"success": False, "error": f"WhatsApp message dispatch failed: {err_text}. Please scan QR code at /qr"}
+            _log_trigger_execution(
+                job_id=job_id,
+                job_name="Field Journey Performance & Leaderboard Report",
+                trigger_type="MANUAL",
+                triggered_by=staff_label,
+                targets=job_targets,
+                sent_count=1,
+                failed_count=0,
+                status="SUCCESS",
+                detail_data=res
+            )
             return {"success": True, "message": "Field Journey Performance & Leaderboard Report dispatched to WhatsApp group", "detail": res}
 
         elif job_id == "missed_call_ack":
             from app.services.operator_call_sync import sync_myoperator_logs
             res = sync_myoperator_logs(db, days_back=1)
+            sent_cnt = (res.get("updated") or 0) if isinstance(res, dict) else 1
+            _log_trigger_execution(
+                job_id=job_id,
+                job_name="Instant Missed Call Auto-ACK",
+                trigger_type="MANUAL",
+                triggered_by=staff_label,
+                targets=job_targets,
+                sent_count=sent_cnt,
+                failed_count=0,
+                status="SUCCESS",
+                detail_data=res
+            )
             return {"success": True, "message": "MyOperator Missed Call Sync & Auto-ACK triggered", "detail": res}
 
         elif job_id == "wa_daily_morning_wish":
-            from app.services.whatsapp_auto_service import dispatch_daily_morning_wishes
-            res = dispatch_daily_morning_wishes(db)
-            return {"success": True, "message": "WhatsApp Morning Wishes dispatched", "detail": res}
+            def _bg_dispatch_wishes():
+                from app.core.database import SessionLocal
+                from app.services.whatsapp_morning_wish_service import dispatch_daily_morning_wishes
+                _bg_db = SessionLocal()
+                try:
+                    res_bg = dispatch_daily_morning_wishes(_bg_db)
+                    _log_trigger_execution(
+                        job_id=job_id,
+                        job_name="WhatsApp 8 AM Morning Wish Dispatch",
+                        trigger_type="MANUAL",
+                        triggered_by=staff_label,
+                        targets=job_targets,
+                        sent_count=res_bg.get("sent_count") or 0,
+                        failed_count=res_bg.get("failed_count") or 0,
+                        status="SUCCESS",
+                        detail_data=res_bg
+                    )
+                finally:
+                    _bg_db.close()
+
+            background_tasks.add_task(_bg_dispatch_wishes)
+            return {"success": True, "message": "WhatsApp Morning Wishes dispatch started in background for 4,000+ leads"}
 
         elif job_id == "vgk4u_morning_wish":
             from app.services.vgk4u_community_alert_service import dispatch_daily_vgk4u_morning_wish
             res = dispatch_daily_vgk4u_morning_wish(db)
-            return {"success": True, "message": "VGK4U Community Morning Wish dispatched", "detail": res}
+            is_success = isinstance(res, dict) and res.get("success") is True
+            sent_cnt = (res.get("dispatched_groups") if isinstance(res, dict) else 0) or 0
+            failed_cnt = (res.get("failed_groups") if isinstance(res, dict) else 0) or 0
+            err_msg = res.get("error") or ("Dispatch failed to one or more targets" if not is_success else None)
+            _log_trigger_execution(
+                job_id=job_id,
+                job_name="VGK4U Elite Community Morning Wish",
+                trigger_type="MANUAL",
+                triggered_by=staff_label,
+                targets=job_targets,
+                sent_count=sent_cnt,
+                failed_count=failed_cnt,
+                status="SUCCESS" if is_success else "FAILED",
+                error_message=err_msg,
+                detail_data=res
+            )
+            if not is_success:
+                return {"success": False, "error": err_msg or "Dispatch failed", "detail": res}
+            return {"success": True, "message": "VGK4U Community Morning Wish dispatched to all configured targets", "detail": res}
 
         elif job_id == "service_summary":
             from app.services.service_group_alert_service import send_daily_service_summary_report
             res = send_daily_service_summary_report(db)
+            is_success = isinstance(res, dict) and res.get("success") is True
+            _log_trigger_execution(
+                job_id=job_id,
+                job_name="Daily 7:30 PM Service Ticket Summary",
+                trigger_type="MANUAL",
+                triggered_by=staff_label,
+                targets=job_targets,
+                sent_count=1 if is_success else 0,
+                failed_count=0 if is_success else 1,
+                status="SUCCESS" if is_success else "FAILED",
+                detail_data=res
+            )
             return {"success": True, "message": "Service Summary Report dispatched", "detail": res}
 
         else:

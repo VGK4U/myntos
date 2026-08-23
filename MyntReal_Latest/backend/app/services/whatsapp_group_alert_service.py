@@ -21,13 +21,24 @@ logger = logging.getLogger(__name__)
 DEFAULT_INVITE_CODE = "LfX8mGootXa7SpwNIz7P5C"
 
 
+def extract_invite_code(url_or_code: str) -> str:
+    """Extract clean WhatsApp Group invite code from URL or raw string."""
+    if not url_or_code:
+        return ""
+    code = str(url_or_code).strip()
+    if 'chat.whatsapp.com/' in code:
+        code = code.split('chat.whatsapp.com/')[-1].split('?')[0].split('#')[0].strip('/')
+    return code
+
+
 def send_group_bot_message(message_text: str, invite_code: str = DEFAULT_INVITE_CODE) -> Dict[str, Any]:
     """
     Sends message payload to WhatsApp Web Group Bot Gateway with IPv4/IPv6 & env-var fallback.
     """
+    clean_code = extract_invite_code(invite_code)
     payload = {
         "message": message_text,
-        "inviteCode": invite_code
+        "inviteCode": clean_code or invite_code
     }
     
     env_url = os.getenv("WHATSAPP_BOT_URL") or os.getenv("WA_BOT_URL") or os.getenv("WA_GROUP_BOT_URL")
@@ -54,7 +65,7 @@ def send_group_bot_message(message_text: str, invite_code: str = DEFAULT_INVITE_
             continue
 
     logger.warning(f"Could not connect to WhatsApp Group Bot Gateway: {last_exc}")
-    return {"success": False, "error": str(last_exc)}
+    return {"success": False, "error": f"WhatsApp Group Bot service is currently offline on port 5002 ({last_exc}). Please start the WhatsApp Bot daemon on the server."}
 
 
 def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, Any]:

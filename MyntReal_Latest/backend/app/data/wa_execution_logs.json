@@ -1,0 +1,196 @@
+[
+  {
+    "id": "log_vgk4u_21_1157",
+    "job_id": "vgk4u_morning_wish",
+    "job_name": "VGK4U Elite Community Morning Wish",
+    "trigger_type": "MANUAL",
+    "triggered_by": "Staff MR10001 (VGK Mentor)",
+    "timestamp": "21 Aug 2026, 11:57:42 AM IST",
+    "iso_timestamp": "2026-08-21T11:57:42+05:30",
+    "target_summary": "VGK4u Official Channel, VGK4u Community Group",
+    "targets": [
+      {
+        "type": "channel",
+        "name": "VGK4u Official Channel",
+        "identifier": "https://whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m"
+      },
+      {
+        "type": "group",
+        "name": "VGK4u Community Group",
+        "identifier": "https://chat.whatsapp.com/HNQQoKXFfCm5PQngGdrIcY"
+      }
+    ],
+    "sent_count": 3,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null
+  },
+  {
+    "id": "log_fj_21_1100",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Aug 2026, 11:00:00 AM IST",
+    "iso_timestamp": "2026-08-21T11:00:00+05:30",
+    "target_summary": "Field Updates Group",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 7,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null
+  },
+  {
+    "id": "log_mw_21_0800",
+    "job_id": "wa_daily_morning_wish",
+    "job_name": "WhatsApp 8 AM Morning Wish Dispatch",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Aug 2026, 08:00:00 AM IST",
+    "iso_timestamp": "2026-08-21T08:00:00+05:30",
+    "target_summary": "Executive Team Announcements",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 3,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null
+  },
+  {
+    "id": "log_mc_21_0730",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "21 Aug 2026, 07:30:00 AM IST",
+    "iso_timestamp": "2026-08-21T07:30:00+05:30",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 3,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null
+  },
+  {
+    "id": "log_svc_20_1930",
+    "job_id": "service_summary",
+    "job_name": "Daily 7:30 PM Service Ticket Summary",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "20 Aug 2026, 07:30:00 PM IST",
+    "iso_timestamp": "2026-08-20T19:30:00+05:30",
+    "target_summary": "Service & Maintenance Team",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Service & Maintenance Team",
+        "identifier": "8875551666"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null
+  },
+  {
+    "id": "log_mw_20_0800",
+    "job_id": "wa_daily_morning_wish",
+    "job_name": "WhatsApp 8 AM Morning Wish Dispatch",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "20 Aug 2026, 08:00:00 AM IST",
+    "iso_timestamp": "2026-08-20T08:00:00+05:30",
+    "target_summary": "Executive Team Announcements",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 3,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null
+  },
+  {
+    "id": "log_mc_20_0730",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "20 Aug 2026, 07:30:00 AM IST",
+    "iso_timestamp": "2026-08-20T07:30:00+05:30",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 18,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null
+  },
+  {
+    "id": "log_mw_19_0800",
+    "job_id": "wa_daily_morning_wish",
+    "job_name": "WhatsApp 8 AM Morning Wish Dispatch",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "19 Aug 2026, 08:00:00 AM IST",
+    "iso_timestamp": "2026-08-19T08:00:00+05:30",
+    "target_summary": "Executive Team Announcements",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 3,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null
+  },
+  {
+    "id": "log_mc_19_0730",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "19 Aug 2026, 07:30:00 AM IST",
+    "iso_timestamp": "2026-08-19T07:30:00+05:30",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 6,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null
+  }
+]

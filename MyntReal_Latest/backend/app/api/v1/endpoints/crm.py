@@ -16312,12 +16312,12 @@ def view_share_link(token: str, db: Session = Depends(get_db)):
 # Public token endpoint: /share/{token}/bundle
 # Uses PyMuPDF (fitz) to merge images + PDFs into a single downloadable PDF.
 # ─────────────────────────────────────────────────────────────────────────────
-_BANK_DOC_TYPES   = ['adhar','pan','powerbill','bank_book','house_tax','quotation','feasibility_letter']
+_BANK_DOC_TYPES   = ['adhar','pan','powerbill','bank_book','house_tax','quotation','feasibility_letter','invoice']
 _DISCOM_DOC_TYPES = ['annexure_a','annexure_c','annexure_c_technical','synchronisation_certificate','dcr_certificate','geotagging_photo']
 _BUNDLE_DOC_LABELS = {
     'adhar':'Aadhaar Card','pan':'PAN Card','powerbill':'Electricity Bill',
     'bank_book':'Bank Book','house_tax':'House Tax Receipt',
-    'quotation':'Quotation','feasibility_letter':'Feasibility Letter',
+    'quotation':'Quotation','feasibility_letter':'Feasibility Letter','invoice':'Invoice',
     'annexure_a':'Annexure-A','annexure_c':'Annexure-C (Project Completion)',
     'annexure_c_technical':'Annexure-C (Technical Details)',
     'synchronisation_certificate':'Synchronisation Certificate',

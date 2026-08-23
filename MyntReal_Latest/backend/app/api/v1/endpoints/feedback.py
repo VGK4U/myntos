@@ -595,6 +595,7 @@ async def upload_video_thumbnail(
 SUPREME_STAFF_TYPES = ['VGK4U_SUPREME', 'RVZ_SUPREME', 'VGK4U', 'VGK4U_EA', 'vgk4u', 'vgk4u_supreme', 'rvz_supreme']
 
 @router.post("/staff/submit")
+@router.post("/submit-staff-announcement")
 async def submit_staff_announcement(
     title: str = Form(...),
     description: str = Form(None),
@@ -655,8 +656,25 @@ async def submit_staff_announcement(
     if not admin_user:
         raise HTTPException(status_code=500, detail="No valid user found to associate announcement")
     
-    # Create submission with auto-approval for Supreme
-    initial_status = SubmissionStatus.APPROVED if is_supreme else SubmissionStatus.PENDING
+    from datetime import datetime, timezone
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Duplicate Guard: Prevent duplicate announcements created on the same day
+    existing_dup = db.query(FeedbackSubmission).filter(
+        FeedbackSubmission.title == title,
+        FeedbackSubmission.submitted_at >= today_start
+    ).first()
+    if existing_dup:
+        return {
+            "success": True,
+            "duplicate": True,
+            "message": "Announcement already posted today",
+            "submission_id": existing_dup.id,
+            "status": "stopped"
+        }
+
+    # Staff announcements (including posters) are auto-approved for immediate login page display
+    initial_status = SubmissionStatus.APPROVED
     
     submission = FeedbackSubmission(
         user_id=admin_user.id,
@@ -665,9 +683,9 @@ async def submit_staff_announcement(
         title=title,
         description=description,
         status=initial_status,
-        is_visible=is_supreme,  # Immediately visible if Supreme
-        approved_at=datetime.utcnow() if is_supreme else None,
-        approved_by=str(current_user.id) if is_supreme else None
+        is_visible=True,  # Immediately visible on Login Page
+        approved_at=datetime.utcnow(),
+        approved_by=str(current_user.id)
     )
     db.add(submission)
     db.flush()
@@ -1860,11 +1878,11 @@ async def get_public_announcements(
         User.name,
         User.city,
         FeedbackSubmission.user_id,
-        FeedbackSubmission.display_order,
+        FeedbackSubmission.submitted_at,
         FeedbackSubmission.approved_at
     ).order_by(
-        FeedbackSubmission.display_order.asc().nullslast(),
-        FeedbackSubmission.approved_at.desc()
+        FeedbackSubmission.approved_at.desc().nullslast(),
+        FeedbackSubmission.submitted_at.desc()
     ).limit(limit).all()
     
     if not subquery:

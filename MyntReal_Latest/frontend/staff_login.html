@@ -473,9 +473,14 @@
     
     <script>
         function resolveApiUrl(url) {
-            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            if (isLocalhost && url && url.startsWith('/api/') && window.location.port !== '5001' && window.location.port !== '8000') {
-                return 'http://' + window.location.hostname + ':5001' + url;
+            if (!url) return url;
+            if (window.location.port === '5001' || window.location.port === '8000') {
+                return url;
+            }
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
+            if (isLocalhost && url.startsWith('/api/')) {
+                const host = window.location.hostname && window.location.hostname !== '' ? window.location.hostname : '127.0.0.1';
+                return 'http://' + host + ':5001' + url;
             }
             return url;
         }
@@ -528,7 +533,7 @@
             } catch (e) {
                 console.error('[DC-REDIRECT] Error parsing staff user:', e);
             }
-            return '/staff/vgk/income-unified';
+            return '/staff/progress';
         }
 
         async function isTokenValid(token) {

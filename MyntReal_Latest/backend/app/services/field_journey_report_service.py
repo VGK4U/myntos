@@ -335,15 +335,15 @@ def format_field_journey_whatsapp_message(stats: Dict[str, Any]) -> str:
                 lines.append(f"   {j['alert_flag']}")
             lines.append("")
 
-    lines.append("💬 _Auto-generated hourly field operations update_")
+    lines.append("💬 _Auto-generated bi-hourly field operations update_")
     return "\n".join(lines)
 
 
 def dispatch_field_journey_whatsapp_reports_and_alerts(db: Session) -> Dict[str, Any]:
     """
-    Main trigger function executed hourly:
+    Main trigger function executed bi-hourly (10 AM - 10 PM IST for active journeys):
     1. Sends Group Summary Report to target WhatsApp group.
-    2. Sends direct 2-Hour Photo Inactivity Warning alerts to Employee AND Reporting Manager.
+    2. Sends direct 2-Hour Photo Inactivity Warning alerts ONLY to employees currently in an active journey.
     """
     from app.services.whatsapp_group_alert_service import send_group_bot_message
     from app.services.whatsapp_auto_service import send_direct_whatsapp
@@ -360,15 +360,17 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(db: Session) -> Dict[str,
     else:
         logger.warning("[FIELD-REPORT] Group bot response: %s", group_res)
 
-    # Log execution into MessageLog table for scheduler matrix tracking
     try:
-        import uuid
         from app.models.whatsapp import MessageLog
+        import uuid
         log_entry = MessageLog(
-            message_sid=f"fj_report_{uuid.uuid4().hex[:16]}",
+            message_sid=f"field_journey_{uuid.uuid4().hex[:12]}",
             mobile_number="GROUP:Field Updates",
             message_type="field_journey",
-            message_body=report_msg[:500]
+            message_body=report_msg[:500],
+            initial_status="sent" if group_result else "failed",
+            current_status="sent" if group_result else "failed",
+            sent_at=datetime.datetime.utcnow()
         )
         db.add(log_entry)
         db.commit()

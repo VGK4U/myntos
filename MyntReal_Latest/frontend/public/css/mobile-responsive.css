@@ -1,17 +1,30 @@
 /* DC_MOBILE_RESPONSIVE: Universal mobile-responsive styles for all pages */
 /* Injected automatically by server.js into every HTML page */
 
-/* ============ SMALL PHONES (≤576px) ============ */
-@media (max-width: 576px) {
+/* ============ MOBILE & TABLET (≤991px) ============ */
+@media (max-width: 991px) {
+    html, body {
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+    }
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        box-sizing: border-box !important;
+    }
     /* Content area: reduce padding */
-    .content-area { padding: 8px !important; }
-    .main-content { padding: 0 !important; }
+    .content-area {
+        padding: 12px !important;
+        max-width: 100vw !important;
+        box-sizing: border-box !important;
+    }
 
-    /* Stat cards: compact 2-col grid */
-    .stats-grid { 
+    /* Stat cards & summary row: responsive grid */
+    .stats-grid, .summary-row { 
         grid-template-columns: repeat(2, 1fr) !important; 
-        gap: 6px !important; 
-        margin-bottom: 10px !important; 
+        gap: 8px !important; 
+        margin-bottom: 12px !important; 
     }
     .stat-card { 
         padding: 8px 10px !important; 

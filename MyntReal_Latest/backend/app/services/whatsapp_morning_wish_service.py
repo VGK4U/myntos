@@ -301,6 +301,13 @@ def dispatch_daily_morning_wishes(db: Session, force_test: bool = False, limit_c
     ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
     start_of_today = (ist_now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=5, minutes=30))
 
+    # Batch fetch all numbers sent today in 1 query for 100x speedup
+    sent_today_numbers = set(
+        r[0] for r in db.query(MessageLog.mobile_number).filter(
+            MessageLog.sent_at >= start_of_today
+        ).all() if r[0]
+    )
+
     sent_count = 0
     skipped_count = 0
     failed_count = 0
@@ -322,13 +329,8 @@ def dispatch_daily_morning_wishes(db: Session, force_test: bool = False, limit_c
             skipped_count += 1
             continue
 
-        # Check if already sent today
-        already_sent = db.query(MessageLog).filter(
-            MessageLog.mobile_number == phone_formatted,
-            MessageLog.sent_at >= start_of_today
-        ).first()
-
-        if already_sent and not force_test:
+        # Check if already sent today (instant O(1) set lookup)
+        if phone_formatted in sent_today_numbers and not force_test:
             skipped_count += 1
             continue
 

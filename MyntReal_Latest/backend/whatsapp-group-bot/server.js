@@ -125,27 +125,29 @@ app.get('/status', (req, res) => {
     });
 });
 
+app.get('/qr-data', (req, res) => {
+    return res.json({
+        status: connectionStatus,
+        qr: currentQr,
+        qr_url: currentQr ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(currentQr)}` : null
+    });
+});
+
 app.get('/qr', (req, res) => {
     if (connectionStatus === 'connected') {
-        return res.send(`<h2>✅ WhatsApp Web Bot is already CONNECTED and ACTIVE!</h2><p>Group JID: ${targetJid || 'Ready'}</p>`);
-    }
-    if (!currentQr) {
         return res.send(`
             <!DOCTYPE html>
             <html>
-            <head>
-                <title>Generating WhatsApp Bot QR</title>
-                <meta http-equiv="refresh" content="3">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            </head>
-            <body style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 40px; background: #f4f6f9; color: #1e293b;">
-                <h2>⏳ Generating QR Code... Please wait a moment.</h2>
-                <p style="color: #64748b;">The page will automatically refresh in 3 seconds...</p>
+            <head><title>WhatsApp Bot Connected</title><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+            <body style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 60px 15px; background: #f4f6f9; color: #1e293b;">
+                <h1 style="color: #10b981; font-size: 48px; margin-bottom: 12px;">✅</h1>
+                <h2 style="color: #065f46; margin: 0 0 8px 0;">WhatsApp Web Bot is CONNECTED & ACTIVE!</h2>
+                <p style="color: #64748b; font-size: 14px;">Target JID: ${targetJid || 'Ready'}</p>
             </body>
             </html>
         `);
     }
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(currentQr)}`;
+    const initialQrUrl = currentQr ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(currentQr)}` : null;
     return res.send(`
         <!DOCTYPE html>
         <html>
@@ -156,27 +158,43 @@ app.get('/qr', (req, res) => {
         <body style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 30px 15px; background: #f4f6f9; color: #1e293b;">
             <h2 style="font-size: 22px; margin-bottom: 8px;">📱 Scan QR Code to Link WhatsApp Bot</h2>
             <p style="color: #64748b; font-size: 14px; margin-top: 0;">Open WhatsApp on phone ➔ Linked Devices ➔ Link a Device</p>
-            <div style="margin: 24px auto; background: white; display: inline-block; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08);">
-                <img id="qrImg" src="${qrUrl}" alt="QR Code" width="300" height="300" style="display:block; border-radius: 8px;" />
+            
+            <div id="qrContainer" style="margin: 24px auto; background: white; display: inline-block; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); min-width: 300px; min-height: 300px;">
+                ${initialQrUrl 
+                    ? `<img src="${initialQrUrl}" width="300" height="300" style="display:block; border-radius: 8px;" />`
+                    : `<div style="padding:100px 20px; font-size: 15px; color: #64748b; font-weight: 600;">⏳ Generating QR Code...<br><span style="font-size:12px; font-weight:400; color:#94a3b8">Will load automatically in a moment.</span></div>`
+                }
             </div>
-            <p id="statusMsg" style="font-size: 13px; font-weight: 600; color: #3b82f6;">🟢 QR Code Ready — Waiting for Phone Scan...</p>
+            
+            <p id="statusMsg" style="font-size: 13px; font-weight: 600; color: #3b82f6;">
+                ${initialQrUrl ? '🟢 QR Code Ready — Waiting for Phone Scan...' : '⏳ Initializing WhatsApp Socket...'}
+            </p>
+
             <script>
-                // Async status check — no full page reload so camera scanning is smooth & uninterrupted
-                setInterval(async () => {
+                async function checkStatus() {
                     try {
-                        const res = await fetch('/status');
+                        const res = await fetch('/qr-data');
                         const data = await res.json();
                         if (data.status === 'connected') {
                             document.body.innerHTML = \`
                                 <div style="padding-top: 60px;">
-                                    <h1 style="color: #10b981; font-size: 48px;">✅</h1>
-                                    <h2 style="color: #065f46;">WhatsApp Bot Successfully CONNECTED!</h2>
-                                    <p style="color: #374151;">Group Bot is active and ready to send WhatsApp alerts.</p>
+                                    <h1 style="color: #10b981; font-size: 48px; margin-bottom: 12px;">✅</h1>
+                                    <h2 style="color: #065f46; margin: 0 0 8px 0;">WhatsApp Bot Successfully CONNECTED!</h2>
+                                    <p style="color: #64748b; font-size: 14px;">Group Bot is active and ready to send WhatsApp alerts.</p>
                                 </div>
                             \`;
+                        } else if (data.qr_url) {
+                            const container = document.getElementById('qrContainer');
+                            if (container) {
+                                container.innerHTML = '<img src="' + data.qr_url + '" width="300" height="300" style="display:block; border-radius: 8px;" />';
+                            }
+                            const msg = document.getElementById('statusMsg');
+                            if (msg) msg.textContent = '🟢 QR Code Ready — Waiting for Phone Scan...';
                         }
                     } catch (e) {}
-                }, 3000);
+                }
+                setInterval(checkStatus, 1500);
+                checkStatus();
             </script>
         </body>
         </html>
@@ -184,6 +202,17 @@ app.get('/qr', (req, res) => {
 });
 
 const jidCache = {};
+
+function cleanTargetCode(raw) {
+    if (!raw) return '';
+    let str = String(raw).trim();
+    if (str.includes('whatsapp.com/channel/')) {
+        str = str.split('whatsapp.com/channel/')[1].split('?')[0].split('#')[0].replace(/\/$/, '');
+    } else if (str.includes('chat.whatsapp.com/')) {
+        str = str.split('chat.whatsapp.com/')[1].split('?')[0].split('#')[0].replace(/\/$/, '');
+    }
+    return str;
+}
 
 app.post('/api/send-group-message', async (req, res) => {
     try {
@@ -204,10 +233,37 @@ app.post('/api/send-group-message', async (req, res) => {
         const targetCodes = Array.from(new Set(Array.isArray(codesToUse) ? codesToUse : [codesToUse]));
         
         let sentCount = 0;
-        let lastResult = null;
+        let failedCount = 0;
+        const results = [];
 
-        for (const codeToUse of targetCodes) {
+        for (const rawCode of targetCodes) {
+            const codeToUse = cleanTargetCode(rawCode);
             let destinationJid = groupId;
+            let targetType = 'group';
+
+            if (String(rawCode).includes('/channel/') || codeToUse.startsWith('0029') || codeToUse.includes('@newsletter')) {
+                targetType = 'channel';
+            }
+
+            const { groupName } = req.body;
+            if (!destinationJid && groupName) {
+                try {
+                    const participating = await sock.groupFetchAllParticipating();
+                    const matchedGroup = Object.values(participating).find(g =>
+                        g.subject && g.subject.trim().toLowerCase() === String(groupName).trim().toLowerCase()
+                    ) || Object.values(participating).find(g =>
+                        g.subject && g.subject.trim().toLowerCase().includes(String(groupName).trim().toLowerCase())
+                    );
+
+                    if (matchedGroup) {
+                        destinationJid = matchedGroup.id;
+                        console.log(`[WA-BOT] Resolved Group Name '${groupName}' to JID: ${destinationJid}`);
+                    }
+                } catch (gFetchErr) {
+                    console.warn(`[WA-BOT] groupFetchAllParticipating error:`, gFetchErr.message);
+                }
+            }
+
             if (!destinationJid && codeToUse) {
                 if (jidCache[codeToUse]) {
                     destinationJid = jidCache[codeToUse];
@@ -217,47 +273,73 @@ app.post('/api/send-group-message', async (req, res) => {
                         new Promise((_, reject) => setTimeout(() => reject(new Error('Invite resolution timeout')), ms))
                     ]);
 
-                    try {
-                        const groupInfo = await withTimeout(sock.groupGetInviteInfo(codeToUse), 4000);
-                        if (groupInfo && groupInfo.id) {
-                            destinationJid = groupInfo.id.includes('@g.us') ? groupInfo.id : `${groupInfo.id}@g.us`;
-                            jidCache[codeToUse] = destinationJid;
-                        }
-                    } catch (invErr) {
-                        console.log(`[WA-BOT] groupGetInviteInfo note for ${codeToUse}: ${invErr.message}`);
-                    }
-
-                    if (!destinationJid) {
+                    if (targetType === 'channel') {
                         try {
-                            const joinedJid = await withTimeout(sock.groupAcceptInvite(codeToUse), 4000);
-                            if (joinedJid) {
-                                destinationJid = joinedJid.includes('@g.us') ? joinedJid : `${joinedJid}@g.us`;
+                            const meta = await withTimeout(sock.newsletterMetadata('invite', codeToUse), 4000);
+                            if (meta && meta.id) {
+                                destinationJid = meta.id.includes('@newsletter') ? meta.id : `${meta.id}@newsletter`;
                                 jidCache[codeToUse] = destinationJid;
-                                console.log(`[WA-BOT] Successfully joined group via invite code ${codeToUse}: ${destinationJid}`);
+                                console.log(`[WA-BOT] Resolved WhatsApp Channel JID: ${destinationJid} (${meta.name || 'Channel'})`);
                             }
-                        } catch (accErr) {
-                            console.log(`[WA-BOT] groupAcceptInvite note: ${accErr.message}`);
+                        } catch (nlErr) {
+                            console.log(`[WA-BOT] newsletterMetadata note for ${codeToUse}: ${nlErr.message}`);
                         }
-                    }
-
-                    if (!destinationJid) {
+                    } else {
                         try {
-                            const groups = await withTimeout(sock.groupFetchAllParticipating(), 4000);
-                            const gList = Object.values(groups || {});
-                            if (gList.length > 0) {
-                                destinationJid = gList[0].id;
+                            const groupInfo = await withTimeout(sock.groupGetInviteInfo(codeToUse), 4000);
+                            if (groupInfo && groupInfo.id) {
+                                destinationJid = groupInfo.id.includes('@g.us') ? groupInfo.id : `${groupInfo.id}@g.us`;
                                 jidCache[codeToUse] = destinationJid;
-                                console.log(`[WA-BOT] Fallback destinationJid: ${destinationJid} (${gList[0].subject})`);
                             }
-                        } catch (fErr) {
-                            console.log(`[WA-BOT] groupFetchAllParticipating note: ${fErr.message}`);
+                        } catch (invErr) {
+                            console.log(`[WA-BOT] groupGetInviteInfo note for ${codeToUse}: ${invErr.message}`);
+                        }
+
+                        if (!destinationJid) {
+                            try {
+                                const joinedJid = await withTimeout(sock.groupAcceptInvite(codeToUse), 4000);
+                                if (joinedJid) {
+                                    destinationJid = joinedJid.includes('@g.us') ? joinedJid : `${joinedJid}@g.us`;
+                                    jidCache[codeToUse] = destinationJid;
+                                }
+                            } catch (accErr) {
+                                console.log(`[WA-BOT] groupAcceptInvite note: ${accErr.message}`);
+                            }
                         }
                     }
                 }
             }
 
-            if (!destinationJid) destinationJid = targetJid;
-            if (!destinationJid) continue;
+            // STRICT TARGET TYPE & RESOLUTION VALIDATION — NO SILENT FALLBACK!
+            if (!destinationJid) {
+                console.warn(`[WA-BOT] ❌ Target resolution failed for '${rawCode}' (Type: ${targetType}). Silent fallback disabled.`);
+                failedCount++;
+                results.push({
+                    intended_target: rawCode,
+                    clean_code: codeToUse,
+                    target_type: targetType,
+                    resolved_jid: null,
+                    success: false,
+                    error: "TARGET_RESOLUTION_FAILED",
+                    fallback_used: false
+                });
+                continue;
+            }
+
+            if (targetType === 'channel' && !destinationJid.includes('@newsletter')) {
+                console.warn(`[WA-BOT] ❌ Target type mismatch for Channel '${rawCode}'. Resolved JID '${destinationJid}' is not @newsletter.`);
+                failedCount++;
+                results.push({
+                    intended_target: rawCode,
+                    clean_code: codeToUse,
+                    target_type: targetType,
+                    resolved_jid: destinationJid,
+                    success: false,
+                    error: "TARGET_TYPE_MISMATCH",
+                    fallback_used: false
+                });
+                continue;
+            }
 
             let contentPayload = { text: message || '' };
             const mediaSrc = imageUrl || imagePath;
@@ -265,41 +347,51 @@ app.post('/api/send-group-message', async (req, res) => {
                 let imgBuffer = null;
                 if (typeof mediaSrc === 'string' && (mediaSrc.startsWith('http://') || mediaSrc.startsWith('https://'))) {
                     imgBuffer = { url: mediaSrc };
-                } else if (typeof mediaSrc === 'string' && mediaSrc.startsWith('data:image/')) {
-                    const base64Data = mediaSrc.replace(/^data:image\/\w+;base64,/, '');
+                } else if (typeof mediaSrc === 'string' && mediaSrc.includes(';base64,')) {
+                    const base64Data = mediaSrc.split(';base64,').pop().replace(/\s/g, '');
                     imgBuffer = Buffer.from(base64Data, 'base64');
                 } else if (typeof mediaSrc === 'string' && fs.existsSync(mediaSrc)) {
                     imgBuffer = fs.readFileSync(mediaSrc);
                 }
                 if (imgBuffer) {
-                    contentPayload = { image: imgBuffer, caption: message || '' };
+                    contentPayload = { image: imgBuffer, caption: message || '', mimetype: 'image/png' };
                 }
             }
 
             try {
-                lastResult = await sock.sendMessage(destinationJid, contentPayload);
+                const sendRes = await sock.sendMessage(destinationJid, contentPayload);
                 sentCount++;
+                results.push({
+                    intended_target: rawCode,
+                    clean_code: codeToUse,
+                    target_type: targetType,
+                    resolved_jid: destinationJid,
+                    message_id: sendRes?.key?.id,
+                    success: true,
+                    fallback_used: false
+                });
             } catch (sendErr) {
-                console.log(`[WA-BOT] Initial sendMessage failed (${sendErr.message}). Attempting groupAcceptInvite & retry...`);
-                try {
-                    const joinedJid = await sock.groupAcceptInvite(codeToUse);
-                    if (joinedJid) {
-                        destinationJid = joinedJid.includes('@g.us') ? joinedJid : `${joinedJid}@g.us`;
-                        jidCache[codeToUse] = destinationJid;
-                    }
-                    lastResult = await sock.sendMessage(destinationJid, contentPayload);
-                    sentCount++;
-                } catch (retryErr) {
-                    console.log(`[WA-BOT] Retry sendMessage failed: ${retryErr.message}`);
-                    throw retryErr;
-                }
+                console.error(`[WA-BOT] Send failed to ${destinationJid}: ${sendErr.message}`);
+                failedCount++;
+                results.push({
+                    intended_target: rawCode,
+                    clean_code: codeToUse,
+                    target_type: targetType,
+                    resolved_jid: destinationJid,
+                    success: false,
+                    error: sendErr.message,
+                    fallback_used: false
+                });
             }
         }
 
+        const isOverallSuccess = sentCount > 0 && failedCount === 0;
         return res.json({
-            success: true,
+            success: isOverallSuccess,
             sent_count: sentCount,
-            message_id: lastResult?.key?.id
+            failed_count: failedCount,
+            results: results,
+            message_id: results.find(r => r.message_id)?.message_id
         });
 
     } catch (err) {
@@ -323,7 +415,8 @@ app.post('/api/send-message', async (req, res) => {
             });
         }
 
-        const cleanPhone = String(phone).replace(/\D/g, '');
+        let cleanPhone = String(phone).replace(/\D/g, '');
+        if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
         const recipientJid = cleanPhone.includes('@s.whatsapp.net') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
 
         let contentPayload = { text: message || '' };
@@ -332,14 +425,14 @@ app.post('/api/send-message', async (req, res) => {
             let imgBuffer = null;
             if (typeof mediaSrc === 'string' && (mediaSrc.startsWith('http://') || mediaSrc.startsWith('https://'))) {
                 imgBuffer = { url: mediaSrc };
-            } else if (typeof mediaSrc === 'string' && mediaSrc.startsWith('data:image/')) {
-                const base64Data = mediaSrc.replace(/^data:image\/\w+;base64,/, '');
+            } else if (typeof mediaSrc === 'string' && mediaSrc.includes(';base64,')) {
+                const base64Data = mediaSrc.split(';base64,').pop().replace(/\s/g, '');
                 imgBuffer = Buffer.from(base64Data, 'base64');
             } else if (typeof mediaSrc === 'string' && fs.existsSync(mediaSrc)) {
                 imgBuffer = fs.readFileSync(mediaSrc);
             }
             if (imgBuffer) {
-                contentPayload = (message && message.trim()) ? { image: imgBuffer, caption: message.trim() } : { image: imgBuffer };
+                contentPayload = (message && message.trim()) ? { image: imgBuffer, caption: message.trim(), mimetype: 'image/png' } : { image: imgBuffer, mimetype: 'image/png' };
             }
         }
 
