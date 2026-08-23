@@ -162,45 +162,45 @@
     ]
   },
   "2026-08-23": {
-    "timestamp_ist": "2026-08-23 11:08:36",
+    "timestamp_ist": "2026-08-23 11:30:00",
     "date_str": "23 August 2026",
-    "time_str": "11:08 AM",
-    "total_calls": 49,
-    "total_talk_seconds": 3887,
-    "total_talk_formatted": "01h 04m 47s",
-    "missed_calls": 11,
+    "time_str": "11:30 AM",
+    "total_calls": 142,
+    "total_talk_seconds": 9589,
+    "total_talk_formatted": "02h 39m 49s",
+    "missed_calls": 24,
     "new_leads": 1,
     "leaderboard": [
       {
         "handled_by": "Ms. Oleti Gayatri Nandana",
-        "call_count": 47,
-        "missed_count": 9,
-        "talk_seconds": 3887,
-        "talk_time_formatted": "01h 04m"
-      },
-      {
-        "handled_by": "Ms. Bhoolakshmi Pathakamsetti",
-        "call_count": 2,
-        "missed_count": 2,
-        "talk_seconds": 0,
-        "talk_time_formatted": "0m"
+        "call_count": 54,
+        "missed_count": 12,
+        "talk_seconds": 4057,
+        "talk_time_formatted": "01h 07m"
       },
       {
         "handled_by": "Ms. Anusha Moyyi",
-        "call_count": 0,
-        "missed_count": 0,
-        "talk_seconds": 0,
-        "talk_time_formatted": "0m"
-      },
-      {
-        "handled_by": "Mrs. Sontayana Appala Nookalakshmi",
-        "call_count": 0,
-        "missed_count": 0,
-        "talk_seconds": 0,
-        "talk_time_formatted": "0m"
+        "call_count": 49,
+        "missed_count": 9,
+        "talk_seconds": 3424,
+        "talk_time_formatted": "57m"
       },
       {
         "handled_by": "Ms. Anushka Karri",
+        "call_count": 12,
+        "missed_count": 0,
+        "talk_seconds": 1241,
+        "talk_time_formatted": "20m"
+      },
+      {
+        "handled_by": "Ms. Bhoolakshmi Pathakamsetti",
+        "call_count": 27,
+        "missed_count": 3,
+        "talk_seconds": 867,
+        "talk_time_formatted": "14m"
+      },
+      {
+        "handled_by": "Mrs. Sontayana Appala Nookalakshmi",
         "call_count": 0,
         "missed_count": 0,
         "talk_seconds": 0,

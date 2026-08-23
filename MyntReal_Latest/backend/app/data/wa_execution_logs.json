@@ -1,5 +1,98 @@
 [
   {
+    "id": "log_f1062419",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Aug 2026, 11:30:02 AM IST",
+    "iso_timestamp": "2026-08-23T11:30:02.735130",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 1
+    }
+  },
+  {
+    "id": "log_a688badf",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "23 Aug 2026, 11:30:02 AM IST",
+    "iso_timestamp": "2026-08-23T11:30:02.143246",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "success": false,
+      "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr"
+    }
+  },
+  {
+    "id": "log_beafe0ce",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "23 Aug 2026, 11:29:56 AM IST",
+    "iso_timestamp": "2026-08-23T11:29:56.511863",
+    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New Group",
+        "identifier": "9053899899"
+      },
+      {
+        "id": "t2",
+        "type": "group",
+        "name": "Executive Team Announcements",
+        "identifier": "7702830269"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+    "detail": {
+      "success": false,
+      "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr"
+    }
+  },
+  {
     "id": "log_fc53036c",
     "job_id": "wa_bihourly_sales_perf_report",
     "job_name": "Sales Team 2-Hour Report & Leaderboard",
