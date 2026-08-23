@@ -221,10 +221,12 @@
           <input type="date" id="fFrom" onchange="loadInbox(1)">
           <input type="date" id="fTo" onchange="loadInbox(1)">
           <select id="fSource" onchange="loadInbox(1)">
-            <option value="">All Sources (BOT / API / Manual)</option>
-            <option value="BOT">🤖 BOT Triggers</option>
-            <option value="API">⚡ API Automations</option>
-            <option value="MANUAL">👤 Manual Staff</option>
+            <option value="">All Sources (BOT / Scanned Bot / Meta API / Manual)</option>
+            <option value="BOT">🤖 BOT Triggers (All Bot Triggers)</option>
+            <option value="SCANNED_BOT">📲 Scanned WhatsApp Bot</option>
+            <option value="META_API">⚡ Meta Cloud API</option>
+            <option value="API">⚙️ API Automations</option>
+            <option value="MANUAL">👤 Manual Staff Dispatches</option>
           </select>
           <select id="fDept" onchange="loadInbox(1)"><option value="">All Departments</option></select>
           <select id="fCat" onchange="loadInbox(1)"><option value="">All Categories</option></select>

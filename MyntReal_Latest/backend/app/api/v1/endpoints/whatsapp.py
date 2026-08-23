@@ -1056,6 +1056,7 @@ def get_inbox(
     status: Optional[str] = Query(None),
     dept_code: Optional[str] = Query(None),
     category_code: Optional[str] = Query(None),
+    source: Optional[str] = Query(None),
     from_date: Optional[str] = Query(None),
     to_date: Optional[str] = Query(None),
     assigned: Optional[bool] = Query(None),
@@ -1393,6 +1394,26 @@ def get_inbox(
             "last_sent_by_name": sent_by_name,
             "source_type":      source_type
         })
+
+    # Apply post-grouping source filter if requested
+    if source and str(source).strip():
+        src_clean = str(source).strip().upper()
+        filtered_data = []
+        for item in data:
+            st = str(item.get("source_type") or "").upper()
+            sn = str(item.get("last_sent_by_name") or "").upper()
+            if src_clean == "BOT" and st == "BOT":
+                filtered_data.append(item)
+            elif src_clean == "SCANNED_BOT" and ("SCANNED" in sn or "SCANNED" in st):
+                filtered_data.append(item)
+            elif src_clean == "META_API" and (st == "BOT" or st == "API") and "SCANNED" not in sn:
+                filtered_data.append(item)
+            elif src_clean == "API" and st == "API":
+                filtered_data.append(item)
+            elif src_clean == "MANUAL" and st == "MANUAL":
+                filtered_data.append(item)
+        data = filtered_data
+        total = len(data)
 
     return {
         "success":   True,
