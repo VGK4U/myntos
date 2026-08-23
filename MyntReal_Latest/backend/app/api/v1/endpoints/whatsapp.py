@@ -1333,9 +1333,12 @@ def get_inbox(
             st_raw = str(lsb_entry.get("type") or "").upper()
             sn_raw = str(lsb_entry.get("name") or "").strip()
             
-            if "BOT" in st_raw or "BOT" in sn_raw.upper() or "AI" in st_raw or "BAILEYS" in st_raw:
+            if "SCANNED" in sn_raw.upper() or "SCANNED" in st_raw:
                 source_type = "BOT"
-                sent_by_name = sn_raw if sn_raw and sn_raw not in ("System/Auto", "System", "Auto") else "Scanned Bot"
+                sent_by_name = "Scanned Bot"
+            elif "BOT" in st_raw or "BOT" in sn_raw.upper() or "AI" in st_raw or "BAILEYS" in st_raw:
+                source_type = "BOT"
+                sent_by_name = "Mynt Bot"
             elif "STAFF" in st_raw or "MANUAL" in st_raw or "USER" in st_raw:
                 source_type = "MANUAL"
                 sent_by_name = sn_raw if sn_raw and sn_raw not in ("System/Auto", "System", "Auto") else "Staff"
@@ -1344,11 +1347,11 @@ def get_inbox(
                 sent_by_name = "API System"
             else:
                 source_type = "BOT"
-                sent_by_name = sn_raw if sn_raw and sn_raw not in ("System/Auto", "System", "Auto") else "Scanned Bot"
+                sent_by_name = "Meta API Bot" if lm_type_lc.startswith("auto_") else "Mynt Bot"
         else:
             if lm_type_lc.startswith("auto_") or "welcome" in body_text_lc or "నమస్కారం" in body_text_lc or "myntreal" in body_text_lc:
                 source_type = "BOT"
-                sent_by_name = "Mynt Bot"
+                sent_by_name = "Meta API Bot"
             elif lm_type_lc.startswith("api_") or "cron" in lm_type_lc:
                 source_type = "API"
                 sent_by_name = "API System"
