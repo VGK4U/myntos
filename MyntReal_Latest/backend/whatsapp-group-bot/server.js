@@ -56,8 +56,9 @@ async function startWhatsAppBot() {
         printQRInTerminal: false,
         browser: Browsers.macOS('Desktop'),
         syncFullHistory: false,
-        connectTimeoutMs: 60000,
-        keepAliveIntervalMs: 25000,
+        connectTimeoutMs: 180000,
+        qrTimeout: 180000,
+        keepAliveIntervalMs: 30000,
         emitOwnEvents: false
     });
 
@@ -235,25 +236,45 @@ app.get('/qr', (req, res) => {
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Scan WhatsApp Group Bot QR</title>
+            <title>Scan WhatsApp Group Bot QR (3-Min Window)</title>
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                .timer-pill { background: #e0f2fe; color: #0369a1; padding: 6px 16px; border-radius: 20px; font-weight: 700; font-size: 13.5px; display: inline-flex; align-items: center; gap: 6px; }
+            </style>
         </head>
         <body style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 30px 15px; background: #f4f6f9; color: #1e293b;">
             <h2 style="font-size: 22px; margin-bottom: 8px;">📱 Scan QR Code to Link WhatsApp Bot</h2>
-            <p style="color: #64748b; font-size: 14px; margin-top: 0;">Open WhatsApp on phone ➔ Linked Devices ➔ Link a Device</p>
+            <p style="color: #64748b; font-size: 14px; margin-top: 0; margin-bottom: 12px;">Open WhatsApp on phone ➔ Linked Devices ➔ Link a Device</p>
+
+            <div class="timer-pill" id="timerBadge">
+                ⏳ QR Code Extended Window: <span id="timerText" style="font-family: monospace; font-size: 15px;">03:00</span>
+            </div>
             
-            <div id="qrContainer" style="margin: 24px auto; background: white; display: inline-block; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); min-width: 300px; min-height: 300px;">
+            <div id="qrContainer" style="margin: 20px auto; background: white; display: inline-block; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); min-width: 300px; min-height: 300px;">
                 ${initialQrUrl 
-                    ? `<img src="${initialQrUrl}" width="300" height="300" style="display:block; border-radius: 8px;" />`
+                    ? `<img id="qrImg" src="${initialQrUrl}" width="300" height="300" style="display:block; border-radius: 8px;" />`
                     : `<div style="padding:100px 20px; font-size: 15px; color: #64748b; font-weight: 600;">⏳ Generating QR Code...<br><span style="font-size:12px; font-weight:400; color:#94a3b8">Will load automatically in a moment.</span></div>`
                 }
             </div>
             
-            <p id="statusMsg" style="font-size: 13px; font-weight: 600; color: #3b82f6;">
-                ${initialQrUrl ? '🟢 QR Code Ready — Waiting for Phone Scan...' : '⏳ Initializing WhatsApp Socket...'}
+            <p id="statusMsg" style="font-size: 13.5px; font-weight: 600; color: #3b82f6;">
+                ${initialQrUrl ? '🟢 QR Code Ready — Take your time to scan (3-Minute Window)...' : '⏳ Initializing WhatsApp Socket...'}
             </p>
 
             <script>
+                let secondsLeft = 180;
+                let lastQrUrl = '${initialQrUrl || ''}';
+
+                function updateCountdown() {
+                    if (secondsLeft > 0) {
+                        secondsLeft--;
+                        const m = Math.floor(secondsLeft / 60);
+                        const s = secondsLeft % 60;
+                        document.getElementById('timerText').textContent = 
+                            String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+                    }
+                }
+
                 async function checkStatus() {
                     try {
                         const res = await fetch('/qr-data');
@@ -261,16 +282,22 @@ app.get('/qr', (req, res) => {
                         if (data.status === 'connected') {
                             window.location.reload();
                         } else if (data.qr_url) {
-                            const container = document.getElementById('qrContainer');
-                            if (container) {
-                                container.innerHTML = '<img src="' + data.qr_url + '" width="300" height="300" style="display:block; border-radius: 8px;" />';
+                            if (data.qr_url !== lastQrUrl) {
+                                lastQrUrl = data.qr_url;
+                                secondsLeft = 180; // Reset 3-minute timer on fresh QR
+                                const container = document.getElementById('qrContainer');
+                                if (container) {
+                                    container.innerHTML = '<img id="qrImg" src="' + data.qr_url + '" width="300" height="300" style="display:block; border-radius: 8px;" />';
+                                }
                             }
                             const msg = document.getElementById('statusMsg');
-                            if (msg) msg.textContent = '🟢 QR Code Ready — Waiting for Phone Scan...';
+                            if (msg) msg.textContent = '🟢 QR Code Ready — Take your time to scan (3-Minute Window)...';
                         }
                     } catch (e) {}
                 }
-                setInterval(checkStatus, 1500);
+
+                setInterval(checkStatus, 2000);
+                setInterval(updateCountdown, 1000);
                 checkStatus();
             </script>
         </body>
