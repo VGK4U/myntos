@@ -4020,165 +4020,90 @@ def list_leads(
     # DC Protocol (Jan 22, 2026): Last Interacted date range filter
     # Filters leads based on their computed max(last_interacted_at) across all sources
     if last_interacted_from or last_interacted_to:
-        # Parse dates
-        from_date = None
-        to_date = None
-        if last_interacted_from:
-            try:
-                from_date = datetime.fromisoformat(last_interacted_from.replace('Z', '+00:00'))
-            except:
-                pass
-        if last_interacted_to:
-            try:
-                to_date = datetime.fromisoformat(last_interacted_to.replace('Z', '+00:00'))
-            except:
-                pass
+        f_str = last_interacted_from.split('T')[0] if (last_interacted_from and 'T' in last_interacted_from) else (last_interacted_from[:10] if last_interacted_from else None)
+        t_str = last_interacted_to.split('T')[0] if (last_interacted_to and 'T' in last_interacted_to) else (last_interacted_to[:10] if last_interacted_to else None)
         
-        # Compute max last_interacted_at per lead and filter based on that
-        # Use subqueries to get max timestamps from each source
-        from sqlalchemy import case
+        f_datetime = f"{f_str} 00:00:00" if f_str else None
+        t_datetime = f"{t_str} 23:59:59" if t_str else None
+
+        sub_sql = text("""
+            SELECT l.id
+            FROM crm_leads l
+            JOIN (
+                SELECT lead_id, MAX(max_act) as last_act FROM (
+                    SELECT lead_id, MAX(created_at) as max_act FROM crm_lead_notes GROUP BY lead_id
+                    UNION ALL
+                    SELECT lead_id, MAX(COALESCE(updated_at, created_at)) as max_act FROM crm_lead_followups GROUP BY lead_id
+                    UNION ALL
+                    SELECT lead_id, MAX(created_at) as max_act FROM crm_revenue_entries GROUP BY lead_id
+                    UNION ALL
+                    SELECT id as lead_id, updated_at as max_act FROM crm_leads
+                ) u
+                GROUP BY lead_id
+            ) sub ON sub.lead_id = l.id
+            WHERE (:cid IS NULL OR l.company_id = :cid)
+              AND (:f_datetime IS NULL OR sub.last_act >= CAST(:f_datetime AS TIMESTAMP))
+              AND (:t_datetime IS NULL OR sub.last_act <= CAST(:t_datetime AS TIMESTAMP))
+        """)
         
-        # Subquery for max note date per lead
-        max_note = db.query(
-            CRMLeadNote.lead_id,
-            func.max(CRMLeadNote.created_at).label('max_date')
-        ).filter(CRMLeadNote.company_id == company_id).group_by(CRMLeadNote.lead_id).subquery()
+        cid_val = company_id if (company_id and str(company_id) != 'all') else None
+        matched_rows = db.execute(sub_sql, {
+            "cid": cid_val,
+            "f_datetime": f_datetime,
+            "t_datetime": t_datetime
+        }).fetchall()
         
-        # Subquery for max followup date per lead
-        max_followup = db.query(
-            CRMLeadFollowUp.lead_id,
-            func.max(CRMLeadFollowUp.created_at).label('max_date')
-        ).filter(CRMLeadFollowUp.company_id == company_id).group_by(CRMLeadFollowUp.lead_id).subquery()
-        
-        # Subquery for max revenue date per lead
-        max_revenue = db.query(
-            CRMRevenueEntry.lead_id,
-            func.max(CRMRevenueEntry.created_at).label('max_date')
-        ).filter(CRMRevenueEntry.company_id == company_id).group_by(CRMRevenueEntry.lead_id).subquery()
-        
-        # Build query with GREATEST to find max across all sources
-        # Note: We compute this per lead and filter
-        leads_with_dates = db.query(
-            CRMLead.id,
-            func.greatest(
-                CRMLead.updated_at,
-                func.coalesce(max_note.c.max_date, CRMLead.updated_at),
-                func.coalesce(max_followup.c.max_date, CRMLead.updated_at),
-                func.coalesce(max_revenue.c.max_date, CRMLead.updated_at)
-            ).label('last_interacted')
-        ).outerjoin(max_note, CRMLead.id == max_note.c.lead_id
-        ).outerjoin(max_followup, CRMLead.id == max_followup.c.lead_id
-        ).outerjoin(max_revenue, CRMLead.id == max_revenue.c.lead_id
-        ).filter(CRMLead.company_id == company_id)
-        
-        # Apply date range filters on the computed last_interacted
-        if from_date:
-            leads_with_dates = leads_with_dates.having(
-                func.greatest(
-                    CRMLead.updated_at,
-                    func.coalesce(max_note.c.max_date, CRMLead.updated_at),
-                    func.coalesce(max_followup.c.max_date, CRMLead.updated_at),
-                    func.coalesce(max_revenue.c.max_date, CRMLead.updated_at)
-                ) >= from_date
-            )
-        if to_date:
-            leads_with_dates = leads_with_dates.having(
-                func.greatest(
-                    CRMLead.updated_at,
-                    func.coalesce(max_note.c.max_date, CRMLead.updated_at),
-                    func.coalesce(max_followup.c.max_date, CRMLead.updated_at),
-                    func.coalesce(max_revenue.c.max_date, CRMLead.updated_at)
-                ) <= to_date
-            )
-        
-        leads_with_dates = leads_with_dates.group_by(CRMLead.id, CRMLead.updated_at, max_note.c.max_date, max_followup.c.max_date, max_revenue.c.max_date)
-        
-        lead_ids_in_range = [r[0] for r in leads_with_dates.all()]
-        
-        if lead_ids_in_range:
-            query = query.filter(CRMLead.id.in_(lead_ids_in_range))
+        matched_lead_ids = [r[0] for r in matched_rows]
+        if matched_lead_ids:
+            query = query.filter(CRMLead.id.in_(matched_lead_ids))
         else:
-            query = query.filter(CRMLead.id == -1)  # Force empty result
+            query = query.filter(CRMLead.id == -1)
     
     # DC Protocol (Jan 22, 2026): Days Since Interaction filter
-    # Filters leads by number of days since last interaction (uses created_at if never interacted)
+    # Filters leads by number of days since last interaction (uses created_at / updated_at if never interacted)
     # Won leads are excluded from this filter (they remain visible regardless of filter value)
     if days_since_interaction:
-        today = get_indian_time().date()
+        sub_sql_days = text("""
+            SELECT l.id,
+                   EXTRACT(DAY FROM NOW() - sub.last_act) as days_diff,
+                   l.status
+            FROM crm_leads l
+            JOIN (
+                SELECT lead_id, MAX(max_act) as last_act FROM (
+                    SELECT lead_id, MAX(created_at) as max_act FROM crm_lead_notes GROUP BY lead_id
+                    UNION ALL
+                    SELECT lead_id, MAX(COALESCE(updated_at, created_at)) as max_act FROM crm_lead_followups GROUP BY lead_id
+                    UNION ALL
+                    SELECT lead_id, MAX(created_at) as max_act FROM crm_revenue_entries GROUP BY lead_id
+                    UNION ALL
+                    SELECT id as lead_id, updated_at as max_act FROM crm_leads
+                ) u
+                GROUP BY lead_id
+            ) sub ON sub.lead_id = l.id
+            WHERE (:cid IS NULL OR l.company_id = :cid)
+        """)
+        cid_val = company_id if (company_id and str(company_id) != 'all') else None
+        rows = db.execute(sub_sql_days, {"cid": cid_val}).fetchall()
         
-        # Build subquery to get max interaction date per lead
-        max_note_sub = db.query(
-            CRMLeadNote.lead_id,
-            func.max(CRMLeadNote.created_at).label('max_date')
-        ).filter(CRMLeadNote.company_id == company_id).group_by(CRMLeadNote.lead_id).subquery()
-        
-        max_followup_sub = db.query(
-            CRMFollowUp.lead_id,
-            func.max(CRMFollowUp.followup_date).label('max_date')
-        ).filter(CRMFollowUp.company_id == company_id).group_by(CRMFollowUp.lead_id).subquery()
-        
-        max_revenue_sub = db.query(
-            CRMLeadRevenue.lead_id,
-            func.max(CRMLeadRevenue.updated_at).label('max_date')
-        ).filter(CRMLeadRevenue.company_id == company_id).group_by(CRMLeadRevenue.lead_id).subquery()
-        
-        # Compute last_interacted using greatest of all sources, fallback to created_at
-        from sqlalchemy import cast, Date
-        last_interacted_expr = func.greatest(
-            cast(CRMLead.created_at, Date),
-            func.coalesce(cast(max_note_sub.c.max_date, Date), cast(CRMLead.created_at, Date)),
-            func.coalesce(cast(max_followup_sub.c.max_date, Date), cast(CRMLead.created_at, Date)),
-            func.coalesce(cast(max_revenue_sub.c.max_date, Date), cast(CRMLead.created_at, Date))
-        )
-        
-        # Calculate days since last interaction
-        days_diff = func.extract('day', func.age(func.current_date(), last_interacted_expr))
-        
-        # Build subquery to get lead IDs matching the days filter
-        days_query = db.query(CRMLead.id).outerjoin(
-            max_note_sub, max_note_sub.c.lead_id == CRMLead.id
-        ).outerjoin(
-            max_followup_sub, max_followup_sub.c.lead_id == CRMLead.id
-        ).outerjoin(
-            max_revenue_sub, max_revenue_sub.c.lead_id == CRMLead.id
-        ).filter(CRMLead.company_id == company_id)
-        
-        # Apply days range filter based on parameter
-        # Won leads are excluded from days filter (show regardless)
-        if days_since_interaction == 'lt6':
-            days_query = days_query.filter(
-                or_(
-                    CRMLead.status == 'won',
-                    days_diff < 6
-                )
-            )
-        elif days_since_interaction == '6-15':
-            days_query = days_query.filter(
-                or_(
-                    CRMLead.status == 'won',
-                    and_(days_diff >= 6, days_diff <= 15)
-                )
-            )
-        elif days_since_interaction == '15-30':
-            days_query = days_query.filter(
-                or_(
-                    CRMLead.status == 'won',
-                    and_(days_diff > 15, days_diff <= 30)
-                )
-            )
-        elif days_since_interaction == 'gt30':
-            days_query = days_query.filter(
-                or_(
-                    CRMLead.status == 'won',
-                    days_diff > 30
-                )
-            )
-        
-        days_lead_ids = [r[0] for r in days_query.all()]
-        if days_lead_ids:
-            query = query.filter(CRMLead.id.in_(days_lead_ids))
+        valid_days_ids = []
+        for r in rows:
+            lid, days_diff, status_val = r[0], r[1] or 0, r[2]
+            if status_val == 'won':
+                valid_days_ids.append(lid)
+                continue
+            if days_since_interaction == 'lt6' and days_diff < 6:
+                valid_days_ids.append(lid)
+            elif days_since_interaction == '6-15' and 6 <= days_diff <= 15:
+                valid_days_ids.append(lid)
+            elif days_since_interaction == '15-30' and 15 < days_diff <= 30:
+                valid_days_ids.append(lid)
+            elif days_since_interaction == 'gt30' and days_diff > 30:
+                valid_days_ids.append(lid)
+                
+        if valid_days_ids:
+            query = query.filter(CRMLead.id.in_(valid_days_ids))
         else:
-            query = query.filter(CRMLead.id == -1)  # Force empty result
+            query = query.filter(CRMLead.id == -1)
     
     total = query.count()
     
@@ -4794,72 +4719,46 @@ def list_team_leads(
             )
         # 'all' - no additional filter needed
     
-    # DC Protocol (Jan 22, 2026): Last interacted date filter
-    # This requires a subquery to find max activity date across notes, followups, and lead updates
+    # DC Protocol (Jan 22, 2026): Last Interacted date range filter
     if last_interacted_from or last_interacted_to:
-        # Get lead IDs that have activity within the date range
-        from sqlalchemy import union_all
+        f_str = last_interacted_from.split('T')[0] if (last_interacted_from and 'T' in last_interacted_from) else (last_interacted_from[:10] if last_interacted_from else None)
+        t_str = last_interacted_to.split('T')[0] if (last_interacted_to and 'T' in last_interacted_to) else (last_interacted_to[:10] if last_interacted_to else None)
         
-        # Build activity date subqueries
-        activity_queries = []
+        f_datetime = f"{f_str} 00:00:00" if f_str else None
+        t_datetime = f"{t_str} 23:59:59" if t_str else None
+
+        sub_sql = text("""
+            SELECT l.id
+            FROM crm_leads l
+            JOIN (
+                SELECT lead_id, MAX(max_act) as last_act FROM (
+                    SELECT lead_id, MAX(created_at) as max_act FROM crm_lead_notes GROUP BY lead_id
+                    UNION ALL
+                    SELECT lead_id, MAX(COALESCE(updated_at, created_at)) as max_act FROM crm_lead_followups GROUP BY lead_id
+                    UNION ALL
+                    SELECT lead_id, MAX(created_at) as max_act FROM crm_revenue_entries GROUP BY lead_id
+                    UNION ALL
+                    SELECT id as lead_id, updated_at as max_act FROM crm_leads
+                ) u
+                GROUP BY lead_id
+            ) sub ON sub.lead_id = l.id
+            WHERE (:cid IS NULL OR l.company_id = :cid)
+              AND (:f_datetime IS NULL OR sub.last_act >= CAST(:f_datetime AS TIMESTAMP))
+              AND (:t_datetime IS NULL OR sub.last_act <= CAST(:t_datetime AS TIMESTAMP))
+        """)
         
-        # Notes activity
-        notes_activity = db.query(
-            CRMLeadNote.lead_id.label('lead_id'),
-            func.max(CRMLeadNote.created_at).label('last_activity')
-        ).filter(CRMLeadNote.company_id == company_id).group_by(CRMLeadNote.lead_id)
+        cid_val = company_id if (company_id and str(company_id) != 'all') else None
+        matched_rows = db.execute(sub_sql, {
+            "cid": cid_val,
+            "f_datetime": f_datetime,
+            "t_datetime": t_datetime
+        }).fetchall()
         
-        # Followups activity
-        followups_activity = db.query(
-            CRMLeadFollowUp.lead_id.label('lead_id'),
-            func.max(func.coalesce(CRMLeadFollowUp.updated_at, CRMLeadFollowUp.created_at)).label('last_activity')
-        ).filter(CRMLeadFollowUp.company_id == company_id).group_by(CRMLeadFollowUp.lead_id)
-        
-        # DC Protocol (Jan 22, 2026): Revenue entries activity
-        revenue_activity = db.query(
-            CRMRevenueEntry.lead_id.label('lead_id'),
-            func.max(CRMRevenueEntry.created_at).label('last_activity')
-        ).filter(CRMRevenueEntry.company_id == company_id).group_by(CRMRevenueEntry.lead_id)
-        
-        # Lead updates (updated_at on lead itself)
-        lead_updates = db.query(
-            CRMLead.id.label('lead_id'),
-            CRMLead.updated_at.label('last_activity')
-        ).filter(CRMLead.company_id == company_id)
-        
-        # Combine and get max per lead (includes notes, followups, revenue, lead updates)
-        combined = union_all(
-            notes_activity.subquery().select(),
-            followups_activity.subquery().select(),
-            revenue_activity.subquery().select(),
-            lead_updates.subquery().select()
-        ).subquery()
-        
-        max_activity = db.query(
-            combined.c.lead_id,
-            func.max(combined.c.last_activity).label('max_activity')
-        ).group_by(combined.c.lead_id).subquery()
-    
-        # Filter by date range
-        activity_filter_conditions = []
-        if last_interacted_from:
-            try:
-                from_date = datetime.fromisoformat(last_interacted_from.replace('Z', '+00:00'))
-                activity_filter_conditions.append(max_activity.c.max_activity >= from_date)
-            except:
-                pass
-        if last_interacted_to:
-            try:
-                to_date = datetime.fromisoformat(last_interacted_to.replace('Z', '+00:00'))
-                # Add 1 day to include the entire "to" date
-                to_date_end = datetime.combine(to_date.date(), datetime.max.time())
-                activity_filter_conditions.append(max_activity.c.max_activity <= to_date_end)
-            except:
-                pass
-        
-        if activity_filter_conditions:
-            filtered_leads = db.query(max_activity.c.lead_id).filter(*activity_filter_conditions).subquery()
-            query = query.filter(CRMLead.id.in_(db.query(filtered_leads.c.lead_id)))
+        matched_lead_ids = [r[0] for r in matched_rows]
+        if matched_lead_ids:
+            query = query.filter(CRMLead.id.in_(matched_lead_ids))
+        else:
+            query = query.filter(CRMLead.id == -1)
     
     # DC Protocol (Jan 22, 2026): Days Since Interaction filter for Team Leads
     if days_since_interaction:

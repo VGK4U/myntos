@@ -20677,6 +20677,23 @@ async def serve_storage_file(request: Request, file_path: str):
     file_data: bytes | None = storage_service.download_file(file_path)
 
     if file_data is None:
+        try:
+            from app.core.database import SessionLocal
+            from sqlalchemy import text
+            _s_db = SessionLocal()
+            try:
+                _doc_row = _s_db.execute(text(
+                    "SELECT file_name FROM kyc_document WHERE file_path = :fp OR file_path ILIKE :lfp LIMIT 1"
+                ), {"fp": file_path, "lfp": f"%{file_path.split('/')[-1]}"}).fetchone()
+                if _doc_row and _doc_row[0] and _doc_row[0] != 'pending' and '.' in _doc_row[0]:
+                    alt_key = f"kyc_documents/{_doc_row[0]}"
+                    file_data = storage_service.download_file(alt_key)
+            finally:
+                _s_db.close()
+        except Exception:
+            pass
+
+    if file_data is None:
         clean_file_path = file_path.lstrip('/')
         local_storage_root = Path(__file__).parent.parent.parent / "frontend" / "storage"
         local_path = local_storage_root / clean_file_path

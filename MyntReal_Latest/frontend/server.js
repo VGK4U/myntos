@@ -7686,14 +7686,16 @@ function ensureWhatsAppBotRunning() {
       stdio: 'inherit'
     });
     waBotProcess.on('exit', (code) => {
-      console.warn(`[DC-WA-BOT] WhatsApp bot daemon exited with code ${code}. Resetting for auto-respawn.`);
+      console.warn(`[DC-WA-BOT] WhatsApp bot daemon exited with code ${code}. Auto-respawning in 5s...`);
       waBotProcess = null;
       waBotStarting = false;
-  } catch (err) {
+      setTimeout(ensureWhatsAppBotRunning, 5000);
+    });  } catch (err) {
     console.error('[DC-WA-BOT] Failed to spawn WhatsApp bot:', err.message);
     waBotStarting = false;
 }
-  // WhatsApp QR Code & Group Bot Gateway Proxy Route (/qr, /qr-data, /whatsapp-qr, /status)
+// Auto-start WhatsApp Bot daemon on server boot
+setTimeout(ensureWhatsAppBotRunning, 2000);  // WhatsApp QR Code & Group Bot Gateway Proxy Route (/qr, /qr-data, /whatsapp-qr, /status)
   if (reqPathLower === '/qr' || reqPathLower === '/qr/' || reqPathLower === '/qr-data' || reqPathLower === '/qr-data/' || reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/' || reqPathLower === '/status') {
     ensureWhatsAppBotRunning();
     const targetPath = (reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/') ? '/qr' : req.url;

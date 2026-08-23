@@ -4418,7 +4418,7 @@ def member_earnings_dashboard(
     parent_ids = list({m.parent_partner_id for m in members if m.parent_partner_id})
     
     # Bulk: passport_photo from official_partners / kyc_document table for member and parent KYC photos
-    passport_photo_map: dict = {}
+    # Bulk: passport_photo from vgk_kyc_documents, kyc_document table, and official_partners logo_path for member & senior photos    passport_photo_map: dict = {}
     all_photo_ids = list(set(member_ids + parent_ids))
     if all_photo_ids:
         try:
@@ -4429,18 +4429,62 @@ def member_earnings_dashboard(
                 p_photo = opr[1]
                 if p_photo and str(p_photo).strip() not in ('', 'None', 'null'):
                     passport_photo_map[int(opr[0])] = p_photo
-
-            photo_rows = db.execute(text(
+            # 1. Check vgk_kyc_documents table (profile_photo / passport_photo)
+            vgk_rows = db.execute(text(
                 "SELECT DISTINCT ON (partner_id) partner_id, file_path "
-                "FROM kyc_document "
-                "WHERE partner_id = ANY(:ids) AND document_type = 'passport_photo' AND is_current_version = true "
-                "ORDER BY partner_id, uploaded_at DESC"
+                "FROM vgk_kyc_documents "
+                "WHERE partner_id = ANY(:ids) AND file_path IS NOT NULL AND file_path != '' "
+                "ORDER BY partner_id, uploaded_at DESC NULLS LAST"
             ), {"ids": all_photo_ids}).fetchall()
-            for r in photo_rows:
-                if r[1]:
+            for r in vgk_rows:
+                if r[0] and r[1]:
                     passport_photo_map[int(r[0])] = r[1]
-        except Exception:
-            pass
+            
+            # 2. Check kyc_document table by partner_id (document_type in passport_photo, profile_photo, photo, avatar, logo)
+            missing_ids = [pid for pid in all_photo_ids if pid not in passport_photo_map]
+            if missing_ids:
+                photo_rows = db.execute(text(
+                    "SELECT DISTINCT ON (partner_id) partner_id, file_path, file_name "
+                    "FROM kyc_document "
+                    "WHERE partner_id = ANY(:ids) "
+                    "AND document_type IN ('passport_photo', 'profile_photo', 'photo', 'avatar', 'logo') "
+                    "AND ((file_path IS NOT NULL AND file_path != '') OR (file_name IS NOT NULL AND file_name != '')) "
+                    "ORDER BY partner_id, CASE WHEN status ILIKE 'approved' THEN 0 ELSE 1 END, uploaded_at DESC NULLS LAST"
+                ), {"ids": missing_ids}).fetchall()
+                for r in photo_rows:
+                    if r[0]:
+                        pid_val = int(r[0])
+                        fp = r[1]
+                        fn = r[2]
+                        chosen = (f"kyc_documents/{fn}" if (fn and fn != 'pending' and '.' in fn and (not fp or not fp.endswith(fn))) else fp) or (f"kyc_documents/{fn}" if fn else None)
+                        if chosen:
+                            passport_photo_map[pid_val] = chosen
+            # 3. Check kyc_document table by owner_id (matching partner_code or user ID)
+            remaining_missing = [pid for pid in all_photo_ids if pid not in passport_photo_map]
+            if remaining_missing:
+                code_rows = db.execute(text(
+                    "SELECT id, partner_code FROM official_partners WHERE id = ANY(:ids)"
+                ), {"ids": remaining_missing}).fetchall()
+                code_to_pid = {str(r[1]).strip(): int(r[0]) for r in code_rows if r[1]}
+                pcodes = list(code_to_pid.keys())
+                if pcodes:
+                    owner_photo_rows = db.execute(text(
+                        "SELECT DISTINCT ON (owner_id) owner_id, file_path, file_name "
+                        "FROM kyc_document "
+                        "WHERE owner_id = ANY(:codes) "
+                        "AND document_type IN ('passport_photo', 'profile_photo', 'photo', 'avatar', 'logo') "
+                        "AND ((file_path IS NOT NULL AND file_path != '') OR (file_name IS NOT NULL AND file_name != '')) "
+                        "ORDER BY owner_id, CASE WHEN status ILIKE 'approved' THEN 0 ELSE 1 END, uploaded_at DESC NULLS LAST"
+                    ), {"codes": pcodes}).fetchall()
+                    for r in owner_photo_rows:
+                        pid_val = code_to_pid.get(str(r[0]).strip())
+                        if pid_val and pid_val not in passport_photo_map:
+                            fp = r[1]
+                            fn = r[2]
+                            chosen = (f"kyc_documents/{fn}" if (fn and fn != 'pending' and '.' in fn and (not fp or not fp.endswith(fn))) else fp) or (f"kyc_documents/{fn}" if fn else None)
+                            if chosen:
+                                passport_photo_map[pid_val] = chosen
+        except Exception as e:            pass
 
     # Bulk: Parent partner info (Senior name and earnings) (DC-VGK-SENIOR-INFO-001)
     parent_map: dict = {}
@@ -4463,11 +4507,13 @@ def member_earnings_dashboard(
             p_pot_map = get_bulk_partner_potential_earning(db, parent_ids, exclude_l1=False) if parent_ids else {}
             for pid in parent_ids:
                 info = p_info.get(pid, {})
+                senior_photo_path = passport_photo_map.get(pid) or info.get("logo_path")
                 parent_map[pid] = {
                     "partner_name": info.get("name"),
                     "phone": info.get("phone"),
                     "gross_earned": p_earnings.get(pid, 0.0),
-                    "passport_photo": passport_photo_map.get(pid),
+                    "passport_photo": senior_photo_path,
+                    "logo_path": info.get("logo_path"),
                     "potential_earned": float(p_pot_map.get(pid, 0.0))
                 }
         except Exception:
@@ -4662,12 +4708,12 @@ def member_earnings_dashboard(
             "phone":                  m.phone,
             "is_active":              m.is_active,
             "logo_path":              m.logo_path,
-            "passport_photo":         passport_photo_map.get(m.id),
+            "passport_photo":         passport_photo_map.get(m.id) or m.logo_path,
             "senior_name":            senior_info.get("partner_name"),
             "senior_phone":           senior_info.get("phone"),
             "senior_earning":         senior_info.get("gross_earned"),
             "senior_potential_earned": senior_info.get("potential_earned"),
-            "senior_photo":           senior_info.get("passport_photo"),
+            "senior_photo":           senior_info.get("passport_photo") or senior_info.get("logo_path"),
             "registered_by_emp_code": m.registered_by_emp_code,
             "registered_by_name":     emp_name_map.get(m.registered_by_emp_code),
             "points_credited":        pts_credited,

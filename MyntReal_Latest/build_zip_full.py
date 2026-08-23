@@ -80,16 +80,16 @@ def should_exclude(rel_path: Path, abs_file: Path) -> bool:
         return True
         
     rel_str = str(rel_path).replace("\\", "/")
-    if "storage/" in rel_str or "uploaded_files/" in rel_str or "public/catalog/" in rel_str or "public/marketplace/" in rel_str:
+    if "storage/" in rel_str or "uploaded_files/" in rel_str or "uploads/" in rel_str:
         return True
         
     if abs_file.suffix.lower() in [".zip", ".sql", ".dump", ".sqlite", ".db"]:
         return True
 
-    # Exclude heavy static images > 150KB (handled via S3 / CDN) to keep deployment zip < 50MB
-    if abs_file.suffix.lower() in [".png", ".jpg", ".jpeg", ".gif", ".webp"]:
+    # Limit static image/media assets > 0.5MB to maintain target ~41MB deployment package size
+    if abs_file.suffix.lower() in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf"]:
         size_mb = abs_file.stat().st_size / (1024 * 1024)
-        if size_mb > 0.15:
+        if size_mb > 0.5:
             return True
             
     return False
@@ -115,13 +115,33 @@ def build_zip():
                     continue
                 
                 try:
-                    zf.write(abs_file, arcname=str(rel_path))
+                    if abs_file.suffix.lower() in [".sh", ".env", ".config"] or abs_file.name in ["Dockerfile", "Procfile"]:
+                        content = abs_file.read_bytes().replace(b"\r\n", b"\n")
+                        zf.writestr(str(rel_path), content)
+                    else:
+                        zf.write(abs_file, arcname=str(rel_path))
                     file_count += 1
                     total_uncompressed += abs_file.stat().st_size
                 except Exception as err:
                     print(f"Warning skipping file {rel_path}: {err}")
                     
-        # Dynamically inject the .env variables securely into the zip without writing to disk
+        # 1. Inject root Procfile for AWS Elastic Beanstalk
+        procfile_content = "web: gunicorn -w 4 -k uvicorn.workers.UvicornWorker backend.app.main:app\n"
+        zf.writestr('Procfile', procfile_content)
+        print("✅ Injected root Procfile (gunicorn + uvicorn) into ZIP")
+
+        # 2. Inject root requirements.txt for AWS Elastic Beanstalk
+        backend_req = SOURCE_DIR / 'backend' / 'requirements.txt'
+        if backend_req.exists():
+            zf.write(backend_req, arcname='requirements.txt')
+            print("✅ Injected root requirements.txt into ZIP")
+
+        # 3. Inject Nginx configuration (.platform/nginx/conf.d/proxy.conf) for 50MB body size
+        nginx_conf = "client_max_body_size 50M;\nproxy_connect_timeout 300;\nproxy_send_timeout 300;\nproxy_read_timeout 300;\nsend_timeout 300;\n"
+        zf.writestr('.platform/nginx/conf.d/proxy.conf', nginx_conf)
+        print("✅ Injected .platform/nginx/conf.d/proxy.conf into ZIP")
+
+        # 4. Dynamically inject .env variables securely into .ebextensions/01_env.config
         env_path = SOURCE_DIR / 'backend' / '.env'
         if not env_path.exists():
             env_path = SOURCE_DIR / '.env'
@@ -133,13 +153,15 @@ def build_zip():
                     line = line.strip()
                     if line and not line.startswith('#') and '=' in line:
                         key, val = line.split('=', 1)
+                        key = key.strip()
                         val = val.strip().strip('\'"')
-                        if key.strip() != "SECRET_KEY":  # Exclude sensitive raw secret key from config
-                            env_config_lines.append(f"    {key.strip()}: \"{val}\"")
+                        # Escape internal backslashes and double quotes for YAML
+                        val_escaped = val.replace('\\', '\\\\').replace('"', '\\"')
+                        env_config_lines.append(f'    {key}: "{val_escaped}"')
             
             env_config_content = '\n'.join(env_config_lines) + '\n'
             zf.writestr('.ebextensions/01_env.config', env_config_content)
-            print(f"✅ Successfully injected secure environment variables from {env_path.name} into the ZIP as .ebextensions/01_env.config")
+            print(f"✅ Successfully injected secure environment variables from {env_path.name} into ZIP as .ebextensions/01_env.config")
 
     # Sync output to all zip target filenames
     shutil.copyfile(OUTPUT_ZIP, ALIAS_ZIP)
@@ -154,7 +176,7 @@ def build_zip():
             hasher.update(chunk)
     sha256_checksum = hasher.hexdigest()
 
-    print(f"\n✅ DEFAULT SLIM ZIP CREATION SUCCESSFUL (< 50MB)!")
+    print(f"\n✅ AWS ELASTIC BEANSTALK DEPLOYMENT ZIP CREATION SUCCESSFUL!")
     print(f"📍 Primary Location: {OUTPUT_ZIP}")
     print(f"📍 Full Zip Alias:   {FULL_ZIP}")
     print(f"📍 Deployment Alias: {ALIAS_ZIP}")

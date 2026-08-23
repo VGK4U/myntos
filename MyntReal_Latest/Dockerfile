@@ -36,7 +36,8 @@ RUN cd frontend && npm install --production --no-audit --no-fund
 # Copy application source code
 COPY . .
 
-RUN chmod +x start.sh
+# Fix line endings and make start.sh executable
+RUN sed -i 's/\r$//' start.sh && chmod +x start.sh
 
 EXPOSE 5000
 

@@ -1420,6 +1420,9 @@ async def partner_kyc_upload(
     doc.processing_status = 'pending' if upload_result['needs_compression'] else 'completed'
     doc.uploaded_at = get_indian_time()
 
+    if doc_type_db in ('passport_photo', 'profile_photo', 'photo', 'logo'):
+        partner.logo_path = upload_result['file_path']
+
     db.commit()
 
     all_docs = db.query(KYCDocument).filter(KYCDocument.partner_id == partner.id).all()

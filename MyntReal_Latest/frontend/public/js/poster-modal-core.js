@@ -394,7 +394,21 @@
         if (freshData.success && freshData.data && freshData.data.length) {
           const found = freshData.data.find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr) || freshData.data[0];
           if (found) m = Object.assign({}, m || {}, found);
-        }
+      const hasMemberPhoto = !!(m && (m.passport_photo || m.passport_photo_url || m.logo_path || m.profile_image || m.photo_url || m.avatar_url || m.photo));
+      const hasSeniorPhoto = !!(m && (m.senior_photo || m.senior_passport_photo || m.senior_logo_path || m.senior_profile_image));
+      const isSeniorNeeded = !!(m && m.parent_partner_id && !['VGK SUPPORT', 'SUPPORT', 'NONE', '—', ''].includes((m.senior_name || '').toUpperCase().trim()));
+      if (!m || !m.id || !hasMemberPhoto || (isSeniorNeeded && !hasSeniorPhoto)) {
+        try {
+          const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
+          const paramStr = (pidStr.startsWith('VGK') || isNaN(pidStr)) ? 'search=' + encodeURIComponent(pidStr) : 'partner_id=' + encodeURIComponent(pidStr);
+          const freshRes = await safeFetch(apiBase + '/vgk/dashboard/member-earnings?' + paramStr + '&_cb=' + Date.now());
+          const freshData = await freshRes.json();
+          if (freshData.success && freshData.data && freshData.data.length) {
+            const found = freshData.data.find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr) || freshData.data[0];
+            if (found) m = Object.assign({}, m || {}, found);
+          }
+        } catch (e) {
+          console.warn("Failed to fetch fresh member data from API:", e);        }
       } catch (e) {
         console.warn("Failed to fetch fresh member data from API:", e);
       }
@@ -418,7 +432,6 @@
         }
         return '';
       }
-
       const photoPath = getValidPhotoPath(m);
       const resolvedUrl = resolvePosterMediaUrl(photoPath);
       if (resolvedUrl && prevImg) {
@@ -426,8 +439,9 @@
           prevImg.crossOrigin = "anonymous";
         } else {
           prevImg.removeAttribute('crossorigin');
-        }
-        prevImg.onload = () => {
+      const photoPath = m.passport_photo || m.passport_photo_url || m.logo_path || m.profile_image || m.photo_url || m.avatar_url || m.id_card_photo || m.photo || m.profile_photo;
+        let triedWithoutCors = false;
+        prevImg.crossOrigin = "anonymous";        prevImg.onload = () => {
           prevImg.style.display = 'block';
           if (prevAvatar) prevAvatar.style.display = 'none';
         };
@@ -435,7 +449,10 @@
           if (!prevImg.dataset.retried) {
             prevImg.dataset.retried = 'true';
             prevImg.src = '/kuruju_srinubabu_official.jpg?t=' + Date.now();
-            return;
+          if (!triedWithoutCors) {
+            triedWithoutCors = true;
+            try { prevImg.removeAttribute('crossOrigin'); } catch(err){}
+            prevImg.src = resolvedUrl;            return;
           }
           prevImg.style.display = 'none';
           if (prevAvatar) prevAvatar.style.display = 'flex';
@@ -454,7 +471,8 @@
         } else {
           prevAvatar.style.display = 'flex';
         }
-      }
+        if (prevImg) prevImg.style.display = 'none';
+        prevAvatar.style.display = 'flex';      }
 
       const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
       const targetPid = m.id || partnerId;
@@ -620,13 +638,18 @@
             if (!seniorImg.dataset.retried) {
               seniorImg.dataset.retried = 'true';
               seniorImg.src = '/kuruju_srinubabu_official.jpg?t=' + Date.now();
-              return;
+        const seniorPhotoPath = m.senior_photo || m.senior_photo_url || m.senior_passport_photo || m.senior_passport_photo_url || m.senior_logo_path || m.senior_profile_image || m.senior_avatar_url;
+          let triedSeniorWithoutCors = false;
+          seniorImg.crossOrigin = "anonymous";
+            if (!triedSeniorWithoutCors) {
+              triedSeniorWithoutCors = true;
+              try { seniorImg.removeAttribute('crossOrigin'); } catch(err){}
+              seniorImg.src = resolvedSeniorUrl;              return;
             }
             seniorImg.style.display = 'none';
             if (seniorAvatar) seniorAvatar.style.display = 'flex';
           };
-          delete seniorImg.dataset.retried;
-          seniorImg.src = resolvedSeniorUrl.includes('?') ? resolvedSeniorUrl : (resolvedSeniorUrl + '?t=' + Date.now());
+          delete seniorImg.dataset.retried;          seniorImg.src = resolvedSeniorUrl.includes('?') ? resolvedSeniorUrl : (resolvedSeniorUrl + '?t=' + Date.now());
         } else {
           if (seniorImg) {
             seniorImg.removeAttribute('crossorigin');

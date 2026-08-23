@@ -3475,8 +3475,12 @@ def trigger_wa_job_manual(
                 log_entry = MessageLog(
                     message_sid=f"wamid_manual_{uuid.uuid4().hex[:12]}",
                     mobile_number=f"GROUP:wa_bihourly_{staff_label}",
+                    user_name=f"{staff_label} (MANUAL)",
+                    sent_by_name=f"{staff_label} (MANUAL)",
+                    sender_type="staff",
+                    sent_by_staff_id=getattr(current_user, 'id', None),
                     message_type="sales_performance",
-                    message_body=f"Sales Performance Report ({staff_label})",
+                    message_body=f"Sales Performance Report (Manual Trigger by {staff_label})",
                     initial_status="sent" if is_success else "failed",
                     current_status="sent" if is_success else "failed",
                     sent_at=datetime.utcnow()
