@@ -106,6 +106,13 @@ READ_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         "allowed_roles": ["PUBLIC", "STAFF", "PARTNER", "ADMIN"],
         "required_params": ["target_route"],
         "sample_queries": ["Take me to CRM dashboard", "Open my timesheet"]
+    },
+    "query_cash_statement": {
+        "capability_name": "query_cash_statement",
+        "description": "Retrieve financial cash statement including Cash In, Cash Out, Bank In, Bank Out, and category breakups for Today, This Week, and Overall.",
+        "allowed_roles": ["STAFF", "OPERATIONS", "TEAM_LEAD", "ADMIN"],
+        "required_params": [],
+        "sample_queries": ["Give me the cash statement", "Total cash in and cash out summary", "Bank and bank out category breakups"]
     }
 }
 
