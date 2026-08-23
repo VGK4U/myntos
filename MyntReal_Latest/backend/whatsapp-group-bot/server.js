@@ -108,6 +108,53 @@ async function startWhatsAppBot() {
 
 // ── API ENDPOINTS ─────────────────────────────────────────────────────────────
 
+async function logoutBotSession() {
+    try {
+        console.log("🚪 Logging out WhatsApp Bot session...");
+        connectionStatus = 'logging_out';
+        if (sock) {
+            try {
+                await sock.logout();
+            } catch (e) {
+                try { sock.end(new Error('Logout requested')); } catch (e2) {}
+            }
+            sock = null;
+        }
+        currentQr = null;
+        targetJid = null;
+
+        if (fs.existsSync(AUTH_DIR)) {
+            fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+            console.log("✅ Cleared auth_info session directory.");
+        }
+
+        connectionStatus = 'disconnected';
+        setTimeout(startWhatsAppBot, 1000);
+        return { success: true, message: "Logged out and reset session successfully." };
+    } catch (err) {
+        console.error("❌ Logout error:", err);
+        return { success: false, error: err.message || String(err) };
+    }
+}
+
+app.all(['/logout', '/api/logout'], async (req, res) => {
+    const result = await logoutBotSession();
+    if (req.headers.accept && req.headers.accept.includes('text/html')) {
+        return res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head><title>Logging out...</title><meta http-equiv="refresh" content="2;url=/qr"></head>
+            <body style="font-family: system-ui, sans-serif; text-align: center; padding: 60px 15px; background: #f4f6f9;">
+                <h2 style="color: #ef4444;">🚪 WhatsApp Bot Logged Out</h2>
+                <p style="color: #64748b;">Session cleared. Redirecting to QR code scanner...</p>
+                <a href="/qr" style="color: #3b82f6; font-weight: bold; text-decoration: none;">Click here if not redirected automatically</a>
+            </body>
+            </html>
+        `);
+    }
+    return res.json(result);
+});
+
 app.get('/status', (req, res) => {
     return res.json({
         status: connectionStatus,
@@ -130,11 +177,53 @@ app.get('/qr', (req, res) => {
         return res.send(`
             <!DOCTYPE html>
             <html>
-            <head><title>WhatsApp Bot Connected</title><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-            <body style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 60px 15px; background: #f4f6f9; color: #1e293b;">
-                <h1 style="color: #10b981; font-size: 48px; margin-bottom: 12px;">✅</h1>
-                <h2 style="color: #065f46; margin: 0 0 8px 0;">WhatsApp Web Bot is CONNECTED & ACTIVE!</h2>
-                <p style="color: #64748b; font-size: 14px;">Target JID: ${targetJid || 'Ready'}</p>
+            <head>
+                <title>WhatsApp Bot Connected</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 50px 15px; background: #f4f6f9; color: #1e293b;">
+                <div style="background: white; max-width: 480px; margin: 0 auto; padding: 36px 24px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+                    <h1 style="color: #10b981; font-size: 56px; margin: 0 0 12px 0;">✅</h1>
+                    <h2 style="color: #065f46; margin: 0 0 8px 0; font-size: 22px; font-weight: 800;">WhatsApp Web Bot is CONNECTED & ACTIVE!</h2>
+                    <p style="color: #64748b; font-size: 13.5px; margin-bottom: 24px;">Target JID: <code style="background: #f1f5f9; padding: 3px 8px; border-radius: 6px; font-weight: 600; color: #0f172a;">${targetJid || '120363410784518818@g.us'}</code></p>
+                    
+                    <div style="border-top: 1px solid #e2e8f0; margin-top: 24px; padding-top: 24px;">
+                        <button id="logoutBtn" onclick="doLogout()" style="background: #ef4444; color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3); transition: all 0.2s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">
+                            🚪 Logout & Disconnect WhatsApp Bot
+                        </button>
+                    </div>
+                    <p id="logoutMsg" style="margin-top: 16px; font-size: 13px; font-weight: 600; color: #64748b; display: none;"></p>
+                </div>
+
+                <script>
+                    async function doLogout() {
+                        if (!confirm("Are you sure you want to log out and disconnect the WhatsApp Web Bot session? You will need to scan the QR code again.")) return;
+                        const btn = document.getElementById('logoutBtn');
+                        const msg = document.getElementById('logoutMsg');
+                        btn.disabled = true;
+                        btn.style.opacity = '0.6';
+                        msg.style.display = 'block';
+                        msg.style.color = '#ef4444';
+                        msg.textContent = '⏳ Logging out and resetting WhatsApp session...';
+                        try {
+                            const res = await fetch('/api/logout', { method: 'POST' });
+                            const data = await res.json();
+                            if (data.success) {
+                                msg.style.color = '#10b981';
+                                msg.textContent = '✅ Logged out successfully! Loading new QR code...';
+                                setTimeout(() => { window.location.href = '/qr'; }, 1200);
+                            } else {
+                                msg.textContent = '❌ Logout error: ' + (data.error || 'Failed');
+                                btn.disabled = false;
+                                btn.style.opacity = '1';
+                            }
+                        } catch (err) {
+                            msg.textContent = '❌ Logout error: ' + err.message;
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                        }
+                    }
+                </script>
             </body>
             </html>
         `);
@@ -170,13 +259,7 @@ app.get('/qr', (req, res) => {
                         const res = await fetch('/qr-data');
                         const data = await res.json();
                         if (data.status === 'connected') {
-                            document.body.innerHTML = \`
-                                <div style="padding-top: 60px;">
-                                    <h1 style="color: #10b981; font-size: 48px; margin-bottom: 12px;">✅</h1>
-                                    <h2 style="color: #065f46; margin: 0 0 8px 0;">WhatsApp Bot Successfully CONNECTED!</h2>
-                                    <p style="color: #64748b; font-size: 14px;">Group Bot is active and ready to send WhatsApp alerts.</p>
-                                </div>
-                            \`;
+                            window.location.reload();
                         } else if (data.qr_url) {
                             const container = document.getElementById('qrContainer');
                             if (container) {
