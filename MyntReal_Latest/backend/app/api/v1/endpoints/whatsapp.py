@@ -2263,20 +2263,44 @@ def trigger_wa_job_manual(
         if job_id == "wa_bihourly_sales_perf_report":
             from app.services.sales_performance_report_service import dispatch_bi_hourly_sales_performance_report
             res = dispatch_bi_hourly_sales_performance_report(db, slot_name="Manual Live Trigger")
-            is_success = isinstance(res, dict) and res.get("success") is True
+            is_success = isinstance(res, dict) and (res.get("success") is True or (isinstance(res.get("data"), dict) and res.get("data").get("success") is True))
             sent_cnt = (res.get("data") or {}).get("sent_count") or (1 if is_success else 0)
+            err_msg = None if is_success else ((res.get("error") or str(res.get("data") or res)))
+            
             _log_trigger_execution(
                 job_id=job_id,
                 job_name="Sales Team 2-Hour Report & Leaderboard",
                 trigger_type="MANUAL",
                 triggered_by=staff_label,
                 targets=job_targets,
-                sent_count=sent_cnt,
+                sent_count=sent_cnt if is_success else 0,
                 failed_count=0 if is_success else 1,
                 status="SUCCESS" if is_success else "FAILED",
-                error_message=None if is_success else str(res),
+                error_message=err_msg,
                 detail_data=res
             )
+
+            # Write Audit MessageLog table entry
+            try:
+                import uuid
+                from app.models.whatsapp import MessageLog
+                log_entry = MessageLog(
+                    message_sid=f"wamid_manual_{uuid.uuid4().hex[:12]}",
+                    mobile_number=f"GROUP:wa_bihourly_{staff_label}",
+                    message_type="sales_performance",
+                    message_body=f"Sales Performance Report ({staff_label})",
+                    initial_status="sent" if is_success else "failed",
+                    current_status="sent" if is_success else "failed",
+                    sent_at=datetime.utcnow()
+                )
+                db.add(log_entry)
+                db.commit()
+            except Exception as log_e:
+                logger.warning("[WA-TRIGGER] Failed to write MessageLog: %s", log_e)
+
+            if not is_success:
+                return {"success": False, "error": f"WhatsApp message dispatch failed: {err_msg}. Please verify WhatsApp QR connection at /qr", "detail": res}
+
             return {"success": True, "message": "Sales Team Performance Report dispatched to WhatsApp group", "detail": res}
 
         elif job_id == "field_staff_journey_report":
