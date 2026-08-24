@@ -19,8 +19,18 @@ from app.core.database import get_db
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
 from app.models.staff import StaffEmployee
 
+from datetime import datetime
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# DC-SOLAR-WITH-SUPPORT-ENHANCEMENT-001 (Aug 24 2026):
+# Enhanced Solar With-Support rate from ₹250 → ₹500/unit for eligible new leads.
+# Cutoff: Aug 24, 2026 19:30:00 IST. Historical leads (< cutoff) remain at ₹250/unit.
+# Eligibility: (created_at >= Cutoff) AND (is_owner OR is_creator).
+# Owner = me.id in field_staff_id, telecaller_id, primary_owner_id, support_staff_id, technical_staff1_id, technical_id, depends_on_staff_id
+# Creator = created_by_id matches me.id or STAFF_{me.id}
+SOLAR_WITH_SUPPORT_ENHANCEMENT_CUTOFF = datetime(2026, 8, 24, 19, 30, 0)
 
 
 def _is_admin(emp: StaffEmployee) -> bool:
@@ -266,6 +276,15 @@ def my_earning_capacity(
     date_from = _dt(today.year, today.month, 1)
     date_to   = _dt(today.year, today.month, _last_day, 23, 59, 59)
 
+    # DC-SOLAR-WITH-SUPPORT-ENHANCEMENT-001 (Aug 24 2026):
+    # Enhanced Solar With-Support rate from ₹250 → ₹500/unit for eligible new leads.
+    # Cutoff: Aug 24, 2026 19:30:00 IST. Historical leads (< cutoff) remain at ₹250/unit.
+    # Eligibility: (created_at >= Cutoff) AND (is_owner OR is_creator).
+    # Owner = me.id in field_staff_id, telecaller_id, primary_owner_id, support_staff_id, technical_staff1_id, technical_id, depends_on_staff_id
+    # Creator = created_by_id matches me.id or STAFF_{me.id}
+    from datetime import datetime as _dt_calc
+    SOLAR_WITH_SUPPORT_ENHANCEMENT_CUTOFF = _dt_calc(2026, 8, 24, 19, 30, 0)
+
     # category_slug → list of matching signup_category ids (company_id=1 as reference)
     CAT_PATTERNS = {
         'solar':       ['%solar%'],
@@ -288,11 +307,6 @@ def my_earning_capacity(
                     slug_to_cat_ids[slug].append(cat_id)
                     break
 
-    # DC-CLOSE-DATE-001: Use actual_close_date (not updated_at) to avoid smuggling
-    # field-edits into a later month's incentive window.
-    # DC-INCENTIVE-TELE-FIELD-ONLY-001: Only telecaller_id + field_staff_id earn incentive
-    # credit; handler_id (VARCHAR, not a systematic FK) is excluded.
-    # DC-INCENTIVE-LEAD-TYPE-003: Direct Work = no MNR/VGK4U ref + not Self Lead.
     _sup = """CASE
         WHEN l.source = 'Self Lead' THEN 0
         WHEN (
@@ -329,16 +343,24 @@ def my_earning_capacity(
         )
     )"""
     lead_rows = db.execute(text(f"""
-        SELECT category_id, dvr, has_support, is_direct FROM (
+        SELECT category_id, dvr, has_support, is_direct, created_at, created_by_id,
+               field_staff_id, telecaller_id, primary_owner_id, support_staff_id,
+               technical_staff1_id, technical_id, depends_on_staff_id FROM (
             SELECT DISTINCT ON (lead_id)
                    lead_id, category_id,
-                   COALESCE(deal_value_received, 0) AS dvr, has_support, is_direct
+                   COALESCE(deal_value_received, 0) AS dvr, has_support, is_direct,
+                   created_at, created_by_id, field_staff_id, telecaller_id,
+                   primary_owner_id, support_staff_id, technical_staff1_id,
+                   technical_id, depends_on_staff_id
             FROM (
                 SELECT l.id                                                        AS lead_id,
                        l.category_id,
                        COALESCE(NULLIF(l.deal_value_received,0), l.deal_value, 0) AS deal_value_received,
                        {_sup}                                                      AS has_support,
-                       {_is_direct}                                                AS is_direct
+                       {_is_direct}                                                AS is_direct,
+                       l.created_at, l.created_by_id, l.field_staff_id, l.telecaller_id,
+                       l.primary_owner_id, l.support_staff_id, l.technical_staff1_id,
+                       l.technical_id, l.depends_on_staff_id
                 FROM crm_leads l
                 WHERE {_comp_where}
                   AND l.telecaller_id::TEXT = :eid
@@ -347,7 +369,10 @@ def my_earning_capacity(
                        l.category_id,
                        COALESCE(NULLIF(l.deal_value_received,0), l.deal_value, 0),
                        {_sup},
-                       {_is_direct}
+                       {_is_direct},
+                       l.created_at, l.created_by_id, l.field_staff_id, l.telecaller_id,
+                       l.primary_owner_id, l.support_staff_id, l.technical_staff1_id,
+                       l.technical_id, l.depends_on_staff_id
                 FROM crm_leads l
                 WHERE {_comp_where}
                   AND l.field_staff_id::TEXT = :eid
@@ -386,17 +411,36 @@ def my_earning_capacity(
 
     # DC-ETC-ALWAYS-COMPANY-001: ETC/Training CRM leads → force has_support=1 (company).
     _training_cat_ids = set(slug_to_cat_ids.get('training', []))
-    lead_rows_clean = [
-        (cid, dvr, 1, False) if cid in _training_cat_ids else (cid, dvr, hs, bool(isd))
-        for cid, dvr, hs, isd in lead_rows
-    ]
+    _solar_cat_ids = set(slug_to_cat_ids.get('solar', []))
 
-    # Aggregate per slug: self / company / direct
+    # Aggregate per slug: self / company / direct + custom solar company base sum
     _empty_ach = lambda: {"self_count": 0, "self_amount": 0.0,
                           "company_count": 0, "company_amount": 0.0,
+                          "company_solar_custom_base": 0.0,
                           "direct_count": 0, "direct_amount": 0.0}
     ach: dict = {slug: _empty_ach() for slug in cfg_map}
-    for cat_id, dvr, has_sup, is_direct in lead_rows_clean:
+    
+    me_id_str = str(me.id)
+
+    for row in lead_rows:
+        cat_id = row[0]
+        dvr = row[1]
+        has_sup = row[2]
+        is_direct = bool(row[3])
+        created_at_dt = row[4]
+        created_by_id_val = row[5]
+        field_staff_id_val = row[6]
+        telecaller_id_val = row[7]
+        primary_owner_id_val = row[8]
+        support_staff_id_val = row[9]
+        technical_staff1_id_val = row[10]
+        technical_id_val = row[11]
+        depends_on_staff_id_val = row[12]
+
+        if cat_id in _training_cat_ids:
+            has_sup = 1
+            is_direct = False
+
         for slug, cat_ids in slug_to_cat_ids.items():
             if slug in cfg_map and cat_id in cat_ids:
                 if is_direct:
@@ -405,10 +449,27 @@ def my_earning_capacity(
                 elif has_sup:
                     ach[slug]["company_count"]  += 1
                     ach[slug]["company_amount"] += float(dvr)
+
+                    # DC-SOLAR-WITH-SUPPORT-ENHANCEMENT-001: Evaluate Solar With-Support rate per lead
+                    if slug == 'solar':
+                        is_new_lead = (created_at_dt is not None and created_at_dt >= SOLAR_WITH_SUPPORT_ENHANCEMENT_CUTOFF)
+                        owner_ids = [str(x) for x in [field_staff_id_val, telecaller_id_val, primary_owner_id_val,
+                                                      support_staff_id_val, technical_staff1_id_val,
+                                                      technical_id_val, depends_on_staff_id_val] if x is not None]
+                        is_owner = (me_id_str in owner_ids)
+                        is_creator = (created_by_id_val is not None and (
+                            str(created_by_id_val) == me_id_str or str(created_by_id_val) == f"STAFF_{me_id_str}"
+                        ))
+
+                        if is_new_lead and (is_owner or is_creator):
+                            ach[slug]["company_solar_custom_base"] += 500.0
+                        else:
+                            ach[slug]["company_solar_custom_base"] += 250.0
                 else:
                     ach[slug]["self_count"]  += 1
                     ach[slug]["self_amount"] += float(dvr)
                 break
+
     for (_dvr_etc,) in _etc_direct_rows:
         if _training_slug in ach:
             ach[_training_slug]["direct_count"]  += 1
@@ -444,7 +505,10 @@ def my_earning_capacity(
 
         if itype == "fixed_per_unit":
             self_base    = self_count    * rate_no
-            company_base = company_count * rate_wi
+            if slug == 'solar' and company_count > 0:
+                company_base = a["company_solar_custom_base"]
+            else:
+                company_base = company_count * rate_wi
             direct_base  = direct_count  * rate_dw
         elif itype == "percentage":
             self_base    = (self_amount    * rate_no) / 100.0
