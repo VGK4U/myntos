@@ -412,7 +412,6 @@ def format_field_journey_whatsapp_message(stats: Dict[str, Any]) -> str:
                 lines.append(f"   🗺️ GPS Loc: {j['location_address']}")
             else:
                 lines.append(f"   🗺️ GPS Loc: Active ({j['distance_km']} KMs tracked)")
-            lines.append(f"   📍 Lead: *{j['lead_name']}* ({j['purpose']})")
             lines.append(f"   📸 Photos: {j['photo_count']} (Latest: {j['latest_photo_formatted']}) | {j['status_text']}")
             if j['alert_flag']:
                 lines.append(f"   {j['alert_flag']}")
