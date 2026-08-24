@@ -4821,10 +4821,10 @@ def init_scheduler():
     )
     logger.info("   🛠️ Service 7:30PM IST daily summary report scheduled")
 
-    # DC_FIELD_JOURNEY_REPORT_001: 90-Minute Field Staff Journey Performance Report (09:30 AM - 09:00 PM IST)
+    # DC_FIELD_JOURNEY_REPORT_001: Hourly Field Staff Journey Performance Report (09:30 AM - 09:00 PM IST, Every 1 Hour)
     try:
         def run_field_journey_scheduled_report_job():
-            logger.info("🚜 [FIELD-JOURNEY-REPORT] Executing scheduled 90-minute field journey report dispatch...")
+            logger.info("🚜 [FIELD-JOURNEY-REPORT] Executing scheduled hourly field journey report dispatch...")
             db = SessionLocal()
             try:
                 from app.services.field_journey_report_service import dispatch_field_journey_whatsapp_reports_and_alerts
@@ -4835,39 +4835,19 @@ def init_scheduler():
             finally:
                 db.close()
 
-        def run_field_journey_inactivity_alerts_only_job():
-            logger.info("🚜 [FIELD-JOURNEY-INACTIVITY] Executing 30-min photo check-in audit (silent alerts only)...")
-            db = SessionLocal()
-            try:
-                from app.services.field_journey_report_service import dispatch_field_journey_photo_inactivity_alerts_only
-                res = dispatch_field_journey_photo_inactivity_alerts_only(db)
-                logger.info("🚜 [FIELD-JOURNEY-INACTIVITY] Silent inactivity audit complete: %s", res)
-            except Exception as exc:
-                logger.error("🚜 [FIELD-JOURNEY-INACTIVITY] Exception in inactivity audit job: %s", exc)
-            finally:
-                db.close()
-
-        # Hourly Schedule: 09:00 AM, 10:00 AM, 11:00 AM, 12:00 PM, 01:00 PM, 02:00 PM, 03:00 PM, 04:00 PM, 05:00 PM, 06:00 PM, 07:00 PM, 08:00 PM, 09:00 PM IST
+        # Hourly Schedule starting at 9:30 AM IST: 09:30 AM, 10:30 AM, 11:30 AM, 12:30 PM, 01:30 PM, 02:30 PM, 03:30 PM, 04:30 PM, 05:30 PM, 06:30 PM, 07:30 PM, 08:30 PM, 09:30 PM IST
         scheduler.add_job(
             run_field_journey_scheduled_report_job,
-            trigger=CronTrigger(hour='9,10,11,12,13,14,15,16,17,18,19,20,21', minute=0, timezone='Asia/Kolkata'),
+            trigger=CronTrigger(hour='9,10,11,12,13,14,15,16,17,18,19,20,21', minute=30, timezone='Asia/Kolkata'),
             id='wa_hourly_field_journey_report',
-            name='WhatsApp: Hourly Field Journey Report (09:00 AM - 09:00 PM IST, Top of Hour)',
+            name='WhatsApp: Hourly Field Journey Report (09:30 AM - 09:00 PM IST, Every 1 Hour)',
             replace_existing=True,
             misfire_grace_time=600,
             max_instances=1,
         )
-
-        # 30-Min Active Journey Photo Check-in Audit (Silent alerts only - DOES NOT DISPATCH GROUP REPORT)
-        scheduler.add_job(
-            run_field_journey_inactivity_alerts_only_job,
-            trigger=CronTrigger(minute='15,45', timezone='Asia/Kolkata'),
-            id='wa_field_journey_inactivity_check',
-            name='WhatsApp: 30-Min Active Journey Photo Check-in Audit (Alerts Only)',
-            replace_existing=True,
-            misfire_grace_time=300,
-            max_instances=1,
-        )
+        logger.info("   🚜 Service: Hourly Field Staff Journey Report scheduled (09:30 AM - 09:00 PM IST)")
+    except Exception as e:
+        logger.warning("   🚜 Service: Hourly Field Staff Journey Report schedule failed: %s", e)
 
 
         # DC_JOURNEY_GAPS_002: 11:59 PM Overnight Safety Net — Auto-close forgotten IN_PROGRESS journeys

@@ -155,12 +155,14 @@ def get_today_field_journey_stats(db: Session) -> Dict[str, Any]:
     # Load previous snapshot for KM delta calculation
     prev_snapshot = {}
     current_snapshot_journeys = {}
+    all_ended_report_sent = False
     if os.path.exists(SNAPSHOT_FILE):
         try:
             with open(SNAPSHOT_FILE, "r") as f:
                 data = json.load(f)
                 if data.get("date") == date_str:
                     prev_snapshot = data.get("journeys", {})
+                    all_ended_report_sent = data.get("all_ended_report_sent", False)
         except Exception as exc:
             logger.warning("[FIELD-REPORT] Failed to read snapshot file: %s", exc)
 
@@ -335,11 +337,13 @@ def get_today_field_journey_stats(db: Session) -> Dict[str, Any]:
 
     # Save new snapshot
     try:
+        is_all_ended = (total_active_staff == 0 and total_completed_staff > 0)
         os.makedirs(os.path.dirname(SNAPSHOT_FILE), exist_ok=True)
         with open(SNAPSHOT_FILE, "w") as f:
             json.dump({
                 "date": date_str,
                 "updated_at": time_str,
+                "all_ended_report_sent": is_all_ended,
                 "journeys": current_snapshot_journeys
             }, f, indent=2)
     except Exception as exc:
@@ -351,6 +355,7 @@ def get_today_field_journey_stats(db: Session) -> Dict[str, Any]:
         "total_participated": len(staff_map),
         "total_active": total_active_staff,
         "total_completed": total_completed_staff,
+        "all_ended_report_sent": all_ended_report_sent,
         "total_km": round(total_km_overall, 1),
         "total_wvv_km": round(total_wvv_km_overall, 1),
         "tagged_crm_leads_count": tagged_crm_leads_count,
@@ -470,7 +475,7 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(
     triggered_by: str = "System Cron"
 ) -> Dict[str, Any]:
     """
-    Main trigger function executed at scheduled 90-minute intervals (09:30 AM - 09:00 PM IST):
+    Main trigger function executed at scheduled hourly intervals starting at 09:30 AM IST (09:30 AM - 09:00 PM IST):
     1. Sends Group Summary Report to target WhatsApp group.
     2. Sends direct 2-Hour Photo Inactivity Warning alerts ONLY to employees currently in an active journey.
     """
@@ -480,10 +485,13 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(
 
     stats = get_today_field_journey_stats(db)
 
-    # Active staff check: For automated scheduler, skip sending if 0 staff active/logged journeys today
-    total_staff = stats.get("total_staff", 0)
+    total_participated = stats.get("total_participated", 0)
     total_active = stats.get("total_active", 0)
-    if trigger_type == "AUTO_SCHEDULER" and total_staff == 0 and total_active == 0:
+    total_completed = stats.get("total_completed", 0)
+    all_ended_sent = stats.get("all_ended_report_sent", False)
+
+    # 1. Active staff check: For automated scheduler, skip sending if 0 staff active/logged journeys today
+    if trigger_type == "AUTO_SCHEDULER" and total_participated == 0 and total_active == 0:
         logger.info("[FIELD-REPORT] No active field staff or journeys logged today. Skipping automated hourly report.")
         log_wa_trigger_execution(
             job_id="field_staff_journey_report",
@@ -502,6 +510,29 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(
             "skipped": True,
             "reason": "No active field staff or journeys today",
             "active_journeys_count": 0
+        }
+
+    # 2. Journeys ended check: Skip if all staff completed/ended their journeys for today and final report was already dispatched
+    if trigger_type == "AUTO_SCHEDULER" and total_active == 0 and total_completed > 0 and all_ended_sent:
+        logger.info("[FIELD-REPORT] All field journeys ended for today (%d completed). Final report already dispatched. Skipping automated hourly report.", total_completed)
+        log_wa_trigger_execution(
+            job_id="field_staff_journey_report",
+            job_name="Field Journey Performance & Leaderboard Report",
+            trigger_type=trigger_type,
+            triggered_by=triggered_by,
+            targets=[{"type": "group", "name": "Field Updates", "identifier": "BctONtnv8431uxxybKBEtS"}],
+            sent_count=0,
+            failed_count=0,
+            status="SKIPPED",
+            error_message="All field journeys ended for today",
+            detail_data={"reason": "all_journeys_ended", "total_completed": total_completed}
+        )
+        return {
+            "success": True,
+            "skipped": True,
+            "reason": "All field journeys ended for today",
+            "active_journeys_count": 0,
+            "completed_journeys_count": total_completed
         }
 
     report_msg = format_field_journey_whatsapp_message(stats)
