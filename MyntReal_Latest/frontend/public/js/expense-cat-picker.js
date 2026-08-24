@@ -10,22 +10,29 @@ const ExpCatPicker = (() => {
     let _loading = null;
 
     async function load() {
-        if (_cache) return _cache;
+        if (_cache && ((_cache.main && _cache.main.length > 0) || (_cache.incMain && _cache.incMain.length > 0))) {
+            return _cache;
+        }
         if (_loading) return _loading;
         _loading = (async () => {
             try {
                 const r = await staffFetch('/api/v1/expense-categories/list');
                 const d = r.ok ? await r.json() : {};
-                _cache = {
+                const resData = {
                     main: d.main_categories || [],
                     sub: d.sub_categories || [],
                     incMain: d.income_main_categories || [],
                     incSub: d.income_sub_categories || []
                 };
-                return _cache;
+                if (resData.main.length > 0 || resData.incMain.length > 0) {
+                    _cache = resData;
+                }
+                return resData;
             } catch (e) {
-                _loading = null;
+                console.warn('[ExpCatPicker] Load categories failed:', e);
                 return { main: [], sub: [], incMain: [], incSub: [] };
+            } finally {
+                _loading = null;
             }
         })();
         return _loading;

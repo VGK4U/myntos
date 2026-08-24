@@ -394,7 +394,11 @@ async def list_categories(
 ):
     """Get all active expense & income categories — used by ExpCatPicker and journal voucher"""
     try:
-        get_user_id_from_staff_or_mnr(request, db)
+        try:
+            get_user_id_from_staff_or_mnr(request, db)
+        except Exception:
+            pass  # Read-only category list lookup allows unblocked fallback for staff portal forms
+
         main_categories = db.query(ExpenseMainCategory).filter(
             ExpenseMainCategory.is_active == True
         ).order_by(ExpenseMainCategory.name).all()

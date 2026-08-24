@@ -169,28 +169,35 @@
     ]
   },
   "2026-08-24": {
-    "timestamp_ist": "2026-08-24 15:30:00",
+    "timestamp_ist": "2026-08-24 17:30:00",
     "date_str": "24 August 2026",
-    "time_str": "03:30 PM",
-    "total_calls": 373,
-    "total_talk_seconds": 23601,
-    "total_talk_formatted": "06h 33m 21s",
-    "missed_calls": 72,
-    "new_leads": 4,
+    "time_str": "05:30 PM",
+    "total_calls": 502,
+    "total_talk_seconds": 31453,
+    "total_talk_formatted": "08h 44m 13s",
+    "missed_calls": 81,
+    "new_leads": 5,
     "leaderboard": [
       {
         "handled_by": "Mrs. Sontayana Appala Nookalakshmi",
-        "call_count": 133,
-        "missed_count": 29,
-        "talk_seconds": 8019,
-        "talk_time_formatted": "02h 13m"
+        "call_count": 193,
+        "missed_count": 33,
+        "talk_seconds": 13188,
+        "talk_time_formatted": "03h 39m"
       },
       {
         "handled_by": "Ms. Oleti Gayatri Nandana",
-        "call_count": 121,
-        "missed_count": 26,
-        "talk_seconds": 7405,
-        "talk_time_formatted": "02h 03m"
+        "call_count": 149,
+        "missed_count": 30,
+        "talk_seconds": 9171,
+        "talk_time_formatted": "02h 32m"
+      },
+      {
+        "handled_by": "Ms. Anusha Moyyi",
+        "call_count": 72,
+        "missed_count": 1,
+        "talk_seconds": 3738,
+        "talk_time_formatted": "01h 02m"
       },
       {
         "handled_by": "Ms. Anushka Karri",
@@ -200,18 +207,11 @@
         "talk_time_formatted": "59m"
       },
       {
-        "handled_by": "Ms. Anusha Moyyi",
-        "call_count": 36,
-        "missed_count": 1,
-        "talk_seconds": 3404,
-        "talk_time_formatted": "56m"
-      },
-      {
         "handled_by": "Ms. Bhoolakshmi Pathakamsetti",
-        "call_count": 25,
-        "missed_count": 11,
-        "talk_seconds": 1194,
-        "talk_time_formatted": "19m"
+        "call_count": 30,
+        "missed_count": 12,
+        "talk_seconds": 1777,
+        "talk_time_formatted": "29m"
       }
     ]
   }
