@@ -5,7 +5,10 @@ Logs all system-level WhatsApp batch, group, and alert dispatches to wa_executio
 import os
 import json
 import uuid
-import fcntl
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 import logging
 from datetime import datetime, timedelta
 
@@ -64,9 +67,10 @@ def log_wa_trigger_execution(
             "detail": detail_data or {}
         }
 
-        # Acquire exclusive lock around read-modify-write block
+        # Acquire lock if fcntl available
         with open(LOCK_FILE_PATH, "w") as lock_file:
-            fcntl.flock(lock_file, fcntl.LOCK_EX)
+            if fcntl:
+                fcntl.flock(lock_file, fcntl.LOCK_EX)
             try:
                 logs = []
                 if os.path.exists(EXEC_LOGS_FILE_PATH):
@@ -88,7 +92,8 @@ def log_wa_trigger_execution(
                     json.dump(logs, f, indent=2)
                 os.replace(tmp_file, EXEC_LOGS_FILE_PATH)
             finally:
-                fcntl.flock(lock_file, fcntl.LOCK_UN)
+                if fcntl:
+                    fcntl.flock(lock_file, fcntl.LOCK_UN)
 
         return entry
     except Exception as e:
