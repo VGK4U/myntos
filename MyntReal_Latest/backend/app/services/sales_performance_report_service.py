@@ -85,13 +85,13 @@ def get_today_sales_performance_stats(db: Session, start_date=None, end_date=Non
           AND LOWER(e.full_name) NOT LIKE '%hema%'
           AND LOWER(e.full_name) NOT LIKE '%raju%'
           AND LOWER(e.full_name) NOT LIKE '%padma%'
-        GROUP BY e.id, e.full_name
           AND e.emp_code NOT ILIKE 'FL%'
           AND e.emp_code NOT ILIKE 'FP%'
           AND LOWER(COALESCE(e.employment_type, '')) NOT IN ('freelancer', 'external', 'partner_freelancer', 'contractor_freelancer', 'partner')
           AND LOWER(COALESCE(r.role_code, '')) NOT LIKE '%freelancer%'
           AND LOWER(COALESCE(r.role_name, '')) NOT LIKE '%freelancer%'
-        GROUP BY e.id, e.full_name, e.emp_code    """)).fetchall()
+        GROUP BY e.id, e.full_name, e.emp_code
+    """)).fetchall()
 
     leaderboard = []
     total_calls = 0
