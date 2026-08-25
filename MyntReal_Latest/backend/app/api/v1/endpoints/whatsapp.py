@@ -3452,7 +3452,9 @@ def trigger_wa_job_manual(
     try:
         if job_id == "wa_bihourly_sales_perf_report":
             from app.services.sales_performance_report_service import dispatch_bi_hourly_sales_performance_report
-            res = dispatch_bi_hourly_sales_performance_report(db, slot_name="Manual Live Trigger")
+            res = dispatch_bi_hourly_sales_performance_report(
+                db, slot_name="Manual Live Trigger", trigger_type="MANUAL", triggered_by=staff_label
+            )
             is_success = isinstance(res, dict) and (res.get("success") is True or (isinstance(res.get("data"), dict) and res.get("data").get("success") is True))
             sent_cnt = (res.get("data") or {}).get("sent_count") or (1 if is_success else 0)
             err_msg = None if is_success else ((res.get("error") or str(res.get("data") or res)))
@@ -3468,15 +3470,15 @@ def trigger_wa_job_manual(
                 error_message=err_msg,
                 detail_data=res
             )
-            # Write Audit MessageLog table entry
+            # Write Audit MessageLog table entry safely (truncated mobile_number <= 20 chars)
             try:
                 import uuid
                 from app.models.whatsapp import MessageLog
                 log_entry = MessageLog(
                     message_sid=f"wamid_manual_{uuid.uuid4().hex[:12]}",
-                    mobile_number=f"GROUP:wa_bihourly_{staff_label}",
-                    user_name=f"{staff_label} (MANUAL)",
-                    sent_by_name=f"{staff_label} (MANUAL)",
+                    mobile_number="GROUP:sales_perf"[:20],
+                    user_name=f"{staff_label}"[:100],
+                    sent_by_name=f"{staff_label}"[:100],
                     sender_type="staff",
                     sent_by_staff_id=getattr(current_user, 'id', None),
                     message_type="sales_performance",
@@ -3488,12 +3490,10 @@ def trigger_wa_job_manual(
                 db.add(log_entry)
                 db.commit()
             except Exception as log_e:
+                db.rollback()
                 logger.warning("[WA-TRIGGER] Failed to write MessageLog: %s", log_e)
             if not is_success:
                 return {"success": False, "error": f"WhatsApp message dispatch failed: {err_msg}. Please verify WhatsApp QR connection at /qr", "detail": res}
-            res = dispatch_bi_hourly_sales_performance_report(
-                db, slot_name="Manual Live Trigger", trigger_type="MANUAL", triggered_by=staff_label
-            )
             _record_job_trigger_audit_log(db, job_id, "Sales Team 2-Hour Report & Leaderboard", res, staff_label)
             return {"success": True, "message": "Sales Team Performance Report dispatched to WhatsApp group", "detail": res}
 
