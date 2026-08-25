@@ -372,12 +372,18 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
         return (base * pct / Decimal('100')).quantize(Decimal('0.01'))
 
     if _is_solar:
+        # Solar VGK4U Commissions (Aug 2026): Flat amounts L2=₹5000, L3=₹3000, L4=₹2000 for both activated & registered members
         levels_map = {
             1: (l1, Decimal('4.00')),
-            2: (l2 if _vgk_active(l2) else None, Decimal('1.50')),
-            3: (None if is_loyal else (l3 if _vgk_active(l3) else None), Decimal('0') if is_loyal else Decimal('1.00')),
-            4: (None if is_loyal else (l4_core if _vgk_active(l4_core) else None), Decimal('0') if is_loyal else Decimal('0.50')),
+            2: (l2, Decimal('0')),
+            3: (None if is_loyal else l3, Decimal('0')),
+            4: (None if is_loyal else l4_core, Decimal('0')),
             5: (None if is_loyal else l5, Decimal('0') if is_loyal else Decimal('1.50')),
+        }
+        _level_comm_overrides = {
+            2: Decimal('5000.00'),
+            3: Decimal('3000.00'),
+            4: Decimal('2000.00'),
         }
     else:
         levels_map = {
@@ -392,23 +398,18 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
             5: (None if is_loyal else l5,
                 Decimal('0') if is_loyal else Decimal(str(cfg.level4_pct or 0))),
         }
-    # DC-AMOUNT-OVERRIDE-001 (Jun 2026): Populate commission overrides for AMOUNT-type
-    # levels (L1–L5). When a level is configured as flat AMOUNT, its pct column = 0,
-    # so the loop guard (pct<=0 AND level not in overrides) would silently skip the
-    # entry. Pre-computing the flat amount here unlocks those entries.
-    # Tuple: (income level, pct_attr, type_attr, amt_attr) — L5 is stored as level4_* in schema.
-    _level_comm_overrides: dict = {}   # level → pre-computed Decimal commission
-    for _il, _pa, _ta, _aa in [
-        (1, 'level1_pct', 'level1_type', 'level1_amt'),
-        (2, 'level2_pct', 'level2_type', 'level2_amt'),
-        (3, 'level3_pct', 'level3_type', 'level3_amt'),
-        (4, 'level4_core_pct', 'level4_core_type', 'level4_core_amt'),  # L4 Core
-        (5, 'level4_pct',      'level4_type',      'level4_amt'),       # L5 Support
-    ]:
-        if str(getattr(cfg, _ta, 'PCT') or 'PCT') == 'AMOUNT':
-            _flat = Decimal(str(getattr(cfg, _aa, 0) or 0))
-            if _flat > 0:
-                _level_comm_overrides[_il] = _flat.quantize(Decimal('0.01'))
+        _level_comm_overrides = {}
+        for _il, _pa, _ta, _aa in [
+            (1, 'level1_pct', 'level1_type', 'level1_amt'),
+            (2, 'level2_pct', 'level2_type', 'level2_amt'),
+            (3, 'level3_pct', 'level3_type', 'level3_amt'),
+            (4, 'level4_core_pct', 'level4_core_type', 'level4_core_amt'),  # L4 Core
+            (5, 'level4_pct',      'level4_type',      'level4_amt'),       # L5 Support
+        ]:
+            if str(getattr(cfg, _ta, 'PCT') or 'PCT') == 'AMOUNT':
+                _flat = Decimal(str(getattr(cfg, _aa, 0) or 0))
+                if _flat > 0:
+                    _level_comm_overrides[_il] = _flat.quantize(Decimal('0.01'))
 
     # L6 SHOWROOM — same AMOUNT-type override pattern for the showroom partner
     if _showroom_p and (_showroom_pct > 0 or (_showroom_type == 'AMOUNT' and _showroom_amt > 0)):

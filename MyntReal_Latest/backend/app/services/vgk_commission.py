@@ -259,25 +259,29 @@ def calculate_vgk_commissions(db: Session, lead_id: int, transaction_id: int, re
         # ── L1 (self — deal partner) — already resolved above as _l1_early ─
         l1_partner = _l1_early
 
+        _is_solar = category_id in (6, 19, 36, 48)
+
         if l1_partner:
             make_entry(l1_partner, 1, config.level1_pct,
                        Decimal(str(config.level1_amt or 0)), getattr(config, 'level1_type', 'PCT') or 'PCT')
 
-            if not is_paid:
-                # DC Protocol Mar 2026: Non-Paid member — L1 only; L2/L3/L4 CORE/L5 skipped.
+            if not is_paid and not _is_solar:
+                # DC Protocol Mar 2026: Non-Paid member for non-solar — L1 only; L2/L3/L4 CORE/L5 skipped.
                 logger.info(
                     f"[VGK-COMM] Non-Paid member {l1_partner.partner_code} — only L1 fires; L2/L3/L4 CORE/L5 skipped"
                 )
             else:
-                # Paid member — full 5-level cascade (DC-VGK-L4CORE-001)
+                # Paid member or Solar deal (Aug 2026 update: Solar level cascades fire for both activated & registered members)
                 # ── L2: Upline of L1 ────────────────────────────────────────
                 l2_partner = None
                 if l1_partner.parent_partner_id:
                     l2_partner = db.query(OfficialPartner).filter(
                         OfficialPartner.id == l1_partner.parent_partner_id
                     ).first()
-                    make_entry(l2_partner, 2, config.level2_pct,
-                               Decimal(str(config.level2_amt or 0)), getattr(config, 'level2_type', 'PCT') or 'PCT')
+                    _l2_pct = Decimal('0') if _is_solar else config.level2_pct
+                    _l2_amt = Decimal('5000.00') if _is_solar else Decimal(str(config.level2_amt or 0))
+                    _l2_type = 'AMOUNT' if _is_solar else (getattr(config, 'level2_type', 'PCT') or 'PCT')
+                    make_entry(l2_partner, 2, _l2_pct, _l2_amt, _l2_type)
 
                 # ── L3: Upline of L2 ─────────────────────────────────────────
                 # Loyal Coupon members — L3/L4 CORE/L5 excluded regardless of paid status.
@@ -287,8 +291,10 @@ def calculate_vgk_commissions(db: Session, lead_id: int, transaction_id: int, re
                         l3_partner = db.query(OfficialPartner).filter(
                             OfficialPartner.id == l2_partner.parent_partner_id
                         ).first()
-                        make_entry(l3_partner, 3, config.level3_pct,
-                                   Decimal(str(config.level3_amt or 0)), getattr(config, 'level3_type', 'PCT') or 'PCT')
+                        _l3_pct = Decimal('0') if _is_solar else config.level3_pct
+                        _l3_amt = Decimal('3000.00') if _is_solar else Decimal(str(config.level3_amt or 0))
+                        _l3_type = 'AMOUNT' if _is_solar else (getattr(config, 'level3_type', 'PCT') or 'PCT')
+                        make_entry(l3_partner, 3, _l3_pct, _l3_amt, _l3_type)
                 else:
                     logger.info(
                         f"[VGK-COMM] Loyal Coupon member {l1_partner.partner_code} — L3/L4 CORE skipped"
@@ -296,10 +302,10 @@ def calculate_vgk_commissions(db: Session, lead_id: int, transaction_id: int, re
 
                 # ── L4 CORE: Upline of L3 (DC-VGK-L4CORE-001) ───────────────
                 if not getattr(l1_partner, 'is_loyal_coupon', False):
-                    _l4core_pct = Decimal(str(getattr(config, 'level4_core_pct', 0) or 0))
-                    _l4core_amt = Decimal(str(getattr(config, 'level4_core_amt', 0) or 0))
-                    _l4core_type = getattr(config, 'level4_core_type', 'PCT') or 'PCT'
-                    if l3_partner and l3_partner.parent_partner_id and _l4core_pct > 0:
+                    _l4core_pct = Decimal('0') if _is_solar else Decimal(str(getattr(config, 'level4_core_pct', 0) or 0))
+                    _l4core_amt = Decimal('2000.00') if _is_solar else Decimal(str(getattr(config, 'level4_core_amt', 0) or 0))
+                    _l4core_type = 'AMOUNT' if _is_solar else (getattr(config, 'level4_core_type', 'PCT') or 'PCT')
+                    if l3_partner and l3_partner.parent_partner_id:
                         l4_core_partner = db.query(OfficialPartner).filter(
                             OfficialPartner.id == l3_partner.parent_partner_id
                         ).first()
