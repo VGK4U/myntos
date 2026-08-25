@@ -14439,6 +14439,12 @@ async def create_lead_unified(
     db.refresh(new_lead)
 
     try:
+        from app.services.whatsapp_group_alert_service import send_instant_new_lead_group_alert
+        send_instant_new_lead_group_alert(db, new_lead.id)
+    except Exception as _ga_e:
+        logger.warning(f"[CRM_UNIFIED_CREATE_LEAD] Group alert trigger exception for lead {new_lead.id}: {_ga_e}")
+
+    try:
         from app.services.whatsapp_auto_service import send_lead_welcome
         if new_lead.phone:
             send_lead_welcome(
@@ -18159,7 +18165,13 @@ def public_create_lead(body: PublicLeadCreateRequest, db: Session = Depends(get_
         db.commit()
         db.refresh(new_lead)
 
-        # Trigger auto-welcome WhatsApp if available
+        # Trigger instant Sales group alert and auto-welcome WhatsApp if available
+        try:
+            from app.services.whatsapp_group_alert_service import send_instant_new_lead_group_alert
+            send_instant_new_lead_group_alert(db, new_lead.id)
+        except Exception as _ga_e:
+            logger.warning("[PUBLIC-LEAD-CREATE] Group alert exception: %s", _ga_e)
+
         try:
             from app.services.whatsapp_auto_service import send_lead_welcome
             send_lead_welcome(db=db, lead=new_lead)
