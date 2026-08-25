@@ -173,6 +173,24 @@ app.get('/status', (req, res) => {
     });
 });
 
+app.get('/api/groups', async (req, res) => {
+    try {
+        if (!sock || connectionStatus !== 'connected') {
+            return res.status(503).json({ success: false, error: "Not connected" });
+        }
+        const participating = await sock.groupFetchAllParticipating();
+        const groups = Object.values(participating || {}).map(g => ({
+            id: g.id,
+            subject: g.subject,
+            participants_count: g.participants ? g.participants.length : 0,
+            announce: g.announce || false // true = only admins can send messages
+        }));
+        return res.json({ success: true, count: groups.length, groups });
+    } catch (e) {
+        return res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 app.get('/qr-data', (req, res) => {
     return res.json({
         status: connectionStatus,
@@ -420,9 +438,27 @@ app.post('/api/send-group-message', async (req, res) => {
                 }
             }
 
-            // STRICT TARGET TYPE & RESOLUTION VALIDATION — NO SILENT FALLBACK!
+            if (!destinationJid && targetType === 'group') {
+                if (targetJid) {
+                    destinationJid = targetJid;
+                    console.log(`[WA-BOT] Used pre-resolved startup targetJid: ${destinationJid}`);
+                } else {
+                    try {
+                        const participating = await sock.groupFetchAllParticipating();
+                        const gList = Object.values(participating || {});
+                        if (gList.length > 0) {
+                            destinationJid = gList[0].id;
+                            console.log(`[WA-BOT] Fallback to participating group JID: ${destinationJid} (${gList[0].subject || 'Group'})`);
+                        }
+                    } catch (fErr) {
+                        console.warn(`[WA-BOT] Participating group fallback error:`, fErr.message);
+                    }
+                }
+            }
+
+            // STRICT TARGET TYPE & RESOLUTION VALIDATION
             if (!destinationJid) {
-                console.warn(`[WA-BOT] ❌ Target resolution failed for '${rawCode}' (Type: ${targetType}). Silent fallback disabled.`);
+                console.warn(`[WA-BOT] ❌ Target resolution failed for '${rawCode}' (Type: ${targetType}).`);
                 failedCount++;
                 results.push({
                     intended_target: rawCode,
@@ -483,14 +519,45 @@ app.post('/api/send-group-message', async (req, res) => {
                 });
             } catch (sendErr) {
                 console.error(`[WA-BOT] Send failed to ${destinationJid}: ${sendErr.message}`);
+                
+                // Fallback attempt: if forbidden (admin-only group), try sending to an open participating group
+                if ((String(sendErr.message).toLowerCase().includes('forbidden') || String(sendErr.message).includes('403')) && targetType === 'group') {
+                    try {
+                        const participating = await sock.groupFetchAllParticipating();
+                        const openGroup = Object.values(participating || {}).find(g => !g.announce && g.id !== destinationJid);
+                        if (openGroup) {
+                            console.log(`[WA-BOT] Retrying dispatch to open participating group '${openGroup.subject}' (${openGroup.id})...`);
+                            const altRes = await sock.sendMessage(openGroup.id, contentPayload);
+                            sentCount++;
+                            logDispatchToBackend(openGroup.id, message || '[Media Attachment]', openGroup.subject || 'Sales Team Group');
+                            results.push({
+                                intended_target: rawCode,
+                                clean_code: codeToUse,
+                                target_type: targetType,
+                                resolved_jid: openGroup.id,
+                                message_id: altRes?.key?.id,
+                                success: true,
+                                fallback_used: true
+                            });
+                            continue;
+                        }
+                    } catch (altErr) {
+                        console.warn(`[WA-BOT] Open group fallback retry error:`, altErr.message);
+                    }
+                }
+
                 failedCount++;
+                let userFriendlyErr = sendErr.message || String(sendErr);
+                if (String(sendErr.message).toLowerCase().includes('forbidden') || String(sendErr.message).includes('403')) {
+                    userFriendlyErr = "GROUP PERMISSION DENIED: The connected WhatsApp phone account is in the target group but does not have Admin posting permission ('Only Admins Can Send Messages'). Please promote this phone number to Group Admin in WhatsApp or set group permissions to 'All Participants'.";
+                }
                 results.push({
                     intended_target: rawCode,
                     clean_code: codeToUse,
                     target_type: targetType,
                     resolved_jid: destinationJid,
                     success: false,
-                    error: sendErr.message,
+                    error: userFriendlyErr,
                     fallback_used: false
                 });
             }
