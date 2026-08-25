@@ -295,8 +295,7 @@ def dispatch_bi_hourly_sales_performance_report(
     is_succ = isinstance(res, dict) and res.get("success") is True
 
     targets = [
-        {"id": "t1", "type": "group", "name": "Mynt Sales New Group", "identifier": "9053899899"},
-        {"id": "t2", "type": "group", "name": "Executive Team Announcements", "identifier": "7702830269"}
+        {"id": "t1", "type": "group", "name": "Mynt Sales New", "identifier": "120363410784518818@g.us"}
     ]
 
     log_wa_trigger_execution(

@@ -3045,8 +3045,7 @@ def search_whatsapp_contacts(
 # In-memory target group configuration cache (backed by AppSettings)
 DEFAULT_JOB_TARGETS = {
     "wa_bihourly_sales_perf_report": [
-        {"id": "t1", "type": "group", "name": "Mynt Sales New Group", "identifier": "9053899899"},
-        {"id": "t2", "type": "group", "name": "Executive Team Announcements", "identifier": "7702830269"}
+        {"id": "t1", "type": "group", "name": "Mynt Sales New", "identifier": "120363410784518818@g.us"}
     ],
     "field_staff_journey_report": [
         {"id": "t3", "type": "group", "name": "Field Updates", "identifier": "BctONtnv8431uxxybKBEtS"}
