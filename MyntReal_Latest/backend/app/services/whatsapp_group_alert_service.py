@@ -141,6 +141,35 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, An
     if page_name and 'Facebook' not in source:
         source = f"Facebook Lead Ads ({page_name})"
 
+    # Extract category / product interest
+    category_name = None
+    if getattr(lead, 'category_id', None):
+        try:
+            from app.models.crm import CRMCategory
+            cat = db.query(CRMCategory).get(lead.category_id)
+            if cat:
+                category_name = cat.name
+        except Exception:
+            pass
+    if not category_name:
+        category_name = getattr(lead, 'looking_for', '') or getattr(lead, 'requirement', '') or sd.get('ivr_option') or sd.get('category') or None
+
+    # MyOperator Missed By / Dialed Operator lookup
+    missed_by = sd.get('missed_by') or sd.get('operator_name') or sd.get('handled_by') or None
+    if not missed_by and phone and phone != 'N/A':
+        try:
+            from app.models.operator_call import OperatorCall
+            clean_p = ''.join(c for c in str(phone) if c.isdigit())[-10:]
+            if clean_p:
+                op_call = db.query(OperatorCall).filter(
+                    (OperatorCall.crm_lead_id == lead.id) | 
+                    (OperatorCall.caller_number.endswith(clean_p))
+                ).order_by(OperatorCall.id.desc()).first()
+                if op_call:
+                    missed_by = op_call.handled_by or op_call.operator_name
+        except Exception:
+            pass
+
     # Staff assignment
     assigned_name = "Unassigned / Telecaller Team"
     if getattr(lead, 'assigned_to_emp_id', None):
@@ -160,12 +189,16 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, An
         f"📍 *Location*: {city}" + (f" (PIN: {pincode})" if pincode else ""),
     ]
 
+    if category_name:
+        msg_lines.append(f"🎯 *Service / Category*: {category_name}")
     if electricity_bill:
         msg_lines.append(f"⚡ *Monthly Bill*: {electricity_bill}")
     if property_type:
         msg_lines.append(f"🏠 *Property Type*: {property_type}")
 
     msg_lines.append(f"🏷️ *Source*: {source}")
+    if missed_by:
+        msg_lines.append(f"📞 *Missed By / Operator*: {missed_by}")
     msg_lines.append(f"⏰ *Lead Generated*: {time_str}")
 
     # Build Q&A summary
