@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_INVITE_CODE = "BctONtnv8431uxxybKBEtS"
+DEFAULT_INVITE_CODE = "LfX8mGootXa7SpwNIz7P5C"
 
 
 def extract_invite_code(url_or_code: str) -> str:
@@ -31,7 +31,12 @@ def extract_invite_code(url_or_code: str) -> str:
     return code
 
 
-def send_group_bot_message(message_text: str, invite_code: str = DEFAULT_INVITE_CODE, group_name: Optional[str] = "Mynt sales new") -> Dict[str, Any]:
+def send_group_bot_message(
+    message_text: str,
+    invite_code: str = DEFAULT_INVITE_CODE,
+    group_name: Optional[str] = "Mynt Sales New",
+    group_id: Optional[str] = "120363410784518818@g.us"
+) -> Dict[str, Any]:
     """
     Sends message payload to WhatsApp Web Group Bot Gateway with IPv4/IPv6 & env-var fallback.
     """
@@ -39,7 +44,8 @@ def send_group_bot_message(message_text: str, invite_code: str = DEFAULT_INVITE_
     payload = {
         "message": message_text,
         "inviteCode": clean_code or invite_code,
-        "groupName": group_name or "Mynt sales new"
+        "groupName": group_name or "Mynt Sales New",
+        "groupId": group_id or "120363410784518818@g.us"
     }
     
     env_url = os.getenv("WHATSAPP_BOT_URL") or os.getenv("WA_BOT_URL") or os.getenv("WA_GROUP_BOT_URL")

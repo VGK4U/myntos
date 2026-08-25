@@ -519,37 +519,10 @@ app.post('/api/send-group-message', async (req, res) => {
                 });
             } catch (sendErr) {
                 console.error(`[WA-BOT] Send failed to ${destinationJid}: ${sendErr.message}`);
-                
-                // Fallback attempt: if forbidden (admin-only group), try sending to an open participating group
-                if ((String(sendErr.message).toLowerCase().includes('forbidden') || String(sendErr.message).includes('403')) && targetType === 'group') {
-                    try {
-                        const participating = await sock.groupFetchAllParticipating();
-                        const openGroup = Object.values(participating || {}).find(g => !g.announce && g.id !== destinationJid);
-                        if (openGroup) {
-                            console.log(`[WA-BOT] Retrying dispatch to open participating group '${openGroup.subject}' (${openGroup.id})...`);
-                            const altRes = await sock.sendMessage(openGroup.id, contentPayload);
-                            sentCount++;
-                            logDispatchToBackend(openGroup.id, message || '[Media Attachment]', openGroup.subject || 'Sales Team Group');
-                            results.push({
-                                intended_target: rawCode,
-                                clean_code: codeToUse,
-                                target_type: targetType,
-                                resolved_jid: openGroup.id,
-                                message_id: altRes?.key?.id,
-                                success: true,
-                                fallback_used: true
-                            });
-                            continue;
-                        }
-                    } catch (altErr) {
-                        console.warn(`[WA-BOT] Open group fallback retry error:`, altErr.message);
-                    }
-                }
-
                 failedCount++;
                 let userFriendlyErr = sendErr.message || String(sendErr);
                 if (String(sendErr.message).toLowerCase().includes('forbidden') || String(sendErr.message).includes('403')) {
-                    userFriendlyErr = "GROUP PERMISSION DENIED: The connected WhatsApp phone account is in the target group but does not have Admin posting permission ('Only Admins Can Send Messages'). Please promote this phone number to Group Admin in WhatsApp or set group permissions to 'All Participants'.";
+                    userFriendlyErr = "GROUP PERMISSION DENIED: In 'Mynt Sales New Group', only Admins can send messages. Please promote the connected WhatsApp phone to Admin in WhatsApp Group Settings or change group settings to 'All Participants'.";
                 }
                 results.push({
                     intended_target: rawCode,
