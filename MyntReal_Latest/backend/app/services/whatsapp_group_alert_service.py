@@ -31,7 +31,7 @@ def extract_invite_code(url_or_code: str) -> str:
     return code
 
 
-def send_group_bot_message(message_text: str, invite_code: str = DEFAULT_INVITE_CODE, group_name: Optional[str] = "Sales") -> Dict[str, Any]:
+def send_group_bot_message(message_text: str, invite_code: str = DEFAULT_INVITE_CODE, group_name: Optional[str] = "Mynt sales new") -> Dict[str, Any]:
     """
     Sends message payload to WhatsApp Web Group Bot Gateway with IPv4/IPv6 & env-var fallback.
     """
@@ -39,7 +39,7 @@ def send_group_bot_message(message_text: str, invite_code: str = DEFAULT_INVITE_
     payload = {
         "message": message_text,
         "inviteCode": clean_code or invite_code,
-        "groupName": group_name or "Sales"
+        "groupName": group_name or "Mynt sales new"
     }
     
     env_url = os.getenv("WHATSAPP_BOT_URL") or os.getenv("WA_BOT_URL") or os.getenv("WA_GROUP_BOT_URL")
@@ -193,4 +193,4 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, An
     msg_lines.append("🔗 *CRM Link*: https://myntreal.com/staff/leads")
 
     message_text = "\n".join(msg_lines)
-    return send_group_bot_message(message_text, group_name="Sales New")
+    return send_group_bot_message(message_text, group_name="Mynt sales new")
