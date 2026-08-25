@@ -26,7 +26,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const PORT = process.env.PORT || 5002;
 const AUTH_DIR = path.join(__dirname, 'auth_info');
-const DEFAULT_INVITE_CODE = "LfX8mGootXa7SpwNIz7P5C";
+const DEFAULT_INVITE_CODE = "BctONtnv8431uxxybKBEtS";
 
 let sock = null;
 let currentQr = null;

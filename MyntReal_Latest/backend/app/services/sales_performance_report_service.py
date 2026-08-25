@@ -286,7 +286,7 @@ def dispatch_bi_hourly_sales_performance_report(
 
     msg = generate_bi_hourly_performance_message(db, slot_name=slot_name)
     logger.info(f"📊 Dispatching sales performance update for slot {slot_name}...")
-    res = send_group_bot_message(msg)
+    res = send_group_bot_message(msg, invite_code="BctONtnv8431uxxybKBEtS", group_name="Field Updates")
     is_succ = isinstance(res, dict) and res.get("success") is True
 
     targets = [

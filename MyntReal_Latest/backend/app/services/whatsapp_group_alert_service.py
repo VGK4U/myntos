@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_INVITE_CODE = "LfX8mGootXa7SpwNIz7P5C"
+DEFAULT_INVITE_CODE = "BctONtnv8431uxxybKBEtS"
 
 
 def extract_invite_code(url_or_code: str) -> str:
