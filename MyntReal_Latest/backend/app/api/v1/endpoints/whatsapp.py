@@ -3243,7 +3243,15 @@ def get_wa_scheduler_status(
             "name": "Sales Team 2-Hour Report & Leaderboard",
             "category": "Sales Reporting",
             "schedule": "Every 2 Hours (9:30 AM - 7:30 PM IST)",
-            "next_run": "Today 01:30 PM IST" if now_ist.hour < 13 or (now_ist.hour == 13 and now_ist.minute < 30) else "Today 03:30 PM IST",
+            "next_run": (
+                "Today 09:30 AM IST" if now_ist.hour < 9 or (now_ist.hour == 9 and now_ist.minute < 30) else
+                "Today 11:30 AM IST" if now_ist.hour < 11 or (now_ist.hour == 11 and now_ist.minute < 30) else
+                "Today 01:30 PM IST" if now_ist.hour < 13 or (now_ist.hour == 13 and now_ist.minute < 30) else
+                "Today 03:30 PM IST" if now_ist.hour < 15 or (now_ist.hour == 15 and now_ist.minute < 30) else
+                "Today 05:30 PM IST" if now_ist.hour < 17 or (now_ist.hour == 17 and now_ist.minute < 30) else
+                "Today 07:30 PM IST" if now_ist.hour < 19 or (now_ist.hour == 19 and now_ist.minute < 30) else
+                "Tomorrow 09:30 AM IST"
+            ),
             "recipients": active_targets.get("wa_bihourly_sales_perf_report", []),
             "day_2_ago": _get_job_day_status("wa_bihourly_sales_perf_report", ["sales_perf_report", "auto_sales_perf_report", "sales_performance_report"], d2_str),
             "yesterday": _get_job_day_status("wa_bihourly_sales_perf_report", ["sales_perf_report", "auto_sales_perf_report", "sales_performance_report"], d1_str),

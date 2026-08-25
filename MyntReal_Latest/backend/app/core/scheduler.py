@@ -4766,16 +4766,16 @@ def init_scheduler():
     )
     logger.info("   🌅 WhatsApp 8AM IST daily morning wish dispatch scheduled")
 
-    # DC-SALES-PERF-001: Bi-Hourly & 90-Min Sales Performance Report to WhatsApp Group (09:30 AM to 08:00 PM IST)
+    # DC-SALES-PERF-001: Bi-Hourly Sales Performance Report to WhatsApp Group (Every 2 Hours: 09:30 AM to 07:30 PM IST)
     scheduler.add_job(
         job_bi_hourly_sales_performance_report,
-        trigger=CronTrigger(hour='9,11,12,13,14,15,16,17,18,19,20', minute='0,30', timezone='Asia/Kolkata'),
+        trigger=CronTrigger(hour='9,11,13,15,17,19', minute='30', timezone='Asia/Kolkata'),
         id='wa_bihourly_sales_perf_report',
-        name='WhatsApp: Sales Performance Report (09:30 AM - 08:00 PM IST)',
+        name='WhatsApp: Sales Performance Report (Every 2 Hours: 09:30 AM - 07:30 PM IST)',
         replace_existing=True,
         misfire_grace_time=600,
     )
-    logger.info("   📊 WhatsApp sales performance report scheduled (09:30 AM - 08:00 PM IST)")
+    logger.info("   📊 WhatsApp sales performance report scheduled (Every 2 Hours: 09:30 AM - 07:30 PM IST)")
 
     # DC-VGK4U-WISH-001: Daily 8:00 AM IST VGK4U Inspiring Morning Wish
     scheduler.add_job(
