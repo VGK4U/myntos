@@ -234,4 +234,9 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, An
     msg_lines.append("🔗 *CRM Link*: https://myntreal.com/staff/leads")
 
     message_text = "\n".join(msg_lines)
-    return send_group_bot_message(message_text, group_name="Mynt sales new")
+    return send_group_bot_message(
+        message_text,
+        invite_code="LfX8mGootXa7SpwNIz7P5C",
+        group_name="Mynt Sales New",
+        group_id="120363410784518818@g.us"
+    )
