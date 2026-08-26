@@ -6110,11 +6110,10 @@ async function generateMemberPoster(partnerId) {
     setVal('postCustomer', customerName);
     setVal('postLocation', location);
     setVal('postSeniorName', seniorName);
-    setVal('postSeniorEarning', seniorEarning);
-    
-    // Senior All-Time Total Network Potential (calculated from active senior entries)
+    // Senior Net Potential Pending (Gross Potential minus Advances Paid = ₹34,350/-)
     const srEntries = window._seniorEntries || [];
     const srUniquePot = {};
+    let srAdvPaidTotal = 0;
     srEntries.forEach(se => {
       if (se.status !== 'CANCELLED') {
         const lid = se.source_lead_id || 0;
@@ -6122,11 +6121,16 @@ async function generateMemberPoster(partnerId) {
         const key = `${lid}_${lvl}`;
         const val = se.potential_overall_earning || se.commission_amount || 0;
         if (!srUniquePot[key] || val > srUniquePot[key]) srUniquePot[key] = val;
+        if (se.kind === 'ADVANCE' || se.kind === 'DVR_ADVANCE') {
+          srAdvPaidTotal += parseFloat(se.commission_amount || 0);
+        }
       }
     });
     const srGrossPotTotal = Object.values(srUniquePot).reduce((a, b) => a + b, 0);
-    const seniorPotentialVal = (srGrossPotTotal > 0) ? '₹' + _meFormatInr(srGrossPotTotal) + '/-' : '₹34,350/-';
+    const srNetPotTotal = Math.max(0, srGrossPotTotal - srAdvPaidTotal);
+    const seniorPotentialVal = (srNetPotTotal > 0) ? '₹' + _meFormatInr(srNetPotTotal) + '/-' : '₹34,350/-';
     setVal('postSeniorPotential', seniorPotentialVal);
+    setVal('postSeniorEarning', seniorPotentialVal);
     
     const postSeniorPot = document.getElementById('postSeniorPotential');
     const seniorNameUpper = (seniorName || '').toUpperCase().trim();
