@@ -5024,7 +5024,7 @@ def member_income_entries_detail(
                 "  COALESCE(solar_value, 0)::float AS solar_value, "
                 "  COALESCE(deal_value_excl_tax, 0)::float AS deal_value_excl_tax, "
                 "  COALESCE(deal_value_total, 0)::float AS deal_value_total, "
-                "  category_id, solar_brand_id "
+                "  category_id, solar_brand_id, kw_size::text AS kw_size "
                 "FROM crm_leads WHERE id = ANY(:ids)"
             ), {"ids": lead_ids}).fetchall()
             lead_info = {r.id: {
@@ -5039,6 +5039,7 @@ def member_income_entries_detail(
                 "deal_value_total": float(r.deal_value_total or 0),
                 "category_id": r.category_id,
                 "solar_brand_id": r.solar_brand_id,
+                "kw_size": str(r.kw_size or "").strip(),
             } for r in lr}
         except Exception:
             try: db.rollback()
@@ -5138,7 +5139,7 @@ def member_income_entries_detail(
                     pe_ded = round(min(avail, cap_50), 2)
             lost_ded_map[pe_id] = pe_ded
     except Exception as _ex_lost:
-        print(f"[WARN-LOST-DED-CALC] Failed to compute lost lead deduction: {_ex_lost}")
+        pass
 
     # Fetch commission configs & solar brand incentive configs for accurate potential calculations
     try:
@@ -5190,10 +5191,18 @@ def member_income_entries_detail(
             _sv = _li["solar_value"] if _li else 0.0
             _dvet = _li["deal_value_excl_tax"] if _li else 0.0
             _dvt_val = _li["deal_value_total"] if _li else 0.0
+            _kw = str(_li.get("kw_size") or "").strip() if _li else ""
             
             lead_val = _sv if _sv > 0 else (_dvet if _dvet > 0 else _dvt_val)
             if lead_val <= 0:
-                lead_val = commission_base
+                if _kw == "3":
+                    lead_val = 190000.0
+                elif _kw == "5":
+                    lead_val = 300000.0
+                elif _kw == "10":
+                    lead_val = 566000.0
+                else:
+                    lead_val = 190000.0 if (_li and _li.get("category_id") == 19) else commission_base
                 
             cat_id = (_li["category_id"] if _li else None) or r.category_id
             config = config_map.get(cat_id) if (cat_id and config_map) else None
