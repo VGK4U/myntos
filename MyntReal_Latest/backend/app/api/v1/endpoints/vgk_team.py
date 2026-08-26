@@ -4876,7 +4876,7 @@ def member_income_entries_detail(
             "  COALESCE(e.deal_value_total, 0)::float      AS dvt_raw "
             "FROM vgk_cash_income_entries e "
             "LEFT JOIN crm_leads l ON e.source_lead_id = l.id "
-            f"WHERE e.partner_id = :pid{_extra_where} "
+            f"WHERE e.partner_id = :pid AND (l.cibil_confirmed IS TRUE OR (l.cibil_score IS NOT NULL AND l.cibil_score >= 600)){_extra_where} "
             "ORDER BY e.created_at DESC"
         ), _extra_params).fetchall()
     except Exception as exc:
@@ -4918,7 +4918,8 @@ def member_income_entries_detail(
                 "  0::float               AS cfv_raw, "
                 "  0::float               AS dvt_raw "
                 "FROM vgk_solar_cibil_advances a "
-                "WHERE a.partner_id = :pid "
+                "LEFT JOIN crm_leads l ON a.lead_id = l.id "
+                "WHERE a.partner_id = :pid AND (l.cibil_confirmed IS TRUE OR (l.cibil_score IS NOT NULL AND l.cibil_score >= 600)) "
                 "  AND a.status IN ('PENDING','RELEASED') "
                 + _vsca_status_clause +
                 "  AND NOT EXISTS ( "
