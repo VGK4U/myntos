@@ -6408,7 +6408,7 @@ function recalculateTodayPayout() {
     breakupItems.push("No Payouts for Selected Date");
   }
   
-  const payingGross = (totalAdvPaid > 0 && total >= totalAdvPaid) ? (total - totalAdvPaid) : total;
+  const payingGross = total;
   
   const postTodayPayoutEl = document.getElementById('postTodayPayout');
   if (postTodayPayoutEl) postTodayPayoutEl.value = breakupItems.map(s => s.replace(/<[^>]*>/g, '')).join(' | ');
