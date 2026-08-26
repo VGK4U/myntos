@@ -58,6 +58,7 @@ class CreateIntervalRequest(BaseModel):
     activity_type: str = Field(default="general")
     kra_entry_id: Optional[int] = None
     task_id: Optional[int] = None
+    lead_id: Optional[int] = None
     activity_title: Optional[str] = None
     activity_notes: Optional[str] = None
     interval_start: Optional[str] = None
@@ -164,7 +165,36 @@ async def start_interval(
             interval_start = datetime.fromisoformat(interval_data.interval_start.replace('Z', ''))
         except:
             pass
-    
+
+    # DC-SOLAR-KRA-001: Lead / Customer validation for Solar Application KRA
+    target_lead_id = interval_data.lead_id
+    if interval_data.kra_entry_id:
+        from app.models.staff_kra import StaffKRADailyInstance, StaffKRATemplate
+        kra_inst = db.query(StaffKRADailyInstance).filter(StaffKRADailyInstance.id == interval_data.kra_entry_id).first()
+        if kra_inst:
+            tpl = db.query(StaffKRATemplate).filter(StaffKRATemplate.id == kra_inst.kra_template_id).first()
+            is_solar_kra = tpl and (
+                tpl.kra_code == 'KRA-SOLAR-APP' or 
+                'solar application' in (tpl.title or '').lower() or
+                'solar' in (tpl.title or '').lower()
+            )
+            if is_solar_kra:
+                if not target_lead_id:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Lead / Customer selection is required to start a Solar Application KRA."
+                    )
+                from app.models.crm import CRMLead
+                lead_obj = db.query(CRMLead).filter(CRMLead.id == target_lead_id).first()
+                if not lead_obj:
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Selected Lead / Customer #{target_lead_id} was not found."
+                    )
+                # Link lead_id to daily instance
+                kra_inst.lead_id = target_lead_id
+                kra_inst.completion_status = 'in_progress'
+
     interval = StaffWorkInterval(
         attendance_id=attendance.id,
         employee_id=current_user.id,
@@ -172,6 +202,7 @@ async def start_interval(
         activity_type=interval_data.activity_type,
         kra_entry_id=interval_data.kra_entry_id,
         task_id=interval_data.task_id,
+        lead_id=target_lead_id,
         activity_title=interval_data.activity_title,
         activity_notes=interval_data.activity_notes,
         is_billable=interval_data.is_billable,

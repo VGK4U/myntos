@@ -7,6 +7,7 @@ import os
 import json
 import logging
 import datetime
+import pytz
 from datetime import timedelta
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
@@ -254,6 +255,9 @@ def generate_bi_hourly_performance_message(db: Session, slot_name: str = "Bi-Hou
 
     lb_formatted = "\n".join(lb_text_lines)
 
+    # DC-SOLAR-PEOPLE-001: Build SOLAR PEOPLE section for bi-hourly update
+    solar_section = format_solar_people_section(db)
+
     is_evening_closing = "07:30" in slot_name or "Closing" in slot_name or ist_now.hour >= 19
     header_title = "📊 *DAILY SALES FINAL CLOSING REPORT*" if is_evening_closing else f"📊 *SALES TEAM 2-HOUR UPDATE ({current_stats['time_str']})*"
 
@@ -266,10 +270,134 @@ def generate_bi_hourly_performance_message(db: Session, slot_name: str = "Bi-Hou
         f"🎯 *New Leads Intake*: {current_stats['new_leads']} leads{delta_leads_str}\n\n"
         f"🏆 *STAFF LEADERBOARD TODAY*:\n"
         f"{lb_formatted}\n\n"
+        f"{solar_section}\n\n"
         f"{'Great effort today team! Have a peaceful evening! 🌙' if is_evening_closing else 'Keep up the strong momentum team! Next update in 2 hours! 🚀'}"
     )
 
     return msg
+
+
+def get_today_solar_people_stats(db: Session, target_date=None) -> Dict[str, Any]:
+    """
+    DC-SOLAR-PEOPLE-001: Aggregates today's Solar Application KRA activity.
+    Queries active and completed Solar Application Work Intervals & Instances for today.
+    """
+    from sqlalchemy import text
+    from app.models.staff import StaffEmployee
+    from app.models.crm import CRMLead
+    from app.models.staff_work_interval import StaffWorkInterval
+    from app.models.staff_kra import StaffKRADailyInstance, StaffKRATemplate
+
+    ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
+    if not target_date:
+        target_date = ist_now.date()
+
+    target_date_str = target_date.strftime("%Y-%m-%d")
+
+    # Fetch Solar KRA template IDs
+    solar_tpl_rows = db.execute(text("""
+        SELECT id FROM staff_kra_templates
+        WHERE kra_code = 'KRA-SOLAR-APP'
+           OR LOWER(title) LIKE '%solar application%'
+           OR LOWER(title) LIKE '%solar%'
+    """)).fetchall()
+
+    solar_tpl_ids = [t[0] for t in solar_tpl_rows] if solar_tpl_rows else [-1]
+
+    # Query all work_intervals for today linked to Solar KRA or lead_id
+    intervals = db.execute(text("""
+        SELECT 
+            wi.id, wi.employee_id, wi.kra_entry_id, wi.lead_id,
+            wi.interval_start, wi.interval_end, wi.duration_minutes, wi.status,
+            e.full_name as staff_name, e.emp_code,
+            l.name as lead_name, l.phone as lead_phone, l.application_no, l.status as lead_status
+        FROM staff_work_intervals wi
+        JOIN staff_employees e ON e.id = wi.employee_id
+        LEFT JOIN staff_kra_daily_instances ki ON ki.id = wi.kra_entry_id
+        LEFT JOIN crm_leads l ON l.id = COALESCE(wi.lead_id, ki.lead_id)
+        WHERE DATE(wi.interval_start AT TIME ZONE 'Asia/Kolkata') = :tdate
+          AND (
+            ki.kra_template_id IN :tpl_ids 
+            OR wi.activity_type = 'solar'
+            OR LOWER(COALESCE(wi.activity_title, '')) LIKE '%solar%'
+            OR wi.lead_id IS NOT NULL
+          )
+        ORDER BY e.full_name, wi.interval_start ASC
+    """), {"tdate": target_date_str, "tpl_ids": tuple(solar_tpl_ids)}).fetchall()
+
+    if not intervals:
+        return {"has_activity": False, "employee_groups": [], "overall_total_seconds": 0}
+
+    # Aggregate by employee
+    emp_map = {}
+    overall_total_sec = 0
+
+    for row in intervals:
+        emp_id = row.employee_id
+        staff_name = (row.staff_name or "").strip() or row.emp_code or f"Staff #{row.employee_id}"
+        if emp_id not in emp_map:
+            emp_map[emp_id] = {
+                "staff_name": staff_name,
+                "emp_code": row.emp_code,
+                "total_seconds": 0,
+                "items": []
+            }
+
+        # Determine interval duration
+        if row.interval_end:
+            sec = max(0, int((row.interval_end - row.interval_start).total_seconds()))
+            is_active = False
+        else:
+            # Active interval — calculate live elapsed time
+            start_dt = row.interval_start
+            if not start_dt.tzinfo:
+                start_dt = pytz.timezone('Asia/Kolkata').localize(start_dt)
+            sec = max(0, int((pytz.timezone('Asia/Kolkata').localize(ist_now) - start_dt).total_seconds()))
+            is_active = True
+
+        emp_map[emp_id]["total_seconds"] += sec
+        overall_total_sec += sec
+
+        lead_label = row.lead_name or (f"Application #{row.application_no}" if row.application_no else (f"Lead #{row.lead_id}" if row.lead_id else "Solar Application"))
+        
+        emp_map[emp_id]["items"].append({
+            "lead_name": lead_label,
+            "duration_seconds": sec,
+            "duration_formatted": _format_seconds_to_hm(sec),
+            "status": "ACTIVE" if is_active else "COMPLETED"
+        })
+
+    emp_list = []
+    for emp_id, data in emp_map.items():
+        data["total_formatted"] = _format_seconds_to_hm(data["total_seconds"])
+        emp_list.append(data)
+
+    return {
+        "has_activity": True,
+        "employee_groups": emp_list,
+        "overall_total_seconds": overall_total_sec,
+        "overall_total_formatted": _format_seconds_to_hm(overall_total_sec)
+    }
+
+
+def format_solar_people_section(db: Session) -> str:
+    """
+    Renders ☀️ SOLAR PEOPLE section for bi-hourly sales update.
+    Returns zero state '☀️ SOLAR PEOPLE: 0' if no activity today.
+    """
+    stats = get_today_solar_people_stats(db)
+    if not stats["has_activity"] or not stats["employee_groups"]:
+        return "☀️ *SOLAR PEOPLE: 0*"
+
+    lines = ["☀️ *SOLAR PEOPLE*\n"]
+    for emp in stats["employee_groups"]:
+        lines.append(f"*{emp['staff_name']} — Total: {emp['total_formatted']}*")
+        for item in emp["items"]:
+            lines.append(f"• {item['lead_name']} — {item['duration_formatted']} — {item['status']}")
+        lines.append("")
+
+    lines.append(f"*Total Solar Time Today: {stats['overall_total_formatted']}*")
+    return "\n".join(lines).strip()
 
 
 def dispatch_bi_hourly_sales_performance_report(

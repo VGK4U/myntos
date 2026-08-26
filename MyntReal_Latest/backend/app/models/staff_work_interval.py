@@ -54,6 +54,7 @@ class StaffWorkInterval(Base):
     
     kra_entry_id = Column(Integer, nullable=True)
     task_id = Column(Integer, nullable=True)
+    lead_id = Column(Integer, ForeignKey('crm_leads.id', ondelete='SET NULL'), nullable=True, index=True)
     
     activity_title = Column(String(256), nullable=True)
     activity_notes = Column(Text, nullable=True)
