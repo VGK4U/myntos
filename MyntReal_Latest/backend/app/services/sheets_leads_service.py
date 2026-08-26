@@ -455,6 +455,28 @@ def _import_rows_to_crm(
             db.add(crm_lead)
             db.commit()
             result['imported'] += 1
+
+            # Dispatch 1-on-1 Customer WhatsApp Welcome & Sales Group Lead Alert Card
+            try:
+                from app.services.whatsapp_auto_service import send_lead_welcome
+                from app.services.whatsapp_group_alert_service import send_instant_new_lead_group_alert
+
+                lead_p = getattr(crm_lead, 'phone', '') or ''
+                lead_nm = (getattr(crm_lead, 'first_name', '') or getattr(crm_lead, 'name', '') or 'Prospect').strip()
+                
+                # 1. 1-on-1 Customer Welcome WhatsApp message
+                send_lead_welcome(
+                    db=db,
+                    phone=lead_p,
+                    lead_name=lead_nm,
+                    lead_id=crm_lead.id
+                )
+
+                # 2. Mynt Sales New Group Lead Alert Card
+                send_instant_new_lead_group_alert(db, crm_lead.id)
+            except Exception as _trig_err:
+                logger.warning(f"[SHEETS-IMPORT] WhatsApp trigger exception for lead #{crm_lead.id}: {_trig_err}")
+
         except Exception as e:
             db.rollback()
             result['errors'].append(str(e)[:200])
