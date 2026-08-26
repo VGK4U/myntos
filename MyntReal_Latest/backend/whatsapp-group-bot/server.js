@@ -206,6 +206,23 @@ app.get('/qr-data', (req, res) => {
     });
 });
 
+app.get('/api/list-groups', async (req, res) => {
+    if (!sock || connectionStatus !== 'connected') {
+        return res.status(503).json({ success: false, error: 'WhatsApp bot not connected' });
+    }
+    try {
+        const participating = await sock.groupFetchAllParticipating();
+        const groups = Object.values(participating || {}).map(g => ({
+            id: g.id,
+            subject: g.subject,
+            participants_count: g.participants ? g.participants.length : 0
+        }));
+        return res.json({ success: true, count: groups.length, groups });
+    } catch (e) {
+        return res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 app.get('/qr', (req, res) => {
     if (connectionStatus === 'connected') {
         return res.send(`

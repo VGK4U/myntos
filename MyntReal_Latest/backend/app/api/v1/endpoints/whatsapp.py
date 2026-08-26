@@ -3048,7 +3048,7 @@ DEFAULT_JOB_TARGETS = {
         {"id": "t1", "type": "group", "name": "Mynt Sales New", "identifier": "120363410784518818@g.us"}
     ],
     "field_staff_journey_report": [
-        {"id": "t3", "type": "group", "name": "Field Updates", "identifier": "BctONtnv8431uxxybKBEtS"}
+        {"id": "t3", "type": "group", "name": "Field Updates", "identifier": "120363428888306723@g.us"}
     ],
     "missed_call_ack": [
         {"id": "t5", "type": "direct", "name": "Customer Direct WhatsApp ACK", "identifier": "Direct Customer Mobile"}
