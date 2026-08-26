@@ -579,15 +579,15 @@
       setVal('postFiles', filesDisplay);
       setVal('postOverall', (activeFiles || m.ground_leads_count || 0) + ' LEADS');
       setVal('postTeamBreakup', `L1 Ground-Source Business Only`);
-      // Option B: Member Gross Potential Valuation
-      const potVal = (grossPotentialEarning > 0) ? grossPotentialEarning : ((m && m.potential_earning !== undefined && m.potential_earning !== null) ? m.potential_earning : 20250);
+      // Member Gross Potential Valuation (calculated from active entries)
+      const potVal = (grossPotentialEarning > 0) ? grossPotentialEarning : 20250;
       setVal('postPotential', '₹' + _meFormatInr(potVal) + '/-');
       setVal('postCustomer', customerName);
       setVal('postLocation', location);
       setVal('postSeniorName', seniorName);
       setVal('postSeniorEarning', seniorEarning);
       
-      // Option B: Senior All-Time Total Network Potential
+      // Senior All-Time Total Network Potential (calculated from active senior entries)
       const srEntries = window._seniorEntries || [];
       const srUniquePot = {};
       srEntries.forEach(se => {
@@ -600,7 +600,7 @@
         }
       });
       const srGrossPotTotal = Object.values(srUniquePot).reduce((a, b) => a + b, 0);
-      const seniorPotentialVal = (m.senior_potential_earned !== null && m.senior_potential_earned !== undefined && m.senior_potential_earned > 0) ? '₹' + _meFormatInr(m.senior_potential_earned) + '/-' : (srGrossPotTotal > 0 ? '₹' + _meFormatInr(srGrossPotTotal) + '/-' : '₹34,350/-');
+      const seniorPotentialVal = (srGrossPotTotal > 0) ? '₹' + _meFormatInr(srGrossPotTotal) + '/-' : '₹34,350/-';
       setVal('postSeniorPotential', seniorPotentialVal);
 
       const seniorNameUpper = (seniorName || '').toUpperCase().trim();
