@@ -435,44 +435,31 @@
       const photoPath = getValidPhotoPath(m);
       const resolvedUrl = resolvePosterMediaUrl(photoPath);
       if (resolvedUrl && prevImg) {
+        let triedWithoutCors = false;
         if (resolvedUrl.startsWith('http') && !resolvedUrl.includes(window.location.host)) {
           prevImg.crossOrigin = "anonymous";
         } else {
           prevImg.removeAttribute('crossorigin');
-      const photoPath = m.passport_photo || m.passport_photo_url || m.logo_path || m.profile_image || m.photo_url || m.avatar_url || m.id_card_photo || m.photo || m.profile_photo;
-        let triedWithoutCors = false;
-        prevImg.crossOrigin = "anonymous";        prevImg.onload = () => {
+        }
+        prevImg.onload = () => {
           prevImg.style.display = 'block';
           if (prevAvatar) prevAvatar.style.display = 'none';
         };
         prevImg.onerror = () => {
-          if (!prevImg.dataset.retried) {
-            prevImg.dataset.retried = 'true';
-            prevImg.src = '/kuruju_srinubabu_official.jpg?t=' + Date.now();
           if (!triedWithoutCors) {
             triedWithoutCors = true;
             try { prevImg.removeAttribute('crossOrigin'); } catch(err){}
-            prevImg.src = resolvedUrl;            return;
+            prevImg.src = resolvedUrl;
+            return;
           }
           prevImg.style.display = 'none';
           if (prevAvatar) prevAvatar.style.display = 'flex';
         };
-        delete prevImg.dataset.retried;
         prevImg.src = resolvedUrl.includes('?') ? resolvedUrl : (resolvedUrl + '?t=' + Date.now());
-      } else if (prevAvatar) {
-        if (prevImg && prevImg.src.includes('kuruju_srinubabu_official')) {
-          prevImg.style.display = 'block';
-          prevAvatar.style.display = 'none';
-        } else if (prevImg) {
-          prevImg.removeAttribute('crossorigin');
-          prevImg.onload = () => { prevImg.style.display = 'block'; if (prevAvatar) prevAvatar.style.display = 'none'; };
-          prevImg.onerror = () => { prevImg.style.display = 'none'; if (prevAvatar) prevAvatar.style.display = 'flex'; };
-          prevImg.src = '/kuruju_srinubabu_official.jpg?t=' + Date.now();
-        } else {
-          prevAvatar.style.display = 'flex';
-        }
+      } else {
         if (prevImg) prevImg.style.display = 'none';
-        prevAvatar.style.display = 'flex';      }
+        if (prevAvatar) prevAvatar.style.display = 'flex';
+      }
 
       const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
       const targetPid = m.id || partnerId;
@@ -624,33 +611,38 @@
         const seniorPhotoPath = getValidPhotoPath({
           passport_photo: m.senior_photo,
           logo_path: m.senior_passport_photo || m.senior_logo_path,
-          profile_image: m.senior_profile_image
+          profile_image: m.senior_profile_image,
+          photo_url: m.senior_photo_url,
+          avatar_url: m.senior_avatar_url
         });
         const resolvedSeniorUrl = resolvePosterMediaUrl(seniorPhotoPath);
         if (resolvedSeniorUrl) {
+          let triedSeniorWithoutCors = false;
           if (resolvedSeniorUrl.startsWith('http') && !resolvedSeniorUrl.includes(window.location.host)) {
             seniorImg.crossOrigin = "anonymous";
           } else {
             seniorImg.removeAttribute('crossorigin');
           }
-          seniorImg.onload = () => { seniorImg.style.display = 'block'; if (seniorAvatar) seniorAvatar.style.display = 'none'; };
+          seniorImg.onload = () => {
+            seniorImg.style.display = 'block';
+            if (seniorAvatar) seniorAvatar.style.display = 'none';
+          };
           seniorImg.onerror = () => {
-            if (!seniorImg.dataset.retried) {
-              seniorImg.dataset.retried = 'true';
-              seniorImg.src = '/kuruju_srinubabu_official.jpg?t=' + Date.now();
-        const seniorPhotoPath = m.senior_photo || m.senior_photo_url || m.senior_passport_photo || m.senior_passport_photo_url || m.senior_logo_path || m.senior_profile_image || m.senior_avatar_url;
-          let triedSeniorWithoutCors = false;
-          seniorImg.crossOrigin = "anonymous";
             if (!triedSeniorWithoutCors) {
               triedSeniorWithoutCors = true;
               try { seniorImg.removeAttribute('crossOrigin'); } catch(err){}
-              seniorImg.src = resolvedSeniorUrl;              return;
+              seniorImg.src = resolvedSeniorUrl;
+              return;
             }
             seniorImg.style.display = 'none';
             if (seniorAvatar) seniorAvatar.style.display = 'flex';
           };
-          delete seniorImg.dataset.retried;          seniorImg.src = resolvedSeniorUrl.includes('?') ? resolvedSeniorUrl : (resolvedSeniorUrl + '?t=' + Date.now());
+          seniorImg.src = resolvedSeniorUrl.includes('?') ? resolvedSeniorUrl : (resolvedSeniorUrl + '?t=' + Date.now());
         } else {
+          seniorImg.style.display = 'none';
+          if (seniorAvatar) seniorAvatar.style.display = 'flex';
+        }
+      }
           if (seniorImg) {
             seniorImg.removeAttribute('crossorigin');
             seniorImg.onload = () => { seniorImg.style.display = 'block'; if (seniorAvatar) seniorAvatar.style.display = 'none'; };

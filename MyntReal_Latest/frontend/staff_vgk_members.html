@@ -5952,14 +5952,25 @@ async function generateMemberPoster(partnerId) {
     const resolvedUrl = resolvePosterMediaUrl(photoPath);
     if (resolvedUrl) {
       const img = document.getElementById('prevImg');
-      img.crossOrigin = "anonymous";
+      let triedWithoutCors = false;
+      if (resolvedUrl.startsWith('http') && !resolvedUrl.includes(window.location.host)) {
+        img.crossOrigin = "anonymous";
+      } else {
+        img.removeAttribute('crossorigin');
+      }
       img.onload = () => {
         console.log("[Poster Debug] Main photo loaded successfully:", img.src);
         img.style.display = 'block';
         avatar.style.display = 'none';
       };
       img.onerror = (err) => {
-        console.error("[Poster Debug] Main photo failed to load:", img.src, err);
+        console.warn("[Poster Debug] Main photo CORS fallback retry for:", resolvedUrl);
+        if (!triedWithoutCors) {
+          triedWithoutCors = true;
+          try { img.removeAttribute('crossOrigin'); } catch(e){}
+          img.src = resolvedUrl;
+          return;
+        }
         img.style.display = 'none';
         avatar.style.display = 'flex';
       };
@@ -6101,12 +6112,26 @@ async function generateMemberPoster(partnerId) {
     const seniorImg = document.getElementById('prevSeniorImg');
     const seniorAvatar = document.getElementById('prevSeniorAvatar');
     if (seniorImg) {
-      const seniorPhotoPath = m.senior_photo || m.senior_passport_photo || m.senior_logo_path || m.senior_profile_image;
+      const seniorPhotoPath = m.senior_photo || m.senior_photo_url || m.senior_passport_photo || m.senior_logo_path || m.senior_profile_image;
       const resolvedSeniorUrl = resolvePosterMediaUrl(seniorPhotoPath);
       if (resolvedSeniorUrl) {
-        seniorImg.crossOrigin = "anonymous";
+        let triedSeniorWithoutCors = false;
+        if (resolvedSeniorUrl.startsWith('http') && !resolvedSeniorUrl.includes(window.location.host)) {
+          seniorImg.crossOrigin = "anonymous";
+        } else {
+          seniorImg.removeAttribute('crossorigin');
+        }
         seniorImg.onload = () => { seniorImg.style.display = 'block'; if (seniorAvatar) seniorAvatar.style.display = 'none'; };
-        seniorImg.onerror = () => { seniorImg.style.display = 'none'; if (seniorAvatar) seniorAvatar.style.display = 'flex'; };
+        seniorImg.onerror = () => {
+          if (!triedSeniorWithoutCors) {
+            triedSeniorWithoutCors = true;
+            try { seniorImg.removeAttribute('crossOrigin'); } catch(e){}
+            seniorImg.src = resolvedSeniorUrl;
+            return;
+          }
+          seniorImg.style.display = 'none';
+          if (seniorAvatar) seniorAvatar.style.display = 'flex';
+        };
         seniorImg.src = resolvedSeniorUrl.includes('?') ? resolvedSeniorUrl : (resolvedSeniorUrl + '?t=' + Date.now());
       } else {
         seniorImg.style.display = 'none';
