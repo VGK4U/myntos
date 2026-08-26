@@ -513,6 +513,7 @@ def list_vgk_members(
                 "COUNT(*) FILTER (WHERE status IN ('lost','cancelled')) AS lost_cancelled "
                 "FROM crm_leads "
                 "WHERE associated_partner_id = ANY(:member_ids) "
+                "AND (cibil_confirmed IS TRUE OR (cibil_score IS NOT NULL AND cibil_score >= 600)) "
                 "GROUP BY associated_partner_id"
             ), {"member_ids": member_ids}).fetchall()
             lead_stats_map = {str(r[0]): {"total": int(r[1]), "won": int(r[2]), "lost": int(r[3])} for r in lead_rows}
@@ -4285,11 +4286,13 @@ def member_earnings_dashboard(
     else:
         status_sql = ""
 
+    cibil_join_sql = " JOIN crm_leads _cbl ON _cbl.id = e.source_lead_id AND (_cbl.cibil_confirmed IS TRUE OR (_cbl.cibil_score IS NOT NULL AND _cbl.cibil_score >= 600)) "
+
     if earners_only or status_val:
         if status_sql:
-            earner_sql = f"SELECT DISTINCT partner_id FROM vgk_cash_income_entries e WHERE 1=1 {status_sql} {date_sql}"
+            earner_sql = f"SELECT DISTINCT e.partner_id FROM vgk_cash_income_entries e {cibil_join_sql} WHERE 1=1 {status_sql} {date_sql}"
         else:
-            earner_sql = f"SELECT DISTINCT partner_id FROM vgk_cash_income_entries e WHERE e.status != 'CANCELLED' {date_sql}"
+            earner_sql = f"SELECT DISTINCT e.partner_id FROM vgk_cash_income_entries e {cibil_join_sql} WHERE e.status != 'CANCELLED' {date_sql}"
         try:
             earner_rows = db.execute(text(earner_sql), date_params).fetchall()
             earner_ids = [r[0] for r in earner_rows]
@@ -4322,7 +4325,7 @@ def member_earnings_dashboard(
         try:
             inc_sql = (
                 "SELECT e.partner_id, e.status, COUNT(*), COALESCE(SUM(e.commission_amount),0), COALESCE(SUM(e.net_payout),0) "
-                "FROM vgk_cash_income_entries e " + cust_join_sql +
+                "FROM vgk_cash_income_entries e " + cibil_join_sql + cust_join_sql +
                 " WHERE e.partner_id = ANY(:ids) "
                 + date_sql + (" " + status_sql if status_val else "") +
                 " GROUP BY e.partner_id, e.status"
@@ -4344,7 +4347,7 @@ def member_earnings_dashboard(
         try:
             lvl_sql_q = (
                 "SELECT e.partner_id, e.level, COUNT(*), COALESCE(SUM(e.commission_amount),0), COALESCE(SUM(e.net_payout),0) "
-                "FROM vgk_cash_income_entries e " + cust_join_sql +
+                "FROM vgk_cash_income_entries e " + cibil_join_sql + cust_join_sql +
                 " WHERE e.partner_id = ANY(:ids) AND e.status != 'CANCELLED' "
                 + date_sql + (" " + status_sql if status_val else "") +
                 " GROUP BY e.partner_id, e.level"
@@ -4358,12 +4361,12 @@ def member_earnings_dashboard(
         except Exception:
             pass
 
-    # DC-VGK-EARN-DASH-001: Total files (non-cancelled entries) per member
+    # DC-VGK-EARN-DASH-001: Total files (non-cancelled entries for CIBIL verified leads) per member
     files_map: dict = {}
     if member_ids:
         try:
             f_sql = (
-                "SELECT e.partner_id, COUNT(*) FROM vgk_cash_income_entries e " + cust_join_sql +
+                "SELECT e.partner_id, COUNT(DISTINCT e.source_lead_id) FROM vgk_cash_income_entries e " + cibil_join_sql + cust_join_sql +
                 " WHERE e.partner_id = ANY(:ids) AND e.status != 'CANCELLED' "
                 + date_sql + (" " + status_sql if status_val else "") +
                 " GROUP BY e.partner_id"
@@ -4373,13 +4376,13 @@ def member_earnings_dashboard(
         except Exception:
             pass
 
-    # DC-VGK-L1-FILES-001: Files where member is ground source (level=1 only, non-cancelled)
+    # DC-VGK-L1-FILES-001: Files where member is ground source (level=1 only, CIBIL verified, non-cancelled)
     l1_files_map: dict = {}
     installed_files_map: dict = {}
     if member_ids:
         try:
             l1f_sql = (
-                "SELECT e.partner_id, COUNT(*) FROM vgk_cash_income_entries e " + cust_join_sql +
+                "SELECT e.partner_id, COUNT(DISTINCT e.source_lead_id) FROM vgk_cash_income_entries e " + cibil_join_sql + cust_join_sql +
                 " WHERE e.partner_id = ANY(:ids) AND e.level = 1 AND e.status != 'CANCELLED' "
                 + date_sql + (" " + status_sql if status_val else "") +
                 " GROUP BY e.partner_id"
@@ -4387,13 +4390,13 @@ def member_earnings_dashboard(
             l1f_rows = db.execute(text(l1f_sql), {"ids": member_ids, **date_params}).fetchall()
             l1_files_map = {int(r[0]): int(r[1]) for r in l1f_rows}
 
-            # Installed files (level=1 leads that reached completed / installed stage in Executive Dashboard)
+            # Installed files (level=1 leads that reached completed / installed stage in Executive Dashboard & CIBIL verified)
             inst_sql = (
                 "SELECT e.partner_id, COUNT(DISTINCT e.source_lead_id) FROM vgk_cash_income_entries e " +
-                "LEFT JOIN crm_leads l ON e.source_lead_id = l.id " +
+                cibil_join_sql +
                 cust_join_sql +
                 " WHERE e.partner_id = ANY(:ids) AND e.level = 1 AND e.status != 'CANCELLED' " +
-                " AND (l.status IN ('completed', 'installed', 'subsidy_pending') OR l.solar_pipeline_status IN ('completed', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed', 'net_meter_pending', 'balance_pending', 'balance_received')) "
+                " AND (_cbl.status IN ('completed', 'installed', 'subsidy_pending') OR _cbl.solar_pipeline_status IN ('completed', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed', 'net_meter_pending', 'balance_pending', 'balance_received')) "
                 + date_sql + (" " + status_sql if status_val else "") +
                 " GROUP BY e.partner_id"
             )
@@ -4770,10 +4773,12 @@ def member_earnings_dashboard(
     items.sort(key=_sfn, reverse=(sort_dir == 'desc'))
 
     total = len(items)
-    start = (page - 1) * page_size
-    paged_items = items[start:start + page_size]
+    page_num = page if isinstance(page, int) else 1
+    psize = page_size if isinstance(page_size, int) else 50
+    start = (page_num - 1) * psize
+    paged_items = items[start:start + psize]
 
-    return {"success": True, "total": total, "page": page, "page_size": page_size, "data": paged_items}
+    return {"success": True, "total": total, "page": page_num, "page_size": psize, "data": paged_items}
 
 
 @router.get("/dashboard/member-income-entries")

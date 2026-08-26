@@ -93,13 +93,10 @@ def check_and_create_advance(db: Session, lead_id: int) -> dict:
         if pipeline not in ELIGIBLE_STAGES:
             return {'created': False, 'reason': f'Stage {pipeline!r} not eligible'}
 
-        _bypass_cibil = pipeline in ('pending_with_bank', 'application_submitted')
-        if not lead.cibil_confirmed and not _bypass_cibil:
-            return {'created': False, 'reason': 'CIBIL not confirmed'}
-
-        score = lead.cibil_score or 0
-        if score < 700 and not _bypass_cibil:
-            return {'created': False, 'reason': f'CIBIL score {score} < 700'}
+        # Require CIBIL verification (confirmed or score >= 600) before calculating/releasing advances
+        is_cibil_valid = bool(lead.cibil_confirmed) or ((lead.cibil_score or 0) >= 600)
+        if not is_cibil_valid:
+            return {'created': False, 'reason': 'CIBIL not confirmed/verified (minimum score 600 or cibil_confirmed required)'}
 
         now = _get_ist()
         created_numbers = []
