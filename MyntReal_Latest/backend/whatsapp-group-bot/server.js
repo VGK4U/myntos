@@ -449,20 +449,9 @@ app.post('/api/send-group-message', async (req, res) => {
             }
 
             if (!destinationJid && targetType === 'group') {
-                if (targetJid) {
+                if (!req.body.groupName && !req.body.inviteCode && targetJid) {
                     destinationJid = targetJid;
                     console.log(`[WA-BOT] Used pre-resolved startup targetJid: ${destinationJid}`);
-                } else {
-                    try {
-                        const participating = await sock.groupFetchAllParticipating();
-                        const gList = Object.values(participating || {});
-                        if (gList.length > 0) {
-                            destinationJid = gList[0].id;
-                            console.log(`[WA-BOT] Fallback to participating group JID: ${destinationJid} (${gList[0].subject || 'Group'})`);
-                        }
-                    } catch (fErr) {
-                        console.warn(`[WA-BOT] Participating group fallback error:`, fErr.message);
-                    }
                 }
             }
 
