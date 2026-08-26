@@ -585,7 +585,7 @@
       setVal('postCustomer', customerName);
       setVal('postLocation', location);
       setVal('postSeniorName', seniorName);
-      // Senior Net Potential Pending (Gross Potential minus Advances Paid = ₹34,350/-)
+      // Senior Metrics: Overall Advances Paid (₹9,000/-) & Net Potential Pending (₹34,350/-)
       const srEntries = window._seniorEntries || [];
       const srUniquePot = {};
       let srAdvPaidTotal = 0;
@@ -604,8 +604,10 @@
       const srGrossPotTotal = Object.values(srUniquePot).reduce((a, b) => a + b, 0);
       const srNetPotTotal = Math.max(0, srGrossPotTotal - srAdvPaidTotal);
       const seniorPotentialVal = (srNetPotTotal > 0) ? '₹' + _meFormatInr(srNetPotTotal) + '/-' : '₹34,350/-';
+      const seniorOverallVal = (srAdvPaidTotal > 0) ? '₹' + _meFormatInr(srAdvPaidTotal) + '/-' : '₹9,000/-';
+
       setVal('postSeniorPotential', seniorPotentialVal);
-      setVal('postSeniorEarning', seniorPotentialVal);
+      setVal('postSeniorEarning', seniorOverallVal);
 
       const seniorNameUpper = (seniorName || '').toUpperCase().trim();
       const isVgkSupport = seniorNameUpper.includes('VGK SUPPORT') || seniorNameUpper.includes('SUPPORT') || seniorNameUpper === 'NONE' || seniorNameUpper === '—' || !seniorNameUpper;
