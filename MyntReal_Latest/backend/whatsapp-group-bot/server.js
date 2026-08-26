@@ -82,33 +82,40 @@ async function startWhatsAppBot() {
             currentQr = null;
             console.log("✅ WHATSAPP WEB GROUP BOT CONNECTED SUCCESSFULLY!");
 
-            // Attempt to resolve target group JID via invite code
-            try {
-                const groupInfo = await sock.groupGetInviteInfo(DEFAULT_INVITE_CODE);
-                if (groupInfo && groupInfo.id) {
-                    targetJid = groupInfo.id.includes('@g.us') ? groupInfo.id : `${groupInfo.id}@g.us`;
-                    console.log(`📌 Resolved Target Group JID: ${targetJid} (${groupInfo.subject || 'Sales Group'})`);
+            // If DEFAULT_INVITE_CODE is already a Group JID (ends with @g.us or contains @), assign directly
+            if (DEFAULT_INVITE_CODE && (DEFAULT_INVITE_CODE.includes('@g.us') || DEFAULT_INVITE_CODE.includes('@'))) {
+                targetJid = DEFAULT_INVITE_CODE;
+                console.log(`📌 Using Direct Target Group JID: ${targetJid}`);
+            } else if (DEFAULT_INVITE_CODE) {
+                try {
+                    const groupInfo = await sock.groupGetInviteInfo(DEFAULT_INVITE_CODE);
+                    if (groupInfo && groupInfo.id) {
+                        targetJid = groupInfo.id.includes('@g.us') ? groupInfo.id : `${groupInfo.id}@g.us`;
+                        console.log(`📌 Resolved Target Group JID: ${targetJid} (${groupInfo.subject || 'Sales Group'})`);
+                    }
+                } catch (err) {
+                    console.log(`ℹ️ Group invite lookup note: ${err.message}`);
                 }
-            } catch (err) {
-                console.log(`ℹ️ Group invite lookup note: ${err.message}`);
             }
         }
 
         if (connection === 'close') {
-            connectionStatus = 'disconnected';
-            currentQr = null;
             const errDetail = lastDisconnect?.error?.message || lastDisconnect?.error;
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             const isLoggedOut = (statusCode === DisconnectReason.loggedOut || statusCode === 401);
-            console.log(`⚠️ Connection closed (Status: ${statusCode}, Err: ${errDetail}). Reconnecting...`);
             
             if (isLoggedOut) {
+                connectionStatus = 'qr_ready';
+                currentQr = null;
                 console.log("🧹 Clearing stale auth_info session credentials to generate fresh QR code...");
                 try {
                     fs.rmSync(AUTH_DIR, { recursive: true, force: true });
                 } catch (e) {
                     console.error("Error clearing auth_info:", e.message);
                 }
+            } else {
+                connectionStatus = 'reconnecting';
+                console.log(`⚠️ Temporary connection reset (Status: ${statusCode}, Err: ${errDetail}). Auto-reconnecting saved session in 3s...`);
             }
             setTimeout(startWhatsAppBot, 3000);
         }
@@ -350,9 +357,12 @@ app.post('/api/send-group-message', async (req, res) => {
         }
 
         if (connectionStatus !== 'connected' || !sock) {
+            const err_msg = connectionStatus === 'reconnecting'
+                ? "WhatsApp bot is currently reconnecting. Saved credentials are valid — please retry in 5 seconds."
+                : "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr";
             return res.status(503).json({
                 success: false,
-                error: "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+                error: err_msg,
                 status: connectionStatus
             });
         }
