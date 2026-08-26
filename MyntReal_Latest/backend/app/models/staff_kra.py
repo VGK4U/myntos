@@ -132,6 +132,7 @@ class StaffKRADailyInstance(Base):
     employee_id = Column(Integer, ForeignKey('staff_employees.id', ondelete='CASCADE'), nullable=False, index=True)
     kra_assignment_id = Column(Integer, ForeignKey('staff_kra_assignments.id', ondelete='CASCADE'), nullable=False, index=True)
     kra_template_id = Column(Integer, ForeignKey('staff_kra_templates.id', ondelete='CASCADE'), nullable=False, index=True)
+    lead_id = Column(Integer, ForeignKey('crm_leads.id', ondelete='SET NULL'), nullable=True, index=True)
     
     instance_date = Column(Date, nullable=False, index=True)
     due_date = Column(Date, nullable=True, index=True)
