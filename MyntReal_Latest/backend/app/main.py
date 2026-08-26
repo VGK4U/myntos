@@ -2793,7 +2793,7 @@ def create_marketplace_tables():
                                     SELECT 1 FROM staff_employee_menu_settings s
                                     WHERE s.employee_id = e.id AND s.menu_id = :mid
                                   )
-                            """, {'mid': _m_id}))
+                            """), {'mid': _m_id})
                     conn.commit()
                     logging.info("[DC-META-ADS-BOOTSTRAP] ✅ Meta Ads menus and permissions bootstrapped across all companies")
                 except Exception as _meta_boot_err:
