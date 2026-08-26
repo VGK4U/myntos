@@ -4417,8 +4417,8 @@ def member_earnings_dashboard(
     # Bulk: Parent partner IDs
     parent_ids = list({m.parent_partner_id for m in members if m.parent_partner_id})
     
-    # Bulk: passport_photo from official_partners / kyc_document table for member and parent KYC photos
-    # Bulk: passport_photo from vgk_kyc_documents, kyc_document table, and official_partners logo_path for member & senior photos    passport_photo_map: dict = {}
+    # Bulk: passport_photo from vgk_kyc_documents, kyc_document table, and official_partners logo_path for member & senior photos
+    passport_photo_map: dict = {}
     all_photo_ids = list(set(member_ids + parent_ids))
     if all_photo_ids:
         try:
