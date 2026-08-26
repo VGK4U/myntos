@@ -6373,7 +6373,7 @@ function recalculateTodayPayout() {
   }
   
   if (breakupItems.length === 0) {
-    breakupItems.push("Stage 2 Payout: ₹5,600/-");
+    breakupItems.push("No Payouts for Selected Date");
   }
   
   const payingGross = (totalAdvPaid > 0 && total >= totalAdvPaid) ? (total - totalAdvPaid) : total;
@@ -6382,7 +6382,7 @@ function recalculateTodayPayout() {
   if (postTodayPayoutEl) postTodayPayoutEl.value = breakupItems.map(s => s.replace(/<[^>]*>/g, '')).join(' | ');
   
   const postTotalTodayEl = document.getElementById('postTotalToday');
-  if (postTotalTodayEl) postTotalTodayEl.value = '₹' + _meFormatInr(payingGross || 5600) + '/-';
+  if (postTotalTodayEl) postTotalTodayEl.value = '₹' + _meFormatInr(payingGross) + '/-';
   
   const postBonusDescEl = document.getElementById('postBonusDesc');
   if (postBonusDescEl) postBonusDescEl.value = 'Active breakups (' + periodLabel + ')';
@@ -6405,7 +6405,7 @@ function recalculateTodayPayout() {
   window._currentTotalAdvPaid = totalAdvPaid;
   const prevTotalTodayEl = document.getElementById('prevTotalToday');
   if (prevTotalTodayEl) {
-    prevTotalTodayEl.textContent = '₹' + _meFormatInr(payingGross || 5600) + '/-';
+    prevTotalTodayEl.textContent = '₹' + _meFormatInr(payingGross) + '/-';
   }
 
   const prevAlreadyPaidEl = document.getElementById('prevAlreadyPaidText');
