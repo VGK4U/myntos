@@ -1109,7 +1109,7 @@ def get_bulk_partner_potential_earning(db, partner_ids: list[int], exclude_l1: b
         SELECT 
             e.partner_id, e.id, e.source_lead_id, e.level, e.commission_amount, e.commission_pct, e.kind, e.category_id,
             l.solar_value, l.deal_value_excl_tax, l.deal_value_total, l.category_id AS lead_category_id,
-            l.solar_brand_id
+            l.solar_brand_id, l.kw_size
         FROM vgk_cash_income_entries e
         LEFT JOIN crm_leads l ON e.source_lead_id = l.id
         WHERE e.partner_id = ANY(:pids) AND e.status != 'CANCELLED'
@@ -1155,10 +1155,18 @@ def get_bulk_partner_potential_earning(db, partner_ids: list[int], exclude_l1: b
             _sv = float(r.solar_value or 0.0)
             _dvet = float(r.deal_value_excl_tax or 0.0)
             _dvt_val = float(r.deal_value_total or 0.0)
+            _kw = str(getattr(r, 'kw_size', '') or "").strip()
             
             lead_val = _sv if _sv > 0 else (_dvet if _dvet > 0 else _dvt_val)
             if lead_val <= 0:
-                lead_val = commission_base
+                if _kw == "3":
+                    lead_val = 190000.0
+                elif _kw == "5":
+                    lead_val = 300000.0
+                elif _kw == "10":
+                    lead_val = 566000.0
+                else:
+                    lead_val = 190000.0 if (r.lead_category_id == 19 or r.category_id == 19) else commission_base
                 
             cat_id = r.lead_category_id or r.category_id
             config = config_map.get(cat_id)

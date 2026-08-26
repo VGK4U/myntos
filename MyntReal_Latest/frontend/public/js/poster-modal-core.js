@@ -271,7 +271,7 @@
               <!-- Potential Pending Card -->
               <div style="background:linear-gradient(135deg, rgba(112,26,117,0.88), rgba(131,24,67,0.88));border:1.5px solid #f472b6;border-radius:12px;padding:6px 2px;text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;min-height:60px;box-sizing:border-box">
                 <div style="font-size:8px;font-weight:900;color:#fbcfe8;text-transform:uppercase;letter-spacing:0.2px;line-height:1;white-space:nowrap">💰 POTENTIAL PENDING</div>
-                <div id="prevPotential" style="display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:950;color:#ffffff;line-height:1;white-space:nowrap">₹1,41,550/-</div>
+                <div id="prevPotential" style="display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:950;color:#ffffff;line-height:1;white-space:nowrap">₹20,250/-</div>
                 <div style="font-size:8px;font-weight:800;color:#fbcfe8;letter-spacing:0.2px;line-height:1;white-space:nowrap">EXPECTED EARNING</div>
               </div>
             </div>
@@ -945,6 +945,7 @@
 
     setTxt('prevOverall', getVal('postOverall'));
     setTxt('prevTeamBreakup', getVal('postTeamBreakup'));
+    setTxt('prevPotential', getVal('postPotential'));
     setTxt('prevCustomer', getVal('postCustomer').toUpperCase());
     setTxt('prevLocation', getVal('postLocation').toUpperCase());
 
