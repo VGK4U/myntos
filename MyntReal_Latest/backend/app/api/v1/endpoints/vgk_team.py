@@ -6283,3 +6283,44 @@ async def get_advance_cap_status(
     info = get_cap_status(db, partner_id, company_id)
     return {"success": True, "cap_status": info}
 
+
+@router.get("/storage/dataurl")
+def get_storage_file_as_data_url(path: str, db: Session = Depends(get_db)):
+    """
+    Returns Base64 Data URL for any storage media path.
+    Prevents CORS canvas tainting when generating client-side achievement posters.
+    """
+    from app.services.object_storage import storage_service
+    import base64
+    import mimetypes
+
+    clean_path = path.strip().lstrip('/')
+    if clean_path.startswith('storage/'):
+        clean_path = clean_path[8:]
+
+    file_data = storage_service.download_file(clean_path)
+    if not file_data:
+        from pathlib import Path
+        local_path = Path(__file__).parent.parent.parent.parent / "storage" / clean_path
+        if local_path.exists():
+            file_data = local_path.read_bytes()
+
+    if not file_data:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    mime_type, _ = mimetypes.guess_type(clean_path)
+    if not mime_type:
+        if clean_path.lower().endswith(('.jpg', '.jpeg')):
+            mime_type = "image/jpeg"
+        elif clean_path.lower().endswith('.png'):
+            mime_type = "image/png"
+        elif clean_path.lower().endswith('.webp'):
+            mime_type = "image/webp"
+        else:
+            mime_type = "image/png"
+
+    b64_str = base64.b64encode(file_data).decode('utf-8')
+    data_url = f"data:{mime_type};base64,{b64_str}"
+    return {"success": True, "path": clean_path, "data_url": data_url}
+
+

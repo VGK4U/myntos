@@ -968,6 +968,7 @@
     if (!container) return;
     const imgs = Array.from(container.querySelectorAll('img'));
     const tok = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token');
+    const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
 
     await Promise.all(imgs.map(async (img) => {
       try {
@@ -975,24 +976,61 @@
         if (!src || src.startsWith('data:')) return;
 
         let dataUrl = null;
-        try {
-          const fetchUrl = (src.startsWith('/') && !src.startsWith('//')) ? (window.location.origin + src) : src;
-          const headers = {};
-          if (tok) headers['Authorization'] = 'Bearer ' + tok;
-          const res = await fetch(fetchUrl, { headers, mode: 'cors', credentials: 'omit' });
-          if (res.ok) {
-            const blob = await res.blob();
-            dataUrl = await new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result);
-              reader.onerror = () => resolve(null);
-              reader.readAsDataURL(blob);
-            });
+
+        // Extract relative path from src
+        let relPath = src;
+        if (relPath.includes('/storage/')) {
+          relPath = relPath.split('/storage/')[1];
+        } else if (relPath.startsWith('http://') || relPath.startsWith('https://')) {
+          try {
+            const u = new URL(relPath);
+            relPath = u.pathname.replace(/^\/storage\//, '').replace(/^\//, '');
+          } catch(e){}
+        } else if (relPath.startsWith('/')) {
+          relPath = relPath.replace(/^\/storage\//, '').replace(/^\//, '');
+        }
+        if (relPath.includes('?')) relPath = relPath.split('?')[0];
+
+        // Strategy 1: Fetch Base64 Data URL via backend API /vgk/storage/dataurl (bypasses CORS/S3 redirects)
+        if (relPath && relPath.length > 3) {
+          try {
+            const endpoint = `${apiBase}/vgk/storage/dataurl?path=${encodeURIComponent(relPath)}`;
+            const headers = {};
+            if (tok) headers['Authorization'] = 'Bearer ' + tok;
+            const res = await fetch(endpoint, { headers });
+            if (res.ok) {
+              const json = await res.json();
+              if (json && json.success && json.data_url) {
+                dataUrl = json.data_url;
+              }
+            }
+          } catch (apiErr) {
+            console.warn("[Poster DataURL API] Endpoint fetch failed for:", relPath, apiErr);
           }
-        } catch (fErr) {
-          console.warn("[Poster DataURL] Fetch blob failed for:", src, fErr);
         }
 
+        // Strategy 2: Direct fetch blob fallback
+        if (!dataUrl) {
+          try {
+            const fetchUrl = (src.startsWith('/') && !src.startsWith('//')) ? (window.location.origin + src) : src;
+            const headers = {};
+            if (tok) headers['Authorization'] = 'Bearer ' + tok;
+            const res = await fetch(fetchUrl, { headers, mode: 'cors', credentials: 'omit' });
+            if (res.ok) {
+              const blob = await res.blob();
+              dataUrl = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(blob);
+              });
+            }
+          } catch (fErr) {
+            console.warn("[Poster DataURL] Fetch blob failed for:", src, fErr);
+          }
+        }
+
+        // Strategy 3: Offscreen canvas drawing if fetch blob failed & image loaded
         if (!dataUrl && img.complete && img.naturalWidth > 0) {
           try {
             const cvs = document.createElement('canvas');
@@ -1181,15 +1219,32 @@
   function downloadPoster() {
     const container = document.getElementById('posterCanvasWrapper');
     const partnerName = document.getElementById('prevSubtitle')?.textContent?.trim() || 'Channel_Partner';
+    const spinner = document.getElementById('posterSpinner');
+    if (spinner) spinner.style.display = 'flex';
+
     capturePosterCanvas(container).then(canvas => {
-      if (!canvas) return;
-      const dataUrl = safeToDataURL(canvas);
+      if (spinner) spinner.style.display = 'none';
+      if (!canvas) { alert('Could not generate poster canvas.'); return; }
+      let dataUrl = safeToDataURL(canvas);
+      if (!dataUrl) {
+        try {
+          const cvs = document.createElement('canvas');
+          cvs.width = canvas.width;
+          cvs.height = canvas.height;
+          const ctx = cvs.getContext('2d');
+          ctx.drawImage(canvas, 0, 0);
+          dataUrl = cvs.toDataURL('image/png');
+        } catch(e){}
+      }
       if (!dataUrl) { alert('Failed to generate poster download image.'); return; }
       const link = document.createElement('a');
       link.download = `${partnerName.replace(/\s+/g, '_')}_Achievement_Poster.png`;
       link.href = dataUrl;
       link.click();
-    }).catch(err => alert('Failed to download image: ' + err.message));
+    }).catch(err => {
+      if (spinner) spinner.style.display = 'none';
+      alert('Failed to download image: ' + err.message);
+    });
   }
 
   function sharePoster() {
