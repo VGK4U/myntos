@@ -536,9 +536,14 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(
 
     report_msg = format_field_journey_whatsapp_message(stats)
 
-    # 1. Post to Target WhatsApp Group (BctONtnv8431uxxybKBEtS)
+    # 1. Post to Target WhatsApp Group (Field Updates: 120363428888306723@g.us / BctONtnv8431uxxybKBEtS)
     group_result = False
-    group_res = send_group_bot_message(message_text=report_msg, invite_code="BctONtnv8431uxxybKBEtS")
+    group_res = send_group_bot_message(
+        message_text=report_msg,
+        invite_code="BctONtnv8431uxxybKBEtS",
+        group_name="Field Updates",
+        group_id="120363428888306723@g.us"
+    )
     if group_res.get("success"):
         group_result = True
         logger.info("[FIELD-REPORT] Successfully posted report to WhatsApp group BctONtnv8431uxxybKBEtS")

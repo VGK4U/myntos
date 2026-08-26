@@ -34,8 +34,8 @@ def extract_invite_code(url_or_code: str) -> str:
 def send_group_bot_message(
     message_text: str,
     invite_code: str = DEFAULT_INVITE_CODE,
-    group_name: Optional[str] = "Mynt Sales New",
-    group_id: Optional[str] = "120363410784518818@g.us"
+    group_name: Optional[str] = None,
+    group_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Sends message payload to WhatsApp Web Group Bot Gateway with IPv4/IPv6 & env-var fallback.
@@ -43,10 +43,12 @@ def send_group_bot_message(
     clean_code = extract_invite_code(invite_code)
     payload = {
         "message": message_text,
-        "inviteCode": clean_code or invite_code,
-        "groupName": group_name or "Mynt Sales New",
-        "groupId": group_id or "120363410784518818@g.us"
+        "inviteCode": clean_code or invite_code
     }
+    if group_name:
+        payload["groupName"] = group_name
+    if group_id:
+        payload["groupId"] = group_id
     
     env_url = os.getenv("WHATSAPP_BOT_URL") or os.getenv("WA_BOT_URL") or os.getenv("WA_GROUP_BOT_URL")
     urls = []
