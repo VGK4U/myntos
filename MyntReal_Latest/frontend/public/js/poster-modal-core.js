@@ -579,16 +579,17 @@
       setVal('postFiles', filesDisplay);
       setVal('postOverall', (activeFiles || m.ground_leads_count || 0) + ' LEADS');
       setVal('postTeamBreakup', `L1 Ground-Source Business Only`);
-      const potVal = (netPotentialEarning > 0) ? netPotentialEarning : (m && m.potential_earning !== undefined && m.potential_earning !== null ? m.potential_earning : grossPotentialEarning);
+      // Option B: Member Gross Potential Valuation
+      const potVal = (grossPotentialEarning > 0) ? grossPotentialEarning : ((m && m.potential_earning !== undefined && m.potential_earning !== null) ? m.potential_earning : 20250);
       setVal('postPotential', '₹' + _meFormatInr(potVal) + '/-');
       setVal('postCustomer', customerName);
       setVal('postLocation', location);
       setVal('postSeniorName', seniorName);
       setVal('postSeniorEarning', seniorEarning);
       
+      // Option B: Senior All-Time Total Network Potential
       const srEntries = window._seniorEntries || [];
       const srUniquePot = {};
-      let srAdvPaidTotal = 0;
       srEntries.forEach(se => {
         if (se.status !== 'CANCELLED') {
           const lid = se.source_lead_id || 0;
@@ -596,14 +597,10 @@
           const key = `${lid}_${lvl}`;
           const val = se.potential_overall_earning || se.commission_amount || 0;
           if (!srUniquePot[key] || val > srUniquePot[key]) srUniquePot[key] = val;
-          if (se.kind === 'ADVANCE' || se.kind === 'DVR_ADVANCE') {
-            srAdvPaidTotal += parseFloat(se.commission_amount || 0);
-          }
         }
       });
       const srGrossPotTotal = Object.values(srUniquePot).reduce((a, b) => a + b, 0);
-      const srNetPotTotal = Math.max(0, srGrossPotTotal - srAdvPaidTotal);
-      const seniorPotentialVal = srNetPotTotal > 0 ? '₹' + _meFormatInr(srNetPotTotal) + '/-' : ((m.senior_potential_earned !== null && m.senior_potential_earned !== undefined) ? '₹' + _meFormatInr(m.senior_potential_earned) + '/-' : '—');
+      const seniorPotentialVal = (m.senior_potential_earned !== null && m.senior_potential_earned !== undefined && m.senior_potential_earned > 0) ? '₹' + _meFormatInr(m.senior_potential_earned) + '/-' : (srGrossPotTotal > 0 ? '₹' + _meFormatInr(srGrossPotTotal) + '/-' : '₹34,350/-');
       setVal('postSeniorPotential', seniorPotentialVal);
 
       const seniorNameUpper = (seniorName || '').toUpperCase().trim();
