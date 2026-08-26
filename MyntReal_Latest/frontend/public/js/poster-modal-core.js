@@ -964,9 +964,110 @@
     }
   }
 
+  async function convertPosterImagesToDataURLs(container) {
+    if (!container) return;
+    const imgs = Array.from(container.querySelectorAll('img'));
+    const tok = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token');
+
+    await Promise.all(imgs.map(async (img) => {
+      try {
+        const src = img.getAttribute('src') || img.src;
+        if (!src || src.startsWith('data:')) return;
+
+        let dataUrl = null;
+        try {
+          const fetchUrl = (src.startsWith('/') && !src.startsWith('//')) ? (window.location.origin + src) : src;
+          const headers = {};
+          if (tok) headers['Authorization'] = 'Bearer ' + tok;
+          const res = await fetch(fetchUrl, { headers, mode: 'cors', credentials: 'omit' });
+          if (res.ok) {
+            const blob = await res.blob();
+            dataUrl = await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.onerror = () => resolve(null);
+              reader.readAsDataURL(blob);
+            });
+          }
+        } catch (fErr) {
+          console.warn("[Poster DataURL] Fetch blob failed for:", src, fErr);
+        }
+
+        if (!dataUrl && img.complete && img.naturalWidth > 0) {
+          try {
+            const cvs = document.createElement('canvas');
+            cvs.width = img.naturalWidth;
+            cvs.height = img.naturalHeight;
+            const ctx = cvs.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            dataUrl = cvs.toDataURL('image/png');
+          } catch (cErr) {
+            console.warn("[Poster DataURL] Canvas draw failed for:", src, cErr);
+          }
+        }
+
+        if (dataUrl && dataUrl.startsWith('data:')) {
+          img.src = dataUrl;
+          img.removeAttribute('crossorigin');
+        }
+      } catch (err) {
+        console.warn("[Poster DataURL] Failed to convert img:", err);
+      }
+    }));
+  }
+
+  function safeToDataURL(canvas) {
+    if (!canvas) return null;
+    try {
+      return canvas.toDataURL('image/png');
+    } catch (err) {
+      console.warn("[Poster export] safeToDataURL primary failed:", err);
+      try {
+        const cvs = document.createElement('canvas');
+        cvs.width = canvas.width;
+        cvs.height = canvas.height;
+        const ctx = cvs.getContext('2d');
+        ctx.drawImage(canvas, 0, 0);
+        return cvs.toDataURL('image/png');
+      } catch (err2) {
+        console.error("[Poster export] safeToDataURL fallback failed:", err2);
+        return null;
+      }
+    }
+  }
+
+  function safeToBlob(canvas, callback, type = 'image/png') {
+    if (!canvas) { callback(null); return; }
+    try {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          callback(blob);
+        } else {
+          const dUrl = safeToDataURL(canvas);
+          if (dUrl) {
+            fetch(dUrl).then(r => r.blob()).then(b => callback(b)).catch(() => callback(null));
+          } else {
+            callback(null);
+          }
+        }
+      }, type);
+    } catch (err) {
+      console.warn("[Poster export] safeToBlob primary failed:", err);
+      const dUrl = safeToDataURL(canvas);
+      if (dUrl) {
+        fetch(dUrl).then(r => r.blob()).then(b => callback(b)).catch(() => callback(null));
+      } else {
+        callback(null);
+      }
+    }
+  }
+
   async function capturePosterCanvas(container) {
     if (!container) container = document.getElementById('posterCanvasWrapper');
     if (!container) return null;
+
+    // Convert all img tags in poster DOM to Base64 Data URLs before html2canvas
+    await convertPosterImagesToDataURLs(container);
 
     const w = container.scrollWidth || 480;
     const h = container.scrollHeight || 780;
@@ -974,7 +1075,7 @@
     try {
       return await window.html2canvas(container, {
         useCORS: true,
-        allowTaint: false,
+        allowTaint: true,
         scale: 2,
         width: w,
         height: h,
@@ -1052,11 +1153,7 @@
     try {
       const canvas = await capturePosterCanvas(container);
       if (canvas) {
-        try {
-          dataUrl = canvas.toDataURL('image/png');
-        } catch (cErr) {
-          console.warn("Poster toDataURL failed:", cErr);
-        }
+        dataUrl = safeToDataURL(canvas);
       }
     } catch (capErr) {
       console.warn("capturePosterCanvas error:", capErr);
@@ -1086,9 +1183,11 @@
     const partnerName = document.getElementById('prevSubtitle')?.textContent?.trim() || 'Channel_Partner';
     capturePosterCanvas(container).then(canvas => {
       if (!canvas) return;
+      const dataUrl = safeToDataURL(canvas);
+      if (!dataUrl) { alert('Failed to generate poster download image.'); return; }
       const link = document.createElement('a');
       link.download = `${partnerName.replace(/\s+/g, '_')}_Achievement_Poster.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = dataUrl;
       link.click();
     }).catch(err => alert('Failed to download image: ' + err.message));
   }
@@ -1103,7 +1202,7 @@
     capturePosterCanvas(container).then(canvas => {
       if (spinner) spinner.style.display = 'none';
       if (!canvas) return;
-      canvas.toBlob(blob => {
+      safeToBlob(canvas, (blob) => {
         if (!blob) { alert('Failed to generate image file.'); return; }
         const file = new File([blob], `${partnerName.replace(/\s+/g, '_')}_Achievement.png`, { type: 'image/png' });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -1157,14 +1256,17 @@
       if (spinner) spinner.style.display = 'none';
       if (!canvas) { if (shareWindow) shareWindow.close(); return; }
 
-      try {
-        const link = document.createElement('a');
-        link.download = `${partnerName.replace(/\s+/g, '_')}_Achievement_Poster.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-      } catch (e) {}
+      const dUrl = safeToDataURL(canvas);
+      if (dUrl) {
+        try {
+          const link = document.createElement('a');
+          link.download = `${partnerName.replace(/\s+/g, '_')}_Achievement_Poster.png`;
+          link.href = dUrl;
+          link.click();
+        } catch (e) {}
+      }
 
-      canvas.toBlob(async (blob) => {
+      safeToBlob(canvas, async (blob) => {
         if (!blob) { alert('Failed to generate sharing image.'); if (shareWindow) shareWindow.close(); return; }
         try {
           if (navigator.clipboard && window.ClipboardItem) {
