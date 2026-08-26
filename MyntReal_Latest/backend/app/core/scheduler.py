@@ -4700,18 +4700,17 @@ def init_scheduler():
     from app.core.scheduler_retry_dispatcher import init_retry_dispatcher_schedule
     init_retry_dispatcher_schedule(scheduler)
 
-    # ── Lead Sync — 4 daily slots (IST) ───────────────────────────────────────
-    for _slot, _hour in [('9am', 9), ('12pm', 12), ('3pm', 15), ('6pm', 18)]:
-        scheduler.add_job(
-            run_daily_lead_sync,
-            CronTrigger(hour=_hour, minute=0, timezone='Asia/Kolkata'),
-            id=f'lead_sync_{_slot}',
-            name=f'Lead Sync {_slot.upper()} IST',
-            replace_existing=True,
-            misfire_grace_time=3600,
-            kwargs={'slot': _slot}
-        )
-    logger.info("   📊 Lead sync scheduled at 9AM, 12PM, 3PM, 6PM IST")
+    # ── Lead Sync — Hourly interval (9:30 AM to 9:30 PM IST) ─────────────────────
+    scheduler.add_job(
+        run_daily_lead_sync,
+        CronTrigger(hour='9,10,11,12,13,14,15,16,17,18,19,20,21', minute=30, timezone='Asia/Kolkata'),
+        id='lead_sync_hourly_window',
+        name='Lead Sync Hourly Window (09:30 AM to 09:30 PM IST)',
+        replace_existing=True,
+        misfire_grace_time=3600,
+        kwargs={'slot': 'manual'}
+    )
+    logger.info("   📊 Lead sync scheduled hourly from 9:30 AM to 9:30 PM IST")
 
     # WhatsApp DC Protocol: Staff daily morning reminder at 8:00 AM IST (Mon-Sat)
     scheduler.add_job(
