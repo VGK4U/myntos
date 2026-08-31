@@ -73,6 +73,31 @@ class PlatformInvoice(Base):
     wvv_hash            = Column(String(255), nullable=True)
     billing_company_id  = Column(Integer, ForeignKey("associated_companies.id"), nullable=True)
     so_number           = Column(String(64), nullable=True)
+    razorpay_order_id   = Column(String(120), unique=True, index=True, nullable=True)
+
+    @property
+    def invoice_type(self) -> str:
+        if self.status == "paid" or (self.invoice_number and self.invoice_number.startswith("INV-")):
+            return "tax_invoice"
+        return "pro_forma"
+
+    @property
+    def is_pro_forma(self) -> bool:
+        return self.invoice_type == "pro_forma"
+
+    @property
+    def tax_invoice_number(self) -> Optional[str]:
+        if self.invoice_type == "tax_invoice":
+            return self.invoice_number
+        return None
+
+    @property
+    def pro_forma_number(self) -> str:
+        return self.so_number or self.invoice_number
+
+    @property
+    def document_title(self) -> str:
+        return "GST TAX INVOICE" if self.invoice_type == "tax_invoice" else "PRO FORMA INVOICE"
 
 
 class PlatformInvoiceLine(Base):
@@ -99,14 +124,15 @@ class PlatformInvoiceLine(Base):
 
 class PlatformPayment(Base):
     __tablename__ = "platform_payments"
-    id           = Column(Integer, primary_key=True)
-    client_id    = Column(Integer, ForeignKey("platform_clients.id"), nullable=False)
-    invoice_id   = Column(Integer, ForeignKey("platform_invoices.id"))
-    amount       = Column(Numeric(14, 2), nullable=False)
-    currency     = Column(String(8), nullable=False, default="INR")
-    method       = Column(String(40))
-    reference    = Column(String(120))
-    received_on  = Column(Date, nullable=False, server_default=func.current_date())
-    notes        = Column(Text)
-    recorded_by  = Column(Integer)
-    created_at   = Column(DateTime(timezone=True), server_default=func.now())
+    id                  = Column(Integer, primary_key=True)
+    client_id           = Column(Integer, ForeignKey("platform_clients.id"), nullable=False)
+    invoice_id          = Column(Integer, ForeignKey("platform_invoices.id"))
+    amount              = Column(Numeric(14, 2), nullable=False)
+    currency            = Column(String(8), nullable=False, default="INR")
+    method              = Column(String(40))
+    reference           = Column(String(120))
+    gateway_payment_id  = Column(String(120), unique=True, index=True, nullable=True)
+    received_on         = Column(Date, nullable=False, server_default=func.current_date())
+    notes               = Column(Text)
+    recorded_by         = Column(Integer)
+    created_at          = Column(DateTime(timezone=True), server_default=func.now())

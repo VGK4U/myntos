@@ -6,6 +6,17 @@
     <title>VGK4U Channel Partner Portal</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        try {
+            localStorage.removeItem('vgk_token');
+            localStorage.removeItem('vgk_partner');
+            document.cookie = "vgk_token=; path=/; max-age=0;";
+            document.cookie = "session_token=; path=/; max-age=0;";
+            Object.keys(localStorage).forEach(k => {
+                if (k.startsWith('vgk_earn_cache')) localStorage.removeItem(k);
+            });
+        } catch(e) {}
+    </script>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -878,6 +889,11 @@
             if (data.success && data.access_token) {
                 localStorage.setItem('vgk_token', data.access_token);
                 localStorage.setItem('vgk_partner', JSON.stringify(data.partner || {}));
+                try {
+                    Object.keys(localStorage).forEach(k => {
+                        if (k.startsWith('vgk_earn_cache')) localStorage.removeItem(k);
+                    });
+                } catch(e) {}
                 if (data.requires_terms_acceptance && data.terms_and_conditions) {
                     showVGKTCModal(data.terms_and_conditions, data.access_token);
                 } else {

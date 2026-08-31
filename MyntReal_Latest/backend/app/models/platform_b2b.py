@@ -59,7 +59,7 @@ class PlatformClient(BaseModel):
     updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
 
     __table_args__ = (
-        CheckConstraint("status IN ('active','suspended','archived','trial')", name='platform_client_status_check'),
+        CheckConstraint("status IN ('active','suspended','archived','trial','pending')", name='platform_client_status_check'),
         CheckConstraint("billing_currency IN ('INR','USD')", name='platform_client_currency_check'),
     )
 
@@ -173,7 +173,7 @@ class PlatformSubscription(BaseModel):
     __table_args__ = (
         CheckConstraint("billing_currency IN ('INR','USD')", name='platform_sub_currency_check'),
         CheckConstraint("billing_cycle IN ('monthly','annual')", name='platform_sub_cycle_check'),
-        CheckConstraint("status IN ('trial','active','suspended','cancelled')", name='platform_sub_status_check'),
+        CheckConstraint("status IN ('trial','active','suspended','cancelled','pending_payment')", name='platform_sub_status_check'),
         CheckConstraint("seat_count >= 1", name='platform_sub_seat_count_check'),
     )
 

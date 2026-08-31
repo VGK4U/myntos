@@ -10,11 +10,19 @@ if [ -f "$SCRIPT_DIR/.env" ]; then
     export $(grep -v '^#' "$SCRIPT_DIR/.env" | xargs)
 fi
 
-# Set fallback database to postgres if not set
-if [ -z "$DATABASE_URL" ] && [ -z "$PROD_DATABASE_URL" ]; then
-    export DATABASE_URL="postgresql://127.0.0.1:5433/myntreal_dev"
-    echo "Using local PostgreSQL database at: $DATABASE_URL"
+# Ensure local PostgreSQL on port 5433 is running
+if ! /opt/homebrew/opt/postgresql@16/bin/pg_ctl -D "$SCRIPT_DIR/postgres_data" status > /dev/null 2>&1; then
+    echo "Starting local PostgreSQL on port 5433..."
+    /opt/homebrew/opt/postgresql@16/bin/pg_ctl -D "$SCRIPT_DIR/postgres_data" -l "$SCRIPT_DIR/postgres_data/server.log" -o "-p 5433 -h 127.0.0.1" start
+    sleep 2
+else
+    echo "Local PostgreSQL is already running on port 5433."
 fi
+
+# Always use local PostgreSQL for local development to prevent AWS RDS network timeouts
+export DATABASE_URL="postgresql://127.0.0.1:5433/myntreal_dev"
+export PROD_DATABASE_URL="postgresql://127.0.0.1:5433/myntreal_dev"
+echo "Using local database: $DATABASE_URL"
 
 if [ -z "$SECRET_KEY" ]; then
     export SECRET_KEY="dev-secret-key-123"

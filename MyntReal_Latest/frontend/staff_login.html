@@ -474,23 +474,19 @@
     <script>
         function resolveApiUrl(url) {
             if (!url) return url;
-            if (window.location.port === '5001' || window.location.port === '8000') {
-                return url;
-            }
-            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
-            if (isLocalhost && url.startsWith('/api/')) {
-                const host = window.location.hostname && window.location.hostname !== '' ? window.location.hostname : '127.0.0.1';
-                return 'http://' + host + ':5001' + url;
+            if (window.location.protocol === 'file:') {
+                return 'http://127.0.0.1:5001' + url;
             }
             return url;
         }
 
         // DC Protocol: Fetch with retry and timeout for production resilience
-        async function fetchWithRetry(url, options = {}, maxRetries = 3, delay = 1000) {
+        async function fetchWithRetry(url, options = {}, maxRetries = 2, delay = 800) {
             const finalUrl = resolveApiUrl(url);
+            let lastErrorMsg = '';
             for (let i = 0; i < maxRetries; i++) {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000);
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
                 try {
                     const reqOptions = { ...options, signal: controller.signal };
                     const response = await fetch(finalUrl, reqOptions);
@@ -498,18 +494,19 @@
                     if (response.ok || response.status < 500) {
                         return response;
                     }
+                    lastErrorMsg = `HTTP status ${response.status}`;
                     console.warn(`⚠️ Retry ${i + 1}/${maxRetries} for ${finalUrl} (status: ${response.status})`);
                 } catch (error) {
                     clearTimeout(timeoutId);
                     const isAbort = error.name === 'AbortError';
-                    const msg = isAbort ? 'Request timed out after 15s' : error.message;
-                    console.warn(`⚠️ Retry ${i + 1}/${maxRetries} for ${finalUrl}: ${msg}`);
+                    lastErrorMsg = isAbort ? 'Request timed out (8s)' : (error.message || 'Network error');
+                    console.warn(`⚠️ Retry ${i + 1}/${maxRetries} for ${finalUrl}: ${lastErrorMsg}`);
                 }
                 if (i < maxRetries - 1) {
                     await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
                 }
             }
-            throw new Error('Connection timed out or failed after ' + maxRetries + ' retries. Please check network/backend.');
+            throw new Error(`Connection failed (${lastErrorMsg || 'backend unreachable'}). Please ensure backend is running.`);
         }
         
         let pendingNdaData = null;

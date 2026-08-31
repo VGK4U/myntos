@@ -240,6 +240,66 @@ class PermissionsRuntime {
     }
   }
 
+  private showProminentCallLogDisclosureModal(): Promise<boolean> {
+    return new Promise((resolve) => {
+      const existing = document.getElementById('mnr-calllog-disclosure-modal');
+      if (existing) existing.remove();
+
+      const modalEl = document.createElement('div');
+      modalEl.id = 'mnr-calllog-disclosure-modal';
+      modalEl.style.cssText = `
+        position: fixed; inset: 0; z-index: 999999;
+        background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px);
+        display: flex; align-items: center; justify-content: center;
+        padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      `;
+
+      modalEl.innerHTML = `
+        <div style="
+          background: #ffffff; color: #1e293b; border-radius: 16px;
+          max-width: 420px; width: 100%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);
+          border-top: 5px solid #1a3c6e;
+        ">
+          <div style="font-size: 32px; text-align: center; margin-bottom: 8px;">📞</div>
+          <h3 style="font-size: 18px; font-weight: 700; color: #1a3c6e; text-align: center; margin-bottom: 12px;">
+            Workforce CRM Call Synchronization
+          </h3>
+          <p style="font-size: 14px; line-height: 1.5; color: #334155; margin-bottom: 12px;">
+            MyntReal accesses your device call log to <strong>automatically identify customer phone numbers</strong>, <strong>match them with your assigned CRM leads</strong>, and <strong>record call duration/timestamps for staff sales activity tracking</strong>.
+          </p>
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+            <p style="font-size: 13px; line-height: 1.4; color: #166534; margin: 0;">
+              🔒 <strong>Privacy Assurance:</strong> Call log data is used solely for CRM activity notes. Your call recordings are never extracted from call logs, and personal call records outside CRM leads are never sold or shared.
+            </p>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 18px;">
+            <button id="mnr-calllog-btn-deny" style="
+              flex: 1; padding: 12px; border: 1px solid #cbd5e1; background: #f8fafc;
+              color: #64748b; font-weight: 600; border-radius: 8px; font-size: 14px; cursor: pointer;
+            ">Not Now</button>
+            <button id="mnr-calllog-btn-agree" style="
+              flex: 2; padding: 12px; border: none; background: #1a3c6e;
+              color: #ffffff; font-weight: 600; border-radius: 8px; font-size: 14px; cursor: pointer;
+            ">Agree & Continue</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modalEl);
+
+      document.getElementById('mnr-calllog-btn-agree')?.addEventListener('click', () => {
+        modalEl.remove();
+        localStorage.setItem('dc_calllog_prompt_shown', 'true');
+        resolve(true);
+      });
+
+      document.getElementById('mnr-calllog-btn-deny')?.addEventListener('click', () => {
+        modalEl.remove();
+        resolve(false);
+      });
+    });
+  }
+
   async requestPermission(type: PermissionType): Promise<PermissionStatus> {
     try {
       let status: PermissionStatus;
@@ -260,6 +320,13 @@ class PermissionsRuntime {
           break;
 
         case 'callLog':
+          if (localStorage.getItem('dc_calllog_prompt_shown') !== 'true') {
+            const agreed = await this.showProminentCallLogDisclosureModal();
+            if (!agreed) {
+              this.permissions.callLog = 'denied';
+              return 'denied';
+            }
+          }
           status = await this.requestNativePermission('READ_CALL_LOG');
           this.permissions.callLog = status;
           break;
@@ -270,7 +337,8 @@ class PermissionsRuntime {
           break;
 
         case 'phoneState':
-          status = await this.requestNativePermission('READ_PHONE_STATE');
+          // READ_PHONE_STATE removed for Google Play Store compliance - call tracking uses READ_CALL_LOG
+          status = 'granted';
           this.permissions.phoneState = status;
           break;
 
@@ -463,7 +531,7 @@ class PermissionsRuntime {
   async ensureCallTrackingPermissions(): Promise<{ callLog: boolean; storage: boolean; phoneState: boolean; contacts: boolean }> {
     const callLog = await this.ensurePermission('callLog');
     const storage = await this.ensurePermission('storage');
-    const phoneState = await this.ensurePermission('phoneState');
+    const phoneState = true; // READ_PHONE_STATE removed for Play Store compliance
     const contacts = await this.ensurePermission('contacts');
     return { callLog, storage, phoneState, contacts };
   }

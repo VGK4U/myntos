@@ -121,6 +121,59 @@ export default function Sidebar() {
     );
   };
 
+  // Dynamic Entitlement & Role Filter
+  const filteredMenu = MENU_MASTER.filter((section) => {
+    // 1. Zynova Platform Admin (MYNTOS_SAAS) — Visible ONLY to Super Admins
+    if (section.section_code === "MYNTOS_SAAS" || section.section_code === "VGK_SAAS") {
+      return Boolean(user?.is_super_admin);
+    }
+
+    // 2. Gate Business-Specific Ecosystems behind explicit entitlements
+    if (section.section_code === "MNR_USER_SIDEBAR") {
+      if (user?.is_super_admin) return true;
+      if (user?.entitled_modules && !user.entitled_modules.includes("MNR_ECOSYSTEM")) {
+        return false;
+      }
+    }
+    if (section.section_code === "VGK_TEAM") {
+      if (user?.is_super_admin) return true;
+      if (user?.entitled_modules && !user.entitled_modules.includes("VGK_ECOSYSTEM")) {
+        return false;
+      }
+    }
+
+    // 3. Hide legacy / not in use sections
+    if (section.section_code === "NOT_IN_USE") {
+      return false;
+    }
+
+    return true;
+  }).map((section) => {
+    // Filter segment items according to specific segment entitlements for non-super-admins
+    if (section.section_code === "MYNT_REAL" && !user?.is_super_admin && user?.entitled_modules?.length) {
+      const segmentMap: Record<string, string> = {
+        "/staff/solar-leads": "CRM_LEADS_SOLAR",
+        "/staff/ev-b2b-leads": "CRM_LEADS_EV_B2B",
+        "/staff/ev-b2c-leads": "CRM_LEADS_EV_B2C",
+        "/staff/ev-spares-leads": "CRM_LEADS_EV_SPARES",
+        "/staff/real-dreams-leads": "CRM_LEADS_REAL_DREAMS",
+        "/staff/insurance-leads": "CRM_LEADS_INSURANCE",
+        "/staff/etc-leads": "CRM_LEADS_ETC",
+      };
+
+      const filteredItems = section.items?.filter((item) => {
+        const reqModule = segmentMap[item.route];
+        if (reqModule) {
+          return user.entitled_modules.includes(reqModule) || user.entitled_modules.includes("CRM_CORE");
+        }
+        return true;
+      });
+
+      return { ...section, items: filteredItems };
+    }
+    return section;
+  });
+
   return (
     <aside
       className={`fixed top-0 left-0 h-screen transition-all duration-300 z-40 border-r border-gray-200 bg-white flex flex-col shadow-sm ${
@@ -130,7 +183,7 @@ export default function Sidebar() {
       <div className="h-22 flex items-center justify-between px-4 border-b border-gray-200 flex-shrink-0 bg-white">
         {!isCollapsed && (
           <Link href="/dashboard" className="font-bold text-xl text-brand-warning flex items-center gap-2 truncate">
-            <span>MyntReal</span>
+            <span>MyntOS</span>
           </Link>
         )}
         <button
@@ -142,19 +195,19 @@ export default function Sidebar() {
       </div>
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 custom-scrollbar bg-white">
-        {MENU_MASTER.map(renderSection)}
+        {filteredMenu.map(renderSection)}
       </div>
       
       {/* Footer / Profile collapsed hint */}
       <div className="p-4 border-t border-gray-200 flex-shrink-0 bg-gray-50">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-brand-warning/20 text-brand-warning flex items-center justify-center font-bold flex-shrink-0">
-             {user?.name?.charAt(0) || "U"}
+             {user?.name?.charAt(0) || user?.full_name?.charAt(0) || "U"}
           </div>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-gray-900 truncate">{user?.name || "Mynt Staff"}</p>
-              <p className="text-xs text-gray-500 truncate">{user?.role?.role_name || "MNR"}</p>
+              <p className="text-sm font-bold text-gray-900 truncate">{user?.name || user?.full_name || "Staff"}</p>
+              <p className="text-xs text-gray-500 truncate">{user?.role?.role_name || user?.role_name || (user?.is_super_admin ? "Super Admin" : "Staff")}</p>
             </div>
           )}
         </div>

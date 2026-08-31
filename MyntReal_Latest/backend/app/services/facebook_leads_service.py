@@ -12,6 +12,7 @@ Features:
 """
 
 import os
+import json
 import hmac
 import hashlib
 import logging
@@ -99,21 +100,23 @@ class FacebookLeadsService:
                 logger.warning(f"DB token lookup failed: {e}")
         return self._legacy_token
 
-    def get_page_info(self, page_id: str, db: Optional[Session] = None) -> Dict[str, str]:
-        """Returns {'token': ..., 'segment': ..., 'name': ...} for a page."""
-        info = {'token': self._legacy_token or '', 'segment': 'GENERAL', 'name': ''}
+    def get_page_info(self, page_id: str, db: Optional[Session] = None) -> Dict[str, Any]:
+        """Returns {'token': ..., 'segment': ..., 'name': ..., 'company_id': ...} for a page."""
+        info = {'token': self._legacy_token or '', 'segment': 'GENERAL', 'name': '', 'company_id': None}
         if db and page_id:
             try:
                 from app.core.security_encryption import decrypt_credential_safe
                 row = db.execute(
-                    text("SELECT access_token, crm_segment, page_name FROM facebook_pages WHERE page_id = :pid"),
+                    text("SELECT access_token, crm_segment, page_name, company_id FROM facebook_pages WHERE page_id = :pid AND is_active = TRUE"),
                     {'pid': str(page_id)}
                 ).fetchone()
                 if row:
                     raw_token = row[0] or info['token']
-                    info['token']   = decrypt_credential_safe(raw_token) if raw_token else ''
-                    info['segment'] = row[1] or 'GENERAL'
-                    info['name']    = row[2] or ''
+                    info['token']      = decrypt_credential_safe(raw_token) if raw_token else ''
+                    info['segment']    = row[1] or 'GENERAL'
+                    info['name']       = row[2] or ''
+                    info['page_name']  = row[2] or ''
+                    info['company_id'] = row[3]
             except Exception as e:
                 logger.warning(f"Page info lookup failed: {e}")
         return info
@@ -400,11 +403,13 @@ class FacebookLeadsService:
             'SOLAR':       'solar',
         }.get(page_segment, 'facebook_lead')
 
-        target_company_id = company_id or 4
+        # Multi-Tenant Strict Resolution: Never fallback to default company 4
+        if not company_id:
+            logger.warning(f"[META-WEBHOOK-REJECT] Lead dropped: No valid company_id resolved for page_id={source_details.get('page_id')}")
+            return None
+
+        target_company_id = company_id
         target_category_id = category_id
-        if not target_category_id:
-            if page_segment == 'SOLAR' or 'solar' in (page_name or '').lower() or True:
-                target_category_id = 19 if target_company_id == 4 else 36
 
         crm = {
             'company_id':          target_company_id,

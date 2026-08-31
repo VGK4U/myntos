@@ -6,6 +6,7 @@ import shutil
 from pathlib import Path
 
 SOURCE_DIR = Path(__file__).resolve().parent
+TEMP_ZIP = Path("/tmp/MyntReal_AWS_Deploy.zip")
 OUTPUT_ZIP = SOURCE_DIR / "MyntReal_AWS_Deploy.zip"
 FULL_ZIP = SOURCE_DIR / "MyntReal_AWS_Deploy_Full.zip"
 ALIAS_ZIP = SOURCE_DIR / "deployment.zip"
@@ -52,39 +53,34 @@ EXCLUDE_FILES = {
     "uvicorn.log",
     "bot.log",
     "mobile.app",
+    "mobile.apk",
     "mnr-catalog.pdf",
     "mnr-catalog-web.pdf",
     "database_backup (1).sql",
     "final_production_backup.dump",
-    "final_replit_backup.dump",
-    "MyntReal_AWS_Deploy_Full.zip",
-    "MyntReal_AWS_Deploy.zip",
-    "MyntReal_AWS_Deploy_Slim.zip",
-    "MyntReal_v2.0.4_Deploy_20260812_072613.zip",
-    "MyntReal_v2.0.4_AWS_Deploy.zip",
-    "MyntReal_Release_v204.zip",
-    "deployment.zip",
-    "modified_changes.zip",
-    "modified_files.zip"
+    "final_replit_backup.dump"
 }
 
 def should_exclude(rel_path: Path, abs_file: Path) -> bool:
+    rel_str = str(rel_path).replace("\\", "/")
+    is_compiled_mobile_asset = rel_str.startswith("frontend/public/mobile")
+    
     parts = rel_path.parts
     for part in parts:
+        if part == "mobile" and is_compiled_mobile_asset:
+            continue
         if part in EXCLUDE_DIRS or part == "__pycache__":
             return True
             
-    if rel_path.name in EXCLUDE_FILES:
+    if rel_path.name in EXCLUDE_FILES or abs_file.name.endswith(".zip"):
         return True
         
-    rel_str = str(rel_path).replace("\\", "/")
-    if "storage/" in rel_str or "uploaded_files/" in rel_str or "uploads/" in rel_str:
+    if "storage/" in rel_str or "uploaded_files/" in rel_str or "uploads/" in rel_str or "postgres_data/" in rel_str:
         return True
         
     if abs_file.suffix.lower() in [".zip", ".sql", ".dump", ".sqlite", ".db"]:
         return True
 
-    # Limit static image/media assets > 0.2MB (preserving MyntReal.apk) to maintain target ~41MB deployment package size
     if abs_file.suffix.lower() in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf"]:
         size_mb = abs_file.stat().st_size / (1024 * 1024)
         if size_mb > 0.2 and abs_file.name != "MyntReal.apk":
@@ -95,21 +91,27 @@ def should_exclude(rel_path: Path, abs_file: Path) -> bool:
 def build_zip():
     print(f"📦 Packaging DEFAULT Slim AWS Deploy Zip (< 50MB) from: {SOURCE_DIR}")
     
+    if TEMP_ZIP.exists():
+        TEMP_ZIP.unlink()
     if OUTPUT_ZIP.exists():
         OUTPUT_ZIP.unlink()
         
     file_count = 0
     total_uncompressed = 0
     
-    with zipfile.ZipFile(OUTPUT_ZIP, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+    with zipfile.ZipFile(TEMP_ZIP, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
         for root, dirs, files in os.walk(SOURCE_DIR):
-            dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS and d != "__pycache__"]
+            dirs[:] = [
+                d for d in dirs
+                if (d not in EXCLUDE_DIRS or (d == "mobile" and Path(root).name == "public"))
+                and d != "__pycache__"
+            ]
             
             for f in files:
                 abs_file = Path(root) / f
                 rel_path = abs_file.relative_to(SOURCE_DIR)
                 
-                if should_exclude(rel_path, abs_file):
+                if should_exclude(rel_path, abs_file) or str(rel_path) == "Procfile":
                     continue
                 
                 try:
@@ -162,8 +164,9 @@ def build_zip():
             print(f"✅ Successfully injected secure environment variables from {env_path.name} into ZIP as .ebextensions/01_env.config")
 
     # Sync output to all zip target filenames
-    shutil.copyfile(OUTPUT_ZIP, ALIAS_ZIP)
-    shutil.copyfile(OUTPUT_ZIP, FULL_ZIP)
+    shutil.copyfile(TEMP_ZIP, OUTPUT_ZIP)
+    shutil.copyfile(TEMP_ZIP, ALIAS_ZIP)
+    shutil.copyfile(TEMP_ZIP, FULL_ZIP)
 
     compressed_size = OUTPUT_ZIP.stat().st_size
     

@@ -1516,12 +1516,43 @@ def add_vgk_cash_income_schema():
             ))
             conn.execute(text(
                 "ALTER TABLE official_partners "
-                "ADD COLUMN IF NOT EXISTS vgk_cash_wallet NUMERIC(15,2) NOT NULL DEFAULT 0"
+                "ADD COLUMN IF NOT EXISTS vgk_cash_wallet NUMERIC(15,2) NOT NULL DEFAULT 0, "
+                "ADD COLUMN IF NOT EXISTS current_position VARCHAR(40) DEFAULT 'Channel Partner', "
+                "ADD COLUMN IF NOT EXISTS solar_qualifying_files_count INT DEFAULT 0"
             ))
+            conn.execute(text(
+                "ALTER TABLE vgk_cash_income_entries "
+                "ADD COLUMN IF NOT EXISTS program_version VARCHAR(30) DEFAULT 'v1_legacy', "
+                "ADD COLUMN IF NOT EXISTS advance_adjusted_amount NUMERIC(15,2) DEFAULT 0"
+            ))
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS incentive_programs (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    segment_code VARCHAR(30) NOT NULL,
+                    program_code VARCHAR(50) NOT NULL UNIQUE,
+                    program_name VARCHAR(200) NOT NULL,
+                    max_pool_pct NUMERIC(5,2) NOT NULL DEFAULT 0.0,
+                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS position_rate_configs (
+                    id SERIAL PRIMARY KEY,
+                    program_id INTEGER NOT NULL REFERENCES incentive_programs(id) ON DELETE CASCADE,
+                    position_name VARCHAR(40) NOT NULL,
+                    stars INTEGER NOT NULL DEFAULT 1,
+                    required_active_team INTEGER NOT NULL DEFAULT 0,
+                    required_qualifying_files INTEGER NOT NULL DEFAULT 0,
+                    commission_pct NUMERIC(5,2) NOT NULL DEFAULT 0.0,
+                    base_income_amount NUMERIC(12,2),
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+            """))
             conn.commit()
-        print("[DC-VGK-CASH] ✅ vgk_cash_income_entries table + vgk_cash_wallet column + indexes created", flush=True)
+        print("[DC-VGK-CASH] ✅ vgk_cash_income_entries + Universal Incentive schema created", flush=True)
     except Exception as e:
-        print(f"[DC-VGK-CASH] ⚠️  Cash income schema migration failed (non-fatal): {e}", flush=True)
+        print(f"[DC-VGK-CASH] ⚠️ Cash income schema migration failed (non-fatal): {e}", flush=True)
 
 
 def add_vgk_wallet_system_schema():
@@ -16338,6 +16369,14 @@ async def exclude_nextjs_routes(request: Request, call_next):
             content={"detail": "Route handled by frontend server"}
         )
     
+    # DC_CANONICAL_DOMAIN_001: Enforce canonical domain (redirect apex myntreal.com to www.myntreal.com)
+    raw_host = request.headers.get("host", "").lower().split(":")[0].strip()
+    if raw_host in ["myntreal.com", "vgk4u.com"] and not request.url.path.startswith("/health") and not request.url.path.startswith("/api/v1/health"):
+        canonical_target = f"https://www.myntreal.com{request.url.path}"
+        if request.url.query:
+            canonical_target += f"?{request.url.query}"
+        return RedirectResponse(url=canonical_target, status_code=301)
+    
     response = await call_next(request)
     return response
 
@@ -16475,6 +16514,55 @@ async def serve_staff_whatsapp_center():
     raise HTTPException(status_code=404, detail="Page not found")
 
 
+# DC_WHATSAPP_SCAN_001: WhatsApp Bot QR Pairing & Management Routes (/scan, /qr, /whatsapp-qr, /qr-data)
+@app.get("/scan", include_in_schema=False)
+@app.get("/scan/", include_in_schema=False)
+@app.get("/qr", include_in_schema=False)
+@app.get("/qr/", include_in_schema=False)
+@app.get("/whatsapp-qr", include_in_schema=False)
+@app.get("/whatsapp-qr/", include_in_schema=False)
+async def serve_whatsapp_scan_page():
+    from fastapi.responses import HTMLResponse, FileResponse
+    import httpx
+    
+    # 1. Attempt to proxy to local Baileys gateway on port 5002 if online
+    try:
+        async with httpx.AsyncClient(timeout=1.5) as client:
+            resp = await client.get("http://127.0.0.1:5002/qr")
+            if resp.status_code == 200:
+                return HTMLResponse(content=resp.text, status_code=200)
+    except Exception:
+        pass
+        
+    # 2. Fallback to WhatsApp Bot Management Hub HTML
+    _workspace_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    bot_hub = os.path.join(_workspace_root, "frontend", "staff_crm_whatsapp_bot.html")
+    if os.path.exists(bot_hub):
+        return FileResponse(bot_hub, media_type="text/html")
+        
+    center_file = os.path.join(_workspace_root, "frontend", "staff_whatsapp_center.html")
+    if os.path.exists(center_file):
+        return FileResponse(center_file, media_type="text/html")
+        
+    raise HTTPException(status_code=404, detail="WhatsApp scan page not found")
+
+
+@app.get("/qr-data", include_in_schema=False)
+@app.get("/qr-data/", include_in_schema=False)
+async def serve_whatsapp_qr_data():
+    from fastapi.responses import JSONResponse
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=1.5) as client:
+            resp = await client.get("http://127.0.0.1:5002/qr-data")
+            if resp.status_code == 200:
+                return JSONResponse(content=resp.json(), status_code=200)
+    except Exception:
+        pass
+    return JSONResponse(content={"status": "disconnected", "qr": None, "qr_url": None, "message": "WhatsApp Bot gateway offline"}, status_code=200)
+
+
+
 @app.get("/mobile.apk", include_in_schema=False)
 @app.get("/mobile.app", include_in_schema=False)
 @app.get("/download/mobile.apk", include_in_schema=False)
@@ -16543,6 +16631,53 @@ if os.path.exists(MARKETPLACE_IMAGES_DIR):
     print(f"[DC-STATIC] ✅ Marketplace images mounted: /marketplace/product-images -> {MARKETPLACE_IMAGES_DIR}", flush=True)
 else:
     print(f"[DC-STATIC] ⚠️ Marketplace images dir not found: {MARKETPLACE_IMAGES_DIR}", flush=True)
+
+# DC_MOBILE_WEB_MOUNT_001: Mount compiled mobile SPA under /mobile and /app
+MOBILE_DIR = os.path.join(FRONTEND_PUBLIC_DIR, "mobile")
+if os.path.exists(MOBILE_DIR):
+    app.mount("/mobile", StaticFiles(directory=MOBILE_DIR, html=True), name="mobile_app")
+    app.mount("/app", StaticFiles(directory=MOBILE_DIR, html=True), name="app_web")
+    print(f"[DC-STATIC] ✅ Mobile Web SPA mounted: /mobile and /app -> {MOBILE_DIR}", flush=True)
+    
+    MOBILE_ASSETS_DIR = os.path.join(MOBILE_DIR, "assets")
+    if os.path.exists(MOBILE_ASSETS_DIR):
+        app.mount("/assets", StaticFiles(directory=MOBILE_ASSETS_DIR), name="mobile_assets")
+        print(f"[DC-STATIC] ✅ Mobile Assets mounted: /assets -> {MOBILE_ASSETS_DIR}", flush=True)
+
+@app.get("/mobile", include_in_schema=False)
+@app.get("/mobile/", include_in_schema=False)
+@app.get("/app", include_in_schema=False)
+@app.get("/app/", include_in_schema=False)
+async def serve_mobile_spa_root():
+    from fastapi.responses import FileResponse
+    mobile_index = os.path.join(FRONTEND_PUBLIC_DIR, "mobile", "index.html")
+    if os.path.exists(mobile_index):
+        return FileResponse(mobile_index, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Mobile application not found")
+
+@app.get("/privacy-policy.html", include_in_schema=False)
+@app.get("/privacy-policy", include_in_schema=False)
+async def serve_privacy_policy_root():
+    from fastapi.responses import FileResponse
+    for path in [
+        os.path.join(FRONTEND_PUBLIC_DIR, "privacy-policy.html"),
+        os.path.join(_WORKSPACE_ROOT, "frontend", "privacy-policy.html"),
+    ]:
+        if os.path.exists(path):
+            return FileResponse(path, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Privacy Policy not found")
+
+@app.get("/delete-account.html", include_in_schema=False)
+@app.get("/delete-account", include_in_schema=False)
+async def serve_delete_account_root():
+    from fastapi.responses import FileResponse
+    for path in [
+        os.path.join(FRONTEND_PUBLIC_DIR, "delete-account.html"),
+        os.path.join(_WORKSPACE_ROOT, "frontend", "delete-account.html"),
+    ]:
+        if os.path.exists(path):
+            return FileResponse(path, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Account Deletion page not found")
 
 # Include API router
 app.include_router(api_router, prefix="/api/v1")

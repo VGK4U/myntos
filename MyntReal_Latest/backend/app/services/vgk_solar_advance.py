@@ -28,11 +28,11 @@ from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
-# DC-SOLAR-SPEC-20260710: Stage 1 Advance (Application Submitted + CIBIL >= 600)
+# DC-SOLAR-SPEC-20260710: Stage 1 Advance (Application Submitted + CIBIL >= 650)
 # L1 (Ground Source): 1000, L2 (Senior): 500 — per VGK Commission & Advance Payment Logic.
 ADVANCE_AMOUNT    = Decimal('1000.00')
 L2_ADVANCE_AMOUNT = Decimal('500.00')
-CIBIL_MIN_SCORE   = 600
+CIBIL_MIN_SCORE   = 650
 
 # Solar pipeline stages that are eligible (application_submitted and above, excluding terminal failure stages)
 ELIGIBLE_STAGES = {
@@ -93,10 +93,11 @@ def check_and_create_advance(db: Session, lead_id: int) -> dict:
         if pipeline not in ELIGIBLE_STAGES:
             return {'created': False, 'reason': f'Stage {pipeline!r} not eligible'}
 
-        # Require CIBIL verification (confirmed or score >= 600) before calculating/releasing advances
-        is_cibil_valid = bool(lead.cibil_confirmed) or ((lead.cibil_score or 0) >= 600)
+        # Require CIBIL verification (confirmed or score >= 650) before calculating/releasing advances
+        score = getattr(lead, 'cibil_score', None)
+        is_cibil_valid = bool(lead.cibil_confirmed) or ((score or 0) >= CIBIL_MIN_SCORE)
         if not is_cibil_valid:
-            return {'created': False, 'reason': 'CIBIL not confirmed/verified (minimum score 600 or cibil_confirmed required)'}
+            return {'created': False, 'reason': f'CIBIL not confirmed/verified (minimum score {CIBIL_MIN_SCORE} or cibil_confirmed required)'}
 
         now = _get_ist()
         created_numbers = []

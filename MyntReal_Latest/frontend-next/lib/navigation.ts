@@ -77,7 +77,8 @@ export const MENU_MASTER: SidebarSection[] = [
       { menu_code: "REVIEW_DASHBOARD", label: "Review Dashboard", route: "/staff/manager-review", audience: ["STAFF"] },
       { menu_code: "STAFF_MY_LEAD_INCENTIVES", label: "My Earnings", route: "/staff/my-lead-incentives", audience: ["STAFF"] },
       { menu_code: "MY_REIMBURSEMENT_CLAIMS", label: "My Reimbursement Claims", route: "/staff/accounts/my-reimbursements", audience: ["STAFF"] },
-      { menu_code: "REIMBURSEMENT_APPROVALS", label: "Reimbursement Approvals", route: "/staff/accounts/reimbursement-approvals", audience: ["STAFF"] }
+      { menu_code: "REIMBURSEMENT_APPROVALS", label: "Reimbursement Approvals", route: "/staff/accounts/reimbursement-approvals", audience: ["STAFF"] },
+      { menu_code: "MY_TENANT_PORTAL", label: "My Tenant & Subscription", route: "/staff/my-tenant", icon: "fas fa-layer-group", audience: ["STAFF"] }
     ]
   },
   {
@@ -596,21 +597,55 @@ export const MENU_MASTER: SidebarSection[] = [
     ]
   },
   {
-    section_code: "VGK_SAAS",
-    section_label: "VGK4U SAAS",
+    section_code: "MYNTOS_SAAS",
+    section_label: "MYNTOS SAAS",
     order: 99,
-    items: [
-      { menu_code: "VGK_SAAS_ALL_TENANTS", label: "All Tenants", route: "/staff/my-tenant", icon: "fas fa-layer-group", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_TENANT_ONBOARDING", label: "Tenant Onboarding", route: "/staff/accounts/companies", icon: "fas fa-building-circle-arrow-right", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_PLATFORM_CLIENTS", label: "Platform Clients (B2B)", route: "/staff/b2b-clients", icon: "fas fa-handshake", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_PUBLIC_SIGNUP_PREVIEW", label: "Public Signup Preview", route: "/b2b-signup", icon: "fas fa-eye", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_SIGNUP_CATEGORIES", label: "Signup Categories", route: "/staff/signup-categories", icon: "fas fa-tags", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_LEAD_SYNC", label: "Lead Sync", route: "/staff/lead-sync", icon: "fas fa-arrows-rotate", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_MENU_ACCESS", label: "Menu Access Control", route: "/rvz/menu-access-config", icon: "fas fa-shield-halved", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_PAGE_REGISTRY", label: "Page Registry Manager", route: "/staff/page-registry", icon: "fas fa-sitemap", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_SIDEBAR_SYNC", label: "Sidebar Sync", route: "/staff/sidebar-sync", icon: "fas fa-rotate", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_PLATFORM_SETUP_GUIDE", label: "Platform Setup Guide", route: "/staff/day-planner-guide#sec-platform-setup", icon: "fas fa-book-open", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_AUDIT_LOGS", label: "Audit Logs (SaaS)", route: "/staff/audit-logs", icon: "fas fa-clipboard-list", audience: ["VGK4U"] }
+    subSections: [
+      {
+        sub_section_code: "MYNTOS_CLIENTS",
+        sub_section_label: "Clients & Tenants",
+        items: [
+          { menu_code: "MYNTOS_ALL_CLIENTS", label: "All Clients (B2B)", route: "/staff/b2b-clients", icon: "fas fa-building", audience: ["SUPER_ADMIN"] },
+          { menu_code: "MYNTOS_TENANT_ONBOARDING", label: "Tenant Legal Entities", route: "/staff/accounts/companies", icon: "fas fa-sitemap", audience: ["SUPER_ADMIN"] }
+        ]
+      },
+      {
+        sub_section_code: "MYNTOS_SIGNUP",
+        sub_section_label: "Signup & Onboarding",
+        items: [
+          { menu_code: "MYNTOS_PUBLIC_SIGNUP", label: "Public Signup", route: "/b2b-signup", icon: "fas fa-user-plus", audience: ["SUPER_ADMIN"] },
+          { menu_code: "MYNTOS_SIGNUP_CATEGORIES", label: "Signup Categories", route: "/staff/signup-categories", icon: "fas fa-tags", audience: ["SUPER_ADMIN"] }
+        ]
+      },
+      {
+        sub_section_code: "MYNTOS_MENUS_PAGES",
+        sub_section_label: "Menus & Pages",
+        items: [
+          { menu_code: "MYNTOS_PAGE_REGISTRY", label: "Platform Page Registry", route: "/staff/page-registry", icon: "fas fa-list-check", audience: ["SUPER_ADMIN"] },
+          { menu_code: "MYNTOS_SIDEBAR_SYNC", label: "Sidebar Auto-Discovery", route: "/staff/sidebar-sync", icon: "fas fa-rotate", audience: ["SUPER_ADMIN"] }
+        ]
+      },
+      {
+        sub_section_code: "MYNTOS_ROLES_ACCESS",
+        sub_section_label: "Roles & Access",
+        items: [
+          { menu_code: "MYNTOS_MENU_ACCESS", label: "Role & Menu Access", route: "/rvz/menu-access-config", icon: "fas fa-shield-halved", audience: ["SUPER_ADMIN"] }
+        ]
+      },
+      {
+        sub_section_code: "MYNTOS_AUDIT_GOVERNANCE",
+        sub_section_label: "Audit & Governance",
+        items: [
+          { menu_code: "MYNTOS_AUDIT_LOGS", label: "Platform Audit Trail", route: "/staff/audit-logs", icon: "fas fa-clipboard-list", audience: ["SUPER_ADMIN"] }
+        ]
+      },
+      {
+        sub_section_code: "MYNTOS_SUPPORT_ADMIN",
+        sub_section_label: "Support & Setup",
+        items: [
+          { menu_code: "MYNTOS_PLATFORM_SETUP_GUIDE", label: "Platform Setup Guide", route: "/staff/day-planner-guide#sec-platform-setup", icon: "fas fa-book-open", audience: ["SUPER_ADMIN"] }
+        ]
+      }
     ]
   }
 ];

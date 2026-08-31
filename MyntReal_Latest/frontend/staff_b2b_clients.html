@@ -64,6 +64,7 @@
 
   <div class="tabs">
     <div class="tab active" data-tab="status">Status</div>
+    <div class="tab" data-tab="applications">Applications <span class="pill warn" id="tab-app-count" style="display:none">0</span></div>
     <div class="tab" data-tab="clients">Clients</div>
     <div class="tab" data-tab="modules">Modules</div>
     <div class="tab" data-tab="plans">Plans</div>
@@ -89,9 +90,9 @@ async function api(method, path, body){
     console.error('[B2B-ADMIN] Network error', method, url, netErr);
     throw new Error('Network error: '+netErr.message);
   }
-  const text = await r.text();
-  let json = null; try{ json = text?JSON.parse(text):null; } catch(_) {}
-  if (!r.ok) {
+  let json = null;
+  try { json = await r.json(); } catch(_) {}
+  if (!r.ok){
     const msg = (json && (json.detail || json.message)) || (r.status+' '+r.statusText);
     console.error('[B2B-ADMIN] API error', method, url, r.status, msg, json);
     throw new Error(msg);
@@ -101,7 +102,7 @@ async function api(method, path, body){
 function fmt(d){ return d? String(d).replace('T',' ').slice(0,19):''; }
 function esc(s){ return s==null?'': String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 const $ = q => document.querySelector(q);
-const TABS = { status:renderStatus, clients:renderClients, modules:renderModules, plans:renderPlans,
+const TABS = { status:renderStatus, applications:renderApplications, clients:renderClients, modules:renderModules, plans:renderPlans,
                subscriptions:renderSubs, pricing:renderPricing, overrides:renderOverrides,
                deps:renderDeps, audit:renderAudit, shadow:renderShadow };
 
@@ -174,6 +175,109 @@ async function renderStatus(){
       <div class="stat"><div class="n">${c.platform_subscriptions??'-'}</div><div class="l">Subscriptions</div></div>
       <div class="stat"><div class="n">${c.b2b_shadow_log??'-'}</div><div class="l">Shadow log rows</div></div>`;
   } catch(e){ $('#grid').innerHTML = '<span class="err">'+e.message+'</span>'; }
+}
+
+async function renderApplications(){
+  $('#panel').innerHTML = `<div class="row"><h3 style="margin:0;flex:1">Signup Applications <span class="small">(Zynova Approval & Invoicing)</span></h3>
+    <button id="refresh-apps">↻ Refresh</button></div>
+    <table id="t-apps">
+      <thead>
+        <tr>
+          <th>Client Code</th>
+          <th>Company / Contact</th>
+          <th>Requested Package</th>
+          <th>Cycle / Currency</th>
+          <th>Price / Invoice</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody><tr><td colspan="7">Loading applications…</td></tr></tbody>
+    </table>`;
+
+  document.getElementById('refresh-apps').onclick = renderApplications;
+
+  try {
+    const data = await api('GET', '/signups/pending');
+    const apps = data.pending_signups || [];
+    const tb = document.querySelector('#t-apps tbody');
+    
+    const countPill = document.getElementById('tab-app-count');
+    if (countPill) {
+      countPill.textContent = apps.filter(a => a.status === 'pending').length;
+      countPill.style.display = countPill.textContent !== '0' ? 'inline-block' : 'none';
+    }
+
+    if (!apps.length) {
+      tb.innerHTML = '<tr><td colspan="7" class="small" style="padding:20px;text-align:center">No pending signup applications.</td></tr>';
+      return;
+    }
+
+    tb.innerHTML = apps.map(a => {
+      const sym = (a.subscription?.billing_currency || a.billing_currency) === 'USD' ? '$' : '₹';
+      const inv = a.invoice;
+      const priceStr = inv ? `<b>${sym}${inv.total.toLocaleString('en-IN')}</b><br><small class="small">${inv.invoice_number} (${inv.status})</small>` : '<span class="small">Pending Invoice</span>';
+      const mods = a.subscription?.requested_modules || [];
+      const modsStr = mods.length ? mods.map(m => `<span class="pill muted" style="font-size:10.5px;margin:1px">${esc(m)}</span>`).join(' ') : '—';
+      
+      let actions = '';
+      if (a.status === 'pending') {
+        actions = `<button class="primary small btn-approve" data-id="${a.client_id}">✓ Approve & Issue Invoice</button>
+                   <button class="small btn-reject" data-id="${a.client_id}" style="color:#dc2626;margin-left:4px">✕ Reject</button>`;
+      } else if (a.status === 'approved') {
+        actions = `<span class="pill ok" style="font-size:11px">Approved & Invoiced</span>
+                   <button class="small btn-reject" data-id="${a.client_id}" style="color:#dc2626;margin-left:4px">✕ Reject</button>`;
+      }
+
+      return `<tr>
+        <td><code>${esc(a.client_code)}</code><br><small class="small">${fmt(a.created_at)}</small></td>
+        <td><b>${esc(a.client_name)}</b><br><small>${esc(a.contact_name)} &lt;${esc(a.contact_email)}&gt;</small></td>
+        <td style="max-width:240px">${modsStr}</td>
+        <td><b>${esc((a.subscription?.billing_cycle||'monthly').toUpperCase())}</b><br><small>${esc(a.subscription?.billing_currency||'INR')}</small></td>
+        <td>${priceStr}</td>
+        <td><span class="pill ${a.status==='approved'?'ok':'warn'}">${esc(a.status)}</span></td>
+        <td>${actions}</td>
+      </tr>`;
+    }).join('');
+
+    // Wire Approve action
+    tb.querySelectorAll('.btn-approve').forEach(btn => {
+      btn.onclick = async () => {
+        const cid = btn.dataset.id;
+        if (!confirm(`Approve application #${cid} and issue official invoice?`)) return;
+        btn.disabled = true; btn.textContent = 'Approving…';
+        try {
+          const res = await api('POST', `/signups/${cid}/approve`);
+          alert(`Application approved! Invoice #${res.invoice_number} generated (${res.currency} ${res.total_payable}).`);
+          renderApplications();
+        } catch(err) {
+          alert('Approval failed: ' + err.message);
+          btn.disabled = false; btn.textContent = '✓ Approve & Issue Invoice';
+        }
+      };
+    });
+
+    // Wire Reject action
+    tb.querySelectorAll('.btn-reject').forEach(btn => {
+      btn.onclick = async () => {
+        const cid = btn.dataset.id;
+        const reason = prompt('Reason for rejection:');
+        if (reason === null) return;
+        btn.disabled = true; btn.textContent = 'Rejecting…';
+        try {
+          await api('POST', `/signups/${cid}/reject`, { reason });
+          alert(`Application #${cid} rejected.`);
+          renderApplications();
+        } catch(err) {
+          alert('Rejection failed: ' + err.message);
+          btn.disabled = false; btn.textContent = '✕ Reject';
+        }
+      };
+    });
+
+  } catch(e) {
+    document.querySelector('#t-apps tbody').innerHTML = `<tr><td colspan="7" class="err">⚠ ${esc(e.message)}</td></tr>`;
+  }
 }
 
 async function renderClients(){

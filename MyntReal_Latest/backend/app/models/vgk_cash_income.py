@@ -56,6 +56,10 @@ class VGKCashIncomeEntry(BaseModel):
     tds_amount             = Column(Numeric(15, 2), nullable=False, default=0)
     net_payout             = Column(Numeric(15, 2), nullable=False, default=0)
 
+    # Universal Incentive Engine: program tracking & advance adjustment deduction
+    program_version         = Column(String(30), nullable=False, default='v1_legacy')
+    advance_adjusted_amount = Column(Numeric(15, 2), nullable=False, default=0)
+
     confirmed_by_id        = Column(Integer, ForeignKey('staff_employees.id', ondelete='SET NULL'), nullable=True)
     confirmed_at           = Column(DateTime, nullable=True)
     released_by_id         = Column(Integer, ForeignKey('staff_employees.id', ondelete='SET NULL'), nullable=True)

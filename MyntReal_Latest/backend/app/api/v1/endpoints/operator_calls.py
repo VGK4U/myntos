@@ -38,7 +38,6 @@ router = APIRouter()
 
 IST = pytz.timezone('Asia/Kolkata')
 
-MYOPERATOR_COMPANY_ID = int(os.getenv('MYOPERATOR_COMPANY_ID', '1'))
 MYOPERATOR_X_API_KEY = os.getenv('MYOPERATOR_X_API_KEY', '')
 MYOPERATOR_API_COMPANY_ID = os.getenv('MYOPERATOR_API_COMPANY_ID', '')
 
@@ -47,20 +46,20 @@ def get_ist_now():
     return datetime.now(IST).replace(tzinfo=None)
 
 
-def _get_staff_company_id(current_user) -> int:
+def _get_staff_company_id(current_user) -> Optional[int]:
     cid = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', None)
-    return int(cid) if cid else MYOPERATOR_COMPANY_ID
+    return int(cid) if cid else None
 
 
 def _get_accessible_company_ids(current_user) -> list:
-    """Returns all company IDs the user has access to (data_companies list)."""
+    """Returns all company IDs the user has access to (data_companies list or base_company_id)."""
     data_cos = getattr(current_user, 'data_companies', None)
     if data_cos and isinstance(data_cos, list):
         ids = [int(c) for c in data_cos if c]
         if ids:
             return ids
     cid = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', None)
-    return [int(cid)] if cid else [MYOPERATOR_COMPANY_ID]
+    return [int(cid)] if cid else []
 
 
 def normalize_phone(phone: str) -> Optional[str]:
@@ -72,22 +71,21 @@ def normalize_phone(phone: str) -> Optional[str]:
     return digits if len(digits) == 10 else None
 
 
-def _match_lead(db: Session, phone: str, company_id: int = None) -> Optional[CRMLead]:
+def _match_lead(db: Session, phone: str, company_id: Optional[int] = None) -> Optional[CRMLead]:
     norm = normalize_phone(phone)
-    if not norm:
+    if not norm or not company_id:
         return None
-    cid = company_id or MYOPERATOR_COMPANY_ID
     lead = db.query(CRMLead).filter(
         or_(
             CRMLead.phone.like(f'%{norm}'),
             CRMLead.alternate_phone.like(f'%{norm}')
         ),
-        CRMLead.company_id == cid
+        CRMLead.company_id == company_id
     ).order_by(CRMLead.created_at.desc()).first()
     return lead
 
 
-def _lead_summary(db: Session, lead_id: int, company_id: int = None) -> Optional[dict]:
+def _lead_summary(db: Session, lead_id: int, company_id: Optional[int] = None) -> Optional[dict]:
     q = db.query(CRMLead).filter(CRMLead.id == lead_id)
     if company_id:
         q = q.filter(CRMLead.company_id == company_id)
@@ -106,9 +104,42 @@ def _lead_summary(db: Session, lead_id: int, company_id: int = None) -> Optional
     return d
 
 
-def _upsert_call(db: Session, call_id: str, payload: dict) -> OperatorCall:
+def _resolve_company_for_call(db: Session, payload: dict) -> Optional[int]:
+    """
+    Resolve the owning tenant company_id for an incoming MyOperator call.
+    Priority:
+    1. Look up called virtual number (DID) in telephony_did_mappings
+    2. Check explicit company_id in payload if provided and valid
+    3. Return None (Reject/Quarantine) - NEVER default to company 1
+    """
+    from app.models.operator_calls import TelephonyDIDMapping
+    called = (payload.get('did') or payload.get('called') or payload.get('to') or '').strip()
+    if called:
+        mapping = db.query(TelephonyDIDMapping).filter(
+            TelephonyDIDMapping.did_number == called,
+            TelephonyDIDMapping.is_active == True
+        ).first()
+        if mapping:
+            return mapping.company_id
+            
+    raw_cid = payload.get('company_id') or payload.get('custom_company_id')
+    if raw_cid:
+        try:
+            return int(raw_cid)
+        except (ValueError, TypeError):
+            pass
+            
+    return None
+
+
+def _upsert_call(db: Session, call_id: str, payload: dict) -> Optional[OperatorCall]:
+    target_company_id = _resolve_company_for_call(db, payload)
+    if not target_company_id:
+        logger.warning(f"[OPERATOR_WEBHOOK_REJECT] Call {call_id} rejected: DID '{payload.get('did')}' is not mapped to any active tenant company.")
+        return None
+
     call = db.query(OperatorCall).filter(
-        OperatorCall.company_id == MYOPERATOR_COMPANY_ID,
+        OperatorCall.company_id == target_company_id,
         OperatorCall.call_id == call_id
     ).first()
     now = get_ist_now()
@@ -143,14 +174,12 @@ def _upsert_call(db: Session, call_id: str, payload: dict) -> OperatorCall:
             recording_expires_at = datetime.fromisoformat(str(rec_exp_raw).replace('Z', '+00:00')).replace(tzinfo=None)
         except (ValueError, TypeError):
             pass
-    # Do NOT guess expiry — MyOperator URLs need their session, not a timer.
-    # We keep recording_url permanently in the DB; the Open Recording button handles auth.
 
     if not call:
-        lead = _match_lead(db, caller)
+        lead = _match_lead(db, caller, company_id=target_company_id)
         call = OperatorCall(
             call_id=call_id,
-            company_id=MYOPERATOR_COMPANY_ID,
+            company_id=target_company_id,
             caller_number=caller,
             called_number=called,
             operator_name=op_name,
@@ -175,9 +204,10 @@ def _upsert_call(db: Session, call_id: str, payload: dict) -> OperatorCall:
             call.recording_url = recording_url
             call.recording_expires_at = recording_expires_at
         if not call.lead_matched:
-            lead = _match_lead(db, caller)
+            lead = _match_lead(db, caller, company_id=target_company_id)
             if lead:
                 call.crm_lead_id = lead.id
+                call.lead_matched = True
                 call.lead_matched = True
 
     if status == 'answered' and not call.answered_at:
@@ -957,9 +987,9 @@ async def get_call_detail(
     d['caller_stats'] = caller_stats
 
     if call.crm_lead_id:
-        d['lead'] = _lead_summary(db, call.crm_lead_id, company_id=company_ids[0] if company_ids else MYOPERATOR_COMPANY_ID)
+        d['lead'] = _lead_summary(db, call.crm_lead_id, company_id=call.company_id)
     else:
-        lead = _match_lead(db, call.caller_number, company_id=company_ids[0] if company_ids else MYOPERATOR_COMPANY_ID)
+        lead = _match_lead(db, call.caller_number, company_id=call.company_id)
         if lead:
             d['potential_lead'] = {
                 'id': lead.id,
@@ -994,10 +1024,8 @@ async def caller_history(
         raise HTTPException(status_code=403, detail="Staff access required")
 
     company_ids = _get_accessible_company_ids(current_user)
-    # DC-CALLHIST-SCOPE-001: Always include MYOPERATOR_COMPANY_ID so staff from any
-    # sub-company can see operator call history regardless of their base_company_id.
-    if MYOPERATOR_COMPANY_ID not in company_ids:
-        company_ids = list(company_ids) + [MYOPERATOR_COMPANY_ID]
+    if not company_ids:
+        return {"success": True, "data": [], "total": 0, "page": page, "per_page": per_page}
 
     norm = normalize_phone(phone)
     search = norm or phone
@@ -1152,7 +1180,7 @@ async def match_lead_to_call(
             CRMLead.company_id.in_(company_ids)
         ).first()
     else:
-        lead = _match_lead(db, call.caller_number, company_id=company_ids[0] if company_ids else MYOPERATOR_COMPANY_ID)
+        lead = _match_lead(db, call.caller_number, company_id=call.company_id)
 
     if not lead:
         return {
@@ -1241,7 +1269,7 @@ async def create_followup(
         raise HTTPException(status_code=404, detail="Call not found")
 
     if not call.crm_lead_id:
-        lead = _match_lead(db, call.caller_number, company_id=company_ids[0] if company_ids else MYOPERATOR_COMPANY_ID)
+        lead = _match_lead(db, call.caller_number, company_id=call.company_id)
         if lead:
             call.crm_lead_id = lead.id
             call.lead_matched = True
@@ -1332,7 +1360,7 @@ async def bulk_match_leads(
 
     matched = 0
     for call in unmatched:
-        lead = _match_lead(db, call.caller_number, company_id=company_ids[0] if company_ids else MYOPERATOR_COMPANY_ID)
+        lead = _match_lead(db, call.caller_number, company_id=call.company_id)
         if lead:
             call.crm_lead_id = lead.id
             call.lead_matched = True

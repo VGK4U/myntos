@@ -485,6 +485,10 @@ async def get_partner_profile(
             primary_company_id = cs.company_id
             break
     
+    # V26 Authoritative Rank Position Evaluation
+    from app.services.universal_incentive_engine import get_partner_current_position_v18
+    rpos = get_partner_current_position_v18(db, partner.id)
+    
     return PartnerProfileResponse(
         success=True,
         partner={
@@ -513,6 +517,21 @@ async def get_partner_profile(
             "service_contact_name": partner.service_contact_name,
             "service_contact_number": partner.service_contact_number,
             "module_settings": partner.module_settings or {},
+            # V26 Normalized Rank Fields
+            "rank_code": rpos.get('rank_code', 'RANK_1'),
+            "rank_num": rpos.get('stars', 1),
+            "current_rank": rpos.get('current_rank', 'Rank 1 — Channel Partner'),
+            "current_designation": rpos.get('current_designation', 'Channel Partner'),
+            "rank_display": rpos.get('rank_display', '1★ Channel Partner'),
+            "rank_slab_pct": rpos.get('rank_slab_pct', 5.00),
+            "activated_team": rpos.get('activated_team', 0),
+            "active_team": rpos.get('active_team', 0),
+            "total_downline": rpos.get('total_downline', 0),
+            "next_rank": rpos.get('next_rank'),
+            "next_rank_requirement": rpos.get('next_rank_requirement'),
+            "rank_gap": rpos.get('rank_gap', 0),
+            "rank_progress_percent": rpos.get('rank_progress_percent', 0.0),
+            "is_permanent_rank": True
         }
     )
 

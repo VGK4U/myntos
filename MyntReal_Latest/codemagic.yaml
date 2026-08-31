@@ -39,25 +39,18 @@ workflows:
       - name: Set Android SDK
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > mobile/android/local.properties
-      - name: Build Android APK
+      - name: Build Android Release AAB
         script: |
           set -e
           cd mobile/android
           chmod +x gradlew
-          echo "=== Starting Gradle Build ==="
-          ./gradlew assembleDebug --stacktrace --info
-          echo "=== Build Complete, Checking APK output ==="
-          APK_FILE=$(find app/build/outputs/apk/debug/ -name "*.apk" -type f | head -1)
-          if [ -n "$APK_FILE" ]; then
-            echo "SUCCESS: APK found at $APK_FILE"
-            ls -la "$APK_FILE"
-          else
-            echo "ERROR: No APK found"
-            find . -name "*.apk" -type f 2>/dev/null || true
-            ls -la app/build/outputs/ 2>/dev/null || echo "No outputs folder"
-            exit 1
-          fi
+          echo "=== Starting Gradle Release Bundle Build ==="
+          ./gradlew bundleRelease --stacktrace --info || ./gradlew assembleRelease --stacktrace --info
+          echo "=== Build Complete, Checking Output ==="
+          find app/build/outputs/ -name "*.aab" -o -name "*.apk" -type f 2>/dev/null || true
     artifacts:
+      - mobile/android/app/build/outputs/bundle/release/*.aab
+      - mobile/android/app/build/outputs/apk/release/*.apk
       - mobile/android/app/build/outputs/apk/debug/*.apk
     publishing:
       email:

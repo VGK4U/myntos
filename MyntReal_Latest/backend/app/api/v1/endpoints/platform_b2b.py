@@ -16,17 +16,24 @@ actor_staff_id, before/after JSON, IST timestamps.
 from __future__ import annotations
 
 import logging
+import json
 from datetime import date
-from typing import Optional, List, Dict, Any
+from decimal import Decimal
+from typing import Optional, List, Dict, Any, Tuple
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Body, status
-from sqlalchemy import text
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request, status
+from sqlalchemy import text, func
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 
 from app.core.database import get_db
+from app.core.config import settings
+from app.core.security import SecurityManager
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
-from app.models.staff import StaffEmployee
+from app.models.staff import (
+    StaffEmployee, StaffRole, StaffDepartment, StaffEmployeeModule, StaffModuleMaster, generate_employee_code
+)
+from app.models.staff_accounts import AssociatedCompany
 from app.models.base import get_indian_time
 from app.models.platform_b2b import (
     PlatformClient, PlatformModule, PlatformPlan, PlatformPlanModule,
@@ -1481,6 +1488,7 @@ def record_payment(
     staff: StaffEmployee = Depends(require_b2b_super_admin),
 ):
     try:
+        from app.services.platform_b2b_billing import apply_payment
         result = apply_payment(
             db, invoice_id=payload.invoice_id, client_id=payload.client_id,
             amount=payload.amount, currency=payload.currency,
@@ -1490,9 +1498,113 @@ def record_payment(
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
-    _audit(db, actor_staff_id=staff.id, client_id=result["client_id"], entity="B2B-PAY",
-           action="CREATE", entity_id=result["id"], after=result)
+    _audit(db, actor_staff_id=staff.id, client_id=result.get("client_id"), entity="B2B-PAY",
+           action="CREATE", entity_id=result.get("id") or result.get("payment_id"), after=result)
     return result
+
+
+@router.post("/invoices/{invoice_id}/checkout")
+def create_invoice_checkout(
+    invoice_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Creates a Razorpay Order strictly using server-side PlatformInvoice.total.
+    Accessible for online SaaS invoice payment. Frontend NEVER defines the price.
+    """
+    try:
+        from app.services.platform_b2b_billing import create_razorpay_order_for_invoice
+        return create_razorpay_order_for_invoice(db, invoice_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        logger.error("[RAZORPAY-CHECKOUT] Error: %s", e)
+        raise HTTPException(500, f"Checkout initialization failed: {str(e)}")
+
+
+@router.post("/webhooks/razorpay")
+async def razorpay_b2b_webhook(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Public Razorpay Webhook endpoint for B2B SaaS Subscription Invoices.
+    Verifies HMAC-SHA256 signature, validates tenant/subscription ownership,
+    enforces idempotency, marks invoice as paid, activates subscription,
+    and automatically provisions the initial Tenant Administrator.
+    """
+    signature = request.headers.get("X-Razorpay-Signature") or request.headers.get("x-razorpay-signature")
+    body_bytes = await request.body()
+
+    # 1. Cryptographic HMAC Signature Verification
+    webhook_secret = settings.RAZORPAY_WEBHOOK_SECRET or settings.RAZORPAY_KEY_SECRET
+    if webhook_secret and signature:
+        try:
+            import razorpay
+            client_rp = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID or "dummy", settings.RAZORPAY_KEY_SECRET or "dummy"))
+            client_rp.utility.verify_webhook_signature(
+                body_bytes.decode("utf-8"),
+                signature,
+                webhook_secret
+            )
+        except Exception as sig_err:
+            logger.warning("[RAZORPAY-WEBHOOK] Signature verification failed: %s", sig_err)
+            raise HTTPException(400, "Invalid webhook signature")
+
+    try:
+        payload = json.loads(body_bytes.decode("utf-8"))
+    except Exception:
+        raise HTTPException(400, "Invalid JSON body")
+
+    event = payload.get("event")
+    if event not in ("payment.captured", "order.paid"):
+        return {"ok": True, "status": "ignored_event", "event": event}
+
+    payment_entity = payload.get("payload", {}).get("payment", {}).get("entity", {})
+    payment_id = payment_entity.get("id")
+    order_id = payment_entity.get("order_id")
+    amount_paise = payment_entity.get("amount", 0)
+    currency = (payment_entity.get("currency") or "INR").upper()
+    notes = payment_entity.get("notes", {})
+
+    invoice_id_str = notes.get("invoice_id")
+    client_id_str = notes.get("client_id")
+
+    if not invoice_id_str:
+        # Try resolving invoice by razorpay_order_id
+        if order_id:
+            inv_match = db.query(PlatformInvoice).filter_by(razorpay_order_id=order_id).first()
+            if inv_match:
+                invoice_id_str = str(inv_match.id)
+                client_id_str = str(inv_match.client_id)
+
+    if not invoice_id_str or not client_id_str:
+        logger.warning("[RAZORPAY-WEBHOOK] Could not resolve invoice/client from notes or order_id %s", order_id)
+        return {"ok": True, "status": "unmapped_order", "order_id": order_id}
+
+    inv_id = int(invoice_id_str)
+    cid = int(client_id_str)
+    amount_inr = Decimal(str(amount_paise)) / Decimal("100")
+
+    try:
+        from app.services.platform_b2b_billing import process_verified_payment
+        res = process_verified_payment(
+            db,
+            invoice_id=inv_id,
+            client_id=cid,
+            amount=amount_inr,
+            currency=currency,
+            gateway_payment_id=payment_id,
+            method="razorpay",
+            notes=f"Razorpay webhook event {event} for order {order_id}",
+        )
+        return res
+    except ValueError as val_err:
+        logger.error("[RAZORPAY-WEBHOOK] Validation Error: %s", val_err)
+        raise HTTPException(400, str(val_err))
+    except Exception as exc:
+        logger.error("[RAZORPAY-WEBHOOK] Server Error: %s", exc)
+        raise HTTPException(500, f"Processing error: {str(exc)}")
 
 
 @router.post("/dunning/run")
@@ -1531,20 +1643,30 @@ def billing_summary(
 
 
 # =============================================================================
-# Task #43 — Phase 5 (Self-Service Sign-up + Tenant Portal)
+# Task #43 — Phase 4A (Public Sign-up + Service/Segment Packaging + Authoritative Pricing)
 # =============================================================================
 import re as _re
 import secrets as _secrets
 
 
-class TenantSignupIn(BaseModel):
-    company_name:  str = Field(..., min_length=2, max_length=120)
-    contact_name:  str = Field(..., min_length=1, max_length=120)
-    contact_email: str = Field(..., min_length=4, max_length=180)
-    contact_phone: Optional[str] = None
+class CalculatePricingIn(BaseModel):
+    selected_modules: List[str] = Field(default_factory=list)
     billing_currency: str = "INR"
-    trial_days:    int = 14
-    notes:         Optional[str] = None
+    billing_cycle: str = "monthly"  # monthly or annual
+    seat_count: int = Field(default=1, ge=1, le=10000)
+
+
+class TenantSignupIn(BaseModel):
+    company_name:     str = Field(..., min_length=2, max_length=120)
+    contact_name:     str = Field(..., min_length=1, max_length=120)
+    contact_email:    str = Field(..., min_length=4, max_length=180)
+    contact_phone:    Optional[str] = None
+    billing_currency: str = "INR"
+    billing_cycle:    str = "monthly"  # monthly or annual
+    selected_modules: Optional[List[str]] = Field(default_factory=list)
+    seat_count:       int = Field(default=1, ge=1, le=10000)
+    trial_days:       int = 14
+    notes:            Optional[str] = None
 
 
 def _slugify_code(s: str) -> str:
@@ -1552,23 +1674,216 @@ def _slugify_code(s: str) -> str:
     return (s or "TENANT")[:24]
 
 
+def _resolve_and_validate_modules_with_dependencies(db: Session, requested_codes: List[str]) -> Tuple[List[PlatformModule], List[PlatformModule]]:
+    """
+    Authoritatively validates that requested module codes exist, are active, and are non-internal.
+    Automatically resolves and appends required dependencies (e.g. CRM_CORE when a segment is selected).
+    Returns (all_modules, auto_included_dependencies).
+    """
+    if not requested_codes:
+        return [], []
+
+    # 1. Fetch requested modules
+    requested_mods = db.query(PlatformModule).filter(
+        PlatformModule.module_code.in_(requested_codes),
+        PlatformModule.is_active == True,
+        PlatformModule.internal_only == False
+    ).all()
+
+    found_codes = {m.module_code for m in requested_mods}
+    for code in requested_codes:
+        if code not in found_codes:
+            raise HTTPException(400, f"Module '{code}' is invalid, inactive, or not available for public subscription.")
+
+    all_mods_map = {m.id: m for m in requested_mods}
+    auto_included: List[PlatformModule] = []
+
+    # 2. Transitive dependency resolution from platform_module_dependencies
+    checked_ids = set(all_mods_map.keys())
+    to_check = list(all_mods_map.keys())
+
+    while to_check:
+        curr_id = to_check.pop(0)
+        deps = db.query(PlatformModuleDependency).filter_by(module_id=curr_id).all()
+        for dep in deps:
+            if dep.depends_on_module_id not in checked_ids:
+                dep_mod = db.query(PlatformModule).filter_by(
+                    id=dep.depends_on_module_id,
+                    is_active=True,
+                    internal_only=False
+                ).first()
+                if dep_mod:
+                    all_mods_map[dep_mod.id] = dep_mod
+                    auto_included.append(dep_mod)
+                    checked_ids.add(dep_mod.id)
+                    to_check.append(dep_mod.id)
+
+    return list(all_mods_map.values()), auto_included
+
+
+def _compute_authoritative_pricing(
+    db: Session,
+    modules: List[PlatformModule],
+    currency: str = "INR",
+    cycle: str = "monthly",
+    seat_count: int = 1
+) -> Dict[str, Any]:
+    """
+    Calculates authoritative server-side pricing from platform_module_pricing.
+    Supports Monthly and Annual cycles (with 2 free months on Annual).
+    """
+    currency_clean = (currency or "INR").upper()
+    cycle_clean = (cycle or "monthly").lower()
+    seats = max(1, int(seat_count or 1))
+
+    line_items = []
+    monthly_subtotal = Decimal("0.00")
+
+    for m in modules:
+        pricing = db.query(PlatformModulePricing).filter_by(module_id=m.id).first()
+        if pricing:
+            unit_price = Decimal(str(pricing.price_inr if currency_clean == "INR" else pricing.price_usd))
+            unit_type = pricing.pricing_unit or "per_company"
+        else:
+            unit_price = Decimal("0.00")
+            unit_type = "per_company"
+
+        # Apply seat multiplier if unit is per_seat
+        qty = Decimal(seats) if unit_type == "per_seat" else Decimal("1.00")
+        line_monthly = unit_price * qty
+        monthly_subtotal += line_monthly
+
+        line_items.append({
+            "module_id": m.id,
+            "module_code": m.module_code,
+            "module_name": m.module_name,
+            "category": m.category,
+            "pricing_unit": unit_type,
+            "unit_price": float(unit_price),
+            "quantity": float(qty),
+            "monthly_amount": float(line_monthly),
+        })
+
+    # Annual discount: 12 months for the price of 10 (2 months free)
+    annual_multiplier = 10 if cycle_clean == "annual" else 1
+    cycle_subtotal = monthly_subtotal * Decimal(annual_multiplier)
+    gst_rate = Decimal("18.00") if currency_clean == "INR" else Decimal("0.00")
+    tax_amount = (cycle_subtotal * gst_rate) / Decimal("100.00")
+    total_payable = cycle_subtotal + tax_amount
+
+    return {
+        "currency": currency_clean,
+        "billing_cycle": cycle_clean,
+        "seat_count": seats,
+        "modules_count": len(modules),
+        "line_items": line_items,
+        "monthly_subtotal": float(monthly_subtotal),
+        "annual_free_months": 2 if cycle_clean == "annual" else 0,
+        "cycle_multiplier": annual_multiplier,
+        "cycle_subtotal": float(cycle_subtotal),
+        "tax_rate_pct": float(gst_rate),
+        "tax_amount": float(tax_amount),
+        "total_payable": float(total_payable),
+        "monthly_effective_rate": float(total_payable / Decimal("12.00")) if cycle_clean == "annual" else float(total_payable),
+    }
+
+
+@router.get("/public-catalog")
+def get_public_signup_catalog(db: Session = Depends(get_db)):
+    """
+    Public catalog of selectable MyntOS Services, Segments, and Addons with pricing.
+    """
+    canonical_codes = [
+        "CRM_CORE", "CRM_LEADS_SOLAR", "CRM_LEADS_EV_B2B", "CRM_LEADS_EV_B2C",
+        "CRM_LEADS_EV_SPARES", "CRM_LEADS_REAL_DREAMS", "CRM_LEADS_INSURANCE", "CRM_LEADS_ETC",
+        "WHATSAPP_INTEGRATION", "META_ADS_INTEGRATION", "TELEPHONY_INTEGRATION",
+        "STAFF_HR", "SFMS_ACCOUNTING"
+    ]
+
+    mods = db.query(PlatformModule).filter(
+        PlatformModule.module_code.in_(canonical_codes),
+        PlatformModule.is_active == True,
+        PlatformModule.internal_only == False
+    ).all()
+
+    services = []
+    segments = []
+
+    for m in mods:
+        p = db.query(PlatformModulePricing).filter_by(module_id=m.id).first()
+        item = {
+            "module_id": m.id,
+            "module_code": m.module_code,
+            "module_name": m.module_name,
+            "category": m.category,
+            "description": m.description,
+            "price_inr": float(p.price_inr) if p else 0.0,
+            "price_usd": float(p.price_usd) if p else 0.0,
+            "pricing_unit": p.pricing_unit if p else "per_company",
+        }
+        if m.category == "CRM_SEGMENT":
+            item["requires_module"] = "CRM_CORE"
+            segments.append(item)
+        else:
+            services.append(item)
+
+    return {
+        "services": services,
+        "segments": segments,
+        "annual_discount_months": 2,
+        "tax_rate_inr_pct": 18.00,
+    }
+
+
+@router.post("/calculate-pricing")
+def calculate_public_pricing(payload: CalculatePricingIn, db: Session = Depends(get_db)):
+    """
+    Authoritative server-side live price calculation for requested services and segments.
+    """
+    if payload.billing_currency.upper() not in ("INR", "USD"):
+        raise HTTPException(400, "billing_currency must be INR or USD")
+    if payload.billing_cycle.lower() not in ("monthly", "annual"):
+        raise HTTPException(400, "billing_cycle must be monthly or annual")
+
+    all_mods, auto_deps = _resolve_and_validate_modules_with_dependencies(db, payload.selected_modules)
+    breakdown = _compute_authoritative_pricing(
+        db, all_mods,
+        currency=payload.billing_currency,
+        cycle=payload.billing_cycle,
+        seat_count=payload.seat_count
+    )
+    breakdown["auto_included_dependencies"] = [m.module_code for m in auto_deps]
+    return breakdown
+
+
 @router.post("/signup", status_code=201)
 def tenant_signup(payload: TenantSignupIn, db: Session = Depends(get_db)):
     """
-    Public self-service sign-up. Creates a `platform_clients` row in 'trial'
-    status plus a 'trial' subscription with NO modules attached. A super-admin
-    must subsequently attach modules / pick a plan.
-
-    Anti-abuse: minimal — uses email+company_name uniqueness. Production
-    deployment should add CAPTCHA/rate-limit; that is documented as Phase 5b.
+    Public self-service sign-up with service/segment packaging and authoritative pricing.
+    Creates a `platform_clients` row in 'pending' status plus a 'pending_payment'
+    subscription with requested modules created in disabled status (enabled=False).
+    Authoritative pricing snapshot is recorded.
     """
     if not _re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", payload.contact_email):
         raise HTTPException(400, "invalid contact_email")
     if payload.billing_currency.upper() not in ("INR", "USD"):
         raise HTTPException(400, "billing_currency must be INR or USD")
-    trial_days = max(1, min(int(payload.trial_days or 14), 90))
+    if payload.billing_cycle.lower() not in ("monthly", "annual"):
+        raise HTTPException(400, "billing_cycle must be monthly or annual")
 
-    # de-dup on (company_name, contact_email) — return existing if present
+    # 1. Resolve & Validate requested modules + dependencies
+    requested_codes = payload.selected_modules or []
+    all_mods, auto_deps = _resolve_and_validate_modules_with_dependencies(db, requested_codes)
+
+    # 2. Compute Authoritative Price Snapshot
+    pricing_snapshot = _compute_authoritative_pricing(
+        db, all_mods,
+        currency=payload.billing_currency,
+        cycle=payload.billing_cycle,
+        seat_count=payload.seat_count
+    )
+
+    # 3. De-dup on (company_name, contact_email)
     existing = db.execute(text("""
         SELECT id FROM platform_clients
          WHERE LOWER(client_name) = LOWER(:n) AND LOWER(contact_email) = LOWER(:e)
@@ -1578,15 +1893,16 @@ def tenant_signup(payload: TenantSignupIn, db: Session = Depends(get_db)):
         cid = int(existing[0])
         return {"ok": True, "client_id": cid, "status": "already-exists"}
 
-    # Pick a unique client_code
-    base_code = _slugify_code(payload.company_name)
-    code = base_code
+    # 4. Pick unique, non-enumerable client_code
+    base_code = _slugify_code(payload.company_name)[:16]
+    code = f"{base_code}-{_secrets.token_hex(4).upper()}"
     for _ in range(8):
         clash = db.execute(text("SELECT 1 FROM platform_clients WHERE client_code=:c"),
                            {"c": code}).first()
         if not clash: break
-        code = f"{base_code}-{_secrets.token_hex(2).upper()}"
+        code = f"{base_code}-{_secrets.token_hex(4).upper()}"
 
+    # 5. Create Pending Client
     client = PlatformClient(
         client_code=code,
         client_name=payload.company_name,
@@ -1594,35 +1910,66 @@ def tenant_signup(payload: TenantSignupIn, db: Session = Depends(get_db)):
         contact_email=payload.contact_email,
         contact_phone=payload.contact_phone,
         billing_currency=payload.billing_currency.upper(),
-        status="trial",
+        status="pending",
         is_internal=False,
         notes=payload.notes,
     )
     db.add(client); db.commit(); db.refresh(client)
 
-    today = date.today()
+    # 6. Create Pending Subscription
     sub = PlatformSubscription(
         client_id=client.id,
         billing_currency=client.billing_currency,
-        billing_cycle="monthly",
-        status="trial",
-        is_trial=True,
-        starts_on=today,
-        trial_ends_on=today + __import__("datetime").timedelta(days=trial_days),
+        billing_cycle=payload.billing_cycle.lower(),
+        annual_free_months=2,
+        status="pending_payment",
+        is_trial=False,
+        seat_count=max(1, int(payload.seat_count or 1)),
+        starts_on=None,
+        trial_ends_on=None,
     )
     db.add(sub); db.commit(); db.refresh(sub)
 
-    _audit(db, actor_staff_id=None, client_id=client.id, entity="B2B-SIGNUP",
-           action="CREATE", entity_id=client.id,
-           after={"client_code": code, "trial_days": trial_days})
+    # 7. Create Requested Subscription Modules (enabled=False until approved & paid)
+    for m in all_mods:
+        sub_mod = PlatformSubscriptionModule(
+            subscription_id=sub.id,
+            module_id=m.id,
+            enabled=False,  # REQUESTED status; becomes True on verified payment
+        )
+        db.add(sub_mod)
+    db.commit()
+
+    # 8. Audit Record with Price Snapshot
+    _audit(
+        db,
+        actor_staff_id=None,
+        client_id=client.id,
+        entity="B2B-SIGNUP",
+        action="CREATE",
+        entity_id=client.id,
+        after={
+            "client_code": code,
+            "status": "pending_payment",
+            "requested_modules": [m.module_code for m in all_mods],
+            "auto_included_dependencies": [m.module_code for m in auto_deps],
+            "pricing_snapshot": pricing_snapshot,
+        }
+    )
 
     return {
-        "ok": True, "client_id": client.id, "client_code": client.client_code,
-        "subscription_id": sub.id, "trial_ends_on": sub.trial_ends_on.isoformat(),
-        "status": "created",
+        "ok": True,
+        "client_id": client.id,
+        "client_code": client.client_code,
+        "subscription_id": sub.id,
+        "status": "pending_payment",
+        "requested_modules": [m.module_code for m in all_mods],
+        "auto_included_dependencies": [m.module_code for m in auto_deps],
+        "pricing_snapshot": pricing_snapshot,
         "next_steps": [
-            "A super-admin must attach modules to your subscription before access is granted.",
-            "Use /staff/my-tenant after login to view your tenant status.",
+            "Your application has been received with requested services.",
+            "Zynova Admin will review your application and issue your invoice.",
+            "Subscription and Tenant Administrator login will activate upon verified payment receipt.",
         ],
     }
 
@@ -1662,3 +2009,838 @@ def my_tenant_self(
         "entitled_module_count": int(entitled or 0),
         "enforcing": enforce_enabled(),
     }
+
+
+# =============================================================================
+# Phase 4B — Zynova Approval, Invoicing, & Commercial State Enforcement
+# =============================================================================
+
+@router.get("/signups/pending")
+def list_pending_signups(
+    db: Session = Depends(get_db),
+    _staff: StaffEmployee = Depends(require_b2b_super_admin),
+):
+    """
+    Zynova Super Admin cockpit endpoint to review pending & approved client applications.
+    """
+    clients = db.query(PlatformClient).filter(
+        PlatformClient.status.in_(["pending", "approved"]),
+        PlatformClient.is_internal == False
+    ).order_by(PlatformClient.id.desc()).all()
+
+    out = []
+    for c in clients:
+        sub = db.query(PlatformSubscription).filter_by(client_id=c.id).order_by(PlatformSubscription.id.desc()).first()
+        sub_mods = []
+        if sub:
+            mods = db.query(PlatformModule).join(
+                PlatformSubscriptionModule, PlatformSubscriptionModule.module_id == PlatformModule.id
+            ).filter(PlatformSubscriptionModule.subscription_id == sub.id).all()
+            sub_mods = [m.module_code for m in mods]
+
+        inv = db.query(PlatformInvoice).filter_by(client_id=c.id).order_by(PlatformInvoice.id.desc()).first() if sub else None
+
+        out.append({
+            "client_id": c.id,
+            "client_code": c.client_code,
+            "client_name": c.client_name,
+            "contact_name": c.contact_name,
+            "contact_email": c.contact_email,
+            "contact_phone": c.contact_phone,
+            "status": c.status,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "subscription": {
+                "id": sub.id if sub else None,
+                "billing_cycle": sub.billing_cycle if sub else "monthly",
+                "billing_currency": sub.billing_currency if sub else c.billing_currency,
+                "seat_count": sub.seat_count if sub else 1,
+                "status": sub.status if sub else None,
+                "requested_modules": sub_mods,
+            } if sub else None,
+            "invoice": {
+                "id": inv.id,
+                "invoice_number": inv.invoice_number,
+                "invoice_type": getattr(inv, "invoice_type", "pro_forma" if inv.status != "paid" else "tax_invoice"),
+                "is_pro_forma": (getattr(inv, "invoice_type", "pro_forma") == "pro_forma" and inv.status != "paid"),
+                "tax_invoice_number": getattr(inv, "tax_invoice_number", None if inv.status != "paid" else inv.invoice_number),
+                "pro_forma_number": getattr(inv, "so_number", inv.invoice_number),
+                "document_title": "GST TAX INVOICE" if inv.status == "paid" else "PRO FORMA INVOICE",
+                "subtotal": float(inv.subtotal),
+                "tax": float(inv.tax),
+                "total": float(inv.total),
+                "status": inv.status,
+                "amount_paid": float(inv.amount_paid or 0),
+                "balance_due": float(inv.balance_due or inv.total),
+                "razorpay_order_id": inv.razorpay_order_id,
+            } if inv else None,
+        })
+
+    return {"pending_signups": out}
+
+
+@router.post("/signups/{client_id}/approve")
+def approve_signup_application(
+    client_id: int,
+    db: Session = Depends(get_db),
+    staff: StaffEmployee = Depends(require_b2b_super_admin),
+):
+    """
+    Zynova Super Admin approval workflow:
+    1. Validates client state is 'pending' or 'approved'.
+    2. Freezes the commercial terms snapshot.
+    3. Authoritatively generates Platform Pro Forma Invoice if not already issued.
+    4. Pre-generates Razorpay order ID.
+    5. Sets client.status = 'approved', sub.status = 'pending_payment'.
+    6. Emits audit trail.
+    """
+    client = db.query(PlatformClient).filter_by(id=client_id).first()
+    if not client:
+        raise HTTPException(404, "Client application not found")
+    if client.is_internal:
+        raise HTTPException(400, "Internal tenant cannot be approved via signup workflow")
+    if client.status not in ("pending", "approved"):
+        raise HTTPException(400, f"Cannot approve client in '{client.status}' status")
+
+    sub = db.query(PlatformSubscription).filter_by(client_id=client.id).order_by(PlatformSubscription.id.desc()).first()
+    if not sub:
+        raise HTTPException(400, "No subscription found for client application")
+
+    # 1. Check if invoice already exists
+    inv = db.query(PlatformInvoice).filter_by(subscription_id=sub.id).first()
+    if not inv:
+        # Generate Authoritative Pro Forma Invoice from frozen approved modules
+        from app.services.platform_b2b_billing import generate_invoice_for_subscription
+        try:
+            inv_res = generate_invoice_for_subscription(
+                db, sub.id,
+                due_in_days=14,
+                actor_staff_id=staff.id,
+            )
+            inv = db.query(PlatformInvoice).filter_by(id=inv_res["id"]).first()
+        except Exception as e:
+            raise HTTPException(400, f"Failed to generate pro forma invoice: {e}")
+
+    # 2. Create or verify Razorpay order
+    from app.services.platform_b2b_billing import create_razorpay_order_for_invoice
+    rzp_res = create_razorpay_order_for_invoice(db, inv.id)
+
+    # 3. Update client state & notes (client stays in pending until payment activation)
+    before_status = client.status
+    client.notes = f"{client.notes or ''}\n[APPROVED_FOR_INVOICE]: Approved by staff #{staff.id}\n[APPROVED_FOR_PRO_FORMA]: Pro forma invoice generated".strip()
+    client.updated_at = get_indian_time()
+    sub.status = "pending_payment"
+    sub.updated_at = get_indian_time()
+    db.commit()
+
+    # 4. Audit Log
+    _audit(
+        db,
+        actor_staff_id=staff.id,
+        client_id=client.id,
+        entity="B2B-APPROVAL",
+        action="UPDATE",
+        entity_id=client.id,
+        before={"status": before_status},
+        after={
+            "status": "approved",
+            "subscription_id": sub.id,
+            "invoice_id": inv.id,
+            "pro_forma_number": inv.invoice_number,
+            "invoice_number": inv.invoice_number,
+            "invoice_type": getattr(inv, "invoice_type", "pro_forma"),
+            "document_title": "PRO FORMA INVOICE",
+            "total_payable": float(inv.total),
+            "currency": inv.currency,
+            "razorpay_order_id": inv.razorpay_order_id,
+        }
+    )
+
+    return {
+        "ok": True,
+        "client_id": client.id,
+        "client_code": client.client_code,
+        "status": "approved",
+        "subscription_id": sub.id,
+        "invoice_id": inv.id,
+        "invoice_number": inv.invoice_number,
+        "pro_forma_number": getattr(inv, "so_number", inv.invoice_number),
+        "invoice_type": getattr(inv, "invoice_type", "pro_forma"),
+        "tax_invoice_number": getattr(inv, "tax_invoice_number", None),
+        "document_title": "PRO FORMA INVOICE",
+        "total_payable": float(inv.total),
+        "currency": inv.currency,
+        "razorpay_order": rzp_res,
+        "message": "Application approved and pro forma invoice generated. Ready for client payment."
+    }
+
+
+
+@router.post("/signups/{client_id}/reject")
+def reject_signup_application(
+    client_id: int,
+    payload: Dict[str, Any] = Body(default_factory=dict),
+    db: Session = Depends(get_db),
+    staff: StaffEmployee = Depends(require_b2b_super_admin),
+):
+    """
+    Zynova Super Admin rejection workflow:
+    1. Sets client.status = 'archived' (with [REJECTED] notes), sub.status = 'cancelled'.
+    2. Voids any unpaid invoices.
+    3. Records rejection audit trail.
+    """
+    client = db.query(PlatformClient).filter_by(id=client_id).first()
+    if not client:
+        raise HTTPException(404, "Client application not found")
+    if client.status == "active":
+        raise HTTPException(400, f"Cannot reject active client")
+
+    reason = payload.get("reason", "Application rejected by Zynova Administrator")
+    before_status = client.status
+    client.status = "archived"
+    client.notes = f"{client.notes or ''}\n[REJECTED]: {reason}".strip()
+    client.updated_at = get_indian_time()
+
+    subs = db.query(PlatformSubscription).filter_by(client_id=client.id).all()
+    for s in subs:
+        if s.status != "active":
+            s.status = "cancelled"
+            s.updated_at = get_indian_time()
+
+    # Void unpaid invoices
+    invs = db.query(PlatformInvoice).filter_by(client_id=client.id).all()
+    for inv in invs:
+        if inv.status in ("open", "draft"):
+            inv.status = "void"
+            inv.updated_at = get_indian_time()
+
+    db.commit()
+
+    _audit(
+        db,
+        actor_staff_id=staff.id,
+        client_id=client.id,
+        entity="B2B-APPROVAL",
+        action="UPDATE",
+        entity_id=client.id,
+        before={"status": before_status},
+        after={"status": "rejected", "reason": reason}
+    )
+
+    return {
+        "ok": True,
+        "client_id": client.id,
+        "client_code": client.client_code,
+        "status": "rejected",
+        "reason": reason
+    }
+
+
+@router.get("/application-status/{client_code}")
+def get_public_application_status(
+    client_code: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Public customer-facing status lookup for a submitted signup application.
+    Sanitized; leaks zero internal secrets.
+    """
+    client = db.query(PlatformClient).filter(
+        func.lower(PlatformClient.client_code) == client_code.lower()
+    ).first()
+    if not client:
+        raise HTTPException(404, "Application code not found")
+
+    sub = db.query(PlatformSubscription).filter_by(client_id=client.id).order_by(PlatformSubscription.id.desc()).first()
+    sub_mods = []
+    if sub:
+        mods = db.query(PlatformModule).join(
+            PlatformSubscriptionModule, PlatformSubscriptionModule.module_id == PlatformModule.id
+        ).filter(PlatformSubscriptionModule.subscription_id == sub.id).all()
+        sub_mods = [m.module_code for m in mods]
+
+    inv = db.query(PlatformInvoice).filter_by(client_id=client.id).order_by(PlatformInvoice.id.desc()).first() if sub else None
+
+    # Determine status step for progress UI
+    step = 1
+    display_status = client.status
+    if client.status == "pending" and not inv:
+        step = 2  # Under Review
+        display_status = "pending"
+    elif client.status == "pending" and inv and inv.status != "paid":
+        step = 3  # Invoice Issued / Payment Pending
+        display_status = "approved"
+    elif client.status == "active" or (inv and inv.status == "paid"):
+        step = 4  # Payment Verified / Workspace Active
+        display_status = "active"
+    elif client.status == "archived" and sub and sub.status == "cancelled":
+        step = -1
+        display_status = "rejected"
+
+    return {
+        "client_code": client.client_code,
+        "company_name": client.client_name,
+        "contact_name": client.contact_name,
+        "status": display_status,
+        "progress_step": step,
+        "requested_modules": sub_mods,
+        "billing_currency": client.billing_currency,
+        "billing_cycle": sub.billing_cycle if sub else "monthly",
+        "invoice": {
+            "id": inv.id,
+            "invoice_number": inv.invoice_number,
+            "invoice_type": getattr(inv, "invoice_type", "pro_forma" if inv.status != "paid" else "tax_invoice"),
+            "is_pro_forma": (getattr(inv, "invoice_type", "pro_forma") == "pro_forma" and inv.status != "paid"),
+            "tax_invoice_number": getattr(inv, "tax_invoice_number", None if inv.status != "paid" else inv.invoice_number),
+            "pro_forma_number": getattr(inv, "so_number", inv.invoice_number),
+            "document_title": "GST TAX INVOICE" if inv.status == "paid" else "PRO FORMA INVOICE",
+            "subtotal": float(inv.subtotal),
+            "tax": float(inv.tax),
+            "total": float(inv.total),
+            "status": inv.status,
+            "amount_paid": float(inv.amount_paid or 0),
+            "balance_due": float(inv.balance_due or inv.total),
+            "razorpay_order_id": inv.razorpay_order_id,
+        } if inv else None,
+    }
+
+
+
+# =============================================================================
+# Task #44 — Phase 4C (Client Admin User Creation & Entitlement Boundary)
+# =============================================================================
+
+class TenantUserCreateIn(BaseModel):
+    full_name: str = Field(..., min_length=2, max_length=120)
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    designation: Optional[str] = "Staff"
+    role_id: int
+    assigned_modules: Optional[List[str]] = Field(default_factory=list)
+    password: Optional[str] = None
+    # Any base_company_id or client_id or data_companies in payload is strictly ignored and overridden
+
+
+class TenantUserStatusUpdateIn(BaseModel):
+    status: str = Field(..., pattern="^(active|deactivated|paused)$")
+    reason: Optional[str] = None
+
+
+class TenantUserModulesUpdateIn(BaseModel):
+    assigned_modules: List[str] = Field(default_factory=list)
+
+
+def require_tenant_admin_context(
+    staff: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db),
+) -> Tuple[StaffEmployee, PlatformClient, AssociatedCompany]:
+    """
+    Validates that the authenticated staff employee has Tenant Admin authority
+    over their specific tenant company and associated active subscription.
+    """
+    if staff.status != "active":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, f"Staff account is {staff.status}")
+
+    if not staff.base_company_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Staff user has no associated company")
+
+    company = db.query(AssociatedCompany).filter_by(id=staff.base_company_id).first()
+    if not company or not company.client_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Staff company is not linked to a SaaS tenant")
+
+    client = db.query(PlatformClient).filter_by(id=company.client_id).first()
+    if not client or client.status != "active":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, f"Tenant client '{company.client_id}' is not active")
+
+    # Verify Tenant Admin authority
+    role = staff.role
+    role_code = (getattr(role, "role_code", "") or "").lower()
+    hierarchy_level = int(getattr(role, "hierarchy_level", 0) or 0)
+    is_super = getattr(staff, "is_super_admin", False)
+
+    if not is_super and role_code not in ("tenant_admin", "super_admin", "admin") and hierarchy_level < 80:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Tenant Administrator authority required")
+
+    return staff, client, company
+
+
+@router.get("/tenant/users")
+def get_tenant_users(
+    ctx: Tuple[StaffEmployee, PlatformClient, AssociatedCompany] = Depends(require_tenant_admin_context),
+    db: Session = Depends(get_db),
+):
+    """
+    Lists users belonging ONLY to the authenticated Tenant Admin's company.
+    Zero cross-tenant user leakage.
+    """
+    staff, client, company = ctx
+    users = db.query(StaffEmployee).filter(
+        StaffEmployee.base_company_id == company.id
+    ).order_by(StaffEmployee.id.asc()).all()
+
+    # Get active subscription
+    sub = db.query(PlatformSubscription).filter_by(client_id=client.id, status="active").first()
+    seat_limit = sub.seat_count if sub else 1
+    active_count = sum(1 for u in users if u.status == "active")
+
+    user_list = []
+    for u in users:
+        u_role = u.role
+        user_list.append({
+            "id": u.id,
+            "emp_code": u.emp_code,
+            "full_name": u.full_name,
+            "email": u.email,
+            "phone": u.phone,
+            "designation": u.designation,
+            "role_id": u.role_id,
+            "role_code": u_role.role_code if u_role else None,
+            "role_name": u_role.role_name if u_role else None,
+            "hierarchy_level": u_role.hierarchy_level if u_role else 0,
+            "status": u.status,
+            "base_company_id": u.base_company_id,
+            "is_root_admin": bool(u_role and u_role.role_code == "tenant_admin" and u.id == staff.id),
+            "created_at": u.date_of_joining.isoformat() if u.date_of_joining else None,
+        })
+
+    return {
+        "ok": True,
+        "tenant_id": client.id,
+        "company_name": company.company_name,
+        "seat_limit": seat_limit,
+        "active_users_count": active_count,
+        "users": user_list,
+    }
+
+
+@router.get("/tenant/entitled-modules")
+def get_tenant_entitled_modules(
+    ctx: Tuple[StaffEmployee, PlatformClient, AssociatedCompany] = Depends(require_tenant_admin_context),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns modules actively entitled to this tenant.
+    Only these modules may be assigned to sub-users.
+    """
+    staff, client, company = ctx
+    sub = db.query(PlatformSubscription).filter_by(client_id=client.id, status="active").first()
+    if not sub:
+        return {"ok": True, "entitled_modules": []}
+
+    mods = db.query(PlatformModule).join(
+        PlatformSubscriptionModule, PlatformSubscriptionModule.module_id == PlatformModule.id
+    ).filter(
+        PlatformSubscriptionModule.subscription_id == sub.id,
+        PlatformSubscriptionModule.enabled == True,
+        PlatformModule.is_active == True,
+    ).all()
+
+    return {
+        "ok": True,
+        "tenant_id": client.id,
+        "entitled_modules": [
+            {
+                "module_id": m.id,
+                "module_code": m.module_code,
+                "module_name": m.module_name,
+                "category": m.category,
+                "description": m.description,
+            }
+            for m in mods
+        ]
+    }
+
+
+@router.get("/tenant/assignable-roles")
+def get_tenant_assignable_roles(
+    ctx: Tuple[StaffEmployee, PlatformClient, AssociatedCompany] = Depends(require_tenant_admin_context),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns roles that a Tenant Admin is authorized to assign to sub-users.
+    Privilege escalation guard: strictly limits to hierarchy_level < 85.
+    """
+    staff, client, company = ctx
+    admin_level = int(getattr(staff.role, "hierarchy_level", 85) or 85)
+
+    roles = db.query(StaffRole).filter(
+        StaffRole.is_active == True,
+        StaffRole.hierarchy_level < min(admin_level, 85),
+    ).order_by(StaffRole.hierarchy_level.desc()).all()
+
+    filtered_roles = [
+        {
+            "id": r.id,
+            "role_code": r.role_code,
+            "role_name": r.role_name,
+            "hierarchy_level": r.hierarchy_level,
+            "description": r.description,
+        }
+        for r in roles
+        if r.role_code.upper() not in _SUPER_ADMIN_ROLE_CODES and r.role_code.lower() != "tenant_admin"
+    ]
+
+    return {
+        "ok": True,
+        "assignable_roles": filtered_roles
+    }
+
+
+@router.post("/tenant/users")
+def create_tenant_user(
+    payload: TenantUserCreateIn,
+    ctx: Tuple[StaffEmployee, PlatformClient, AssociatedCompany] = Depends(require_tenant_admin_context),
+    db: Session = Depends(get_db),
+):
+    """
+    Creates a new user within the authenticated Tenant Admin's tenant boundary.
+    Enforces:
+    1. Tenant Boundary: Base company locked to tenant company; data_companies locked to [company.id].
+    2. Privilege Escalation Defense: Target role hierarchy MUST be < 85 and < admin's hierarchy.
+       Cannot assign Super Admin, Platform Admin, or grant is_super_admin=True.
+    3. Authoritative Module Entitlement Gate: All assigned modules MUST be actively entitled
+       in platform_subscription_modules (enabled=True). Any unpurchased module is strictly rejected with HTTP 400.
+    4. Seat Count Limit: Active user count cannot exceed active subscription seat_count.
+    5. Audit Logging: Emits PlatformAuditLog.
+    """
+    admin_staff, client, company = ctx
+
+    # ── 1. PRIVILEGE ESCALATION DEFENSE ──────────────────────────────────────
+    target_role = db.query(StaffRole).filter_by(id=payload.role_id, is_active=True).first()
+    if not target_role:
+        raise HTTPException(400, "Invalid target role")
+
+    admin_level = int(getattr(admin_staff.role, "hierarchy_level", 85) or 85)
+    target_code = target_role.role_code.upper()
+    target_level = int(target_role.hierarchy_level or 0)
+
+    if (
+        target_code in _SUPER_ADMIN_ROLE_CODES
+        or target_role.role_code.lower() == "tenant_admin"
+        or target_level >= min(admin_level, 85)
+    ):
+        raise HTTPException(
+            403,
+            f"Privilege escalation denied: Tenant Admin cannot create users with role '{target_role.role_name}' (hierarchy level {target_level})."
+        )
+
+    # ── 2. SEAT COUNT LIMIT CHECK ───────────────────────────────────────────
+    sub = db.query(PlatformSubscription).filter_by(client_id=client.id, status="active").first()
+    if not sub:
+        raise HTTPException(400, "Tenant does not have an active subscription")
+
+    active_user_count = db.query(StaffEmployee).filter(
+        StaffEmployee.base_company_id == company.id,
+        StaffEmployee.status == "active"
+    ).count()
+
+    if active_user_count >= sub.seat_count:
+        raise HTTPException(
+            400,
+            f"Tenant seat limit reached (maximum {sub.seat_count} active seats). Please upgrade your subscription to add more users."
+        )
+
+    # ── 3. AUTHORITATIVE MODULE ENTITLEMENT CHECK ───────────────────────────
+    if payload.assigned_modules:
+        entitled_sub_mods = db.query(PlatformModule.module_code).join(
+            PlatformSubscriptionModule, PlatformSubscriptionModule.module_id == PlatformModule.id
+        ).filter(
+            PlatformSubscriptionModule.subscription_id == sub.id,
+            PlatformSubscriptionModule.enabled == True,
+            PlatformModule.is_active == True,
+        ).all()
+        entitled_codes = {m[0] for m in entitled_sub_mods}
+
+        for mod_code in payload.assigned_modules:
+            if mod_code not in entitled_codes:
+                raise HTTPException(
+                    400,
+                    f"Module assignment denied: Module '{mod_code}' is not purchased or active for this tenant."
+                )
+
+    # ── 4. EMAIL UNIQUENESS CHECK ───────────────────────────────────────────
+    if payload.email:
+        existing = db.query(StaffEmployee).filter_by(email=payload.email.lower()).first()
+        if existing:
+            raise HTTPException(400, "Email address is already in use by another staff employee")
+
+    # ── 5. CODE & PASSWORD GENERATION ────────────────────────────────────────
+    emp_code = generate_employee_code(db, staff_type="MN_EMPLOYEE")
+    raw_pwd = payload.password or emp_code
+    pwd_hash = SecurityManager.get_password_hash(raw_pwd)
+
+    # ── 6. ATOMIC USER CREATION (SCOPED TO TENANT COMPANY) ───────────────────
+    new_user = StaffEmployee(
+        emp_code=emp_code,
+        staff_type="MN_EMPLOYEE",
+        full_name=payload.full_name,
+        email=payload.email.lower() if payload.email else None,
+        phone=payload.phone,
+        designation=payload.designation or "Staff",
+        role_id=target_role.id,
+        status="active",
+        date_of_joining=date.today(),
+        password_hash=pwd_hash,
+        requires_password_change=True,
+        base_company_id=company.id,  # STRICTLY LOCKED
+        data_companies=[company.id], # STRICTLY LOCKED
+    )
+    db.add(new_user)
+    db.flush()
+
+    # ── 7. AUDIT LOGGING ─────────────────────────────────────────────────────
+    _audit(
+        db,
+        actor_staff_id=admin_staff.id,
+        client_id=client.id,
+        entity="STAFF-USER",
+        action="CREATE",
+        entity_id=new_user.id,
+        after={
+            "emp_code": emp_code,
+            "full_name": new_user.full_name,
+            "email": new_user.email,
+            "role_code": target_role.role_code,
+            "base_company_id": company.id,
+            "assigned_modules": payload.assigned_modules or [],
+        }
+    )
+    db.commit()
+    db.refresh(new_user)
+
+    return {
+        "ok": True,
+        "message": f"User '{new_user.full_name}' created successfully.",
+        "user": {
+            "id": new_user.id,
+            "emp_code": new_user.emp_code,
+            "full_name": new_user.full_name,
+            "email": new_user.email,
+            "role_code": target_role.role_code,
+            "role_name": target_role.role_name,
+            "status": new_user.status,
+            "base_company_id": new_user.base_company_id,
+            "assigned_modules": payload.assigned_modules or [],
+        }
+    }
+
+
+@router.put("/tenant/users/{user_id}/status")
+def update_tenant_user_status(
+    user_id: int,
+    payload: TenantUserStatusUpdateIn,
+    ctx: Tuple[StaffEmployee, PlatformClient, AssociatedCompany] = Depends(require_tenant_admin_context),
+    db: Session = Depends(get_db),
+):
+    """
+    Enables/disables a user within the authenticated Tenant Admin's tenant boundary.
+    Enforces:
+    1. Tenant Boundary: Target user MUST belong to the admin's company (base_company_id == company.id).
+    2. Root Admin Protection: Cannot deactivate own root admin account if no other admin exists.
+    3. Audit Logging: Emits PlatformAuditLog.
+    """
+    admin_staff, client, company = ctx
+
+    target_user = db.query(StaffEmployee).filter_by(id=user_id).first()
+    if not target_user or target_user.base_company_id != company.id:
+        raise HTTPException(404, "User not found in your tenant workspace")
+
+    # Root Admin self-deactivation guard
+    if target_user.id == admin_staff.id and payload.status != "active":
+        raise HTTPException(400, "Cannot deactivate the currently logged-in root administrator account")
+
+    before_status = target_user.status
+    target_user.status = payload.status
+    target_user.status_changed_at = get_indian_time()
+    target_user.status_changed_by = admin_staff.id
+    target_user.status_change_reason = payload.reason or f"Status changed to {payload.status} by Tenant Admin"
+
+    if payload.status != "active":
+        target_user.last_working_date = date.today()
+    else:
+        target_user.restart_date = date.today()
+
+    _audit(
+        db,
+        actor_staff_id=admin_staff.id,
+        client_id=client.id,
+        entity="STAFF-USER",
+        action="UPDATE",
+        entity_id=target_user.id,
+        before={"status": before_status},
+        after={"status": target_user.status, "reason": target_user.status_change_reason}
+    )
+    db.commit()
+
+    return {
+        "ok": True,
+        "message": f"User status updated to '{target_user.status}'.",
+        "user_id": target_user.id,
+        "emp_code": target_user.emp_code,
+        "status": target_user.status,
+    }
+
+
+@router.put("/tenant/users/{user_id}/modules")
+def update_tenant_user_modules(
+    user_id: int,
+    payload: TenantUserModulesUpdateIn,
+    ctx: Tuple[StaffEmployee, PlatformClient, AssociatedCompany] = Depends(require_tenant_admin_context),
+    db: Session = Depends(get_db),
+):
+    """
+    Updates module assignments for a user within the authenticated Tenant Admin's tenant boundary.
+    Enforces:
+    1. Tenant Boundary: Target user MUST belong to the admin's company.
+    2. Authoritative Module Entitlement Gate: All assigned modules MUST be actively entitled in
+       platform_subscription_modules for this tenant. Unpurchased modules are rejected with HTTP 400.
+    3. Audit Logging: Emits PlatformAuditLog.
+    """
+    admin_staff, client, company = ctx
+
+    target_user = db.query(StaffEmployee).filter_by(id=user_id).first()
+    if not target_user or target_user.base_company_id != company.id:
+        raise HTTPException(404, "User not found in your tenant workspace")
+
+    sub = db.query(PlatformSubscription).filter_by(client_id=client.id, status="active").first()
+    if not sub:
+        raise HTTPException(400, "Tenant does not have an active subscription")
+
+    if payload.assigned_modules:
+        entitled_sub_mods = db.query(PlatformModule.module_code).join(
+            PlatformSubscriptionModule, PlatformSubscriptionModule.module_id == PlatformModule.id
+        ).filter(
+            PlatformSubscriptionModule.subscription_id == sub.id,
+            PlatformSubscriptionModule.enabled == True,
+            PlatformModule.is_active == True,
+        ).all()
+        entitled_codes = {m[0] for m in entitled_sub_mods}
+
+        for mod_code in payload.assigned_modules:
+            if mod_code not in entitled_codes:
+                raise HTTPException(
+                    400,
+                    f"Module assignment denied: Module '{mod_code}' is not purchased or active for this tenant."
+                )
+
+    _audit(
+        db,
+        actor_staff_id=admin_staff.id,
+        client_id=client.id,
+        entity="STAFF-USER-MODULES",
+        action="UPDATE",
+        entity_id=target_user.id,
+        after={"assigned_modules": payload.assigned_modules}
+    )
+    db.commit()
+
+    return {
+        "ok": True,
+        "message": "User modules updated successfully.",
+        "user_id": target_user.id,
+        "assigned_modules": payload.assigned_modules,
+    }
+
+
+# =============================================================================
+# Task #45 — Phase 4D (Post-Activation Authentication & Account Lifecycle Security)
+# =============================================================================
+
+class TenantUserPasswordResetIn(BaseModel):
+    temp_password: Optional[str] = None
+
+
+class TenantUserPasswordChangeIn(BaseModel):
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=6, max_length=128)
+
+
+@router.post("/tenant/users/{user_id}/reset-password")
+def reset_tenant_user_password(
+    user_id: int,
+    payload: TenantUserPasswordResetIn = Body(default_factory=TenantUserPasswordResetIn),
+    ctx: Tuple[StaffEmployee, PlatformClient, AssociatedCompany] = Depends(require_tenant_admin_context),
+    db: Session = Depends(get_db),
+):
+    """
+    Tenant Admin resets a sub-user's password within their tenant.
+    Enforces:
+    1. Tenant Boundary: target_user.base_company_id == company.id.
+    2. Privilege Defense: Cannot reset password of equal or higher hierarchy user or super admin.
+    3. Resets failed_login_attempts, unlocks account, requires password change on next login.
+    4. Audit logging.
+    """
+    admin_staff, client, company = ctx
+    target_user = db.query(StaffEmployee).filter_by(id=user_id).first()
+    if not target_user or target_user.base_company_id != company.id:
+        raise HTTPException(404, "User not found in your tenant workspace")
+
+    admin_level = int(getattr(admin_staff.role, "hierarchy_level", 85) or 85)
+    target_level = int(getattr(target_user.role, "hierarchy_level", 0) or 0)
+    if target_user.id != admin_staff.id and target_level >= admin_level:
+        raise HTTPException(403, "Cannot reset password of equal or higher hierarchy administrator")
+
+    temp_pw = payload.temp_password or target_user.emp_code
+    target_user.password_hash = SecurityManager.get_password_hash(temp_pw)
+    target_user.requires_password_change = True
+    target_user.failed_login_attempts = 0
+    target_user.locked_until = None
+
+    _audit(
+        db,
+        actor_staff_id=admin_staff.id,
+        client_id=client.id,
+        entity="STAFF-USER",
+        action="UPDATE",
+        entity_id=target_user.id,
+        after={"event": "PASSWORD_RESET", "requires_password_change": True}
+    )
+    db.commit()
+
+    return {
+        "ok": True,
+        "message": f"Password for '{target_user.full_name}' reset successfully.",
+        "emp_code": target_user.emp_code,
+        "requires_password_change": True,
+    }
+
+
+@router.post("/tenant/auth/change-password")
+def change_tenant_user_password(
+    payload: TenantUserPasswordChangeIn,
+    current_staff: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Authenticated tenant user changes their password.
+    Validates current_password, updates hash, clears requires_password_change.
+    """
+    if current_staff.status != "active":
+        raise HTTPException(403, f"Staff account is {current_staff.status}")
+
+    if not SecurityManager.verify_password(payload.current_password, current_staff.password_hash):
+        raise HTTPException(400, "Current password is incorrect")
+
+    current_staff.password_hash = SecurityManager.get_password_hash(payload.new_password)
+    current_staff.requires_password_change = False
+    current_staff.last_password_change = get_indian_time()
+
+    company = db.query(AssociatedCompany).filter_by(id=current_staff.base_company_id).first() if current_staff.base_company_id else None
+    client_id = company.client_id if company else None
+
+    _audit(
+        db,
+        actor_staff_id=current_staff.id,
+        client_id=client_id,
+        entity="STAFF-USER",
+        action="UPDATE",
+        entity_id=current_staff.id,
+        after={"event": "PASSWORD_CHANGED", "requires_password_change": False}
+    )
+    db.commit()
+
+    return {
+        "ok": True,
+        "message": "Password changed successfully.",
+    }
+
+

@@ -585,10 +585,10 @@ const MENU_MASTER = [
       }
     ]
   },
-  // ─── VGK SAAS (Last Section) ──────────────────────────────────────────
+  // ─── MYNTOS SAAS (Last Section) ──────────────────────────────────────────
   {
     section_code: "VGK_SAAS",
-    section_label: "VGK4U SAAS",
+    section_label: "MYNTOS SAAS",
     order: 99,
     items: [
       { menu_code: "VGK_SAAS_ALL_TENANTS", label: "All Tenants", route: "/staff/my-tenant", icon: "fas fa-layer-group", audience: ["VGK4U"] },

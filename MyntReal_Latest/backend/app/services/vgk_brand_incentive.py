@@ -30,7 +30,7 @@ from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
-CIBIL_MIN_SCORE = 600
+CIBIL_MIN_SCORE = 650
 
 ELIGIBLE_STAGES = frozenset({
     'application_submitted', 'pending_with_bank', 'documents_issue',
@@ -313,6 +313,14 @@ def generate_brand_commission_entries(db: Session, lead) -> int:
     Returns number of entries created.
     """
     try:
+        # DC-VGK-BRAND-INCENTIVE-002: Brand commissions are generated ONLY at final completion stages
+        COMPLETION_STAGES = {'subsidy_pending', 'completed', 'balance_received'}
+        pipeline = (getattr(lead, 'solar_pipeline_status', None) or '').strip().lower()
+        status = (getattr(lead, 'status', None) or '').strip().lower()
+        if pipeline not in COMPLETION_STAGES and status != 'completed':
+            logger.debug(f'[VGK-BRAND-COMM] Lead {lead.id} stage {pipeline!r} / status {status!r} not in completion stages; skipping brand commission generation.')
+            return 0
+
         solar_brand_id = getattr(lead, 'solar_brand_id', None)
         if not solar_brand_id:
             return 0

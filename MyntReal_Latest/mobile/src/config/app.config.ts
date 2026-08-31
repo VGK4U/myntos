@@ -10,7 +10,7 @@
  * This ensures mobile-in-browser always matches web data.
  */
 
-const PRODUCTION_DOMAIN = 'www.vgk4u.com';
+const PRODUCTION_DOMAIN = 'www.myntreal.com';
 const DEVELOPMENT_DOMAIN = '5305e65f-c4f9-487a-b990-7fdd5e743de1-00-2fjho41r6u5wb.worf.replit.dev';
 
 function isDevMode(): boolean {
@@ -74,8 +74,8 @@ function getWsBaseUrl(): string {
 
 export const APP_CONFIG = {
   VERSION: '1.0.1',
-  BUILD_NUMBER: 4,
-  BUILD_DATE: '2026-04-05',
+  BUILD_NUMBER: 1,
+  BUILD_DATE: '2026-08-30',
   MIN_SUPPORTED_VERSION: '1.0.0',
   
   get DOMAIN() { return getCurrentDomain(); },

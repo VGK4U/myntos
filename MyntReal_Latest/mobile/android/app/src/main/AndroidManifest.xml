@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -86,9 +86,8 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
-    <!-- Call Log & Phone State Permissions (DC_CALL_TRACKING_PERM_001) -->
+    <!-- Call Log Permissions (DC_CALL_TRACKING_PERM_001) -->
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
     <!-- Contacts Permission (DC_CONTACTS_PERM_001) - for enriching call logs with contact names -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />

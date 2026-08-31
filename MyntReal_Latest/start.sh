@@ -43,15 +43,32 @@ echo ""
 echo "Starting FastAPI Backend with Uvicorn supervisor (background)..."
 (
   while true; do
-    echo "[SUPERVISOR] Starting FastAPI Backend on port 8000..."
     cd "$SCRIPT_DIR/backend"
-    python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info || true
+    PYTHON_EXE=$(which python3 2>/dev/null || which python 2>/dev/null || echo "python3")
+    $PYTHON_EXE -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info || true
     echo "[SUPERVISOR] FastAPI Backend process exited. Restarting in 2 seconds..."
     sleep 2
   done
 ) &
 BACKEND_PID=$!
 echo "Backend Supervisor PID: $BACKEND_PID"
+
+# Start WhatsApp Group Bot daemon (port 5002) in background
+if [ -f "$SCRIPT_DIR/backend/whatsapp-group-bot/server.js" ]; then
+    echo "Starting WhatsApp Group Bot daemon on port 5002 (background)..."
+    (
+        cd "$SCRIPT_DIR/backend/whatsapp-group-bot"
+        export NODE_PATH="$SCRIPT_DIR/frontend/node_modules:$SCRIPT_DIR/backend/whatsapp-group-bot/node_modules:${NODE_PATH}"
+        while true; do
+            echo "[SUPERVISOR] Starting WhatsApp Bot daemon on port 5002..."
+            node server.js || true
+            echo "[SUPERVISOR] WhatsApp Bot daemon exited. Restarting in 3 seconds..."
+            sleep 3
+        done
+    ) &
+    WA_PID=$!
+    echo "WhatsApp Bot Supervisor PID: $WA_PID"
+fi
 
 # Let FastAPI Backend start in the background while we immediately start the frontend.
 # This prevents 502/5xx errors during Elastic Beanstalk deployments by ensuring
@@ -69,7 +86,14 @@ echo "======================================"
 
 while true; do
   echo "[SUPERVISOR] Starting Node.js Frontend on port ${PORT:-5000}..."
-  node server.js || true
+  if [ -f "server.js" ]; then
+    node server.js || true
+  elif [ -f "static-server.js" ]; then
+    node static-server.js || true
+  else
+    echo "ERROR: Neither static-server.js nor server.js found in $(pwd)"
+    sleep 5
+  fi
   echo "[SUPERVISOR] Node.js Frontend exited with code $?. Restarting in 2 seconds..."
   sleep 2
 done

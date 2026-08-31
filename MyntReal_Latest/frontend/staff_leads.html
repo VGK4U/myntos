@@ -29,7 +29,31 @@
         .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 8px; }
         .card-body { padding: 24px; }
         
-        .stat-card { background: white; border-radius: 10px; padding: 12px 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .stat-card { 
+            background: white; 
+            border-radius: 12px; 
+            padding: 12px 10px; 
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08); 
+            text-align: center; 
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+            border-color: rgba(37,99,235,0.25);
+        }
+        .stat-card.active-stat {
+            border-color: #2563eb !important;
+            background: #eff6ff !important;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.2), 0 6px 16px rgba(37,99,235,0.12) !important;
+            transform: translateY(-2px);
+        }
+        .stat-card.active-stat .value {
+            color: #1d4ed8 !important;
+        }
         .stat-card .icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; font-size: 16px; }
         .stat-card .value { font-size: 20px; font-weight: 700; color: #1f2937; }
         .stat-card .label { color: #6b7280; font-size: 12px; margin-top: 2px; }
@@ -239,140 +263,14 @@
             Please select a company from the dropdown above to view leads.
         </div>
         
-        <div class="d-flex flex-wrap gap-2 mb-4" style="justify-content: space-between;">
-            <div style="flex: 1; min-width: 120px;">
-                <div class="stat-card stat-blue">
-                    <div class="icon"><i class="fas fa-users"></i></div>
-                    <div class="value" id="totalLeads">0</div>
-                    <div class="label" style="font-size: 11px;">Total Leads</div>
-                </div>
-            </div>
-            <div style="flex: 1; min-width: 120px;">
-                <div class="stat-card stat-indigo">
-                    <div class="icon"><i class="fas fa-user-check"></i></div>
-                    <div class="value" id="selfLeadsStat">0</div>
-                    <div class="label" style="font-size: 11px;">Self Leads</div>
-                </div>
-            </div>
-            <div style="flex: 1; min-width: 120px;">
-                <div class="stat-card stat-cyan">
-                    <div class="icon"><i class="fas fa-user-plus"></i></div>
-                    <div class="value" id="newLeads">0</div>
-                    <div class="label" style="font-size: 11px;">New</div>
-                </div>
-            </div>
-            <div style="flex: 1; min-width: 120px;">
-                <div class="stat-card stat-purple">
-                    <div class="icon"><i class="fas fa-handshake"></i></div>
-                    <div class="value" id="inProgressLeads">0</div>
-                    <div class="label" style="font-size: 11px;">In Progress</div>
-                </div>
-            </div>
-            <div style="flex: 1; min-width: 100px;">
-                <div class="stat-card" style="background: #fefce8; border-left: 3px solid #ca8a04;">
-                    <div class="icon"><i class="fas fa-university" style="color: #ca8a04;"></i></div>
-                    <div class="value" style="color: #854d0e;" id="loanProcessLeads">0</div>
-                    <div class="label" style="font-size: 11px;">At Bank</div>
-                </div>
-            </div>
-            <div style="flex: 1; min-width: 120px;">
-                <div class="stat-card stat-green">
-                    <div class="icon"><i class="fas fa-trophy"></i></div>
-                    <div class="value" id="wonLeads">0</div>
-                    <div class="label" style="font-size: 11px;">Won</div>
-                </div>
-            </div>
-            <div style="flex: 1; min-width: 100px;">
-                <div class="stat-card" style="background: #ecfdf5; border-left: 3px solid #059669;">
-                    <div class="icon"><i class="fas fa-check-double" style="color: #059669;"></i></div>
-                    <div class="value" style="color: #064e3b;" id="completedLeads">0</div>
-                    <div class="label" style="font-size: 11px;">Completed</div>
-                </div>
-            </div>
-            <div style="flex: 1; min-width: 100px;">
-                <div class="stat-card" style="background: #fef2f2; border-left: 3px solid #ef4444;">
-                    <div class="icon"><i class="fas fa-times-circle" style="color: #ef4444;"></i></div>
-                    <div class="value text-danger" id="lostLeads">0</div>
-                    <div class="label" style="font-size: 11px;">Lost</div>
-                </div>
-            </div>
-            <div style="flex: 1; min-width: 100px;">
-                <div class="stat-card" style="background: #fefce8; border-left: 3px solid #eab308;">
-                    <div class="icon"><i class="fas fa-pause-circle" style="color: #eab308;"></i></div>
-                    <div class="value text-warning" id="onHoldLeads">0</div>
-                    <div class="label" style="font-size: 11px;">On Hold</div>
-                </div>
-            </div>
-            <div style="flex: 1; min-width: 120px;">
-                <div class="stat-card stat-yellow">
-                    <div class="icon"><i class="fas fa-calendar-check"></i></div>
-                    <div class="value" id="todayFollowups">0</div>
-                    <div class="label" style="font-size: 11px;">Today's Followups</div>
-                </div>
-            </div>
-            <div style="flex: 1; min-width: 120px;">
-                <div class="stat-card stat-red">
-                    <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
-                    <div class="value" id="overdueFollowups">0</div>
-                    <div class="label" style="font-size: 11px;">Overdue</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row mb-4">
-            <div class="col-12 mb-2">
-                <h6 class="text-muted"><i class="fas fa-chart-bar me-2"></i>Revenue Performance (Won Deals)</h6>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" style="border-left: 4px solid #059669;">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <div class="label text-muted mb-1">Total Value</div>
-                            <div class="value text-success" id="revenueTotalAll">₹0</div>
-                        </div>
-                        <div class="icon" style="background: #d1fae5; color: #059669; width: 40px; height: 40px; font-size: 16px;"><i class="fas fa-rupee-sign"></i></div>
+        <!-- TOP FILTER SECTION (Moved to top of the page) -->
+        <div class="card mb-3 shadow-sm border-0" id="topFilterCard" style="border-radius: 12px; background: #ffffff;">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-filter text-primary me-2"></i>Filter Leads</h6>
+                        <span class="badge bg-light text-secondary border" id="activeFilterBadge">All Leads</span>
                     </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" style="border-left: 4px solid #2563eb;">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <div class="label text-muted mb-1">Amount Received</div>
-                            <div class="value text-primary" id="revenueReceivedAll">₹0</div>
-                        </div>
-                        <div class="icon" style="background: #dbeafe; color: #2563eb; width: 40px; height: 40px; font-size: 16px;"><i class="fas fa-check-circle"></i></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" style="border-left: 4px solid #d97706;">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <div class="label text-muted mb-1">Pending Balance</div>
-                            <div class="value text-warning" id="revenueBalanceAll">₹0</div>
-                        </div>
-                        <div class="icon" style="background: #fef3c7; color: #d97706; width: 40px; height: 40px; font-size: 16px;"><i class="fas fa-clock"></i></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" style="border-left: 4px solid #7c3aed;">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <div class="label text-muted mb-1">This Month</div>
-                            <div class="value text-info" id="revenueThisMonth">₹0</div>
-                        </div>
-                        <div class="icon" style="background: #ede9fe; color: #7c3aed; width: 40px; height: 40px; font-size: 16px;"><i class="fas fa-calendar-alt"></i></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card">
-            <div class="card-header flex-column align-items-start">
-                <div class="d-flex justify-content-between align-items-center w-100 mb-2">
-                    <h5 class="mb-0"><i class="fas fa-table me-2"></i>All Leads</h5>
                     <div class="d-flex gap-2">
                         <button class="btn btn-outline-secondary btn-sm" onclick="seedLeadSources()">
                             <i class="fas fa-database me-1"></i> Seed Sources
@@ -382,23 +280,20 @@
                         </button>
                     </div>
                 </div>
-                <div class="d-flex gap-2 flex-wrap align-items-center w-100">
-                    <select class="form-select form-select-sm" id="visibilityFilter" onchange="setVisibility(this.value)" style="width: auto; min-width: 160px;">
+                <div class="d-flex gap-2 flex-wrap align-items-center w-100 mb-2">
+                    <select class="form-select form-select-sm" id="visibilityFilter" onchange="setVisibility(this.value)" style="width: auto; min-width: 150px;">
                         <option value="all">All Leads</option>
                         <option value="my">My Leads</option>
                         <option value="assigned">Assigned to Me</option>
                         <option value="fresh">Fresh Leads</option>
                     </select>
-                    <div class="vr mx-1"></div>
-                    <!-- DC Protocol (Jan 22, 2026): Unified quick filter dropdown -->
                     <select class="form-select form-select-sm" id="quickFilterDropdown" onchange="setQuickFilter(this.value)" style="width: auto; min-width: 140px;">
-                        <option value="all">All</option>
+                        <option value="all">Quick Filter: All</option>
                         <option value="today">Today's Leads</option>
                         <option value="overdue">Overdue</option>
                         <option value="no_followup">No Followup</option>
                     </select>
-                    <div class="vr mx-1"></div>
-                    <select class="form-select form-select-sm" id="filterStatus" style="width: auto;">
+                    <select class="form-select form-select-sm" id="filterStatus" style="width: auto; min-width: 130px;">
                         <option value="">All Status</option>
                         <option value="new">New</option>
                         <option value="contacted">Contacted</option>
@@ -424,40 +319,43 @@
                     <select class="form-select form-select-sm" id="filterCategory" style="width: auto;">
                         <option value="">All Categories</option>
                     </select>
+                    <select class="form-select form-select-sm" id="filterSource" style="width: auto;">
+                        <option value="">All Sources</option>
+                    </select>
                     <div style="position:relative;">
-                        <input type="text" class="form-control form-control-sm" id="filterPartnerSearch" placeholder="Business Partner..." style="width:160px;padding-right:24px;" autocomplete="off" oninput="onPartnerFilterInput(this.value)">
+                        <input type="text" class="form-control form-control-sm" id="filterPartnerSearch" placeholder="Business Partner..." style="width:150px;padding-right:24px;" autocomplete="off" oninput="onPartnerFilterInput(this.value)">
                         <input type="hidden" id="filterPartnerId">
-                        <span id="filterPartnerClearBtn" onclick="clearPartnerFilter()" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;color:#aaa;font-size:12px;"><i class="fas fa-times"></i></span>
+                        <span id="filterPartnerClearBtn" onclick="clearPartnerFilter(true)" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;color:#aaa;font-size:12px;"><i class="fas fa-times"></i></span>
                         <div id="filterPartnerDropdown" style="display:none;position:absolute;top:100%;left:0;z-index:1050;background:#fff;border:1px solid #dee2e6;border-radius:8px;max-height:200px;overflow-y:auto;width:260px;box-shadow:0 4px 16px rgba(0,0,0,0.14);"></div>
                     </div>
                     <div style="position:relative;">
-                        <input type="text" class="form-control form-control-sm" id="filterTelecallerSearch" placeholder="🎤 Tele Caller..." style="width:150px;padding-right:24px;" autocomplete="off" oninput="onStaffFilterInput('telecaller',this.value)">
+                        <input type="text" class="form-control form-control-sm" id="filterTelecallerSearch" placeholder="🎤 Tele Caller..." style="width:140px;padding-right:24px;" autocomplete="off" oninput="onStaffFilterInput('telecaller',this.value)">
                         <input type="hidden" id="filterTelecallerId">
-                        <span id="filterTelecallerClearBtn" onclick="clearStaffFilter('telecaller')" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;color:#aaa;font-size:12px;"><i class="fas fa-times"></i></span>
+                        <span id="filterTelecallerClearBtn" onclick="clearStaffFilter('telecaller', true)" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;color:#aaa;font-size:12px;"><i class="fas fa-times"></i></span>
                         <div id="filterTelecallerDropdown" style="display:none;position:absolute;top:100%;left:0;z-index:1050;background:#fff;border:1px solid #dee2e6;border-radius:8px;max-height:200px;overflow-y:auto;width:240px;box-shadow:0 4px 16px rgba(0,0,0,0.14);"></div>
                     </div>
                     <div style="position:relative;">
-                        <input type="text" class="form-control form-control-sm" id="filterFieldStaffSearch" placeholder="👤 Field Staff..." style="width:150px;padding-right:24px;" autocomplete="off" oninput="onStaffFilterInput('field_staff',this.value)">
+                        <input type="text" class="form-control form-control-sm" id="filterFieldStaffSearch" placeholder="👤 Field Staff..." style="width:140px;padding-right:24px;" autocomplete="off" oninput="onStaffFilterInput('field_staff',this.value)">
                         <input type="hidden" id="filterFieldStaffId">
-                        <span id="filterFieldStaffClearBtn" onclick="clearStaffFilter('field_staff')" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;color:#aaa;font-size:12px;"><i class="fas fa-times"></i></span>
+                        <span id="filterFieldStaffClearBtn" onclick="clearStaffFilter('field_staff', true)" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;color:#aaa;font-size:12px;"><i class="fas fa-times"></i></span>
                         <div id="filterFieldStaffDropdown" style="display:none;position:absolute;top:100%;left:0;z-index:1050;background:#fff;border:1px solid #dee2e6;border-radius:8px;max-height:200px;overflow-y:auto;width:240px;box-shadow:0 4px 16px rgba(0,0,0,0.14);"></div>
                     </div>
-                    <div class="vr mx-1"></div>
-                    <span class="text-muted small">Followup:</span>
+                </div>
+                
+                <div class="d-flex gap-2 flex-wrap align-items-center w-100">
+                    <span class="text-muted small fw-semibold">Followup:</span>
                     <input type="date" class="form-control form-control-sm" id="filterDateFrom" style="width: 130px;" title="Followup From Date">
-                    <span class="text-muted">to</span>
+                    <span class="text-muted small">to</span>
                     <input type="date" class="form-control form-control-sm" id="filterDateTo" style="width: 130px;" title="Followup To Date">
                     <button class="btn btn-outline-secondary btn-sm" onclick="clearDateFilters()" title="Clear All Date Filters">
                         <i class="fas fa-times"></i>
                     </button>
                     <div class="vr mx-1"></div>
-                    <!-- DC Protocol (Jan 22, 2026): Last Interacted date range filter -->
-                    <span class="text-muted small">Last Interacted:</span>
+                    <span class="text-muted small fw-semibold">Last Interacted:</span>
                     <input type="date" class="form-control form-control-sm" id="filterLastInteractedFrom" style="width: 130px;" title="Last Interacted From Date">
-                    <span class="text-muted">to</span>
+                    <span class="text-muted small">to</span>
                     <input type="date" class="form-control form-control-sm" id="filterLastInteractedTo" style="width: 130px;" title="Last Interacted To Date">
                     <div class="vr mx-1"></div>
-                    <!-- DC Protocol (Jan 22, 2026): Days Since Interaction filter -->
                     <select class="form-select form-select-sm" id="filterDaysSince" style="width: 140px;">
                         <option value="">Days Since: All</option>
                         <option value="lt6">Less than 6 days</option>
@@ -466,15 +364,15 @@
                         <option value="gt30">Above 30 days</option>
                     </select>
                     <div class="vr mx-1"></div>
-                    <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Search name/phone/pincode..." style="width: 200px;">
-                    <button class="btn btn-primary btn-sm" onclick="loadLeads(1)" title="Apply Filters">
+                    <input type="text" class="form-control form-control-sm flex-grow-1" id="searchInput" placeholder="Search name, phone, email, pincode..." style="min-width: 180px;">
+                    <button class="btn btn-primary btn-sm px-3" onclick="loadLeads(1); loadDashboard(); highlightActiveCards();" title="Apply Filters">
                         <i class="fas fa-filter me-1"></i> Filter
                     </button>
-                    <button class="btn btn-outline-secondary btn-sm" onclick="resetAllFilters()" title="Reset All Filters">
+                    <button class="btn btn-outline-secondary btn-sm px-3" onclick="resetAllFilters()" title="Reset All Filters">
                         <i class="fas fa-undo me-1"></i> Reset
                     </button>
                 </div>
-                <!-- DC-INCENTIVE-LEADS-001: Employee filter banner (shown when viewing a specific employee's leads) -->
+                <!-- DC-INCENTIVE-LEADS-001: Employee filter banner -->
                 <div id="employeeFilterBanner" style="display:none;margin-top:10px;padding:8px 14px;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;align-items:center;gap:10px;flex-wrap:wrap;">
                     <i class="fas fa-user-circle" style="color:#92400e;"></i>
                     <span style="color:#92400e;font-weight:600;font-size:0.88rem;">Viewing leads for: <span id="employeeFilterName"></span></span>
@@ -491,6 +389,147 @@
                         <i class="fas fa-times me-1"></i>Clear
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- KPI / DATA LABELS SECTION (Interactive & click-to-filter) -->
+        <div class="d-flex flex-wrap gap-2 mb-3" style="justify-content: space-between;" id="kpiCardsContainer">
+            <div style="flex: 1; min-width: 110px;">
+                <div class="stat-card stat-blue" id="statCardTotal" onclick="filterByStat('total')" title="Click to view all leads">
+                    <div class="icon"><i class="fas fa-users"></i></div>
+                    <div class="value" id="totalLeads">0</div>
+                    <div class="label" style="font-size: 11px;">Total Leads</div>
+                </div>
+            </div>
+            <div style="flex: 1; min-width: 110px;">
+                <div class="stat-card stat-indigo" id="statCardSelf" onclick="filterByStat('self')" title="Click to filter Self Leads">
+                    <div class="icon"><i class="fas fa-user-check"></i></div>
+                    <div class="value" id="selfLeadsStat">0</div>
+                    <div class="label" style="font-size: 11px;">Self Leads</div>
+                </div>
+            </div>
+            <div style="flex: 1; min-width: 110px;">
+                <div class="stat-card stat-cyan" id="statCardNew" onclick="filterByStat('new')" title="Click to filter New leads">
+                    <div class="icon"><i class="fas fa-user-plus"></i></div>
+                    <div class="value" id="newLeads">0</div>
+                    <div class="label" style="font-size: 11px;">New</div>
+                </div>
+            </div>
+            <div style="flex: 1; min-width: 110px;">
+                <div class="stat-card stat-purple" id="statCardInProgress" onclick="filterByStat('in_progress')" title="Click to filter In Progress leads">
+                    <div class="icon"><i class="fas fa-handshake"></i></div>
+                    <div class="value" id="inProgressLeads">0</div>
+                    <div class="label" style="font-size: 11px;">In Progress</div>
+                </div>
+            </div>
+            <div style="flex: 1; min-width: 100px;">
+                <div class="stat-card" id="statCardLoan" style="background: #fefce8; border-left: 3px solid #ca8a04;" onclick="filterByStat('loan_process')" title="Click to filter At Bank leads">
+                    <div class="icon"><i class="fas fa-university" style="color: #ca8a04;"></i></div>
+                    <div class="value" style="color: #854d0e;" id="loanProcessLeads">0</div>
+                    <div class="label" style="font-size: 11px;">At Bank</div>
+                </div>
+            </div>
+            <div style="flex: 1; min-width: 110px;">
+                <div class="stat-card stat-green" id="statCardWon" onclick="filterByStat('won')" title="Click to filter Won leads">
+                    <div class="icon"><i class="fas fa-trophy"></i></div>
+                    <div class="value" id="wonLeads">0</div>
+                    <div class="label" style="font-size: 11px;">Won</div>
+                </div>
+            </div>
+            <div style="flex: 1; min-width: 100px;">
+                <div class="stat-card" id="statCardCompleted" style="background: #ecfdf5; border-left: 3px solid #059669;" onclick="filterByStat('completed')" title="Click to filter Completed leads">
+                    <div class="icon"><i class="fas fa-check-double" style="color: #059669;"></i></div>
+                    <div class="value" style="color: #064e3b;" id="completedLeads">0</div>
+                    <div class="label" style="font-size: 11px;">Completed</div>
+                </div>
+            </div>
+            <div style="flex: 1; min-width: 100px;">
+                <div class="stat-card" id="statCardLost" style="background: #fef2f2; border-left: 3px solid #ef4444;" onclick="filterByStat('lost')" title="Click to filter Lost leads">
+                    <div class="icon"><i class="fas fa-times-circle" style="color: #ef4444;"></i></div>
+                    <div class="value text-danger" id="lostLeads">0</div>
+                    <div class="label" style="font-size: 11px;">Lost</div>
+                </div>
+            </div>
+            <div style="flex: 1; min-width: 100px;">
+                <div class="stat-card" id="statCardOnHold" style="background: #fefce8; border-left: 3px solid #eab308;" onclick="filterByStat('on_hold')" title="Click to filter On Hold leads">
+                    <div class="icon"><i class="fas fa-pause-circle" style="color: #eab308;"></i></div>
+                    <div class="value text-warning" id="onHoldLeads">0</div>
+                    <div class="label" style="font-size: 11px;">On Hold</div>
+                </div>
+            </div>
+            <div style="flex: 1; min-width: 110px;">
+                <div class="stat-card stat-yellow" id="statCardToday" onclick="filterByStat('today')" title="Click to filter Today's Followups">
+                    <div class="icon"><i class="fas fa-calendar-check"></i></div>
+                    <div class="value" id="todayFollowups">0</div>
+                    <div class="label" style="font-size: 11px;">Today's Followups</div>
+                </div>
+            </div>
+            <div style="flex: 1; min-width: 110px;">
+                <div class="stat-card stat-red" id="statCardOverdue" onclick="filterByStat('overdue')" title="Click to filter Overdue followups">
+                    <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="value" id="overdueFollowups">0</div>
+                    <div class="label" style="font-size: 11px;">Overdue</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- REVENUE PERFORMANCE (Interactive Won Deals) -->
+        <div class="row mb-4" id="revenueContainer">
+            <div class="col-12 mb-2 d-flex justify-content-between align-items-center">
+                <h6 class="text-muted mb-0"><i class="fas fa-chart-bar me-2"></i>Revenue Performance (Won Deals)</h6>
+                <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>Click card to filter matching leads</small>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" id="revCardTotal" style="border-left: 4px solid #059669;" onclick="filterByRevenue('total')" title="Click to filter Won Deals">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="label text-muted mb-1">Total Value</div>
+                            <div class="value text-success" id="revenueTotalAll">₹0</div>
+                        </div>
+                        <div class="icon" style="background: #d1fae5; color: #059669; width: 40px; height: 40px; font-size: 16px;"><i class="fas fa-rupee-sign"></i></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" id="revCardReceived" style="border-left: 4px solid #2563eb;" onclick="filterByRevenue('received')" title="Click to filter Won Deals">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="label text-muted mb-1">Amount Received</div>
+                            <div class="value text-primary" id="revenueReceivedAll">₹0</div>
+                        </div>
+                        <div class="icon" style="background: #dbeafe; color: #2563eb; width: 40px; height: 40px; font-size: 16px;"><i class="fas fa-check-circle"></i></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" id="revCardBalance" style="border-left: 4px solid #d97706;" onclick="filterByRevenue('balance')" title="Click to filter Won Deals">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="label text-muted mb-1">Pending Balance</div>
+                            <div class="value text-warning" id="revenueBalanceAll">₹0</div>
+                        </div>
+                        <div class="icon" style="background: #fef3c7; color: #d97706; width: 40px; height: 40px; font-size: 16px;"><i class="fas fa-clock"></i></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" id="revCardThisMonth" style="border-left: 4px solid #7c3aed;" onclick="filterByRevenue('this_month')" title="Click to filter This Month's Won Deals">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="label text-muted mb-1">This Month</div>
+                            <div class="value text-info" id="revenueThisMonth">₹0</div>
+                        </div>
+                        <div class="icon" style="background: #ede9fe; color: #7c3aed; width: 40px; height: 40px; font-size: 16px;"><i class="fas fa-calendar-alt"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- LEADS TABLE CARD -->
+        <div class="card shadow-sm border-0" id="leadsTableCard" style="border-radius: 12px;">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+                <h5 class="mb-0 fw-bold text-dark"><i class="fas fa-table text-primary me-2"></i>Leads Table</h5>
+                <span class="badge bg-light text-muted border px-2 py-1" id="tableHeaderCount">0 Leads</span>
             </div>
             <div class="card-body p-0">
                 <div id="leadsTableContainer">
@@ -1643,10 +1682,16 @@
         // Staff Leads: Set handler role filter
         function setHandlerRole(role) {
             currentHandlerRole = role;
-            document.querySelectorAll('.handler-filter-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.role === role);
-            });
+            updateRoleButtons();
             loadLeads(1);
+            loadDashboard();
+            highlightActiveCards();
+        }
+
+        function updateRoleButtons() {
+            document.querySelectorAll('.handler-filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.role === currentHandlerRole);
+            });
         }
         
         // Staff Leads: Load handler counts for filter badges
@@ -1932,29 +1977,175 @@
             });
         }
         
+        function highlightActiveCards() {
+            // Remove active class from all stat cards and revenue cards
+            document.querySelectorAll('.stat-card').forEach(card => card.classList.remove('active-stat'));
+
+            const status = document.getElementById('filterStatus')?.value || '';
+            const quick = document.getElementById('quickFilterDropdown')?.value || '';
+            
+            if (currentHandlerRole === 'self') {
+                document.getElementById('statCardSelf')?.classList.add('active-stat');
+            } else if (quick === 'today') {
+                document.getElementById('statCardToday')?.classList.add('active-stat');
+            } else if (quick === 'overdue') {
+                document.getElementById('statCardOverdue')?.classList.add('active-stat');
+            } else if (status === 'new') {
+                document.getElementById('statCardNew')?.classList.add('active-stat');
+            } else if (status === 'interested' || status === 'contacted' || status === 'qualified' || status === 'proposal') {
+                document.getElementById('statCardInProgress')?.classList.add('active-stat');
+            } else if (status === 'loan_process' || status === 'waiting_for_bank_loan') {
+                document.getElementById('statCardLoan')?.classList.add('active-stat');
+            } else if (status === 'won') {
+                document.getElementById('statCardWon')?.classList.add('active-stat');
+                document.getElementById('revCardTotal')?.classList.add('active-stat');
+            } else if (status === 'completed') {
+                document.getElementById('statCardCompleted')?.classList.add('active-stat');
+            } else if (status === 'lost') {
+                document.getElementById('statCardLost')?.classList.add('active-stat');
+            } else if (status === 'on_hold') {
+                document.getElementById('statCardOnHold')?.classList.add('active-stat');
+            } else if (!status && quick === 'all' && (!currentHandlerRole || currentHandlerRole === 'any')) {
+                document.getElementById('statCardTotal')?.classList.add('active-stat');
+            }
+        }
+
+        function filterByStat(statKey) {
+            const statusSelect = document.getElementById('filterStatus');
+            const quickDropdown = document.getElementById('quickFilterDropdown');
+            const targetCard = document.getElementById(`statCard${statKey.charAt(0).toUpperCase() + statKey.slice(1)}`);
+            const isAlreadyActive = targetCard && targetCard.classList.contains('active-stat');
+
+            if (isAlreadyActive && statKey !== 'total') {
+                if (statusSelect) statusSelect.value = '';
+                if (quickDropdown) quickDropdown.value = 'all';
+                currentQuickFilter = 'all';
+                currentHandlerRole = 'any';
+                updateRoleButtons();
+                loadLeads(1);
+                loadDashboard();
+                highlightActiveCards();
+                return;
+            }
+
+            switch(statKey) {
+                case 'total':
+                    if (statusSelect) statusSelect.value = '';
+                    if (quickDropdown) quickDropdown.value = 'all';
+                    currentQuickFilter = 'all';
+                    currentHandlerRole = 'any';
+                    updateRoleButtons();
+                    break;
+                case 'self':
+                    setHandlerRole('self');
+                    return;
+                case 'new':
+                    if (statusSelect) statusSelect.value = 'new';
+                    if (quickDropdown) quickDropdown.value = 'all';
+                    currentQuickFilter = 'all';
+                    break;
+                case 'in_progress':
+                    if (statusSelect) statusSelect.value = 'interested';
+                    if (quickDropdown) quickDropdown.value = 'all';
+                    currentQuickFilter = 'all';
+                    break;
+                case 'loan_process':
+                    if (statusSelect) statusSelect.value = 'loan_process';
+                    if (quickDropdown) quickDropdown.value = 'all';
+                    currentQuickFilter = 'all';
+                    break;
+                case 'won':
+                    if (statusSelect) statusSelect.value = 'won';
+                    if (quickDropdown) quickDropdown.value = 'all';
+                    currentQuickFilter = 'all';
+                    break;
+                case 'completed':
+                    if (statusSelect) statusSelect.value = 'completed';
+                    if (quickDropdown) quickDropdown.value = 'all';
+                    currentQuickFilter = 'all';
+                    break;
+                case 'lost':
+                    if (statusSelect) statusSelect.value = 'lost';
+                    if (quickDropdown) quickDropdown.value = 'all';
+                    currentQuickFilter = 'all';
+                    break;
+                case 'on_hold':
+                    if (statusSelect) statusSelect.value = 'on_hold';
+                    if (quickDropdown) quickDropdown.value = 'all';
+                    currentQuickFilter = 'all';
+                    break;
+                case 'today':
+                    setQuickFilter('today');
+                    return;
+                case 'overdue':
+                    setQuickFilter('overdue');
+                    return;
+            }
+
+            loadLeads(1);
+            loadDashboard();
+            highlightActiveCards();
+        }
+
+        function filterByRevenue(revKey) {
+            const statusSelect = document.getElementById('filterStatus');
+            if (statusSelect) statusSelect.value = 'won';
+            
+            if (revKey === 'this_month') {
+                const now = new Date();
+                const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+                const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+                const dFrom = document.getElementById('filterDateFrom');
+                const dTo = document.getElementById('filterDateTo');
+                if (dFrom) dFrom.value = firstDay;
+                if (dTo) dTo.value = lastDay;
+            }
+            
+            loadLeads(1);
+            loadDashboard();
+            highlightActiveCards();
+        }
+
         async function loadDashboard() {
             // DC Protocol: Skip if no valid company selected
             if (!companyId) return;
             
-            // DC Protocol (Jan 22, 2026): Get date filters for dashboard stats
+            // Collect all filter parameters to ensure data labels align with active filters
             const dateFrom = document.getElementById('filterDateFrom')?.value || '';
             const dateTo = document.getElementById('filterDateTo')?.value || '';
             const lastInteractedFrom = document.getElementById('filterLastInteractedFrom')?.value || '';
             const lastInteractedTo = document.getElementById('filterLastInteractedTo')?.value || '';
+            const categoryId = document.getElementById('filterCategory')?.value || '';
+            const source = document.getElementById('filterSource')?.value || '';
+            const priority = document.getElementById('filterPriority')?.value || '';
+            const partnerId = document.getElementById('filterPartnerId')?.value || '';
+            const telecallerId = document.getElementById('filterTelecallerId')?.value || '';
+            const fieldStaffId = document.getElementById('filterFieldStaffId')?.value || '';
+            const daysSince = document.getElementById('filterDaysSince')?.value || '';
             
-            // Build date filter query params
-            let dateParams = '';
-            if (dateFrom) dateParams += `&next_followup_from=${dateFrom}T00:00:00`;
-            if (dateTo) dateParams += `&next_followup_to=${dateTo}T23:59:59`;
-            if (lastInteractedFrom) dateParams += `&last_interacted_from=${lastInteractedFrom}T00:00:00`;
-            if (lastInteractedTo) dateParams += `&last_interacted_to=${lastInteractedTo}T23:59:59`;
+            // Build filter query params
+            let filterParams = '';
+            if (dateFrom) filterParams += `&next_followup_from=${dateFrom}T00:00:00`;
+            if (dateTo) filterParams += `&next_followup_to=${dateTo}T23:59:59`;
+            if (lastInteractedFrom) filterParams += `&last_interacted_from=${lastInteractedFrom}T00:00:00`;
+            if (lastInteractedTo) filterParams += `&last_interacted_to=${lastInteractedTo}T23:59:59`;
+            if (categoryId) {
+                if (companyId === 'all') filterParams += `&category=${encodeURIComponent(categoryId)}`;
+                else filterParams += `&category_id=${categoryId}`;
+            }
+            if (source) filterParams += `&source=${encodeURIComponent(source)}`;
+            if (priority) filterParams += `&priority=${priority}`;
+            if (partnerId) filterParams += `&associated_partner_id=${partnerId}`;
+            if (telecallerId) filterParams += `&filter_telecaller_id=${telecallerId}`;
+            if (fieldStaffId) filterParams += `&filter_field_staff_id=${fieldStaffId}`;
+            if (daysSince) filterParams += `&days_since_interaction=${daysSince}`;
             
             try {
                 // DC Protocol (Dec 31, 2025): "All Companies" dashboard aggregation
                 if (companyId === 'all' && companiesList.length > 0) {
                     // Fetch dashboard stats from all companies in parallel
                     const fetchPromises = companiesList.map(async (company) => {
-                        const url = `${API_BASE}/dashboard?company_id=${company.id}${dateParams}`;
+                        const url = `${API_BASE}/dashboard?company_id=${company.id}${filterParams}`;
                         try {
                             const response = await staffFetch(url);
                             if (!response.ok) return null;
@@ -2027,9 +2218,9 @@
                     document.getElementById('revenueBalanceAll').textContent = formatCurrency(aggregated.revenue.balance);
                     document.getElementById('revenueThisMonth').textContent = formatCurrency(aggregated.revenue_this_month.total);
                 } else {
-                    // Single company mode - DC Protocol (Jan 22, 2026): Include date filters
+                    // Single company mode with all active filters
                     let endpoint = '/dashboard';
-                    if (dateParams) endpoint += '?' + dateParams.substring(1);  // Remove leading &
+                    if (filterParams) endpoint += '?' + filterParams.substring(1);
                     const data = await apiCall(endpoint);
                     if (data && data.success) {
                         const stats = data.data;
@@ -2047,7 +2238,7 @@
                         document.getElementById('todayFollowups').textContent = stats.today_followups;
                         document.getElementById('overdueFollowups').textContent = stats.overdue_followups;
                         
-                        // Revenue Analytics (3-part deal value system)
+                        // Revenue Analytics
                         if (stats.revenue) {
                             document.getElementById('revenueTotalAll').textContent = formatCurrency(stats.revenue.total);
                             document.getElementById('revenueReceivedAll').textContent = formatCurrency(stats.revenue.received);
@@ -2058,6 +2249,7 @@
                         }
                     }
                 }
+                highlightActiveCards();
             } catch (error) {
                 console.error('Failed to load dashboard:', error);
             }
@@ -2153,6 +2345,30 @@
             }
         }
 
+        function populateSourceDropdowns() {
+            const filterSelect = document.getElementById('filterSource');
+            const formSelect = document.getElementById('leadSource');
+            
+            if (filterSelect) {
+                const currentFilterVal = filterSelect.value;
+                filterSelect.innerHTML = '<option value="">All Sources</option>';
+                (leadSources || []).forEach(src => {
+                    if (src && src.name) {
+                        filterSelect.innerHTML += `<option value="${src.name}">${src.name}</option>`;
+                    }
+                });
+                if (currentFilterVal) filterSelect.value = currentFilterVal;
+            }
+            if (formSelect) {
+                formSelect.innerHTML = '<option value="">Select Source</option>';
+                (leadSources || []).forEach(src => {
+                    if (src && src.name) {
+                        formSelect.innerHTML += `<option value="${src.name}">${src.name}</option>`;
+                    }
+                });
+            }
+        }
+
         async function loadLeadSources() {
             // DC Protocol: Skip if no valid company selected
             if (!companyId) return;
@@ -2179,27 +2395,19 @@
                     results.forEach(sources => {
                         if (sources) {
                             sources.forEach(src => {
-                                if (!sourceMap.has(src.name)) {
+                                if (src && src.name && !sourceMap.has(src.name)) {
                                     sourceMap.set(src.name, src);
                                 }
                             });
                         }
                     });
                     leadSources = Array.from(sourceMap.values());
-                    const select = document.getElementById('leadSource');
-                    select.innerHTML = '<option value="">Select Source</option>';
-                    leadSources.forEach(src => {
-                        select.innerHTML += `<option value="${src.name}">${src.name}</option>`;
-                    });
+                    populateSourceDropdowns();
                 } else {
                     const data = await apiCall('/sources');
                     if (data && data.success) {
                         leadSources = data.data;
-                        const select = document.getElementById('leadSource');
-                        select.innerHTML = '<option value="">Select Source</option>';
-                        leadSources.forEach(src => {
-                            select.innerHTML += `<option value="${src.name}">${src.name}</option>`;
-                        });
+                        populateSourceDropdowns();
                     }
                 }
             } catch (error) {
@@ -2272,6 +2480,8 @@
             }
             
             loadLeads(1);
+            loadDashboard();
+            highlightActiveCards();
         }
         
         // ── Business Partner filter helpers ──────────────────────────────
@@ -2312,13 +2522,20 @@
             document.getElementById('filterPartnerDropdown').style.display = 'none';
             document.getElementById('filterPartnerClearBtn').style.display = 'inline';
             loadLeads(1);
+            loadDashboard();
+            highlightActiveCards();
         }
-        function clearPartnerFilter() {
+        function clearPartnerFilter(reload = false) {
             document.getElementById('filterPartnerId').value = '';
             document.getElementById('filterPartnerSearch').value = '';
             document.getElementById('filterPartnerDropdown').style.display = 'none';
             const cb = document.getElementById('filterPartnerClearBtn');
             if (cb) cb.style.display = 'none';
+            if (reload) {
+                loadLeads(1);
+                loadDashboard();
+                highlightActiveCards();
+            }
         }
         document.addEventListener('click', function(e) {
             const dd = document.getElementById('filterPartnerDropdown');
@@ -2371,8 +2588,10 @@
             document.getElementById(ddId).style.display = 'none';
             document.getElementById(cbId).style.display = 'inline';
             loadLeads(1);
+            loadDashboard();
+            highlightActiveCards();
         }
-        function clearStaffFilter(role) {
+        function clearStaffFilter(role, reload = false) {
             const hidId = role === 'telecaller' ? 'filterTelecallerId'       : 'filterFieldStaffId';
             const txtId = role === 'telecaller' ? 'filterTelecallerSearch'   : 'filterFieldStaffSearch';
             const ddId  = role === 'telecaller' ? 'filterTelecallerDropdown' : 'filterFieldStaffDropdown';
@@ -2382,6 +2601,11 @@
             document.getElementById(ddId).style.display = 'none';
             const cb = document.getElementById(cbId);
             if (cb) cb.style.display = 'none';
+            if (reload) {
+                loadLeads(1);
+                loadDashboard();
+                highlightActiveCards();
+            }
         }
         document.addEventListener('click', function(e) {
             ['filterTelecallerDropdown','filterFieldStaffDropdown'].forEach(ddId => {
@@ -2431,6 +2655,8 @@
             document.getElementById('filterStatus').value = '';
             document.getElementById('filterPriority').value = '';
             document.getElementById('filterCategory').value = '';
+            const filterSourceEl = document.getElementById('filterSource');
+            if (filterSourceEl) filterSourceEl.value = '';
             clearPartnerFilter();
             clearStaffFilter('telecaller');
             clearStaffFilter('field_staff');
@@ -2477,6 +2703,7 @@
             const status = document.getElementById('filterStatus').value;
             const priority = document.getElementById('filterPriority').value;
             const categoryId = document.getElementById('filterCategory').value;
+            const source = document.getElementById('filterSource')?.value;
             const search = document.getElementById('searchInput').value;
             const dateFrom = document.getElementById('filterDateFrom').value;
             const dateTo = document.getElementById('filterDateTo').value;
@@ -2499,6 +2726,7 @@
             
             if (status) baseEndpoint += `&status=${status}`;
             if (priority) baseEndpoint += `&priority=${priority}`;
+            if (source) baseEndpoint += `&source=${encodeURIComponent(source)}`;
             if (categoryId) {
                 if (companyId === 'all') {
                     baseEndpoint += `&category=${encodeURIComponent(categoryId)}`;
@@ -2561,10 +2789,21 @@
                     
                     if (status) allCompanyEndpoint += `&status=${status}`;
                     if (priority) allCompanyEndpoint += `&priority=${priority}`;
+                    if (source) allCompanyEndpoint += `&source=${encodeURIComponent(source)}`;
                     if (categoryId) allCompanyEndpoint += `&category=${encodeURIComponent(categoryId)}`;
                     if (search) allCompanyEndpoint += `&search=${encodeURIComponent(search)}`;
+                    if (filterPartnerId) allCompanyEndpoint += `&associated_partner_id=${filterPartnerId}`;
+                    if (filterTelecallerId) allCompanyEndpoint += `&filter_telecaller_id=${filterTelecallerId}`;
+                    if (filterFieldStaffId) allCompanyEndpoint += `&filter_field_staff_id=${filterFieldStaffId}`;
                     if (dateFrom) allCompanyEndpoint += `&next_followup_from=${dateFrom}T00:00:00`;
                     if (dateTo) allCompanyEndpoint += `&next_followup_to=${dateTo}T23:59:59`;
+                    if (lastInteractedFrom) allCompanyEndpoint += `&last_interacted_from=${lastInteractedFrom}T00:00:00`;
+                    if (lastInteractedTo) allCompanyEndpoint += `&last_interacted_to=${lastInteractedTo}T23:59:59`;
+                    if (daysSinceFilter) allCompanyEndpoint += `&days_since_interaction=${daysSinceFilter}`;
+                    if (involvedEmpId) {
+                        allCompanyEndpoint += `&involved_employee_id=${involvedEmpId}`;
+                        if (involvedEmpRole) allCompanyEndpoint += `&involved_role=${involvedEmpRole}`;
+                    }
                     
                     if (currentQuickFilter === 'overdue') {
                         allCompanyEndpoint += '&exclude_closed=true';
@@ -2614,6 +2853,9 @@
                     const paginatedLeads = allLeads.slice(startIdx, startIdx + perPage);
                     const totalPages = Math.ceil(allLeads.length / perPage);
                     
+                    const headerCountEl = document.getElementById('tableHeaderCount');
+                    if (headerCountEl) headerCountEl.textContent = `${allLeads.length} Leads`;
+                    
                     // DC Protocol (Jan 22, 2026): Pass pageOffset for S.No. calculation
                     renderLeadsTable(paginatedLeads, startIdx);
                     renderPagination({
@@ -2626,6 +2868,9 @@
                     // Single company mode
                     const data = await apiCall(baseEndpoint);
                     if (data.success) {
+                        const headerCountEl = document.getElementById('tableHeaderCount');
+                        if (headerCountEl) headerCountEl.textContent = `${data.pagination?.total || data.data.length} Leads`;
+                        
                         // DC Protocol (Jan 22, 2026): Pass pageOffset for S.No. calculation
                         const pageOffset = (page - 1) * (data.pagination?.per_page || 20);
                         renderLeadsTable(data.data, pageOffset);
@@ -4333,7 +4578,7 @@
                     document.getElementById('detailNextFollowup').textContent = formatDate(lead.next_followup_date);
                     document.getElementById('detailDescription').textContent = lead.description || 'No description provided.';
                     
-                    renderNotes(lead.notes || []);
+                    renderNotes(lead.notes || [], lead);
                     renderFollowups(lead.followups || []);
 
                     // Populate MNR Assignment fields in view modal
@@ -4914,19 +5159,62 @@
             }
         }
         
-        function renderNotes(notes) {
+        function renderNotes(notes, lead = null) {
             const container = document.getElementById('notesContainer');
-            if (notes.length === 0) {
-                container.innerHTML = '<p class="text-muted small">No notes yet.</p>';
-                return;
+            if (!container) return;
+            const _e = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            
+            let html = '';
+            
+            // 1. Looking For (from lead data)
+            if (lead && lead.looking_for && String(lead.looking_for).trim()) {
+                html += `
+                    <div class="note-card mb-2" style="border-left: 3px solid #8b5cf6; background: #faf5ff; padding: 10px 14px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+                        <div class="note-meta" style="color: #7c3aed; font-weight: 700; font-size: 11px; margin-bottom: 3px; display: flex; align-items: center; gap: 5px;">
+                            <i class="fas fa-search"></i> <span>Looking For</span>
+                        </div>
+                        <div class="note-text" style="font-size: 12.5px; color: #3b0764; white-space: pre-wrap; font-weight: 500;">${_e(lead.looking_for)}</div>
+                    </div>
+                `;
             }
             
-            container.innerHTML = notes.map(note => `
-                <div class="note-card">
-                    <div class="note-meta">${formatDate(note.created_at)} - ${note.created_by_type || 'System'}</div>
-                    <div class="note-text">${note.note}</div>
-                </div>
-            `).join('');
+            // 2. Recent Comments (from lead data)
+            if (lead && lead.recent_comments && String(lead.recent_comments).trim()) {
+                html += `
+                    <div class="note-card mb-2" style="border-left: 3px solid #0ea5e9; background: #f0f9ff; padding: 10px 14px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+                        <div class="note-meta" style="color: #0284c7; font-weight: 700; font-size: 11px; margin-bottom: 3px; display: flex; align-items: center; gap: 5px;">
+                            <i class="fas fa-comment-dots"></i> <span>Recent Comments</span>
+                        </div>
+                        <div class="note-text" style="font-size: 12.5px; color: #082f49; white-space: pre-wrap; font-weight: 500;">${_e(lead.recent_comments)}</div>
+                    </div>
+                `;
+            }
+            
+            // 3. CRM Notes
+            if (notes && notes.length > 0) {
+                html += notes.map(note => {
+                    const dtStr = note.created_at ? new Date(note.created_at).toLocaleString('en-IN', {
+                        timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', hour12: true
+                    }) : '—';
+                    const author = note.created_by_name || (note.created_by_id ? `${note.created_by_type || 'User'}: ${note.created_by_id}` : (note.created_by_type || 'Staff'));
+                    return `
+                        <div class="note-card mb-2" style="border-left: 3px solid #64748b; background: #f8fafc; padding: 9px 12px; border-radius: 6px;">
+                            <div class="note-meta" style="color: #475569; font-size: 11px; font-weight: 600; margin-bottom: 2px; display: flex; align-items: center; justify-content: space-between;">
+                                <span><i class="fas fa-user-edit me-1 text-muted"></i>${_e(author)}</span>
+                                <span style="color: #94a3b8; font-weight: 400; font-size: 10.5px;">${_e(dtStr)}</span>
+                            </div>
+                            <div class="note-text" style="font-size: 12px; color: #1e293b; white-space: pre-wrap;">${_e(note.note)}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            if (!html.trim()) {
+                container.innerHTML = '<p class="text-muted small">No notes yet.</p>';
+            } else {
+                container.innerHTML = html;
+            }
         }
         
         function renderFollowups(followups) {
@@ -4951,20 +5239,30 @@
         
         function _cmnCallRow(c,_ctColor){
           const _e=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-          const dt=c.call_datetime?new Date(c.call_datetime).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}):'—';
+          const dt=c.call_datetime?(function(dStr){
+            const s=String(dStr);
+            const d=new Date(s);
+            return isNaN(d.getTime())?s:d.toLocaleString('en-IN',{
+              timeZone:'Asia/Kolkata',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true
+            });
+          })(c.call_datetime):'—';
           const dur=(c.duration_seconds>0)?c.duration_seconds+'s':'—';
           const ct=(c.call_type||'OUTGOING').toUpperCase();
-          const sc=_ctColor[ct]||'#6b7280';
+          const _colors={'OUTGOING':'#0ea5e9','OUTBOUND':'#0ea5e9','INCOMING':'#059669','INBOUND':'#059669','MISSED':'#dc2626','REJECTED':'#dc2626','DIALER':'#d97706','OPERATOR':'#7c3aed'};
+          const sc=_colors[ct]||_ctColor[ct]||'#6b7280';
           const outcome=c.call_outcome?' · '+_e(c.call_outcome):'';
+          const opBadge=(c.source==='operator')?' <span style="font-size:9.5px;background:#f3e8ff;color:#7e22ce;padding:1px 5px;border-radius:4px;font-weight:600">MyOperator</span>':'';
+          const recBtn=c.recording_url?`<div style="margin-top:4px"><audio controls style="height:26px;max-width:240px" src="${_e(c.recording_url)}"></audio></div>`:'';
+          const callerName=_e(c.staff_name||c.contact_name||'—');
           return '<div style="padding:9px 16px;border-bottom:1px solid #f3f4f6;display:flex;align-items:flex-start;gap:9px">'+
             '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:'+sc+'22;color:'+sc+';font-weight:700;white-space:nowrap;margin-top:2px">'+ct+'</span>'+
-            '<div style="flex:1;min-width:0"><div style="font-size:12px;color:#1f2937;font-weight:600">'+_e(c.staff_name||c.contact_name||'—')+outcome+'</div>'+
-            '<div style="font-size:11px;color:#6b7280;margin-top:1px">'+_e(dt)+' &nbsp;·&nbsp; '+dur+'</div></div></div>';
+            '<div style="flex:1;min-width:0"><div style="font-size:12px;color:#1f2937;font-weight:600"><i class="fas fa-headset me-1 text-muted"></i>'+callerName+opBadge+outcome+'</div>'+
+            '<div style="font-size:11px;color:#6b7280;margin-top:1px">'+_e(dt)+' &nbsp;·&nbsp; '+dur+'</div>'+recBtn+'</div></div>';
         }
         function openCallHistFull(){
           const calls=window._cmnCallHistData||[];if(!calls.length)return;
           document.getElementById('cmnCallHistFull')?.remove();
-          const _ctColor={'OUTGOING':'#0ea5e9','INCOMING':'#059669','MISSED':'#dc2626','REJECTED':'#7c3aed','DIALER':'#d97706'};
+          const _ctColor={'OUTGOING':'#0ea5e9','OUTBOUND':'#0ea5e9','INCOMING':'#059669','INBOUND':'#059669','MISSED':'#dc2626','REJECTED':'#dc2626','DIALER':'#d97706','OPERATOR':'#7c3aed'};
           const ov=document.createElement('div');ov.id='cmnCallHistFull';
           ov.style.cssText='position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px';
           ov.onclick=e=>{if(e.target===ov)ov.remove();};
@@ -5560,9 +5858,10 @@
             setTimeout(() => toast.remove(), 4000);
         }
         
-        document.getElementById('filterStatus').addEventListener('change', () => loadLeads(1));
-        document.getElementById('filterPriority').addEventListener('change', () => loadLeads(1));
-        document.getElementById('filterCategory').addEventListener('change', () => loadLeads(1));
+        document.getElementById('filterStatus').addEventListener('change', () => { loadLeads(1); loadDashboard(); highlightActiveCards(); });
+        document.getElementById('filterPriority').addEventListener('change', () => { loadLeads(1); loadDashboard(); highlightActiveCards(); });
+        document.getElementById('filterCategory').addEventListener('change', () => { loadLeads(1); loadDashboard(); highlightActiveCards(); });
+        document.getElementById('filterSource')?.addEventListener('change', () => { loadLeads(1); loadDashboard(); highlightActiveCards(); });
         // DC Protocol (Jan 22, 2026): Date filters now also refresh dashboard stats
         document.getElementById('filterDateFrom').addEventListener('change', () => {
             currentQuickFilter = 'custom';
@@ -5572,7 +5871,8 @@
                 quickFilterDropdown.value = 'all';
             }
             loadLeads(1);
-            loadDashboard();  // DC Protocol (Jan 22, 2026): Refresh stats with date filter
+            loadDashboard();
+            highlightActiveCards();
         });
         document.getElementById('filterDateTo').addEventListener('change', () => {
             currentQuickFilter = 'custom';
@@ -5581,13 +5881,14 @@
                 quickFilterDropdown.value = 'all';
             }
             loadLeads(1);
-            loadDashboard();  // DC Protocol (Jan 22, 2026): Refresh stats with date filter
+            loadDashboard();
+            highlightActiveCards();
         });
         // DC Protocol (Jan 22, 2026): Last Interacted date filter event listeners - also refresh dashboard
-        document.getElementById('filterLastInteractedFrom').addEventListener('change', () => { loadLeads(1); loadDashboard(); });
-        document.getElementById('filterLastInteractedTo').addEventListener('change', () => { loadLeads(1); loadDashboard(); });
+        document.getElementById('filterLastInteractedFrom').addEventListener('change', () => { loadLeads(1); loadDashboard(); highlightActiveCards(); });
+        document.getElementById('filterLastInteractedTo').addEventListener('change', () => { loadLeads(1); loadDashboard(); highlightActiveCards(); });
         // DC Protocol (Jan 22, 2026): Days Since Interaction filter event listener
-        document.getElementById('filterDaysSince').addEventListener('change', () => { loadLeads(1); loadDashboard(); });
+        document.getElementById('filterDaysSince').addEventListener('change', () => { loadLeads(1); loadDashboard(); highlightActiveCards(); });
         document.getElementById('searchInput').addEventListener('input', debounce(() => loadLeads(1), 300));
         
         function debounce(func, wait) {

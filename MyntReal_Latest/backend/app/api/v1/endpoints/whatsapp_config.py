@@ -43,6 +43,14 @@ async def require_wa_config(
     role = _get_role_code(staff)
     if role not in WHATSAPP_CONFIG_ROLES:
         raise HTTPException(status_code=403, detail="WhatsApp Config access restricted")
+
+    from app.services.b2b_shadow import resolve_client_id_for_staff, is_module_entitled
+    is_super = getattr(staff, "is_super_admin", False) or role in {"super_admin", "vgk4u", "vgk4u_supreme"}
+    if not is_super:
+        client_id = resolve_client_id_for_staff(db, staff)
+        if not client_id or not is_module_entitled(db, client_id, "WHATSAPP_INTEGRATION", strict=True):
+            raise HTTPException(status_code=403, detail="Service not enabled for this tenant.")
+
     return current_user
 
 
@@ -55,6 +63,14 @@ async def require_wa_send(
     role = _get_role_code(staff)
     if role not in WHATSAPP_SEND_ROLES:
         raise HTTPException(status_code=403, detail="WhatsApp Send access restricted")
+
+    from app.services.b2b_shadow import resolve_client_id_for_staff, is_module_entitled
+    is_super = getattr(staff, "is_super_admin", False) or role in {"super_admin", "vgk4u", "vgk4u_supreme"}
+    if not is_super:
+        client_id = resolve_client_id_for_staff(db, staff)
+        if not client_id or not is_module_entitled(db, client_id, "WHATSAPP_INTEGRATION", strict=True):
+            raise HTTPException(status_code=403, detail="Service not enabled for this tenant.")
+
     return current_user
 
 
@@ -2140,17 +2156,19 @@ async def list_segments(current_user=Depends(require_wa_send)):
 async def get_wa_credentials_endpoint(
     request: Request,
     db: Session = Depends(get_db),
-    _auth=Depends(require_wa_config),
+    current_user=Depends(require_wa_config),
 ):
-    """Return current credentials with token masked. Admin-only."""
+    """Return current credentials for authenticated tenant with token masked."""
     try:
         from sqlalchemy import text
+        from app.core.security_encryption import decrypt_credential_safe
+        target_cid = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', None) or 1
         row = db.execute(text(
             "SELECT access_token, phone_number_id, verify_token, business_account_id, updated_at, updated_by, facebook_app_id "
-            "FROM whatsapp_api_config ORDER BY id DESC LIMIT 1"
-        )).fetchone()
+            "FROM whatsapp_api_config WHERE company_id = :cid ORDER BY id DESC LIMIT 1"
+        ), {"cid": target_cid}).fetchone()
         if row and row[0]:
-            token = row[0]
+            token = decrypt_credential_safe(row[0] or "")
             masked = token[:10] + "..." + token[-10:] if len(token) > 20 else "***"
             return {
                 "has_credentials": True,
@@ -2165,17 +2183,16 @@ async def get_wa_credentials_endpoint(
             }
     except Exception:
         pass
-    import os
-    token_env = os.environ.get("META_WHATSAPP_ACCESS_TOKEN", "")
+
     return {
-        "has_credentials": bool(token_env),
-        "access_token_masked": (token_env[:10] + "...***") if token_env else "",
-        "phone_number_id": os.environ.get("META_WHATSAPP_PHONE_NUMBER_ID", ""),
-        "verify_token": os.environ.get("META_WHATSAPP_VERIFY_TOKEN", ""),
-        "business_account_id": os.environ.get("META_WHATSAPP_BUSINESS_ACCOUNT_ID", ""),
+        "has_credentials": False,
+        "access_token_masked": "",
+        "phone_number_id": "",
+        "verify_token": "",
+        "business_account_id": "",
         "updated_at": None,
         "updated_by": "",
-        "source": "env_var",
+        "source": "not_configured",
     }
 
 
@@ -2186,8 +2203,9 @@ async def update_wa_credentials(
     db: Session = Depends(get_db),
     current_user=Depends(require_wa_config),
 ):
-    """Upsert credentials into whatsapp_api_config."""
+    """Upsert credentials into whatsapp_api_config strictly scoped to tenant."""
     from sqlalchemy import text
+    from app.core.security_encryption import encrypt_credential_safe
     import datetime
 
     access_token = (payload.get("access_token") or "").strip()
@@ -2203,14 +2221,16 @@ async def update_wa_credentials(
 
     updater = getattr(current_user, 'employee_id', None) or getattr(current_user, 'name', 'staff')
     now = datetime.datetime.now()
+    target_cid = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', None) or 1
+    enc_token = encrypt_credential_safe(access_token)
 
-    db.execute(text("DELETE FROM whatsapp_api_config"))
+    db.execute(text("DELETE FROM whatsapp_api_config WHERE company_id = :cid"), {"cid": target_cid})
     db.execute(text(
         "INSERT INTO whatsapp_api_config "
-        "(access_token, phone_number_id, verify_token, business_account_id, facebook_app_id, updated_at, updated_by) "
-        "VALUES (:tok, :pid, :vt, :baid, :appid, :now, :by)"
-    ), {"tok": access_token, "pid": phone_number_id, "vt": verify_token, "baid": business_account_id,
-        "appid": facebook_app_id or None, "now": now, "by": str(updater)})
+        "(access_token, phone_number_id, verify_token, business_account_id, facebook_app_id, updated_at, updated_by, company_id) "
+        "VALUES (:tok, :pid, :vt, :baid, :appid, :now, :by, :cid)"
+    ), {"tok": enc_token, "pid": phone_number_id, "vt": verify_token, "baid": business_account_id,
+        "appid": facebook_app_id or None, "now": now, "by": str(updater), "cid": target_cid})
     db.commit()
 
     try:

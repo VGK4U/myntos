@@ -2967,6 +2967,10 @@ class OfficialPartner(BaseModel):
     vgk_cash_wallet       = Column(Numeric(15, 2), nullable=False, default=0)
     vgk_cash_earned_total = Column(Numeric(15, 2), nullable=False, default=0)
 
+    # Universal Incentive Engine: Position & File qualification tracking
+    current_position              = Column(String(40), nullable=False, default='Channel Partner')
+    solar_qualifying_files_count = Column(Integer, nullable=False, default=0)
+
     # DC Protocol Mar 2026: KYC status for VGK/Partner members (mirrors User.kyc_status)
     kyc_status = Column(String(30), nullable=True, default='Not Submitted')
 

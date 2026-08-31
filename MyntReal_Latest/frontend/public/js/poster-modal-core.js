@@ -63,6 +63,10 @@
                 <input type="text" id="postSubtitle" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. BANDI GANGARAJU">
               </div>
               <div>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">MEMBER RANK &amp; DESIGNATION</label>
+                <input type="text" id="postRank" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. 2★ CHANNEL PARTNER">
+              </div>
+              <div>
                 <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">OVERALL EARNING (₹)</label>
                 <input type="text" id="postHighlight" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. ₹1,07,880/-">
               </div>
@@ -177,7 +181,6 @@
         </div>
         
         <div id="posterCanvasWrapper" style="width:480px;height:fit-content;background:radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 50%, #020617 100%);border:5px double #fbbf24;border-radius:20px;box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 50px rgba(251,191,36,0.4);position:relative;box-sizing:border-box;color:#ffffff;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;user-select:none;flex-shrink:0;padding:14px 16px 20px 16px;display:flex;flex-direction:column;align-items:center;overflow:hidden">
-          <div id="prevName" style="display:none"></div>
           <div id="prevBonusDesc" style="display:none"></div>
           <div id="prevTitle" style="display:none">CONGRATULATIONS</div>
           <div id="prevTodayTitle" style="display:none">TODAY'S PAYOUT</div>
@@ -222,10 +225,17 @@
               <img src="/assets/logos/vgk4u-logo.png" style="height:28px;max-width:100px;object-fit:contain" alt="VGK4U">
             </div>
 
-            <div style="background:linear-gradient(135deg, #854d0e 0%, #ca8a04 50%, #854d0e 100%);border:1.5px solid #fde047;color:#fffbeb;font-family:Georgia,serif;font-size:11px;font-weight:900;letter-spacing:1px;padding:4px 14px;border-radius:30px;box-shadow:0 4px 15px rgba(202,138,4,0.5);margin-bottom:5px;text-transform:uppercase;white-space:nowrap;max-width:100%;box-sizing:border-box">🎉 👑 ★★ CONGRATULATIONS ★★ 👑 🎉</div>
+            <div id="prevCelebrationTitle" style="background:linear-gradient(135deg, #854d0e 0%, #ca8a04 50%, #854d0e 100%);border:1.5px solid #fde047;color:#fffbeb;font-family:Georgia,serif;font-size:11px;font-weight:900;letter-spacing:1px;padding:4px 14px;border-radius:30px;box-shadow:0 4px 15px rgba(202,138,4,0.5);margin-bottom:5px;text-transform:uppercase;white-space:nowrap;max-width:100%;box-sizing:border-box">🎉 👑 ★★ CONGRATULATIONS ★★ 👑 🎉</div>
 
             <div style="width:100%;text-align:center;margin-bottom:6px">
-              <div id="prevSubtitle" style="width:100%;background:#fbbf24;color:#000000 !important;-webkit-text-fill-color:#000000 !important;font-size:21px;font-weight:950;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;text-transform:uppercase;letter-spacing:1px;line-height:1.2;padding:5px 12px;border:2.5px solid #ffffff;border-radius:12px;box-shadow:0 6px 20px rgba(251,191,36,0.75);box-sizing:border-box">MR. BANDI GANGARAJU</div>
+              <div id="prevSubtitle" style="width:100%;background:#fbbf24;color:#000000 !important;-webkit-text-fill-color:#000000 !important;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;text-transform:uppercase;padding:6px 12px;border:2.5px solid #ffffff;border-radius:12px;box-shadow:0 6px 20px rgba(251,191,36,0.75);box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                <!-- Line 1: Member Name -->
+                <div id="prevName" style="font-size:22px;font-weight:950;letter-spacing:1px;line-height:1.15;color:#000000">MR. BANDI GANGARAJU</div>
+                <!-- Line 2: Rank & Designation below Name -->
+                <div id="prevRankContainer" style="font-size:12.5px;font-weight:900;letter-spacing:1.2px;color:#78350f;line-height:1.1;margin-top:3px;display:inline-flex;align-items:center;gap:4px">
+                  <span>★</span><span id="prevRank">2★ CHANNEL PARTNER</span><span>★</span>
+                </div>
+              </div>
             </div>
 
             <div style="position:relative;width:220px;height:220px;margin-bottom:12px">
@@ -237,7 +247,7 @@
               </div>
 
               <div style="position:absolute;bottom:4px;right:-106px;font-size:82px;line-height:1;filter:drop-shadow(0 6px 16px rgba(251,191,36,0.9));z-index:10;user-select:none">🏆</div>
-              <div style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#b45309,#f59e0b,#b45309);border:1.5px solid #fef08a;color:#ffffff;font-size:10.5px;font-weight:900;padding:4px 18px;border-radius:14px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.6);z-index:11">🏆 CHAMPION</div>
+              <div id="prevChampionBadge" style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#b45309,#f59e0b,#b45309);border:1.5px solid #fef08a;color:#ffffff;font-size:10.5px;font-weight:900;padding:4px 18px;border-radius:14px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.6);z-index:11">🏆 CHAMPION</div>
             </div>
 
             <div style="width:100%;background:linear-gradient(135deg, #ffffff 0%, #fffbeb 50%, #fef3c7 100%);border:2.5px solid #eab308;border-radius:16px;padding:7px 14px;text-align:center;margin-bottom:6px;box-shadow:0 8px 25px rgba(0,0,0,0.5), 0 0 20px rgba(251,191,36,0.3)">
@@ -263,7 +273,7 @@
               
               <!-- Members / Team Size Card -->
               <div style="background:rgba(15,23,42,0.88);border:1.5px solid rgba(234,179,8,0.5);border-radius:12px;padding:6px 2px;text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;min-height:60px;box-sizing:border-box">
-                <div style="font-size:8px;font-weight:900;color:#a7f3d0;text-transform:uppercase;letter-spacing:0.2px;line-height:1;white-space:nowrap">👥 TEAM SIZE</div>
+                <div id="prevOverallLabel" style="font-size:8px;font-weight:900;color:#a7f3d0;text-transform:uppercase;letter-spacing:0.2px;line-height:1;white-space:nowrap">👥 TEAM SIZE</div>
                 <div id="prevOverall" style="display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:950;color:#ffffff;line-height:1;white-space:nowrap">8 MEMBERS</div>
                 <div id="prevTeamBreakup" style="font-size:8px;font-weight:800;color:#6ee7b7;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">L2: 6 | L3: 2 | L4: 0</div>
               </div>
@@ -394,21 +404,7 @@
         if (freshData.success && freshData.data && freshData.data.length) {
           const found = freshData.data.find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr) || freshData.data[0];
           if (found) m = Object.assign({}, m || {}, found);
-      const hasMemberPhoto = !!(m && (m.passport_photo || m.passport_photo_url || m.logo_path || m.profile_image || m.photo_url || m.avatar_url || m.photo));
-      const hasSeniorPhoto = !!(m && (m.senior_photo || m.senior_passport_photo || m.senior_logo_path || m.senior_profile_image));
-      const isSeniorNeeded = !!(m && m.parent_partner_id && !['VGK SUPPORT', 'SUPPORT', 'NONE', '—', ''].includes((m.senior_name || '').toUpperCase().trim()));
-      if (!m || !m.id || !hasMemberPhoto || (isSeniorNeeded && !hasSeniorPhoto)) {
-        try {
-          const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
-          const paramStr = (pidStr.startsWith('VGK') || isNaN(pidStr)) ? 'search=' + encodeURIComponent(pidStr) : 'partner_id=' + encodeURIComponent(pidStr);
-          const freshRes = await safeFetch(apiBase + '/vgk/dashboard/member-earnings?' + paramStr + '&_cb=' + Date.now());
-          const freshData = await freshRes.json();
-          if (freshData.success && freshData.data && freshData.data.length) {
-            const found = freshData.data.find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr) || freshData.data[0];
-            if (found) m = Object.assign({}, m || {}, found);
-          }
-        } catch (e) {
-          console.warn("Failed to fetch fresh member data from API:", e);        }
+        }
       } catch (e) {
         console.warn("Failed to fetch fresh member data from API:", e);
       }
@@ -491,22 +487,52 @@
       });
       const activeFiles = uniqueL1Leads.size;
 
-      // Potential Earning: Total net potential pending (Gross Potential minus Advances Paid)
-      const uniquePotentialLeads = {};
+      // Authoritative Potential Pending Calculation on Active In-Flight Leads
+      // Formula: Deal Value * Rank Rate + Brand Allowance (APS/Navgrun = ₹2k) + Field Support (1.5%) - Advances Already Paid
+      const memberRatePct = (m.commission_pct || (m.stars === 2 ? 6.5 : (m.stars === 3 ? 7.5 : (m.stars === 4 ? 8.25 : (m.stars === 5 ? 8.5 : 5.0))))) / 100.0;
+      const activeLeadPendingMap = {};
+
       entries.forEach(e => {
-        if (e.status !== 'CANCELLED') {
-          const leadId = e.source_lead_id || 0;
-          const lvl = e.level !== null && e.level !== undefined ? e.level : -1;
-          const key = `${leadId}_${lvl}`;
-          const val = e.potential_overall_earning || e.commission_amount || 0;
-          if (!uniquePotentialLeads[key] || val > uniquePotentialLeads[key]) {
-            uniquePotentialLeads[key] = val;
+        if (e.status !== 'CANCELLED' && e.source_lead_id) {
+          const lid = e.source_lead_id;
+          if (!activeLeadPendingMap[lid]) {
+            const dVal = parseFloat(e.deal_value_total || e.deal_value || e.solar_value || 200000);
+            const brandAmt = (e.solar_brand_id === 2 || e.solar_brand_name === 'APS' || e.brand_commission_amount) ? 2000 : 0;
+            const isSupp = (e.level === 5 || e.is_field_support === true || String(e.vgk_field_support_id) === String(targetPid) || String(e.vgk_field_support_id) === String(m.id));
+            activeLeadPendingMap[lid] = { 
+              dealValue: dVal, 
+              brandAllowance: brandAmt,
+              isSupport: isSupp,
+              paid: 0, 
+              hasFinalComm: false 
+            };
+          }
+          if (e.level === 5 || e.is_field_support === true || String(e.vgk_field_support_id) === String(targetPid) || String(e.vgk_field_support_id) === String(m.id)) {
+            activeLeadPendingMap[lid].isSupport = true;
+          }
+          const amt = parseFloat(e.commission_amount || 0);
+          if (e.status === 'PAID' || e.status === 'RELEASED') {
+            activeLeadPendingMap[lid].paid += amt;
+          }
+          if (e.kind === 'COMMISSION' && (e.status === 'PAID' || e.status === 'RELEASED') && (e.level === 1 || e.level === 6)) {
+            activeLeadPendingMap[lid].hasFinalComm = true;
           }
         }
       });
-      const grossPotentialEarning = Object.values(uniquePotentialLeads).reduce((a, b) => a + b, 0);
-      const stage1AdvancesSum = entries.filter(e => e.status !== 'CANCELLED' && e.level === 1 && (e.kind === 'ADVANCE' || e.kind === 'DVR_ADVANCE')).reduce((s, e) => s + (parseFloat(e.commission_amount || 0)), 0);
-      const netPotentialEarning = Math.max(0, grossPotentialEarning - stage1AdvancesSum);
+
+      let truePotentialPending = 0;
+      Object.keys(activeLeadPendingMap).forEach(lid => {
+        const item = activeLeadPendingMap[lid];
+        if (!item.hasFinalComm) {
+          let expectedTotal = item.dealValue * memberRatePct;
+          if (item.brandAllowance > 0) expectedTotal += item.brandAllowance;
+          if (item.isSupport) expectedTotal += (item.dealValue * 0.015);
+          const remaining = Math.max(0, expectedTotal - item.paid);
+          truePotentialPending += remaining;
+
+          console.log(`[VGK POSTER DEBUG] Lead: ${lid} | Member: ${targetPid} | Deal: ${item.dealValue} | Sourcing Comm: ${item.dealValue * memberRatePct} | Is Support: ${item.isSupport} | Support Comm: ${item.isSupport ? item.dealValue * 0.015 : 0} | Brand: ${item.brandAllowance} | Paid: ${item.paid} | Remaining Potential Pending: ${remaining}`);
+        }
+      });
 
       const todayStr = new Date().toISOString().split('T')[0];
       const validDates = entries.filter(e => e.level === 1 && e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None').map(e => e.income_date).sort();
@@ -548,24 +574,52 @@
       const installedStages = ['completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed'];
       const installedSet = new Set();
       entries.forEach(e => {
-        if (e.level === 1 && e.status !== 'CANCELLED' && e.source_lead_id) {
-          const typeStr = (e.income_type || e.kind || '').toLowerCase();
-          const stageStr = (e.stage_name || e.solar_pipeline_status || e.stage || '').toString().toLowerCase();
-          const hasInstDate = e.installation_date || (e.install_date && e.install_date !== 'None');
-          const isInst = hasInstDate || installedStages.some(s => typeStr.includes(s) || stageStr.includes(s));
-          if (isInst && !stageStr.includes('pending') && !stageStr.includes('loan')) {
+        if (e.status !== 'CANCELLED' && e.source_lead_id) {
+          const stageStr = (e.stage_name || e.solar_pipeline_status || e.lead_status || e.stage || '').toString().toLowerCase();
+          const hasInstDate = !!(e.installation_date && e.installation_date !== 'None' && e.installation_date !== 'null') ||
+                              !!(e.installed_at && e.installed_at !== 'None' && e.installed_at !== 'null') ||
+                              !!(e.install_date && e.install_date !== 'None' && e.install_date !== 'null');
+          const isCompletedStage = installedStages.some(s => stageStr === s || stageStr.startsWith(s));
+          const hasFinalCommPaid = (e.kind === 'COMMISSION' && (e.status === 'PAID' || e.status === 'RELEASED') && (e.level === 1 || e.level === 6));
+          
+          if (hasInstDate || isCompletedStage || hasFinalCommPaid) {
             installedSet.add(e.source_lead_id);
           }
         }
       });
       let installedFiles = installedSet.size;
-      const filesDisplay = (installedFiles > 0 ? `${installedFiles}/${activeFiles}` : `0/${activeFiles}`) + ' FILES';
+      const filesDisplay = `${installedFiles}/${activeFiles || m.ground_leads_count || 3} FILES`;
 
       const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
       const setChecked = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
 
+      const partnerStars = m.stars || (m.current_position === 'Director' ? 5 : (m.current_position === 'Regional Manager' ? 4 : (m.current_position === 'Zonal Manager' || m.current_position === 'Senior Channel Partner' ? 3 : (m.current_position === 'Manager' ? 2 : 1))));
+      
+      let rankTitle = 'Channel Partner';
+      if (m.rank_display) {
+        rankTitle = m.rank_display;
+      } else if (m.current_position && m.current_position !== 'none') {
+        rankTitle = (partnerStars > 1 ? `${partnerStars}★ ` : '') + m.current_position;
+      } else if (partnerStars > 1) {
+        rankTitle = `${partnerStars}★ Channel Partner`;
+      } else {
+        rankTitle = 'Channel Partner';
+      }
+
       setVal('postTitle', 'CONGRATULATIONS');
       setVal('postSubtitle', m.partner_name || '');
+      setVal('postRank', rankTitle);
+
+      const prevChampionBadgeEl = document.getElementById('prevChampionBadge');
+      if (prevChampionBadgeEl) {
+        prevChampionBadgeEl.textContent = partnerStars > 1 ? `🏆 ${partnerStars}★ CHAMPION` : `🏆 CHAMPION`;
+      }
+
+      const prevCelebrationTitleEl = document.getElementById('prevCelebrationTitle');
+      if (prevCelebrationTitleEl) {
+        const starStr = '★'.repeat(partnerStars > 1 ? partnerStars : 2);
+        prevCelebrationTitleEl.textContent = `🎉 👑 ${starStr} CONGRATULATIONS ${starStr} 👑 🎉`;
+      }
 
       // Overall Earning: Total cumulative earnings irrespective of level
       const allTimeSum = entries.reduce((sum, e) => {
@@ -577,11 +631,20 @@
       const overallVal = (allTimeSum > 0) ? allTimeSum : ((m.all_time_gross_earned !== undefined && m.all_time_gross_earned !== null) ? m.all_time_gross_earned : ((m.gross_earned !== undefined && m.gross_earned !== null) ? m.gross_earned : (m.received || 0)));
       setVal('postHighlight', '₹' + _meFormatInr(overallVal) + '/-');
       setVal('postFiles', filesDisplay);
-      setVal('postOverall', (activeFiles || m.ground_leads_count || 0) + ' LEADS');
-      setVal('postTeamBreakup', `L1 Ground-Source Business Only`);
+
+      if (m.total_team_size && m.total_team_size > 0) {
+        setVal('postOverall', `${m.total_team_size} ${m.total_team_size === 1 ? 'MEMBER' : 'MEMBERS'}`);
+        setVal('postTeamBreakup', `L2: ${m.team_l2_count || 1} Team Partner`);
+      } else {
+        setVal('postOverall', (activeFiles || m.ground_leads_count || 0) + ' LEADS');
+        setVal('postTeamBreakup', `L1 Ground-Source Business Only`);
+      }
       // Member Gross Potential Valuation (calculated from active entries)
-      const potVal = (grossPotentialEarning > 0) ? grossPotentialEarning : 20250;
+      const potVal = truePotentialPending;
+      console.log(`[VGK POSTER DEBUG] Setting postPotential: ₹${_meFormatInr(potVal)}/-`);
       setVal('postPotential', '₹' + _meFormatInr(potVal) + '/-');
+      const prevPotEl = document.getElementById('prevPotential');
+      if (prevPotEl) prevPotEl.textContent = '₹' + _meFormatInr(potVal) + '/-';
       setVal('postCustomer', customerName);
       setVal('postLocation', location);
       setVal('postSeniorName', seniorName);
@@ -606,6 +669,34 @@
       const seniorPotentialVal = (srNetPotTotal > 0) ? '₹' + _meFormatInr(srNetPotTotal) + '/-' : '₹34,350/-';
       const seniorOverallVal = (srAdvPaidTotal > 0) ? '₹' + _meFormatInr(srAdvPaidTotal) + '/-' : '₹9,000/-';
 
+      let srTodayAmt = 0;
+      const todayIso = new Date().toISOString().split('T')[0];
+      srEntries.forEach(se => {
+        if (se.status !== 'CANCELLED') {
+          const dStr = (se.income_date || se.created_at || '').slice(0, 10);
+          if (dStr === todayIso) {
+            const sGross = parseFloat(se.commission_amount || 0);
+            const sAdv = parseFloat(se.advance_paid || 0);
+            const sBal = (se.balance_gross !== undefined && se.balance_gross !== null) ? parseFloat(se.balance_gross) : Math.max(0, sGross - sAdv);
+            srTodayAmt += (sBal > 0 ? sBal : sGross);
+          }
+        }
+      });
+      if (srTodayAmt === 0) {
+        entries.forEach(e => {
+          if (e.status !== 'CANCELLED' && (e.level === 2 || (e.kind || '').toUpperCase() === 'SENIOR_COMM')) {
+            const dStr = (e.income_date || e.created_at || '').slice(0, 10);
+            if (dStr === todayIso) {
+              const sGross = parseFloat(e.commission_amount || 0);
+              const sAdv = parseFloat(e.advance_paid || 0);
+              const sBal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, sGross - sAdv);
+              srTodayAmt += (sBal > 0 ? sBal : sGross);
+            }
+          }
+        });
+      }
+
+      setVal('postSeniorToday', '₹' + _meFormatInr(srTodayAmt) + '/-');
       setVal('postSeniorPotential', seniorPotentialVal);
       setVal('postSeniorEarning', seniorOverallVal);
 
@@ -664,16 +755,6 @@
         } else {
           seniorImg.style.display = 'none';
           if (seniorAvatar) seniorAvatar.style.display = 'flex';
-        }
-      }
-          if (seniorImg) {
-            seniorImg.removeAttribute('crossorigin');
-            seniorImg.onload = () => { seniorImg.style.display = 'block'; if (seniorAvatar) seniorAvatar.style.display = 'none'; };
-            seniorImg.onerror = () => { seniorImg.style.display = 'none'; if (seniorAvatar) seniorAvatar.style.display = 'flex'; };
-            seniorImg.src = '/kuruju_srinubabu_official.jpg?t=' + Date.now();
-          } else if (seniorAvatar) {
-            seniorAvatar.style.display = 'flex';
-          }
         }
       }
 
@@ -774,76 +855,97 @@
       periodLabel = 'All Time';
     }
 
-    let stage1Amt = 0, stage2AdvAmt = 0, finalCommBalGrossAmt = 0, finalCommAdvPaidAmt = 0;
+    let stage1Amt = 0, stage2AdvAmt = 0;
     let brandAmt = 0, bonanzaAmt = 0, extraAmt = 0, awardAmt = 0, seniorTodayAmt = 0;
+    let commByLevel = {};
+    const finalCommLeadIds = new Set();
 
-    // All partner income entries calculation for the selected date context (L1 to L6)
+    // All partner income entries calculation for the selected date context
     entries.forEach(e => {
       if (e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
         const d = e.income_date;
         if (dateFrom && d < dateFrom) return;
         if (dateTo && d > dateTo) return;
 
-        const grossAmt = parseFloat(e.commission_amount || 0);
-        
-        // Actual cash payment status check: only count advance_paid or paid if explicitly paid out
-        const isPaidOut = e.status === 'PAID' || Boolean(e.paid_at) || Boolean(e.paid_bank_ledger_id) || Boolean(e.paid_cash_staff_id);
-        const advPaid = isPaidOut ? parseFloat(e.commission_amount || e.advance_paid || 0) : 0;
-        const balGross = Math.max(0, grossAmt - advPaid);
-
+        const grossAmt = parseFloat(e.commission_amount || e.amount || 0);
         const k = (e.kind || '').toUpperCase();
         const typeStr = (e.income_type || '').toLowerCase();
 
-        if (k === 'ADVANCE' || typeStr.includes('stage 1 adv')) stage1Amt += grossAmt;
-        else if (k === 'DVR_ADVANCE' || typeStr.includes('stage 2 adv')) stage2AdvAmt += grossAmt;
-        else if (k === 'BRAND_COMMISSION' || typeStr.includes('brand')) brandAmt += grossAmt;
-        else if (k === 'SLAB_BONUS' || typeStr.includes('bonanza') || typeStr.includes('slab')) bonanzaAmt += grossAmt;
-        else if (k === 'EXTRA_COMMISSION' || typeStr.includes('extra')) extraAmt += grossAmt;
-        else if (k === 'AWARD' || k === 'INCENTIVE' || k === 'ROYALTY' || typeStr.includes('award') || typeStr.includes('incentive')) awardAmt += grossAmt;
-        else if (k === 'COMMISSION' || k === 'SENIOR_COMM') {
-          finalCommBalGrossAmt += balGross;
-          finalCommAdvPaidAmt += advPaid;
+        if (k === 'ADVANCE' || typeStr.includes('stage 1 adv')) {
+          stage1Amt += grossAmt;
+        } else if (k === 'DVR_ADVANCE' || typeStr.includes('stage 2 adv')) {
+          stage2AdvAmt += grossAmt;
+        } else if (k === 'BRAND_COMMISSION' || typeStr.includes('brand')) {
+          brandAmt += grossAmt;
+        } else if (k === 'SLAB_BONUS' || typeStr.includes('bonanza') || typeStr.includes('slab')) {
+          bonanzaAmt += grossAmt;
+        } else if (k === 'EXTRA_COMMISSION' || typeStr.includes('extra')) {
+          extraAmt += grossAmt;
+        } else if (k === 'AWARD' || k === 'INCENTIVE' || k === 'ROYALTY' || typeStr.includes('award') || typeStr.includes('incentive')) {
+          awardAmt += grossAmt;
+        } else if (k === 'COMMISSION' || k === 'SENIOR_COMM') {
+          const lvl = e.level || 1;
+          const lbl = e.level_label || (lvl === 1 ? 'L1 Ground Source Comm' : (lvl === 5 ? 'Field Support Comm' : (lvl === 2 ? 'L2 Senior Referrer Comm' : `L${lvl} Commission`)));
+          if (!commByLevel[lbl]) commByLevel[lbl] = 0;
+          commByLevel[lbl] += grossAmt;
+          if (e.source_lead_id) finalCommLeadIds.add(e.source_lead_id);
         }
       }
     });
 
     let breakupItems = [];
     let total = 0;
-    let commByLevel = {};
 
-    entries.forEach(e => {
-      if (e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
-        const d = e.income_date;
-        if (dateFrom && d < dateFrom) return;
-        if (dateTo && d > dateTo) return;
-        const k = (e.kind || '').toUpperCase();
-        if (k === 'COMMISSION' || k === 'SENIOR_COMM') {
-          const lvl = e.level || 1;
-          const lbl = e.level_label || (lvl === 1 ? 'L1 Ground Source Comm' : `L${lvl} Commission`);
-          const grossAmt = parseFloat(e.commission_amount || 0);
-          const isPaidOut = e.status === 'PAID' || Boolean(e.paid_at);
-          const advPaid = isPaidOut ? grossAmt : 0;
-          if (!commByLevel[lbl]) commByLevel[lbl] = { gross: 0, adv: 0 };
-          commByLevel[lbl].gross += grossAmt;
-          commByLevel[lbl].adv += advPaid;
+    if (showStage1 && stage1Amt > 0) {
+      breakupItems.push(`Stage 1 Advance: ₹${_meFormatInr(stage1Amt)}/-`);
+      total += stage1Amt;
+    }
+    if (showStage2Adv && stage2AdvAmt > 0) {
+      breakupItems.push(`Stage 2 Advance: ₹${_meFormatInr(stage2AdvAmt)}/-`);
+      total += stage2AdvAmt;
+    }
+    if (showFinalComm && Object.keys(commByLevel).length > 0) {
+      for (const [lbl, amt] of Object.entries(commByLevel)) {
+        if (amt > 0) {
+          breakupItems.push(`${lbl}: ₹${_meFormatInr(amt)}/-`);
+          total += amt;
         }
       }
-    });
+    }
+    if (showBrand && brandAmt > 0) {
+      breakupItems.push(`Brand Commission: ₹${_meFormatInr(brandAmt)}/-`);
+      total += brandAmt;
+    }
+    if (showBonanza && bonanzaAmt > 0) {
+      breakupItems.push(`Bonanza Bonus: ₹${_meFormatInr(bonanzaAmt)}/-`);
+      total += bonanzaAmt;
+    }
+    if (showExtra && extraAmt > 0) {
+      breakupItems.push(`Extra Comm: ₹${_meFormatInr(extraAmt)}/-`);
+      total += extraAmt;
+    }
+    if (showAward && awardAmt > 0) {
+      breakupItems.push(`Award Incentive: ₹${_meFormatInr(awardAmt)}/-`);
+      total += awardAmt;
+    }
 
-    if (showStage1 && stage1Amt > 0) { breakupItems.push(`Stage 1 Advance: ₹${_meFormatInr(stage1Amt)}/-`); total += stage1Amt; }
-    if (showStage2Adv && stage2AdvAmt > 0) { breakupItems.push(`Stage 2 Advance: ₹${_meFormatInr(stage2AdvAmt)}/-`); total += stage2AdvAmt; }
+    if (breakupItems.length === 0) {
+      breakupItems.push("No Payouts for Selected Date");
+    }
 
-    let totalAdvPaid = 0; // Actual cash paid out
-    entries.forEach(e => {
-      if (e.level === 1 && e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
-        const d = e.income_date;
-        if (dateFrom && d < dateFrom) return;
-        if (dateTo && d > dateTo) return;
-        if (e.status === 'PAID' || Boolean(e.paid_at)) {
-          totalAdvPaid += parseFloat(e.commission_amount || e.amount || 0);
+    // Calculate prior advances already paid on previous dates for the leads in this final payout
+    let totalPriorAdvPaid = 0;
+    if (finalCommLeadIds.size > 0) {
+      entries.forEach(e => {
+        if (e.status !== 'CANCELLED' && finalCommLeadIds.has(e.source_lead_id)) {
+          const isPriorDate = !dateFrom || (e.income_date && e.income_date < dateFrom);
+          const isAdvKind = (e.kind === 'ADVANCE' || e.kind === 'DVR_ADVANCE');
+          if (isPriorDate && isAdvKind && (e.status === 'PAID' || Boolean(e.paid_at))) {
+            totalPriorAdvPaid += parseFloat(e.commission_amount || 0);
+          }
         }
-      }
-    });
+      });
+    }
 
     const payingGross = total;
 
@@ -857,10 +959,12 @@
     seniorTodayAmt = 0;
     if (window._seniorEntries && window._seniorEntries.length) {
       window._seniorEntries.forEach(se => {
-        if (se.status !== 'CANCELLED' && se.income_date && se.income_date !== 'None') {
-          const sd = se.income_date;
-          if (dateFrom && sd < dateFrom) return;
-          if (dateTo && sd > dateTo) return;
+        if (se.status !== 'CANCELLED') {
+          const sd = (se.income_date || se.created_at || '').slice(0, 10);
+          if (sd && sd !== 'None') {
+            if (dateFrom && sd < dateFrom) return;
+            if (dateTo && sd > dateTo) return;
+          }
           seniorTodayAmt += parseFloat(se.commission_amount || se.amount || 0);
         }
       });
@@ -871,17 +975,16 @@
       postSeniorToday.value = '₹' + _meFormatInr(seniorTodayAmt) + '/-';
     }
 
-    window._currentTotalAdvPaid = totalAdvPaid;
+    window._currentTotalAdvPaid = totalPriorAdvPaid;
     const prevTotalTodayEl = document.getElementById('prevTotalToday');
     if (prevTotalTodayEl) prevTotalTodayEl.textContent = '₹' + _meFormatInr(payingGross) + '/-';
 
     const prevAlreadyPaidEl = document.getElementById('prevAlreadyPaidText');
     if (prevAlreadyPaidEl) {
-      if (totalAdvPaid > 0) {
-        prevAlreadyPaidEl.textContent = `(Already Paid: ₹${_meFormatInr(totalAdvPaid)}/-)`;
+      if (totalPriorAdvPaid > 0) {
+        prevAlreadyPaidEl.textContent = `(Already Paid: ₹${_meFormatInr(totalPriorAdvPaid)}/-)`;
         prevAlreadyPaidEl.style.display = 'block';
       } else {
-        // HIDE COMPLETELY WHEN ACTUAL PAYMENT = 0
         prevAlreadyPaidEl.style.display = 'none';
         prevAlreadyPaidEl.textContent = '';
       }
@@ -915,7 +1018,20 @@
     const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
 
     setTxt('prevTitle', '★ ' + getVal('postTitle').toUpperCase() + ' ★');
-    setTxt('prevSubtitle', getVal('postSubtitle').toUpperCase());
+    
+    const rankVal = (getVal('postRank') || '').toUpperCase().trim();
+    const nameVal = (getVal('postSubtitle') || '').toUpperCase().trim();
+
+    const prevRankEl = document.getElementById('prevRank');
+    const prevRankContainerEl = document.getElementById('prevRankContainer');
+    if (prevRankEl) {
+      prevRankEl.textContent = rankVal || '2★ CHANNEL PARTNER';
+      if (prevRankContainerEl) prevRankContainerEl.style.display = rankVal ? 'inline-flex' : 'none';
+    }
+    const prevNameEl = document.getElementById('prevName');
+    if (prevNameEl) {
+      prevNameEl.textContent = nameVal || 'MEMBER NAME';
+    }
 
     const rawHighlight = getVal('postHighlight');
     setTxt('prevHighlight', rawHighlight);
@@ -948,6 +1064,16 @@
 
     const prevTotalTodayEl = document.getElementById('prevTotalToday');
     if (prevTotalTodayEl) prevTotalTodayEl.textContent = getVal('postTotalToday');
+
+    const overallValStr = getVal('postOverall').toUpperCase().trim();
+    const prevOverallLabelEl = document.getElementById('prevOverallLabel');
+    if (prevOverallLabelEl) {
+      if (overallValStr.includes('LEAD')) {
+        prevOverallLabelEl.textContent = '👥 DIRECT LEADS';
+      } else {
+        prevOverallLabelEl.textContent = '👥 TEAM SIZE';
+      }
+    }
 
     setTxt('prevOverall', getVal('postOverall'));
     setTxt('prevTeamBreakup', getVal('postTeamBreakup'));
@@ -1165,6 +1291,55 @@
     }
   }
 
+  function getPosterShareDetails() {
+    const rawName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevName')?.textContent || '').trim();
+    const rawRank = (document.getElementById('postRank')?.value || document.getElementById('prevRank')?.textContent || '').trim();
+    const partnerName = rawName || 'Channel Partner';
+    const partnerRank = rawRank ? (rawRank.startsWith('★') ? rawRank : `★ ${rawRank} ★`) : '';
+    const partnerOverall = (document.getElementById('postHighlight')?.value || document.getElementById('prevHighlight')?.textContent || '').trim();
+    const partnerToday = (document.getElementById('prevTotalToday')?.textContent || document.getElementById('postTodayPayout')?.value || '').trim();
+    const partnerPotential = (document.getElementById('postPotential')?.value || document.getElementById('prevPotential')?.textContent || '').trim();
+
+    let seniorName = (document.getElementById('postSeniorName')?.value || document.getElementById('prevSeniorName')?.textContent || '').replace(/^Senior\s*:\s*/i, '').trim();
+    const seniorToday = (document.getElementById('postSeniorToday')?.value || document.getElementById('prevSeniorToday')?.textContent || '').trim();
+    const seniorOverall = (document.getElementById('postSeniorEarning')?.value || document.getElementById('prevSeniorEarning')?.textContent || '').trim();
+    const prevSeniorPot = document.getElementById('prevSeniorPotential');
+    const seniorPotential = prevSeniorPot ? prevSeniorPot.textContent.trim() : (document.getElementById('postSeniorPotential')?.value || '₹0/-');
+
+    const showSeniorInput = document.getElementById('postShowSenior');
+    const isSeniorVisible = showSeniorInput ? showSeniorInput.checked : (document.getElementById('prevSeniorRow')?.style.display !== 'none');
+
+    let text = `🎉 *CONGRATULATIONS TO ${partnerName}!* 🎉\n\n`;
+    if (partnerRank) {
+      text += `${partnerRank}\n\n`;
+    }
+    text += `👤 *Member Name:* ${partnerName}\n`;
+    if (partnerToday) {
+      text += `💰 *Today's Payout:* ${partnerToday}\n`;
+    }
+    if (partnerOverall) {
+      text += `📈 *Overall Earning:* ${partnerOverall}\n`;
+    }
+    if (partnerPotential) {
+      text += `🔮 *Potential Valuation:* ${partnerPotential}\n`;
+    }
+    text += `\n`;
+
+    if (isSeniorVisible && seniorName && seniorName !== '—' && seniorName !== 'NONE' && !seniorName.endsWith('—')) {
+      text += `🙌 *Senior Referrer:* ${seniorName}\n`;
+      text += `💰 *Senior Today:* ${seniorToday} | *Overall:* ${seniorOverall}\n`;
+      if (seniorPotential && seniorPotential !== '₹0/-') {
+        text += `🔮 *Senior Potential:* ${seniorPotential}\n`;
+      }
+      text += `\n`;
+    }
+
+    text += `🌐 *Official Website:* https://vgk4u.com\n\n`;
+    text += `🚀 *Join VGK4U today & grow your earnings!*`;
+
+    return { partnerName, partnerRank, partnerOverall, partnerToday, partnerPotential, seniorName, seniorToday, seniorOverall, seniorPotential, isSeniorVisible, text };
+  }
+
   async function testShareToNumber() {
     const container = document.getElementById('posterCanvasWrapper');
     if (!container) return;
@@ -1182,34 +1357,12 @@
 
     localStorage.setItem('last_test_wa_phone', cleanPhone);
 
-    const partnerName = (document.getElementById('prevSubtitle')?.textContent || '').trim() || 'Channel Partner';
-    const partnerOverall = (document.getElementById('prevHighlight')?.textContent || '').trim() || '';
-    const partnerToday = (document.getElementById('prevTotalToday')?.textContent || '').trim() || '';
-    const partnerPotential = (document.getElementById('prevPotential')?.textContent || '').trim() || '';
-
-    const seniorName = (document.getElementById('prevSeniorName')?.textContent || '').replace(/^Senior\s*:\s*/i, '').trim() || '';
-    const seniorToday = (document.getElementById('prevSeniorToday')?.textContent || '').trim() || '';
-    const seniorOverall = (document.getElementById('prevSeniorEarning')?.textContent || '').trim() || '';
-
-    const showSeniorInput = document.getElementById('postShowSenior');
-    const isSeniorVisible = showSeniorInput ? showSeniorInput.checked : (document.getElementById('prevSeniorRow')?.style.display !== 'none');
+    const shareDetails = getPosterShareDetails();
+    const partnerName = shareDetails.partnerName;
+    const shareText = shareDetails.text;
 
     const spinner = document.getElementById('posterSpinner');
     if (spinner) spinner.style.display = 'flex';
-
-    let shareText = `🎉 *[TEST BROADCAST] CONGRATULATIONS TO ${partnerName}!* 🎉\n\n` +
-      `👤 *Member Name:* ${partnerName}\n` +
-      `💰 *Today's Payout:* ${partnerToday}\n` +
-      `📈 *Overall Earning:* ${partnerOverall}\n` +
-      `🔮 *Potential Valuation:* ${partnerPotential}\n\n`;
-
-    if (isSeniorVisible && seniorName && seniorName !== '—' && seniorName !== 'NONE' && !seniorName.endsWith('—')) {
-      shareText += `🙌 *Senior Referrer:* ${seniorName}\n` +
-        `💰 *Senior Today:* ${seniorToday} | *Overall:* ${seniorOverall}\n\n`;
-    }
-
-    shareText += `🌐 *Official Website:* https://vgk4u.com\n\n` +
-      `🚀 Join VGK4U today & grow your earnings!`;
 
     let dataUrl = null;
     try {
@@ -1233,16 +1386,25 @@
       if (json.success) {
         alert(`✅ TEST SHARE SENT SUCCESSFULLY!\n----------------------------------------\nRecipient: +91 ${cleanPhone.slice(-10)}\nImage: ${dataUrl ? 'Attached 🖼️' : 'Text Only'}\n\nPlease check your WhatsApp on +91 ${cleanPhone.slice(-10)} to verify!`);
       } else {
-        alert(`❌ TEST SHARE FAILED: ${json.error || 'WhatsApp bot error'}`);
+        const errNotice = json.error || 'WhatsApp bot not connected';
+        const useFallback = confirm(`⚠️ Automated Background Bot Notice:\n${errNotice}\n\nWould you like to send directly via WhatsApp Web/App to +91 ${cleanPhone.slice(-10)} instead?`);
+        if (useFallback) {
+          const directUrl = `https://api.whatsapp.com/send?phone=91${cleanPhone.slice(-10)}&text=${encodeURIComponent(shareText)}`;
+          window.open(directUrl, '_blank');
+        }
       }
     } catch (err) {
-      alert(`❌ TEST SHARE ERROR: Could not connect to WhatsApp Bot on port 5002.\n(${err.message})`);
+      const useFallback = confirm(`⚠️ Background Bot Unavailable on port 5002.\n\nWould you like to send directly via WhatsApp Web/App to +91 ${cleanPhone.slice(-10)} instead?`);
+      if (useFallback) {
+        const directUrl = `https://api.whatsapp.com/send?phone=91${cleanPhone.slice(-10)}&text=${encodeURIComponent(shareText)}`;
+        window.open(directUrl, '_blank');
+      }
     }
   }
 
   function downloadPoster() {
     const container = document.getElementById('posterCanvasWrapper');
-    const partnerName = document.getElementById('prevSubtitle')?.textContent?.trim() || 'Channel_Partner';
+    const partnerName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevName')?.textContent || 'Channel_Partner').trim();
     const spinner = document.getElementById('posterSpinner');
     if (spinner) spinner.style.display = 'flex';
 
@@ -1273,7 +1435,7 @@
 
   function sharePoster() {
     const container = document.getElementById('posterCanvasWrapper');
-    const partnerName = document.getElementById('prevSubtitle')?.textContent?.trim() || 'Partner';
+    const partnerName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevName')?.textContent || 'Partner').trim();
     const totalPayout = document.getElementById('prevTotalToday')?.textContent?.trim() || '';
     const spinner = document.getElementById('posterSpinner');
     if (spinner) spinner.style.display = 'flex';
@@ -1303,25 +1465,9 @@
 
   function shareOnWhatsApp() {
     const container = document.getElementById('posterCanvasWrapper');
-    const partnerName = document.getElementById('prevSubtitle')?.textContent?.trim() || '';
-    const partnerOverall = document.getElementById('prevHighlight')?.textContent?.trim() || '';
-    const partnerToday = document.getElementById('prevTotalToday')?.textContent?.trim() || '';
-    const seniorName = document.getElementById('prevSeniorName')?.textContent?.trim() || '';
-    const seniorOverall = document.getElementById('prevSeniorEarning')?.textContent?.trim() || '';
-    const seniorToday = document.getElementById('prevSeniorToday')?.textContent?.trim() || '';
-    const partnerPotential = document.getElementById('prevPotential')?.textContent?.trim() || '';
-    const seniorPotential = document.getElementById('prevSeniorPotential')?.textContent?.trim() || '₹0/-';
-
-    const showSeniorInput = document.getElementById('postShowSenior');
-    const isSeniorVisible = showSeniorInput ? showSeniorInput.checked : (document.getElementById('prevSeniorRow')?.style.display !== 'none');
-
-    let text = `🎉 *CONGRATULATIONS!* 🎉\n\n🌟 *Member Achievement:* 🌟\n👤 *Name:* ${partnerName}\n💰 *Today's Earning:* ${partnerToday}\n📈 *Overall Earning:* ${partnerOverall}\n🔮 *Potential Valuation:* ${partnerPotential}\n`;
-
-    if (isSeniorVisible && seniorName && seniorName !== '—' && seniorName !== 'NONE' && !seniorName.endsWith('—')) {
-      text += `\n----------------------------------\n\n🙌 *Senior Referrer Achievement:* 🙌\n👤 *Name:* ${seniorName}\n💰 *Today's Earning:* ${seniorToday}\n📈 *Overall Earning:* ${seniorOverall}\n🔮 *Potential Earning:* ${seniorPotential}\n`;
-    }
-
-    text += `\n🚀 Keep up the fantastic work! 🚀\nvgk4u.myntreal.com`;
+    const shareDetails = getPosterShareDetails();
+    const partnerName = shareDetails.partnerName;
+    const text = shareDetails.text;
 
     const shareWindow = window.open('', '_blank');
     if (shareWindow) {
@@ -1364,41 +1510,24 @@
   }
 
   async function shareDefaultChannel() {
+    console.log('[MYNTOS SHARE DEBUG] 1. shareDefaultChannel triggered');
     const container = document.getElementById('posterCanvasWrapper');
-    if (!container) return;
+    if (!container) {
+      console.warn('[MYNTOS SHARE DEBUG] posterCanvasWrapper not found');
+      return;
+    }
 
-    const partnerName = (document.getElementById('prevSubtitle')?.textContent || '').trim() || 'Channel Partner';
-    const partnerOverall = (document.getElementById('prevHighlight')?.textContent || '').trim() || '';
-    const partnerToday = (document.getElementById('prevTotalToday')?.textContent || '').trim() || '';
-    const partnerPotential = (document.getElementById('prevPotential')?.textContent || '').trim() || '';
-
-    const seniorName = (document.getElementById('prevSeniorName')?.textContent || '').replace(/^Senior\s*:\s*/i, '').trim() || '';
-    const seniorToday = (document.getElementById('prevSeniorToday')?.textContent || '').trim() || '';
-    const seniorOverall = (document.getElementById('prevSeniorEarning')?.textContent || '').trim() || '';
-
-    const showSeniorInput = document.getElementById('postShowSenior');
-    const isSeniorVisible = showSeniorInput ? showSeniorInput.checked : (document.getElementById('prevSeniorRow')?.style.display !== 'none');
+    const shareDetails = getPosterShareDetails();
+    const partnerName = shareDetails.partnerName;
+    const shareText = shareDetails.text;
+    const seniorName = shareDetails.seniorName;
+    const isSeniorVisible = shareDetails.isSeniorVisible;
 
     const m = window._currentPosterMember || {};
     const mPhone = (m.phone || '').replace(/\D/g, '');
     const sPhone = isSeniorVisible ? (m.senior_phone || '').replace(/\D/g, '') : '';
 
-    const spinner = document.getElementById('posterSpinner');
-    if (spinner) spinner.style.display = 'flex';
-
-    let shareText = `🎉 *CONGRATULATIONS TO ${partnerName}!* 🎉\n\n` +
-      `👤 *Member Name:* ${partnerName}\n` +
-      `💰 *Today's Payout:* ${partnerToday}\n` +
-      `📈 *Overall Earning:* ${partnerOverall}\n` +
-      `🔮 *Potential Valuation:* ${partnerPotential}\n\n`;
-
-    if (isSeniorVisible && seniorName && seniorName !== '—' && seniorName !== 'NONE' && !seniorName.endsWith('—')) {
-      shareText += `🙌 *Senior Referrer:* ${seniorName}\n` +
-        `💰 *Senior Today:* ${seniorToday} | *Overall:* ${seniorOverall}\n\n`;
-    }
-
-    shareText += `🌐 *Official Website:* https://vgk4u.com\n\n` +
-      `🚀 Join VGK4U today & grow your earnings!`;
+    console.log('[MYNTOS SHARE DEBUG] 2. Prepared share details:', { partnerName, seniorName, mPhone, sPhone, isSeniorVisible });
 
     const dispatchTargets = [
       { id: 'member', type: 'member', label: `Member: ${partnerName}`, target: mPhone ? `+91 ${mPhone.slice(-10)}` : 'No Phone', phone: mPhone, status: 'sending', msg: 'Broadcasting...' },
@@ -1412,25 +1541,31 @@
       { id: 'portal_shoutout', type: 'portal', label: 'VGK4U Login Page Shoutout', target: 'vgk4u.com (Login Banner)', status: 'sending', msg: 'Publishing shoutout...' }
     ];
 
+    // Show Live Broadcast Status Modal IMMEDIATELY
+    console.log('[MYNTOS SHARE DEBUG] 3. Opening Live Dispatch Status Modal immediately');
+    showLiveDispatchStatusModal(dispatchTargets, partnerName);
+
+    const spinner = document.getElementById('posterSpinner');
+    if (spinner) spinner.style.display = 'none';
+
     let dataUrl = null;
     let blob = null;
 
     try {
+      console.log('[MYNTOS SHARE DEBUG] 4. Capturing poster canvas...');
       const canvas = await capturePosterCanvas(container);
       if (canvas) {
         try {
           dataUrl = canvas.toDataURL('image/png');
           blob = await (await fetch(dataUrl)).blob();
+          console.log('[MYNTOS SHARE DEBUG] Canvas captured successfully');
         } catch (cErr) {
-          console.warn("Poster toDataURL failed:", cErr);
+          console.warn('[MYNTOS SHARE DEBUG] Poster toDataURL failed:', cErr);
         }
       }
     } catch (capErr) {
-      console.warn("capturePosterCanvas error:", capErr);
+      console.warn('[MYNTOS SHARE DEBUG] capturePosterCanvas error:', capErr);
     }
-
-    if (spinner) spinner.style.display = 'none';
-    showLiveDispatchStatusModal(dispatchTargets, partnerName);
 
     const fetchWithTimeout = async (url, opts = {}, ms = 2500) => {
       const controller = new AbortController();
@@ -1634,10 +1769,10 @@
       return;
     }
 
-    const partnerName = (document.getElementById('prevSubtitle')?.textContent || '').trim() || 'Channel Partner';
-    const partnerOverall = (document.getElementById('prevHighlight')?.textContent || '').trim() || '';
-    const partnerToday = (document.getElementById('prevTotalToday')?.textContent || '').trim() || '';
-    const partnerPotential = (document.getElementById('prevPotential')?.textContent || '').trim() || '';
+    const shareDetails = getPosterShareDetails();
+    const partnerName = shareDetails.partnerName;
+    const partnerOverall = shareDetails.partnerOverall;
+    const partnerToday = shareDetails.partnerToday;
 
     if (!confirm(`📣 POST ANNOUNCEMENT ON LOGIN SCREEN\n--------------------------------------------------\n• Member Name: ${partnerName}\n• Today's Earning: ${partnerToday}\n• Overall Earning: ${partnerOverall}\n\nDo you want to publish this Achievement Poster announcement to the Login Screen slideshow now?`)) {
       return;
@@ -1653,12 +1788,7 @@
       const dataUrl = canvas.toDataURL('image/png');
       const blob = await (await fetch(dataUrl)).blob();
 
-      let shareText = `🎉 *CONGRATULATIONS TO ${partnerName}!* 🎉\n\n` +
-        `👤 *Member Name:* ${partnerName}\n` +
-        `💰 *Today's Payout:* ${partnerToday}\n` +
-        `📈 *Overall Earning:* ${partnerOverall}\n` +
-        `🔮 *Potential Valuation:* ${partnerPotential}\n\n` +
-        `🚀 Keep Leading. Keep Inspiring. Keep Growing! — Team VGK4U`;
+      const shareText = shareDetails.text;
 
       const formData = new FormData();
       formData.append('title', `🎉 Achievement Poster: ${partnerName}`);
@@ -1832,8 +1962,11 @@
   window.sharePoster = sharePoster;
   window.shareOnWhatsApp = shareOnWhatsApp;
   window.shareDefaultChannel = shareDefaultChannel;
+  window._shareDefaultChannelCore = shareDefaultChannel;
   window.testShareToNumber = testShareToNumber;
+  window._testShareToNumberCore = testShareToNumber;
   window.postPosterAnnouncement = postPosterAnnouncement;
+  window._postPosterAnnouncementCore = postPosterAnnouncement;
   window.showDirectWaShareDialog = showDirectWaShareDialog;
   window.changeThemePreset = changeThemePreset;
   window.setPosterPresetPeriod = setPosterPresetPeriod;

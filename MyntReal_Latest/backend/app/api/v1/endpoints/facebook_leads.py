@@ -156,21 +156,21 @@ async def process_facebook_lead(
         logger.error(f"Could not fetch lead data for {lead_id} (page {page_id})")
         return None
 
-    default_company = db.query(AssociatedCompany).filter(
-        AssociatedCompany.is_active == True
-    ).order_by(AssociatedCompany.id).first()
-
-    if not default_company:
-        logger.error("No active company found for Facebook leads")
+    target_company_id = page_info.get('company_id')
+    if not target_company_id:
+        logger.warning(f"[META-WEBHOOK-REJECT] Lead {lead_id} rejected: Page {page_id} is not mapped to an active tenant company.")
         return None
 
     crm_data = facebook_leads_service.map_to_crm_lead(
         lead_data=lead_data,
-        company_id=default_company.id,
+        company_id=target_company_id,
         category_id=None,
         page_segment=page_segment,
         page_name=page_name
     )
+    if not crm_data:
+        logger.warning(f"[META-WEBHOOK-REJECT] Lead {lead_id} mapping failed for company {target_company_id}")
+        return None
 
     crm_lead = CRMLead(**crm_data)
     db.add(crm_lead)

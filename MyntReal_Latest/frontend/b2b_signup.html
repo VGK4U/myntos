@@ -196,30 +196,127 @@
 
     <!-- signup form -->
     <div class="signup" id="signup">
-      <h2>Start your free trial</h2>
-      <p class="sub">Provisioned within 1 business day. Cancel anytime — your data is yours.</p>
+      <h2>Build your MyntOS package</h2>
+      <p class="sub">Tailor your cockpit with exact services and business verticals. Request instant provisioning.</p>
       <form id="f" autocomplete="on">
         <label>Company name</label>
         <input name="company_name" required minlength="2" maxlength="120" placeholder="Acme Industries Pvt Ltd"/>
-        <label>Your full name</label>
-        <input name="contact_name" required placeholder="Priya Sharma"/>
-        <label>Work email</label>
-        <input name="contact_email" required type="email" placeholder="priya@acme.in"/>
+        <div class="row2">
+          <div>
+            <label>Your full name</label>
+            <input name="contact_name" required placeholder="Priya Sharma"/>
+          </div>
+          <div>
+            <label>Work email</label>
+            <input name="contact_email" required type="email" placeholder="priya@acme.in"/>
+          </div>
+        </div>
         <div class="row2">
           <div>
             <label>Phone <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
             <input name="contact_phone" type="tel" placeholder="+91 98xxxxxxxx"/>
           </div>
           <div>
-            <label>Preferred currency</label>
-            <select name="billing_currency">
+            <label>Currency</label>
+            <select name="billing_currency" id="currency-select">
               <option value="INR" selected>₹ INR — India</option>
               <option value="USD">$ USD — International</option>
             </select>
           </div>
         </div>
-        <button id="b" class="btn-cta" type="submit">Create my account →</button>
-        <div class="small">By continuing, you agree to MyntReal&rsquo;s Terms &amp; Privacy. We&rsquo;ll never share your data.</div>
+
+        <!-- Service Packaging -->
+        <label style="margin-top:16px;font-size:13px;color:var(--brand-1)">1. Select Core Services</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px" id="services-container">
+          <label style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--line);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12.5px;margin:0">
+            <input type="checkbox" name="module_choice" value="CRM_CORE" id="chk-crm" checked style="width:auto">
+            <span><b>Universal CRM</b><br><small style="color:var(--muted)">Leads & Pipelines</small></span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--line);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12.5px;margin:0">
+            <input type="checkbox" name="module_choice" value="WHATSAPP_INTEGRATION" style="width:auto">
+            <span><b>WhatsApp Cloud</b><br><small style="color:var(--muted)">Inbox & Templates</small></span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--line);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12.5px;margin:0">
+            <input type="checkbox" name="module_choice" value="META_ADS_INTEGRATION" style="width:auto">
+            <span><b>Meta Facebook Ads</b><br><small style="color:var(--muted)">Instant Lead Sync</small></span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--line);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12.5px;margin:0">
+            <input type="checkbox" name="module_choice" value="TELEPHONY_INTEGRATION" style="width:auto">
+            <span><b>Telephony & Dialer</b><br><small style="color:var(--muted)">Call Logs & Recs</small></span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--line);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12.5px;margin:0">
+            <input type="checkbox" name="module_choice" value="STAFF_HR" style="width:auto">
+            <span><b>Staff HR & Payroll</b><br><small style="color:var(--muted)">Attendance & Leaves</small></span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--line);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12.5px;margin:0">
+            <input type="checkbox" name="module_choice" value="SFMS_ACCOUNTING" style="width:auto">
+            <span><b>SFMS Accounting</b><br><small style="color:var(--muted)">GST & Invoices</small></span>
+          </label>
+        </div>
+
+        <!-- CRM Vertical Segments -->
+        <div id="segment-section" style="margin-top:14px">
+          <label style="font-size:13px;color:var(--brand-1)">2. Select CRM Industry Verticals</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px" id="segments-container">
+            <label style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--line);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12px;margin:0">
+              <input type="checkbox" name="module_choice" value="CRM_LEADS_SOLAR" checked style="width:auto">
+              <span>☀️ Solar CRM</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--line);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12px;margin:0">
+              <input type="checkbox" name="module_choice" value="CRM_LEADS_EV_B2B" style="width:auto">
+              <span>⚡ EV B2B Fleet</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--line);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12px;margin:0">
+              <input type="checkbox" name="module_choice" value="CRM_LEADS_EV_B2C" style="width:auto">
+              <span>🛵 EV B2C Consumer</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--line);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12px;margin:0">
+              <input type="checkbox" name="module_choice" value="CRM_LEADS_EV_SPARES" style="width:auto">
+              <span>🔧 EV Spares & Parts</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--line);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12px;margin:0">
+              <input type="checkbox" name="module_choice" value="CRM_LEADS_REAL_DREAMS" style="width:auto">
+              <span>🏢 Real Estate CRM</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--line);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12px;margin:0">
+              <input type="checkbox" name="module_choice" value="CRM_LEADS_INSURANCE" style="width:auto">
+              <span>🛡️ Insurance Policies</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--line);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12px;margin:0">
+              <input type="checkbox" name="module_choice" value="CRM_LEADS_ETC" style="width:auto">
+              <span>🎓 ETC Training</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Billing Cycle Switch -->
+        <label style="margin-top:14px;font-size:13px;color:var(--brand-1)">3. Billing Cycle</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+          <label style="display:flex;align-items:center;gap:8px;background:#fff;border:2px solid var(--line);padding:10px;border-radius:8px;cursor:pointer;font-size:13px;margin:0" id="cycle-label-monthly">
+            <input type="radio" name="billing_cycle" value="monthly" checked style="width:auto">
+            <span>Monthly</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;background:#fff;border:2px solid var(--line);padding:10px;border-radius:8px;cursor:pointer;font-size:13px;margin:0" id="cycle-label-annual">
+            <input type="radio" name="billing_cycle" value="annual" style="width:auto">
+            <span>Annual <span style="background:var(--ok);color:#fff;font-size:10px;padding:2px 6px;border-radius:999px;font-weight:700">2 MO FREE</span></span>
+          </label>
+        </div>
+
+        <!-- Live Price Calculation Box -->
+        <div id="price-box" style="margin-top:14px;padding:12px 14px;background:#f1f5f9;border-radius:10px;border:1px solid var(--line);font-size:13px">
+          <div style="display:flex;justify-content:space-between;color:var(--muted)">
+            <span>Estimated Package Total</span>
+            <span id="price-cycle-name">Monthly</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px">
+            <span style="font-size:22px;font-weight:800;color:var(--ink)" id="price-total">₹4,498</span>
+            <span style="font-size:11px;color:var(--muted)" id="price-tax-label">+ 18% GST (Subject to approval)</span>
+          </div>
+          <div id="price-dependencies" style="font-size:11.5px;color:var(--brand-1);margin-top:4px"></div>
+        </div>
+
+        <button id="b" class="btn-cta" type="submit">Submit Signup Application →</button>
+        <div class="small">By submitting, you agree to MyntOS Platform Terms. Zero upfront charges until review and invoice issuance.</div>
         <div id="msg"></div>
       </form>
     </div>
@@ -426,7 +523,7 @@
 
 <footer>
   <div class="container">
-    <div>© <span id="yr"></span> MyntReal · VGK4U SaaS Console · DC_SAAS_CONSOLE_001</div>
+    <div>© <span id="yr"></span> MyntReal · MyntOS SaaS Console · DC_SAAS_CONSOLE_001</div>
     <div><a href="#top">Back to top ↑</a></div>
   </div>
 </footer>
@@ -519,32 +616,122 @@ document.getElementById('yr').textContent = new Date().getFullYear();
 
 function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-// ── signup form submission (unchanged contract) ──
+// ── Live Pricing & Dependency Calculator ──
+async function updatePricingCalculation() {
+  const form = document.getElementById('f');
+  const currency = form.billing_currency.value || 'INR';
+  const cycle = form.querySelector('input[name="billing_cycle"]:checked')?.value || 'monthly';
+  
+  const checkedBoxes = Array.from(form.querySelectorAll('input[name="module_choice"]:checked'));
+  const selectedModules = checkedBoxes.map(cb => cb.value);
+
+  // If a segment is selected, ensure CRM_CORE is checked
+  const hasSegment = selectedModules.some(m => m.startsWith('CRM_LEADS_'));
+  const chkCrm = document.getElementById('chk-crm');
+  if (hasSegment && chkCrm && !chkCrm.checked) {
+    chkCrm.checked = true;
+    selectedModules.push('CRM_CORE');
+  }
+
+  // Update UI Cycle labels
+  const cycleLabel = document.getElementById('price-cycle-name');
+  if (cycleLabel) cycleLabel.textContent = cycle === 'annual' ? 'Annual (2 Months Free)' : 'Monthly';
+
+  try {
+    const res = await fetch('/api/v1/platform-b2b/calculate-pricing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        selected_modules: selectedModules,
+        billing_currency: currency,
+        billing_cycle: cycle,
+        seat_count: 1
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const symbol = currency === 'USD' ? '$' : '₹';
+      document.getElementById('price-total').textContent = `${symbol}${data.total_payable.toLocaleString('en-IN')}`;
+      
+      const taxLabel = document.getElementById('price-tax-label');
+      if (taxLabel) {
+        if (cycle === 'annual') {
+          taxLabel.textContent = `Includes 18% GST · Save ~17% · Equiv. ${symbol}${Math.round(data.monthly_effective_rate).toLocaleString('en-IN')}/mo`;
+        } else {
+          taxLabel.textContent = `Includes 18% GST (Subject to approval)`;
+        }
+      }
+
+      const depBox = document.getElementById('price-dependencies');
+      if (depBox) {
+        if (data.auto_included_dependencies && data.auto_included_dependencies.length) {
+          depBox.textContent = `ℹ️ Auto-included core dependencies: ${data.auto_included_dependencies.join(', ')}`;
+        } else {
+          depBox.textContent = '';
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Live price calculation fallback:', err);
+  }
+}
+
+// Attach change listeners for live dynamic pricing
+document.querySelectorAll('input[name="module_choice"], input[name="billing_cycle"], select[name="billing_currency"]').forEach(el => {
+  el.addEventListener('change', updatePricingCalculation);
+});
+
+// Run initial calculation
+updatePricingCalculation();
+
+// ── Enhanced Signup Submission ──
 document.getElementById('f').addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const b = document.getElementById('b'); const m = document.getElementById('msg');
-  b.disabled = true; b.textContent = 'Creating your account…'; m.innerHTML = '';
-  const fd = Object.fromEntries(new FormData(ev.target));
+  b.disabled = true; b.textContent = 'Submitting application…'; m.innerHTML = '';
+  
+  const form = ev.target;
+  const checkedBoxes = Array.from(form.querySelectorAll('input[name="module_choice"]:checked'));
+  const selectedModules = checkedBoxes.map(cb => cb.value);
+  const cycle = form.querySelector('input[name="billing_cycle"]:checked')?.value || 'monthly';
+  
+  const payload = {
+    company_name: form.company_name.value.trim(),
+    contact_name: form.contact_name.value.trim(),
+    contact_email: form.contact_email.value.trim(),
+    contact_phone: form.contact_phone.value.trim() || null,
+    billing_currency: form.billing_currency.value,
+    billing_cycle: cycle,
+    selected_modules: selectedModules,
+    seat_count: 1
+  };
+
   try {
     const r = await fetch('/api/v1/platform-b2b/signup', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(fd),
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
     const j = await r.json();
-    if (!r.ok) throw new Error(j.detail || j.message || ('HTTP '+r.status));
-    m.innerHTML = `<div class="ok-card">
-      <b>Welcome aboard! 🎉</b><br>
-      Tenant: <code>${escapeHtml(j.client_code||'')}</code><br>
-      Trial ends: <b>${escapeHtml(j.trial_ends_on || '—')}</b><br>
-      Status: <b>${escapeHtml(j.status||'pending')}</b><br><br>
-      Your account manager will reach out shortly to provision your modules. Please keep an eye on your inbox.
+    if (!r.ok) throw new Error(j.detail || j.message || ('HTTP ' + r.status));
+
+    const sym = payload.billing_currency === 'USD' ? '$' : '₹';
+    const totalPayable = j.pricing_snapshot ? j.pricing_snapshot.total_payable : 0;
+    const requestedList = (j.requested_modules || []).join(', ');
+
+    m.innerHTML = `<div class="ok-card" style="background:#f0fdf4;border:1px solid #86efac;color:#166534">
+      <h3 style="margin:0 0 6px;font-size:16px;color:#15803d">Application Received! 🎉</h3>
+      <b>Tenant Code:</b> <code>${escapeHtml(j.client_code || '')}</code><br>
+      <b>Requested Package:</b> ${escapeHtml(requestedList)}<br>
+      <b>Billing Cycle:</b> ${escapeHtml(cycle.toUpperCase())} (${sym}${totalPayable.toLocaleString('en-IN')})<br>
+      <b>Status:</b> <span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:999px;font-weight:700;font-size:12px">PENDING REVIEW</span><br><br>
+      Our SaaS Provisioning team will review your application and issue your onboarding invoice. Once paid, your Tenant Admin login and workspace will be activated automatically.
     </div>`;
     b.style.display = 'none';
-    // disable inputs
-    ev.target.querySelectorAll('input,select').forEach(el => el.disabled = true);
+    form.querySelectorAll('input,select').forEach(el => el.disabled = true);
   } catch (e) {
     m.innerHTML = `<div class="err">⚠ ${escapeHtml(e.message)}</div>`;
-    b.disabled = false; b.textContent = 'Create my account →';
+    b.disabled = false; b.textContent = 'Submit Signup Application →';
   }
 });
 

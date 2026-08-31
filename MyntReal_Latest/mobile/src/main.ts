@@ -63,6 +63,7 @@ import { StaffAttendanceComputationPage } from './pages/StaffAttendanceComputati
 // New CRM Section Pages
 import { StaffLeadSourcesPage } from './pages/StaffLeadSourcesPage';
 import { StaffTeamLeadsPage } from './pages/StaffTeamLeadsPage';
+import { StaffWhatsAppInboxPage } from './pages/StaffWhatsAppInboxPage';
 // New Tasks Section Pages
 import { TasksAssignedPage } from './pages/TasksAssignedPage';
 import { TasksReceivedPage } from './pages/TasksReceivedPage';
@@ -607,16 +608,28 @@ class MNRApp {
   }
 
   private async renderPage(route: PageRoute): Promise<void> {
-    if (this.currentPageInstance && typeof this.currentPageInstance.cleanup === 'function') {
-      try {
-        this.currentPageInstance.cleanup();
-      } catch (e) {
-        console.warn('[DC_APP] Page cleanup error:', e);
-      }
-    }
-    this.currentPageInstance = null;
+    const isVgkHubTransition = route === 'vgk-member-hub' && this.currentPageInstance instanceof VGKMemberHubPage && !!document.getElementById('vgk4u-dashboard-frame');
 
-    this.pageContainer.innerHTML = '<div class="loading-state">Loading...</div>';
+    if (!isVgkHubTransition) {
+      if (this.currentPageInstance && typeof this.currentPageInstance.cleanup === 'function') {
+        try {
+          this.currentPageInstance.cleanup();
+        } catch (e) {
+          console.warn('[DC_APP] Page cleanup error:', e);
+        }
+      }
+      this.currentPageInstance = null;
+      this.pageContainer.innerHTML = '<div class="loading-state">Loading...</div>';
+    }
+
+    if (isVgkHubTransition) {
+      try {
+        await this.currentPageInstance.init();
+      } catch (e) {
+        console.error('[DC_APP] VGK Hub transition error:', e);
+      }
+      return;
+    }
 
     let page: any;
 
@@ -714,6 +727,10 @@ class MNRApp {
         break;
       case 'staff-team-leads':
         page = new StaffTeamLeadsPage(this.pageContainer);
+        break;
+      case 'staff-whatsapp':
+      case 'staff-whatsapp-inbox':
+        page = new StaffWhatsAppInboxPage(this.pageContainer);
         break;
       
       // New Staff Dashboard Section Pages

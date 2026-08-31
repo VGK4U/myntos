@@ -102,7 +102,7 @@ export class SettingsPage {
         <div class="settings-section card">
           <h3 class="section-title">Account</h3>
           
-          <button class="menu-item danger" id="logoutBtn">
+          <button class="menu-item" id="logoutBtn" style="margin-bottom: 8px;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
               <polyline points="16 17 21 12 16 7"/>
@@ -110,6 +110,40 @@ export class SettingsPage {
             </svg>
             <span>Logout</span>
           </button>
+
+          <button class="menu-item danger" id="deleteAccountBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
+              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/>
+            </svg>
+            <span style="color: #ef4444; font-weight: 600;">Delete Account</span>
+            <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </button>
+        </div>
+
+        <div id="deleteAccountModal" class="modal" style="display: none;">
+          <div class="modal-content" style="max-width: 440px;">
+            <div style="font-size: 28px; text-align: center; margin-bottom: 4px;">⚠️</div>
+            <h3 class="modal-title" style="color: #dc2626; text-align: center;">Delete Account Permanently</h3>
+            <p style="font-size: 13px; line-height: 1.5; color: #4b5563; margin-bottom: 12px;">
+              This will permanently delete your personal information, credentials, and active sessions. Past statutory invoices and transaction ledgers will be retained anonymously under your internal Support ID as required by law.
+            </p>
+            <form id="deleteAccountForm">
+              <div class="input-group">
+                <label class="input-label">Account Password</label>
+                <input type="password" id="deletePassword" class="input" required placeholder="Enter your current password" />
+              </div>
+              <div class="input-group">
+                <label class="input-label">Type <strong>DELETE</strong> to confirm</label>
+                <input type="text" id="deleteConfirmText" class="input" required placeholder="DELETE" style="text-transform: uppercase;" />
+              </div>
+              <div class="modal-actions">
+                <button type="submit" id="confirmDeleteBtn" class="btn btn-full" style="background: #dc2626; color: #fff; font-weight: 600;">Permanently Delete</button>
+                <button type="button" class="btn btn-outline btn-full" id="cancelDeleteBtn">Cancel</button>
+              </div>
+            </form>
+          </div>
         </div>
 
         <div id="passwordModal" class="modal" style="display: none;">
@@ -170,12 +204,66 @@ export class SettingsPage {
       await this.handlePasswordChange();
     });
 
+    document.getElementById('deleteAccountBtn')?.addEventListener('click', () => {
+      document.getElementById('deleteAccountModal')!.style.display = 'flex';
+    });
+
+    document.getElementById('cancelDeleteBtn')?.addEventListener('click', () => {
+      document.getElementById('deleteAccountModal')!.style.display = 'none';
+      (document.getElementById('deleteAccountForm') as HTMLFormElement)?.reset();
+    });
+
+    document.getElementById('deleteAccountForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await this.handleAccountDeletion();
+    });
+
     document.getElementById('logoutBtn')?.addEventListener('click', async () => {
       if (confirm('Are you sure you want to logout?')) {
         await authService.logout();
         window.dispatchEvent(new CustomEvent('logout'));
       }
     });
+  }
+
+  private async handleAccountDeletion(): Promise<void> {
+    const password = (document.getElementById('deletePassword') as HTMLInputElement).value;
+    const confirmText = (document.getElementById('deleteConfirmText') as HTMLInputElement).value.trim();
+    const btn = document.getElementById('confirmDeleteBtn') as HTMLButtonElement;
+
+    if (confirmText.toUpperCase() !== 'DELETE') {
+      alert('Please type DELETE to confirm permanent account deletion.');
+      return;
+    }
+
+    if (!confirm('FINAL WARNING: This will permanently delete your personal account. Are you absolutely sure?')) {
+      return;
+    }
+
+    try {
+      btn.disabled = true;
+      btn.textContent = 'Deleting Account...';
+
+      const response = await apiService.post('/auth/delete-account', {
+        password: password,
+        confirm_text: confirmText,
+        reason: 'In-app user initiated deletion'
+      });
+
+      if (response.success) {
+        alert('Your account and personal data have been permanently deleted.');
+        document.getElementById('deleteAccountModal')!.style.display = 'none';
+        await authService.logout();
+        window.location.reload();
+      } else {
+        alert(response.error || 'Failed to delete account. Please verify your password.');
+      }
+    } catch (err: any) {
+      alert(err.message || 'An error occurred during account deletion.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Permanently Delete';
+    }
   }
 
   private async handlePasswordChange(): Promise<void> {

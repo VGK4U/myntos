@@ -112,15 +112,17 @@ def t3_e2e_invoice_payment_cycle() -> bool:
         if not existing_link:
             db.add(PlatformSubscriptionModule(subscription_id=s.id, module_id=m.id, enabled=True))
             db.commit()
-        # Set global pricing for the module so the invoice has a non-zero line
-        db.execute(text("""
-            INSERT INTO platform_module_pricing (module_id, price_inr, price_usd, pricing_unit)
-            VALUES (:m, 1000, 12, 'per_company')
-            ON CONFLICT (module_id) DO UPDATE
-              SET price_inr=EXCLUDED.price_inr, price_usd=EXCLUDED.price_usd,
-                  pricing_unit=EXCLUDED.pricing_unit
-        """), {"m": m.id})
+        from app.models.platform_b2b import PlatformModulePricing
+        pricing_row = db.query(PlatformModulePricing).filter_by(module_id=m.id).first()
+        if not pricing_row:
+            pricing_row = PlatformModulePricing(module_id=m.id, price_inr=1000, price_usd=12, pricing_unit="per_company")
+            db.add(pricing_row)
+        else:
+            pricing_row.price_inr = 1000
+            pricing_row.price_usd = 12
+            pricing_row.pricing_unit = "per_company"
         db.commit()
+
 
         # Generate
         inv = generate_invoice_for_subscription(db, s.id)

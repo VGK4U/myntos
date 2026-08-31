@@ -40,17 +40,29 @@ def enforce_enabled() -> bool:
 def resolve_client_id_for_staff(db: Session, staff) -> Optional[int]:
     """
     Map a staff principal to a platform_clients.id.
-
-    For now: every staff user belongs to the internal MNR tenant. Phase 5 will
-    add a real per-user client_id (likely on staff_employees or via a join
-    table). Until then this is a single SELECT and is cached by callers.
+    Resolves:
+    1. Direct staff.client_id (if present)
+    2. staff.base_company_id -> associated_companies.client_id
+    3. Fallback to INTERNAL_CLIENT_CODE (MNR-INTERNAL)
     """
     if staff is None:
         return None
-    # Optional staff.client_id support if the column exists in a future phase
     cid = getattr(staff, "client_id", None)
     if cid:
         return int(cid)
+    
+    base_cid = getattr(staff, "base_company_id", None)
+    if base_cid:
+        try:
+            ac_row = db.execute(
+                text("SELECT client_id FROM associated_companies WHERE id = :bc AND client_id IS NOT NULL LIMIT 1"),
+                {"bc": base_cid}
+            ).first()
+            if ac_row and ac_row[0]:
+                return int(ac_row[0])
+        except Exception as exc:
+            logger.debug("[DC-B2B] associated_company client_id lookup failed: %s", exc)
+
     try:
         row = db.execute(
             text("SELECT id FROM platform_clients WHERE client_code = :c LIMIT 1"),
@@ -83,13 +95,13 @@ def is_module_entitled(
     user_id: Optional[int] = None,
     user_type: Optional[str] = None,
     route: Optional[str] = None,
+    strict: bool = False,
 ) -> bool:
     """
-    Compute & log entitlement decision. In shadow mode (default) always
-    returns True. In enforcement mode (B2B_ENFORCE=true) returns the
-    real decision.
+    Compute & log entitlement decision. In shadow mode (default) returns True unless strict=True.
+    In enforcement mode (B2B_ENFORCE=true or strict=True) returns the real decision.
     """
-    enforcing = enforce_enabled()
+    enforcing = enforce_enabled() or strict
     decision = "ALLOW"
     reason: Optional[str] = None
 

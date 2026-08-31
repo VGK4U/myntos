@@ -467,4 +467,13 @@ __all__ = [
     "CRMLeadDeal",
     "CRMLeadTransaction",
     "CRMLeadAuditLog",
+    
+    # VoIP & In-App PSTN Telephony Models
+    "VoIPCallSession",
+    "CallMethodEnum",
+    "CallStateEnum",
+    "RecordingStatusEnum",
 ]
+
+from app.models.voip_enums import CallMethodEnum, CallStateEnum, RecordingStatusEnum
+from app.models.voip_call_session import VoIPCallSession

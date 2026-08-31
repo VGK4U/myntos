@@ -23,6 +23,7 @@ from app.models.signup_category import SignupCategory
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
 from app.core.security import get_current_user_hybrid_with_partner
 from app.models.staff import StaffEmployee
+from app.services.universal_incentive_engine import get_partner_current_position_v18
 
 router = APIRouter()
 
@@ -79,27 +80,41 @@ def _next_vgk_entry_number(db: Session, company_id: int, prefix: str = None) -> 
     return f"{tag}-{yymm}-{seq:04d}"
 
 
-def _collect_tree_codes(partner: OfficialPartner, db: Session, depth: int) -> list:
-    """Collect all partner_codes in the downline tree for batch CRM queries (DC-VGK-TREE-BATCH-001)."""
-    codes = [partner.partner_code]
+def _collect_tree_partners(partner: OfficialPartner, db: Session, depth: int) -> list:
+    """Collect all OfficialPartner instances in the downline tree (DC-VGK-TREE-BATCH-001)."""
+    partners = [partner]
     if depth <= 0:
-        return codes
+        return partners
     children = db.query(OfficialPartner).filter(
         OfficialPartner.parent_partner_id == partner.id,
         OfficialPartner.category == 'VGK_TEAM'
     ).all()
     for c in children:
-        codes.extend(_collect_tree_codes(c, db, depth - 1))
-    return codes
+        partners.extend(_collect_tree_partners(c, db, depth - 1))
+    return partners
 
 
-def _build_tree_node(partner: OfficialPartner, db: Session, depth: int, direction: str, lead_counts: dict = None) -> dict:
+def _collect_tree_codes(partner: OfficialPartner, db: Session, depth: int) -> list:
+    """Collect all partner_codes in the downline tree for batch CRM queries (DC-VGK-TREE-BATCH-001)."""
+    return [p.partner_code for p in _collect_tree_partners(partner, db, depth) if p.partner_code]
+
+
+def _build_tree_node(
+    partner: OfficialPartner,
+    db: Session,
+    depth: int,
+    direction: str,
+    lead_counts: dict = None,
+    bulk_rpos_map: dict = None,
+    cm_income_map: dict = None,
+    inst_lead_map: dict = None
+) -> dict:
     # [DC-VGK-TREE-BATCH-001] Use pre-fetched batch counts when available to avoid N+1 CRM queries
     if lead_counts is not None:
         lead_total = lead_counts.get(partner.partner_code, 0)
         leads_by_status = {}
     else:
-        # Legacy per-node query path (wrapped in try/except for production resilience)
+        # Legacy per-node query path
         try:
             from app.models.crm import CRMLeadDeal
             lead_total = db.query(func.count(CRMLeadDeal.id)).filter(
@@ -126,6 +141,13 @@ def _build_tree_node(partner: OfficialPartner, db: Session, depth: int, directio
         except Exception:
             leads_by_status = {}
 
+    rpos = (bulk_rpos_map or {}).get(partner.id) or {}
+    resolved_stars = rpos.get('stars', 1)
+    resolved_slab = float(rpos.get('rank_slab_pct', 5.00) or 5.00)
+    resolved_display = rpos.get('rank_display', '1★ Channel Partner')
+    _lm = (inst_lead_map or {}).get(partner.id, {"total_files": 0, "installed_files": 0})
+    cm_earning = float((cm_income_map or {}).get(partner.id, 0.0))
+
     node = {
         "id": partner.id,
         "partner_code": partner.partner_code,
@@ -133,6 +155,12 @@ def _build_tree_node(partner: OfficialPartner, db: Session, depth: int, directio
         "phone": partner.phone,
         "is_active": partner.is_active,
         "vgk_role": partner.vgk_role,
+        "rank_num": resolved_stars,
+        "rank_display": resolved_display,
+        "rank_slab_pct": resolved_slab,
+        "current_month_earning": cm_earning,
+        "eligible_files_total": _lm["total_files"],
+        "eligible_files_installed": _lm["installed_files"],
         "vgk_points_balance": float(partner.vgk_points_balance or 0),
         "created_at": partner.created_at.isoformat() if partner.created_at else None,
         "vgk_activated_at": partner.vgk_activated_at.isoformat() if partner.vgk_activated_at else None,
@@ -149,7 +177,10 @@ def _build_tree_node(partner: OfficialPartner, db: Session, depth: int, directio
             OfficialPartner.category == 'VGK_TEAM'
         ).order_by(OfficialPartner.id).all()
         node["direct_count"] = len(children)
-        node["children"] = [_build_tree_node(c, db, depth - 1, "down", lead_counts) for c in children]
+        node["children"] = [
+            _build_tree_node(c, db, depth - 1, "down", lead_counts, bulk_rpos_map, cm_income_map, inst_lead_map)
+            for c in children
+        ]
     return node
 
 
@@ -308,6 +339,8 @@ def list_vgk_members(
     registered_by_emp_code: Optional[str] = Query(None, description="Filter by registering staff emp code"),
     referred_by: Optional[str] = Query(None, description="Filter by referrer partner name or code"),
     category_id: Optional[str] = Query(None, description="Category ID or Category Name e.g. Solar, EV"),
+    rank_level: Optional[int] = Query(None, description="Filter by rank level 1 to 5"),
+    eligibility_filter: Optional[str] = Query(None, description="Filter by business eligibility: installed_1plus|leads_1plus|team_1plus|earners_1plus|current_month_active"),
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
@@ -397,7 +430,7 @@ def list_vgk_members(
     _sb_str = sort_by if isinstance(sort_by, str) else ''
     _do_python_sort  = _sb_str in _COMPUTED_SORT_FIELDS
     _des_str = designation_tier if isinstance(designation_tier, str) else ''
-    _needs_full_fetch = _do_python_sort or bool(_des_str.strip())
+    _needs_full_fetch = _do_python_sort or bool(_des_str.strip()) or bool(rank_level) or bool(eligibility_filter)
 
     # Sorting
     _sort_col = OfficialPartner.id
@@ -429,6 +462,35 @@ def list_vgk_members(
         "GROUP BY partner_id"
     ), {"ids": member_ids}).fetchall() if member_ids else []
     income_map = {row[0]: float(row[1]) for row in income_rows}
+
+    # Bulk fetch current month income
+    curr_month_start = today.replace(day=1).isoformat()
+    cm_income_rows = db.execute(text(
+        "SELECT partner_id, COALESCE(SUM(commission_amount),0) "
+        "FROM vgk_cash_income_entries WHERE partner_id = ANY(:ids) "
+        "AND status IN ('RELEASED','PAID') AND status != 'CANCELLED' "
+        "AND income_date >= :cm_start "
+        "GROUP BY partner_id"
+    ), {"ids": member_ids, "cm_start": curr_month_start}).fetchall() if member_ids else []
+    cm_income_map = {row[0]: float(row[1]) for row in cm_income_rows}
+
+    # Bulk fetch eligible files / CRM leads stats (all-time & current month)
+    cm_lead_rows = db.execute(text(
+        "SELECT associated_partner_id, "
+        "  COUNT(*) AS total_files, "
+        "  COUNT(*) FILTER (WHERE installation_date IS NOT NULL OR solar_pipeline_status IN ('completed','completed_paid','subsidy_pending','subsidy_received','net_meter_done','installed')) AS installed_files, "
+        "  COUNT(*) FILTER (WHERE created_at >= CAST(:cm_start AS date)) AS cm_total_files, "
+        "  COUNT(*) FILTER (WHERE (installation_date IS NOT NULL OR solar_pipeline_status IN ('completed','completed_paid','subsidy_pending','subsidy_received','net_meter_done','installed')) AND (installation_date >= CAST(:cm_start AS date) OR updated_at >= CAST(:cm_start AS date))) AS cm_installed_files "
+        "FROM crm_leads "
+        "WHERE associated_partner_id = ANY(:ids) "
+        "GROUP BY associated_partner_id"
+    ), {"ids": member_ids, "cm_start": curr_month_start}).fetchall() if member_ids else []
+    cm_lead_map = {r[0]: {
+        "total_files": int(r[1]),
+        "installed_files": int(r[2]),
+        "cm_total_files": int(r[3]),
+        "cm_installed_files": int(r[4])
+    } for r in cm_lead_rows}
 
     VGK_INITIAL_POINTS = 60000
 
@@ -513,7 +575,7 @@ def list_vgk_members(
                 "COUNT(*) FILTER (WHERE status IN ('lost','cancelled')) AS lost_cancelled "
                 "FROM crm_leads "
                 "WHERE associated_partner_id = ANY(:member_ids) "
-                "AND (cibil_confirmed IS TRUE OR (cibil_score IS NOT NULL AND cibil_score >= 600)) "
+                "AND (cibil_confirmed IS TRUE OR (cibil_score IS NOT NULL AND cibil_score >= 650)) "
                 "GROUP BY associated_partner_id"
             ), {"member_ids": member_ids}).fetchall()
             lead_stats_map = {str(r[0]): {"total": int(r[1]), "won": int(r[2]), "lost": int(r[3])} for r in lead_rows}
@@ -548,6 +610,10 @@ def list_vgk_members(
     from app.models.promo import PromoInfluencer
     inf_rows = db.query(PromoInfluencer).filter(PromoInfluencer.vgk_member_id.in_(parent_codes)).all() if parent_codes else []
     influencer_codes = {i.vgk_member_id for i in inf_rows}
+
+    # Bulk fetch V26 rank positions for all members
+    from app.services.universal_incentive_engine import get_bulk_partner_current_positions_v26
+    bulk_rpos_map = get_bulk_partner_current_positions_v26(db, member_ids) if member_ids else {}
 
     for m in members:
         d = m.to_dict()
@@ -605,7 +671,76 @@ def list_vgk_members(
         d['leads_total']       = ls.get('total', 0)
         d['leads_won']         = ls.get('won', 0)
         d['leads_lost']        = ls.get('lost', 0)
+
+        # Attach V26 Authoritative Rank Position
+        rpos = bulk_rpos_map.get(m.id) or {}
+        comm_pct = float(getattr(m, 'commission_pct', 0.0) or 0.0)
+        resolved_stars = rpos.get('stars', 1)
+        resolved_slab = float(rpos.get('rank_slab_pct', 5.00) or 5.00)
+        resolved_display = rpos.get('rank_display', '1★ Channel Partner')
+        resolved_desig = rpos.get('current_designation', 'Channel Partner')
+
+        if comm_pct >= 8.5:
+            resolved_stars = max(resolved_stars, 5)
+            resolved_slab = max(resolved_slab, 8.50)
+            resolved_display = '5★ Director'
+            resolved_desig = 'Director'
+        elif comm_pct >= 8.25:
+            resolved_stars = max(resolved_stars, 4)
+            resolved_slab = max(resolved_slab, 8.25)
+            resolved_display = '4★ Regional Manager'
+            resolved_desig = 'Regional Manager'
+        elif comm_pct >= 7.5:
+            resolved_stars = max(resolved_stars, 3)
+            resolved_slab = max(resolved_slab, 7.50)
+            resolved_display = '3★ Zonal Manager'
+            resolved_desig = 'Zonal Manager'
+        elif comm_pct >= 6.5:
+            resolved_stars = max(resolved_stars, 2)
+            resolved_slab = max(resolved_slab, 6.50)
+            resolved_display = '2★ Manager'
+            resolved_desig = 'Manager'
+
+        d['rank_code']             = rpos.get('rank_code', f'RANK_{resolved_stars}')
+        d['rank_num']              = resolved_stars
+        d['current_rank']          = rpos.get('current_rank', f'Rank {resolved_stars} — {resolved_desig}')
+        d['current_designation']   = resolved_desig
+        d['rank_display']          = resolved_display
+        d['rank_slab_pct']         = resolved_slab
+        d['activated_team_cnt']    = max(rpos.get('activated_team', 0), activ_map.get(m.id, 0))
+        d['next_rank']             = rpos.get('next_rank')
+        d['next_rank_requirement'] = rpos.get('next_rank_requirement')
+        d['rank_gap']              = rpos.get('rank_gap', 0)
+        d['rank_progress_percent'] = rpos.get('rank_progress_percent', 0.0)
+        d['is_permanent_rank']     = True
+
+        # Attach Current Month Performance & Business Eligibility Files
+        d['current_month_earning']     = cm_income_map.get(m.id, 0.0)
+        _lm = cm_lead_map.get(m.id, {"total_files": 0, "installed_files": 0, "cm_total_files": 0, "cm_installed_files": 0})
+        d['eligible_files_total']      = _lm['total_files']
+        d['eligible_files_installed']  = _lm['installed_files']
+        d['cm_files_total']            = _lm['cm_total_files']
+        d['cm_files_installed']        = _lm['cm_installed_files']
+
         items.append(d)
+
+    # Filter by rank_level if requested
+    if rank_level and isinstance(rank_level, int):
+        items = [i for i in items if i.get('rank_num') == rank_level]
+
+    # Filter by eligibility_filter if requested
+    if isinstance(eligibility_filter, str) and eligibility_filter.strip():
+        ef = eligibility_filter.strip().lower()
+        if ef == 'installed_1plus':
+            items = [i for i in items if i.get('eligible_files_installed', 0) >= 1]
+        elif ef == 'leads_1plus':
+            items = [i for i in items if i.get('eligible_files_total', 0) >= 1]
+        elif ef == 'team_1plus':
+            items = [i for i in items if (i.get('activated_team_cnt', 0) >= 1 or i.get('activated_people', 0) >= 1)]
+        elif ef == 'earners_1plus':
+            items = [i for i in items if (i.get('confirmed_income_total', 0) > 0 or i.get('current_month_earning', 0) > 0)]
+        elif ef == 'current_month_active':
+            items = [i for i in items if (i.get('current_month_earning', 0) > 0 or i.get('cm_files_total', 0) >= 1)]
 
     # DC_CP_CARD_001: designation filter (Python-side)
     if isinstance(designation_tier, str) and designation_tier.strip():
@@ -1085,6 +1220,10 @@ def get_vgk_member_tree(
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
+    from datetime import date
+    today = date.today()
+    curr_month_start = today.replace(day=1).isoformat()
+
     member = db.query(OfficialPartner).filter(
         OfficialPartner.id == member_id,
         OfficialPartner.category == 'VGK_TEAM'
@@ -1092,6 +1231,11 @@ def get_vgk_member_tree(
     if not member:
         raise HTTPException(status_code=404, detail="VGK member not found")
 
+    all_tree_partners = _collect_tree_partners(member, db, depth=3)
+    all_partner_ids = [p.id for p in all_tree_partners]
+    all_codes = [p.partner_code for p in all_tree_partners if p.partner_code]
+
+    # Resolve upline
     upline = []
     current = member
     for _ in range(3):
@@ -1100,14 +1244,46 @@ def get_vgk_member_tree(
         parent = db.query(OfficialPartner).filter(OfficialPartner.id == current.parent_partner_id).first()
         if not parent:
             break
+        if parent.id not in all_partner_ids:
+            all_partner_ids.append(parent.id)
         upline.append({"id": parent.id, "partner_code": parent.partner_code, "partner_name": parent.partner_name, "is_active": parent.is_active})
         current = parent
 
-    # [DC-VGK-TREE-BATCH-001] Batch-fetch CRM lead counts for entire tree in 3 queries
-    # instead of 2 queries per node (eliminates N+1, fixes production timeout on Neon)
+    # Bulk fetch rank positions
+    from app.services.universal_incentive_engine import get_bulk_partner_current_positions_v26
+    bulk_rpos_map = get_bulk_partner_current_positions_v26(db, all_partner_ids) if all_partner_ids else {}
+
+    # Bulk fetch current month income
+    cm_income_rows = db.execute(text(
+        "SELECT partner_id, COALESCE(SUM(commission_amount),0) "
+        "FROM vgk_cash_income_entries "
+        "WHERE status IN ('RELEASED','PAID') AND status != 'CANCELLED' "
+        "  AND income_date >= :cm_start "
+        "GROUP BY partner_id"
+    ), {"cm_start": curr_month_start}).fetchall()
+    cm_income_map = {r[0]: float(r[1]) for r in cm_income_rows}
+
+    # Bulk fetch installed files
+    inst_lead_rows = db.execute(text(
+        "SELECT associated_partner_id, "
+        "  COUNT(*) AS total_files, "
+        "  COUNT(*) FILTER (WHERE installation_date IS NOT NULL OR solar_pipeline_status IN ('completed','completed_paid','subsidy_pending','subsidy_received','net_meter_done','installed')) AS installed_files "
+        "FROM crm_leads "
+        "WHERE associated_partner_id IS NOT NULL "
+        "GROUP BY associated_partner_id"
+    )).fetchall()
+    inst_lead_map = {r[0]: {"total_files": int(r[1]), "installed_files": int(r[2])} for r in inst_lead_rows}
+
+    # Attach rank data to upline
+    for u in upline:
+        urpos = bulk_rpos_map.get(u["id"]) or {}
+        u["rank_display"] = urpos.get("rank_display", "1★ Channel Partner")
+        u["rank_slab_pct"] = float(urpos.get("rank_slab_pct", 5.00) or 5.00)
+        u["rank_num"] = urpos.get("stars", 1)
+
+    # Batch-fetch CRM lead counts for entire tree
     lead_counts: dict = {}
     try:
-        all_codes = list(set(_collect_tree_codes(member, db, depth=3)))
         if all_codes:
             from app.models.crm import CRMLeadDeal
             src_rows = db.query(CRMLeadDeal.deal_source_id, func.count(CRMLeadDeal.id)).filter(
@@ -1125,11 +1301,54 @@ def get_vgk_member_tree(
                 if code:
                     lead_counts[code] = lead_counts.get(code, 0) + cnt
     except Exception:
-        lead_counts = {}  # CRM unavailable — tree still renders without lead counts
+        lead_counts = {}
 
-    downline = _build_tree_node(member, db, depth=3, direction="down", lead_counts=lead_counts)
+    downline = _build_tree_node(
+        member, db, depth=3, direction="down",
+        lead_counts=lead_counts,
+        bulk_rpos_map=bulk_rpos_map,
+        cm_income_map=cm_income_map,
+        inst_lead_map=inst_lead_map
+    )
 
-    return {"success": True, "data": {"member": member.to_dict(), "upline": upline, "downline": downline}}
+    # Attach performance data to root member
+    member_dict = member.to_dict()
+    mem_rpos = bulk_rpos_map.get(member.id) or {}
+    member_dict["rank_display"] = mem_rpos.get("rank_display", "1★ Channel Partner")
+    member_dict["rank_slab_pct"] = float(mem_rpos.get("rank_slab_pct", 5.00) or 5.00)
+    member_dict["rank_num"] = mem_rpos.get("stars", 1)
+    member_dict["current_month_earning"] = float(cm_income_map.get(member.id, 0.0))
+    _mlm = inst_lead_map.get(member.id, {"total_files": 0, "installed_files": 0})
+    member_dict["eligible_files_total"] = _mlm["total_files"]
+    member_dict["eligible_files_installed"] = _mlm["installed_files"]
+
+    # Calculate rank summary across downline
+    downline_partners = [p for p in all_tree_partners if p.id != member.id]
+    rank_summary = {
+        "rank_1": sum(1 for p in downline_partners if (bulk_rpos_map.get(p.id, {}).get("stars", 1) == 1)),
+        "rank_2": sum(1 for p in downline_partners if (bulk_rpos_map.get(p.id, {}).get("stars", 1) == 2)),
+        "rank_3": sum(1 for p in downline_partners if (bulk_rpos_map.get(p.id, {}).get("stars", 1) == 3)),
+        "rank_4": sum(1 for p in downline_partners if (bulk_rpos_map.get(p.id, {}).get("stars", 1) == 4)),
+        "rank_5": sum(1 for p in downline_partners if (bulk_rpos_map.get(p.id, {}).get("stars", 1) == 5)),
+    }
+
+    team_summary = {
+        "total_team_members": len(downline_partners),
+        "total_files": sum(inst_lead_map.get(p.id, {}).get("total_files", 0) for p in downline_partners),
+        "installed_files": sum(inst_lead_map.get(p.id, {}).get("installed_files", 0) for p in downline_partners),
+        "this_month_payout": sum(cm_income_map.get(p.id, 0.0) for p in downline_partners)
+    }
+
+    return {
+        "success": True,
+        "data": {
+            "member": member_dict,
+            "upline": upline,
+            "downline": downline,
+            "rank_summary": rank_summary,
+            "team_summary": team_summary
+        }
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -4191,7 +4410,7 @@ def member_earnings_dashboard(
         query = query.filter(OfficialPartner.id == partner_id)
         earners_only = False
     if hide_vgk_support and not partner_id:
-        query = query.filter(OfficialPartner.partner_code != 'VGK07102207', OfficialPartner.id != 31, OfficialPartner.partner_name.not_ilike('%VGK Support%'))
+        query = query.filter(OfficialPartner.id != 31, OfficialPartner.partner_name.not_ilike('%VGK Support%'))
     if partner_code and isinstance(partner_code, str):
         query = query.filter(OfficialPartner.partner_code == partner_code.strip())
     if search and isinstance(search, str):
@@ -4286,7 +4505,7 @@ def member_earnings_dashboard(
     else:
         status_sql = ""
 
-    cibil_join_sql = " JOIN crm_leads _cbl ON _cbl.id = e.source_lead_id AND (_cbl.cibil_confirmed IS TRUE OR (_cbl.cibil_score IS NOT NULL AND _cbl.cibil_score >= 600)) "
+    cibil_join_sql = " JOIN crm_leads _cbl ON _cbl.id = e.source_lead_id AND (_cbl.cibil_confirmed IS TRUE OR (_cbl.cibil_score IS NOT NULL AND _cbl.cibil_score >= 650)) "
 
     if earners_only or status_val:
         if status_sql:
@@ -4608,6 +4827,49 @@ def member_earnings_dashboard(
         except Exception:
             pass
 
+    bulk_all_entries_map = {}
+    bulk_lost_adv_map = {}
+    if member_ids:
+        try:
+            _bae_rows = db.execute(text("""
+                SELECT partner_id, id, kind, commission_amount, created_at, status
+                FROM vgk_cash_income_entries
+                WHERE partner_id = ANY(:ids) AND status != 'CANCELLED'
+                ORDER BY created_at ASC, id ASC
+            """), {"ids": member_ids}).fetchall()
+            for _r in _bae_rows:
+                _pid = int(_r[0])
+                if _pid not in bulk_all_entries_map:
+                    bulk_all_entries_map[_pid] = []
+                bulk_all_entries_map[_pid].append(_r)
+        except Exception:
+            pass
+
+        try:
+            _bla_rows = db.execute(text("""
+                SELECT c.associated_partner_id, c.primary_owner_id, v.partner_id,
+                       c.id AS lead_id, c.name, c.status, c.solar_pipeline_status, c.updated_at AS rejected_at,
+                       COALESCE(SUM(v.commission_amount), 0) AS adv_paid
+                FROM crm_leads c
+                JOIN vgk_cash_income_entries v ON v.source_lead_id = c.id
+                WHERE (c.associated_partner_id = ANY(:ids) OR c.primary_owner_id = ANY(:ids) OR v.partner_id = ANY(:ids))
+                  AND (c.status IN ('lost', 'cancelled', 'rejected') OR c.solar_pipeline_status IN ('loan_rejected', 'bank_loan_rejected', 'rejected', 'cancelled', 'different_vendor', 'opted_out'))
+                  AND v.kind IN ('ADVANCE', 'DVR_ADVANCE', 'STAGE1_ADVANCE', 'STAGE2_ADVANCE', 'COMMISSION')
+                  AND (v.status IS NULL OR v.status NOT IN ('CANCELLED', 'REJECTED'))
+                GROUP BY c.associated_partner_id, c.primary_owner_id, v.partner_id, c.id, c.name, c.status, c.solar_pipeline_status, c.updated_at
+            """), {"ids": member_ids}).fetchall()
+            for _r in _bla_rows:
+                _p1 = int(_r[0]) if _r[0] is not None else None
+                _p2 = int(_r[1]) if _r[1] is not None else None
+                _p3 = int(_r[2]) if _r[2] is not None else None
+                for _target_p in set([_p1, _p2, _p3]):
+                    if _target_p and _target_p in member_ids:
+                        if _target_p not in bulk_lost_adv_map:
+                            bulk_lost_adv_map[_target_p] = []
+                        bulk_lost_adv_map[_target_p].append(_r)
+        except Exception:
+            pass
+
     from app.services.vgk_earner_card import get_bulk_partner_potential_earning
     pot_map = get_bulk_partner_potential_earning(db, member_ids, exclude_l1=False) if member_ids else {}
 
@@ -4625,33 +4887,8 @@ def member_earnings_dashboard(
         pending_amt = 0.0
         net_earning = 0.0
         
-        # Query lost lead advance pool for member to subtract lost lead advance deductions
-        m_lost_adv_rows = []
-        try:
-            m_lost_adv_rows = db.execute(text("""
-                SELECT c.id AS lead_id, c.name, c.status, c.solar_pipeline_status, c.updated_at AS rejected_at,
-                       COALESCE(SUM(v.commission_amount), 0) AS adv_paid
-                FROM crm_leads c
-                JOIN vgk_cash_income_entries v ON v.source_lead_id = c.id
-                WHERE (c.associated_partner_id = :pid OR c.primary_owner_id = :pid OR v.partner_id = :pid)
-                  AND (c.status IN ('lost', 'cancelled', 'rejected') OR c.solar_pipeline_status IN ('loan_rejected', 'bank_loan_rejected', 'rejected', 'cancelled', 'different_vendor', 'opted_out'))
-                  AND v.kind IN ('ADVANCE', 'DVR_ADVANCE', 'STAGE1_ADVANCE', 'STAGE2_ADVANCE', 'COMMISSION')
-                  AND (v.status IS NULL OR v.status NOT IN ('CANCELLED', 'REJECTED'))
-                GROUP BY c.id, c.name, c.status, c.solar_pipeline_status, c.updated_at
-            """), {"pid": m.id}).fetchall()
-        except Exception:
-            pass
-
-        m_all_entries = []
-        try:
-            m_all_entries = db.execute(text("""
-                SELECT id, kind, commission_amount, created_at, status
-                FROM vgk_cash_income_entries
-                WHERE partner_id = :pid AND status != 'CANCELLED'
-                ORDER BY created_at ASC, id ASC
-            """), {"pid": m.id}).fetchall()
-        except Exception:
-            pass
+        m_lost_adv_rows = bulk_lost_adv_map.get(m.id, [])
+        m_all_entries = bulk_all_entries_map.get(m.id, [])
 
         m_lost_ded_map = {}
         for pe in m_all_entries:
@@ -4701,8 +4938,43 @@ def member_earnings_dashboard(
         net_earning = round(net_earning, 2)
         _lvl = lvl_map.get(m.id, {})
         
+        active_team_count = team_network_map.get(m.id, {}).get("total", 0) if team_network_map else 0
+        installed_cnt = installed_files_map.get(m.id, 0)
+        curr_pos = getattr(m, 'current_position', None) or 'Channel Partner'
+        if curr_pos and curr_pos not in ('Channel Partner', 'none'):
+            if 'Director' in curr_pos:
+                p_stars = 5
+                p_rank_display = '5★ Director'
+            elif 'Regional' in curr_pos:
+                p_stars = 4
+                p_rank_display = '4★ Regional Manager'
+            elif 'Zonal' in curr_pos or 'Senior' in curr_pos or 'Sr.' in curr_pos:
+                p_stars = 3
+                p_rank_display = '3★ Senior Channel Partner'
+            elif 'Manager' in curr_pos:
+                p_stars = 2
+                p_rank_display = '2★ Manager'
+            else:
+                p_stars = 1
+                p_rank_display = curr_pos
+        elif active_team_count >= 50:
+            p_stars = 5
+            p_rank_display = '5★ Director'
+        elif active_team_count >= 25:
+            p_stars = 4
+            p_rank_display = '4★ Regional Manager'
+        elif active_team_count >= 10 or installed_cnt >= 10:
+            p_stars = 3
+            p_rank_display = '3★ Senior Channel Partner'
+        elif active_team_count >= 2 or installed_cnt >= 3:
+            p_stars = 2
+            p_rank_display = '2★ Channel Partner'
+        else:
+            p_stars = 1
+            p_rank_display = 'Channel Partner'
+
         senior_info = parent_map.get(m.parent_partner_id, {}) if m.parent_partner_id else {}
-        
+
         items.append({
             "id":                     m.id,
             "parent_partner_id":        m.parent_partner_id,
@@ -4746,6 +5018,9 @@ def member_earnings_dashboard(
             "team_l3_count":          team_network_map.get(m.id, {}).get("l3", 0) if team_network_map else 0,
             "team_l4_count":          team_network_map.get(m.id, {}).get("l4", 0) if team_network_map else 0,
             "total_team_size":        team_network_map.get(m.id, {}).get("total", 0) if team_network_map else 0,
+            "stars":                  p_stars,
+            "current_position":       curr_pos,
+            "rank_display":           p_rank_display,
         })
 
     # Python-level sort (supports computed columns like gross_earned, received)
@@ -4876,7 +5151,7 @@ def member_income_entries_detail(
             "  COALESCE(e.deal_value_total, 0)::float      AS dvt_raw "
             "FROM vgk_cash_income_entries e "
             "LEFT JOIN crm_leads l ON e.source_lead_id = l.id "
-            f"WHERE e.partner_id = :pid AND (l.cibil_confirmed IS TRUE OR (l.cibil_score IS NOT NULL AND l.cibil_score >= 600)){_extra_where} "
+            f"WHERE e.partner_id = :pid AND (l.cibil_confirmed IS TRUE OR (l.cibil_score IS NOT NULL AND l.cibil_score >= 650)){_extra_where} "
             "ORDER BY e.created_at DESC"
         ), _extra_params).fetchall()
     except Exception as exc:
@@ -4919,7 +5194,7 @@ def member_income_entries_detail(
                 "  0::float               AS dvt_raw "
                 "FROM vgk_solar_cibil_advances a "
                 "LEFT JOIN crm_leads l ON a.lead_id = l.id "
-                "WHERE a.partner_id = :pid AND (l.cibil_confirmed IS TRUE OR (l.cibil_score IS NOT NULL AND l.cibil_score >= 600)) "
+                "WHERE a.partner_id = :pid AND (l.cibil_confirmed IS TRUE OR (l.cibil_score IS NOT NULL AND l.cibil_score >= 650)) "
                 "  AND a.status IN ('PENDING','RELEASED') "
                 + _vsca_status_clause +
                 "  AND NOT EXISTS ( "
@@ -5020,11 +5295,13 @@ def member_income_entries_detail(
                 "SELECT id, name, phone, COALESCE(deal_value_received, 0) AS deal_value_received, "
                 "  submit_date::text AS submit_date, complete_date::text AS complete_date, "
                 "  first_payment_received_date::text AS first_payment_received_date, "
+                "  status::text AS lead_status, solar_pipeline_status::text AS solar_pipeline_status, "
+                "  installation_date::text AS installation_date, "
                 "  city, area, state, "
                 "  COALESCE(solar_value, 0)::float AS solar_value, "
                 "  COALESCE(deal_value_excl_tax, 0)::float AS deal_value_excl_tax, "
                 "  COALESCE(deal_value_total, 0)::float AS deal_value_total, "
-                "  category_id, solar_brand_id, kw_size::text AS kw_size "
+                "  category_id, solar_brand_id, vgk_field_support_id, kw_size::text AS kw_size "
                 "FROM crm_leads WHERE id = ANY(:ids)"
             ), {"ids": lead_ids}).fetchall()
             lead_info = {r.id: {
@@ -5033,12 +5310,16 @@ def member_income_entries_detail(
                 "submit_date": r.submit_date,
                 "complete_date": r.complete_date,
                 "first_payment_received_date": r.first_payment_received_date,
+                "lead_status": r.lead_status,
+                "solar_pipeline_status": r.solar_pipeline_status,
+                "installation_date": r.installation_date,
                 "city": r.city, "area": r.area, "state": r.state,
                 "solar_value": float(r.solar_value or 0),
                 "deal_value_excl_tax": float(r.deal_value_excl_tax or 0),
                 "deal_value_total": float(r.deal_value_total or 0),
                 "category_id": r.category_id,
                 "solar_brand_id": r.solar_brand_id,
+                "vgk_field_support_id": r.vgk_field_support_id,
                 "kw_size": str(r.kw_size or "").strip(),
             } for r in lr}
         except Exception:
@@ -5150,10 +5431,12 @@ def member_income_entries_detail(
         config_map = {}
 
     try:
-        brands = db.execute(text("SELECT id, l1_amount, l2_amount, l5_amount FROM vgk_incentive_brands WHERE is_active = true")).fetchall()
+        brands = db.execute(text("SELECT id, brand_name, l1_amount, l2_amount, l5_amount FROM vgk_incentive_brands WHERE is_active = true")).fetchall()
         brand_map = {b.id: b for b in brands}
+        brand_name_map = {b.id: b.brand_name for b in brands}
     except Exception:
         brand_map = {}
+        brand_name_map = {}
 
     result = []
     _lvl_labels_map = {0:'Comm', 1:'Source', 2:'Senior', 3:'Extended', 4:'Core', 5:'Support'}
@@ -5245,7 +5528,7 @@ def member_income_entries_detail(
                     potential_amount = round(lead_val * potential_pct / 100.0, 2)
             else:
                 # Fallback to standard Solar percentages if config missing
-                standard_solar_pcts = {1: 2.50, 2: 1.00, 3: 0.50, 4: 0.50, 5: 1.50, 6: 3.50}
+                standard_solar_pcts = {1: 5.00, 2: 1.50, 3: 0.50, 4: 0.50, 5: 1.50, 6: 3.50}
                 potential_pct = standard_solar_pcts.get(_lvl_int, 0.0)
                 potential_amount = round(lead_val * potential_pct / 100.0, 2)
 
@@ -5319,8 +5602,18 @@ def member_income_entries_detail(
             "submit_date":       _li["submit_date"]   if _li else None,
             "first_payment_received_date": _li["first_payment_received_date"] if _li else None,
             "complete_date":     _li["complete_date"]  if _li else None,
+            "solar_pipeline_status": _li.get("solar_pipeline_status") if _li else None,
+            "lead_status":       _li.get("lead_status") if _li else None,
+            "stage_name":        _li.get("solar_pipeline_status") or (_li.get("lead_status") if _li else None),
+            "installation_date": _li.get("installation_date") if _li else None,
             "from_vsca":         is_vsca,
             "source_lead_id":    r.source_lead_id,
+            "deal_value_total":  float(_li.get("deal_value_total") or getattr(r, "deal_value_total", None) or 200000.0) if _li else float(getattr(r, "deal_value_total", None) or 200000.0),
+            "solar_brand_id":    _li.get("solar_brand_id") if _li else None,
+            "solar_brand_name":  brand_name_map.get(_li.get("solar_brand_id")) if (_li and _li.get("solar_brand_id")) else None,
+            "brand_commission_amount": float(brand_map[_li.get("solar_brand_id")].l1_amount or 0) if (_li and _li.get("solar_brand_id") in brand_map and _lvl_int == 1) else 0.0,
+            "vgk_field_support_id": _li.get("vgk_field_support_id") if _li else None,
+            "is_field_support":  (_li.get("vgk_field_support_id") == partner_id) if _li else False,
             "potential_overall_earning": potential_amount,
         }
 
@@ -5880,6 +6173,7 @@ def vgk_top_partners_leaderboard_table(
     search: Optional[str] = Query(None),
     reg_by: Optional[str] = Query(None),
     referred_by: Optional[str] = Query(None),
+    rank_level: Optional[int] = Query(None, description="Filter by rank level 1 to 5"),
     sort_by: str = Query("total_leads"),
     sort_dir: str = Query("desc"),
     page: int = Query(1, ge=1),
@@ -5889,7 +6183,7 @@ def vgk_top_partners_leaderboard_table(
 ):
     """
     Detailed Leaderboard for Top Partners by Leads with full stage metrics (Submits, DVR/1st Payment, Won, Completed, Lost),
-    date presets (Today, Yesterday, This/Last Week, This/Last Month, This FY, Custom), filters, sorting, and pagination.
+    rank and performance metrics, date presets, filters, sorting, and pagination.
     """
     from datetime import date, timedelta
     today = date.today()
@@ -6030,8 +6324,37 @@ def vgk_top_partners_leaderboard_table(
         print("[TPT_SQL_ERR]", e)
         raw_rows = []
 
+    partner_ids = [int(r[0]) for r in raw_rows]
+    curr_month_start = today.replace(day=1).isoformat()
+
+    # Bulk fetch current month income
+    cm_income_rows = db.execute(text(
+        "SELECT partner_id, COALESCE(SUM(commission_amount),0) "
+        "FROM vgk_cash_income_entries "
+        "WHERE status IN ('RELEASED','PAID') AND status != 'CANCELLED' "
+        "  AND income_date >= :cm_start "
+        "GROUP BY partner_id"
+    ), {"cm_start": curr_month_start}).fetchall()
+    cm_income_map = {r[0]: float(r[1]) for r in cm_income_rows}
+
+    # Bulk fetch installed files
+    inst_lead_rows = db.execute(text(
+        "SELECT associated_partner_id, "
+        "  COUNT(*) AS total_files, "
+        "  COUNT(*) FILTER (WHERE installation_date IS NOT NULL OR solar_pipeline_status IN ('completed','completed_paid','subsidy_pending','subsidy_received','net_meter_done','installed')) AS installed_files "
+        "FROM crm_leads "
+        "WHERE associated_partner_id IS NOT NULL "
+        "GROUP BY associated_partner_id"
+    )).fetchall()
+    inst_lead_map = {r[0]: {"total_files": int(r[1]), "installed_files": int(r[2])} for r in inst_lead_rows}
+
+    # Bulk fetch V26 rank positions
+    from app.services.universal_incentive_engine import get_bulk_partner_current_positions_v26
+    bulk_rpos_map = get_bulk_partner_current_positions_v26(db, partner_ids) if partner_ids else {}
+
     partners = []
     for r in raw_rows:
+        pid = int(r[0])
         tm_added = int(r[3] or 0)
         tot = int(r[4] or 0)
         sub_c = int(r[5] or 0)
@@ -6058,10 +6381,23 @@ def vgk_top_partners_leaderboard_table(
         lost_pct = round((lost_c / tot * 100), 1) if tot > 0 else 0.0
         win_rate = round(((won_c + comp_c) / tot * 100), 1) if tot > 0 else 0.0
 
+        rpos = bulk_rpos_map.get(pid) or {}
+        resolved_stars = rpos.get('stars', 1)
+        resolved_slab = float(rpos.get('rank_slab_pct', 5.00) or 5.00)
+        resolved_display = rpos.get('rank_display', '1★ Channel Partner')
+
+        _lm = inst_lead_map.get(pid, {"total_files": 0, "installed_files": 0})
+
         partners.append({
-            "id": int(r[0]),
+            "id": pid,
             "name": r[1] or "Unknown Partner",
-            "code": r[2] or f"VGK{r[0]}",
+            "code": r[2] or f"VGK{pid}",
+            "rank_num": resolved_stars,
+            "rank_display": resolved_display,
+            "rank_slab_pct": resolved_slab,
+            "current_month_earning": cm_income_map.get(pid, 0.0),
+            "eligible_files_total": _lm["total_files"],
+            "eligible_files_installed": _lm["installed_files"],
             "team_added": tm_added,
             "total_leads": tot,
             "submits_count": sub_c, "submits_val": sub_v, "submits_pct": sub_pct,
@@ -6078,6 +6414,10 @@ def vgk_top_partners_leaderboard_table(
             "team_dvr_val": tm_dvr_v,
             "team_total_received_val": tm_tot_recv_v
         })
+
+    # Filter by rank_level if requested
+    if rank_level and isinstance(rank_level, int):
+        partners = [p for p in partners if p["rank_num"] == rank_level]
 
     # Sort
     reverse = (sort_dir.lower() != "asc")
@@ -6098,6 +6438,7 @@ def vgk_top_partners_leaderboard_table(
         "lost_count": lambda x: x["lost_count"],
         "lost_val": lambda x: x["lost_val"],
         "win_rate": lambda x: x["win_rate"],
+        "current_month_earning": lambda x: x["current_month_earning"],
         "team_leads": lambda x: x["team_leads"],
         "team_submits_count": lambda x: x["team_submits_count"],
         "team_submits_val": lambda x: x["team_submits_val"],
@@ -6107,6 +6448,10 @@ def vgk_top_partners_leaderboard_table(
     }
     key_func = sort_key_map.get(sort_by, lambda x: x["total_leads"])
     partners.sort(key=key_func, reverse=reverse)
+
+    # Set rank attribute on every partner
+    for idx, p in enumerate(partners):
+        p["rank"] = idx + 1
 
     total_team_members = sum(p["team_added"] for p in partners)
     total_team_files = sum(p["team_leads"] for p in partners)
@@ -6126,6 +6471,14 @@ def vgk_top_partners_leaderboard_table(
         "total_received_val": team_total_received_val
     }
 
+    rank_summary = {
+        "rank_1": sum(1 for p in partners if p.get("rank_num") == 1),
+        "rank_2": sum(1 for p in partners if p.get("rank_num") == 2),
+        "rank_3": sum(1 for p in partners if p.get("rank_num") == 3),
+        "rank_4": sum(1 for p in partners if p.get("rank_num") == 4),
+        "rank_5": sum(1 for p in partners if p.get("rank_num") == 5),
+    }
+
     total_count = len(partners)
     start_idx = (page - 1) * limit
     end_idx = start_idx + limit
@@ -6142,6 +6495,7 @@ def vgk_top_partners_leaderboard_table(
             "limit": limit,
             "total_pages": (total_count + limit - 1) // limit if limit > 0 else 1,
             "team_summary": team_summary,
+            "rank_summary": rank_summary,
             "partners": paginated_partners
         }
     }

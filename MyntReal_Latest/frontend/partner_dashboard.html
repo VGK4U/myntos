@@ -251,6 +251,41 @@
         <!-- Overview Tab -->
         <div class="partner-tab-pane active" id="pane-overview">
         <div class="container-fluid px-4">
+            <!-- Rank Achievement & Progression Widget -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div style="background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); border-radius: 16px; padding: 22px 28px; color: white; box-shadow: 0 4px 15px rgba(124,58,237,0.25);">
+                        <div class="row align-items-center">
+                            <div class="col-md-4 mb-3 mb-md-0">
+                                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; font-weight: 700;">CURRENT RANK & INCENTIVE SLAB</div>
+                                <div style="font-size: 22px; font-weight: 800; margin-top: 4px; display: flex; align-items: center; gap: 8px;">
+                                    <span id="rankBadgeDisplay"><i class="fas fa-star text-warning me-1"></i><span id="partnerCurrentRank">1★ Channel Partner</span></span>
+                                </div>
+                                <div style="margin-top: 6px; display: flex; gap: 10px; align-items: center;">
+                                    <span style="background: rgba(255,255,255,0.2); padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;">Rank Slab: <span id="partnerRankSlabPct">5.00%</span></span>
+                                    <span style="background: #059669; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;"><i class="fas fa-shield-alt me-1"></i>Permanent Rank</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3 mb-md-0" style="border-left: 1px solid rgba(255,255,255,0.15); border-right: 1px solid rgba(255,255,255,0.15); padding-left: 20px; padding-right: 20px;">
+                                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; font-weight: 700;">ACTIVATED TEAM MEMBERS</div>
+                                <div style="font-size: 24px; font-weight: 800; margin-top: 2px;"><span id="partnerActivatedTeam">0</span> <small style="font-size: 12px; opacity: 0.8; font-weight: 500;">Active: <span id="partnerActiveTeam">0</span></small></div>
+                                <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;"><i class="fas fa-info-circle me-1"></i>Downline with ≥3 unique first-payment files</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div style="display: flex; justify-content: space-between; font-size: 11px; text-transform: uppercase; font-weight: 700; opacity: 0.85; margin-bottom: 4px;">
+                                    <span>NEXT RANK: <strong id="partnerNextRank" style="color: #fde047;">Manager</strong></span>
+                                    <span>GAP: <strong id="partnerRankGap">2</strong></span>
+                                </div>
+                                <div class="progress" style="height: 10px; background: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden;">
+                                    <div class="progress-bar bg-warning" id="partnerRankProgressBar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <div style="font-size: 11px; opacity: 0.85; margin-top: 6px; text-align: right;"><span id="partnerRankProgressPct">0.0%</span> Completed towards <span id="partnerNextRankReq">2</span> Activated Members</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="row mb-4">
                 <div class="col-md-3">
                     <div class="stat-card">
@@ -704,6 +739,17 @@
                 if (!data.success) throw new Error();
                 const p = data.partner || data.data || data;
                 _partnerData = p;
+
+                // V26 Rank Achievement Binding
+                const elRank = document.getElementById('partnerCurrentRank'); if (elRank) elRank.textContent = p.rank_display || p.current_rank || '1★ Channel Partner';
+                const elSlab = document.getElementById('partnerRankSlabPct'); if (elSlab) elSlab.textContent = (p.rank_slab_pct || 5.0).toFixed(2) + '%';
+                const elAct  = document.getElementById('partnerActivatedTeam'); if (elAct) elAct.textContent = p.activated_team || 0;
+                const elActv = document.getElementById('partnerActiveTeam'); if (elActv) elActv.textContent = p.active_team || 0;
+                const elNext = document.getElementById('partnerNextRank'); if (elNext) elNext.textContent = p.next_rank || 'Director (Max Rank)';
+                const elGap  = document.getElementById('partnerRankGap'); if (elGap) elGap.textContent = p.next_rank ? (p.rank_gap || 0) : '0';
+                const elProg = document.getElementById('partnerRankProgressPct'); if (elProg) elProg.textContent = (p.rank_progress_percent || 0).toFixed(1) + '%';
+                const elReq  = document.getElementById('partnerNextRankReq'); if (elReq) elReq.textContent = p.next_rank_requirement || '50';
+                const elPBar = document.getElementById('partnerRankProgressBar'); if (elPBar) elPBar.style.width = Math.min(100, (p.rank_progress_percent || 0)) + '%';
 
                 // DC_PARTNER_STATUS_001: Refresh login_status in localStorage from live API data
                 const _pInfo = JSON.parse(localStorage.getItem('partner_info') || '{}');

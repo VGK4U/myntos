@@ -1140,6 +1140,25 @@ def run_pending_migrations():
         except Exception as e:
             print(f"   ⚠️  Migration warning for {mig['name']}: {str(e)[:100]}")
 
+    # DC-NEW-LEADS-UNASSIGNED-POOL-001 (Aug 2026): Clear telecaller_id and ownership from all status='new' leads
+    # so they remain unassigned and accessible in the open dialer queue for all telecallers.
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("""
+                UPDATE crm_leads
+                SET telecaller_id = NULL,
+                    field_staff_id = NULL,
+                    handler_type = 'unassigned',
+                    handler_id = NULL,
+                    primary_owner_type = NULL,
+                    primary_owner_id = NULL
+                WHERE status = 'new'
+                  AND (telecaller_id IS NOT NULL OR primary_owner_id IS NOT NULL OR handler_type != 'unassigned' OR handler_id IS NOT NULL);
+            """))
+            print("   ✅ DC-NEW-LEADS-UNASSIGNED-POOL-001: All 'new' status leads unassigned for universal telecaller availability")
+    except Exception as e:
+        print(f"   ⚠️  DC-NEW-LEADS-UNASSIGNED-POOL-001 warning: {str(e)[:100]}")
+
 
 def init_db():
     """

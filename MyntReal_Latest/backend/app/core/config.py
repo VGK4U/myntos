@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     # DC Protocol: Explicit production domains for TrustedHostMiddleware
     # Includes custom domain, Replit deployment domain, and localhost for dev
     ALLOWED_HOSTS: List[str] = [
+        "testserver",
         "localhost",
         "127.0.0.1",
         "0.0.0.0",
@@ -56,6 +57,7 @@ class Settings(BaseSettings):
     # Razorpay Configuration
     RAZORPAY_KEY_ID: Optional[str] = None
     RAZORPAY_KEY_SECRET: Optional[str] = None
+    RAZORPAY_WEBHOOK_SECRET: Optional[str] = None
     
     # A1Topup Configuration
     A1TOPUP_USERNAME: Optional[str] = None
@@ -98,6 +100,15 @@ class Settings(BaseSettings):
     CAMPAIGN_AUTOMATION_ENABLED: bool = False
     STRICT_ENCRYPTED_CREDS_ONLY: bool = True
     
+    # ── In-App PSTN Telephony & Call Session Engine Configuration ──
+    MYNTREAL_OUTBOUND_CALLING_NUMBER: str = os.getenv("MYNTREAL_OUTBOUND_CALLING_NUMBER", "+912269470537")
+    TELEPHONY_PROVIDER: str = os.getenv("TELEPHONY_PROVIDER", "mock")
+    TELEPHONY_ACCOUNT_ID: Optional[str] = os.getenv("TELEPHONY_ACCOUNT_ID")
+    TELEPHONY_API_KEY: Optional[str] = os.getenv("TELEPHONY_API_KEY")
+    TELEPHONY_API_SECRET: Optional[str] = os.getenv("TELEPHONY_API_SECRET")
+    TELEPHONY_WEBHOOK_SECRET: Optional[str] = os.getenv("TELEPHONY_WEBHOOK_SECRET")
+    TELEPHONY_APPLICATION_SID: Optional[str] = os.getenv("TELEPHONY_APPLICATION_SID")
+
     @validator("DATABASE_URL", pre=True)
     def assemble_db_connection(cls, v: Optional[str], values: dict) -> str:
         """Create database URL from environment or use PostgreSQL default"""
@@ -129,6 +140,7 @@ class Settings(BaseSettings):
     def assemble_cors_origins(cls, v: List[str]) -> List[str]:
         """Configure explicit allowed hosts for TrustedHostMiddleware"""
         return [
+            "testserver",
             "localhost",
             "127.0.0.1",
             "0.0.0.0",

@@ -47,6 +47,9 @@ from app.api.v1.endpoints import (
     staff_bonus,
     ai_command_center,
     engineering_ai,
+    vgk_incentive_api,
+    voip_dialer,
+    account_deletion,
 )
 
 # Scaffold routers are mounted in main.py at ROOT level to match Flask routing
@@ -54,12 +57,14 @@ from app.api.v1.endpoints import (
 # Create main API router
 api_router = APIRouter()
 
-# Include Universal AI Command Center
+# Include Universal Incentive Router & AI Command Center
+api_router.include_router(vgk_incentive_api.router, tags=["VGK Incentive Engine"])
 api_router.include_router(ai_command_center.router, tags=["AI Command Center"])
 api_router.include_router(engineering_ai.router, tags=["Engineering AI Command Center"])
 
 # Include all endpoint routers
 api_router.include_router(auth.router, prefix="/auth", tags=["authentication"])
+api_router.include_router(account_deletion.router, prefix="/auth", tags=["Account Deletion & Data Privacy"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(team_management.router, prefix="/team", tags=["team"])
@@ -229,6 +234,7 @@ api_router.include_router(member_lifecycle.router, tags=["Member Lifecycle Track
 api_router.include_router(call_tracking.router, prefix="/call-tracking", tags=["Staff Call Tracking System"])
 api_router.include_router(call_quality.router, tags=["Call Quality Review System"])
 api_router.include_router(crm_dialer.router, prefix="/crm", tags=["CRM Auto Dialer"])
+api_router.include_router(voip_dialer.router, tags=["VoIP In-App PSTN Calling & Recordings"])
 api_router.include_router(crm_lead_sync.router, prefix="/crm", tags=["CRM Google Sheets Lead Sync"])
 api_router.include_router(crm_commissions.router, tags=["CRM Commissions"])
 

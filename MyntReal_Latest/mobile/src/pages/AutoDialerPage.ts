@@ -93,6 +93,7 @@ export class AutoDialerPage {
   // DC_MYOP_001: Call method tracking — 'myoperator' | 'normal'. Persists via session.myoperator_attempts.
   private myoperatorAttemptsThisSession: number = 0;
   private callMethod: string = 'myoperator';
+  private myopAgent: { name: string; contact_number: string; extension: string; user_id: string } | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -180,6 +181,15 @@ export class AutoDialerPage {
       if (res?.success && body) {
         this.catPriorityIds = (body.category_priority || []).map(Number);
         this.availableCategories = body.available_categories || [];
+      }
+    } catch {
+      // Non-fatal
+    }
+
+    try {
+      const agRes = await apiService.get<any>('/crm/dialer/myoperator-agent');
+      if (agRes?.success && agRes.data?.agent) {
+        this.myopAgent = agRes.data.agent;
       }
     } catch {
       // Non-fatal
@@ -326,7 +336,9 @@ export class AutoDialerPage {
   // DC_MYOP_001: Call method chooser modal
   private _showCallMethodModal(phone: string, lead: QueueItem): void {
     document.getElementById('dc-method-modal')?.remove();
-    const normalLocked = this.myoperatorAttemptsThisSession === 0;
+    const myopLabel = this.myopAgent
+      ? `Connected as ${this.myopAgent.name} (${this.myopAgent.contact_number}${this.myopAgent.extension ? ' · Ext: ' + this.myopAgent.extension : ''})`
+      : 'Cloud bridge · Call recorded via MyOperator';
 
     const modal = document.createElement('div');
     modal.id = 'dc-method-modal';
@@ -338,19 +350,19 @@ export class AutoDialerPage {
           <div class="dc-method-phone">${phone}</div>
           <p class="dc-method-title">How do you want to call?</p>
 
-          <button id="dc-method-myop" class="dc-method-btn dc-method-btn--myop">
-            <span class="dc-method-icon">📞</span>
+          <button id="dc-method-normal" class="dc-method-btn dc-method-btn--normal" style="background:#f0fdf4;border:1.5px solid #22c55e;">
+            <span class="dc-method-icon">📱</span>
             <span class="dc-method-label">
-              <b>Call via MyOperator</b>
-              <small>Recommended · Call recorded · Your phone rings automatically</small>
+              <b style="color:#15803d;">Direct Device Call (Fast &amp; Reliable)</b>
+              <small style="color:#16a34a;">Uses phone dialer / SIM directly</small>
             </span>
           </button>
 
-          <button id="dc-method-normal" class="dc-method-btn dc-method-btn--normal${normalLocked ? ' dc-method-btn--locked' : ''}">
-            <span class="dc-method-icon">${normalLocked ? '🔒' : '📱'}</span>
+          <button id="dc-method-myop" class="dc-method-btn dc-method-btn--myop" style="margin-top:8px;">
+            <span class="dc-method-icon">📞</span>
             <span class="dc-method-label">
-              <b>Normal Call</b>
-              <small>${normalLocked ? 'Make at least 1 MyOperator call first this session' : 'Device dialer — no recording'}</small>
+              <b>Call via MyOperator Bridge</b>
+              <small style="color: #7c3aed; font-weight: 500;">${myopLabel}</small>
             </span>
           </button>
 
@@ -359,22 +371,14 @@ export class AutoDialerPage {
       </div>`;
     document.body.appendChild(modal);
 
+    document.getElementById('dc-method-normal')?.addEventListener('click', () => {
+      modal.remove();
+      void this._executeDial(phone, lead, 'normal');
+    });
+
     document.getElementById('dc-method-myop')?.addEventListener('click', () => {
       modal.remove();
       void this._executeDial(phone, lead, 'myoperator');
-    });
-
-    document.getElementById('dc-method-normal')?.addEventListener('click', () => {
-      if (normalLocked) {
-        const hint = modal.querySelector('.dc-method-btn--locked small');
-        if (hint) {
-          hint.textContent = '⚠️ You must make at least 1 MyOperator call first this session';
-          (hint as HTMLElement).style.color = '#ef4444';
-        }
-        return;
-      }
-      modal.remove();
-      void this._executeDial(phone, lead, 'normal');
     });
 
     document.getElementById('dc-method-cancel')?.addEventListener('click', () => {
@@ -389,8 +393,10 @@ export class AutoDialerPage {
     const statusText = isMyOp
       ? 'Connecting via MyOperator…'
       : 'Calling via your phone app…';
+    const agentPhone = this.myopAgent?.contact_number || '';
+    const agentName = this.myopAgent?.name || '';
     const hintText = isMyOp
-      ? 'Your phone will ring shortly from <b>+918065184781</b>.<br>Answer it — the customer will be bridged automatically.<br>Tap "Call Ended" below when done.'
+      ? `Your phone ${agentPhone ? `(<b>${agentPhone}</b>)` : ''} will ring shortly from <b>+918065184781</b>.<br>Answer it — the customer will be bridged automatically.<br>Tap "Call Ended" below when done.`
       : 'Come back to this app after the call<br>and the outcome form will open automatically.';
     const screen = document.createElement('div');
     screen.id = 'dc-calling-screen';
@@ -400,7 +406,7 @@ export class AutoDialerPage {
           <div class="dc-calling-avatar">${initial}</div>
           <div class="dc-calling-name">${lead.name || 'Unknown Lead'}</div>
           <div class="dc-calling-phone">${phone}</div>
-          ${isMyOp ? '<div class="dc-method-badge">📞 MyOperator</div>' : ''}
+          ${isMyOp ? `<div class="dc-method-badge">📞 MyOperator Agent: ${agentName || 'Connected'}</div>` : ''}
           <div class="dc-calling-status">
             <span class="dc-calling-dot"></span>
             <span class="dc-calling-dot"></span>

@@ -179,17 +179,31 @@
         </div>
       </div>
 
+      <!-- Disconnected / Scan QR Warning Banner -->
+      <div id="gatewayWarningBanner" style="display:none;background:linear-gradient(135deg,#78350f,#92400e);border:1px solid #f59e0b;border-radius:10px;padding:10px 16px;margin-bottom:14px;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.15);color:#fff">
+        <div style="display:flex;align-items:center;gap:10px">
+          <i class="fas fa-exclamation-triangle" style="color:#fbbf24;font-size:20px"></i>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#fef3c7">WhatsApp Bot Disconnected / Logged Out</div>
+            <div style="font-size:11.5px;color:#fde68a">Scan QR code to link your WhatsApp account for automated messages &amp; replies</div>
+          </div>
+        </div>
+        <button class="btn-custom btn-green" onclick="openScanQrModal()" style="padding:6px 14px;font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.2)">
+          <i class="fas fa-qrcode"></i> Scan QR Code
+        </button>
+      </div>
+
       <!-- ═══ 5-TAB NAVIGATION ══════════════════════════════════════════════════ -->
       <div class="wa-tab-bar">
-        <button class="wa-tab-btn active" id="btn-tab-inbox" onclick="switchCenterTab('inbox')"><i class="fas fa-inbox"></i> 1. CRM Inbox <span class="badge-num" id="tb-inbox-num">0</span></button>
-        <button class="wa-tab-btn" id="btn-tab-messenger" onclick="switchCenterTab('messenger')"><i class="fas fa-comments"></i> 2. Messenger</button>
-        <button class="wa-tab-btn" id="btn-tab-templates" onclick="switchCenterTab('templates')"><i class="fas fa-file-alt"></i> 3. Template Management Hub</button>
-        <button class="wa-tab-btn" id="btn-tab-automations" onclick="switchCenterTab('automations')"><i class="fas fa-robot"></i> 4. Automations &amp; Trigger Tracker</button>
-        <button class="wa-tab-btn" id="btn-tab-audit" onclick="switchCenterTab('audit')"><i class="fas fa-shield-alt"></i> 5. Audit Log</button>
+        <button class="wa-tab-btn active" id="btn-tab-messenger" onclick="switchCenterTab('messenger')"><i class="fas fa-comments"></i> 1. Messenger</button>
+        <button class="wa-tab-btn" id="btn-tab-inbox" onclick="switchCenterTab('inbox')"><i class="fas fa-inbox"></i> 2. CRM Inbox <span class="badge-num" id="tb-inbox-num">0</span></button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-templates" onclick="switchCenterTab('templates')"><i class="fas fa-file-alt"></i> 3. Template Management Hub</button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-automations" onclick="switchCenterTab('automations')"><i class="fas fa-robot"></i> 4. Automations &amp; Trigger Tracker</button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-audit" onclick="switchCenterTab('audit')"><i class="fas fa-shield-alt"></i> 5. Audit Log</button>
       </div>
 
       <!-- ═══ TAB 1: CRM INBOX ═════════════════════════════════════════════════ -->
-      <div class="tab-pane active" id="pane-inbox">
+      <div class="tab-pane" id="pane-inbox">
 
         <!-- Stats Bar -->
         <div class="stats-bar">
@@ -251,8 +265,8 @@
         </div>
       </div>
 
-      <!-- ═══ TAB 2: MESSENGER ═════════════════════════════════════════════════ -->
-      <div class="tab-pane" id="pane-messenger">
+      <!-- ═══ TAB 1: MESSENGER ═════════════════════════════════════════════════ -->
+      <div class="tab-pane active" id="pane-messenger">
         <div class="messenger-container">
 
           <!-- Sidebar -->
@@ -287,23 +301,60 @@
 
             <!-- Attachment Preview -->
             <div class="attach-preview-card" id="attachPreviewCard">
+            <!-- Attachment Preview Bar -->
+            <div class="attach-preview-card" id="attachPreviewCard" style="display:none;padding:6px 12px;background:#e2e8f0;border-top:1px solid #cbd5e1;align-items:center;gap:8px;">
               <i class="fas fa-paperclip" style="color:#059669;font-size:14px"></i>
-              <span id="attachFileName" style="font-weight:600;flex:1">filename.jpg</span>
+              <span id="attachFileName" style="font-weight:600;flex:1;font-size:12px">filename.jpg</span>
               <button class="btn-custom btn-outline-custom" onclick="clearAttachment()" style="padding:2px 6px"><i class="fas fa-times"></i></button>
             </div>
 
-            <!-- Composer Bar -->
-            <div class="chat-composer-bar">
-              <div class="composer-row">
-                <label class="btn-custom btn-outline-custom" style="cursor:pointer" title="Attach Image or PDF">
+            <!-- Quick Action Pills -->
+            <div style="display:flex;gap:6px;overflow-x:auto;padding:6px 10px;background:#f3f4f6;border-top:1px solid #e5e7eb;">
+              <button type="button" class="btn-custom btn-outline-custom" style="padding:3px 8px;font-size:11px;border-radius:12px;white-space:nowrap;" onclick="insertQuickPill('Hello! Thank you for contacting MyntReal. How can we assist you today?')">👋 Greeting</button>
+              <button type="button" class="btn-custom btn-outline-custom" style="padding:3px 8px;font-size:11px;border-radius:12px;white-space:nowrap;" onclick="insertQuickPill('We are pleased to share our project brochure and pricing details. When is a good time to connect?')">📁 Brochure</button>
+              <button type="button" class="btn-custom btn-outline-custom" style="padding:3px 8px;font-size:11px;border-radius:12px;white-space:nowrap;" onclick="insertQuickPill('Our executive will call you shortly to assist you with the complete details.')">📞 Callback</button>
+              <button type="button" class="btn-custom btn-outline-custom" style="padding:3px 8px;font-size:11px;border-radius:12px;white-space:nowrap;" onclick="insertQuickPill('📍 Project Location: https://maps.google.com/?q=17.729,83.308')">📍 Location</button>
+            </div>
+
+            <!-- WhatsApp Native-Style Emoji Palette Tray -->
+            <div id="emojiTray" style="display:none;background:#f9fafb;border-top:1px solid #e5e7eb;padding:8px 12px;max-height:180px;overflow-y:auto;">
+              <div style="display:flex;gap:10px;border-bottom:1px solid #e5e7eb;padding-bottom:6px;margin-bottom:8px;">
+                <button type="button" class="btn-custom btn-outline-custom emoji-cat-btn active" data-cat="smileys" onclick="switchEmojiCategory('smileys')">😃</button>
+                <button type="button" class="btn-custom btn-outline-custom emoji-cat-btn" data-cat="hands" onclick="switchEmojiCategory('hands')">👋</button>
+                <button type="button" class="btn-custom btn-outline-custom emoji-cat-btn" data-cat="realestate" onclick="switchEmojiCategory('realestate')">🏠</button>
+                <button type="button" class="btn-custom btn-outline-custom emoji-cat-btn" data-cat="reactions" onclick="switchEmojiCategory('reactions')">❤️</button>
+                <button type="button" class="btn-custom btn-outline-custom emoji-cat-btn" data-cat="travel" onclick="switchEmojiCategory('travel')">🚗</button>
+              </div>
+              <div id="emojiListGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(32px,1fr));gap:4px;text-align:center;"></div>
+            </div>
+
+            <!-- WhatsApp Style Composer Bar -->
+            <div class="chat-composer-bar" style="padding:8px 12px;background:#f0f2f5;border-top:1px solid #e5e7eb;">
+              <div class="composer-row" style="display:flex;align-items:center;gap:6px;">
+                
+                <!-- Emoji Toggle -->
+                <button type="button" class="btn-custom btn-outline-custom" id="btnEmojiToggle" onclick="toggleEmojiTray()" style="padding:6px 10px;font-size:16px;border-radius:50%;" title="Insert Emoji">
+                  <i class="far fa-smile"></i>
+                </button>
+
+                <!-- Attachment Picker -->
+                <label class="btn-custom btn-outline-custom" style="cursor:pointer;padding:6px 10px;font-size:14px;border-radius:50%;" title="Attach Image or PDF">
                   <i class="fas fa-paperclip"></i>
                   <input type="file" id="msgFileInput" accept="image/*,application/pdf" style="display:none" onchange="onFileSelected(this)">
                 </label>
-                <select id="msgTemplateSel" class="composer-input" style="flex:0 0 190px" onchange="onMsgTemplateSelect(this.value)">
-                  <option value="">— Select Template —</option>
+
+                <!-- Template Selector -->
+                <select id="msgTemplateSel" class="composer-input" style="flex:0 0 170px;padding:6px 8px;font-size:12px;" onchange="onMsgTemplateSelect(this.value)">
+                  <option value="">— Template —</option>
                 </select>
-                <input type="text" class="composer-input" id="msgTextInput" placeholder="Type a WhatsApp message..." onkeypress="if(event.key==='Enter')sendChatMessage()">
-                <button class="btn-custom btn-green" onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i> Send</button>
+
+                <!-- Message Input -->
+                <input type="text" class="composer-input" id="msgTextInput" placeholder="Type a WhatsApp message..." style="flex:1;padding:8px 14px;border-radius:20px;font-size:13px;" onkeypress="if(event.key==='Enter')sendChatMessage()">
+                
+                <!-- Send Button -->
+                <button class="btn-custom btn-green" onclick="sendChatMessage()" style="border-radius:20px;padding:7px 16px;font-size:13px;">
+                  <i class="fas fa-paper-plane"></i> Send
+                </button>
               </div>
             </div>
           </div>
@@ -421,19 +472,164 @@
   </div>
 </div>
 
+<!-- ═══ SCAN QR CODE MODAL ═══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="scanQrModal">
+  <div class="modal-box" style="max-width:420px;text-align:center">
+    <div class="modal-head">
+      <h4 style="font-size:15px;font-weight:700;color:#065f46;margin:0"><i class="fab fa-whatsapp" style="color:#25d366"></i> Link WhatsApp Web Account</h4>
+      <button class="btn-custom btn-outline-custom" onclick="closeModal('scanQrModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" style="padding:20px">
+      <div style="font-size:12.5px;color:#4b5563;line-height:1.45;margin-bottom:16px;text-align:left;background:#f3f4f6;padding:12px;border-radius:8px">
+        <strong>Steps to connect WhatsApp:</strong><br>
+        1. Open WhatsApp on your phone<br>
+        2. Tap <strong>Linked Devices</strong> in Settings or Menu (⋮)<br>
+        3. Tap <strong>Link a Device</strong> and point your camera at this QR code
+      </div>
+
+      <div id="qrCodeContainer" style="background:#fff;padding:16px;border-radius:12px;display:inline-block;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.1);border:1px solid #e5e7eb">
+        <div id="qrLoadingSpinner" style="width:200px;height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#6b7280">
+          <i class="fas fa-qrcode fa-spin fa-2x" style="color:#059669;margin-bottom:8px"></i>
+          <span style="font-size:12px;font-weight:600">Generating QR code...</span>
+        </div>
+        <img id="qrImageElement" src="" style="width:200px;height:200px;display:none" alt="WhatsApp QR Code">
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button class="btn-custom btn-outline-custom" onclick="refreshGatewayQr()"><i class="fas fa-sync-alt"></i> Refresh QR</button>
+        <button class="btn-custom btn-green" onclick="checkGatewayConnectionStatus()"><i class="fas fa-check"></i> Check Status</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Toast Notification -->
 <div class="toast" id="toast"></div>
 
 <script>
 const API = '/api/v1';
-let activeCenterTab = 'inbox';
+let activeCenterTab = 'messenger';
 let activeScope     = 'assigned_tagged';
 let activeChatPhone = null;
 let activeChatType  = 'individual';
 let activeMediaUrl  = null;
 let pollTimer       = null;
 let debounceTimer   = null;
+
+// WhatsApp Native Emoji Palette
+const EMOJI_DATA = {
+  smileys: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','😉','😌','😍','🥰','😘','😋','😛','😜','🤪','😎','🤩','🥳','😏','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','😱','🤗','🤔','🤫','😴','😷'],
+  hands: ['👍','👎','👌','🤌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👏','🙌','👐','🤲','🤝','🙏','💪','👋','✍️'],
+  realestate: ['🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏪','🏫','🏬','🏭','🏰','🏗️','🏘️','🏙️','🗺️','📍','📌','🔑','🗝️','🚪','💰','💵','💳','🧾','📊','📈','💼','📁','📄','📋','📞','📱','✉️','📧'],
+  reactions: ['❤️','💚','💙','💛','💜','🖤','💔','❣️','💕','💓','✨','🌟','⭐','🔥','💥','💯','⚠️','🚨','✅','❌','➕','➖','🟢','🔴','🟡','🔵'],
+  travel: ['🚗','🚕','🚙','🚌','🏎️','🚓','🚑','🚒','🚐','🚚','🛵','🏍️','🛺','🚲','⛽','🚦','🛣️','✈️','🚀']
+};
+
+let activeEmojiCat = 'smileys';
+
+function toggleEmojiTray() {
+  const tray = document.getElementById('emojiTray');
+  if (!tray) return;
+  const isOpen = tray.style.display === 'block';
+  tray.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) renderEmojiGrid(activeEmojiCat);
+}
+
+function switchEmojiCategory(cat) {
+  activeEmojiCat = cat;
+  document.querySelectorAll('.emoji-cat-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.cat === cat);
+  });
+  renderEmojiGrid(cat);
+}
+
+function renderEmojiGrid(cat) {
+  const list = EMOJI_DATA[cat] || [];
+  const grid = document.getElementById('emojiListGrid');
+  if (!grid) return;
+  grid.innerHTML = list.map(e => `
+    <button type="button" class="btn-custom btn-outline-custom" style="padding:4px;font-size:18px;border:none;background:none;cursor:pointer" onclick="insertEmoji('${e}')">${e}</button>
+  `).join('');
+}
+
+function insertEmoji(emoji) {
+  const input = document.getElementById('msgTextInput');
+  if (!input) return;
+  const start = input.selectionStart || input.value.length;
+  const end = input.selectionEnd || input.value.length;
+  input.value = input.value.substring(0, start) + emoji + input.value.substring(end);
+  input.selectionStart = input.selectionEnd = start + emoji.length;
+  input.focus();
+}
+
+function insertQuickPill(text) {
+  const input = document.getElementById('msgTextInput');
+  if (!input) return;
+  input.value = text;
+  input.focus();
+}
+
+async function checkGatewayConnectionStatus() {
+  try {
+    const res = await apiFetch(`${API}/whatsapp/bot-status`);
+    const isConnected = res.connected === true;
+    const banner = document.getElementById('gatewayWarningBanner');
+    const badge = document.getElementById('hdrGatewayStatus');
+    if (banner) banner.style.display = isConnected ? 'none' : 'flex';
+    if (badge) {
+      badge.innerHTML = isConnected 
+        ? '<i class="fas fa-circle" style="color:#25d366;font-size:8px"></i> Bot Connected & Active' 
+        : '<i class="fas fa-circle" style="color:#ef4444;font-size:8px"></i> Bot Disconnected';
+    }
+    if (isConnected) {
+      closeModal('scanQrModal');
+    }
+    return res;
+  } catch(e) {
+    return { connected: false };
+  }
+}
+
+async function openScanQrModal() {
+  openModal('scanQrModal');
+  await refreshGatewayQr();
+}
+
+async function refreshGatewayQr() {
+  const spinner = document.getElementById('qrLoadingSpinner');
+  const img = document.getElementById('qrImageElement');
+  if (spinner) {
+    spinner.style.display = 'flex';
+    spinner.innerHTML = '<i class="fas fa-qrcode fa-spin fa-2x" style="color:#059669;margin-bottom:8px"></i><span style="font-size:12px;font-weight:600">Generating QR code...</span>';
+  }
+  if (img) img.style.display = 'none';
+
+  try {
+    const res = await apiFetch(`${API}/whatsapp/gateway-status-qr`);
+    if (res.qr) {
+      img.src = res.qr.startsWith('data:') ? res.qr : `data:image/png;base64,${res.qr}`;
+      img.style.display = 'block';
+      if (spinner) spinner.style.display = 'none';
+    } else {
+      if (spinner) spinner.innerHTML = `<span style="font-size:12px;color:#6b7280;padding:10px">${res.message || 'Waiting for QR code from WhatsApp gateway...'}</span>`;
+    }
+  } catch(e) {
+    if (spinner) spinner.innerHTML = `<span style="font-size:12px;color:#dc2626">Error: ${e.message}</span>`;
+  }
+}
+
+function isWhatsAppAdmin() {
+  try {
+    const raw = localStorage.getItem('staff_user') || localStorage.getItem('user') || '{}';
+    const user = JSON.parse(raw);
+    const empCode = (user.emp_code || '').toUpperCase().trim();
+    const roleCode = (user.role_code || (user.role && user.role.role_code) || '').toLowerCase().trim();
+    const name = (user.full_name || user.name || '').toLowerCase().trim();
+    return empCode === 'MR10001' || empCode === 'MR10016' || roleCode === 'vgk4u' || roleCode === 'ea' || name.includes('yaswanth');
+  } catch {
+    return false;
+  }
+}
 
 function getToken() {
   return localStorage.getItem('staff_token') || localStorage.getItem('token') || sessionStorage.getItem('staff_token') || '';
@@ -997,7 +1193,17 @@ function openAuditMsgModal(idx) {
   const timestamp = l.sent_at || l.time_str || l.created_at || 'LOG';
   const recipient = (l.mobile_number || l.recipient || '—') + ((l.user_name && l.user_name !== '—') ? ` (${l.user_name})` : '');
   const wamid = l.message_sid || l.wamid || '—';
-  const bodyText = l.message_body || l.body_text || l.message || 'No message content available.';
+  
+  let bodyText = l.message_body || l.body_text || l.message || '';
+  if (!bodyText || bodyText === '—' || bodyText === 'None') {
+    if (l.message_type === 'whatsapp_otp') {
+      bodyText = '🔐 WhatsApp OTP Authentication: Your 6-digit verification code was dispatched via Meta Cloud API.';
+    } else if (l.message_type && l.message_type.includes('otp')) {
+      bodyText = `🔐 Verification Code (${l.message_type}) was dispatched via WhatsApp.`;
+    } else {
+      bodyText = `📱 WhatsApp Notification (${l.message_type || 'Automated Dispatch'}) was delivered to ${l.mobile_number || 'recipient'}.`;
+    }
+  }
 
   document.getElementById('auditMetaTimestamp').innerHTML = `<i class="fas fa-clock"></i> ${timestamp}`;
   document.getElementById('auditMetaRecipient').innerHTML = `<i class="fas fa-user"></i> ${recipient}`;
@@ -1034,13 +1240,25 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     if (typeof window.StaffBackButton !== 'undefined') window.StaffBackButton.init();
 
+    // DC Protocol: Enforce tab visibility by role
+    if (!isWhatsAppAdmin()) {
+      document.querySelectorAll('.admin-only-tab').forEach(el => {
+        el.style.display = 'none';
+      });
+    }
+
     const urlParams = new URLSearchParams(window.location.search);
     const requestedTab = urlParams.get('tab');
 
-    // Load initial Inbox data
-    await loadInbox(1);
+    if (requestedTab) {
+      switchCenterTab(requestedTab);
+    } else {
+      // Default landing tab is Tab 1: Messenger
+      switchCenterTab('messenger');
+    }
 
-    if (requestedTab) switchCenterTab(requestedTab);
+    // Check WhatsApp Gateway connection status
+    await checkGatewayConnectionStatus();
 
     // Hide global loader & show main workspace
     document.getElementById('pageLoader').style.display = 'none';
@@ -1054,6 +1272,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   pollTimer = setInterval(() => {
     if (activeCenterTab === 'inbox') loadInbox(1);
     else if (activeCenterTab === 'messenger' && activeChatPhone) loadChatHistory(activeChatPhone, activeChatType);
+    checkGatewayConnectionStatus();
   }, 5000);
 });
 </script>

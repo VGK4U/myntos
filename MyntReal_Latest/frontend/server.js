@@ -7621,42 +7621,55 @@ let waBotProcess = null;
 let waBotStarting = false;
 function ensureWhatsAppBotRunning() {
   if (waBotProcess || waBotStarting) return;
-  const botPathCandidates = [
-    path.join(__dirname, '../backend/whatsapp-group-bot/server.js'),
-    path.join(__dirname, 'backend/whatsapp-group-bot/server.js'),
-    path.join(process.cwd(), 'backend/whatsapp-group-bot/server.js'),
-    path.join(process.cwd(), 'MyntReal_Latest/backend/whatsapp-group-bot/server.js')
-  ];
-  let botScriptPath = null;
-  for (const p of botPathCandidates) {
-    if (fs.existsSync(p)) {
-      botScriptPath = p;
-      break;
-    }
-  }
-  if (!botScriptPath) {
-    console.warn('[DC-WA-BOT] Could not locate whatsapp-group-bot/server.js script');
-    return;
-  }
-  waBotStarting = true;
-  console.log(`[DC-WA-BOT] Auto-spawning WhatsApp Group Bot daemon on port 5002 from ${botScriptPath}...`);
-  try {
-    const { fork } = require('child_process');
-    waBotProcess = fork(botScriptPath, [], {
-      cwd: path.dirname(botScriptPath),
-      env: { ...process.env, PORT: '5002' },
-      stdio: 'inherit'
-    });
-    waBotProcess.on('exit', (code) => {
-      console.warn(`[DC-WA-BOT] WhatsApp bot daemon exited with code ${code}. Auto-respawning in 5s...`);
-      waBotProcess = null;
-      waBotStarting = false;
-      setTimeout(ensureWhatsAppBotRunning, 5000);
-    });
-  } catch (err) {
-    console.error('[DC-WA-BOT] Failed to spawn WhatsApp bot:', err.message);
+  
+  // First check if port 5002 is already active
+  const checkReq = http.get('http://127.0.0.1:5002/status', (res) => {
+    // Port 5002 is already running and responsive
+    console.log('[DC-WA-BOT] WhatsApp bot daemon is already running on port 5002.');
     waBotStarting = false;
-  }
+  });
+  checkReq.on('error', () => {
+    // Port 5002 is not listening, proceed to spawn
+    const botPathCandidates = [
+      path.join(__dirname, '../backend/whatsapp-group-bot/server.js'),
+      path.join(__dirname, 'backend/whatsapp-group-bot/server.js'),
+      path.join(process.cwd(), 'backend/whatsapp-group-bot/server.js'),
+      path.join(process.cwd(), 'MyntReal_Latest/backend/whatsapp-group-bot/server.js')
+    ];
+    let botScriptPath = null;
+    for (const p of botPathCandidates) {
+      if (fs.existsSync(p)) {
+        botScriptPath = p;
+        break;
+      }
+    }
+    if (!botScriptPath) {
+      console.warn('[DC-WA-BOT] Could not locate whatsapp-group-bot/server.js script');
+      return;
+    }
+    waBotStarting = true;
+    console.log(`[DC-WA-BOT] Auto-spawning WhatsApp Group Bot daemon on port 5002 from ${botScriptPath}...`);
+    try {
+      const { fork } = require('child_process');
+      waBotProcess = fork(botScriptPath, [], {
+        cwd: path.dirname(botScriptPath),
+        env: { ...process.env, PORT: '5002' },
+        stdio: 'inherit'
+      });
+      waBotProcess.on('exit', (code) => {
+        console.warn(`[DC-WA-BOT] WhatsApp bot daemon exited with code ${code}. Auto-respawning in 5s...`);
+        waBotProcess = null;
+        waBotStarting = false;
+        setTimeout(ensureWhatsAppBotRunning, 5000);
+      });
+    } catch (err) {
+      console.error('[DC-WA-BOT] Failed to spawn WhatsApp bot:', err.message);
+      waBotStarting = false;
+    }
+  });
+  checkReq.setTimeout(1500, () => {
+    checkReq.abort();
+  });
 }
 // Auto-start WhatsApp Bot daemon on server boot
 setTimeout(ensureWhatsAppBotRunning, 2000);
@@ -7664,6 +7677,15 @@ setTimeout(ensureWhatsAppBotRunning, 2000);
 const server = http.createServer(async (req, res) => {
   // DC Protocol: Global error handler wrapper for production stability
   try {
+    const hostHeader = (req.headers['host'] || '').toLowerCase();
+    if (hostHeader === 'myntreal.com' || hostHeader.startsWith('myntreal.com:')) {
+      res.writeHead(301, {
+        'Location': `https://www.myntreal.com${req.url}`,
+        'Cache-Control': 'public, max-age=86400'
+      });
+      res.end();
+      return;
+    }
     const url = req.url;
     const urlParts = new URL(url, `http://${getSafeHost(req)}`);
     const reqPathLower = (urlParts.pathname || '').toLowerCase();
@@ -8374,13 +8396,28 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Privacy Policy page — public, no login required (/privacy and /privacy-policy both work)
-  if (url === '/privacy' || url.startsWith('/privacy?') || url === '/privacy-policy' || url.startsWith('/privacy-policy?')) {
+  // Privacy Policy page — public, no login required (/privacy, /privacy-policy, /privacy-policy.html)
+  if (url === '/privacy' || url.startsWith('/privacy?') || url === '/privacy-policy' || url.startsWith('/privacy-policy?') || url === '/privacy-policy.html' || url.startsWith('/privacy-policy.html?')) {
     const filePath = path.join(__dirname, 'privacy-policy.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) {
         res.writeHead(404);
         res.end('Privacy policy page not found');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600' });
+      res.end(data);
+    });
+    return;
+  }
+
+  // Delete Account page — Google Play compliance public page (/delete-account, /delete-account.html)
+  if (url === '/delete-account' || url.startsWith('/delete-account?') || url === '/delete-account.html' || url.startsWith('/delete-account.html?')) {
+    const filePath = path.join(__dirname, 'delete-account.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(404);
+        res.end('Delete account page not found');
         return;
       }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600' });

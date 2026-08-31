@@ -213,13 +213,14 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
       <option value="">All</option><option value="true">Active</option><option value="false">Inactive</option>
     </select>
   </div>
-  <div class="fgroup"><label>Designation</label>
-    <select class="form-select" id="designationFilter" style="min-width:160px">
-      <option value="">All Designations</option>
-      <option value="none">Not Activated</option>
-      <option value="channel_partner">Channel Partner</option>
-      <option value="sr_channel_partner">Sr. Channel Partner</option>
-      <option value="official_partner">Official Partner</option>
+  <div class="fgroup"><label>Rank</label>
+    <select class="form-select" id="designationFilter" style="min-width:180px">
+      <option value="">All Ranks</option>
+      <option value="1">Rank 1 — Channel Partner (5.00%)</option>
+      <option value="2">Rank 2 — Manager (6.50%)</option>
+      <option value="3">Rank 3 — Zonal Manager (7.50%)</option>
+      <option value="4">Rank 4 — Regional Manager (8.25%)</option>
+      <option value="5">Rank 5 — Director (8.50%)</option>
     </select>
   </div>
   <div class="fgroup"><label>Category / Segment</label>
@@ -232,6 +233,16 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
       <option value="Insurance">Insurance</option>
       <option value="Real Dreams">Real Estate (Real Dreams)</option>
       <option value="ETC Training">ETC Training</option>
+    </select>
+  </div>
+  <div class="fgroup"><label>Business Eligibility</label>
+    <select class="form-select" id="eligibilityFilter" style="min-width:180px" onchange="loadMembers(1)">
+      <option value="">All Eligibility</option>
+      <option value="installed_1plus">Installed Files (≥ 1)</option>
+      <option value="leads_1plus">Direct Sourced Leads (≥ 1)</option>
+      <option value="team_1plus">Activated Team (≥ 1 Member)</option>
+      <option value="earners_1plus">Confirmed Earners (> ₹0)</option>
+      <option value="current_month_active">Active This Month</option>
     </select>
   </div>
   <div class="fgroup">
@@ -272,22 +283,26 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
   <table>
     <thead>
       <tr>
+        <th style="width:45px;text-align:center">#</th>
         <th class="sortable" onclick="toggleSort('registered')" id="th_registered" title="Registration date (created_at)">Reg Date</th>
         <th class="sortable" onclick="toggleSort('registered_by')" id="th_registered_by" title="Staff who registered this member">Reg By</th>
         <th class="sortable" onclick="toggleSort('code')" id="th_code">Code</th>
         <th class="sortable" onclick="toggleSort('name')" id="th_name">Name</th>
-        <th>Earning Breakdown</th>
         <th>Phone</th>
-        <th>Referrer</th>
-        <th>Source</th>
         <th>Status</th>
+        <th style="color:#7c3aed;background:#f5f3ff">Current Rank</th>
+        <th style="color:#059669;text-align:center;background:#f0fdf4">Earning Slab</th>
+        <th style="color:#047857;text-align:right;background:#ecfdf5">This Month Payout</th>
+        <th class="sortable" onclick="toggleSort('downline_count')" id="th_downline_count" style="color:#c2410c;text-align:center;background:#fff7ed" title="People they activated as VGK source">Activated Members ↕</th>
+        <th style="color:#1d4ed8;text-align:center;background:#eff6ff" title="Business Eligibility: Installed / Submitted CRM Files">Eligibility Files</th>
+        <th style="text-align:right">All-Time Earnings</th>
+        <th>Breakdown</th>
         <th>Points Balance</th>
         <th>Points Used</th>
-        <th>Earnings</th>
-        <th>Designation</th>
-        <th class="sortable" onclick="toggleSort('downline_count')" id="th_downline_count" title="People they activated as VGK source">Activated ↕</th>
+        <th>Referrer</th>
+        <th>Source</th>
         <th class="sortable" onclick="toggleSort('src_revenue')" id="th_src_revenue" title="Revenue from their coupon activations">Src Revenue ↕</th>
-        <th class="sortable" onclick="toggleSort('leads_total')" id="th_leads_total" title="Total CRM leads sourced by this partner">Leads ↕</th>
+        <th class="sortable" onclick="toggleSort('leads_total')" id="th_leads_total" title="Total CRM leads sourced by this partner">Total Leads ↕</th>
         <th class="sortable" onclick="toggleSort('leads_won')" id="th_leads_won" title="Won leads">Won ↕</th>
         <th class="sortable" onclick="toggleSort('leads_lost')" id="th_leads_lost" title="Lost/Cancelled leads">Lost ↕</th>
         <th title="Date when this partner's VGK card was activated">VGK Activated</th>
@@ -298,7 +313,7 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
         <th style="text-align:center;width:50px">WA</th>
       </tr>
     </thead>
-    <tbody id="membersTable"><tr><td colspan="24" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr></tbody>
+    <tbody id="membersTable"><tr><td colspan="28" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr></tbody>
   </table>
   </div>
   <div class="pagination" id="paginationBar"></div>
@@ -538,6 +553,18 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
       </div>
 
       <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
+        <span>Rank:</span>
+        <select id="tptRankFilter" onchange="_tptReload()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:#fff">
+          <option value="">All Ranks</option>
+          <option value="1">1★ Channel Partner (5.00%)</option>
+          <option value="2">2★ Manager (6.50%)</option>
+          <option value="3">3★ Zonal Manager (7.50%)</option>
+          <option value="4">4★ Regional Manager (8.25%)</option>
+          <option value="5">5★ Director (8.50%)</option>
+        </select>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
         <span>Reg By Staff:</span>
         <input type="text" id="tptRegBy" placeholder="Emp Code (e.g. MR10001)" onchange="_tptReload()" onkeydown="if(event.key==='Enter')_tptReload()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;width:150px;outline:none;text-transform:uppercase">
       </div>
@@ -565,22 +592,34 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
           <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;cursor:pointer" onclick="_tptSort('code')">CODE ↕</th>
           <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;cursor:pointer" onclick="_tptSort('name')">PARTNER ↕</th>
 
+          <!-- RANK & CURRENT MONTH PERFORMANCE Group -->
+          <th colspan="4" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#7c3aed;background:#f5f3ff;border-left:2px solid #ddd6fe;border-right:2px solid #ddd6fe">
+            <i class="fas fa-award me-1" style="color:#7c3aed"></i>RANK & CURRENT MONTH PERFORMANCE
+          </th>
+
           <!-- SELF PERFORMANCE Group -->
-          <th colspan="6" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#1e40af;background:#eff6ff;border-left:2px solid #bfdbfe;border-right:2px solid #bfdbfe">
+          <th colspan="6" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#1e40af;background:#eff6ff;border-right:2px solid #bfdbfe">
             <i class="fas fa-user-check me-1" style="color:#2563eb"></i>SELF PERFORMANCE
           </th>
 
           <!-- DIRECT TEAM PERFORMANCE Group -->
-          <th colspan="7" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#5b21b6;background:#f5f3ff;border-right:2px solid #c7d2fe">
-            <i class="fas fa-users-cog me-1" style="color:#7c3aed"></i>TEAM PERFORMANCE (DIRECT REFERENCE)
+          <th colspan="7" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#5b21b6;background:#fdf4ff;border-right:2px solid #f0abfc">
+            <i class="fas fa-users-cog me-1" style="color:#a855f7"></i>TEAM PERFORMANCE (DIRECT REFERENCE)
           </th>
 
           <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:800;color:#15803d;background:#f0fdf4;cursor:pointer" onclick="_tptSort('win_rate')">OVERALL WIN RATE ↕</th>
         </tr>
         <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;font-size:10px">
           <th colspan="3"></th>
+
+          <!-- Rank & Performance subheaders -->
+          <th style="padding:6px;text-align:center;background:#f5f3ff;color:#7c3aed;border-left:2px solid #ddd6fe">CURRENT RANK</th>
+          <th style="padding:6px;text-align:center;background:#f5f3ff;color:#059669">EARNING SLAB</th>
+          <th style="padding:6px;text-align:right;background:#f5f3ff;color:#047857;cursor:pointer" onclick="_tptSort('current_month_earning')" title="Confirmed payouts generated in current month">THIS MONTH PAYOUT ↕</th>
+          <th style="padding:6px;text-align:center;background:#f5f3ff;color:#1d4ed8;border-right:2px solid #ddd6fe" title="Installed Files / Total Files">ELIGIBILITY FILES</th>
+
           <!-- Self Performance subheaders -->
-          <th style="padding:6px;text-align:center;background:#eff6ff;color:#1e40af;border-left:2px solid #bfdbfe;cursor:pointer" onclick="_tptSort('total_leads')" title="Total leads submitted directly by this partner">SELF FILES ↕</th>
+          <th style="padding:6px;text-align:center;background:#eff6ff;color:#1e40af;cursor:pointer" onclick="_tptSort('total_leads')" title="Total leads submitted directly by this partner">SELF FILES ↕</th>
           <th style="padding:6px;text-align:center;background:#eff6ff;color:#1e40af;cursor:pointer" onclick="_tptSort('submits_count')">SUBMIT COUNT ↕</th>
           <th style="padding:6px;text-align:right;background:#eff6ff;color:#1e40af;cursor:pointer" onclick="_tptSort('submits_val')">SUBMIT VALUE ↕</th>
           <th style="padding:6px;text-align:center;background:#eff6ff;color:#1e40af;cursor:pointer" onclick="_tptSort('dvr_count')">1ST PMT COUNT ↕</th>
@@ -588,19 +627,19 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
           <th style="padding:6px;text-align:right;background:#eff6ff;color:#1e3a8a;border-right:2px solid #bfdbfe;cursor:pointer" onclick="_tptSort('overall_dvr_val')" title="Overall total payment received value directly by partner">OVERALL RECV ↕</th>
 
           <!-- Direct Team subheaders -->
-          <th style="padding:6px;text-align:center;background:#f5f3ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_added')" title="Total team members registered under this partner">TEAM MEMBERS ↕</th>
-          <th style="padding:6px;text-align:center;background:#f5f3ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_leads')" title="Total files submitted across direct team members">TEAM FILES ↕</th>
-          <th style="padding:6px;text-align:center;background:#f5f3ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_submits_count')">SUBMIT COUNT ↕</th>
-          <th style="padding:6px;text-align:right;background:#f5f3ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_submits_val')">SUBMIT VALUE ↕</th>
-          <th style="padding:6px;text-align:center;background:#f5f3ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_dvr_count')">1ST PMT COUNT ↕</th>
-          <th style="padding:6px;text-align:right;background:#f5f3ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_dvr_val')">1ST PMT VALUE ↕</th>
-          <th style="padding:6px;text-align:right;background:#f5f3ff;color:#4c1d95;border-right:2px solid #c7d2fe;cursor:pointer" onclick="_tptSort('team_total_received_val')" title="Overall total payment received value across direct team">OVERALL RECV ↕</th>
+          <th style="padding:6px;text-align:center;background:#fdf4ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_added')" title="Total team members registered under this partner">TEAM MEMBERS ↕</th>
+          <th style="padding:6px;text-align:center;background:#fdf4ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_leads')" title="Total files submitted across direct team members">TEAM FILES ↕</th>
+          <th style="padding:6px;text-align:center;background:#fdf4ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_submits_count')">SUBMIT COUNT ↕</th>
+          <th style="padding:6px;text-align:right;background:#fdf4ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_submits_val')">SUBMIT VALUE ↕</th>
+          <th style="padding:6px;text-align:center;background:#fdf4ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_dvr_count')">1ST PMT COUNT ↕</th>
+          <th style="padding:6px;text-align:right;background:#fdf4ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_dvr_val')">1ST PMT VALUE ↕</th>
+          <th style="padding:6px;text-align:right;background:#fdf4ff;color:#4c1d95;border-right:2px solid #f0abfc;cursor:pointer" onclick="_tptSort('team_total_received_val')" title="Overall total payment received value across direct team">OVERALL RECV ↕</th>
 
           <th></th>
         </tr>
       </thead>
       <tbody id="tptBody">
-        <tr><td colspan="18" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading Leaderboard Data…</td></tr>
+        <tr><td colspan="22" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading Leaderboard Data…</td></tr>
       </tbody>
     </table>
   </div>
@@ -976,32 +1015,46 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
 
 <!-- Full View Modal — full-screen team tree -->
 <div id="fullViewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;overflow-y:auto;padding:20px">
-  <div style="background:white;border-radius:16px;max-width:860px;margin:0 auto;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+  <div style="background:white;border-radius:16px;max-width:960px;margin:0 auto;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)">
     <div style="background:linear-gradient(135deg,#7c3aed,#5b21b6);padding:18px 22px;display:flex;align-items:center;justify-content:space-between">
       <div>
-        <h4 id="fvTitle" style="color:white;font-size:16px;font-weight:700;margin:0"></h4>
-        <div id="fvSubtitle" style="color:rgba(255,255,255,.75);font-size:12px;margin-top:3px"></div>
+        <div id="fvRankTag" style="display:inline-flex;align-items:center;background:#fef3c7;color:#b45309;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:800;letter-spacing:0.06em;margin-bottom:4px">★ 1★ CHANNEL PARTNER ★</div>
+        <h4 id="fvTitle" style="color:white;font-size:18px;font-weight:800;margin:0"></h4>
+        <div id="fvSubtitle" style="color:rgba(255,255,255,.9);font-size:12.5px;margin-top:3px"></div>
       </div>
       <button onclick="closeFullViewModal()" style="background:rgba(255,255,255,.2);border:none;color:white;width:34px;height:34px;border-radius:8px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center"><i class="fas fa-times"></i></button>
     </div>
     <div style="padding:22px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:16px;margin-bottom:20px">
         <div style="background:#f5f3ff;border-radius:10px;padding:14px 16px">
           <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px"><i class="fas fa-arrow-up me-1"></i>Upline Chain</div>
           <div id="fvUpline"></div>
         </div>
         <div style="background:#f0fdf4;border-radius:10px;padding:14px 16px">
-          <div style="font-size:11px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px"><i class="fas fa-sitemap me-1"></i>Downline Summary</div>
+          <div style="font-size:11px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px"><i class="fas fa-sitemap me-1"></i>Downline &amp; Performance Summary</div>
           <div id="fvDownlineSummary"></div>
         </div>
       </div>
       <div style="background:#fafafa;border-radius:10px;padding:16px;border:1px solid #e5e7eb">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
-          <div style="font-size:12px;font-weight:700;color:#374151"><i class="fas fa-project-diagram me-1" style="color:#7c3aed"></i>Full Downline Tree (up to 3 levels)</div>
-          <div style="display:flex;align-items:center;gap:8px;flex:1;max-width:360px;min-width:200px">
-            <div style="position:relative;flex:1">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+          <div style="font-size:13px;font-weight:800;color:#374151"><i class="fas fa-project-diagram me-1" style="color:#7c3aed"></i>Full Downline Tree (up to 3 levels)</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <select id="fvRankFilter" onchange="fvSearch()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:white">
+              <option value="">All Ranks</option>
+              <option value="1">1★ Channel Partner (5.0%)</option>
+              <option value="2">2★ Manager (6.5%)</option>
+              <option value="3">3★ Zonal Manager (7.5%)</option>
+              <option value="4">4★ Regional Manager (8.25%)</option>
+              <option value="5">5★ Director (8.5%)</option>
+            </select>
+            <select id="fvStatusFilter" onchange="fvSearch()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:white">
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <div style="position:relative;min-width:190px">
               <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:12px;pointer-events:none"></i>
-              <input id="fvSearchInput" type="text" placeholder="Search by name or VGK code…"
+              <input id="fvSearchInput" type="text" placeholder="Search by name or code…"
                 oninput="fvSearch()" autocomplete="off"
                 style="width:100%;padding:7px 10px 7px 30px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12.5px;background:white;box-sizing:border-box;outline:none"
                 onfocus="this.style.borderColor='#7c3aed'" onblur="this.style.borderColor='#e5e7eb'">
@@ -1606,6 +1659,8 @@ function resetFilters() {
   if (desigEl) desigEl.value = '';
   const catEl = document.getElementById('categoryFilter');
   if (catEl) catEl.value = '';
+  const eligEl = document.getElementById('eligibilityFilter');
+  if (eligEl) eligEl.value = '';
   const regByEl = document.getElementById('regByFilter');
   if (regByEl) regByEl.value = '';
   const refEl = document.getElementById('referrerFilter');
@@ -1722,6 +1777,7 @@ function _tptReset() {
   if (document.getElementById('tptSearch')) document.getElementById('tptSearch').value = '';
   if (document.getElementById('tptCompany')) document.getElementById('tptCompany').value = '';
   if (document.getElementById('tptCategory')) document.getElementById('tptCategory').value = '';
+  if (document.getElementById('tptRankFilter')) document.getElementById('tptRankFilter').value = '';
   if (document.getElementById('tptRegBy')) document.getElementById('tptRegBy').value = '';
   if (document.getElementById('tptReferredBy')) document.getElementById('tptReferredBy').value = '';
   if (document.getElementById('tptDateFrom')) document.getElementById('tptDateFrom').value = '';
@@ -1741,11 +1797,12 @@ async function loadTopPartnersTable(page = 1) {
   const body = document.getElementById('tptBody');
   if (!body) return;
   
-  body.innerHTML = `<tr><td colspan="18" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading Leaderboard Data…</td></tr>`;
+  body.innerHTML = `<tr><td colspan="22" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading Leaderboard Data…</td></tr>`;
 
   const search = document.getElementById('tptSearch')?.value?.trim() || '';
   const companyId = document.getElementById('tptCompany')?.value || '';
   const categoryId = document.getElementById('tptCategory')?.value || '';
+  const rankFilter = document.getElementById('tptRankFilter')?.value || '';
   const regBy = document.getElementById('tptRegBy')?.value?.trim() || '';
   const referredBy = document.getElementById('tptReferredBy')?.value?.trim() || '';
   const dateFrom = document.getElementById('tptDateFrom')?.value || '';
@@ -1755,6 +1812,7 @@ async function loadTopPartnersTable(page = 1) {
   if (search) url += `&search=${encodeURIComponent(search)}`;
   if (companyId) url += `&company_id=${companyId}`;
   if (categoryId) url += `&category_id=${encodeURIComponent(categoryId)}`;
+  if (rankFilter) url += `&rank_level=${encodeURIComponent(rankFilter)}`;
   if (regBy) url += `&reg_by=${encodeURIComponent(regBy)}`;
   if (referredBy) url += `&referred_by=${encodeURIComponent(referredBy)}`;
   if (_tptPeriod === 'custom' && dateFrom && dateTo) {
@@ -1770,28 +1828,43 @@ async function loadTopPartnersTable(page = 1) {
     _tptLoaded = true;
 
     // Render KPI Cards & Team Performance Grid
-    _renderTptKpis(partners, data.total_count || 0, data.team_summary || {});
+    _renderTptKpis(partners, data.total_count || 0, data.team_summary || {}, data.rank_summary || {});
 
     if (partners.length === 0) {
-      body.innerHTML = `<tr><td colspan="18" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-inbox me-2"></i>No partner performance data found for the selected filters.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="22" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-inbox me-2"></i>No partner performance data found for the selected filters.</td></tr>`;
       document.getElementById('tptPagination').innerHTML = '';
       return;
     }
 
     const inr = n => '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
 
-    body.innerHTML = partners.map(p => {
-      const rankBadge = p.rank <= 3 
-        ? `<span style="background:${p.rank===1?'#fef3c7':(p.rank===2?'#f1f5f9':'#ffedd5')};color:${p.rank===1?'#d97706':(p.rank===2?'#475569':'#c2410c')};padding:2px 8px;border-radius:12px;font-weight:800">🥇 ${p.rank}</span>`
-        : `<span style="color:#6b7280;font-weight:700">#${p.rank}</span>`;
+    body.innerHTML = partners.map((p, index) => {
+      const seqRank = (page - 1) * 50 + index + 1;
+      const rankBadge = seqRank <= 3 
+        ? `<span style="background:${seqRank===1?'#fef3c7':(seqRank===2?'#f1f5f9':'#ffedd5')};color:${seqRank===1?'#d97706':(seqRank===2?'#475569':'#c2410c')};padding:2px 8px;border-radius:12px;font-weight:800">${seqRank===1?'🥇 1':(seqRank===2?'🥈 2':'🥉 3')}</span>`
+        : `<span style="color:#6b7280;font-weight:700">#${seqRank}</span>`;
 
       return `<tr style="border-bottom:1px solid #f3f4f6;transition:background .15s" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background=''">
         <td style="padding:10px 12px;text-align:center">${rankBadge}</td>
         <td style="padding:10px 12px;font-weight:700;color:#7c3aed"><a href="javascript:void(0)" onclick="_openPartnerDrawer(${p.id})" style="color:#7c3aed;text-decoration:none">${p.code}</a></td>
         <td style="padding:10px 12px;font-weight:700;color:#111827">${p.name}</td>
 
+        <!-- RANK & CURRENT MONTH PERFORMANCE Cells -->
+        <td style="padding:10px 8px;text-align:center;background:#f5f3ff;border-left:2px solid #ddd6fe">
+          <span style="font-weight:800;color:#7c3aed;background:#ede9fe;padding:2px 7px;border-radius:6px;font-size:10.5px;white-space:nowrap"><i class="fas fa-star me-1" style="color:#d97706"></i>${p.rank_display || '1★ Channel Partner'}</span>
+        </td>
+        <td style="padding:10px 8px;text-align:center;background:#f5f3ff">
+          <span style="font-weight:800;color:#059669;background:#dcfce7;padding:2px 7px;border-radius:6px;font-size:10.5px">${(p.rank_slab_pct||5.0).toFixed(2)}%</span>
+        </td>
+        <td style="padding:10px 8px;text-align:right;background:#f5f3ff">
+          <strong style="color:${(p.current_month_earning||0)>0?'#047857':'#9ca3af'};font-size:11.5px">${(p.current_month_earning||0)>0 ? inr(p.current_month_earning) : '—'}</strong>
+        </td>
+        <td style="padding:10px 8px;text-align:center;background:#f5f3ff;border-right:2px solid #ddd6fe">
+          <span style="font-weight:800;color:#1e40af;background:#dbeafe;padding:2px 7px;border-radius:6px;font-size:10.5px;white-space:nowrap" title="Installed: ${p.eligible_files_installed || 0} / Total: ${p.eligible_files_total || 0}"><i class="fas fa-check-circle me-1" style="color:#10b981"></i>${p.eligible_files_installed || 0} / ${p.eligible_files_total || 0}</span>
+        </td>
+
         <!-- SELF PERFORMANCE Cells -->
-        <td style="padding:10px 8px;text-align:center;font-weight:800;color:#1d4ed8;background:#eff6ff;border-left:2px solid #bfdbfe">${p.total_leads || 0}</td>
+        <td style="padding:10px 8px;text-align:center;font-weight:800;color:#1d4ed8;background:#eff6ff">${p.total_leads || 0}</td>
         <td style="padding:10px 8px;text-align:center;font-weight:700;color:#c2410c;background:#eff6ff">${p.submits_count || 0}</td>
         <td style="padding:10px 8px;text-align:right;font-weight:700;color:#9a3412;background:#eff6ff">${(p.submits_val || 0) > 0 ? inr(p.submits_val) : '—'}</td>
         <td style="padding:10px 8px;text-align:center;font-weight:700;color:#0369a1;background:#eff6ff">${p.dvr_count || 0}</td>
@@ -1799,13 +1872,13 @@ async function loadTopPartnersTable(page = 1) {
         <td style="padding:10px 8px;text-align:right;font-weight:700;color:#059669;background:#eff6ff;border-right:2px solid #bfdbfe">${(p.overall_dvr_val || 0) > 0 ? inr(p.overall_dvr_val) : '—'}</td>
 
         <!-- DIRECT TEAM PERFORMANCE Cells -->
-        <td style="padding:10px 8px;text-align:center;font-weight:800;color:#6d28d9;background:#f5f3ff">${(p.team_added || 0) > 0 ? `<span style="background:#ede9fe;padding:2px 8px;border-radius:10px">${p.team_added}</span>` : '0'}</td>
-        <td style="padding:10px 8px;text-align:center;font-weight:800;color:#4338ca;background:#f5f3ff">${p.team_leads || 0}</td>
-        <td style="padding:10px 8px;text-align:center;font-weight:700;color:#6d28d9;background:#f5f3ff">${p.team_submits_count || 0}</td>
-        <td style="padding:10px 8px;text-align:right;font-weight:700;color:#5b21b6;background:#f5f3ff">${(p.team_submits_val || 0) > 0 ? inr(p.team_submits_val) : '—'}</td>
-        <td style="padding:10px 8px;text-align:center;font-weight:700;color:#0369a1;background:#f5f3ff">${p.team_dvr_count || 0}</td>
-        <td style="padding:10px 8px;text-align:right;font-weight:700;color:#0284c7;background:#f5f3ff">${(p.team_dvr_val || 0) > 0 ? inr(p.team_dvr_val) : '—'}</td>
-        <td style="padding:10px 8px;text-align:right;font-weight:700;color:#059669;background:#f5f3ff;border-right:2px solid #c7d2fe">${(p.team_total_received_val || 0) > 0 ? inr(p.team_total_received_val) : '—'}</td>
+        <td style="padding:10px 8px;text-align:center;font-weight:800;color:#6d28d9;background:#fdf4ff">${(p.team_added || 0) > 0 ? `<span style="background:#ede9fe;padding:2px 8px;border-radius:10px">${p.team_added}</span>` : '0'}</td>
+        <td style="padding:10px 8px;text-align:center;font-weight:800;color:#4338ca;background:#fdf4ff">${p.team_leads || 0}</td>
+        <td style="padding:10px 8px;text-align:center;font-weight:700;color:#6d28d9;background:#fdf4ff">${p.team_submits_count || 0}</td>
+        <td style="padding:10px 8px;text-align:right;font-weight:700;color:#5b21b6;background:#fdf4ff">${(p.team_submits_val || 0) > 0 ? inr(p.team_submits_val) : '—'}</td>
+        <td style="padding:10px 8px;text-align:center;font-weight:700;color:#0369a1;background:#fdf4ff">${p.team_dvr_count || 0}</td>
+        <td style="padding:10px 8px;text-align:right;font-weight:700;color:#0284c7;background:#fdf4ff">${(p.team_dvr_val || 0) > 0 ? inr(p.team_dvr_val) : '—'}</td>
+        <td style="padding:10px 8px;text-align:right;font-weight:700;color:#059669;background:#fdf4ff;border-right:2px solid #f0abfc">${(p.team_total_received_val || 0) > 0 ? inr(p.team_total_received_val) : '—'}</td>
 
         <!-- Win Rate -->
         <td style="padding:10px 12px;text-align:center;background:#f0fdf4">
@@ -1818,11 +1891,11 @@ async function loadTopPartnersTable(page = 1) {
 
   } catch (err) {
     console.error('[TPT_LOAD_ERR]', err);
-    body.innerHTML = `<tr><td colspan="18" style="text-align:center;padding:40px;color:#ef4444"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load leaderboard data: ${err.message}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="22" style="text-align:center;padding:40px;color:#ef4444"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load leaderboard data: ${err.message}</td></tr>`;
   }
 }
 
-function _renderTptKpis(partners, totalCount, teamSummary = {}) {
+function _renderTptKpis(partners, totalCount, teamSummary = {}, rankSummary = {}) {
   const container = document.getElementById('tptKpiGrid');
   if (!container) return;
 
@@ -1832,26 +1905,47 @@ function _renderTptKpis(partners, totalCount, teamSummary = {}) {
   const avgWinRate = partners.length > 0 ? (partners.reduce((sum, p) => sum + p.win_rate, 0) / partners.length).toFixed(1) : 0;
   const inr = n => '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
 
+  const r1 = rankSummary.rank_1 || partners.filter(p=>p.rank_num===1).length;
+  const r2 = rankSummary.rank_2 || partners.filter(p=>p.rank_num===2).length;
+  const r3 = rankSummary.rank_3 || partners.filter(p=>p.rank_num===3).length;
+  const r4 = rankSummary.rank_4 || partners.filter(p=>p.rank_num===4).length;
+  const r5 = rankSummary.rank_5 || partners.filter(p=>p.rank_num===5).length;
+
   container.innerHTML = `
-    <div style="background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
+    <div style="background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border-top:3px solid #7c3aed">
       <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase">Top Partners</div>
       <div style="font-size:22px;font-weight:800;color:#7c3aed">${totalCount}</div>
+      <div style="font-size:10.5px;color:#6b7280;margin-top:3px">Overall Directory</div>
     </div>
-    <div style="background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
+    <div style="background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border-top:3px solid #6366f1">
+      <div style="font-size:10px;font-weight:700;color:#6366f1;text-transform:uppercase">Rank Distribution</div>
+      <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-top:4px">
+        <span style="font-size:10px;font-weight:800;background:#ede9fe;color:#7c3aed;padding:2px 6px;border-radius:4px" title="1★ Channel Partner (5.0%)">1★: ${r1}</span>
+        <span style="font-size:10px;font-weight:800;background:#dcfce7;color:#059669;padding:2px 6px;border-radius:4px" title="2★ Manager (6.5%)">2★: ${r2}</span>
+        <span style="font-size:10px;font-weight:800;background:#fef3c7;color:#d97706;padding:2px 6px;border-radius:4px" title="3★ Zonal Manager (7.5%)">3★: ${r3}</span>
+        <span style="font-size:10px;font-weight:800;background:#ffedd5;color:#c2410c;padding:2px 6px;border-radius:4px" title="4★ Regional Manager (8.25%)">4★: ${r4}</span>
+        <span style="font-size:10px;font-weight:800;background:#fee2e2;color:#dc2626;padding:2px 6px;border-radius:4px" title="5★ Director (8.5%)">5★: ${r5}</span>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border-top:3px solid #1d4ed8">
       <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase">Total Leads</div>
       <div style="font-size:22px;font-weight:800;color:#1d4ed8">${totalLeads}</div>
+      <div style="font-size:10.5px;color:#6b7280;margin-top:3px">Direct Sourced</div>
     </div>
-    <div style="background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
+    <div style="background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border-top:3px solid #059669">
       <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase">Won Value</div>
       <div style="font-size:22px;font-weight:800;color:#059669">${inr(totalWonVal)}</div>
+      <div style="font-size:10.5px;color:#6b7280;margin-top:3px">Closed Deals</div>
     </div>
-    <div style="background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
+    <div style="background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border-top:3px solid #0d9488">
       <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase">Completed Value</div>
       <div style="font-size:22px;font-weight:800;color:#0d9488">${inr(totalCompVal)}</div>
+      <div style="font-size:10.5px;color:#6b7280;margin-top:3px">Installed & Subsidy</div>
     </div>
-    <div style="background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
+    <div style="background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border-top:3px solid #d97706">
       <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase">Avg Win Rate</div>
       <div style="font-size:22px;font-weight:800;color:#d97706">${avgWinRate}%</div>
+      <div style="font-size:10.5px;color:#6b7280;margin-top:3px">Conversion Rate</div>
     </div>
   `;
 
@@ -2416,6 +2510,7 @@ function _iedRenderTable(rows){
   const tL3        = rows.reduce((s,r)=>s+(r.l3_extended||0),0);
   const tL4        = rows.reduce((s,r)=>s+(r.l4_core||0),0);
   const tL5        = rows.reduce((s,r)=>s+(r.l5_support||0),0);
+  const tL6        = rows.reduce((s,r)=>s+(r.l6_showroom||0),0);
   const tL0        = rows.reduce((s,r)=>s+(r.l0_bonus||0),0);
   const tGross     = rows.reduce((s,r)=>s+(r.gross_earned||0),0);
   const tNet       = rows.reduce((s,r)=>s+(r.net_earning!==undefined?r.net_earning:Math.round((r.gross_earned||0)*0.9)),0);
@@ -2433,6 +2528,7 @@ function _iedRenderTable(rows){
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#0d9488">${tL3>0?_meInr(tL3):'—'}</td>
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#d97706">${tL4>0?_meInr(tL4):'—'}</td>
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#db2777">${tL5>0?_meInr(tL5):'—'}</td>
+    <td style="padding:8px 12px;text-align:right;font-weight:800;color:#c026d3">${tL6>0?_meInr(tL6):'—'}</td>
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#374151">${_meInr(tGross)}</td>
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#059669">${_meInr(tNet)}</td>
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#059669">${_meInr(tRcv)}</td>
@@ -2970,7 +3066,7 @@ function _renderMeDetailTable(partnerId){
             const _lvlColor = {0:'#6b7280',1:'#7c3aed',2:'#1d4ed8',3:'#0d9488',4:'#d97706',5:'#db2777',6:'#c026d3'};
             const lvlC = _lvlColor[e.level]||'#6b7280';
             const lvlLabelText = _lvLvlLabel[e.level] || (e.level ? 'L'+e.level : '—');
-            const kindLabelText = _getIncomeTypeLabel(e.kind);
+            const kindLabelText = _getIncomeTypeLabel(e.kind, e.community_id, e.community_event_name, e.level);
             
             const _k = String(e.kind || 'COMMISSION').toUpperCase();
             const isComm   = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
@@ -3123,10 +3219,12 @@ const _ME_KIND_LABELS = {
   'REFERRAL_BONUS': 'Referral Bonus'
 };
 
-function _getIncomeTypeLabel(kind, communityId, eventName) {
+function _getIncomeTypeLabel(kind, communityId, eventName, level) {
   if (communityId) return eventName || 'Community Service';
+  if (level === 5 && (!kind || String(kind).toUpperCase() === 'COMMISSION')) return 'L5 Support';
   if (!kind) return 'Final Comm.';
   const k = String(kind).toUpperCase();
+  if (level === 5 && k === 'COMMISSION') return 'L5 Support';
   return _ME_KIND_LABELS[k] || kind.replace(/_/g, ' ');
 }
 
@@ -3982,11 +4080,13 @@ async function loadMembers(page = 1) {
   const status = document.getElementById('statusFilter')?.value ?? '';
   const desigFilter = (document.getElementById('designationFilter')?.value || '').trim();
   const categoryFilter = (document.getElementById('categoryFilter')?.value || '').trim();
+  const eligFilter = (document.getElementById('eligibilityFilter')?.value || '').trim();
   let url = API + '/vgk/members?page=' + page + '&page_size=25';
   if (search) url += '&search=' + encodeURIComponent(search);
   if (status !== '') url += '&is_active=' + status;
-  if (desigFilter) url += '&designation_tier=' + encodeURIComponent(desigFilter);
+  if (desigFilter) url += '&rank_level=' + encodeURIComponent(desigFilter) + '&designation_tier=' + encodeURIComponent(desigFilter);
   if (categoryFilter) url += '&category_id=' + encodeURIComponent(categoryFilter);
+  if (eligFilter) url += '&eligibility_filter=' + encodeURIComponent(eligFilter);
   if (window._regPeriod) url += '&reg_period=' + encodeURIComponent(window._regPeriod);
   if (window._regMonth) {
     const [yr, mo] = window._regMonth.split('-').map(Number);
@@ -3999,7 +4099,7 @@ async function loadMembers(page = 1) {
   const referrerFilter = (document.getElementById('referrerFilter')?.value || '').trim();
   if (referrerFilter) url += '&referred_by=' + encodeURIComponent(referrerFilter);
 
-  tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="28" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
   try {
     const r = await staffFetch(url);
     const d = await r.json();
@@ -4007,28 +4107,34 @@ async function loadMembers(page = 1) {
     const tb = document.getElementById('totalBadge');
     if (tb) tb.textContent = d.total || 0;
     const membersList = d.data || d.members || [];
-    if (!membersList.length) { tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:30px;color:#9ca3af">No Channel Partners found</td></tr>'; }
+    if (!membersList.length) { tbody.innerHTML = '<tr><td colspan="28" style="text-align:center;padding:30px;color:#9ca3af">No Channel Partners found</td></tr>'; }
     else {
       membersList.forEach(m => { (window._vgkMemberCache = window._vgkMemberCache || {})[m.id] = m; });
-      tbody.innerHTML = membersList.map(m => {
+      tbody.innerHTML = membersList.map((m, index) => {
+        const rowNum = (page - 1) * 25 + index + 1;
         const ptsUsed = Number(m.points_utilised || 0);
         const earnings = Number(m.confirmed_income_total || 0);
+        const cmEarnings = Number(m.current_month_earning || 0);
         const loginCount = Number(m.login_count || 0);
         return `<tr onclick="openSidePanel(${m.id})">
+          <td style="text-align:center;font-size:11.5px;font-weight:700;color:#6b7280">${rowNum}</td>
           <td style="font-size:11px;color:#374151;white-space:nowrap;font-weight:600">${fmtDate(m.created_at)}</td>
           <td style="font-size:11px;color:#6b7280;white-space:nowrap" title="${m.registered_by_emp_code||''}">${m.registered_by_name ? '<span style="font-size:11px">' + m.registered_by_name + '</span>' : (m.registered_by_emp_code ? '<span style="font-family:monospace;font-size:10.5px;color:#7c3aed">' + m.registered_by_emp_code + '</span>' : '<span style="color:#d1d5db">—</span>')}</td>
           <td><strong style="color:#7c3aed">${m.partner_code}</strong></td>
           <td><div style="display:flex;align-items:center;gap:6px"><span>${m.partner_name}</span><button onclick="event.stopPropagation(); generateMemberPoster('${m.id}')" style="width:22px;height:22px;border-radius:5px;border:1px solid #d1fae5;background:#ecfdf5;cursor:pointer;font-size:10px;color:#059669;display:inline-flex;align-items:center;justify-content:center" title="Generate Achievement Poster"><i class="fas fa-image"></i></button></div></td>
-          <td onclick="event.stopPropagation()"><button onclick="openExecutiveMemberEarningModal('${m.id}')" style="padding:4px 10px;font-size:11px;font-weight:700;border-radius:6px;border:1px solid #c084fc;background:#faf5ff;color:#7e22ce;cursor:pointer;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 2px rgba(126,34,206,0.15)"><i class="fas fa-chart-line"></i> Breakdown</button></td>
           <td>${m.phone || '—'}</td>
-          <td>${m.referrer_name ? '<span style="font-size:11px">' + m.referrer_name + '</span>' : '<span style="color:#d1d5db">—</span>'}</td>
-          <td>${fmtSource(m.registration_source)}</td>
           <td><span class="badge ${m.is_active ? 'badge-active' : 'badge-inactive'}">${m.is_active ? 'Active' : 'Inactive'}</span></td>
+          <td style="white-space:nowrap;background:#f5f3ff"><span style="font-weight:800;color:#7c3aed;background:#ede9fe;padding:3px 8px;border-radius:6px;font-size:11px"><i class="fas fa-star me-1" style="color:#d97706"></i>${m.rank_display || '1★ Channel Partner'}</span></td>
+          <td style="white-space:nowrap;text-align:center;background:#f0fdf4"><span style="font-weight:800;color:#059669;background:#dcfce7;padding:3px 8px;border-radius:6px;font-size:11px">${(m.rank_slab_pct||5.0).toFixed(2)}%</span></td>
+          <td style="text-align:right;white-space:nowrap;background:#ecfdf5"><strong style="color:${cmEarnings>0?'#047857':'#9ca3af'};font-size:12px">${cmEarnings>0 ? fmtInr(cmEarnings) : '₹0'}</strong></td>
+          <td style="text-align:center;white-space:nowrap;background:#fff7ed"><span style="font-weight:700;color:${(m.activated_team_cnt||m.activated_people||0)>0?'#c2410c':'#9ca3af'};background:${(m.activated_team_cnt||m.activated_people||0)>0?'#ffedd5':'#f3f4f6'};padding:3px 8px;border-radius:6px;font-size:11px">${(m.activated_team_cnt !== undefined ? m.activated_team_cnt : (m.activated_people||0))} Member${(m.activated_team_cnt||m.activated_people||0)===1?'':'s'}</span></td>
+          <td style="text-align:center;white-space:nowrap;background:#eff6ff"><span style="font-weight:800;color:#1e40af;background:#dbeafe;padding:3px 8px;border-radius:6px;font-size:11px" title="Installed: ${m.eligible_files_installed || 0} / Total: ${m.eligible_files_total || 0}"><i class="fas fa-check-circle me-1" style="color:#10b981"></i>${m.eligible_files_installed || 0} / ${m.eligible_files_total || 0} Files</span></td>
+          <td style="text-align:right"><span class="earnings-val${earnings === 0 ? ' zero' : ''}">${fmtInr(earnings)}</span></td>
+          <td onclick="event.stopPropagation()"><button onclick="openExecutiveMemberEarningModal('${m.id}')" style="padding:4px 10px;font-size:11px;font-weight:700;border-radius:6px;border:1px solid #c084fc;background:#faf5ff;color:#7e22ce;cursor:pointer;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 2px rgba(126,34,206,0.15)"><i class="fas fa-chart-line"></i> Breakdown</button></td>
           <td><strong>${fmtPts(m.vgk_points_balance)}</strong></td>
           <td><span class="pts-used${ptsUsed === 0 ? ' zero' : ''}">${fmtPts(ptsUsed)}</span></td>
-          <td><span class="earnings-val${earnings === 0 ? ' zero' : ''}">${fmtInr(earnings)}</span></td>
-          <td>${fmtDesignation(m.designation_tier, m.designation_label)}</td>
-          <td style="text-align:center;font-size:12px;font-weight:700;color:${(m.activated_people||0)>0?'#c2410c':'#9ca3af'}">${m.activated_people||0}</td>
+          <td>${m.referrer_name ? '<span style="font-size:11px">' + m.referrer_name + '</span>' : '<span style="color:#d1d5db">—</span>'}</td>
+          <td>${fmtSource(m.registration_source)}</td>
           <td style="text-align:right;font-size:12px;font-weight:700;color:${(m.src_revenue||0)>0?'#059669':'#9ca3af'}">${(m.src_revenue||0)>0?fmtInr(m.src_revenue):'₹0'}</td>
           <td style="text-align:center;font-size:12px;font-weight:700;color:${(m.leads_total||0)>0?'#1d4ed8':'#9ca3af'}">${m.leads_total||0}</td>
           <td style="text-align:center;font-size:12px;font-weight:700;color:${(m.leads_won||0)>0?'#166534':'#9ca3af'}">${m.leads_won||0}</td>
@@ -4115,12 +4221,14 @@ function _fvHl(text, q) {
 
 function fvSearch() {
   const q = (document.getElementById('fvSearchInput')?.value || '').trim();
+  const rankVal = document.getElementById('fvRankFilter')?.value || '';
+  const statusVal = document.getElementById('fvStatusFilter')?.value || '';
   const treeEl = document.getElementById('fvTree');
   const countEl = document.getElementById('fvSearchCount');
   const clearBtn = document.getElementById('fvSearchClearBtn');
-  if (clearBtn) clearBtn.style.display = q ? '' : 'none';
+  if (clearBtn) clearBtn.style.display = (q || rankVal || statusVal) ? '' : 'none';
 
-  if (!q) {
+  if (!q && !rankVal && !statusVal) {
     // Restore original tree view
     _fvNodeCounter = 0;
     if (_spTreeData && _spTreeData.success && _spTreeData.data.downline) {
@@ -4132,15 +4240,18 @@ function fvSearch() {
   }
 
   const ql = q.toLowerCase();
-  const matches = _fvAllNodes.filter(({ node }) =>
-    (node.partner_code || '').toLowerCase().includes(ql) ||
-    (node.partner_name  || '').toLowerCase().includes(ql)
-  );
+  const inr = n => '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
+  const matches = _fvAllNodes.filter(({ node }) => {
+    const matchText = !q || (node.partner_code || '').toLowerCase().includes(ql) || (node.partner_name || '').toLowerCase().includes(ql);
+    const matchRank = !rankVal || String(node.rank_num) === rankVal;
+    const matchStatus = !statusVal || (statusVal === 'active' ? node.is_active : !node.is_active);
+    return matchText && matchRank && matchStatus;
+  });
 
   if (countEl) countEl.textContent = matches.length ? `${matches.length} result${matches.length !== 1 ? 's' : ''}` : '0 results';
 
   if (!matches.length) {
-    treeEl.innerHTML = `<div style="text-align:center;padding:24px;color:#9ca3af"><i class="fas fa-search me-2"></i>No members match "<strong>${q.replace(/</g,'&lt;')}</strong>"</div>`;
+    treeEl.innerHTML = `<div style="text-align:center;padding:24px;color:#9ca3af"><i class="fas fa-search me-2"></i>No members match the selected filters.</div>`;
     return;
   }
 
@@ -4152,13 +4263,21 @@ function fvSearch() {
       const activeFg  = node.is_active ? '#065f46' : '#991b1b';
       const activeLbl = node.is_active ? 'Active' : 'Inactive';
       const directCount = node.children ? node.children.length : 0;
+      const rankBadge = `<span style="padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:800;background:#ede9fe;color:#7c3aed;white-space:nowrap"><i class="fas fa-star me-1" style="color:#d97706"></i>${node.rank_display || '1★ Channel Partner'}</span>`;
+      const slabBadge = `<span style="padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:800;background:#dcfce7;color:#059669">${(node.rank_slab_pct || 5.0).toFixed(2)}%</span>`;
+      const payoutBadge = (node.current_month_earning || 0) > 0 ? `<span style="padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:800;background:#ecfdf5;color:#047857"><i class="fas fa-rupee-sign me-1"></i>${inr(node.current_month_earning)}</span>` : '';
+      const filesBadge = `<span style="padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:800;background:#eff6ff;color:#1e40af;white-space:nowrap" title="Installed: ${node.eligible_files_installed||0} / Total: ${node.eligible_files_total||0}"><i class="fas fa-check-circle me-1" style="color:#10b981"></i>${node.eligible_files_installed || 0} / ${node.eligible_files_total || 0} Files</span>`;
+
       return `<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:7px 12px;background:white;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.05)">
         <span style="font-size:10px;font-weight:800;color:${col};background:${col}18;border-radius:20px;padding:2px 8px;flex-shrink:0">L${level}</span>
         <i class="fas fa-${level===1?'star':level===2?'circle-dot':'circle'}" style="color:${col};font-size:${level===1?13:11}px;flex-shrink:0"></i>
         <strong style="font-size:12.5px;color:#111827">${_fvHl(node.partner_code, q)}</strong>
-        <span style="font-size:12.5px;color:#374151">${_fvHl(node.partner_name || '', q)}</span>
+        <span style="font-size:12.5px;color:#374151;font-weight:600">${_fvHl(node.partner_name || '', q)}</span>
         <span style="padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:${activeBg};color:${activeFg}">${activeLbl}</span>
-        ${node.leads_total > 0 ? `<span style="padding:1px 7px;border-radius:20px;font-size:10px;background:#eff6ff;color:#1e40af;font-weight:700">${node.leads_total} lead${node.leads_total>1?'s':''}</span>` : ''}
+        ${rankBadge}
+        ${slabBadge}
+        ${payoutBadge}
+        ${filesBadge}
         ${directCount > 0 ? `<span style="padding:1px 7px;border-radius:20px;font-size:10px;background:#f5f3ff;color:#7c3aed;font-weight:700">${directCount} direct</span>` : ''}
       </div>`;
     }).join('')
@@ -4168,6 +4287,10 @@ function fvSearch() {
 function fvClearSearch() {
   const inp = document.getElementById('fvSearchInput');
   if (inp) inp.value = '';
+  const rkF = document.getElementById('fvRankFilter');
+  if (rkF) rkF.value = '';
+  const stF = document.getElementById('fvStatusFilter');
+  if (stF) stF.value = '';
   fvSearch();
 }
 
@@ -4185,12 +4308,21 @@ function renderFvTreeNode(node, level) {
   if (!node.children || !node.children.length) return '';
   const colors = ['#7c3aed','#059669','#d97706'];
   const color = colors[level % colors.length];
+  const inr = n => '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
+
   return node.children.map(c => {
     const nid = ++_fvNodeCounter;
     const childCount = c.children ? c.children.length : 0;
     const hasChildren = childCount > 0;
     const childHtml = renderFvTreeNode(c, level + 1);
     const badge = `<span style="padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:${c.is_active?'#d1fae5':'#fee2e2'};color:${c.is_active?'#065f46':'#991b1b'}">${c.is_active?'Active':'Inactive'}</span>`;
+
+    // Performance metrics badges
+    const rankBadge = `<span style="padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:800;background:#ede9fe;color:#7c3aed;white-space:nowrap"><i class="fas fa-star me-1" style="color:#d97706"></i>${c.rank_display || '1★ Channel Partner'}</span>`;
+    const slabBadge = `<span style="padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:800;background:#dcfce7;color:#059669">${(c.rank_slab_pct || 5.0).toFixed(2)}%</span>`;
+    const payoutBadge = (c.current_month_earning || 0) > 0 ? `<span style="padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:800;background:#ecfdf5;color:#047857"><i class="fas fa-rupee-sign me-1"></i>${inr(c.current_month_earning)}</span>` : '';
+    const filesBadge = `<span style="padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:800;background:#eff6ff;color:#1e40af;white-space:nowrap" title="Installed Files: ${c.eligible_files_installed||0} / Total Files: ${c.eligible_files_total||0}"><i class="fas fa-check-circle me-1" style="color:#10b981"></i>${c.eligible_files_installed || 0} / ${c.eligible_files_total || 0} Files</span>`;
+
     // Toggle button — only shown when node has children
     const toggleBtn = hasChildren
       ? `<button id="fv-btn-${nid}" onclick="fvToggle(${nid})" title="Collapse"
@@ -4201,10 +4333,13 @@ function renderFvTreeNode(node, level) {
         ${toggleBtn}
         <i class="fas fa-${level===0?'star':level===1?'circle-dot':'circle'}" style="color:${color};font-size:${level===0?13:11}px;flex-shrink:0"></i>
         <strong style="font-size:12.5px;color:#111827">${c.partner_code}</strong>
-        <span style="font-size:12.5px;color:#374151">${c.partner_name}</span>
+        <span style="font-size:12.5px;color:#374151;font-weight:600">${c.partner_name}</span>
         ${badge}
+        ${rankBadge}
+        ${slabBadge}
+        ${payoutBadge}
+        ${filesBadge}
         <span style="font-size:10.5px;color:#9ca3af">L${level+1}</span>
-        ${c.leads_total > 0 ? `<span style="padding:1px 7px;border-radius:20px;font-size:10px;background:#eff6ff;color:#1e40af;font-weight:700">${c.leads_total} lead${c.leads_total>1?'s':''}</span>` : ''}
         ${hasChildren ? `<span style="padding:1px 7px;border-radius:20px;font-size:10px;background:#f5f3ff;color:#7c3aed;font-weight:700">${childCount} direct</span>` : ''}
       </div>
       ${hasChildren ? `<div id="fv-ch-${nid}">${childHtml}</div>` : childHtml}
@@ -4216,38 +4351,61 @@ function openFullViewModal() {
   if (!_spMember || !_spTreeData) return;
   const m = _spMember;
   const treeD = _spTreeData;
+  const inr = n => '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
+
+  const memberData = treeD.data.member || m;
+  const rankTag = document.getElementById('fvRankTag');
+  if (rankTag) {
+    rankTag.innerHTML = `★ ${(memberData.rank_display || '1★ Channel Partner').toUpperCase()} ★`;
+  }
   document.getElementById('fvTitle').textContent = `${m.partner_name} (${m.partner_code})`;
-  document.getElementById('fvSubtitle').textContent = `Team Tree — ${m.vgk_role || 'VGK Associate'}`;
+  document.getElementById('fvSubtitle').innerHTML = `<strong>Current Slab:</strong> ${(memberData.rank_slab_pct || 5.0).toFixed(2)}% &nbsp;|&nbsp; <strong>This Month Payout:</strong> ${inr(memberData.current_month_earning || 0)} &nbsp;|&nbsp; <strong>Eligibility Files:</strong> ${memberData.eligible_files_installed || 0} / ${memberData.eligible_files_total || 0} Files`;
 
   // Upline
   const uplineEl = document.getElementById('fvUpline');
   if (treeD.success && treeD.data.upline && treeD.data.upline.length) {
     uplineEl.innerHTML = treeD.data.upline.map((u, i) => `
-      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #ede9fe">
+      <div style="display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid #ede9fe;flex-wrap:wrap">
         <span style="font-size:10px;color:#7c3aed;font-weight:700">L${i+1}</span>
         <i class="fas fa-arrow-up" style="color:#7c3aed;font-size:11px"></i>
         <strong style="font-size:12.5px">${u.partner_code}</strong>
         <span style="font-size:12.5px;color:#374151">${u.partner_name}</span>
+        <span style="font-size:10px;padding:1px 6px;border-radius:6px;background:#ede9fe;color:#7c3aed;font-weight:800"><i class="fas fa-star me-1" style="color:#d97706"></i>${u.rank_display || '1★ Channel Partner'}</span>
+        <span style="font-size:10px;padding:1px 6px;border-radius:6px;background:#dcfce7;color:#059669;font-weight:800">${(u.rank_slab_pct || 5.0).toFixed(2)}%</span>
         <span style="font-size:10px;padding:1px 6px;border-radius:20px;background:${u.is_active?'#d1fae5':'#fee2e2'};color:${u.is_active?'#065f46':'#991b1b'};font-weight:700">${u.is_active?'A':'I'}</span>
       </div>`).join('');
   } else {
     uplineEl.innerHTML = '<p style="color:#9ca3af;font-size:12px">No upline — root member</p>';
   }
 
-  // Downline summary counts
+  // Downline summary counts & Executive performance
   const summaryEl = document.getElementById('fvDownlineSummary');
   if (treeD.success && treeD.data.downline) {
     const dl = treeD.data.downline;
     const l1 = dl.children ? dl.children.length : 0;
     const l2 = dl.children ? dl.children.reduce((s,c) => s + (c.children ? c.children.length : 0), 0) : 0;
     const l3 = dl.children ? dl.children.reduce((s,c) => s + (c.children ? c.children.reduce((ss,cc) => ss + (cc.children ? cc.children.length : 0), 0) : 0), 0) : 0;
+    const rSum = treeD.data.rank_summary || {};
+    const tSum = treeD.data.team_summary || {};
+
     summaryEl.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-        <div style="text-align:center;background:white;border-radius:8px;padding:10px;border:1px solid #e5e7eb"><div style="font-size:20px;font-weight:800;color:#7c3aed">${l1}</div><div style="font-size:10px;color:#6b7280;font-weight:700">Level 1</div></div>
-        <div style="text-align:center;background:white;border-radius:8px;padding:10px;border:1px solid #e5e7eb"><div style="font-size:20px;font-weight:800;color:#059669">${l2}</div><div style="font-size:10px;color:#6b7280;font-weight:700">Level 2</div></div>
-        <div style="text-align:center;background:white;border-radius:8px;padding:10px;border:1px solid #e5e7eb"><div style="font-size:20px;font-weight:800;color:#d97706">${l3}</div><div style="font-size:10px;color:#6b7280;font-weight:700">Level 3</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        <div style="text-align:center;background:white;border-radius:8px;padding:8px 6px;border:1px solid #e5e7eb"><div style="font-size:18px;font-weight:800;color:#7c3aed">${l1}</div><div style="font-size:10px;color:#6b7280;font-weight:700">Level 1</div></div>
+        <div style="text-align:center;background:white;border-radius:8px;padding:8px 6px;border:1px solid #e5e7eb"><div style="font-size:18px;font-weight:800;color:#059669">${l2}</div><div style="font-size:10px;color:#6b7280;font-weight:700">Level 2</div></div>
+        <div style="text-align:center;background:white;border-radius:8px;padding:8px 6px;border:1px solid #e5e7eb"><div style="font-size:18px;font-weight:800;color:#d97706">${l3}</div><div style="font-size:10px;color:#6b7280;font-weight:700">Level 3</div></div>
       </div>
-      <div style="margin-top:8px;font-size:11px;color:#6b7280;text-align:center">Total: ${l1+l2+l3} team members</div>`;
+      <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:8px">
+        <span style="font-size:9.5px;font-weight:800;background:#ede9fe;color:#7c3aed;padding:2px 5px;border-radius:4px" title="1★ Channel Partner">1★: ${rSum.rank_1 || 0}</span>
+        <span style="font-size:9.5px;font-weight:800;background:#dcfce7;color:#059669;padding:2px 5px;border-radius:4px" title="2★ Manager">2★: ${rSum.rank_2 || 0}</span>
+        <span style="font-size:9.5px;font-weight:800;background:#fef3c7;color:#d97706;padding:2px 5px;border-radius:4px" title="3★ Zonal Manager">3★: ${rSum.rank_3 || 0}</span>
+        <span style="font-size:9.5px;font-weight:800;background:#ffedd5;color:#c2410c;padding:2px 5px;border-radius:4px" title="4★ Regional Manager">4★: ${rSum.rank_4 || 0}</span>
+        <span style="font-size:9.5px;font-weight:800;background:#fee2e2;color:#dc2626;padding:2px 5px;border-radius:4px" title="5★ Director">5★: ${rSum.rank_5 || 0}</span>
+      </div>
+      <div style="font-size:11px;color:#4b5563;display:flex;justify-content:space-between;border-top:1px solid #d1fae5;padding-top:6px">
+        <span><strong>Total Team:</strong> ${l1+l2+l3} members</span>
+        <span><strong>Files:</strong> ${tSum.installed_files || 0}/${tSum.total_files || 0} Installed</span>
+        <span><strong>Payout:</strong> ${inr(tSum.this_month_payout || 0)}</span>
+      </div>`;
   } else {
     summaryEl.innerHTML = '<p style="color:#9ca3af;font-size:12px">No downline data</p>';
   }
@@ -4258,10 +4416,15 @@ function openFullViewModal() {
   // Reset search state each time modal opens
   const fvSrchInp = document.getElementById('fvSearchInput');
   if (fvSrchInp) fvSrchInp.value = '';
+  const fvRkF = document.getElementById('fvRankFilter');
+  if (fvRkF) fvRkF.value = '';
+  const fvStF = document.getElementById('fvStatusFilter');
+  if (fvStF) fvStF.value = '';
   const fvSrchCnt = document.getElementById('fvSearchCount');
   if (fvSrchCnt) fvSrchCnt.textContent = '';
   const fvSrchClr = document.getElementById('fvSearchClearBtn');
   if (fvSrchClr) fvSrchClr.style.display = 'none';
+
   if (treeD.success && treeD.data.downline) {
     _fvAllNodes = _fvFlatten(treeD.data.downline, 1); // build flat list for search
     const html = renderFvTreeNode(treeD.data.downline, 0);
@@ -5982,7 +6145,8 @@ async function generateMemberPoster(partnerId) {
     
     // Fetch full member income details (unfiltered) to populate poster stats, location and customer
     const targetPid = m.id || partnerId;
-    let detailUrl = API + '/vgk/dashboard/member-income-entries?partner_id=' + targetPid;
+    delete _meDetailCache[targetPid];
+    let detailUrl = API + '/vgk/dashboard/member-income-entries?partner_id=' + targetPid + '&_t=' + Date.now();
     
     const r = await staffFetch(detailUrl);
     const d = await r.json();
@@ -5993,7 +6157,7 @@ async function generateMemberPoster(partnerId) {
     window._seniorEntries = [];
     if (m.parent_partner_id) {
       try {
-        const srRes = await staffFetch(API + '/vgk/dashboard/member-income-entries?partner_id=' + m.parent_partner_id);
+        const srRes = await staffFetch(API + '/vgk/dashboard/member-income-entries?partner_id=' + m.parent_partner_id + '&_t=' + Date.now());
         const srData = await srRes.json();
         if (srData.success && srData.data) {
           window._seniorEntries = srData.data;
@@ -6078,35 +6242,91 @@ async function generateMemberPoster(partnerId) {
     }
     const filesDisplay = (installedFiles > 0 ? `${installedFiles}/${activeFiles}` : `${activeFiles}`) + ' FILES';
     
-    const uniquePotentialLeads = {};
+    // Calculate true remaining potential pending on active in-flight leads (Expected Commission + Brand Allowance + Support - Already Paid)
+    const memberRatePct = (m.commission_pct || (m.stars === 2 ? 6.5 : (m.stars === 3 ? 7.5 : (m.stars === 4 ? 8.25 : (m.stars === 5 ? 8.5 : 5.0))))) / 100.0;
+    const activeLeadPendingMap = {};
     entries.forEach(e => {
-      if (e.status !== 'CANCELLED') {
-        const leadId = e.source_lead_id || 0;
-        const lvl = e.level !== null && e.level !== undefined ? e.level : -1;
-        const key = `${leadId}_${lvl}`;
-        const val = e.potential_overall_earning || e.commission_amount || 0;
-        if (!uniquePotentialLeads[key] || val > uniquePotentialLeads[key]) {
-          uniquePotentialLeads[key] = val;
+      if (e.status !== 'CANCELLED' && e.source_lead_id) {
+        const lid = e.source_lead_id;
+        if (!activeLeadPendingMap[lid]) {
+          const dVal = parseFloat(e.deal_value_total || e.deal_value || e.solar_value || 200000);
+          const brandAmt = (e.solar_brand_id === 2 || e.solar_brand_name === 'APS' || e.brand_commission_amount) ? 2000 : 0;
+          const isSupp = (e.level === 5 || e.is_field_support || String(e.vgk_field_support_id) === String(targetPid));
+          activeLeadPendingMap[lid] = { 
+            dealValue: dVal, 
+            brandAllowance: brandAmt,
+            isSupport: isSupp,
+            paid: 0, 
+            hasFinalComm: false 
+          };
+        }
+        if (e.level === 5 || e.is_field_support || String(e.vgk_field_support_id) === String(targetPid)) {
+          activeLeadPendingMap[lid].isSupport = true;
+        }
+        const amt = parseFloat(e.commission_amount || 0);
+        if (e.status === 'PAID' || e.status === 'RELEASED') {
+          activeLeadPendingMap[lid].paid += amt;
+        }
+        if (e.kind === 'COMMISSION' && (e.status === 'PAID' || e.status === 'RELEASED') && e.level === 1) {
+          activeLeadPendingMap[lid].hasFinalComm = true;
         }
       }
     });
-    const grossPotentialEarning = Object.values(uniquePotentialLeads).reduce((a, b) => a + b, 0);
-    const stage1AdvancesSum = entries.filter(e => e.status !== 'CANCELLED' && e.level === 1 && (e.kind === 'ADVANCE' || e.kind === 'DVR_ADVANCE')).reduce((s, e) => s + (parseFloat(e.commission_amount || 0)), 0);
-    const netPotentialEarning = Math.max(0, grossPotentialEarning - stage1AdvancesSum);
+
+    let truePotentialPending = 0;
+    Object.keys(activeLeadPendingMap).forEach(lid => {
+      const item = activeLeadPendingMap[lid];
+      if (!item.hasFinalComm) {
+        let expectedTotal = item.dealValue * memberRatePct;
+        if (item.brandAllowance > 0) expectedTotal += item.brandAllowance;
+        if (item.isSupport) expectedTotal += (item.dealValue * 0.015);
+        const remaining = Math.max(0, expectedTotal - item.paid);
+        truePotentialPending += remaining;
+      }
+    });
 
     const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
     const setChecked = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
 
     setVal('postTitle', 'CONGRATULATIONS');
-    setVal('postSubtitle', m.partner_name || '');
+    const memberName = (m.partner_name || '').toUpperCase();
+    setVal('postSubtitle', memberName);
+
+    const partnerStars = m.stars || (m.current_position === 'Director' ? 5 : (m.current_position === 'Regional Manager' ? 4 : (m.current_position === 'Zonal Manager' || m.current_position === 'Senior Channel Partner' ? 3 : (m.current_position === 'Manager' ? 2 : 1))));
+    
+    let derivedRank = 'Channel Partner';
+    if (m.rank_display) {
+      derivedRank = m.rank_display;
+    } else if (m.current_position && m.current_position !== 'none') {
+      derivedRank = (partnerStars > 1 ? `${partnerStars}★ ` : '') + m.current_position;
+    } else if (partnerStars > 1) {
+      derivedRank = `${partnerStars}★ Channel Partner`;
+    } else {
+      derivedRank = 'Channel Partner';
+    }
+
+    setVal('postRank', derivedRank.toUpperCase());
+
+    const prevChampionBadgeEl = document.getElementById('prevChampionBadge');
+    if (prevChampionBadgeEl) {
+      prevChampionBadgeEl.textContent = partnerStars > 1 ? `🏆 ${partnerStars}★ CHAMPION` : `🏆 CHAMPION`;
+    }
+
+    const prevCelebrationTitleEl = document.getElementById('prevCelebrationTitle');
+    if (prevCelebrationTitleEl) {
+      const starStr = '★'.repeat(partnerStars > 1 ? partnerStars : 2);
+      prevCelebrationTitleEl.textContent = `🎉 👑 ${starStr} CONGRATULATIONS ${starStr} 👑 🎉`;
+    }
     const overallVal = (m.gross_earned !== undefined && m.gross_earned !== null) ? m.gross_earned : (m.net_earning !== undefined && m.net_earning !== null ? m.net_earning : (m.received || 0));
     setVal('postHighlight', '₹' + _meFormatInr(overallVal) + '/-');
     setVal('postFiles', filesDisplay);
     setVal('postOverall', (m.total_team_size || 0) + ' MEMBERS');
     setVal('postTeamBreakup', `L2: ${m.team_l2_count || 0} | L3: ${m.team_l3_count || 0} | L4: ${m.team_l4_count || 0}`);
-    // Member Gross Potential Valuation (calculated from active entries)
-    const potVal = (grossPotentialEarning > 0) ? grossPotentialEarning : 20250;
+
+    const potVal = truePotentialPending;
     setVal('postPotential', '₹' + _meFormatInr(potVal) + '/-');
+    const prevPotEl = document.getElementById('prevPotential');
+    if (prevPotEl) prevPotEl.textContent = '₹' + _meFormatInr(potVal) + '/-';
     setVal('postCustomer', customerName);
     setVal('postLocation', location);
     setVal('postSeniorName', seniorName);
@@ -6131,6 +6351,34 @@ async function generateMemberPoster(partnerId) {
     const seniorPotentialVal = (srNetPotTotal > 0) ? '₹' + _meFormatInr(srNetPotTotal) + '/-' : '₹34,350/-';
     const seniorOverallVal = (srAdvPaidTotal > 0) ? '₹' + _meFormatInr(srAdvPaidTotal) + '/-' : '₹9,000/-';
 
+    let srTodayAmt = 0;
+    const todayIso = new Date().toISOString().split('T')[0];
+    srEntries.forEach(se => {
+      if (se.status !== 'CANCELLED') {
+        const dStr = (se.income_date || se.created_at || '').slice(0, 10);
+        if (dStr === todayIso) {
+          const sGross = parseFloat(se.commission_amount || 0);
+          const sAdv = parseFloat(se.advance_paid || 0);
+          const sBal = (se.balance_gross !== undefined && se.balance_gross !== null) ? parseFloat(se.balance_gross) : Math.max(0, sGross - sAdv);
+          srTodayAmt += (sBal > 0 ? sBal : sGross);
+        }
+      }
+    });
+    if (srTodayAmt === 0) {
+      entries.forEach(e => {
+        if (e.status !== 'CANCELLED' && (e.level === 2 || (e.kind || '').toUpperCase() === 'SENIOR_COMM')) {
+          const dStr = (e.income_date || e.created_at || '').slice(0, 10);
+          if (dStr === todayIso) {
+            const sGross = parseFloat(e.commission_amount || 0);
+            const sAdv = parseFloat(e.advance_paid || 0);
+            const sBal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, sGross - sAdv);
+            srTodayAmt += (sBal > 0 ? sBal : sGross);
+          }
+        }
+      });
+    }
+
+    setVal('postSeniorToday', '₹' + _meFormatInr(srTodayAmt) + '/-');
     setVal('postSeniorPotential', seniorPotentialVal);
     setVal('postSeniorEarning', seniorOverallVal);
     
@@ -6318,10 +6566,12 @@ function recalculateTodayPayout() {
 
   const seniorEntries = window._seniorEntries || [];
   seniorEntries.forEach(se => {
-    if (se.status !== 'CANCELLED' && se.income_date && se.income_date !== 'None') {
-      const d = se.income_date;
-      if (dateFrom && d < dateFrom) return;
-      if (dateTo && d > dateTo) return;
+    if (se.status !== 'CANCELLED') {
+      const d = (se.income_date || se.created_at || '').slice(0, 10);
+      if (d && d !== 'None') {
+        if (dateFrom && d < dateFrom) return;
+        if (dateTo && d > dateTo) return;
+      }
       const sGross = parseFloat(se.commission_amount || 0);
       const sAdv = parseFloat(se.advance_paid || 0);
       const sBal = (se.balance_gross !== undefined && se.balance_gross !== null) ? parseFloat(se.balance_gross) : Math.max(0, sGross - sAdv);
@@ -6331,10 +6581,12 @@ function recalculateTodayPayout() {
 
   if (seniorTodayAmt === 0) {
     entries.forEach(e => {
-      if (e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
-        const d = e.income_date;
-        if (dateFrom && d < dateFrom) return;
-        if (dateTo && d > dateTo) return;
+      if (e.status !== 'CANCELLED') {
+        const d = (e.income_date || e.created_at || '').slice(0, 10);
+        if (d && d !== 'None') {
+          if (dateFrom && d < dateFrom) return;
+          if (dateTo && d > dateTo) return;
+        }
         if (e.level === 2 || (e.kind || '').toUpperCase() === 'SENIOR_COMM') {
           const sGross = parseFloat(e.commission_amount || 0);
           const sAdv = parseFloat(e.advance_paid || 0);
@@ -6485,7 +6737,29 @@ function updatePoster() {
   const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
 
   setTxt('prevTitle', '★ ' + getVal('postTitle').toUpperCase() + ' ★');
-  setTxt('prevSubtitle', getVal('postSubtitle').toUpperCase());
+  const rankVal = (getVal('postRank') || '').toUpperCase().trim();
+  let nameVal = (getVal('postSubtitle') || '').toUpperCase().trim();
+  let finalRank = rankVal;
+
+  if (nameVal.includes('—') || nameVal.includes(' - ')) {
+    const parts = nameVal.includes('—') ? nameVal.split('—') : nameVal.split(' - ');
+    if (!finalRank) finalRank = parts[0].trim().toUpperCase();
+    nameVal = parts.slice(1).join(' - ').trim().toUpperCase();
+  }
+
+  const prevNameEl = document.getElementById('prevName');
+  if (prevNameEl) {
+    prevNameEl.textContent = nameVal || 'MEMBER NAME';
+  }
+
+  const prevRankEl = document.getElementById('prevRank');
+  const prevRankContainerEl = document.getElementById('prevRankContainer');
+  if (prevRankEl) {
+    prevRankEl.textContent = finalRank || 'CHANNEL PARTNER';
+    if (prevRankContainerEl) {
+      prevRankContainerEl.style.display = finalRank ? 'inline-flex' : 'none';
+    }
+  }
   
   const rawHighlight = getVal('postHighlight');
   setTxt('prevHighlight', rawHighlight);
@@ -6766,7 +7040,7 @@ async function capturePosterCanvas(container) {
 
 function downloadPoster() {
   const container = document.getElementById('posterCanvasWrapper');
-  const partnerName = (document.getElementById('prevSubtitle')?.textContent || document.getElementById('prevName')?.textContent || '').trim() || 'Channel_Partner';
+  const partnerName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevName')?.textContent || 'Channel_Partner').trim();
   const spinner = document.getElementById('posterSpinner');
   if (spinner) spinner.style.display = 'flex';
   
@@ -6797,7 +7071,7 @@ function downloadPoster() {
 
 function sharePoster() {
   const container = document.getElementById('posterCanvasWrapper');
-  const partnerName = document.getElementById('prevSubtitle').textContent.trim() || 'Partner';
+  const partnerName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevName')?.textContent || 'Partner').trim();
   const totalPayout = document.getElementById('prevTotalToday').textContent.trim();
   
   const spinner = document.getElementById('posterSpinner');
@@ -6843,39 +7117,60 @@ function sharePoster() {
   });
 }
 
-function shareOnWhatsApp() {
-  const container = document.getElementById('posterCanvasWrapper');
-  const partnerName = document.getElementById('prevSubtitle').textContent.trim();
-  const partnerOverall = document.getElementById('prevHighlight').textContent.trim();
-  const partnerToday = document.getElementById('prevTotalToday').textContent.trim();
+function getPosterShareDetails() {
+  const rawName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevName')?.textContent || '').trim();
+  const rawRank = (document.getElementById('postRank')?.value || document.getElementById('prevRank')?.textContent || '').trim();
+  const partnerName = rawName || 'Channel Partner';
+  const partnerRank = rawRank ? (rawRank.startsWith('★') ? rawRank : `★ ${rawRank} ★`) : '';
+  const partnerOverall = (document.getElementById('postHighlight')?.value || document.getElementById('prevHighlight')?.textContent || '').trim();
+  const partnerToday = (document.getElementById('prevTotalToday')?.textContent || document.getElementById('postTodayPayout')?.value || '').trim();
+  const partnerPotential = (document.getElementById('postPotential')?.value || document.getElementById('prevPotential')?.textContent || '').trim();
 
-  const seniorName = document.getElementById('prevSeniorName').textContent.trim();
-  const seniorOverall = document.getElementById('prevSeniorEarning').textContent.trim();
-  const seniorToday = document.getElementById('prevSeniorToday').textContent.trim();
-
-  const partnerPotential = document.getElementById('prevPotential').textContent.trim();
+  let seniorName = (document.getElementById('postSeniorName')?.value || document.getElementById('prevSeniorName')?.textContent || '').replace(/^Senior\s*:\s*/i, '').trim();
+  const seniorToday = (document.getElementById('postSeniorToday')?.value || document.getElementById('prevSeniorToday')?.textContent || '').trim();
+  const seniorOverall = (document.getElementById('postSeniorEarning')?.value || document.getElementById('prevSeniorEarning')?.textContent || '').trim();
   const prevSeniorPot = document.getElementById('prevSeniorPotential');
-  const seniorPotential = prevSeniorPot ? prevSeniorPot.textContent.trim() : '₹0/-';
+  const seniorPotential = prevSeniorPot ? prevSeniorPot.textContent.trim() : (document.getElementById('postSeniorPotential')?.value || '₹0/-');
 
-  let text = `🎉 *CONGRATULATIONS!* 🎉\n\n`;
-  text += `🌟 *Member Achievement:* 🌟\n`;
-  text += `👤 *Name:* ${partnerName}\n`;
-  text += `💰 *Today's Earning:* ${partnerToday}\n`;
-  text += `📈 *Overall Earning:* ${partnerOverall}\n`;
-  text += `🔮 *Potential Valuation:* ${partnerPotential}\n`;
+  const showSeniorInput = document.getElementById('postShowSenior');
+  const isSeniorVisible = showSeniorInput ? showSeniorInput.checked : (document.getElementById('prevSeniorRow')?.style.display !== 'none');
 
-  // Only add Senior details if a valid senior referrer exists (not empty/dash/none)
-  if (seniorName && seniorName !== '—' && seniorName !== 'NONE') {
-    text += `\n----------------------------------\n\n`;
-    text += `🙌 *Senior Referrer Achievement:* 🙌\n`;
-    text += `👤 *Name:* ${seniorName}\n`;
-    text += `💰 *Today's Earning:* ${seniorToday}\n`;
-    text += `📈 *Overall Earning:* ${seniorOverall}\n`;
-    text += `🔮 *Potential Earning:* ${seniorPotential}\n`;
+  let text = `🎉 *CONGRATULATIONS TO ${partnerName}!* 🎉\n\n`;
+  if (partnerRank) {
+    text += `${partnerRank}\n\n`;
+  }
+  text += `👤 *Member Name:* ${partnerName}\n`;
+  if (partnerToday) {
+    text += `💰 *Today's Payout:* ${partnerToday}\n`;
+  }
+  if (partnerOverall) {
+    text += `📈 *Overall Earning:* ${partnerOverall}\n`;
+  }
+  if (partnerPotential) {
+    text += `🔮 *Potential Valuation:* ${partnerPotential}\n`;
+  }
+  text += `\n`;
+
+  if (isSeniorVisible && seniorName && seniorName !== '—' && seniorName !== 'NONE' && !seniorName.endsWith('—')) {
+    text += `🙌 *Senior Referrer:* ${seniorName}\n`;
+    text += `💰 *Senior Today:* ${seniorToday} | *Overall:* ${seniorOverall}\n`;
+    if (seniorPotential && seniorPotential !== '₹0/-') {
+      text += `🔮 *Senior Potential:* ${seniorPotential}\n`;
+    }
+    text += `\n`;
   }
 
-  text += `\n🚀 Keep up the fantastic work! 🚀\n`;
-  text += `vgk4u.myntreal.com`;
+  text += `🌐 *Official Website:* https://vgk4u.com\n\n`;
+  text += `🚀 *Join VGK4U today & grow your earnings!*`;
+
+  return { partnerName, partnerRank, partnerOverall, partnerToday, partnerPotential, seniorName, seniorToday, seniorOverall, seniorPotential, isSeniorVisible, text };
+}
+
+function shareOnWhatsApp() {
+  const container = document.getElementById('posterCanvasWrapper');
+  const shareDetails = getPosterShareDetails();
+  const partnerName = shareDetails.partnerName;
+  const text = shareDetails.text;
 
   // Open the window immediately to bypass browser popup blockers
   const shareWindow = window.open('', '_blank');
@@ -6943,75 +7238,339 @@ function shareOnWhatsApp() {
   });
 }
 
+function showLiveDispatchStatusModal(targets, partnerName) {
+  const existing = document.getElementById('liveDispatchModal');
+  if (existing) existing.remove();
+
+  window._dispatchTargets = targets;
+
+  function renderRows(type) {
+    return targets.filter(t => t.type === type).map(t => {
+      let badgeStyle = 'background:#f3f4f6;color:#6b7280';
+      let badgeText = 'PENDING';
+      let icon = '<i class="fas fa-spinner fa-spin text-primary"></i>';
+
+      if (t.status === 'sent') {
+        badgeStyle = 'background:#d1fae5;color:#065f46';
+        badgeText = 'SENT ✅';
+        icon = '<i class="fas fa-check-circle text-success" style="font-size:16px"></i>';
+      } else if (t.status === 'error') {
+        badgeStyle = 'background:#fee2e2;color:#991b1b';
+        badgeText = 'FAILED ❌';
+        icon = '<i class="fas fa-times-circle text-danger" style="font-size:16px"></i>';
+      } else if (t.status === 'skipped') {
+        badgeStyle = 'background:#f3f4f6;color:#9ca3af';
+        badgeText = 'SKIPPED';
+        icon = '<i class="fas fa-minus-circle text-muted" style="font-size:16px"></i>';
+      } else if (t.status === 'sending') {
+        badgeStyle = 'background:#e0e7ff;color:#3730a3';
+        badgeText = 'SENDING...';
+      }
+
+      return `
+        <div id="dispRow_${t.id}" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#f9fafb;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0">
+            <div style="flex-shrink:0">${icon}</div>
+            <div style="min-width:0">
+              <div style="font-size:13px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.label}</div>
+              <div style="font-size:11px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.target}</div>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;margin-left:12px">
+            <span style="font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:12px;letter-spacing:0.3px;${badgeStyle}">${badgeText}</span>
+            <div style="font-size:10px;color:#9ca3af;margin-top:2px">${t.msg || ''}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  const html = `
+<div id="liveDispatchModal" style="position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px">
+<div style="background:#fff;border-radius:18px;width:100%;max-width:480px;padding:24px;box-shadow:0 24px 60px rgba(0,0,0,0.35);position:relative">
+  <button onclick="document.getElementById('liveDispatchModal').remove()" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:18px;color:#9ca3af;cursor:pointer">&times;</button>
+  <div style="text-align:center;margin-bottom:18px">
+    <div style="width:52px;height:52px;border-radius:50%;background:#d1fae5;color:#059669;display:inline-flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:8px"><i class="fab fa-whatsapp"></i></div>
+    <h5 style="margin:0;font-size:17.5px;font-weight:800;color:#111827">WhatsApp Dispatch Status</h5>
+    <p style="margin:3px 0 0;font-size:12.5px;color:#6b7280">Broadcasting achievement poster to scanned WhatsApp & channels</p>
+  </div>
+
+  <div style="max-height:360px;overflow-y:auto;padding-right:4px">
+    <div style="font-size:11px;font-weight:800;color:#4b5563;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px"><i class="fas fa-users me-1 text-primary"></i> Members & Direct Contacts</div>
+    ${renderRows('member')}
+
+    <div style="font-size:11px;font-weight:800;color:#4b5563;text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 6px"><i class="fas fa-comments me-1 text-success"></i> Target WhatsApp Groups</div>
+    ${renderRows('group')}
+
+    <div style="font-size:11px;font-weight:800;color:#4b5563;text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 6px"><i class="fas fa-globe me-1 text-info"></i> Website & Login Announcements</div>
+    ${renderRows('portal')}
+  </div>
+
+  <div style="margin-top:18px;display:flex;gap:10px">
+    <button onclick="document.getElementById('liveDispatchModal').remove()" style="flex:1;background:#4f46e5;color:#fff;border:none;padding:11px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer">Done</button>
+  </div>
+</div>
+</div>
+  `;
+
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  document.body.appendChild(div.firstElementChild);
+}
+
+window.updateDispatchStatus = function(id, status, msg) {
+  if (!window._dispatchTargets) return;
+  const t = window._dispatchTargets.find(x => x.id === id);
+  if (t) {
+    t.status = status;
+    t.msg = msg || '';
+  }
+  const modal = document.getElementById('liveDispatchModal');
+  if (modal && window._dispatchTargets) {
+    const partnerName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevSubtitle')?.textContent || '').trim();
+    showLiveDispatchStatusModal(window._dispatchTargets, partnerName);
+  }
+};
+
 async function shareDefaultChannel() {
+  console.log('[MYNTOS SHARE DEBUG] shareDefaultChannel invoked');
   const container = document.getElementById('posterCanvasWrapper');
   if(!container) return;
 
-  const partnerName = (document.getElementById('prevSubtitle').textContent || '').trim() || 'Channel Partner';
-  const partnerOverall = (document.getElementById('prevHighlight').textContent || '').trim() || '';
-  const partnerToday = (document.getElementById('prevTotalToday').textContent || '').trim() || '';
-  const seniorName = (document.getElementById('prevSeniorName').textContent || '').replace(/^Senior\s*:\s*/i, '').trim() || 'Senior Referrer';
+  const shareDetails = getPosterShareDetails();
+  const partnerName = shareDetails.partnerName;
+  const shareText = shareDetails.text;
+  const seniorName = shareDetails.seniorName;
+  const isSeniorVisible = shareDetails.isSeniorVisible;
 
   const m = window._currentPosterMember || {};
-  const mPhone = m.phone || '';
-  const sPhone = m.senior_phone || '';
+  const mPhone = (m.phone || '').replace(/\D/g, '');
+  const sPhone = isSeniorVisible ? (m.senior_phone || '').replace(/\D/g, '') : '';
+
+  const dispatchTargets = [
+    { id: 'member', type: 'member', label: `Member: ${partnerName}`, target: mPhone ? `+91 ${mPhone.slice(-10)}` : 'No Phone', phone: mPhone, status: 'sending', msg: 'Broadcasting...' },
+    { id: 'senior', type: 'member', label: `Senior: ${seniorName || 'Referrer'}`, target: !isSeniorVisible ? 'Excluded (Show Senior unchecked)' : (sPhone ? `+91 ${sPhone.slice(-10)}` : 'No Phone'), phone: sPhone, status: isSeniorVisible ? (sPhone ? 'sending' : 'skipped') : 'skipped', msg: !isSeniorVisible ? 'Excluded by toggle' : (sPhone ? 'Broadcasting...' : 'No Senior Phone') },
+    { id: 'channel_official', type: 'group', label: 'VGK4U Official Channel', target: 'whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m', inviteCode: '0029Vb7Vb5f9cDDXf3zWtf0m', status: 'sending', msg: 'Broadcasting to channel...' },
+    { id: 'group_main', type: 'group', label: 'VGK Community Group', target: 'chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY', inviteCode: 'HNQQoKXFfCm5PQngGdrlcY', status: 'sending', msg: 'Broadcasting to group...' },
+    { id: 'group_exec', type: 'group', label: 'Executive Announcements', target: 'chat.whatsapp.com/LfX8mGootXa7SpwNIz7P5C', inviteCode: 'LfX8mGootXa7SpwNIz7P5C', status: 'sending', msg: 'Broadcasting to group...' },
+    { id: 'group_ev_stars', type: 'group', label: 'Ev scooty. MNR (royal ev ) stars', target: 'Ev scooty. MNR (royal ev ) stars', groupName: 'Ev scooty. MNR (royal ev ) stars', status: 'sending', msg: 'Broadcasting to group...' },
+    { id: 'group_mnr_gen', type: 'group', label: 'MNR General Group', target: 'MNR General Group', groupName: 'MNR General Group', status: 'sending', msg: 'Broadcasting to group...' },
+    { id: 'group_vgk_vjd', type: 'group', label: 'VGK4U - Vijayawada', target: 'VGK4U - Vijayawada', groupName: 'VGK4U - Vijayawada', status: 'sending', msg: 'Broadcasting to group...' },
+    { id: 'portal_shoutout', type: 'portal', label: 'VGK4U Login Page Shoutout', target: 'vgk4u.com (Login Banner)', status: 'sending', msg: 'Publishing shoutout...' }
+  ];
+
+  // 1. OPEN STATUS MODAL IMMEDIATELY
+  showLiveDispatchStatusModal(dispatchTargets, partnerName);
 
   const spinner = document.getElementById('posterSpinner');
-  if (spinner) {
-    spinner.style.display = 'flex';
-    const spText = spinner.querySelector('div div');
-    if (spText) spText.textContent = 'Posting to VGK4U Channel & Elite Groups...';
-  }
+  if (spinner) spinner.style.display = 'none';
 
-  const shareText = `🎉 CONGRATULATIONS TO ${partnerName}!\nSenior : ${seniorName}\n\n💰 Today's Payout: ${partnerToday}\n📈 Overall Earning: ${partnerOverall}\n\nShared to VGK4U Channel & Elite Members Group as single source of truth.`;
+  let dataUrl = null;
+  let blob = null;
 
   try {
     const canvas = await capturePosterCanvas(container);
-    if (!canvas) throw new Error('Failed to capture poster canvas');
+    if (canvas) {
+      try {
+        dataUrl = canvas.toDataURL('image/png');
+        blob = await (await fetch(dataUrl)).blob();
+      } catch (cErr) {
+        console.warn("Poster toDataURL failed:", cErr);
+      }
+    }
+  } catch (capErr) {
+    console.warn("capturePosterCanvas error:", capErr);
+  }
 
-    const dataUrl = safeToDataURL(canvas);
-    let blob = null;
-    if (dataUrl) {
-      blob = await (await fetch(dataUrl)).blob();
+  const fetchWithTimeout = async (url, opts = {}, ms = 2500) => {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), ms);
+    try {
+      const r = await fetch(url, { ...opts, signal: controller.signal });
+      clearTimeout(tid);
+      return r;
+    } catch (e) {
+      clearTimeout(tid);
+      throw e;
+    }
+  };
+
+  try {
+    // 1. Submit Portal Shoutout
+    try {
+      const formData = new FormData();
+      formData.append('title', `🎉 Achievement Poster: ${partnerName}`);
+      formData.append('description', shareText);
+      formData.append('category_id', '1');
+      formData.append('submission_type', 'photo');
+      if (blob) {
+        formData.append('files', blob, `${partnerName.replace(/\s+/g, '_')}_Achievement.png`);
+      }
+
+      const tok = localStorage.getItem('staff_token') || localStorage.getItem('access_token') || sessionStorage.getItem('staff_token') || sessionStorage.getItem('access_token');
+      const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
+      
+      const res = await fetch(`${apiBase}/feedback/submit-staff-announcement`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + tok },
+        body: formData
+      });
+      const d = await res.json();
+      if (d && d.duplicate) {
+        updateDispatchStatus('portal_shoutout', 'skipped', 'STOPPED ⏸️ Already Posted Today');
+      } else {
+        updateDispatchStatus('portal_shoutout', 'sent', 'Published on Login Page');
+      }
+    } catch (pErr) {
+      updateDispatchStatus('portal_shoutout', 'error', pErr.message || 'Portal Submit Error');
     }
 
-    const formData = new FormData();
-    formData.append('title', `🎉 Achievement Poster: ${partnerName}`);
-    formData.append('description', shareText);
-    formData.append('category_id', '1');
-    formData.append('submission_type', 'photo');
-    if (blob) formData.append('files', blob, `${partnerName.replace(/\s+/g, '_')}_Achievement.png`);
+    // 2. Member Direct Send via Scanned Bot
+    if (mPhone) {
+      try {
+        const res = await fetchWithTimeout('http://localhost:5002/api/send-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: mPhone, imageUrl: dataUrl, message: shareText })
+        });
+        const json = await res.json();
+        if (json.success) {
+          updateDispatchStatus('member', 'sent', 'Delivered via Scanned WhatsApp');
+        } else {
+          updateDispatchStatus('member', 'error', json.error || 'Bot Error');
+        }
+      } catch (mErr) {
+        updateDispatchStatus('member', 'error', 'WhatsApp Bot Offline (port 5002)');
+      }
+    } else {
+      updateDispatchStatus('member', 'skipped', 'No Phone Number');
+    }
 
-    const tok = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
-    const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
-    await fetch(`${apiBase}/community-services/submit-staff-announcement`, {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + tok },
-      body: formData
-    });
+    // 3. Senior Direct Send via Scanned Bot
+    if (isSeniorVisible && sPhone) {
+      try {
+        const res = await fetchWithTimeout('http://localhost:5002/api/send-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: sPhone, imageUrl: dataUrl, message: shareText })
+        });
+        const json = await res.json();
+        if (json.success) {
+          updateDispatchStatus('senior', 'sent', 'Delivered via Scanned WhatsApp');
+        } else {
+          updateDispatchStatus('senior', 'error', json.error || 'Bot Error');
+        }
+      } catch (sErr) {
+        updateDispatchStatus('senior', 'error', 'WhatsApp Bot Offline');
+      }
+    } else {
+      updateDispatchStatus('senior', 'skipped', !isSeniorVisible ? 'Excluded by toggle' : 'No Senior Phone');
+    }
 
-    if (spinner) spinner.style.display = 'none';
+    // 4. VGK4U Official Channel Send
+    try {
+      const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: dataUrl, message: shareText, inviteCode: '0029Vb7Vb5f9cDDXf3zWtf0m' })
+      });
+      const json = await res.json();
+      if (json.success) {
+        updateDispatchStatus('channel_official', 'sent', 'Delivered to Channel');
+      } else {
+        updateDispatchStatus('channel_official', 'error', json.error || 'Channel Send Failed');
+      }
+    } catch (cErr) {
+      updateDispatchStatus('channel_official', 'error', 'Bot Offline or Not Admin');
+    }
 
-    toast('🎉 Default Achievement Poster shared to VGK4U Channel & Elite Members Group!', 'success');
+    // 5. VGK Community Group Send
+    try {
+      const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: dataUrl, message: shareText, inviteCode: 'HNQQoKXFfCm5PQngGdrlcY' })
+      });
+      const json = await res.json();
+      if (json.success) {
+        updateDispatchStatus('group_main', 'sent', 'Delivered to Group');
+      } else {
+        updateDispatchStatus('group_main', 'error', json.error || 'Group Send Failed');
+      }
+    } catch (gErr) {
+      updateDispatchStatus('group_main', 'error', 'Bot Offline or Not in Group');
+    }
 
-    showDirectWaShareDialog({
-      memberName: partnerName,
-      memberPhone: mPhone,
-      seniorName: seniorName,
-      seniorPhone: sPhone,
-      msgText: shareText
-    });
+    // 6. Executive Announcements Send
+    try {
+      const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: dataUrl, message: shareText, inviteCode: 'LfX8mGootXa7SpwNIz7P5C' })
+      });
+      const json = await res.json();
+      if (json.success) {
+        updateDispatchStatus('group_exec', 'sent', 'Delivered to Group');
+      } else {
+        updateDispatchStatus('group_exec', 'error', json.error || 'Group Send Failed');
+      }
+    } catch (gErr) {
+      updateDispatchStatus('group_exec', 'error', 'Bot Offline or Not in Group');
+    }
+
+    // 7. EV Scooty Stars
+    try {
+      const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupName: 'Ev scooty. MNR (royal ev ) stars' })
+      });
+      const json = await res.json();
+      if (json.success) {
+        updateDispatchStatus('group_ev_stars', 'sent', 'Delivered to Group');
+      } else {
+        updateDispatchStatus('group_ev_stars', 'error', json.error || 'Group Send Failed');
+      }
+    } catch (eErr) {
+      updateDispatchStatus('group_ev_stars', 'error', 'Bot Offline or Not in Group');
+    }
+
+    // 8. MNR General Group
+    try {
+      const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupName: 'MNR General Group' })
+      });
+      const json = await res.json();
+      if (json.success) {
+        updateDispatchStatus('group_mnr_gen', 'sent', 'Delivered to Group');
+      } else {
+        updateDispatchStatus('group_mnr_gen', 'error', json.error || 'Group Send Failed');
+      }
+    } catch (mErr) {
+      updateDispatchStatus('group_mnr_gen', 'error', 'Bot Offline or Not in Group');
+    }
+
+    // 9. VGK4U - Vijayawada
+    try {
+      const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupName: 'VGK4U - Vijayawada' })
+      });
+      const json = await res.json();
+      if (json.success) {
+        updateDispatchStatus('group_vgk_vjd', 'sent', 'Delivered to Group');
+      } else {
+        updateDispatchStatus('group_vgk_vjd', 'error', json.error || 'Group Send Failed');
+      }
+    } catch (vErr) {
+      updateDispatchStatus('group_vgk_vjd', 'error', 'Bot Offline or Not in Group');
+    }
+
   } catch(err) {
-    if (spinner) spinner.style.display = 'none';
     console.error('Share Default error:', err);
-    toast('🎉 Default Achievement Poster shared to VGK4U Channel & Elite Members Group!', 'success');
-    showDirectWaShareDialog({
-      memberName: partnerName,
-      memberPhone: mPhone,
-      seniorName: seniorName,
-      seniorPhone: sPhone,
-      msgText: shareText
-    });
   }
 }
 
@@ -7022,10 +7581,10 @@ async function postPosterAnnouncement() {
   const container = document.getElementById('posterCanvasWrapper');
   if(!container) { toast('Poster preview not ready', 'error'); return; }
 
-  const partnerName = (document.getElementById('prevSubtitle')?.textContent || '').trim() || 'Channel Partner';
-  const partnerOverall = (document.getElementById('prevHighlight')?.textContent || '').trim() || '';
-  const partnerToday = (document.getElementById('prevTotalToday')?.textContent || '').trim() || '';
-  const partnerPotential = (document.getElementById('prevPotential')?.textContent || '').trim() || '';
+  const shareDetails = getPosterShareDetails();
+  const partnerName = shareDetails.partnerName;
+  const partnerOverall = shareDetails.partnerOverall;
+  const partnerToday = shareDetails.partnerToday;
 
   if(!confirm(`📣 POST ANNOUNCEMENT ON LOGIN SCREEN\n--------------------------------------------------\n• Member Name: ${partnerName}\n• Today's Earning: ${partnerToday}\n• Overall Earning: ${partnerOverall}\n\nDo you want to publish this Achievement Poster announcement to the Login Screen slideshow now?`)) return;
 
@@ -7042,12 +7601,7 @@ async function postPosterAnnouncement() {
       blob = await (await fetch(dataUrl)).blob();
     }
 
-    let shareText = `🎉 *CONGRATULATIONS TO ${partnerName}!* 🎉\n\n` +
-      `👤 *Member Name:* ${partnerName}\n` +
-      `💰 *Today's Payout:* ${partnerToday}\n` +
-      `📈 *Overall Earning:* ${partnerOverall}\n` +
-      `🔮 *Potential Valuation:* ${partnerPotential}\n\n` +
-      `🚀 Keep Leading. Keep Inspiring. Keep Growing! — Team VGK4U`;
+    const shareText = shareDetails.text;
 
     const formData = new FormData();
     formData.append('title', `🎉 Achievement Poster: ${partnerName}`);
@@ -7825,8 +8379,12 @@ function _renderCommDetailTable(partnerId) {
             <input type="text" id="postTitle" oninput="updatePoster()" style="width:100%;padding:8px 10px;font-size:12px;border:1.5px solid #d1d5db;border-radius:6px;outline:none" placeholder="e.g. SOLAR 1ST PAYMENT RELEASED">
           </div>
           <div>
-            <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px">MEMBER NAME (POSTER SUBTITLE)</label>
+            <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px">MEMBER NAME</label>
             <input type="text" id="postSubtitle" oninput="updatePoster()" style="width:100%;padding:8px 10px;font-size:12px;border:1.5px solid #d1d5db;border-radius:6px;outline:none" placeholder="e.g. MR. BANDI GANGARAJU">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px">RANK &amp; DESIGNATION (2ND LINE)</label>
+            <input type="text" id="postRank" oninput="updatePoster()" style="width:100%;padding:8px 10px;font-size:12px;border:1.5px solid #d1d5db;border-radius:6px;outline:none" placeholder="e.g. 2★ CHANNEL PARTNER">
           </div>
           <div>
             <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px">OVERALL EARNING (₹)</label>
@@ -7961,7 +8519,6 @@ function _renderCommDetailTable(partnerId) {
         <!-- Renderable Canvas Wrapper - Dynamic Content-Fitting Celebration Poster (480px width, tight auto-fit height with zero empty space) -->
         <div id="posterCanvasWrapper" style="width:480px;height:fit-content;background:radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 50%, #020617 100%);border:5px double #fbbf24;border-radius:20px;box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 50px rgba(251,191,36,0.4);position:relative;box-sizing:border-box;color:#ffffff;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;user-select:none;flex-shrink:0;padding:14px 16px 20px 16px;display:flex;flex-direction:column;align-items:center;overflow:hidden">
           
-          <div id="prevName" style="display:none"></div>
           <div id="prevBonusDesc" style="display:none"></div>
           <div id="prevTitle" style="display:none">CONGRATULATIONS</div>
           <div id="prevTodayTitle" style="display:none">TODAY'S PAYOUT</div>
@@ -8019,9 +8576,16 @@ function _renderCommDetailTable(partnerId) {
             <!-- 2. Congratulations Ribbon Badge (Clean Background) -->
             <div style="background:linear-gradient(135deg, #854d0e 0%, #ca8a04 50%, #854d0e 100%);border:1.5px solid #fde047;color:#fffbeb;font-family:Georgia,serif;font-size:11px;font-weight:900;letter-spacing:1px;padding:4px 14px;border-radius:30px;box-shadow:0 4px 15px rgba(202,138,4,0.5);margin-bottom:5px;text-transform:uppercase;white-space:nowrap;max-width:100%;box-sizing:border-box">🎉 👑 ★★ CONGRATULATIONS ★★ 👑 🎉</div>
 
-            <!-- 3. Member Name (Solid Gold Banner Plaque with Solid Black Typography for HTML2Canvas) -->
+            <!-- 3. Member Name with Rank & Designation (Solid Gold Banner Plaque) -->
             <div style="width:100%;text-align:center;margin-bottom:6px">
-              <div id="prevSubtitle" style="width:100%;background:#fbbf24;color:#000000 !important;-webkit-text-fill-color:#000000 !important;font-size:21px;font-weight:950;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;text-transform:uppercase;letter-spacing:1px;line-height:1.2;padding:5px 12px;border:2.5px solid #ffffff;border-radius:12px;box-shadow:0 6px 20px rgba(251,191,36,0.75);box-sizing:border-box">MR. BANDI GANGARAJU</div>
+              <div id="prevSubtitle" style="width:100%;background:#fbbf24;color:#000000 !important;-webkit-text-fill-color:#000000 !important;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;text-transform:uppercase;padding:6px 12px;border:2.5px solid #ffffff;border-radius:12px;box-shadow:0 6px 20px rgba(251,191,36,0.75);box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                <!-- Line 1: Member Name -->
+                <div id="prevName" style="font-size:22px;font-weight:950;letter-spacing:1px;line-height:1.15;color:#000000">MR. BANDI GANGARAJU</div>
+                <!-- Line 2: Rank & Designation below Name -->
+                <div id="prevRankContainer" style="font-size:12.5px;font-weight:900;letter-spacing:1.2px;color:#78350f;line-height:1.1;margin-top:3px;display:inline-flex;align-items:center;gap:4px">
+                  <span>★</span><span id="prevRank">2★ CHANNEL PARTNER</span><span>★</span>
+                </div>
+              </div>
             </div>
 
             <!-- 4. Member Profile Photo inside Golden Wreath Ring with Standalone Dual Champion Trophies (No Circles) -->
@@ -8039,7 +8603,7 @@ function _renderCommDetailTable(partnerId) {
               <div style="position:absolute;bottom:4px;right:-106px;font-size:82px;line-height:1;filter:drop-shadow(0 6px 16px rgba(251,191,36,0.9));z-index:10;user-select:none">🏆</div>
 
               <!-- Champion Pill at Bottom -->
-              <div style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#b45309,#f59e0b,#b45309);border:1.5px solid #fef08a;color:#ffffff;font-size:10.5px;font-weight:900;padding:4px 18px;border-radius:14px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.6);z-index:11">🏆 CHAMPION</div>
+              <div id="prevChampionBadge" style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#b45309,#f59e0b,#b45309);border:1.5px solid #fef08a;color:#ffffff;font-size:10.5px;font-weight:900;padding:4px 18px;border-radius:14px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.6);z-index:11">🏆 CHAMPION</div>
             </div>
 
             <!-- 5. Overall Earning Plaque (Centerpiece) -->
@@ -8069,7 +8633,7 @@ function _renderCommDetailTable(partnerId) {
               
               <!-- Members / Team Size Card -->
               <div style="background:rgba(15,23,42,0.88);border:1.5px solid rgba(234,179,8,0.5);border-radius:12px;padding:6px 4px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;align-items:center;height:54px;box-sizing:border-box">
-                <div style="font-size:8.5px;font-weight:900;color:#a7f3d0;text-transform:uppercase;letter-spacing:0.5px;line-height:1">👥 TEAM SIZE</div>
+                <div id="prevOverallLabel" style="font-size:8.5px;font-weight:900;color:#a7f3d0;text-transform:uppercase;letter-spacing:0.5px;line-height:1">👥 TEAM SIZE</div>
                 <div id="prevOverall" style="height:18px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:950;color:#ffffff;line-height:1">8 MEMBERS</div>
                 <div id="prevTeamBreakup" style="font-size:8.5px;font-weight:800;color:#6ee7b7;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">L2: 6 | L3: 2 | L4: 0</div>
               </div>
@@ -8562,6 +9126,6 @@ function toggleExecModalExpand() {
 }
 </script>
 
-<script src="/public/js/poster-modal-core.js"></script>
+<script src="/public/js/poster-modal-core.js?v=20260831_1435"></script>
 </body>
 </html>

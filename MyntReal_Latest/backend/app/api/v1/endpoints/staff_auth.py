@@ -4,7 +4,7 @@ Separate authentication system for staff members
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from datetime import datetime, timedelta
 from typing import Optional
 from pydantic import BaseModel, EmailStr, Field
@@ -231,29 +231,62 @@ def get_current_staff_user_hybrid(request: Request, db: Session = Depends(get_db
     }
 
 
-def requires_staff_role(*allowed_roles):
+def resolve_tenant_company_for_request(current_user, requested_company_id: Optional[int] = None) -> int:
     """
-    Decorator factory to check staff role
-    DC: Role-based access control
+    Authoritatively resolve target company_id for an authenticated staff request.
+    - If user is Super Admin / Platform Admin: permits explicit requested_company_id if provided.
+    - If user is Tenant Staff / Tenant Admin: strictly enforces current_user.base_company_id.
+      If a conflicting requested_company_id is provided, raises HTTP 403 Forbidden.
     """
-    def decorator(func):
-        async def wrapper(*args, **kwargs):
-            current_user = kwargs.get('current_user')
-            if not current_user:
-                raise HTTPException(status_code=403, detail="Authentication required")
-            
-            if current_user.role.role_code not in allowed_roles:
-                raise HTTPException(
-                    status_code=403, 
-                    detail=f"Access denied. Required roles: {', '.join(allowed_roles)}"
-                )
-            return await func(*args, **kwargs)
-        return wrapper
-    return decorator
+    staff_cid = getattr(current_user, "base_company_id", None) or getattr(current_user, "company_id", None)
+    if not staff_cid:
+        raise HTTPException(status_code=403, detail="Unresolved tenant context for staff user")
+
+    role_code = (current_user.role.role_code.lower() if hasattr(current_user, "role") and current_user.role and getattr(current_user.role, "role_code", None) else "")
+    is_super = getattr(current_user, "is_super_admin", False) or role_code in {"super_admin", "vgk4u", "vgk4u_supreme"}
+
+    if requested_company_id is not None and requested_company_id != staff_cid:
+        if not is_super:
+            raise HTTPException(
+                status_code=403,
+                detail="Cross-tenant access forbidden. You cannot specify another tenant's company_id."
+            )
+        return int(requested_company_id)
+
+    return int(staff_cid)
+
+
+def require_module_entitlement(module_code: str):
+    """
+    FastAPI route dependency that validates the authenticated staff's tenant subscription
+    has active entitlement for the specified module_code.
+    """
+    def _entitlement_guard(
+        request: Request,
+        db: Session = Depends(get_db),
+        current_user: StaffEmployee = Depends(get_current_staff_user)
+    ) -> StaffEmployee:
+        from app.services.b2b_shadow import resolve_client_id_for_staff, is_module_entitled
+        role_code = (current_user.role.role_code.lower() if current_user.role and current_user.role.role_code else "")
+        is_super = getattr(current_user, "is_super_admin", False) or role_code in {"super_admin", "vgk4u", "vgk4u_supreme"} or (current_user.role and getattr(current_user.role, "hierarchy_level", 0) >= 90)
+        if is_super:
+            return current_user
+
+        client_id = resolve_client_id_for_staff(db, current_user)
+        if not client_id:
+            raise HTTPException(status_code=403, detail="Service not enabled for this tenant.")
+
+        if not is_module_entitled(db, client_id, module_code, user_id=current_user.id, user_type="staff", route=str(request.url.path), strict=True):
+            raise HTTPException(status_code=403, detail="Service not enabled for this tenant.")
+
+        return current_user
+
+    return _entitlement_guard
+
 
 
 @router.post("/auth/login", response_model=StaffLoginResponse)
-async def staff_login(
+def staff_login(
     login_data: StaffLoginRequest = Body(...),
     request: Request = None,
     db: Session = Depends(get_db)
@@ -266,19 +299,28 @@ async def staff_login(
     - 2FA support
     - Default password = Employee ID (requires change on first login)
     """
+    import time
+    t0 = time.time()
     # Normalize employee ID (uppercase)
     emp_id = login_data.employee_id.upper().strip()
     
-    # Search by employee code — emp_id already uppercased above, use exact match for index performance
-    employee = db.query(StaffEmployee).filter(
+    # Search by employee code with joined role for immediate access
+    t_lookup_start = time.time()
+    employee = db.query(StaffEmployee).options(
+        joinedload(StaffEmployee.role)
+    ).filter(
         StaffEmployee.emp_code == emp_id
     ).first()
+    t_lookup_ms = (time.time() - t_lookup_start) * 1000
     
     if not employee:
         log_staff_audit(db, None, "LOGIN_FAILED", "auth", 
                        new_data={"employee_id": emp_id, "reason": "user_not_found"},
                        ip_address=request.client.host if request.client else None)
-        db.commit()
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid Employee ID or password"
@@ -289,7 +331,10 @@ async def staff_login(
         log_staff_audit(db, employee.id, "LOGIN_BLOCKED", "auth",
                        new_data={"emp_code": emp_id, "reason": "account_deactivated", "status": employee.status},
                        ip_address=request.client.host if request.client else None)
-        db.commit()
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account temporarily suspended"
@@ -299,7 +344,10 @@ async def staff_login(
         log_staff_audit(db, employee.id, "LOGIN_BLOCKED", "auth",
                        new_data={"emp_code": emp_id, "reason": "account_resigned", "status": employee.status},
                        ip_address=request.client.host if request.client else None)
-        db.commit()
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account permanently deactivated"
@@ -310,7 +358,10 @@ async def staff_login(
         log_staff_audit(db, employee.id, "LOGIN_BLOCKED", "auth",
                        new_data={"emp_code": emp_id, "reason": f"account_{employee.status}", "status": employee.status},
                        ip_address=request.client.host if request.client else None)
-        db.commit()
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Account is {employee.status}. Please contact administrator."
@@ -323,9 +374,12 @@ async def staff_login(
             detail=f"Account locked. Try again in {remaining} minutes."
         )
     
+    t_pw_start = time.time()
     raw_pw = login_data.password or ""
     clean_pw = raw_pw.strip()
     pw_ok = SecurityManager.verify_password(raw_pw, employee.password_hash) or (clean_pw != raw_pw and SecurityManager.verify_password(clean_pw, employee.password_hash))
+    t_pw_ms = (time.time() - t_pw_start) * 1000
+    
     if not pw_ok:
         employee.failed_login_attempts += 1
         max_attempts = get_staff_setting(db, 'max_login_attempts', 5)
@@ -337,7 +391,10 @@ async def staff_login(
                            new_data={"attempts": employee.failed_login_attempts},
                            ip_address=request.client.host if request.client else None)
         
-        db.commit()
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
         
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -363,6 +420,7 @@ async def staff_login(
     employee.locked_until = None
     employee.last_login = datetime.utcnow()
     
+    t_token_start = time.time()
     session_hours = get_staff_setting(db, 'session_timeout_hours', 24)
     token = SecurityManager.create_access_token(
         data={
@@ -375,14 +433,21 @@ async def staff_login(
         },
         expires_delta=timedelta(hours=session_hours)
     )
+    t_token_ms = (time.time() - t_token_start) * 1000
     
     log_staff_audit(db, employee.id, "LOGIN_SUCCESS", "auth",
                    new_data={"emp_code": employee.emp_code, "requires_password_change": employee.requires_password_change},
                    ip_address=request.client.host if request.client else None)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
     
-    # DC Protocol (Dec 20, 2025): Auto-sync menu settings on login
-    # Ensures employee has baseline menu settings even if bulk repair missed them
+    # Extract employee data dictionary safely
+    employee_data = employee.to_dict()
+    
+    # DC Protocol: Auto-sync menu settings in safe try-catch
+    t_sync_start = time.time()
     try:
         from app.api.v1.endpoints.staff_menu_settings import sync_default_menu_settings_for_employees, get_employee_company_ids
         employee_companies = get_employee_company_ids(employee)
@@ -395,28 +460,17 @@ async def staff_login(
                 admin_name='Auto-Sync on Login'
             )
             sync_count += created
-        if sync_count > 0:
-            import logging
-            logging.getLogger(__name__).info(f"[DC-LOGIN-SYNC] Created {sync_count} menu settings for {employee.emp_code} on login")
-    except Exception as sync_err:
-        import logging
-        logging.getLogger(__name__).warning(f"[DC-LOGIN-SYNC] Menu sync failed for {employee.emp_code}: {sync_err}")
-    
-    # Build response with password change flag
-    employee_data = employee.to_dict()
+    except Exception:
+        pass
+    t_sync_ms = (time.time() - t_sync_start) * 1000
     
     # DC-AGREEMENT-TYPE-001: Check all pending agreements sequentially on login
     staff_type = employee.staff_type or 'MN_STAFF'
-    
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info(f"[DC-NDA-CHECK] Employee: {employee.emp_code}, Staff Type: {staff_type}")
-    
+    t_nda_start = time.time()
     nda_required, first_pending_type, active_nda = check_all_pending_agreements(
         db, employee.id, staff_type
     )
-    
-    logger.info(f"[DC-NDA-CHECK] Result: nda_required={nda_required}, type={first_pending_type}, version_id={active_nda.id if active_nda else None}")
+    t_nda_ms = (time.time() - t_nda_start) * 1000
     
     _agreement_labels = {'NDA': 'Non-Disclosure Agreement', 'EMPLOYMENT': 'Employment Agreement'}
     
@@ -440,7 +494,9 @@ async def staff_login(
             "agreement_type": first_pending_type or 'NDA',
             "agreement_label": _agreement_labels.get(first_pending_type or 'NDA', 'Non-Disclosure Agreement')
         }
-        logger.info(f"[DC-NDA-CHECK] Agreement data built: type={first_pending_type}, content present: {bool(nda_data.get('content_html'))}")
+    
+    total_ms = (time.time() - t0) * 1000
+    print(f"[LOGIN TRACE] Total: {total_ms:.1f}ms (lookup: {t_lookup_ms:.1f}ms, pw: {t_pw_ms:.1f}ms, token: {t_token_ms:.1f}ms, sync: {t_sync_ms:.1f}ms, nda: {t_nda_ms:.1f}ms)", flush=True)
     
     return StaffLoginResponse(
         success=True,
@@ -463,13 +519,52 @@ async def get_staff_profile(
 ):
     """
     Get current staff user profile
-    DC: Returns complete profile with role information + has_direct_reports flag
+    DC: Returns complete profile with role information, direct reports, and active tenant entitlements
     """
     from app.utils.staff_hierarchy import has_direct_reports
-    
+    from app.services.b2b_shadow import resolve_client_id_for_staff
+    from app.models.platform_b2b import PlatformSubscription, PlatformSubscriptionModule, PlatformModule, PlatformClient
+
     employee_data = current_user.to_dict()
     employee_data["has_direct_reports"] = has_direct_reports(current_user.id, db, StaffEmployee)
-    
+
+    # Resolve tenant & active entitlements
+    cid = resolve_client_id_for_staff(db, current_user)
+    employee_data["client_id"] = cid
+    entitled_codes = []
+    client_code = None
+
+    if cid:
+        client_obj = db.query(PlatformClient).filter_by(id=cid).first()
+        if client_obj:
+            client_code = client_obj.client_code
+        
+        sub_ids = [s.id for s in db.query(PlatformSubscription).filter(
+            PlatformSubscription.client_id == cid,
+            PlatformSubscription.status.in_(["active", "trial"])
+        ).all()]
+        if sub_ids:
+            psm_rows = db.query(PlatformSubscriptionModule, PlatformModule).join(
+                PlatformModule, PlatformSubscriptionModule.module_id == PlatformModule.id
+            ).filter(
+                PlatformSubscriptionModule.subscription_id.in_(sub_ids),
+                PlatformSubscriptionModule.enabled == True
+            ).all()
+            for _psm, pm in psm_rows:
+                entitled_codes.append(pm.module_code)
+
+    employee_data["client_code"] = client_code
+    employee_data["entitled_modules"] = list(set(entitled_codes))
+
+    role_code = (getattr(current_user.role, "role_code", "") or "").upper()
+    role_level = int(getattr(current_user.role, "hierarchy_level", 0) or 0)
+    employee_data["is_super_admin"] = bool(
+        role_level >= 90 or role_code in {"SUPER_ADMIN", "B2B_SUPER_ADMIN", "CEO", "CTO", "FOUNDER"}
+    )
+    employee_data["is_tenant_admin"] = bool(
+        role_code == "TENANT_ADMIN" or role_level == 85
+    )
+
     return StaffProfileResponse(
         success=True,
         employee=employee_data

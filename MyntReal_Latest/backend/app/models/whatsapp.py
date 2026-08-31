@@ -65,6 +65,7 @@ class MessageLog(Base):
     provider = Column(String(50), default='TWILIO_WHATSAPP')
     initial_status = Column(String(20))  # queued, sent, delivered, failed, etc.
     current_status = Column(String(20))
+    status_source = Column(String(50), default='SYSTEM')  # 'SYSTEM', 'META_WEBHOOK', 'SYNTHETIC_TEST'
     
     # Timestamps
     sent_at = Column(DateTime, default=datetime.utcnow)
@@ -76,6 +77,8 @@ class MessageLog(Base):
     # Error tracking
     error_code = Column(String(20))
     error_message = Column(Text)
+    failure_reason = Column(Text, nullable=True)
+    webhook_data = Column(Text, nullable=True)
 
     # Sender tracking — who triggered this message
     sent_by_staff_id = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
@@ -381,7 +384,7 @@ class WAInbox(Base):
     received_at     = Column(DateTime, default=datetime.utcnow, nullable=False)
     raw_payload     = Column(Text, nullable=True)
 
-    # CRM Extension columns
+    company_id          = Column(Integer, nullable=True, index=True)
     dept_code           = Column(String(50), nullable=True)
     assigned_to_emp_id  = Column(Integer, nullable=True)
     assigned_at         = Column(DateTime, nullable=True)
@@ -400,6 +403,7 @@ class WAInbox(Base):
     def to_dict(self):
         return {
             'id':                  self.id,
+            'company_id':          self.company_id,
             'wamid':               self.wamid,
             'from_phone':          self.from_phone,
             'from_name':           self.from_name,

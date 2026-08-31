@@ -164,16 +164,21 @@ class WhatsAppService:
 
             wamid = data.get("messages", [{}])[0].get("id", "")
 
+            # Structured Logging
+            logger.info(f"WHATSAPP_OUTGOING message_id={wamid} recipient={recipient} type=template template=otp api_status=accepted created_at={datetime.utcnow().isoformat()}")
+
             message_log = MessageLog(
                 message_sid=wamid,
                 message_type='whatsapp_otp',
+                message_body=f"🔐 Your MyntReal authentication code is {otp_code}. Valid for 10 minutes. Do not share this OTP with anyone.",
                 mobile_number=mobile_number,
                 user_name=user_name,
                 from_number=self.business_phone_number,
                 to_number=mobile_number,
                 provider='META_WHATSAPP',
-                initial_status='sent',
-                current_status='sent',
+                initial_status='API_ACCEPTED',
+                current_status='API_ACCEPTED',
+                status_source='SYSTEM',
                 sent_at=datetime.utcnow()
             )
             self.db.add(message_log)
@@ -181,9 +186,9 @@ class WhatsAppService:
 
             return {
                 'success': True,
-                'message': f'WhatsApp OTP sent successfully to {mobile_number}',
+                'message': f'WhatsApp OTP accepted by Meta for {mobile_number}',
                 'message_sid': wamid,
-                'delivery_status': 'sent'
+                'delivery_status': 'API_ACCEPTED'
             }
         except Exception as e:
             logger.error(f"[DC-OTP-TEMPLATE-001] Meta API OTP send failed for {mobile_number}: {e}")
@@ -494,6 +499,79 @@ async def meta_status_webhook(
     return {"status": "success"}
 
 
+@router.get("/delivery-diagnostics")
+@router.get("/whatsapp/delivery-diagnostics")
+async def get_whatsapp_delivery_diagnostics(db: Session = Depends(get_db)):
+    """
+    Phase 9 & 14 Diagnostic View:
+    Returns complete WhatsApp Cloud API health, sender configuration,
+    last outgoing message status, webhook connectivity, and recent delivery lifecycle events.
+    Strictly separates SYSTEM API acceptance from META_WEBHOOK delivery confirmation.
+    """
+    from app.services.wa_credentials import get_wa_credentials
+    creds = get_wa_credentials(db)
+    waba_id = creds.get("business_account_id") or "2085096442059400"
+    phone_id = creds.get("phone_number_id") or "1107174242473257"
+    sender_phone = "+91 85858 52738"
+
+    last_msg = db.query(MessageLog).filter(
+        MessageLog.provider == 'META_WHATSAPP'
+    ).order_by(MessageLog.id.desc()).first()
+
+    recent_logs = db.query(MessageLog).filter(
+        MessageLog.provider == 'META_WHATSAPP'
+    ).order_by(MessageLog.id.desc()).limit(10).all()
+
+    last_webhook = db.query(MessageLog).filter(
+        MessageLog.provider == 'META_WHATSAPP',
+        MessageLog.status_source == 'META_WEBHOOK'
+    ).order_by(MessageLog.last_status_update.desc()).first()
+
+    is_delivered = bool(
+        last_msg and 
+        last_msg.status_source == 'META_WEBHOOK' and 
+        last_msg.current_status in ('delivered', 'read')
+    )
+
+    return {
+        "waba_id": waba_id,
+        "sender_phone": sender_phone,
+        "phone_number_id": phone_id,
+        "webhook_url": "https://www.myntreal.com/api/v1/whatsapp/webhook",
+        "webhook_verify_token": creds.get("verify_token") or "vgk4u_webhook",
+        "last_outgoing_message": {
+            "id": last_msg.id if last_msg else None,
+            "message_sid": last_msg.message_sid if last_msg else None,
+            "recipient": last_msg.mobile_number if last_msg else None,
+            "message_type": last_msg.message_type if last_msg else None,
+            "api_acceptance": "YES" if last_msg and last_msg.message_sid else "NO",
+            "meta_confirmed_status": last_msg.current_status if last_msg else "NONE",
+            "status_source": getattr(last_msg, 'status_source', 'SYSTEM') if last_msg else "NONE",
+            "delivery_confirmed": is_delivered,
+            "error_code": last_msg.error_code if last_msg else None,
+            "error_message": last_msg.error_message if last_msg else None,
+            "sent_at": last_msg.sent_at.isoformat() if last_msg and last_msg.sent_at else None,
+            "delivered_at": last_msg.delivered_at.isoformat() if last_msg and last_msg.delivered_at else None,
+            "last_status_update": last_msg.last_status_update.isoformat() if last_msg and last_msg.last_status_update else None
+        } if last_msg else None,
+        "last_meta_webhook_received_at": last_webhook.last_status_update.isoformat() if last_webhook and last_webhook.last_status_update else None,
+        "recent_messages_lifecycle": [
+            {
+                "id": m.id,
+                "message_sid": m.message_sid,
+                "recipient": m.mobile_number,
+                "status": m.current_status,
+                "status_source": getattr(m, 'status_source', 'SYSTEM'),
+                "error_code": m.error_code,
+                "error_message": m.error_message,
+                "sent_at": m.sent_at.isoformat() if m.sent_at else None,
+                "delivered_at": m.delivered_at.isoformat() if m.delivered_at else None
+            }
+            for m in recent_logs
+        ]
+    }
+
+
 # ── META CANONICAL WEBHOOK (path Meta actually calls) ──────────────────────────
 
 @router.get("/webhook")
@@ -545,17 +623,25 @@ async def meta_webhook_status_canonical(request: Request, db: Session = Depends(
             for su in value.get("statuses", []):
                 wamid       = su.get("id")
                 meta_status = su.get("status")
+                recipient_id = su.get("recipient_id")
+                status_timestamp = su.get("timestamp")
                 if not wamid or not meta_status:
                     continue
                 status_map = {"sent": "sent", "delivered": "delivered", "read": "read", "failed": "failed"}
                 mapped = status_map.get(meta_status, meta_status)
                 ml = db.query(MessageLog).filter(MessageLog.message_sid == wamid).first()
                 if not ml:
-                    print(f"[WA-WEBHOOK] ⚠️ wamid not found: {wamid}")
+                    logger.warning(f"[WA-WEBHOOK] ⚠️ wamid not found in message_log: {wamid}")
                     continue
                 ml.current_status     = mapped
+                ml.status_source      = 'META_WEBHOOK'
                 ml.last_status_update = datetime.utcnow()
                 ml.last_updated       = datetime.utcnow()
+                ml.webhook_data       = _json.dumps(su)
+                
+                err_code = None
+                err_msg = None
+                
                 if mapped == "delivered":
                     ml.delivered_at = datetime.utcnow()
                 elif mapped == "read":
@@ -566,8 +652,15 @@ async def meta_webhook_status_canonical(request: Request, db: Session = Depends(
                     ml.failed_at = datetime.utcnow()
                     errs = su.get("errors", [])
                     if errs:
-                        ml.error_code    = str(errs[0].get("code", ""))
-                        ml.error_message = errs[0].get("message", "")
+                        err_code = str(errs[0].get("code", ""))
+                        err_msg  = errs[0].get("message", "") or errs[0].get("title", "")
+                        details  = errs[0].get("error_data", {}).get("details", "")
+                        ml.error_code    = err_code
+                        ml.error_message = err_msg
+                        ml.failure_reason = f"{err_msg}: {details}" if details else err_msg
+
+                # Structured Logging
+                logger.info(f"WHATSAPP_STATUS message_id={wamid} recipient={recipient_id or ml.mobile_number} status={mapped} timestamp={status_timestamp} error_code={err_code} error_message={err_msg}")
                 
                 # Also update WhatsAppCampaignLog if matching wamid
                 try:
@@ -587,7 +680,14 @@ async def meta_webhook_status_canonical(request: Request, db: Session = Depends(
                     pass
                 print(f"[WA-WEBHOOK] 📨 {wamid} → {mapped}")
 
+            db.commit()
+
             # ── 2. Incoming messages ────────────────────────────────────────
+            metadata = value.get("metadata", {})
+            phone_number_id = metadata.get("phone_number_id")
+            from app.services.wa_credentials import resolve_company_id_by_phone_number_id
+            resolved_company_id = resolve_company_id_by_phone_number_id(db, phone_number_id)
+
             contacts = {c.get("wa_id"): c.get("profile", {}).get("name") for c in value.get("contacts", [])}
             for msg in value.get("messages", []):
                 try:
@@ -618,14 +718,20 @@ async def meta_webhook_status_canonical(request: Request, db: Session = Depends(
                     if wamid_in and db.query(WAInbox).filter_by(wamid=wamid_in).first():
                         continue
 
-                    # Auto-link to CRM lead by phone
+                    # Auto-link to CRM lead by phone (scoped to tenant company if resolved)
                     clean = from_phone.lstrip("91") if from_phone.startswith("91") and len(from_phone) == 12 else from_phone
-                    lead = db.query(CRMLead).filter(
+                    lead_q = db.query(CRMLead).filter(
                         CRMLead.phone.in_([from_phone, clean, "91" + clean])
-                    ).order_by(CRMLead.id.desc()).first()
+                    )
+                    if resolved_company_id:
+                        lead_q = lead_q.filter(CRMLead.company_id == resolved_company_id)
+                    lead = lead_q.order_by(CRMLead.id.desc()).first()
+
+                    msg_company_id = resolved_company_id or (lead.company_id if lead else 1)
 
                     inbox = WAInbox(
                         wamid=wamid_in,
+                        company_id=msg_company_id,
                         from_phone=from_phone,
                         from_name=from_name,
                         message_type=msg_type,
@@ -646,7 +752,7 @@ async def meta_webhook_status_canonical(request: Request, db: Session = Depends(
                         from app.services.job_queue_service import enqueue_system_job
                         import uuid
                         
-                        target_company_id = lead.company_id if lead else 1
+                        target_company_id = msg_company_id
                         
                         if lead:
                             # 1. Look up active session
@@ -2369,38 +2475,50 @@ def get_whatsapp_conversations_hub(
                     "unread_count": unread_prev
                 }
 
-        # 3. Enhanced Identity Resolution: Join Lead, Staff, and User names for non-group items
+        # 3. Enhanced Identity Resolution: Query ONLY matching phones (high-performance targeted lookup)
         from app.models.crm import CRMLead
         from app.models.staff import StaffEmployee
         from app.models.user import User
 
-        # Map CRM Leads
-        leads = db.query(CRMLead).filter(CRMLead.phone.isnot(None)).all()
-        for lead in leads:
-            p = ''.join(filter(str.isdigit, lead.phone or ''))[-10:]
-            if p and len(p) == 10 and p in contact_map and contact_map[p]["contact_type"] not in ("GROUP", "CHANNEL"):
-                if lead.name:
-                    contact_map[p]["name"] = lead.name
-                    contact_map[p]["contact_type"] = "CONTACT"
+        contact_phones_10 = [p for p in contact_map.keys() if len(p) == 10 and contact_map[p].get("contact_type") not in ("GROUP", "CHANNEL")]
+        if contact_phones_10:
+            # Map CRM Leads matching these specific numbers
+            leads = db.query(CRMLead.name, CRMLead.phone, CRMLead.alternate_phone).filter(
+                or_(*[CRMLead.phone.like(f"%{p}%") for p in contact_phones_10], *[CRMLead.alternate_phone.like(f"%{p}%") for p in contact_phones_10])
+            ).all()
+            for l_name, l_ph, l_alt in leads:
+                for ph_val in (l_ph, l_alt):
+                    if not ph_val: continue
+                    cp = ''.join(filter(str.isdigit, str(ph_val)))[-10:]
+                    if cp in contact_map and contact_map[cp]["contact_type"] not in ("GROUP", "CHANNEL"):
+                        if l_name:
+                            contact_map[cp]["name"] = l_name
+                            contact_map[cp]["contact_type"] = "CONTACT"
 
-        # Map Staff Employees
-        staff_members = db.query(StaffEmployee).filter(StaffEmployee.phone.isnot(None)).all()
-        for sm in staff_members:
-            p = ''.join(filter(str.isdigit, sm.phone or ''))[-10:]
-            if p and len(p) == 10 and p in contact_map and contact_map[p]["contact_type"] not in ("GROUP", "CHANNEL"):
-                full_n = f"{sm.first_name} {sm.last_name or ''}".strip()
-                if full_n:
-                    contact_map[p]["name"] = f"{full_n} ({sm.emp_code})"
-                    contact_map[p]["contact_type"] = "STAFF"
+            # Map Staff Employees matching these specific numbers
+            staff_members = db.query(StaffEmployee.first_name, StaffEmployee.last_name, StaffEmployee.emp_code, StaffEmployee.phone).filter(
+                or_(*[StaffEmployee.phone.like(f"%{p}%") for p in contact_phones_10])
+            ).all()
+            for fn, ln, ecode, sph in staff_members:
+                if sph:
+                    cp = ''.join(filter(str.isdigit, str(sph)))[-10:]
+                    if cp in contact_map and contact_map[cp]["contact_type"] not in ("GROUP", "CHANNEL"):
+                        full_n = f"{fn} {ln or ''}".strip()
+                        if full_n:
+                            contact_map[cp]["name"] = f"{full_n} ({ecode})"
+                            contact_map[cp]["contact_type"] = "STAFF"
 
-        # Map Registered Users
-        users = db.query(User).filter(User.phone_number.isnot(None)).all()
-        for u in users:
-            p = ''.join(filter(str.isdigit, u.phone_number or ''))[-10:]
-            if p and len(p) == 10 and p in contact_map and contact_map[p]["contact_type"] not in ("GROUP", "CHANNEL"):
-                if u.name and (contact_map[p]["name"].startswith("Contact (+91") or contact_map[p]["name"] in ("System/Auto", "All")):
-                    contact_map[p]["name"] = u.name
-                    contact_map[p]["contact_type"] = "USER"
+            # Map Registered Users matching these specific numbers
+            users = db.query(User.name, User.phone_number).filter(
+                or_(*[User.phone_number.like(f"%{p}%") for p in contact_phones_10])
+            ).all()
+            for uname, uph in users:
+                if uph:
+                    cp = ''.join(filter(str.isdigit, str(uph)))[-10:]
+                    if cp in contact_map and contact_map[cp]["contact_type"] not in ("GROUP", "CHANNEL"):
+                        if uname and (contact_map[cp]["name"].startswith("Contact (+91") or contact_map[cp]["name"] in ("System/Auto", "All")):
+                            contact_map[cp]["name"] = uname
+                            contact_map[cp]["contact_type"] = "USER"
 
         # Clean up any remaining generic System/Auto labels
         for p, info in contact_map.items():
@@ -3652,24 +3770,42 @@ def update_whatsapp_scheduler_template(
 @router.get("/bot-status")
 def get_whatsapp_bot_status():
     """
-    Queries local Baileys gateway on port 5002 and returns real-time connection status.
+    Queries local Baileys gateway on port 5002 and returns real-time connection status and QR code if available.
     """
     try:
         r = requests.get("http://localhost:5002/status", timeout=3)
         if r.status_code == 200:
             data = r.json()
+            qr_code = data.get("qr", "")
+            # Try fetching QR if not in status
+            if not qr_code and (data.get("status") != "connected" or data.get("qr_available")):
+                try:
+                    rqr = requests.get("http://localhost:5002/qr", timeout=2)
+                    if rqr.status_code == 200:
+                        qr_code = rqr.text.strip()
+                except Exception:
+                    pass
+
             return {
                 "success": True,
                 "connected": data.get("status") == "connected",
-                "status": data.get("status"),
-                "qr_available": data.get("qr_available", False)
+                "status": data.get("status", "disconnected"),
+                "qr": qr_code,
+                "qr_available": bool(qr_code) or data.get("qr_available", False)
             }
     except Exception:
         pass
     return {
-        "success": False,
+        "success": True,
         "connected": False,
         "status": "disconnected",
-        "qr_available": False
+        "qr": "",
+        "qr_available": False,
+        "message": "WhatsApp Bot gateway is offline or disconnected. Please scan QR code to link WhatsApp account."
     }
+
+
+@router.get("/gateway-status-qr")
+def get_gateway_status_qr():
+    return get_whatsapp_bot_status()
 

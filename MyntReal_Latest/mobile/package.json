@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "build:full": "cd ../shared/journey-core && npm install && npm run build && cd ../../mobile && tsc && vite build",
+    "build": "tsc && vite build && cp -r dist/* ../frontend/public/mobile/",
+    "build:full": "cd ../shared/journey-core && npm install && npm run build && cd ../../mobile && tsc && vite build && cp -r dist/* ../frontend/public/mobile/",
     "preview": "vite preview",
-    "cap:init": "npx cap init 'MyntReal' com.myntreal.mnr --web-dir dist",
+    "cap:init": "npx cap init 'MyntReal' com.myntos.mobile --web-dir dist",
     "cap:add:android": "npx cap add android",
     "cap:add:ios": "npx cap add ios",
     "cap:sync": "npx cap sync",

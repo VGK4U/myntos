@@ -383,6 +383,46 @@ async def get_lead_call_history(
             'has_recording': False,
         })
 
+    # DC-OPERATOR-CALLS-UNION: Include Operator / MyOperator calls for this lead
+    op_entries = []
+    try:
+        from app.models.operator_calls import OperatorCall
+        op_phone_conditions = []
+        if norm_phone:
+            op_phone_conditions.append(OperatorCall.caller_number.like(f'%{norm_phone}%'))
+            op_phone_conditions.append(OperatorCall.called_number.like(f'%{norm_phone}%'))
+        if norm_alt:
+            op_phone_conditions.append(OperatorCall.caller_number.like(f'%{norm_alt}%'))
+            op_phone_conditions.append(OperatorCall.called_number.like(f'%{norm_alt}%'))
+
+        op_filter = or_(
+            OperatorCall.crm_lead_id == lead_id,
+            *[c for c in op_phone_conditions if c is not None]
+        ) if op_phone_conditions else (OperatorCall.crm_lead_id == lead_id)
+
+        op_rows = db.query(OperatorCall).filter(op_filter).order_by(OperatorCall.created_at.desc()).limit(100).all()
+        for op in op_rows:
+            ct = 'MISSED' if (op.status or '').lower() == 'missed' else (op.call_type or 'INBOUND').upper()
+            st_name = op.handled_by or op.operator_name or 'MyOperator'
+            op_entries.append({
+                'id': f'operator_{op.id}',
+                'source': 'operator',
+                'staff_id': None,
+                'staff_name': f"{st_name} (Operator)" if st_name != 'MyOperator' else 'MyOperator',
+                'phone_number': op.caller_number if op.call_type == 'inbound' else op.called_number,
+                'contact_name': lead.name,
+                'call_type': ct,
+                'call_datetime': OperatorCall._fmt_dt(op.started_at or op.created_at),
+                'duration_seconds': op.duration_seconds or 0,
+                'call_outcome': op.status or '',
+                'matched_lead_id': lead_id,
+                'recording_url': op.recording_url,
+                'has_recording': bool(op.recording_url),
+            })
+    except Exception as _ope:
+        print(f"[CALL-TRACKING] Operator calls merge error: {_ope}")
+        op_entries = []
+
     native_data = [{
         **c.to_dict(),
         'staff_name': staff_names.get(c.staff_id, 'Unknown'),
@@ -390,20 +430,22 @@ async def get_lead_call_history(
     } for c in calls]
 
     all_data = sorted(
-        native_data + dialer_entries,
+        native_data + dialer_entries + op_entries,
         key=lambda x: x.get('call_datetime') or '',
         reverse=True
     )
+
+    total_with_op = total + len(dialer_entries) + len(op_entries)
 
     return {
         "success": True,
         "data": all_data,
         "summary": {
-            "total_calls": summary_query.total_calls or 0,
-            "total_duration_seconds": int(summary_query.total_duration or 0),
-            "incoming": summary_query.incoming or 0,
-            "outgoing": summary_query.outgoing or 0,
-            "missed": summary_query.missed or 0,
+            "total_calls": (summary_query.total_calls or 0) + len(dialer_entries) + len(op_entries),
+            "total_duration_seconds": int(summary_query.total_duration or 0) + sum(e['duration_seconds'] for e in op_entries),
+            "incoming": (summary_query.incoming or 0) + sum(1 for e in op_entries if e['call_type'] == 'INBOUND'),
+            "outgoing": (summary_query.outgoing or 0) + sum(1 for e in op_entries if e['call_type'] == 'OUTBOUND') + len(dialer_entries),
+            "missed": (summary_query.missed or 0) + sum(1 for e in op_entries if e['call_type'] == 'MISSED'),
             "staff_involved": summary_query.staff_count or 0,
         },
         "staff_breakdown": staff_breakdown,
@@ -411,8 +453,8 @@ async def get_lead_call_history(
         "pagination": {
             "page": page,
             "per_page": per_page,
-            "total": total,
-            "pages": (total + per_page - 1) // per_page if total > 0 else 0
+            "total": total_with_op,
+            "pages": (total_with_op + per_page - 1) // per_page if total_with_op > 0 else 0
         }
     }
 

@@ -8,6 +8,21 @@
     <meta http-equiv="Expires" content="0">
     <meta name="vgk-build" content="__VGK_BUILD_ID__">
     <title>VGK4U Channel Partner Portal — Dashboard</title>
+    <script>
+        (function() {
+            try {
+                var params = new URLSearchParams(window.location.search);
+                var targetTab = params.get('tab') || localStorage.getItem('vgk_active_tab') || 'earnings';
+                var validTabs = ['earnings','leads','orders','tickets','network','addmember','points','ledger','coupons','profile','bonanza','vendors','media','mycard'];
+                if (validTabs.indexOf(targetTab) !== -1 && targetTab !== 'earnings') {
+                    var style = document.createElement('style');
+                    style.id = 'early-tab-style';
+                    style.innerHTML = '#tab-earnings, #summaryRow { display: none !important; } #tab-' + targetTab + ' { display: block !important; }';
+                    document.head.appendChild(style);
+                }
+            } catch(e) {}
+        })();
+    </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
     <style>
@@ -525,6 +540,11 @@
             <div class="sidebar-head-info">
                 <div class="sidebar-head-name" id="sidebarMemberName">Loading…</div>
                 <div class="sidebar-head-id" id="sidebarMemberId"></div>
+                <div id="sidebarMemberRankBadge" style="margin-top:6px;display:none">
+                    <span style="background:rgba(255,255,255,0.18);color:#fff;border:1px solid rgba(255,255,255,0.35);border-radius:12px;padding:2px 10px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px">
+                        <i class="fas fa-star text-warning"></i><span id="sidebarMemberRankText">2★ Manager</span>
+                    </span>
+                </div>
             </div>
         </div>
         <nav class="sidebar-nav">
@@ -635,6 +655,39 @@
                         <span class="svc-label">REAL ESTATE</span>
                     </div>
                 </div>
+
+                <!-- MY VGK4U RANK Hero Card -->
+                <div style="background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); border-radius: 16px; padding: 22px 24px; color: white; box-shadow: 0 4px 18px rgba(124,58,237,0.25); margin-bottom: 16px;">
+                    <div class="row align-items-center">
+                        <div class="col-md-4 col-12 mb-3 mb-md-0">
+                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; font-weight: 700;">MY VGK4U RANK & INCENTIVE SLAB</div>
+                            <div style="font-size: 22px; font-weight: 800; margin-top: 4px; display: flex; align-items: center; gap: 8px;">
+                                <span><i class="fas fa-star text-warning me-1"></i><span id="vgkCurrentRankDisplay">Loading…</span></span>
+                            </div>
+                            <div style="margin-top: 6px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                                <span style="background: rgba(255,255,255,0.2); padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;">Rank Slab: <span id="vgkRankSlabPctDisplay">—</span></span>
+                                <span style="background: #059669; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;"><i class="fas fa-shield-alt me-1"></i>Permanent Rank</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-12 mb-3 mb-md-0" style="border-left: 1px solid rgba(255,255,255,0.15); border-right: 1px solid rgba(255,255,255,0.15); padding-left: 18px; padding-right: 18px;">
+                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; font-weight: 700;">ACTIVATED TEAM MEMBERS</div>
+                            <div style="font-size: 24px; font-weight: 800; margin-top: 2px;"><span id="vgkActivatedTeamCount">—</span> <small style="font-size: 12px; opacity: 0.8; font-weight: 500;">Active: <span id="vgkActiveTeamCount">—</span></small></div>
+                            <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;"><i class="fas fa-info-circle me-1"></i>Downline with ≥3 unique first-payment files</div>
+                        </div>
+                        <div class="col-md-4 col-12">
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; text-transform: uppercase; font-weight: 700; opacity: 0.85; margin-bottom: 4px;">
+                                <span>NEXT RANK: <strong id="vgkNextRankDisplay" style="color: #fde047;">—</strong></span>
+                                <span>GAP: <strong id="vgkRankGapDisplay">—</strong></span>
+                            </div>
+                            <div class="progress" style="height: 10px; background: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden;">
+                                <div class="progress-bar bg-warning" id="vgkRankProgressBar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                            <div style="font-size: 11px; opacity: 0.85; margin-top: 6px; text-align: right;"><span id="vgkRankProgressPctDisplay">0.0%</span> Completed towards <span id="vgkNextRankReqDisplay">—</span> Activated Members</div>
+                        </div>
+                    </div>
+                </div>
+
+
 
                 <!-- My Rewards card -->
                 <div class="hero-rewards-card" onclick="showTab('points')">
@@ -2158,23 +2211,23 @@
                 <!-- Progress Table -->
                 <div style="background:#fff;border-radius:14px;padding:18px 20px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
                     <div style="font-size:13px;font-weight:800;color:#111;margin-bottom:14px;display:flex;align-items:center;gap:8px">
-                        <i class="fas fa-chart-line" style="color:#7c3aed"></i> Designation Progress
+                        <i class="fas fa-award" style="color:#7c3aed"></i> Authoritative Rank & Designation Ladder
                     </div>
-                    <div style="font-size:12px;color:#6b7280;margin-bottom:12px">Each coupon applied = ₹5,000 revenue. Progress shown is for your direct source activity only.</div>
+                    <div style="font-size:12px;color:#6b7280;margin-bottom:12px">Rank promotions are permanent with zero demotions. Promotions are unlocked by achieving qualified downline members with ≥3 first-payment files.</div>
 
                     <!-- Progress stats row -->
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px">
                         <div style="background:#faf5ff;border-radius:10px;padding:12px;text-align:center;border:1.5px solid #ede9fe">
-                            <div style="font-size:11px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Coupons Applied</div>
+                            <div style="font-size:11px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Coupons Available</div>
                             <div id="mycardCoupons" style="font-size:22px;font-weight:900;color:#4c1d95">0</div>
                         </div>
                         <div style="background:#f0fdf4;border-radius:10px;padding:12px;text-align:center;border:1.5px solid #bbf7d0">
-                            <div style="font-size:11px;color:#15803d;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Revenue Generated</div>
-                            <div id="mycardRevenue" style="font-size:22px;font-weight:900;color:#166534">₹0</div>
+                            <div style="font-size:11px;color:#15803d;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Current Rank Slab</div>
+                            <div id="mycardRevenue" style="font-size:22px;font-weight:900;color:#166534">6.50%</div>
                         </div>
                         <div style="background:#fff7ed;border-radius:10px;padding:12px;text-align:center;border:1.5px solid #fed7aa">
-                            <div style="font-size:11px;color:#c2410c;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">People Activated</div>
-                            <div id="mycardActivated" style="font-size:22px;font-weight:900;color:#9a3412">0</div>
+                            <div style="font-size:11px;color:#c2410c;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Activated Downlines</div>
+                            <div id="mycardActivated" style="font-size:22px;font-weight:900;color:#9a3412">3</div>
                         </div>
                     </div>
 
@@ -2182,10 +2235,10 @@
                     <table style="width:100%;border-collapse:collapse;font-size:13px">
                         <thead>
                             <tr style="background:#f9fafb">
-                                <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;border-bottom:1.5px solid #e5e7eb">Designation</th>
-                                <th style="padding:9px 12px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;border-bottom:1.5px solid #e5e7eb">People (OR)</th>
-                                <th style="padding:9px 12px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;border-bottom:1.5px solid #e5e7eb">Revenue</th>
-                                <th style="padding:9px 12px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;border-bottom:1.5px solid #e5e7eb">Status</th>
+                                <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;border-bottom:1.5px solid #e5e7eb">Rank / Designation</th>
+                                <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;border-bottom:1.5px solid #e5e7eb">Incentive Slab</th>
+                                <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;border-bottom:1.5px solid #e5e7eb">Requirement (≥3 Paid Files)</th>
+                                <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;border-bottom:1.5px solid #e5e7eb">Status</th>
                             </tr>
                         </thead>
                         <tbody id="mycardTierTable"></tbody>
@@ -2230,13 +2283,9 @@
 
             <!-- Panel: ID Card -->
             <div id="mcPanel-idcard" style="display:none">
-                <!-- [DC_VGK_IDCARD_TAB_001] ID Card section — shown only when idcard_enabled -->
+                <!-- [DC_VGK_IDCARD_TAB_001] ID Card section — shown directly by default when idcard_enabled -->
                 <div id="mycardIdcardWrap">
-                    <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#374151;cursor:pointer;margin-bottom:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px">
-                        <input type="checkbox" id="mycardIdcardToggle" onchange="toggleMycardIdcard(this.checked)" style="width:16px;height:16px;accent-color:#1d4ed8;cursor:pointer">
-                        Show My ID Card
-                    </label>
-                    <div id="mycardIdcardArea" style="display:none"></div>
+                    <div id="mycardIdcardArea" style="display:block"></div>
                 </div>
                 <div id="mycardIdcardLocked" style="display:none;background:linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%);border:2px dashed #cbd5e1;border-radius:14px;padding:32px 22px;text-align:center">
                     <i class="fas fa-lock" style="font-size:36px;color:#94a3b8;margin-bottom:12px;display:block"></i>
@@ -2278,6 +2327,13 @@
         if (queryToken) {
             localStorage.setItem('vgk_token', queryToken);
             token = queryToken;
+        }
+        if (!token) {
+            const vgkMatch = document.cookie.match(/vgk_token=([^;]+)/);
+            if (vgkMatch) {
+                token = vgkMatch[1];
+                localStorage.setItem('vgk_token', token);
+            }
         }
         if (!token) {
             const match = document.cookie.match(/session_token=([^;]+)/);
@@ -2360,6 +2416,10 @@
         }
 
         function showTab(name, el) {
+            // Remove early tab style if present
+            const _ets = document.getElementById('early-tab-style');
+            if (_ets) _ets.remove();
+
             // Persist active tab so page refresh restores it
             localStorage.setItem('vgk_active_tab', name);
 
@@ -2448,15 +2508,16 @@
 
         // ── Dashboard (Earnings) ──────────────────────────────────────────
         async function loadEarnings() {
-            // [DC-PERF-001] Stale-while-revalidate: show cached dashboard instantly
-            const _EC_KEY = 'vgk_earn_cache';
+            // [DC-PERF-001] Scoped stale-while-revalidate: cache per partner ID
+            const _pid = (JSON.parse(localStorage.getItem('vgk_partner') || '{}')).id || 'guest';
+            const _EC_KEY = 'vgk_earn_cache_' + _pid;
             const _EC_TTL = 3 * 60 * 1000; // 3 minutes
             var _earnCacheShown = false;
             try {
                 const _ec = localStorage.getItem(_EC_KEY);
                 if (_ec) {
                     const { d: _ecd, ts: _ects } = JSON.parse(_ec);
-                    if (_ecd && _ecd.success) {
+                    if (_ecd && _ecd.success && _ecd.rank_position && String(_ecd.rank_position.partner_id) === String(_pid)) {
                         _applyEarningsData(_ecd);
                         _earnCacheShown = true;
                         if (Date.now() - _ects < _EC_TTL) return; // fresh — skip network
@@ -2465,7 +2526,7 @@
             } catch(_ece) {}
             try {
                 const resp = await fetch(BASE + '/dashboard/summary', { headers: authHeaders() });
-                if (resp.status === 401) { logout(); return; }
+                if (resp.status === 401 || resp.status === 403) { logout(); return; }
                 const data = await resp.json();
                 if (!data.success) throw new Error(data.detail || 'Error');
                 try { localStorage.setItem(_EC_KEY, JSON.stringify({ d: data, ts: Date.now() })); } catch(_se) {}
@@ -2501,12 +2562,52 @@
                 const e = data.earnings || {};
                 const dc = data.discount_credits || {};
                 const t = data.team || {};
+
+                // [DC-FIX-IDENTITY] Always keep topbar and sidebar member code and name in sync with authenticated session
+                if (m.partner_code) {
+                    const _tid = document.getElementById('topbarMemberId'); if (_tid) _tid.innerHTML = '<i class="fas fa-id-badge me-1"></i>' + m.partner_code;
+                    const _sid = document.getElementById('sidebarMemberId'); if (_sid) _sid.textContent = m.partner_code;
+                }
+                if (m.partner_name) {
+                    const _tn = document.getElementById('topbarMemberName'); if (_tn) _tn.textContent = m.partner_name;
+                    const _sn = document.getElementById('sidebarMemberName'); if (_sn) _sn.textContent = m.partner_name;
+                }
                 // DC-VGK-DL-001: cache member profile for promo creative download
                 if (!window._vgkDlProfile || !window._vgkDlProfile.desig) {
                     fetch('/api/v1/vgk/auth/me', { headers: authHeaders() })
                         .then(r => r.ok ? r.json() : null)
                         .then(d => { if (d) window._vgkDlProfile = { name: d.partner_name||m.partner_name||'', phone: d.phone||m.phone||'', desig: d.designation_label||'Channel Partner' }; })
                         .catch(() => { window._vgkDlProfile = { name: m.partner_name||'', phone: m.phone||'', desig: 'Channel Partner' }; });
+                }
+
+                // V27 Authoritative Rank Position & Earnings Reconciliation Binding
+                if (data.rank_position) {
+                    const rp = data.rank_position;
+                    const elR = document.getElementById('vgkCurrentRankDisplay'); if (elR) elR.textContent = rp.rank_display || '1★ Channel Partner';
+                    const elS = document.getElementById('vgkRankSlabPctDisplay'); if (elS) elS.textContent = (rp.rank_slab_pct || 5.0).toFixed(2) + '%';
+                    const elA = document.getElementById('vgkActivatedTeamCount'); if (elA) elA.textContent = rp.activated_team || 0;
+                    const elV = document.getElementById('vgkActiveTeamCount'); if (elV) elV.textContent = rp.active_team || 0;
+                    const elN = document.getElementById('vgkNextRankDisplay'); if (elN) elN.textContent = rp.next_rank || 'Director (Max Rank)';
+                    const elG = document.getElementById('vgkRankGapDisplay'); if (elG) elG.textContent = rp.next_rank ? (rp.rank_gap || 0) : '0';
+                    const elP = document.getElementById('vgkRankProgressPctDisplay'); if (elP) elP.textContent = (rp.rank_progress_percent || 0).toFixed(1) + '%';
+                    const elReq = document.getElementById('vgkNextRankReqDisplay'); if (elReq) elReq.textContent = rp.next_rank_requirement || '50';
+                    const elBar = document.getElementById('vgkRankProgressBar'); if (elBar) elBar.style.width = Math.min(100, (rp.rank_progress_percent || 0)) + '%';
+
+                    // Sidebar Rank & Designation Badge
+                    const _srb = document.getElementById('sidebarMemberRankBadge');
+                    const _srt = document.getElementById('sidebarMemberRankText');
+                    if (_srb && _srt && rp.rank_display) {
+                        _srt.textContent = rp.rank_display;
+                        _srb.style.display = 'block';
+                    }
+                }
+                if (data.earnings_breakdown) {
+                    const eb = data.earnings_breakdown;
+                    const fmtInr = n => '₹' + Number(n||0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const elG = document.getElementById('ebV2Gross'); if (elG) elG.textContent = fmtInr(eb.gross_entitlement_v2);
+                    const elP = document.getElementById('ebTotalEconPaid'); if (elP) elP.textContent = fmtInr(eb.total_economic_paid);
+                    const elPend = document.getElementById('ebCurrentPending'); if (elPend) elPend.textContent = fmtInr(eb.current_pending);
+                    const elAdj = document.getElementById('ebProcessAdj'); if (elAdj) elAdj.textContent = fmtInr(eb.process_adjustment);
                 }
 
                 // Update hero section cards
@@ -4507,9 +4608,14 @@
                         ['Last Login', p.last_login ? new Date(p.last_login).toLocaleString('en-IN') : '—']
                     ];
                 } else {
+                    const roleClean = {'VGK_ASSOCIATE':'VGK Associate','VGK_MENTOR':'VGK Mentor','VGK_LEADER':'VGK Leader'}[p.vgk_role] || p.vgk_role || 'VGK Associate';
                     fields = [
                         ['Member ID', `<strong style="color:#7c3aed;font-size:17px">${escHtml(p.partner_code)}</strong>`],
                         ['Display Name', escHtml(p.partner_name||'—')],
+                        ['Designation', `<strong style="color:#7c3aed;font-size:16px"><i class="fas fa-award text-warning me-1"></i>${escHtml(p.current_designation || p.designation_label || 'Channel Partner')}</strong>`],
+                        ['Current Rank', `<span style="background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;border-radius:20px;padding:4px 14px;font-size:13px;font-weight:800;display:inline-flex;align-items:center;gap:6px"><i class="fas fa-star text-warning"></i>${escHtml(p.rank_display || '1★ Channel Partner')}</span>`],
+                        ['Incentive Slab', `<strong style="color:#059669;font-size:15px">${Number(p.rank_slab_pct || 5.0).toFixed(2)}%</strong> <span style="background:#059669;color:#fff;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700;margin-left:6px">Permanent Rank</span>`],
+                        ['Activated Team', `<strong style="color:#4c1d95;font-size:16px">${p.activated_team_cnt || 0} Members</strong> <span style="font-size:11px;color:#6b7280">(≥3 paid files)</span>`],
                         ['Title', escHtml(p.name_title||'—')],
                         ['First Name', escHtml(p.first_name||'—')],
                         ['Last Name', escHtml(p.last_name||'—')],
@@ -4517,7 +4623,7 @@
                         ['Phone', escHtml(p.phone||'—')],
                         ['Email', escHtml(p.email||'—')],
                         ['WhatsApp', escHtml(p.whatsapp_number||'—')],
-                        ['Role', escHtml(p.vgk_role||'MEMBER')],
+                        ['Role', escHtml(roleClean)],
                         ['Status', p.is_active && p.vgk_activated_at ? '<span class="status-active">Activated</span>' : p.is_active ? '<span class="status-active">Active</span>' : '<span class="status-inactive">Pending Activation</span>'],
                         ['Referrer', p.referrer_code && p.referrer_code !== 'VGK07102207' ? `${escHtml(p.referrer_name||'')} <span style="color:#7c3aed;font-weight:700">(${escHtml(p.referrer_code)})</span>` : '<span style="color:#7c3aed;font-weight:600">VGK Support</span>'],
                         ['Points Balance', `<strong style="color:#2563eb">${(parseFloat(p.vgk_points_balance)||0).toLocaleString('en-IN')}</strong>`],
@@ -5928,63 +6034,58 @@
         function logout() {
             localStorage.removeItem('vgk_token');
             localStorage.removeItem('vgk_partner');
+            document.cookie = "vgk_token=; path=/; max-age=0;";
+            document.cookie = "session_token=; path=/; max-age=0;";
+            try {
+                Object.keys(localStorage).forEach(k => {
+                    if (k.startsWith('vgk_earn_cache')) localStorage.removeItem(k);
+                });
+            } catch(e) {}
             window.location.href = '/vgk/login';
         }
 
         // ── Init ────────────────────────────────────────────────────────
         async function init() {
-            const stored = JSON.parse(localStorage.getItem('vgk_partner') || '{}');
-            if (stored.partner_code) {
-                const _tid = document.getElementById('topbarMemberId');
-                if (_tid) _tid.innerHTML = '<i class="fas fa-id-badge me-1"></i>' + stored.partner_code;
-                const _sid = document.getElementById('sidebarMemberId');
-                if (_sid) _sid.textContent = stored.partner_code;
-            }
-            if (stored.partner_name) {
-                const _tn = document.getElementById('topbarMemberName');
-                if (_tn) _tn.textContent = stored.partner_name;
-                const _sn = document.getElementById('sidebarMemberName');
-                if (_sn) _sn.textContent = stored.partner_name;
-            }
-            // Restore last active tab (default to earnings if none saved)
+            // [DC-INSTANT-TAB] Restore and render target active tab IMMEDIATELY (0ms delay)
             const _validTabs = ['earnings','leads','orders','tickets','network','addmember','points','ledger','coupons','profile','bonanza','vendors','media','mycard'];
             const urlParams = new URLSearchParams(window.location.search);
             const queryTab = urlParams.get('tab');
             let _lastTab = queryTab || localStorage.getItem('vgk_active_tab') || 'earnings';
-            if (stored.vgk_role === 'COMMUNITY') {
+            const _initialStored = JSON.parse(localStorage.getItem('vgk_partner') || '{}');
+            if (_initialStored.vgk_role === 'COMMUNITY') {
                 if (_lastTab !== 'profile' && _lastTab !== 'ledger') {
                     _lastTab = 'ledger';
                 }
             }
             showTab(_validTabs.includes(_lastTab) ? _lastTab : 'earnings');
-            enforceCommunityRestriction(stored.vgk_role);
+            if (_initialStored.partner_code) {
+                const _tid = document.getElementById('topbarMemberId'); if (_tid) _tid.innerHTML = '<i class="fas fa-id-badge me-1"></i>' + _initialStored.partner_code;
+                const _sid = document.getElementById('sidebarMemberId'); if (_sid) _sid.textContent = _initialStored.partner_code;
+            }
+            if (_initialStored.partner_name) {
+                const _tn = document.getElementById('topbarMemberName'); if (_tn) _tn.textContent = _initialStored.partner_name;
+                const _sn = document.getElementById('sidebarMemberName'); if (_sn) _sn.textContent = _initialStored.partner_name;
+            }
 
-            // [DC-INIT-PROFILE] Dynamic profile load to resolve stuck "Loading..." for roles like COMMUNITY
+            // [DC-INIT-PROFILE] Dynamic profile load in parallel to ensure session identity is fresh
+            var p = null;
             try {
                 const resp = await fetch(BASE + '/auth/me', { headers: authHeaders() });
                 if (resp.status === 401) { logout(); return; }
                 if (resp.ok) {
                     const data = await resp.json();
                     if (data.success && data.data) {
-                        const p = data.data;
+                        p = data.data;
+                        const prevStored = JSON.parse(localStorage.getItem('vgk_partner') || '{}');
+                        if (prevStored.id && p.id && prevStored.id !== p.id) {
+                            // Partner switched — clear stale earnings cache
+                            try {
+                                Object.keys(localStorage).forEach(k => {
+                                    if (k.startsWith('vgk_earn_cache')) localStorage.removeItem(k);
+                                });
+                            } catch(e) {}
+                        }
                         localStorage.setItem('vgk_partner', JSON.stringify(p));
-                        
-                        // Update UI with fresh details
-                        if (p.partner_code) {
-                            const _tid = document.getElementById('topbarMemberId');
-                            if (_tid) _tid.innerHTML = '<i class="fas fa-id-badge me-1"></i>' + p.partner_code;
-                            const _sid = document.getElementById('sidebarMemberId');
-                            if (_sid) _sid.textContent = p.partner_code;
-                        }
-                        if (p.partner_name) {
-                            const _tn = document.getElementById('topbarMemberName');
-                            if (_tn) _tn.textContent = p.partner_name;
-                            const _sn = document.getElementById('sidebarMemberName');
-                            if (_sn) _sn.textContent = p.partner_name;
-                        }
-                        
-                        // Recalculate restrictions based on fresh role
-                        enforceCommunityRestriction(p.vgk_role);
                         
                         // Terms Acceptance Check
                         if (data.requires_terms_acceptance && data.terms_and_conditions && !localStorage.getItem('vgk_tc_accepted')) {
@@ -5995,6 +6096,25 @@
             } catch(e) {
                 console.error("Failed to fetch fresh profile in init()", e);
             }
+
+            const stored = p || JSON.parse(localStorage.getItem('vgk_partner') || '{}');
+            if (stored.partner_code) {
+                const _tid = document.getElementById('topbarMemberId'); if (_tid) _tid.innerHTML = '<i class="fas fa-id-badge me-1"></i>' + stored.partner_code;
+                const _sid = document.getElementById('sidebarMemberId'); if (_sid) _sid.textContent = stored.partner_code;
+            }
+            if (stored.partner_name) {
+                const _tn = document.getElementById('topbarMemberName'); if (_tn) _tn.textContent = stored.partner_name;
+                const _sn = document.getElementById('sidebarMemberName'); if (_sn) _sn.textContent = stored.partner_name;
+            }
+            const rankText = stored.rank_display || (stored.current_designation ? stored.current_designation : '1★ Channel Partner');
+            const _srb = document.getElementById('sidebarMemberRankBadge');
+            const _srt = document.getElementById('sidebarMemberRankText');
+            if (_srb && _srt && rankText) {
+                _srt.textContent = rankText;
+                _srb.style.display = 'block';
+            }
+
+            enforceCommunityRestriction(stored.vgk_role);
 
             // [DC-VCARD] Load visiting card eligibility in background
             loadVisitingCard();
@@ -8477,75 +8597,70 @@
         document.getElementById('mycardContent').style.display = 'block';
 
         const fmtInr = v => '₹' + Number(v).toLocaleString('en-IN');
-        const tierColors = {
-            'none':               { bg:'#f8fafc', border:'#cbd5e1', text:'#94a3b8' },
-            'channel_partner':    { bg:'#f5f3ff', border:'#ede9fe', text:'#4c1d95' },
-            'sr_channel_partner': { bg:'#fef3c7', border:'#fde68a', text:'#92400e' },
-            'official_partner':   { bg:'#f0fdf4', border:'#bbf7d0', text:'#166534' },
-        };
-        const tc = tierColors[d.tier] || tierColors['none'];
-        const badgeBox = document.getElementById('mycardBadgeBox');
-        badgeBox.style.background  = tc.bg;
-        badgeBox.style.borderColor = tc.border;
-        document.getElementById('mycardBadgeLabel').style.color = tc.text;
-        document.getElementById('mycardBadgeLabel').textContent = d.tier_label || '—';
-        const subMsgs = {
-            'none':               'Reach 10 activations, ₹5 Lakh revenue, or pay ₹5,000 to unlock your Channel Partner card',
-            'channel_partner':    'Keep growing! Reach 15 activations or ₹15 Lakh revenue to become Sr. Channel Partner',
-            'sr_channel_partner': 'Almost there! Reach 30 activations or ₹30 Lakh revenue to become Lead Channel Partner',
-            'official_partner':   '🎉 Highest tier achieved! You are a Lead Channel Partner.',
-        };
-        document.getElementById('mycardBadgeSub').textContent = subMsgs[d.tier] || '';
-        document.getElementById('mycardCoupons').textContent   = d.coupons_used || 0;
-        document.getElementById('mycardRevenue').textContent   = fmtInr(d.revenue || 0);
-        document.getElementById('mycardActivated').textContent = d.activated_people || 0;
+        const storedPartner = JSON.parse(localStorage.getItem('vgk_partner') || '{}');
+        const memberRankDisplay = storedPartner.rank_display || d.rank_display || (storedPartner.stars === 0 ? 'Member' : '1★ Channel Partner');
+        const memberDesig = storedPartner.current_designation || d.tier_label || 'Member';
+        const memberStars = storedPartner.rank_num !== undefined ? storedPartner.rank_num : (memberRankDisplay === 'Member' ? 0 : memberRankDisplay.startsWith('2★') ? 2 : memberRankDisplay.startsWith('3★') ? 3 : memberRankDisplay.startsWith('4★') ? 4 : memberRankDisplay.startsWith('5★') ? 5 : 1);
+        const memberActivatedCnt = storedPartner.activated_team_cnt !== undefined ? storedPartner.activated_team_cnt : (d.activated_people || 0);
 
-        const p = d.progress || {};
-        const rows = [
-            { key:'channel_partner',    icon:'🟣',
-              rev_done: p.channel_partner?.revenue_done,  rev_need: p.channel_partner?.revenue_needed,
-              ppl_done: p.channel_partner?.people_done,   ppl_need: p.channel_partner?.people_needed },
-            { key:'sr_channel_partner', icon:'🟡',
-              rev_done: p.sr_channel_partner?.revenue_done, rev_need: p.sr_channel_partner?.revenue_needed,
-              ppl_done: p.sr_channel_partner?.people_done,  ppl_need: p.sr_channel_partner?.people_needed },
-            { key:'official_partner',   icon:'🟢',
-              rev_done: p.official_partner?.revenue_done,  rev_need: p.official_partner?.revenue_needed,
-              ppl_done: p.official_partner?.people_done,   ppl_need: p.official_partner?.people_needed },
+        const badgeBox = document.getElementById('mycardBadgeBox');
+        badgeBox.style.background  = 'linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%)';
+        badgeBox.style.borderColor = '#ede9fe';
+        document.getElementById('mycardBadgeLabel').style.color = '#4c1d95';
+        document.getElementById('mycardBadgeLabel').innerHTML = memberStars === 0 
+            ? `<i class="fas fa-user-circle text-primary me-2"></i>Member`
+            : `<i class="fas fa-star text-warning me-2"></i>${escHtml(memberRankDisplay)}`;
+        
+        const nextRankName = storedPartner.next_rank || (memberStars === 0 ? '1★ Channel Partner' : memberStars === 1 ? 'Manager' : memberStars === 2 ? 'Zonal Manager' : memberStars === 3 ? 'Regional Manager' : memberStars === 4 ? 'Director' : 'Director (Max Rank)');
+        const nextRankReq = storedPartner.next_rank_requirement || (memberStars === 0 ? 1 : memberStars === 1 ? 2 : memberStars === 2 ? 10 : memberStars === 3 ? 25 : memberStars === 4 ? 50 : 50);
+        const rankGap = Math.max(0, nextRankReq - memberActivatedCnt);
+
+        if (memberStars === 0) {
+            document.getElementById('mycardBadgeSub').innerHTML = `Welcome to VGK4U! Complete your <strong>1st File 1st Payment</strong> to activate and unlock <strong>1★ Channel Partner</strong> (5.00% Permanent Slab).`;
+        } else if (memberStars >= 5) {
+            document.getElementById('mycardBadgeSub').innerHTML = `<span style="color:#059669;font-weight:700">🎉 Maximum Rank Achieved! You are an Authoritative Director.</span>`;
+        } else {
+            document.getElementById('mycardBadgeSub').innerHTML = `Permanent Rank achieved with <strong>${memberActivatedCnt} Activated Downlines</strong>. Need <strong>${rankGap} more</strong> to unlock <strong>${escHtml(nextRankName)}</strong>.`;
+        }
+        
+        document.getElementById('mycardCoupons').textContent   = d.coupons_used || 0;
+        document.getElementById('mycardRevenue').textContent   = (storedPartner.rank_slab_pct ? storedPartner.rank_slab_pct.toFixed(2) + '%' : '6.50%');
+        document.getElementById('mycardActivated').textContent = memberActivatedCnt;
+
+        // Authoritative Career Progression Ladder (Starting from Member -> 1st File -> 5 Ranks)
+        const rankTiers = [
+            { rankNum: 0, name: 'Member', icon: '👤', slab: 'Standard', reqText: 'Default Joining', isUnlocked: true, color: '#6b7280' },
+            { rankNum: 1, name: 'Channel Partner', icon: '1★', slab: '5.00%', reqText: '1st File 1st Payment', isUnlocked: memberStars >= 1, color: '#6b7280' },
+            { rankNum: 2, name: 'Manager', icon: '2★', slab: '6.50%', reqText: '2 Activated Downlines', isUnlocked: memberStars >= 2, color: '#7c3aed' },
+            { rankNum: 3, name: 'Zonal Manager', icon: '3★', slab: '7.50%', reqText: '10 Activated Downlines', isUnlocked: memberStars >= 3, color: '#2563eb' },
+            { rankNum: 4, name: 'Regional Manager', icon: '4★', slab: '8.25%', reqText: '25 Activated Downlines', isUnlocked: memberStars >= 4, color: '#d97706' },
+            { rankNum: 5, name: 'Director', icon: '5★', slab: '8.50%', reqText: '50 Activated Downlines', isUnlocked: memberStars >= 5, color: '#059669' },
         ];
-        const tierLabelMap = {
-            'channel_partner': 'Channel Partner',
-            'sr_channel_partner': 'Sr. Channel Partner',
-            'official_partner': 'Lead Channel Partner',
-        };
-        const tierOrder = ['none','channel_partner','sr_channel_partner','official_partner'];
-        const currentIdx = tierOrder.indexOf(d.tier);
+
         let html = '';
-        rows.forEach(r => {
-            const rowIdx = tierOrder.indexOf(r.key);
-            const unlocked = r.key === d.tier || rowIdx < currentIdx;
-            const isCurrent = r.key === d.tier;
-            const revPct  = r.rev_need  ? Math.round((r.rev_done  / r.rev_need)  * 100) : 0;
-            const pplPct  = r.ppl_need  ? Math.round((r.ppl_done  / r.ppl_need)  * 100) : 0;
-            const bestPct = Math.max(revPct, pplPct);
-            const statusBadge = unlocked
-                ? `<span style="background:#dcfce7;color:#166534;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700">✓ Unlocked</span>`
-                : `<span style="background:#fef3c7;color:#92400e;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700">${bestPct}%</span>`;
-            html += `<tr style="${isCurrent ? 'background:#faf5ff;' : ''}">
-                <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;font-weight:700;color:${unlocked?'#111':'#9ca3af'}">${r.icon} ${tierLabelMap[r.key]}</td>
-                <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;text-align:center">
-                    ${r.ppl_need ? `<div style="font-size:12px;font-weight:700;color:#c2410c">${r.ppl_done}/${r.ppl_need}</div>
-                    <div style="height:4px;background:#e5e7eb;border-radius:2px;margin-top:4px;max-width:60px;margin-left:auto;margin-right:auto">
-                        <div style="height:4px;background:#c2410c;border-radius:2px;width:${Math.min(pplPct,100)}%"></div>
-                    </div>` : '<span style="color:#d1d5db">—</span>'}
+        rankTiers.forEach(r => {
+            const isUnlocked = memberStars >= r.rankNum;
+            const isCurrent = memberStars === r.rankNum;
+            const pct = r.req === 0 ? 100 : Math.min(100, Math.round((memberActivatedCnt / r.req) * 100));
+            const statusBadge = isUnlocked
+                ? `<span style="background:#dcfce7;color:#166534;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700"><i class="fas fa-check me-1"></i>Unlocked</span>`
+                : `<span style="background:#fef3c7;color:#92400e;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700">${pct}% Progress</span>`;
+            
+            html += `<tr style="${isCurrent ? 'background:#faf5ff;border-left:4px solid #7c3aed;' : ''}">
+                <td style="padding:12px;border-bottom:1px solid #f3f4f6;font-weight:700;color:${isUnlocked?'#111':'#9ca3af'}">
+                    <span style="background:${isUnlocked ? '#ede9fe' : '#f3f4f6'};color:${isUnlocked ? '#7c3aed' : '#9ca3af'};padding:2px 8px;border-radius:6px;font-size:11px;margin-right:6px;font-weight:800">${r.icon}</span>
+                    ${escHtml(r.name)} ${isCurrent ? '<span style="background:#7c3aed;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px">Current</span>' : ''}
                 </td>
-                <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;text-align:center">
-                    <div style="font-size:12px;font-weight:700;color:#059669">${fmtInr(r.rev_done || 0)}</div>
-                    <div style="font-size:10px;color:#9ca3af">/ ${fmtInr(r.rev_need || 0)}</div>
-                    <div style="height:4px;background:#e5e7eb;border-radius:2px;margin-top:4px;max-width:60px;margin-left:auto;margin-right:auto">
-                        <div style="height:4px;background:#059669;border-radius:2px;width:${Math.min(revPct,100)}%"></div>
+                <td style="padding:12px;border-bottom:1px solid #f3f4f6;text-align:center">
+                    <strong style="color:#059669;font-size:13px">${r.slab}</strong>
+                </td>
+                <td style="padding:12px;border-bottom:1px solid #f3f4f6;text-align:center">
+                    <div style="font-size:12px;font-weight:700;color:${isUnlocked ? '#059669' : '#c2410c'}">${memberActivatedCnt} / ${r.req} Members</div>
+                    <div style="height:5px;background:#e5e7eb;border-radius:3px;margin-top:4px;max-width:80px;margin-left:auto;margin-right:auto">
+                        <div style="height:5px;background:${isUnlocked ? '#059669' : '#7c3aed'};border-radius:3px;width:${pct}%"></div>
                     </div>
                 </td>
-                <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;text-align:center">${statusBadge}</td>
+                <td style="padding:12px;border-bottom:1px solid #f3f4f6;text-align:center">${statusBadge}</td>
             </tr>`;
         });
         document.getElementById('mycardTierTable').innerHTML = html;
@@ -8670,13 +8785,27 @@
 
     // ── ID Card tab ───────────────────────────────────────────────────────────
     var _idcardTabBuilt = false;
-    function _buildIdcardTab() {
+    async function _buildIdcardTab() {
         var d = _mycardData;
         var wrapEl = document.getElementById('mycardIdcardWrap');
         var lockEl = document.getElementById('mycardIdcardLocked');
+        var areaEl = document.getElementById('mycardIdcardArea');
         if (d && d.idcard_enabled) {
             if (wrapEl) wrapEl.style.display = '';
             if (lockEl) lockEl.style.display = 'none';
+            if (areaEl) {
+                areaEl.style.display = 'block';
+                areaEl.innerHTML = '<div style="text-align:center;padding:16px;color:#9ca3af;font-size:12px"><i class="fas fa-spinner fa-spin me-1"></i>Loading ID Card…</div>';
+                const cd = await _myFetchCard();
+                if (cd) {
+                    areaEl.innerHTML = _mpIdCardHtml(cd)
+                        .replace(/mpIdcardEl/g, 'tabIdcardEl')
+                        .replace(/downloadMpCard\('mpIdcardEl'/g, "downloadMpCard('tabIdcardEl'")
+                        .replace(/shareMpCard\('mpIdcardEl'/g, "shareMpCard('tabIdcardEl'");
+                } else {
+                    areaEl.innerHTML = '<div style="color:#dc2626;font-size:12px;padding:8px">Failed to load ID card.</div>';
+                }
+            }
         } else {
             if (wrapEl) wrapEl.style.display = 'none';
             if (lockEl) lockEl.style.display = '';
@@ -8742,8 +8871,8 @@
             } else {
                 // Income summary card — last slide
                 var d = _mycardData;
-                var tier = (d && d.tier_label) || 'Channel Partner';
                 var partner = JSON.parse(localStorage.getItem('vgk_partner') || '{}');
+                var tier = partner.current_designation || partner.designation_label || partner.rank_display || (d && d.tier_label) || 'Manager';
                 var name = partner.partner_name || (d && d.card_data && d.card_data.display_name) || 'VGK Partner';
                 var vgkId = partner.partner_code || (d && d.card_data && d.card_data.partner_code) || '';
                 return '<div id="pf-slide-' + s.idx + '" style="' + hidden + '">'
@@ -9287,9 +9416,11 @@
 
             // Badges
             const badges = [];
+            const memberRank = d.rank_display || (d.stars ? d.stars + '★ ' + d.position : '1★ Channel Partner');
+            badges.push(`<span style="background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:800"><i class="fas fa-star text-warning me-1"></i>${escHtml(memberRank)}</span>`);
             if (d.is_loyal_coupon) badges.push(`<span style="background:#fef9c3;color:#854d0e;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700"><i class="fas fa-certificate" style="margin-right:3px"></i>Loyal Coupon</span>`);
             if (d.is_paid_activation) badges.push(`<span style="background:#f5f3ff;color:#5b21b6;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700"><i class="fas fa-check-circle" style="margin-right:3px"></i>PIN Activated</span>`);
-            document.getElementById('vgkMpBadges').innerHTML = badges.join('');
+            document.getElementById('vgkMpBadges').innerHTML = badges.join(' ');
 
             // Stats
             const total = _countAll(d.downline);

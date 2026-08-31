@@ -99,8 +99,10 @@ def get_current_vgk_member(request: Request, db: Session = Depends(get_db)) -> O
                             headers={"WWW-Authenticate": "Bearer"})
 
 
+from fastapi import Response
+
 @router.post("/auth/login", response_model=VGKLoginResponse)
-def vgk_login(request: VGKLoginRequest, db: Session = Depends(get_db)):
+def vgk_login(request: VGKLoginRequest, response: Response, db: Session = Depends(get_db)):
     identifier = request.identifier.strip()
     partner = db.query(OfficialPartner).filter(
         OfficialPartner.category == 'VGK_TEAM',
@@ -208,6 +210,12 @@ def vgk_login(request: VGKLoginRequest, db: Session = Depends(get_db)):
     except Exception as _tc_err:
         logger.warning(f"[VGK-AUTH] T&C lookup failed (non-fatal): {_tc_err}")
 
+    from app.services.universal_incentive_engine import get_partner_current_position_v18
+    rpos = get_partner_current_position_v18(db, partner.id)
+
+    response.set_cookie(key="vgk_token", value=token, httponly=False, path="/")
+    response.set_cookie(key="session_token", value=token, httponly=False, path="/")
+
     return VGKLoginResponse(
         success=True,
         message="Login successful",
@@ -217,7 +225,18 @@ def vgk_login(request: VGKLoginRequest, db: Session = Depends(get_db)):
             "partner_code": partner.partner_code,
             "partner_name": partner.partner_name,
             "vgk_role": partner.vgk_role,
-            "company_id": partner.company_id
+            "company_id": partner.company_id,
+            "rank_code": rpos.get('rank_code', 'RANK_1'),
+            "rank_num": rpos.get('stars', 1),
+            "current_rank": rpos.get('current_rank', 'Rank 1 — Channel Partner'),
+            "current_designation": rpos.get('current_designation', 'Channel Partner'),
+            "rank_display": rpos.get('rank_display', '1★ Channel Partner'),
+            "rank_slab_pct": rpos.get('rank_slab_pct', 5.00),
+            "activated_team": rpos.get('activated_team', 0),
+            "next_rank": rpos.get('next_rank'),
+            "rank_gap": rpos.get('rank_gap', 0),
+            "rank_progress_percent": rpos.get('rank_progress_percent', 0.0),
+            "is_permanent_rank": True
         },
         terms_and_conditions=tc_payload,
         requires_terms_acceptance=needs_tc,
@@ -231,6 +250,23 @@ def vgk_me(current_member: OfficialPartner = Depends(get_current_vgk_member), db
         ref = db.query(OfficialPartner).filter(OfficialPartner.id == current_member.parent_partner_id).first()
         d['referrer_name'] = ref.partner_name if ref else None
         d['referrer_code'] = ref.partner_code if ref else None
+
+    # Attach Authoritative V27 Rank Position & Sync Designation
+    from app.services.universal_incentive_engine import get_partner_current_position_v18
+    rpos = get_partner_current_position_v18(db, current_member.id)
+    d['rank_code']             = rpos.get('rank_code', 'RANK_1')
+    d['rank_num']              = rpos.get('stars', 1)
+    d['current_rank']          = rpos.get('current_rank', 'Rank 1 — Channel Partner')
+    d['current_designation']   = rpos.get('current_designation', 'Channel Partner')
+    d['designation_label']     = rpos.get('rank_display', '1★ Channel Partner')
+    d['rank_display']          = rpos.get('rank_display', '1★ Channel Partner')
+    d['rank_slab_pct']         = rpos.get('rank_slab_pct', 5.00)
+    d['activated_team_cnt']    = rpos.get('activated_team', 0)
+    d['next_rank']             = rpos.get('next_rank')
+    d['next_rank_requirement'] = rpos.get('next_rank_requirement')
+    d['rank_gap']              = rpos.get('rank_gap', 0)
+    d['rank_progress_percent'] = rpos.get('rank_progress_percent', 0.0)
+    d['is_permanent_rank']     = True
 
     # T&C check — same as login so already-logged-in members also see pending T&C
     tc_payload = None
@@ -320,7 +356,7 @@ def vgk_visiting_card(
             best_rev       = rev
             best_threshold = threshold
 
-    card_eligible = eligible_tier is not None
+    card_eligible = eligible_tier is not None or bool(current_member.is_active and current_member.vgk_activated_at) or bool(getattr(current_member, 'vcard_enabled', False))
 
     # ── Build referral QR code as base64 ──────────────────────────────────────
     host = get_safe_base_url(request)
@@ -756,13 +792,23 @@ def vgk_my_earnings(
         if e.status != 'CANCELLED' and e.created_at and e.created_at.replace(tzinfo=None) >= month_start.replace(tzinfo=None)
     )
 
+    from app.services.universal_incentive_engine import get_partner_current_position_v18, get_partner_earnings_summary_v27
+    rank_pos = get_partner_current_position_v18(db, current_member.id)
+    earn_breakdown = get_partner_earnings_summary_v27(db, current_member.id)
+
     return {
         "success": True,
+        "rank_position": rank_pos,
+        "earnings_breakdown": earn_breakdown,
         "summary": {
             "points_balance": float(current_member.vgk_points_balance or 0),
             "total_pending": total_pending,
             "total_confirmed": total_confirmed,
-            "this_month": this_month
+            "this_month": this_month,
+            "gross_entitlement_v2": earn_breakdown.get("gross_entitlement_v2", 0.0),
+            "total_economic_paid": earn_breakdown.get("total_economic_paid", 0.0),
+            "current_pending": earn_breakdown.get("current_pending", 0.0),
+            "process_adjustment": earn_breakdown.get("process_adjustment", 0.0)
         },
         "data": [e.to_dict() for e in entries]
     }
@@ -799,12 +845,22 @@ def vgk_my_network(
                 OfficialPartner.id == p.parent_partner_id
             ).first()
             parent_code = _parent[0] if _parent else None
+        # Attach Authoritative V27 Rank Position
+        from app.services.universal_incentive_engine import get_partner_current_position_v18
+        rpos = get_partner_current_position_v18(db, p.id)
+
         node = {
             "id": p.id, "partner_code": p.partner_code, "partner_name": p.partner_name,
             "is_active": p.is_active, "vgk_points_balance": float(p.vgk_points_balance or 0),
             "vgk_activated_at": p.vgk_activated_at.isoformat() if p.vgk_activated_at else None,
             "created_at": p.created_at.isoformat() if p.created_at else None,
             "parent_partner_code": parent_code,
+            "rank_code": rpos.get('rank_code', 'RANK_1'),
+            "current_rank": rpos.get('current_rank', 'Rank 1 — Channel Partner'),
+            "rank_display": rpos.get('rank_display', '1★ Channel Partner'),
+            "rank_slab_pct": rpos.get('rank_slab_pct', 5.00),
+            "activated_team": rpos.get('activated_team', 0),
+            "level": f"L{4 - depth}",
             "children": []
         }
         _node_count += 1
@@ -2424,6 +2480,11 @@ def vgk_dashboard_summary(
             "date": e.created_at.isoformat() if e.created_at else None,
         })
 
+    # V27 Authoritative Rank Position & Reconciled Earnings Summary
+    from app.services.universal_incentive_engine import get_partner_current_position_v18, get_partner_earnings_summary_v27
+    rank_pos = get_partner_current_position_v18(db, pid)
+    earn_breakdown = get_partner_earnings_summary_v27(db, pid)
+
     return {
         "success": True,
         "member": {
@@ -2437,6 +2498,8 @@ def vgk_dashboard_summary(
             "is_loyal_coupon": getattr(current_member, 'is_loyal_coupon', False),
             "created_at": current_member.created_at.isoformat() if current_member.created_at else None,
         },
+        "rank_position": rank_pos,
+        "earnings_breakdown": earn_breakdown,
         "earnings": {
             "total_confirmed": total_confirmed,
             "total_pending":   total_pending,
@@ -4150,17 +4213,28 @@ def _compute_cp_designation(partner, db) -> dict:
         tier = 'official_partner'
     elif coupons_used >= 300 or activated_people >= 15:
         tier = 'sr_channel_partner'
-    elif manually or paid_activated or coupons_used >= 100 or activated_people >= 10:
+    elif manually or paid_activated or coupons_used >= 100 or activated_people >= 10 or (partner.is_active and partner.vgk_activated_at):
         tier = 'channel_partner'
+
+    tier_label = _CP_TIER_LABELS.get(tier, 'Channel Partner')
+    is_card_visible = False
+    try:
+        from app.services.universal_incentive_engine import get_partner_current_position_v18
+        pos = get_partner_current_position_v18(db, pid)
+        if pos and pos.get('position'):
+            tier_label = pos.get('position')
+            is_card_visible = (pos.get('stars', 0) >= 1) or bool(getattr(partner, 'vcard_enabled', False))
+    except Exception:
+        pass
 
     return {
         "tier":               tier,
-        "tier_label":         _CP_TIER_LABELS.get(tier, '—'),
+        "tier_label":         tier_label,
         "manually_activated": manually,
         "coupons_used":       coupons_used,
         "activated_people":   activated_people,
         "revenue":            revenue,
-        "is_card_visible":    tier != 'none',
+        "is_card_visible":    is_card_visible,
         "progress": {
             "channel_partner": {
                 "label":           "Channel Partner",
@@ -4249,6 +4323,11 @@ def vgk_designation_progress(
         pass
 
     safe_get2 = lambda attr: (getattr(current_member, attr, None) or '')
+    # Attach Authoritative V27 Rank Position
+    from app.services.universal_incentive_engine import get_partner_current_position_v18
+    rpos = get_partner_current_position_v18(db, current_member.id)
+    desig["rank_position"] = rpos
+
     desig["card_data"] = {
         "partner_code":       current_member.partner_code,
         "display_name":       display_name,
@@ -4259,7 +4338,9 @@ def vgk_designation_progress(
         "referral_url":       referral_url,
         "qr_b64":             qr_b64,
         "blood_group":        safe_get2('blood_group'),
-        "designation_label":  desig["tier_label"],
+        "designation_label":  rpos.get("rank_display", desig["tier_label"]),
+        "rank_display":       rpos.get("rank_display", "1★ Channel Partner"),
+        "rank_slab_pct":      rpos.get("rank_slab_pct", 5.00),
         "passport_photo_url": passport_photo_url,
     }
     desig["idcard_enabled"] = bool(getattr(current_member, 'idcard_enabled', False))

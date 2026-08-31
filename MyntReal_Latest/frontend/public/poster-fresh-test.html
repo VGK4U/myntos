@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>VGK Channel Partner Achievement Poster</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Outfit:wght@400;600;700;900&family=Playfair+Display:ital,wght@1,900&family=Poppins:wght@700;800;900&display=swap');
+
+html, body {
+  margin: 0; padding: 0;
+  background: #090d16;
+  width: 480px; height: 720px;
+  overflow: hidden;
+  font-family: 'Segoe UI', Roboto, Helvetica, sans-serif;
+  box-sizing: border-box;
+}
+
+#posterCanvasWrapper {
+  width: 480px; height: 720px;
+  background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 50%, #020617 100%);
+  border: 5px double #fbbf24;
+  border-radius: 20px;
+  box-shadow: 0 25px 70px rgba(0,0,0,0.95), 0 0 50px rgba(251,191,36,0.4);
+  position: relative;
+  box-sizing: border-box;
+  color: #ffffff;
+  padding: 14px 16px 20px 16px;
+  display: flex; flex-direction: column; align-items: center;
+  overflow: hidden;
+}
+
+.stars-overlay {
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(3px 3px at 25px 35px, #fbbf24, transparent), 
+    radial-gradient(3px 3px at 60px 85px, #ffffff, transparent), 
+    radial-gradient(2px 2px at 110px 45px, #f472b6, transparent), 
+    radial-gradient(3px 3px at 180px 140px, #38bdf8, transparent), 
+    radial-gradient(2.5px 2.5px at 250px 90px, #fbbf24, transparent), 
+    radial-gradient(3px 3px at 340px 60px, #ffffff, transparent), 
+    radial-gradient(3px 3px at 410px 120px, #fbbf24, transparent), 
+    radial-gradient(2px 2px at 450px 40px, #38bdf8, transparent), 
+    radial-gradient(3px 3px at 55px 280px, #fbbf24, transparent), 
+    radial-gradient(3px 3px at 430px 310px, #ffffff, transparent), 
+    radial-gradient(2.5px 2.5px at 35px 550px, #f472b6, transparent), 
+    radial-gradient(3px 3px at 440px 580px, #fbbf24, transparent);
+  opacity: 0.85; pointer-events: none; z-index: 1;
+}
+
+.confetti-svg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 1; opacity: 0.45;
+}
+
+.inner-content {
+  position: relative; z-index: 2; width: 100%;
+  display: flex; flex-direction: column; align-items: center;
+}
+
+.header-banner {
+  width: 100%; height: 54px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.95));
+  border: 1.8px solid rgba(234,179,8,0.85);
+  border-radius: 14px; padding: 3px 12px;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px; box-shadow: 0 4px 18px rgba(0,0,0,0.4);
+}
+
+.congrats-ribbon {
+  background: linear-gradient(135deg, #854d0e 0%, #ca8a04 50%, #854d0e 100%);
+  border: 1.5px solid #fde047; color: #fffbeb;
+  font-family: Georgia, serif; font-size: 11.5px; font-weight: 900;
+  letter-spacing: 1px; padding: 4px 14px; border-radius: 30px;
+  box-shadow: 0 4px 15px rgba(202,138,4,0.5); margin-bottom: 6px;
+  text-transform: uppercase; white-space: nowrap; max-width: 100%; box-sizing: border-box;
+}
+
+.member-ribbon {
+  width: 100%; background: #fbbf24;
+  color: #000000 !important; -webkit-text-fill-color: #000000 !important;
+  font-size: 20px; font-weight: 950;
+  font-family: 'Segoe UI', Roboto, Helvetica, sans-serif;
+  text-transform: uppercase; letter-spacing: 1px; line-height: 1.2;
+  padding: 5px 12px; border: 2.5px solid #ffffff; border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(251,191,36,0.75); box-sizing: border-box; text-align: center;
+  margin-bottom: 8px;
+}
+
+.photo-container {
+  position: relative; width: 175px; height: 175px; margin-bottom: 14px;
+}
+.trophy-left {
+  position: absolute; bottom: 0px; left: -90px;
+  font-size: 72px; line-height: 1;
+  filter: drop-shadow(0 6px 16px rgba(251,191,36,0.9)); z-index: 10; user-select: none;
+}
+.photo-circle {
+  width: 175px; height: 175px; border-radius: 50%;
+  border: 5px solid #fde047; overflow: hidden; background: #001233;
+  box-shadow: 0 0 50px rgba(234,179,8,0.95);
+  display: flex; align-items: center; justify-content: center;
+}
+.photo-img {
+  width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block;
+}
+.photo-avatar {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg,#1d4ed8,#7c3aed); color: white; font-size: 58px; font-weight: 900;
+}
+.trophy-right {
+  position: absolute; bottom: 0px; right: -90px;
+  font-size: 72px; line-height: 1;
+  filter: drop-shadow(0 6px 16px rgba(251,191,36,0.9)); z-index: 10; user-select: none;
+}
+.champion-pill {
+  position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg,#b45309,#f59e0b,#b45309);
+  border: 1.5px solid #fef08a; color: #ffffff;
+  font-size: 10.5px; font-weight: 900; padding: 3px 16px;
+  border-radius: 14px; letter-spacing: 1.2px; white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.6); z-index: 11;
+}
+
+.overall-card {
+  width: 100%; background: linear-gradient(135deg, #ffffff 0%, #fffbeb 50%, #fef3c7 100%);
+  border: 2.5px solid #eab308; border-radius: 16px; padding: 6px 14px;
+  text-align: center; margin-bottom: 6px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.5), 0 0 20px rgba(251,191,36,0.3);
+}
+.overall-title { color: #92400e; font-size: 11px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
+.overall-amount { color: #b91c1c; font-size: 32px; font-weight: 950; line-height: 1; letter-spacing: -0.5px; }
+.overall-words { font-size: 9px; font-weight: 850; color: #92400e; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.3px; line-height: 1.2; }
+
+.today-banner {
+  width: 100%; background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #065f46 100%);
+  border: 1.5px solid #34d399; border-radius: 14px; padding: 7px 10px;
+  text-align: center; margin-bottom: 6px; box-shadow: 0 4px 16px rgba(4,120,87,0.45); box-sizing: border-box;
+}
+.today-val { font-size: 19px; font-weight: 950; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; }
+.today-paid { font-size: 11px; font-weight: 800; color: #fde047; margin-top: 2px; }
+
+.metrics-grid {
+  width: 100%; display: grid; grid-template-columns: 1fr 1fr 1.05fr; gap: 6px; margin-bottom: 6px; align-items: stretch;
+}
+.metric-box {
+  background: rgba(15,23,42,0.88); border: 1.5px solid rgba(234,179,8,0.5);
+  border-radius: 12px; padding: 5px 2px; text-align: center;
+  display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 3px; min-height: 54px; box-sizing: border-box;
+}
+
+.senior-row {
+  position: relative; width: 100%; background: rgba(8,18,38,0.95);
+  border: 1.5px solid rgba(234,179,8,0.65); border-radius: 16px;
+  padding: 8px 12px 8px 100px; display: flex; flex-direction: column; justify-content: center;
+  min-height: 84px; box-shadow: 0 8px 25px rgba(0,0,0,0.6); box-sizing: border-box;
+}
+.senior-photo-wrap {
+  position: absolute; top: -8px; left: 8px; width: 84px; height: 84px;
+  border-radius: 50%; background: #1e3a8a; border: 3.5px solid #fde047;
+  box-shadow: 0 6px 25px rgba(251,191,36,0.9); display: flex; align-items: center; justify-content: center; z-index: 10; overflow: hidden;
+}
+.senior-avatar {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg,#1d4ed8,#7c3aed); color: white; font-size: 30px; font-weight: 900;
+}
+.senior-name { font-size: 12.5px; font-weight: 950; color: #fde047; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+.senior-metrics-flex { display: flex; justify-content: space-between; align-items: center; width: 100%; padding-right: 4px; }
+</style>
+</head>
+<body>
+
+<div id="posterCanvasWrapper">
+  <div class="stars-overlay"></div>
+
+  <svg class="confetti-svg" viewBox="0 0 480 700" preserveAspectRatio="none">
+    <path d="M-10,40 Q60,10 120,60 T240,40" fill="none" stroke="#fbbf24" stroke-width="2.5" stroke-dasharray="8,5"/>
+    <path d="M360,30 Q420,80 490,40" fill="none" stroke="#f472b6" stroke-width="2.5" stroke-dasharray="6,4"/>
+    <path d="M-20,200 Q70,160 140,220" fill="none" stroke="#38bdf8" stroke-width="2"/>
+    <path d="M340,240 Q410,190 490,260" fill="none" stroke="#fbbf24" stroke-width="2.5"/>
+    <polygon points="40,20 48,32 32,30" fill="#fbbf24"/>
+    <polygon points="430,30 442,18 420,15" fill="#f472b6"/>
+    <rect x="70" y="110" width="8" height="14" rx="2" fill="#38bdf8" transform="rotate(25 70 110)"/>
+    <rect x="400" y="130" width="10" height="16" rx="2" fill="#fbbf24" transform="rotate(-35 400 130)"/>
+    <circle cx="130" cy="180" r="4" fill="#fbbf24"/>
+    <circle cx="350" cy="190" r="5" fill="#f472b6"/>
+  </svg>
+
+  <div class="inner-content">
+    <!-- Header Banner -->
+    <div class="header-banner">
+      <img src="/assets/logos/myntreal_logo_new.png" style="height: 24px;" alt="MYNTREAL" onerror="this.src='/public/mnr-logo.png'">
+      <div style="background: linear-gradient(135deg,#fffbeb,#fef08a); border: 1.5px solid #f59e0b; border-radius: 8px; padding: 2px 8px;">
+        <img src="/assets/logos/hgs-logo.png" style="height: 28px;" alt="HAR GHAR SOLAR" onerror="this.style.display='none'">
+      </div>
+      <div style="font-weight: 900; font-size: 15px; color: #1e3a8a;">VGK<span style="color:#eab308">4U</span></div>
+    </div>
+
+    <!-- Congratulations Ribbon -->
+    <div class="congrats-ribbon">🎉 👑 ★★ CONGRATULATIONS ★★ 👑 🎉</div>
+
+    <!-- Member Name Ribbon -->
+    <div class="member-ribbon" id="postMemberName">MR. KURUJU SRINUBABU</div>
+
+    <!-- Member Photo Frame with Golden Trophies -->
+    <div class="photo-container">
+      <div class="trophy-left">🏆</div>
+      <div class="photo-circle">
+        <img id="postMemberImg" class="photo-img" src="/attached_assets/kuruju_srinubabu.png" onerror="this.style.display='none'; document.getElementById('postMemberAvatar').style.display='flex';" />
+        <div id="postMemberAvatar" class="photo-avatar" style="display:none;">KS</div>
+      </div>
+      <div class="trophy-right">🏆</div>
+      <div class="champion-pill">🏆 CHAMPION</div>
+    </div>
+
+    <!-- Overall Earning Card -->
+    <div class="overall-card">
+      <div class="overall-title">★ OVERALL EARNING ★</div>
+      <div class="overall-amount" id="postOverallVal">₹25,895/-</div>
+      <div class="overall-words" id="postOverallWords">RUPEES TWENTY FIVE THOUSAND EIGHT HUNDRED NINETY FIVE ONLY</div>
+    </div>
+
+    <!-- Today Earning Banner -->
+    <div class="today-banner">
+      <div class="today-val">TODAY'S EARNING: <span id="postTodayVal" style="color: #fde047;">₹9,395/-</span></div>
+      <div class="today-paid">(Already Paid: ₹3,000/-)</div>
+    </div>
+
+    <!-- 3 Metrics Cards -->
+    <div class="metrics-grid">
+      <div class="metric-box">
+        <div style="font-size: 7.5px; font-weight: 900; color: #93c5fd; text-transform: uppercase;">📂 FILES</div>
+        <div style="background: linear-gradient(135deg,#f59e0b,#eab308); color: #0f172a; font-weight: 950; font-size: 9px; padding: 2px 6px; border-radius: 4px; line-height: 1;">1 INSTALLED</div>
+        <div style="font-size: 7.5px; font-weight: 900; color: #93c5fd;">7 SUBMITTED</div>
+      </div>
+
+      <div class="metric-box">
+        <div style="font-size: 7.5px; font-weight: 900; color: #a7f3d0; text-transform: uppercase;">👥 TEAM SIZE</div>
+        <div style="font-size: 11px; font-weight: 950; color: #ffffff;">6 MEMBERS</div>
+        <div style="font-size: 7.5px; font-weight: 800; color: #6ee7b7;">L2: 4 | L3: 2 | L4: 0</div>
+      </div>
+
+      <div class="metric-box" style="background: linear-gradient(135deg, rgba(112,26,117,0.88), rgba(131,24,67,0.88)); border-color: #f472b6;">
+        <div style="font-size: 7.5px; font-weight: 900; color: #fbcfe8; text-transform: uppercase;">💰 POTENTIAL PENDING</div>
+        <div style="font-size: 11px; font-weight: 950; color: #ffffff;" id="postPotentialVal">₹1,41,550/-</div>
+        <div style="font-size: 7.5px; font-weight: 800; color: #fbcfe8;">EXPECTED EARNING</div>
+      </div>
+    </div>
+
+    <!-- Senior Referrer Row -->
+    <div class="senior-row">
+      <div class="senior-photo-wrap">
+        <img id="postSeniorImg" class="photo-img" src="/attached_assets/jarra_kumari.png" onerror="this.style.display='none'; document.getElementById('postSeniorAvatar').style.display='flex';" />
+        <div id="postSeniorAvatar" class="senior-avatar" style="display:none;">JK</div>
+      </div>
+      <div class="senior-name" id="postSeniorName">Senior : MS. JARRA KUMARI</div>
+      <div class="senior-metrics-flex">
+        <div>
+          <div style="font-size: 7px; color: #94a3b8; text-transform: uppercase;">Today</div>
+          <div style="font-size: 12px; font-weight: 950; color: #ffffff;" id="postSeniorToday">₹1,835/-</div>
+        </div>
+        <div>
+          <div style="font-size: 7px; color: #94a3b8; text-transform: uppercase;">Overall</div>
+          <div style="font-size: 12px; font-weight: 950; color: #34d399;" id="postSeniorOverall">₹49,875/-</div>
+        </div>
+        <div>
+          <div style="font-size: 7px; color: #94a3b8; text-transform: uppercase;">Potential</div>
+          <div style="font-size: 12px; font-weight: 950; color: #fb923c;" id="postSeniorPotential">₹91,650/-</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  try {
+    const p = new URLSearchParams(window.location.search);
+    if (p.has('name')) {
+      const name = p.get('name').toUpperCase();
+      document.getElementById('postMemberName').textContent = name;
+      const initials = name.split(' ').map(w => w[0]).join('').slice(0,2);
+      document.getElementById('postMemberAvatar').textContent = initials;
+    }
+    if (p.has('overall')) {
+      const o = p.get('overall').replace(/[^\d,.]/g, '');
+      document.getElementById('postOverallVal').textContent = '₹' + o + '/-';
+    }
+    if (p.has('today')) {
+      const t = p.get('today').replace(/[^\d,.]/g, '');
+      document.getElementById('postTodayVal').textContent = '₹' + t + '/-';
+    }
+    if (p.has('potential')) {
+      const pt = p.get('potential').replace(/[^\d,.]/g, '');
+      document.getElementById('postPotentialVal').textContent = '₹' + pt + '/-';
+    }
+    if (p.has('senior')) {
+      const s = p.get('senior').toUpperCase();
+      document.getElementById('postSeniorName').textContent = 'Senior : ' + s;
+      const initials = s.split(' ').map(w => w[0]).join('').slice(0,2);
+      document.getElementById('postSeniorAvatar').textContent = initials;
+    }
+    if (p.has('senior_today')) {
+      const st = p.get('senior_today').replace(/[^\d,.]/g, '');
+      document.getElementById('postSeniorToday').textContent = '₹' + st + '/-';
+    }
+    if (p.has('senior_overall')) {
+      const so = p.get('senior_overall').replace(/[^\d,.]/g, '');
+      document.getElementById('postSeniorOverall').textContent = '₹' + so + '/-';
+    }
+    if (p.has('photo') && p.get('photo')) {
+      const img = document.getElementById('postMemberImg');
+      img.src = p.get('photo');
+      img.style.display = 'block';
+      document.getElementById('postMemberAvatar').style.display = 'none';
+    }
+  } catch(e) {}
+})();
+</script>
+
+</body>
+</html>

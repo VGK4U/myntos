@@ -276,9 +276,8 @@
             <div style="flex-shrink:0;width:80px;height:100px;border:2.5px solid #1d4ed8;border-radius:8px;overflow:hidden;background:#dbeafe">${avatarContent}</div>
             <div style="flex:1;min-width:0;padding-top:2px">
                 <div style="font-size:11px;font-weight:800;color:#d97706;letter-spacing:.04em;margin-bottom:2px">VGK ID</div>
-                <div style="display:inline-block;background:#1d4ed8;color:#fff;font-size:10.5px;font-weight:900;padding:2px 10px;border-radius:5px;margin-bottom:6px">${vgkId}</div>
                 <div data-vgk-name="${name}" style="font-size:12px;font-weight:900;color:#111;line-height:1.2;margin-bottom:3px;white-space:nowrap;overflow:visible">${name}</div>
-                <div style="font-size:9px;color:#6b7280;font-style:italic">~\u00b7~ Channel Partner</div>
+                <div style="font-size:10px;color:#1d4ed8;font-weight:700;font-style:italic">~·~ ${_e(cd.designation_label || cd.current_designation || cd.rank_display || 'Channel Partner')}</div>
             </div>
         </div>
         <div style="display:flex;gap:10px;justify-content:center;padding-top:8px">

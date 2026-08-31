@@ -105,3 +105,29 @@ class OperatorCall(BaseModel):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+class TelephonyDIDMapping(BaseModel):
+    """
+    Multi-tenant Telephony Virtual DID mapping.
+    Maps an inbound virtual number (DID) to its owning associated_companies.id / tenant.
+    """
+    __tablename__ = 'telephony_did_mappings'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    did_number = Column(String(50), nullable=False, unique=True, index=True)
+    company_id = Column(Integer, nullable=False, index=True)
+    provider = Column(String(50), nullable=False, default='MYOPERATOR')
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'did_number': self.did_number,
+            'company_id': self.company_id,
+            'provider': self.provider,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+

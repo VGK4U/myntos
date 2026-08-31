@@ -6,7 +6,7 @@ const DEV_MODE = false;
 const DEV_SERVER_URL = 'https://5305e65f-c4f9-487a-b990-7fdd5e743de1-00-2fjho41r6u5wb.worf.replit.dev/mobile';
 
 const config: CapacitorConfig = {
-  appId: 'com.myntreal.mnr',
+  appId: 'com.myntos.mobile',
   appName: 'MyntReal',
   webDir: 'dist',
   server: {
@@ -43,7 +43,7 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: false,
     captureInput: true,
-    webContentsDebuggingEnabled: true,
+    webContentsDebuggingEnabled: DEV_MODE,
     orientation: 'portrait'
   },
   ios: {

@@ -647,51 +647,103 @@ def get_crm_dashboard(
     next_followup_to: Optional[str] = Query(None, description="DC Protocol (Jan 22, 2026): Filter by next followup date (to)"),
     last_interacted_from: Optional[str] = Query(None, description="DC Protocol (Jan 22, 2026): Filter by last interaction date (from)"),
     last_interacted_to: Optional[str] = Query(None, description="DC Protocol (Jan 22, 2026): Filter by last interaction date (to)"),
+    category_id: Optional[int] = None,
+    category: Optional[str] = Query(None, description="Filter by category name"),
+    source: Optional[str] = Query(None, description="Filter by lead source"),
+    priority: Optional[str] = Query(None, description="Filter by priority"),
+    status: Optional[str] = Query(None, description="Filter by status"),
+    filter_telecaller_id: Optional[int] = Query(None, description="Filter by telecaller ID"),
+    filter_field_staff_id: Optional[int] = Query(None, description="Filter by field staff ID"),
+    associated_partner_id: Optional[int] = Query(None, description="Filter by partner ID"),
+    days_since_interaction: Optional[str] = Query(None, description="Filter by days since interaction"),
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
-    """Get CRM dashboard statistics
+    """Get CRM dashboard statistics with full filter support."""
+    lead_filters = [CRMLead.company_id == company_id]
     
-    DC Protocol (Jan 1, 2026): Tri-mode team member filtering
-    - scope='primary': Count only leads where member is primary owner
-    - scope='handler': Count only leads where member is telecaller/field_staff/mnr_handler (NOT owner)
-    - scope='all': Count leads where member is primary owner OR any handler
-    
-    DC Protocol (Jan 22, 2026): Date filtering support
-    - next_followup_from/to: Filter by next followup date range
-    - last_interacted_from/to: Filter by last interaction date range
-    """
-    base_query = db.query(CRMLead).filter(CRMLead.company_id == company_id)
-    
-    # DC Protocol (Jan 22, 2026): Apply date filters
-    if next_followup_from:
+    # Apply date filters
+    if isinstance(next_followup_from, str) and next_followup_from:
         try:
             date_from = datetime.fromisoformat(next_followup_from.replace('Z', '+00:00'))
-            base_query = base_query.filter(CRMLead.next_followup_date >= date_from)
+            lead_filters.append(CRMLead.next_followup_date >= date_from)
         except ValueError:
             pass
-    if next_followup_to:
+    if isinstance(next_followup_to, str) and next_followup_to:
         try:
             date_to = datetime.fromisoformat(next_followup_to.replace('Z', '+00:00'))
-            base_query = base_query.filter(CRMLead.next_followup_date <= date_to)
+            lead_filters.append(CRMLead.next_followup_date <= date_to)
         except ValueError:
             pass
+    
+    if isinstance(last_interacted_from, str) and last_interacted_from:
+        try:
+            date_from = datetime.fromisoformat(last_interacted_from.replace('Z', '+00:00'))
+            lead_filters.append(CRMLead.last_contact_date >= date_from)
+        except ValueError:
+            pass
+    if isinstance(last_interacted_to, str) and last_interacted_to:
+        try:
+            date_to = datetime.fromisoformat(last_interacted_to.replace('Z', '+00:00'))
+            lead_filters.append(CRMLead.last_contact_date <= date_to)
+        except ValueError:
+            pass
+
+    if (isinstance(category, str) and category) or isinstance(category_id, int):
+        _cat_ids = []
+        if isinstance(category_id, int):
+            _cat_ids.append(category_id)
+        if isinstance(category, str) and category:
+            if category.isdigit():
+                _cat_ids.append(int(category))
+            else:
+                _matched_cats = db.query(SignupCategory.id).filter(
+                    or_(
+                        SignupCategory.name.ilike(category),
+                        SignupCategory.name.ilike(f"%{category}%"),
+                        SignupCategory.slug.ilike(category)
+                    )
+                ).all()
+                _cat_ids.extend([r.id for r in _matched_cats])
+        _cat_ids = list(set(_cat_ids))
+        if _cat_ids:
+            lead_filters.append(CRMLead.category_id.in_(_cat_ids))
+        else:
+            lead_filters.append(CRMLead.id == -1)
+
+    if isinstance(source, str) and source:
+        lead_filters.append(CRMLead.source.ilike(source.strip()))
+    if isinstance(priority, str) and priority:
+        lead_filters.append(CRMLead.priority == priority)
+    if isinstance(status, str) and status and status != 'closed':
+        lead_filters.append(CRMLead.status == status)
+    elif isinstance(status, str) and status == 'closed':
+        lead_filters.append(CRMLead.status.in_(['won', 'lost']))
+    if isinstance(filter_telecaller_id, int):
+        lead_filters.append(CRMLead.telecaller_id == filter_telecaller_id)
+    if isinstance(filter_field_staff_id, int):
+        lead_filters.append(CRMLead.field_staff_id == filter_field_staff_id)
+    if isinstance(associated_partner_id, int):
+        lead_filters.append(CRMLead.associated_partner_id == associated_partner_id)
+    if isinstance(days_since_interaction, str) and days_since_interaction:
+        now_dt = get_indian_time()
+        if days_since_interaction == 'lt6':
+            lead_filters.append(CRMLead.last_contact_date >= now_dt - timedelta(days=6))
+        elif days_since_interaction == '6-15':
+            lead_filters.append(and_(CRMLead.last_contact_date >= now_dt - timedelta(days=15), CRMLead.last_contact_date < now_dt - timedelta(days=6)))
+        elif days_since_interaction == '15-30':
+            lead_filters.append(and_(CRMLead.last_contact_date >= now_dt - timedelta(days=30), CRMLead.last_contact_date < now_dt - timedelta(days=15)))
+        elif days_since_interaction == 'gt30':
+            lead_filters.append(CRMLead.last_contact_date < now_dt - timedelta(days=30))
     
     # DC Protocol (Jan 1, 2026): Tri-mode team member filtering
-    if team_member_id:
-        # Get employee code for MNR handler matching
+    if isinstance(team_member_id, int):
         target_emp = db.query(StaffEmployee).filter(StaffEmployee.id == team_member_id).first()
         target_emp_code = target_emp.emp_code if target_emp else None
         
         if scope == 'primary':
-            # Only primary owner
-            base_query = base_query.filter(
-                CRMLead.primary_owner_type == 'staff',
-                CRMLead.primary_owner_id == team_member_id
-            )
+            lead_filters.append(and_(CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id == team_member_id))
         elif scope == 'handler':
-            # DC Protocol (Jan 1, 2026): Only handler roles (telecaller/field_staff/mnr_handler), NOT primary owner
-            # DC Protocol Fix (Apr 2026): Also match source_ref_id for non-user-type sources
             handler_conditions = [
                 CRMLead.telecaller_id == team_member_id,
                 CRMLead.field_staff_id == team_member_id,
@@ -702,10 +754,8 @@ def get_crm_dashboard(
                     and_(CRMLead.source_ref_type.in_(('staff', 'mnr', 'vgk')),
                          CRMLead.source_ref_id == str(team_member_id))
                 )
-            base_query = base_query.filter(or_(*handler_conditions))
+            lead_filters.append(or_(*handler_conditions))
         else:
-            # 'all' mode: owner OR any handler assignment
-            # DC Protocol Fix (Apr 2026): Also match source_ref_id for non-user-type sources
             handler_conditions = [
                 and_(CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id == team_member_id),
                 CRMLead.telecaller_id == team_member_id,
@@ -717,189 +767,92 @@ def get_crm_dashboard(
                     and_(CRMLead.source_ref_type.in_(('staff', 'mnr', 'vgk')),
                          CRMLead.source_ref_id == str(team_member_id))
                 )
-            base_query = base_query.filter(or_(*handler_conditions))
+            lead_filters.append(or_(*handler_conditions))
 
+    base_query = db.query(CRMLead).filter(*lead_filters)
     total_leads = base_query.count()
     
-    # DC Protocol (Jan 22, 2026): Build date filter list for reuse across all queries
-    date_filter = []
-    if next_followup_from:
-        try:
-            date_from = datetime.fromisoformat(next_followup_from.replace('Z', '+00:00'))
-            date_filter.append(CRMLead.next_followup_date >= date_from)
-        except ValueError:
-            pass
-    if next_followup_to:
-        try:
-            date_to = datetime.fromisoformat(next_followup_to.replace('Z', '+00:00'))
-            date_filter.append(CRMLead.next_followup_date <= date_to)
-        except ValueError:
-            pass
-    
-    # Build team member filter for direct queries (using same scope logic)
-    team_filter = []
-    if team_member_id:
-        target_emp = db.query(StaffEmployee).filter(StaffEmployee.id == team_member_id).first()
-        target_emp_code = target_emp.emp_code if target_emp else None
-        
-        if scope == 'primary':
-            team_filter = [CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id == team_member_id]
-        elif scope == 'handler':
-            # DC Protocol (Jan 1, 2026): Only handler roles, NOT primary owner
-            # DC Protocol Fix (Apr 2026): Also match source_ref_id for non-user-type sources
-            handler_conds = [
-                CRMLead.telecaller_id == team_member_id,
-                CRMLead.field_staff_id == team_member_id,
-            ]
-            if target_emp_code:
-                handler_conds.append(CRMLead.mnr_handler_id == target_emp_code)
-                handler_conds.append(
-                    and_(CRMLead.source_ref_type.in_(('staff', 'mnr', 'vgk')),
-                         CRMLead.source_ref_id == str(team_member_id))
-                )
-            team_filter = [or_(*handler_conds)]
-        else:
-            # 'all' mode: owner OR any handler assignment
-            # DC Protocol Fix (Apr 2026): Also match source_ref_id for non-user-type sources
-            handler_conds = [
-                and_(CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id == team_member_id),
-                CRMLead.telecaller_id == team_member_id,
-                CRMLead.field_staff_id == team_member_id,
-            ]
-            if target_emp_code:
-                handler_conds.append(CRMLead.mnr_handler_id == target_emp_code)
-                handler_conds.append(
-                    and_(CRMLead.source_ref_type.in_(('staff', 'mnr', 'vgk')),
-                         CRMLead.source_ref_id == str(team_member_id))
-                )
-            team_filter = [or_(*handler_conds)]
-    
-    # DC Protocol (Jan 22, 2026): Apply both team_filter and date_filter to all queries
-    status_counts = db.query(
+    # Status counts within the filtered query
+    status_counts = base_query.with_entities(
         CRMLead.status, func.count(CRMLead.id)
-    ).filter(CRMLead.company_id == company_id, *team_filter, *date_filter).group_by(CRMLead.status).all()
+    ).group_by(CRMLead.status).all()
     
     status_map = {status: count for status, count in status_counts}
     
-    priority_counts = db.query(
+    # Priority counts within the filtered query
+    priority_counts = base_query.with_entities(
         CRMLead.priority, func.count(CRMLead.id)
-    ).filter(CRMLead.company_id == company_id, *team_filter, *date_filter).group_by(CRMLead.priority).all()
+    ).group_by(CRMLead.priority).all()
     
     priority_map = {priority: count for priority, count in priority_counts}
     
-    # DC Protocol (Jan 22, 2026): Category counts - use same scope logic as other queries
-    # Build category join conditions based on scope parameter
-    category_join_conditions = [
-        CRMLead.category_id == SignupCategory.id,
-        CRMLead.company_id == company_id
-    ]
-    if team_member_id:
-        target_emp_cat = db.query(StaffEmployee).filter(StaffEmployee.id == team_member_id).first()
-        target_emp_code_cat = target_emp_cat.emp_code if target_emp_cat else None
-        
-        if scope == 'primary':
-            category_join_conditions.extend([
-                CRMLead.primary_owner_type == 'staff',
-                CRMLead.primary_owner_id == team_member_id
-            ])
-        elif scope == 'handler':
-            # DC Protocol Fix (Apr 2026): Also match source_ref_id for non-user-type sources
-            handler_conds_cat = [
-                CRMLead.telecaller_id == team_member_id,
-                CRMLead.field_staff_id == team_member_id,
-            ]
-            if target_emp_code_cat:
-                handler_conds_cat.append(CRMLead.mnr_handler_id == target_emp_code_cat)
-                handler_conds_cat.append(
-                    and_(CRMLead.source_ref_type.in_(('staff', 'mnr', 'vgk')),
-                         CRMLead.source_ref_id == str(team_member_id))
-                )
-            category_join_conditions.append(or_(*handler_conds_cat))
-        else:
-            # DC Protocol Fix (Apr 2026): Also match source_ref_id for non-user-type sources
-            all_conds_cat = [
-                and_(CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id == team_member_id),
-                CRMLead.telecaller_id == team_member_id,
-                CRMLead.field_staff_id == team_member_id,
-            ]
-            if target_emp_code_cat:
-                all_conds_cat.append(CRMLead.mnr_handler_id == target_emp_code_cat)
-                all_conds_cat.append(
-                    and_(CRMLead.source_ref_type.in_(('staff', 'mnr', 'vgk')),
-                         CRMLead.source_ref_id == str(team_member_id))
-                )
-            category_join_conditions.append(or_(*all_conds_cat))
-    
-    category_counts = db.query(
+    # Category counts within the filtered query
+    category_counts = base_query.join(
+        SignupCategory, CRMLead.category_id == SignupCategory.id
+    ).with_entities(
         SignupCategory.name, func.count(CRMLead.id)
-    ).outerjoin(CRMLead, and_(*category_join_conditions)
-    ).filter(SignupCategory.company_id == company_id).group_by(SignupCategory.name).all()
+    ).group_by(SignupCategory.name).all()
+    
+    # Self leads count within the filtered query
+    self_leads_count = base_query.filter(
+        CRMLead.primary_owner_type == 'staff',
+        CRMLead.primary_owner_id == current_employee.id
+    ).count()
     
     today = get_indian_time().date()
     today_start = datetime.combine(today, datetime.min.time())
     today_end = datetime.combine(today, datetime.max.time())
+    this_month_start = today.replace(day=1)
     
-    # DC Protocol (Jan 22, 2026): Apply date_filter to followup queries
-    today_followups = db.query(CRMLeadFollowUp).join(CRMLead).filter(
-        CRMLead.company_id == company_id,
-        *team_filter,
-        *date_filter,
+    # Followup queries within filtered lead set
+    today_followups = db.query(CRMLeadFollowUp).join(
+        CRMLead, CRMLeadFollowUp.lead_id == CRMLead.id
+    ).filter(
+        *lead_filters,
         CRMLeadFollowUp.scheduled_date >= today_start,
         CRMLeadFollowUp.scheduled_date <= today_end,
         CRMLeadFollowUp.status == 'scheduled'
     ).count()
     
-    overdue_followups = db.query(CRMLeadFollowUp).join(CRMLead).filter(
-        CRMLead.company_id == company_id,
-        *team_filter,
-        *date_filter,
+    overdue_followups = db.query(CRMLeadFollowUp).join(
+        CRMLead, CRMLeadFollowUp.lead_id == CRMLead.id
+    ).filter(
+        *lead_filters,
         CRMLeadFollowUp.scheduled_date < today_start,
         CRMLeadFollowUp.status == 'scheduled'
     ).count()
     
-    this_month_start = today.replace(day=1)
     won_this_month = base_query.filter(
         CRMLead.status == 'won',
-        CRMLead.actual_close_date >= this_month_start
+        or_(CRMLead.actual_close_date >= this_month_start, and_(CRMLead.actual_close_date == None, CRMLead.updated_at >= this_month_start))
     ).count()
     
-    # Legacy deal value (backward compatibility) - DC Protocol (Jan 22, 2026): Apply date_filter
-    total_deal_value = db.query(func.sum(CRMLead.deal_value)).filter(
-        CRMLead.company_id == company_id,
-        CRMLead.status == 'won',
-        *team_filter,
-        *date_filter
-    ).scalar() or 0
-    
-    # Revenue Analytics (3-part deal value system) - DC Protocol (Jan 22, 2026): Apply date_filter
-    revenue_stats = db.query(
+    # Revenue Analytics (3-part deal value system) within filtered set
+    revenue_stats = base_query.filter(
+        CRMLead.status == 'won'
+    ).with_entities(
         func.coalesce(func.sum(CRMLead.deal_value_total), 0).label('total'),
         func.coalesce(func.sum(CRMLead.deal_value_received), 0).label('received'),
         func.coalesce(func.sum(CRMLead.deal_value_balance), 0).label('balance')
-    ).filter(
-        CRMLead.company_id == company_id,
-        CRMLead.status == 'won',
-        *team_filter,
-        *date_filter
     ).first()
     
-    # Monthly revenue breakdown - DC Protocol (Jan 22, 2026): Apply date_filter
-    monthly_revenue = db.query(
+    # Monthly revenue breakdown within filtered set
+    monthly_revenue = base_query.filter(
+        CRMLead.status == 'won',
+        or_(CRMLead.actual_close_date >= this_month_start, and_(CRMLead.actual_close_date == None, CRMLead.updated_at >= this_month_start))
+    ).with_entities(
         func.coalesce(func.sum(CRMLead.deal_value_total), 0).label('total'),
         func.coalesce(func.sum(CRMLead.deal_value_received), 0).label('received'),
         func.coalesce(func.sum(CRMLead.deal_value_balance), 0).label('balance')
-    ).filter(
-        CRMLead.company_id == company_id,
-        CRMLead.status == 'won',
-        CRMLead.actual_close_date >= this_month_start,
-        *team_filter,
-        *date_filter
     ).first()
+    
+    total_deal_value = float(revenue_stats.total) if revenue_stats else 0
     
     return {
         'success': True,
         'data': {
             'total_leads': total_leads,
+            'self_leads_count': self_leads_count,
             'status_breakdown': {
                 'new': status_map.get('new', 0),
                 'contacted': status_map.get('contacted', 0),
@@ -907,6 +860,7 @@ def get_crm_dashboard(
                 'qualified': status_map.get('qualified', 0),
                 'proposal': status_map.get('proposal', 0),
                 'loan_process': status_map.get('loan_process', 0),
+                'waiting_for_bank_loan': status_map.get('waiting_for_bank_loan', 0),
                 'won': status_map.get('won', 0),
                 'processing': status_map.get('processing', 0),
                 'completed': status_map.get('completed', 0),
@@ -3748,6 +3702,7 @@ def list_leads(
     involved_role: Optional[str] = Query(None, description="DC-INCENTIVE-LEADS-001: Restrict to a specific role for involved_employee_id: handler, telecaller, field_staff"),
     filter_telecaller_id: Optional[int] = Query(None, description="Filter by specific telecaller staff ID"),
     filter_field_staff_id: Optional[int] = Query(None, description="Filter by specific field staff ID"),
+    source: Optional[str] = Query(None, description="Filter by lead source"),
     page: int = 1,
     per_page: int = 20,
     db: Session = Depends(get_db),
@@ -3778,6 +3733,22 @@ def list_leads(
     is_restricted_freelancer = (staff_type == 'FREELANCER' and getattr(current_employee, 'freelancer_access_mode', 'default') == 'only_leads')
     if is_restricted_freelancer:
         can_view_all = False
+
+    # B2B SaaS Multi-Tenant Segment Entitlement Guard
+    if category:
+        from app.services.b2b_shadow import resolve_client_id_for_staff, is_module_entitled, enforce_enabled
+        cid = resolve_client_id_for_staff(db, current_employee)
+        clean_cat = str(category).strip().upper().replace(" ", "_").replace("-", "_")
+        module_key = f"CRM_LEADS_{clean_cat}"
+        is_entitled = (
+            is_module_entitled(db, cid, module_key, user_id=current_employee.id, user_type="staff", route="/crm/leads") or
+            is_module_entitled(db, cid, "CRM_CORE", user_id=current_employee.id, user_type="staff", route="/crm/leads")
+        )
+        if not is_entitled and enforce_enabled():
+            raise HTTPException(
+                status_code=403,
+                detail=f"Segment '{category}' is not entitled for your organization",
+            )
     
     # DC Protocol (Aug 2026): CATEGORY-WISE LEAD QUERYING.
     # MyntReal menus operate Category-wise across company accounts (1, 2, 3, 4).
@@ -3810,6 +3781,8 @@ def list_leads(
                     ),
                     CRMLead.telecaller_id == current_employee.id,
                     CRMLead.field_staff_id == current_employee.id,
+                    # DC-NEW-LEADS-UNASSIGNED-POOL-001: All 'new' status leads are open and available to all telecallers
+                    CRMLead.status == 'new',
                     and_(
                         CRMLead.handler_type == 'unassigned',
                         ~CRMLead.status.in_(['won', 'lost']),
@@ -3842,6 +3815,8 @@ def list_leads(
             CRMLead.telecaller_id == current_employee.id,
             CRMLead.field_staff_id == current_employee.id,
             CRMLead.handler_id == current_employee.emp_code,  # Legacy fallback
+            # DC-NEW-LEADS-UNASSIGNED-POOL-001: All 'new' status leads are open and available to all telecallers
+            CRMLead.status == 'new',
             # New/Unassigned leads visible to all for claiming
             and_(
                 ~CRMLead.status.in_(['won', 'lost']),
@@ -3960,6 +3935,8 @@ def list_leads(
         query = query.filter(CRMLead.handler_type == handler_type)
     if handler_id:
         query = query.filter(CRMLead.handler_id == handler_id)
+    if source:
+        query = query.filter(CRMLead.source.ilike(source.strip()))
     if search:
         _st = f'%{search}%'
         _sc = [
@@ -8287,6 +8264,261 @@ def exec_trend_leads(
     }
 
 
+@router.get("/exec-emp-perf-leads")
+def get_exec_emp_perf_leads(
+    period_type: str = Query('monthly', description="monthly or weekly"),
+    period_key: str = Query(..., description="e.g. 2026-08, 2026-08-29, 2026-W35, TOTAL"),
+    emp_code: str = Query(..., description="Employee code e.g. MR10022"),
+    metric: str = Query(..., description="self_leads, overall_new_leads, overdue_leads, overall_won, solar_won, etc_won, b2b_won, b2c_won, insurance_won, others_won, overall_rev, solar_rev, etc_rev, b2b_rev, b2c_rev, insurance_rev, others_rev, service_tickets_count, service_rev, spares_rev"),
+    created_from: Optional[str] = Query(None),
+    created_to: Optional[str] = Query(None),
+    closed_from: Optional[str] = Query(None),
+    closed_to: Optional[str] = Query(None),
+    company_id_filter: Optional[int] = Query(None),
+    limit: int = Query(200, ge=1, le=500),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """Drill-down lead list for Employee Performance table cells."""
+    from sqlalchemy import cast as _sa_cast, Date as _sa_Date, and_ as _sa_and, or_ as _sa_or, func as _sa_func
+    from datetime import date as _date, timedelta as _td, datetime as _dt
+    from app.models.signup_category import SignupCategory as _SC2
+    from app.models.staff import StaffEmployee as _SE2
+    from app.models.user import User as _User2
+    from app.models.vgk_incentive_brands import VGKIncentiveBrand as _VIB2
+
+    def _cl(val):
+        if hasattr(val, 'default'):
+            return val.default if val.default is not ... else None
+        return val
+
+    period_type = _cl(period_type)
+    period_key = _cl(period_key)
+    emp_code = _cl(emp_code)
+    metric = _cl(metric)
+    limit = _cl(limit) or 200
+    company_id_filter = _cl(company_id_filter)
+
+    POST_WON = ['won', 'completed', 'delivered', 'installed']
+
+    # Target employee lookup
+    target_emp = None
+    if emp_code and emp_code != 'UNASSIGNED':
+        target_emp = db.query(_SE2).filter(_SE2.emp_code == emp_code).first()
+        if not target_emp and emp_code.isdigit():
+            target_emp = db.query(_SE2).filter(_SE2.id == int(emp_code)).first()
+
+    base = db.query(CRMLead)
+    if company_id_filter:
+        base = base.filter(CRMLead.company_id == company_id_filter)
+
+    # Employee assignment condition
+    if emp_code and emp_code != 'UNASSIGNED':
+        emp_match_conds = [
+            CRMLead.handler_id == str(emp_code),
+            CRMLead.created_by_id == str(emp_code),
+        ]
+        if target_emp:
+            emp_match_conds.extend([
+                CRMLead.telecaller_id == target_emp.id,
+                CRMLead.field_staff_id == target_emp.id,
+                CRMLead.primary_owner_id == target_emp.id,
+                CRMLead.created_by_id == str(target_emp.id),
+                CRMLead.created_by_id == str(target_emp.emp_code),
+                CRMLead.handler_id == str(target_emp.id),
+                CRMLead.handler_id == str(target_emp.emp_code)
+            ])
+        elif emp_code.isdigit():
+            emp_match_conds.extend([
+                CRMLead.telecaller_id == int(emp_code),
+                CRMLead.field_staff_id == int(emp_code),
+                CRMLead.primary_owner_id == int(emp_code)
+            ])
+
+        if metric == 'self_leads':
+            self_conds = [
+                CRMLead.created_by_id == str(emp_code),
+            ]
+            if target_emp:
+                self_conds.extend([
+                    CRMLead.created_by_id == str(target_emp.id),
+                    CRMLead.created_by_id == str(target_emp.emp_code),
+                    CRMLead.primary_owner_id == target_emp.id
+                ])
+            elif emp_code.isdigit():
+                self_conds.append(CRMLead.primary_owner_id == int(emp_code))
+            base = base.filter(_sa_or(*self_conds))
+        else:
+            base = base.filter(_sa_or(*emp_match_conds))
+
+    # Metric specific filters
+    if metric == 'overdue_leads':
+        base = base.filter(
+            CRMLead.next_followup_date < _sa_func.now(),
+            ~_sa_func.lower(_sa_func.coalesce(CRMLead.status, '')).in_(['won', 'completed', 'delivered', 'installed', 'lost', 'cancelled', 'junk'])
+        )
+    elif metric in ('overall_won', 'overall_rev'):
+        base = base.filter(CRMLead.status.in_(POST_WON))
+    elif metric in ('solar_won', 'solar_rev'):
+        base = base.join(_SC2, CRMLead.category_id == _SC2.id).filter(
+            CRMLead.status.in_(POST_WON),
+            _SC2.name.ilike('%solar%')
+        )
+    elif metric in ('etc_won', 'etc_rev'):
+        base = base.join(_SC2, CRMLead.category_id == _SC2.id).filter(
+            CRMLead.status.in_(POST_WON),
+            _SC2.name.ilike('%etc%')
+        )
+    elif metric in ('b2b_won', 'b2b_rev'):
+        base = base.join(_SC2, CRMLead.category_id == _SC2.id).filter(
+            CRMLead.status.in_(POST_WON),
+            _SC2.name.ilike('%b2b%')
+        )
+    elif metric in ('b2c_won', 'b2c_rev'):
+        base = base.join(_SC2, CRMLead.category_id == _SC2.id).filter(
+            CRMLead.status.in_(POST_WON),
+            _SC2.name.ilike('%b2c%')
+        )
+    elif metric in ('insurance_won', 'insurance_rev'):
+        base = base.join(_SC2, CRMLead.category_id == _SC2.id).filter(
+            CRMLead.status.in_(POST_WON),
+            _SC2.name.ilike('%insurance%')
+        )
+    elif metric in ('others_won', 'others_rev'):
+        base = base.join(_SC2, CRMLead.category_id == _SC2.id).filter(
+            CRMLead.status.in_(POST_WON),
+            ~_SC2.name.ilike('%solar%'),
+            ~_SC2.name.ilike('%etc%'),
+            ~_SC2.name.ilike('%b2b%'),
+            ~_SC2.name.ilike('%b2c%'),
+            ~_SC2.name.ilike('%insurance%')
+        )
+
+    # Date / period filter
+    if metric != 'overdue_leads':
+        if period_key and period_key.upper() != 'TOTAL':
+            if len(period_key) == 10:  # YYYY-MM-DD
+                try:
+                    d_obj = _dt.strptime(period_key, '%Y-%m-%d').date()
+                    base = base.filter(_sa_cast(CRMLead.created_at, _sa_Date) == d_obj)
+                except Exception:
+                    pass
+            elif len(period_key) == 7:  # YYYY-MM
+                base = base.filter(_sa_func.to_char(CRMLead.created_at, 'YYYY-MM') == period_key)
+            elif 'W' in period_key:
+                base = base.filter(_sa_func.to_char(CRMLead.created_at, 'IYYY-"W"IW') == period_key)
+        else:
+            if created_from:
+                try:
+                    c_from_dt = _dt.strptime(created_from[:10], '%Y-%m-%d')
+                    base = base.filter(CRMLead.created_at >= c_from_dt)
+                except Exception:
+                    pass
+            if created_to:
+                try:
+                    c_to_dt = _dt.strptime(created_to[:10], '%Y-%m-%d') + _td(days=1)
+                    base = base.filter(CRMLead.created_at <= c_to_dt)
+                except Exception:
+                    pass
+
+    total = base.count()
+    _leads = base.order_by(CRMLead.created_at.desc()).limit(limit).all()
+
+    _cids = list({l.category_id for l in _leads if l.category_id})
+    _cmap = {}
+    if _cids:
+        for c in db.query(_SC2).filter(_SC2.id.in_(_cids)).all():
+            _cmap[c.id] = c.name
+
+    _bids = list({l.solar_brand_id for l in _leads if l.solar_brand_id})
+    _bmap = {}
+    if _bids:
+        for b in db.query(_VIB2).filter(_VIB2.id.in_(_bids)).all():
+            _bmap[b.id] = b.brand_name
+
+    _lids = [l.id for l in _leads]
+    _nmap = {}
+    if _lids:
+        _mnq = db.query(CRMLeadNote.lead_id, _sa_func.max(CRMLeadNote.id).label('mid')).filter(CRMLeadNote.lead_id.in_(_lids)).group_by(CRMLeadNote.lead_id).subquery()
+        for n in db.query(CRMLeadNote).join(_mnq, CRMLeadNote.id == _mnq.c.mid).all():
+            _nmap[n.lead_id] = {
+                'note': n.note,
+                'by': n.created_by_id or '',
+                'at': n.created_at.isoformat() if n.created_at else None,
+            }
+
+    _mnr_str_ids = list({str(l.mnr_handler_id) for l in _leads if l.mnr_handler_id})
+    _tc_str_ids = list({str(l.telecaller_id) for l in _leads if l.telecaller_id})
+    _unmap = {}
+    _all_str_ids = list(set(_mnr_str_ids + _tc_str_ids))
+    if _all_str_ids:
+        for u in db.query(_User2).filter(_User2.id.in_(_all_str_ids)).all():
+            _unmap[str(u.id)] = u.name or u.id
+            _unmap[u.id] = u.name or u.id
+        _all_int_ids = [int(x) for x in _all_str_ids if str(x).isdigit()]
+        if _all_int_ids:
+            for e in db.query(_SE2).filter(_SE2.id.in_(_all_int_ids)).all():
+                _emp_n = e.full_name or getattr(e, 'name', None) or e.emp_code or f"MR{e.id}"
+                _unmap[str(e.id)] = _emp_n
+                _unmap[e.id] = _emp_n
+
+    _txmap = {}
+    if _lids:
+        from app.models.crm import CRMLeadTransaction as _CLT
+        _txs = db.query(_CLT.lead_id, _sa_func.min(_CLT.transaction_date).label('min_date')).filter(
+            _CLT.lead_id.in_(_lids),
+            _CLT.transaction_date.isnot(None)
+        ).group_by(_CLT.lead_id).all()
+        for t in _txs:
+            if t.min_date:
+                _txmap[t.lead_id] = t.min_date.date() if hasattr(t.min_date, 'date') else t.min_date
+
+    def _mask(ph):
+        if not ph:
+            return None
+        d = ''.join(c for c in str(ph) if c.isdigit())
+        return (d[:2] + '×' * (len(d) - 4) + d[-2:]) if len(d) >= 5 else ('×' * len(str(ph)))
+
+    return {
+        'success': True,
+        'total': total,
+        'data': [{
+            'id': l.id,
+            'company_id': l.company_id,
+            'name': l.name or '—',
+            'phone': _mask(l.phone),
+            'phone_raw': l.phone,
+            'created_at': l.created_at.isoformat() if l.created_at else None,
+            'submit_date': l.submit_date.isoformat() if l.submit_date else None,
+            'first_payment_received_date': (l.first_payment_received_date or _txmap.get(l.id)).isoformat() if (l.first_payment_received_date or _txmap.get(l.id)) else None,
+            'installation_date': l.installation_date.isoformat() if l.installation_date else None,
+            'source': l.source or '—',
+            'ground_source': l.source_ref_name or '—',
+            'ground_support': _unmap.get(l.mnr_handler_id, l.mnr_handler_id) if l.mnr_handler_id else '—',
+            'telecaller_name': _unmap.get(l.telecaller_id, l.telecaller_id) if l.telecaller_id else '—',
+            'status': l.status or '—',
+            'solar_pipeline_status': l.solar_pipeline_status,
+            'category_name': _cmap.get(l.category_id) if l.category_id else None,
+            'loan_bank': l.loan_bank or None,
+            'bank_branch': l.bank_branch or None,
+            'brand_name': _bmap.get(l.solar_brand_id) if l.solar_brand_id else None,
+            'deal_value_total': float(l.deal_value_total or 0),
+            'deal_value_received': float(l.deal_value_received or 0),
+            'balance_pending': float(l.deal_value_balance or 0),
+            'area': l.area or l.address or '—',
+            'city': l.city or '—',
+            'state': l.state or '—',
+            'pincode': l.pincode or '—',
+            'latitude': l.latitude or None,
+            'longitude': l.longitude or None,
+            'google_maps_link': l.google_maps_link or None,
+            'solar_pipeline_status_updated_at': l.solar_pipeline_status_updated_at.isoformat() if getattr(l, 'solar_pipeline_status_updated_at', None) else None,
+            'updated_at': l.updated_at.isoformat() if getattr(l, 'updated_at', None) else None,
+            'latest_note': _nmap.get(l.id),
+        } for l in _leads],
+    }
+
+
 @router.get("/leads/check-duplicate")
 def check_lead_duplicate(
     phone: Optional[str] = Query(None),
@@ -8467,6 +8699,22 @@ def create_lead(
                 }
             )
 
+    _lead_status = lead_data.status or 'new'
+    # DC-NEW-LEADS-UNASSIGNED-POOL-001: Leads in 'new' status have no telecaller ID or individual ownership
+    # and remain unassigned so they are universally available to all telecallers in the dialer pool.
+    if _lead_status == 'new':
+        validated_telecaller_id = None
+        validated_field_staff_id = None
+        _eff_handler_type = 'unassigned'
+        _eff_handler_id = None
+        _eff_owner_type = None
+        _eff_owner_id = None
+    else:
+        _eff_handler_type = lead_data.handler_type or 'unassigned'
+        _eff_handler_id = lead_data.handler_id
+        _eff_owner_type = 'staff'
+        _eff_owner_id = current_employee.id
+
     new_lead = CRMLead(
         company_id=resolved_company_id,
         name=lead_data.name,
@@ -8478,10 +8726,10 @@ def create_lead(
         category_id=lead_data.category_id,
         source=_resolved_source,
         source_details=lead_data.source_details,
-        status=lead_data.status or 'new',
+        status=_lead_status,
         priority=lead_data.priority or 'medium',
-        handler_type=lead_data.handler_type or 'unassigned',
-        handler_id=lead_data.handler_id,
+        handler_type=_eff_handler_type,
+        handler_id=_eff_handler_id,
         telecaller_id=validated_telecaller_id,
         field_staff_id=validated_field_staff_id,
         associated_partner_id=validated_partner_id,
@@ -8524,8 +8772,8 @@ def create_lead(
         tags=lead_data.tags,
         created_by_type='staff',
         created_by_id=current_employee.emp_code,
-        primary_owner_type='staff',
-        primary_owner_id=current_employee.id,
+        primary_owner_type=_eff_owner_type,
+        primary_owner_id=_eff_owner_id,
         community_id=lead_data.community_id,
         showroom_vgk_id=lead_data.showroom_vgk_id,
         team_senior_partner_id=lead_data.team_senior_partner_id,
@@ -8917,11 +9165,32 @@ def get_lead(
             lead_dict['followups_total'] = 0
 
         try:
-            # DC_LEAD_DETAIL_FIX: Same bounded approach for notes
+            # DC_LEAD_DETAIL_FIX: Same bounded approach for notes with author resolution
             note_rows = db.query(CRMLeadNote).filter(
                 CRMLeadNote.lead_id == lead_id
             ).order_by(CRMLeadNote.created_at.desc()).limit(100).all()
-            lead_dict['notes'] = [n.to_dict() for n in note_rows]
+            notes_data = []
+            for n in note_rows:
+                nd = n.to_dict()
+                if n.created_by_type == 'staff' and n.created_by_id:
+                    st_emp = db.query(StaffEmployee).filter(
+                        or_(StaffEmployee.emp_code == n.created_by_id, StaffEmployee.id == (int(n.created_by_id) if n.created_by_id.isdigit() else -1))
+                    ).first()
+                    if st_emp:
+                        nd['created_by_name'] = f"{st_emp.full_name} ({st_emp.emp_code})"
+                elif n.created_by_type == 'partner' and n.created_by_id:
+                    from app.models.staff_accounts import OfficialPartner as _OPModel
+                    pt = db.query(_OPModel).filter(
+                        or_(_OPModel.partner_code == n.created_by_id, _OPModel.id == (int(n.created_by_id) if n.created_by_id.isdigit() else -1))
+                    ).first()
+                    if pt:
+                        nd['created_by_name'] = f"{pt.partner_name or pt.contact_person} ({pt.partner_code})"
+                elif n.created_by_type == 'member' and n.created_by_id:
+                    mb = db.query(User).filter(User.id == n.created_by_id).first()
+                    if mb:
+                        nd['created_by_name'] = f"{mb.name} ({mb.id})"
+                notes_data.append(nd)
+            lead_dict['notes'] = notes_data
             lead_dict['notes_total'] = db.query(CRMLeadNote).filter(
                 CRMLeadNote.lead_id == lead_id
             ).count() if len(note_rows) == 100 else len(note_rows)
@@ -9227,6 +9496,16 @@ def update_lead(
     # the person making the update becomes the primary owner
     follow_up_statuses = ['contacted', 'interested', 'qualified', 'proposal', 'won', 'on_hold']
     new_status = update_data.get('status')
+    
+    # DC-NEW-LEADS-UNASSIGNED-POOL-001: If status is set to 'new', clear telecaller_id, field_staff_id, and ownership
+    if new_status == 'new':
+        update_data['telecaller_id'] = None
+        update_data['field_staff_id'] = None
+        update_data['handler_type'] = 'unassigned'
+        update_data['handler_id'] = None
+        update_data['primary_owner_type'] = None
+        update_data['primary_owner_id'] = None
+
     is_first_contact = (
         lead.status == 'new' and 
         new_status in follow_up_statuses and 
@@ -9235,6 +9514,10 @@ def update_lead(
     
     if is_first_contact:
         update_data['primary_owner_type'] = 'staff'
+        update_data['primary_owner_id'] = current_employee.id
+        update_data['telecaller_id'] = current_employee.id
+        update_data['handler_type'] = 'staff'
+        update_data['handler_id'] = current_employee.emp_code
         update_data['primary_owner_id'] = current_employee.id
         
         auto_assignment = CRMLeadAssignment(
@@ -9465,9 +9748,10 @@ def update_lead(
         if hasattr(lead, key):
             setattr(lead, key, value)
 
-    # DC_INACTIVE_REASSIGN: Auto-reassign lead to active staff member if lead is unassigned
-    # or currently assigned to an inactive / resigned employee
-    if current_employee and hasattr(current_employee, 'id'):
+    # DC_STATUS_CHANGE_ASSIGN: Only assign lead to current employee if STATUS was changed by this user
+    # (General field editing / comments / notes MUST NOT auto-assign unassigned leads)
+    _status_changed = ('status' in update_data and update_data['status'] != _pre_commit_status)
+    if _status_changed and current_employee and hasattr(current_employee, 'id'):
         is_inactive_owner = False
         if lead.telecaller_id:
             _st = db.query(StaffEmployee.status, StaffEmployee.is_deleted).filter(StaffEmployee.id == lead.telecaller_id).first()
@@ -9484,6 +9768,21 @@ def update_lead(
             lead.telecaller_id = current_employee.id
             lead.primary_owner_type = 'staff'
             lead.primary_owner_id = current_employee.id
+
+    # DC-NOTE-AUDIT: When recent_comments is added or modified, log a CRMLeadNote entry showing who updated it
+    if 'recent_comments' in update_data and update_data['recent_comments']:
+        _new_rc = str(update_data['recent_comments']).strip()
+        if _new_rc:
+            rc_note = CRMLeadNote(
+                company_id=lead.company_id or company_id,
+                lead_id=lead_id,
+                note=f"[Recent Comment] {_new_rc}",
+                is_private=False,
+                created_by_type='staff',
+                created_by_id=current_employee.emp_code if current_employee else 'System',
+                created_at=get_indian_time()
+            )
+            db.add(rc_note)
     
     if time_taken and int(time_taken) >= 1:
         from app.services.activity_time_service import log_activity_time
@@ -10684,17 +10983,37 @@ def list_lead_sources(
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
-    """List lead sources for company"""
+    """List lead sources for company, merging configured sources and existing lead source tags."""
     query = db.query(CRMLeadSource).filter(CRMLeadSource.company_id == company_id)
     
     if not include_inactive:
         query = query.filter(CRMLeadSource.is_active == True)
     
     sources = query.order_by(CRMLeadSource.display_order).all()
+    source_dicts = [s.to_dict() for s in sources]
+    existing_names = {s['name'].strip().lower() for s in source_dicts if s.get('name')}
+
+    # Also include distinct actual sources from crm_leads for completeness
+    extra_sources = db.query(CRMLead.source).filter(
+        CRMLead.company_id == company_id,
+        CRMLead.source.isnot(None),
+        CRMLead.source != ''
+    ).distinct().all()
+    for (src_val,) in extra_sources:
+        if src_val and src_val.strip().lower() not in existing_names:
+            source_dicts.append({
+                'id': None,
+                'company_id': company_id,
+                'name': src_val.strip(),
+                'code': src_val.strip().lower().replace(' ', '_'),
+                'is_active': True,
+                'display_order': 99
+            })
+            existing_names.add(src_val.strip().lower())
     
     return {
         'success': True,
-        'data': [s.to_dict() for s in sources]
+        'data': source_dicts
     }
 
 
@@ -14366,6 +14685,25 @@ async def create_lead_unified(
             )
 
     effective_cat_id = _auto_align_category_from_looking_for(db, company_id, lead_data.looking_for or lead_data.requirements, lead_data.category_id)
+    _u_status = lead_data.status or 'new'
+    
+    # DC-NEW-LEADS-UNASSIGNED-POOL-001: Leads in 'new' status have no telecaller ID or individual ownership
+    # and remain unassigned so they are universally available to all telecallers in the dialer pool.
+    if _u_status == 'new':
+        _u_handler_type = 'unassigned'
+        _u_handler_id = None
+        _u_owner_type = None
+        _u_owner_id = None
+        _u_telecaller_id = None
+        _u_field_staff_id = None
+    else:
+        _u_handler_type = 'member' if user_type == 'member' else 'staff'
+        _u_handler_id = user_id
+        _u_owner_type = 'mnr' if user_type == 'member' else 'staff'
+        _u_owner_id = current_user.id if is_staff else None
+        _u_telecaller_id = lead_data.telecaller_id if is_staff else None
+        _u_field_staff_id = lead_data.field_staff_id if is_staff else None
+
     new_lead = CRMLead(
         company_id=company_id,
         name=lead_data.name,
@@ -14375,7 +14713,7 @@ async def create_lead_unified(
         email=lead_data.email,
         category_id=effective_cat_id,
         priority=lead_data.priority or 'medium',
-        status=lead_data.status or 'new',
+        status=_u_status,
         source=lead_data.source,
         next_followup_date=lead_data.next_followup_date,
         pincode=lead_data.pincode,
@@ -14389,10 +14727,12 @@ async def create_lead_unified(
         mnr_handler_id=lead_data.mnr_handler_id,
         guru_id=lead_data.guru_id,
         adi_guru_id=lead_data.adi_guru_id,
-        handler_type='member' if user_type == 'member' else 'staff',
-        handler_id=user_id,
-        primary_owner_type='mnr' if user_type == 'member' else 'staff',
-        primary_owner_id=current_user.id if is_staff else None,  # DC Protocol: Integer for staff.id
+        handler_type=_u_handler_type,
+        handler_id=_u_handler_id,
+        telecaller_id=_u_telecaller_id,
+        field_staff_id=_u_field_staff_id,
+        primary_owner_type=_u_owner_type,
+        primary_owner_id=_u_owner_id,
         created_by_type=user_type,
         created_by_id=str(user_id),
         created_at=get_indian_time(),
@@ -14418,12 +14758,8 @@ async def create_lead_unified(
             new_lead.created_by_id = str(lead_data.source_ref_id)
             new_lead.created_by_type = 'staff'
 
-    # Staff users can assign telecaller, field_staff, partner, vendor
-    if is_staff:
-        if lead_data.telecaller_id:
-            new_lead.telecaller_id = lead_data.telecaller_id
-        if lead_data.field_staff_id:
-            new_lead.field_staff_id = lead_data.field_staff_id
+    # Staff users can assign partner, vendor (when not new)
+    if is_staff and _u_status != 'new':
         if lead_data.associated_partner_id:
             new_lead.associated_partner_id = lead_data.associated_partner_id
         if lead_data.vendor_id:

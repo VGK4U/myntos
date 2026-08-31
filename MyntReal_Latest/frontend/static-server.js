@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const cookie = require('cookie');
 const hostname = '0.0.0.0';
-const port = 5000;
+const port = process.env.PORT || 5000;
 
 // SERVER-SIDE JavaScript String Escaping - For embedding values in inline <script> tags
 function escapeJSServer(str) {
@@ -3878,6 +3878,7 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   res.setHeader('Surrogate-Control', 'no-store');
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
   
   // CENTRALIZED ROUTE MAP DISPATCHER
   // Try route-map first (if enabled), then fall back to legacy if/else chain
@@ -3890,9 +3891,98 @@ const server = http.createServer(async (req, res) => {
   }
   
   // LEGACY ROUTE HANDLING (if/else chain)
-  // This executes when route-map is disabled OR route not found in map
-  if (url === '/' || url === '/user' || url.startsWith('/user?')) {
-    // Check authentication first
+
+  // 1. ELB / Health Check Handlers (Must return 200 OK for ELB-HealthChecker)
+  if (url === '/health' || url === '/elb-health' || (req.headers['user-agent'] && req.headers['user-agent'].includes('ELB-HealthChecker'))) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'healthy', version: BUILD_ID, timestamp: new Date().toISOString() }));
+    return;
+  }
+
+  // 2. Static Assets Dispatcher (/mnr-logo-vertical.png, /favicon.ico, /public/*, /hub/Assets/*, /assets/*)
+  const isStaticAsset = (
+    url === '/mnr-logo-vertical.png' || 
+    url === '/mnr-logo.png' || 
+    url === '/mnr-logo-horizontal.png' || 
+    url === '/favicon.ico' || 
+    url.startsWith('/public/') || 
+    url.startsWith('/hub/Assets/') || 
+    url.startsWith('/css/') || 
+    url.startsWith('/js/') || 
+    url.startsWith('/images/') ||
+    url.startsWith('/assets/')
+  );
+
+  if (isStaticAsset) {
+    let filePath;
+    if (url === '/mnr-logo-vertical.png' || url === '/mnr-logo.png' || url === '/mnr-logo-horizontal.png' || url === '/favicon.ico') {
+      filePath = path.join(__dirname, 'public', url.substring(1));
+      if (!fs.existsSync(filePath)) {
+        filePath = path.join(__dirname, url.substring(1));
+      }
+    } else if (url.startsWith('/hub/Assets/')) {
+      filePath = path.join(__dirname, 'public', url.substring(1));
+    } else if (url.startsWith('/public/')) {
+      filePath = path.join(__dirname, url);
+    } else {
+      filePath = path.join(__dirname, 'public', url.substring(1));
+    }
+    
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      const ext = path.extname(filePath).toLowerCase();
+      const mimeTypes = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.svg': 'image/svg+xml',
+        '.ico': 'image/x-icon',
+        '.css': 'text/css',
+        '.js': 'application/javascript',
+        '.json': 'application/json',
+        '.pdf': 'application/pdf',
+        '.woff': 'font/woff',
+        '.woff2': 'font/woff2',
+        '.ttf': 'font/ttf'
+      };
+      const contentType = mimeTypes[ext] || 'application/octet-stream';
+      res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=86400' });
+      fs.createReadStream(filePath).pipe(res);
+      return;
+    }
+  }
+
+  // 3. Public Compliance & Privacy Pages
+  if (url === '/privacy-policy.html' || url === '/privacy-policy' || url.startsWith('/privacy-policy.html?') || url.startsWith('/privacy-policy?')) {
+    const policyPath = path.join(__dirname, 'privacy-policy.html');
+    if (fs.existsSync(policyPath)) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(fs.readFileSync(policyPath, 'utf8'));
+      return;
+    }
+  }
+
+  if (url === '/delete-account.html' || url === '/delete-account' || url.startsWith('/delete-account.html?') || url.startsWith('/delete-account?')) {
+    const deletePath = path.join(__dirname, 'delete-account.html');
+    if (fs.existsSync(deletePath)) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(fs.readFileSync(deletePath, 'utf8'));
+      return;
+    }
+  }
+
+  // 4. MyntReal Website & Hub Landing Page (/ or /hub or /landing)
+  if (url === '/' || url === '/hub' || url.startsWith('/hub?') || url === '/landing' || url.startsWith('/landing?') || url === '/index.html') {
+    const landingPath = path.join(__dirname, 'public', 'landing.html');
+    if (fs.existsSync(landingPath)) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(fs.readFileSync(landingPath, 'utf8'));
+      return;
+    }
+  }
+
+  // 5. User Portal Redirect (/user)
+  if (url === '/user' || url.startsWith('/user?')) {
     if (!isLoggedIn) {
       res.writeHead(302, { 'Location': `/login?v=${BUILD_ID}` });
       res.end();
@@ -3902,7 +3992,7 @@ const server = http.createServer(async (req, res) => {
     // If logged in, redirect to dashboard
     res.writeHead(302, { 'Location': `/dashboard` });
     res.end();
-    
+    return;
   } else if (url === '/dashboard' || url.startsWith('/dashboard?')) {
     if (!isLoggedIn) {
       res.writeHead(302, { 'Location': `/login?v=${BUILD_ID}` });
@@ -4172,7 +4262,7 @@ const server = http.createServer(async (req, res) => {
           try {
             const response = await fetch("/api/v1/auth/me", {
               headers: {
-                "Authorization": `Bearer ${token}`
+                "Authorization": "Bearer " + token
               }
             });
             
@@ -4188,11 +4278,11 @@ const server = http.createServer(async (req, res) => {
                 
                 let message = "";
                 if (kycStatus !== "Approved" && bankStatus !== "Approved") {
-                  message = `<strong>KYC Status:</strong> ${kycStatus} | <strong>Bank Status:</strong> ${bankStatus}<br><strong>Impact:</strong> Cannot process withdrawals, claim awards, or redeem bonanza until both are approved.`;
+                  message = "<strong>KYC Status:</strong> " + kycStatus + " | <strong>Bank Status:</strong> " + bankStatus + "<br><strong>Impact:</strong> Cannot process withdrawals, claim awards, or redeem bonanza until both are approved.";
                 } else if (kycStatus !== "Approved") {
-                  message = `<strong>KYC Status:</strong> ${kycStatus}<br>Complete your KYC verification immediately to access platform benefits.`;
+                  message = "<strong>KYC Status:</strong> " + kycStatus + "<br>Complete your KYC verification immediately to access platform benefits.";
                 } else {
-                  message = `<strong>Bank Status:</strong> ${bankStatus}<br>Submit your bank details for approval to enable payment processing.`;
+                  message = "<strong>Bank Status:</strong> " + bankStatus + "<br>Submit your bank details for approval to enable payment processing.";
                 }
                 
                 warningMessage.innerHTML = message;
@@ -12363,7 +12453,7 @@ const server = http.createServer(async (req, res) => {
             try {
               const response = await fetch("/api/v1/auth/me", {
                 headers: {
-                  "Authorization": `Bearer ${sessionToken}`
+                  "Authorization": "Bearer " + sessionToken
                 }
               });
               
@@ -12379,11 +12469,11 @@ const server = http.createServer(async (req, res) => {
                   
                   let message = "";
                   if (kycStatus !== "Approved" && bankStatus !== "Approved") {
-                    message = `<strong>KYC Status:</strong> ${kycStatus} | <strong>Bank Status:</strong> ${bankStatus}<br>You cannot claim awards or bonanza until both KYC and bank details are approved.`;
+                    message = "<strong>KYC Status:</strong> " + kycStatus + " | <strong>Bank Status:</strong> " + bankStatus + "<br>You cannot claim awards or bonanza until both KYC and bank details are approved.";
                   } else if (kycStatus !== "Approved") {
-                    message = `<strong>KYC Status:</strong> ${kycStatus}<br>Complete your KYC verification to enable awards and bonanza claims.`;
+                    message = "<strong>KYC Status:</strong> " + kycStatus + "<br>Complete your KYC verification to enable awards and bonanza claims.";
                   } else {
-                    message = `<strong>Bank Status:</strong> ${bankStatus}<br>Submit your bank details for approval to enable claims.`;
+                    message = "<strong>Bank Status:</strong> " + bankStatus + "<br>Submit your bank details for approval to enable claims.";
                   }
                   
                   warningMessage.innerHTML = message;

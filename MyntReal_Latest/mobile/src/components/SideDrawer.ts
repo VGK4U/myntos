@@ -49,6 +49,13 @@ const ROUTE_PATH_MAP: Record<string, string> = {
   '/staff/leads': 'staff-leads',
   '/staff/team-leads': 'staff-team-leads',
   '/staff/lead-sources': 'staff-lead-sources',
+  '/staff/crm/whatsapp-inbox': 'staff-whatsapp',
+  '/staff/crm/wa-inbox': 'staff-whatsapp',
+  '/staff/whatsapp': 'staff-whatsapp',
+  '/staff/whatsapp-inbox': 'staff-whatsapp',
+  '/staff/whatsapp-center': 'staff-whatsapp',
+  '/staff/crm/whatsapp-center': 'staff-whatsapp',
+  '/staff/crm/whatsapp': 'staff-whatsapp',
   
   '/staff/call-tracking': 'staff-call-tracking',
   '/staff/vendors': 'staff-vendors',
@@ -215,7 +222,9 @@ const MENU_MASTER: MenuSection[] = [
     items: [
       { menu_code: "MY_LEADS", label: "My Leads", route: "staff-my-leads" },
       { menu_code: "LEADS_MASTER", label: "Leads Master", route: "staff-leads" },
-      { menu_code: "TEAM_LEADS", label: "Team Leads", route: "staff-team-leads" }
+      { menu_code: "TEAM_LEADS", label: "Team Leads", route: "staff-team-leads" },
+      { menu_code: "WHATSAPP_CENTER", label: "WhatsApp Center", route: "staff-whatsapp" },
+      { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "auto-dialer" }
     ]
   },
   {

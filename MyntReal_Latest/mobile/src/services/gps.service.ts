@@ -408,64 +408,92 @@ class GpsService {
     return this.isClockedIn || this.activeJourneyId !== null;
   }
 
-  // DC Protocol (Jan 28, 2026): Request background location permission for Android 10+
-  // This shows the "Allow all the time" option which is needed for GPS tracking when app is minimized
-  // Only prompts ONCE per install (stored in localStorage)
+  // Google Play Compliant Prominent Background Location Disclosure
+  // Appears BEFORE system permission request explaining that location is collected
+  // even when the app is closed or minimized during active working shifts.
+  private showProminentDisclosureModal(): Promise<boolean> {
+    return new Promise((resolve) => {
+      const existing = document.getElementById('mnr-bg-location-disclosure-modal');
+      if (existing) existing.remove();
+
+      const modalEl = document.createElement('div');
+      modalEl.id = 'mnr-bg-location-disclosure-modal';
+      modalEl.style.cssText = `
+        position: fixed; inset: 0; z-index: 999999;
+        background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px);
+        display: flex; align-items: center; justify-content: center;
+        padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      `;
+
+      modalEl.innerHTML = `
+        <div style="
+          background: #ffffff; color: #1e293b; border-radius: 16px;
+          max-width: 420px; width: 100%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);
+          border-top: 5px solid #1a3c6e;
+        ">
+          <div style="font-size: 32px; text-align: center; margin-bottom: 8px;">📍</div>
+          <h3 style="font-size: 18px; font-weight: 700; color: #1a3c6e; text-align: center; margin-bottom: 12px;">
+            Staff Location & Attendance Tracking
+          </h3>
+          <p style="font-size: 14px; line-height: 1.5; color: #334155; margin-bottom: 12px;">
+            MyntReal collects location data to enable <strong>field staff attendance verification</strong>, <strong>active journey recording</strong>, and <strong>travel allowance calculation</strong>.
+          </p>
+          <div style="background: #f0f7ff; border: 1px solid #c5d8f8; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+            <p style="font-size: 13px; line-height: 1.4; color: #1e40af; margin: 0;">
+              ⚠️ <strong>Background Tracking Notice:</strong> Location data is collected <strong>even when the app is closed or not in use</strong>, but <strong>ONLY while you are actively clocked in</strong>. Tracking stops immediately when you clock out.
+            </p>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 18px;">
+            <button id="mnr-loc-btn-deny" style="
+              flex: 1; padding: 12px; border: 1px solid #cbd5e1; background: #f8fafc;
+              color: #64748b; font-weight: 600; border-radius: 8px; font-size: 14px; cursor: pointer;
+            ">Not Now</button>
+            <button id="mnr-loc-btn-agree" style="
+              flex: 2; padding: 12px; border: none; background: #1a3c6e;
+              color: #ffffff; font-weight: 600; border-radius: 8px; font-size: 14px; cursor: pointer;
+            ">Agree & Continue</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modalEl);
+
+      document.getElementById('mnr-loc-btn-agree')?.addEventListener('click', () => {
+        modalEl.remove();
+        localStorage.setItem('dc_bg_location_prompt_shown', 'true');
+        resolve(true);
+      });
+
+      document.getElementById('mnr-loc-btn-deny')?.addEventListener('click', () => {
+        modalEl.remove();
+        resolve(false);
+      });
+    });
+  }
+
   private async requestBackgroundLocationPermission(): Promise<void> {
     try {
-      // Check if running on Android
       const { Capacitor } = await import('@capacitor/core');
       if (Capacitor.getPlatform() !== 'android') {
         if (GPS_DEBUG()) console.log('[DC_GPS] Background location: Not Android, skipping special request');
         return;
       }
 
-      // Check if we've already shown the background location prompt
       const promptShown = localStorage.getItem('dc_bg_location_prompt_shown');
       if (promptShown === 'true') {
         if (GPS_DEBUG()) console.log('[DC_GPS] Background location prompt already shown once');
         return;
       }
 
-      // For Android 10+ (API 29+), we need to guide user to settings for "Always Allow"
-      // The standard Geolocation.requestPermissions() only grants "While Using"
-      
-      // Check current permission status
       const currentStatus = await Geolocation.checkPermissions();
-      if (GPS_DEBUG()) console.log('[DC_GPS] Current permission status:', JSON.stringify(currentStatus));
-      
-      // If we only have "while using" (location granted but not background), prompt user ONCE
       if (currentStatus.location === 'granted') {
-        // Mark as shown so we don't prompt again
-        localStorage.setItem('dc_bg_location_prompt_shown', 'true');
-        
-        // Show a dialog explaining why background location is needed
-        const shouldOpenSettings = confirm(
-          '📍 Background Location Required\n\n' +
-          'To track your location during work hours (even when app is minimized), please:\n\n' +
-          '1. Tap "OK" for instructions\n' +
-          '2. Enable "Allow all the time" in Settings\n\n' +
-          'This ensures accurate GPS tracking for your attendance and journey records.\n\n' +
-          '(This message will only appear once)'
-        );
-        
-        if (shouldOpenSettings) {
-          // Show instructions to enable background location
-          // Note: On Android 10+, "Allow all the time" can only be set in system settings
-          alert(
-            '📍 Enable Background Location:\n\n' +
-            '1. Go to your phone Settings\n' +
-            '2. Find "Apps" → "MyntReal"\n' +
-            '3. Tap "Permissions" → "Location"\n' +
-            '4. Select "Allow all the time"\n\n' +
-            'This allows GPS tracking even when the app is minimized.'
-          );
-          if (GPS_DEBUG()) console.log('[DC_GPS] Showed background location instructions (first time)');
+        const agreed = await this.showProminentDisclosureModal();
+        if (agreed && GPS_DEBUG()) {
+          console.log('[DC_GPS] User agreed to prominent background location disclosure');
         }
       }
     } catch (error) {
       if (GPS_DEBUG()) console.log('[DC_GPS] Background location request info:', error);
-      // Non-fatal - continue with foreground location
     }
   }
 

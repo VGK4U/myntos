@@ -1674,7 +1674,13 @@ def member_earner_cards(
         if len(cards) >= 20:
             break
 
-    earned_total = float(getattr(current_member, 'vgk_cash_earned_total', 0) or 0)
+    earned_row = db.execute(text("""
+        SELECT COALESCE(SUM(commission_amount), 0) AS total
+        FROM vgk_cash_income_entries
+        WHERE partner_id = :pid
+          AND status IN ('RELEASED', 'PAID')
+    """), {'pid': current_member.id}).fetchone()
+    earned_total = float(earned_row.total if earned_row else 0)
     return {'success': True, 'cards': cards, 'earned_total': earned_total}
 
 

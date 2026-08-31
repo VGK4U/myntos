@@ -171,16 +171,18 @@ _myop_user_cache_ts: float = 0.0
 _MYOP_USER_CACHE_TTL = 1800  # 30 minutes
 
 
-def _get_myop_user_id(agent_phone_10: str) -> Optional[str]:
+def _get_myop_agent_info(current_user) -> Optional[dict]:
     """
-    DC_MYOP_UID: Look up the MyOperator user_id for an agent by their 10-digit phone number.
-    Fetches from GET /user?token=TOKEN (returns list of all agents).
-    Caches result for 30 minutes to avoid repeated API calls.
+    DC_MYOP_AGENT: Resolve the agent's full MyOperator profile directly from MyOperator.
+    Prioritizes matching by:
+    1. Employee phone -> MyOperator contact_number
+    2. Employee full_name / name -> MyOperator agent name (exact or substring/token)
+    3. Employee email -> MyOperator email
     """
     import time
     global _myop_user_cache, _myop_user_cache_ts
     now = time.time()
-    if now - _myop_user_cache_ts > _MYOP_USER_CACHE_TTL or not _myop_user_cache:
+    if now - _myop_user_cache_ts > _MYOP_USER_CACHE_TTL or not _myop_user_cache or 'list' not in _myop_user_cache:
         try:
             resp = _http.get(
                 f'{_MYOP_BASE_URL}/user',
@@ -189,20 +191,57 @@ def _get_myop_user_id(agent_phone_10: str) -> Optional[str]:
             )
             data = resp.json()
             if data.get('status') == 'success' and data.get('data'):
-                cache = {}
-                for u in data['data']:
-                    raw = re.sub(r'[^\d]', '', str(u.get('contact_number', '')))
-                    phone10 = raw[-10:] if len(raw) > 10 else raw
-                    if phone10:
-                        cache[phone10] = u.get('user_id', '')
-                _myop_user_cache = cache
+                agents_list = data['data']
+                _myop_user_cache = {'list': agents_list}
                 _myop_user_cache_ts = now
-                logger.info('[DC_MYOP_UID] Refreshed user cache: %d agents', len(cache))
+                logger.info('[DC_MYOP_UID] Refreshed user cache: %d agents', len(agents_list))
             else:
                 logger.warning('[DC_MYOP_UID] Failed to refresh user cache: %s', data)
         except Exception as e:
             logger.error('[DC_MYOP_UID] User cache refresh failed: %s', e)
-    return _myop_user_cache.get(agent_phone_10)
+
+    agents = _myop_user_cache.get('list', []) if isinstance(_myop_user_cache, dict) else []
+    if not agents:
+        return None
+
+    agent_phone_raw = getattr(current_user, 'phone', None) or ''
+    agent_phone_10 = _normalize_phone_for_ctc(agent_phone_raw)
+    agent_name = (getattr(current_user, 'full_name', '') or getattr(current_user, 'name', '') or '').lower().strip()
+    agent_email = (getattr(current_user, 'email', '') or '').lower().strip()
+
+    # 1. Match by phone
+    if agent_phone_10:
+        for a in agents:
+            cnum = re.sub(r'[^\d]', '', str(a.get('contact_number', '')))[-10:]
+            if cnum == agent_phone_10:
+                return a
+
+    # 2. Match by email
+    if agent_email:
+        for a in agents:
+            aemail = (a.get('email') or '').lower().strip()
+            if aemail and aemail == agent_email:
+                return a
+
+    # 3. Match by name (exact, substring, or token)
+    if agent_name:
+        for a in agents:
+            myop_name = (a.get('name') or '').lower().strip()
+            if myop_name and (myop_name in agent_name or agent_name in myop_name):
+                return a
+        for a in agents:
+            myop_name = (a.get('name') or '').lower().strip()
+            if any(tok in myop_name for tok in agent_name.split() if len(tok) > 3):
+                return a
+
+    return None
+
+
+def _get_myop_user_id(agent_phone_10: str, agent_name: str = '') -> Optional[str]:
+    """Helper to return user_id string for phone or name."""
+    dummy_user = type('DummyUser', (), {'phone': agent_phone_10, 'full_name': agent_name, 'name': agent_name, 'email': ''})()
+    info = _get_myop_agent_info(dummy_user)
+    return info.get('user_id') if info else None
 
 
 def _normalize_phone_for_ctc(phone: str) -> str:
@@ -430,6 +469,8 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
             CRMLead.company_id.in_(co_ids),
             CRMLead.status.notin_(['won', 'lost', 'completed', 'do_not_call']),
             or_(
+                # DC-NEW-LEADS-UNASSIGNED-POOL-001: All 'new' status leads are universally available to all telecallers
+                CRMLead.status == 'new',
                 # Truly unassigned leads
                 and_(
                     or_(
@@ -567,12 +608,17 @@ def _build_queue_for_mnr(user: User, db: Session) -> List[dict]:
             CRMLead.company_id.in_(company_ids),
             CRMLead.status.notin_(['won', 'lost', 'completed', 'do_not_call']),
             or_(
-                CRMLead.handler_type == 'unassigned',
-                CRMLead.handler_id.is_(None),
-                CRMLead.handler_id == '',
+                CRMLead.status == 'new',
+                and_(
+                    or_(
+                        CRMLead.handler_type == 'unassigned',
+                        CRMLead.handler_id.is_(None),
+                        CRMLead.handler_id == '',
+                    ),
+                    CRMLead.telecaller_id.is_(None),
+                    CRMLead.field_staff_id.is_(None),
+                )
             ),
-            CRMLead.telecaller_id.is_(None),
-            CRMLead.field_staff_id.is_(None),
             # DC_FUTURE_NFD_EXCLUDE: Guard unassigned leads with a future date too
             or_(
                 CRMLead.next_followup_date.is_(None),
@@ -2328,20 +2374,26 @@ async def initiate_click_to_call(
     No tel: redirect — the call is handled server-side through MyOperator's platform.
     Returns: { success, call_id } so the mobile can poll for call-end via webhook.
     """
-    customer_phone = body.get('customer_phone', '')
+    customer_phone = body.get('customer_phone') or body.get('phone') or ''
     lead_id = body.get('lead_id')
-
-    agent_phone_raw = getattr(current_user, 'phone', None) or ''
-    if not agent_phone_raw:
-        raise HTTPException(status_code=400, detail="Agent phone number not set in your staff profile. Please ask an admin to add it.")
+    session_id = body.get('session_id')
 
     customer_norm = _normalize_phone_for_ctc(customer_phone)
-    agent_norm = _normalize_phone_for_ctc(agent_phone_raw)
-
     if len(customer_norm) != 10:
         raise HTTPException(status_code=400, detail=f"Invalid customer phone number: {customer_phone}")
-    if len(agent_norm) != 10:
-        raise HTTPException(status_code=400, detail=f"Invalid agent phone number in profile: {agent_phone_raw}")
+
+    # Resolve MyOperator agent from active MyOperator account
+    agent_myop = _get_myop_agent_info(current_user)
+    if not agent_myop:
+        agent_display = getattr(current_user, 'full_name', '') or getattr(current_user, 'name', 'Staff')
+        raise HTTPException(
+            status_code=400,
+            detail=f"MyOperator agent account not found for '{agent_display}'. Please ensure this user is added as an active agent in MyOperator."
+        )
+
+    myop_user_id = agent_myop.get('user_id')
+    myop_agent_name = agent_myop.get('name') or 'Agent'
+    myop_agent_phone = _normalize_phone_for_ctc(agent_myop.get('contact_number', ''))
 
     if not _MYOP_X_API_KEY:
         logger.error('[DC_MYOP_CTC] MYOPERATOR_X_API_KEY not configured')
@@ -2358,17 +2410,8 @@ async def initiate_click_to_call(
             detail="MyOperator Public IVR ID not configured. Please set MYOPERATOR_PUBLIC_IVR_ID in environment variables (found in MyOperator Campaign Dashboard)."
         )
 
-    # Look up agent's MyOperator user_id by their phone number
-    import uuid as uuid_mod
-    myop_user_id = _get_myop_user_id(agent_norm)
-    if not myop_user_id:
-        logger.error('[DC_MYOP_CTC] No MyOperator user_id found for agent phone %s. Known agents: %s', agent_norm, list(_myop_user_cache.keys()))
-        raise HTTPException(
-            status_code=400,
-            detail=f"Agent phone {agent_norm} not found in MyOperator. Ensure the agent's phone number in their staff profile matches their MyOperator account."
-        )
-
     # E.164 format for customer number
+    import uuid as uuid_mod
     customer_e164 = f'+91{customer_norm}'
     reference_id = f'ctc_{lead_id or "x"}_{str(uuid_mod.uuid4())[:8]}'
 
@@ -2422,9 +2465,32 @@ async def initiate_click_to_call(
     return {
         'success': True,
         'call_id': call_id,
-        'agent_number': agent_norm,
+        'agent_name': myop_agent_name,
+        'agent_number': myop_agent_phone,
         'customer_number': customer_norm,
-        'message': result.get('message', 'Call initiated — your phone will ring shortly'),
+        'message': result.get('message', f'Call initiated for {myop_agent_name} ({myop_agent_phone}) — your phone will ring shortly from +918065184781'),
+    }
+
+
+@router.get("/dialer/myoperator-agent")
+async def get_myoperator_agent_profile(
+    current_user=Depends(get_current_user_hybrid)
+):
+    """
+    DC_MYOP_AGENT: Return the active MyOperator agent identity for the logged-in user.
+    """
+    agent = _get_myop_agent_info(current_user)
+    if not agent:
+        return {'success': False, 'message': 'Not mapped to a MyOperator agent'}
+    return {
+        'success': True,
+        'agent': {
+            'user_id': agent.get('user_id'),
+            'name': agent.get('name'),
+            'contact_number': agent.get('contact_number'),
+            'extension': agent.get('extension'),
+            'is_active': str(agent.get('is_active', '1')) == '1',
+        }
     }
 
 
