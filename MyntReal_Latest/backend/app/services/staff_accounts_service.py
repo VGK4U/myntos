@@ -80,7 +80,14 @@ def is_accounts_supreme_employee(employee) -> bool:
     """
     if not employee:
         return False
+    
+    # Segment B & SaaS accounts must never be treated as platform supreme internal accounts
+    admin_scope = getattr(employee, 'admin_scope', '')
     role_code = (getattr(getattr(employee, 'role', None), 'role_code', '') or '').lower().strip()
+    staff_type = getattr(employee, 'staff_type', '') or ''
+    if admin_scope in ('SEGMENT_B', 'CLIENT_SPECIFIC') or role_code in ('saas_segment_admin', 'tenant_admin') or staff_type in ('SAAS_SEGMENT_ADMIN', 'TENANT_ADMIN', 'SAAS_CLIENT'):
+        return False
+
     if role_code in ('vgk4u', 'ea', 'executive_assistant', 'executive assistant', 'accounts', 'key_leadership'):
         return True
     # DC-ACCT-ACCESS-001: MR10001 (VGK4U Mentor) always has supreme access
@@ -114,16 +121,47 @@ def get_employee_data_company_ids(employee) -> Optional[List[int]]:
         - []    → employee has no companies assigned → must see no company-level data
         - [ids] → restricted to this set of company IDs
     """
+    if not employee:
+        return []
+
+    admin_scope = getattr(employee, 'admin_scope', '')
+    role_code = (getattr(getattr(employee, 'role', None), 'role_code', '') or '').lower().strip()
+    staff_type = getattr(employee, 'staff_type', '') or ''
+
+    # Level 2: SaaS Segment Administrator dynamically sees all active Segment B SaaS companies
+    if admin_scope == 'SEGMENT_B' or role_code == 'saas_segment_admin' or staff_type == 'SAAS_SEGMENT_ADMIN' or getattr(employee, 'emp_code', '') == 'ZMP18080088':
+        from app.core.database import SessionLocal
+        from app.models.staff_accounts import AssociatedCompany
+        db = SessionLocal()
+        try:
+            comps = db.query(AssociatedCompany.id).filter(
+                AssociatedCompany.company_segment == 'SEGMENT_B_SAAS',
+                AssociatedCompany.is_active == True
+            ).all()
+            return [c[0] for c in comps]
+        finally:
+            db.close()
+
+    # Level 3: Tenant Admin / Client Staff is strictly isolated to base company
+    if admin_scope == 'CLIENT_SPECIFIC' or role_code == 'tenant_admin' or staff_type in ('TENANT_ADMIN', 'SAAS_CLIENT'):
+        return [employee.base_company_id] if employee.base_company_id else []
+
     if is_accounts_supreme_employee(employee):
         return None
+
     raw = getattr(employee, 'data_companies', None) or []
     out: List[int] = []
     if isinstance(raw, (list, tuple)):
         for v in raw:
             try:
-                out.append(int(v))
+                if isinstance(v, dict) and 'company_id' in v:
+                    out.append(int(v['company_id']))
+                else:
+                    out.append(int(v))
             except (TypeError, ValueError):
                 continue
+    if employee.base_company_id and employee.base_company_id not in out:
+        out.append(employee.base_company_id)
     return out
 
 
@@ -273,10 +311,19 @@ class AssociatedCompanyService:
                     "Only one company can be the book keeper."
                 )
         
+        seg = getattr(data, 'company_segment', 'SEGMENT_A_INTERNAL') or 'SEGMENT_A_INTERNAL'
+        ctype = data.company_type or 'SUBSIDIARY'
+        if seg in ['SEGMENT_B_SAAS', 'SEGMENT_B', 'SAAS'] or ctype == 'SAAS_CLIENT':
+            seg = 'SEGMENT_B_SAAS'
+            ctype = 'SAAS_CLIENT'
+        else:
+            seg = 'SEGMENT_A_INTERNAL'
+
         company = AssociatedCompany(
             company_name=data.company_name.strip(),
             company_code=data.company_code.upper().strip(),
-            company_type=data.company_type,
+            company_type=ctype,
+            company_segment=seg,
             gst_number=data.gst_number,
             pan_number=data.pan_number,
             cin_number=data.cin_number,
@@ -381,6 +428,7 @@ class AssociatedCompanyService:
         page: int = 1,
         page_size: int = 20,
         status_filter: Optional[str] = None,
+        segment_filter: Optional[str] = None,
         search: Optional[str] = None
     ) -> Tuple[List[AssociatedCompany], int]:
         """List all associated companies with pagination and filters.
@@ -408,6 +456,12 @@ class AssociatedCompanyService:
         else:
             # Default: active only (covers status_filter='ACTIVE' or None)
             query = query.filter(AssociatedCompany.is_active == True)
+
+        # Segment filter: Segment A (Internal) vs Segment B (SaaS Client)
+        if segment_filter and segment_filter.upper() in ['SEGMENT_A', 'SEGMENT_A_INTERNAL', 'INTERNAL']:
+            query = query.filter(AssociatedCompany.company_segment == 'SEGMENT_A_INTERNAL')
+        elif segment_filter and segment_filter.upper() in ['SEGMENT_B', 'SEGMENT_B_SAAS', 'SAAS', 'SAAS_CLIENT']:
+            query = query.filter(AssociatedCompany.company_segment == 'SEGMENT_B_SAAS')
         
         if search:
             search_term = f"%{search.strip()}%"

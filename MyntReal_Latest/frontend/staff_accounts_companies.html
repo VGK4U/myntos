@@ -31,7 +31,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-page); min-height: 100vh; color: var(--text-main); }
         
-        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 76px; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 0; }
         .sidebar-expanded .main-content { margin-left: 260px; }
         .content-area { padding: 24px 32px; width: 100%; max-width: 100%; }
         
@@ -153,7 +153,6 @@
 <body>
     <nav id="staffSidebar"></nav>
     <div class="main-content">
-        <div id="headerContainer"></div>
         <div class="content-area">
             
             <!-- Page Header -->
@@ -168,15 +167,33 @@
                 </div>
             </div>
 
-            <!-- KPI Metric Summary (Lifecycle Stage Counters) -->
+            <!-- KPI Metric Summary (Lifecycle Stage Counters & Segment Breakdown) -->
             <div class="kpi-grid">
-                <div class="kpi-card" onclick="quickFilterStatus('ALL')" style="cursor:pointer;">
+                <div class="kpi-card" onclick="quickFilterSegment('ALL')" style="cursor:pointer;">
                     <div class="kpi-icon-box" style="background: #eef2ff; color: #4f46e5;">
                         <i class="fas fa-building"></i>
                     </div>
                     <div>
                         <div class="kpi-title">Total Registered</div>
                         <div class="kpi-value" id="kpiTotal">0</div>
+                    </div>
+                </div>
+                <div class="kpi-card" onclick="quickFilterSegment('SEGMENT_A_INTERNAL')" style="cursor:pointer;">
+                    <div class="kpi-icon-box" style="background: #ede9fe; color: #6d28d9;">
+                        <i class="fas fa-sitemap"></i>
+                    </div>
+                    <div>
+                        <div class="kpi-title">Segment A (Internal)</div>
+                        <div class="kpi-value" id="kpiSegmentA" style="color: #6d28d9;">0</div>
+                    </div>
+                </div>
+                <div class="kpi-card" onclick="quickFilterSegment('SEGMENT_B_SAAS')" style="cursor:pointer;">
+                    <div class="kpi-icon-box" style="background: #ecfdf5; color: #059669;">
+                        <i class="fas fa-cloud"></i>
+                    </div>
+                    <div>
+                        <div class="kpi-title">Segment B (SaaS Clients)</div>
+                        <div class="kpi-value" id="kpiSegmentB" style="color: #059669;">0</div>
                     </div>
                 </div>
                 <div class="kpi-card" onclick="quickFilterStatus('ACTIVE_PAID')" style="cursor:pointer;">
@@ -195,15 +212,6 @@
                     <div>
                         <div class="kpi-title">Trial (14 Days)</div>
                         <div class="kpi-value" id="kpiTrial" style="color: #0284c7;">0</div>
-                    </div>
-                </div>
-                <div class="kpi-card" onclick="quickFilterStatus('OVERDUE')" style="cursor:pointer;">
-                    <div class="kpi-icon-box" style="background: #fee2e2; color: #dc2626;">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <div>
-                        <div class="kpi-title">Suspended / Overdue</div>
-                        <div class="kpi-value" id="kpiOverdue" style="color: #dc2626;">0</div>
                     </div>
                 </div>
             </div>
@@ -226,6 +234,12 @@
                 </div>
 
                 <div class="filter-group">
+                    <select id="segmentFilter" class="filter-select" onchange="applyFiltersAndSort()" style="font-weight:700; color:#3730a3; background:#f5f3ff; border-color:#ddd6fe;">
+                        <option value="ALL" selected>All Segments</option>
+                        <option value="SEGMENT_A_INTERNAL">Segment A — Internal</option>
+                        <option value="SEGMENT_B_SAAS">Segment B — SaaS Clients</option>
+                    </select>
+
                     <select id="statusFilter" class="filter-select" onchange="applyFiltersAndSort()">
                         <option value="ALL" selected>All Lifecycle Stages</option>
                         <option value="ACTIVE_PAID">Active & Paid Only</option>
@@ -314,6 +328,21 @@
             </div>
             <div class="modal-body">
                 <form id="createForm">
+                    <div class="form-group" style="background:#f8fafc; padding:12px; border-radius:10px; border:1.5px solid #cbd5e1; margin-bottom:14px;">
+                        <label style="font-weight:700; color:#0f172a; display:block; margin-bottom:8px;">
+                            Company Segment * <span style="font-size:11px; color:var(--text-sub); font-weight:400;">(Architectural Governance Boundary)</span>
+                        </label>
+                        <div style="display:flex; gap:16px;">
+                            <label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:#3730a3;">
+                                <input type="radio" name="formSegment" id="formSegmentA" value="SEGMENT_A_INTERNAL" onchange="handleSegmentChange(this.value, 'create')">
+                                <span class="badge" style="background:#e0e7ff; color:#3730a3; padding:4px 8px; border-radius:4px; font-size:12px;">Segment A • Internal</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:#065f46;">
+                                <input type="radio" name="formSegment" id="formSegmentB" value="SEGMENT_B_SAAS" checked onchange="handleSegmentChange(this.value, 'create')">
+                                <span class="badge" style="background:#ecfdf5; color:#065f46; padding:4px 8px; border-radius:4px; font-size:12px;">Segment B • SaaS Client</span>
+                            </label>
+                        </div>
+                    </div>
                     <div class="form-group">
                         <label>Company Name *</label>
                         <input type="text" id="formName" required placeholder="e.g. Acme Logistics Solutions" oninput="handleCompanyNameInput(this.value)">
@@ -421,6 +450,21 @@
             <div class="modal-body">
                 <form id="editForm">
                     <input type="hidden" id="editId">
+                    <div class="form-group" style="background:#f8fafc; padding:12px; border-radius:10px; border:1.5px solid #cbd5e1; margin-bottom:14px;">
+                        <label style="font-weight:700; color:#0f172a; display:block; margin-bottom:8px;">
+                            Company Segment * <span style="font-size:11px; color:var(--text-sub); font-weight:400;">(Architectural Governance Boundary)</span>
+                        </label>
+                        <div style="display:flex; gap:16px;">
+                            <label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:#3730a3;">
+                                <input type="radio" name="editSegment" id="editSegmentA" value="SEGMENT_A_INTERNAL" onchange="handleSegmentChange(this.value, 'edit')">
+                                <span class="badge" style="background:#e0e7ff; color:#3730a3; padding:4px 8px; border-radius:4px; font-size:12px;">Segment A • Internal</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:#065f46;">
+                                <input type="radio" name="editSegment" id="editSegmentB" value="SEGMENT_B_SAAS" onchange="handleSegmentChange(this.value, 'edit')">
+                                <span class="badge" style="background:#ecfdf5; color:#065f46; padding:4px 8px; border-radius:4px; font-size:12px;">Segment B • SaaS Client</span>
+                            </label>
+                        </div>
+                    </div>
                     <div class="form-group"><label>Company Name *</label><input type="text" id="editName" required></div>
                     <div class="form-row">
                         <div class="form-group"><label>Short Code</label><input type="text" id="editCode" disabled style="background: #f1f5f9; color: #64748b; font-weight:600;"></div>
@@ -839,23 +883,56 @@
 
         function updateKPICounters(list) {
             const total = list.length;
-            let activePaid = 0, trial = 0, overdue = 0;
+            let activePaid = 0, trial = 0, segA = 0, segB = 0;
             list.forEach(c => {
                 const stage = getCompanyLifecycleStage(c);
                 if (stage === 'ACTIVE_PAID') activePaid++;
                 else if (stage === 'TRIAL') trial++;
-                else if (stage === 'OVERDUE') overdue++;
+
+                const seg = (c.company_segment || '').toUpperCase();
+                if (seg.includes('B') || seg.includes('SAAS') || c.company_type === 'SAAS_CLIENT') {
+                    segB++;
+                } else {
+                    segA++;
+                }
             });
 
-            document.getElementById('kpiTotal').textContent = total;
-            document.getElementById('kpiActive').textContent = activePaid;
-            document.getElementById('kpiTrial').textContent = trial;
-            document.getElementById('kpiOverdue').textContent = overdue;
+            if (document.getElementById('kpiTotal')) document.getElementById('kpiTotal').textContent = total;
+            if (document.getElementById('kpiSegmentA')) document.getElementById('kpiSegmentA').textContent = segA;
+            if (document.getElementById('kpiSegmentB')) document.getElementById('kpiSegmentB').textContent = segB;
+            if (document.getElementById('kpiActive')) document.getElementById('kpiActive').textContent = activePaid;
+            if (document.getElementById('kpiTrial')) document.getElementById('kpiTrial').textContent = trial;
+        }
+
+        function quickFilterSegment(segment) {
+            if (document.getElementById('segmentFilter')) {
+                document.getElementById('segmentFilter').value = segment;
+            }
+            applyFiltersAndSort();
         }
 
         function quickFilterStatus(status) {
             document.getElementById('statusFilter').value = status;
             applyFiltersAndSort();
+        }
+
+        function renderSegmentBadge(seg, type) {
+            const isSaaS = (seg === 'SEGMENT_B_SAAS' || seg === 'SEGMENT_B' || type === 'SAAS_CLIENT');
+            if (isSaaS) {
+                return `<span class="badge" style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-weight:700; font-size:10px; padding:2px 6px; border-radius:4px;"><i class="fas fa-cloud me-1"></i>Segment B • SaaS</span>`;
+            }
+            return `<span class="badge" style="background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; font-weight:700; font-size:10px; padding:2px 6px; border-radius:4px;"><i class="fas fa-building me-1"></i>Segment A • Internal</span>`;
+        }
+
+        function handleSegmentChange(segVal, mode) {
+            const typeEl = document.getElementById(mode === 'create' ? 'formType' : 'editType');
+            if (typeEl) {
+                if (segVal === 'SEGMENT_B_SAAS') {
+                    typeEl.value = 'SAAS_CLIENT';
+                } else if (typeEl.value === 'SAAS_CLIENT') {
+                    typeEl.value = 'SUBSIDIARY';
+                }
+            }
         }
 
         function formatDate(dateStr) {
@@ -945,6 +1022,7 @@
         function applyFiltersAndSort() {
             const query = (document.getElementById('searchInput').value || '').trim().toLowerCase();
             const status = document.getElementById('statusFilter').value;
+            const segment = document.getElementById('segmentFilter') ? document.getElementById('segmentFilter').value : 'ALL';
 
             filteredCompanies = rawCompanies.filter(c => {
                 const name = (c.company_name || c.name || '').toLowerCase();
@@ -959,6 +1037,11 @@
 
                 const stage = getCompanyLifecycleStage(c);
                 if (status !== 'ALL' && stage !== status) return false;
+
+                const seg = (c.company_segment || '').toUpperCase();
+                const isSaaS = seg.includes('B') || seg.includes('SAAS') || c.company_type === 'SAAS_CLIENT';
+                if (segment === 'SEGMENT_A_INTERNAL' && isSaaS) return false;
+                if (segment === 'SEGMENT_B_SAAS' && !isSaaS) return false;
 
                 return true;
             });
@@ -1056,6 +1139,7 @@
 
                 const statusBadge = renderStatusBadge(stage);
                 const typeBadge = renderTypeBadge(c.company_type || 'SUBSIDIARY');
+                const segBadge = renderSegmentBadge(c.company_segment, c.company_type);
 
                 const toggleActionText = isActive ? '<i class="fas fa-pause"></i> Pause' : '<i class="fas fa-play"></i> Activate';
                 const toggleActionClass = isActive ? 'btn-act-pause' : 'btn-act-active';
@@ -1068,8 +1152,9 @@
                         <td style="font-weight: 800; color: #4338ca; font-family: monospace; white-space: nowrap;">${companyUid}</td>
                         <td>
                             <div style="font-weight: 700; color: #0f172a; font-size: 13.5px;">${name}</div>
-                            <div style="display:flex;align-items:center;gap:5px;">
+                            <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px;">
                                 <span class="code-pill">${code}</span>
+                                ${segBadge}
                                 ${typeBadge}
                             </div>
                         </td>
@@ -1121,6 +1206,7 @@
                 const userLogins = (COMPANY_LOGINS_MAP[code] || {}).text || '10+ Logins';
                 const pkgValue = (COMPANY_PACKAGES_MAP[code] || {}).text || '₹1,00,000 / yr';
                 const statusBadge = renderStatusBadge(stage);
+                const segBadge = renderSegmentBadge(c.company_segment, c.company_type);
                 const companyUid = 'ZMP1808' + String(c.id).padStart(4, '0');
 
                 return `
@@ -1129,8 +1215,9 @@
                             <div>
                                 <div style="font-size:11px;font-weight:700;color:#64748b;">S. No. ${sno} • ID <span style="color:#4338ca;font-weight:800;font-family:monospace;">${companyUid}</span></div>
                                 <h3 style="font-size:16px;font-weight:700;margin:3px 0;color:#0f172a;">${escapeHtml(name)}</h3>
-                                <div style="display:flex;align-items:center;gap:5px;">
+                                <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
                                     <span class="code-pill">${code}</span>
+                                    ${segBadge}
                                     ${renderTypeBadge(c.company_type || 'SUBSIDIARY')}
                                 </div>
                             </div>
@@ -1363,6 +1450,7 @@
             const companyName = document.getElementById('formName').value.trim();
             const companyCode = document.getElementById('formCode').value.trim();
             const panNumber = (document.getElementById('formPan').value || '').trim().toUpperCase();
+            const companySegment = document.querySelector('input[name="formSegment"]:checked')?.value || 'SEGMENT_B_SAAS';
             
             if (!companyName) { alert('Company name is required'); return; }
             if (!companyCode) { alert('Company code is required'); return; }
@@ -1378,6 +1466,7 @@
                 company_name: companyName,
                 company_code: companyCode.toUpperCase(),
                 company_type: document.getElementById('formType').value,
+                company_segment: companySegment,
                 is_active: isActive,
                 city: document.getElementById('formCity').value.trim() || null,
                 state: document.getElementById('formState').value.trim() || null,
@@ -1452,6 +1541,15 @@
             document.getElementById('editName').value = company.company_name || company.name || '';
             document.getElementById('editCode').value = company.company_code || company.code || '';
             document.getElementById('editType').value = company.company_type || 'SAAS_CLIENT';
+            
+            // Prefill Segment
+            const compSeg = (company.company_segment || '').toUpperCase();
+            if (compSeg === 'SEGMENT_A_INTERNAL' || compSeg === 'SEGMENT_A' || compSeg === 'INTERNAL' || company.company_type !== 'SAAS_CLIENT') {
+                if (document.getElementById('editSegmentA')) document.getElementById('editSegmentA').checked = true;
+            } else {
+                if (document.getElementById('editSegmentB')) document.getElementById('editSegmentB').checked = true;
+            }
+
             document.getElementById('editLifecycle').value = stage;
             document.getElementById('editCity').value = company.city || '';
             document.getElementById('editState').value = company.state || '';
@@ -1483,6 +1581,7 @@
             const companyId = document.getElementById('editId').value;
             const companyName = document.getElementById('editName').value.trim();
             const panNumber = (document.getElementById('editPan').value || '').trim().toUpperCase();
+            const editSegment = document.querySelector('input[name="editSegment"]:checked')?.value || 'SEGMENT_A_INTERNAL';
             
             if (!companyName) { alert('Company name is required'); return; }
             if (!panNumber) { alert('PAN Number is mandatory'); return; }
@@ -1496,6 +1595,7 @@
             const data = {
                 company_name: companyName,
                 company_type: document.getElementById('editType').value,
+                company_segment: editSegment,
                 is_active: isActive,
                 city: document.getElementById('editCity').value.trim() || null,
                 state: document.getElementById('editState').value.trim() || null,

@@ -3252,6 +3252,9 @@ def get_bank_wise_leads(
     sort_by: Optional[str] = Query("stage_days_desc", description="stage_days_desc, stage_days_asc, member, bank, deal_value, customer_name"),
     search: Optional[str] = Query(None, description="Search by customer name, phone, district, branch"),
     member_filter: Optional[str] = Query(None, description="Filter by Ground Source or Handler member name"),
+    upliner_filter: Optional[str] = Query(None, description="Filter by Ground Source Upliner Name"),
+    city_filter: Optional[str] = Query(None, description="Filter by City / District"),
+    area_filter: Optional[str] = Query(None, description="Filter by Area / Location"),
     telecaller_filter: Optional[str] = Query(None, description="Filter by Telecaller Name"),
     ground_support_filter: Optional[str] = Query(None, description="Filter by Ground Support / Field Staff Name"),
     uport_staff_filter: Optional[str] = Query(None, description="Filter by Up-port / Handler Staff Name"),
@@ -3266,6 +3269,25 @@ def get_bank_wise_leads(
     
     Other staff members can ONLY view files assigned to them as telecaller, field staff, or ground source.
     """
+    def _str_val(v):
+        if v is None or hasattr(v, 'default'): return None
+        s = str(v).strip()
+        return s if s and s.lower() not in ('none', 'null', 'undefined') else None
+
+    company_id = int(company_id) if (company_id is not None and not hasattr(company_id, 'default') and str(company_id).isdigit()) else None
+    bank_name = _str_val(bank_name)
+    stage_filter = _str_val(stage_filter)
+    bucket_filter = _str_val(bucket_filter)
+    sort_by = _str_val(sort_by) or "stage_days_desc"
+    search = _str_val(search)
+    member_filter = _str_val(member_filter)
+    upliner_filter = _str_val(upliner_filter)
+    city_filter = _str_val(city_filter)
+    area_filter = _str_val(area_filter)
+    telecaller_filter = _str_val(telecaller_filter)
+    ground_support_filter = _str_val(ground_support_filter)
+    uport_staff_filter = _str_val(uport_staff_filter)
+
     from datetime import date as _date_cls
     staff_type = (current_employee.staff_type or '').upper()
     emp_code = (getattr(current_employee, 'emp_code', '') or '').upper()
@@ -3437,22 +3459,40 @@ def get_bank_wise_leads(
             staff_map[s.emp_code.lower()] = s.full_name
 
     partner_phone_map = {}
+    partner_map = {}
+    partner_name_map = {}
+    partner_norm_map = {}
+
+    def _norm_person_name(name_str: str) -> str:
+        if not name_str: return ''
+        n = re.sub(r'^(mr\.|ms\.|mrs\.|dr\.)\s*', '', str(name_str).lower().strip())
+        words = sorted([w for w in re.split(r'[\s\.\,\-_]+', n) if len(w) > 1])
+        return ' '.join(words)
+
     try:
         from app.models.staff_accounts import OfficialPartner
-        partner_q = db.query(OfficialPartner.id, OfficialPartner.partner_name, OfficialPartner.phone, OfficialPartner.whatsapp_number)
-        if target_partner_ids or target_ref_names:
-            p_conds = []
-            if target_partner_ids: p_conds.append(OfficialPartner.id.in_(list(target_partner_ids)))
-            if target_ref_names: p_conds.append(func.lower(OfficialPartner.partner_name).in_(list(target_ref_names)))
-            partner_q = partner_q.filter(or_(*p_conds))
-        
-        for p in partner_q.all():
+        partners_all = db.query(
+            OfficialPartner.id,
+            OfficialPartner.partner_name,
+            OfficialPartner.phone,
+            OfficialPartner.whatsapp_number,
+            OfficialPartner.parent_partner_id,
+            OfficialPartner.city,
+            OfficialPartner.state,
+            OfficialPartner.address
+        ).all()
+        for p in partners_all:
+            partner_map[p.id] = p
             ph = p.phone or p.whatsapp_number
+            if p.partner_name:
+                p_clean = p.partner_name.lower().strip()
+                partner_name_map[p_clean] = p
+                partner_norm_map[_norm_person_name(p.partner_name)] = p
+                if ph:
+                    partner_phone_map[p_clean] = ph
             if ph:
                 partner_phone_map[p.id] = ph
                 partner_phone_map[str(p.id)] = ph
-                if p.partner_name:
-                    partner_phone_map[p.partner_name.lower().strip()] = ph
     except Exception:
         pass
 
@@ -3472,6 +3512,9 @@ def get_bank_wise_leads(
     processed_leads = []
     bank_counts = {}
     member_set = set()
+    upliner_set = set()
+    city_set = set()
+    area_set = set()
     telecaller_set = set()
     ground_support_set = set()
     uport_staff_set = set()
@@ -3531,6 +3574,50 @@ def get_bank_wise_leads(
         g_source_val = lead.source_ref_name or lead.guru_name or lead.source_details or 'Direct'
         g_source = str(g_source_val) if not isinstance(g_source_val, str) else g_source_val
         member_set.add(g_source)
+
+        # Resolve Ground Source Partner & Upliner
+        gs_partner = None
+        if getattr(lead, 'associated_partner_id', None) and lead.associated_partner_id in partner_map:
+            gs_partner = partner_map[lead.associated_partner_id]
+        elif g_source.lower().strip() in partner_name_map:
+            gs_partner = partner_name_map[g_source.lower().strip()]
+        elif _norm_person_name(g_source) in partner_norm_map:
+            gs_partner = partner_norm_map[_norm_person_name(g_source)]
+
+        # Resolve Upliner Name & Phone
+        upliner_name = (lead.z_guru_name or '').strip()
+        if upliner_name.lower() in ('none', 'null', '—', ''):
+            upliner_name = ''
+
+        upliner_phone = ''
+        if gs_partner and getattr(gs_partner, 'parent_partner_id', None) and gs_partner.parent_partner_id in partner_map:
+            parent_partner = partner_map[gs_partner.parent_partner_id]
+            if not upliner_name:
+                upliner_name = parent_partner.partner_name
+            if parent_partner.phone:
+                upliner_phone = parent_partner.phone or parent_partner.whatsapp_number or ''
+
+        if not upliner_phone and upliner_name:
+            up_clean = upliner_name.lower().strip()
+            up_norm = _norm_person_name(upliner_name)
+            if up_clean in partner_phone_map:
+                upliner_phone = partner_phone_map[up_clean]
+            elif up_norm in partner_norm_map and (partner_norm_map[up_norm].phone or partner_norm_map[up_norm].whatsapp_number):
+                upliner_phone = partner_norm_map[up_norm].phone or partner_norm_map[up_norm].whatsapp_number or ''
+            elif up_clean in user_phone_map:
+                upliner_phone = user_phone_map[up_clean]
+            elif up_clean in staff_phone_map:
+                upliner_phone = staff_phone_map[up_clean]
+
+        if upliner_name and upliner_name not in ('—', 'Direct / None'):
+            upliner_set.add(upliner_name)
+        else:
+            upliner_name = '—'
+
+        if lead.city and str(lead.city).strip() and str(lead.city).strip() not in ('—', 'None', 'null'):
+            city_set.add(str(lead.city).strip().title())
+        if lead.area and str(lead.area).strip() and str(lead.area).strip() not in ('—', 'None', 'null'):
+            area_set.add(str(lead.area).strip().title())
         
         # Resolve Telecaller, Ground Support (Field Staff), and Up-port Staff names
         tc_val = staff_map.get(lead.telecaller_id) or getattr(lead, 'telecaller_supported', None)
@@ -3545,6 +3632,8 @@ def get_bank_wise_leads(
             gs_phone = partner_phone_map[lead.associated_partner_id]
         if not gs_phone and isinstance(g_source, str) and g_source.lower().strip() in partner_phone_map:
             gs_phone = partner_phone_map[g_source.lower().strip()]
+        if not gs_phone and isinstance(g_source, str) and _norm_person_name(g_source) in partner_norm_map:
+            gs_phone = partner_norm_map[_norm_person_name(g_source)].phone or partner_norm_map[_norm_person_name(g_source)].whatsapp_number or ''
         if not gs_phone and isinstance(g_source, str) and g_source.lower().strip() in user_phone_map:
             gs_phone = user_phone_map[g_source.lower().strip()]
         if not gs_phone and isinstance(g_source, str) and g_source.lower().strip() in staff_phone_map:
@@ -3581,6 +3670,8 @@ def get_bank_wise_leads(
             'stage_updated_at': s_date_dt.isoformat() if s_date_dt else None,
             'ground_source_name': g_source,
             'ground_source_phone': gs_phone,
+            'upliner_name': upliner_name,
+            'upliner_phone': upliner_phone,
             'telecaller_name': tc_name,
             'ground_support_name': fs_name,
             'ground_support_phone': fs_phone,
@@ -3588,6 +3679,7 @@ def get_bank_wise_leads(
             'uport_staff_name': u_name,
             'brand_name': getattr(lead, 'brand_name', None) or '—',
             'area': lead.area or '—',
+            'city': lead.city or '—',
             'city_district': f"{lead.city or ''}, {lead.state or ''}".strip(', ') or '—',
             'deal_value': deal_val,
             'deal_value_received': float(getattr(lead, 'deal_value_received', 0.0) or 0.0),
@@ -3602,6 +3694,21 @@ def get_bank_wise_leads(
     if bucket_filter and bucket_filter.strip() and not bucket_filter.strip().lower().startswith('all'):
         clean_b = bucket_filter.strip().lower()
         processed_leads = [l for l in processed_leads if str(l.get('bucket_key') or '').lower() == clean_b or clean_b in str(l.get('bucket_label') or '').lower()]
+
+    # Apply Upliner Filter
+    if upliner_filter and upliner_filter.strip() and not upliner_filter.strip().lower().startswith('all'):
+        clean_up = upliner_filter.strip().lower()
+        processed_leads = [l for l in processed_leads if clean_up in str(l.get('upliner_name') or '').lower()]
+
+    # Apply City Filter
+    if city_filter and city_filter.strip() and not city_filter.strip().lower().startswith('all'):
+        clean_city = city_filter.strip().lower()
+        processed_leads = [l for l in processed_leads if clean_city in str(l.get('city_district') or '').lower() or clean_city in str(l.get('city') or '').lower()]
+
+    # Apply Area Filter
+    if area_filter and area_filter.strip() and not area_filter.strip().lower().startswith('all'):
+        clean_area = area_filter.strip().lower()
+        processed_leads = [l for l in processed_leads if clean_area in str(l.get('area') or '').lower()]
 
     # Apply Telecaller Filter
     if telecaller_filter and telecaller_filter.strip() and not telecaller_filter.strip().lower().startswith('all'):
@@ -3668,6 +3775,9 @@ def get_bank_wise_leads(
         'bank_summary': bank_summary,
         'bucket_summary': bucket_summary,
         'unique_members': sorted(list(member_set)),
+        'unique_upliners': sorted([u for u in upliner_set if u and u != '—']),
+        'unique_cities': sorted(list(city_set)),
+        'unique_areas': sorted(list(area_set)),
         'unique_telecallers': sorted(list(telecaller_set)),
         'unique_ground_supports': sorted(list(ground_support_set)),
         'unique_uport_staff': sorted(list(uport_staff_set)),

@@ -3593,26 +3593,131 @@ async def get_my_menus(
     except Exception as e:
         logger.warning(f"[DC-MY-MENUS-DEPT-CHECK] Error checking accounts department: {e}")
     
-    # AUTO-SYNC: Create missing settings for default-visible menus BEFORE querying
-    # DC Protocol: Only syncs for companies the employee has access to (base_company_id / data_companies)
-    # This maintains data segregation - employee only gets defaults for their authorized companies
+    # AUTO-SYNC: Seed defaults ONLY if employee has ZERO existing settings (brand new employee)
+    # Existing employees with settings MUST NEVER trigger bulk synchronization on normal sidebar queries.
     try:
-        employee_companies = get_employee_company_ids(current_user)
+        from app.models.staff import StaffEmployeeMenuSettings
+        has_existing_settings = db.query(StaffEmployeeMenuSettings.id).filter(
+            StaffEmployeeMenuSettings.employee_id == employee_id
+        ).first()
         
-        total_synced = 0
-        for cid in employee_companies:
-            synced = sync_default_menu_settings_for_employees(
-                db, cid, [employee_id],
-                admin_id=None,
-                admin_code='SYSTEM',
-                admin_name='Auto-Sync on Login'
-            )
-            total_synced += synced
-        if total_synced > 0:
-            logger.info(f"[DC-MY-MENUS-AUTOSYNC] Created {total_synced} default settings for employee {employee_id} ({current_user.emp_code}) across {len(employee_companies)} companies")
+        if not has_existing_settings:
+            employee_companies = get_employee_company_ids(current_user)
+            total_synced = 0
+            for cid in employee_companies:
+                synced = sync_default_menu_settings_for_employees(
+                    db, cid, [employee_id],
+                    admin_id=None,
+                    admin_code='SYSTEM',
+                    admin_name='Initial Seed on First Access'
+                )
+                total_synced += synced
+            if total_synced > 0:
+                logger.info(f"[DC-MY-MENUS-AUTOSYNC] Initial seed created {total_synced} default settings for new employee {employee_id} ({current_user.emp_code}) across {len(employee_companies)} companies")
     except Exception as e:
-        logger.error(f"[DC-MY-MENUS-AUTOSYNC] Error auto-syncing for employee {employee_id}: {e}")
+        logger.error(f"[DC-MY-MENUS-AUTOSYNC] Error during initial seed check for employee {employee_id}: {e}")
     
+    # DC-SAAS-GOVERNANCE-002: SaaS Segment Administrator (Level 2) Menu Isolation
+    if getattr(current_user, "admin_scope", "") == "SEGMENT_B" or (current_user.role and current_user.role.role_code == "saas_segment_admin") or current_user.staff_type == "SAAS_SEGMENT_ADMIN" or getattr(current_user, "emp_code", "") == "ZMP18080088":
+        saas_admin_menus = [
+            {
+                "id": 9001,
+                "menu_code": "saas_admin_dashboard",
+                "menu_name": "SaaS Overview",
+                "menu_description": "Overview of all Segment B SaaS client workspaces and metrics",
+                "route_path": "/saas/admin",
+                "menu_category": "SAAS ADMINISTRATION",
+                "menu_icon": "fas fa-cubes",
+                "display_order": 1,
+                "sidebar_section": "saas-governance",
+                "sidebar_section_title": "SAAS GOVERNANCE",
+                "sidebar_section_order": 1,
+                "parent_section": None,
+                "is_submenu": False,
+                "audience_scope": "saas_admin",
+                "can_view": True,
+                "can_edit": True
+            },
+            {
+                "id": 9002,
+                "menu_code": "saas_tenant_directory",
+                "menu_name": "Tenant Companies",
+                "menu_description": "Manage and provision Segment B SaaS client tenants",
+                "route_path": "/staff/accounts/companies?segment=SEGMENT_B_SAAS",
+                "menu_category": "SAAS ADMINISTRATION",
+                "menu_icon": "fas fa-building",
+                "display_order": 2,
+                "sidebar_section": "saas-governance",
+                "sidebar_section_title": "SAAS GOVERNANCE",
+                "sidebar_section_order": 1,
+                "parent_section": None,
+                "is_submenu": False,
+                "audience_scope": "saas_admin",
+                "can_view": True,
+                "can_edit": True
+            },
+            {
+                "id": 9003,
+                "menu_code": "saas_module_entitlements",
+                "menu_name": "Module Entitlements",
+                "menu_description": "Manage SaaS package modules and tenant feature licensing",
+                "route_path": "/saas/admin#modules",
+                "menu_category": "SAAS ADMINISTRATION",
+                "menu_icon": "fas fa-toggle-on",
+                "display_order": 3,
+                "sidebar_section": "saas-governance",
+                "sidebar_section_title": "SAAS GOVERNANCE",
+                "sidebar_section_order": 1,
+                "parent_section": None,
+                "is_submenu": False,
+                "audience_scope": "saas_admin",
+                "can_view": True,
+                "can_edit": True
+            },
+            {
+                "id": 9004,
+                "menu_code": "saas_change_scope_logs",
+                "menu_name": "Change Scope Governance",
+                "menu_description": "Audit trail and segment/client configuration inheritance logs",
+                "route_path": "/saas/admin#change-scope",
+                "menu_category": "SAAS ADMINISTRATION",
+                "menu_icon": "fas fa-sliders-h",
+                "display_order": 4,
+                "sidebar_section": "saas-governance",
+                "sidebar_section_title": "SAAS GOVERNANCE",
+                "sidebar_section_order": 1,
+                "parent_section": None,
+                "is_submenu": False,
+                "audience_scope": "saas_admin",
+                "can_view": True,
+                "can_edit": True
+            }
+        ]
+        
+        saas_categorized = {"SAAS ADMINISTRATION": saas_admin_menus}
+        saas_routes = {m["route_path"] for m in saas_admin_menus if m.get("route_path")}
+        sidebar_tree = build_sidebar_tree(saas_admin_menus)
+        
+        return {
+            "success": True,
+            "company_id": company_id or 88,
+            "employee_id": employee_id,
+            "employee_code": current_user.emp_code,
+            "employee_name": current_user.full_name,
+            "staff_type": current_user.staff_type,
+            "admin_scope": "SEGMENT_B",
+            "is_supreme": False,
+            "total_menus": len(saas_admin_menus),
+            "menus": saas_admin_menus,
+            "allowed_paths": list(saas_routes),
+            "sidebar_tree": sidebar_tree,
+            "categorized": saas_categorized,
+            "categories": list(saas_categorized.keys()),
+            "unified_mode": True,
+            "structure_version": "saas-segment-b",
+            "message": "SaaS Segment Administrator Access"
+        }
+
     # VGK4U Supreme & Key Leadership Access Bypass - Full access to all menus via Registry
     # DC Jan 2026: Accept VGK4U, KEY_LEADERSHIP, KEY LEADERSHIP, EA, RVZ_SUPREME for full access
     if current_user.staff_type in ['VGK4U', 'VGK4U Supreme', 'VGK4U_SUPREME', 'RVZ_SUPREME', 'KEY_LEADERSHIP', 'KEY LEADERSHIP', 'EA', 'VGK4U_EA'] or (hasattr(current_user, 'emp_code') and current_user.emp_code in ['MR10001', 'MR10018', 'MR10016', 'MR10025']):

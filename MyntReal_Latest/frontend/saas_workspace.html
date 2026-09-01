@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenant Workspace — Zynova Cloud</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-base: #090e17;
+            --bg-card: rgba(17, 24, 39, 0.8);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --brand-primary: #3b82f6;
+            --brand-gradient: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-image: 
+                radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 40%),
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 32px 32px, 32px 32px;
+        }
+
+        .navbar {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo {
+            width: 36px;
+            height: 36px;
+            background: var(--brand-gradient);
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 18px;
+        }
+
+        .brand-name {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .tenant-pill {
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(96, 165, 250, 0.25);
+            margin-left: 6px;
+        }
+
+        .user-nav {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+
+        .btn-logout {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-logout:hover {
+            background: rgba(239, 68, 68, 0.3);
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 32px 20px 60px;
+            width: 100%;
+        }
+
+        .workspace-hero {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.12) 0%, rgba(56, 189, 248, 0.04) 100%);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 16px;
+            padding: 24px 28px;
+            margin-bottom: 30px;
+        }
+
+        .workspace-hero h1 {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .workspace-hero p {
+            color: var(--text-muted);
+            font-size: 13.5px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .module-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 24px;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .module-card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .module-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-bottom: 16px;
+        }
+
+        .icon-blue { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+        .icon-purple { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+        .icon-amber { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+
+        .module-card h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .module-card p {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 18px;
+        }
+
+        .btn-launch {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 9px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-launch:hover {
+            background: var(--brand-primary);
+            border-color: var(--brand-primary);
+        }
+    </style>
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="brand-wrap">
+            <div class="brand-logo">
+                <i class="fas fa-cube"></i>
+            </div>
+            <div class="brand-name" id="navTenantName">Tenant Workspace</div>
+            <span class="tenant-pill" id="navCompanyCode">TENANT</span>
+        </div>
+
+        <div class="user-nav">
+            <div class="user-pill">
+                <i class="fas fa-user-circle" style="color:#60a5fa;"></i>
+                <span id="userBadge">Admin</span>
+            </div>
+            <button class="btn-logout" onclick="handleLogout()">
+                <i class="fas fa-arrow-right-from-bracket"></i> Logout
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="workspace-hero">
+            <h1 id="heroTenantTitle">Welcome to Your Tenant Workspace</h1>
+            <p>Your workspace is configured with isolated client storage and dedicated module subscriptions.</p>
+        </div>
+
+        <div class="section-title">
+            <i class="fas fa-cubes" style="color:#60a5fa;"></i>
+            <span>Licensed Modules</span>
+        </div>
+
+        <div class="modules-grid" id="modulesGrid">
+            <div class="module-card">
+                <div>
+                    <div class="module-icon icon-blue">
+                        <i class="fas fa-users-gear"></i>
+                    </div>
+                    <h3>CRM & Lead Pipeline</h3>
+                    <p>Track incoming customer leads, manage sales pipelines, assign reps, and log interactions.</p>
+                </div>
+                <a href="/staff/crm/leads" class="btn-launch">
+                    <span>Open CRM</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="module-card">
+                <div>
+                    <div class="module-icon icon-purple">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <h3>Service Desk & Tickets</h3>
+                    <p>Customer complaint tracking, ticket resolution workflows, and field technician dispatch.</p>
+                </div>
+                <a href="/staff/service/tickets" class="btn-launch">
+                    <span>Open Service Desk</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function handleLogout() {
+            localStorage.clear();
+            sessionStorage.clear();
+            document.cookie = 'staff_token=; path=/; max-age=0';
+            document.cookie = 'session_token=; path=/; max-age=0';
+            document.cookie = 'session=; path=/; max-age=0';
+            window.location.href = '/saas/login?logout=true';
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                window.location.href = '/saas/login';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/v1/staff/auth/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.employee) {
+                        const emp = data.employee;
+                        document.getElementById('userBadge').textContent = `${emp.emp_code} (${emp.full_name})`;
+                        if (emp.base_company_name) {
+                            document.getElementById('navTenantName').textContent = emp.base_company_name;
+                            document.getElementById('heroTenantTitle').textContent = `${emp.base_company_name} Workspace`;
+                        }
+                        if (emp.base_company_code) {
+                            document.getElementById('navCompanyCode').textContent = emp.base_company_code;
+                        }
+                    }
+                }
+            } catch (_) {}
+        });
+    </script>
+</body>
+</html>

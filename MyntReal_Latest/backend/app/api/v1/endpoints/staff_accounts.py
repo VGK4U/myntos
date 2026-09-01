@@ -272,6 +272,7 @@ async def list_companies(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     status_filter: Optional[str] = Query(None, description="Filter by status: ACTIVE, INACTIVE, ALL. Default (None or ACTIVE) returns active companies only."),
+    segment_filter: Optional[str] = Query(None, description="Filter by segment: SEGMENT_A_INTERNAL, SEGMENT_B_SAAS, ALL"),
     search: Optional[str] = Query(None, description="Search by name, code, or city"),
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(get_current_staff_user)
@@ -282,7 +283,7 @@ async def list_companies(
     """
     try:
         companies, total = AssociatedCompanyService.list_companies(
-            db, current_user, page, page_size, status_filter, search
+            db, current_user, page, page_size, status_filter, segment_filter, search
         )
         return JSONResponse(content={
             "success": True,
@@ -479,8 +480,23 @@ async def get_company_logins(
 
         primary_admin = None
         default_pwd = f"{company.company_code}@123"
-        # VGK4U Platform / PARENT holding is always administered by Supreme System Administrator (MR10001)
-        if company.company_code in ['VGK4U', 'VGK', 'HQ'] or company.company_type == 'PARENT' or company.id == 88:
+        # Company 88 / SaaS Segment Administrator
+        if company.id == 88:
+            saas_admin = db.query(_SE).filter_by(emp_code="ZMP18080088", is_deleted=False).first()
+            if saas_admin:
+                primary_admin = {
+                    "id": saas_admin.id,
+                    "emp_code": saas_admin.emp_code,
+                    "full_name": saas_admin.full_name,
+                    "email": saas_admin.email,
+                    "phone": saas_admin.phone or "—",
+                    "designation": saas_admin.designation,
+                    "role_name": "SaaS Segment Administrator",
+                    "status": saas_admin.status,
+                    "is_active": True,
+                    "default_password": "ZMP18080088"
+                }
+        elif company.company_code in ['VGK4U', 'VGK', 'HQ'] or company.company_type == 'PARENT':
             primary_admin = supreme_admin_info
         else:
             # Query base employees belonging strictly to this company

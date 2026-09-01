@@ -99,6 +99,7 @@ class AssociatedCompany(BaseModel):
     
     is_book_keeper = Column(Boolean, default=False, nullable=False)
     is_marketplace_endpoint = Column(Boolean, default=False, nullable=False, server_default=text('false'))   # DC_STOCK_002: Lucky Enterprises etc — sells to marketplace customers
+    company_segment = Column(String(50), default='SEGMENT_A_INTERNAL', nullable=False, server_default='SEGMENT_A_INTERNAL', index=True) # SEGMENT_A_INTERNAL vs SEGMENT_B_SAAS
     licensed_modules = Column(JSONB, nullable=True)  # List of licensed module keys for SaaS tenants
     is_active = Column(Boolean, default=True, nullable=False)
 
@@ -133,6 +134,8 @@ class AssociatedCompany(BaseModel):
             'company_code': self.company_code,
             'company_name': self.company_name,
             'company_type': self.company_type,
+            'company_segment': self.company_segment or 'SEGMENT_A_INTERNAL',
+            'licensed_modules': self.licensed_modules or [],
             'gst_number': self.gst_number,
             'pan_number': self.pan_number,
             'phone': self.phone,
@@ -146,6 +149,72 @@ class AssociatedCompany(BaseModel):
             'is_marketplace_endpoint': self.is_marketplace_endpoint,
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class PlatformChangeScopeLog(BaseModel):
+    """
+    Change Scope Governance & Audit Log
+    Tracks all changes across Segment A, Segment B, and Client-Specific boundaries.
+    """
+    __tablename__ = 'platform_change_scope_logs'
+
+    id = Column(Integer, primary_key=True, index=True)
+    change_title = Column(String(200), nullable=False)
+    change_category = Column(String(100), nullable=True) # e.g. 'MODULE_CONFIG', 'FEATURE_FLAG', 'SETTING'
+    scope_type = Column(String(50), nullable=False) # 'SEGMENT_A', 'SEGMENT_B', 'CLIENT_SPECIFIC', 'BOTH_SEGMENTS'
+    target_tenant_id = Column(Integer, nullable=True, index=True)
+    target_module = Column(String(100), nullable=True)
+    old_value = Column(JSONB, nullable=True)
+    new_value = Column(JSONB, nullable=True)
+    created_by_id = Column(Integer, nullable=True)
+    created_by_name = Column(String(150), nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'change_title': self.change_title,
+            'change_category': self.change_category,
+            'scope_type': self.scope_type,
+            'target_tenant_id': self.target_tenant_id,
+            'target_module': self.target_module,
+            'old_value': self.old_value,
+            'new_value': self.new_value,
+            'created_by_id': self.created_by_id,
+            'created_by_name': self.created_by_name,
+            'notes': self.notes,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class SegmentGovernanceConfig(BaseModel):
+    """
+    Segment-Level & Tenant-Level Configuration Overrides
+    Hierarchy: PLATFORM -> SEGMENT DEFAULT -> CLIENT-SPECIFIC OVERRIDE
+    """
+    __tablename__ = 'segment_governance_configs'
+
+    id = Column(Integer, primary_key=True, index=True)
+    scope_type = Column(String(50), nullable=False) # 'PLATFORM', 'SEGMENT_A', 'SEGMENT_B', 'CLIENT_SPECIFIC'
+    tenant_id = Column(Integer, nullable=True, index=True)
+    config_key = Column(String(100), nullable=False, index=True)
+    config_value = Column(JSONB, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'scope_type': self.scope_type,
+            'tenant_id': self.tenant_id,
+            'config_key': self.config_key,
+            'config_value': self.config_value,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 
 

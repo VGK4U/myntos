@@ -737,18 +737,19 @@ window.StaffSidebar = window.StaffSidebar || {
             return { sections: [], zeroAccess: false };
         }
         
-        // Check if user is Supreme / Key Leadership (bypass all access control)
-        const supremeTypes = this.SUPREME_STAFF_TYPES || ['VGK4U_SUPREME', 'RVZ_SUPREME', 'VGK4U', 'VGK4U Supreme', 'VGK4U_EA', 'KEY_LEADERSHIP', 'KEY LEADERSHIP', 'EA'];
+        // Check if user is Supreme / Key Leadership / Admin (bypass all access control)
+        const supremeTypes = this.SUPREME_STAFF_TYPES || ['VGK4U_SUPREME', 'RVZ_SUPREME', 'VGK4U', 'VGK4U Supreme', 'VGK4U_EA', 'KEY_LEADERSHIP', 'KEY LEADERSHIP', 'EA', 'SAAS_SEGMENT_ADMIN', 'SUPER_ADMIN'];
         const empCode = (this.userData?.emp_code || '').toUpperCase();
         const roleCode = (this.userData?.role?.role_code || '').toLowerCase();
+        const staffTypeUpper = (staffType || '').toUpperCase();
         const isSupreme = this.allowedMenuPaths === '*' || 
                          ['MR10018', 'MR10001', 'MR10016', 'MR10025'].includes(empCode) ||
-                         ['key_leadership', 'vgk4u', 'ea'].includes(roleCode) ||
-                         (staffType && supremeTypes.some(s => staffType.toUpperCase().includes(s.toUpperCase().replace('_', ' ')) || staffType.toUpperCase().includes(s.toUpperCase())));
+                         ['key_leadership', 'vgk4u', 'ea', 'super_admin', 'saas_segment_admin'].includes(roleCode) ||
+                         (staffType && supremeTypes.some(s => staffTypeUpper.includes(s.replace('_', ' ')) || staffTypeUpper.includes(s)));
         
         if (isSupreme) {
-            // VGK4U_SUPREME / RVZ_SUPREME: Render ALL sections & items from MENU_MASTER
-            console.log('[DC-SIDEBAR] Supreme bypass: Rendering all', menuMaster.length, 'sections');
+            // VGK4U_SUPREME / RVZ_SUPREME / Administrators: Render ALL sections & items from MENU_MASTER
+            console.log('[DC-SIDEBAR] Supreme/Admin bypass: Rendering all', menuMaster.length, 'sections');
             return { sections: this.transformMenuMasterToSidebar(menuMaster, null) };
         }
         
@@ -798,34 +799,52 @@ window.StaffSidebar = window.StaffSidebar || {
             }
         }
         
-        const isSaaSTenant = (this.userData?.staff_type === 'TENANT_ADMIN' || this.userData?.staff_type === 'SAAS_CLIENT' || (this.userData?.base_company_id && this.userData?.base_company_id !== 4 && this.userData?.base_company_id !== 88 && this.userData?.base_company_id !== 1));
+        const empCode = (this.userData?.emp_code || '').toUpperCase();
+        const roleCode = (this.userData?.role?.role_code || '').toLowerCase();
+        const staffType = (this.userData?.staff_type || '').toUpperCase();
+        const isSaaSAdmin = ['MR10018', 'MR10001', 'MR10025', 'MR10016'].includes(empCode) || 
+                            ['SAAS_SEGMENT_ADMIN', 'SUPER_ADMIN', 'VGK4U_SUPREME'].includes(staffType) ||
+                            ['super_admin', 'saas_segment_admin', 'tenant_admin', 'key_leadership', 'vgk4u'].includes(roleCode) ||
+                            (this.userData?.base_company_id === 88);
+        const isSaaSTenant = !isSaaSAdmin && (this.userData?.staff_type === 'TENANT_ADMIN' || this.userData?.staff_type === 'SAAS_CLIENT' || (this.userData?.base_company_id && this.userData?.base_company_id !== 4 && this.userData?.base_company_id !== 88 && this.userData?.base_company_id !== 1));
         
         for (const section of menuMaster) {
             const sCode = (section.section_code || '').toUpperCase();
             const sTitle = (section.section_label || section.title || section.id || '').toUpperCase();
-            const empCode = (this.userData?.emp_code || '').toUpperCase();
+            const isSaasSection = sCode === 'VGK_SAAS' || sTitle.includes('MYNTOS SAAS') || sTitle.includes('SAAS');
             
             // For SaaS tenants, completely exclude internal platform and group company sections
             if (isSaaSTenant) {
                 const saasRestricted = ['MNR', 'MYNT', 'VGK', 'META', 'CONFIG', 'NOT IN USE', 'NOT_IN_USE', 'PARTNER', 'INTERNAL'];
                 if (saasRestricted.some(k => sCode.includes(k) || sTitle.includes(k))) {
-                    continue;
+                    if (!isSaasSection) {
+                        continue;
+                    }
                 }
             }
             
-            // Global Directive: Remove META ADS, ACCOUNTS, CONFIGURATION, VGK SAAS, INTERNAL for all staff EXCEPT MR10001 and MR10025
-            if (empCode !== 'MR10001' && empCode !== 'MR10025') {
+            // Global Directive: Remove META ADS, ACCOUNTS, CONFIGURATION, INTERNAL for general staff
+            // MYNTOS SAAS is preserved for all administrators (MR10018, MR10001, MR10025, SAAS_SEGMENT_ADMIN, etc.)
+            if (!isSaaSAdmin) {
                 const globalRestrictedKeywords = ['META', 'ACCOUNT', 'CONFIG', 'SAAS', 'INTERNAL'];
                 if (globalRestrictedKeywords.some(k => sCode.includes(k) || sTitle.includes(k))) {
                     console.log('[DC-SIDEBAR-RESTRICT] Hiding section for staff', empCode, ':', sTitle);
                     continue;
                 }
+            } else {
+                // For SaaS Admins, only restrict non-applicable internal sections if not super user
+                if (empCode !== 'MR10001' && empCode !== 'MR10025') {
+                    const nonSaasRestricted = ['META', 'INTERNAL'];
+                    if (nonSaasRestricted.some(k => sCode.includes(k) || sTitle.includes(k))) {
+                        continue;
+                    }
+                }
             }
 
-            // Additional Directive for MR10018: Remove NOT IN USE, MNR, NDA, ZYNOVA
+            // Additional Directive for MR10018: Remove NOT IN USE, MNR, NDA, ZYNOVA (preserves MYNTOS SAAS)
             if (empCode === 'MR10018') {
                 const mr10018RestrictedKeywords = ['NOT IN USE', 'NOT_IN_USE', 'MNR', 'NDA', 'ZYNOVA', 'ZINOVA'];
-                if (mr10018RestrictedKeywords.some(k => sCode.includes(k) || sTitle.includes(k))) {
+                if (mr10018RestrictedKeywords.some(k => (sCode.includes(k) || sTitle.includes(k)) && !isSaasSection)) {
                     console.log('[DC-SIDEBAR-MR10018] Hiding section for MR10018:', sTitle);
                     continue;
                 }

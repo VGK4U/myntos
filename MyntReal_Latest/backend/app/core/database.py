@@ -8,7 +8,7 @@ import sys
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import StaticPool, NullPool
 from app.core.config import settings
 
 import re
@@ -95,29 +95,23 @@ else:
             echo=False
         )
     else:
-        # Neon (production cloud) — SSL keepalives + pool sized for 1-worker + APScheduler load
-        # DC Protocol (May 2026 — pool fix): Production runs --workers 1 + APScheduler with up to
-        # 8 concurrent background threads. Under burst load (multi-company dashboard, GPS ticks,
-        # CRM pages loading simultaneously) the old pool_size=3/overflow=4 (7 max) was fully
-        # exhausted — new requests waited 12s then threw QueuePool → "socket hang up" → login fails.
-        print("[DC-DB-INIT] Creating PostgreSQL engine (Neon cloud mode)...", flush=True)
+        # RDS PostgreSQL — Capped connection pool to prevent RDS connection slot exhaustion
+        print("[DC-DB-INIT] Creating PostgreSQL engine (Optimized 5-Connection Pool mode)...", flush=True)
         engine = create_engine(
             _db_url_str,
-            pool_pre_ping=True,          # Detect dead Neon SSL connections before use
-            pool_recycle=300,            # Recycle every 5m — just before Neon drops idle SSL at ~5m
-            pool_size=20,                # Increased for high concurrency
-            max_overflow=40,             # Increased for high concurrency bursts
-            pool_timeout=15,             # Increased timeout to allow queries to wait for a connection
-            pool_use_lifo=True,          # LIFO: reuse warm connections, reduces SSL churn
-            pool_reset_on_return='rollback',  # Ensure returned connections are always clean
+            pool_pre_ping=True,
+            pool_size=5,
+            max_overflow=5,
+            pool_timeout=30,
+            pool_recycle=300,
+            pool_use_lifo=True,
             connect_args={
-                "connect_timeout": 15,       # Fail fast if Neon unreachable (no indefinite hang)
+                "connect_timeout": 30,
+                "sslmode": "require",
                 "keepalives": 1,
-                "keepalives_idle": 30,       # Send keepalive after 30s idle
+                "keepalives_idle": 30,
                 "keepalives_interval": 10,
                 "keepalives_count": 3,
-                # DC-MIGRATION-TIMEOUT-001: statement_timeout NOT set at connection level.
-                # Applied per-session in get_db() — API requests protected; migrations unrestricted.
             },
             echo=False
         )
@@ -137,18 +131,21 @@ def get_db():
     """
     Dependency function to get database session
     Used in FastAPI route dependencies.
-    DC-MIGRATION-TIMEOUT-001: statement_timeout applied here (not at engine level) so
-    startup migration sessions that bypass get_db() are never killed mid-key-check.
-    Guarded for PostgreSQL only — prevents sqlite3.OperationalError near SET syntax error.
     """
-    from sqlalchemy import text as _text
     db = SessionLocal()
     try:
-        if db.bind and db.bind.dialect.name == "postgresql":
-            db.execute(_text("SET statement_timeout = 25000"))
         yield db
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        raise
     finally:
-        db.close()
+        try:
+            db.close()
+        except Exception:
+            pass
 
 def run_pending_migrations():
     """

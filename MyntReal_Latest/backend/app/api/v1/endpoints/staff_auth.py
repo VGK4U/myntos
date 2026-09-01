@@ -309,29 +309,44 @@ def staff_login(
     
     t_lookup_start = time.time()
     
-    # 1. Company ID Login (e.g., ZMP18080001, ZMP18080002... ZMP18080088)
-    company_id_match = re.match(r"^ZMP1808(\d{4})$", emp_id)
-    if company_id_match:
-        target_company_id = int(company_id_match.group(1))
-        target_comp = db.query(AssociatedCompany).filter_by(id=target_company_id).first()
-        
-        # Parent / Holding / VGK4U is always administered by Supreme System Administrator (MR10001)
-        if target_company_id == 88 or (target_comp and (target_comp.company_type == 'PARENT' or target_comp.company_code in ['VGK4U', 'VGK', 'HQ'])):
-            employee = db.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter_by(id=1, is_deleted=False).first()
-        else:
-            # Look for primary admin belonging directly to this company (base_company_id)
-            base_emps = db.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter(
-                StaffEmployee.is_deleted == False,
-                StaffEmployee.base_company_id == target_company_id,
-                StaffEmployee.status == 'active'
-            ).order_by(StaffEmployee.id).all()
+    # 1. Exact Employee Code / Username Match (e.g. MR10001, ZMP18080088, TECO_ADMIN)
+    employee = db.query(StaffEmployee).options(
+        joinedload(StaffEmployee.role)
+    ).filter(
+        StaffEmployee.is_deleted == False,
+        (StaffEmployee.emp_code == emp_id) | (StaffEmployee.email.ilike(raw_ident))
+    ).first()
+
+    # 2. Company ID Login Pattern (e.g., ZMP18080088, ZMP18080092... ZMP1808XXXX)
+    if not employee:
+        company_id_match = re.match(r"^ZMP1808(\d{4})$", emp_id)
+        if company_id_match:
+            target_company_id = int(company_id_match.group(1))
+            target_comp = db.query(AssociatedCompany).filter_by(id=target_company_id).first()
             
-            ta_emps = [e for e in base_emps if (e.role_id == 17 or getattr(e, 'staff_type', '') in ['TENANT_ADMIN', 'SAAS_CLIENT'] or any(k in ((getattr(e, 'designation', '') or '') + (e.role.role_name if e.role else '')).upper() for k in ['ADMIN', 'MANAGER', 'LEAD', 'DIRECTOR', 'HEAD']))]
+            # Company 88 / SaaS Segment Administrator
+            if target_company_id == 88:
+                employee = db.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter(
+                    StaffEmployee.is_deleted == False,
+                    StaffEmployee.base_company_id == 88,
+                    StaffEmployee.staff_type == 'SAAS_SEGMENT_ADMIN',
+                    StaffEmployee.status == 'active'
+                ).first()
             
-            if ta_emps:
-                employee = ta_emps[0]
-            elif base_emps:
-                employee = base_emps[0]
+            if not employee:
+                # Look for primary tenant admin belonging directly to this company (base_company_id)
+                base_emps = db.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter(
+                    StaffEmployee.is_deleted == False,
+                    StaffEmployee.base_company_id == target_company_id,
+                    StaffEmployee.status == 'active'
+                ).order_by(StaffEmployee.id).all()
+                
+                ta_emps = [e for e in base_emps if (e.role_id == 17 or getattr(e, 'role', None) and e.role.role_code in ['tenant_admin', 'saas_segment_admin'] or getattr(e, 'staff_type', '') in ['TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN', 'SAAS_CLIENT'] or any(k in ((getattr(e, 'designation', '') or '') + (e.role.role_name if e.role else '')).upper() for k in ['ADMIN', 'MANAGER', 'LEAD', 'DIRECTOR', 'HEAD']))]
+                
+                if ta_emps:
+                    employee = ta_emps[0]
+                elif base_emps:
+                    employee = base_emps[0]
 
     # 2. Mobile Number Login (e.g. 10 digits or with country code +91)
     if not employee:
@@ -467,6 +482,9 @@ def staff_login(
             "emp_code": employee.emp_code,
             "email": employee.email,
             "role": employee.role.role_code if employee.role else "junior_executive",
+            "staff_type": getattr(employee, "staff_type", "MN_STAFF"),
+            "admin_scope": getattr(employee, "admin_scope", "CLIENT_SPECIFIC"),
+            "base_company_id": employee.base_company_id,
             "team_tag": employee.team_tag,
             "user_type": "staff"
         },
@@ -485,23 +503,9 @@ def staff_login(
     # Extract employee data dictionary safely
     employee_data = employee.to_dict()
     
-    # DC Protocol: Auto-sync menu settings in safe try-catch
-    t_sync_start = time.time()
-    try:
-        from app.api.v1.endpoints.staff_menu_settings import sync_default_menu_settings_for_employees, get_employee_company_ids
-        employee_companies = get_employee_company_ids(employee)
-        sync_count = 0
-        for company_id in employee_companies:
-            created = sync_default_menu_settings_for_employees(
-                db, company_id, [employee.id],
-                admin_id=None,
-                admin_code='SYSTEM',
-                admin_name='Auto-Sync on Login'
-            )
-            sync_count += created
-    except Exception:
-        pass
-    t_sync_ms = (time.time() - t_sync_start) * 1000
+    # P0 LOGIN REMEDIATION: Dynamic Menu Sync removed from authentication request path.
+    # Menu provisioning is an administrative/seed event, not an authentication prerequisite.
+    t_sync_ms = 0.0
     
     # DC-AGREEMENT-TYPE-001: Check all pending agreements sequentially on login
     staff_type = employee.staff_type or 'MN_STAFF'

@@ -16220,21 +16220,24 @@ def seed_bank_wise_leads_menu():
                     audience_scope = 'staff'
             """))
             menu_id = conn.execute(text("SELECT id FROM staff_menu_registry WHERE menu_code = 'MNR_BANK_WISE_LEADS'")).scalar()
-            conn.execute(text("UPDATE staff_menu_master SET menu_name = 'Field staff leads', is_active = true, is_default_visible = true, is_default_accessible = true WHERE menu_code = 'MNR_BANK_WISE_LEADS'"))
             if menu_id:
-                conn.execute(text("DELETE FROM staff_employee_menu_settings WHERE menu_id = :mid"), {"mid": menu_id})
-                for cid in (1, 2, 3, 4, 5):
-                    conn.execute(text("""
-                        INSERT INTO staff_employee_menu_settings (company_id, employee_id, menu_id, can_view, can_edit, is_overridden)
-                        SELECT :cid, e.id, :mid,
-                               CASE WHEN (e.department_id IN (1, 13) OR e.emp_code IN ('MR10001', 'MN10003', 'MN10014') OR LOWER(COALESCE(d.name, '')) LIKE '%sales%' OR LOWER(COALESCE(d.name, '')) LIKE '%management%' OR LOWER(COALESCE(e.designation, '')) LIKE '%telecaller%' OR LOWER(COALESCE(e.designation, '')) LIKE '%sales%' OR LOWER(COALESCE(e.designation, '')) LIKE '%executive%') THEN true ELSE false END,
-                               CASE WHEN (e.department_id IN (1, 13) OR e.emp_code IN ('MR10001', 'MN10003', 'MN10014') OR LOWER(COALESCE(d.name, '')) LIKE '%sales%' OR LOWER(COALESCE(d.name, '')) LIKE '%management%' OR LOWER(COALESCE(e.designation, '')) LIKE '%telecaller%' OR LOWER(COALESCE(e.designation, '')) LIKE '%sales%' OR LOWER(COALESCE(e.designation, '')) LIKE '%executive%') THEN true ELSE false END,
-                               true
-                        FROM staff_employees e
-                        LEFT JOIN staff_departments d ON e.department_id = d.id
-                    """), {"mid": menu_id, "cid": cid})
-            conn.commit()
-            logging.info("[DC-MENU-SEED] ✅ MNR_BANK_WISE_LEADS registered and granted to Key Leadership & Sales Department employees across all companies")
+                already_seeded = conn.execute(text("SELECT 1 FROM staff_employee_menu_settings WHERE menu_id = :mid LIMIT 1"), {"mid": menu_id}).scalar()
+                if not already_seeded:
+                    conn.execute(text("UPDATE staff_menu_master SET menu_name = 'Field staff leads', is_active = true, is_default_visible = true, is_default_accessible = true WHERE menu_code = 'MNR_BANK_WISE_LEADS'"))
+                    for cid in (1, 2, 3, 4, 5):
+                        conn.execute(text("""
+                            INSERT INTO staff_employee_menu_settings (company_id, employee_id, menu_id, can_view, can_edit, is_overridden)
+                            SELECT :cid, e.id, :mid,
+                                   CASE WHEN (e.department_id IN (1, 13) OR e.emp_code IN ('MR10001', 'MN10003', 'MN10014') OR LOWER(COALESCE(d.name, '')) LIKE '%sales%' OR LOWER(COALESCE(d.name, '')) LIKE '%management%' OR LOWER(COALESCE(e.designation, '')) LIKE '%telecaller%' OR LOWER(COALESCE(e.designation, '')) LIKE '%sales%' OR LOWER(COALESCE(e.designation, '')) LIKE '%executive%') THEN true ELSE false END,
+                                   CASE WHEN (e.department_id IN (1, 13) OR e.emp_code IN ('MR10001', 'MN10003', 'MN10014') OR LOWER(COALESCE(d.name, '')) LIKE '%sales%' OR LOWER(COALESCE(d.name, '')) LIKE '%management%' OR LOWER(COALESCE(e.designation, '')) LIKE '%telecaller%' OR LOWER(COALESCE(e.designation, '')) LIKE '%sales%' OR LOWER(COALESCE(e.designation, '')) LIKE '%executive%') THEN true ELSE false END,
+                                   true
+                            FROM staff_employees e
+                            LEFT JOIN staff_departments d ON e.department_id = d.id
+                        """), {"mid": menu_id, "cid": cid})
+                    conn.commit()
+                    logging.info("[DC-MENU-SEED] ✅ MNR_BANK_WISE_LEADS registered and granted to Key Leadership & Sales Department employees across all companies")
+                else:
+                    logging.info("[DC-MENU-SEED] ✅ MNR_BANK_WISE_LEADS already provisioned — skipping batch mutation")
     except Exception as e:
         logging.warning(f"[DC-MENU-SEED] Bank wise leads menu seed failed (non-fatal): {e}")
 
@@ -16708,8 +16711,11 @@ from app.api.v1.endpoints import (
     award_processing,
     staff_attendance_sheet,
     platform_b2b,  # Task #39 — B2B SaaS Layer Phase 1 (Foundation, Shadow Mode)
+    platform_governance,  # DC_SAAS_SEGMENT_001: Segment Governance & Change Scope Architecture
 )
 
+app.include_router(platform_governance.router, prefix="/api/v1")
+app.include_router(platform_governance.saas_signup_router, prefix="/api/v1")
 app.include_router(platform_b2b.router, prefix="/api/v1/platform-b2b", tags=["b2b-saas-phase1"])  # Task #39
 app.include_router(public_routes.router, tags=["public"])
 app.include_router(user_routes.router, tags=["user"])
@@ -16822,18 +16828,24 @@ app.include_router(careers.router, prefix="/api/v1", tags=["careers"])
 # DC-APPLIED-KEYS-MODULE-PRELOAD: Populate _applied_keys for all module-level
 # migration blocks below (these run at import time, outside _startup_worker).
 # _startup_worker has its own independent local copy populated the same way.
-try:
-    from sqlalchemy import text as _mk_preload_text
-    with engine.connect() as _mk_preload_conn:
-        _applied_keys = set(
-            r[0] for r in _mk_preload_conn.execute(
-                _mk_preload_text("SELECT key FROM dc_migrations")
-            ).fetchall()
-        )
-    print(f"[DC-MODULE-PRELOAD] ✅ {len(_applied_keys)} migration keys cached for module-level blocks", flush=True)
-except Exception as _mk_preload_err:
-    _applied_keys = set()
-    print(f"[DC-MODULE-PRELOAD] ⚠️ Preload failed (safe fallback): {_mk_preload_err}", flush=True)
+_applied_keys = set()
+import time as _mk_time
+for _attempt in range(3):
+    try:
+        from sqlalchemy import text as _mk_preload_text
+        with engine.connect() as _mk_preload_conn:
+            _applied_keys = set(
+                r[0] for r in _mk_preload_conn.execute(
+                    _mk_preload_text("SELECT key FROM dc_migrations")
+                ).fetchall()
+            )
+        print(f"[DC-MODULE-PRELOAD] ✅ {len(_applied_keys)} migration keys cached for module-level blocks", flush=True)
+        break
+    except Exception as _mk_preload_err:
+        if _attempt < 2:
+            _mk_time.sleep(1)
+        else:
+            print(f"[DC-MODULE-PRELOAD] ⚠️ Preload failed (safe fallback): {_mk_preload_err}", flush=True)
 
 # DC-VEH-COLOR-001: Vehicle Color-Wise Inventory Sheet (Jun 2026)
 try:
@@ -18405,6 +18417,7 @@ try:
     from sqlalchemy import text as _plr_text
     _plr_mk = "dc_pl_jv_party_repair_20260624"
     if _plr_mk not in _applied_keys:
+        _plr_db.execute(_plr_text("SET statement_timeout = 3000"))
         # Step 1: Identify all mis-attributed entries to know which party groups need rebalancing
         _plr_mismatch = _plr_db.execute(_plr_text("""
             SELECT pl.id           AS pl_id,

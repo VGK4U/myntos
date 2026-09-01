@@ -591,16 +591,16 @@ const MENU_MASTER = [
     section_label: "MYNTOS SAAS",
     order: 99,
     items: [
-      { menu_code: "VGK_SAAS_TENANT_ONBOARDING", label: "Tenant Onboarding", route: "/staff/accounts/companies", icon: "fas fa-building-circle-arrow-right", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_PLATFORM_CLIENTS", label: "Platform Clients (B2B)", route: "/staff/b2b-clients", icon: "fas fa-handshake", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_PUBLIC_SIGNUP_PREVIEW", label: "Public Signup Preview", route: "/b2b-signup", icon: "fas fa-eye", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_SIGNUP_CATEGORIES", label: "Signup Categories", route: "/staff/signup-categories", icon: "fas fa-tags", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_LEAD_SYNC", label: "Lead Sync", route: "/staff/lead-sync", icon: "fas fa-arrows-rotate", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_MENU_ACCESS", label: "Menu Access Control", route: "/rvz/menu-access-config", icon: "fas fa-shield-halved", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_PAGE_REGISTRY", label: "Page Registry Manager", route: "/staff/page-registry", icon: "fas fa-sitemap", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_SIDEBAR_SYNC", label: "Sidebar Sync", route: "/staff/sidebar-sync", icon: "fas fa-rotate", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_PLATFORM_SETUP_GUIDE", label: "Platform Setup Guide", route: "/staff/day-planner-guide#sec-platform-setup", icon: "fas fa-book-open", audience: ["VGK4U"] },
-      { menu_code: "VGK_SAAS_AUDIT_LOGS", label: "Audit Logs (SaaS)", route: "/staff/audit-logs", icon: "fas fa-clipboard-list", audience: ["VGK4U"] }
+      { menu_code: "VGK_SAAS_TENANT_ONBOARDING", label: "Tenant Onboarding", route: "/staff/accounts/companies", icon: "fas fa-building-circle-arrow-right", audience: ["STAFF", "VGK4U", "SAAS"] },
+      { menu_code: "VGK_SAAS_PLATFORM_CLIENTS", label: "Platform Clients (B2B)", route: "/staff/b2b-clients", icon: "fas fa-handshake", audience: ["STAFF", "VGK4U", "SAAS"] },
+      { menu_code: "VGK_SAAS_PUBLIC_SIGNUP_PREVIEW", label: "Public Signup Preview", route: "/b2b-signup", icon: "fas fa-eye", audience: ["STAFF", "VGK4U", "SAAS"] },
+      { menu_code: "VGK_SAAS_SIGNUP_CATEGORIES", label: "Signup Categories", route: "/staff/signup-categories", icon: "fas fa-tags", audience: ["STAFF", "VGK4U", "SAAS"] },
+      { menu_code: "VGK_SAAS_LEAD_SYNC", label: "Lead Sync", route: "/staff/lead-sync", icon: "fas fa-arrows-rotate", audience: ["STAFF", "VGK4U", "SAAS"] },
+      { menu_code: "VGK_SAAS_MENU_ACCESS", label: "Menu Access Control", route: "/rvz/menu-access-config", icon: "fas fa-shield-halved", audience: ["STAFF", "VGK4U", "SAAS"] },
+      { menu_code: "VGK_SAAS_PAGE_REGISTRY", label: "Page Registry Manager", route: "/staff/page-registry", icon: "fas fa-sitemap", audience: ["STAFF", "VGK4U", "SAAS"] },
+      { menu_code: "VGK_SAAS_SIDEBAR_SYNC", label: "Sidebar Sync", route: "/staff/sidebar-sync", icon: "fas fa-rotate", audience: ["STAFF", "VGK4U", "SAAS"] },
+      { menu_code: "VGK_SAAS_PLATFORM_SETUP_GUIDE", label: "Platform Setup Guide", route: "/staff/day-planner-guide#sec-platform-setup", icon: "fas fa-book-open", audience: ["STAFF", "VGK4U", "SAAS"] },
+      { menu_code: "VGK_SAAS_AUDIT_LOGS", label: "Audit Logs (SaaS)", route: "/staff/audit-logs", icon: "fas fa-clipboard-list", audience: ["STAFF", "VGK4U", "SAAS"] }
     ]
   }
 ];

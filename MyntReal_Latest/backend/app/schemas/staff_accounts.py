@@ -67,7 +67,8 @@ class AssociatedCompanyBase(BaseModel):
     """Base schema for Associated Company - aligned with model fields"""
     company_name: str = Field(..., min_length=2, max_length=200, description="Company name")
     company_code: str = Field(..., min_length=2, max_length=20, description="Unique company code")
-    company_type: str = Field(default="SUBSIDIARY", description="Company type: PARENT, SUBSIDIARY, PARTNER, VENDOR")
+    company_type: str = Field(default="SUBSIDIARY", description="Company type: PARENT, SUBSIDIARY, PARTNER, VENDOR, SAAS_CLIENT")
+    company_segment: Optional[str] = Field(default="SEGMENT_A_INTERNAL", description="Company segment: SEGMENT_A_INTERNAL vs SEGMENT_B_SAAS")
     
     gst_number: Optional[str] = Field(None, max_length=20, description="GST Number")
     pan_number: Optional[str] = Field(None, max_length=15, description="PAN Number")
@@ -107,6 +108,18 @@ class AssociatedCompanyBase(BaseModel):
         if v and v.upper() not in valid_types:
             raise ValueError(f'Company type must be one of: {valid_types}')
         return v.upper() if v else 'SAAS_CLIENT'
+
+    @field_validator('company_segment')
+    @classmethod
+    def validate_company_segment(cls, v):
+        if not v:
+            return 'SEGMENT_A_INTERNAL'
+        v_upper = v.upper().strip()
+        if v_upper in ['SEGMENT_A', 'SEGMENT_A_INTERNAL', 'INTERNAL']:
+            return 'SEGMENT_A_INTERNAL'
+        if v_upper in ['SEGMENT_B', 'SEGMENT_B_SAAS', 'SAAS', 'SAAS_CLIENT']:
+            return 'SEGMENT_B_SAAS'
+        return v_upper
     
     @field_validator('gst_number')
     @classmethod
@@ -138,6 +151,7 @@ class AssociatedCompanyUpdate(BaseModel):
     """Schema for updating Associated Company - aligned with model fields"""
     company_name: Optional[str] = Field(None, min_length=2, max_length=200)
     company_type: Optional[str] = Field(None, description="PARENT, SUBSIDIARY, PARTNER, VENDOR, SAAS_CLIENT")
+    company_segment: Optional[str] = Field(None, description="SEGMENT_A_INTERNAL vs SEGMENT_B_SAAS")
     
     gst_number: Optional[str] = Field(None, max_length=20)
     pan_number: Optional[str] = Field(None, max_length=15)
@@ -197,6 +211,7 @@ class AssociatedCompanyResponse(BaseModel):
     company_code: str
     company_name: str
     company_type: str
+    company_segment: Optional[str] = "SEGMENT_A_INTERNAL"
     
     gst_number: Optional[str] = None
     pan_number: Optional[str] = None

@@ -423,6 +423,28 @@
             </select>
           </div>
         </div>
+
+        <!-- Row 3: Ground Source Upliner & Location Filters -->
+        <div class="row g-2 mt-1">
+          <div class="col-md-4">
+            <div class="filter-label"><i class="fas fa-user-shield text-warning me-1"></i>Ground Source Upliner</div>
+            <select id="uplinerSelect" class="form-select form-select-sm" onchange="loadBankLeads()">
+              <option value="ALL">All Ground Source Upliners</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <div class="filter-label"><i class="fas fa-city text-info me-1"></i>City / District</div>
+            <select id="citySelect" class="form-select form-select-sm" onchange="loadBankLeads()">
+              <option value="ALL">All Cities / Districts</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <div class="filter-label"><i class="fas fa-map-marker-alt text-danger me-1"></i>Area / Location</div>
+            <select id="areaSelect" class="form-select form-select-sm" onchange="loadBankLeads()">
+              <option value="ALL">All Areas / Locations</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <!-- Active Custom Filter Badge Bar -->
@@ -620,6 +642,9 @@
             const bucket = document.getElementById('bucketSelect').value;
             const sortBy = document.getElementById('sortSelect').value;
             const member = document.getElementById('memberSelect').value;
+            const upliner = document.getElementById('uplinerSelect') ? document.getElementById('uplinerSelect').value : 'ALL';
+            const city = document.getElementById('citySelect') ? document.getElementById('citySelect').value : 'ALL';
+            const area = document.getElementById('areaSelect') ? document.getElementById('areaSelect').value : 'ALL';
             const telecaller = document.getElementById('telecallerSelect').value;
             const groundSupport = document.getElementById('groundSupportSelect').value;
             const uportStaff = document.getElementById('uportStaffSelect').value;
@@ -635,6 +660,9 @@
             if (stage && stage !== 'ALL') queryParams.append('stage_filter', stage);
             if (bucket && bucket !== 'ALL') queryParams.append('bucket_filter', bucket);
             if (member && member !== 'ALL') queryParams.append('member_filter', member);
+            if (upliner && upliner !== 'ALL') queryParams.append('upliner_filter', upliner);
+            if (city && city !== 'ALL') queryParams.append('city_filter', city);
+            if (area && area !== 'ALL') queryParams.append('area_filter', area);
             if (telecaller && telecaller !== 'ALL') queryParams.append('telecaller_filter', telecaller);
             if (groundSupport && groundSupport !== 'ALL') queryParams.append('ground_support_filter', groundSupport);
             if (uportStaff && uportStaff !== 'ALL') queryParams.append('uport_staff_filter', uportStaff);
@@ -668,6 +696,9 @@
 
                     populateBankDropdown(data.bank_summary, bank);
                     populateMemberDropdown(data.unique_members, member);
+                    populateSelectDropdown('uplinerSelect', data.unique_upliners, 'All Ground Source Upliners', upliner);
+                    populateSelectDropdown('citySelect', data.unique_cities, 'All Cities / Districts', city);
+                    populateSelectDropdown('areaSelect', data.unique_areas, 'All Areas / Locations', area);
                     populateTelecallerDropdown(data.unique_telecallers, telecaller);
                     populateGroundSupportDropdown(data.unique_ground_supports, groundSupport);
                     populateUportStaffDropdown(data.unique_uport_staff, uportStaff);
@@ -715,6 +746,12 @@
                 setSelectOrAdd('stageSelect', val);
             } else if (type === 'member') {
                 setSelectOrAdd('memberSelect', val);
+            } else if (type === 'upliner') {
+                setSelectOrAdd('uplinerSelect', val);
+            } else if (type === 'city') {
+                setSelectOrAdd('citySelect', val);
+            } else if (type === 'area') {
+                setSelectOrAdd('areaSelect', val);
             } else if (type === 'telecaller') {
                 setSelectOrAdd('telecallerSelect', val);
             } else if (type === 'groundSupport') {
@@ -763,6 +800,9 @@
             document.getElementById('bucketSelect').value = 'ALL';
             document.getElementById('sortSelect').value = 'stage_days_desc';
             document.getElementById('memberSelect').value = 'ALL';
+            if (document.getElementById('uplinerSelect')) document.getElementById('uplinerSelect').value = 'ALL';
+            if (document.getElementById('citySelect')) document.getElementById('citySelect').value = 'ALL';
+            if (document.getElementById('areaSelect')) document.getElementById('areaSelect').value = 'ALL';
             document.getElementById('telecallerSelect').value = 'ALL';
             document.getElementById('groundSupportSelect').value = 'ALL';
             document.getElementById('uportStaffSelect').value = 'ALL';
@@ -776,6 +816,9 @@
             const stage = document.getElementById('stageSelect').value;
             const bucket = document.getElementById('bucketSelect').value;
             const member = document.getElementById('memberSelect').value;
+            const upliner = document.getElementById('uplinerSelect') ? document.getElementById('uplinerSelect').value : 'ALL';
+            const city = document.getElementById('citySelect') ? document.getElementById('citySelect').value : 'ALL';
+            const area = document.getElementById('areaSelect') ? document.getElementById('areaSelect').value : 'ALL';
             const telecaller = document.getElementById('telecallerSelect').value;
             const groundSupport = document.getElementById('groundSupportSelect').value;
             const uportStaff = document.getElementById('uportStaffSelect').value;
@@ -789,7 +832,7 @@
                 count++;
             }
             if (stage && stage !== 'ALL') {
-                const stageLabels = {'pending_with_bank': 'Pending with Bank', 'balance_pending': 'Balance Pending', 'net_meter_pending': 'Net Meter Pending'};
+                const stageLabels = {'pending_with_bank': 'Pending with Bank', 'balance_pending': 'Balance Pending', 'net_meter_pending': 'Net Meter Pending', 'electricity_bill_change': 'EB Change Pending'};
                 html += `<span class="badge bg-warning text-dark me-1 p-1 px-2 mb-1" style="font-weight:600;font-size:11px">Stage: ${stageLabels[stage] || stage} <i class="fas fa-times ms-1" style="cursor:pointer" onclick="clearSpecificFilter('stageSelect')"></i></span>`;
                 count++;
             }
@@ -800,6 +843,18 @@
             }
             if (member && member !== 'ALL') {
                 html += `<span class="badge bg-warning text-dark me-1 p-1 px-2 mb-1" style="font-weight:600;font-size:11px">Ground Source: ${esc(member)} <i class="fas fa-times ms-1" style="cursor:pointer" onclick="clearSpecificFilter('memberSelect')"></i></span>`;
+                count++;
+            }
+            if (upliner && upliner !== 'ALL') {
+                html += `<span class="badge bg-warning-subtle text-dark border border-warning me-1 p-1 px-2 mb-1" style="font-weight:700;font-size:11px">Upliner: ${esc(upliner)} <i class="fas fa-times ms-1" style="cursor:pointer" onclick="clearSpecificFilter('uplinerSelect')"></i></span>`;
+                count++;
+            }
+            if (city && city !== 'ALL') {
+                html += `<span class="badge bg-info text-dark me-1 p-1 px-2 mb-1" style="font-weight:600;font-size:11px">City: ${esc(city)} <i class="fas fa-times ms-1" style="cursor:pointer" onclick="clearSpecificFilter('citySelect')"></i></span>`;
+                count++;
+            }
+            if (area && area !== 'ALL') {
+                html += `<span class="badge bg-danger text-white me-1 p-1 px-2 mb-1" style="font-weight:600;font-size:11px">Area: ${esc(area)} <i class="fas fa-times ms-1" style="cursor:pointer" onclick="clearSpecificFilter('areaSelect')"></i></span>`;
                 count++;
             }
             if (telecaller && telecaller !== 'ALL') {
@@ -1043,6 +1098,20 @@
             sel.innerHTML = html;
         }
 
+        function populateSelectDropdown(elementId, items, defaultLabel, currentSelected) {
+            const sel = document.getElementById(elementId);
+            if (!sel) return;
+            let html = `<option value="ALL">${defaultLabel}</option>`;
+            if (items) {
+                items.forEach(item => {
+                    if (!item || item === '—' || item === 'None' || item === 'null') return;
+                    const selected = (item === currentSelected) ? 'selected' : '';
+                    html += `<option value="${esc(item)}" ${selected}>${esc(item)}</option>`;
+                });
+            }
+            sel.innerHTML = html;
+        }
+
         function populateTelecallerDropdown(telecallers, currentSelected) {
             const sel = document.getElementById('telecallerSelect');
             let html = `<option value="ALL">All Tele Callers</option>`;
@@ -1115,6 +1184,10 @@
                     ? `<br><a href="tel:${esc(l.ground_source_phone)}" class="btn btn-sm btn-outline-warning py-0 px-2 mt-1" style="font-size:10px;font-weight:600;display:inline-block" title="Call Ground Source"><i class="fas fa-phone-alt me-1"></i>${esc(l.ground_source_phone)}</a>` 
                     : '';
 
+                const gsUplinerInfo = (l.upliner_name && l.upliner_name !== '—' && l.upliner_name !== 'Direct / None')
+                    ? `<br><small class="text-muted" style="font-size:10px;font-weight:600" title="Ground Source Upliner"><i class="fas fa-user-shield text-warning me-1"></i>${esc(l.upliner_name)}${l.upliner_phone ? ` <a href="tel:${esc(l.upliner_phone)}" class="text-decoration-none text-warning fw-bold">(${esc(l.upliner_phone)})</a>` : ''}</small>`
+                    : '';
+
                 const gsSupportCallBtn = l.ground_support_phone 
                     ? `<br><a href="tel:${esc(l.ground_support_phone)}" class="btn btn-sm btn-outline-success py-0 px-2 mt-1" style="font-size:10px;font-weight:600;display:inline-block" title="Call Ground Support"><i class="fas fa-phone-alt me-1"></i>${esc(l.ground_support_phone)}</a>` 
                     : '';
@@ -1130,7 +1203,7 @@
                 html += `<tr>
                     <td style="text-align:center;color:#9ca3af;font-weight:600">${idx + 1}</td>
                     <td style="font-weight:700;color:#d97706">
-                        <span class="clickable-label" onclick="applyCustomFilter('member', '${escJs(l.ground_source_name)}')" title="Click to filter by Ground Source: ${esc(l.ground_source_name)}">${esc(l.ground_source_name)}</span>${gsCallBtn}
+                        <span class="clickable-label" onclick="applyCustomFilter('member', '${escJs(l.ground_source_name)}')" title="Click to filter by Ground Source: ${esc(l.ground_source_name)}">${esc(l.ground_source_name)}</span>${gsCallBtn}${gsUplinerInfo}
                     </td>
                     <td style="color:#0284c7;font-weight:600">
                         <span class="clickable-label" onclick="applyCustomFilter('telecaller', '${escJs(l.telecaller_name)}')" title="Click to filter by Telecaller: ${esc(l.telecaller_name)}">${esc(l.telecaller_name)}</span>
@@ -1471,6 +1544,10 @@
                         key: key,
                         sourceName: sName,
                         sourcePhone: l.ground_source_phone || '',
+                        uplinerName: l.upliner_name || '',
+                        uplinerPhone: l.upliner_phone || '',
+                        areas: new Set(),
+                        cities: new Set(),
                         leads: [],
                         totalValue: 0,
                         maxDays: 0,
@@ -1485,6 +1562,11 @@
                 groups[key].totalValue += (l.deal_value || 0);
                 if (l.stage_days > groups[key].maxDays) groups[key].maxDays = l.stage_days;
                 if (!groups[key].sourcePhone && l.ground_source_phone) groups[key].sourcePhone = l.ground_source_phone;
+                if ((!groups[key].uplinerName || groups[key].uplinerName === '—') && l.upliner_name && l.upliner_name !== '—') groups[key].uplinerName = l.upliner_name;
+                if (!groups[key].uplinerPhone && l.upliner_phone) groups[key].uplinerPhone = l.upliner_phone;
+                if (l.area && l.area !== '—' && l.area !== 'None') groups[key].areas.add(l.area.trim());
+                if (l.city && l.city !== '—' && l.city !== 'None') groups[key].cities.add(l.city.trim());
+                else if (l.city_district && l.city_district !== '—') groups[key].cities.add(l.city_district.trim());
 
                 if (l.stage_days <= 7) groups[key].b_0_7++;
                 else if (l.stage_days <= 15) groups[key].b_8_15++;
@@ -1524,14 +1606,44 @@
                 const groupId = 'gs_' + g.key.replace(/[^a-zA-Z0-9]/g, '_');
                 const isExpanded = expandedSummaryGroups.has(groupId);
                 const valText = g.totalValue ? `₹${(g.totalValue / 100000).toFixed(2)}L` : '—';
-                const callBtn = g.sourcePhone ? `<a href="tel:${esc(g.sourcePhone)}" class="btn btn-sm btn-outline-warning py-0 px-2 ms-2" style="font-size:11px" title="Call Ground Source"><i class="fas fa-phone-alt me-1"></i>${esc(g.sourcePhone)}</a>` : '';
+                const callBtn = g.sourcePhone ? `<a href="tel:${esc(g.sourcePhone)}" class="btn btn-sm btn-outline-warning py-0 px-2" style="font-size:11px;font-weight:600" title="Call Ground Source"><i class="fas fa-phone-alt me-1"></i>${esc(g.sourcePhone)}</a>` : '';
+
+                // Upliner Badge & Call Button
+                const hasUpliner = g.uplinerName && g.uplinerName !== '—' && g.uplinerName !== 'Direct / None';
+                const uplinerCallBtn = g.uplinerPhone ? `<a href="tel:${esc(g.uplinerPhone)}" class="btn btn-sm btn-outline-warning py-0 px-2 ms-1" style="font-size:10.5px;font-weight:600" title="Call Upliner"><i class="fas fa-phone-alt me-1"></i>${esc(g.uplinerPhone)}</a>` : '';
+                const uplinerBadge = hasUpliner ? `
+                    <div class="d-inline-flex align-items-center">
+                        <span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1 clickable-label" style="font-size:11.5px;font-weight:700" onclick="applyCustomFilter('upliner', '${escJs(g.uplinerName)}')" title="Click to filter by Upliner: ${esc(g.uplinerName)}">
+                            <i class="fas fa-user-shield text-warning-emphasis me-1"></i>Upliner: <span class="text-primary">${esc(g.uplinerName)}</span>
+                        </span>
+                        ${uplinerCallBtn}
+                    </div>` : '';
+
+                // Location Summary (Area & City)
+                const areasArr = Array.from(g.areas);
+                const citiesArr = Array.from(g.cities);
+                let locDisplay = '';
+                if (areasArr.length > 0 && citiesArr.length > 0) {
+                    locDisplay = `${areasArr.slice(0, 2).join(', ')}${areasArr.length > 2 ? ` (+${areasArr.length - 2})` : ''} • ${citiesArr.slice(0, 2).join(', ')}`;
+                } else if (areasArr.length > 0) {
+                    locDisplay = `${areasArr.slice(0, 3).join(', ')}${areasArr.length > 3 ? ` (+${areasArr.length - 3})` : ''}`;
+                } else if (citiesArr.length > 0) {
+                    locDisplay = `${citiesArr.slice(0, 3).join(', ')}${citiesArr.length > 3 ? ` (+${citiesArr.length - 3})` : ''}`;
+                }
+
+                const locBadge = locDisplay ? `
+                    <span class="badge bg-white text-secondary border px-2 py-1" style="font-size:11.5px;font-weight:600" title="Ground Source Operating Locations: ${esc(locDisplay)}">
+                        <i class="fas fa-map-marker-alt text-danger me-1"></i>${esc(locDisplay)}
+                    </span>` : '';
 
                 html += `
                 <div class="card mb-3 border-0 shadow-sm" style="border-radius:12px;overflow:hidden;background:#ffffff">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 py-2 px-3 border-bottom">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-warning text-dark px-2 py-1" style="font-size:13px;font-weight:800"><i class="fas fa-user-tag me-1"></i>${esc(g.sourceName)}</span>
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <span class="badge bg-warning text-dark px-2 py-1 clickable-label" style="font-size:13px;font-weight:800" onclick="applyCustomFilter('member', '${escJs(g.sourceName)}')" title="Click to filter by Ground Source"><i class="fas fa-user-tag me-1"></i>${esc(g.sourceName)}</span>
                             ${callBtn}
+                            ${uplinerBadge}
+                            ${locBadge}
                             <span class="badge bg-success px-2 py-1" style="font-weight:700">${g.leads.length} Files</span>
                         </div>
                         <div class="d-flex align-items-center gap-3">
@@ -1564,8 +1676,10 @@
                                     <th>Lead Name</th>
                                     <th>Contact</th>
                                     <th style="color:#fbbf24">Documents & Links</th>
+                                    <th>Area & City</th>
                                     <th>Stage Days</th>
                                     <th>Ground Support</th>
+                                    <th>Upliner</th>
                                     <th>Stage</th>
                                     <th class="text-end">Deal Value</th>
                                 </tr>
@@ -1575,18 +1689,23 @@
                         const lVal = l.deal_value ? ('₹' + (l.deal_value / 100000).toFixed(2) + 'L') : '—';
                         const gsStaffName = l.ground_support_name || l.field_staff_name || '—';
                         const stageLabel = l.solar_pipeline_stage || l.stage || (currentMainTab === 'balance-pending' ? 'Bal Pending' : 'At Bank');
+                        const leadLoc = (l.area && l.area !== '—') ? `${l.area}, ${l.city_district || l.city || ''}` : (l.city_district || l.city || '—');
+                        const leadUp = (l.upliner_name && l.upliner_name !== '—') ? `${esc(l.upliner_name)}${l.upliner_phone ? `<br><small class="text-muted">${esc(l.upliner_phone)}</small>` : ''}` : '—';
+
                         html += `<tr>
                             <td>${idx + 1}</td>
-                            <td class="fw-semibold text-primary">${esc(l.telecaller_name || '—')}</td>
-                            <td class="fw-bold text-success">${esc(l.bank_name || '—')} (${esc(l.bank_branch || 'N/A')})</td>
-                            <td class="fw-bold text-dark">${esc(l.customer_name)}</td>
+                            <td class="fw-semibold text-primary clickable-label" onclick="applyCustomFilter('telecaller', '${escJs(l.telecaller_name)}')">${esc(l.telecaller_name || '—')}</td>
+                            <td class="fw-bold text-success clickable-label" onclick="applyCustomFilter('bank', '${escJs(l.bank_name)}')">${esc(l.bank_name || '—')} (${esc(l.bank_branch || 'N/A')})</td>
+                            <td class="fw-bold text-dark clickable-label" onclick="applyCustomFilter('search', '${escJs(l.customer_name)}')">${esc(l.customer_name)}</td>
                             <td><a href="tel:${esc(l.phone_number)}" class="text-decoration-none fw-semibold"><i class="fas fa-phone-alt me-1"></i>${esc(l.phone_number)}</a></td>
                             <td style="white-space:nowrap">
                                 <button class="btn btn-sm btn-outline-success py-0 px-2 text-nowrap" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'discom_link')" title="DISCOM Document Link" style="font-size:10px;font-weight:700"><i class="fas fa-bolt me-1"></i>DISCOM</button>
                                 <button class="btn btn-sm btn-outline-info py-0 px-2 text-nowrap ms-1" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'bank_link')" title="Bank Document Link" style="font-size:10px;font-weight:700"><i class="fas fa-university me-1"></i>Bank</button>
                             </td>
+                            <td><span class="text-muted clickable-label" onclick="applyCustomFilter('search', '${escJs(l.area || l.city)}')"><i class="fas fa-map-marker-alt text-danger me-1" style="font-size:10px"></i>${esc(leadLoc)}</span></td>
                             <td><span class="badge bg-secondary">${l.stage_days}d</span></td>
-                            <td class="fw-semibold text-success">${esc(gsStaffName)}</td>
+                            <td class="fw-semibold text-success clickable-label" onclick="applyCustomFilter('groundSupport', '${escJs(gsStaffName)}')">${esc(gsStaffName)}</td>
+                            <td class="fw-semibold text-warning-emphasis">${leadUp}</td>
                             <td><span class="badge bg-info text-dark px-2 py-1" style="font-size:10px;font-weight:700">${esc(stageLabel)}</span></td>
                             <td class="text-end fw-bold text-success">${lVal}</td>
                         </tr>`;

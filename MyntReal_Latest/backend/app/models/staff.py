@@ -214,6 +214,9 @@ class StaffEmployee(Base):
     # Values: 'default', 'only_leads'
     freelancer_access_mode = Column(String(32), default='default', nullable=True)
     
+    # DC-SAAS-GOVERNANCE-002: Administrative Scope (PLATFORM, SEGMENT_A, SEGMENT_B, CLIENT_SPECIFIC)
+    admin_scope = Column(String(50), default='CLIENT_SPECIFIC', nullable=True, index=True)
+    
     # DC Protocol (Jan 2026): Employment Type - Probation/Confirmed tracking
     employment_type = Column(String(32), default='probation', nullable=False, index=True)  # probation, confirmed, extended_probation
     probation_period_months = Column(Integer, default=6, nullable=True)  # Standard: 3, 6, 9, 12 months
@@ -337,6 +340,7 @@ class StaffEmployee(Base):
             # [DC-PARTNER-CONTACTS-001] Linked partner showroom for dual portal login
             "linked_partner_id": getattr(self, 'linked_partner_id', None),
             "freelancer_access_mode": getattr(self, 'freelancer_access_mode', 'default'),
+            "admin_scope": getattr(self, 'admin_scope', 'CLIENT_SPECIFIC'),
         }
         
         if include_sensitive:

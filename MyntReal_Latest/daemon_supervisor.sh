@@ -18,13 +18,14 @@ if ! /opt/homebrew/opt/postgresql@16/bin/pg_ctl -D "$PROJECT_DIR/postgres_data" 
 fi
 
 # Load environment variables
-if [ -f "$PROJECT_DIR/.env" ]; then
+if [ -f "$PROJECT_DIR/backend/.env" ]; then
+    export $(grep -v '^#' "$PROJECT_DIR/backend/.env" | xargs)
+elif [ -f "$PROJECT_DIR/.env" ]; then
     export $(grep -v '^#' "$PROJECT_DIR/.env" | xargs)
 fi
 
-# Ensure local database is used for local resilience
-export DATABASE_URL="postgresql://127.0.0.1:5433/myntreal_dev"
-export PROD_DATABASE_URL="postgresql://127.0.0.1:5433/myntreal_dev"
+export DATABASE_URL="${DATABASE_URL:-postgresql://127.0.0.1:5433/myntreal_dev}"
+export PROD_DATABASE_URL="${PROD_DATABASE_URL:-$DATABASE_URL}"
 export SECRET_KEY="${SECRET_KEY:-dev-secret-key-123}"
 export AI_AUDIO_DIR="$PROJECT_DIR/tmp_ai_audio"
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"

@@ -140,6 +140,7 @@ class Settings(BaseSettings):
     def assemble_cors_origins(cls, v: List[str]) -> List[str]:
         """Configure explicit allowed hosts for TrustedHostMiddleware"""
         return [
+            "*",
             "testserver",
             "localhost",
             "127.0.0.1",

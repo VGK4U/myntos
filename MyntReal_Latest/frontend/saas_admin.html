@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zynova Cloud — SaaS Segment B Administration</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-base: #060b13;
+            --bg-card: rgba(15, 23, 42, 0.75);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --brand-primary: #0284c7;
+            --brand-gradient: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --badge-saas: #0284c7;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(2, 132, 199, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.08) 0%, transparent 40%),
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+        }
+
+        /* Top Navigation Header */
+        .navbar {
+            background: rgba(10, 15, 29, 0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--brand-gradient);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+        }
+
+        .brand-title {
+            font-size: 17px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+        }
+
+        .brand-title span {
+            background: var(--brand-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .segment-tag {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(2, 132, 199, 0.2);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            margin-left: 8px;
+        }
+
+        .user-nav {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-pill {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+
+        .user-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #0284c7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .btn-logout {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-logout:hover {
+            background: rgba(239, 68, 68, 0.3);
+            color: #fff;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 28px 20px 60px;
+            width: 100%;
+        }
+
+        /* Hero Banner */
+        .hero-banner {
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.15) 0%, rgba(6, 182, 212, 0.05) 100%);
+            border: 1px solid rgba(2, 132, 199, 0.25);
+            border-radius: 16px;
+            padding: 24px 28px;
+            margin-bottom: 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(12px);
+        }
+
+        .hero-info h1 {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .hero-info p {
+            color: var(--text-muted);
+            font-size: 13.5px;
+            max-width: 650px;
+        }
+
+        .hero-action {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-primary {
+            background: var(--brand-gradient);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 9px;
+            border: none;
+            font-weight: 700;
+            font-size: 13.5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 18px;
+            margin-bottom: 28px;
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .kpi-title {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .kpi-value {
+            font-size: 28px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            color: #fff;
+        }
+
+        .kpi-sub {
+            font-size: 11.5px;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        /* Content Sections */
+        .section-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 28px;
+            backdrop-filter: blur(12px);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: 12px 16px;
+            color: var(--text-dim);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            vertical-align: middle;
+        }
+
+        .data-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .code-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            padding: 3px 8px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 6px;
+            color: #38bdf8;
+            font-weight: 600;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+
+        .status-pill.active {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+
+        .module-chip {
+            display: inline-block;
+            font-size: 11px;
+            padding: 2px 7px;
+            border-radius: 4px;
+            background: rgba(2, 132, 199, 0.15);
+            color: #38bdf8;
+            margin: 2px;
+            border: 1px solid rgba(2, 132, 199, 0.25);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <header class="navbar">
+        <div class="brand-wrap">
+            <div class="brand-icon">
+                <i class="fas fa-cubes"></i>
+            </div>
+            <div class="brand-title">
+                Zynova <span>Cloud</span>
+            </div>
+            <span class="segment-tag"><i class="fas fa-layer-group"></i> Segment B Administration</span>
+        </div>
+
+        <div class="user-nav">
+            <div class="user-pill">
+                <div class="user-avatar"><i class="fas fa-user-shield"></i></div>
+                <span id="userIdent">ZMP18080088 (SaaS Admin)</span>
+            </div>
+            <button class="btn-logout" onclick="handleLogout()">
+                <i class="fas fa-arrow-right-from-bracket"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <!-- Hero Section -->
+        <div class="hero-banner">
+            <div class="hero-info">
+                <h1>SaaS Multi-Tenant Segment Console</h1>
+                <p>Governing all Segment B client organizations, module entitlements, license subscriptions, and cross-tenant configuration governance under isolated multi-tenant architecture.</p>
+            </div>
+            <div class="hero-action">
+                <a href="/saas/signup" target="_blank" class="btn-primary">
+                    <i class="fas fa-plus"></i> Onboard New Tenant
+                </a>
+            </div>
+        </div>
+
+        <!-- KPI Grid -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-title">
+                    <span>Segment B Tenants</span>
+                    <i class="fas fa-building" style="color:#38bdf8;"></i>
+                </div>
+                <div class="kpi-value" id="kpiTenants">3</div>
+                <div class="kpi-sub">Active independent client workspaces</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">
+                    <span>Global Licensed Modules</span>
+                    <i class="fas fa-shapes" style="color:#a855f7;"></i>
+                </div>
+                <div class="kpi-value">6</div>
+                <div class="kpi-sub">CRM, Service, Solar EV, GST, Inventory, HR</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">
+                    <span>Scope Isolation</span>
+                    <i class="fas fa-shield-halved" style="color:#10b981;"></i>
+                </div>
+                <div class="kpi-value">100%</div>
+                <div class="kpi-sub">Strict Level 2 / Level 3 Data Segregation</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">
+                    <span>Change Scope Audit</span>
+                    <i class="fas fa-sliders-h" style="color:#f59e0b;"></i>
+                </div>
+                <div class="kpi-value" id="kpiScopeChanges">Active</div>
+                <div class="kpi-sub">Inheritance & audit logging enabled</div>
+            </div>
+        </div>
+
+        <!-- Tenant Directory -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="fas fa-network-wired" style="color:#38bdf8;"></i>
+                    <span>Segment B Client Tenants Directory</span>
+                </div>
+                <div>
+                    <a href="/staff/accounts/companies?segment=SEGMENT_B_SAAS" class="btn-primary" style="font-size:12px;padding:6px 12px;">
+                        <i class="fas fa-external-link-alt"></i> Manage in Companies
+                    </a>
+                </div>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Company ID</th>
+                        <th>Company Code</th>
+                        <th>Tenant Name</th>
+                        <th>Master Admin</th>
+                        <th>Licensed Modules</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="tenantTableBody">
+                    <tr>
+                        <td><span class="code-badge">ZMP18080092</span></td>
+                        <td><strong>TECO</strong></td>
+                        <td>Test Company</td>
+                        <td><code>TECO_ADMIN</code></td>
+                        <td><span class="module-chip">CRM_LEADS</span> <span class="module-chip">SERVICE_TICKETS</span></td>
+                        <td><span class="status-pill active"><i class="fas fa-check-circle"></i> Active</span></td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-badge">ZMP18080093</span></td>
+                        <td><strong>ZYLOG</strong></td>
+                        <td>Zynova Logistics Tech</td>
+                        <td><code>ZYLOG_ADMIN</code></td>
+                        <td><span class="module-chip">CRM_LEADS</span> <span class="module-chip">SERVICE_TICKETS</span> <span class="module-chip">SOLAR_EV</span></td>
+                        <td><span class="status-pill active"><i class="fas fa-check-circle"></i> Active</span></td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-badge">ZMP18080094</span></td>
+                        <td><strong>AIS</strong></td>
+                        <td>Apex Infotech Solutions</td>
+                        <td><code>AIS_ADMIN</code></td>
+                        <td><span class="module-chip">CRM_LEADS</span> <span class="module-chip">SERVICE_TICKETS</span> <span class="module-chip">STAFF_HRMS</span></td>
+                        <td><span class="status-pill active"><i class="fas fa-check-circle"></i> Active</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
+        function handleLogout() {
+            localStorage.clear();
+            sessionStorage.clear();
+            document.cookie = 'staff_token=; path=/; max-age=0';
+            document.cookie = 'session_token=; path=/; max-age=0';
+            document.cookie = 'session=; path=/; max-age=0';
+            window.location.href = '/saas/login?logout=true';
+        }
+
+        // Fetch user data on load
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                window.location.href = '/saas/login';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/v1/staff/auth/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.employee) {
+                        document.getElementById('userIdent').textContent = `${data.employee.emp_code} (${data.employee.full_name})`;
+                    }
+                }
+            } catch (_) {}
+        });
+    </script>
+</body>
+</html>

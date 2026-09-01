@@ -81,8 +81,8 @@ const BACKEND_URL_SERVER = process.env.BACKEND_URL || 'http://127.0.0.1:8000';
 console.log(`🔌 [DC-BACKEND] Environment: ${isDeployment ? 'PRODUCTION' : 'DEVELOPMENT'}`); 
 console.log(`🔌 [DC-BACKEND] Backend URL: ${BACKEND_URL_SERVER}`);
 
-// DC Protocol: Resolved backend hosts for proxy connections
-const RESOLVED_BACKEND_HOSTS = ['127.0.0.1:8000', 'localhost:8000'];
+// DC Protocol: Resolved backend hosts for proxy connections (explicit IPv4 to prevent IPv6 localhost hang)
+const RESOLVED_BACKEND_HOSTS = ['127.0.0.1:8000'];
 
 // Browser-side: Use same URL pattern
 const BACKEND_URL_BROWSER = BACKEND_URL_SERVER;
@@ -8034,7 +8034,7 @@ const server = http.createServer(async (req, res) => {
     const contentType = req.headers['content-type'] || '';
     const isMultipart = contentType.includes('multipart/form-data');
     const isLoginCall = url.endsWith('/auth/login') || url.includes('/auth/login?');
-    const maxRetries = isMultipart ? 0 : (isLoginCall ? 3 : 4);
+    const maxRetries = isMultipart ? 0 : (isLoginCall ? 1 : 2);
     let clientAborted = false;
     res.on('close', () => { 
       if (!res.writableFinished) {
@@ -8069,6 +8069,8 @@ const server = http.createServer(async (req, res) => {
       }
       
       const proxyHeaders = { ...req.headers };
+      proxyHeaders['x-forwarded-host'] = req.headers.host || '';
+      proxyHeaders['host'] = BACKEND_HOSTS[hostIndex];
       if (bodyBuffer !== null) {
         proxyHeaders['content-length'] = String(bodyBuffer.length);
         delete proxyHeaders['transfer-encoding'];
@@ -8160,9 +8162,11 @@ const server = http.createServer(async (req, res) => {
         proxyUrl.includes('/lead-analytics') ||
         proxyUrl.includes('/employee-performance-dashboard') ||
         proxyUrl.includes('/exec-trend-leads');
+      proxyHeaders['connection'] = 'close';
       const options = {
         method: req.method,
         headers: proxyHeaders,
+        agent: false,
         timeout: isLongRunning ? 120000 : 30000
       };
       
@@ -8340,7 +8344,11 @@ const server = http.createServer(async (req, res) => {
       const backendUrl = `http://${BACKEND_HOSTS[hostIndex]}${url}`;
       const options = {
         method: req.method,
-        headers: req.headers,
+        headers: {
+          ...req.headers,
+          'x-forwarded-host': req.headers.host || '',
+          host: BACKEND_HOSTS[hostIndex]
+        },
         timeout: 300000
       };
       
@@ -18676,6 +18684,17 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     if (sideVal)    forwardParams += `&side=${encodeURIComponent(sideVal)}`;
     res.writeHead(302, { 'Location': `/create-member?signup=true${forwardParams}&v=${BUILD_ID}` });
     res.end();
+  } else if (url.startsWith('/saas/signup') || url.startsWith('/saas_signup') || url.startsWith('/saas-signup') || url.startsWith('/client/signup')) {
+    // SaaS Client Registration - Zynova Multi-Tenant Cloud
+    serveCachedHtml(res, 'saas_signup.html', BUILD_ID);
+    return;
+  } else if (url.startsWith('/saas/admin') || url.startsWith('/saas_admin') || url.startsWith('/saas-admin')) {
+    // SaaS Segment B Administration Console
+    serveCachedHtml(res, 'saas_admin.html', BUILD_ID);
+    return;
+  } else if (url.startsWith('/saas/workspace') || url.startsWith('/saas_workspace') || url.startsWith('/saas-workspace')) {
+    // Individual SaaS Tenant Workspace
+    serveCachedHtml(res, 'saas_workspace.html', BUILD_ID);
     return;
   } else if (url.startsWith('/saas/login') || url.startsWith('/saas_login') || url.startsWith('/saas-login') || url.startsWith('/client/login') || url.startsWith('/client_login') || url.startsWith('/tenant/login')) {
     // SaaS Client Portal Login - Zynova Multi-Tenant Cloud
