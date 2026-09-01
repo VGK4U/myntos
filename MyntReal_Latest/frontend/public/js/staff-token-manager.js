@@ -122,9 +122,23 @@
         const isFinancePage = path.includes('/finance');
         
         if (isStaffPage || isRvzPage || isAdminPage || isVgkPage || isFinancePage) {
+            const rawUser = localStorage.getItem('staff_user');
+            let isSaaSTenant = false;
+            if (rawUser) {
+                try {
+                    const u = JSON.parse(rawUser);
+                    if (u.staff_type === 'TENANT_ADMIN' || u.staff_type === 'SAAS_CLIENT' || (u.base_company_id && u.base_company_id !== 4 && u.base_company_id !== 88 && u.base_company_id !== 1)) {
+                        isSaaSTenant = true;
+                    }
+                } catch (_) {}
+            }
             const currentPath = window.location.pathname + window.location.search;
             console.log('[DC_TOKEN] Redirecting to login with redirect:', currentPath);
-            window.location.href = '/staff/login?redirect=' + encodeURIComponent(currentPath);
+            if (isSaaSTenant) {
+                window.location.href = '/saas/login?redirect=' + encodeURIComponent(currentPath);
+            } else {
+                window.location.href = '/staff/login?redirect=' + encodeURIComponent(currentPath);
+            }
         }
     }
     

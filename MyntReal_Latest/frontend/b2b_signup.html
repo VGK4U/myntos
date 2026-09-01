@@ -225,6 +225,28 @@
           </div>
         </div>
 
+        <div class="row2">
+          <div>
+            <label>Pincode <span id="signupPincodeStatus" style="font-size:11px;font-weight:600;color:var(--brand-1);margin-left:4px;"></span></label>
+            <input name="pincode" id="signupPincode" placeholder="6-digit Pincode (e.g. 531173)" maxlength="6" oninput="lookupSignupPincode(this.value)"/>
+          </div>
+          <div>
+            <label>City & State</label>
+            <input name="city_state" id="signupCityState" placeholder="City, State (Auto-fetched)" style="background:#f8fafc;"/>
+          </div>
+        </div>
+
+        <div class="row2">
+          <div>
+            <label>PAN Number *</label>
+            <input name="pan_number" required placeholder="10-digit PAN (e.g. ABCDE1234F)" maxlength="10" style="text-transform:uppercase;"/>
+          </div>
+          <div>
+            <label>CIN Number <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+            <input name="cin_number" placeholder="21-digit CIN (Optional)" maxlength="25" style="text-transform:uppercase;"/>
+          </div>
+        </div>
+
         <!-- Service Packaging -->
         <label style="margin-top:16px;font-size:13px;color:var(--brand-1)">1. Select Core Services</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px" id="services-container">
@@ -616,6 +638,34 @@ document.getElementById('yr').textContent = new Date().getFullYear();
 
 function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+async function lookupSignupPincode(pincode) {
+    pincode = (pincode || '').replace(/\D/g, '');
+    const statusEl = document.getElementById('signupPincodeStatus');
+    const locInput = document.getElementById('signupCityState');
+    if (pincode.length !== 6) {
+        if (statusEl) statusEl.textContent = '';
+        return;
+    }
+    if (statusEl) statusEl.innerHTML = '⏳ Fetching...';
+    try {
+        const res = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
+                const po = data[0].PostOffice[0];
+                const city = po.District || po.Block || po.Division || '';
+                const state = po.State || '';
+                if (locInput) locInput.value = `${city}, ${state}`;
+                if (statusEl) statusEl.innerHTML = `<span style="color:var(--ok)">✓ ${city}, ${state}</span>`;
+                return;
+            }
+        }
+        if (statusEl) statusEl.innerHTML = `<span style="color:var(--warn)">Not found</span>`;
+    } catch (e) {
+        if (statusEl) statusEl.textContent = '';
+    }
+}
+
 // ── Live Pricing & Dependency Calculator ──
 async function updatePricingCalculation() {
   const form = document.getElementById('f');
@@ -695,11 +745,33 @@ document.getElementById('f').addEventListener('submit', async (ev) => {
   const selectedModules = checkedBoxes.map(cb => cb.value);
   const cycle = form.querySelector('input[name="billing_cycle"]:checked')?.value || 'monthly';
   
+  const locVal = (form.city_state ? form.city_state.value : '').split(',');
+  const city = locVal[0] ? locVal[0].trim() : null;
+  const state = locVal[1] ? locVal[1].trim() : null;
+  const pan = (form.pan_number ? form.pan_number.value : '').trim().toUpperCase();
+  
+  if (!pan) {
+    m.innerHTML = '<div class="err">⚠ PAN Number is mandatory.</div>';
+    b.disabled = false; b.textContent = 'Submit Signup Application →';
+    return;
+  }
+  if (pan.length !== 10) {
+    m.innerHTML = '<div class="err">⚠ PAN Number must be exactly 10 characters (e.g. ABCDE1234F).</div>';
+    b.disabled = false; b.textContent = 'Submit Signup Application →';
+    return;
+  }
+
   const payload = {
     company_name: form.company_name.value.trim(),
+    company_type: 'SAAS_CLIENT',
     contact_name: form.contact_name.value.trim(),
     contact_email: form.contact_email.value.trim(),
     contact_phone: form.contact_phone.value.trim() || null,
+    pan_number: pan,
+    cin_number: (form.cin_number ? form.cin_number.value : '').trim().toUpperCase() || null,
+    pincode: form.pincode ? form.pincode.value.trim() : null,
+    city: city,
+    state: state,
     billing_currency: form.billing_currency.value,
     billing_cycle: cycle,
     selected_modules: selectedModules,

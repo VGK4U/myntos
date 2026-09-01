@@ -665,6 +665,8 @@ window.StaffHeader = window.StaffHeader || {
         const isMnEmployee = staffType === 'MN_EMPLOYEE' || userData.is_mn_employee;
         const isFreelancer = staffType === 'FREELANCER' || userData.is_freelancer;
         
+        const isTenantAdmin = staffType === 'TENANT_ADMIN' || staffType === 'SAAS_CLIENT' || role.includes('Tenant') || (userData.base_company_id && userData.base_company_id !== 4 && userData.base_company_id !== 88);
+        
         const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
         
         const initialsEl = document.getElementById('headerUserInitials');
@@ -679,7 +681,11 @@ window.StaffHeader = window.StaffHeader || {
         if (roleEl) {
             roleEl.textContent = role;
             
-            if (isFreelancer) {
+            if (isTenantAdmin) {
+                roleEl.className = 'user-info-role role-badge-tenant-admin';
+                roleEl.style.background = 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
+                roleEl.style.color = '#ffffff';
+            } else if (isFreelancer) {
                 roleEl.className = 'user-info-role role-badge-freelancer';
             } else if (isMnEmployee) {
                 roleEl.className = 'user-info-role role-badge-mn-employee';
@@ -695,17 +701,52 @@ window.StaffHeader = window.StaffHeader || {
                 roleEl.className = 'user-info-role role-badge-default';
             }
         }
+
+        // For SaaS tenant workspaces, dynamically replace header logo & hide internal platform campaign widgets
+        if (isTenantAdmin) {
+            const logoEl = document.querySelector('.header-logo');
+            if (logoEl) {
+                const compName = userData.base_company_name || 'Zynova Cloud';
+                const parent = logoEl.parentElement;
+                if (parent && !parent.querySelector('.tenant-header-brand')) {
+                    logoEl.style.display = 'none';
+                    const brandSpan = document.createElement('span');
+                    brandSpan.className = 'tenant-header-brand';
+                    brandSpan.style.cssText = 'font-weight:800;font-size:15px;color:#ffffff;letter-spacing:0.4px;display:flex;align-items:center;gap:7px;';
+                    brandSpan.innerHTML = `<i class="fas fa-cube" style="color:#38bdf8;font-size:16px;"></i> ${compName}`;
+                    logoEl.insertAdjacentElement('afterend', brandSpan);
+                }
+            }
+            const badges = document.getElementById('activeCommunitySevaBadges');
+            if (badges) badges.style.display = 'none';
+            const campaign = document.getElementById('headerCampaignBannerContainer');
+            if (campaign) campaign.style.display = 'none';
+        }
         
-        this.showStaffTypeBanner(staffType, empId);
+        this.showStaffTypeBanner(staffType, empId, userData.base_company_name);
     },
     
-    showStaffTypeBanner: function(staffType, empId) {
+    showStaffTypeBanner: function(staffType, empId, compName) {
         const existingBanner = document.getElementById('staffTypeBanner');
         if (existingBanner) {
             existingBanner.remove();
         }
         
         const bannerConfig = {
+            'TENANT_ADMIN': {
+                icon: 'fas fa-shield-halved',
+                badge: 'TENANT ADMIN',
+                message: `Welcome to ${compName || 'your SaaS Workspace'}!`,
+                badgeClass: 'mn-employee-badge',
+                bannerClass: 'mn-employee-banner'
+            },
+            'SAAS_CLIENT': {
+                icon: 'fas fa-shield-halved',
+                badge: 'TENANT CLIENT',
+                message: `Welcome to ${compName || 'your SaaS Workspace'}!`,
+                badgeClass: 'mn-employee-badge',
+                bannerClass: 'mn-employee-banner'
+            },
             'MN_STAFF': {
                 icon: 'fas fa-user-tie',
                 badge: 'MN STAFF',

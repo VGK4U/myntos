@@ -9036,7 +9036,7 @@ const server = http.createServer(async (req, res) => {
   
   // DC Protocol: Staff session auto-restore (Dec 27, 2025)
   // Staff users use staff_token cookie, validate with staff auth endpoint
-  if (staffToken && !isStaffLoggedIn && !url.startsWith('/staff/login') && !url.startsWith('/api/')) {
+  if (staffToken && !isStaffLoggedIn && !url.startsWith('/staff/login') && !url.startsWith('/saas/login') && !url.startsWith('/client/login') && !url.startsWith('/api/')) {
     try {
       const staffProfileResponse = await fetch(BACKEND_URL_SERVER + '/api/v1/staff/auth/me', {
         headers: { 'Authorization': 'Bearer ' + staffToken }
@@ -18677,7 +18677,11 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     res.writeHead(302, { 'Location': `/create-member?signup=true${forwardParams}&v=${BUILD_ID}` });
     res.end();
     return;
-  } else if (url.startsWith('/staff/login')) {
+  } else if (url.startsWith('/saas/login') || url.startsWith('/saas_login') || url.startsWith('/saas-login') || url.startsWith('/client/login') || url.startsWith('/client_login') || url.startsWith('/tenant/login')) {
+    // SaaS Client Portal Login - Zynova Multi-Tenant Cloud
+    serveCachedHtml(res, 'saas_login.html', BUILD_ID);
+    return;
+  } else if (url.startsWith('/staff/login') || url.startsWith('/staff_login') || url.startsWith('/staff-login')) {
     // Staff Portal Login - No MNR user auth required
     // DC Protocol (Dec 23, 2025): Use cached HTML to prevent EIO errors
     serveCachedHtml(res, 'staff_login.html', BUILD_ID);
@@ -18992,14 +18996,9 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     });
     return;
   } else if (url.startsWith('/staff/my-tenant')) {
-    // DC_SAAS_CONSOLE_001: VGK SaaS → All Tenants (read-only)
-    const filePath = path.join(__dirname, 'staff_my_tenant.html');
-    readFileWithRetry(filePath, (err, data) => {
-      if (err) { res.writeHead(404); res.end('Page not found'); return; }
-      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
-      res.writeHead(200, { 'Content-Type': 'text/html' });
-      res.end(html);
-    });
+    // Redirect legacy single-tenant URL to Master Companies / Tenant Onboarding
+    res.writeHead(302, { 'Location': '/staff/accounts/companies' });
+    res.end();
     return;
   } else if (url.startsWith('/staff/b2b-clients')) {
     // DC_SAAS_CONSOLE_001: VGK SaaS → Platform Clients (B2B)

@@ -680,17 +680,37 @@ window.StaffSidebar = window.StaffSidebar || {
         console.log('[DC-SIDEBAR] Notifications toggle - to be implemented');
     },
 
-    // Logout function
+    // Logout function (context-aware: returns SaaS tenants to /saas/login, internal staff to /staff/login)
     logout: function() {
-        localStorage.removeItem('staff_token');
-        localStorage.removeItem('staff_user');
-        localStorage.removeItem('staff_sidebar_collapsed');
+        const rawUser = localStorage.getItem('staff_user');
+        let isSaaSTenant = false;
+        if (rawUser) {
+            try {
+                const u = JSON.parse(rawUser);
+                if (u.staff_type === 'TENANT_ADMIN' || u.staff_type === 'SAAS_CLIENT' || (u.base_company_id && u.base_company_id !== 4 && u.base_company_id !== 88 && u.base_company_id !== 1)) {
+                    isSaaSTenant = true;
+                }
+            } catch (_) {}
+        }
+        
+        // Clear all storage
         try {
-            Object.keys(localStorage).forEach(k => {
-                if (k.startsWith('staff_sidebar_state_')) localStorage.removeItem(k);
-            });
+            localStorage.clear();
+            sessionStorage.clear();
         } catch (_) {}
-        window.location.href = '/staff/login';
+
+        // Clear all session cookies
+        ['staff_token', 'session_token', 'session', 'vgk_token', 'access_token', 'token'].forEach(name => {
+            document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/staff;';
+            document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/saas;';
+        });
+
+        if (isSaaSTenant) {
+            window.location.href = '/saas/login?logout=true';
+        } else {
+            window.location.href = '/staff/login?logout=true';
+        }
     },
 
     // Inject unified header into page
@@ -778,10 +798,20 @@ window.StaffSidebar = window.StaffSidebar || {
             }
         }
         
+        const isSaaSTenant = (this.userData?.staff_type === 'TENANT_ADMIN' || this.userData?.staff_type === 'SAAS_CLIENT' || (this.userData?.base_company_id && this.userData?.base_company_id !== 4 && this.userData?.base_company_id !== 88 && this.userData?.base_company_id !== 1));
+        
         for (const section of menuMaster) {
             const sCode = (section.section_code || '').toUpperCase();
             const sTitle = (section.section_label || section.title || section.id || '').toUpperCase();
             const empCode = (this.userData?.emp_code || '').toUpperCase();
+            
+            // For SaaS tenants, completely exclude internal platform and group company sections
+            if (isSaaSTenant) {
+                const saasRestricted = ['MNR', 'MYNT', 'VGK', 'META', 'CONFIG', 'NOT IN USE', 'NOT_IN_USE', 'PARTNER', 'INTERNAL'];
+                if (saasRestricted.some(k => sCode.includes(k) || sTitle.includes(k))) {
+                    continue;
+                }
+            }
             
             // Global Directive: Remove META ADS, ACCOUNTS, CONFIGURATION, VGK SAAS, INTERNAL for all staff EXCEPT MR10001 and MR10025
             if (empCode !== 'MR10001' && empCode !== 'MR10025') {
@@ -1660,15 +1690,33 @@ window.StaffSidebar = window.StaffSidebar || {
 
     // Logout function
     logout: function() {
-        localStorage.removeItem('staff_token');
-        localStorage.removeItem('staff_user');
-        // Clear all sidebar state keys for all roles
-        Object.keys(localStorage).forEach(key => {
-            if (key.startsWith('staff_sidebar_state_')) {
-                localStorage.removeItem(key);
-            }
+        const rawUser = localStorage.getItem('staff_user');
+        let isSaaSTenant = false;
+        if (rawUser) {
+            try {
+                const u = JSON.parse(rawUser);
+                if (u.staff_type === 'TENANT_ADMIN' || u.staff_type === 'SAAS_CLIENT' || (u.base_company_id && u.base_company_id !== 4 && u.base_company_id !== 88 && u.base_company_id !== 1)) {
+                    isSaaSTenant = true;
+                }
+            } catch (_) {}
+        }
+        
+        try {
+            localStorage.clear();
+            sessionStorage.clear();
+        } catch (_) {}
+
+        ['staff_token', 'session_token', 'session', 'vgk_token', 'access_token', 'token'].forEach(name => {
+            document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/staff;';
+            document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/saas;';
         });
-        window.location.href = '/staff/login';
+
+        if (isSaaSTenant) {
+            window.location.href = '/saas/login?logout=true';
+        } else {
+            window.location.href = '/staff/login?logout=true';
+        }
     },
 
     // Escape HTML to prevent XSS

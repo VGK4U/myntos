@@ -292,6 +292,7 @@ class AssociatedCompanyService:
             upi_id=data.upi_id,
             is_book_keeper=data.is_book_keeper,
             is_marketplace_endpoint=getattr(data, 'is_marketplace_endpoint', False) or False,
+            licensed_modules=getattr(data, 'licensed_modules', None),
             is_active=data.is_active,
             created_by_id=employee.id
         )
@@ -320,6 +321,43 @@ class AssociatedCompanyService:
         except Exception as _seed_err:
             logging.warning(f"[DC_SFMS_SEED_002] Auto-seed for new company {company.id} failed (non-fatal): {_seed_err}")
         
+        # DC_SAAS_TENANT_ADMIN_001 (Sep 2026): Automatically provision a dedicated Tenant Master Admin
+        # Every SaaS client / tenant MUST have its own independent admin account and NOT reuse MR10001
+        try:
+            from datetime import date
+            from app.models.staff import StaffRole
+            from app.core.security import SecurityManager
+            
+            tenant_admin_role = db.query(StaffRole).filter(StaffRole.role_code == 'tenant_admin').first()
+            role_id = tenant_admin_role.id if tenant_admin_role else 17
+            
+            admin_emp_code = f"{company.company_code}_ADMIN"
+            existing_admin = db.query(StaffEmployee).filter_by(emp_code=admin_emp_code).first()
+            if existing_admin:
+                admin_emp_code = f"{company.company_code}_ADM_{company.id}"
+            
+            default_pwd = admin_emp_code
+            tenant_admin = StaffEmployee(
+                emp_code=admin_emp_code,
+                full_name=f"{company.company_name} Admin",
+                email=f"admin@{company.company_code.lower()}.zynova.cloud",
+                phone=getattr(data, 'phone', None) or None,
+                designation="Tenant Master Administrator",
+                role_id=role_id,
+                base_company_id=company.id,
+                data_companies=[{"company_id": company.id}],
+                staff_type="TENANT_ADMIN",
+                status="active",
+                date_of_joining=date.today(),
+                password_hash=SecurityManager.get_password_hash(default_pwd),
+                created_by=employee.id
+            )
+            db.add(tenant_admin)
+            db.commit()
+            logging.info(f"[DC_SAAS_PROVISION] Created Tenant Master Admin: {admin_emp_code} (ID={tenant_admin.id}) for {company.company_name}")
+        except Exception as _ta_err:
+            logging.warning(f"[DC_SAAS_PROVISION] Failed to auto-provision Tenant Admin for company {company.id}: {_ta_err}")
+
         return company
     
     @staticmethod

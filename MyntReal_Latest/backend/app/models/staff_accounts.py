@@ -51,6 +51,7 @@ import pytz
 
 from app.models.base import Base, BaseModel, get_indian_time
 from app.models.expense_category import ExpenseMainCategory, ExpenseSubCategory
+from app.models.platform_b2b import PlatformClient
 
 
 class AssociatedCompany(BaseModel):
@@ -98,6 +99,7 @@ class AssociatedCompany(BaseModel):
     
     is_book_keeper = Column(Boolean, default=False, nullable=False)
     is_marketplace_endpoint = Column(Boolean, default=False, nullable=False, server_default=text('false'))   # DC_STOCK_002: Lucky Enterprises etc — sells to marketplace customers
+    licensed_modules = Column(JSONB, nullable=True)  # List of licensed module keys for SaaS tenants
     is_active = Column(Boolean, default=True, nullable=False)
 
     # Task #39 — B2B SaaS Layer Phase 1 (Shadow Mode): nullable link to tenant.
@@ -113,7 +115,7 @@ class AssociatedCompany(BaseModel):
     
     __table_args__ = (
         CheckConstraint(
-            "company_type IN ('PARENT', 'SUBSIDIARY', 'PARTNER', 'VENDOR')",
+            "company_type IN ('PARENT', 'SUBSIDIARY', 'PARTNER', 'VENDOR', 'SAAS_CLIENT')",
             name='associated_company_type_check'
         ),
         CheckConstraint(

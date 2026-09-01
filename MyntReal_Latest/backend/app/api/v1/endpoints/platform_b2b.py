@@ -1661,6 +1661,12 @@ class TenantSignupIn(BaseModel):
     contact_name:     str = Field(..., min_length=1, max_length=120)
     contact_email:    str = Field(..., min_length=4, max_length=180)
     contact_phone:    Optional[str] = None
+    pan_number:       Optional[str] = None
+    cin_number:       Optional[str] = None
+    pincode:          Optional[str] = None
+    city:             Optional[str] = None
+    state:            Optional[str] = None
+    company_type:     str = "SAAS_CLIENT"
     billing_currency: str = "INR"
     billing_cycle:    str = "monthly"  # monthly or annual
     selected_modules: Optional[List[str]] = Field(default_factory=list)
@@ -1909,7 +1915,10 @@ def tenant_signup(payload: TenantSignupIn, db: Session = Depends(get_db)):
         contact_name=payload.contact_name,
         contact_email=payload.contact_email,
         contact_phone=payload.contact_phone,
+        pan_number=payload.pan_number,
         billing_currency=payload.billing_currency.upper(),
+        billing_address=f"{payload.city or ''}, {payload.state or ''} - {payload.pincode or ''}".strip(" ,-") or None,
+        state_for_gst=payload.state,
         status="pending",
         is_internal=False,
         notes=payload.notes,

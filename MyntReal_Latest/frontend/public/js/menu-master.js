@@ -591,7 +591,6 @@ const MENU_MASTER = [
     section_label: "MYNTOS SAAS",
     order: 99,
     items: [
-      { menu_code: "VGK_SAAS_ALL_TENANTS", label: "All Tenants", route: "/staff/my-tenant", icon: "fas fa-layer-group", audience: ["VGK4U"] },
       { menu_code: "VGK_SAAS_TENANT_ONBOARDING", label: "Tenant Onboarding", route: "/staff/accounts/companies", icon: "fas fa-building-circle-arrow-right", audience: ["VGK4U"] },
       { menu_code: "VGK_SAAS_PLATFORM_CLIENTS", label: "Platform Clients (B2B)", route: "/staff/b2b-clients", icon: "fas fa-handshake", audience: ["VGK4U"] },
       { menu_code: "VGK_SAAS_PUBLIC_SIGNUP_PREVIEW", label: "Public Signup Preview", route: "/b2b-signup", icon: "fas fa-eye", audience: ["VGK4U"] },

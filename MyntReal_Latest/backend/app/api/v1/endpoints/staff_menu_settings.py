@@ -4032,6 +4032,57 @@ async def get_my_menus(
         if before != len(all_menus):
             logger.info(f"[DC-INTERNAL] Filtered internal section for role={user_role_code}, emp={current_user.emp_code}")
 
+    # DC_SAAS_TENANT_ENTITLEMENT_001 (Sep 2026): SaaS Tenant Module Entitlement Filtering
+    # For SaaS client tenants, filter all menus and sections strictly against their company's licensed_modules
+    is_saas_tenant = (
+        getattr(current_user, 'staff_type', '') in ['TENANT_ADMIN', 'SAAS_CLIENT', 'CLIENT_USER'] or
+        (current_user.base_company_id and current_user.base_company_id not in [4, 88, 1])
+    )
+    if is_saas_tenant and current_user.base_company_id:
+        from app.models.staff_accounts import AssociatedCompany
+        tenant_company = db.query(AssociatedCompany).filter_by(id=current_user.base_company_id).first()
+        if tenant_company and tenant_company.company_type == 'SAAS_CLIENT':
+            raw_mods = tenant_company.licensed_modules or []
+            licensed_mods = [str(m).upper() for m in raw_mods]
+            
+            # Canonical mapping from licensed module code to allowable section identifiers
+            ALLOWED_CORE_SECTIONS = {'PROGRESS', 'STAFF DASHBOARD', 'STAFF-DASHBOARD', 'TASK-MANAGEMENT', 'TASK MANAGEMENT', 'TIMESHEET', 'KRA-MANAGEMENT', 'KRA MANAGEMENT'}
+            
+            MODULE_SECTION_MAP = {
+                'CRM_LEADS': {'CRM', 'CRM & LEADS', 'LEAD MANAGEMENT', 'DIALER', 'WHATSAPP'},
+                'CRM': {'CRM', 'CRM & LEADS', 'LEAD MANAGEMENT', 'DIALER', 'WHATSAPP'},
+                'SERVICE_TICKETS': {'SERVICE TICKETS', 'SERVICE-TICKETS', 'SERVICE DESK'},
+                'SERVICE': {'SERVICE TICKETS', 'SERVICE-TICKETS', 'SERVICE DESK'},
+                'SOLAR_EV': {'SOLAR & EV', 'SOLAR', 'EV', 'EV MOBILITY', 'ZYNOVA', 'STAFF_MNR_USER_ZYNOVA'},
+                'SOLAR': {'SOLAR & EV', 'SOLAR', 'EV', 'EV MOBILITY', 'ZYNOVA'},
+                'ACCOUNTS_GST': {'ACCOUNTS', 'SFMS', 'FINANCIAL ACCOUNTING', 'LEDGERS'},
+                'ACCOUNTS': {'ACCOUNTS', 'SFMS', 'FINANCIAL ACCOUNTING', 'LEDGERS'},
+                'INVENTORY': {'INVENTORY', 'SFMS_INVENTORY', 'STOCK', 'WAREHOUSE'},
+                'STAFF_HRMS': {'HR', 'ATTENDANCE', 'LOCATION-TRACKING', 'LOCATION TRACKING', 'JOURNEY TRACKING', 'PAYROLL'},
+                'STAFF_HR': {'HR', 'ATTENDANCE', 'LOCATION-TRACKING', 'LOCATION TRACKING', 'JOURNEY TRACKING', 'PAYROLL'},
+            }
+            
+            allowed_sections = set(ALLOWED_CORE_SECTIONS)
+            for m in licensed_mods:
+                if m in MODULE_SECTION_MAP:
+                    allowed_sections.update(MODULE_SECTION_MAP[m])
+            
+            # Filter all_menus
+            filtered_tenant_menus = []
+            for menu in all_menus:
+                sec = (menu.sidebar_section or '').upper()
+                sec_title = (menu.sidebar_section_title or '').upper()
+                cat = (menu.menu_category or '').upper()
+                
+                # Check if matches any allowed section
+                if any(s in sec or s in sec_title or s in cat for s in allowed_sections):
+                    # Never allow internal platform keywords for tenants
+                    if not any(k in sec or k in sec_title or k in cat for k in ['MNR', 'VGK', 'MYNT', 'META', 'CONFIG', 'NOT IN USE', 'NOT_IN_USE', 'PARTNER']):
+                        filtered_tenant_menus.append(menu)
+            
+            all_menus = filtered_tenant_menus
+            logger.info(f"[DC-SAAS-ENTITLEMENT] Filtered menus for tenant company {tenant_company.id} ({tenant_company.company_code}) to {len(all_menus)} items matching {licensed_mods}")
+
     categorized = {}
     menu_list = []
     all_route_paths = set()

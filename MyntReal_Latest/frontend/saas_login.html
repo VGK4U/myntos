@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zynova Enterprise Cloud — SaaS Client Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --brand-primary: #3b82f6;
+            --brand-primary-hover: #2563eb;
+            --brand-secondary: #06b6d4;
+            --brand-gradient: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%);
+            --accent-purple: #8b5cf6;
+            --bg-dark: #090d16;
+            --bg-card: rgba(15, 23, 42, 0.75);
+            --border-glass: rgba(255, 255, 255, 0.1);
+            --border-glow: rgba(59, 130, 246, 0.35);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow-x: hidden;
+            padding: 24px;
+        }
+
+        /* Ambient Glow & Background Mesh */
+        .bg-glow-1 {
+            position: fixed;
+            top: -150px;
+            left: -150px;
+            width: 550px;
+            height: 550px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.22) 0%, rgba(37, 99, 235, 0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-glow-2 {
+            position: fixed;
+            bottom: -150px;
+            right: -150px;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.18) 0%, rgba(6, 182, 212, 0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Container Layout */
+        .login-wrapper {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 460px;
+            animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Brand Header */
+        .brand-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .brand-logo-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 58px;
+            height: 58px;
+            background: var(--brand-gradient);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.45);
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .brand-logo-badge i {
+            font-size: 26px;
+            color: #ffffff;
+        }
+
+        .brand-title {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.6px;
+            background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .brand-subtitle {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* Glassmorphic Login Card */
+        .login-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            padding: 32px 28px;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+            position: relative;
+        }
+
+        /* Mode Tabs */
+        .tab-group {
+            display: flex;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 24px;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 9px 12px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+        }
+
+        .tab-btn.active {
+            background: rgba(37, 99, 235, 0.25);
+            color: #60a5fa;
+            border: 1px solid rgba(96, 165, 250, 0.35);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 7px;
+            letter-spacing: 0.2px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            color: var(--text-dim);
+            font-size: 15px;
+            pointer-events: none;
+            transition: color 0.2s;
+        }
+
+        .form-control {
+            width: 100%;
+            height: 48px;
+            padding: 0 42px 0 42px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: var(--text-main);
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .form-control::placeholder {
+            color: var(--text-dim);
+            font-size: 13.5px;
+        }
+
+        .form-control:focus {
+            border-color: var(--brand-primary);
+            background: rgba(15, 23, 42, 0.9);
+            box-shadow: 0 0 0 3.5px rgba(59, 130, 246, 0.18);
+        }
+
+        .form-control:focus + .input-icon,
+        .input-wrapper:focus-within .input-icon {
+            color: #60a5fa;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 14px;
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            font-size: 14px;
+            cursor: pointer;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+
+        .toggle-password:hover {
+            color: var(--text-main);
+        }
+
+        /* Helper Text & Badges */
+        .input-hint {
+            font-size: 11.5px;
+            color: var(--text-dim);
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Options Row */
+        .options-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 22px;
+            font-size: 13px;
+        }
+
+        .remember-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+            color: var(--text-muted);
+        }
+
+        .remember-wrap input[type="checkbox"] {
+            accent-color: var(--brand-primary);
+            width: 15px;
+            height: 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .forgot-link {
+            color: #60a5fa;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .forgot-link:hover {
+            color: #93c5fd;
+            text-decoration: underline;
+        }
+
+        /* Submit Button */
+        .btn-submit {
+            width: 100%;
+            height: 48px;
+            background: var(--brand-gradient);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: #ffffff;
+            font-size: 14.5px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+            filter: brightness(1.05);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Alert Feedback */
+        .alert-box {
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 18px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+        }
+
+        /* Footer Badges */
+        .login-footer {
+            text-align: center;
+            margin-top: 24px;
+        }
+
+        .security-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11.5px;
+            color: var(--text-dim);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .security-badge i {
+            color: var(--success);
+        }
+
+        /* Help Modal */
+        .help-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            padding: 20px;
+        }
+
+        .help-modal {
+            background: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            max-width: 420px;
+            width: 100%;
+            padding: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+
+        .help-modal h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .help-modal p {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+
+        .btn-close-modal {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-close-modal:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-glow-1"></div>
+    <div class="bg-glow-2"></div>
+    <div class="bg-grid-overlay"></div>
+
+    <div class="login-wrapper">
+        <!-- Brand Header -->
+        <div class="brand-header">
+            <div class="brand-logo-badge">
+                <i class="fas fa-cubes"></i>
+            </div>
+            <h1 class="brand-title">Zynova Cloud</h1>
+            <p class="brand-subtitle">Enterprise Multi-Tenant SaaS Workspace</p>
+        </div>
+
+        <!-- Login Card -->
+        <div class="login-card">
+            <!-- Mode Switcher Tabs -->
+            <div class="tab-group">
+                <button type="button" class="tab-btn active" id="tabCompany" onclick="switchTab('COMPANY')">
+                    <i class="fas fa-building"></i> Company ID
+                </button>
+                <button type="button" class="tab-btn" id="tabUser" onclick="switchTab('USER')">
+                    <i class="fas fa-mobile-alt"></i> Mobile / User
+                </button>
+            </div>
+
+            <!-- Feedback Alert -->
+            <div id="alertBox" class="alert-box">
+                <i id="alertIcon" class="fas fa-exclamation-circle"></i>
+                <span id="alertMsg">Invalid credentials</span>
+            </div>
+
+            <form id="saasLoginForm" onsubmit="handleSaaSLogin(event)">
+                <!-- Identifier Input (Company ID / Mobile / Email) -->
+                <div class="form-group">
+                    <label class="form-label" id="identifierLabel" for="identifierInput">
+                        <span>Company Master ID</span>
+                        <span style="font-size:11px;color:#60a5fa;font-weight:500;" id="identifierBadge">ZMP1808XXXX</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-id-card input-icon" id="identifierIcon"></i>
+                        <input 
+                            type="text" 
+                            id="identifierInput" 
+                            class="form-control" 
+                            placeholder="e.g. ZMP18080002" 
+                            autocomplete="username" 
+                            required 
+                            autofocus
+                        >
+                    </div>
+                    <div class="input-hint" id="identifierHint">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Enter the 11-digit Company ID assigned to your tenant workspace</span>
+                    </div>
+                </div>
+
+                <!-- Password Input -->
+                <div class="form-group">
+                    <label class="form-label" for="passwordInput">
+                        <span>Password</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input 
+                            type="password" 
+                            id="passwordInput" 
+                            class="form-control" 
+                            placeholder="Enter your security password" 
+                            autocomplete="current-password" 
+                            required
+                        >
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility()" title="Toggle password visibility">
+                            <i class="fas fa-eye" id="pwdEyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Options Row -->
+                <div class="options-row">
+                    <label class="remember-wrap">
+                        <input type="checkbox" id="rememberMe" checked>
+                        <span>Keep me signed in</span>
+                    </label>
+                    <a href="javascript:void(0)" class="forgot-link" onclick="openHelpModal()">Trouble signing in?</a>
+                </div>
+
+                <!-- Action Button -->
+                <button type="submit" class="btn-submit" id="btnSubmit">
+                    <i class="fas fa-arrow-right-to-bracket"></i>
+                    <span id="btnSubmitText">Sign In to Workspace</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Security Footer -->
+        <div class="login-footer">
+            <div class="security-badge">
+                <i class="fas fa-shield-halved"></i>
+                <span>TLS 1.3 Encrypted • Isolated Multi-Tenant Cloud</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help / Recovery Modal -->
+    <div class="help-modal-overlay" id="helpModal">
+        <div class="help-modal">
+            <h3><i class="fas fa-life-ring" style="color:#38bdf8;"></i> Tenant Access Help</h3>
+            <p>
+                Each tenant organization is provisioned with an official <strong>Company Master ID</strong> (format: <code>ZMP1808XXXX</code>) and registered team mobile logins.
+            </p>
+            <p>
+                If you have forgotten your password or require a workspace credential reset, please contact your Organization Administrator or Zynova Enterprise Support.
+            </p>
+            <button type="button" class="btn-close-modal" onclick="closeHelpModal()">Got it, back to login</button>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'COMPANY'; // 'COMPANY' | 'USER'
+
+        function switchTab(mode) {
+            currentMode = mode;
+            const tabCompany = document.getElementById('tabCompany');
+            const tabUser = document.getElementById('tabUser');
+            const identLabel = document.getElementById('identifierLabel');
+            const identBadge = document.getElementById('identifierBadge');
+            const identInput = document.getElementById('identifierInput');
+            const identIcon = document.getElementById('identifierIcon');
+            const identHint = document.getElementById('identifierHint');
+
+            hideAlert();
+
+            if (mode === 'COMPANY') {
+                tabCompany.classList.add('active');
+                tabUser.classList.remove('active');
+                identLabel.querySelector('span:first-child').textContent = 'Company Master ID';
+                identBadge.textContent = 'ZMP1808XXXX';
+                identBadge.style.display = 'inline';
+                identInput.placeholder = 'e.g. ZMP18080002';
+                identIcon.className = 'fas fa-id-card input-icon';
+                identHint.innerHTML = '<i class="fas fa-info-circle"></i> <span>Enter the 11-digit Company ID assigned to your tenant workspace</span>';
+            } else {
+                tabUser.classList.add('active');
+                tabCompany.classList.remove('active');
+                identLabel.querySelector('span:first-child').textContent = 'Mobile Number / User ID';
+                identBadge.style.display = 'none';
+                identInput.placeholder = 'e.g. 9876543210 or User ID';
+                identIcon.className = 'fas fa-mobile-alt input-icon';
+                identHint.innerHTML = '<i class="fas fa-info-circle"></i> <span>Enter your 10-digit registered mobile number or employee ID</span>';
+            }
+            identInput.focus();
+        }
+
+        function togglePasswordVisibility() {
+            const pwdInput = document.getElementById('passwordInput');
+            const eyeIcon = document.getElementById('pwdEyeIcon');
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                eyeIcon.className = 'fas fa-eye-slash';
+            } else {
+                pwdInput.type = 'password';
+                eyeIcon.className = 'fas fa-eye';
+            }
+        }
+
+        function showAlert(msg, isSuccess = false) {
+            const box = document.getElementById('alertBox');
+            const icon = document.getElementById('alertIcon');
+            const text = document.getElementById('alertMsg');
+            
+            box.className = 'alert-box ' + (isSuccess ? 'alert-success' : 'alert-error');
+            icon.className = isSuccess ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+            text.textContent = msg;
+            box.style.display = 'flex';
+        }
+
+        function hideAlert() {
+            document.getElementById('alertBox').style.display = 'none';
+        }
+
+        function openHelpModal() {
+            document.getElementById('helpModal').style.display = 'flex';
+        }
+
+        function closeHelpModal() {
+            document.getElementById('helpModal').style.display = 'none';
+        }
+
+        function getRedirectTarget() {
+            const params = new URLSearchParams(window.location.search);
+            const redirect = params.get('redirect');
+            if (redirect && redirect.startsWith('/') && !redirect.includes('//')) {
+                return decodeURIComponent(redirect);
+            }
+            return '/staff/progress';
+        }
+
+        async function handleSaaSLogin(e) {
+            e.preventDefault();
+            hideAlert();
+
+            const identifier = document.getElementById('identifierInput').value.trim();
+            const password = document.getElementById('passwordInput').value;
+            const btn = document.getElementById('btnSubmit');
+            const btnText = document.getElementById('btnSubmitText');
+
+            if (!identifier) {
+                showAlert(currentMode === 'COMPANY' ? 'Please enter your Company ID' : 'Please enter your Mobile Number / User ID');
+                return;
+            }
+
+            if (!password) {
+                showAlert('Please enter your password');
+                return;
+            }
+
+            btn.disabled = true;
+            btnText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
+
+            try {
+                const response = await fetch('/api/v1/staff/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        employee_id: identifier,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.access_token) {
+                    // Store tokens and session
+                    localStorage.setItem('staff_token', data.access_token);
+                    document.cookie = `staff_token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
+                    document.cookie = `session_token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
+                    document.cookie = `session=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
+
+                    if (data.employee) {
+                        localStorage.setItem('staff_user', JSON.stringify(data.employee));
+                    }
+
+                    showAlert('Authentication successful! Launching workspace...', true);
+
+                    setTimeout(() => {
+                        window.location.href = getRedirectTarget();
+                    }, 600);
+                } else {
+                    const errorDetail = data.detail || data.message || 'Invalid credentials or company account suspended';
+                    showAlert(errorDetail);
+                    btn.disabled = false;
+                    btnText.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Sign In to Workspace';
+                }
+            } catch (err) {
+                showAlert('Network communication error. Please try again.');
+                btn.disabled = false;
+                btnText.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Sign In to Workspace';
+            }
+        }
+
+        // Auto-detect existing valid session
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (window.location.search.includes('logout=true')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                return;
+            }
+            const token = localStorage.getItem('staff_token');
+            if (token) {
+                try {
+                    const res = await fetch('/api/v1/staff/auth/me', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        window.location.href = getRedirectTarget();
+                    }
+                } catch (_) {}
+            }
+        });
+    </script>
+</body>
+</html>

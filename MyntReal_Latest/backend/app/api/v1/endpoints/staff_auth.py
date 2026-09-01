@@ -17,6 +17,7 @@ from app.models.staff import (
     StaffEmployee, StaffRole, StaffDepartment, StaffSetting, 
     StaffAuditLog, log_staff_audit, check_nda_acceptance, check_all_pending_agreements
 )
+from app.models.staff_accounts import AssociatedCompany
 
 router = APIRouter(prefix="/staff", tags=["Staff Auth"])
 
@@ -299,23 +300,61 @@ def staff_login(
     - 2FA support
     - Default password = Employee ID (requires change on first login)
     """
-    import time
+    import time, re
     t0 = time.time()
-    # Normalize employee ID (uppercase)
-    emp_id = login_data.employee_id.upper().strip()
+    # Normalize employee ID / login identifier
+    raw_ident = (login_data.employee_id or "").strip()
+    emp_id = raw_ident.upper()
+    employee = None
     
-    # Search by employee code with joined role for immediate access
     t_lookup_start = time.time()
-    employee = db.query(StaffEmployee).options(
-        joinedload(StaffEmployee.role)
-    ).filter(
-        StaffEmployee.emp_code == emp_id
-    ).first()
+    
+    # 1. Company ID Login (e.g., ZMP18080001, ZMP18080002... ZMP18080088)
+    company_id_match = re.match(r"^ZMP1808(\d{4})$", emp_id)
+    if company_id_match:
+        target_company_id = int(company_id_match.group(1))
+        target_comp = db.query(AssociatedCompany).filter_by(id=target_company_id).first()
+        
+        # Parent / Holding / VGK4U is always administered by Supreme System Administrator (MR10001)
+        if target_company_id == 88 or (target_comp and (target_comp.company_type == 'PARENT' or target_comp.company_code in ['VGK4U', 'VGK', 'HQ'])):
+            employee = db.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter_by(id=1, is_deleted=False).first()
+        else:
+            # Look for primary admin belonging directly to this company (base_company_id)
+            base_emps = db.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter(
+                StaffEmployee.is_deleted == False,
+                StaffEmployee.base_company_id == target_company_id,
+                StaffEmployee.status == 'active'
+            ).order_by(StaffEmployee.id).all()
+            
+            ta_emps = [e for e in base_emps if (e.role_id == 17 or getattr(e, 'staff_type', '') in ['TENANT_ADMIN', 'SAAS_CLIENT'] or any(k in ((getattr(e, 'designation', '') or '') + (e.role.role_name if e.role else '')).upper() for k in ['ADMIN', 'MANAGER', 'LEAD', 'DIRECTOR', 'HEAD']))]
+            
+            if ta_emps:
+                employee = ta_emps[0]
+            elif base_emps:
+                employee = base_emps[0]
+
+    # 2. Mobile Number Login (e.g. 10 digits or with country code +91)
+    if not employee:
+        clean_phone = re.sub(r"\D", "", raw_ident)
+        if len(clean_phone) >= 10:
+            last10 = clean_phone[-10:]
+            employee = db.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter(
+                StaffEmployee.is_deleted == False,
+                StaffEmployee.phone.like(f"%{last10}")
+            ).first()
+
+    # 3. Employee Code / Email Login
+    if not employee:
+        employee = db.query(StaffEmployee).options(
+            joinedload(StaffEmployee.role)
+        ).filter(
+            (StaffEmployee.emp_code == emp_id) | (StaffEmployee.email.ilike(raw_ident))
+        ).first()
     t_lookup_ms = (time.time() - t_lookup_start) * 1000
     
     if not employee:
         log_staff_audit(db, None, "LOGIN_FAILED", "auth", 
-                       new_data={"employee_id": emp_id, "reason": "user_not_found"},
+                       new_data={"employee_id": raw_ident, "reason": "user_not_found"},
                        ip_address=request.client.host if request.client else None)
         try:
             db.commit()
@@ -323,7 +362,7 @@ def staff_login(
             db.rollback()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Employee ID or password"
+            detail="Invalid Company ID, Mobile Number, or password"
         )
     
     # DC Protocol: Block login for deactivated/resigned employees (Dec 2025)
@@ -389,7 +428,7 @@ def staff_login(
             employee.locked_until = datetime.utcnow() + timedelta(minutes=lockout_minutes)
             log_staff_audit(db, employee.id, "ACCOUNT_LOCKED", "auth",
                            new_data={"attempts": employee.failed_login_attempts},
-                           ip_address=request.client.host if request.client else None)
+                           ip_address=request.client.host if request and request.client else None)
         
         try:
             db.commit()

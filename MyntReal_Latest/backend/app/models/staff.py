@@ -1423,7 +1423,9 @@ def check_all_pending_agreements(db, employee_id: int, staff_type: str = None):
         employee = db.query(StaffEmployee).filter(StaffEmployee.id == employee_id).first()
         staff_type = (employee.staff_type or 'MN_STAFF') if employee else 'MN_STAFF'
     
-    # Check NDA first, then Employment Agreement (sequential order)
+    # External SaaS client tenants are independent organizations and not subject to internal staff agreements
+    if (staff_type or '').upper() in ['TENANT_ADMIN', 'SAAS_CLIENT', 'CLIENT_USER']:
+        return (False, None, None)
     for doc_type in ['NDA', 'EMPLOYMENT']:
         needs, version = check_nda_acceptance(db, employee_id, staff_type, document_type=doc_type)
         if needs:

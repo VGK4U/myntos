@@ -14,12 +14,18 @@
     }
 
     function getToken() {
-        // Sole staff authority: localStorage.staff_token
-        let tok = localStorage.getItem(STORAGE_KEYS.TOKEN);
+        // Multi-storage JWT token lookup with fallback hierarchy
+        let tok = localStorage.getItem(STORAGE_KEYS.TOKEN) ||
+                  localStorage.getItem('access_token') ||
+                  localStorage.getItem('token') ||
+                  sessionStorage.getItem(STORAGE_KEYS.TOKEN) ||
+                  sessionStorage.getItem('access_token') ||
+                  sessionStorage.getItem('token');
         
-        // Defensive cookie fallback for staff_token ONLY if localStorage is transiently empty
+        // Defensive cookie fallback for staff_token / access_token / token if storage is transiently empty
         if (!tok || tok === 'null' || tok === 'undefined' || tok === '[object Object]' || tok.trim() === '') {
-            const cookieMatch = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('staff_token='));
+            const cookies = document.cookie.split(';').map(c => c.trim());
+            const cookieMatch = cookies.find(c => c.startsWith('staff_token=') || c.startsWith('access_token=') || c.startsWith('token='));
             if (cookieMatch) {
                 tok = cookieMatch.split('=')[1];
                 if (tok) {
@@ -66,9 +72,23 @@
     }
     
     function redirectToLogin() {
+        const rawUser = localStorage.getItem('staff_user');
+        let isSaaSTenant = false;
+        if (rawUser) {
+            try {
+                const u = JSON.parse(rawUser);
+                if (u.staff_type === 'TENANT_ADMIN' || u.staff_type === 'SAAS_CLIENT' || (u.base_company_id && u.base_company_id !== 4 && u.base_company_id !== 88 && u.base_company_id !== 1)) {
+                    isSaaSTenant = true;
+                }
+            } catch (_) {}
+        }
         const currentPath = window.location.pathname + window.location.search;
         console.log('[DC-FETCH] Redirecting to login with redirect:', currentPath);
-        window.location.href = '/staff/login?redirect=' + encodeURIComponent(currentPath);
+        if (isSaaSTenant) {
+            window.location.href = '/saas/login?redirect=' + encodeURIComponent(currentPath);
+        } else {
+            window.location.href = '/staff/login?redirect=' + encodeURIComponent(currentPath);
+        }
     }
     
     function handleAuthFailure(status, errorDetail) {
@@ -222,6 +242,16 @@
             // WVV Protocol: Preserve structured error data for validation errors
             // If detail is an object (validation error), throw it directly so frontend can access type, message, resolution_url, etc.
             const detail = errorData.detail;
+            if (response.status === 403 && (errorData.module_unsubscribed || (typeof detail === 'string' && detail.includes('not activated')))) {
+                // Dispatch friendly module spotlight event
+                window.dispatchEvent(new CustomEvent('mnr:module_unsubscribed', {
+                    detail: {
+                        module_code: errorData.module_code || 'PREMIUM_MODULE',
+                        module_name: errorData.module_name || 'Advanced Module',
+                        message: errorData.message || detail
+                    }
+                }));
+            }
             if (detail && typeof detail === 'object' && detail.type) {
                 // Structured validation error - throw the object itself
                 const error = new Error(detail.message || 'Validation error');

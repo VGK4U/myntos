@@ -54,6 +54,7 @@ class PlatformClient(BaseModel):
     gstin = Column(String(20), nullable=True)
     state_for_gst = Column(String(80), nullable=True)
     pan_number = Column(String(20), nullable=True)
+    subscribed_modules = Column(JSONB, nullable=True)
 
     created_at = Column(DateTime, default=get_indian_time, nullable=False)
     updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)

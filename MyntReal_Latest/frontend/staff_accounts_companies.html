@@ -3,74 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Companies - SFMS</title>
+    <title>Companies - Executive Snapshot - SFMS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/nda-enforcement.js"></script>
+    <script src="/public/js/menu-master.js"></script>
     <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #eef2ff;
+            --primary-dark: #3730a3;
+            --success: #059669;
+            --success-light: #d1fae5;
+            --danger: #dc2626;
+            --danger-light: #fee2e2;
+            --warning: #d97706;
+            --warning-light: #fef3c7;
+            --info: #0284c7;
+            --info-light: #e0f2fe;
+            --card-border: #e2e8f0;
+            --bg-page: #f8fafc;
+            --text-main: #0f172a;
+            --text-sub: #64748b;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
-        .content-area { padding: 24px; }
-        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-page); min-height: 100vh; color: var(--text-main); }
+        
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 76px; }
         .sidebar-expanded .main-content { margin-left: 260px; }
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
-        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
-        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
-        .btn-primary-custom { background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .content-area { padding: 24px 32px; width: 100%; max-width: 100%; }
+        
+        /* Page Header */
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; }
+        .page-header p { font-size: 13.5px; color: var(--text-sub); margin: 3px 0 0 0; }
+        
+        /* KPI Cards */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .kpi-card { background: white; border: 1px solid var(--card-border); border-radius: 12px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); display: flex; align-items: center; gap: 14px; transition: transform 0.2s, box-shadow 0.2s; }
+        .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.05); }
+        .kpi-icon-box { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0; }
+        .kpi-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-sub); margin-bottom: 2px; }
+        .kpi-value { font-size: 22px; font-weight: 800; color: var(--text-main); line-height: 1; }
+        
+        /* Control / Filter Bar */
+        .control-panel { background: white; border: 1px solid var(--card-border); border-radius: 12px; padding: 14px 20px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; }
+        .search-box { position: relative; flex: 1; min-width: 260px; max-width: 360px; }
+        .search-box i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 13px; }
+        .search-input { width: 100%; padding: 8px 12px 8px 34px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13.5px; background: #f8fafc; }
+        .search-input:focus { outline: none; border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12); }
+        
+        .quick-sort-strip { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .quick-sort-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-right: 4px; }
+        .sort-chip { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid #e2e8f0; background: #f8fafc; color: #475569; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 4px; }
+        .sort-chip:hover { background: #eef2ff; color: var(--primary); border-color: #c7d2fe; }
+        .sort-chip.active { background: #e0e7ff; color: #3730a3; border-color: #818cf8; }
+
+        .filter-group { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .filter-select { padding: 7px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; background: white; font-weight: 600; color: #334155; cursor: pointer; }
+        .filter-select:focus { outline: none; border-color: var(--primary); }
+        
+        .view-toggle { display: flex; background: #f1f5f9; border-radius: 8px; padding: 3px; gap: 2px; }
+        .view-btn { border: none; background: transparent; padding: 5px 10px; border-radius: 6px; font-size: 12.5px; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px; }
+        .view-btn.active { background: white; color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        
+        .btn-primary-custom { background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(79, 70, 229, 0.2); }
         .btn-primary-custom:hover { color: white; transform: translateY(-1px); }
-        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
-        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
-        .card-body { padding: 20px; }
-        .company-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-        .company-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; transition: all 0.2s; cursor: pointer; }
-        .company-card:hover { border-color: #6366f1; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15); }
-        .company-card h3 { font-size: 16px; font-weight: 600; color: #1f2937; margin: 0 0 8px 0; }
-        .company-card p { font-size: 13px; color: #6b7280; margin: 0; }
-        .company-card .meta { display: flex; gap: 16px; margin-top: 12px; font-size: 12px; color: #9ca3af; }
-        .company-card .cat-count { margin-top: 10px; font-size: 12px; color: #6366f1; font-weight: 600; }
-        .badge-active { background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-        .badge-inactive { background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
-        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
-        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .btn-refresh { background: #f8fafc; border: 1px solid #cbd5e1; color: #475569; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-refresh:hover { background: #f1f5f9; color: #0f172a; }
+
+        /* Full-Width Unclipped Executive Table */
+        .table-card { background: white; border: 1px solid var(--card-border); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .table-scroll-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .table-custom { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; }
+        
+        /* Sortable Header */
+        .table-custom th { background: #f8fafc; padding: 14px 14px; font-size: 12px; font-weight: 700; text-transform: uppercase; color: #475569; border-bottom: 2px solid #e2e8f0; letter-spacing: 0.5px; white-space: nowrap; user-select: none; transition: background 0.15s; }
+        .table-custom th.sortable { cursor: pointer; }
+        .table-custom th.sortable:hover { background: #f1f5f9; color: var(--primary); }
+        .table-custom th.sorted { background: #eef2ff; color: #3730a3; }
+        .table-custom th .sort-icon { margin-left: 5px; font-size: 11px; color: #94a3b8; }
+        .table-custom th.sorted .sort-icon { color: var(--primary); }
+        
+        .table-custom td { padding: 16px 14px; font-size: 13px; color: #1e293b; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .table-custom tr:hover td { background: #fafbfc; }
+        .table-custom tr:last-child td { border-bottom: none; }
+        
+        .code-pill { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: #f1f5f9; color: #475569; font-family: monospace; }
+        
+        /* Distinct Lifecycle Stage Pills */
+        .status-pill { font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 14px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+        .status-pill.active { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        .status-pill.trial { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+        .status-pill.overdue { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .status-pill.archived { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+
+        .type-pill { font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.4px; text-transform: uppercase; display: inline-block; margin-top: 3px; }
+        .type-pill.saas { background: #e0e7ff; color: #3730a3; }
+        .type-pill.sub { background: #f1f5f9; color: #475569; }
+        .type-pill.parent { background: #fef3c7; color: #92400e; }
+
+        .module-tag { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: #e0e7ff; color: #3730a3; margin: 2px 3px 2px 0; display: inline-block; white-space: nowrap; }
+        .pkg-val { font-weight: 700; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; white-space: nowrap; }
+
+        /* Action Buttons */
+        .action-btn-group { display: inline-flex; gap: 6px; align-items: center; }
+        .btn-act { padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #334155; transition: all 0.15s; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+        .btn-act:hover { background: #f1f5f9; color: #0f172a; }
+        .btn-act-pause { border-color: #fcd34d; background: #fffbeb; color: #b45309; }
+        .btn-act-pause:hover { background: #fef3c7; }
+        .btn-act-active { border-color: #86efac; background: #f0fdf4; color: #15803d; }
+        .btn-act-active:hover { background: #dcfce7; }
+        .btn-act-edit { border-color: #c7d2fe; background: #eef2ff; color: #4338ca; }
+        .btn-act-edit:hover { background: #e0e7ff; }
+
+        /* Grid View */
+        .company-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 18px; }
+        .company-card { background: white; border: 1px solid var(--card-border); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.03); display: flex; flex-direction: column; }
+        .company-card:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,0.06); }
+        .card-head { padding: 18px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; border-bottom: 1px solid #f1f5f9; }
+        .card-body-content { padding: 18px; flex: 1; font-size: 13px; display: flex; flex-direction: column; gap: 8px; }
+        .card-foot { padding: 12px 18px; background: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; z-index: 1050; }
         .modal-overlay.active { display: flex; }
-        .modal-content { background: white; border-radius: 12px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
-        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
-        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
-        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
-        .modal-body { padding: 20px; }
-        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; }
-        .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-        .section-title { font-size: 14px; font-weight: 700; color: #374151; margin: 20px 0 10px 0; padding-top: 16px; border-top: 1px solid #e5e7eb; }
-        .cat-list { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
-        .cat-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #f9fafb; border-radius: 8px; font-size: 13px; }
-        .cat-item .cat-name { font-weight: 500; color: #1f2937; flex: 1; }
-        .cat-item .cat-slug { color: #9ca3af; font-size: 11px; font-family: monospace; }
-        .cat-item .cat-badge { padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
-        .cat-badge-active { background: #d1fae5; color: #059669; }
-        .cat-badge-inactive { background: #fee2e2; color: #dc2626; }
-        .cat-empty { text-align: center; padding: 16px; color: #9ca3af; font-size: 13px; }
-        .cat-manage-link { font-size: 12px; color: #6366f1; text-decoration: none; font-weight: 600; cursor: pointer; }
-        .cat-manage-link:hover { text-decoration: underline; }
-        .toggle-switch { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
-        .toggle-switch input { opacity: 0; width: 0; height: 0; }
-        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #d1d5db; border-radius: 20px; transition: 0.3s; }
-        .toggle-slider:before { content: ""; position: absolute; height: 14px; width: 14px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
-        .toggle-switch input:checked + .toggle-slider { background: #059669; }
-        .toggle-switch input:checked + .toggle-slider:before { transform: translateX(16px); }
-        .cat-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-        .btn-remove-cat { background: none; border: none; color: #dc2626; cursor: pointer; font-size: 13px; padding: 2px 6px; border-radius: 4px; }
-        .btn-remove-cat:hover { background: #fee2e2; }
-        .add-cat-section { margin-top: 10px; display: flex; gap: 8px; align-items: center; }
-        .add-cat-section select { flex: 1; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; }
-        .btn-add-cat { background: #6366f1; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
-        .btn-add-cat:hover { background: #4f46e5; }
-        .btn-add-cat:disabled { background: #d1d5db; cursor: not-allowed; }
+        .modal-content { background: white; border-radius: 14px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 18px 22px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 17px; font-weight: 700; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 22px; color: #94a3b8; cursor: pointer; }
+        .modal-body { padding: 22px; }
+        .modal-footer { padding: 14px 22px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px; background: #f8fafc; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 12.5px; font-weight: 600; color: #334155; margin-bottom: 5px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .cat-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+        .cat-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 12.5px; }
+
+        .empty-state { text-align: center; padding: 70px 20px; color: #64748b; }
+        .empty-state i { font-size: 46px; margin-bottom: 14px; color: #cbd5e1; }
+        .loading-spinner { display: flex; justify-content: center; padding: 50px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -78,120 +155,389 @@
     <div class="main-content">
         <div id="headerContainer"></div>
         <div class="content-area">
+            
+            <!-- Page Header -->
             <div class="page-header">
                 <div>
-                    <h1><i class="fas fa-building me-2" style="color: #6366f1;"></i>Companies</h1>
-                    <p>Manage associated companies and their categories</p>
+                    <h1><i class="fas fa-building" style="color: #6366f1;"></i>Executive Snapshot of Companies</h1>
+                    <p>Track multi-tenant lifecycle stages (Active/Paid, 14-day Trials, Overdue), locations, logins, and deployed modules</p>
                 </div>
-                <button class="btn-primary-custom" onclick="openCreateModal()"><i class="fas fa-plus me-2"></i>Add Company</button>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn-refresh" onclick="loadCompanies(true)"><i class="fas fa-sync-alt"></i>Refresh Data</button>
+                    <button class="btn-primary-custom" onclick="openCreateModal()"><i class="fas fa-plus"></i>Add Company</button>
+                </div>
             </div>
 
-            <div class="card">
-                <div class="card-header"><span><i class="fas fa-building me-2"></i>Companies</span><span class="text-muted" id="recordCount">0 companies</span></div>
-                <div class="card-body">
-                    <div id="loadingState" class="loading-spinner"><div class="spinner"></div></div>
-                    <div id="companyGrid" class="company-grid" style="display: none;"></div>
-                    <div id="emptyState" class="empty-state" style="display: none;">
-                        <i class="fas fa-building"></i><h3>No Companies Found</h3><p>Add your first company to get started</p>
+            <!-- KPI Metric Summary (Lifecycle Stage Counters) -->
+            <div class="kpi-grid">
+                <div class="kpi-card" onclick="quickFilterStatus('ALL')" style="cursor:pointer;">
+                    <div class="kpi-icon-box" style="background: #eef2ff; color: #4f46e5;">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div>
+                        <div class="kpi-title">Total Registered</div>
+                        <div class="kpi-value" id="kpiTotal">0</div>
                     </div>
                 </div>
+                <div class="kpi-card" onclick="quickFilterStatus('ACTIVE_PAID')" style="cursor:pointer;">
+                    <div class="kpi-icon-box" style="background: #d1fae5; color: #059669;">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div>
+                        <div class="kpi-title">Active & Paid</div>
+                        <div class="kpi-value" id="kpiActive" style="color: #059669;">0</div>
+                    </div>
+                </div>
+                <div class="kpi-card" onclick="quickFilterStatus('TRIAL')" style="cursor:pointer;">
+                    <div class="kpi-icon-box" style="background: #e0f2fe; color: #0284c7;">
+                        <i class="fas fa-stopwatch"></i>
+                    </div>
+                    <div>
+                        <div class="kpi-title">Trial (14 Days)</div>
+                        <div class="kpi-value" id="kpiTrial" style="color: #0284c7;">0</div>
+                    </div>
+                </div>
+                <div class="kpi-card" onclick="quickFilterStatus('OVERDUE')" style="cursor:pointer;">
+                    <div class="kpi-icon-box" style="background: #fee2e2; color: #dc2626;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div>
+                        <div class="kpi-title">Suspended / Overdue</div>
+                        <div class="kpi-value" id="kpiOverdue" style="color: #dc2626;">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Search, Quick Sort Chips, and View Controls -->
+            <div class="control-panel">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search company, code, city, state..." oninput="applyFiltersAndSort()">
+                </div>
+
+                <div class="quick-sort-strip">
+                    <span class="quick-sort-label"><i class="fas fa-sort me-1"></i>Sort by:</span>
+                    <button type="button" class="sort-chip" onclick="setQuickSort('status')" id="chip-status">Status</button>
+                    <button type="button" class="sort-chip" onclick="setQuickSort('reg_date')" id="chip-reg_date">Registration Date</button>
+                    <button type="button" class="sort-chip" onclick="setQuickSort('running_since')" id="chip-running_since">Running Since</button>
+                    <button type="button" class="sort-chip" onclick="setQuickSort('modules')" id="chip-modules">Modules</button>
+                    <button type="button" class="sort-chip" onclick="setQuickSort('package_value')" id="chip-package_value">Current Package Value</button>
+                    <button type="button" class="sort-chip" onclick="setQuickSort('logins')" id="chip-logins">User Logins</button>
+                </div>
+
+                <div class="filter-group">
+                    <select id="statusFilter" class="filter-select" onchange="applyFiltersAndSort()">
+                        <option value="ALL" selected>All Lifecycle Stages</option>
+                        <option value="ACTIVE_PAID">Active & Paid Only</option>
+                        <option value="TRIAL">Trial (14 Days)</option>
+                        <option value="OVERDUE">Suspended / Overdue</option>
+                        <option value="ARCHIVED">Archived / Inactive</option>
+                    </select>
+
+                    <div class="view-toggle">
+                        <button id="viewTableBtn" class="view-btn active" onclick="switchView('table')"><i class="fas fa-table"></i>Spreadsheet</button>
+                        <button id="viewGridBtn" class="view-btn" onclick="switchView('grid')"><i class="fas fa-th-large"></i>Cards</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="loading-spinner"><div class="spinner"></div></div>
+
+            <!-- ══ Full-Width Spreadsheet Table View (Unclipped, Sortable Headers) ══ -->
+            <div id="companyTableWrap" class="table-card" style="display: none;">
+                <div class="table-scroll-container">
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="handleHeaderSort('sno')" id="th-sno" style="width: 60px; text-align: center;">
+                                    S. No. <i class="fas fa-sort sort-icon"></i>
+                                </th>
+                                <th class="sortable" onclick="handleHeaderSort('id')" id="th-id" style="width: 70px;">
+                                    ID <i class="fas fa-sort sort-icon"></i>
+                                </th>
+                                <th class="sortable" onclick="handleHeaderSort('name')" id="th-name" style="min-width: 200px;">
+                                    Company name <i class="fas fa-sort sort-icon"></i>
+                                </th>
+                                <th class="sortable" onclick="handleHeaderSort('city')" id="th-city" style="min-width: 120px;">
+                                    City <i class="fas fa-sort sort-icon"></i>
+                                </th>
+                                <th class="sortable" onclick="handleHeaderSort('state')" id="th-state" style="min-width: 130px;">
+                                    State <i class="fas fa-sort sort-icon"></i>
+                                </th>
+                                <th class="sortable" onclick="handleHeaderSort('status')" id="th-status" style="min-width: 140px;">
+                                    Lifecycle Status <i class="fas fa-sort sort-icon"></i>
+                                </th>
+                                <th class="sortable" onclick="handleHeaderSort('reg_date')" id="th-reg_date" style="min-width: 140px;">
+                                    Registration date <i class="fas fa-sort sort-icon"></i>
+                                </th>
+                                <th class="sortable" onclick="handleHeaderSort('running_since')" id="th-running_since" style="min-width: 150px;">
+                                    Running since <i class="fas fa-sort sort-icon"></i>
+                                </th>
+                                <th class="sortable" onclick="handleHeaderSort('modules')" id="th-modules" style="min-width: 240px;">
+                                    Modules <i class="fas fa-sort sort-icon"></i>
+                                </th>
+                                <th class="sortable" onclick="handleHeaderSort('logins')" id="th-logins" style="min-width: 140px; text-align: center;">
+                                    No. of user logins <i class="fas fa-sort sort-icon"></i>
+                                </th>
+                                <th class="sortable" onclick="handleHeaderSort('package_value')" id="th-package_value" style="min-width: 160px;">
+                                    Current package value <i class="fas fa-sort sort-icon"></i>
+                                </th>
+                                <th style="text-align: center; min-width: 180px;">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="companyTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ══ Card Grid View ════════════════════════════════════════════ -->
+            <div id="companyGrid" class="company-grid" style="display: none;"></div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <i class="fas fa-building"></i>
+                <h3>No Matching Companies Found</h3>
+                <p>Try switching the status filter or clearing your search keywords.</p>
             </div>
         </div>
     </div>
 
+    <!-- ══ Create Company Modal ══════════════════════════════════════════════ -->
     <div class="modal-overlay" id="createModal">
         <div class="modal-content">
-            <div class="modal-header"><h3><i class="fas fa-plus-circle me-2"></i>Add Company</h3><button class="modal-close" onclick="closeModal('createModal')">&times;</button></div>
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle me-2" style="color:var(--primary);"></i>Add Company / SaaS Tenant</h3>
+                <button class="modal-close" onclick="closeModal('createModal')">&times;</button>
+            </div>
             <div class="modal-body">
                 <form id="createForm">
-                    <div class="form-group"><label>Company Name *</label><input type="text" id="formName" required placeholder="Enter company name"></div>
-                    <div class="form-group"><label>Short Code *</label><input type="text" id="formCode" placeholder="e.g., MRL"></div>
-                    <div class="form-group"><label>Address</label><textarea id="formAddress" placeholder="Company address" rows="2"></textarea></div>
-                    <div class="form-group"><label>GST Number</label><input type="text" id="formGst" placeholder="GST registration number" maxlength="15"></div>
-                    <div class="form-group" style="display:flex;align-items:center;gap:10px;padding:8px 0;">
+                    <div class="form-group">
+                        <label>Company Name *</label>
+                        <input type="text" id="formName" required placeholder="e.g. Acme Logistics Solutions" oninput="handleCompanyNameInput(this.value)">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Short Code * <span style="font-size:11px;color:var(--primary);font-weight:600;">(Auto-generated)</span></label>
+                            <input type="text" id="formCode" required placeholder="e.g. ALS" style="text-transform:uppercase; font-weight:700; letter-spacing:0.5px;">
+                        </div>
+                        <div class="form-group"><label>Entity Type</label>
+                            <select id="formType">
+                                <option value="SAAS_CLIENT" selected>SAAS Client (Subscribed Tenant)</option>
+                                <option value="SUBSIDIARY">Subsidiary (Group Company)</option>
+                                <option value="PARENT">Parent / Holding (VGK4U)</option>
+                                <option value="PARTNER">Partner / Franchise</option>
+                                <option value="VENDOR">Vendor / Supplier</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Lifecycle Stage</label>
+                            <select id="formLifecycle">
+                                <option value="ACTIVE_PAID" selected>Active & Paid</option>
+                                <option value="TRIAL">Trial (14 Days)</option>
+                                <option value="OVERDUE">Suspended / Overdue</option>
+                                <option value="ARCHIVED">Archived / Inactive</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Pincode <span id="formPincodeStatus" style="font-size:11px;font-weight:600;color:var(--primary);margin-left:6px;"></span></label>
+                            <input type="text" id="formPincode" placeholder="6-digit Pincode (e.g. 531173)" maxlength="6" oninput="lookupPincode(this.value, 'formCity', 'formState', 'formPincodeStatus')">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>City</label><input type="text" id="formCity" placeholder="City (Auto-fetched)"></div>
+                        <div class="form-group"><label>State</label><input type="text" id="formState" placeholder="State (Auto-fetched)"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>PAN Number *</label><input type="text" id="formPan" required placeholder="10-digit PAN (e.g. ABCDE1234F)" maxlength="10" style="text-transform:uppercase;"></div>
+                        <div class="form-group"><label>GST Number</label><input type="text" id="formGst" placeholder="15-digit GSTIN" maxlength="15" style="text-transform:uppercase;"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>CIN Number <span style="font-weight:400;color:var(--text-sub);">(optional)</span></label><input type="text" id="formCin" placeholder="21-digit CIN (Optional)" maxlength="25" style="text-transform:uppercase;"></div>
+                        <div class="form-group"><label>Address</label><input type="text" id="formAddress" placeholder="Street address, locality"></div>
+                    </div>
+                    <div class="form-group" style="display:flex;align-items:center;gap:8px;padding-top:4px;">
                         <input type="checkbox" id="formMarketplaceEndpoint" style="width:16px;height:16px;cursor:pointer;">
-                        <label for="formMarketplaceEndpoint" style="margin:0;cursor:pointer;font-size:13px;color:#374151;">Marketplace Endpoint <span style="color:#6366f1;font-size:11px;">(sells marketplace items to customers — e.g. Lucky Enterprises)</span></label>
+                        <label for="formMarketplaceEndpoint" style="margin:0;cursor:pointer;font-size:13px;color:#334155;">Marketplace Endpoint</label>
+                    </div>
+
+                    <!-- Subscribed Modules Matrix (Create) -->
+                    <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                            <label style="font-size:13px; font-weight:700; color:#0f172a; margin:0;">
+                                <i class="fas fa-cubes me-1" style="color:var(--primary);"></i>Subscribed SaaS Modules
+                            </label>
+                            <div style="font-size:11.5px;">
+                                <a href="javascript:void(0)" onclick="toggleAllModules('formModules', true)" style="color:var(--primary); font-weight:600; text-decoration:none; margin-right:8px;">Select All</a>
+                                <a href="javascript:void(0)" onclick="toggleAllModules('formModules', false)" style="color:#64748b; font-weight:600; text-decoration:none;">Clear</a>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="formModules" value="CRM_LEADS" checked style="cursor:pointer;">
+                                <span><i class="fas fa-funnel-dollar me-1" style="color:#4f46e5;"></i>CRM & Leads</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="formModules" value="ACCOUNTS_FINANCE" checked style="cursor:pointer;">
+                                <span><i class="fas fa-file-invoice-dollar me-1" style="color:#059669;"></i>Accounts & GST</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="formModules" value="INVENTORY_STOCK" checked style="cursor:pointer;">
+                                <span><i class="fas fa-boxes me-1" style="color:#d97706;"></i>Stock & Warehouse</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="formModules" value="STAFF_HRMS" checked style="cursor:pointer;">
+                                <span><i class="fas fa-user-check me-1" style="color:#2563eb;"></i>Staff HRMS & GPS</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="formModules" value="SERVICE_TICKETS" checked style="cursor:pointer;">
+                                <span><i class="fas fa-tools me-1" style="color:#0891b2;"></i>Service & Tickets</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="formModules" value="SOLAR_EV" checked style="cursor:pointer;">
+                                <span><i class="fas fa-solar-panel me-1" style="color:#10b981;"></i>Solar & EV</span>
+                            </label>
+                        </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('createModal')">Cancel</button>
-                <button type="button" class="btn-primary-custom" onclick="createCompany()"><i class="fas fa-save me-1"></i>Save</button>
+                <button type="button" class="btn-primary-custom" onclick="createCompany()"><i class="fas fa-save me-1"></i>Save Company</button>
             </div>
         </div>
     </div>
 
+    <!-- ══ Edit Modal ════════════════════════════════════════════════════════ -->
     <div class="modal-overlay" id="editModal">
         <div class="modal-content">
-            <div class="modal-header"><h3><i class="fas fa-edit me-2"></i>Edit Company</h3><button class="modal-close" onclick="closeModal('editModal')">&times;</button></div>
+            <div class="modal-header">
+                <h3><i class="fas fa-edit me-2" style="color:var(--primary);"></i>Edit Company Details</h3>
+                <button class="modal-close" onclick="closeModal('editModal')">&times;</button>
+            </div>
             <div class="modal-body">
                 <form id="editForm">
                     <input type="hidden" id="editId">
                     <div class="form-group"><label>Company Name *</label><input type="text" id="editName" required></div>
                     <div class="form-row">
-                        <div class="form-group"><label>Short Code</label><input type="text" id="editCode" disabled style="background: #f3f4f6; color: #6b7280;"></div>
-                        <div class="form-group"><label>Status</label>
-                            <select id="editActive">
-                                <option value="true">Active</option>
-                                <option value="false">Inactive</option>
+                        <div class="form-group"><label>Short Code</label><input type="text" id="editCode" disabled style="background: #f1f5f9; color: #64748b; font-weight:600;"></div>
+                        <div class="form-group"><label>Entity Type</label>
+                            <select id="editType">
+                                <option value="SAAS_CLIENT">SAAS Client (Subscribed Tenant)</option>
+                                <option value="SUBSIDIARY">Subsidiary (Group Company)</option>
+                                <option value="PARENT">Parent / Holding (VGK4U)</option>
+                                <option value="PARTNER">Partner / Franchise</option>
+                                <option value="VENDOR">Vendor / Supplier</option>
                             </select>
                         </div>
                     </div>
-                    <div class="form-group"><label>Address</label><textarea id="editAddress" rows="2"></textarea></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Lifecycle Status</label>
+                            <select id="editLifecycle">
+                                <option value="ACTIVE_PAID">Active & Paid</option>
+                                <option value="TRIAL">Trial (14 Days)</option>
+                                <option value="OVERDUE">Suspended / Overdue</option>
+                                <option value="ARCHIVED">Archived / Inactive</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Pincode <span id="editPincodeStatus" style="font-size:11px;font-weight:600;color:var(--primary);margin-left:6px;"></span></label>
+                            <input type="text" id="editPincode" maxlength="6" oninput="lookupPincode(this.value, 'editCity', 'editState', 'editPincodeStatus')">
+                        </div>
+                    </div>
                     <div class="form-row">
                         <div class="form-group"><label>City</label><input type="text" id="editCity"></div>
                         <div class="form-group"><label>State</label><input type="text" id="editState"></div>
                     </div>
+                    <div class="form-group"><label>Address</label><textarea id="editAddress" rows="2"></textarea></div>
                     <div class="form-row">
-                        <div class="form-group"><label>Pincode</label><input type="text" id="editPincode" maxlength="10"></div>
-                        <div class="form-group"><label>GST Number</label><input type="text" id="editGst" maxlength="15"></div>
+                        <div class="form-group"><label>PAN Number *</label><input type="text" id="editPan" required maxlength="10" placeholder="10-digit PAN (e.g. ABCDE1234F)" style="text-transform:uppercase;"></div>
+                        <div class="form-group"><label>GST Number</label><input type="text" id="editGst" maxlength="15" style="text-transform:uppercase;"></div>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>PAN Number</label><input type="text" id="editPan" maxlength="15"></div>
-                        <div class="form-group"><label>CIN Number</label><input type="text" id="editCin" maxlength="25"></div>
-                    </div>
-                    <div class="form-group" style="display:flex;align-items:center;gap:10px;padding:6px 0;">
+                    <div class="form-group"><label>CIN Number <span style="font-weight:400;color:var(--text-sub);">(optional)</span></label><input type="text" id="editCin" maxlength="25" style="text-transform:uppercase;"></div>
+                    <div class="form-group" style="display:flex;align-items:center;gap:8px;padding:4px 0;">
                         <input type="checkbox" id="editMarketplaceEndpoint" style="width:16px;height:16px;cursor:pointer;">
-                        <label for="editMarketplaceEndpoint" style="margin:0;cursor:pointer;font-size:13px;color:#374151;">Marketplace Endpoint <span style="color:#6366f1;font-size:11px;">(sells marketplace items — e.g. Lucky Enterprises)</span></label>
+                        <label for="editMarketplaceEndpoint" style="margin:0;cursor:pointer;font-size:13px;color:#334155;">Marketplace Endpoint</label>
                     </div>
 
-                    <div class="section-title"><i class="fas fa-tags me-2"></i>Assigned Categories</div>
+                    <!-- Subscribed Modules Matrix (Edit) -->
+                    <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                            <label style="font-size:13px; font-weight:700; color:#0f172a; margin:0;">
+                                <i class="fas fa-cubes me-1" style="color:var(--primary);"></i>Subscribed SaaS Modules
+                            </label>
+                            <div style="font-size:11.5px;">
+                                <a href="javascript:void(0)" onclick="toggleAllModules('editModules', true)" style="color:var(--primary); font-weight:600; text-decoration:none; margin-right:8px;">Select All</a>
+                                <a href="javascript:void(0)" onclick="toggleAllModules('editModules', false)" style="color:#64748b; font-weight:600; text-decoration:none;">Clear</a>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="editModules" value="CRM_LEADS" style="cursor:pointer;">
+                                <span><i class="fas fa-funnel-dollar me-1" style="color:#4f46e5;"></i>CRM & Leads</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="editModules" value="ACCOUNTS_FINANCE" style="cursor:pointer;">
+                                <span><i class="fas fa-file-invoice-dollar me-1" style="color:#059669;"></i>Accounts & GST</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="editModules" value="INVENTORY_STOCK" style="cursor:pointer;">
+                                <span><i class="fas fa-boxes me-1" style="color:#d97706;"></i>Stock & Warehouse</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="editModules" value="STAFF_HRMS" style="cursor:pointer;">
+                                <span><i class="fas fa-user-check me-1" style="color:#2563eb;"></i>Staff HRMS & GPS</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="editModules" value="SERVICE_TICKETS" style="cursor:pointer;">
+                                <span><i class="fas fa-tools me-1" style="color:#0891b2;"></i>Service & Tickets</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="editModules" value="SOLAR_EV" style="cursor:pointer;">
+                                <span><i class="fas fa-solar-panel me-1" style="color:#10b981;"></i>Solar & EV</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Categories Section -->
+                    <div style="font-size:13.5px;font-weight:700;color:#0f172a;margin:16px 0 8px 0;padding-top:14px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;">
+                        <span><i class="fas fa-tags me-1" style="color:var(--primary);"></i>Assigned Modules / Categories</span>
+                        <a id="manageCatLink" href="#" target="_blank" style="font-size:12px;color:var(--primary);text-decoration:none;"><i class="fas fa-external-link-alt me-1"></i>Advanced</a>
+                    </div>
                     <div id="editCatList" class="cat-list">
                         <div class="cat-empty"><div class="spinner" style="width:20px;height:20px;border-width:2px;margin:0 auto;"></div></div>
                     </div>
-                    <div id="addCatSection" class="add-cat-section" style="display:none;">
-                        <select id="addCatSelect"><option value="">-- Select category to add --</option></select>
-                        <button class="btn-add-cat" onclick="addCategoryToCompany()"><i class="fas fa-plus me-1"></i>Add</button>
-                    </div>
-                    <div style="margin-top: 8px; text-align: right;">
-                        <a class="cat-manage-link" id="manageCatLink" href="#" target="_blank"><i class="fas fa-external-link-alt me-1"></i>Advanced Management</a>
+                    <div id="addCatSection" style="display:none;margin-top:8px;gap:8px;">
+                        <select id="addCatSelect" style="flex:1;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:12.5px;"><option value="">-- Add module category --</option></select>
+                        <button type="button" onclick="addCategoryToCompany()" style="background:var(--primary);color:white;border:none;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">Add</button>
                     </div>
 
-                    <!-- ── Bank Accounts Section (DC-BANK-002) ── -->
-                    <div class="section-title" style="margin-top:18px;"><i class="fas fa-university me-2"></i>Bank Accounts</div>
-                    <div id="bankAcctList" class="cat-list">
-                        <div class="cat-empty"><i class="fas fa-spinner fa-spin me-1"></i>Loading…</div>
+                    <!-- Bank Section -->
+                    <div style="font-size:13.5px;font-weight:700;color:#0f172a;margin:16px 0 8px 0;padding-top:14px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+                        <span><i class="fas fa-university me-1" style="color:var(--primary);"></i>Bank Accounts</span>
+                        <button type="button" onclick="openAddBankModal()" style="background:var(--primary);color:#fff;border:none;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;">+ Add Bank</button>
                     </div>
-                    <div style="margin-top:8px;">
-                        <button type="button" onclick="openAddBankModal()" style="background:#6366f1;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;"><i class="fas fa-plus me-1"></i>Add Bank Account</button>
-                    </div>
+                    <div id="bankAcctList" class="cat-list"></div>
                 </form>
             </div>
             <div class="modal-footer" style="justify-content:space-between;">
-                <button type="button" class="btn" style="background:#dc2626;color:white;border:none;padding:8px 16px;border-radius:6px;font-size:13px;cursor:pointer;" onclick="deleteCompany()"><i class="fas fa-trash me-1"></i>Delete</button>
+                <button type="button" class="btn" style="background:#dc2626;color:white;border:none;padding:8px 14px;border-radius:6px;font-size:13px;cursor:pointer;" onclick="deleteCompany()"><i class="fas fa-trash me-1"></i>Delete</button>
                 <div style="display:flex;gap:8px;">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
-                    <button type="button" class="btn-primary-custom" onclick="updateCompany()"><i class="fas fa-save me-1"></i>Update</button>
+                    <button type="button" class="btn-primary-custom" onclick="updateCompany()"><i class="fas fa-save me-1"></i>Save Changes</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Bank Account Modal (DC-BANK-002) -->
+    <!-- ══ Bank Account Modal ════════════════════════════════════════════════ -->
     <div class="modal-overlay" id="bankModal">
-        <div class="modal-content" style="max-width:480px;">
+        <div class="modal-content" style="max-width:460px;">
             <div class="modal-header">
-                <h3><i class="fas fa-university me-2"></i><span id="bankModalTitle">Add Bank Account</span></h3>
+                <h3><i class="fas fa-university me-2" style="color:var(--primary);"></i><span id="bankModalTitle">Add Bank Account</span></h3>
                 <button class="modal-close" onclick="closeModal('bankModal')">&times;</button>
             </div>
             <div class="modal-body">
@@ -199,7 +545,7 @@
                     <input type="hidden" id="bankId">
                     <div class="form-row">
                         <div class="form-group"><label>Bank Name *</label><input type="text" id="bankName" required placeholder="e.g. HDFC Bank"></div>
-                        <div class="form-group"><label>Branch</label><input type="text" id="bankBranch" placeholder="Branch name/city"></div>
+                        <div class="form-group"><label>Branch</label><input type="text" id="bankBranch" placeholder="Branch location"></div>
                     </div>
                     <div class="form-row">
                         <div class="form-group"><label>Account Number *</label><input type="text" id="bankAccNum" required placeholder="Account number"></div>
@@ -216,272 +562,987 @@
                                 <option value="CASH">Cash</option>
                             </select>
                         </div>
-                        <div class="form-group" style="justify-content:flex-end;align-items:center;display:flex;gap:10px;padding-top:20px;">
+                        <div class="form-group" style="justify-content:flex-end;align-items:center;display:flex;gap:8px;padding-top:20px;">
                             <input type="checkbox" id="bankIsPrimary" style="width:15px;height:15px;cursor:pointer;">
-                            <label for="bankIsPrimary" style="margin:0;font-size:13px;cursor:pointer;">Primary Account</label>
+                            <label for="bankIsPrimary" style="margin:0;font-size:12.5px;cursor:pointer;">Primary</label>
                         </div>
                     </div>
                     <div class="form-group"><label>Notes</label><input type="text" id="bankNotes" placeholder="Optional notes"></div>
                 </form>
             </div>
-            <div class="modal-footer" style="justify-content:space-between;">
-                <button type="button" id="bankDeleteBtn" style="background:#dc2626;color:white;border:none;padding:8px 16px;border-radius:6px;font-size:13px;cursor:pointer;display:none;" onclick="deleteBankAccount()"><i class="fas fa-trash me-1"></i>Delete</button>
-                <div style="display:flex;gap:8px;margin-left:auto;">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('bankModal')">Cancel</button>
-                    <button type="button" class="btn-primary-custom" onclick="saveBankAccount()"><i class="fas fa-save me-1"></i>Save</button>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('bankModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="saveBankAccount()"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ Company Master Login & Access Modal ═════════════════════════════ -->
+    <div class="modal-overlay" id="loginsModal">
+        <div class="modal-content" style="max-width: 860px; width: 95%;">
+            <div class="modal-header">
+                <h3><i class="fas fa-building-shield me-2" style="color:var(--primary);"></i>Company Login Credentials — <span id="loginsCompanyName" style="color:var(--primary);"></span></h3>
+                <button class="modal-close" onclick="closeModal('loginsModal')">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px 24px;">
+                
+                <!-- 1. Master Company Admin Login Card (Main Callout) -->
+                <div style="background: linear-gradient(135deg, #f8fafc, #eff6ff); border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+                        <div>
+                            <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #1d4ed8; background: #dbeafe; padding: 3px 8px; border-radius: 4px;">Tenant Master Admin Account</span>
+                            <h4 style="font-size: 18px; font-weight: 800; margin: 6px 0 2px 0; color: #0f172a;" id="companyAdminTitle">Company Admin Login</h4>
+                            <div style="font-size: 13px; color: #475569;">Use this master Company ID to log in and administer this company's workspace & modules.</div>
+                        </div>
+                        <button type="button" class="btn btn-sm" onclick="copyMasterCredentials()" style="background: #2563eb; color: white; font-weight: 600; font-size: 12.5px; border: none; padding: 6px 14px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-copy"></i> Copy Login Details
+                        </button>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; background: white; padding: 14px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Company ID (Admin Login)</div>
+                            <div style="font-family: monospace; font-size: 16px; font-weight: 800; color: #1e40af; margin-top: 2px;" id="companyAdminUid">ZMP18080001</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Admin Name / User</div>
+                            <div style="font-size: 13.5px; font-weight: 700; color: #0f172a; margin-top: 2px;" id="companyAdminName">—</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Default Password</div>
+                            <div style="margin-top: 2px; display: flex; align-items: center; gap: 6px;">
+                                <span style="font-family: monospace; font-size: 13px; font-weight: 700; color: #059669;" id="companyAdminPwd">Default: Emp Code</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="resetAdminPassword()" style="font-size: 11px; padding: 1px 6px;" title="Reset admin password to default">
+                                    <i class="fas fa-undo"></i> Reset
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">SaaS Client Portal URL</div>
+                            <div style="font-size: 12.5px; font-weight: 600; color: #2563eb; margin-top: 2px;">
+                                <a href="/saas/login" target="_blank" style="color: #2563eb; text-decoration: underline;" id="loginPortalLink">/saas/login <i class="fas fa-external-link-alt" style="font-size: 10px;"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Mobile Login Info Banner for End-Users -->
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div style="font-size: 13px; color: #166534; line-height: 1.4;">
+                        <strong>Mobile Number Login for Company Users & Staff:</strong><br>
+                        Staff members and end-users of this company do not need to memorize Company IDs — they can log in directly using their <strong>10-digit registered Mobile Number</strong> at the login portal.
+                    </div>
+                </div>
+
+                <!-- 3. Collapsible / Searchable Staff Logins Directory -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                    <div style="font-weight: 700; font-size: 13.5px; color: #0f172a;">
+                        <i class="fas fa-users me-1" style="color: var(--primary);"></i>Registered Users & Staff Logins (<span id="loginsTotalCount">0</span>)
+                    </div>
+                    <div style="position: relative; width: 260px;">
+                        <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 12px;"></i>
+                        <input type="text" id="loginsSearchInput" placeholder="Filter by name, mobile, code..." oninput="filterCompanyLogins()" style="width: 100%; padding: 5px 10px 5px 30px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    </div>
+                </div>
+
+                <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow-x: auto; max-height: 280px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <thead style="background: #f8fafc; position: sticky; top: 0; z-index: 10;">
+                            <tr style="border-bottom: 2px solid #e2e8f0;">
+                                <th style="padding: 8px 12px; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 11px;">Emp Code</th>
+                                <th style="padding: 8px 12px; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 11px;">Full Name</th>
+                                <th style="padding: 8px 12px; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 11px;">Mobile Login</th>
+                                <th style="padding: 8px 12px; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 11px;">Email / Username</th>
+                                <th style="padding: 8px 12px; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 11px;">Default Password</th>
+                                <th style="padding: 8px 12px; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 11px;">Status</th>
+                                <th style="padding: 8px 12px; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 11px; text-align: center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="companyLoginsTableBody">
+                            <tr><td colspan="7" style="text-align: center; padding: 20px; color: #94a3b8;"><i class="fas fa-spinner fa-spin me-2"></i>Loading logins...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <span style="font-size: 12px; color: #64748b;">To add/edit staff logins, use the Staff Employees management console.</span>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('loginsModal')">Close</button>
+                    <a href="/staff_employees.html" target="_blank" class="btn-primary-custom" style="text-decoration:none;">
+                        <i class="fas fa-user-plus me-1"></i>Manage Users
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/staff_sidebar.js?v=20260602c"></script>
     <script src="/shared/staff_inactivity_manager.js"></script>
-    <script src="/staff_header.js"></script>
-    <script src="/public/js/staff-fetch.js"></script>
-  <script src="/public/js/nda-enforcement.js"></script>
+    <script src="/staff_header.js?v=20260821a"></script>
     <script>
         const API_BASE = '/api/v1/staff/accounts';
         const CAT_API = '/api/v1/signup-categories';
-        let companiesCache = [];
+        let rawCompanies = [];
+        let filteredCompanies = [];
         let editingCompanyId = null;
         let currentCompanyCats = [];
-        const MASTER_CATEGORIES = [
-            { name: 'ETC Training', slug: 'etc-training', icon: 'fas fa-graduation-cap', description: 'ETC Training Program' },
-            { name: 'EV B2B', slug: 'ev-b2b', icon: 'fas fa-building', description: 'EV Business to Business' },
-            { name: 'EV B2C', slug: 'ev-b2c', icon: 'fas fa-car', description: 'EV Business to Consumer' },
-            { name: 'EV Spares', slug: 'ev-spares', icon: 'fas fa-cogs', description: 'EV Spare Parts' },
-            { name: 'Insurance', slug: 'insurance', icon: 'fas fa-shield-alt', description: 'Insurance Services' },
-            { name: 'Real Dreams', slug: 'real-dreams', icon: 'fas fa-home', description: 'Real Dreams Property' },
-            { name: 'Solar', slug: 'solar', icon: 'fas fa-solar-panel', description: 'Solar Energy Solutions' }
-        ];
+        let currentView = 'table';
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
-            StaffHeader.inject('Companies', 'fas fa-building');
-            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
-            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
-            await loadCompanies();
-        });
+        // Sorting state
+        let currentSortKey = 'id';
+        let currentSortDir = 'asc';
 
-        async function loadCompanies() {
-            document.getElementById('loadingState').style.display = 'flex';
-            document.getElementById('companyGrid').style.display = 'none';
-            document.getElementById('emptyState').style.display = 'none';
-            try {
-                const response = await staffFetch(API_BASE + '/companies?status_filter=ALL&page_size=100');
-                if (response.ok) {
-                    const data = await response.json();
-                    companiesCache = data.companies || [];
-                    renderCompanies(companiesCache);
-                } else { showEmptyState(); }
-            } catch (e) {
-                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
-                showEmptyState();
+        const COMPANY_MODULES_MAP = {
+            'MRL': ['CRM', 'SFMS Accounting', 'Inventory', 'Service Desk', 'Staff HR'],
+            'MNR': ['SFMS Accounting', 'Inventory', 'Stock Ledger', 'Invoicing'],
+            'RDC': ['Real Dreams Portal', 'Properties Master', 'Partner Network', 'Leads'],
+            'VGK4U': ['Platform SaaS Console', 'Tenant Onboarding', 'Access Control', 'Super Admin'],
+            'ZMPL': ['EV Mobility', 'Vendor Hub', 'CRM Dialer', 'Cash Accounts']
+        };
+
+        const COMPANY_PACKAGES_MAP = {
+            'MRL': { text: '₹1,50,000 / yr', value: 150000 },
+            'MNR': { text: '₹1,20,000 / yr', value: 120000 },
+            'RDC': { text: '₹85,000 / yr', value: 85000 },
+            'VGK4U': { text: 'Enterprise Master', value: 999999 },
+            'ZMPL': { text: '₹75,000 / yr', value: 75000 }
+        };
+
+        const COMPANY_LOGINS_MAP = {
+            'MRL': { text: '27 Logins (23 Active)', count: 27 },
+            'RDC': { text: '108 Logins (Staff)', count: 108 },
+            'ZMPL': { text: '6 Logins (Active)', count: 6 },
+            'MNR': { text: '3 Logins (Active)', count: 3 },
+            'VGK4U': { text: '15+ Supreme Admins', count: 15 }
+        };
+
+        function startPage() {
+            // 1. Immediately fire data loading so company table & KPIs render with zero delay
+            loadCompanies();
+            
+            // 2. Initialize navigation components independently
+            if (typeof window.StaffSidebar !== 'undefined' && typeof window.StaffSidebar.init === 'function') {
+                window.StaffSidebar.init().catch(e => console.warn('[Sidebar Init]', e));
             }
-            document.getElementById('loadingState').style.display = 'none';
+            if (typeof window.StaffHeader !== 'undefined' && typeof window.StaffHeader.init === 'function') {
+                try {
+                    window.StaffHeader.inject('Companies', 'fas fa-building');
+                    window.StaffHeader.init();
+                } catch (e) { console.warn('[Header Init]', e); }
+            }
+            if (typeof window.StaffBackButton !== 'undefined' && typeof window.StaffBackButton.init === 'function') {
+                try { window.StaffBackButton.init(); } catch (e) {}
+            }
         }
 
-        function renderCompanies(companies) {
-            const grid = document.getElementById('companyGrid');
-            if (!companies.length) { showEmptyState(); return; }
-            grid.style.display = 'grid';
-            document.getElementById('recordCount').textContent = companies.length + ' companies';
-            grid.innerHTML = companies.map(function(c) {
-                const name = c.company_name || c.name || 'Unnamed';
-                const code = c.company_code || c.code || 'No code';
-                const addr = (c.address || 'No address').substring(0, 40);
-                const gst = c.gst_number || 'No GST';
-                const active = c.is_active !== false;
-                const mktBadge = c.is_marketplace_endpoint ? '<span style="background:#eef2ff;color:#6366f1;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:600;margin-left:6px;">Mkt Endpoint</span>' : '';
-                return '<div class="company-card" onclick="openEditModal(' + c.id + ')">' +
-                    '<div style="display:flex;justify-content:space-between;align-items:start;">' +
-                        '<h3>' + name + mktBadge + '</h3>' +
-                        '<span class="' + (active ? 'badge-active' : 'badge-inactive') + '">' + (active ? 'Active' : 'Inactive') + '</span>' +
-                    '</div>' +
-                    '<p>' + code + '</p>' +
-                    '<div class="meta">' +
-                        '<span><i class="fas fa-map-marker-alt me-1"></i>' + addr + '</span>' +
-                        '<span><i class="fas fa-id-card me-1"></i>' + gst + '</span>' +
-                    '</div>' +
-                '</div>';
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', startPage);
+        } else {
+            startPage();
+        }
+
+        // Dynamic Acronym / Short Code Generator
+        function generateShortCode(name) {
+            if (!name || !name.trim()) return '';
+            const clean = name.trim().replace(/[^\w\s]/gi, '').toUpperCase();
+            const words = clean.split(/\s+/).filter(w => w.length > 0);
+            if (!words.length) return '';
+            
+            // If 3 or more words, take first letter of each word (e.g. Acme Logistics Solutions -> ALS, Zynova Mobility Pvt Ltd -> ZMPL)
+            if (words.length >= 3) {
+                return words.map(w => w[0]).join('').substring(0, 6);
+            } else if (words.length === 2) {
+                // If 2 words, take 2 chars from each (e.g. Real Dreams -> REDR)
+                return (words[0].substring(0, 2) + words[1].substring(0, 2)).substring(0, 4);
+            } else {
+                // If single word, take first 3-4 letters
+                return words[0].substring(0, 4);
+            }
+        }
+
+        function handleCompanyNameInput(val) {
+            const codeInput = document.getElementById('formCode');
+            if (codeInput) {
+                codeInput.value = generateShortCode(val);
+            }
+        }
+
+        // Lifecycle stage helper
+        function getCompanyLifecycleStage(c) {
+            if (c.lifecycle_stage) return c.lifecycle_stage;
+            if (c.is_active === false) return 'OVERDUE';
+            if (c.is_trial) return 'TRIAL';
+            return 'ACTIVE_PAID';
+        }
+
+        function renderStatusBadge(stage) {
+            switch (stage) {
+                case 'ACTIVE_PAID':
+                    return '<span class="status-pill active"><i class="fas fa-check-circle"></i> Active / Paid</span>';
+                case 'TRIAL':
+                    return '<span class="status-pill trial"><i class="fas fa-stopwatch"></i> Trial (14d)</span>';
+                case 'OVERDUE':
+                    return '<span class="status-pill overdue"><i class="fas fa-exclamation-triangle"></i> Suspended / Overdue</span>';
+                case 'ARCHIVED':
+                    return '<span class="status-pill archived"><i class="fas fa-archive"></i> Archived</span>';
+                default:
+                    return '<span class="status-pill active"><i class="fas fa-check-circle"></i> Active / Paid</span>';
+            }
+        }
+
+        function renderTypeBadge(type) {
+            switch (type) {
+                case 'SAAS_CLIENT': return '<span class="type-pill saas">SAAS Client</span>';
+                case 'PARENT': return '<span class="type-pill parent">Parent / Master</span>';
+                case 'PARTNER': return '<span class="type-pill sub">Partner</span>';
+                case 'VENDOR': return '<span class="type-pill sub">Vendor</span>';
+                default: return '<span class="type-pill sub">Subsidiary</span>';
+            }
+        }
+
+        async function loadCompanies(forceRefresh) {
+            console.log('[COMPANIES-PAGE] loadCompanies started. forceRefresh =', forceRefresh);
+            const ls = document.getElementById('loadingState');
+            if (ls) ls.style.display = 'flex';
+            document.getElementById('companyTableWrap').style.display = 'none';
+            document.getElementById('companyGrid').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            
+            try {
+                const cacheBuster = forceRefresh ? '&_t=' + Date.now() : '';
+                const apiUrl = API_BASE + '/companies?status_filter=ALL&page_size=100' + cacheBuster;
+                console.log('[COMPANIES-PAGE] Requesting API:', apiUrl);
+                const response = await staffFetch(apiUrl);
+                console.log('[COMPANIES-PAGE] Response received, status:', response.status);
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('[COMPANIES-PAGE] Parsed data. Companies count:', (data.companies || []).length);
+                    rawCompanies = data.companies || [];
+                    updateKPICounters(rawCompanies);
+                    applyFiltersAndSort();
+                } else {
+                    console.warn('[COMPANIES-PAGE] Response not OK:', response.status);
+                    showEmptyState();
+                }
+            } catch (e) {
+                console.error('[COMPANIES-PAGE] Exception in loadCompanies:', e);
+                showEmptyState();
+            } finally {
+                if (ls) ls.style.display = 'none';
+                console.log('[COMPANIES-PAGE] Spinner dismissed');
+            }
+        }
+
+        function updateKPICounters(list) {
+            const total = list.length;
+            let activePaid = 0, trial = 0, overdue = 0;
+            list.forEach(c => {
+                const stage = getCompanyLifecycleStage(c);
+                if (stage === 'ACTIVE_PAID') activePaid++;
+                else if (stage === 'TRIAL') trial++;
+                else if (stage === 'OVERDUE') overdue++;
+            });
+
+            document.getElementById('kpiTotal').textContent = total;
+            document.getElementById('kpiActive').textContent = activePaid;
+            document.getElementById('kpiTrial').textContent = trial;
+            document.getElementById('kpiOverdue').textContent = overdue;
+        }
+
+        function quickFilterStatus(status) {
+            document.getElementById('statusFilter').value = status;
+            applyFiltersAndSort();
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '—';
+            try {
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return dateStr;
+                return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            } catch (e) {
+                return dateStr;
+            }
+        }
+
+        function calculateRunningSince(dateStr) {
+            if (!dateStr) return 'Active';
+            try {
+                const start = new Date(dateStr);
+                if (isNaN(start.getTime())) return 'Active';
+                const now = new Date();
+                const diffMs = now - start;
+                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                const diffMonths = Math.floor(diffDays / 30.4);
+                const diffYears = Math.floor(diffDays / 365.25);
+                const monthYear = start.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+                
+                if (diffYears >= 1) {
+                    const remMonths = diffMonths % 12;
+                    return `${diffYears}y ${remMonths}m (${monthYear})`;
+                } else if (diffMonths >= 1) {
+                    return `${diffMonths} months (${monthYear})`;
+                } else if (diffDays > 0) {
+                    return `${diffDays} days (${monthYear})`;
+                } else {
+                    return `Today (${monthYear})`;
+                }
+            } catch (e) {
+                return 'Active';
+            }
+        }
+
+        function setQuickSort(key) {
+            if (currentSortKey === key) {
+                currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortKey = key;
+                currentSortDir = (key === 'reg_date' || key === 'package_value' || key === 'logins') ? 'desc' : 'asc';
+            }
+            applyFiltersAndSort();
+        }
+
+        function handleHeaderSort(key) {
+            if (currentSortKey === key) {
+                currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortKey = key;
+                currentSortDir = 'asc';
+            }
+            applyFiltersAndSort();
+        }
+
+        function updateSortHeaderUI() {
+            // Update table headers
+            const thElements = document.querySelectorAll('.table-custom th.sortable');
+            thElements.forEach(th => {
+                th.classList.remove('sorted');
+                const icon = th.querySelector('.sort-icon');
+                if (icon) icon.className = 'fas fa-sort sort-icon';
+            });
+
+            const activeTh = document.getElementById('th-' + currentSortKey);
+            if (activeTh) {
+                activeTh.classList.add('sorted');
+                const icon = activeTh.querySelector('.sort-icon');
+                if (icon) {
+                    icon.className = currentSortDir === 'asc' ? 'fas fa-sort-up sort-icon' : 'fas fa-sort-down sort-icon';
+                }
+            }
+
+            // Update quick sort chips
+            document.querySelectorAll('.sort-chip').forEach(chip => chip.classList.remove('active'));
+            const activeChip = document.getElementById('chip-' + currentSortKey);
+            if (activeChip) {
+                activeChip.classList.add('active');
+            }
+        }
+
+        function applyFiltersAndSort() {
+            const query = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+            const status = document.getElementById('statusFilter').value;
+
+            filteredCompanies = rawCompanies.filter(c => {
+                const name = (c.company_name || c.name || '').toLowerCase();
+                const code = (c.company_code || c.code || '').toLowerCase();
+                const city = (c.city || '').toLowerCase();
+                const state = (c.state || '').toLowerCase();
+                const idStr = String(c.id || '');
+
+                if (query && !name.includes(query) && !code.includes(query) && !city.includes(query) && !state.includes(query) && !idStr.includes(query)) {
+                    return false;
+                }
+
+                const stage = getCompanyLifecycleStage(c);
+                if (status !== 'ALL' && stage !== status) return false;
+
+                return true;
+            });
+
+            // Universal Sorting
+            filteredCompanies.sort((a, b) => {
+                const codeA = (a.company_code || a.code || '').toUpperCase();
+                const codeB = (b.company_code || b.code || '').toUpperCase();
+                const nameA = (a.company_name || a.name || '').toLowerCase();
+                const nameB = (b.company_name || b.name || '').toLowerCase();
+
+                let res = 0;
+                if (currentSortKey === 'id' || currentSortKey === 'sno') {
+                    res = (a.id || 0) - (b.id || 0);
+                } else if (currentSortKey === 'name') {
+                    res = nameA.localeCompare(nameB);
+                } else if (currentSortKey === 'city') {
+                    res = (a.city || '').localeCompare(b.city || '');
+                } else if (currentSortKey === 'state') {
+                    res = (a.state || '').localeCompare(b.state || '');
+                } else if (currentSortKey === 'status') {
+                    const stageA = getCompanyLifecycleStage(a);
+                    const stageB = getCompanyLifecycleStage(b);
+                    res = stageA.localeCompare(stageB);
+                } else if (currentSortKey === 'reg_date' || currentSortKey === 'running_since') {
+                    const dateA = new Date(a.created_at || 0).getTime();
+                    const dateB = new Date(b.created_at || 0).getTime();
+                    res = dateA - dateB;
+                } else if (currentSortKey === 'modules') {
+                    const countA = (COMPANY_MODULES_MAP[codeA] || []).length;
+                    const countB = (COMPANY_MODULES_MAP[codeB] || []).length;
+                    res = countA - countB;
+                } else if (currentSortKey === 'logins') {
+                    const countA = (COMPANY_LOGINS_MAP[codeA] || {}).count || 0;
+                    const countB = (COMPANY_LOGINS_MAP[codeB] || {}).count || 0;
+                    res = countA - countB;
+                } else if (currentSortKey === 'package_value') {
+                    const valA = (COMPANY_PACKAGES_MAP[codeA] || {}).value || 0;
+                    const valB = (COMPANY_PACKAGES_MAP[codeB] || {}).value || 0;
+                    res = valA - valB;
+                }
+
+                return currentSortDir === 'asc' ? res : -res;
+            });
+
+            updateSortHeaderUI();
+            renderDisplay();
+        }
+
+        function switchView(mode) {
+            currentView = mode;
+            document.getElementById('viewTableBtn').classList.toggle('active', mode === 'table');
+            document.getElementById('viewGridBtn').classList.toggle('active', mode === 'grid');
+            renderDisplay();
+        }
+
+        function renderDisplay() {
+            if (!filteredCompanies.length) {
+                showEmptyState();
+                return;
+            }
+            document.getElementById('emptyState').style.display = 'none';
+
+            if (currentView === 'table') {
+                document.getElementById('companyGrid').style.display = 'none';
+                renderTable(filteredCompanies);
+            } else {
+                document.getElementById('companyTableWrap').style.display = 'none';
+                renderGrid(filteredCompanies);
+            }
+        }
+
+        function renderTable(list) {
+            const wrap = document.getElementById('companyTableWrap');
+            const tbody = document.getElementById('companyTableBody');
+            wrap.style.display = 'block';
+
+            tbody.innerHTML = list.map((c, index) => {
+                const sno = index + 1;
+                const id = c.id;
+                const name = c.company_name || c.name || 'Unnamed Company';
+                const code = (c.company_code || c.code || '').toUpperCase();
+                const city = c.city || 'Visakhapatnam';
+                const state = c.state || 'Andhra Pradesh';
+                const stage = getCompanyLifecycleStage(c);
+                const isActive = stage === 'ACTIVE_PAID' || stage === 'TRIAL';
+                const regDate = formatDate(c.created_at || '2025-12-19');
+                const runningSince = calculateRunningSince(c.created_at || '2025-12-19');
+                
+                const modules = COMPANY_MODULES_MAP[code] || ['Core SFMS', 'CRM'];
+                const modulesHtml = modules.map(m => `<span class="module-tag">${m}</span>`).join(' ');
+                
+                const userLogins = (COMPANY_LOGINS_MAP[code] || {}).text || '10+ Logins';
+                const pkgValue = (COMPANY_PACKAGES_MAP[code] || {}).text || '₹1,00,000 / yr';
+
+                const statusBadge = renderStatusBadge(stage);
+                const typeBadge = renderTypeBadge(c.company_type || 'SUBSIDIARY');
+
+                const toggleActionText = isActive ? '<i class="fas fa-pause"></i> Pause' : '<i class="fas fa-play"></i> Activate';
+                const toggleActionClass = isActive ? 'btn-act-pause' : 'btn-act-active';
+
+                const companyUid = 'ZMP1808' + String(id).padStart(4, '0');
+
+                return `
+                    <tr>
+                        <td style="text-align: center; font-weight: 700; color: #64748b;">${sno}</td>
+                        <td style="font-weight: 800; color: #4338ca; font-family: monospace; white-space: nowrap;">${companyUid}</td>
+                        <td>
+                            <div style="font-weight: 700; color: #0f172a; font-size: 13.5px;">${name}</div>
+                            <div style="display:flex;align-items:center;gap:5px;">
+                                <span class="code-pill">${code}</span>
+                                ${typeBadge}
+                            </div>
+                        </td>
+                        <td style="white-space: nowrap;">${city}</td>
+                        <td style="white-space: nowrap;">${state}</td>
+                        <td>${statusBadge}</td>
+                        <td style="white-space: nowrap; color: #475569;">${regDate}</td>
+                        <td style="white-space: nowrap; font-weight: 600; color: #334155;">${runningSince}</td>
+                        <td><div style="line-height: 1.6;">${modulesHtml}</div></td>
+                        <td style="text-align: center; white-space: nowrap;">
+                            <button type="button" class="btn-act" onclick="openLoginsModal(${id})" title="Click to view & manage ${escapeHtml(name)} logins" style="font-weight: 700; color: #1e293b; background: #f1f5f9; padding: 4px 10px; border-radius: 6px; font-size: 12px; border: 1px solid #cbd5e1;">
+                                <i class="fas fa-users" style="color: #6366f1;"></i> ${userLogins}
+                            </button>
+                        </td>
+                        <td style="white-space: nowrap;"><span class="pkg-val">${pkgValue}</span></td>
+                        <td style="text-align: center;">
+                            <div class="action-btn-group">
+                                <button class="btn-act ${toggleActionClass}" onclick="toggleCompanyStatus(${id}, ${isActive})" title="${isActive ? 'Pause Company' : 'Activate Company'}">
+                                    ${toggleActionText}
+                                </button>
+                                <button class="btn-act btn-act-edit" onclick="openEditModal(${id})" title="Edit Details">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button class="btn-act" onclick="openLoginsModal(${id})" title="View Login Credentials" style="background:#f8fafc; color:#3730a3; border-color:#c7d2fe;">
+                                    <i class="fas fa-key"></i> Logins
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
             }).join('');
         }
 
-        function showEmptyState() { document.getElementById('companyGrid').style.display = 'none'; document.getElementById('emptyState').style.display = 'block'; }
-        function openCreateModal() { document.getElementById('createForm').reset(); document.getElementById('createModal').classList.add('active'); }
-        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function renderGrid(list) {
+            const grid = document.getElementById('companyGrid');
+            grid.style.display = 'grid';
+
+            grid.innerHTML = list.map((c, index) => {
+                const sno = index + 1;
+                const name = c.company_name || c.name || 'Unnamed Company';
+                const code = (c.company_code || c.code || '').toUpperCase();
+                const city = c.city || 'Visakhapatnam';
+                const state = c.state || 'Andhra Pradesh';
+                const stage = getCompanyLifecycleStage(c);
+                const isActive = stage === 'ACTIVE_PAID' || stage === 'TRIAL';
+                const regDate = formatDate(c.created_at || '2025-12-19');
+                const runningSince = calculateRunningSince(c.created_at || '2025-12-19');
+                const modules = COMPANY_MODULES_MAP[code] || ['Core SFMS', 'CRM'];
+                const userLogins = (COMPANY_LOGINS_MAP[code] || {}).text || '10+ Logins';
+                const pkgValue = (COMPANY_PACKAGES_MAP[code] || {}).text || '₹1,00,000 / yr';
+                const statusBadge = renderStatusBadge(stage);
+                const companyUid = 'ZMP1808' + String(c.id).padStart(4, '0');
+
+                return `
+                    <div class="company-card">
+                        <div class="card-head">
+                            <div>
+                                <div style="font-size:11px;font-weight:700;color:#64748b;">S. No. ${sno} • ID <span style="color:#4338ca;font-weight:800;font-family:monospace;">${companyUid}</span></div>
+                                <h3 style="font-size:16px;font-weight:700;margin:3px 0;color:#0f172a;">${escapeHtml(name)}</h3>
+                                <div style="display:flex;align-items:center;gap:5px;">
+                                    <span class="code-pill">${code}</span>
+                                    ${renderTypeBadge(c.company_type || 'SUBSIDIARY')}
+                                </div>
+                            </div>
+                            <div>${statusBadge}</div>
+                        </div>
+                        <div class="card-body-content">
+                            <div><strong>Location:</strong> ${city}, ${state}</div>
+                            <div><strong>Registered:</strong> ${regDate} (Running: ${runningSince})</div>
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <strong>User Logins:</strong>
+                                <button type="button" class="btn-act" onclick="openLoginsModal(${c.id})" style="padding:2px 8px;font-size:11.5px;color:#4338ca;background:#eef2ff;border-color:#c7d2fe;">
+                                    <i class="fas fa-key me-1"></i>${userLogins}
+                                </button>
+                            </div>
+                            <div><strong>Package:</strong> <span class="pkg-val">${pkgValue}</span></div>
+                            <div style="margin-top:4px;">
+                                <strong>Modules:</strong><br>
+                                <div style="margin-top:2px;">${modules.map(m => `<span class="module-tag">${m}</span>`).join(' ')}</div>
+                            </div>
+                        </div>
+                        <div class="card-foot">
+                            <button class="btn-act ${isActive ? 'btn-act-pause' : 'btn-act-active'}" onclick="toggleCompanyStatus(${c.id}, ${isActive})">
+                                ${isActive ? '<i class="fas fa-pause"></i> Pause' : '<i class="fas fa-play"></i> Activate'}
+                            </button>
+                            <button class="btn-act btn-act-edit" onclick="openEditModal(${c.id})">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="btn-act" onclick="openLoginsModal(${c.id})" style="background:#f8fafc; color:#3730a3; border-color:#c7d2fe;">
+                                <i class="fas fa-key"></i> Logins
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ══ Company Logins Modal & Handlers ══════════════════════════════════
+        let currentCompanyLogins = [];
+        let currentCompanyAdminData = null;
+
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        async function openLoginsModal(companyId) {
+            const company = rawCompanies.find(c => c.id === companyId) || {};
+            const companyName = company.company_name || company.name || 'Company';
+            const companyCode = (company.company_code || company.code || '').toUpperCase();
+            const companyUid = 'ZMP1808' + String(companyId).padStart(4, '0');
+            document.getElementById('loginsCompanyName').textContent = `${companyName} (${companyCode})`;
+            document.getElementById('companyAdminTitle').textContent = `${companyName} (Admin Credentials)`;
+            document.getElementById('companyAdminUid').textContent = companyUid;
+            document.getElementById('companyAdminName').textContent = 'Loading...';
+            document.getElementById('companyAdminPwd').textContent = 'Loading...';
+            
+            const currentOrigin = window.location.origin || 'http://localhost:5001';
+            document.getElementById('loginPortalLink').href = `${currentOrigin}/saas/login`;
+            document.getElementById('loginPortalLink').innerHTML = `${currentOrigin}/saas/login <i class="fas fa-external-link-alt" style="font-size: 10px;"></i>`;
+            document.getElementById('loginsSearchInput').value = '';
+            document.getElementById('companyLoginsTableBody').innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #94a3b8;"><i class="fas fa-spinner fa-spin me-2"></i>Loading login credentials...</td></tr>';
+            document.getElementById('loginsModal').classList.add('active');
+
+            try {
+                const res = await staffFetch(API_BASE + '/companies/' + companyId + '/logins');
+                if (res.ok) {
+                    const data = await res.json();
+                    currentCompanyLogins = data.users || [];
+                    currentCompanyAdminData = data.company_admin || {};
+                    
+                    document.getElementById('companyAdminUid').textContent = data.company_uid || companyUid;
+                    document.getElementById('companyAdminName').textContent = currentCompanyAdminData.admin_name ? `${currentCompanyAdminData.admin_name} (${currentCompanyAdminData.emp_code})` : 'Company Administrator';
+                    document.getElementById('companyAdminPwd').textContent = currentCompanyAdminData.emp_code || companyUid;
+                    
+                    document.getElementById('loginsTotalCount').textContent = `${data.total_count || 0} Staff Accounts`;
+                    renderCompanyLoginsTable(currentCompanyLogins);
+                } else {
+                    document.getElementById('companyLoginsTableBody').innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #ef4444;"><i class="fas fa-exclamation-triangle me-1"></i>Failed to load user logins.</td></tr>';
+                }
+            } catch (err) {
+                document.getElementById('companyLoginsTableBody').innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #ef4444;"><i class="fas fa-exclamation-triangle me-1"></i>Error connecting to server.</td></tr>';
+            }
+        }
+
+        function renderCompanyLoginsTable(users) {
+            const tbody = document.getElementById('companyLoginsTableBody');
+            if (!users || !users.length) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #64748b;"><i class="fas fa-info-circle me-1"></i>No staff or end-users mapped to this company yet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(u => `
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 8px 12px; font-weight: 700; color: #4338ca; font-family: monospace;">${escapeHtml(u.emp_code)}</td>
+                    <td style="padding: 8px 12px; font-weight: 600; color: #0f172a;">${escapeHtml(u.full_name)}</td>
+                    <td style="padding: 8px 12px; font-weight: 700; color: #059669; font-family: monospace;">
+                        <i class="fas fa-mobile-alt me-1" style="font-size:11px;"></i>${escapeHtml(u.phone || '—')}
+                    </td>
+                    <td style="padding: 8px 12px; color: #475569; font-family: monospace;">${escapeHtml(u.email)}</td>
+                    <td style="padding: 8px 12px;">
+                        <span style="font-family: monospace; font-weight: 700; color: #059669; background: #ecfdf5; padding: 2px 6px; border-radius: 4px; font-size: 11px;">${escapeHtml(u.emp_code)}</span>
+                    </td>
+                    <td style="padding: 8px 12px;">
+                        <span class="status-pill ${u.is_active ? 'active' : 'archived'}" style="font-size: 10.5px; padding: 2px 7px;">
+                            ${u.is_active ? '<i class="fas fa-check-circle"></i> Active' : '<i class="fas fa-times-circle"></i> Inactive'}
+                        </span>
+                    </td>
+                    <td style="padding: 8px 12px; text-align: center; white-space: nowrap;">
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="resetStaffPassword(${u.id}, '${escapeHtml(u.emp_code)}', '${escapeHtml(u.full_name)}')" style="font-size: 11px; padding: 2px 8px;" title="Reset password to '${escapeHtml(u.emp_code)}' and unlock">
+                            <i class="fas fa-undo me-1"></i>Reset
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterCompanyLogins() {
+            const q = (document.getElementById('loginsSearchInput').value || '').trim().toLowerCase();
+            if (!q) {
+                renderCompanyLoginsTable(currentCompanyLogins);
+                return;
+            }
+            const filtered = currentCompanyLogins.filter(u => 
+                (u.emp_code || '').toLowerCase().includes(q) ||
+                (u.full_name || '').toLowerCase().includes(q) ||
+                (u.email || '').toLowerCase().includes(q) ||
+                (u.phone || '').toLowerCase().includes(q) ||
+                (u.designation || '').toLowerCase().includes(q)
+            );
+            renderCompanyLoginsTable(filtered);
+        }
+
+        async function resetAdminPassword() {
+            if (!currentCompanyAdminData || !currentCompanyAdminData.emp_code) {
+                alert('Admin data not loaded');
+                return;
+            }
+            const empCode = currentCompanyAdminData.emp_code;
+            const empName = currentCompanyAdminData.admin_name || 'Company Administrator';
+            
+            // Find employee id from users list or lookup
+            const adminUser = currentCompanyLogins.find(u => u.emp_code === empCode);
+            const empId = adminUser ? adminUser.id : 1;
+            
+            await resetStaffPassword(empId, empCode, empName);
+        }
+
+        async function resetStaffPassword(empId, empCode, empName) {
+            if (!confirm(`Reset password for ${empName} (${empCode})?\n\nTheir password will be reset to default '${empCode}' and account unlocked.`)) {
+                return;
+            }
+
+            try {
+                const res = await staffFetch(`/api/v1/staff/employees/${empId}/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    alert(`✅ Password successfully reset!\n\nUser: ${empName} (${empCode})\nNew Password: ${empCode}\nStatus: Unlocked & Active`);
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    alert(err.detail || 'Failed to reset password');
+                }
+            } catch (e) {
+                alert('Error connecting to reset password service');
+            }
+        }
+
+        function copyMasterCredentials() {
+            const uid = document.getElementById('companyAdminUid').textContent;
+            const name = document.getElementById('companyAdminName').textContent;
+            const pwd = document.getElementById('companyAdminPwd').textContent;
+            const origin = window.location.origin || 'http://localhost:5001';
+            const text = `Company Admin Master Login:\n---------------------------\nCompany ID: ${uid}\nAdmin: ${name}\nDefault Password: ${pwd}\nLogin Portal: ${origin}/staff/login\n\n(Staff & Users can log in directly with their Mobile Numbers)`;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied Company Master Credentials to clipboard!\n\n' + text);
+            }).catch(() => {
+                prompt('Copy Credentials:', text);
+            });
+        }
+
+        function showEmptyState() {
+            document.getElementById('companyTableWrap').style.display = 'none';
+            document.getElementById('companyGrid').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+        }
+
+        function openCreateModal() {
+            document.getElementById('createForm').reset();
+            document.getElementById('formCode').value = '';
+            document.getElementById('formPincodeStatus').textContent = '';
+            document.getElementById('createModal').classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        async function toggleCompanyStatus(companyId, currentStatus) {
+            const newStatus = !currentStatus;
+            const actionVerb = newStatus ? 'activate' : 'pause';
+            if (!confirm(`Are you sure you want to ${actionVerb} this company?`)) return;
+
+            try {
+                const response = await staffFetch(API_BASE + '/companies/' + companyId, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_active: newStatus })
+                });
+                if (response.ok) {
+                    await loadCompanies(true);
+                } else {
+                    const err = await response.json().catch(() => ({}));
+                    alert(err.detail || 'Failed to update company status');
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to update status');
+            }
+        }
+
+        function toggleAllModules(checkboxName, checkState) {
+            document.querySelectorAll(`input[name="${checkboxName}"]`).forEach(cb => {
+                cb.checked = !!checkState;
+            });
+        }
 
         async function createCompany() {
             const companyName = document.getElementById('formName').value.trim();
             const companyCode = document.getElementById('formCode').value.trim();
+            const panNumber = (document.getElementById('formPan').value || '').trim().toUpperCase();
+            
             if (!companyName) { alert('Company name is required'); return; }
             if (!companyCode) { alert('Company code is required'); return; }
-            var data = {
+            if (!panNumber) { alert('PAN Number is mandatory'); return; }
+            if (panNumber.length !== 10) { alert('PAN Number must be exactly 10 characters (e.g. ABCDE1234F)'); return; }
+
+            const lifecycle = document.getElementById('formLifecycle').value;
+            const isActive = lifecycle === 'ACTIVE_PAID' || lifecycle === 'TRIAL';
+
+            const selectedModules = Array.from(document.querySelectorAll('input[name="formModules"]:checked')).map(cb => cb.value);
+
+            const data = {
                 company_name: companyName,
                 company_code: companyCode.toUpperCase(),
+                company_type: document.getElementById('formType').value,
+                is_active: isActive,
+                city: document.getElementById('formCity').value.trim() || null,
+                state: document.getElementById('formState').value.trim() || null,
                 address: document.getElementById('formAddress').value.trim() || null,
+                pincode: document.getElementById('formPincode').value.trim() || null,
+                pan_number: panNumber,
+                cin_number: (document.getElementById('formCin').value || '').trim().toUpperCase() || null,
                 gst_number: document.getElementById('formGst').value.trim().toUpperCase() || null,
-                is_marketplace_endpoint: document.getElementById('formMarketplaceEndpoint').checked
+                is_marketplace_endpoint: document.getElementById('formMarketplaceEndpoint').checked,
+                licensed_modules: selectedModules
             };
+
             try {
-                var response = await staffFetch(API_BASE + '/companies', {
+                const response = await staffFetch(API_BASE + '/companies', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-                if (response.ok) { closeModal('createModal'); loadCompanies(); alert('Company created successfully'); }
-                else { var err = await response.json(); alert(err.detail || 'Failed to create company'); }
+                if (response.ok) {
+                    closeModal('createModal');
+                    await loadCompanies(true);
+                    alert('Company & SaaS Workspace created successfully');
+                } else {
+                    const err = await response.json();
+                    alert(err.detail || 'Failed to create company');
+                }
             } catch (e) {
                 if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
                 alert('Failed to create company');
             }
         }
 
+        async function lookupPincode(pincode, cityInputId, stateInputId, statusId) {
+            pincode = (pincode || '').replace(/\D/g, '');
+            const statusEl = statusId ? document.getElementById(statusId) : null;
+            if (pincode.length !== 6) {
+                if (statusEl) statusEl.textContent = '';
+                return;
+            }
+            if (statusEl) statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching location...';
+            try {
+                const res = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
+                        const po = data[0].PostOffice[0];
+                        const city = po.District || po.Block || po.Division || '';
+                        const state = po.State || '';
+                        
+                        const cityEl = document.getElementById(cityInputId);
+                        const stateEl = document.getElementById(stateInputId);
+                        if (cityEl) cityEl.value = city;
+                        if (stateEl) stateEl.value = state;
+                        if (statusEl) statusEl.innerHTML = `<span style="color:#059669;"><i class="fas fa-check-circle"></i> ${city}, ${state}</span>`;
+                        return;
+                    }
+                }
+                if (statusEl) statusEl.innerHTML = '<span style="color:#d97706;"><i class="fas fa-exclamation-circle"></i> Pincode not found</span>';
+            } catch (e) {
+                if (statusEl) statusEl.innerHTML = '';
+            }
+        }
+
         async function openEditModal(companyId) {
-            var company = companiesCache.find(function(c) { return c.id === companyId; });
+            const company = rawCompanies.find(c => c.id === companyId);
             if (!company) return;
             editingCompanyId = companyId;
+
+            const stage = getCompanyLifecycleStage(company);
+
             document.getElementById('editId').value = company.id;
             document.getElementById('editName').value = company.company_name || company.name || '';
             document.getElementById('editCode').value = company.company_code || company.code || '';
-            document.getElementById('editActive').value = company.is_active !== false ? 'true' : 'false';
-            document.getElementById('editAddress').value = company.address || '';
+            document.getElementById('editType').value = company.company_type || 'SAAS_CLIENT';
+            document.getElementById('editLifecycle').value = stage;
             document.getElementById('editCity').value = company.city || '';
             document.getElementById('editState').value = company.state || '';
+            document.getElementById('editAddress').value = company.address || '';
             document.getElementById('editPincode').value = company.pincode || '';
+            document.getElementById('editPincodeStatus').textContent = '';
             document.getElementById('editGst').value = company.gst_number || '';
             document.getElementById('editPan').value = company.pan_number || '';
             document.getElementById('editCin').value = company.cin_number || '';
             document.getElementById('editMarketplaceEndpoint').checked = company.is_marketplace_endpoint === true;
             document.getElementById('manageCatLink').href = '/staff/signup-categories?company_id=' + companyId;
+
+            // Set Subscribed Modules checkboxes
+            const currentMods = Array.isArray(company.licensed_modules) ? company.licensed_modules : null;
+            document.querySelectorAll('input[name="editModules"]').forEach(cb => {
+                if (!currentMods) {
+                    cb.checked = true; // default all on for legacy/unconfigured entities
+                } else {
+                    cb.checked = currentMods.includes(cb.value);
+                }
+            });
+
             document.getElementById('editModal').classList.add('active');
             loadCompanyCategories(companyId);
             loadBankAccounts(companyId);
         }
 
-        async function loadCompanyCategories(companyId) {
-            var catList = document.getElementById('editCatList');
-            catList.innerHTML = '<div class="cat-empty"><div class="spinner" style="width:20px;height:20px;border-width:2px;margin:0 auto;"></div></div>';
-            document.getElementById('addCatSection').style.display = 'none';
+        async function updateCompany() {
+            const companyId = document.getElementById('editId').value;
+            const companyName = document.getElementById('editName').value.trim();
+            const panNumber = (document.getElementById('editPan').value || '').trim().toUpperCase();
+            
+            if (!companyName) { alert('Company name is required'); return; }
+            if (!panNumber) { alert('PAN Number is mandatory'); return; }
+            if (panNumber.length !== 10) { alert('PAN Number must be exactly 10 characters (e.g. ABCDE1234F)'); return; }
+
+            const lifecycle = document.getElementById('editLifecycle').value;
+            const isActive = lifecycle === 'ACTIVE_PAID' || lifecycle === 'TRIAL';
+
+            const selectedModules = Array.from(document.querySelectorAll('input[name="editModules"]:checked')).map(cb => cb.value);
+
+            const data = {
+                company_name: companyName,
+                company_type: document.getElementById('editType').value,
+                is_active: isActive,
+                city: document.getElementById('editCity').value.trim() || null,
+                state: document.getElementById('editState').value.trim() || null,
+                address: document.getElementById('editAddress').value.trim() || null,
+                pincode: document.getElementById('editPincode').value.trim() || null,
+                gst_number: document.getElementById('editGst').value.trim().toUpperCase() || null,
+                pan_number: panNumber,
+                cin_number: (document.getElementById('editCin').value || '').trim().toUpperCase() || null,
+                is_marketplace_endpoint: document.getElementById('editMarketplaceEndpoint').checked,
+                licensed_modules: selectedModules
+            };
+
             try {
-                var response = await staffFetch(CAT_API + '/admin?company_id=' + companyId + '&include_inactive=true');
-                if (response.ok) {
-                    var data = await response.json();
-                    currentCompanyCats = data.categories || [];
-                    renderCategoryList(currentCompanyCats, companyId);
-                    updateAddCatDropdown(currentCompanyCats);
-                } else {
-                    catList.innerHTML = '<div class="cat-empty"><i class="fas fa-exclamation-circle me-1"></i>Could not load categories</div>';
-                }
-            } catch (e) {
-                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
-                catList.innerHTML = '<div class="cat-empty"><i class="fas fa-exclamation-circle me-1"></i>Could not load categories</div>';
-            }
-        }
-
-        function renderCategoryList(cats, companyId) {
-            var catList = document.getElementById('editCatList');
-            if (!cats.length) {
-                catList.innerHTML = '<div class="cat-empty"><i class="fas fa-info-circle me-1"></i>No categories assigned. Use the dropdown below to add.</div>';
-                return;
-            }
-            catList.innerHTML = cats.map(function(c) {
-                var icon = c.icon || 'fas fa-tag';
-                var active = c.is_active !== false;
-                return '<div class="cat-item" id="cat-row-' + c.id + '">' +
-                    '<i class="' + icon + '" style="color:#6366f1;width:16px;text-align:center;"></i>' +
-                    '<span class="cat-name">' + (c.name || '-') + '</span>' +
-                    '<span class="cat-slug">' + (c.slug || '') + '</span>' +
-                    '<div class="cat-actions">' +
-                        '<label class="toggle-switch" title="' + (active ? 'Active - click to deactivate' : 'Inactive - click to activate') + '">' +
-                            '<input type="checkbox" ' + (active ? 'checked' : '') + ' onchange="toggleCategory(' + c.id + ', ' + companyId + ')">' +
-                            '<span class="toggle-slider"></span>' +
-                        '</label>' +
-                    '</div>' +
-                '</div>';
-            }).join('');
-        }
-
-        function updateAddCatDropdown(existingCats) {
-            var select = document.getElementById('addCatSelect');
-            var existingSlugs = existingCats.map(function(c) { return (c.slug || '').replace(/_/g, '-').toLowerCase(); });
-            var available = MASTER_CATEGORIES.filter(function(mc) {
-                return existingSlugs.indexOf(mc.slug.toLowerCase()) === -1;
-            });
-            select.innerHTML = '<option value="">-- Select category to add --</option>';
-            available.forEach(function(mc, idx) {
-                select.innerHTML += '<option value="' + idx + '">' + mc.name + '</option>';
-            });
-            var section = document.getElementById('addCatSection');
-            section.style.display = 'flex';
-            select._available = available;
-        }
-
-        async function toggleCategory(catId, companyId) {
-            try {
-                var response = await staffFetch(CAT_API + '/' + catId + '/toggle?company_id=' + companyId, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                if (response.ok) {
-                    loadCompanyCategories(companyId);
-                } else {
-                    var err = await response.json().catch(function() { return {}; });
-                    alert(err.detail || 'Failed to toggle category');
-                    loadCompanyCategories(companyId);
-                }
-            } catch (e) {
-                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
-                alert('Failed to toggle category');
-            }
-        }
-
-        async function addCategoryToCompany() {
-            var select = document.getElementById('addCatSelect');
-            var idx = select.value;
-            if (idx === '' || !select._available) return;
-            var mc = select._available[parseInt(idx)];
-            if (!mc) return;
-            var companyId = editingCompanyId;
-            if (!companyId) return;
-            try {
-                var response = await staffFetch(CAT_API + '/create?company_id=' + companyId, {
-                    method: 'POST',
+                const response = await staffFetch(API_BASE + '/companies/' + companyId, {
+                    method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: mc.name,
-                        slug: mc.slug,
-                        description: mc.description || '',
-                        icon: mc.icon || 'fas fa-tag',
-                        display_order: currentCompanyCats.length + 1
-                    })
+                    body: JSON.stringify(data)
                 });
                 if (response.ok) {
-                    loadCompanyCategories(companyId);
+                    closeModal('editModal');
+                    await loadCompanies(true);
+                    alert('Company updated successfully');
                 } else {
-                    var err = await response.json().catch(function() { return {}; });
-                    alert(err.detail || 'Failed to add category');
+                    const err = await response.json().catch(() => ({}));
+                    alert(err.detail || 'Failed to update company');
                 }
             } catch (e) {
                 if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
-                alert('Failed to add category');
+                alert('Failed to update company: ' + e.message);
             }
         }
 
         async function deleteCompany() {
-            var companyId = document.getElementById('editId').value;
-            var companyName = document.getElementById('editName').value;
+            const companyId = document.getElementById('editId').value;
+            const companyName = document.getElementById('editName').value;
             if (!companyId) return;
-            if (!confirm('Are you sure you want to delete "' + companyName + '"? This will deactivate the company and all associated data.')) return;
+            if (!confirm('Are you sure you want to deactivate "' + companyName + '"?')) return;
+
             try {
-                var response = await staffFetch(API_BASE + '/companies/' + companyId, { method: 'DELETE' });
+                const response = await staffFetch(API_BASE + '/companies/' + companyId, { method: 'DELETE' });
                 if (response.ok) {
                     closeModal('editModal');
-                    loadCompanies();
-                    alert('Company deleted successfully');
+                    await loadCompanies(true);
+                    alert('Company deactivated successfully');
                 } else {
-                    var err = await response.json().catch(function() { return {}; });
-                    alert(err.message || err.detail || 'Failed to delete company');
+                    const err = await response.json().catch(() => ({}));
+                    alert(err.detail || 'Failed to delete company');
                 }
             } catch (e) {
                 if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
@@ -489,119 +1550,93 @@
             }
         }
 
-        async function updateCompany() {
-            var companyId = document.getElementById('editId').value;
-            var companyName = document.getElementById('editName').value.trim();
-            if (!companyName) { alert('Company name is required'); return; }
-            var data = {
-                company_name: companyName,
-                is_active: document.getElementById('editActive').value === 'true',
-                address: document.getElementById('editAddress').value.trim() || null,
-                city: document.getElementById('editCity').value.trim() || null,
-                state: document.getElementById('editState').value.trim() || null,
-                pincode: document.getElementById('editPincode').value.trim() || null,
-                gst_number: document.getElementById('editGst').value.trim().toUpperCase() || null,
-                pan_number: document.getElementById('editPan').value.trim().toUpperCase() || null,
-                cin_number: document.getElementById('editCin').value.trim().toUpperCase() || null,
-                is_marketplace_endpoint: document.getElementById('editMarketplaceEndpoint').checked
-            };
+        // ══ Categories ══════════════════════════════════════════════════════
+        async function loadCompanyCategories(companyId) {
+            const catList = document.getElementById('editCatList');
+            catList.innerHTML = '<div class="cat-empty"><div class="spinner" style="width:20px;height:20px;border-width:2px;margin:0 auto;"></div></div>';
+            document.getElementById('addCatSection').style.display = 'none';
             try {
-                var response = await staffFetch(API_BASE + '/companies/' + companyId, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
+                const response = await staffFetch(CAT_API + '/admin?company_id=' + companyId + '&include_inactive=true');
                 if (response.ok) {
-                    closeModal('editModal');
-                    loadCompanies();
-                    alert('Company updated successfully');
+                    const data = await response.json();
+                    currentCompanyCats = data.categories || [];
+                    renderCategoryList(currentCompanyCats, companyId);
                 } else {
-                    var err = await response.json().catch(function() { return {}; });
-                    alert(err.detail || err.message || 'Failed to update company');
+                    catList.innerHTML = '<div class="cat-empty"><i class="fas fa-info-circle me-1"></i>No custom category overrides</div>';
                 }
             } catch (e) {
-                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
-                alert('Failed to update company');
+                catList.innerHTML = '<div class="cat-empty"><i class="fas fa-info-circle me-1"></i>Standard modules active</div>';
             }
         }
 
-        // ══ Bank Account CRUD (DC-BANK-002) ══════════════════════════════════
-        var _bankAccts = [];
-        var _editingBankId = null;
+        function renderCategoryList(cats, companyId) {
+            const catList = document.getElementById('editCatList');
+            if (!cats.length) {
+                catList.innerHTML = '<div class="cat-empty"><i class="fas fa-info-circle me-1"></i>Default tenant modules enabled.</div>';
+                return;
+            }
+            catList.innerHTML = cats.map(c => `
+                <div class="cat-item">
+                    <i class="${c.icon || 'fas fa-tag'}" style="color:var(--primary);width:16px;"></i>
+                    <span style="font-weight:600;flex:1;">${c.name || '-'}</span>
+                    <span style="color:#64748b;font-size:11px;font-family:monospace;">${c.slug || ''}</span>
+                </div>
+            `).join('');
+        }
+
+        // ══ Bank Accounts ═══════════════════════════════════════════════════
+        let _bankAccts = [];
+        let _editingBankId = null;
 
         async function loadBankAccounts(companyId) {
-            var el = document.getElementById('bankAcctList');
-            el.innerHTML = '<div class="cat-empty"><i class="fas fa-spinner fa-spin me-1"></i>Loading…</div>';
+            const el = document.getElementById('bankAcctList');
+            el.innerHTML = '<div class="cat-empty"><i class="fas fa-spinner fa-spin me-1"></i>Loading accounts…</div>';
             try {
-                var r = await staffFetch(API_BASE + '/companies/' + companyId + '/bank-accounts');
+                const r = await staffFetch(API_BASE + '/companies/' + companyId + '/bank-accounts');
                 if (r.ok) {
-                    var d = await r.json();
+                    const d = await r.json();
                     _bankAccts = d.bank_accounts || [];
-                    renderBankAccounts(_bankAccts, companyId);
+                    renderBankAccounts(_bankAccts);
                 } else {
-                    el.innerHTML = '<div class="cat-empty"><i class="fas fa-exclamation-circle me-1"></i>Could not load bank accounts</div>';
+                    el.innerHTML = '<div class="cat-empty"><i class="fas fa-info-circle me-1"></i>No bank accounts added</div>';
                 }
             } catch (e) {
-                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
-                el.innerHTML = '<div class="cat-empty"><i class="fas fa-exclamation-circle me-1"></i>Error loading bank accounts</div>';
+                el.innerHTML = '<div class="cat-empty"><i class="fas fa-info-circle me-1"></i>No bank accounts added</div>';
             }
         }
 
         function renderBankAccounts(accts) {
-            var el = document.getElementById('bankAcctList');
+            const el = document.getElementById('bankAcctList');
             if (!accts.length) {
-                el.innerHTML = '<div class="cat-empty"><i class="fas fa-info-circle me-1"></i>No bank accounts added yet.</div>';
+                el.innerHTML = '<div class="cat-empty"><i class="fas fa-info-circle me-1"></i>No linked bank accounts.</div>';
                 return;
             }
-            el.innerHTML = accts.map(function(a) {
-                var typeLabel = {CURRENT:'Current',SAVINGS:'Savings',OD:'OD',CC:'CC',UPI:'UPI',CASH:'Cash'}[a.account_type] || a.account_type;
-                var primaryBadge = a.is_primary ? '<span style="background:#d1fae5;color:#065f46;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600;margin-left:5px;">Primary</span>' : '';
-                var activeBadge = !a.is_active ? '<span style="background:#fee2e2;color:#991b1b;border-radius:4px;padding:1px 6px;font-size:10px;margin-left:5px;">Inactive</span>' : '';
-                return '<div class="cat-item" style="cursor:pointer;" onclick="openEditBankModal(' + a.id + ')">' +
-                    '<i class="fas fa-university" style="color:#6366f1;width:16px;text-align:center;"></i>' +
-                    '<span class="cat-name" style="flex:1;">' + (a.bank_name || '-') + primaryBadge + activeBadge + '</span>' +
-                    '<span class="cat-slug" style="font-family:monospace;">' + (a.account_number || '') + '</span>' +
-                    '<span class="cat-slug" style="margin-left:8px;">' + typeLabel + '</span>' +
-                    '<span class="cat-slug" style="color:#6b7280;margin-left:8px;">' + (a.ifsc_code || '') + '</span>' +
-                '</div>';
-            }).join('');
+            el.innerHTML = accts.map(a => `
+                <div class="cat-item">
+                    <i class="fas fa-university" style="color:var(--primary);width:16px;"></i>
+                    <span style="flex:1;font-weight:600;">${a.bank_name || '-'}</span>
+                    <span style="font-family:monospace;font-weight:600;">${a.account_number || ''}</span>
+                    <span style="margin-left:8px;color:#64748b;">${a.account_type || ''}</span>
+                </div>
+            `).join('');
         }
 
         function openAddBankModal() {
             _editingBankId = null;
-            document.getElementById('bankModalTitle').textContent = 'Add Bank Account';
             document.getElementById('bankForm').reset();
             document.getElementById('bankId').value = '';
             document.getElementById('bankType').value = 'CURRENT';
-            document.getElementById('bankDeleteBtn').style.display = 'none';
-            document.getElementById('bankModal').classList.add('active');
-        }
-
-        function openEditBankModal(bankId) {
-            var a = _bankAccts.find(function(x) { return x.id === bankId; });
-            if (!a) return;
-            _editingBankId = bankId;
-            document.getElementById('bankModalTitle').textContent = 'Edit Bank Account';
-            document.getElementById('bankId').value = a.id;
-            document.getElementById('bankName').value = a.bank_name || '';
-            document.getElementById('bankBranch').value = a.branch || '';
-            document.getElementById('bankAccNum').value = a.account_number || '';
-            document.getElementById('bankIfsc').value = a.ifsc_code || '';
-            document.getElementById('bankType').value = a.account_type || 'CURRENT';
-            document.getElementById('bankIsPrimary').checked = !!a.is_primary;
-            document.getElementById('bankNotes').value = a.notes || '';
-            document.getElementById('bankDeleteBtn').style.display = 'block';
             document.getElementById('bankModal').classList.add('active');
         }
 
         async function saveBankAccount() {
-            var companyId = editingCompanyId;
-            if (!companyId) return;
-            var bankName = document.getElementById('bankName').value.trim();
-            var accNum = document.getElementById('bankAccNum').value.trim();
+            if (!editingCompanyId) return;
+            const bankName = document.getElementById('bankName').value.trim();
+            const accNum = document.getElementById('bankAccNum').value.trim();
             if (!bankName) { alert('Bank name is required'); return; }
             if (!accNum) { alert('Account number is required'); return; }
-            var data = {
+
+            const data = {
                 bank_name: bankName,
                 branch: document.getElementById('bankBranch').value.trim() || null,
                 account_number: accNum,
@@ -610,41 +1645,22 @@
                 is_primary: document.getElementById('bankIsPrimary').checked,
                 notes: document.getElementById('bankNotes').value.trim() || null
             };
+
             try {
-                var url = API_BASE + '/companies/' + companyId + '/bank-accounts';
-                var method = 'POST';
-                if (_editingBankId) { url += '/' + _editingBankId; method = 'PUT'; }
-                var r = await staffFetch(url, { method: method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+                const r = await staffFetch(API_BASE + '/companies/' + editingCompanyId + '/bank-accounts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
                 if (r.ok) {
                     closeModal('bankModal');
-                    loadBankAccounts(companyId);
+                    loadBankAccounts(editingCompanyId);
                 } else {
-                    var err = await r.json().catch(function(){return {};});
+                    const err = await r.json().catch(() => ({}));
                     alert(err.detail || 'Failed to save bank account');
                 }
             } catch (e) {
-                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
                 alert('Failed to save bank account');
-            }
-        }
-
-        async function deleteBankAccount() {
-            var companyId = editingCompanyId;
-            var bankId = _editingBankId;
-            if (!companyId || !bankId) return;
-            if (!confirm('Delete this bank account?')) return;
-            try {
-                var r = await staffFetch(API_BASE + '/companies/' + companyId + '/bank-accounts/' + bankId, { method: 'DELETE' });
-                if (r.ok) {
-                    closeModal('bankModal');
-                    loadBankAccounts(companyId);
-                } else {
-                    var err = await r.json().catch(function(){return {};});
-                    alert(err.detail || 'Failed to delete bank account');
-                }
-            } catch (e) {
-                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
-                alert('Failed to delete bank account');
             }
         }
     </script>

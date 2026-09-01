@@ -82,6 +82,8 @@ class AssociatedCompanyBase(BaseModel):
     state: Optional[str] = Field(None, max_length=100)
     pincode: Optional[str] = Field(None, max_length=10)
     
+    licensed_modules: Optional[List[str]] = Field(default=None, description="List of licensed module keys")
+
     bank_name: Optional[str] = Field(None, max_length=200, description="Bank name")
     bank_branch: Optional[str] = Field(None, max_length=200, description="Bank branch")
     account_number: Optional[str] = Field(None, max_length=30, description="Bank account number")
@@ -101,10 +103,10 @@ class AssociatedCompanyBase(BaseModel):
     @field_validator('company_type')
     @classmethod
     def validate_company_type(cls, v):
-        valid_types = ['PARENT', 'SUBSIDIARY', 'PARTNER', 'VENDOR']
+        valid_types = ['PARENT', 'SUBSIDIARY', 'PARTNER', 'VENDOR', 'SAAS_CLIENT']
         if v and v.upper() not in valid_types:
             raise ValueError(f'Company type must be one of: {valid_types}')
-        return v.upper() if v else 'SUBSIDIARY'
+        return v.upper() if v else 'SAAS_CLIENT'
     
     @field_validator('gst_number')
     @classmethod
@@ -135,7 +137,7 @@ class AssociatedCompanyCreate(AssociatedCompanyBase):
 class AssociatedCompanyUpdate(BaseModel):
     """Schema for updating Associated Company - aligned with model fields"""
     company_name: Optional[str] = Field(None, min_length=2, max_length=200)
-    company_type: Optional[str] = Field(None, description="PARENT, SUBSIDIARY, PARTNER, VENDOR")
+    company_type: Optional[str] = Field(None, description="PARENT, SUBSIDIARY, PARTNER, VENDOR, SAAS_CLIENT")
     
     gst_number: Optional[str] = Field(None, max_length=20)
     pan_number: Optional[str] = Field(None, max_length=15)
@@ -150,6 +152,8 @@ class AssociatedCompanyUpdate(BaseModel):
     state: Optional[str] = Field(None, max_length=100)
     pincode: Optional[str] = Field(None, max_length=10)
     
+    licensed_modules: Optional[List[str]] = Field(None, description="List of licensed module keys")
+
     bank_name: Optional[str] = Field(None, max_length=200)
     bank_branch: Optional[str] = Field(None, max_length=200)
     account_number: Optional[str] = Field(None, max_length=30)
@@ -207,6 +211,8 @@ class AssociatedCompanyResponse(BaseModel):
     state: Optional[str] = None
     pincode: Optional[str] = None
     
+    licensed_modules: Optional[List[str]] = None
+
     bank_name: Optional[str] = None
     bank_branch: Optional[str] = None
     account_number: Optional[str] = None

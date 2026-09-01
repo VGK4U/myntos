@@ -7098,6 +7098,8 @@ def _startup_worker():
     # DC_STOCK_MULTICOMP_001: Multi-company stock + marketplace endpoint (Apr 2026)
     _stock_mc_sqls = [
         "ALTER TABLE associated_companies ADD COLUMN IF NOT EXISTS is_marketplace_endpoint BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE associated_companies DROP CONSTRAINT IF EXISTS associated_company_type_check",
+        "ALTER TABLE associated_companies ADD CONSTRAINT associated_company_type_check CHECK (company_type IN ('PARENT', 'SUBSIDIARY', 'PARTNER', 'VENDOR', 'SAAS_CLIENT'))",
         """CREATE TABLE IF NOT EXISTS inter_company_margin_config (
             id                SERIAL PRIMARY KEY,
             from_company_id   INTEGER REFERENCES associated_companies(id),
