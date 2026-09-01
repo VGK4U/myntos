@@ -13,7 +13,8 @@
  * - No removal of any menu from the PDF
  */
 
-var MENU_MASTER = window.MENU_MASTER = window.MENU_MASTER || [
+var _win = typeof window !== 'undefined' ? window : {};
+var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
   {
     section_code: "PROGRESS",
     section_label: "PROGRESS",

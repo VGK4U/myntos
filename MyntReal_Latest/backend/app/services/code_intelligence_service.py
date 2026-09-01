@@ -12,7 +12,7 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-REPO_ROOT = "/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest"
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
 
 SECRET_PATTERNS = [
     (r'(?i)(password|passwd|pwd|secret|access_token|api_key|private_key)\s*[:=]\s*["\']([^"\']+)["\']', r'\1: "[REDACTED_SECRET]"'),
