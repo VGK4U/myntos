@@ -4,8 +4,9 @@ Creates monthly_settlement_batches table with UNIQUE(partner_id, settlement_peri
 composite index to enforce DB-level atomic idempotency.
 """
 
+import os
 import sys
-sys.path.insert(0, '/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/backend')
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
 from app.core.database import SessionLocal
 from sqlalchemy import text

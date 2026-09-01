@@ -4,8 +4,9 @@ Creates incentive_programs & position_rate_configs tables if not present,
 adds index optimizations, and seeds Solar V2 position rate configurations.
 """
 
+import os
 import sys
-sys.path.insert(0, '/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/backend')
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
 from app.core.database import SessionLocal
 from sqlalchemy import text
