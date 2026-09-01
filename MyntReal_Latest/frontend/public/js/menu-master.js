@@ -13,7 +13,7 @@
  * - No removal of any menu from the PDF
  */
 
-const MENU_MASTER = [
+var MENU_MASTER = window.MENU_MASTER = window.MENU_MASTER || [
   {
     section_code: "PROGRESS",
     section_label: "PROGRESS",

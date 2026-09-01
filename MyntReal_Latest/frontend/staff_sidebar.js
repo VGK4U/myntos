@@ -52,23 +52,22 @@ window.MENU_MASTER_DATA = window.MENU_MASTER_DATA || null;
 var MENU_MASTER_DATA = window.MENU_MASTER_DATA;
 
 // DC-SIDEBAR-RACE-FIX-001 (Jun 2026): Promise that resolves when menu-master.js is ready.
-// Previously this was fire-and-forget, causing StaffSidebar.init() to call getMenuForRole()
-// before MENU_MASTER was defined → only hardcoded pinned items rendered, dynamic sections blank.
 let _menuMasterReady = (function loadMenuMaster() {
     return new Promise(function(resolve) {
-        // Already loaded synchronously (e.g. inline script) — no wait needed
-        if (typeof MENU_MASTER !== "undefined") {
-            MENU_MASTER_DATA = MENU_MASTER;
-            console.log("[DC-SIDEBAR] MENU_MASTER already available:", MENU_MASTER_DATA.length, "sections");
+        // Already loaded synchronously — no wait needed
+        const existingMaster = window.MENU_MASTER || (typeof MENU_MASTER !== "undefined" ? MENU_MASTER : null);
+        if (existingMaster && existingMaster.length > 0) {
+            MENU_MASTER_DATA = window.MENU_MASTER_DATA = existingMaster;
+            console.log("[DC-SIDEBAR] MENU_MASTER already available:", existingMaster.length, "sections");
             return resolve();
         }
         var script = document.createElement("script");
         script.src = "/public/js/menu-master.js?v=" + Date.now();
-        (document.head || document.documentElement).appendChild(script);
         script.onload = function() {
-            if (typeof MENU_MASTER !== "undefined") {
-                MENU_MASTER_DATA = MENU_MASTER;
-                console.log("[DC-SIDEBAR] MENU_MASTER loaded:", MENU_MASTER_DATA.length, "sections");
+            const loadedMaster = window.MENU_MASTER || (typeof MENU_MASTER !== "undefined" ? MENU_MASTER : null);
+            if (loadedMaster && loadedMaster.length > 0) {
+                MENU_MASTER_DATA = window.MENU_MASTER_DATA = loadedMaster;
+                console.log("[DC-SIDEBAR] MENU_MASTER loaded:", loadedMaster.length, "sections");
             } else {
                 console.warn("[DC-SIDEBAR] menu-master.js loaded but MENU_MASTER not defined");
             }
@@ -79,8 +78,8 @@ let _menuMasterReady = (function loadMenuMaster() {
             resolve(); // unblock init() so we still render pinned items
         };
         // Safety timeout: don't block init() forever if script hangs
-        setTimeout(resolve, 6000);
-        document.head.appendChild(script);
+        setTimeout(resolve, 3000);
+        (document.head || document.documentElement).appendChild(script);
     });
 })();
 
@@ -731,7 +730,7 @@ window.StaffSidebar = window.StaffSidebar || {
         const staffType = this.userData?.staff_type || '';
         
         // Use MENU_MASTER as the source of truth
-        const menuMaster = (typeof MENU_MASTER !== 'undefined') ? MENU_MASTER : MENU_MASTER_DATA;
+        const menuMaster = window.MENU_MASTER || (typeof MENU_MASTER !== 'undefined' ? MENU_MASTER : null) || window.MENU_MASTER_DATA || MENU_MASTER_DATA;
         
         if (!menuMaster || menuMaster.length === 0) {
             return { sections: [], zeroAccess: false };

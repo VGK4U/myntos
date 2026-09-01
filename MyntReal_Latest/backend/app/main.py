@@ -18745,10 +18745,11 @@ finally:
 _vblc_mk = 'vgk_cash_income_level_check_20260815'
 _vblc_db = SessionLocal()
 try:
+    from sqlalchemy import text as _vblc_text
     if _vblc_mk not in _applied_keys:
-        _vblc_db.execute(text("ALTER TABLE vgk_cash_income_entries DROP CONSTRAINT IF EXISTS vgk_cash_income_level_check"))
-        _vblc_db.execute(text("ALTER TABLE vgk_cash_income_entries ADD CONSTRAINT vgk_cash_income_level_check CHECK (level >= 0 AND level <= 20)"))
-        _vblc_db.execute(text("INSERT INTO dc_migrations(key) VALUES(:k) ON CONFLICT(key) DO NOTHING"), {"k": _vblc_mk})
+        _vblc_db.execute(_vblc_text("ALTER TABLE vgk_cash_income_entries DROP CONSTRAINT IF EXISTS vgk_cash_income_level_check"))
+        _vblc_db.execute(_vblc_text("ALTER TABLE vgk_cash_income_entries ADD CONSTRAINT vgk_cash_income_level_check CHECK (level >= 0 AND level <= 20)"))
+        _vblc_db.execute(_vblc_text("INSERT INTO dc_migrations(key) VALUES(:k) ON CONFLICT(key) DO NOTHING"), {"k": _vblc_mk})
         _vblc_db.commit()
         print("[DC-VGK-BRAND-LEVEL-001] ✅ vgk_cash_income_level_check updated to 0..20", flush=True)
     else:
