@@ -19,9 +19,16 @@ interface HeaderOptions {
 
 export class PageHeader {
   static render(options: HeaderOptions): string {
-    let { title, showBack = false, showLogout = false, rightAction, subtitle, showMenu = false } = options;
+    let { title, showBack = false, showLogout = false, rightAction, subtitle, showMenu } = options;
 
     const portal = portalService.getPortal();
+    const currentRoute = routerService.getCurrentRoute();
+    const isRootRoute = ['progress', 'dashboard', 'attendance', 'journeys', 'announcements', 'profile', 'mnr-dashboard', 'partner-dashboard', 'vgk-member-hub'].includes(currentRoute);
+
+    if (showMenu === undefined) {
+      showMenu = isRootRoute || !showBack;
+    }
+
     if (portal === 'vgk') {
       showLogout = true;
       if (!subtitle) {
@@ -36,11 +43,11 @@ export class PageHeader {
     }
 
     return `
-      <header class="page-header">
-        <div class="header-left" style="display:flex; align-items:center; gap:10px;">
+      <header class="page-header" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #0f172a; border-bottom: 1px solid #1e293b; position: sticky; top: 0; z-index: 100;">
+        <div class="header-left" style="display: flex; align-items: center; gap: 10px;">
           ${showMenu ? `
-            <button class="header-btn hamburger-btn" id="hamburgerBtn" style="padding: 6px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); border: none; color: white; border-radius: 6px; cursor: pointer;">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="header-btn hamburger-btn" id="hamburgerBtn" title="Open Navigation Menu" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 8px; cursor: pointer; flex-shrink: 0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="3" y1="12" x2="21" y2="12"/>
                 <line x1="3" y1="6" x2="21" y2="6"/>
                 <line x1="3" y1="18" x2="21" y2="18"/>
@@ -48,14 +55,14 @@ export class PageHeader {
             </button>
           ` : ''}
           ${showBack ? `
-            <button class="header-btn back-btn" id="backBtn">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="header-btn back-btn" id="backBtn" title="Back" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 8px; cursor: pointer; flex-shrink: 0;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="15 18 9 12 15 6"/>
               </svg>
             </button>
           ` : ''}
           <div class="header-title-wrapper" style="display:flex; flex-direction:column; gap:2px">
-            <h1 class="header-title" style="margin:0; font-size:16px; font-weight:700">${title}</h1>
+            <h1 class="header-title" style="margin:0; font-size:16px; font-weight:700; color:#fff;">${title}</h1>
             ${subtitle ? `<span class="header-subtitle" style="font-size:11px; color:rgba(255,255,255,0.65); font-weight:500">${subtitle}</span>` : ''}
           </div>
         </div>

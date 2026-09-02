@@ -178,7 +178,7 @@ export class ProgressPage {
 
     this.container.innerHTML = `
       <div class="page-container progress-page">
-        ${PageHeader.render({ title: 'Progress Dashboard', showBack: true })}
+        ${PageHeader.render({ title: 'Progress Dashboard', showMenu: true, showBack: false })}
         
         <!-- Filters Section -->
         <div class="progress-filters">
