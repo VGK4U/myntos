@@ -29,7 +29,6 @@ EXCLUDE_DIRS = {
     "uploaded_files",
     "uploads",
     "media_backup",
-    "mobile",
     "tests",
     "docs",
     ".agents",
@@ -70,7 +69,19 @@ EXCLUDE_FILES = {
 }
 
 def should_exclude(rel_path: Path, abs_file: Path) -> bool:
+    rel_str = str(rel_path).replace("\\", "/")
+    
+    # Always keep compiled frontend/public/mobile assets
+    if "frontend/public/mobile" in rel_str:
+        if abs_file.suffix.lower() in [".zip", ".sql", ".dump", ".db", ".apk", ".app"]:
+            return True
+        return False
+
+    # Exclude root mobile source code directory
     parts = rel_path.parts
+    if parts and parts[0] == "mobile":
+        return True
+
     for part in parts:
         if part in EXCLUDE_DIRS or part == "__pycache__":
             return True
@@ -78,11 +89,10 @@ def should_exclude(rel_path: Path, abs_file: Path) -> bool:
     if rel_path.name in EXCLUDE_FILES:
         return True
         
-    rel_str = str(rel_path).replace("\\", "/")
     if "storage/" in rel_str or "uploaded_files/" in rel_str or "public/catalog/" in rel_str or "public/marketplace/" in rel_str or ".ai_uploads" in rel_str or ".ai_backups" in rel_str or "solar-creative-" in rel_str:
         return True
         
-    if abs_file.suffix.lower() in [".zip", ".sql", ".dump", ".sqlite", ".db"]:
+    if abs_file.suffix.lower() in [".zip", ".sql", ".dump", ".sqlite", ".db", ".apk", ".app"]:
         return True
 
     # Exclude heavy non-UI images > 2MB while keeping all logos
@@ -104,7 +114,12 @@ def build_zip():
     
     with zipfile.ZipFile(OUTPUT_ZIP, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
         for root, dirs, files in os.walk(SOURCE_DIR):
-            dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS and d != "__pycache__"]
+            dirs[:] = [
+                d for d in dirs 
+                if d not in EXCLUDE_DIRS 
+                and d != "__pycache__" 
+                and not (Path(root) == SOURCE_DIR and d == "mobile")
+            ]
             
             for f in files:
                 abs_file = Path(root) / f
