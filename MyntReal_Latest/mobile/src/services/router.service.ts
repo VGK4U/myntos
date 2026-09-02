@@ -206,14 +206,14 @@ interface RouteConfig {
 }
 
 class RouterService {
-  private currentRoute: PageRoute = 'dashboard';
+  private currentRoute: PageRoute = 'progress';
   private history: PageRoute[] = [];
   private listeners: ((route: PageRoute) => void)[] = [];
 
   readonly routes: Record<PageRoute, RouteConfig> = {
     // Staff Portal
-    'dashboard': { id: 'dashboard', title: 'Home', icon: 'home', showInTabs: true, tabOrder: 1, portal: 'staff' },
-    'progress': { id: 'progress', title: 'Progress Dashboard', icon: 'bar-chart', showInTabs: false, portal: 'staff' },
+    'progress': { id: 'progress', title: 'Home', icon: 'home', showInTabs: true, tabOrder: 1, portal: 'staff' },
+    'dashboard': { id: 'dashboard', title: 'Clock-In', icon: 'clock', showInTabs: false, portal: 'staff' },
     'attendance': { id: 'attendance', title: 'Attendance', icon: 'clock', showInTabs: true, tabOrder: 2, portal: 'staff' },
     'journeys': { id: 'journeys', title: 'Journeys', icon: 'map', showInTabs: true, tabOrder: 3, portal: 'staff' },
     'announcements': { id: 'announcements', title: 'News', icon: 'bell', showInTabs: true, tabOrder: 4, portal: 'staff' },

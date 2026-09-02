@@ -79,12 +79,12 @@ export class PageHeader {
     `;
   }
 
-  private static getPortalDashboard(): 'dashboard' | 'mnr-dashboard' | 'partner-dashboard' | 'vgk-member-hub' {
+  private static getPortalDashboard(): 'progress' | 'mnr-dashboard' | 'partner-dashboard' | 'vgk-member-hub' {
     const portal = portalService.getPortal();
     if (portal === 'mnr') return 'mnr-dashboard';
     if (portal === 'partner') return 'partner-dashboard';
     if (portal === 'vgk') return 'vgk-member-hub';
-    return 'dashboard';
+    return 'progress';
   }
 
   static attachListeners(options: HeaderOptions): void {

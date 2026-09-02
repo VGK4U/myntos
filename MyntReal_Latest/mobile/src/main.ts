@@ -412,7 +412,7 @@ class MNRApp {
       console.log('[DC_APP] Session expired event received');
       if (this.isLoggedIn) {
         const currentRoute = routerService.getCurrentRoute();
-        const portalDashboards: PageRoute[] = ['dashboard', 'mnr-dashboard', 'partner-dashboard'];
+        const portalDashboards: PageRoute[] = ['progress', 'mnr-dashboard', 'partner-dashboard', 'vgk-member-hub'];
         if (!portalDashboards.includes(currentRoute)) {
           localStorage.setItem('mnr_pre_expiry_route', currentRoute);
         }
@@ -424,7 +424,7 @@ class MNRApp {
       console.log('[DC_APP] Auth token expired event received');
       if (this.isLoggedIn) {
         const currentRoute = routerService.getCurrentRoute();
-        const portalDashboards: PageRoute[] = ['dashboard', 'mnr-dashboard', 'partner-dashboard'];
+        const portalDashboards: PageRoute[] = ['progress', 'mnr-dashboard', 'partner-dashboard', 'vgk-member-hub'];
         if (!portalDashboards.includes(currentRoute)) {
           localStorage.setItem('mnr_pre_expiry_route', currentRoute);
         }
@@ -440,7 +440,7 @@ class MNRApp {
 
     App.addListener('backButton', () => {
       const currentRoute = routerService.getCurrentRoute();
-      const portalDashboards: PageRoute[] = ['dashboard', 'mnr-dashboard', 'partner-dashboard'];
+      const portalDashboards: PageRoute[] = ['progress', 'mnr-dashboard', 'partner-dashboard', 'vgk-member-hub'];
       if (portalDashboards.includes(currentRoute)) {
         App.minimizeApp();
       } else {
@@ -448,7 +448,7 @@ class MNRApp {
           const authState = authService.getAuthState();
           const portal = authState.user?.portal || 'staff';
           const homeRoute: PageRoute = portal === 'mnr' ? 'mnr-dashboard'
-            : portal === 'partner' ? 'partner-dashboard' : 'dashboard';
+            : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'progress';
           routerService.navigate(homeRoute);
         }
       }
@@ -609,10 +609,10 @@ class MNRApp {
       if (!config.portal || config.portal === portal) {
         targetRoute = savedRoute;
       } else {
-        targetRoute = portal === 'mnr' ? 'mnr-dashboard' : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'dashboard';
+        targetRoute = portal === 'mnr' ? 'mnr-dashboard' : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'progress';
       }
     } else {
-      targetRoute = portal === 'mnr' ? 'mnr-dashboard' : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'dashboard';
+      targetRoute = portal === 'mnr' ? 'mnr-dashboard' : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'progress';
     }
 
     console.log('[DC_APP] Initializing with route:', targetRoute);
