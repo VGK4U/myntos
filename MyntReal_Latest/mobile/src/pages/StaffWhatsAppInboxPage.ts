@@ -513,19 +513,66 @@ export class StaffWhatsAppInboxPage {
 
   private renderAttachMenu(): string {
     return `
-      <div style="background: #1e293b; border-top: 1px solid #334155; padding: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-        <button class="wa-attach-choice-btn" data-type="brochure" style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 10px; color: #fff; font-size: 12px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;">
-          <i class="fas fa-file-pdf" style="font-size: 22px; color: #ef4444;"></i>
-          PDF Brochure
+      <div style="background: #1e293b; border-top: 1px solid #334155; padding: 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+        <input type="file" id="waChatFileInput" accept="image/jpeg,image/png,image/webp,application/pdf" style="display: none;" />
+        
+        <button class="wa-attach-choice-btn" data-type="upload-image" style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 10px 4px; color: #fff; font-size: 11px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(59,130,246,0.15); display: flex; align-items: center; justify-content: center;">
+            <i class="fas fa-image" style="font-size: 16px; color: #3b82f6;"></i>
+          </div>
+          <span>Photos</span>
         </button>
-        <button class="wa-attach-choice-btn" data-type="photo" style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 10px; color: #fff; font-size: 12px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;">
-          <i class="fas fa-image" style="font-size: 22px; color: #3b82f6;"></i>
-          Project Photos
+
+        <button class="wa-attach-choice-btn" data-type="upload-doc" style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 10px 4px; color: #fff; font-size: 11px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(239,68,68,0.15); display: flex; align-items: center; justify-content: center;">
+            <i class="fas fa-file-pdf" style="font-size: 16px; color: #ef4444;"></i>
+          </div>
+          <span>Document</span>
         </button>
-        <button class="wa-attach-choice-btn" data-type="location" style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 10px; color: #fff; font-size: 12px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;">
-          <i class="fas fa-map-marker-alt" style="font-size: 22px; color: #10b981;"></i>
-          Location Pin
+
+        <button class="wa-attach-choice-btn" data-type="brochure" style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 10px 4px; color: #fff; font-size: 11px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(168,85,247,0.15); display: flex; align-items: center; justify-content: center;">
+            <i class="fas fa-book-open" style="font-size: 16px; color: #a855f7;"></i>
+          </div>
+          <span>Brochure</span>
         </button>
+
+        <button class="wa-attach-choice-btn" data-type="location" style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 10px 4px; color: #fff; font-size: 11px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(16,185,129,0.15); display: flex; align-items: center; justify-content: center;">
+            <i class="fas fa-map-marker-alt" style="font-size: 16px; color: #10b981;"></i>
+          </div>
+          <span>Location</span>
+        </button>
+      </div>
+    `;
+  }
+
+  private renderMediaPreview(m: any): string {
+    const url = m.media_url || m.url || '';
+    if (!url) return '';
+    
+    const isImage = (m.media_type === 'image') || (/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(url));
+    if (isImage) {
+      return `
+        <div style="margin-bottom: 6px; border-radius: 8px; overflow: hidden; max-height: 220px; background: rgba(0,0,0,0.2);">
+          <a href="${url}" target="_blank" rel="noopener noreferrer" style="display: block;">
+            <img src="${url}" alt="Attachment" style="width: 100%; max-height: 220px; object-fit: cover; display: block;" onerror="this.style.display='none'" />
+          </a>
+        </div>
+      `;
+    }
+
+    const filename = m.media_name || m.filename || (url.split('/').pop()?.split('?')[0]) || 'Document.pdf';
+    return `
+      <div style="margin-bottom: 6px;">
+        <a href="${url}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: rgba(0,0,0,0.25); border-radius: 8px; text-decoration: none; color: #38bdf8; border: 1px solid rgba(255,255,255,0.1);">
+          <i class="fas fa-file-pdf" style="font-size: 20px; color: #ef4444; flex-shrink: 0;"></i>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 11.5px; font-weight: 600; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.escapeHtml(filename)}</div>
+            <div style="font-size: 9.5px; color: #94a3b8;">Document Attachment · Click to view</div>
+          </div>
+          <i class="fas fa-download" style="font-size: 11px; color: #94a3b8; flex-shrink: 0;"></i>
+        </a>
       </div>
     `;
   }
@@ -546,12 +593,14 @@ export class StaffWhatsAppInboxPage {
 
     const text = m.body_text || m.body || m.message || '';
     const ticks = m.status_ticks || '✓✓';
+    const mediaHtml = this.renderMediaPreview(m);
 
     if (isOutbound) {
       return `
         <div style="align-self: flex-end; max-width: 82%; background: ${isBot ? '#065f46' : '#059669'}; color: #fff; padding: 8px 12px; border-radius: 12px 12px 2px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
           ${isBot ? '<div style="font-size: 9.5px; font-weight: 700; color: #a7f3d0; margin-bottom: 2px;"><i class="fas fa-robot"></i> Bot Automated</div>' : ''}
-          <div style="font-size: 13px; line-height: 1.35; word-break: break-word; white-space: pre-wrap;">${this.escapeHtml(text)}</div>
+          ${mediaHtml}
+          ${text ? `<div style="font-size: 13px; line-height: 1.35; word-break: break-word; white-space: pre-wrap;">${this.escapeHtml(text)}</div>` : ''}
           <div style="font-size: 9.5px; color: #a7f3d0; text-align: right; margin-top: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 3px;">
             <span>${timeStr}</span>
             <span style="font-size: 10px; color: #a7f3d0;">${ticks}</span>
@@ -562,7 +611,8 @@ export class StaffWhatsAppInboxPage {
 
     return `
       <div style="align-self: flex-start; max-width: 82%; background: #1e293b; color: #f8fafc; padding: 8px 12px; border-radius: 12px 12px 12px 2px; border: 1px solid #334155; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
-        <div style="font-size: 13px; line-height: 1.35; word-break: break-word; white-space: pre-wrap;">${this.escapeHtml(text)}</div>
+        ${mediaHtml}
+        ${text ? `<div style="font-size: 13px; line-height: 1.35; word-break: break-word; white-space: pre-wrap;">${this.escapeHtml(text)}</div>` : ''}
         <div style="font-size: 9.5px; color: #94a3b8; text-align: right; margin-top: 3px;">
           ${timeStr}
         </div>
@@ -1196,23 +1246,74 @@ export class StaffWhatsAppInboxPage {
       this.scrollToChatBottom();
     });
 
+    // File Input for Chat Attachments
+    const chatFileInput = document.getElementById('waChatFileInput') as HTMLInputElement;
+    chatFileInput?.addEventListener('change', async () => {
+      const file = chatFileInput.files?.[0];
+      if (!file) return;
+
+      this.activeAttachment = {
+        type: file.type.startsWith('image/') ? 'image' : 'document',
+        name: `Uploading ${file.name}...`
+      };
+      this.showAttachMenu = false;
+      this.render();
+
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await apiService.uploadFile<any>('/whatsapp/media-upload', fd);
+        if (res.success && res.data && res.data.media_url) {
+          this.activeAttachment = {
+            type: res.data.media_type || (file.type.startsWith('image/') ? 'image' : 'document'),
+            name: res.data.filename || file.name,
+            url: res.data.media_url
+          };
+        } else {
+          alert(res.error || 'Failed to upload attachment.');
+          this.activeAttachment = null;
+        }
+      } catch (err: any) {
+        alert(`Upload failed: ${err.message || 'Network error'}`);
+        this.activeAttachment = null;
+      } finally {
+        chatFileInput.value = '';
+        this.render();
+        this.scrollToChatBottom();
+      }
+    });
+
     // Attachment Choices
     this.container.querySelectorAll('.wa-attach-choice-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const type = (e.currentTarget as HTMLElement).dataset.type;
-        if (type === 'brochure') {
-          this.activeAttachment = { type: 'pdf', name: 'MyntReal_Venture_Brochure.pdf' };
-        } else if (type === 'photo') {
-          this.activeAttachment = { type: 'image', name: 'Venture_Layout_Plan.jpg' };
+        if (type === 'upload-image') {
+          if (chatFileInput) {
+            chatFileInput.accept = 'image/jpeg,image/png,image/webp';
+            chatFileInput.click();
+          }
+        } else if (type === 'upload-doc') {
+          if (chatFileInput) {
+            chatFileInput.accept = 'application/pdf';
+            chatFileInput.click();
+          }
+        } else if (type === 'brochure') {
+          this.activeAttachment = { 
+            type: 'document', 
+            name: 'MyntReal_Venture_Brochure.pdf',
+            url: '/storage/wa_media/MyntReal_Venture_Brochure.pdf'
+          };
+          this.showAttachMenu = false;
+          this.render();
         } else if (type === 'location') {
           const input = document.getElementById('waLiveMsgInput') as HTMLInputElement;
           if (input) {
-            input.value += ' 📍 Venture Location: https://maps.google.com/?q=17.729,83.308';
+            input.value += (input.value ? '\n' : '') + '📍 Venture Location: https://maps.google.com/?q=17.729,83.308';
             input.focus();
           }
+          this.showAttachMenu = false;
+          this.render();
         }
-        this.showAttachMenu = false;
-        this.render();
       });
     });
 
@@ -1228,10 +1329,10 @@ export class StaffWhatsAppInboxPage {
 
     const doSend = async () => {
       let text = msgInput?.value?.trim() || '';
-      if (this.activeAttachment) {
-        text += (text ? '\n\n' : '') + `[Attachment: ${this.activeAttachment.name}]`;
-      }
-      if (!text || !this.activeChatPhone) return;
+      const currentAttach = this.activeAttachment;
+
+      if (!text && !currentAttach) return;
+      if (!this.activeChatPhone) return;
 
       if (msgInput) msgInput.value = '';
       this.activeAttachment = null;
@@ -1243,13 +1344,16 @@ export class StaffWhatsAppInboxPage {
       const empCode = user.emp_code ? ` (${user.emp_code})` : '';
       const designation = user.designation || user.role_name || user.role?.role_name || 'Workflows';
       const signature = `\n\n—\nRegards,\n${staffName}${empCode}\n${designation} | MyntReal Workflows`;
-      const finalMsg = text.includes('Regards,') ? text : `${text}${signature}`;
+      const finalMsg = text ? (text.includes('Regards,') ? text : `${text}${signature}`) : '';
 
       this.chatHistory.push({
         id: Date.now(),
         from_phone: this.activeChatPhone,
         message_type: 'outbound',
         body_text: finalMsg,
+        media_url: currentAttach?.url || null,
+        media_name: currentAttach?.name || null,
+        media_type: currentAttach?.type || 'text',
         received_at: new Date().toISOString(),
         status_ticks: '✓✓'
       });
@@ -1263,6 +1367,8 @@ export class StaffWhatsAppInboxPage {
           to_phone: cleanPhone,
           phone: cleanPhone,
           message: finalMsg,
+          media_url: currentAttach?.url || null,
+          message_type: currentAttach ? currentAttach.type : 'text',
           recipient_type: 'individual'
         });
       } catch (err) {
@@ -1491,6 +1597,14 @@ export class StaffWhatsAppInboxPage {
                   <button id="waFmtMono" title="Monospace" style="padding: 2px 7px; border-radius: 4px; background: #334155; color: #fff; font-family: monospace; font-size: 11px; border: none; cursor: pointer;">&lt;/&gt;</button>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
+                  <!-- Attachment Trigger Button -->
+                  <button id="waModalAttachBtn" title="Attach Photo or Document" style="background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); border-radius: 6px; padding: 2px 8px; font-size: 11.5px; color: #38bdf8; cursor: pointer; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+                    <i class="fas fa-paperclip"></i>
+                    <span>Attach</span>
+                  </button>
+                  <input type="file" id="waModalFileInput" accept="image/jpeg,image/png,image/webp,application/pdf" style="display: none;" />
+
+                  <!-- Emoji Picker Toggle -->
                   <button id="waModalEmojiToggle" style="background: none; border: none; font-size: 17px; color: #25d366; cursor: pointer; padding: 2px; display: flex; align-items: center;">
                     <i class="far fa-smile"></i>
                   </button>
@@ -1504,6 +1618,26 @@ export class StaffWhatsAppInboxPage {
                 placeholder="Type a message as on WhatsApp or select template above..."
                 style="width: 100%; box-sizing: border-box; padding: 10px 12px; background: transparent; border: none; color: #fff; font-size: 13px; outline: none; resize: vertical; line-height: 1.5; font-family: inherit;"
               >${initialText || ''}</textarea>
+
+              <!-- Upload Progress Indicator -->
+              <div id="waModalUploadProgress" style="display: none; padding: 7px 12px; background: #0f172a; border-top: 1px solid #334155; font-size: 11.5px; color: #38bdf8; align-items: center; gap: 6px;">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Uploading attachment...</span>
+              </div>
+
+              <!-- Selected Attachment Preview Chip in Modal -->
+              <div id="waModalAttachPreviewWrap" style="display: none; padding: 8px 12px; background: #1e293b; border-top: 1px solid #334155; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                  <div id="waModalAttachIcon" style="width: 28px; height: 28px; border-radius: 6px; background: #0f172a; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="fas fa-paperclip" style="color: #38bdf8;"></i>
+                  </div>
+                  <div style="min-width: 0;">
+                    <div id="waModalAttachFileName" style="font-size: 12px; font-weight: 600; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">filename.pdf</div>
+                    <div id="waModalAttachFileSize" style="font-size: 10px; color: #94a3b8;">Uploaded</div>
+                  </div>
+                </div>
+                <button id="waModalRemoveAttachBtn" style="background: none; border: none; color: #ef4444; font-size: 14px; cursor: pointer; padding: 4px;">✕</button>
+              </div>
 
               <!-- Expandable Emoji Tray in Modal -->
               <div id="waModalEmojiDrawer" style="display: none; background: #1e293b; border-top: 1px solid #334155; padding: 8px;">
@@ -1534,6 +1668,7 @@ export class StaffWhatsAppInboxPage {
               <!-- Live WhatsApp Chat Bubble Preview -->
               <div style="font-size: 10.5px; color: #94a3b8; margin-bottom: 4px;">Live WhatsApp Message Preview:</div>
               <div style="background: #005c4b; border-radius: 10px; border-top-right-radius: 2px; padding: 10px 12px; color: #e9edef; font-size: 12.5px; line-height: 1.4; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+                <div id="waLivePreviewMedia" style="display: none; margin-bottom: 6px; border-radius: 6px; overflow: hidden; background: rgba(0,0,0,0.2);"></div>
                 <div id="waLivePreviewText" style="white-space: pre-wrap; word-break: break-word;">Hello from MyntReal!</div>
                 <div id="waLivePreviewSig" style="white-space: pre-wrap; font-size: 11px; color: #8696a0; margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 4px;">${defaultSig}</div>
                 <div style="text-align: right; font-size: 10px; color: #8696a0; margin-top: 4px; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
@@ -1898,6 +2033,83 @@ export class StaffWhatsAppInboxPage {
     };
     attachEmojiClick();
 
+    // Modal Attachment Handlers
+    let attachedModalMedia: { url: string; name: string; type: string; size?: number } | null = null;
+    const modalFileInput = document.getElementById('waModalFileInput') as HTMLInputElement;
+    const modalAttachBtn = document.getElementById('waModalAttachBtn');
+    const modalAttachPreviewWrap = document.getElementById('waModalAttachPreviewWrap');
+    const modalAttachIcon = document.getElementById('waModalAttachIcon');
+    const modalAttachFileName = document.getElementById('waModalAttachFileName');
+    const modalAttachFileSize = document.getElementById('waModalAttachFileSize');
+    const modalRemoveAttachBtn = document.getElementById('waModalRemoveAttachBtn');
+    const modalUploadProgress = document.getElementById('waModalUploadProgress');
+    const modalLivePreviewMedia = document.getElementById('waLivePreviewMedia');
+
+    modalAttachBtn?.addEventListener('click', () => {
+      modalFileInput?.click();
+    });
+
+    modalFileInput?.addEventListener('change', async () => {
+      const file = modalFileInput.files?.[0];
+      if (!file) return;
+
+      if (modalUploadProgress) modalUploadProgress.style.display = 'flex';
+      if (modalAttachPreviewWrap) modalAttachPreviewWrap.style.display = 'none';
+
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await apiService.uploadFile<any>('/whatsapp/media-upload', fd);
+        if (res.success && res.data && res.data.media_url) {
+          attachedModalMedia = {
+            url: res.data.media_url,
+            name: res.data.filename || file.name,
+            type: res.data.media_type || (file.type.startsWith('image/') ? 'image' : 'document'),
+            size: res.data.file_size || file.size
+          };
+
+          if (modalAttachPreviewWrap) modalAttachPreviewWrap.style.display = 'flex';
+          if (modalAttachFileName) modalAttachFileName.textContent = attachedModalMedia.name;
+          if (modalAttachFileSize) modalAttachFileSize.textContent = `${(file.size / 1024).toFixed(0)} KB · Ready to send`;
+          if (modalAttachIcon) {
+            modalAttachIcon.innerHTML = attachedModalMedia.type === 'image'
+              ? '<i class="fas fa-image" style="color: #3b82f6;"></i>'
+              : '<i class="fas fa-file-pdf" style="color: #ef4444;"></i>';
+          }
+
+          if (modalLivePreviewMedia) {
+            modalLivePreviewMedia.style.display = 'block';
+            if (attachedModalMedia.type === 'image') {
+              modalLivePreviewMedia.innerHTML = `<img src="${attachedModalMedia.url}" style="width:100%; max-height:160px; object-fit:cover; display:block;" />`;
+            } else {
+              modalLivePreviewMedia.innerHTML = `
+                <div style="display:flex; align-items:center; gap:8px; padding:6px 8px; background:rgba(0,0,0,0.3); border-radius:6px;">
+                  <i class="fas fa-file-pdf" style="font-size:20px; color:#ef4444;"></i>
+                  <span style="font-size:11.5px; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${attachedModalMedia.name}</span>
+                </div>
+              `;
+            }
+          }
+        } else {
+          alert(res.error || 'Failed to upload attachment.');
+        }
+      } catch (err: any) {
+        alert(`Upload failed: ${err.message || 'Network error'}`);
+      } finally {
+        if (modalUploadProgress) modalUploadProgress.style.display = 'none';
+        modalFileInput.value = '';
+      }
+    });
+
+    modalRemoveAttachBtn?.addEventListener('click', () => {
+      attachedModalMedia = null;
+      if (modalAttachPreviewWrap) modalAttachPreviewWrap.style.display = 'none';
+      if (modalLivePreviewMedia) {
+        modalLivePreviewMedia.style.display = 'none';
+        modalLivePreviewMedia.innerHTML = '';
+      }
+    });
+
     // Unified Send Action
     document.getElementById('waModalSendBtn')?.addEventListener('click', async () => {
       let targetPhone = selectedContactPhone;
@@ -1911,14 +2123,14 @@ export class StaffWhatsAppInboxPage {
         alert('Please search and select a contact or enter a valid 10-digit phone number.');
         return;
       }
-      if (!text) {
-        alert('Please enter or select a message.');
+      if (!text && !attachedModalMedia) {
+        alert('Please enter a message or attach a file.');
         return;
       }
 
       const attachSig = sigCheck?.checked ?? true;
       const signature = `\n\n${defaultSig}`;
-      const finalMsg = (attachSig && !text.includes('Regards,')) ? `${text}${signature}` : text;
+      const finalMsg = text ? ((attachSig && !text.includes('Regards,')) ? `${text}${signature}` : text) : '';
 
       if (sendBtn) sendBtn.disabled = true;
       if (sendBtnText) sendBtnText.textContent = currentMode === 'company' ? 'Sending via Meta API...' : 'Sending via WhatsApp Bot...';
@@ -1931,9 +2143,10 @@ export class StaffWhatsAppInboxPage {
           await apiService.post(`/whatsapp-config/crm-lead-send/${leadId}`, {
             phone: targetPhone,
             template_id: tplId ? parseInt(tplId, 10) : null,
-            custom_message: !tplId ? finalMsg : null,
+            custom_message: !tplId ? (finalMsg || (attachedModalMedia ? `Attachment: ${attachedModalMedia.name}` : null)) : null,
             variable_values: variableValues,
-            send_mode: 'company'
+            send_mode: 'company',
+            media_url: attachedModalMedia?.url || null
           });
         } else {
           // Scanned Bot Gateway Send
@@ -1942,6 +2155,8 @@ export class StaffWhatsAppInboxPage {
             to_phone: targetPhone,
             phone: targetPhone,
             message: finalMsg,
+            media_url: attachedModalMedia?.url || null,
+            message_type: attachedModalMedia ? attachedModalMedia.type : 'text',
             recipient_type: 'individual',
             recipient_name: selectedContactName || 'Customer'
           });
