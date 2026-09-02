@@ -26,12 +26,15 @@ WORKDIR /app
 COPY backend/requirements.txt backend/requirements.txt
 COPY frontend/package.json frontend/package.json
 COPY frontend/package-lock.json frontend/package-lock.json
+COPY backend/whatsapp-group-bot/package.json backend/whatsapp-group-bot/package.json
+COPY backend/whatsapp-group-bot/package-lock.json backend/whatsapp-group-bot/package-lock.json
 
 # Install Python dependencies with pre-compiled wheels
 RUN pip install --no-cache-dir --prefer-binary -r backend/requirements.txt
 
-# Install Node.js production dependencies
+# Install Node.js production dependencies for frontend and whatsapp bot
 RUN cd frontend && npm install --production --no-audit --no-fund
+RUN cd backend/whatsapp-group-bot && npm install --production --no-audit --no-fund
 
 # Copy application source code
 COPY . .
