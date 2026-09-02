@@ -655,9 +655,13 @@ async def meta_webhook_status_canonical(request: Request, db: Session = Depends(
                         err_code = str(errs[0].get("code", ""))
                         err_msg  = errs[0].get("message", "") or errs[0].get("title", "")
                         details  = errs[0].get("error_data", {}).get("details", "")
-                        ml.error_code    = err_code
-                        ml.error_message = err_msg
-                        ml.failure_reason = f"{err_msg}: {details}" if details else err_msg
+                        
+                        # DC Fix: Postgres schema still has VARCHAR(100) for these fields despite SQLAlchemy model having Text.
+                        # We truncate to 95 chars here to prevent 500 crashes during webhook updates.
+                        ml.error_code    = err_code[:20] if err_code else err_code
+                        ml.error_message = err_msg[:95] if err_msg else err_msg
+                        full_reason = f"{err_msg}: {details}" if details else err_msg
+                        ml.failure_reason = full_reason[:95] if full_reason else full_reason
 
                 # Structured Logging
                 logger.info(f"WHATSAPP_STATUS message_id={wamid} recipient={recipient_id or ml.mobile_number} status={mapped} timestamp={status_timestamp} error_code={err_code} error_message={err_msg}")

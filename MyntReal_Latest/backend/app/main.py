@@ -16612,13 +16612,13 @@ logging.info(f"✅ Static files mounted: /uploads -> {UPLOADS_DIR} (follow_symli
 # DC Protocol: Fallback route for backward compatibility with old media paths
 # Redirects /feedback/* to /uploads/feedback/* for announcements media
 FEEDBACK_DIR = os.path.join(UPLOADS_DIR, "feedback")
-if os.path.exists(FEEDBACK_DIR):
+if os.path.isdir(FEEDBACK_DIR):
     app.mount("/feedback", StaticFiles(directory=FEEDBACK_DIR, follow_symlink=True), name="feedback")
     logging.info(f"✅ Feedback media fallback mounted: /feedback -> {FEEDBACK_DIR} (follow_symlink=True)")
 
 # Mount static files for frontend assets (CSS, JS, images, etc.)
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "static")
-if os.path.exists(STATIC_DIR):
+if os.path.isdir(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR, follow_symlink=True), name="static")
     logging.info(f"✅ Static files mounted: /static -> {STATIC_DIR} (follow_symlink=True)")
 else:
@@ -16626,7 +16626,7 @@ else:
 
 _WORKSPACE_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 FRONTEND_PUBLIC_DIR = os.path.join(_WORKSPACE_ROOT, "frontend", "public")
-if os.path.exists(FRONTEND_PUBLIC_DIR):
+if os.path.isdir(FRONTEND_PUBLIC_DIR):
     app.mount("/public", StaticFiles(directory=FRONTEND_PUBLIC_DIR, follow_symlink=True), name="public_frontend_assets")
     print(f"[DC-STATIC] ✅ Public assets mounted: /public -> {FRONTEND_PUBLIC_DIR}", flush=True)
 
