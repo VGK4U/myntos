@@ -13,7 +13,7 @@ from app.models.whatsapp import WhatsAppControl, MessageLog
 from app.models.system_control import AppSettings
 from app.models.staff import StaffEmployee
 from pydantic import BaseModel, ConfigDict
-from typing import Optional, List
+from typing import Optional, List, Any, Union, Dict
 from datetime import datetime, timedelta
 import logging
 import os
@@ -1527,6 +1527,7 @@ def get_inbox(
         "page":      page,
         "page_size": page_size,
         "stats":     stats,
+        "items":     data,
         "data":      data,
     }
 
@@ -2291,23 +2292,24 @@ def _get_downline_staff_ids(db: Session, manager_id: int) -> set:
 def _get_permitted_phones_for_staff(db: Session, staff: StaffEmployee, scope: str = 'assigned_tagged') -> Optional[set]:
     """
     Returns set of permitted 10-digit phone numbers for staff member based on scope:
-    - assigned_tagged: Leads assigned or tagged to staff + own sent messages
+    - assigned_tagged: Leads assigned or tagged to staff + own sent messages + own WAInbox chats
     - downline: Leads assigned or tagged to staff or downline team + downline sent messages
-    - all: Full access (Admin / EA only, returns None for unrestricted)
+    - all: Full access (Admin / EA / Leadership level >= 80, otherwise fallbacks gracefully to all staff-accessible messages so it never 403s)
     """
     role_code = _get_role_code_wa(staff)
     is_admin = role_code in {"vgk4u_supreme", "admin", "super_admin", "ea"}
     
     if scope == 'all':
-        if not is_admin:
-            role_obj = getattr(staff, 'role', None)
-            level = getattr(role_obj, 'hierarchy_level', 0) if role_obj else 0
-            if level < 80:
-                raise HTTPException(status_code=403, detail="Access denied for scope 'all'. Requires Admin or EA authorization.")
-        return None  # Unrestricted access
+        if is_admin:
+            return None  # Unrestricted access
+        role_obj = getattr(staff, 'role', None)
+        level = getattr(role_obj, 'hierarchy_level', 0) if role_obj else 0
+        if level >= 80:
+            return None  # Unrestricted access for leadership
+        # For general staff requesting 'all', seamlessly fallback to their full accessible scope without 403 error
 
     from app.models.crm import CRMLead
-    from app.models.whatsapp import MessageLog
+    from app.models.whatsapp import MessageLog, WAInbox
     from sqlalchemy import or_
 
     target_staff_ids = {staff.id}
@@ -2315,6 +2317,12 @@ def _get_permitted_phones_for_staff(db: Session, staff: StaffEmployee, scope: st
         target_staff_ids = _get_downline_staff_ids(db, staff.id)
 
     permitted_phones = set()
+
+    # Staff's own phone if available
+    if staff.phone:
+        sph = ''.join(filter(str.isdigit, str(staff.phone)))[-10:]
+        if len(sph) == 10:
+            permitted_phones.add(sph)
 
     # Query leads assigned to or tagged by target staff IDs
     lead_query = db.query(CRMLead.phone, CRMLead.alternate_phone).filter(
@@ -2328,20 +2336,35 @@ def _get_permitted_phones_for_staff(db: Session, staff: StaffEmployee, scope: st
     )
     for p1, p2 in lead_query.all():
         if p1:
-            c1 = ''.join(filter(str.isdigit, p1))[-10:]
+            c1 = ''.join(filter(str.isdigit, str(p1)))[-10:]
             if len(c1) == 10: permitted_phones.add(c1)
         if p2:
-            c2 = ''.join(filter(str.isdigit, p2))[-10:]
+            c2 = ''.join(filter(str.isdigit, str(p2)))[-10:]
             if len(c2) == 10: permitted_phones.add(c2)
 
-    # Query messages sent by target staff IDs
+    # Query messages sent by target staff IDs or logged with their employee code
     log_query = db.query(MessageLog.mobile_number).filter(
-        MessageLog.sent_by_staff_id.in_(target_staff_ids)
+        or_(
+            MessageLog.sent_by_staff_id.in_(target_staff_ids),
+            MessageLog.sent_by_name.like(f"%{staff.emp_code}%")
+        )
     )
     for (mob,) in log_query.all():
         if mob:
-            cm = ''.join(filter(str.isdigit, mob))[-10:]
+            cm = ''.join(filter(str.isdigit, str(mob)))[-10:]
             if len(cm) == 10: permitted_phones.add(cm)
+
+    # Query conversations from WAInbox handled or assigned to target staff IDs
+    inbox_query = db.query(WAInbox.from_phone).filter(
+        or_(
+            WAInbox.replied_by_id.in_(target_staff_ids),
+            WAInbox.assigned_to_emp_id.in_(target_staff_ids)
+        )
+    )
+    for (f_ph,) in inbox_query.all():
+        if f_ph:
+            c_in = ''.join(filter(str.isdigit, str(f_ph)))[-10:]
+            if len(c_in) == 10: permitted_phones.add(c_in)
 
     return permitted_phones
 
@@ -2453,8 +2476,21 @@ def get_whatsapp_conversations_hub(
             elif "otp" in msg_type or "verification" in msg_body:
                 cat = "OTP / Auth"
 
+            last_msg = l.message_body
+            if not last_msg or str(last_msg).strip() in ("", "—", "None", "null"):
+                m_type = (l.message_type or '').lower()
+                if m_type in ('template', 'morning_wish', 'auto_staff_alert'):
+                    last_msg = "🌅 Good Morning! Wishing you a productive day."
+                elif m_type == 'otp':
+                    last_msg = "🔐 Your OTP verification code"
+                elif m_type:
+                    last_msg = f"[{m_type.replace('_', ' ').title()}]"
+                else:
+                    last_msg = "Automated System Notification"
+
             c_type = contact_map.get(clean_phone, {}).get("contact_type", "CONTACT")
-            resolved_name = l.user_name or contact_map.get(clean_phone, {}).get("name") or f"Contact (+91 {clean_phone})"
+            raw_uname = str(l.user_name or '').strip()
+            resolved_name = raw_uname if raw_uname and raw_uname not in ("0", "None", "null") and not raw_uname.isdigit() else (contact_map.get(clean_phone, {}).get("name") or f"Customer (+91 {clean_phone})")
             if clean_phone in target_map:
                 c_type = target_map[clean_phone]["type"]
                 resolved_name = target_map[clean_phone]["name"]
@@ -2467,7 +2503,7 @@ def get_whatsapp_conversations_hub(
                     "contact_type": c_type,
                     "status": "Active",
                     "category": cat,
-                    "last_message": l.message_body or "—",
+                    "last_message": last_msg,
                     "last_time": l.sent_at.strftime('%d %b, %I:%M %p') if l.sent_at else '—',
                     "last_timestamp": l.sent_at or datetime.min,
                     "message_type": l.message_type or 'bot_dispatch',
@@ -2491,7 +2527,7 @@ def get_whatsapp_conversations_hub(
                     if not ph_val: continue
                     cp = ''.join(filter(str.isdigit, str(ph_val)))[-10:]
                     if cp in contact_map and contact_map[cp]["contact_type"] not in ("GROUP", "CHANNEL"):
-                        if l_name:
+                        if l_name and str(l_name).strip() not in ("0", "None", "null") and not str(l_name).strip().isdigit():
                             contact_map[cp]["name"] = l_name
                             contact_map[cp]["contact_type"] = "CONTACT"
 
@@ -2516,22 +2552,32 @@ def get_whatsapp_conversations_hub(
                 if uph:
                     cp = ''.join(filter(str.isdigit, str(uph)))[-10:]
                     if cp in contact_map and contact_map[cp]["contact_type"] not in ("GROUP", "CHANNEL"):
-                        if uname and (contact_map[cp]["name"].startswith("Contact (+91") or contact_map[cp]["name"] in ("System/Auto", "All")):
+                        if uname and str(uname).strip() not in ("0", "None", "null") and (contact_map[cp]["name"].startswith("Contact (+91") or contact_map[cp]["name"].startswith("Customer (+91") or contact_map[cp]["name"] in ("System/Auto", "All")):
                             contact_map[cp]["name"] = uname
                             contact_map[cp]["contact_type"] = "USER"
 
-        # Clean up any remaining generic System/Auto labels
+        # Clean up any remaining generic System/Auto, numeric, or staff dispatch labels
         for p, info in contact_map.items():
-            if info["name"] in ("System/Auto", "All", "Missed Call"):
-                info["name"] = f"Customer (+91 {p})"
+            curr_name = str(info.get("name") or "").strip()
+            if not curr_name or curr_name in ("System/Auto", "All", "Missed Call", "0", "None", "null", "Staff Lead Dispatch") or curr_name.isdigit():
+                # Check if we have a user or customer name in message_log
+                ml_name_row = db.query(MessageLog.user_name).filter(
+                    MessageLog.mobile_number.like(f"%{p}%"),
+                    MessageLog.user_name.isnot(None),
+                    ~MessageLog.user_name.in_(["0", "None", "null", "Staff Lead Dispatch", "System/Auto", "All"])
+                ).order_by(MessageLog.id.desc()).first()
+                if ml_name_row and ml_name_row[0]:
+                    info["name"] = ml_name_row[0]
+                else:
+                    info["name"] = f"Customer (+91 {p})"
             if "contact_type" not in info:
                 info["contact_type"] = "CONTACT"
 
-        # Filter by permitted phones for leads (preserving configured groups & channels for operational staff)
+        # Filter by permitted phones for staff (strictly personal for assigned_tagged)
         if permitted_phones is not None:
             contact_map = {
                 p: info for p, info in contact_map.items() 
-                if (p in permitted_phones or info.get("contact_type") in ("GROUP", "CHANNEL"))
+                if p in permitted_phones
             }
 
         sorted_contacts = sorted(contact_map.values(), key=lambda x: str(x["last_timestamp"]), reverse=True)
@@ -2588,7 +2634,19 @@ def get_whatsapp_chat_history(
         ).all()
 
         for l in log_q:
-            c_body = _clean_body(l.message_body)
+            body_content = l.message_body
+            if not body_content or str(body_content).strip() in ("", "—", "None", "null"):
+                m_type = (l.message_type or '').lower()
+                if m_type in ('template', 'morning_wish', 'auto_staff_alert'):
+                    body_content = "🌅 Good Morning! Wishing you a productive and successful day ahead. Explore our latest opportunities at MyntReal."
+                elif m_type == 'otp':
+                    body_content = f"🔐 Your OTP verification code is {l.otp_code or '••••••'}."
+                elif m_type:
+                    body_content = f"[{m_type.replace('_', ' ').title()} Notification]"
+                else:
+                    body_content = "Automated System Notification"
+
+            c_body = _clean_body(body_content)
             if c_body:
                 seen_bodies.add(c_body)
             
@@ -2602,12 +2660,15 @@ def get_whatsapp_chat_history(
             else:
                 ticks, color, lbl = "✓", "#6b7280", "Sent"
 
+            is_bot = (l.sender_type == "bot" or not l.sent_by_staff_id)
+            sender_label = l.sent_by_name or ("Mynt Bot" if is_bot else "Staff Member")
+
             log_messages.append({
                 "id": f"ml_{l.id}",
                 "wamid": l.message_sid,
-                "sender": "bot",
-                "sender_name": l.sent_by_name or l.user_name or "Mynt Bot",
-                "body": l.message_body or "—",
+                "sender": "bot" if is_bot else "staff",
+                "sender_name": sender_label,
+                "body": body_content,
                 "sent_at": _to_ist_str(l.sent_at),
                 "timestamp": l.sent_at or datetime.min,
                 "status": l.current_status or 'sent',
@@ -2615,8 +2676,8 @@ def get_whatsapp_chat_history(
                 "status_color": color,
                 "status_label": lbl,
                 "message_type": "outbound",
-                "sent_by_name": l.sent_by_name or "Mynt Bot",
-                "sender_type": l.sender_type or "bot"
+                "sent_by_name": sender_label,
+                "sender_type": "bot" if is_bot else "staff"
             })
 
         # Fetch from WAInbox (deduplicating against seen_bodies)
@@ -2750,8 +2811,11 @@ async def upload_staff_whatsapp_media(
 
 
 class WASendMessagePayload(BaseModel):
-    recipient: str
+    recipient: Optional[str] = None
+    to_phone: Optional[str] = None
+    phone: Optional[str] = None
     message: str = ""
+    message_type: Optional[str] = "text"
     media_url: Optional[str] = None
     recipient_type: Optional[str] = "individual"  # "individual", "staff", "user", "group", "channel"
     recipient_name: Optional[str] = None
@@ -2759,6 +2823,7 @@ class WASendMessagePayload(BaseModel):
     template_id: Optional[int] = None
     template_slug: Optional[str] = None
     variable_values: Optional[dict] = None
+    lead_id: Optional[Any] = None
 
 _processed_client_msg_ids = set()
 
@@ -2777,7 +2842,7 @@ def send_manual_whatsapp_message(
     import uuid
     import requests
 
-    rec = (payload.recipient or "").strip()
+    rec = (payload.recipient or payload.to_phone or payload.phone or "").strip()
     msg_text = (payload.message or "").strip()
     rec_type = (payload.recipient_type or "individual").lower()
     client_id = (payload.client_msg_id or "").strip()
@@ -3808,4 +3873,218 @@ def get_whatsapp_bot_status():
 @router.get("/gateway-status-qr")
 def get_gateway_status_qr():
     return get_whatsapp_bot_status()
+
+
+@router.get("/search-contacts")
+def search_whatsapp_contacts(
+    q: str = Query("", min_length=1),
+    db: Session = Depends(get_db),
+    current_employee=Depends(_require_staff)
+):
+    """
+    Search contacts across CRM leads, synced mobile contacts, staff team, and message logs.
+    """
+    query_str = q.strip()
+    if not query_str:
+        return {"success": True, "contacts": []}
+
+    results = []
+    seen_phones = set()
+    clean_digits = ''.join(filter(str.isdigit, query_str))
+
+    # 1. Search CRM Leads
+    try:
+        from sqlalchemy import text
+        crm_sql = text("""
+            SELECT id, name, phone, alternate_phone, status
+            FROM crm_leads
+            WHERE name ILIKE :q_like 
+               OR phone LIKE :q_like 
+               OR alternate_phone LIKE :q_like
+               OR (:digits <> '' AND (REGEXP_REPLACE(phone, '[^0-9]', '', 'g') LIKE :d_like OR REGEXP_REPLACE(alternate_phone, '[^0-9]', '', 'g') LIKE :d_like))
+            LIMIT 20;
+        """)
+        crm_rows = db.execute(crm_sql, {
+            "q_like": f"%{query_str}%",
+            "digits": clean_digits,
+            "d_like": f"%{clean_digits}%"
+        }).fetchall()
+
+        for cid, c_name, c_ph, c_alt, c_stat in crm_rows:
+            for p in (c_ph, c_alt):
+                if not p: continue
+                cp = ''.join(filter(str.isdigit, str(p)))[-10:]
+                if len(cp) == 10 and cp not in seen_phones:
+                    seen_phones.add(cp)
+                    masked = f"+91 {cp[:4]}••••{cp[-2:]}"
+                    results.append({
+                        "id": cid,
+                        "name": (c_name or "CRM Customer").strip(),
+                        "phone": cp,
+                        "masked_phone": masked,
+                        "source": "CRM Lead",
+                        "status": c_stat or "Active",
+                        "badge_color": "#059669"
+                    })
+    except Exception as e:
+        logger.warning(f"Error searching CRM leads: {e}")
+
+    # 2. Search Staff Call Logs (Synced Mobile Contacts)
+    try:
+        from sqlalchemy import text
+        calls_sql = text("""
+            SELECT DISTINCT ON (RIGHT(REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g'), 10))
+                   contact_name, phone_number
+            FROM staff_call_logs
+            WHERE (contact_name IS NOT NULL AND contact_name <> '' AND contact_name ILIKE :q_like)
+               OR phone_number LIKE :q_like
+               OR (:digits <> '' AND REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g') LIKE :d_like)
+            LIMIT 20;
+        """)
+        call_rows = db.execute(calls_sql, {
+            "q_like": f"%{query_str}%",
+            "digits": clean_digits,
+            "d_like": f"%{clean_digits}%"
+        }).fetchall()
+
+        for c_name, c_ph in call_rows:
+            if not c_ph: continue
+            cp = ''.join(filter(str.isdigit, str(c_ph)))[-10:]
+            if len(cp) == 10 and cp not in seen_phones:
+                seen_phones.add(cp)
+                masked = f"+91 {cp[:4]}••••{cp[-2:]}"
+                results.append({
+                    "name": (c_name or "Mobile Contact").strip(),
+                    "phone": cp,
+                    "masked_phone": masked,
+                    "source": "Mobile Contact",
+                    "status": "Synced",
+                    "badge_color": "#0284c7"
+                })
+    except Exception as e:
+        logger.warning(f"Error searching staff call logs: {e}")
+
+    # 3. Search Staff Colleagues
+    try:
+        from sqlalchemy import text
+        staff_sql = text("""
+            SELECT first_name, last_name, emp_code, phone, designation
+            FROM staff_employees
+            WHERE first_name ILIKE :q_like
+               OR last_name ILIKE :q_like
+               OR emp_code ILIKE :q_like
+               OR phone LIKE :q_like
+               OR (:digits <> '' AND REGEXP_REPLACE(phone, '[^0-9]', '', 'g') LIKE :d_like)
+            LIMIT 15;
+        """)
+        staff_rows = db.execute(staff_sql, {
+            "q_like": f"%{query_str}%",
+            "digits": clean_digits,
+            "d_like": f"%{clean_digits}%"
+        }).fetchall()
+
+        for fn, ln, ecode, sph, desig in staff_rows:
+            if not sph: continue
+            cp = ''.join(filter(str.isdigit, str(sph)))[-10:]
+            if len(cp) == 10 and cp not in seen_phones:
+                seen_phones.add(cp)
+                masked = f"+91 {cp[:4]}••••{cp[-2:]}"
+                full_n = f"{fn or ''} {ln or ''}".strip()
+                results.append({
+                    "name": f"{full_n} ({ecode})",
+                    "phone": cp,
+                    "masked_phone": masked,
+                    "source": "Staff Team",
+                    "status": desig or "Staff",
+                    "badge_color": "#7c3aed"
+                })
+    except Exception as e:
+        logger.warning(f"Error searching staff employees: {e}")
+
+    # 4. Search Past Message Logs
+    try:
+        from sqlalchemy import text
+        msg_sql = text("""
+            SELECT DISTINCT ON (RIGHT(REGEXP_REPLACE(mobile_number, '[^0-9]', '', 'g'), 10))
+                   user_name, mobile_number
+            FROM message_log
+            WHERE (user_name IS NOT NULL AND user_name <> '' AND user_name ILIKE :q_like)
+               OR mobile_number LIKE :q_like
+               OR (:digits <> '' AND REGEXP_REPLACE(mobile_number, '[^0-9]', '', 'g') LIKE :d_like)
+            LIMIT 15;
+        """)
+        msg_rows = db.execute(msg_sql, {
+            "q_like": f"%{query_str}%",
+            "digits": clean_digits,
+            "d_like": f"%{clean_digits}%"
+        }).fetchall()
+
+        for uname, uph in msg_rows:
+            if not uph: continue
+            cp = ''.join(filter(str.isdigit, str(uph)))[-10:]
+            if len(cp) == 10 and cp not in seen_phones:
+                seen_phones.add(cp)
+                masked = f"+91 {cp[:4]}••••{cp[-2:]}"
+                results.append({
+                    "name": (uname or "Message Contact").strip(),
+                    "phone": cp,
+                    "masked_phone": masked,
+                    "source": "Message Log",
+                    "status": "Contacted",
+                    "badge_color": "#d97706"
+                })
+    except Exception as e:
+        logger.warning(f"Error searching message logs: {e}")
+
+    return {"success": True, "contacts": results[:40]}
+
+
+@router.get("/templates-list")
+def get_whatsapp_templates_catalog(
+    db: Session = Depends(get_db),
+    current_employee=Depends(_require_staff)
+):
+    """
+    Returns pre-configured templates for 1-click selection and dispatch.
+    """
+    templates = [
+        {
+            "id": "tpl_welcome",
+            "title": "👋 Welcome & Introduction",
+            "category": "Lead Engagement",
+            "text": "Namaskaram! Welcome to MyntReal. We are delighted to assist you with our premium real estate and solar project opportunities. How can our project advisory team help you today?"
+        },
+        {
+            "id": "tpl_brochure",
+            "title": "📁 Project Brochure & Pricing",
+            "category": "Lead Engagement",
+            "text": "Dear Sir/Madam, please find the project layout brochure and current unit availability details. Let us know when would be a convenient time to schedule a detailed walkthrough."
+        },
+        {
+            "id": "tpl_site_visit",
+            "title": "📍 Site Visit Invitation & Pin",
+            "category": "Site Visits",
+            "text": "Dear Valued Customer, you are cordially invited to visit our project site.\n\n📍 GPS Location: https://maps.google.com/?q=17.6892,83.0286\nOur Site Relationship Manager will be available on-site to assist you."
+        },
+        {
+            "id": "tpl_visit_confirm",
+            "title": "📅 Site Visit Confirmation",
+            "category": "Site Visits",
+            "text": "Your site visit has been scheduled successfully. Our transportation and advisory team have been notified. Looking forward to welcoming you!"
+        },
+        {
+            "id": "tpl_task_reminder",
+            "title": "⏰ Follow-up & Task Reminder",
+            "category": "Support",
+            "text": "Gentle reminder regarding your scheduled inquiry discussion with MyntReal. Please feel free to reply if you would like to reschedule or need any additional information."
+        },
+        {
+            "id": "tpl_payment_receipt",
+            "title": "💳 Payment Acknowledgement",
+            "category": "Accounts",
+            "text": "Thank you for your payment towards your MyntReal booking. The transaction has been recorded successfully in your portal ledger."
+        }
+    ]
+    return {"success": True, "templates": templates}
+
 

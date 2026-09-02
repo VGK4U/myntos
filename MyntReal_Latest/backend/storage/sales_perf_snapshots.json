@@ -449,5 +449,52 @@
         "talk_time_formatted": "0m"
       }
     ]
+  },
+  "2026-09-01": {
+    "timestamp_ist": "2026-09-01 09:30:00",
+    "date_str": "01 September 2026",
+    "time_str": "09:30 AM",
+    "total_calls": 4,
+    "total_talk_seconds": 0,
+    "total_talk_formatted": "00h 00m 00s",
+    "missed_calls": 4,
+    "new_leads": 2,
+    "leaderboard": [
+      {
+        "handled_by": "Mrs. Sontayana Appala Nookalakshmi",
+        "call_count": 3,
+        "missed_count": 3,
+        "talk_seconds": 0,
+        "talk_time_formatted": "0m"
+      },
+      {
+        "handled_by": "Ms. Bhoolakshmi Pathakamsetti",
+        "call_count": 1,
+        "missed_count": 1,
+        "talk_seconds": 0,
+        "talk_time_formatted": "0m"
+      },
+      {
+        "handled_by": "Ms. Anusha Moyyi",
+        "call_count": 0,
+        "missed_count": 0,
+        "talk_seconds": 0,
+        "talk_time_formatted": "0m"
+      },
+      {
+        "handled_by": "Ms. Oleti Gayatri Nandana",
+        "call_count": 0,
+        "missed_count": 0,
+        "talk_seconds": 0,
+        "talk_time_formatted": "0m"
+      },
+      {
+        "handled_by": "Ms. Anushka Karri",
+        "call_count": 0,
+        "missed_count": 0,
+        "talk_seconds": 0,
+        "talk_time_formatted": "0m"
+      }
+    ]
   }
 }

@@ -79,16 +79,16 @@ def should_exclude(rel_path: Path, abs_file: Path) -> bool:
         return True
         
     rel_str = str(rel_path).replace("\\", "/")
-    if "storage/" in rel_str or "uploaded_files/" in rel_str or "public/catalog/" in rel_str or "public/marketplace/" in rel_str:
+    if "storage/" in rel_str or "uploaded_files/" in rel_str or "public/catalog/" in rel_str or "public/marketplace/" in rel_str or ".ai_uploads" in rel_str or ".ai_backups" in rel_str or "solar-creative-" in rel_str:
         return True
         
     if abs_file.suffix.lower() in [".zip", ".sql", ".dump", ".sqlite", ".db"]:
         return True
 
-    # Exclude heavy static images > 150KB (handled via S3 / CDN) to keep deployment zip < 50MB
+    # Exclude heavy non-UI images > 2MB while keeping all logos
     if abs_file.suffix.lower() in [".png", ".jpg", ".jpeg", ".gif", ".webp"]:
         size_mb = abs_file.stat().st_size / (1024 * 1024)
-        if size_mb > 0.15:
+        if size_mb > 1.8:
             return True
             
     return False

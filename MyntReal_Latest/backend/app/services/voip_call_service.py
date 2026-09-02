@@ -90,7 +90,7 @@ class VoIPCallService:
         operator_user_ref = getattr(current_user, 'emp_code', None) or str(current_user.id)
         operator_name = getattr(current_user, 'full_name', '') or getattr(current_user, 'name', 'Operator')
         operator_phone = getattr(current_user, 'phone', None) or getattr(current_user, 'phone_number', '') or ''
-        company_id = getattr(current_user, 'company_id', 1) or 1
+        company_id = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', None) or 1
         branch_id = getattr(current_user, 'branch_id', None)
 
         # 2. Normalize customer phone number

@@ -201,10 +201,10 @@ class SessionExpirationBanner {
         }
 
         // DC_REAUTH_REFRESH: Reload the current page so it re-inits with a fresh token.
-        // Without this, pages like AutoDialer remain in their stale error state after re-auth
-        // and the user has to manually navigate away and back to recover.
         console.log('[SessionBanner] Refreshing current page after successful re-auth');
-        window.dispatchEvent(new CustomEvent('login-success'));
+        const { routerService } = await import('../services/router.service');
+        const currentRoute = routerService.getCurrentRoute();
+        routerService.navigate(currentRoute, false);
       } else {
         if (errorEl) {
           errorEl.textContent = result.error || 'Login failed. Please try again.';

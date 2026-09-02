@@ -1,12 +1,90 @@
 [
   {
-    "id": "log_6abbe499",
+    "id": "log_bf98edd5",
+    "job_id": "wa_daily_morning_wish",
+    "job_name": "WhatsApp 8 AM Morning Wish Dispatch",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "02 Sep 2026, 09:44:03 AM IST",
+    "iso_timestamp": "2026-09-02T09:44:03.827776",
+    "target_summary": "Configured Targets",
+    "targets": [],
+    "sent_count": 3849,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "Failed 1 sends",
+    "detail": {
+      "total_eligible": 3913,
+      "sent_count": 3849,
+      "skipped_count": 63
+    }
+  },
+  {
+    "id": "log_89b5ee67",
     "job_id": "missed_call_ack",
     "job_name": "Instant Missed Call Auto-ACK",
     "trigger_type": "AUTO_SCHEDULER",
     "triggered_by": "System Real-time Sync",
-    "timestamp": "01 Sep 2026, 09:03:51 PM IST",
-    "iso_timestamp": "2026-09-01T21:03:51.927747",
+    "timestamp": "02 Sep 2026, 09:01:29 AM IST",
+    "iso_timestamp": "2026-09-02T09:01:29.609984",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 741,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 741,
+      "created": 1,
+      "updated": 740,
+      "skipped": 0,
+      "followups_created": 268
+    }
+  },
+  {
+    "id": "log_493d2fe3",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "02 Sep 2026, 09:00:12 AM IST",
+    "iso_timestamp": "2026-09-02T09:00:12.504750",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 2,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 2,
+      "created": 1,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 2
+    }
+  },
+  {
+    "id": "log_b1084e0d",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "02 Sep 2026, 08:30:01 AM IST",
+    "iso_timestamp": "2026-09-02T08:30:01.527320",
     "target_summary": "Customer Direct WhatsApp ACK",
     "targets": [
       {
@@ -26,6 +104,1121 @@
       "updated": 1,
       "skipped": 0,
       "followups_created": 1
+    }
+  },
+  {
+    "id": "log_c133b30a",
+    "job_id": "vgk4u_morning_wish",
+    "job_name": "VGK4U Elite Community Morning Wish",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "02 Sep 2026, 08:00:04 AM IST",
+    "iso_timestamp": "2026-09-02T08:00:04.906185",
+    "target_summary": "VGK4u Official Channel, VGK4u Community Group, VGK4U - Vijayawada",
+    "targets": [
+      {
+        "id": "t_vgk_channel",
+        "type": "channel",
+        "name": "VGK4u Official Channel",
+        "identifier": "https://whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m"
+      },
+      {
+        "id": "t_vgk_group",
+        "type": "group",
+        "name": "VGK4u Community Group",
+        "identifier": "https://chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY?s=cl&p=i&mlu=0"
+      },
+      {
+        "id": "t_vgk_vijayawada",
+        "type": "group",
+        "name": "VGK4U - Vijayawada",
+        "identifier": "VGK4U - Vijayawada"
+      }
+    ],
+    "sent_count": 3,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "dispatched_groups": 3,
+      "failed_groups": 0,
+      "results": [
+        {
+          "success": true,
+          "data": {
+            "success": true,
+            "sent_count": 1,
+            "failed_count": 0,
+            "results": [
+              {
+                "intended_target": "0029Vb7Vb5f9cDDXf3zWtf0m",
+                "clean_code": "0029Vb7Vb5f9cDDXf3zWtf0m",
+                "target_type": "channel",
+                "resolved_jid": "120363426686429374@newsletter",
+                "message_id": "3EB0EB1500DBEC7530DACF",
+                "success": true,
+                "fallback_used": false
+              }
+            ],
+            "message_id": "3EB0EB1500DBEC7530DACF"
+          }
+        },
+        {
+          "success": true,
+          "data": {
+            "success": true,
+            "sent_count": 1,
+            "failed_count": 0,
+            "results": [
+              {
+                "intended_target": "HNQQoKXFfCm5PQngGdrlcY",
+                "clean_code": "HNQQoKXFfCm5PQngGdrlcY",
+                "target_type": "group",
+                "resolved_jid": "120363424730418206@g.us",
+                "message_id": "3EB0F7E48FD129EB863C21",
+                "success": true,
+                "fallback_used": false
+              }
+            ],
+            "message_id": "3EB0F7E48FD129EB863C21"
+          }
+        },
+        {
+          "success": true,
+          "data": {
+            "success": true,
+            "sent_count": 1,
+            "failed_count": 0,
+            "results": [
+              {
+                "intended_target": "120363410784518818@g.us",
+                "clean_code": "120363410784518818@g.us",
+                "target_type": "group",
+                "resolved_jid": "120363411401107279@g.us",
+                "message_id": "3EB05ABF3C8B3AEB114307",
+                "success": true,
+                "fallback_used": false
+              }
+            ],
+            "message_id": "3EB05ABF3C8B3AEB114307"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "log_57540295",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "02 Sep 2026, 08:00:00 AM IST",
+    "iso_timestamp": "2026-09-02T08:00:00.876195",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 1
+    }
+  },
+  {
+    "id": "log_20260902073042_vgk_member_morning_statement",
+    "job_id": "vgk_member_morning_statement",
+    "job_name": "VGK Members Daily 8 AM Revenue Statement",
+    "timestamp": "2026-09-02T07:30:42.495023",
+    "status": "SUCCESS",
+    "triggered_by": "SYSTEM",
+    "payload": {
+      "qualifying_members_count": 24,
+      "dispatched_count": 23,
+      "failed_count": 1,
+      "detail": [
+        {
+          "member_id": 1,
+          "name": "MNR Mega Natural Resources",
+          "status": "SUCCESS",
+          "phone": "6300286103"
+        },
+        {
+          "member_id": 25,
+          "name": "Sri Lakshmi EV Solutions",
+          "status": "SUCCESS",
+          "phone": "9032418896"
+        },
+        {
+          "member_id": 31,
+          "name": "VGK Support",
+          "status": "FAILED",
+          "error": "invalid_phone_number"
+        },
+        {
+          "member_id": 32,
+          "name": "Geetharam Enterprises",
+          "status": "SUCCESS",
+          "phone": "9058121456"
+        },
+        {
+          "member_id": 33,
+          "name": "Velagas Enterprises",
+          "status": "SUCCESS",
+          "phone": "9849471128"
+        },
+        {
+          "member_id": 40,
+          "name": "K. V. Naidu",
+          "status": "SUCCESS",
+          "phone": "7702445685"
+        },
+        {
+          "member_id": 73,
+          "name": "MyntReal LLP",
+          "status": "SUCCESS",
+          "phone": "9032574588"
+        },
+        {
+          "member_id": 77,
+          "name": "Kalla Nookunaidu",
+          "status": "SUCCESS",
+          "phone": "8688269969"
+        },
+        {
+          "member_id": 83,
+          "name": "Geetharam Enterprises",
+          "status": "SUCCESS",
+          "phone": "9058121456"
+        },
+        {
+          "member_id": 97,
+          "name": "Velagas Enterprises",
+          "status": "SUCCESS",
+          "phone": "9849471128"
+        },
+        {
+          "member_id": 122,
+          "name": "Mr. Bandi Gangaraju",
+          "status": "SUCCESS",
+          "phone": "9494188948"
+        },
+        {
+          "member_id": 123,
+          "name": "Lochala Simhachalam",
+          "status": "SUCCESS",
+          "phone": "9391144684"
+        },
+        {
+          "member_id": 133,
+          "name": "Mr. Ramanadh Velaga",
+          "status": "SUCCESS",
+          "phone": "9290221042"
+        },
+        {
+          "member_id": 134,
+          "name": "Mr. Rohith Tangi",
+          "status": "SUCCESS",
+          "phone": "8688788680"
+        },
+        {
+          "member_id": 152,
+          "name": "Mr. Pothala Chiranjeevi",
+          "status": "SUCCESS",
+          "phone": "9010827917"
+        },
+        {
+          "member_id": 160,
+          "name": "Mr. Tharakaramarao Allu",
+          "status": "SUCCESS",
+          "phone": "9666679696"
+        },
+        {
+          "member_id": 175,
+          "name": "Mr. Jartha Musallayya",
+          "status": "SUCCESS",
+          "phone": "9676284460"
+        },
+        {
+          "member_id": 176,
+          "name": "Mr. Bhusari Balaraju",
+          "status": "SUCCESS",
+          "phone": "9666386133"
+        },
+        {
+          "member_id": 177,
+          "name": "Mr. Kudumula Suribabu",
+          "status": "SUCCESS",
+          "phone": "7382988020"
+        },
+        {
+          "member_id": 209,
+          "name": "Mr. Kuruju Srinubabu",
+          "status": "SUCCESS",
+          "phone": "9492249439"
+        },
+        {
+          "member_id": 216,
+          "name": "Mr. B Ramalakshmi",
+          "status": "SUCCESS",
+          "phone": "9550297657"
+        },
+        {
+          "member_id": 221,
+          "name": "Mr. Seeram reddy Thammu Naidu",
+          "status": "SUCCESS",
+          "phone": "8500926972"
+        },
+        {
+          "member_id": 230,
+          "name": "Mr. Tarum Nageswara Rao",
+          "status": "SUCCESS",
+          "phone": "9494545848"
+        },
+        {
+          "member_id": 233,
+          "name": "Mr. Jalumuri Trimurthulu",
+          "status": "SUCCESS",
+          "phone": "9490387083"
+        }
+      ]
+    },
+    "error_message": null
+  },
+  {
+    "id": "log_20260902073016_wa_daily_vgk_zero_lead_motivational_730am",
+    "job_id": "wa_daily_vgk_zero_lead_motivational_730am",
+    "job_name": "VGK Members Daily 7:30 AM 0-Lead Motivational Dispatch",
+    "timestamp": "2026-09-02T07:30:16.149621",
+    "status": "PARTIAL_SUCCESS",
+    "triggered_by": "SYSTEM",
+    "payload": {
+      "total_count": 11,
+      "total_eligible": 11,
+      "dispatched_count": 10,
+      "skipped_count": 0,
+      "failed_count": 1,
+      "active_partners_with_leads": 174,
+      "total_gross_earned": 7100864.0,
+      "theme_used": "\ud83c\udf1f *WEDNESDAY MOMENTUM \u2014 \u0c17\u0c4a\u0c2a\u0c4d\u0c2a \u0c30\u0c3f\u0c35\u0c3e\u0c30\u0c4d\u0c21\u0c41\u0c32\u0c41 \u0c2e\u0c3f\u0c2e\u0c4d\u0c2e\u0c32\u0c4d\u0c28\u0c3f \u0c06\u0c39\u0c4d\u0c35\u0c3e\u0c28\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2f\u0c3f!*",
+      "results": [
+        {
+          "member_id": 6,
+          "name": "Test Partner (VIEW ONLY)",
+          "status": "FAILED",
+          "error": "invalid_phone_number"
+        },
+        {
+          "member_id": 26,
+          "name": "Rajesh Sharma",
+          "status": "SUCCESS",
+          "phone": "9810012001"
+        },
+        {
+          "member_id": 27,
+          "name": "Priya Patel",
+          "status": "SUCCESS",
+          "phone": "9810012002"
+        },
+        {
+          "member_id": 28,
+          "name": "Amit Singh",
+          "status": "SUCCESS",
+          "phone": "9810012003"
+        },
+        {
+          "member_id": 29,
+          "name": "Sunita Verma",
+          "status": "SUCCESS",
+          "phone": "9810012004"
+        },
+        {
+          "member_id": 30,
+          "name": "Ravi Kumar",
+          "status": "SUCCESS",
+          "phone": "9810012005"
+        },
+        {
+          "member_id": 106,
+          "name": "Nissi Enterprises",
+          "status": "SUCCESS",
+          "phone": "9491114014"
+        },
+        {
+          "member_id": 111,
+          "name": "Visionera Pvt Ltd",
+          "status": "SUCCESS",
+          "phone": "9347475257"
+        },
+        {
+          "member_id": 170,
+          "name": "Sri Vijaya",
+          "status": "SUCCESS",
+          "phone": "8688788680"
+        },
+        {
+          "member_id": 246,
+          "name": "Mr. K Sravan",
+          "status": "SUCCESS",
+          "phone": "9000250716"
+        },
+        {
+          "member_id": 338,
+          "name": "Ganesh Mandal",
+          "status": "SUCCESS",
+          "phone": "9988776655"
+        }
+      ]
+    },
+    "error_message": null
+  },
+  {
+    "id": "log_71ed572c",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "02 Sep 2026, 07:30:01 AM IST",
+    "iso_timestamp": "2026-09-02T07:30:01.124467",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 1
+    }
+  },
+  {
+    "id": "log_a8ace1a5",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "02 Sep 2026, 07:00:00 AM IST",
+    "iso_timestamp": "2026-09-02T07:00:00.886317",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 0,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 1
+    }
+  },
+  {
+    "id": "log_cbc5c138",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "01 Sep 2026, 08:02:13 PM IST",
+    "iso_timestamp": "2026-09-01T20:02:13.593024",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 3,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 3,
+      "created": 0,
+      "updated": 3,
+      "skipped": 0,
+      "followups_created": 2
+    }
+  },
+  {
+    "id": "log_feeccba1",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "01 Sep 2026, 06:33:30 PM IST",
+    "iso_timestamp": "2026-09-01T18:33:30.986017",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 9,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 9,
+      "created": 0,
+      "updated": 9,
+      "skipped": 0,
+      "followups_created": 2
+    }
+  },
+  {
+    "id": "log_d0dd02dd",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "01 Sep 2026, 06:31:28 PM IST",
+    "iso_timestamp": "2026-09-01T18:31:28.522394",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "group_posted": true,
+      "alerts_sent": 1,
+      "active_journeys": 1
+    }
+  },
+  {
+    "id": "log_74304b62",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "01 Sep 2026, 04:30:30 PM IST",
+    "iso_timestamp": "2026-09-01T16:30:30.521164",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "(psycopg2.OperationalError) connection to server at \"myntreal-database.c5gywaicq6zu.ap-south-2.rds.amazonaws.com\" (16.112.74.247), port 5432 failed: timeout expired\n\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
+    "detail": {
+      "error": "(psycopg2.OperationalError) connection to server at \"myntreal-database.c5gywaicq6zu.ap-south-2.rds.amazonaws.com\" (16.112.74.247), port 5432 failed: timeout expired\n\n(Background on this error at: https://sqlalche.me/e/20/e3q8)"
+    }
+  },
+  {
+    "id": "log_057ef06d",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "01 Sep 2026, 04:03:29 PM IST",
+    "iso_timestamp": "2026-09-01T16:03:29.735687",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 14,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 14,
+      "created": 0,
+      "updated": 14,
+      "skipped": 0,
+      "followups_created": 3
+    }
+  },
+  {
+    "id": "log_5f89f8db",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "01 Sep 2026, 03:00:30 PM IST",
+    "iso_timestamp": "2026-09-01T15:00:30.638789",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "QueuePool limit of size 3 overflow 2 reached, connection timed out, timeout 30.00 (Background on this error at: https://sqlalche.me/e/20/3o7r)",
+    "detail": {
+      "error": "QueuePool limit of size 3 overflow 2 reached, connection timed out, timeout 30.00 (Background on this error at: https://sqlalche.me/e/20/3o7r)"
+    }
+  },
+  {
+    "id": "log_1ea8938c",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "01 Sep 2026, 01:00:54 PM IST",
+    "iso_timestamp": "2026-09-01T13:00:54.553626",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 15,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 15,
+      "created": 1,
+      "updated": 14,
+      "skipped": 0,
+      "followups_created": 5
+    }
+  },
+  {
+    "id": "log_46b28858",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "01 Sep 2026, 09:30:17 AM IST",
+    "iso_timestamp": "2026-09-01T09:30:17.810952",
+    "target_summary": "Mynt Sales New",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New",
+        "identifier": "120363410784518818@g.us"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "success": true,
+      "data": {
+        "success": true,
+        "sent_count": 1,
+        "failed_count": 0,
+        "results": [
+          {
+            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
+            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
+            "target_type": "group",
+            "resolved_jid": "120363410784518818@g.us",
+            "message_id": "3EB0017099745E63BC1773",
+            "success": true,
+            "fallback_used": false
+          }
+        ],
+        "message_id": "3EB0017099745E63BC1773"
+      }
+    }
+  },
+  {
+    "id": "log_0fe68e35",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "01 Sep 2026, 09:30:10 AM IST",
+    "iso_timestamp": "2026-09-01T09:30:10.221882",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 2,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 2,
+      "created": 0,
+      "updated": 2,
+      "skipped": 0,
+      "followups_created": 2
+    }
+  },
+  {
+    "id": "log_7d16f75f",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "01 Sep 2026, 09:30:09 AM IST",
+    "iso_timestamp": "2026-09-01T09:30:09.846150",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "BctONtnv8431uxxybKBEtS"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "group_posted": true,
+      "alerts_sent": 0,
+      "active_journeys": 1
+    }
+  },
+  {
+    "id": "log_7ca97277",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "01 Sep 2026, 08:30:04 AM IST",
+    "iso_timestamp": "2026-09-01T08:30:04.370320",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 2,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 2,
+      "created": 1,
+      "updated": 1,
+      "skipped": 0,
+      "followups_created": 2
+    }
+  },
+  {
+    "id": "log_20260901073007_wa_daily_vgk_zero_lead_motivational_730am",
+    "job_id": "wa_daily_vgk_zero_lead_motivational_730am",
+    "job_name": "VGK Members Daily 7:30 AM 0-Lead Motivational Dispatch",
+    "timestamp": "2026-09-01T07:30:07.889899",
+    "status": "PARTIAL_SUCCESS",
+    "triggered_by": "SYSTEM",
+    "payload": {
+      "total_count": 11,
+      "total_eligible": 11,
+      "dispatched_count": 0,
+      "skipped_count": 0,
+      "failed_count": 11,
+      "active_partners_with_leads": 174,
+      "total_gross_earned": 7100864.0,
+      "theme_used": "\ud83d\udca1 *TUESDAY GROWTH SPARK \u2014 \u0c2e\u0c40 \u0c28\u0c46\u0c1f\u0c4d\u200c\u0c35\u0c30\u0c4d\u0c15\u0c47 \u0c2e\u0c40 \u0c05\u0c38\u0c32\u0c48\u0c28 \u0c06\u0c38\u0c4d\u0c24\u0c3f!*",
+      "results": [
+        {
+          "member_id": 6,
+          "name": "Test Partner (VIEW ONLY)",
+          "status": "FAILED",
+          "error": "invalid_phone_number"
+        },
+        {
+          "member_id": 26,
+          "name": "Rajesh Sharma",
+          "status": "FAILED",
+          "error": "Authentication Error"
+        },
+        {
+          "member_id": 27,
+          "name": "Priya Patel",
+          "status": "FAILED",
+          "error": "Authentication Error"
+        },
+        {
+          "member_id": 28,
+          "name": "Amit Singh",
+          "status": "FAILED",
+          "error": "Authentication Error"
+        },
+        {
+          "member_id": 29,
+          "name": "Sunita Verma",
+          "status": "FAILED",
+          "error": "Authentication Error"
+        },
+        {
+          "member_id": 30,
+          "name": "Ravi Kumar",
+          "status": "FAILED",
+          "error": "Authentication Error"
+        },
+        {
+          "member_id": 106,
+          "name": "Nissi Enterprises",
+          "status": "FAILED",
+          "error": "Authentication Error"
+        },
+        {
+          "member_id": 111,
+          "name": "Visionera Pvt Ltd",
+          "status": "FAILED",
+          "error": "Authentication Error"
+        },
+        {
+          "member_id": 170,
+          "name": "Sri Vijaya",
+          "status": "FAILED",
+          "error": "Authentication Error"
+        },
+        {
+          "member_id": 246,
+          "name": "Mr. K Sravan",
+          "status": "FAILED",
+          "error": "Authentication Error"
+        },
+        {
+          "member_id": 338,
+          "name": "Ganesh Mandal",
+          "status": "FAILED",
+          "error": "Authentication Error"
+        }
+      ]
+    },
+    "error_message": null
+  },
+  {
+    "id": "log_20260901073001_vgk_member_morning_statement",
+    "job_id": "vgk_member_morning_statement",
+    "job_name": "VGK Members Daily 8 AM Revenue Statement",
+    "timestamp": "2026-09-01T07:30:01.386060",
+    "status": "FAILED",
+    "triggered_by": "SYSTEM",
+    "payload": {
+      "qualifying_members_count": 24,
+      "dispatched_count": 0,
+      "failed_count": 24,
+      "detail": [
+        {
+          "member_id": 1,
+          "name": "MNR Mega Natural Resources",
+          "status": "FAILED",
+          "error": "Authentication Error"
+        },
+        {
+          "member_id": 25,
+          "name": "Sri Lakshmi EV Solutions",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 31,
+          "name": "VGK Support",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 32,
+          "name": "Geetharam Enterprises",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 33,
+          "name": "Velagas Enterprises",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 40,
+          "name": "K. V. Naidu",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 73,
+          "name": "MyntReal LLP",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 77,
+          "name": "Kalla Nookunaidu",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 83,
+          "name": "Geetharam Enterprises",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 97,
+          "name": "Velagas Enterprises",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 122,
+          "name": "Mr. Bandi Gangaraju",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 123,
+          "name": "Lochala Simhachalam",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 133,
+          "name": "Mr. Ramanadh Velaga",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 134,
+          "name": "Mr. Rohith Tangi",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 152,
+          "name": "Mr. Pothala Chiranjeevi",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 160,
+          "name": "Mr. Tharakaramarao Allu",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 175,
+          "name": "Mr. Jartha Musallayya",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 176,
+          "name": "Mr. Bhusari Balaraju",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 177,
+          "name": "Mr. Kudumula Suribabu",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 209,
+          "name": "Mr. Kuruju Srinubabu",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 216,
+          "name": "Mr. B Ramalakshmi",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 221,
+          "name": "Mr. Seeram reddy Thammu Naidu",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 230,
+          "name": "Mr. Tarum Nageswara Rao",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        },
+        {
+          "member_id": 233,
+          "name": "Mr. Jalumuri Trimurthulu",
+          "status": "FAILED",
+          "error": "This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.UndefinedColumn) column \"status_source\" of relation \"message_log\" does not exist\nLINE 1: ...number, provider, initial_status, current_status, status_sou...\n                                                             ^\n\n[SQL: INSERT INTO message_log (message_sid, message_type, mobile_number, user_name, otp_code, message_body, from_number, to_number, provider, initial_status, current_status, status_source, sent_at, delivered_at, read_at, failed_at, last_status_update, error_code, error_message, failure_reason, webhook_data, sent_by_staff_id, sent_by_name, sender_type) VALUES (%(message_sid)s, %(message_type)s, %(mobile_number)s, %(user_name)s, %(otp_code)s, %(message_body)s, %(from_number)s, %(to_number)s, %(provider)s, %(initial_status)s, %(current_status)s, %(status_source)s, %(sent_at)s, %(delivered_at)s, %(read_at)s, %(failed_at)s, %(last_status_update)s, %(error_code)s, %(error_message)s, %(failure_reason)s, %(webhook_data)s, %(sent_by_staff_id)s, %(sent_by_name)s, %(sender_type)s) RETURNING message_log.id]\n[parameters: {'message_sid': 'auto.direct_send.6300286103.1788208201', 'message_type': 'auto_direct_send', 'mobile_number': '6300286103', 'user_name': None, 'otp_code': None, 'message_body': '\ud83c\udf05 *\u0c28\u0c2e\u0c38\u0c4d\u0c15\u0c3e\u0c30\u0c02! \u0c2e\u0c40 VGK4U DAILY REVENUE & PROGRESS UPDATE*\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udc64 *Member Name*: MNR Mega Natural Resources (DST0001)\\n\ud83d\udcf1 *Phone*:  ... (569 characters truncated) ... ntries (\u20b90)\\n\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83c\udf1f _\u0c08 \u0c30\u0c4b\u0c1c\u0c41 \u0c2e\u0c40\u0c15\u0c41 \u0c35\u0c3f\u0c1c\u0c2f\u0c35\u0c02\u0c24\u0c02\u0c17\u0c3e \u0c38\u0c3e\u0c17\u0c3e\u0c32\u0c28\u0c3f \u0c06\u0c36\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41!_\\n\ud83d\udcac _Auto-generated VGK4U Executive Member Revenue Report_', 'from_number': None, 'to_number': '6300286103', 'provider': 'META_WHATSAPP', 'initial_status': 'failed', 'current_status': 'failed', 'status_source': 'SYSTEM', 'sent_at': datetime.datetime(2026, 9, 1, 2, 0, 1, 375911), 'delivered_at': None, 'read_at': None, 'failed_at': None, 'last_status_update': datetime.datetime(2026, 9, 1, 2, 0, 1, 375914), 'error_code': None, 'error_message': 'Authentication Error', 'failure_reason': None, 'webhook_data': None, 'sent_by_staff_id': None, 'sent_by_name': 'System/Auto', 'sender_type': 'system'}]\n(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+        }
+      ]
+    },
+    "error_message": null
+  },
+  {
+    "id": "log_cf748328",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "01 Sep 2026, 07:30:00 AM IST",
+    "iso_timestamp": "2026-09-01T07:30:00.718262",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 1,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_c0e7e1e1",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "01 Sep 2026, 07:00:00 AM IST",
+    "iso_timestamp": "2026-09-01T07:00:00.485487",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 1,
+      "created": 1,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_bde7c7e9",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "31 Aug 2026, 09:01:38 PM IST",
+    "iso_timestamp": "2026-08-31T21:01:38.514792",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 6,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 12,
+      "created": 6,
+      "updated": 0,
+      "skipped": 6,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_d1ea20ea",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "31 Aug 2026, 08:30:00 PM IST",
+    "iso_timestamp": "2026-08-31T20:30:00.587417",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 10,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 18,
+      "created": 10,
+      "updated": 0,
+      "skipped": 8,
+      "followups_created": 0
     }
   },
   {

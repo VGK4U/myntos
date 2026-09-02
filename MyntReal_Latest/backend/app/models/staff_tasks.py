@@ -804,6 +804,8 @@ class StaffDayPlanItem(Base):
     task_id = Column(Integer, ForeignKey('staff_tasks.id', ondelete='CASCADE'), nullable=False, index=True)
     phase_id = Column(Integer, ForeignKey('staff_task_phases.id', ondelete='SET NULL'), nullable=True, index=True)
     
+    plan_type = Column(String(32), nullable=False, default='planned')
+    is_followup = Column(Boolean, default=False, nullable=False)
     priority_order = Column(Integer, nullable=False, default=1)
     
     planned_status = Column(String(32), nullable=True)
@@ -839,6 +841,8 @@ class StaffDayPlanItem(Base):
             "phase_id": self.phase_id,
             "priority_order": self.priority_order,
             "planned_status": self.planned_status,
+            "plan_type": getattr(self, 'plan_type', 'planned') or 'planned',
+            "is_followup": bool(getattr(self, 'is_followup', False) or (getattr(self, 'plan_type', 'planned') == 'followup')),
             "eod_status": self.eod_status,
             "eod_progress": self.eod_progress,
             "eod_notes": self.eod_notes,

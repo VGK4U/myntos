@@ -6,6 +6,7 @@
 
 import { apiService } from '../../services/api.service';
 import { PageHeader } from '../../components/PageHeader';
+import { unifiedWAModal } from '../../components/UnifiedWAModal';
 
 interface Lead {
   id: number;
@@ -380,7 +381,7 @@ export class MNRMyLeads {
             <h4 class="lead-name">${lead.name}</h4>
             <div class="lead-contact-row">
               <a href="tel:${phone}" class="lead-phone-link" onclick="event.stopPropagation()">${phone || 'No phone'}</a>
-              ${phone ? `<a href="https://wa.me/91${whatsappNumber}" class="whatsapp-link" target="_blank" onclick="event.stopPropagation()">💬</a>` : ''}
+              ${phone ? `<button class="whatsapp-link open-mnr-wa-btn" data-phone="${whatsappNumber}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" onclick="event.stopPropagation()" style="background:none;border:none;cursor:pointer;padding:0 2px;">💬</button>` : ''}
             </div>
           </div>
           <span class="status-badge ${statusClass}">${lead.status}</span>
@@ -396,9 +397,9 @@ export class MNRMyLeads {
           <a href="tel:${phone}" class="action-btn call" onclick="event.stopPropagation()">
             <span>📞</span>
           </a>
-          <a href="https://wa.me/91${whatsappNumber}" class="action-btn whatsapp" target="_blank" onclick="event.stopPropagation()">
+          <button class="action-btn whatsapp open-mnr-wa-btn" data-phone="${whatsappNumber}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" onclick="event.stopPropagation()" style="border:none;cursor:pointer;" title="Send WhatsApp">
             <span>💬</span>
-          </a>
+          </button>
           <button class="action-btn view" data-action="view" data-id="${lead.id}">
             <span>👁</span>
           </button>
@@ -497,6 +498,26 @@ export class MNRMyLeads {
           this.viewLeadDetails(parseInt(id));
         } else if (action === 'edit' && id) {
           this.showEditLeadModal(parseInt(id));
+        }
+      });
+    });
+
+    // Unified WhatsApp Send Modal (Scan WA Common Number / WhatsApp API)
+    document.querySelectorAll('.open-mnr-wa-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const phone = (btn as HTMLElement).dataset.phone || '';
+        const name = (btn as HTMLElement).dataset.name || 'Customer';
+        const leadId = (btn as HTMLElement).dataset.id || '';
+        const context = (btn as HTMLElement).dataset.cat || '';
+        if (phone) {
+          unifiedWAModal.open({
+            phone,
+            name,
+            leadId,
+            context
+          });
         }
       });
     });

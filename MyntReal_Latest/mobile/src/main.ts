@@ -64,6 +64,7 @@ import { StaffAttendanceComputationPage } from './pages/StaffAttendanceComputati
 import { StaffLeadSourcesPage } from './pages/StaffLeadSourcesPage';
 import { StaffTeamLeadsPage } from './pages/StaffTeamLeadsPage';
 import { StaffWhatsAppInboxPage } from './pages/StaffWhatsAppInboxPage';
+import { StaffBankWiseLeadsPage } from './pages/StaffBankWiseLeadsPage';
 // New Tasks Section Pages
 import { TasksAssignedPage } from './pages/TasksAssignedPage';
 import { TasksReceivedPage } from './pages/TasksReceivedPage';
@@ -574,6 +575,16 @@ class MNRApp {
   }
 
   private showApp(): void {
+    const authState = authService.getAuthState();
+    const portal = authState.user?.portal || 'staff';
+    portalService.setPortal(portal).catch(() => {});
+
+    // Guard: If app layout is already mounted and active, do not recreate DOM or reset route
+    if (this.appContainer.classList.contains('app-layout') && this.pageContainer.parentElement) {
+      console.log('[DC_APP] App layout already active — preserving current route:', routerService.getCurrentRoute());
+      return;
+    }
+
     this.appContainer.innerHTML = '';
     this.appContainer.className = 'app-layout';
     this.appContainer.appendChild(this.pageContainer);
@@ -588,23 +599,24 @@ class MNRApp {
     // DC_SESSION_EXPIRY_001: Initialize global session expiration banner
     sessionExpirationBanner.init();
     
-    const authState = authService.getAuthState();
-    const portal = authState.user?.portal || 'staff';
-    portalService.setPortal(portal).catch(() => {});
-    routerService.reset(portal);
-    
     const savedRoute = localStorage.getItem('mnr_pre_expiry_route') as PageRoute | null
       || localStorage.getItem('mnr_current_route') as PageRoute | null;
     localStorage.removeItem('mnr_pre_expiry_route');
-    if (savedRoute) {
-      const routeConfig = routerService.getRouteConfig(savedRoute);
-      if (routeConfig && (!routeConfig.portal || routeConfig.portal === portal)) {
-        console.log('[DC_APP] Restoring route:', savedRoute);
-        routerService.navigate(savedRoute);
+
+    let targetRoute: PageRoute;
+    if (savedRoute && routerService.getRouteConfig(savedRoute)) {
+      const config = routerService.getRouteConfig(savedRoute);
+      if (!config.portal || config.portal === portal) {
+        targetRoute = savedRoute;
+      } else {
+        targetRoute = portal === 'mnr' ? 'mnr-dashboard' : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'dashboard';
       }
+    } else {
+      targetRoute = portal === 'mnr' ? 'mnr-dashboard' : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'dashboard';
     }
-    
-    this.renderPage(routerService.getCurrentRoute());
+
+    console.log('[DC_APP] Initializing with route:', targetRoute);
+    routerService.navigate(targetRoute, false);
   }
 
   private async renderPage(route: PageRoute): Promise<void> {
@@ -727,6 +739,9 @@ class MNRApp {
         break;
       case 'staff-team-leads':
         page = new StaffTeamLeadsPage(this.pageContainer);
+        break;
+      case 'staff-bank-wise-leads':
+        page = new StaffBankWiseLeadsPage(this.pageContainer);
         break;
       case 'staff-whatsapp':
       case 'staff-whatsapp-inbox':

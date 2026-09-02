@@ -556,6 +556,17 @@ def run_pending_migrations():
             "check": "SELECT column_name FROM information_schema.columns WHERE table_name='staff_day_plan_items' AND column_name='time_spent_minutes'",
             "migrate": "ALTER TABLE staff_day_plan_items ADD COLUMN time_spent_minutes INTEGER NOT NULL DEFAULT 0"
         },
+        # DC Protocol (Sep 2026): DayPlanItem Plan vs Follow-up separation
+        {
+            "name": "staff_day_plan_items.plan_type",
+            "check": "SELECT column_name FROM information_schema.columns WHERE table_name='staff_day_plan_items' AND column_name='plan_type'",
+            "migrate": "ALTER TABLE staff_day_plan_items ADD COLUMN plan_type VARCHAR(32) NOT NULL DEFAULT 'planned'"
+        },
+        {
+            "name": "staff_day_plan_items.is_followup",
+            "check": "SELECT column_name FROM information_schema.columns WHERE table_name='staff_day_plan_items' AND column_name='is_followup'",
+            "migrate": "ALTER TABLE staff_day_plan_items ADD COLUMN is_followup BOOLEAN NOT NULL DEFAULT FALSE"
+        },
         # DC Protocol (Feb 24, 2026): Activity Time Log table creation
         {
             "name": "staff_activity_time_log_table",

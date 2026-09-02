@@ -90,7 +90,7 @@ export const API_ENDPOINTS = {
     TODAY: `${API_PREFIX}/staff/day-plans/today`,
     BY_DATE: `${API_PREFIX}/staff/day-plans/by-date`,
     AVAILABLE_TASKS: `${API_PREFIX}/staff/day-plans/available-tasks`,
-    CREATE_OR_UPDATE: `${API_PREFIX}/staff/day-plans`,
+    CREATE_OR_UPDATE: `${API_PREFIX}/staff/day-plans/`,
     UPDATE_ITEM: (id: number) => `${API_PREFIX}/staff/day-plans/items/${id}`,
     DELETE_ITEM: (id: number) => `${API_PREFIX}/staff/day-plans/items/${id}`,
     FINALIZE: `${API_PREFIX}/staff/day-plans/finalize`,

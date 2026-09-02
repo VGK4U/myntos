@@ -198,9 +198,18 @@ class ApiService {
         config.body = isFormData ? body : JSON.stringify(body);
       }
 
+      let normalizedEndpoint = endpoint;
+      if (normalizedEndpoint.startsWith('/api/v1')) {
+        normalizedEndpoint = normalizedEndpoint.substring(7);
+      }
+      if (!normalizedEndpoint.startsWith('/')) {
+        normalizedEndpoint = '/' + normalizedEndpoint;
+      }
+      const targetUrl = `${API_BASE}${normalizedEndpoint}`;
+
       let response: Response;
       try {
-        response = await fetch(`${API_BASE}${endpoint}`, config);
+        response = await fetch(targetUrl, config);
       } finally {
         clearTimeout(timeoutId);
       }

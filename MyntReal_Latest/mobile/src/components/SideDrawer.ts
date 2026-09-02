@@ -49,6 +49,18 @@ const ROUTE_PATH_MAP: Record<string, string> = {
   '/staff/leads': 'staff-leads',
   '/staff/team-leads': 'staff-team-leads',
   '/staff/lead-sources': 'staff-lead-sources',
+  '/staff/bank-wise-leads': 'staff-bank-wise-leads',
+  '/staff/crm/bank-wise-leads': 'staff-bank-wise-leads',
+  '/staff/solar-leads': 'staff-leads',
+  '/staff/real-dreams-leads': 'zynova-real-estate',
+  '/staff/insurance-leads': 'zynova-insurance',
+  '/staff/ev-b2b-leads': 'staff-leads',
+  '/staff/ev-b2c-leads': 'staff-leads',
+  '/staff/ev-spares-leads': 'staff-leads',
+  '/staff/etc-leads': 'staff-training-videos',
+  '/staff/mnr-leads': 'staff-leads',
+  '/staff/mnr-leads-master': 'staff-leads',
+  '/staff/executive-dashboard': 'dashboard',
   '/staff/crm/whatsapp-inbox': 'staff-whatsapp',
   '/staff/crm/wa-inbox': 'staff-whatsapp',
   '/staff/whatsapp': 'staff-whatsapp',
@@ -222,15 +234,26 @@ const MENU_MASTER: MenuSection[] = [
     items: [
       { menu_code: "MY_LEADS", label: "My Leads", route: "staff-my-leads" },
       { menu_code: "LEADS_MASTER", label: "Leads Master", route: "staff-leads" },
+      { menu_code: "BANK_WISE_LEADS", label: "Field staff leads", route: "staff-bank-wise-leads" },
       { menu_code: "TEAM_LEADS", label: "Team Leads", route: "staff-team-leads" },
-      { menu_code: "WHATSAPP_CENTER", label: "WhatsApp Center", route: "staff-whatsapp" },
       { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "auto-dialer" }
+    ]
+  },
+  {
+    section_code: "WORKFLOWS",
+    section_label: "WORK FLOWS",
+    order: 10,
+    items: [
+      { menu_code: "MNR_BANK_WISE_LEADS", label: "Field staff leads", route: "staff-bank-wise-leads" },
+      { menu_code: "SOLAR_LEADS", label: "Solar Leads", route: "staff-leads" },
+      { menu_code: "ZYN_REAL_ESTATE", label: "Real Estate Leads", route: "zynova-real-estate" },
+      { menu_code: "ZYN_INSURANCE", label: "Insurance Leads", route: "zynova-insurance" }
     ]
   },
   {
     section_code: "OPERATIONS",
     section_label: "OPERATIONS",
-    order: 10,
+    order: 11,
     items: [
       { menu_code: "CALL_TRACKING", label: "Call Tracking", route: "staff-call-tracking" },
       { menu_code: "VENDORS", label: "Vendors", route: "staff-vendors" },
@@ -306,7 +329,8 @@ export class SideDrawer {
           ...(showOverview ? [{ menu_code: "OVERVIEW", label: `<i class="fas fa-th" style="margin-right: 8px; width: 18px; text-align: center;"></i> Overview`, route: "dashboard" }] : []),
           { menu_code: "TASK_PLANNER", label: `<i class="fas fa-calendar-day" style="margin-right: 8px; width: 18px; text-align: center;"></i> Task Planner`, route: "day-planner" },
           { menu_code: "KRA_STATUS", label: `<i class="fas fa-chart-bar" style="margin-right: 8px; width: 18px; text-align: center;"></i> KRA Status`, route: "kras" },
-          { menu_code: "TIME_SHEET", label: `<i class="fas fa-clock" style="margin-right: 8px; width: 18px; text-align: center;"></i> Time Sheet`, route: "timesheet" }
+          { menu_code: "TIME_SHEET", label: `<i class="fas fa-clock" style="margin-right: 8px; width: 18px; text-align: center;"></i> Time Sheet`, route: "timesheet" },
+          { menu_code: "WHATSAPP_CENTER", label: `<i class="fab fa-whatsapp" style="margin-right: 8px; width: 18px; text-align: center; color: #25d366;"></i> WhatsApp Center`, route: "staff-whatsapp" }
         ];
       }
     }
@@ -316,7 +340,7 @@ export class SideDrawer {
     return `
       <div class="drawer-header">
         <div class="drawer-logo">
-          <span class="logo-text">MNR</span>
+          <span class="logo-text">WORKFLOWS</span>
         </div>
         <button class="drawer-close" id="drawerClose">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -488,6 +512,10 @@ export class SideDrawer {
       // Add items from direct section.items
       if (sec.items) {
         for (const item of sec.items) {
+          // Skip WhatsApp Center from nested sections since it is pinned at the top under Time Sheet
+          if (item.menu_code === 'CRM_WA_INBOX' || item.menu_code === 'WHATSAPP_CENTER' || item.route_path === '/staff/whatsapp-center' || item.route_path === '/staff/whatsapp') {
+            continue;
+          }
           const route = ROUTE_PATH_MAP[item.route_path];
           if (route) {
             const iconHtml = item.menu_icon ? `<i class="${item.menu_icon}" style="margin-right: 8px; width: 18px; text-align: center;"></i>` : '';
@@ -506,6 +534,9 @@ export class SideDrawer {
           const subItems: MenuItem[] = [];
           if (sub.items) {
             for (const item of sub.items) {
+              if (item.menu_code === 'CRM_WA_INBOX' || item.menu_code === 'WHATSAPP_CENTER' || item.route_path === '/staff/whatsapp-center' || item.route_path === '/staff/whatsapp') {
+                continue;
+              }
               const route = ROUTE_PATH_MAP[item.route_path];
               if (route) {
                 const iconHtml = item.menu_icon ? `<i class="${item.menu_icon}" style="margin-right: 8px; width: 18px; text-align: center;"></i>` : '';
@@ -528,9 +559,15 @@ export class SideDrawer {
       }
 
       if (items.length > 0 || subSections.length > 0) {
+        let secTitle = sec.title || 'Other';
+        const secIdLower = (sec.id || sec.section_id || '').toLowerCase();
+        if (secIdLower === 'mynt_real' || secIdLower === 'myntreal' || secIdLower === 'workflows' || secTitle.toUpperCase() === 'MYNT REAL' || secTitle.toUpperCase() === 'MYNTREAL') {
+          secTitle = 'WORK FLOWS';
+        }
+
         sections.push({
           section_code: sec.id || sec.section_id || 'other',
-          section_label: sec.title || 'Other',
+          section_label: secTitle,
           order: sec.order || 999,
           items: items.length > 0 ? items : undefined,
           subSections: subSections.length > 0 ? subSections : undefined

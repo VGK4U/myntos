@@ -407,14 +407,18 @@ def dispatch_daily_morning_wishes(
             failed_count += 1
 
         # Record history entry
+        safe_lead_name = lead_name if lead_name and lead_name != '0' else f"Customer ({clean_10})"
+        wish_body = tdef.get("body_text", "🌅 Good Morning! Wishing you a productive and successful day ahead.").replace("{{1}}", safe_lead_name)
         history_item = MessageLog(
             message_sid=f"wamid.sim.{uuid.uuid4().hex[:12]}",
             mobile_number=phone_formatted,
-            user_name=lead_name,
+            user_name=safe_lead_name,
             message_type="template",
+            message_body=wish_body,
             initial_status="sent" if sent_success else "failed",
             current_status="sent" if sent_success else "failed",
-            sent_at=datetime.datetime.utcnow()
+            sent_at=datetime.datetime.utcnow(),
+            sender_type="bot"
         )
         db.add(history_item)
         db.commit()

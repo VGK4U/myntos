@@ -193,13 +193,14 @@
         </button>
       </div>
 
-      <!-- ═══ 5-TAB NAVIGATION ══════════════════════════════════════════════════ -->
+      <!-- ═══ 6-TAB NAVIGATION ══════════════════════════════════════════════════ -->
       <div class="wa-tab-bar">
-        <button class="wa-tab-btn active" id="btn-tab-messenger" onclick="switchCenterTab('messenger')"><i class="fas fa-comments"></i> 1. Messenger</button>
-        <button class="wa-tab-btn" id="btn-tab-inbox" onclick="switchCenterTab('inbox')"><i class="fas fa-inbox"></i> 2. CRM Inbox <span class="badge-num" id="tb-inbox-num">0</span></button>
-        <button class="wa-tab-btn admin-only-tab" id="btn-tab-templates" onclick="switchCenterTab('templates')"><i class="fas fa-file-alt"></i> 3. Template Management Hub</button>
-        <button class="wa-tab-btn admin-only-tab" id="btn-tab-automations" onclick="switchCenterTab('automations')"><i class="fas fa-robot"></i> 4. Automations &amp; Trigger Tracker</button>
-        <button class="wa-tab-btn admin-only-tab" id="btn-tab-audit" onclick="switchCenterTab('audit')"><i class="fas fa-shield-alt"></i> 5. Audit Log</button>
+        <button class="wa-tab-btn active" id="btn-tab-messenger" onclick="switchCenterTab('messenger')"><i class="fas fa-comments"></i> 1. My Messages</button>
+        <button class="wa-tab-btn" id="btn-tab-team" onclick="switchCenterTab('team')"><i class="fas fa-users"></i> 2. Team Messages</button>
+        <button class="wa-tab-btn" id="btn-tab-inbox" onclick="switchCenterTab('inbox')"><i class="fas fa-robot"></i> 3. WhatsApp API Bot <span class="badge-num" id="tb-inbox-num">0</span></button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-templates" onclick="switchCenterTab('templates')"><i class="fas fa-file-alt"></i> 4. Templates</button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-automations" onclick="switchCenterTab('automations')"><i class="fas fa-cogs"></i> 5. Automations</button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-audit" onclick="switchCenterTab('audit')"><i class="fas fa-shield-alt"></i> 6. Audit Log</button>
       </div>
 
       <!-- ═══ TAB 1: CRM INBOX ═════════════════════════════════════════════════ -->
@@ -659,14 +660,30 @@ function switchCenterTab(tabName) {
   document.querySelectorAll('.wa-tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
 
-  document.getElementById(`btn-tab-${tabName}`).classList.add('active');
-  document.getElementById(`pane-${tabName}`).classList.add('active');
-
-  if (tabName === 'inbox') loadInbox(1);
-  else if (tabName === 'messenger') loadMessengerHub();
-  else if (tabName === 'templates') loadTemplatesHub();
-  else if (tabName === 'automations') loadAutomationsHub();
-  else if (tabName === 'audit') loadAuditLogHub();
+  const btn = document.getElementById(`btn-tab-${tabName}`);
+  if (btn) btn.classList.add('active');
+  
+  if (tabName === 'messenger') {
+    document.getElementById('pane-messenger')?.classList.add('active');
+    activeScope = 'assigned_tagged';
+    loadMessengerHub();
+  } else if (tabName === 'team') {
+    document.getElementById('pane-messenger')?.classList.add('active');
+    activeScope = 'downline';
+    loadMessengerHub();
+  } else if (tabName === 'inbox') {
+    document.getElementById('pane-inbox')?.classList.add('active');
+    loadInbox(1);
+  } else if (tabName === 'templates') {
+    document.getElementById('pane-templates')?.classList.add('active');
+    loadTemplatesHub();
+  } else if (tabName === 'automations') {
+    document.getElementById('pane-automations')?.classList.add('active');
+    loadAutomationsHub();
+  } else if (tabName === 'audit') {
+    document.getElementById('pane-audit')?.classList.add('active');
+    loadAuditLogHub();
+  }
 }
 
 // ── TAB 1: CRM INBOX ────────────────────────────────────────────────────────

@@ -16,7 +16,7 @@ import { PageHeader } from '../components/PageHeader';
 
 export class StaffWhatsAppInboxPage {
   private container: HTMLElement;
-  private activeTab: 'messenger' | 'inbox' | 'templates' | 'automations' | 'audit' = 'messenger';
+  private activeTab: 'messenger' | 'team' | 'inbox' | 'templates' | 'automations' | 'audit' = 'messenger';
 
   // ── Gateway & QR State ─────────────────────────────────────────────────────
   private gatewayConnected: boolean = true;
@@ -40,7 +40,9 @@ export class StaffWhatsAppInboxPage {
   private convsLoading: boolean = false;
   private activeChatPhone: string | null = null;
   private activeChatName: string = '';
-  private activeScope: string = 'all';
+  private activeScope: string = 'assigned_tagged';
+  private chatOriginTab: 'messenger' | 'team' | 'inbox' = 'messenger';
+  private fMsgSearch: string = '';
   private chatHistory: any[] = [];
   private chatLoading: boolean = false;
 
@@ -84,12 +86,25 @@ export class StaffWhatsAppInboxPage {
     return empCode === 'MR10001' || empCode === 'MR10016' || roleCode === 'vgk4u' || roleCode === 'ea' || name.includes('yaswanth');
   }
 
+  private isKeyLeadershipOrAdmin(): boolean {
+    const authState = authService.getAuthState();
+    const user = authState.user || {};
+    const empCode = (user.emp_code || '').toUpperCase().trim();
+    const roleCode = (user.role_code || user.role?.role_code || '').toLowerCase().trim();
+    const roleName = (user.role_name || user.role?.role_name || user.designation || '').toUpperCase().trim();
+    const name = (user.name || user.full_name || '').toLowerCase().trim();
+    return empCode === 'MR10001' || empCode === 'MR10016' || empCode === 'MR10018' || 
+           roleCode === 'vgk4u' || roleCode === 'ea' || roleCode === 'key_leadership' || 
+           roleName.includes('KEY LEADERSHIP') || roleName.includes('CHIEF') || roleName.includes('DIRECTOR') || 
+           name.includes('yaswanth') || name.includes('jagannadh');
+  }
+
   private async checkGatewayStatus(): Promise<void> {
     try {
       const res = await apiService.get<any>('/whatsapp/bot-status');
       if (res.success && res.data) {
-        this.gatewayConnected = res.data.connected === true;
-        this.gatewayStatus = res.data.status || 'disconnected';
+        this.gatewayConnected = !!res.data.connected;
+        this.gatewayStatus = res.data.status || (this.gatewayConnected ? 'connected' : 'disconnected');
         this.gatewayQr = res.data.qr || '';
       } else {
         this.gatewayConnected = false;
@@ -129,6 +144,10 @@ export class StaffWhatsAppInboxPage {
   private async loadCurrentTab(): Promise<void> {
     await this.checkGatewayStatus();
     if (this.activeTab === 'messenger') {
+      this.activeScope = 'assigned_tagged';
+      await this.loadMessenger();
+    } else if (this.activeTab === 'team') {
+      this.activeScope = 'downline';
       await this.loadMessenger();
     } else if (this.activeTab === 'inbox') {
       await this.loadInbox();
@@ -145,6 +164,7 @@ export class StaffWhatsAppInboxPage {
 
   private render(): void {
     const isAdmin = this.isWhatsAppAdmin();
+    const isKeyLeadership = this.isKeyLeadershipOrAdmin();
 
     this.container.innerHTML = `
       ${PageHeader.render({
@@ -197,30 +217,35 @@ export class StaffWhatsAppInboxPage {
           </div>
         ` : ''}
 
-        <!-- Navigation Tabs: Tab 1 Messenger, Tab 2 CRM Inbox, Tabs 3-5 Admin Only -->
+        <!-- Navigation Tabs: Tab 1 My Messages, Tab 2 Team Messages, Tab 3 WhatsApp API Bot (Key Leadership/Admin), Tabs 4-6 Admin Only -->
         <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; -webkit-overflow-scrolling: touch;">
           <button class="wa-nav-tab ${this.activeTab === 'messenger' ? 'active' : ''}" data-tab="messenger" style="${this.getTabBtnStyle(this.activeTab === 'messenger')}">
-            <i class="fas fa-comments"></i> 1. Messenger
+            <i class="fas fa-comments"></i> 1. My Messages
           </button>
-          <button class="wa-nav-tab ${this.activeTab === 'inbox' ? 'active' : ''}" data-tab="inbox" style="${this.getTabBtnStyle(this.activeTab === 'inbox')}">
-            <i class="fas fa-inbox"></i> 2. CRM Inbox
-            ${this.inboxStats.unread > 0 ? `<span style="background:#ef4444;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px;">${this.inboxStats.unread}</span>` : ''}
+          <button class="wa-nav-tab ${this.activeTab === 'team' ? 'active' : ''}" data-tab="team" style="${this.getTabBtnStyle(this.activeTab === 'team')}">
+            <i class="fas fa-users"></i> 2. Team Messages
           </button>
+          ${isKeyLeadership ? `
+            <button class="wa-nav-tab ${this.activeTab === 'inbox' ? 'active' : ''}" data-tab="inbox" style="${this.getTabBtnStyle(this.activeTab === 'inbox')}">
+              <i class="fas fa-robot"></i> 3. WhatsApp API Bot
+              ${this.inboxStats.unread > 0 ? `<span style="background:#ef4444;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px;">${this.inboxStats.unread}</span>` : ''}
+            </button>
+          ` : ''}
           ${isAdmin ? `
             <button class="wa-nav-tab ${this.activeTab === 'templates' ? 'active' : ''}" data-tab="templates" style="${this.getTabBtnStyle(this.activeTab === 'templates')}">
-              <i class="fas fa-file-alt"></i> 3. Templates
+              <i class="fas fa-file-alt"></i> 4. Templates
             </button>
             <button class="wa-nav-tab ${this.activeTab === 'automations' ? 'active' : ''}" data-tab="automations" style="${this.getTabBtnStyle(this.activeTab === 'automations')}">
-              <i class="fas fa-robot"></i> 4. Automations
+              <i class="fas fa-cogs"></i> 5. Automations
             </button>
             <button class="wa-nav-tab ${this.activeTab === 'audit' ? 'active' : ''}" data-tab="audit" style="${this.getTabBtnStyle(this.activeTab === 'audit')}">
-              <i class="fas fa-shield-alt"></i> 5. Audit Log
+              <i class="fas fa-shield-alt"></i> 6. Audit Log
             </button>
           ` : ''}
         </div>
 
         <!-- Tab Content Panes -->
-        ${this.activeTab === 'messenger' ? this.renderMessengerTab() : ''}
+        ${(this.activeTab === 'messenger' || this.activeTab === 'team') ? this.renderMessengerTab() : ''}
         ${this.activeTab === 'inbox' ? this.renderInboxTab() : ''}
         ${this.activeTab === 'templates' && isAdmin ? this.renderTemplatesTab() : ''}
         ${this.activeTab === 'automations' && isAdmin ? this.renderAutomationsTab() : ''}
@@ -251,19 +276,33 @@ export class StaffWhatsAppInboxPage {
     return 'padding: 8px 14px; border-radius: 20px; background: #1e293b; color: #94a3b8; font-size: 12px; font-weight: 600; border: 1px solid #334155; cursor: pointer; white-space: nowrap; flex-shrink: 0; display: flex; align-items: center; gap: 6px;';
   }
 
-  // ── TAB 1: MESSENGER (PRIMARY VIEW) ─────────────────────────────────────────
+  // ── TAB 1 & TAB 2: MESSENGER / TEAM VIEW ────────────────────────────────────
 
   private renderMessengerTab(): string {
+    const isTeam = this.activeTab === 'team';
     return `
       <div style="background: #1e293b; border-radius: 12px; border: 1px solid #334155; overflow: hidden; display: flex; flex-direction: column; min-height: 520px;">
         
-        <!-- Messenger Scope & Search -->
-        <div style="padding: 10px; background: #0f172a; border-bottom: 1px solid #334155; display: flex; gap: 6px;">
-          <select id="waMsgScopeSelect" style="flex: 1; padding: 7px 10px; border-radius: 8px; background: #1e293b; border: 1px solid #334155; color: #fff; font-size: 12px; outline: none;">
-            <option value="all" ${this.activeScope === 'all' ? 'selected' : ''}>All Conversations</option>
-            <option value="assigned_tagged" ${this.activeScope === 'assigned_tagged' ? 'selected' : ''}>My Assigned & Tagged</option>
-            <option value="crm_leads" ${this.activeScope === 'crm_leads' ? 'selected' : ''}>CRM Leads Only</option>
-          </select>
+        <!-- Search & Filter Header -->
+        <div style="padding: 10px; background: #0f172a; border-bottom: 1px solid #334155; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="font-size: 12px; font-weight: 700; color: #38bdf8;">
+              <i class="${isTeam ? 'fas fa-users' : 'fas fa-comments'}"></i> ${isTeam ? 'Downline Team Conversations' : 'My Sent Messages & Assigned Leads'}
+            </div>
+            <div style="font-size: 11px; color: #94a3b8;">
+              ${this.convsList.length} conversation${this.convsList.length === 1 ? '' : 's'}
+            </div>
+          </div>
+          <div style="position: relative;">
+            <i class="fas fa-search" style="position: absolute; left: 10px; top: 9px; font-size: 12px; color: #64748b;"></i>
+            <input 
+              type="text" 
+              id="waMsgSearchInput" 
+              placeholder="${isTeam ? 'Search team messages / phone...' : 'Search my messages / phone...'}" 
+              value="${this.escapeAttr(this.fMsgSearch)}"
+              style="width: 100%; box-sizing: border-box; padding: 7px 10px 7px 30px; border-radius: 8px; background: #1e293b; border: 1px solid #334155; color: #fff; font-size: 12px; outline: none;"
+            />
+          </div>
         </div>
 
         <!-- Conversations List (or Chat Thread if active) -->
@@ -279,7 +318,8 @@ export class StaffWhatsAppInboxPage {
             ${!this.convsLoading && this.convsList.length === 0 ? `
               <div style="text-align: center; padding: 40px 20px; color: #64748b;">
                 <i class="fas fa-comments" style="font-size: 36px; margin-bottom: 8px;"></i>
-                <div>No messenger conversations found.</div>
+                <div>${isTeam ? 'No downline team conversations found.' : 'No personal conversations found.'}</div>
+                <div style="font-size: 11.5px; color: #475569; margin-top: 4px;">Tap "+ New Message" above to start a conversation.</div>
               </div>
             ` : ''}
 
@@ -291,18 +331,28 @@ export class StaffWhatsAppInboxPage {
     `;
   }
 
+  private maskPhone(phone: string): string {
+    const clean = (phone || '').replace(/[^0-9]/g, '').slice(-10);
+    if (!clean || clean.length < 10) return '••••••••••';
+    return `+91 ${clean.slice(0, 4)}••••${clean.slice(-2)}`;
+  }
+
   private renderMessengerCard(c: any): string {
     const phone = c.from_phone || c.phone || '';
     const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
-    const name = c.resolved_name || c.from_name || c.name || 'Customer';
-    const initial = (name.charAt(0) || 'W').toUpperCase();
+    let rawName = c.resolved_name || c.from_name || c.name || '';
+    const hasRealName = rawName && rawName !== '0' && rawName !== 'None' && rawName !== 'null' && !/^\d+$/.test(rawName) && !rawName.startsWith('Customer (+91') && !rawName.startsWith('Contact (+91');
+    
+    const displayName = hasRealName ? rawName : `Customer (${this.maskPhone(cleanPhone)})`;
+    const initial = (displayName.charAt(0) || 'C').toUpperCase();
     const msg = c.last_message || c.snippet || 'No messages';
+    const time = c.last_time || '';
 
     return `
       <div 
         class="wa-msg-card" 
         data-phone="${phone}" 
-        data-name="${this.escapeAttr(name)}"
+        data-name="${this.escapeAttr(displayName)}"
         style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #0f172a; border-radius: 10px; border: 1px solid #334155; cursor: pointer;"
       >
         <div style="width: 36px; height: 36px; border-radius: 50%; background: #059669; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: #fff; flex-shrink: 0;">
@@ -311,9 +361,9 @@ export class StaffWhatsAppInboxPage {
         <div style="flex: 1; min-width: 0;">
           <div style="display: flex; justify-content: space-between; align-items: baseline;">
             <div style="font-size: 13.5px; font-weight: 700; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-              ${name}
+              ${displayName}
             </div>
-            <div style="font-size: 10.5px; color: #94a3b8;">+91 ${cleanPhone}</div>
+            <div style="font-size: 10.5px; color: #64748b; margin-left: 6px; white-space: nowrap;">${time}</div>
           </div>
           <div style="font-size: 12px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;">
             ${msg}
@@ -326,6 +376,10 @@ export class StaffWhatsAppInboxPage {
 
   private renderLiveChatPane(): string {
     const cleanPhone = (this.activeChatPhone || '').replace(/[^0-9]/g, '').slice(-10);
+    const rawName = this.activeChatName || '';
+    const hasRealName = rawName && rawName !== '0' && rawName !== 'None' && rawName !== 'null' && !/^\d+$/.test(rawName) && !rawName.startsWith('Customer (+91') && !rawName.startsWith('Contact (+91');
+    const headerTitle = hasRealName ? rawName : `Customer (${this.maskPhone(cleanPhone)})`;
+    const headerSub = hasRealName ? 'WhatsApp Contact' : this.maskPhone(cleanPhone);
 
     return `
       <div style="display: flex; flex-direction: column; height: calc(100vh - 280px); min-height: 480px; background: #0b1120;">
@@ -337,8 +391,8 @@ export class StaffWhatsAppInboxPage {
               <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-              <div style="font-size: 14px; font-weight: 700; color: #f8fafc;">${this.activeChatName || this.activeChatPhone}</div>
-              <div style="font-size: 11px; color: #25d366;"><i class="fab fa-whatsapp"></i> +91 ${cleanPhone}</div>
+              <div style="font-size: 14px; font-weight: 700; color: #f8fafc;">${headerTitle}</div>
+              <div style="font-size: 11px; color: #25d366;"><i class="fab fa-whatsapp"></i> ${headerSub}</div>
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 6px;">
@@ -477,27 +531,30 @@ export class StaffWhatsAppInboxPage {
   }
 
   private renderMessageBubble(m: any): string {
-    const isOutbound = m.message_type === 'outbound' || m.message_type === 'bot';
-    const isBot = m.message_type === 'bot';
+    const isOutbound = m.message_type === 'outbound' || m.message_type === 'bot' || m.message_type === 'manual_staff' || m.sender === 'bot' || m.sender_type === 'bot' || m.is_from_me;
+    const isBot = m.message_type === 'bot' || m.sender_type === 'bot';
     
-    let timeStr = '';
-    try {
-      const dt = new Date(m.received_at || m.sent_at || Date.now());
-      timeStr = dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-    } catch {
-      timeStr = '';
+    let timeStr = m.sent_at || '';
+    if (!timeStr) {
+      try {
+        const dt = new Date(m.received_at || m.timestamp || Date.now());
+        timeStr = dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+      } catch {
+        timeStr = '';
+      }
     }
 
-    const text = m.body_text || m.message || '';
+    const text = m.body_text || m.body || m.message || '';
+    const ticks = m.status_ticks || '✓✓';
 
     if (isOutbound) {
       return `
         <div style="align-self: flex-end; max-width: 82%; background: ${isBot ? '#065f46' : '#059669'}; color: #fff; padding: 8px 12px; border-radius: 12px 12px 2px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
           ${isBot ? '<div style="font-size: 9.5px; font-weight: 700; color: #a7f3d0; margin-bottom: 2px;"><i class="fas fa-robot"></i> Bot Automated</div>' : ''}
-          <div style="font-size: 13px; line-height: 1.35; word-break: break-word;">${this.escapeHtml(text)}</div>
+          <div style="font-size: 13px; line-height: 1.35; word-break: break-word; white-space: pre-wrap;">${this.escapeHtml(text)}</div>
           <div style="font-size: 9.5px; color: #a7f3d0; text-align: right; margin-top: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 3px;">
             <span>${timeStr}</span>
-            <i class="fas fa-check-double" style="font-size: 8px;"></i>
+            <span style="font-size: 10px; color: #a7f3d0;">${ticks}</span>
           </div>
         </div>
       `;
@@ -505,7 +562,7 @@ export class StaffWhatsAppInboxPage {
 
     return `
       <div style="align-self: flex-start; max-width: 82%; background: #1e293b; color: #f8fafc; padding: 8px 12px; border-radius: 12px 12px 12px 2px; border: 1px solid #334155; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
-        <div style="font-size: 13px; line-height: 1.35; word-break: break-word;">${this.escapeHtml(text)}</div>
+        <div style="font-size: 13px; line-height: 1.35; word-break: break-word; white-space: pre-wrap;">${this.escapeHtml(text)}</div>
         <div style="font-size: 9.5px; color: #94a3b8; text-align: right; margin-top: 3px;">
           ${timeStr}
         </div>
@@ -599,8 +656,10 @@ export class StaffWhatsAppInboxPage {
     const isUnread = !item.is_read;
     const phone = item.from_phone || item.phone || '';
     const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
-    const name = item.resolved_name || item.from_name || item.caller_name || 'Customer';
-    const initial = (name.charAt(0) || 'W').toUpperCase();
+    const rawName = item.resolved_name || item.from_name || item.caller_name || '';
+    const hasRealName = rawName && rawName !== '0' && rawName !== 'None' && rawName !== 'null' && !/^\d+$/.test(rawName) && !rawName.startsWith('Customer (+91') && !rawName.startsWith('Contact (+91');
+    const displayName = hasRealName ? rawName : `Customer (${this.maskPhone(cleanPhone)})`;
+    const initial = (displayName.charAt(0) || 'W').toUpperCase();
     const msg = item.last_message || item.body_text || 'No message content';
     const status = item.status || 'new';
 
@@ -620,7 +679,7 @@ export class StaffWhatsAppInboxPage {
       <div 
         class="wa-inbox-card" 
         data-phone="${phone}"
-        data-name="${this.escapeAttr(name)}"
+        data-name="${this.escapeAttr(displayName)}"
         style="background: ${isUnread ? '#1e293b' : '#131e32'}; border-radius: 12px; padding: 12px; border: 1px solid ${isUnread ? '#059669' : '#1e293b'}; cursor: pointer; transition: background 0.15s;"
       >
         <div style="display: flex; gap: 10px; align-items: flex-start;">
@@ -636,7 +695,7 @@ export class StaffWhatsAppInboxPage {
           <div style="flex: 1; min-width: 0;">
             <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;">
               <div style="font-size: 14px; font-weight: 700; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                ${name}
+                ${displayName}
               </div>
               <div style="font-size: 11px; color: ${isUnread ? '#25d366' : '#94a3b8'}; flex-shrink: 0;">
                 ${timeIst}
@@ -656,10 +715,10 @@ export class StaffWhatsAppInboxPage {
             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #1e293b; padding-top: 6px;">
               <span>By: <strong style="color:#e2e8f0;">${lastSentBy}</strong></span>
               <div style="display: flex; gap: 6px;">
-                <button class="wa-row-assign-btn" data-phone="${phone}" data-name="${this.escapeAttr(name)}" style="background: #1e293b; border: 1px solid #475569; color: #38bdf8; border-radius: 6px; padding: 2px 8px; font-size: 11px; cursor: pointer;">
+                <button class="wa-row-assign-btn" data-phone="${phone}" data-name="${this.escapeAttr(displayName)}" style="background: #1e293b; border: 1px solid #475569; color: #38bdf8; border-radius: 6px; padding: 2px 8px; font-size: 11px; cursor: pointer;">
                   <i class="fas fa-tag"></i> Assign
                 </button>
-                <button class="wa-row-chat-btn" data-phone="${phone}" data-name="${this.escapeAttr(name)}" style="background: #059669; border: none; color: #fff; border-radius: 6px; padding: 2px 8px; font-size: 11px; cursor: pointer;">
+                <button class="wa-row-chat-btn" data-phone="${phone}" data-name="${this.escapeAttr(displayName)}" style="background: #059669; border: none; color: #fff; border-radius: 6px; padding: 2px 8px; font-size: 11px; cursor: pointer;">
                   <i class="fas fa-comment"></i> Chat
                 </button>
               </div>
@@ -812,13 +871,19 @@ export class StaffWhatsAppInboxPage {
 
       const res = await apiService.get<any>(url);
       if (res.success && res.data) {
-        this.inboxItems = res.data.data || res.data.items || [];
-        if (res.data.stats) {
-          this.inboxStats = res.data.stats;
-        } else {
-          this.inboxStats.all = res.data.total || this.inboxItems.length;
-          this.inboxStats.unread = this.inboxItems.filter(i => !i.is_read).length;
-          this.inboxStats.pending = this.inboxItems.filter(i => i.status === 'pending').length;
+        const raw = res.data;
+        if (Array.isArray(raw)) {
+          this.inboxItems = raw;
+        } else if (raw && typeof raw === 'object') {
+          this.inboxItems = Array.isArray(raw.items) ? raw.items : (Array.isArray(raw.data) ? raw.data : []);
+          if (raw.stats) {
+            this.inboxStats = raw.stats;
+          }
+        }
+        if (this.inboxItems.length > 0 && (!this.inboxStats || !this.inboxStats.all)) {
+          this.inboxStats.all = this.inboxItems.length;
+          this.inboxStats.unread = this.inboxItems.filter((i: any) => !i.is_read).length;
+          this.inboxStats.pending = this.inboxItems.filter((i: any) => i.status === 'pending').length;
         }
       }
     } catch (err) {
@@ -834,7 +899,11 @@ export class StaffWhatsAppInboxPage {
     this.render();
 
     try {
-      const res = await apiService.get<any>(`/whatsapp/conversations-hub?scope=${this.activeScope}`);
+      let url = `/whatsapp/conversations-hub?scope=${this.activeScope}`;
+      if (this.fMsgSearch) {
+        url += `&search=${encodeURIComponent(this.fMsgSearch.trim())}`;
+      }
+      const res = await apiService.get<any>(url);
       if (res.success && res.data) {
         this.convsList = res.data.conversations || [];
       }
@@ -846,21 +915,40 @@ export class StaffWhatsAppInboxPage {
     }
   }
 
-  private async loadChat(phone: string, name: string): Promise<void> {
+  private async loadChat(phone: string, name: string, originTab?: 'messenger' | 'team' | 'inbox'): Promise<void> {
+    if (originTab) {
+      this.chatOriginTab = originTab;
+    } else if (this.activeTab === 'team' || this.activeTab === 'inbox' || this.activeTab === 'messenger') {
+      this.chatOriginTab = this.activeTab;
+    }
+
+    const cleanPhone = (phone || '').replace(/[^0-9]/g, '').slice(-10);
+    let safeName = name;
+    if (!safeName || safeName === '0' || safeName === 'None' || safeName === 'null' || /^\d+$/.test(safeName)) {
+      safeName = `Customer (+91 ${cleanPhone})`;
+    }
     this.activeChatPhone = phone;
-    this.activeChatName = name;
+    this.activeChatName = safeName;
     this.showEmojiTray = false;
     this.showAttachMenu = false;
     this.chatLoading = true;
     this.render();
 
     try {
-      const res = await apiService.get<any>(`/whatsapp/inbox/thread/${encodeURIComponent(phone)}`);
-      if (res.success && res.data) {
-        this.chatHistory = res.data.messages || [];
+      const res = await apiService.get<any>(`/whatsapp/chat-history?phone=${encodeURIComponent(phone)}`);
+      if (res.success && res.data && res.data.messages && res.data.messages.length > 0) {
+        this.chatHistory = res.data.messages;
+      } else {
+        const fallbackRes = await apiService.get<any>(`/whatsapp/inbox/thread/${encodeURIComponent(phone)}`);
+        if (fallbackRes.success && fallbackRes.data) {
+          this.chatHistory = fallbackRes.data.messages || [];
+        } else {
+          this.chatHistory = [];
+        }
       }
     } catch (err) {
       console.error('[StaffWhatsAppCenter] Error loading thread:', err);
+      this.chatHistory = [];
     } finally {
       this.chatLoading = false;
       this.render();
@@ -950,6 +1038,19 @@ export class StaffWhatsAppInboxPage {
       this.openNewMessageModal();
     });
 
+    // Messenger & Team Messages Live Search
+    const msgSearchInput = document.getElementById('waMsgSearchInput') as HTMLInputElement;
+    if (msgSearchInput) {
+      let dt: any;
+      msgSearchInput.addEventListener('input', () => {
+        clearTimeout(dt);
+        dt = setTimeout(() => {
+          this.fMsgSearch = msgSearchInput.value;
+          this.loadMessenger();
+        }, 300);
+      });
+    }
+
     // CRM Inbox Search & Filters
     const searchInput = document.getElementById('waInboxSearchInput') as HTMLInputElement;
     if (searchInput) {
@@ -995,8 +1096,7 @@ export class StaffWhatsAppInboxPage {
         const phone = (card as HTMLElement).dataset.phone;
         const name = (card as HTMLElement).dataset.name || 'Customer';
         if (phone) {
-          this.activeTab = 'messenger';
-          this.loadChat(phone, name);
+          this.loadChat(phone, name, 'inbox');
         }
       });
     });
@@ -1021,15 +1121,26 @@ export class StaffWhatsAppInboxPage {
       card.addEventListener('click', () => {
         const phone = (card as HTMLElement).dataset.phone || '';
         const name = (card as HTMLElement).dataset.name || 'Customer';
-        this.loadChat(phone, name);
+        this.loadChat(phone, name, this.activeTab === 'team' ? 'team' : 'messenger');
       });
     });
 
-    // Back to messenger list
+    // Back to conversation list preserving origin tab
     document.getElementById('waBackToMsgListBtn')?.addEventListener('click', () => {
       this.activeChatPhone = null;
+      this.activeTab = this.chatOriginTab;
       this.render();
     });
+
+    // Intercept top header back button if chat is open
+    document.getElementById('backBtn')?.addEventListener('click', (e) => {
+      if (this.activeChatPhone) {
+        e.stopImmediatePropagation();
+        this.activeChatPhone = null;
+        this.activeTab = this.chatOriginTab;
+        this.render();
+      }
+    }, true);
 
     // Quick Pills in Live Chat
     this.container.querySelectorAll('.wa-quick-pill').forEach(pill => {
@@ -1127,21 +1238,32 @@ export class StaffWhatsAppInboxPage {
       this.showEmojiTray = false;
       this.showAttachMenu = false;
 
+      const user = authService.getAuthState().user || {};
+      const staffName = user.full_name || user.name || 'Staff';
+      const empCode = user.emp_code ? ` (${user.emp_code})` : '';
+      const designation = user.designation || user.role_name || user.role?.role_name || 'Workflows';
+      const signature = `\n\n—\nRegards,\n${staffName}${empCode}\n${designation} | MyntReal Workflows`;
+      const finalMsg = text.includes('Regards,') ? text : `${text}${signature}`;
+
       this.chatHistory.push({
         id: Date.now(),
         from_phone: this.activeChatPhone,
         message_type: 'outbound',
-        body_text: text,
+        body_text: finalMsg,
         received_at: new Date().toISOString(),
+        status_ticks: '✓✓'
       });
       this.render();
       this.scrollToChatBottom();
 
       try {
+        const cleanPhone = (this.activeChatPhone || '').replace(/[^0-9]/g, '').slice(-10);
         await apiService.post('/whatsapp/send-message', {
-          to_phone: this.activeChatPhone,
-          message: text,
-          message_type: 'text'
+          recipient: cleanPhone,
+          to_phone: cleanPhone,
+          phone: cleanPhone,
+          message: finalMsg,
+          recipient_type: 'individual'
         });
       } catch (err) {
         console.error('[StaffWhatsAppCenter] Send failed:', err);
@@ -1182,32 +1304,23 @@ export class StaffWhatsAppInboxPage {
             <button id="waQrModalCloseBtn" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer;">✕</button>
           </div>
 
-          <div style="font-size: 12.5px; color: #94a3b8; line-height: 1.45; margin-bottom: 16px; text-align: left; background: #0f172a; padding: 10px 12px; border-radius: 8px;">
-            <strong>To connect WhatsApp:</strong><br>
-            1. Open WhatsApp on your phone<br>
-            2. Tap <strong>Linked Devices</strong> in Settings/Menu<br>
-            3. Tap <strong>Link a Device</strong> and point your camera at this QR code
-          </div>
+          <p style="font-size: 12px; color: #94a3b8; margin-bottom: 16px; line-height: 1.4;">
+            Open WhatsApp on your phone > <strong>Linked Devices</strong> > <strong>Link a Device</strong> and point your camera here:
+          </p>
 
-          <!-- QR Container -->
-          <div id="waQrCodeBox" style="background: #fff; padding: 16px; border-radius: 12px; display: inline-block; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+          <div style="background: #fff; padding: 12px; border-radius: 12px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 16px;">
             ${this.gatewayQr ? `
-              <img src="${this.gatewayQr.startsWith('data:') ? this.gatewayQr : 'data:image/png;base64,' + this.gatewayQr}" style="width: 200px; height: 200px; display: block;" alt="WhatsApp QR Code" />
+              <img src="${this.gatewayQr}" alt="QR Code" style="width: 200px; height: 200px; display: block;" />
             ` : `
-              <div style="width: 200px; height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #475569;">
-                <i class="fas fa-qrcode fa-spin" style="font-size: 36px; color: #059669; margin-bottom: 8px;"></i>
-                <span style="font-size: 12px; font-weight: 600;">Generating QR code...</span>
+              <div style="width: 200px; height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b; font-size: 12px; gap: 8px;">
+                <i class="fas fa-spinner fa-spin" style="font-size: 28px; color: #25d366;"></i>
+                <span>Loading QR Code...</span>
               </div>
             `}
           </div>
 
-          <div style="display: flex; gap: 8px;">
-            <button id="waRefreshQrBtn" style="flex: 1; padding: 10px; border-radius: 8px; background: #334155; color: #f8fafc; font-size: 12.5px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-              <i class="fas fa-sync-alt"></i> Refresh QR
-            </button>
-            <button id="waCheckStatusBtn" style="flex: 1; padding: 10px; border-radius: 8px; background: #25d366; color: #0f172a; font-size: 12.5px; font-weight: 700; border: none; cursor: pointer;">
-              Check Status
-            </button>
+          <div style="font-size: 11px; color: #64748b;">
+            Auto-refreshes every 5 seconds.
           </div>
 
         </div>
@@ -1216,72 +1329,630 @@ export class StaffWhatsAppInboxPage {
 
     document.getElementById('waQrModalCloseBtn')?.addEventListener('click', () => {
       modalWrap.innerHTML = '';
+      if (this.qrPollingTimer) clearInterval(this.qrPollingTimer);
     });
 
-    document.getElementById('waRefreshQrBtn')?.addEventListener('click', async () => {
-      await this.checkGatewayStatus();
-      this.openScanQrModal();
-    });
-
-    document.getElementById('waCheckStatusBtn')?.addEventListener('click', async () => {
+    if (this.qrPollingTimer) clearInterval(this.qrPollingTimer);
+    this.qrPollingTimer = setInterval(async () => {
       await this.checkGatewayStatus();
       if (this.gatewayConnected) {
+        clearInterval(this.qrPollingTimer);
         modalWrap.innerHTML = '';
         this.render();
-      } else {
-        this.openScanQrModal();
       }
-    });
+    }, 5000);
   }
 
-  private openNewMessageModal(phoneDefault: string = '', textDefault: string = ''): void {
+  private openNewMessageModal(phoneNum?: string, initialText?: string): void {
     const modalWrap = document.getElementById('waCenterModalContainer');
     if (!modalWrap) return;
 
+    const user = authService.getAuthState().user || {};
+    const staffName = user.full_name || user.name || 'Staff';
+    const empCode = user.emp_code ? ` (${user.emp_code})` : '';
+    const designation = user.designation || user.role_name || user.role?.role_name || 'Workflows';
+    const defaultSig = `—\nRegards,\n${staffName}${empCode}\n${designation} | MyntReal Workflows`;
+
+    let activeModalEmojiCat = 'smileys';
+    let showModalEmoji = false;
+    let currentMode: 'scanned' | 'company' = 'scanned';
+    let selectedContactPhone = (phoneNum || '').replace(/[^0-9]/g, '').slice(-10);
+    let selectedContactName = '';
+    let selectedContactLeadId: string | null = null;
+    let searchDebounceTimer: any = null;
+    let fetchedTemplates: any[] = [];
+    let selectedTemplateObj: any = null;
+    let variableValues: Record<string, string> = {};
+
     modalWrap.innerHTML = `
-      <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 16px;">
-        <div style="background: #1e293b; border-radius: 14px; padding: 20px; width: 100%; max-width: 380px; border: 1px solid #334155; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-            <div style="font-size: 15px; font-weight: 700; color: #f8fafc;"><i class="fab fa-whatsapp" style="color:#25d366;"></i> Send WhatsApp Message</div>
-            <button id="waModalCloseBtn" style="background: none; border: none; color: #94a3b8; font-size: 16px; cursor: pointer;">✕</button>
+      <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 12px; backdrop-filter: blur(4px);">
+        <div style="background: #1e293b; border-radius: 16px; width: 100%; max-width: 480px; max-height: 94vh; overflow-y: auto; border: 1px solid #334155; box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column;">
+          
+          <!-- Header -->
+          <div style="padding: 14px 16px; background: linear-gradient(135deg, #075e54, #128c7e); border-top-left-radius: 16px; border-top-right-radius: 16px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 32px; height: 32px; border-radius: 50%; background: #25d366; display: flex; align-items: center; justify-content: center; color: #0f172a; font-size: 18px;">
+                <i class="fab fa-whatsapp"></i>
+              </div>
+              <div>
+                <div style="font-size: 15px; font-weight: 700; color: #fff;">Send WhatsApp Message</div>
+                <div style="font-size: 11px; color: #a7f3d0;">Unified Gateway & Meta CRM Model</div>
+              </div>
+            </div>
+            <button id="waModalCloseBtn" style="background: rgba(0,0,0,0.2); border: none; color: #fff; width: 28px; height: 28px; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
           </div>
 
-          <div style="margin-bottom: 10px;">
-            <label style="font-size: 11.5px; font-weight: 600; color: #94a3b8; display: block; margin-bottom: 4px;">Recipient Phone (10 Digits)</label>
-            <input type="tel" id="waNewPhoneInput" placeholder="9876543210" value="${phoneDefault}" style="width: 100%; box-sizing: border-box; padding: 8px 12px; border-radius: 8px; background: #0f172a; border: 1px solid #334155; color: #fff; font-size: 13px; outline: none;" />
+          <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+            
+            <!-- Mode Switcher (Scan WhatsApp vs WhatsApp API) -->
+            <div style="display: flex; gap: 8px; background: #0f172a; border-radius: 10px; padding: 4px; border: 1px solid #334155;">
+              <button id="waModeScanBtn" style="flex: 1; padding: 8px 6px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; background: #059669; color: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2);">
+                <i class="fas fa-qrcode text-success"></i> Scan WhatsApp
+                <small style="display: block; font-weight: 400; font-size: 10px; opacity: 0.9; margin-top: 2px;">Common Number · Gateway</small>
+              </button>
+              <button id="waModeCompBtn" style="flex: 1; padding: 8px 6px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; background: transparent; color: #94a3b8;">
+                <i class="fas fa-building text-primary"></i> WhatsApp API
+                <small style="display: block; font-weight: 400; font-size: 10px; opacity: 0.9; margin-top: 2px;">Meta Cloud API</small>
+              </button>
+            </div>
+
+            <!-- Recipient Phone / Search Field -->
+            <div style="position: relative;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <label style="font-size: 11.5px; font-weight: 600; color: #94a3b8;">Recipient Contact / Phone</label>
+                <span style="font-size: 10.5px; color: #38bdf8;"><i class="fas fa-search"></i> CRM & Mobile Synced</span>
+              </div>
+
+              <!-- Selected Contact Badge (if chosen) -->
+              <div id="waSelectedContactBadge" style="${selectedContactPhone ? 'display: flex;' : 'display: none;'} align-items: center; justify-content: space-between; padding: 7px 10px; background: #064e3b; border: 1px solid #059669; border-radius: 8px; margin-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #ecfdf5;">
+                  <i class="fas fa-check-circle" style="color: #25d366;"></i>
+                  <span id="waSelectedContactLabel">${selectedContactName || selectedContactPhone} (${this.maskPhone(selectedContactPhone)})</span>
+                </div>
+                <button id="waClearSelectedContactBtn" style="background: none; border: none; color: #f87171; font-size: 13px; cursor: pointer;">✕</button>
+              </div>
+
+              <!-- Search Input -->
+              <div id="waPhoneInputWrap" style="${selectedContactPhone ? 'display: none;' : 'display: flex;'} align-items: center; background: #0f172a; border: 1px solid #334155; border-radius: 10px; overflow: hidden;">
+                <span style="padding: 9px 12px; background: #1e293b; color: #25d366; font-size: 12.5px; font-weight: 700; border-right: 1px solid #334155; display: flex; align-items: center; gap: 4px;">
+                  🇮🇳 +91
+                </span>
+                <input 
+                  type="text" 
+                  id="waNewPhoneInput" 
+                  value="${selectedContactPhone || ''}" 
+                  placeholder="Search name or enter 10-digit number..."
+                  autocomplete="off"
+                  style="flex: 1; padding: 9px 12px; background: transparent; border: none; color: #fff; font-size: 13px; outline: none;"
+                />
+                <span id="waSearchSpinner" style="display: none; padding-right: 10px; color: #25d366; font-size: 12px;">
+                  <i class="fas fa-spinner fa-spin"></i>
+                </span>
+              </div>
+
+              <!-- Live Search Dropdown Drawer -->
+              <div id="waSearchResultsDrawer" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #1e293b; border: 1px solid #475569; border-radius: 10px; margin-top: 4px; max-height: 220px; overflow-y: auto; z-index: 10001; box-shadow: 0 10px 25px rgba(0,0,0,0.6);">
+                <div id="waSearchResultsList" style="padding: 4px;"></div>
+              </div>
+            </div>
+
+            <!-- CRM Filters (Segment & Category) -->
+            <div>
+              <div style="font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 5px;">Template Filters</div>
+              <div style="display: flex; gap: 8px;">
+                <select id="waSegSelect" style="flex: 1; font-size: 12px; padding: 7px 10px; border: 1px solid #334155; border-radius: 8px; background: #0f172a; color: #fff; outline: none;">
+                  <option value="">All Segments</option>
+                  <option value="general">MNR General</option>
+                  <option value="solar">Solar</option>
+                  <option value="myntreal_real">Myntreal Real</option>
+                  <option value="ev_b2c">EV B2C</option>
+                  <option value="ev_b2b">EV B2B</option>
+                  <option value="real_estate">Real Estate</option>
+                  <option value="etc_training">ETC Training</option>
+                  <option value="vgk">VGK Members</option>
+                  <option value="system">System</option>
+                </select>
+                <select id="waCatSelect" style="flex: 1; font-size: 12px; padding: 7px 10px; border: 1px solid #334155; border-radius: 8px; background: #0f172a; color: #fff; outline: none;">
+                  <option value="">All Categories</option>
+                  <option value="MARKETING">Marketing</option>
+                  <option value="UTILITY">Utility</option>
+                  <option value="AUTHENTICATION">Authentication</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Template Selector Dropdown -->
+            <div>
+              <label id="waTplLabel" style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 5px;">
+                Template (Optional — Any Active)
+              </label>
+              <select id="waTplSelect" style="width: 100%; font-size: 12.5px; padding: 8px 10px; border: 1px solid #334155; border-radius: 8px; background: #0f172a; color: #fff; outline: none;">
+                <option value="">— Select a template (optional) —</option>
+              </select>
+            </div>
+
+            <!-- Dynamic Variables Fill-in Box -->
+            <div id="waVarSection" style="display: none; background: #0f172a; border-radius: 10px; padding: 10px; border: 1px solid #334155;">
+              <div style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase; margin-bottom: 6px;">
+                <i class="fas fa-sliders-h"></i> Fill in Variables
+              </div>
+              <div id="waVarInputsContainer" style="display: flex; flex-direction: column; gap: 6px;"></div>
+            </div>
+
+            <!-- WhatsApp Message Composer Box -->
+            <div style="background: #0f172a; border-radius: 12px; border: 1px solid #334155; overflow: hidden;">
+              
+              <!-- Formatting Toolbar -->
+              <div style="padding: 6px 10px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <button id="waFmtBold" title="Bold" style="padding: 2px 7px; border-radius: 4px; background: #334155; color: #fff; font-weight: 700; font-size: 11.5px; border: none; cursor: pointer;">B</button>
+                  <button id="waFmtItalic" title="Italic" style="padding: 2px 7px; border-radius: 4px; background: #334155; color: #fff; font-style: italic; font-size: 11.5px; border: none; cursor: pointer;">I</button>
+                  <button id="waFmtStrike" title="Strikethrough" style="padding: 2px 7px; border-radius: 4px; background: #334155; color: #fff; text-decoration: line-through; font-size: 11.5px; border: none; cursor: pointer;">S</button>
+                  <button id="waFmtMono" title="Monospace" style="padding: 2px 7px; border-radius: 4px; background: #334155; color: #fff; font-family: monospace; font-size: 11px; border: none; cursor: pointer;">&lt;/&gt;</button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <button id="waModalEmojiToggle" style="background: none; border: none; font-size: 17px; color: #25d366; cursor: pointer; padding: 2px; display: flex; align-items: center;">
+                    <i class="far fa-smile"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Message Textarea -->
+              <textarea 
+                id="waNewTextInput" 
+                rows="4" 
+                placeholder="Type a message as on WhatsApp or select template above..."
+                style="width: 100%; box-sizing: border-box; padding: 10px 12px; background: transparent; border: none; color: #fff; font-size: 13px; outline: none; resize: vertical; line-height: 1.5; font-family: inherit;"
+              >${initialText || ''}</textarea>
+
+              <!-- Expandable Emoji Tray in Modal -->
+              <div id="waModalEmojiDrawer" style="display: none; background: #1e293b; border-top: 1px solid #334155; padding: 8px;">
+                <div style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid #334155;">
+                  <button class="wa-modal-ecat active" data-cat="smileys" style="padding: 3px 8px; border-radius: 10px; background: #059669; color: #fff; border: none; font-size: 11px; cursor: pointer;">😀 Smileys</button>
+                  <button class="wa-modal-ecat" data-cat="hands" style="padding: 3px 8px; border-radius: 10px; background: #334155; color: #94a3b8; border: none; font-size: 11px; cursor: pointer;">👍 Hands</button>
+                  <button class="wa-modal-ecat" data-cat="realestate" style="padding: 3px 8px; border-radius: 10px; background: #334155; color: #94a3b8; border: none; font-size: 11px; cursor: pointer;">🏠 Real Estate</button>
+                  <button class="wa-modal-ecat" data-cat="reactions" style="padding: 3px 8px; border-radius: 10px; background: #334155; color: #94a3b8; border: none; font-size: 11px; cursor: pointer;">❤️ Hearts</button>
+                  <button class="wa-modal-ecat" data-cat="travel" style="padding: 3px 8px; border-radius: 10px; background: #334155; color: #94a3b8; border: none; font-size: 11px; cursor: pointer;">🚗 Travel</button>
+                </div>
+                <div id="waModalEmojiGrid" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; max-height: 120px; overflow-y: auto; font-size: 18px; text-align: center;">
+                  ${this.emojiData.smileys.map(em => `<span class="wa-modal-emo-item" style="cursor: pointer; padding: 3px; border-radius: 4px; user-select: none;">${em}</span>`).join('')}
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Signature Toggle & Live Preview -->
+            <div style="background: #0f172a; border-radius: 10px; border: 1px solid #334155; padding: 10px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #e2e8f0; cursor: pointer; font-weight: 600;">
+                  <input type="checkbox" id="waAttachSigCheck" checked style="accent-color: #25d366;" />
+                  Attach Staff Signature
+                </label>
+                <span style="font-size: 10.5px; color: #25d366;"><i class="fas fa-check-circle"></i> Sender Tracked</span>
+              </div>
+              
+              <!-- Live WhatsApp Chat Bubble Preview -->
+              <div style="font-size: 10.5px; color: #94a3b8; margin-bottom: 4px;">Live WhatsApp Message Preview:</div>
+              <div style="background: #005c4b; border-radius: 10px; border-top-right-radius: 2px; padding: 10px 12px; color: #e9edef; font-size: 12.5px; line-height: 1.4; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+                <div id="waLivePreviewText" style="white-space: pre-wrap; word-break: break-word;">Hello from MyntReal!</div>
+                <div id="waLivePreviewSig" style="white-space: pre-wrap; font-size: 11px; color: #8696a0; margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 4px;">${defaultSig}</div>
+                <div style="text-align: right; font-size: 10px; color: #8696a0; margin-top: 4px; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+                  <span>Just now</span>
+                  <span style="color: #53bdeb;">✓✓</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Send Action Button -->
+            <div style="display: flex; gap: 8px;">
+              <button id="waModalSendBtn" style="flex: 1; padding: 12px; border-radius: 10px; background: linear-gradient(135deg, #059669, #10b981); color: #fff; font-size: 14px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(5,150,105,0.4);">
+                <i class="fab fa-whatsapp" style="font-size: 18px;"></i>
+                <span id="waModalSendBtnText">Send via Scan WhatsApp</span>
+              </button>
+            </div>
+
           </div>
 
-          <div style="margin-bottom: 14px;">
-            <label style="font-size: 11.5px; font-weight: 600; color: #94a3b8; display: block; margin-bottom: 4px;">Message Text</label>
-            <textarea id="waNewTextInput" rows="4" placeholder="Enter message payload..." style="width: 100%; box-sizing: border-box; padding: 8px 12px; border-radius: 8px; background: #0f172a; border: 1px solid #334155; color: #fff; font-size: 13px; outline: none; resize: none;">${textDefault}</textarea>
-          </div>
-
-          <button id="waModalSendBtn" style="width: 100%; padding: 10px; border-radius: 8px; background: #25d366; color: #0f172a; font-size: 13px; font-weight: 700; border: none; cursor: pointer;">
-            🚀 Send via Meta API
-          </button>
         </div>
       </div>
     `;
 
+    // Modal Close
     document.getElementById('waModalCloseBtn')?.addEventListener('click', () => {
       modalWrap.innerHTML = '';
     });
 
-    document.getElementById('waModalSendBtn')?.addEventListener('click', async () => {
-      const phone = (document.getElementById('waNewPhoneInput') as HTMLInputElement)?.value?.trim();
-      const text = (document.getElementById('waNewTextInput') as HTMLTextAreaElement)?.value?.trim();
-      if (!phone || !text) return;
+    const textInput = document.getElementById('waNewTextInput') as HTMLTextAreaElement;
+    const phoneInput = document.getElementById('waNewPhoneInput') as HTMLInputElement;
+    const searchDrawer = document.getElementById('waSearchResultsDrawer');
+    const searchList = document.getElementById('waSearchResultsList');
+    const searchSpinner = document.getElementById('waSearchSpinner');
+    const selectedBadge = document.getElementById('waSelectedContactBadge');
+    const selectedLabel = document.getElementById('waSelectedContactLabel');
+    const phoneInputWrap = document.getElementById('waPhoneInputWrap');
+    const previewText = document.getElementById('waLivePreviewText');
+    const previewSig = document.getElementById('waLivePreviewSig');
+    const sigCheck = document.getElementById('waAttachSigCheck') as HTMLInputElement;
+    const emojiDrawer = document.getElementById('waModalEmojiDrawer');
+    const emojiGrid = document.getElementById('waModalEmojiGrid');
+    const segSelect = document.getElementById('waSegSelect') as HTMLSelectElement;
+    const catSelect = document.getElementById('waCatSelect') as HTMLSelectElement;
+    const tplSelect = document.getElementById('waTplSelect') as HTMLSelectElement;
+    const tplLabel = document.getElementById('waTplLabel');
+    const varSection = document.getElementById('waVarSection');
+    const varInputsContainer = document.getElementById('waVarInputsContainer');
+    const sendBtn = document.getElementById('waModalSendBtn') as HTMLButtonElement;
+    const sendBtnText = document.getElementById('waModalSendBtnText');
 
-      modalWrap.innerHTML = '';
+    const btnScan = document.getElementById('waModeScanBtn');
+    const btnComp = document.getElementById('waModeCompBtn');
+
+    // Update Live Preview Bubble
+    const updatePreview = () => {
+      if (previewText) {
+        previewText.textContent = textInput?.value || 'Hello from MyntReal!';
+      }
+      if (previewSig) {
+        previewSig.style.display = sigCheck?.checked ? 'block' : 'none';
+      }
+    };
+
+    textInput?.addEventListener('input', updatePreview);
+    sigCheck?.addEventListener('change', updatePreview);
+    updatePreview();
+
+    // Mode Switcher Handler
+    const applyMode = (mode: 'scanned' | 'company') => {
+      currentMode = mode;
+      if (mode === 'scanned') {
+        if (btnScan) { btnScan.style.background = '#059669'; btnScan.style.color = '#fff'; }
+        if (btnComp) { btnComp.style.background = 'transparent'; btnComp.style.color = '#94a3b8'; }
+        if (tplLabel) tplLabel.textContent = 'Template (Optional — Any Active)';
+        if (sendBtnText) sendBtnText.textContent = 'Send via Scan WhatsApp';
+        if (sendBtn) sendBtn.style.background = 'linear-gradient(135deg, #059669, #10b981)';
+      } else {
+        if (btnComp) { btnComp.style.background = '#2563eb'; btnComp.style.color = '#fff'; }
+        if (btnScan) { btnScan.style.background = 'transparent'; btnScan.style.color = '#94a3b8'; }
+        if (tplLabel) tplLabel.textContent = 'Template (Meta-Approved Only)';
+        if (sendBtnText) sendBtnText.textContent = 'Send via WhatsApp API';
+        if (sendBtn) sendBtn.style.background = 'linear-gradient(135deg, #2563eb, #3b82f6)';
+      }
+      loadCrmTemplates();
+    };
+
+    btnScan?.addEventListener('click', () => applyMode('scanned'));
+    btnComp?.addEventListener('click', () => applyMode('company'));
+
+    // Load Templates matching Filters
+    const loadCrmTemplates = async () => {
+      if (!tplSelect) return;
+      tplSelect.innerHTML = '<option value="">— Loading templates… —</option>';
+
+      const seg = segSelect?.value || '';
+      const cat = catSelect?.value || '';
+
       try {
-        await apiService.post('/whatsapp/send-message', {
-          to_phone: phone,
-          message: text,
-          message_type: 'text'
-        });
-        this.loadCurrentTab();
+        let url = currentMode === 'company' 
+          ? `/whatsapp-config/templates/approved?1=1` 
+          : `/whatsapp-config/templates?1=1`;
+        if (seg) url += `&segment=${encodeURIComponent(seg)}`;
+        if (cat && currentMode === 'company') url += `&category=${encodeURIComponent(cat)}`;
+
+        const res = await apiService.get<any>(url);
+        if (res.success && res.data) {
+          const list = res.data.templates || (Array.isArray(res.data) ? res.data : []);
+          fetchedTemplates = list;
+
+          if (list.length === 0) {
+            tplSelect.innerHTML = '<option value="">— No templates found for this filter —</option>';
+          } else {
+            tplSelect.innerHTML = '<option value="">— Select a template (optional) —</option>' + 
+              list.map((t: any) => `
+                <option value="${t.id || t.template_id}">${t.title || t.name} (${t.segment || 'general'})</option>
+              `).join('');
+          }
+        }
       } catch (err) {
-        console.error('Send error:', err);
+        console.error('Error loading CRM templates:', err);
+        tplSelect.innerHTML = '<option value="">— Error loading templates —</option>';
+      }
+    };
+
+    segSelect?.addEventListener('change', loadCrmTemplates);
+    catSelect?.addEventListener('change', loadCrmTemplates);
+    loadCrmTemplates();
+
+    // Template Change Handler with Variable Extraction
+    tplSelect?.addEventListener('change', () => {
+      const tplId = tplSelect.value;
+      if (!tplId) {
+        selectedTemplateObj = null;
+        if (varSection) varSection.style.display = 'none';
+        return;
+      }
+
+      selectedTemplateObj = fetchedTemplates.find((t: any) => String(t.id || t.template_id) === String(tplId));
+      if (!selectedTemplateObj) return;
+
+      const bodyText = selectedTemplateObj.body_text || selectedTemplateObj.text || selectedTemplateObj.content || '';
+      
+      // Extract {{var}} placeholders
+      const matches: string[] = bodyText.match(/\{\{([^}]+)\}\}/g) || [];
+      const varKeys: string[] = Array.from(new Set(matches.map((m: string) => m.replace(/[{}]/g, '').trim())));
+
+      variableValues = {};
+      if (varKeys.length > 0 && varSection && varInputsContainer) {
+        varSection.style.display = 'block';
+        varInputsContainer.innerHTML = varKeys.map((k: string) => {
+          let defaultVal = '';
+          if (k === '1' || k === 'name' || k === 'customer_name') {
+            defaultVal = selectedContactName || 'Customer';
+          }
+          variableValues[k] = defaultVal;
+
+          return `
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+              <span style="font-size: 11.5px; color: #94a3b8; font-weight: 600; width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{${k}}}</span>
+              <input 
+                type="text" 
+                class="wa-tpl-var-input" 
+                data-key="${k}" 
+                value="${defaultVal}" 
+                placeholder="Value for {{${k}}}"
+                style="flex: 1; padding: 5px 8px; border-radius: 6px; background: #1e293b; border: 1px solid #334155; color: #fff; font-size: 12px; outline: none;"
+              />
+            </div>
+          `;
+        }).join('');
+
+        // Attach variable change listeners
+        varInputsContainer.querySelectorAll('.wa-tpl-var-input').forEach(inp => {
+          inp.addEventListener('input', (e) => {
+            const el = e.target as HTMLInputElement;
+            variableValues[el.dataset.key || ''] = el.value;
+            renderTemplatedMessage();
+          });
+        });
+      } else if (varSection) {
+        varSection.style.display = 'none';
+      }
+
+      renderTemplatedMessage();
+    });
+
+    const renderTemplatedMessage = () => {
+      if (!selectedTemplateObj || !textInput) return;
+      let msg = selectedTemplateObj.body_text || selectedTemplateObj.text || selectedTemplateObj.content || '';
+      for (const [k, v] of Object.entries(variableValues)) {
+        msg = msg.split(`{{${k}}}`).join(v || `{{${k}}}`);
+      }
+      textInput.value = msg;
+      updatePreview();
+    };
+
+    // Select Contact Helper
+    const selectContact = (phone: string, name: string, sourceBadge?: string, leadId?: string) => {
+      selectedContactPhone = phone.replace(/[^0-9]/g, '').slice(-10);
+      selectedContactName = name || 'Customer';
+      selectedContactLeadId = leadId || null;
+
+      if (selectedBadge && selectedLabel && phoneInputWrap && searchDrawer) {
+        selectedLabel.textContent = `${selectedContactName} (${this.maskPhone(selectedContactPhone)}) ${sourceBadge ? `[${sourceBadge}]` : ''}`;
+        selectedBadge.style.display = 'flex';
+        phoneInputWrap.style.display = 'none';
+        searchDrawer.style.display = 'none';
+      }
+
+      // If variable 1 / customer_name is present, update it
+      if (variableValues['1'] !== undefined) variableValues['1'] = selectedContactName;
+      if (variableValues['customer_name'] !== undefined) variableValues['customer_name'] = selectedContactName;
+      if (variableValues['name'] !== undefined) variableValues['name'] = selectedContactName;
+      renderTemplatedMessage();
+    };
+
+    // Clear Selected Contact
+    document.getElementById('waClearSelectedContactBtn')?.addEventListener('click', () => {
+      selectedContactPhone = '';
+      selectedContactName = '';
+      selectedContactLeadId = null;
+      if (selectedBadge && phoneInputWrap && phoneInput) {
+        selectedBadge.style.display = 'none';
+        phoneInputWrap.style.display = 'flex';
+        phoneInput.value = '';
+        phoneInput.focus();
+      }
+    });
+
+    // Live Contact Search Listener
+    phoneInput?.addEventListener('input', () => {
+      const q = phoneInput.value.trim();
+      if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+
+      if (q.length < 1) {
+        if (searchDrawer) searchDrawer.style.display = 'none';
+        return;
+      }
+
+      const cleanDigits = q.replace(/[^0-9]/g, '');
+      if (cleanDigits.length === 10) {
+        selectedContactPhone = cleanDigits;
+      }
+
+      if (searchSpinner) searchSpinner.style.display = 'inline-block';
+
+      searchDebounceTimer = setTimeout(async () => {
+        try {
+          const res = await apiService.get<any>(`/whatsapp/search-contacts?q=${encodeURIComponent(q)}`);
+          if (searchSpinner) searchSpinner.style.display = 'none';
+
+          if (res.success && res.data && res.data.contacts && res.data.contacts.length > 0) {
+            const contacts = res.data.contacts;
+            if (searchList && searchDrawer) {
+              searchList.innerHTML = contacts.map((c: any) => `
+                <div 
+                  class="wa-search-item" 
+                  data-phone="${c.phone}" 
+                  data-name="${this.escapeAttr(c.name)}" 
+                  data-source="${c.source || ''}"
+                  data-lead-id="${c.id || ''}"
+                  style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 8px; cursor: pointer; border-bottom: 1px solid #334155; transition: background 0.15s;"
+                >
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 28px; height: 28px; border-radius: 50%; background: ${c.badge_color || '#059669'}; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff;">
+                      ${(c.name.charAt(0) || 'C').toUpperCase()}
+                    </div>
+                    <div>
+                      <div style="font-size: 13px; font-weight: 700; color: #f8fafc;">${c.name}</div>
+                      <div style="font-size: 10.5px; color: #94a3b8;">${c.masked_phone || this.maskPhone(c.phone)}</div>
+                    </div>
+                  </div>
+                  <span style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 10px; background: rgba(255,255,255,0.1); color: ${c.badge_color || '#38bdf8'};">
+                    ${c.source}
+                  </span>
+                </div>
+              `).join('');
+
+              searchDrawer.style.display = 'block';
+
+              // Attach item click
+              searchList.querySelectorAll('.wa-search-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                  const target = e.currentTarget as HTMLElement;
+                  const phone = target.dataset.phone || '';
+                  const name = target.dataset.name || '';
+                  const src = target.dataset.source || '';
+                  const lid = target.dataset.leadId || '';
+                  selectContact(phone, name, src, lid);
+                });
+              });
+            }
+          } else {
+            if (searchList && searchDrawer) {
+              searchList.innerHTML = `<div style="padding: 10px; text-align: center; color: #94a3b8; font-size: 12px;">No matching contacts found. You can type the 10-digit number directly.</div>`;
+              searchDrawer.style.display = 'block';
+            }
+          }
+        } catch {
+          if (searchSpinner) searchSpinner.style.display = 'none';
+        }
+      }, 200);
+    });
+
+    // Formatting Toolbar Helpers
+    const wrapSelection = (before: string, after: string) => {
+      if (!textInput) return;
+      const start = textInput.selectionStart;
+      const end = textInput.selectionEnd;
+      const sel = textInput.value.substring(start, end);
+      const rep = sel ? `${before}${sel}${after}` : `${before}text${after}`;
+      textInput.setRangeText(rep, start, end, 'end');
+      textInput.focus();
+      updatePreview();
+    };
+
+    document.getElementById('waFmtBold')?.addEventListener('click', () => wrapSelection('*', '*'));
+    document.getElementById('waFmtItalic')?.addEventListener('click', () => wrapSelection('_', '_'));
+    document.getElementById('waFmtStrike')?.addEventListener('click', () => wrapSelection('~', '~'));
+    document.getElementById('waFmtMono')?.addEventListener('click', () => wrapSelection('```', '```'));
+
+    // Toggle Emoji Drawer in Modal
+    document.getElementById('waModalEmojiToggle')?.addEventListener('click', () => {
+      showModalEmoji = !showModalEmoji;
+      if (emojiDrawer) {
+        emojiDrawer.style.display = showModalEmoji ? 'block' : 'none';
+      }
+    });
+
+    // Emoji Category Switcher in Modal
+    modalWrap.querySelectorAll('.wa-modal-ecat').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const cat = (e.currentTarget as HTMLElement).dataset.cat as any;
+        modalWrap.querySelectorAll('.wa-modal-ecat').forEach(b => {
+          (b as HTMLElement).style.background = '#334155';
+          (b as HTMLElement).style.color = '#94a3b8';
+        });
+        (e.currentTarget as HTMLElement).style.background = '#059669';
+        (e.currentTarget as HTMLElement).style.color = '#fff';
+
+        if (cat && (this.emojiData as any)[cat] && emojiGrid) {
+          emojiGrid.innerHTML = (this.emojiData as any)[cat].map((em: string) => 
+            `<span class="wa-modal-emo-item" style="cursor: pointer; padding: 3px; border-radius: 4px; user-select: none;">${em}</span>`
+          ).join('');
+          attachEmojiClick();
+        }
+      });
+    });
+
+    const attachEmojiClick = () => {
+      modalWrap.querySelectorAll('.wa-modal-emo-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          const em = (e.currentTarget as HTMLElement).textContent || '';
+          if (textInput && em) {
+            const start = textInput.selectionStart;
+            textInput.setRangeText(em, start, start, 'end');
+            textInput.focus();
+            updatePreview();
+          }
+        });
+      });
+    };
+    attachEmojiClick();
+
+    // Unified Send Action
+    document.getElementById('waModalSendBtn')?.addEventListener('click', async () => {
+      let targetPhone = selectedContactPhone;
+      if (!targetPhone) {
+        const rawInput = phoneInput?.value?.trim() || '';
+        targetPhone = rawInput.replace(/[^0-9]/g, '').slice(-10);
+      }
+
+      const text = textInput?.value?.trim();
+      if (!targetPhone || targetPhone.length < 10) {
+        alert('Please search and select a contact or enter a valid 10-digit phone number.');
+        return;
+      }
+      if (!text) {
+        alert('Please enter or select a message.');
+        return;
+      }
+
+      const attachSig = sigCheck?.checked ?? true;
+      const signature = `\n\n${defaultSig}`;
+      const finalMsg = (attachSig && !text.includes('Regards,')) ? `${text}${signature}` : text;
+
+      if (sendBtn) sendBtn.disabled = true;
+      if (sendBtnText) sendBtnText.textContent = currentMode === 'company' ? 'Sending via Meta API...' : 'Sending via WhatsApp Bot...';
+
+      try {
+        if (currentMode === 'company') {
+          // Meta Cloud API Send
+          const tplId = selectedTemplateObj ? (selectedTemplateObj.id || selectedTemplateObj.template_id) : null;
+          const leadId = selectedContactLeadId || '0';
+          await apiService.post(`/whatsapp-config/crm-lead-send/${leadId}`, {
+            phone: targetPhone,
+            template_id: tplId ? parseInt(tplId, 10) : null,
+            custom_message: !tplId ? finalMsg : null,
+            variable_values: variableValues,
+            send_mode: 'company'
+          });
+        } else {
+          // Scanned Bot Gateway Send
+          await apiService.post('/whatsapp/send-message', {
+            recipient: targetPhone,
+            to_phone: targetPhone,
+            phone: targetPhone,
+            message: finalMsg,
+            recipient_type: 'individual',
+            recipient_name: selectedContactName || 'Customer'
+          });
+        }
+
+        modalWrap.innerHTML = '';
+        await this.loadCurrentTab();
+      } catch (err: any) {
+        alert(`Failed to send message: ${err.message || 'Unknown error'}`);
+        if (sendBtn) sendBtn.disabled = false;
+        if (sendBtnText) sendBtnText.textContent = currentMode === 'company' ? 'Send via WhatsApp API' : 'Send via Scan WhatsApp';
       }
     });
   }

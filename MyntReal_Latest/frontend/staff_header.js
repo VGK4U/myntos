@@ -996,8 +996,19 @@ window.StaffHeader = window.StaffHeader || {
     }
 };
 
-if (!document.getElementById('staffHeaderStyles')) {
+if (typeof document !== 'undefined' && !document.getElementById('staffHeaderStyles')) {
     document.head.insertAdjacentHTML('beforeend', StaffHeader.headerStyles);
+}
+
+// Universal Plivo Softphone Loader for Staff Portal
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    if (!document.getElementById('plivoSoftphoneScript')) {
+        const softphoneScript = document.createElement('script');
+        softphoneScript.id = 'plivoSoftphoneScript';
+        softphoneScript.src = '/public/js/plivo-softphone.js';
+        softphoneScript.async = true;
+        document.head.appendChild(softphoneScript);
+    }
 }
 
 if (typeof module !== 'undefined' && module.exports) {

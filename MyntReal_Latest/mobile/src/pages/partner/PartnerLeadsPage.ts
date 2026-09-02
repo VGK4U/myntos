@@ -8,6 +8,7 @@ import { apiService } from '../../services/api.service';
 import { authService } from '../../services/auth.service';
 import { routerService } from '../../services/router.service';
 import { partnerSideDrawer } from '../../components/PartnerSideDrawer';
+import { unifiedWAModal } from '../../components/UnifiedWAModal';
 
 interface Lead {
   id: number;
@@ -322,7 +323,7 @@ export class PartnerLeadsPage {
             <div class="lead-name">${lead.name}</div>
             <div class="lead-contact-row">
               <a href="tel:${lead.phone || ''}" class="lead-phone-link" onclick="event.stopPropagation()">${lead.phone || 'No phone'}</a>
-              ${lead.phone ? `<a href="https://wa.me/91${(lead.phone || '').replace(/\D/g, '')}" class="whatsapp-link" target="_blank" onclick="event.stopPropagation()">💬</a>` : ''}
+              ${lead.phone ? `<button class="whatsapp-link open-partner-wa-btn" data-phone="${(lead.phone || '').replace(/\D/g, '')}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category_name || ''}" onclick="event.stopPropagation()" style="background:none;border:none;cursor:pointer;padding:0 2px;">💬</button>` : ''}
             </div>
           </div>
           <span class="lead-status ${lead.status}">${lead.status}</span>
@@ -336,12 +337,32 @@ export class PartnerLeadsPage {
         </div>
         <div class="lead-actions">
           <a href="tel:${lead.phone || ''}" class="action-btn call" onclick="event.stopPropagation()">📞</a>
-          <a href="https://wa.me/91${(lead.phone || '').replace(/\D/g, '')}" class="action-btn whatsapp" target="_blank" onclick="event.stopPropagation()">💬</a>
+          <button class="action-btn whatsapp open-partner-wa-btn" data-phone="${(lead.phone || '').replace(/\D/g, '')}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category_name || ''}" onclick="event.stopPropagation()" style="border:none;cursor:pointer;" title="Send WhatsApp">💬</button>
           <button class="action-btn view" data-action="view" data-id="${lead.id}">👁</button>
           <button class="action-btn edit" data-action="edit" data-id="${lead.id}">✏️</button>
         </div>
       </div>
     `).join('');
+
+    // Unified WhatsApp Send Modal (Scan WA Common Number / WhatsApp API)
+    document.querySelectorAll('.open-partner-wa-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const phone = (btn as HTMLElement).dataset.phone || '';
+        const name = (btn as HTMLElement).dataset.name || 'Customer';
+        const leadId = (btn as HTMLElement).dataset.id || '';
+        const context = (btn as HTMLElement).dataset.cat || '';
+        if (phone) {
+          unifiedWAModal.open({
+            phone,
+            name,
+            leadId,
+            context
+          });
+        }
+      });
+    });
   }
 
   private showAddLeadModal(): void {

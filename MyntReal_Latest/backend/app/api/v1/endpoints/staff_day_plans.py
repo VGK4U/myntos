@@ -235,6 +235,7 @@ def get_available_tasks(
     return {"tasks": result, "total": len(result)}
 
 
+@router.post("", summary="Create or update day plan")
 @router.post("/", summary="Create or update day plan")
 def create_or_update_plan(
     request: Request,
@@ -313,6 +314,11 @@ def create_or_update_plan(
             if not phase:
                 continue
 
+        is_followup = bool(item.get("is_followup", False))
+        plan_type = item.get("plan_type", "followup" if is_followup else "planned")
+        if plan_type == "followup":
+            is_followup = True
+
         plan_item = StaffDayPlanItem(
             day_plan_id=plan.id,
             item_type=item_type,
@@ -320,6 +326,8 @@ def create_or_update_plan(
             phase_id=phase_id if item_type == "phase" else None,
             priority_order=priority,
             planned_status=item.get("planned_status", task.status),
+            plan_type=plan_type,
+            is_followup=is_followup,
             is_carried_forward=item.get("is_carried_forward", False),
             carried_from_date=date.fromisoformat(item["carried_from_date"]) if item.get("carried_from_date") else None
         )
@@ -1011,13 +1019,20 @@ def push_item_to_team_plan(
         StaffDayPlanItem.day_plan_id == plan.id
     ).scalar() or 0
 
+    is_followup = bool(data.get("is_followup", False))
+    plan_type = data.get("plan_type", "followup" if is_followup else "planned")
+    if plan_type == "followup":
+        is_followup = True
+
     plan_item = StaffDayPlanItem(
         day_plan_id=plan.id,
         item_type=item_type,
         task_id=task_id,
         phase_id=phase_id if item_type == "phase" else None,
         priority_order=max_priority + 1,
-        planned_status=task.status
+        planned_status=task.status,
+        plan_type=plan_type,
+        is_followup=is_followup
     )
     db.add(plan_item)
     _recalc_plan_stats(plan)

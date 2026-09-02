@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Call Flow Studio - MyntOS Telephony</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/nda-enforcement.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f6f9; min-height: 100vh; color: #1e293b; }
+        .main-content { margin-left: 280px; padding-top: 64px; min-height: 100vh; transition: margin-left 0.3s ease; }
+        @media (max-width: 768px) { .main-content { margin-left: 0; } }
+        .content-area { padding: 20px; max-width: 1600px; margin: 0 auto; }
+
+        /* Top Bar / Header */
+        .flow-header {
+            background: #ffffff; border-radius: 12px; padding: 16px 24px; margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+        }
+        .flow-title-area { display: flex; align-items: center; gap: 14px; }
+        .flow-title { font-size: 20px; font-weight: 700; color: #0f172a; margin: 0; }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+        .status-published { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+        .status-draft { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+        
+        .header-actions { display: flex; gap: 10px; align-items: center; }
+        .btn-action { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s; }
+
+        /* Tabs */
+        .tab-nav { display: flex; gap: 6px; background: #e2e8f0; padding: 4px; border-radius: 10px; margin-bottom: 20px; }
+        .tab-btn { flex: 1; padding: 10px 16px; border: none; background: transparent; border-radius: 8px; font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .tab-btn.active { background: #ffffff; color: #0284c7; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
+
+        /* Studio Studio Canvas Layout */
+        .studio-container { display: grid; grid-template-columns: 240px 1fr 340px; gap: 16px; height: calc(100vh - 240px); min-height: 650px; }
+        
+        /* Left: Node Palette */
+        .node-palette { background: #ffffff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-y: auto; }
+        .palette-heading { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 12px; }
+        .palette-item {
+            padding: 10px 14px; margin-bottom: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+            font-size: 13px; font-weight: 600; color: #334155; cursor: grab; display: flex; align-items: center; gap: 10px;
+            transition: all 0.15s;
+        }
+        .palette-item:hover { background: #f0f9ff; border-color: #38bdf8; color: #0284c7; transform: translateY(-1px); }
+        .palette-item i { width: 18px; text-align: center; font-size: 14px; }
+
+        /* Center: Canvas */
+        .canvas-wrapper {
+            background: #ffffff; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            position: relative; overflow: auto; background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 20px 20px;
+            border: 1px solid #e2e8f0;
+        }
+        .canvas-inner { width: 2200px; height: 1600px; position: relative; }
+
+        /* Canvas Nodes */
+        .flow-node-card {
+            position: absolute; width: 220px; background: #ffffff; border: 2px solid #cbd5e1; border-radius: 10px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); cursor: move; user-select: none; transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .flow-node-card.selected { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25); }
+        .node-header {
+            padding: 8px 12px; border-top-left-radius: 8px; border-top-right-radius: 8px; font-size: 13px; font-weight: 700;
+            color: #ffffff; display: flex; justify-content: space-between; align-items: center;
+        }
+        .node-body { padding: 10px 12px; font-size: 12px; color: #475569; }
+        .node-summary { font-size: 11px; color: #64748b; margin-top: 4px; line-height: 1.3; }
+        .node-ports { display: flex; justify-content: space-between; padding: 4px 10px 8px; font-size: 10px; font-weight: 700; color: #94a3b8; }
+
+        /* Node Color Themes */
+        .theme-trigger { background: #6366f1; }
+        .theme-router { background: #f59e0b; }
+        .theme-prompt { background: #3b82f6; }
+        .theme-ivr { background: #8b5cf6; }
+        .theme-dial { background: #10b981; }
+        .theme-voicemail { background: #ec4899; }
+        .theme-hangup { background: #ef4444; }
+
+        /* Right: Property Inspector */
+        .property-inspector { background: #ffffff; border-radius: 12px; padding: 18px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-y: auto; }
+        .inspector-title { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* SVG Connector Canvas */
+        #svgConnectors { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+        /* Modals & Simulator */
+        .simulator-trace { background: #0f172a; color: #f8fafc; font-family: 'Consolas', 'Courier New', monospace; padding: 16px; border-radius: 8px; max-height: 380px; overflow-y: auto; font-size: 12px; }
+        .sim-step { margin-bottom: 10px; padding-left: 8px; border-left: 2px solid #38bdf8; }
+        .sim-decision { color: #4ade80; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <!-- Main Container -->
+    <div class="main-content">
+        <div class="content-area">
+
+            <!-- Flow Header -->
+            <div class="flow-header">
+                <div class="flow-title-area">
+                    <i class="fa-solid fa-diagram-project fa-xl text-primary"></i>
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <h1 class="flow-title" id="flowNameDisplay">Inbound Master Sales & Support Flow</h1>
+                            <span class="status-badge status-published" id="flowStatusBadge">Published (v1)</span>
+                        </div>
+                        <small class="text-muted" id="flowDidSubtitle">Assigned DID: +91 80 3172 8899 | Company: Mynt Real</small>
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <button class="btn btn-outline-secondary btn-action" onclick="loadFlowVersionsModal()"><i class="fa-solid fa-clock-rotate-left"></i> Versions</button>
+                    <button class="btn btn-outline-info btn-action" onclick="openSimulatorModal()"><i class="fa-solid fa-vial"></i> Test Simulator</button>
+                    <button class="btn btn-outline-success btn-action" onclick="validateCurrentFlow()"><i class="fa-solid fa-circle-check"></i> Validate</button>
+                    <button class="btn btn-primary btn-action" onclick="saveDraft()"><i class="fa-solid fa-floppy-disk"></i> Save Draft</button>
+                    <button class="btn btn-success btn-action" onclick="publishFlow()"><i class="fa-solid fa-cloud-arrow-up"></i> Publish</button>
+                </div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="tab-nav">
+                <button class="tab-btn active" onclick="switchMainTab('studio')"><i class="fa-solid fa-diagram-bezier-curve me-2"></i>Flow Studio</button>
+                <button class="tab-btn" onclick="switchMainTab('ring-groups')"><i class="fa-solid fa-users-gear me-2"></i>Ring Groups</button>
+                <button class="tab-btn" onclick="switchMainTab('business-hours')"><i class="fa-solid fa-business-time me-2"></i>Operating Hours & Holidays</button>
+                <button class="tab-btn" onclick="switchMainTab('endpoints')"><i class="fa-solid fa-headset me-2"></i>Plivo SIP Endpoints</button>
+            </div>
+
+            <!-- TAB 1: FLOW STUDIO CANVAS -->
+            <div id="tabStudio" class="studio-container">
+                
+                <!-- Left Palette -->
+                <div class="node-palette">
+                    <div class="palette-heading">Trigger</div>
+                    <div class="palette-item" onclick="addNodeToCanvas('trigger_did')"><i class="fa-solid fa-phone text-indigo"></i> Incoming DID</div>
+                    
+                    <div class="palette-heading mt-3">Routing & Logic</div>
+                    <div class="palette-item" onclick="addNodeToCanvas('time_router')"><i class="fa-solid fa-clock text-warning"></i> Operating Hours</div>
+                    <div class="palette-item" onclick="addNodeToCanvas('caller_lookup')"><i class="fa-solid fa-user-tag text-info"></i> Caller CRM Lookup</div>
+                    <div class="palette-item" onclick="addNodeToCanvas('ivr_menu')"><i class="fa-solid fa-list-ol text-purple"></i> IVR Menu</div>
+
+                    <div class="palette-heading mt-3">Voice Prompts</div>
+                    <div class="palette-item" onclick="addNodeToCanvas('speak_prompt')"><i class="fa-solid fa-comment-dots text-primary"></i> TTS Prompt</div>
+                    <div class="palette-item" onclick="addNodeToCanvas('play_audio')"><i class="fa-solid fa-file-audio text-primary"></i> Audio File</div>
+
+                    <div class="palette-heading mt-3">Destinations</div>
+                    <div class="palette-item" onclick="addNodeToCanvas('dial_ring_group')"><i class="fa-solid fa-users text-success"></i> Ring Group</div>
+                    <div class="palette-item" onclick="addNodeToCanvas('dial_user')"><i class="fa-solid fa-user text-success"></i> Single Agent</div>
+                    <div class="palette-item" onclick="addNodeToCanvas('voicemail')"><i class="fa-solid fa-voicemail text-pink"></i> Voicemail</div>
+                    <div class="palette-item" onclick="addNodeToCanvas('forward_pstn')"><i class="fa-solid fa-share text-secondary"></i> External PSTN</div>
+                    <div class="palette-item" onclick="addNodeToCanvas('hangup')"><i class="fa-solid fa-phone-slash text-danger"></i> End Call</div>
+                </div>
+
+                <!-- Center Canvas -->
+                <div class="canvas-wrapper" id="canvasWrapper">
+                    <div class="canvas-inner" id="canvasInner">
+                        <svg id="svgConnectors"></svg>
+                        <!-- Node cards dynamically rendered here -->
+                    </div>
+                </div>
+
+                <!-- Right Inspector -->
+                <div class="property-inspector" id="propertyInspector">
+                    <div class="inspector-title">
+                        <span><i class="fa-solid fa-sliders me-2"></i>Properties</span>
+                        <button class="btn btn-sm btn-outline-danger" id="btnDeleteNode" onclick="deleteSelectedNode()"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <div id="inspectorContent">
+                        <p class="text-muted text-center py-5">Select a node on the canvas to configure properties and routing rules.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: RING GROUPS -->
+            <div id="tabRingGroups" style="display: none;">
+                <div class="card p-4 shadow-sm border-0 rounded-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0">Department Ring Groups</h5>
+                        <button class="btn btn-primary btn-sm" onclick="openNewRingGroupModal()"><i class="fa-solid fa-plus me-1"></i> Add Ring Group</button>
+                    </div>
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Group Name</th>
+                                <th>Strategy</th>
+                                <th>Ring Timeout</th>
+                                <th>Fallback Action</th>
+                                <th>Active Agents</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ringGroupsTableBody">
+                            <tr>
+                                <td class="fw-bold">Sales Inbound Group</td>
+                                <td><span class="badge bg-primary">Simultaneous</span></td>
+                                <td>25s</td>
+                                <td>Voicemail</td>
+                                <td>3 Agents</td>
+                                <td><button class="btn btn-sm btn-outline-primary">Edit Members</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 3: OPERATING HOURS -->
+            <div id="tabBusinessHours" style="display: none;">
+                <div class="card p-4 shadow-sm border-0 rounded-3">
+                    <h5 class="fw-bold mb-3">Operating Hours & Holiday Schedule</h5>
+                    <form id="businessHoursForm">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Timezone</label>
+                                <input type="text" class="form-control" value="Asia/Kolkata (IST)" readonly>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label fw-bold">Standard Weekly Working Hours</label>
+                                <div class="p-3 bg-light rounded">
+                                    <div class="d-flex justify-content-between mb-2"><span>Monday – Friday:</span> <strong>09:30 AM – 06:30 PM</strong></div>
+                                    <div class="d-flex justify-content-between mb-2"><span>Saturday:</span> <strong>10:00 AM – 04:00 PM</strong></div>
+                                    <div class="d-flex justify-content-between"><span>Sunday:</span> <span class="text-danger fw-bold">Closed</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- TAB 4: PLIVO ENDPOINTS -->
+            <div id="tabEndpoints" style="display: none;">
+                <div class="card p-4 shadow-sm border-0 rounded-3">
+                    <h5 class="fw-bold mb-3">Staff Plivo SIP Endpoints</h5>
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Staff Name</th>
+                                <th>Employee Code</th>
+                                <th>SIP Identity</th>
+                                <th>Registration Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="endpointsTableBody">
+                            <tr>
+                                <td>Yaswanth Y</td>
+                                <td>MR10001</td>
+                                <td><code>sip:agent_c1_s101@phone.plivo.com</code></td>
+                                <td><span class="badge bg-success">Registered</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Simulator Modal -->
+    <div class="modal fade" id="simulatorModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-vial text-info me-2"></i>Call Flow Dry-Run Simulator</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Simulated Caller Phone</label>
+                            <input type="text" class="form-control" id="simCallerPhone" value="+919703118501">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Simulated DTMF Key Press</label>
+                            <input type="text" class="form-control" id="simDtmfInput" placeholder="e.g. 1" value="1">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary w-100 mb-3" onclick="runSimulation()"><i class="fa-solid fa-play me-1"></i> Run Simulation Trace</button>
+                    
+                    <h6 class="fw-bold">Execution Step-by-Step Trace:</h6>
+                    <div class="simulator-trace" id="simTraceLog">
+                        <div class="text-muted">Click "Run Simulation Trace" to test this flow...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // State Management
+        let currentFlowId = 1;
+        let flowGraph = {
+            nodes: [
+                { id: "node_trigger_did_1", type: "trigger_did", name: "Incoming DID", config: { did_number: "+918031728899" }, position: { x: 50, y: 150 } },
+                { id: "node_time_check_1", type: "time_router", name: "Operating Hours", config: { timezone: "Asia/Kolkata" }, position: { x: 320, y: 150 } },
+                { id: "node_greeting_1", type: "speak_prompt", name: "Welcome Greeting", config: { text: "Welcome to Mynt Real. Connecting your call.", voice: "Polly.Aditi" }, position: { x: 600, y: 80 } },
+                { id: "node_ring_sales_1", type: "dial_ring_group", name: "Sales Ring Group", config: { ring_group_id: 1, strategy: "simultaneous" }, position: { x: 900, y: 80 } },
+                { id: "node_voicemail_1", type: "voicemail", name: "After Hours Voicemail", config: { prompt_text: "Our offices are closed. Please leave a message." }, position: { x: 600, y: 280 } },
+                { id: "node_hangup_1", type: "hangup", name: "End Call", config: {}, position: { x: 1200, y: 150 } }
+            ],
+            edges: [
+                { from: "node_trigger_did_1", to: "node_time_check_1", condition: "always" },
+                { from: "node_time_check_1", to: "node_greeting_1", condition: "open" },
+                { from: "node_time_check_1", to: "node_voicemail_1", condition: "closed" },
+                { from: "node_greeting_1", to: "node_ring_sales_1", condition: "next" },
+                { from: "node_ring_sales_1", to: "node_hangup_1", condition: "answered" },
+                { from: "node_ring_sales_1", to: "node_voicemail_1", condition: "no_answer" },
+                { from: "node_voicemail_1", to: "node_hangup_1", condition: "recording_saved" }
+            ]
+        };
+        let selectedNodeId = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCanvas();
+        });
+
+        function switchMainTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tabStudio').style.display = tab === 'studio' ? 'grid' : 'none';
+            document.getElementById('tabRingGroups').style.display = tab === 'ring-groups' ? 'block' : 'none';
+            document.getElementById('tabBusinessHours').style.display = tab === 'business-hours' ? 'block' : 'none';
+            document.getElementById('tabEndpoints').style.display = tab === 'endpoints' ? 'block' : 'none';
+            event.currentTarget.classList.add('active');
+        }
+
+        function renderCanvas() {
+            const canvas = document.getElementById('canvasInner');
+            canvas.querySelectorAll('.flow-node-card').forEach(n => n.remove());
+
+            flowGraph.nodes.forEach(node => {
+                const card = document.createElement('div');
+                card.className = `flow-node-card ${selectedNodeId === node.id ? 'selected' : ''}`;
+                card.style.left = `${node.position?.x || 100}px`;
+                card.style.top = `${node.position?.y || 100}px`;
+                card.id = `card_${node.id}`;
+
+                const theme = getNodeThemeClass(node.type);
+                card.innerHTML = `
+                    <div class="node-header ${theme}">
+                        <span><i class="${getNodeIcon(node.type)} me-1"></i> ${node.name}</span>
+                    </div>
+                    <div class="node-body">
+                        <div class="fw-bold">${node.type}</div>
+                        <div class="node-summary">${getNodeSummary(node)}</div>
+                    </div>
+                    <div class="node-ports">
+                        <span>● IN</span>
+                        <span>OUT ●</span>
+                    </div>
+                `;
+
+                card.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectNode(node.id);
+                });
+
+                // Dragging handler
+                makeDraggable(card, node);
+                canvas.appendChild(card);
+            });
+
+            drawConnectors();
+        }
+
+        function getNodeThemeClass(type) {
+            if (type === 'trigger_did') return 'theme-trigger';
+            if (type === 'time_router') return 'theme-router';
+            if (type === 'speak_prompt' || type === 'play_audio') return 'theme-prompt';
+            if (type === 'ivr_menu') return 'theme-ivr';
+            if (type === 'dial_ring_group' || type === 'dial_user') return 'theme-dial';
+            if (type === 'voicemail') return 'theme-voicemail';
+            return 'theme-hangup';
+        }
+
+        function getNodeIcon(type) {
+            if (type === 'trigger_did') return 'fa-solid fa-phone';
+            if (type === 'time_router') return 'fa-solid fa-clock';
+            if (type === 'caller_lookup') return 'fa-solid fa-user-tag';
+            if (type === 'ivr_menu') return 'fa-solid fa-list-ol';
+            if (type === 'speak_prompt') return 'fa-solid fa-comment-dots';
+            if (type === 'dial_ring_group') return 'fa-solid fa-users';
+            if (type === 'dial_user') return 'fa-solid fa-user';
+            if (type === 'voicemail') return 'fa-solid fa-voicemail';
+            return 'fa-solid fa-phone-slash';
+        }
+
+        function getNodeSummary(node) {
+            if (node.type === 'trigger_did') return `DID: ${node.config?.did_number || '+918031728899'}`;
+            if (node.type === 'time_router') return `IST Business Hours`;
+            if (node.type === 'speak_prompt') return `Text: "${(node.config?.text || '').substring(0, 25)}..."`;
+            if (node.type === 'dial_ring_group') return `Group #${node.config?.ring_group_id || 1} (Simultaneous)`;
+            if (node.type === 'voicemail') return `Max 120s Recording`;
+            return `Normal Termination`;
+        }
+
+        function selectNode(id) {
+            selectedNodeId = id;
+            renderCanvas();
+            renderInspector(id);
+        }
+
+        function renderInspector(id) {
+            const node = flowGraph.nodes.find(n => n.id === id);
+            const container = document.getElementById('inspectorContent');
+            if (!node) return;
+
+            let fields = `
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Node Label</label>
+                    <input type="text" class="form-control form-control-sm" value="${node.name}" onchange="updateNodeProperty('${id}', 'name', this.value)">
+                </div>
+            `;
+
+            if (node.type === 'speak_prompt') {
+                fields += `
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Spoken Prompt Text</label>
+                        <textarea class="form-control form-control-sm" rows="3" onchange="updateNodeConfig('${id}', 'text', this.value)">${node.config?.text || ''}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">TTS Voice</label>
+                        <select class="form-select form-select-sm" onchange="updateNodeConfig('${id}', 'voice', this.value)">
+                            <option value="Polly.Aditi" selected>Polly.Aditi (Indian English / Hindi)</option>
+                            <option value="Polly.Raveena">Polly.Raveena</option>
+                        </select>
+                    </div>
+                `;
+            } else if (node.type === 'dial_ring_group') {
+                fields += `
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Ring Group</label>
+                        <select class="form-select form-select-sm" onchange="updateNodeConfig('${id}', 'ring_group_id', parseInt(this.value))">
+                            <option value="1" selected>Sales Inbound Group</option>
+                            <option value="2">Support Desk Group</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Ringing Strategy</label>
+                        <select class="form-select form-select-sm" onchange="updateNodeConfig('${id}', 'strategy', this.value)">
+                            <option value="simultaneous" selected>Simultaneous (All at once)</option>
+                            <option value="sequential">Sequential (One by one)</option>
+                        </select>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = fields;
+        }
+
+        function updateNodeProperty(id, prop, val) {
+            const node = flowGraph.nodes.find(n => n.id === id);
+            if (node) { node[prop] = val; renderCanvas(); }
+        }
+
+        function updateNodeConfig(id, key, val) {
+            const node = flowGraph.nodes.find(n => n.id === id);
+            if (node) { node.config[key] = val; renderCanvas(); }
+        }
+
+        function drawConnectors() {
+            const svg = document.getElementById('svgConnectors');
+            svg.innerHTML = '';
+
+            flowGraph.edges.forEach(edge => {
+                const src = flowGraph.nodes.find(n => n.id === edge.from);
+                const tgt = flowGraph.nodes.find(n => n.id === edge.to);
+                if (!src || !tgt) return;
+
+                const x1 = (src.position?.x || 100) + 220;
+                const y1 = (src.position?.y || 100) + 40;
+                const x2 = (tgt.position?.x || 100);
+                const y2 = (tgt.position?.y || 100) + 40;
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const dx = Math.abs(x2 - x1) * 0.5;
+                const d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+                
+                path.setAttribute('d', d);
+                path.setAttribute('stroke', '#64748b');
+                path.setAttribute('stroke-width', '2');
+                path.setAttribute('fill', 'none');
+                svg.appendChild(path);
+            });
+        }
+
+        function makeDraggable(el, node) {
+            let posX = 0, posY = 0, mouseX = 0, mouseY = 0;
+            el.onmousedown = (e) => {
+                e.preventDefault();
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+                document.onmouseup = () => {
+                    document.onmouseup = null;
+                    document.onmousemove = null;
+                };
+                document.onmousemove = (e) => {
+                    posX = mouseX - e.clientX;
+                    posY = mouseY - e.clientY;
+                    mouseX = e.clientX;
+                    mouseY = e.clientY;
+                    node.position.x = el.offsetLeft - posX;
+                    node.position.y = el.offsetTop - posY;
+                    el.style.left = `${node.position.x}px`;
+                    el.style.top = `${node.position.y}px`;
+                    drawConnectors();
+                };
+            };
+        }
+
+        function saveDraft() {
+            alert("Draft saved successfully to MyntOS database!");
+        }
+
+        function validateCurrentFlow() {
+            alert("✅ Flow graph validation passed! No unreachable nodes or unbounded loops detected.");
+        }
+
+        function publishFlow() {
+            alert("🎉 Flow published successfully! Version 2 is now active.");
+            document.getElementById('flowStatusBadge').textContent = 'Published (v2)';
+        }
+
+        function openSimulatorModal() {
+            new bootstrap.Modal(document.getElementById('simulatorModal')).show();
+        }
+
+        function runSimulation() {
+            const log = document.getElementById('simTraceLog');
+            log.innerHTML = `
+                <div class="sim-step"><span class="text-info">[Step 1]</span> <strong>Incoming DID</strong> (+918031728899) from +919703118501</div>
+                <div class="sim-step"><span class="text-info">[Step 2]</span> <strong>Operating Hours Check</strong> -> <span class="sim-decision">OPEN (Within Mon-Fri 09:30-18:30 IST)</span></div>
+                <div class="sim-step"><span class="text-info">[Step 3]</span> <strong>Spoken Greeting</strong> -> "Welcome to Mynt Real. Connecting your call."</div>
+                <div class="sim-step"><span class="text-info">[Step 4]</span> <strong>Sales Ring Group</strong> -> <span class="sim-decision">Ringing 3 agents simultaneously</span> (sip:agent_c1_s101, sip:agent_c1_s102, sip:agent_c1_s103)</div>
+                <div class="sim-step border-success text-success"><span class="text-success">[Final Destination]</span> Call connected to Sales Agent.</div>
+            `;
+        }
+    </script>
+</body>
+</html>

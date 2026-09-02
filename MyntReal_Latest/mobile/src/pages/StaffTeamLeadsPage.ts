@@ -9,6 +9,7 @@ import { authService } from '../services/auth.service';
 import { PageHeader } from '../components/PageHeader';
 import { routerService } from '../services/router.service';
 import { vgkBannerService } from '../services/vgk-banner.service';
+import { unifiedWAModal } from '../components/UnifiedWAModal';
 
 interface Company {
   id: number;
@@ -1291,7 +1292,7 @@ export class StaffTeamLeadsPage {
           <div class="lead-name">${lead.name}</div>
           <div class="lead-contact-links">
             <a href="tel:${phone}" class="mobile-link" onclick="event.stopPropagation()">${phone || '-'}</a>
-            ${phone ? `<a href="https://wa.me/91${whatsappNumber}" class="whatsapp-link" target="_blank" onclick="event.stopPropagation()">💬</a>` : ''}
+            ${phone ? `<button class="whatsapp-link open-team-lead-wa-btn" data-phone="${whatsappNumber}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" onclick="event.stopPropagation()" style="background:none;border:none;cursor:pointer;padding:0 2px;">💬</button>` : ''}
           </div>
         </td>
         <td>${lead.category_name || lead.category || '-'}</td>
@@ -1308,7 +1309,7 @@ export class StaffTeamLeadsPage {
         <td class="days-cell">${lead.days_since_created || 0}</td>
         <td class="actions-cell">
           <a href="tel:${phone}" class="action-btn call-btn" onclick="event.stopPropagation()" title="Call">📞</a>
-          <a href="https://wa.me/91${whatsappNumber}" class="action-btn whatsapp-btn" target="_blank" onclick="event.stopPropagation()" title="WhatsApp">💬</a>
+          <button class="action-btn whatsapp-btn open-team-lead-wa-btn" data-phone="${whatsappNumber}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" onclick="event.stopPropagation()" style="border:none;cursor:pointer;" title="Send WhatsApp">💬</button>
           <button class="action-btn view-btn" data-id="${lead.id}" title="View">👁</button>
           <button class="action-btn edit-btn" data-id="${lead.id}" title="Edit">✏️</button>
         </td>
@@ -1476,6 +1477,26 @@ export class StaffTeamLeadsPage {
       });
     });
 
+    // Unified WhatsApp Send Modal (Scan WA Common Number / WhatsApp API)
+    document.querySelectorAll('.open-team-lead-wa-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const phone = (btn as HTMLElement).dataset.phone || '';
+        const name = (btn as HTMLElement).dataset.name || 'Customer';
+        const leadId = (btn as HTMLElement).dataset.id || '';
+        const context = (btn as HTMLElement).dataset.cat || '';
+        if (phone) {
+          unifiedWAModal.open({
+            phone,
+            name,
+            leadId,
+            context
+          });
+        }
+      });
+    });
+
     document.getElementById('addLeadBtn')?.addEventListener('click', () => {
       this.showAddLeadModal();
     });
@@ -1588,7 +1609,7 @@ export class StaffTeamLeadsPage {
           <button class="btn btn-info" id="detailFollowupBtn" style="flex: 1; min-width: 120px;">Follow-up</button>
           <button class="btn btn-warning" id="detailStatusBtn" style="flex: 1; min-width: 120px;">Status</button>
           <button class="btn btn-secondary" onclick="window.location.href='tel:${lead.phone}'" style="flex: 1; min-width: 100px;">Call</button>
-          <button class="btn btn-success" onclick="window.open('https://wa.me/91${lead.phone}', '_blank')" style="flex: 1; min-width: 100px;">WhatsApp</button>
+          <button class="btn btn-success open-team-lead-wa-btn" data-phone="${(lead.phone || '').replace(/\D/g, '')}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" style="flex: 1; min-width: 100px;">WhatsApp</button>
         </div>
       </div>
     `;

@@ -49,6 +49,8 @@ from app.api.v1.endpoints import (
     engineering_ai,
     vgk_incentive_api,
     voip_dialer,
+    call_flow_api,
+    plivo_softphone_api,
     account_deletion,
 )
 
@@ -235,6 +237,8 @@ api_router.include_router(call_tracking.router, prefix="/call-tracking", tags=["
 api_router.include_router(call_quality.router, tags=["Call Quality Review System"])
 api_router.include_router(crm_dialer.router, prefix="/crm", tags=["CRM Auto Dialer"])
 api_router.include_router(voip_dialer.router, tags=["VoIP In-App PSTN Calling & Recordings"])
+api_router.include_router(call_flow_api.router, prefix="/telephony", tags=["MyntOS Native Telephony & Call Flow Designer"])
+api_router.include_router(plivo_softphone_api.router, prefix="/telephony/plivo", tags=["Plivo Browser Softphone & Token API"])
 api_router.include_router(crm_lead_sync.router, prefix="/crm", tags=["CRM Google Sheets Lead Sync"])
 api_router.include_router(crm_commissions.router, tags=["CRM Commissions"])
 

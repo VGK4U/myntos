@@ -44,6 +44,7 @@ export type PageRoute =
   | 'staff-lead-sources'
   | 'staff-whatsapp'
   | 'staff-whatsapp-inbox'
+  | 'staff-bank-wise-leads'
   // Day Planner Section
   | 'day-planner'
   // Tasks Section - New
@@ -255,6 +256,7 @@ class RouterService {
     'staff-lead-sources': { id: 'staff-lead-sources', title: 'Lead Sources', icon: 'list', showInTabs: false, portal: 'staff' },
     'staff-whatsapp': { id: 'staff-whatsapp', title: 'WhatsApp Inbox', icon: 'message-circle', showInTabs: false, portal: 'staff' },
     'staff-whatsapp-inbox': { id: 'staff-whatsapp-inbox', title: 'WhatsApp Inbox', icon: 'message-circle', showInTabs: false, portal: 'staff' },
+    'staff-bank-wise-leads': { id: 'staff-bank-wise-leads', title: 'Field staff leads', icon: 'users', showInTabs: false, portal: 'staff' },
     'staff-call-tracking': { id: 'staff-call-tracking', title: 'Call Tracking', icon: 'call', showInTabs: false, portal: 'staff' },
     'auto-dialer': { id: 'auto-dialer', title: 'Auto Dialer', icon: 'phone-call', showInTabs: false, portal: 'staff' },
     'call-history': { id: 'call-history', title: 'Call History', icon: 'phone', showInTabs: false, portal: 'staff' },

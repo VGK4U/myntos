@@ -27,10 +27,9 @@
     '<div style="padding:18px">',
 
     /* mode toggle */
-    '<div style="display:flex;gap:6px;margin-bottom:16px;background:#f3f4f6;border-radius:10px;padding:4px">',
-    '<button id="_lwaBtnComp"    onclick="window._lwaMode(\'company\')" style="flex:1;padding:8px 6px;border:none;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;transition:all .15s"><i class="fas fa-building"></i> Company WA<small style="display:block;font-weight:400;font-size:9.5px;margin-top:1px">Meta API</small></button>',
-    '<button id="_lwaBtnScanned" onclick="window._lwaMode(\'scanned\')" style="flex:1;padding:8px 6px;border:none;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;transition:all .15s"><i class="fas fa-qrcode"></i> Scanned Bot WA<small style="display:block;font-weight:400;font-size:9.5px;margin-top:1px">Connected Bot</small></button>',
-    '<button id="_lwaBtnDir"     onclick="window._lwaMode(\'direct\')"  style="flex:1;padding:8px 6px;border:none;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;transition:all .15s"><i class="fab fa-whatsapp"></i> Direct WA<small style="display:block;font-weight:400;font-size:9.5px;margin-top:1px">App / Web</small></button>',
+    '<div style="display:flex;gap:8px;margin-bottom:16px;background:#f3f4f6;border-radius:10px;padding:4px">',
+    '<button id="_lwaBtnScanned" onclick="window._lwaMode(\'scanned\')" style="flex:1;padding:8px 6px;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s"><i class="fas fa-qrcode text-success"></i> Scan WhatsApp<small style="display:block;font-weight:400;font-size:10px;margin-top:1px">Common Number · Tracked</small></button>',
+    '<button id="_lwaBtnComp"    onclick="window._lwaMode(\'company\')" style="flex:1;padding:8px 6px;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s"><i class="fas fa-building text-primary"></i> WhatsApp API<small style="display:block;font-weight:400;font-size:10px;margin-top:1px">Meta Cloud API</small></button>',
     '</div>',
 
     /* filters */
@@ -120,32 +119,27 @@
     var mode = _s.mode;
     var btnComp = document.getElementById('_lwaBtnComp');
     var btnScan = document.getElementById('_lwaBtnScanned');
-    var btnDir  = document.getElementById('_lwaBtnDir');
-    [btnComp, btnScan, btnDir].forEach(function(b) {
+    [btnComp, btnScan].forEach(function(b) {
       if (!b) return;
       b.style.background  = 'none';
       b.style.boxShadow   = 'none';
       b.style.color       = '#6b7280';
     });
-    var active = mode === 'company' ? btnComp : mode === 'scanned' ? btnScan : btnDir;
+    var active = mode === 'company' ? btnComp : btnScan;
     if (active) {
       active.style.background = '#fff';
       active.style.boxShadow  = '0 1px 4px rgba(0,0,0,.12)';
-      active.style.color      = mode === 'company' ? '#065f46' : mode === 'scanned' ? '#15803d' : '#0369a1';
+      active.style.color      = mode === 'company' ? '#2563eb' : '#15803d';
     }
     document.getElementById('_lwaTplLbl').textContent = mode === 'company'
       ? 'Template (Meta-approved only)'
       : 'Template (optional — any active)';
     document.getElementById('_lwaSendLbl').textContent = mode === 'company'
-      ? 'Send via Meta'
-      : mode === 'scanned'
-      ? 'Send via Scanned Bot'
-      : 'Open WhatsApp';
+      ? 'Send via WhatsApp API'
+      : 'Send via Scan WhatsApp';
     document.getElementById('_lwaSend').style.background = mode === 'company'
-      ? '#25D366'
-      : mode === 'scanned'
-      ? '#16a34a'
-      : '#0d9488';
+      ? '#2563eb'
+      : '#16a34a';
   }
 
   /* ── Load templates ───────────────────────────────────────────────────────── */
@@ -273,6 +267,12 @@
 
     if (!msg) { _showRes('Please enter a message or select a template.', false); return; }
 
+    /* append signature if not present */
+    var sig = _getStaffSignature();
+    if (msg && msg.indexOf('Regards,') === -1 && msg.indexOf('MyntReal') === -1) {
+      msg = msg + sig;
+    }
+
     if (_s.mode === 'direct') {
       var cleaned = (_s.phone || '').replace(/\D/g, '').slice(-10);
       var waUrl   = cleaned
@@ -301,14 +301,15 @@
         body: JSON.stringify({
           recipient: targetNum,
           message: msg,
-          recipient_type: 'individual'
+          recipient_type: 'individual',
+          recipient_name: _s.name || 'Customer'
         })
       })
       .then(function(r) { return r.json(); })
       .then(function(d) {
         if (d.success) {
           btn.innerHTML = '<i class="fas fa-check"></i> Sent via Bot ✓';
-          _showRes('✅ Sent via Scanned WhatsApp Bot! Message ID: ' + (d.message_id || 'OK'), true);
+          _showRes('✅ Sent via Scanned WhatsApp Bot! (Signed & Tracked)', true);
           if (_s.leadId && _s.leadId !== 'new') {
             fetch(API + '/crm-lead-send/' + _s.leadId + '/log-direct', {
               method: 'POST', credentials: 'include',
@@ -316,7 +317,7 @@
               body: JSON.stringify({ phone: _s.phone, message_preview: msg.slice(0, 200), message_body: msg, template_id: tplId ? parseInt(tplId, 10) : null })
             }).catch(function(e) { console.warn('[lwa] log-scanned non-fatal', e); });
           }
-          setTimeout(function() { document.getElementById('_lwaModal').style.display = 'none'; }, 3000);
+          setTimeout(function() { document.getElementById('_lwaModal').style.display = 'none'; }, 2500);
         } else {
           var errDetail = d.detail || d.message || d.error || 'Gateway dispatch failed';
           _showRes('❌ ' + errDetail, false);
@@ -367,6 +368,22 @@
     });
   }
 
+  function _getStaffSignature() {
+    try {
+      var raw = localStorage.getItem('mnr_auth_state') || localStorage.getItem('user');
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        var u = parsed.user || parsed;
+        var name = u.full_name || u.name || (u.first_name ? u.first_name + ' ' + (u.last_name || '') : '') || 'MyntReal Staff';
+        var code = u.emp_code || u.employee_id || u.mnr_id || '';
+        var desig = u.designation || u.role || 'Operations';
+        var codeStr = code ? ' (' + code + ')' : '';
+        return '\n\n—\nRegards,\n' + name + codeStr + '\n' + desig + ' | MyntReal Workflows';
+      }
+    } catch (e) {}
+    return '\n\n—\nRegards,\nMyntReal Workflows';
+  }
+
   /* ── Expose window functions (called from inline HTML) ───────────────────── */
   function _bindGlobals() {
     window._lwaClose     = function() { document.getElementById('_lwaModal').style.display = 'none'; };
@@ -381,19 +398,19 @@
   window.openLeadWAModal = function(leadId, phone, name, companyId) {
     _ensure();
     _bindGlobals();
-    _s = { leadId: leadId, phone: phone, name: name, companyId: companyId, mode: 'company', tpls: [], bodyTpl: '' };
+    _s = { leadId: leadId, phone: phone, name: name, companyId: companyId, mode: 'scanned', tpls: [], bodyTpl: '' };
 
     /* reset UI */
     document.getElementById('_lwaSub').textContent     = (name || '') + ' · ' + (phone || '');
     document.getElementById('_lwaSeg').value           = '';
     document.getElementById('_lwaCat').value           = '';
-    document.getElementById('_lwaMsg').value           = '';
+    document.getElementById('_lwaMsg').value           = 'Namaskaram ' + (name || 'Customer') + '! ' + _getStaffSignature();
     document.getElementById('_lwaVars').style.display  = 'none';
     document.getElementById('_lwaVarBox').innerHTML    = '';
     document.getElementById('_lwaNoTpl').style.display = 'none';
     document.getElementById('_lwaResult').style.display= 'none';
     document.getElementById('_lwaSend').disabled       = false;
-    document.getElementById('_lwaSend').innerHTML      = '<i class="fab fa-whatsapp"></i> <span id="_lwaSendLbl">Send via Meta</span>';
+    document.getElementById('_lwaSend').innerHTML      = '<i class="fas fa-qrcode"></i> <span id="_lwaSendLbl">Send via Scanned Bot</span>';
     _applyModeStyle();
 
     document.getElementById('_lwaModal').style.display = 'flex';

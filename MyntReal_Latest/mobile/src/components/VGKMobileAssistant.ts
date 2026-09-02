@@ -41,12 +41,13 @@ export class VGKMobileAssistant {
     this.container.innerHTML = `
       <style>
         #vgk-mobile-fab {
-          position: fixed; bottom: 80px; right: 16px; z-index: 9999;
-          width: 52px; height: 52px; border-radius: 50%;
+          position: fixed; bottom: 140px; right: 12px; z-index: 9999;
+          width: 46px; height: 46px; border-radius: 50%;
           background: linear-gradient(135deg, #6c3de8, #a855f7);
           border: none; box-shadow: 0 4px 16px rgba(108,61,232,.5);
           cursor: pointer; display: flex; align-items: center; justify-content: center;
-          font-size: 22px; transition: transform .2s;
+          font-size: 20px; transition: transform .15s, box-shadow .2s;
+          touch-action: none; user-select: none;
         }
         #vgk-mobile-fab:active { transform: scale(.92); }
         #vgk-mobile-modal {
@@ -106,7 +107,7 @@ export class VGKMobileAssistant {
       </style>
 
       <button id="vgk-mobile-fab" aria-label="VGK Assistant">
-        <img src="/public/vgk-assistant-logo.png" onerror="this.style.display='none';this.parentElement.textContent='🤖'" style="width:30px;height:30px;border-radius:50%;">
+        <img src="/public/vgk-assistant-logo.png" onerror="this.style.display='none';this.parentElement.textContent='🤖'" style="width:26px;height:26px;border-radius:50%;">
       </button>
 
       <div id="vgk-mobile-modal">
@@ -127,7 +128,8 @@ export class VGKMobileAssistant {
     this.fab = this.container.querySelector('#vgk-mobile-fab');
     this.modal = this.container.querySelector('#vgk-mobile-modal');
 
-    this.fab?.addEventListener('click', () => this.open());
+    this.attachFabDrag();
+
     this.container.querySelector('#vgk-close-btn')?.addEventListener('click', () => this.close());
 
     const input = this.container.querySelector('#vgk-text-input') as HTMLInputElement;
@@ -141,6 +143,59 @@ export class VGKMobileAssistant {
     this.container.querySelector('#vgk-mic-btn')?.addEventListener('click', () => this.startVoice(input));
 
     this.pushMessage('assistant', 'Hi! I\'m VGK Assistant. How can I help you today?');
+  }
+
+  private attachFabDrag() {
+    if (!this.fab) return;
+    let isDragging = false;
+    let startX = 0, startY = 0, initialX = 0, initialY = 0;
+    let moved = false;
+
+    const onTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      const rect = this.fab!.getBoundingClientRect();
+      initialX = rect.left;
+      initialY = rect.top;
+      isDragging = true;
+      moved = false;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isDragging) return;
+      const touch = e.touches[0];
+      const dx = touch.clientX - startX;
+      const dy = touch.clientY - startY;
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        moved = true;
+        const newLeft = Math.max(10, Math.min(window.innerWidth - 60, initialX + dx));
+        const newTop = Math.max(60, Math.min(window.innerHeight - 100, initialY + dy));
+        this.fab!.style.left = `${newLeft}px`;
+        this.fab!.style.top = `${newTop}px`;
+        this.fab!.style.right = 'auto';
+        this.fab!.style.bottom = 'auto';
+      }
+    };
+
+    const onTouchEnd = () => {
+      isDragging = false;
+      if (!moved) {
+        this.open();
+      }
+    };
+
+    this.fab.addEventListener('touchstart', onTouchStart, { passive: true });
+    this.fab.addEventListener('touchmove', onTouchMove, { passive: true });
+    this.fab.addEventListener('touchend', onTouchEnd);
+    this.fab.addEventListener('click', (e) => {
+      if (moved) {
+        e.preventDefault();
+        e.stopPropagation();
+      } else {
+        this.open();
+      }
+    });
   }
 
   private open() {

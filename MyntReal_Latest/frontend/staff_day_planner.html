@@ -414,7 +414,18 @@
                         <table class="table table-hover">
                             <thead>
                                 <tr>
-                                    <th><input type="checkbox" id="selectAllTasks" onchange="toggleSelectAll()"></th>
+                                    <th style="min-width: 60px; text-align: center; vertical-align: middle;">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <input type="checkbox" id="selectAllPlan" onchange="toggleSelectAll('plan')" title="Select all for Plan">
+                                            <span style="font-size:10px; font-weight:700; color:#4f46e5; margin-top:2px;">PLAN</span>
+                                        </div>
+                                    </th>
+                                    <th style="min-width: 80px; text-align: center; vertical-align: middle;">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <input type="checkbox" id="selectAllFollowup" onchange="toggleSelectAll('followup')" title="Select all for Follow up">
+                                            <span style="font-size:10px; font-weight:700; color:#d97706; margin-top:2px; white-space:nowrap;">FOLLOW UP</span>
+                                        </div>
+                                    </th>
                                     <th>Priority #</th>
                                     <th>Task / Phase</th>
                                     <th data-sort-field="days_pending" data-sort-dir="" style="cursor:pointer;" onclick="sortAvailableTasks(this,'days_pending')">Days Pending <i class="fas fa-sort text-muted"></i></th>
@@ -427,7 +438,7 @@
                             </thead>
                             <tbody id="availableTasksBody">
                                 <tr>
-                                    <td colspan="9" class="text-center py-5">
+                                    <td colspan="10" class="text-center py-5">
                                         <i class="fas fa-spinner fa-spin fa-2x"></i>
                                         <p class="mt-2">Loading tasks...</p>
                                     </td>
@@ -537,23 +548,19 @@
     </div>
 
     <div class="modal fade" id="finalizeModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white;">
-                    <h5 class="modal-title"><i class="fas fa-flag-checkered me-2"></i>Finalize Day Plan</h5>
+                    <h5 class="modal-title"><i class="fas fa-flag-checkered me-2"></i>Finalize Day Plan &amp; Review Progress</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="text-center mb-3">
-                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #d97706;"></i>
-                    </div>
-                    <p class="text-center fw-bold">Are you sure you want to finalize today's plan?</p>
-                    <p class="text-center text-muted">Status changes will be applied to the original tasks. This action cannot be undone.</p>
-                    <div id="finalizeSummary" class="mt-3"></div>
+                    <p class="text-muted mb-2" style="font-size: 13px;">Review your planned &amp; follow-up tasks, adjust completion status, and enter your actual comments/remarks before finalizing.</p>
+                    <div id="finalizeSummary" class="mt-2"></div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button class="btn btn-success" onclick="finalizePlan()"><i class="fas fa-check me-1"></i>Confirm &amp; Finalize</button>
+                    <button class="btn btn-success" onclick="finalizePlan()"><i class="fas fa-check me-1"></i>Confirm &amp; Finalize Day</button>
                 </div>
             </div>
         </div>
@@ -1169,16 +1176,24 @@
         function renderPlanItems() {
             const tbody = document.getElementById('planItemsBody');
             if (!planItems || planItems.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="11"><div class="empty-state"><i class="fas fa-calendar-plus"></i><p>No items in today\'s plan</p><p class="text-muted">Select tasks from the right panel and add them to your plan</p></div></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11"><div class="empty-state"><i class="fas fa-calendar-plus"></i><p>No items in today\'s plan</p><p class="text-muted">Select tasks from the right panel (as Plan or Follow up) and add them to your plan</p></div></td></tr>';
                 return;
             }
+
             const sorted = [...planItems].sort((a, b) => (a.priority_order || 999) - (b.priority_order || 999));
+            const plannedTasks = sorted.filter(item => !item.is_followup && item.plan_type !== 'followup');
+            const followupTasks = sorted.filter(item => item.is_followup || item.plan_type === 'followup');
+
             let html = '';
-            sorted.forEach((item, idx) => {
-                const isCarried = item.carried_forward;
+
+            function renderPlanRow(item, idx, isFollowupRow) {
+                const isCarried = item.carried_forward || item.is_carried_forward;
                 const rowClass = isCarried ? 'carried-forward-indicator' : '';
                 const title = escapeHtml(item.task_title || item.title || '');
+                const itemNotes = (item.eod_notes || item.notes || '').trim();
+                const notePreview = itemNotes ? '<div style="font-size: 11px; color: #4338ca; margin-top: 3px; font-weight: normal;"><i class="far fa-comment-dots me-1 text-primary"></i>' + escapeHtml(itemNotes) + '</div>' : '';
                 const typeBadge = item.item_type === 'phase' ? '<span class="badge badge-phase">Phase</span>' : '<span class="badge badge-task">Task</span>';
+                const followupBadge = isFollowupRow ? '<span class="badge" style="background: #fef3c7; color: #b45309; font-size: 11px; margin-right: 6px;"><i class="fas fa-redo me-1"></i>Follow up</span>' : '';
                 const priority = item.task_priority || item.priority || '';
                 const status = item.task_status || item.status || 'pending';
                 const eodStatus = item.eod_status || '';
@@ -1187,38 +1202,149 @@
                 const dueDateClass = getDueDateClass(dueDate);
                 const isFinalized = currentPlan && currentPlan.is_finalized;
                 const taskId = item.task_id || item.source_id;
-                // DC Protocol (Mar 2026): Entire row is clickable to open viewTask; allow view even on finalized plans
                 const rowClickable = taskId ? ' style="cursor:pointer;" onclick="viewTask(' + taskId + ')"' : '';
-                html += '<tr class="' + rowClass + '"' + rowClickable + '>';
-                html += '<td>' + (item.priority_order || (idx + 1)) + '</td>';
-                // Title cell — no separate onclick; row handles it
-                html += '<td class="task-title">' + title + (isCarried ? ' <i class="fas fa-forward" style="color: #ea580c; font-size: 11px;" title="Carried Forward"></i>' : '') + '</td>';
+
+                let rHtml = '<tr class="' + rowClass + '"' + rowClickable + '>';
+                rHtml += '<td>' + (item.priority_order || (idx + 1)) + '</td>';
+                rHtml += '<td class="task-title">' + followupBadge + title + (isCarried ? ' <i class="fas fa-forward" style="color: #ea580c; font-size: 11px;" title="Carried Forward"></i>' : '') + notePreview + '</td>';
                 const daysPending = item.days_pending || 0;
                 const dpClass = daysPending > 30 ? 'bg-danger' : daysPending > 14 ? 'bg-warning text-dark' : 'bg-success';
-                html += '<td><span class="badge ' + dpClass + '">' + daysPending + 'd</span></td>';
+                rHtml += '<td><span class="badge ' + dpClass + '">' + daysPending + 'd</span></td>';
                 const timesPlanned = item.times_planned || 0;
                 const tpClass = timesPlanned === 0 ? 'text-danger' : 'text-success';
-                html += '<td><span class="' + tpClass + '"><i class="fas fa-calendar-alt me-1"></i>' + timesPlanned + '</span></td>';
-                html += '<td>' + typeBadge + '</td>';
-                html += '<td><span class="badge ' + getPriorityBadgeClass(priority) + '">' + formatStatus(priority) + '</span></td>';
-                html += '<td><span class="badge ' + getStatusBadgeClass(status) + '">' + formatStatus(status) + '</span></td>';
-                html += '<td><div class="progress-bar-container"><div class="progress-bar-fill" style="width: ' + progress + '%"></div></div> <span style="font-size:12px;">' + progress + '%</span></td>';
-                html += '<td><span class="due-date ' + dueDateClass + '">' + formatDate(dueDate) + '</span></td>';
-                html += '<td>' + (eodStatus ? '<span class="badge ' + getStatusBadgeClass(eodStatus) + '">' + formatStatus(eodStatus) + '</span>' : '<span class="text-muted">-</span>') + '</td>';
-                // DC Protocol (Mar 2026): Actions cell stops propagation so trash click never fires row onclick
-                html += '<td onclick="event.stopPropagation()"><div class="action-btns">';
+                rHtml += '<td><span class="' + tpClass + '"><i class="fas fa-calendar-alt me-1"></i>' + timesPlanned + '</span></td>';
+                rHtml += '<td>' + typeBadge + '</td>';
+                rHtml += '<td><span class="badge ' + getPriorityBadgeClass(priority) + '">' + formatStatus(priority) + '</span></td>';
+                rHtml += '<td><span class="badge ' + getStatusBadgeClass(status) + '">' + formatStatus(status) + '</span></td>';
+                rHtml += '<td><div class="progress-bar-container"><div class="progress-bar-fill" style="width: ' + progress + '%"></div></div> <span style="font-size:12px;">' + progress + '%</span></td>';
+                rHtml += '<td><span class="due-date ' + dueDateClass + '">' + formatDate(dueDate) + '</span></td>';
+                rHtml += '<td>' + (eodStatus ? '<span class="badge ' + getStatusBadgeClass(eodStatus) + '">' + formatStatus(eodStatus) + '</span>' : '<span class="text-muted">-</span>') + '</td>';
+                rHtml += '<td onclick="event.stopPropagation()"><div class="action-btns">';
+                rHtml += '<button class="btn btn-outline-primary btn-sm me-1" onclick="updateItemStatus(' + item.id + ')" title="Update Status &amp; Notes"><i class="fas fa-edit"></i></button>';
                 if (!isFinalized) {
-                    html += '<button class="btn btn-outline-danger btn-sm" onclick="removeFromPlan(' + item.id + ')" title="Remove"><i class="fas fa-trash"></i></button>';
+                    rHtml += '<button class="btn btn-outline-danger btn-sm" onclick="removeFromPlan(' + item.id + ')" title="Remove"><i class="fas fa-trash"></i></button>';
                 }
-                html += '</div></td>';
-                html += '</tr>';
+                rHtml += '</div></td>';
+                rHtml += '</tr>';
+                return rHtml;
+            }
+
+            // Section 1: Planned for the Day
+            html += '<tr style="background: #eef2ff; border-top: 1px solid #c7d2fe;">';
+            html += '<td colspan="11" class="py-2 px-3 fw-bold" style="color: #3730a3; font-size: 13px; letter-spacing: 0.3px;">';
+            html += '<i class="fas fa-tasks me-2"></i>1. Planned for the Day (' + plannedTasks.length + ' Tasks)';
+            html += '</td></tr>';
+
+            if (plannedTasks.length > 0) {
+                plannedTasks.forEach((item, idx) => { html += renderPlanRow(item, idx, false); });
+            } else {
+                html += '<tr class="text-muted"><td colspan="11" class="text-center py-3 fst-italic bg-white" style="font-size: 13px; color: #6b7280;">';
+                html += 'No regular tasks planned for today. Select tasks under "Plan" on the right.';
+                html += '</td></tr>';
+            }
+
+            // Section 2: Follow ups
+            html += '<tr style="background: #fffbeb; border-top: 2px solid #fef3c7;">';
+            html += '<td colspan="11" class="py-2 px-3 fw-bold" style="color: #b45309; font-size: 13px; letter-spacing: 0.3px;">';
+            html += '<i class="fas fa-redo-alt me-2"></i>2. Follow ups (' + followupTasks.length + ' Tasks)';
+            html += '</td></tr>';
+
+            if (followupTasks.length > 0) {
+                followupTasks.forEach((item, idx) => { html += renderPlanRow(item, idx, true); });
+            } else {
+                html += '<tr class="text-muted"><td colspan="11" class="text-center py-3 fst-italic bg-white" style="font-size: 13px; color: #6b7280;">';
+                html += 'No follow-up tasks added for today. Select tasks under "Follow up" on the right.';
+                html += '</td></tr>';
+            }
+
+            // Section 3: Overdue & Backlog Tasks (Strictly excluding items already in Section 1 or 2)
+            const planTaskIds = new Set();
+            const planPhaseIds = new Set();
+            (planItems || []).forEach(item => {
+                if (item.task_id) planTaskIds.add(item.task_id);
+                if (item.phase_id) planPhaseIds.add(item.phase_id);
+                if (item.item_type === 'task' && item.source_id) planTaskIds.add(item.source_id);
+                if (item.item_type === 'phase' && item.source_id) planPhaseIds.add(item.source_id);
             });
+
+            const overdueBacklogTasks = (availableTasks || []).filter(t => 
+                !planTaskIds.has(t.id) && ((t.days_pending || 0) > 0 || (t.times_planned || 0) > 0)
+            );
+
+            html += '<tr style="background: #fef2f2; border-top: 2px solid #fee2e2;">';
+            html += '<td colspan="11" class="py-2 px-3 fw-bold" style="color: #991b1b; font-size: 13px; letter-spacing: 0.3px;">';
+            html += '<i class="fas fa-exclamation-triangle me-2"></i>3. Overdue &amp; Backlog Tasks (' + overdueBacklogTasks.length + ' Tasks - Not in Plan)';
+            html += '</td></tr>';
+
+            if (overdueBacklogTasks.length > 0) {
+                overdueBacklogTasks.forEach((task, idx) => {
+                    const taskTitle = task.title || '';
+                    const taskPriority = (task.priority || 'medium').toLowerCase();
+                    const taskStatus = (task.status || 'pending').toLowerCase();
+                    const daysPending = task.days_pending || 0;
+                    const timesPlanned = task.times_planned || 0;
+                    const dueDate = task.due_date || '';
+                    const dpClass = daysPending > 30 ? 'bg-danger' : daysPending > 14 ? 'bg-warning text-dark' : 'bg-success';
+                    const tpClass = timesPlanned === 0 ? 'text-danger' : 'text-success';
+
+                    html += '<tr style="background: #fffafa;">';
+                    html += '<td style="text-align: center; vertical-align: middle;">' + (idx + 1) + '</td>';
+                    html += '<td style="cursor:pointer;" onclick="viewTask(' + task.id + ')">';
+                    html += '<span class="badge bg-danger me-1" style="font-size:10px;">Backlog</span> ' + escapeHtml(taskTitle);
+                    html += '</td>';
+                    html += '<td><span class="badge ' + dpClass + '">' + daysPending + 'd</span></td>';
+                    html += '<td><span class="' + tpClass + '"><i class="fas fa-calendar-alt me-1"></i>' + timesPlanned + '</span></td>';
+                    html += '<td><span class="badge badge-task">Task</span></td>';
+                    html += '<td><span class="badge ' + getPriorityBadgeClass(taskPriority) + '">' + formatStatus(taskPriority) + '</span></td>';
+                    html += '<td><span class="badge ' + getStatusBadgeClass(taskStatus) + '">' + formatStatus(taskStatus) + '</span></td>';
+                    html += '<td><div class="progress" style="height: 6px;"><div class="progress-bar" style="width: 0%;"></div></div><span class="small text-muted">0%</span></td>';
+                    html += '<td><span class="due-date ' + getDueDateClass(dueDate) + '">' + formatDate(dueDate) + '</span></td>';
+                    html += '<td><span class="text-muted fst-italic">Unplanned</span></td>';
+                    html += '<td onclick="event.stopPropagation()"><div class="action-btns">';
+                    html += '<button class="btn btn-outline-primary btn-sm me-1" onclick="quickAddSingleToPlan(' + task.id + ', \'planned\')" title="Plan for Today"><i class="fas fa-plus me-1"></i>Plan</button>';
+                    html += '<button class="btn btn-outline-warning btn-sm" onclick="quickAddSingleToPlan(' + task.id + ', \'followup\')" title="Add to Follow-ups"><i class="fas fa-redo-alt me-1"></i>Follow up</button>';
+                    html += '</div></td>';
+                    html += '</tr>';
+                });
+            } else {
+                html += '<tr class="text-muted"><td colspan="11" class="text-center py-3 fst-italic bg-white" style="font-size: 13px; color: #6b7280;">';
+                html += 'Great! No overdue backlog tasks pending.';
+                html += '</td></tr>';
+            }
+
             tbody.innerHTML = html;
+        }
+
+        async function quickAddSingleToPlan(taskId, planType) {
+            const isFollowup = planType === 'followup';
+            const entry = {
+                item_type: 'task',
+                task_id: taskId,
+                priority_order: (planItems || []).length + 1,
+                plan_type: planType,
+                is_followup: isFollowup
+            };
+            try {
+                const response = await staffFetch(API_BASE + '/staff/day-plans/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plan_date: selectedDate, items: [entry], append: true })
+                });
+                if (response.ok) {
+                    showToast('Task added to ' + (isFollowup ? 'follow-ups' : 'today\'s plan') + ' successfully!', 'success');
+                    await loadDayPlan();
+                    await loadAvailableTasks();
+                } else {
+                    showToast('Failed to add task', 'error');
+                }
+            } catch(e) {
+                showToast('Failed to add task', 'error');
+            }
         }
 
         async function loadAvailableTasks() {
             const tbody = document.getElementById('availableTasksBody');
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x"></i><p class="mt-2">Loading tasks...</p></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x"></i><p class="mt-2">Loading tasks...</p></td></tr>';
             try {
                 const response = await staffFetch(API_BASE + '/staff/day-plans/available-tasks');
                 if (!response.ok) throw new Error('Failed to load tasks');
@@ -1237,13 +1363,13 @@
             const statusVal = document.getElementById('availStatusFilter').value;
             const priorityVal = document.getElementById('availPriorityFilter').value;
 
-            const planTaskIds = new Set();
-            const planPhaseIds = new Set();
+            const planTaskMap = new Map();
+            const planPhaseMap = new Map();
             (planItems || []).forEach(item => {
-                if (item.task_id) planTaskIds.add(item.task_id);
-                if (item.phase_id) planPhaseIds.add(item.phase_id);
-                if (item.item_type === 'task' && item.source_id) planTaskIds.add(item.source_id);
-                if (item.item_type === 'phase' && item.source_id) planPhaseIds.add(item.source_id);
+                if (item.task_id) planTaskMap.set(item.task_id, item);
+                if (item.phase_id) planPhaseMap.set(item.phase_id, item);
+                if (item.item_type === 'task' && item.source_id) planTaskMap.set(item.source_id, item);
+                if (item.item_type === 'phase' && item.source_id) planPhaseMap.set(item.source_id, item);
             });
 
             let html = '';
@@ -1257,12 +1383,22 @@
                 const matchStatus = statusVal === 'all' || taskStatus === statusVal;
                 const matchPriority = priorityVal === 'all' || taskPriority === priorityVal;
                 const showTask = matchSearch && matchStatus && matchPriority;
-                const inPlan = planTaskIds.has(task.id);
+
+                const planItem = planTaskMap.get(task.id);
+                const inPlan = !!planItem;
+                const isFollowup = planItem && (planItem.is_followup || planItem.plan_type === 'followup');
+                const planChecked = inPlan && !isFollowup;
+                const followupChecked = inPlan && isFollowup;
 
                 if (showTask) {
                     visibleCount++;
                     html += '<tr>';
-                    html += '<td><input type="checkbox" class="task-checkbox" data-type="task" data-id="' + task.id + '" ' + (inPlan ? 'checked disabled' : '') + '></td>';
+                    html += '<td style="text-align: center; vertical-align: middle;">';
+                    html += '<input type="checkbox" class="task-checkbox task-checkbox-plan" data-type="task" data-id="' + task.id + '" onchange="handleTaskCheckboxChange(this, \'plan\')" ' + (planChecked ? 'checked disabled' : (inPlan ? 'disabled' : '')) + ' title="Plan for today">';
+                    html += '</td>';
+                    html += '<td style="text-align: center; vertical-align: middle;">';
+                    html += '<input type="checkbox" class="task-checkbox task-checkbox-followup" data-type="task" data-id="' + task.id + '" onchange="handleTaskCheckboxChange(this, \'followup\')" ' + (followupChecked ? 'checked disabled' : (inPlan ? 'disabled' : '')) + ' title="Add to follow ups">';
+                    html += '</td>';
                     html += '<td><input type="number" class="priority-input" data-id="task-' + task.id + '" min="1" max="99" value="' + (visibleCount) + '" ' + (inPlan ? 'disabled' : '') + '></td>';
                     html += '<td class="task-title" style="cursor:pointer;" onclick="viewTask(' + task.id + ')">' + escapeHtml(taskTitle) + '</td>';
                     const tDp = task.days_pending || 0;
@@ -1285,12 +1421,22 @@
                     const matchPhaseSearch = !searchVal || phaseTitle.toLowerCase().includes(searchVal) || taskTitle.toLowerCase().includes(searchVal);
                     const matchPhaseStatus = statusVal === 'all' || phaseStatus === statusVal;
                     const showPhase = matchPhaseSearch && matchPhaseStatus && (priorityVal === 'all' || taskPriority === priorityVal);
-                    const phaseInPlan = planPhaseIds.has(phase.id);
+
+                    const phasePlanItem = planPhaseMap.get(phase.id);
+                    const phaseInPlan = !!phasePlanItem;
+                    const phaseIsFollowup = phasePlanItem && (phasePlanItem.is_followup || phasePlanItem.plan_type === 'followup');
+                    const phasePlanChecked = phaseInPlan && !phaseIsFollowup;
+                    const phaseFollowupChecked = phaseInPlan && phaseIsFollowup;
 
                     if (showPhase) {
                         visibleCount++;
                         html += '<tr class="phase-row">';
-                        html += '<td><input type="checkbox" class="task-checkbox" data-type="phase" data-id="' + phase.id + '" data-task-id="' + task.id + '" ' + (phaseInPlan ? 'checked disabled' : '') + '></td>';
+                        html += '<td style="text-align: center; vertical-align: middle;">';
+                        html += '<input type="checkbox" class="task-checkbox task-checkbox-plan" data-type="phase" data-id="' + phase.id + '" data-task-id="' + task.id + '" onchange="handleTaskCheckboxChange(this, \'plan\')" ' + (phasePlanChecked ? 'checked disabled' : (phaseInPlan ? 'disabled' : '')) + ' title="Plan for today">';
+                        html += '</td>';
+                        html += '<td style="text-align: center; vertical-align: middle;">';
+                        html += '<input type="checkbox" class="task-checkbox task-checkbox-followup" data-type="phase" data-id="' + phase.id + '" data-task-id="' + task.id + '" onchange="handleTaskCheckboxChange(this, \'followup\')" ' + (phaseFollowupChecked ? 'checked disabled' : (phaseInPlan ? 'disabled' : '')) + ' title="Add to follow ups">';
+                        html += '</td>';
                         html += '<td><input type="number" class="priority-input" data-id="phase-' + phase.id + '" min="1" max="99" value="' + visibleCount + '" ' + (phaseInPlan ? 'disabled' : '') + '></td>';
                         const phaseClickHandler = phase.child_task_id ? ' style="cursor:pointer;" onclick="viewTask(' + phase.child_task_id + ')"' : ' style="cursor:pointer;" onclick="viewTask(' + task.id + ')"';
                         html += '<td' + phaseClickHandler + '><span class="phase-indent">\u21B3</span> Phase ' + (pIdx + 1) + ': ' + escapeHtml(phaseTitle) + '</td>';
@@ -1310,9 +1456,23 @@
             });
 
             if (visibleCount === 0) {
-                html = '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-inbox"></i><p>No available tasks found</p></div></td></tr>';
+                html = '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-inbox"></i><p>No available tasks found</p></div></td></tr>';
             }
             tbody.innerHTML = html;
+        }
+
+        function handleTaskCheckboxChange(el, clickedType) {
+            const row = el.closest('tr');
+            if (!row) return;
+            const planCb = row.querySelector('.task-checkbox-plan');
+            const followupCb = row.querySelector('.task-checkbox-followup');
+            if (el.checked) {
+                if (clickedType === 'plan' && followupCb && !followupCb.disabled) {
+                    followupCb.checked = false;
+                } else if (clickedType === 'followup' && planCb && !planCb.disabled) {
+                    planCb.checked = false;
+                }
+            }
         }
 
         function filterAvailableTasks() {
@@ -1385,24 +1545,58 @@
             renderAvailableTasks();
         }
 
-        function toggleSelectAll() {
-            const checked = document.getElementById('selectAllTasks').checked;
-            document.querySelectorAll('.task-checkbox:not(:disabled)').forEach(cb => { cb.checked = checked; });
+        function toggleSelectAll(type) {
+            if (type === 'plan') {
+                const checked = document.getElementById('selectAllPlan').checked;
+                if (checked) {
+                    const followupHeader = document.getElementById('selectAllFollowup');
+                    if (followupHeader) followupHeader.checked = false;
+                    document.querySelectorAll('.task-checkbox-followup:not(:disabled)').forEach(cb => { cb.checked = false; });
+                }
+                document.querySelectorAll('.task-checkbox-plan:not(:disabled)').forEach(cb => { cb.checked = checked; });
+            } else if (type === 'followup') {
+                const checked = document.getElementById('selectAllFollowup').checked;
+                if (checked) {
+                    const planHeader = document.getElementById('selectAllPlan');
+                    if (planHeader) planHeader.checked = false;
+                    document.querySelectorAll('.task-checkbox-plan:not(:disabled)').forEach(cb => { cb.checked = false; });
+                }
+                document.querySelectorAll('.task-checkbox-followup:not(:disabled)').forEach(cb => { cb.checked = checked; });
+            }
         }
 
         async function addSelectedToPlan() {
-            const checkboxes = document.querySelectorAll('.task-checkbox:checked:not(:disabled)');
-            if (checkboxes.length === 0) {
-                showToast('Please select at least one task or phase', 'error');
+            const planCheckboxes = document.querySelectorAll('.task-checkbox-plan:checked:not(:disabled)');
+            const followupCheckboxes = document.querySelectorAll('.task-checkbox-followup:checked:not(:disabled)');
+            
+            if (planCheckboxes.length === 0 && followupCheckboxes.length === 0) {
+                showToast('Please select at least one task or phase under Plan or Follow up', 'error');
                 return;
             }
+
             const items = [];
-            checkboxes.forEach(cb => {
+
+            planCheckboxes.forEach(cb => {
                 const type = cb.dataset.type;
                 const id = parseInt(cb.dataset.id);
                 const priorityInput = document.querySelector('.priority-input[data-id="' + type + '-' + id + '"]');
                 const priorityOrder = priorityInput ? parseInt(priorityInput.value) || 1 : 1;
-                const entry = { item_type: type, priority_order: priorityOrder };
+                const entry = { item_type: type, priority_order: priorityOrder, plan_type: 'planned', is_followup: false };
+                if (type === 'task') {
+                    entry.task_id = id;
+                } else {
+                    entry.phase_id = id;
+                    entry.task_id = parseInt(cb.dataset.taskId) || null;
+                }
+                items.push(entry);
+            });
+
+            followupCheckboxes.forEach(cb => {
+                const type = cb.dataset.type;
+                const id = parseInt(cb.dataset.id);
+                const priorityInput = document.querySelector('.priority-input[data-id="' + type + '-' + id + '"]');
+                const priorityOrder = priorityInput ? parseInt(priorityInput.value) || 1 : 1;
+                const entry = { item_type: type, priority_order: priorityOrder, plan_type: 'followup', is_followup: true };
                 if (type === 'task') {
                     entry.task_id = id;
                 } else {
@@ -1512,24 +1706,65 @@
                 else if (st === 'in_progress') inProgressCount++;
                 else pendingCount++;
             });
-            const summaryHtml = '<div class="p-3" style="background: #f9fafb; border-radius: 8px;">' +
-                '<div class="d-flex justify-content-between mb-2"><span>Total Items:</span><strong>' + items.length + '</strong></div>' +
-                '<div class="d-flex justify-content-between mb-2"><span>Completed:</span><strong style="color: #059669;">' + completedCount + '</strong></div>' +
-                '<div class="d-flex justify-content-between mb-2"><span>In Progress:</span><strong style="color: #2563eb;">' + inProgressCount + '</strong></div>' +
-                '<div class="d-flex justify-content-between"><span>Pending:</span><strong style="color: #d97706;">' + pendingCount + '</strong></div>' +
-                '</div>';
+
+            let summaryHtml = '<div class="p-3 mb-3" style="background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">' +
+                '<div class="row text-center">' +
+                '<div class="col"><strong>' + items.length + '</strong><div class="text-muted" style="font-size:11px;">Total Items</div></div>' +
+                '<div class="col"><strong style="color: #059669;">' + completedCount + '</strong><div class="text-muted" style="font-size:11px;">Completed</div></div>' +
+                '<div class="col"><strong style="color: #2563eb;">' + inProgressCount + '</strong><div class="text-muted" style="font-size:11px;">In Progress</div></div>' +
+                '<div class="col"><strong style="color: #d97706;">' + pendingCount + '</strong><div class="text-muted" style="font-size:11px;">Pending</div></div>' +
+                '</div></div>';
+
+            summaryHtml += '<div class="table-responsive" style="max-height: 380px; overflow-y: auto;">' +
+                '<table class="table table-sm table-bordered align-middle">' +
+                '<thead class="table-light"><tr><th style="min-width:180px;">Task / Follow-up</th><th style="width:130px;">EOD Status</th><th style="width:70px;">Prog %</th><th>Staff Comment / Remarks</th></tr></thead>' +
+                '<tbody>';
+
+            if (items.length === 0) {
+                summaryHtml += '<tr><td colspan="4" class="text-center py-3 text-muted">No items in plan to finalize.</td></tr>';
+            } else {
+                items.forEach((item, idx) => {
+                    const title = escapeHtml(item.task_title || item.title || 'Task');
+                    const st = (item.eod_status || item.status || 'pending').toLowerCase();
+                    const prog = item.eod_progress != null ? item.eod_progress : (item.task_progress || 0);
+                    const note = escapeHtml(item.eod_notes || item.notes || '');
+                    const isFollowup = item.is_followup || item.plan_type === 'followup';
+                    const tag = isFollowup ? '<span class="badge bg-warning text-dark me-1" style="font-size:10px;">Followup</span>' : '<span class="badge bg-primary me-1" style="font-size:10px;">Plan</span>';
+
+                    summaryHtml += '<tr>';
+                    summaryHtml += '<td style="font-size:12px; font-weight:600;">' + tag + title + '</td>';
+                    summaryHtml += '<td><select class="form-select form-select-sm" id="fin_status_' + item.id + '" onchange="document.getElementById(\'fin_prog_' + item.id + '\').value = (this.value === \'completed\' ? 100 : (this.value === \'pending\' ? 0 : 50))">' +
+                        '<option value="completed"' + (st === 'completed' ? ' selected' : '') + '>Completed</option>' +
+                        '<option value="in_progress"' + (st === 'in_progress' ? ' selected' : '') + '>In Progress</option>' +
+                        '<option value="pending"' + (st === 'pending' ? ' selected' : '') + '>Pending</option>' +
+                        '<option value="on_hold"' + (st === 'on_hold' ? ' selected' : '') + '>On Hold</option>' +
+                        '<option value="cancelled"' + (st === 'cancelled' ? ' selected' : '') + '>Cancelled</option>' +
+                        '</select></td>';
+                    summaryHtml += '<td><input type="number" min="0" max="100" class="form-control form-control-sm" id="fin_prog_' + item.id + '" value="' + prog + '"></td>';
+                    summaryHtml += '<td><input type="text" class="form-control form-control-sm" id="fin_note_' + item.id + '" value="' + note + '" placeholder="Enter actual comment / progress remark..."></td>';
+                    summaryHtml += '</tr>';
+                });
+            }
+
+            summaryHtml += '</tbody></table></div>';
+
             document.getElementById('finalizeSummary').innerHTML = summaryHtml;
             new bootstrap.Modal(document.getElementById('finalizeModal')).show();
         }
 
         async function finalizePlan() {
             try {
-                const itemUpdates = (planItems || []).map(item => ({
-                    id: item.id,
-                    eod_status: item.eod_status || item.status || 'pending',
-                    eod_progress: item.eod_progress != null ? item.eod_progress : (item.task_progress || 0),
-                    eod_notes: item.eod_notes || ''
-                }));
+                const itemUpdates = (planItems || []).map(item => {
+                    const statusEl = document.getElementById('fin_status_' + item.id);
+                    const progEl = document.getElementById('fin_prog_' + item.id);
+                    const noteEl = document.getElementById('fin_note_' + item.id);
+                    return {
+                        id: item.id,
+                        eod_status: statusEl ? statusEl.value : (item.eod_status || item.status || 'pending'),
+                        eod_progress: progEl ? parseInt(progEl.value) || 0 : (item.eod_progress != null ? item.eod_progress : (item.task_progress || 0)),
+                        eod_notes: noteEl ? noteEl.value.trim() : (item.eod_notes || '')
+                    };
+                });
                 const response = await staffFetch(API_BASE + '/staff/day-plans/finalize', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -3911,6 +4146,16 @@
                 }
             } catch(e) { console.warn('[DC-PLANNER] Morning metrics fetch exception:', e); }
 
+            if (!availableTasks || availableTasks.length === 0) {
+                try {
+                    var avResp = await staffFetch(API_BASE + '/staff/day-plans/available-tasks');
+                    if (avResp.ok) {
+                        var avData = await avResp.json();
+                        availableTasks = Array.isArray(avData) ? avData : (avData && avData.tasks ? avData.tasks : []);
+                    }
+                } catch(e) {}
+            }
+
             var msg = '🌟 *DAILY TASK PLAN | ' + dateStr.toUpperCase() + '*\n';
             msg += '👤 *Staff Member:* ' + staffName + ' (' + empCode + ')\n';
             msg += '🏢 *Company:* MyntReal LLP\n\n';
@@ -3921,40 +4166,105 @@
             msg += '🟢 *Logged In:* ' + inTimeStr + '\n';
             msg += '📍 *Area / Location:* ' + locAreaStr + '\n\n';
 
+            var plannedList = (planItems || []).filter(function(i) { return !i.is_followup && i.plan_type !== 'followup'; });
+            var followupList = (planItems || []).filter(function(i) { return i.is_followup || i.plan_type === 'followup'; });
+
+            var planTaskIds = new Set();
+            (planItems || []).forEach(function(i) {
+                if (i.task_id) planTaskIds.add(i.task_id);
+                if (i.item_type === 'task' && i.source_id) planTaskIds.add(i.source_id);
+            });
+
+            var overdueItems = (typeof availableTasks !== 'undefined' && availableTasks) ? availableTasks.filter(function(t) {
+                var inPlan = planTaskIds.has(t.id);
+                return !inPlan && ((t.days_pending || 0) > 0 || (t.times_planned || 0) > 0);
+            }) : [];
+
+            var totalPlanned = plannedList.length + followupList.length;
+
             msg += '=================================\n';
-            msg += '📋 *TODAY\'S PLANNED ACTIVITIES (' + ((planItems || []).length) + ' Tasks)*\n';
+            msg += '📊 *DAY PLAN SUMMARY & TARGETS*\n';
+            msg += '=================================\n';
+            msg += '📌 *Total Planned for Today:* ' + totalPlanned + ' Items\n';
+            msg += '🔹 *Planned Activities / Tasks:* ' + plannedList.length + '\n';
+            msg += '🔸 *Follow-up Activities:* ' + followupList.length + '\n';
+            msg += '⚠️ *Overdue Backlog Pending:* ' + overdueItems.length + ' Tasks\n';
+            msg += '🎯 *Target Execution Rate:* 100%\n\n';
+
+            msg += '=================================\n';
+            msg += '📋 *1. PLANNED FOR THE DAY (' + plannedList.length + ' Tasks)*\n';
             msg += '=================================\n';
 
-            if (planItems && planItems.length > 0) {
-                planItems.forEach(function(item, idx) {
+            if (plannedList.length > 0) {
+                plannedList.forEach(function(item, idx) {
                     var title = item.task_title || item.title || 'Task';
                     var prio = (item.priority || item.task_priority || 'medium').toUpperCase();
                     var daysP = item.days_pending || 0;
                     var timesP = item.times_planned || 1;
                     var status = (item.task_status || item.status || 'planned').toUpperCase();
+                    var note = (item.eod_notes || item.notes || '').trim();
 
                     msg += (idx + 1) + '. 🔹 *' + title + '*\n';
                     msg += '   • Priority: ' + prio + ' | Status: ' + status + '\n';
                     msg += '   • Days Active/Pending: ' + daysP + 'd\n';
                     msg += '   • Times Planned: Planned ' + timesP + ' time(s)\n';
+                    if (note) {
+                        msg += '   • *Staff Note:* ' + note + '\n';
+                    }
                 });
             } else {
-                msg += '• No tasks scheduled for today.\n';
+                msg += '• No regular tasks scheduled for today.\n';
             }
 
-            var overdueItems = (typeof availableTasks !== 'undefined' && availableTasks) ? availableTasks.filter(function(t) { return (t.days_pending || 0) > 0 || (t.times_planned || 0) > 0; }) : [];
+            msg += '\n=================================\n';
+            msg += '🔄 *2. FOLLOW UPS (' + followupList.length + ' Tasks)*\n';
+            msg += '=================================\n';
+
+            if (followupList.length > 0) {
+                followupList.forEach(function(item, idx) {
+                    var title = item.task_title || item.title || 'Task';
+                    var prio = (item.priority || item.task_priority || 'medium').toUpperCase();
+                    var daysP = item.days_pending || 0;
+                    var timesP = item.times_planned || 1;
+                    var status = (item.task_status || item.status || 'planned').toUpperCase();
+                    var note = (item.eod_notes || item.notes || '').trim();
+
+                    msg += (idx + 1) + '. 🔸 *' + title + '* (Follow up)\n';
+                    msg += '   • Priority: ' + prio + ' | Status: ' + status + '\n';
+                    msg += '   • Days Active/Pending: ' + daysP + 'd\n';
+                    msg += '   • Times Planned: Planned ' + timesP + ' time(s)\n';
+                    if (note) {
+                        msg += '   • *Staff Note:* ' + note + '\n';
+                    }
+                });
+            } else {
+                msg += '• No follow-up tasks scheduled for today.\n';
+            }
+
+            var planTaskIds = new Set();
+            (planItems || []).forEach(function(i) {
+                if (i.task_id) planTaskIds.add(i.task_id);
+                if (i.item_type === 'task' && i.source_id) planTaskIds.add(i.source_id);
+            });
+
+            var overdueItems = (typeof availableTasks !== 'undefined' && availableTasks) ? availableTasks.filter(function(t) {
+                var inPlan = planTaskIds.has(t.id);
+                return !inPlan && ((t.days_pending || 0) > 0 || (t.times_planned || 0) > 0);
+            }) : [];
             if (overdueItems && overdueItems.length > 0) {
                 msg += '\n=================================\n';
-                msg += '⚠️ *UNPLANNED & OVERDUE BACKLOG (' + overdueItems.length + ' Tasks)*\n';
+                msg += '⚠️ *3. OVERDUE & UNPLANNED BACKLOG (' + overdueItems.length + ' Tasks)*\n';
                 msg += '=================================\n';
-                overdueItems.slice(0, 5).forEach(function(t) {
+                overdueItems.slice(0, 8).forEach(function(t, idx) {
                     var title = t.task_title || t.title || 'Task';
                     var daysP = t.days_pending || 0;
                     var timesP = t.times_planned || 0;
-                    msg += '• 🔻 *' + title + '* (' + daysP + ' days pending | Planned & missed ' + timesP + ' time(s))\n';
+                    var prio = (t.priority || 'medium').toUpperCase();
+                    msg += (idx + 1) + '. 🔻 *' + title + '* [' + prio + ']\n';
+                    msg += '   • ' + daysP + ' days pending | Planned & missed ' + timesP + ' time(s)\n';
                 });
-                if (overdueItems.length > 5) {
-                    msg += '• ... and ' + (overdueItems.length - 5) + ' more pending backlog items.\n';
+                if (overdueItems.length > 8) {
+                    msg += '• ... and ' + (overdueItems.length - 8) + ' more pending backlog items.\n';
                 }
             }
 
@@ -3981,7 +4291,6 @@
             var staffName = user.full_name || user.name || 'Staff Member';
             var dateStr = (typeof selectedDate !== 'undefined' && selectedDate) ? selectedDate : new Date().toISOString().split('T')[0];
 
-            // Fetch comprehensive daily metrics
             var metrics = {
                 in_time: '09:15 AM',
                 out_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
@@ -4007,13 +4316,29 @@
                 }
             } catch(e) { console.warn('[DC-PLANNER] Metrics fetch exception:', e); }
 
+            if (!availableTasks || availableTasks.length === 0) {
+                try {
+                    var avResp = await staffFetch(API_BASE + '/staff/day-plans/available-tasks');
+                    if (avResp.ok) {
+                        var avData = await avResp.json();
+                        availableTasks = Array.isArray(avData) ? avData : (avData && avData.tasks ? avData.tasks : []);
+                    }
+                } catch(e) {}
+            }
+
             var items = planItems || [];
+            var plannedList = items.filter(function(i) { return !i.is_followup && i.plan_type !== 'followup'; });
+            var followupList = items.filter(function(i) { return i.is_followup || i.plan_type === 'followup'; });
+
             var completed = 0, pending = 0;
             items.forEach(function(item) {
                 var st = (item.eod_status || item.status || '').toLowerCase();
                 if (st === 'completed') completed++;
                 else pending++;
             });
+            var plannedCompleted = plannedList.filter(function(i) { return (i.eod_status || i.status || '').toLowerCase() === 'completed'; }).length;
+            var followupCompleted = followupList.filter(function(i) { return (i.eod_status || i.status || '').toLowerCase() === 'completed'; }).length;
+
             var total = items.length;
             var pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
@@ -4030,13 +4355,11 @@
             msg += '⏳ *Work Duration:* ' + metrics.duration + '\n';
             msg += '🎯 *KRA Score:* ' + metrics.kra_score + '\n\n';
 
-            // Check department & data presence for dynamic section rendering
             var dept = (metrics.department_name || '').toLowerCase();
             var salesM = metrics.sales_metrics || {};
             var serviceM = metrics.service_metrics || {};
             var mobilityM = metrics.mobility_metrics || {};
 
-            // 1. Sales & Telecalling Section (If Sales/Marketing/Telecalling department OR has call/lead data today)
             var showSales = dept.includes('sales') || dept.includes('tele') || dept.includes('marketing') || dept.includes('crm') || salesM.has_data;
             if (showSales) {
                 msg += '=================================\n';
@@ -4047,7 +4370,6 @@
                 msg += '📋 *Leads Contacted / Updated:* ' + (salesM.leads_contacted || 0) + '\n\n';
             }
 
-            // 2. Mobility & Field Metrics Section (If Field/Logistics/Ops department OR has mobility data today)
             var showMobility = dept.includes('field') || dept.includes('ops') || dept.includes('logistics') || dept.includes('project') || mobilityM.has_data;
             if (showMobility) {
                 msg += '=================================\n';
@@ -4058,7 +4380,6 @@
                 msg += '🤝 *Appointments Attended & Tagged:* ' + (metrics.appointments_attended || 0) + ' Meeting(s)\n\n';
             }
 
-            // 3. Service Team Tickets Data Section (If Service/Technical/Support department OR has ticket data today)
             var showService = dept.includes('service') || dept.includes('tech') || dept.includes('support') || serviceM.has_data;
             if (showService) {
                 msg += '=================================\n';
@@ -4069,32 +4390,87 @@
                 msg += '⏱️ *Within TAT Rate:* ' + (metrics.service_tat_pct || 100) + '%\n\n';
             }
 
-            msg += '=================================\n';
-            msg += '📊 *DAY SUMMARY STATISTICS*\n';
-            msg += '=================================\n';
-            msg += '✅ *Planned Tasks:* ' + total + '\n';
-            msg += '🎉 *Completed:* ' + completed + '\n';
-            msg += '⏳ *Pending / In Progress:* ' + pending + '\n';
-            msg += '📈 *Day Completion Rate:* ' + pct + '%\n\n';
+            var plannedPending = plannedList.length - plannedCompleted;
+            var followupPending = followupList.length - followupCompleted;
 
             msg += '=================================\n';
-            msg += '✅ *ACTIVITIES PROGRESS & STAFF COMMENTS*\n';
+            msg += '📊 *DAY SUMMARY & EXECUTION METRICS*\n';
+            msg += '=================================\n';
+            msg += '📌 *Total Planned for Today:* ' + total + ' Tasks\n';
+            msg += '🔹 *Planned Activities:* ' + plannedList.length + ' (Completed: ' + plannedCompleted + ' | Pending: ' + plannedPending + ')\n';
+            msg += '🔸 *Follow-up Activities:* ' + followupList.length + ' (Completed: ' + followupCompleted + ' | Pending: ' + followupPending + ')\n';
+            msg += '🎉 *Planned vs Completed:* ' + completed + ' / ' + total + ' Completed\n';
+            msg += '⏳ *Total Pending / In Progress:* ' + pending + '\n';
+            msg += '📈 *Day Completion Rate:* ' + pct + '%\n';
+            msg += '⚠️ *Remaining Overdue Backlog:* ' + overdueItems.length + ' Tasks\n\n';
+
+            msg += '=================================\n';
+            msg += '📋 *1. PLANNED TASKS PROGRESS (' + plannedList.length + ')*\n';
             msg += '=================================\n';
 
-            if (items.length > 0) {
-                items.forEach(function(item, idx) {
+            if (plannedList.length > 0) {
+                plannedList.forEach(function(item, idx) {
                     var title = item.task_title || item.title || 'Task';
                     var daysP = item.days_pending || 0;
                     var timesP = item.times_planned || 1;
                     var st = (item.eod_status || item.status || 'pending').toUpperCase();
-                    var remarks = item.eod_remarks || item.remarks || item.notes || 'Completed as scheduled.';
+                    var userComment = (item.eod_notes || item.notes || '').trim();
+                    var comment = userComment || (st === 'COMPLETED' ? 'Completed as scheduled.' : 'Pending / in progress.');
 
                     msg += (idx + 1) + '. ' + (st === 'COMPLETED' ? '✔️' : '⏳') + ' *' + title + '*\n';
                     msg += '   • Status: ' + st + ' (' + daysP + ' days pending | Planned ' + timesP + ' time(s))\n';
-                    msg += '   • *Staff Comment:* ' + remarks + '\n';
+                    msg += '   • *Staff Comment:* ' + comment + '\n';
                 });
             } else {
-                msg += '• No activities recorded for today.\n';
+                msg += '• No regular planned tasks recorded for today.\n';
+            }
+
+            msg += '\n=================================\n';
+            msg += '🔄 *2. FOLLOW UPS PROGRESS (' + followupList.length + ')*\n';
+            msg += '=================================\n';
+
+            if (followupList.length > 0) {
+                followupList.forEach(function(item, idx) {
+                    var title = item.task_title || item.title || 'Task';
+                    var daysP = item.days_pending || 0;
+                    var timesP = item.times_planned || 1;
+                    var st = (item.eod_status || item.status || 'pending').toUpperCase();
+                    var userComment = (item.eod_notes || item.notes || '').trim();
+                    var comment = userComment || (st === 'COMPLETED' ? 'Follow-up completed.' : 'Follow-up executed / in progress.');
+
+                    msg += (idx + 1) + '. ' + (st === 'COMPLETED' ? '✔️' : '⏳') + ' *' + title + '* (Follow up)\n';
+                    msg += '   • Status: ' + st + ' (' + daysP + ' days pending | Planned ' + timesP + ' time(s))\n';
+                    msg += '   • *Staff Comment:* ' + comment + '\n';
+                });
+            } else {
+                msg += '• No follow-up activities recorded for today.\n';
+            }
+
+            var planTaskIds = new Set();
+            (planItems || []).forEach(function(i) {
+                if (i.task_id) planTaskIds.add(i.task_id);
+                if (i.item_type === 'task' && i.source_id) planTaskIds.add(i.source_id);
+            });
+
+            var overdueItems = (typeof availableTasks !== 'undefined' && availableTasks) ? availableTasks.filter(function(t) {
+                var inPlan = planTaskIds.has(t.id);
+                return !inPlan && ((t.days_pending || 0) > 0 || (t.times_planned || 0) > 0);
+            }) : [];
+            if (overdueItems && overdueItems.length > 0) {
+                msg += '\n=================================\n';
+                msg += '⚠️ *3. OVERDUE & UNPLANNED BACKLOG (' + overdueItems.length + ' Tasks)*\n';
+                msg += '=================================\n';
+                overdueItems.slice(0, 8).forEach(function(t, idx) {
+                    var title = t.task_title || t.title || 'Task';
+                    var daysP = t.days_pending || 0;
+                    var timesP = t.times_planned || 0;
+                    var prio = (t.priority || 'medium').toUpperCase();
+                    msg += (idx + 1) + '. 🔻 *' + title + '* [' + prio + ']\n';
+                    msg += '   • ' + daysP + ' days pending | Planned & missed ' + timesP + ' time(s)\n';
+                });
+                if (overdueItems.length > 8) {
+                    msg += '• ... and ' + (overdueItems.length - 8) + ' more pending backlog items.\n';
+                }
             }
 
             msg += '\n=================================\n';

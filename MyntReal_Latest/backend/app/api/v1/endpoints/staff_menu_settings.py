@@ -2424,7 +2424,7 @@ async def get_menu_settings_matrix(
         'vgk4u': 'ZYNOVA',
         'vgk_team': 'VGK4U',
         'vendor_management': 'VENDOR MANAGEMENT',
-        'mynt_real': 'MYNT REAL',
+        'mynt_real': 'WORKFLOWS',
     }
     sidebar_section_lookup = {}
     route_path_lookup = {}
@@ -4942,8 +4942,8 @@ async def sync_sidebar_to_registry_legacy(
             '/staff/vgk/wallet', '/staff/vgk/cash-income/sales', '/staff/vgk/cash-income/accounts',
             '/staff/vgk/vendors'
         ]),
-        'mynt_real': ('MYNT REAL', 23, [
-            '/staff/executive-dashboard', '/staff/solar-leads', '/staff/ev-b2b-leads', '/staff/ev-b2c-leads', '/staff/ev-spares-leads',
+        'mynt_real': ('WORKFLOWS', 23, [
+            '/staff/executive-dashboard', '/staff/bank-wise-leads', '/staff/solar-leads', '/staff/ev-b2b-leads', '/staff/ev-b2c-leads', '/staff/ev-spares-leads',
             '/staff/real-dreams-leads', '/staff/insurance-leads', '/staff/etc-leads', '/staff/mnr-leads'
         ]),
     }
