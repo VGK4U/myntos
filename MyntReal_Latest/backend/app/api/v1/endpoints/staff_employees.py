@@ -379,19 +379,37 @@ async def list_employees(
     
     total = query.count()
     
-    employees = query.order_by(StaffEmployee.created_at.desc())\
-                     .offset((page - 1) * limit)\
-                     .limit(limit)\
-                     .all()
+    from sqlalchemy.orm import joinedload
+    from app.models.staff import StaffEmployeeDepartment
+
+    employees = query.options(
+        joinedload(StaffEmployee.role),
+        joinedload(StaffEmployee.department),
+        joinedload(StaffEmployee.reporting_manager),
+        joinedload(StaffEmployee.base_company),
+        joinedload(StaffEmployee.additional_departments).joinedload(StaffEmployeeDepartment.department)
+    ).order_by(StaffEmployee.created_at.desc())\
+     .offset((page - 1) * limit)\
+     .limit(limit)\
+     .all()
     
     # DC Protocol (Dec 21, 2025): Resolve data_companies to include company names
-    # Build a lookup of all company IDs referenced across employees
+    # Build a lookup of all company IDs referenced across employees in single query
     all_company_ids = set()
     for emp in employees:
-        if emp.data_companies:
-            all_company_ids.update(emp.data_companies)
+        if emp.data_companies and isinstance(emp.data_companies, list):
+            for item in emp.data_companies:
+                if isinstance(item, dict):
+                    cid = item.get("company_id") or item.get("id")
+                    if cid and isinstance(cid, int):
+                        all_company_ids.add(cid)
+                    elif isinstance(cid, str) and cid.isdigit():
+                        all_company_ids.add(int(cid))
+                elif isinstance(item, int):
+                    all_company_ids.add(item)
+                elif isinstance(item, str) and item.isdigit():
+                    all_company_ids.add(int(item))
     
-    # Fetch company details in single query
     company_lookup = {}
     if all_company_ids:
         companies = db.query(AssociatedCompany).filter(
@@ -399,19 +417,8 @@ async def list_employees(
         ).all()
         company_lookup = {c.id: {"company_id": c.id, "company_name": c.company_name, "company_code": c.company_code} for c in companies}
     
-    # Convert employees to dict and resolve data_companies
-    employee_list = []
-    for emp in employees:
-        emp_dict = emp.to_dict()
-        # Resolve data_companies IDs to full objects with names
-        if emp.data_companies:
-            emp_dict["data_companies"] = [
-                company_lookup.get(cid, {"company_id": cid, "company_name": f"ID: {cid}"})
-                for cid in emp.data_companies
-            ]
-        else:
-            emp_dict["data_companies"] = []
-        employee_list.append(emp_dict)
+    # Convert employees to dict using fast company_lookup
+    employee_list = [emp.to_dict(company_lookup=company_lookup) for emp in employees]
     
     return {
         "success": True,

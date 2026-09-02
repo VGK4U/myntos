@@ -264,7 +264,7 @@ class StaffEmployee(Base):
     # DC Protocol (Dec 21, 2025): Additional departments relationship (many-to-many)
     additional_departments = relationship("StaffEmployeeDepartment", foreign_keys="[StaffEmployeeDepartment.employee_id]", cascade="all, delete-orphan")
     
-    def to_dict(self, include_sensitive=False):
+    def to_dict(self, include_sensitive=False, company_lookup=None):
         # DC_RBAC_API_STRUCTURE_001: Build complete role object for frontend access control
         role_data = None
         if self.role:
@@ -322,7 +322,7 @@ class StaffEmployee(Base):
             "base_company_id": self.base_company_id,
             "base_company_name": self.base_company.company_name if self.base_company else None,
             "base_company_code": self.base_company.company_code if self.base_company else None,
-            "data_companies": self._get_data_companies_info(),
+            "data_companies": self._get_data_companies_info(company_lookup=company_lookup),
             # DC Protocol (Dec 21, 2025): Additional Departments (multi-department support)
             "additional_departments": self._get_additional_departments_info(),
             # DC Protocol (Jan 2026): Employment Type - Probation/Confirmed tracking
@@ -351,30 +351,28 @@ class StaffEmployee(Base):
         
         return data
     
-    def _get_data_companies_info(self):
-        """Get data companies with names for display"""
-        from sqlalchemy import inspect
-        
-        if not self.data_companies or len(self.data_companies) == 0:
+    def _get_data_companies_info(self, company_lookup=None):
+        """Get data companies with names for display without N+1 queries"""
+        if not self.data_companies or not isinstance(self.data_companies, list):
             return []
         
-        # Try to get company details if session is available
-        try:
-            session = inspect(self).session
-            if session:
-                from app.models.sfms import AssociatedCompany
-                companies = session.query(AssociatedCompany).filter(
-                    AssociatedCompany.id.in_(self.data_companies)
-                ).all()
-                return [
-                    {"company_id": c.id, "company_name": c.company_name, "company_code": c.company_code}
-                    for c in companies
-                ]
-        except Exception:
-            pass
-        
-        # Fallback: return IDs only
-        return [{"company_id": cid} for cid in self.data_companies]
+        result = []
+        for item in self.data_companies:
+            if isinstance(item, dict):
+                cid = item.get("company_id") or item.get("id")
+                cname = item.get("company_name") or (company_lookup.get(cid, {}).get("company_name") if company_lookup and cid in company_lookup else f"Company {cid}")
+                ccode = item.get("company_code") or (company_lookup.get(cid, {}).get("company_code") if company_lookup and cid in company_lookup else str(cid))
+                result.append({"company_id": cid, "company_name": cname, "company_code": ccode})
+            else:
+                try:
+                    cid = int(item)
+                except (ValueError, TypeError):
+                    cid = item
+                if company_lookup and cid in company_lookup:
+                    result.append(company_lookup[cid])
+                else:
+                    result.append({"company_id": cid, "company_name": f"Company {cid}", "company_code": str(cid)})
+        return result
     
     def _get_additional_departments_info(self):
         """DC Protocol (Dec 21, 2025): Get additional departments for multi-department display"""

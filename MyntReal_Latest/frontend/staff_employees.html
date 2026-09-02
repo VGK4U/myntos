@@ -1069,7 +1069,14 @@
             // DC_UNIVERSAL_FILTER_001: Load fallback departments first
             loadFallbackDepartments();
             
-            // DC_UNIVERSAL_FILTER_001: Initialize universal filter
+            // Kick off employee, role, and department loading immediately in parallel for instant render
+            const initialDataPromise = Promise.all([
+                loadRoles(),
+                loadDepartments(),
+                loadEmployees()
+            ]);
+
+            // DC_UNIVERSAL_FILTER_001: Initialize universal filter in background
             if (typeof DCUniversalFilter !== 'undefined') {
                 universalFilter = new DCUniversalFilter('universalFilterContainer', {
                     showCompany: false,
@@ -1086,31 +1093,23 @@
                 try {
                     const success = await Promise.race([
                         universalFilter.waitForReady(),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Filter init timeout')), 5000))
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Filter init timeout')), 1000))
                     ]);
-                    await new Promise(r => setTimeout(r, 50));
                     if (success === true && 
                         universalFilter.isReady === true && 
                         universalFilter.initFailed === false &&
                         document.getElementById('universalFilterContainer')?.children.length > 0) {
                         universalFilterReady = true;
                         hideFallbackFilters();
-                        console.log('[DC] Universal filter ready - using enhanced filters');
                     } else {
-                        console.warn('[DC] Universal filter not fully ready, keeping fallback');
                         universalFilterReady = false;
                     }
                 } catch (e) {
-                    console.warn('[DC] Universal filter initialization failed or timed out, using fallback:', e);
                     universalFilterReady = false;
                 }
-            } else {
-                console.warn('[DC] DCUniversalFilter not available - using fallback filters');
             }
             
-            await loadRoles();
-            await loadDepartments();
-            await loadEmployees();
+            await initialDataPromise;
         });
         
         function applyRoleBasedUI() {

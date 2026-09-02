@@ -552,3 +552,59 @@ async def plivo_application_hangup(
         "final_status": session.status,
         "duration_seconds": session.duration_seconds
     }
+
+
+# ── 6. DIRECT CLICK-TO-CALL BRIDGE ──────────────────────────────────────────
+
+@router.post("/plivo/click-to-call")
+def initiate_click_to_call(
+    payload: Dict[str, Any] = Body(...),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Direct Server-Side Click-to-Call Bridge.
+    Dials customer or agent directly via Plivo Cloud Trunk, ensuring immediate connection
+    without requiring local browser WebRTC certificates.
+    """
+    import requests as _req
+    from app.core.config import settings
+    from app.core.config import get_safe_base_url
+
+    to_phone = str(payload.get("to") or payload.get("destination") or "").strip()
+    if not to_phone:
+        raise HTTPException(status_code=400, detail="Destination phone number is required")
+
+    if not to_phone.startswith("+"):
+        to_phone = "+91" + to_phone.lstrip("0")
+
+    auth_id = getattr(settings, 'PLIVO_AUTH_ID', None)
+    auth_token = getattr(settings, 'PLIVO_AUTH_TOKEN', None)
+    from_number = getattr(settings, 'PLIVO_DEFAULT_CALLER_ID', '+918031728899')
+
+    if not auth_id or not auth_token:
+        raise HTTPException(status_code=503, detail="Plivo credentials not configured on server")
+
+    plivo_url = f"https://api.plivo.com/v1/Account/{auth_id}/Call/"
+    call_payload = {
+        "from": from_number,
+        "to": to_phone,
+        "answer_url": f"https://www.myntreal.com/api/v1/telephony/plivo/inbound",
+        "answer_method": "POST",
+        "hangup_url": f"https://www.myntreal.com/api/v1/telephony/plivo/hangup",
+        "hangup_method": "POST"
+    }
+
+    try:
+        resp = _req.post(plivo_url, json=call_payload, auth=(auth_id, auth_token), timeout=10)
+        res_json = resp.json()
+        logger.info(f"[CLICK-TO-CALL] Initiated outbound call to {to_phone}: status={resp.status_code} res={res_json}")
+        return {
+            "success": True,
+            "message": f"Outbound call initiated to {to_phone}",
+            "status_code": resp.status_code,
+            "data": res_json
+        }
+    except Exception as e:
+        logger.error(f"[CLICK-TO-CALL] Failed to dispatch Plivo call to {to_phone}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

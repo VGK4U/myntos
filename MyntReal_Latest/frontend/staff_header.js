@@ -1005,7 +1005,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     if (!document.getElementById('plivoSoftphoneScript')) {
         const softphoneScript = document.createElement('script');
         softphoneScript.id = 'plivoSoftphoneScript';
-        softphoneScript.src = '/public/js/plivo-softphone.js';
+        softphoneScript.src = '/public/js/plivo-softphone.js?v=' + Date.now();
         softphoneScript.async = true;
         document.head.appendChild(softphoneScript);
     }

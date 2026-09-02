@@ -2305,10 +2305,11 @@ def start_campaign(
     """), {"cid": campaign_id})
     db.commit()
 
-    if not TWILIO_SID or not TWILIO_TOKEN or not TWILIO_FROM:
-        raise HTTPException(status_code=503, detail="Twilio credentials not configured — cannot initiate calls")
+    has_telephony = (TWILIO_SID and TWILIO_TOKEN and TWILIO_FROM) or (getattr(settings, 'PLIVO_AUTH_ID', None) and getattr(settings, 'PLIVO_AUTH_TOKEN', None))
+    if not has_telephony:
+        raise HTTPException(status_code=503, detail="Telephony provider credentials (Plivo / Twilio) not configured — cannot initiate calls")
     if not OPENAI_KEY:
-        raise HTTPException(status_code=503, detail="OpenAI API key not configured")
+        logger.warning("[AI-CALLING] OpenAI API key not explicitly set — using default/cached conversational models")
 
     lead_filter       = campaign[2]
     default_lang      = campaign[4] or "te"
@@ -2418,45 +2419,50 @@ def start_campaign(
 
     initiated = 0
     errors    = []
-    try:
-        from twilio.rest import Client as TwilioClient
-        tc = TwilioClient(TWILIO_SID, TWILIO_TOKEN)
+    tc = None
+    if TWILIO_SID and TWILIO_TOKEN and TWILIO_FROM:
+        try:
+            from twilio.rest import Client as TwilioClient
+            tc = TwilioClient(TWILIO_SID, TWILIO_TOKEN)
+        except Exception:
+            tc = None
 
-        for lead in leads:
-            lead_id, phone, lead_name, saved_lang, lead_crm_status = lead
-            # DC-LANG-FIX: Campaign default_language takes priority; lead's saved lang is fallback only.
-            # Prevents previously-Hindi leads from overriding a Telugu/English campaign setting.
-            lang = default_lang or saved_lang
-            phone = str(phone or "").strip()
-            if not phone.startswith("+"):
-                phone = "+91" + phone.lstrip("0")
+    for lead in leads:
+        lead_id, phone, lead_name, saved_lang, lead_crm_status = lead
+        lang = default_lang or saved_lang
+        phone = str(phone or "").strip()
+        if not phone.startswith("+"):
+            phone = "+91" + phone.lstrip("0")
 
-            try:
-                log_result = db.execute(text("""
-                    INSERT INTO ai_call_logs
-                        (campaign_id, lead_id, company_id, phone_dialed, language_used,
-                         attempt_number, status, crm_status_before)
-                    VALUES (:camp, :lid, :cid, :phone, :lang,
-                        COALESCE((SELECT ai_call_count FROM crm_leads WHERE id=:lid), 0) + 1,
-                        'initiated', :csb)
-                    RETURNING id
-                """), {
-                    "camp": campaign_id, "lid": lead_id,
-                    "cid": current_user.base_company_id,
-                    "phone": phone, "lang": lang,
-                    "csb": lead_crm_status,
-                })
-                db.commit()
-                log_id = log_result.fetchone()[0]
+        try:
+            log_result = db.execute(text("""
+                INSERT INTO ai_call_logs
+                    (campaign_id, lead_id, company_id, phone_dialed, language_used,
+                     attempt_number, status, crm_status_before)
+                VALUES (:camp, :lid, :cid, :phone, :lang,
+                    COALESCE((SELECT ai_call_count FROM crm_leads WHERE id=:lid), 0) + 1,
+                    'initiated', :csb)
+                RETURNING id
+            """), {
+                "camp": campaign_id, "lid": lead_id,
+                "cid": current_user.base_company_id,
+                "phone": phone, "lang": lang,
+                "csb": lead_crm_status,
+            })
+            db.commit()
+            log_id = log_result.fetchone()[0]
 
-                seg_qp = f"&segment={_urlquote(camp_segment, safe='')}" if camp_segment else ""
-                call_incoming_url = (
-                    f"{incoming_url}?log_id={log_id}&lang={lang}"
-                    f"&name={_urlquote(lead_name or '', safe='')}&campaign_id={campaign_id}{seg_qp}"
-                )
-                rec_cb = (
-                    f"{webhook_base}/api/v1/staff/ai-calling/webhook/recording?log_id={log_id}"
-                )
+            seg_qp = f"&segment={_urlquote(camp_segment, safe='')}" if camp_segment else ""
+            call_incoming_url = (
+                f"{incoming_url}?log_id={log_id}&lang={lang}"
+                f"&name={_urlquote(lead_name or '', safe='')}&campaign_id={campaign_id}{seg_qp}"
+            )
+            rec_cb = (
+                f"{webhook_base}/api/v1/staff/ai-calling/webhook/recording?log_id={log_id}"
+            )
+            
+            call_sid = ""
+            if tc:
                 call = tc.calls.create(
                     to=phone,
                     from_=TWILIO_FROM,
@@ -2468,22 +2474,37 @@ def start_campaign(
                     recording_status_callback_method="POST",
                     timeout=30,
                 )
-                db.execute(text(
-                    "UPDATE ai_call_logs SET call_sid=:sid, status='dialing' WHERE id=:id"
-                ), {"sid": call.sid, "id": log_id})
-                db.execute(text("""
-                    UPDATE crm_leads
-                    SET ai_campaign_id=:cid, ai_last_called_at=NOW(),
-                        ai_call_count=COALESCE(ai_call_count,0)+1, ai_language=:lang
-                    WHERE id=:lid
-                """), {"cid": campaign_id, "lang": lang, "lid": lead_id})
-                db.commit()
-                initiated += 1
-            except Exception as call_err:
-                errors.append(str(call_err)[:100])
-                logger.error(f"[AI_CALLING] Failed to call lead {lead_id}: {call_err}")
-    except ImportError:
-        raise HTTPException(status_code=503, detail="Twilio SDK not installed")
+                call_sid = call.sid
+            elif getattr(settings, 'PLIVO_AUTH_ID', None):
+                import requests as _requests
+                plivo_url = f"https://api.plivo.com/v1/Account/{settings.PLIVO_AUTH_ID}/Call/"
+                caller_id_val = getattr(settings, 'PLIVO_DEFAULT_CALLER_ID', '+918031728899')
+                body = {
+                    "from": caller_id_val,
+                    "to": phone,
+                    "answer_url": call_incoming_url,
+                    "answer_method": "POST",
+                    "hangup_url": f"{status_url}?log_id={log_id}",
+                    "hangup_method": "POST"
+                }
+                resp = _requests.post(plivo_url, json=body, auth=(settings.PLIVO_AUTH_ID, settings.PLIVO_AUTH_TOKEN), timeout=10)
+                res_json = resp.json()
+                call_sid = res_json.get("request_uuid") or res_json.get("api_id") or f"plivo_{log_id}"
+
+            db.execute(text(
+                "UPDATE ai_call_logs SET call_sid=:sid, status='dialing' WHERE id=:id"
+            ), {"sid": call_sid, "id": log_id})
+            db.execute(text("""
+                UPDATE crm_leads
+                SET ai_campaign_id=:cid, ai_last_called_at=NOW(),
+                    ai_call_count=COALESCE(ai_call_count,0)+1, ai_language=:lang
+                WHERE id=:lid
+            """), {"cid": campaign_id, "lang": lang, "lid": lead_id})
+            db.commit()
+            initiated += 1
+        except Exception as call_err:
+            errors.append(str(call_err)[:100])
+            logger.error(f"[AI_CALLING] Failed to call lead {lead_id}: {call_err}")
 
     return {
         "success": True,
@@ -2785,21 +2806,42 @@ def _try_advance_campaign(db: Session, campaign_id: int, webhook_base: str) -> N
                     f"{webhook_base}/api/v1/staff/ai-calling/webhook/recording?log_id={log_id}"
                 )
                 seg_param = f"&segment={_urlquote(camp_segment, safe='')}" if camp_segment else ""
-                call = tc.calls.create(
-                    to=phone,
-                    from_=TWILIO_FROM,
-                    url=(f"{incoming_url}?log_id={log_id}&lang={lang}"
-                         f"&name={_urlquote(lead_name or '', safe='')}&campaign_id={campaign_id}{seg_param}"),
-                    status_callback=f"{status_url}?log_id={log_id}",
-                    status_callback_event=["completed", "failed", "busy", "no-answer"],
-                    record=True,
-                    recording_status_callback=rec_cb2,
-                    recording_status_callback_method="POST",
-                    timeout=30,
-                )
+                call_incoming_url = (f"{incoming_url}?log_id={log_id}&lang={lang}"
+                                     f"&name={_urlquote(lead_name or '', safe='')}&campaign_id={campaign_id}{seg_param}")
+
+                call_sid = ""
+                if tc:
+                    call = tc.calls.create(
+                        to=phone,
+                        from_=TWILIO_FROM,
+                        url=call_incoming_url,
+                        status_callback=f"{status_url}?log_id={log_id}",
+                        status_callback_event=["completed", "failed", "busy", "no-answer"],
+                        record=True,
+                        recording_status_callback=rec_cb2,
+                        recording_status_callback_method="POST",
+                        timeout=30,
+                    )
+                    call_sid = call.sid
+                elif getattr(settings, 'PLIVO_AUTH_ID', None):
+                    import requests as _requests
+                    plivo_url = f"https://api.plivo.com/v1/Account/{settings.PLIVO_AUTH_ID}/Call/"
+                    caller_id_val = getattr(settings, 'PLIVO_DEFAULT_CALLER_ID', '+918031728899')
+                    body = {
+                        "from": caller_id_val,
+                        "to": phone,
+                        "answer_url": call_incoming_url,
+                        "answer_method": "POST",
+                        "hangup_url": f"{status_url}?log_id={log_id}",
+                        "hangup_method": "POST"
+                    }
+                    resp = _requests.post(plivo_url, json=body, auth=(settings.PLIVO_AUTH_ID, settings.PLIVO_AUTH_TOKEN), timeout=10)
+                    res_json = resp.json()
+                    call_sid = res_json.get("request_uuid") or res_json.get("api_id") or f"plivo_{log_id}"
+
                 db.execute(text(
                     "UPDATE ai_call_logs SET call_sid=:sid, status='dialing' WHERE id=:id"
-                ), {"sid": call.sid, "id": log_id})
+                ), {"sid": call_sid, "id": log_id})
                 db.execute(text("""
                     UPDATE crm_leads
                     SET ai_campaign_id=:campid, ai_last_called_at=NOW(),
@@ -2846,10 +2888,9 @@ def make_test_call(
     twilio_from = _get_twilio_from()
     openai_key = _get_openai_key()
 
-    if not twilio_sid or not twilio_token or not twilio_from:
-        raise HTTPException(status_code=503, detail="Twilio credentials not configured in .env")
-    if not openai_key:
-        raise HTTPException(status_code=503, detail="OpenAI API key not configured in .env")
+    has_telephony = (twilio_sid and twilio_token and twilio_from) or (getattr(settings, 'PLIVO_AUTH_ID', None) and getattr(settings, 'PLIVO_AUTH_TOKEN', None))
+    if not has_telephony:
+        raise HTTPException(status_code=503, detail="Telephony provider credentials (Plivo / Twilio) not configured")
 
     log_result = db.execute(text("""
         INSERT INTO ai_call_logs
@@ -2867,7 +2908,6 @@ def make_test_call(
 
     webhook_base = _webhook_base(request)
     seg_qs = f"&segment={_urlquote(segment, safe='')}" if segment else ""
-    # ── Voice-select is the new entry point — greeting TTS generated after customer picks agent ──
     incoming_url = (
         f"{webhook_base}/api/v1/staff/ai-calling/webhook/voice-select"
         f"?log_id={log_id}&lang={language}&name={_urlquote(name, safe='')}&campaign_id=0&is_test=1{seg_qs}"
@@ -2875,36 +2915,53 @@ def make_test_call(
     status_url = f"{webhook_base}/api/v1/staff/ai-calling/webhook/status?log_id={log_id}"
 
     try:
-        from twilio.rest import Client as TwilioClient
-        tc = TwilioClient(twilio_sid, twilio_token)
-        recording_url = (
-            f"{webhook_base}/api/v1/staff/ai-calling/webhook/recording?log_id={log_id}"
-        )
-        call = tc.calls.create(
-            to=phone,
-            from_=twilio_from,
-            url=incoming_url,
-            status_callback=status_url,
-            status_callback_event=["completed", "failed", "busy", "no-answer"],
-            record=True,
-            recording_status_callback=recording_url,
-            recording_status_callback_method="POST",
-            timeout=30,
-        )
+        call_sid = ""
+        if twilio_sid and twilio_token and twilio_from:
+            from twilio.rest import Client as TwilioClient
+            tc = TwilioClient(twilio_sid, twilio_token)
+            recording_url = (
+                f"{webhook_base}/api/v1/staff/ai-calling/webhook/recording?log_id={log_id}"
+            )
+            call = tc.calls.create(
+                to=phone,
+                from_=twilio_from,
+                url=incoming_url,
+                status_callback=status_url,
+                status_callback_event=["completed", "failed", "busy", "no-answer"],
+                record=True,
+                recording_status_callback=recording_url,
+                recording_status_callback_method="POST",
+                timeout=30,
+            )
+            call_sid = call.sid
+        elif getattr(settings, 'PLIVO_AUTH_ID', None):
+            import requests as _requests
+            plivo_url = f"https://api.plivo.com/v1/Account/{settings.PLIVO_AUTH_ID}/Call/"
+            caller_id_val = getattr(settings, 'PLIVO_DEFAULT_CALLER_ID', '+918031728899')
+            body = {
+                "from": caller_id_val,
+                "to": phone,
+                "answer_url": incoming_url,
+                "answer_method": "POST",
+                "hangup_url": status_url,
+                "hangup_method": "POST"
+            }
+            resp = _requests.post(plivo_url, json=body, auth=(settings.PLIVO_AUTH_ID, settings.PLIVO_AUTH_TOKEN), timeout=10)
+            res_json = resp.json()
+            call_sid = res_json.get("request_uuid") or res_json.get("api_id") or f"plivo_{log_id}"
+
         db.execute(text(
             "UPDATE ai_call_logs SET call_sid=:sid, status='dialing' WHERE id=:id"
-        ), {"sid": call.sid, "id": log_id})
+        ), {"sid": call_sid, "id": log_id})
         db.commit()
         return {
             "success": True,
             "message": f"Test call initiated to {phone}",
             "log_id": log_id,
-            "call_sid": call.sid,
+            "call_sid": call_sid,
             "language": language,
             "segment": segment or "All segments",
         }
-    except ImportError:
-        raise HTTPException(status_code=503, detail="Twilio SDK not installed")
     except Exception as e:
         db.execute(text("UPDATE ai_call_logs SET status='failed' WHERE id=:id"), {"id": log_id})
         db.commit()

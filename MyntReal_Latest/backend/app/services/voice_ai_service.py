@@ -18,11 +18,17 @@ class VoiceAIService:
     """
     Voice AI Calling Service.
     Integrates neutral VoiceProvider adapter interface.
-    Default provider is NullVoiceProvider.
+    Default provider is PlivoTelephonyProvider when live credentials exist, otherwise NullVoiceProvider.
     """
 
     def __init__(self, provider=None):
-        self.provider = provider or NullVoiceProvider()
+        if provider:
+            self.provider = provider
+        elif getattr(settings, 'PLIVO_AUTH_ID', None) and not str(settings.PLIVO_AUTH_ID).startswith('mock_'):
+            from app.services.telephony.plivo_provider import PlivoTelephonyProvider
+            self.provider = PlivoTelephonyProvider()
+        else:
+            self.provider = NullVoiceProvider()
 
     def check_call_eligibility(self, lead_data: Dict[str, Any]) -> Dict[str, Any]:
         """

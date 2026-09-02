@@ -1,6 +1,30 @@
 (function() {
     'use strict';
     
+    if (typeof window !== 'undefined' && window.location && window.location.hostname === 'myntreal.com') {
+        window.location.replace('https://www.myntreal.com' + window.location.pathname + window.location.search);
+        return;
+    }
+    
+    // Auto-load MyntOS Native Telephony & Multi-Method Call Selector on all authenticated pages
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        const loadSoftphone = () => {
+            const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
+            if (token && !window.PlivoSoftphoneLoaded) {
+                window.PlivoSoftphoneLoaded = true;
+                const script = document.createElement('script');
+                script.src = '/public/js/plivo-softphone.js?v=' + Date.now();
+                script.async = true;
+                document.head.appendChild(script);
+            }
+        };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadSoftphone);
+        } else {
+            loadSoftphone();
+        }
+    }
+
     const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
     const TOKEN_CHECK_INTERVAL_MS = 60 * 1000;
     const API_BASE = '/api/v1';

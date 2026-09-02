@@ -42,9 +42,12 @@ sleep 1
 echo ""
 echo "Starting FastAPI Backend with Uvicorn supervisor (background)..."
 (
+  PYTHON_EXE=$(which python3 2>/dev/null || which python 2>/dev/null || echo "python3")
+  echo "Verifying Python dependencies..."
+  $PYTHON_EXE -m pip install --prefer-binary -q -r "$SCRIPT_DIR/backend/requirements.txt" 2>/dev/null || true
+  
   while true; do
     cd "$SCRIPT_DIR/backend"
-    PYTHON_EXE=$(which python3 2>/dev/null || which python 2>/dev/null || echo "python3")
     $PYTHON_EXE -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info || true
     echo "[SUPERVISOR] FastAPI Backend process exited. Restarting in 2 seconds..."
     sleep 2
@@ -53,8 +56,8 @@ echo "Starting FastAPI Backend with Uvicorn supervisor (background)..."
 BACKEND_PID=$!
 echo "Backend Supervisor PID: $BACKEND_PID"
 
-# Start WhatsApp Group Bot daemon (port 5002) in background
-if [ -f "$SCRIPT_DIR/backend/whatsapp-group-bot/server.js" ]; then
+# Start WhatsApp Group Bot daemon (port 5002) in background ONLY if node_modules exists
+if [ -f "$SCRIPT_DIR/backend/whatsapp-group-bot/server.js" ] && [ -d "$SCRIPT_DIR/backend/whatsapp-group-bot/node_modules" ]; then
     echo "Starting WhatsApp Group Bot daemon on port 5002 (background)..."
     (
         cd "$SCRIPT_DIR/backend/whatsapp-group-bot"
@@ -62,8 +65,8 @@ if [ -f "$SCRIPT_DIR/backend/whatsapp-group-bot/server.js" ]; then
         while true; do
             echo "[SUPERVISOR] Starting WhatsApp Bot daemon on port 5002..."
             node server.js || true
-            echo "[SUPERVISOR] WhatsApp Bot daemon exited. Restarting in 3 seconds..."
-            sleep 3
+            echo "[SUPERVISOR] WhatsApp Bot daemon exited. Restarting in 30 seconds..."
+            sleep 30
         done
     ) &
     WA_PID=$!

@@ -95,14 +95,14 @@ else:
             echo=False
         )
     else:
-        # RDS PostgreSQL — Capped connection pool to prevent RDS connection slot exhaustion
-        print("[DC-DB-INIT] Creating PostgreSQL engine (Optimized 5-Connection Pool mode)...", flush=True)
+        # RDS PostgreSQL — Robust connection pool sized for concurrent API traffic
+        print("[DC-DB-INIT] Creating PostgreSQL engine (High-Throughput Pool mode)...", flush=True)
         engine = create_engine(
             _db_url_str,
             pool_pre_ping=True,
-            pool_size=5,
-            max_overflow=5,
-            pool_timeout=30,
+            pool_size=20,
+            max_overflow=20,
+            pool_timeout=15,
             pool_recycle=300,
             pool_use_lifo=True,
             connect_args={

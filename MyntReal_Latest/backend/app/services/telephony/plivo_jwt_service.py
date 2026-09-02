@@ -44,35 +44,37 @@ class PlivoJWTService:
         if getattr(staff, 'status', 'active') not in ('active', 'ACTIVE'):
             raise HTTPException(status_code=403, detail="Inactive or disabled staff members cannot provision telephony endpoints")
 
+        import re
+
         # 1. Check existing mapping
         endpoint = db.query(TelephonyPlivoEndpoint).filter(
             TelephonyPlivoEndpoint.company_id == company_id,
             TelephonyPlivoEndpoint.staff_id == staff.id
         ).first()
 
-        if endpoint:
-            return endpoint
-
-        # 2. Provision new endpoint username
-        # Format: agent_c{company_id}_s{staff_id}
-        username = f"agent_c{company_id}_s{staff.id}"
-        alias = f"{staff.full_name} ({staff.emp_code})"
-        raw_password = secrets.token_urlsafe(16)
-
         auth_id = getattr(settings, 'PLIVO_AUTH_ID', None) or os.getenv("PLIVO_AUTH_ID")
         auth_token = getattr(settings, 'PLIVO_AUTH_TOKEN', None) or os.getenv("PLIVO_AUTH_TOKEN")
         app_id = getattr(settings, 'PLIVO_APP_ID', None) or os.getenv("PLIVO_APP_ID")
 
+        if endpoint and endpoint.plivo_endpoint_id:
+            return endpoint
+
+        # 2. Provision new endpoint username & alias
+        # Plivo requires purely alphanumeric username and clean alias characters
+        clean_alias = re.sub(r'[^a-zA-Z0-9_\-\+@\.]', '_', f"{staff.emp_code}_{staff.full_name}")[:30]
+        base_username = f"agentc{company_id}s{staff.id}"
+        raw_password = secrets.token_urlsafe(16)
         endpoint_id = None
+        actual_username = base_username
 
         # 3. Call Plivo REST API if live credentials configured
         if auth_id and auth_token and not auth_id.startswith("mock_"):
             try:
                 plivo_url = f"https://api.plivo.com/v1/Account/{auth_id}/Endpoint/"
                 payload = {
-                    "username": username,
+                    "username": base_username,
                     "password": raw_password,
-                    "alias": alias
+                    "alias": clean_alias
                 }
                 if app_id:
                     payload["app_id"] = app_id
@@ -86,19 +88,28 @@ class PlivoJWTService:
                 if resp.status_code in (200, 201):
                     res_json = resp.json()
                     endpoint_id = res_json.get("endpoint_id")
-                    logger.info(f"[PLIVO-ENDPOINT] Successfully provisioned remote endpoint {username} (ID: {endpoint_id})")
+                    actual_username = res_json.get("username") or base_username
+                    logger.info(f"[PLIVO-ENDPOINT] Successfully provisioned remote endpoint {actual_username} (ID: {endpoint_id})")
                 else:
                     logger.warning(f"[PLIVO-ENDPOINT] Plivo API endpoint creation response ({resp.status_code}): {resp.text}")
             except Exception as e:
                 logger.error(f"[PLIVO-ENDPOINT-ERROR] Failed to contact Plivo API: {e}")
 
-        # 4. Save mapping in database
+        # 4. Save or update mapping in database
+        if endpoint:
+            endpoint.plivo_endpoint_id = endpoint_id
+            endpoint.plivo_username = actual_username
+            endpoint.plivo_alias = clean_alias
+            db.commit()
+            db.refresh(endpoint)
+            return endpoint
+
         endpoint = TelephonyPlivoEndpoint(
             company_id=company_id,
             staff_id=staff.id,
             plivo_endpoint_id=endpoint_id,
-            plivo_username=username,
-            plivo_alias=alias,
+            plivo_username=actual_username,
+            plivo_alias=clean_alias,
             is_registered=False
         )
         db.add(endpoint)
@@ -122,7 +133,10 @@ class PlivoJWTService:
             raise HTTPException(status_code=403, detail="Inactive staff members cannot acquire browser telephony tokens")
 
         staff_company_id = getattr(staff, 'base_company_id', None) or 1
-        if staff_company_id != company_id:
+        role_code = (getattr(staff.role, 'role_code', '') or '').lower() if getattr(staff, 'role', None) else ''
+        is_super = getattr(staff, 'is_super_admin', False) or role_code in ('vgk4u', 'vgk4u_supreme', 'super_admin') or (staff.role and getattr(staff.role, 'hierarchy_level', 0) >= 90)
+        
+        if not is_super and staff_company_id != company_id:
             raise HTTPException(status_code=403, detail="Cross-company telephony access is strictly prohibited")
 
         # 2. Retrieve or provision endpoint mapping

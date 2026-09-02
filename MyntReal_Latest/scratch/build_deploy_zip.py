@@ -49,9 +49,6 @@ EXCLUDE_FILES = {
     "node.log",
     "uvicorn.log",
     "bot.log",
-    "MyntReal.apk",
-    "mobile.apk",
-    "mobile.app",
     "mnr-catalog.pdf",
     "mnr-catalog-web.pdf",
     "database_backup (1).sql",
@@ -71,9 +68,13 @@ EXCLUDE_FILES = {
 def should_exclude(rel_path: Path, abs_file: Path) -> bool:
     rel_str = str(rel_path).replace("\\", "/")
     
+    # Always keep production APK files
+    if rel_str in ["frontend/public/MyntReal.apk", "frontend/public/mobile.apk"]:
+        return False
+
     # Always keep compiled frontend/public/mobile assets
     if "frontend/public/mobile" in rel_str:
-        if abs_file.suffix.lower() in [".zip", ".sql", ".dump", ".db", ".apk", ".app"]:
+        if abs_file.suffix.lower() in [".zip", ".sql", ".dump", ".db"]:
             return True
         return False
 
@@ -92,7 +93,7 @@ def should_exclude(rel_path: Path, abs_file: Path) -> bool:
     if "storage/" in rel_str or "uploaded_files/" in rel_str or "public/catalog/" in rel_str or "public/marketplace/" in rel_str or ".ai_uploads" in rel_str or ".ai_backups" in rel_str or "solar-creative-" in rel_str:
         return True
         
-    if abs_file.suffix.lower() in [".zip", ".sql", ".dump", ".sqlite", ".db", ".apk", ".app"]:
+    if abs_file.suffix.lower() in [".zip", ".sql", ".dump", ".sqlite", ".db", ".app"]:
         return True
 
     # Exclude heavy non-UI images > 2MB while keeping all logos

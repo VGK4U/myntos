@@ -95,19 +95,25 @@ class Settings(BaseSettings):
     CAPI_ENABLED: bool = False
     WA_AUDIT_ENABLED: bool = True
     WA_AI_ENABLED: bool = False
-    VOICE_AI_ENABLED: bool = False
+    VOICE_AI_ENABLED: bool = True
     AI_ORCHESTRATOR_ENABLED: bool = False
     CAMPAIGN_AUTOMATION_ENABLED: bool = False
     STRICT_ENCRYPTED_CREDS_ONLY: bool = True
     
     # ── In-App PSTN Telephony & Call Session Engine Configuration ──
-    MYNTREAL_OUTBOUND_CALLING_NUMBER: str = os.getenv("MYNTREAL_OUTBOUND_CALLING_NUMBER", "+912269470537")
-    TELEPHONY_PROVIDER: str = os.getenv("TELEPHONY_PROVIDER", "mock")
+    MYNTREAL_OUTBOUND_CALLING_NUMBER: str = os.getenv("MYNTREAL_OUTBOUND_CALLING_NUMBER", "+918031728899")
+    TELEPHONY_PROVIDER: str = os.getenv("TELEPHONY_PROVIDER", "plivo")
     TELEPHONY_ACCOUNT_ID: Optional[str] = os.getenv("TELEPHONY_ACCOUNT_ID")
     TELEPHONY_API_KEY: Optional[str] = os.getenv("TELEPHONY_API_KEY")
     TELEPHONY_API_SECRET: Optional[str] = os.getenv("TELEPHONY_API_SECRET")
     TELEPHONY_WEBHOOK_SECRET: Optional[str] = os.getenv("TELEPHONY_WEBHOOK_SECRET")
     TELEPHONY_APPLICATION_SID: Optional[str] = os.getenv("TELEPHONY_APPLICATION_SID")
+
+    # ── Plivo Cloud Telephony ──
+    PLIVO_AUTH_ID: Optional[str] = os.getenv("PLIVO_AUTH_ID", "MAMTLIY2U4MTKTN2E3NC")
+    PLIVO_AUTH_TOKEN: Optional[str] = os.getenv("PLIVO_AUTH_TOKEN", "Nzg3MzZmZWQtNGRmNi00OWUxLTdhZjItMDQwNWYy")
+    PLIVO_APP_ID: Optional[str] = os.getenv("PLIVO_APP_ID", "10583407997011554")
+    PLIVO_DEFAULT_CALLER_ID: str = os.getenv("PLIVO_DEFAULT_CALLER_ID", "+918031728899")
 
     @validator("DATABASE_URL", pre=True)
     def assemble_db_connection(cls, v: Optional[str], values: dict) -> str:
