@@ -6,6 +6,11 @@
         return;
     }
     
+    if (typeof window !== 'undefined' && window.location && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (window.location.port === '' || window.location.port === '80')) {
+        window.location.replace('http://127.0.0.1:5001' + window.location.pathname + window.location.search);
+        return;
+    }
+    
     // Auto-load MyntOS Native Telephony & Multi-Method Call Selector on all authenticated pages
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
         const loadSoftphone = () => {

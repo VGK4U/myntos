@@ -4225,39 +4225,31 @@ def list_leads(
             n = emp.full_name or (f"{emp.first_name or ''} {emp.last_name or ''}".strip()) or emp.emp_code
             _handler_map[emp.id] = {'name': n, 'emp_code': emp.emp_code}
 
-    # Latest note per lead — one query using a subquery for max created_at
+    # DC Protocol: Fast batch lookup of latest notes, followups, and revenue for the current page
     _note_map: dict = {}
-    if _lead_ids:
-        from sqlalchemy import tuple_ as _tuple
-        _max_note_sq = (
-            db.query(CRMLeadNote.lead_id, func.max(CRMLeadNote.created_at).label('mx'))
-            .filter(CRMLeadNote.lead_id.in_(_lead_ids))
-            .group_by(CRMLeadNote.lead_id)
-            .subquery()
-        )
-        _note_rows = (
-            db.query(CRMLeadNote)
-            .join(_max_note_sq, (CRMLeadNote.lead_id == _max_note_sq.c.lead_id) &
-                                (CRMLeadNote.created_at == _max_note_sq.c.mx))
-            .all()
-        )
-        for _n in _note_rows:
-            _note_map[_n.lead_id] = _n
-
-    # Batch max dates for last_interacted_at (notes + followups + revenue — one query each)
     _note_max_map: dict = {}
     _fu_max_map:   dict = {}
     _rev_max_map:  dict = {}
     if _lead_ids:
-        for row in db.query(CRMLeadNote.lead_id, func.max(CRMLeadNote.created_at)).filter(
-                CRMLeadNote.lead_id.in_(_lead_ids)).group_by(CRMLeadNote.lead_id).all():
-            _note_max_map[row[0]] = row[1]
-        for row in db.query(CRMLeadFollowUp.lead_id, func.max(CRMLeadFollowUp.created_at)).filter(
-                CRMLeadFollowUp.lead_id.in_(_lead_ids)).group_by(CRMLeadFollowUp.lead_id).all():
-            _fu_max_map[row[0]] = row[1]
-        for row in db.query(CRMRevenueEntry.lead_id, func.max(CRMRevenueEntry.created_at)).filter(
-                CRMRevenueEntry.lead_id.in_(_lead_ids)).group_by(CRMRevenueEntry.lead_id).all():
-            _rev_max_map[row[0]] = row[1]
+        all_notes = db.query(CRMLeadNote).filter(CRMLeadNote.lead_id.in_(_lead_ids)).order_by(CRMLeadNote.created_at.desc()).all()
+        for _n in all_notes:
+            if _n.lead_id not in _note_map:
+                _note_map[_n.lead_id] = _n
+            if _n.lead_id not in _note_max_map and _n.created_at:
+                _note_max_map[_n.lead_id] = _n.created_at
+
+        for row in db.query(CRMLeadFollowUp.lead_id, CRMLeadFollowUp.created_at, CRMLeadFollowUp.updated_at).filter(
+                CRMLeadFollowUp.lead_id.in_(_lead_ids)).all():
+            mx = max(filter(None, [row.created_at, row.updated_at]), default=None)
+            if mx:
+                if row.lead_id not in _fu_max_map or mx > _fu_max_map[row.lead_id]:
+                    _fu_max_map[row.lead_id] = mx
+
+        for row in db.query(CRMRevenueEntry.lead_id, CRMRevenueEntry.created_at).filter(
+                CRMRevenueEntry.lead_id.in_(_lead_ids)).all():
+            if row.created_at:
+                if row.lead_id not in _rev_max_map or row.created_at > _rev_max_map[row.lead_id]:
+                    _rev_max_map[row.lead_id] = row.created_at
 
     leads_data = []
     for lead in leads:
@@ -6209,6 +6201,10 @@ def get_employee_performance_dashboard(
     }
 
 
+_LEAD_ANALYTICS_CACHE = {}
+_LEAD_ANALYTICS_CACHE_TTL = 60  # seconds
+
+
 @router.get("/lead-analytics")
 def lead_analytics(
     category: Optional[str] = Query(None),
@@ -6248,6 +6244,23 @@ def lead_analytics(
 ):
     """Executive analytics dashboard: summary KPIs, by-status, by-category,
     by-source, by-telecaller, by-field-staff breakdowns."""
+    import time as _pytime
+    _ckey = (
+        current_employee.id, company_id_filter, category, status, search, source,
+        net_source, guru_filter, z_guru_filter, telecaller_emp_code,
+        field_staff_emp_code, pincode, created_from, created_to, closed_from,
+        closed_to, accepted_date_from, accepted_date_to, installation_date_from,
+        installation_date_to, material_reach_date_from, material_reach_date_to,
+        next_followup_from, next_followup_to, solar_pipeline_status, ev_b2b_stage,
+        combined_bank_filter, submit_date_from, submit_date_to, complete_date_from,
+        complete_date_to, first_dvr_from, first_dvr_to
+    )
+    _now = _pytime.time()
+    if _ckey in _LEAD_ANALYTICS_CACHE:
+        _cts, _cval = _LEAD_ANALYTICS_CACHE[_ckey]
+        if _now - _cts < _LEAD_ANALYTICS_CACHE_TTL:
+            return _cval
+
     import math as _m
     from sqlalchemy import func as _f, case as _sa_case
 
@@ -7066,25 +7079,20 @@ def lead_analytics(
             '_unassigned': True,
         })
 
-    # ── Monthly trend (last 12 months) — 3 separate queries ─────────────────
-    # DC-TREND-DATE-001: Win Value bucketed by actual_close_date (not creation date).
-    # Completed Value bucketed by complete_date. Total leads still by submit/created date.
-    from datetime import date as _date
-    import calendar as _cal
-    from sqlalchemy import cast as _sa_cast, Date as _sa_Date
+    # ── Monthly & Weekly Trends (Consolidated Single Fetch + In-Memory Bucketing) ────
+    from datetime import date as _date, timedelta as _td
     _today = _date.today()
     _mo12_yr, _mo12_mn = _today.year, _today.month - 11
     while _mo12_mn <= 0:
         _mo12_mn += 12; _mo12_yr -= 1
-    _mo12_start = datetime(_mo12_yr, _mo12_mn, 1)
-    _trend_date_mo = _f.coalesce(CRMLead.submit_date, _sa_cast(CRMLead.created_at, _sa_Date))
+    _mo12_start_date = _date(_mo12_yr, _mo12_mn, 1)
 
-    # Q1: Total leads by submit/creation date (with detailed metrics)
-    from sqlalchemy import and_ as _sa_and, or_ as _sa_or
-    _eff_dv_expr = _eff_dv()
-    _EXCL_PIPE_PS = ['cancelled', 'not_interested', 'completed', 'loan_rejected', 'different_vendor', 'documents_issue']
+    _today_dt = datetime.combine(_today, datetime.min.time())
+    _week_start = _today_dt - _td(days=_today.weekday())
+    _wk12_start = _week_start - _td(weeks=11)
+    _wk12_start_date = _wk12_start.date()
 
-    # DC-TREND-BASE-001: Build trend_base without top-bar date-range filters so 12-month and 12-week trends always show full historical data
+    # DC-TREND-BASE-001: Build trend_base without top-bar date-range filters
     trend_base = db.query(CRMLead)
     if company_id_filter:
         trend_base = trend_base.filter(CRMLead.company_id == company_id_filter)
@@ -7101,152 +7109,199 @@ def lead_analytics(
         ev_b2b_stage=ev_b2b_stage, combined_bank_filter=combined_bank_filter, company_id_filter=company_id_filter
     )
 
-    _mo_tot_rows = trend_base.filter(_trend_date_mo >= _mo12_start.date()).with_entities(
-        _f.date_trunc('month', _trend_date_mo).label('bucket'),
-        _f.count(CRMLead.id).label('total'),
-        _f.coalesce(_f.sum(_sa_case(
-            (_sa_and(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(['cancelled', 'not_interested'])), 1),
-            else_=0
-        )), 0).label('submitted'),
-        _f.coalesce(_f.sum(_sa_case(
-            (_sa_and(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(['cancelled', 'not_interested'])), _eff_dv_expr),
-            else_=0
-        )), 0).label('sub_val'),
-        _f.coalesce(_f.sum(_sa_case(
-            (_sa_and(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(_EXCL_PIPE_PS)), 1),
-            else_=0
-        )), 0).label('pipeline'),
-        _f.coalesce(_f.sum(_sa_case(
-            (_sa_and(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(_EXCL_PIPE_PS)), _eff_dv_expr),
-            else_=0
-        )), 0).label('pipe_val'),
-        _f.coalesce(_f.sum(_sa_case((CRMLead.solar_pipeline_status == 'pending_with_bank', 1), else_=0)), 0).label('at_bank'),
-        _f.coalesce(_f.sum(_sa_case((CRMLead.solar_pipeline_status == 'electricity_bill_change', 1), else_=0)), 0).label('eb_change'),
-        _f.coalesce(_f.sum(_sa_case(
-            (CRMLead.solar_pipeline_status.in_(['installation_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending']), 1),
-            else_=0
-        )), 0).label('in_prog'),
-        _f.coalesce(_f.sum(_sa_case(
-            (CRMLead.solar_pipeline_status.in_(['installation_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending']), _eff_dv_expr),
-            else_=0
-        )), 0).label('in_prog_val'),
-        _f.coalesce(_f.sum(_sa_case((CRMLead.solar_pipeline_status == 'installation_pending', 1), else_=0)), 0).label('inst_pending'),
-        _f.coalesce(_f.sum(_sa_case((CRMLead.solar_pipeline_status == 'balance_pending', 1), else_=0)), 0).label('bal_pending')
-    ).group_by('bucket').all()
+    # Fetch min transaction date per lead
+    from sqlalchemy import cast as _sa_cast, Date as _sa_Date
+    _tx_rows = db.query(
+        CRMLeadTransaction.lead_id,
+        _f.min(_sa_cast(CRMLeadTransaction.transaction_date, _sa_Date))
+    ).group_by(CRMLeadTransaction.lead_id).all()
+    _tx_map = {r[0]: (r[1].date() if hasattr(r[1], 'date') else r[1]) for r in _tx_rows if r[0] and r[1]}
 
-    _mo_tot_map = {
-        (r.bucket.year, r.bucket.month): (
-            int(r.total), int(r.submitted), float(r.sub_val), int(r.pipeline), float(r.pipe_val),
-            int(r.at_bank), int(r.eb_change), int(r.in_prog), float(r.in_prog_val),
-            int(r.inst_pending), int(r.bal_pending)
-        )
-        for r in _mo_tot_rows if r.bucket
-    }
-
-    # Q2: Won leads — ALL segments use submit_date as primary WON bucket date.
-    _mo_won_dt = _f.coalesce(
+    # Single consolidated query for all trend leads
+    _trend_leads = trend_base.with_entities(
+        CRMLead.id,
+        CRMLead.status,
         CRMLead.submit_date,
-        _sa_cast(CRMLead.actual_close_date, _sa_Date),
-        _trend_date_mo,
-    )
-    _mo_won_rows = trend_base.filter(_won_ok, _mo_won_dt >= _mo12_start.date()).with_entities(
-        _f.date_trunc('month', _mo_won_dt).label('bucket'),
-        _f.count(CRMLead.id).label('won'),
-        _f.coalesce(_f.sum(_eff_dv()), 0).label('win_value'),
-        _f.coalesce(_f.sum(CRMLead.deal_value_received), 0).label('win_recv'),
-    ).group_by('bucket').all()
-    _mo_won_map = {
-        (r.bucket.year, r.bucket.month): (int(r.won), float(r.win_value), float(r.win_recv))
-        for r in _mo_won_rows if r.bucket
-    }
-
-    # Q3: Completed leads bucketed by complete_date (fallback → stage updated date → submit/created)
-    _mo_comp_dt = _f.coalesce(CRMLead.complete_date, _sa_cast(CRMLead.solar_pipeline_status_updated_at, _sa_Date), _trend_date_mo)
-    _mo_comp_rows = trend_base.filter(_completed_cond, _mo_comp_dt >= _mo12_start.date()).with_entities(
-        _f.date_trunc('month', _mo_comp_dt).label('bucket'),
-        _f.count(CRMLead.id).label('completed'),
-        _f.coalesce(_f.sum(_eff_dv()), 0).label('comp_value'),
-        _f.coalesce(_f.sum(CRMLead.deal_value_received), 0).label('comp_recv'),
-    ).group_by('bucket').all()
-    _mo_comp_map = {
-        (r.bucket.year, r.bucket.month): (int(r.completed), float(r.comp_value), float(r.comp_recv))
-        for r in _mo_comp_rows if r.bucket
-    }
-
-    # Q4: Installed leads bucketed by installation_date (or stage updated date for downstream stages)
-    # DC-INSTALLED-STAGE-DATE-001: Includes installed, net_meter_pending, balance_pending, balance_received, subsidy_pending, completed
-    _effective_inst_dt = _f.coalesce(
-        CRMLead.installation_date,
-        _sa_cast(CRMLead.solar_pipeline_status_updated_at, _sa_Date),
+        CRMLead.created_at,
+        CRMLead.actual_close_date,
         CRMLead.complete_date,
-        _trend_date_mo
-    )
-    _installed_cond = _sa_or(
-        CRMLead.installation_date.isnot(None),
-        CRMLead.solar_pipeline_status.in_(['installed', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed']),
-        CRMLead.status == 'completed'
-    )
-    _mo_inst_rows = trend_base.filter(_installed_cond, _effective_inst_dt >= _mo12_start.date()).with_entities(
-        _f.date_trunc('month', _effective_inst_dt).label('bucket'),
-        _f.count(CRMLead.id).label('installed')
-    ).group_by('bucket').all()
-    _mo_inst_map = {(r.bucket.year, r.bucket.month): int(r.installed) for r in _mo_inst_rows if r.bucket}
+        CRMLead.solar_pipeline_status,
+        CRMLead.solar_pipeline_status_updated_at,
+        CRMLead.installation_date,
+        CRMLead.first_payment_received_date,
+        CRMLead.deal_value_total,
+        CRMLead.confirmed_final_value,
+        CRMLead.deal_value_received,
+        CRMLead.ev_b2b_stage,
+        _eff_dv().label('eff_dv')
+    ).all()
 
-    _stage_upd_dt_mo = _f.coalesce(_sa_cast(CRMLead.solar_pipeline_status_updated_at, _sa_Date), CRMLead.installation_date, _trend_date_mo)
+    _mo_tot = {}
+    _mo_won = {}
+    _mo_comp = {}
+    _mo_inst = {}
+    _mo_inst_pend = {}
+    _mo_net_meter_pend = {}
+    _mo_bal_pend = {}
+    _mo_sub_pend = {}
+    _mo_at_bank = {}
+    _mo_pmt_recd = {}
 
-    _mo_inst_pend_rows = trend_base.filter(CRMLead.solar_pipeline_status == 'installation_pending', _stage_upd_dt_mo >= _mo12_start.date()).with_entities(
-        _f.date_trunc('month', _stage_upd_dt_mo).label('bucket'),
-        _f.count(CRMLead.id).label('inst_pending')
-    ).group_by('bucket').all()
-    _mo_inst_pend_map = {(r.bucket.year, r.bucket.month): int(r.inst_pending) for r in _mo_inst_pend_rows if r.bucket}
+    _wk_tot = {}
+    _wk_won = {}
+    _wk_comp = {}
+    _wk_inst = {}
+    _wk_net_meter_pend = {}
+    _wk_bal_pend = {}
+    _wk_sub_pend = {}
+    _wk_pmt_recd = {}
 
-    _mo_net_meter_pend_rows = trend_base.filter(CRMLead.solar_pipeline_status == 'net_meter_pending', _stage_upd_dt_mo >= _mo12_start.date()).with_entities(
-        _f.date_trunc('month', _stage_upd_dt_mo).label('bucket'),
-        _f.count(CRMLead.id).label('net_meter_pending')
-    ).group_by('bucket').all()
-    _mo_net_meter_pend_map = {(r.bucket.year, r.bucket.month): int(r.net_meter_pending) for r in _mo_net_meter_pend_rows if r.bucket}
+    def _get_wk_monday(d):
+        return d - _td(days=d.weekday())
 
-    _mo_bal_pend_rows = trend_base.filter(CRMLead.solar_pipeline_status == 'balance_pending', _stage_upd_dt_mo >= _mo12_start.date()).with_entities(
-        _f.date_trunc('month', _stage_upd_dt_mo).label('bucket'),
-        _f.count(CRMLead.id).label('bal_pending')
-    ).group_by('bucket').all()
-    _mo_bal_pend_map = {(r.bucket.year, r.bucket.month): int(r.bal_pending) for r in _mo_bal_pend_rows if r.bucket}
+    for l in _trend_leads:
+        st = l.status
+        ps = l.solar_pipeline_status
+        dv = float(l.eff_dv or 0)
+        recv = float(l.deal_value_received or 0)
 
-    _mo_sub_pend_rows = trend_base.filter(CRMLead.solar_pipeline_status == 'subsidy_pending', _stage_upd_dt_mo >= _mo12_start.date()).with_entities(
-        _f.date_trunc('month', _stage_upd_dt_mo).label('bucket'),
-        _f.count(CRMLead.id).label('subsidy_pending')
-    ).group_by('bucket').all()
-    _mo_sub_pend_map = {(r.bucket.year, r.bucket.month): int(r.subsidy_pending) for r in _mo_sub_pend_rows if r.bucket}
+        is_won = (st in POST_WON) and (ps is None or ps not in _EXCL_WON_PS)
+        is_comp = (ps == 'completed' or l.ev_b2b_stage == 'completed' or st == 'completed' or l.id in _etc_comp_ids)
+        is_installed = (l.installation_date is not None or ps in {'installed', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed'} or st == 'completed')
 
-    _mo_at_bank_rows = trend_base.filter(CRMLead.solar_pipeline_status == 'pending_with_bank', _stage_upd_dt_mo >= _mo12_start.date()).with_entities(
-        _f.date_trunc('month', _stage_upd_dt_mo).label('bucket'),
-        _f.count(CRMLead.id).label('at_bank')
-    ).group_by('bucket').all()
-    _mo_at_bank_map = {(r.bucket.year, r.bucket.month): int(r.at_bank) for r in _mo_at_bank_rows if r.bucket}
+        c_date = l.created_at.date() if hasattr(l.created_at, 'date') else l.created_at
+        tr_date = l.submit_date or c_date
 
-    # DC-FIRST-PMT-RECD-001: Subquery for earliest transaction date per lead
-    _tx_sub = db.query(
-        CRMLeadTransaction.lead_id.label('lead_id'),
-        _f.min(_sa_cast(CRMLeadTransaction.transaction_date, _sa_Date)).label('min_tx_date')
-    ).group_by(CRMLeadTransaction.lead_id).subquery()
+        cl_date = l.actual_close_date.date() if (l.actual_close_date and hasattr(l.actual_close_date, 'date')) else l.actual_close_date
+        won_date = l.submit_date or cl_date or tr_date
 
-    _mo_pmt_dt = _f.coalesce(
-        _sa_cast(CRMLead.first_payment_received_date, _sa_Date),
-        _tx_sub.c.min_tx_date
-    )
-    _pmt_cond = _sa_or(
-        CRMLead.first_payment_received_date.isnot(None),
-        _tx_sub.c.lead_id.isnot(None)
-    )
+        ps_upd_date = l.solar_pipeline_status_updated_at.date() if (l.solar_pipeline_status_updated_at and hasattr(l.solar_pipeline_status_updated_at, 'date')) else l.solar_pipeline_status_updated_at
+        comp_date = l.complete_date or ps_upd_date or tr_date
 
-    _mo_pmt_recd_rows = trend_base.outerjoin(_tx_sub, CRMLead.id == _tx_sub.c.lead_id).filter(
-        _pmt_cond,
-        _mo_pmt_dt >= _mo12_start.date()
-    ).with_entities(
-        _f.date_trunc('month', _mo_pmt_dt).label('bucket'),
-        _f.count(CRMLead.id).label('pmt_recd')
-    ).group_by('bucket').all()
-    _mo_pmt_recd_map = {(r.bucket.year, r.bucket.month): int(r.pmt_recd) for r in _mo_pmt_recd_rows if r.bucket}
+        inst_date = l.installation_date or ps_upd_date or l.complete_date or tr_date
+        stage_upd_date = ps_upd_date or l.installation_date or tr_date
+
+        pmt_date = l.first_payment_received_date or _tx_map.get(l.id)
+
+        # Monthly
+        if tr_date and tr_date >= _mo12_start_date:
+            mkey = (tr_date.year, tr_date.month)
+            if mkey not in _mo_tot:
+                _mo_tot[mkey] = [0, 0, 0.0, 0, 0.0, 0, 0, 0, 0.0, 0, 0]
+            rec = _mo_tot[mkey]
+            rec[0] += 1
+            if ps is not None and ps not in {'cancelled', 'not_interested'}:
+                rec[1] += 1
+                rec[2] += dv
+            if ps is not None and ps not in _EXCL_PIPE_PS:
+                rec[3] += 1
+                rec[4] += dv
+            if ps == 'pending_with_bank':
+                rec[5] += 1
+            if ps == 'electricity_bill_change':
+                rec[6] += 1
+            if ps in {'installation_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending'}:
+                rec[7] += 1
+                rec[8] += dv
+            if ps == 'installation_pending':
+                rec[9] += 1
+            if ps == 'balance_pending':
+                rec[10] += 1
+
+        if is_won and won_date and won_date >= _mo12_start_date:
+            mkey = (won_date.year, won_date.month)
+            if mkey not in _mo_won:
+                _mo_won[mkey] = [0, 0.0, 0.0]
+            _mo_won[mkey][0] += 1
+            _mo_won[mkey][1] += dv
+            _mo_won[mkey][2] += recv
+
+        if is_comp and comp_date and comp_date >= _mo12_start_date:
+            mkey = (comp_date.year, comp_date.month)
+            if mkey not in _mo_comp:
+                _mo_comp[mkey] = [0, 0.0, 0.0]
+            _mo_comp[mkey][0] += 1
+            _mo_comp[mkey][1] += dv
+            _mo_comp[mkey][2] += recv
+
+        if is_installed and inst_date and inst_date >= _mo12_start_date:
+            mkey = (inst_date.year, inst_date.month)
+            _mo_inst[mkey] = _mo_inst.get(mkey, 0) + 1
+
+        if stage_upd_date and stage_upd_date >= _mo12_start_date:
+            mkey = (stage_upd_date.year, stage_upd_date.month)
+            if ps == 'installation_pending':
+                _mo_inst_pend[mkey] = _mo_inst_pend.get(mkey, 0) + 1
+            elif ps == 'net_meter_pending':
+                _mo_net_meter_pend[mkey] = _mo_net_meter_pend.get(mkey, 0) + 1
+            elif ps == 'balance_pending':
+                _mo_bal_pend[mkey] = _mo_bal_pend.get(mkey, 0) + 1
+            elif ps == 'subsidy_pending':
+                _mo_sub_pend[mkey] = _mo_sub_pend.get(mkey, 0) + 1
+            elif ps == 'pending_with_bank':
+                _mo_at_bank[mkey] = _mo_at_bank.get(mkey, 0) + 1
+
+        if (l.first_payment_received_date is not None or l.id in _tx_map) and pmt_date and pmt_date >= _mo12_start_date:
+            mkey = (pmt_date.year, pmt_date.month)
+            _mo_pmt_recd[mkey] = _mo_pmt_recd.get(mkey, 0) + 1
+
+        # Weekly
+        if tr_date and tr_date >= _wk12_start_date:
+            wkey = _get_wk_monday(tr_date)
+            if wkey not in _wk_tot:
+                _wk_tot[wkey] = [0, 0, 0.0, 0, 0.0, 0, 0, 0, 0.0, 0, 0]
+            rec = _wk_tot[wkey]
+            rec[0] += 1
+            if ps is not None and ps not in {'cancelled', 'not_interested'}:
+                rec[1] += 1
+                rec[2] += dv
+            if ps is not None and ps not in _EXCL_PIPE_PS:
+                rec[3] += 1
+                rec[4] += dv
+            if ps == 'pending_with_bank':
+                rec[5] += 1
+            if ps == 'electricity_bill_change':
+                rec[6] += 1
+            if ps in {'installation_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending'}:
+                rec[7] += 1
+                rec[8] += dv
+            if ps == 'installation_pending':
+                rec[9] += 1
+            if ps == 'balance_pending':
+                rec[10] += 1
+
+        if is_won and won_date and won_date >= _wk12_start_date:
+            wkey = _get_wk_monday(won_date)
+            if wkey not in _wk_won:
+                _wk_won[wkey] = [0, 0.0, 0.0]
+            _wk_won[wkey][0] += 1
+            _wk_won[wkey][1] += dv
+            _wk_won[wkey][2] += recv
+
+        if is_comp and comp_date and comp_date >= _wk12_start_date:
+            wkey = _get_wk_monday(comp_date)
+            if wkey not in _wk_comp:
+                _wk_comp[wkey] = [0, 0.0, 0.0]
+            _wk_comp[wkey][0] += 1
+            _wk_comp[wkey][1] += dv
+            _wk_comp[wkey][2] += recv
+
+        if is_installed and inst_date and inst_date >= _wk12_start_date:
+            wkey = _get_wk_monday(inst_date)
+            _wk_inst[wkey] = _wk_inst.get(wkey, 0) + 1
+
+        if stage_upd_date and stage_upd_date >= _wk12_start_date:
+            wkey = _get_wk_monday(stage_upd_date)
+            if ps == 'net_meter_pending':
+                _wk_net_meter_pend[wkey] = _wk_net_meter_pend.get(wkey, 0) + 1
+            elif ps == 'balance_pending':
+                _wk_bal_pend[wkey] = _wk_bal_pend.get(wkey, 0) + 1
+            elif ps == 'subsidy_pending':
+                _wk_sub_pend[wkey] = _wk_sub_pend.get(wkey, 0) + 1
+
+        if (l.first_payment_received_date is not None or l.id in _tx_map) and pmt_date and pmt_date >= _wk12_start_date:
+            wkey = _get_wk_monday(pmt_date)
+            _wk_pmt_recd[wkey] = _wk_pmt_recd.get(wkey, 0) + 1
 
     monthly_trend = []
     for _mo in range(11, -1, -1):
@@ -7254,21 +7309,20 @@ def lead_analytics(
         _mn = _today.month - _mo
         while _mn <= 0:
             _mn += 12; _yr -= 1
-        _tot_data = _mo_tot_map.get((_yr, _mn), (0, 0, 0.0, 0, 0.0, 0, 0, 0, 0.0, 0, 0))
+        _tot_data = _mo_tot.get((_yr, _mn), [0, 0, 0.0, 0, 0.0, 0, 0, 0, 0.0, 0, 0])
         (
             _m_total, _m_sub, _m_sub_val, _m_pipe, _m_pipe_val,
             _, _m_eb_change, _m_in_prog, _m_in_prog_val,
-            _, _
+            _, _m_bal_pending
         ) = _tot_data
-        _m_won, _m_dv, _m_wr = _mo_won_map.get((_yr, _mn), (0, 0.0, 0.0))
-        _m_comp, _m_fdv, _m_cr = _mo_comp_map.get((_yr, _mn), (0, 0.0, 0.0))
-        _m_inst = _mo_inst_map.get((_yr, _mn), 0)
-        _m_inst_pending = _mo_inst_pend_map.get((_yr, _mn), 0)
-        _m_net_meter_pending = _mo_net_meter_pend_map.get((_yr, _mn), 0)
-        _m_bal_pending = _mo_bal_pend_map.get((_yr, _mn), 0)
-        _m_sub_pending = _mo_sub_pend_map.get((_yr, _mn), 0)
-        _m_at_bank = _mo_at_bank_map.get((_yr, _mn), 0)
-        _m_first_pmt_recd = _mo_pmt_recd_map.get((_yr, _mn), 0)
+        _m_won, _m_dv, _m_wr = _mo_won.get((_yr, _mn), [0, 0.0, 0.0])
+        _m_comp, _m_fdv, _m_cr = _mo_comp.get((_yr, _mn), [0, 0.0, 0.0])
+        _m_installed = _mo_inst.get((_yr, _mn), 0)
+        _m_inst_pending = _mo_inst_pend.get((_yr, _mn), 0)
+        _m_at_bank = _mo_at_bank.get((_yr, _mn), 0)
+        _m_net_meter_pending = _mo_net_meter_pend.get((_yr, _mn), 0)
+        _m_first_pmt_recd = _mo_pmt_recd.get((_yr, _mn), 0)
+        _m_sub_pending = _mo_sub_pend.get((_yr, _mn), 0)
         monthly_trend.append({
             'label': f"{_date(1900, _mn, 1).strftime('%b')} {_yr}",
             'total': _m_total, 'won': _m_won,
@@ -7276,159 +7330,28 @@ def lead_analytics(
             'pipeline': _m_pipe, 'pipeline_value': _m_pipe_val,
             'at_bank': _m_at_bank, 'eb_change': _m_eb_change,
             'first_pmt_recd': _m_first_pmt_recd,
-            'installed': _m_inst, 'completed': _m_comp, 'comp_value': _m_fdv,
+            'installed': _m_installed, 'completed': _m_comp, 'comp_value': _m_fdv,
             'in_progress': _m_in_prog, 'inprog_value': _m_in_prog_val,
             'inst_pending': _m_inst_pending, 'net_meter_pending': _m_net_meter_pending,
             'bal_pending': _m_bal_pending, 'subsidy_pending': _m_sub_pending,
         })
 
-    # ── Weekly trend (last 12 weeks) — 4 separate queries ────────────────────
-    from datetime import timedelta as _td
-    _today_dt = datetime.combine(_today, datetime.min.time())
-    _week_start = _today_dt - _td(days=_today.weekday())
-    _wk12_start = _week_start - _td(weeks=11)
-    _trend_date_wk = _f.coalesce(CRMLead.submit_date, _sa_cast(CRMLead.created_at, _sa_Date))
-
-    # Q1: Total leads by submit/creation date
-    _wk_tot_rows = trend_base.filter(_trend_date_wk >= _wk12_start.date()).with_entities(
-        _f.date_trunc('week', _trend_date_wk).label('bucket'),
-        _f.count(CRMLead.id).label('total'),
-        _f.coalesce(_f.sum(_sa_case(
-            (_sa_and(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(['cancelled', 'not_interested'])), 1),
-            else_=0
-        )), 0).label('submitted'),
-        _f.coalesce(_f.sum(_sa_case(
-            (_sa_and(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(['cancelled', 'not_interested'])), _eff_dv_expr),
-            else_=0
-        )), 0).label('sub_val'),
-        _f.coalesce(_f.sum(_sa_case(
-            (_sa_and(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(_EXCL_PIPE_PS)), 1),
-            else_=0
-        )), 0).label('pipeline'),
-        _f.coalesce(_f.sum(_sa_case(
-            (_sa_and(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(_EXCL_PIPE_PS)), _eff_dv_expr),
-            else_=0
-        )), 0).label('pipe_val'),
-        _f.coalesce(_f.sum(_sa_case((CRMLead.solar_pipeline_status == 'pending_with_bank', 1), else_=0)), 0).label('at_bank'),
-        _f.coalesce(_f.sum(_sa_case((CRMLead.solar_pipeline_status == 'electricity_bill_change', 1), else_=0)), 0).label('eb_change'),
-        _f.coalesce(_f.sum(_sa_case(
-            (CRMLead.solar_pipeline_status.in_(['installation_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending']), 1),
-            else_=0
-        )), 0).label('in_prog'),
-        _f.coalesce(_f.sum(_sa_case(
-            (CRMLead.solar_pipeline_status.in_(['installation_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending']), _eff_dv_expr),
-            else_=0
-        )), 0).label('in_prog_val'),
-        _f.coalesce(_f.sum(_sa_case((CRMLead.solar_pipeline_status == 'installation_pending', 1), else_=0)), 0).label('inst_pending'),
-        _f.coalesce(_f.sum(_sa_case((CRMLead.solar_pipeline_status == 'balance_pending', 1), else_=0)), 0).label('bal_pending')
-    ).group_by('bucket').all()
-    _wk_tot_map = {
-        r.bucket.date(): (
-            int(r.total), int(r.submitted), float(r.sub_val), int(r.pipeline), float(r.pipe_val),
-            int(r.at_bank), int(r.eb_change), int(r.in_prog), float(r.in_prog_val),
-            int(r.inst_pending), int(r.bal_pending)
-        )
-        for r in _wk_tot_rows if r.bucket
-    }
-
-    # Q2: Won leads — same date logic as monthly (DC-WON-DATE-ALL-001).
-    _wk_won_dt = _f.coalesce(
-        CRMLead.submit_date,
-        _sa_cast(CRMLead.actual_close_date, _sa_Date),
-        _trend_date_wk,
-    )
-    _wk_won_rows = trend_base.filter(_won_ok, _wk_won_dt >= _wk12_start.date()).with_entities(
-        _f.date_trunc('week', _wk_won_dt).label('bucket'),
-        _f.count(CRMLead.id).label('won'),
-        _f.coalesce(_f.sum(_eff_dv()), 0).label('win_value'),
-        _f.coalesce(_f.sum(CRMLead.deal_value_received), 0).label('win_recv'),
-    ).group_by('bucket').all()
-    _wk_won_map = {r.bucket.date(): (int(r.won), float(r.win_value), float(r.win_recv)) for r in _wk_won_rows if r.bucket}
-
-    # Q3: Completed leads by complete_date (fallback → stage updated date → submit/created)
-    _wk_comp_dt = _f.coalesce(CRMLead.complete_date, _sa_cast(CRMLead.solar_pipeline_status_updated_at, _sa_Date), _trend_date_wk)
-    _wk_comp_rows = trend_base.filter(_completed_cond, _wk_comp_dt >= _wk12_start.date()).with_entities(
-        _f.date_trunc('week', _wk_comp_dt).label('bucket'),
-        _f.count(CRMLead.id).label('completed'),
-        _f.coalesce(_f.sum(_eff_dv()), 0).label('comp_value'),
-        _f.coalesce(_f.sum(CRMLead.deal_value_received), 0).label('comp_recv'),
-    ).group_by('bucket').all()
-    _wk_comp_map = {r.bucket.date(): (int(r.completed), float(r.comp_value), float(r.comp_recv)) for r in _wk_comp_rows if r.bucket}
-
-    # DC-INSTALLED-STAGE-DATE-001 (Weekly)
-    _effective_inst_dt_wk = _f.coalesce(
-        CRMLead.installation_date,
-        _sa_cast(CRMLead.solar_pipeline_status_updated_at, _sa_Date),
-        CRMLead.complete_date,
-        _trend_date_wk
-    )
-    _wk_inst_rows = trend_base.filter(_installed_cond, _effective_inst_dt_wk >= _wk12_start.date()).with_entities(
-        _f.date_trunc('week', _effective_inst_dt_wk).label('bucket'),
-        _f.count(CRMLead.id).label('installed')
-    ).group_by('bucket').all()
-    _wk_inst_map = {r.bucket.date(): int(r.installed) for r in _wk_inst_rows if r.bucket}
-
-    _stage_upd_dt_wk = _f.coalesce(_sa_cast(CRMLead.solar_pipeline_status_updated_at, _sa_Date), CRMLead.installation_date, _trend_date_wk)
-
-    _wk_inst_pend_rows = trend_base.filter(CRMLead.solar_pipeline_status == 'installation_pending', _stage_upd_dt_wk >= _wk12_start.date()).with_entities(
-        _f.date_trunc('week', _stage_upd_dt_wk).label('bucket'),
-        _f.count(CRMLead.id).label('inst_pending')
-    ).group_by('bucket').all()
-    _wk_inst_pend_map = {r.bucket.date(): int(r.inst_pending) for r in _wk_inst_pend_rows if r.bucket}
-
-    _wk_net_meter_pend_rows = trend_base.filter(CRMLead.solar_pipeline_status == 'net_meter_pending', _stage_upd_dt_wk >= _wk12_start.date()).with_entities(
-        _f.date_trunc('week', _stage_upd_dt_wk).label('bucket'),
-        _f.count(CRMLead.id).label('net_meter_pending')
-    ).group_by('bucket').all()
-    _wk_net_meter_pend_map = {r.bucket.date(): int(r.net_meter_pending) for r in _wk_net_meter_pend_rows if r.bucket}
-
-    _wk_bal_pend_rows = trend_base.filter(CRMLead.solar_pipeline_status == 'balance_pending', _stage_upd_dt_wk >= _wk12_start.date()).with_entities(
-        _f.date_trunc('week', _stage_upd_dt_wk).label('bucket'),
-        _f.count(CRMLead.id).label('bal_pending')
-    ).group_by('bucket').all()
-    _wk_bal_pend_map = {r.bucket.date(): int(r.bal_pending) for r in _wk_bal_pend_rows if r.bucket}
-
-    _wk_sub_pend_rows = trend_base.filter(CRMLead.solar_pipeline_status == 'subsidy_pending', _stage_upd_dt_wk >= _wk12_start.date()).with_entities(
-        _f.date_trunc('week', _stage_upd_dt_wk).label('bucket'),
-        _f.count(CRMLead.id).label('subsidy_pending')
-    ).group_by('bucket').all()
-    _wk_sub_pend_map = {r.bucket.date(): int(r.subsidy_pending) for r in _wk_sub_pend_rows if r.bucket}
-
-    _wk_at_bank_rows = trend_base.filter(CRMLead.solar_pipeline_status == 'pending_with_bank', _stage_upd_dt_wk >= _wk12_start.date()).with_entities(
-        _f.date_trunc('week', _stage_upd_dt_wk).label('bucket'),
-        _f.count(CRMLead.id).label('at_bank')
-    ).group_by('bucket').all()
-    _wk_at_bank_map = {r.bucket.date(): int(r.at_bank) for r in _wk_at_bank_rows if r.bucket}
-
-    _wk_pmt_dt = _f.coalesce(
-        _sa_cast(CRMLead.first_payment_received_date, _sa_Date),
-        _tx_sub.c.min_tx_date
-    )
-    _wk_pmt_recd_rows = trend_base.outerjoin(_tx_sub, CRMLead.id == _tx_sub.c.lead_id).filter(
-        _pmt_cond,
-        _wk_pmt_dt >= _wk12_start.date()
-    ).with_entities(
-        _f.date_trunc('week', _wk_pmt_dt).label('bucket'),
-        _f.count(CRMLead.id).label('pmt_recd')
-    ).group_by('bucket').all()
-    _wk_pmt_recd_map = {r.bucket.date(): int(r.pmt_recd) for r in _wk_pmt_recd_rows if r.bucket}
-
     weekly_trend = []
     for _wk in range(11, -1, -1):
         _ws = _week_start - _td(weeks=_wk)
         _w_start = _ws.date()
-        _tot_data = _wk_tot_map.get(_w_start, (0, 0, 0.0, 0, 0.0, 0, 0, 0, 0.0, 0, 0))
+        _tot_data = _wk_tot.get(_w_start, [0, 0, 0.0, 0, 0.0, 0, 0, 0, 0.0, 0, 0])
         (
             _w_total, _w_submitted, _w_submitted_value, _w_pipeline, _w_pipeline_value,
             _w_at_bank, _w_eb_change, _w_in_progress, _w_inprog_value,
             _w_inst_pending, _w_bal_pending
         ) = _tot_data
-        _w_won, _w_dv, _w_wr = _wk_won_map.get(_ws.date(), (0, 0.0, 0.0))
-        _w_comp, _w_fdv, _w_cr = _wk_comp_map.get(_ws.date(), (0, 0.0, 0.0))
-        _w_installed = _wk_inst_map.get(_ws.date(), 0)
-        _w_net_meter_pending = _wk_net_meter_pend_map.get(_ws.date(), 0)
-        _w_first_pmt_recd = _wk_pmt_recd_map.get(_ws.date(), 0)
-        _w_sub_pending = _wk_sub_pend_map.get(_ws.date(), 0)
+        _w_won, _w_dv, _w_wr = _wk_won.get(_w_start, [0, 0.0, 0.0])
+        _w_comp, _w_fdv, _w_cr = _wk_comp.get(_w_start, [0, 0.0, 0.0])
+        _w_installed = _wk_inst.get(_w_start, 0)
+        _w_net_meter_pending = _wk_net_meter_pend.get(_w_start, 0)
+        _w_first_pmt_recd = _wk_pmt_recd.get(_w_start, 0)
+        _w_sub_pending = _wk_sub_pend.get(_w_start, 0)
         weekly_trend.append({
             'label': f"W{12-_wk} ({_ws.strftime('%d %b')})",
             'total': _w_total, 'won': _w_won,
@@ -7477,7 +7400,7 @@ def lead_analytics(
     for _k in _LOAN_STATUS_KEYS:
         pipeline_breakdown[_k] = _ls_map.get(_k, 0)
 
-    return {
+    _analytics_res = {
         'summary': {
             'total_leads': total_leads,
             'won_leads': won_leads,
@@ -7515,6 +7438,8 @@ def lead_analytics(
         'monthly_trend': monthly_trend,
         'weekly_trend': weekly_trend
     }
+    _LEAD_ANALYTICS_CACHE[_ckey] = (_now, _analytics_res)
+    return _analytics_res
 
 
 def _resolve_phone_duplicate(phone, alt_phone, db, exclude_lead_id=None):

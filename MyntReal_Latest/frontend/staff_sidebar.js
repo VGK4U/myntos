@@ -51,60 +51,43 @@ ThemeManager.init();
 window.MENU_MASTER_DATA = window.MENU_MASTER_DATA || null;
 var MENU_MASTER_DATA = window.MENU_MASTER_DATA;
 
-// DC-SIDEBAR-RACE-FIX-001 (Jun 2026): Promise that resolves when menu-master.js is ready.
-let _menuMasterReady = (function loadMenuMaster() {
+// DC-SIDEBAR-RACE-FIX-001: Promise that resolves when menu-master.js is ready.
+window._menuMasterReady = window._menuMasterReady || (function loadMenuMaster() {
     return new Promise(function(resolve) {
-        // Already loaded synchronously — no wait needed
         const existingMaster = window.MENU_MASTER || (typeof MENU_MASTER !== "undefined" ? MENU_MASTER : null);
         if (existingMaster && existingMaster.length > 0) {
             MENU_MASTER_DATA = window.MENU_MASTER_DATA = existingMaster;
-            console.log("[DC-SIDEBAR] MENU_MASTER already available:", existingMaster.length, "sections");
             return resolve();
         }
         var script = document.createElement("script");
-        script.src = "/public/js/menu-master.js?v=" + Date.now();
+        script.src = "/public/js/menu-master.js?v=20260902";
         script.onload = function() {
             const loadedMaster = window.MENU_MASTER || (typeof MENU_MASTER !== "undefined" ? MENU_MASTER : null);
             if (loadedMaster && loadedMaster.length > 0) {
                 MENU_MASTER_DATA = window.MENU_MASTER_DATA = loadedMaster;
-                console.log("[DC-SIDEBAR] MENU_MASTER loaded:", loadedMaster.length, "sections");
-            } else {
-                console.warn("[DC-SIDEBAR] menu-master.js loaded but MENU_MASTER not defined");
             }
             resolve();
         };
         script.onerror = function() {
-            console.warn("[DC-SIDEBAR] Failed to load menu-master.js — sidebar dynamic sections will be empty");
-            resolve(); // unblock init() so we still render pinned items
+            console.warn("[SIDEBAR] Failed to load menu-master.js");
+            resolve();
         };
-        // Safety timeout: don't block init() forever if script hangs
-        setTimeout(resolve, 3000);
+        setTimeout(resolve, 1500);
         (document.head || document.documentElement).appendChild(script);
     });
 })();
+var _menuMasterReady = window._menuMasterReady;
 
 
 window.StaffSidebar = window.StaffSidebar || {
-    // Allowed menus from /my-menus API (Zero-Default Access Policy)
-    allowedMenuPaths: null,  // Set of allowed route_path values
-    allowedMenuCodes: null,  // DC Protocol (Jan 22, 2026): Set of allowed menu_code values
-    rawMenus: null,          // Raw menu items returned from API
+    allowedMenuPaths: null,
+    allowedMenuCodes: null,
+    rawMenus: null,
     SUPREME_STAFF_TYPES: ["VGK4U_SUPREME", "RVZ_SUPREME", "VGK4U", "VGK4U Supreme", "VGK4U_EA", "KEY_LEADERSHIP", "KEY LEADERSHIP", "EA"],
-    zeroAccessMessage: null, // Message to show when no access granted
-    // DC Protocol (Jan 12, 2026): REMOVED ALL HARDCODED MENU CONFIG
-    // Sidebar is now 100% API-driven from /staff/menu-settings/registry
-    // Database sidebar_section_order is the SINGLE SOURCE OF TRUTH for section ordering
-    // Expected 19 sections: PROGRESS, STAFF DASHBOARD, ACCOUNTS, BUSINESS PARTNERS, 
-    // CONFIGURATION, CRM & LEADS, JOURNEY TRACKING, KRA MANAGEMENT, LOCATION TRACKING,
-    // TASK MANAGEMENT, ATTENDANCE, TIMESHEET, SERVICE TICKETS, REIMBURSEMENT, 
-    // NDA MANAGEMENT, ZYNOVA, MNR, MNR USER SIDEBAR
-    menuConfig: {},  // Legacy - kept empty for backward compatibility, not used
-
-
-    // Current page path
+    zeroAccessMessage: null,
+    menuConfig: {},
     currentPath: window.location.pathname,
 
-    // Helper for precise route active matching (prevents false prefix matching on /staff)
     isPathActive: function(href) {
         if (!href) return false;
         const c = (this.currentPath || '').split('?')[0].replace(/\/$/, '');
@@ -113,18 +96,47 @@ window.StaffSidebar = window.StaffSidebar || {
         return c === h || (c.startsWith(h + '/') && h.length > 7);
     },
 
-    // User data cache
     userData: null,
 
-    // Initialize sidebar
+    // Initialize sidebar with INSTANT first-paint from local cache
     init: async function(containerId = 'staffSidebar') {
         const container = document.getElementById(containerId);
-        if (!container) {
-            console.error('Sidebar container not found:', containerId);
-            return;
+        if (!container) return;
+
+        // 1. Instant Synchronous First-Paint from Local Cache (0 ms - No Blank Screen)
+        try {
+            const rawUser = localStorage.getItem('staff_user');
+            if (rawUser) {
+                this.userData = JSON.parse(rawUser);
+            }
+            const cachedRegistry = localStorage.getItem('staff_menu_registry_cache');
+            if (cachedRegistry) {
+                this._parseAndSetDynamicConfig(JSON.parse(cachedRegistry));
+            }
+            if (this.userData) {
+                const staffType = this.userData.staff_type || '';
+                const empCode = this.userData.emp_code || '';
+                const roleCode = (this.userData.role?.role_code || '').toLowerCase();
+                const supremeVariants = ["VGK4U_SUPREME", "RVZ_SUPREME", "VGK4U", "VGK4U Supreme", "VGK4U_EA", "KEY_LEADERSHIP", "KEY LEADERSHIP", "EA"];
+                if ((staffType && supremeVariants.includes(staffType)) || ['MR10018', 'MR10001', 'MR10016', 'MR10025'].includes(empCode) || ['key_leadership', 'vgk4u', 'ea'].includes(roleCode)) {
+                    this.allowedMenuPaths = '*';
+                }
+                // Paint immediately
+                this.updateHeaderUserInfo();
+                this.createMobileToggle();
+                this.createBackdrop();
+                container.innerHTML = this.renderSidebar();
+                this.restoreSidebarState();
+                this.bindGroupToggles();
+                this.restoreSectionStates();
+                this.autoExpandActiveSection();
+                this.highlightCurrentPage();
+            }
+        } catch (e) {
+            console.warn('[DC-SIDEBAR] Fast-path render fallback:', e);
         }
 
-        // Get user data from localStorage or API
+        // 2. Background Revalidation & Full Sync
         await this.loadUserData();
         
         if (this.userData) {
@@ -134,7 +146,6 @@ window.StaffSidebar = window.StaffSidebar || {
                 const currentPath = window.location.pathname;
                 const isAllowed = allowedPaths.some(p => currentPath === p || currentPath.startsWith(p + '/') || currentPath.startsWith(p + '?'));
                 if (!isAllowed) {
-                    console.warn('[DC-REDIRECT] Restricted freelancer accessed unauthorized page:', currentPath, 'redirecting to dashboard');
                     window.location.href = '/staff/dashboard';
                     return;
                 }
@@ -142,62 +153,27 @@ window.StaffSidebar = window.StaffSidebar || {
         }
         
         if (!this.userData) {
-            try {
-                const rawUser = localStorage.getItem('staff_user');
-                if (rawUser) {
-                    this.userData = JSON.parse(rawUser);
-                }
-            } catch (_) {}
-        }
-        
-        if (!this.userData) {
             if (this.authError === 'NO_TOKEN' || this.authError === 'AUTH_FAILED') {
                 const currentPath = window.location.pathname + window.location.search;
                 window.location.href = '/staff/login?redirect=' + encodeURIComponent(currentPath);
-            } else {
-                console.warn('[DC-SIDEBAR] User data not available, but not an auth error - continuing');
             }
             return;
         }
 
-        // DC Protocol (Dec 28, 2025): Update header user info immediately after user data loads
         this.updateHeaderUserInfo();
-
-        // Zero-Default Access Policy: Load allowed menus after user data
         await this.loadAllowedMenus();
-
-        // DC_TRAINING_GATE_001: Hard-lock sidebar to Training Videos if training incomplete
         await this.applyTrainingGate();
-
-        // DC-SIDEBAR-RACE-FIX-001: Ensure MENU_MASTER is fully loaded before rendering
-        // Without this await, getMenuForRole() sees MENU_MASTER as undefined and returns
-        // empty dynamic sections — only the hardcoded pinned items (Progress, Task Planner…)
-        // appear in the sidebar, making it look broken/incomplete.
         if (typeof _menuMasterReady !== 'undefined') await _menuMasterReady;
 
-        // Create mobile toggle button and backdrop
+        // Render full verified state
         this.createMobileToggle();
         this.createBackdrop();
-
-        // Render sidebar
         container.innerHTML = this.renderSidebar();
-        
-        // Restore sidebar visibility state (desktop collapsed)
         this.restoreSidebarState();
-        
-        // Bind group toggle handlers
         this.bindGroupToggles();
-        
-        // Restore saved section states
         this.restoreSectionStates();
-        
-        // Auto-expand section containing active page
         this.autoExpandActiveSection();
-        
-        // Highlight current page
         this.highlightCurrentPage();
-        
-        // Close sidebar on nav item click (mobile)
         this.bindMobileNavClose();
     },
     
@@ -243,12 +219,98 @@ window.StaffSidebar = window.StaffSidebar || {
     dynamicMenuConfig: null,
     
     // Load dynamic menu structure from registry API
-    // DC Protocol: Single source of truth for sidebar menu structure
+    _parseAndSetDynamicConfig: function(data) {
+        if (!data || !data.sections || data.sections.length === 0) return false;
+        try {
+            const dynamicSections = data.sections.map(section => {
+                const sectionObj = {
+                    id: section.id,
+                    title: section.title,
+                    order: section.order || 999,
+                    menu_type: section.menu_type || 'STAFF',
+                    items: (section.items || []).map(item => ({
+                        icon: item.icon || 'fas fa-circle',
+                        label: item.label,
+                        href: item.href,
+                        menu_code: item.menu_code,
+                        parent_section: item.parent_section
+                    }))
+                };
+                if (section.subSections && section.subSections.length > 0) {
+                    sectionObj.subSections = section.subSections.map(sub => ({
+                        id: sub.id,
+                        title: sub.title,
+                        icon: sub.icon || 'fas fa-folder',
+                        items: (sub.items || []).map(item => ({
+                            icon: item.icon || 'fas fa-circle',
+                            label: item.label,
+                            href: item.href,
+                            menu_code: item.menu_code
+                        }))
+                    }));
+                }
+                return sectionObj;
+            });
+
+            const legacySectionsToRemove = [
+                'staff-mnr', 'MNR MANAGEMENT', 'staff_mnr_announcements', 'STAFF MNR ANNOUNCEMENTS', 
+                'staff_mnr_kyc_bank', 'STAFF MNR KYC BANK', 'WORKING_MNR', 'WORKING MNR',
+                'USER PORTAL', 'user-portal', 'USER_PORTAL',
+                'USER TEAM', 'user-team', 'USER_TEAM',
+                'USER EARNINGS', 'user-earnings', 'USER_EARNINGS',
+                'NEW REQUIRED', 'new-required', 'NEW_REQUIRED',
+                'NEW NOT REQUIRED', 'new-not-required', 'NEW_NOT_REQUIRED',
+                'SUPER ADMIN', 'superadmin', 'SUPERADMIN', 'super-admin',
+                'RVZ INCOME', 'rvz-income', 'RVZ_INCOME',
+                'WORKING', 'WORKING_STAFF', 'WORKING STAFF',
+                'earnings-admin', 'EARNINGS ADMIN', 'members-admin', 'MEMBERS ADMIN',
+                'admin-functions', 'ADMIN FUNCTIONS', 'withdrawal-admin', 'WITHDRAWAL ADMIN',
+                'rvz-earnings', 'RVZ EARNINGS',
+                'FINANCE', 'finance', 'FINANCIAL MANAGEMENT',
+                'RVZ ADMIN', 'rvz-admin', 'RVZ_ADMIN',
+                'ADMIN', 'admin', 'ADMIN EARNINGS', 'admin-earnings', 'ADMIN_EARNINGS',
+                'ADMIN MEMBERS', 'admin-members', 'ADMIN_MEMBERS'
+            ];
+
+            for (let i = dynamicSections.length - 1; i >= 0; i--) {
+                const section = dynamicSections[i];
+                const sId = (section.id || '').toLowerCase();
+                const sTitle = section.title || '';
+                if (legacySectionsToRemove.includes(section.id) || 
+                    legacySectionsToRemove.includes(sTitle) ||
+                    legacySectionsToRemove.includes(sId)) {
+                    dynamicSections.splice(i, 1);
+                }
+            }
+
+            dynamicSections.sort((a, b) => {
+                const aOrder = a.order || 999;
+                const bOrder = b.order || 999;
+                if (aOrder !== bOrder) return aOrder - bOrder;
+                return (a.title || '').localeCompare(b.title || '');
+            });
+
+            this.dynamicMenuConfig = { sections: dynamicSections };
+            return true;
+        } catch (e) {
+            console.warn('[DC-SIDEBAR] Error in _parseAndSetDynamicConfig:', e);
+            return false;
+        }
+    },
+
+    // Load dynamic menu structure from registry API with instant cache
     loadDynamicMenuConfig: async function() {
         try {
             const apiUrl = '/api/v1/staff/menu-settings/registry?audience=staff&include_sections=true';
             
-            // Try to fetch from registry API
+            // Try cache first
+            const cached = localStorage.getItem('staff_menu_registry_cache');
+            if (cached && !this.dynamicMenuConfig) {
+                try {
+                    this._parseAndSetDynamicConfig(JSON.parse(cached));
+                } catch (_) {}
+            }
+
             let data = null;
             if (typeof staffFetchJson === 'function') {
                 data = await staffFetchJson(apiUrl);
@@ -265,142 +327,23 @@ window.StaffSidebar = window.StaffSidebar || {
             }
             
             if (data && data.success && data.sections && data.sections.length > 0) {
-                // Transform registry sections to menuConfig format
-                // DC Protocol (Jan 2026): Include subSections for nested menus like ZYNOVA
-                const dynamicSections = data.sections.map(section => {
-                    const sectionObj = {
-                        id: section.id,
-                        title: section.title,
-                        order: section.order || 999,  // DC Protocol (Jan 12, 2026): Include order from database
-                        menu_type: section.menu_type || 'STAFF',
-                        items: (section.items || []).map(item => ({
-                            icon: item.icon || 'fas fa-circle',
-                            label: item.label,
-                            href: item.href,
-                            menu_code: item.menu_code,
-                            parent_section: item.parent_section  // DC Protocol (Jan 10, 2026): Include for MNR USER nesting
-                        }))
-                    };
-                    
-                    // Include subSections if present (for ZYNOVA with Real Dreams submenu)
-                    if (section.subSections && section.subSections.length > 0) {
-                        sectionObj.subSections = section.subSections.map(sub => ({
-                            id: sub.id,
-                            title: sub.title,
-                            icon: sub.icon || 'fas fa-folder',
-                            items: (sub.items || []).map(item => ({
-                                icon: item.icon || 'fas fa-circle',
-                                label: item.label,
-                                href: item.href,
-                                menu_code: item.menu_code
-                            }))
-                        }));
-                    }
-                    
-                    return sectionObj;
-                });
-                
-                console.log('[DC-SIDEBAR-REGISTRY] Dynamic menu loaded:', data.total_menus, 'menus in', data.total_sections, 'sections');
-                
-                // DC Protocol (Jan 8, 2026): Store flat menu list for MNR User Sidebar filtering
-                const filteredMenus = data.menus || [];
-                
-                // DC Protocol (Jan 12, 2026): FULLY DATABASE-DRIVEN NESTING
-                // REMOVED all hardcoded nesting logic for STAFF MENUS, ACCOUNTS, ZYNOVA
-                // Backend now handles all nesting via is_submenu and parent_section database fields
-                // The API returns properly nested subSections directly - no frontend manipulation needed
-                console.log('[DC-SIDEBAR-REGISTRY] Using database-driven nesting (no frontend transformation)');
-                
-                // DC Protocol (Jan 11, 2026): SIMPLIFIED MNR HANDLING
-                // Trust the backend's pre-nested structure - only remove legacy/duplicate sections
-                // The API already returns MNR with proper subSections
-                
-                // List of legacy sections to remove (not valid parent sections)
-                const legacySectionsToRemove = [
-                    'staff-mnr', 'MNR MANAGEMENT', 'staff_mnr_announcements', 'STAFF MNR ANNOUNCEMENTS', 
-                    'staff_mnr_kyc_bank', 'STAFF MNR KYC BANK', 'WORKING_MNR', 'WORKING MNR',
-                    'USER PORTAL', 'user-portal', 'USER_PORTAL',
-                    'USER TEAM', 'user-team', 'USER_TEAM',
-                    'USER EARNINGS', 'user-earnings', 'USER_EARNINGS',
-                    'NEW REQUIRED', 'new-required', 'NEW_REQUIRED',
-                    'NEW NOT REQUIRED', 'new-not-required', 'NEW_NOT_REQUIRED',
-                    'SUPER ADMIN', 'superadmin', 'SUPERADMIN', 'super-admin',
-                    'RVZ INCOME', 'rvz-income', 'RVZ_INCOME',
-                    'WORKING', 'WORKING_STAFF', 'WORKING STAFF',
-                    'earnings-admin', 'EARNINGS ADMIN', 'members-admin', 'MEMBERS ADMIN',
-                    'admin-functions', 'ADMIN FUNCTIONS', 'withdrawal-admin', 'WITHDRAWAL ADMIN',
-                    'rvz-earnings', 'RVZ EARNINGS',
-                    'FINANCE', 'finance', 'FINANCIAL MANAGEMENT',
-                    'RVZ ADMIN', 'rvz-admin', 'RVZ_ADMIN',
-                    'ADMIN', 'admin', 'ADMIN EARNINGS', 'admin-earnings', 'ADMIN_EARNINGS',
-                    'ADMIN MEMBERS', 'admin-members', 'ADMIN_MEMBERS'
-                ];
-                
-                // Remove legacy sections
-                for (let i = dynamicSections.length - 1; i >= 0; i--) {
-                    const section = dynamicSections[i];
-                    const sId = (section.id || '').toLowerCase();
-                    const sTitle = section.title || '';
-                    
-                    if (legacySectionsToRemove.includes(section.id) || 
-                        legacySectionsToRemove.includes(sTitle) ||
-                        legacySectionsToRemove.includes(sId)) {
-                        dynamicSections.splice(i, 1);
-                        console.log('[DC-SIDEBAR-REGISTRY] Removed legacy section:', section.id || sTitle);
-                    }
-                }
-                
-                // Find MNR and log its structure (for debugging)
-                const mnr = dynamicSections.find(s => 
-                    s.id === 'mnr' || s.id === 'mnr' || 
-                    s.title === 'MNR' || s.title === 'MNR'
-                );
-                if (mnr) {
-                    console.log('[DC-SIDEBAR-REGISTRY] MNR found with', 
-                        mnr.items?.length || 0, 'direct items,', 
-                        mnr.subSections?.length || 0, 'subSections');
-                }
-                
-                console.log('[DC-SIDEBAR-REGISTRY] Simplified processing complete');
-                
-                // DC Protocol (Jan 12, 2026): FULLY DATABASE-DRIVEN ORDERING
-                // REMOVED hardcoded sectionOrderMap - database sidebar_section_order is single source of truth
-                // API returns sections pre-sorted by sidebar_section_order from database
-                
-                dynamicSections.sort((a, b) => {
-                    // Use order from API response (comes from database sidebar_section_order)
-                    const aOrder = a.order || 999;
-                    const bOrder = b.order || 999;
-                    if (aOrder !== bOrder) return aOrder - bOrder;
-                    // Alphabetical for same order
-                    return (a.title || '').localeCompare(b.title || '');
-                });
-                
-                console.log('[DC-SIDEBAR-REGISTRY] Sections sorted by database order:', dynamicSections.map(s => `${s.title}(${s.order})`).slice(0, 15));
-                
-                // Store as dynamic menu config for VGK4U Supreme role
-                this.dynamicMenuConfig = {
-                    sections: dynamicSections
-                };
-                
-                return true;
+                try {
+                    localStorage.setItem('staff_menu_registry_cache', JSON.stringify(data));
+                } catch (_) {}
+                return this._parseAndSetDynamicConfig(data);
             }
-            
-            console.log('[DC-SIDEBAR-REGISTRY] No dynamic menu available, using static config');
             return false;
         } catch (error) {
-            console.warn('[DC-SIDEBAR-REGISTRY] Error loading dynamic menu, falling back to static:', error.message);
+            console.warn('[DC-SIDEBAR-REGISTRY] Error loading dynamic menu:', error.message);
             return false;
         }
     },
 
     // Load allowed menus from /my-menus API (Zero-Default Access Policy)
     // DC Protocol: Staff menu access is employee-centric (unified across ALL companies)
+    // MENU_MASTER is the authoritative single source of truth for sidebar structure & ordering
     loadAllowedMenus: async function() {
         try {
-            // DC Protocol (Dec 29, 2025): Try to load dynamic menu config first
-            await this.loadDynamicMenuConfig();
-            
             // DC Protocol: Only VGK4U (Supreme) has default full access
             // All other staff types (EA, RVZ, MYNT_REAL, etc.) follow Access Matrix control
             const staffType = this.userData?.staff_type || '';
@@ -410,7 +353,6 @@ window.StaffSidebar = window.StaffSidebar || {
             const empCode = this.userData?.emp_code || '';
             const roleCode = (this.userData?.role?.role_code || '').toLowerCase();
             if ((staffType && supremeVariants.includes(staffType)) || ['MR10018', 'MR10001', 'MR10016', 'MR10025'].includes(empCode) || ['key_leadership', 'vgk4u', 'ea'].includes(roleCode)) {
-                console.log('[DC-SIDEBAR] Supreme & Key Leadership bypass: Full menu access for', staffType, empCode);
                 this.allowedMenuPaths = '*';  // Supreme & Key Leadership always get full access
                 return;
             }
@@ -743,10 +685,13 @@ window.StaffSidebar = window.StaffSidebar || {
     getMenuForRole: function() {
         const staffType = this.userData?.staff_type || '';
         
-        // Use MENU_MASTER as the source of truth
+        // Use MENU_MASTER as the source of truth, fallback to dynamicMenuConfig
         const menuMaster = window.MENU_MASTER || (typeof MENU_MASTER !== 'undefined' ? MENU_MASTER : null) || window.MENU_MASTER_DATA || MENU_MASTER_DATA;
         
         if (!menuMaster || menuMaster.length === 0) {
+            if (this.dynamicMenuConfig && this.dynamicMenuConfig.sections && this.dynamicMenuConfig.sections.length > 0) {
+                return { sections: this.dynamicMenuConfig.sections, zeroAccess: false };
+            }
             return { sections: [], zeroAccess: false };
         }
         

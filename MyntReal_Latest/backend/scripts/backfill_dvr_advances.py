@@ -3,7 +3,7 @@ import sys
 import logging
 
 # Add backend directory to sys.path
-backend_dir = "/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/backend"
+backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, backend_dir)
 
 from app.core.database import SessionLocal, settings

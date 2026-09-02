@@ -8158,7 +8158,9 @@ const server = http.createServer(async (req, res) => {
         proxyUrl.includes('/meta-templates/submit') ||
         proxyUrl.includes('/meta-templates/ai-draft') ||
         proxyUrl.includes('/meta-templates/sync-status') ||
-        proxyUrl.includes('/staff/progress/ranking') ||
+        proxyUrl.includes('/staff/progress') ||
+        proxyUrl.includes('/day-progress') ||
+        proxyUrl.includes('/day-plans') ||
         proxyUrl.includes('/lead-analytics') ||
         proxyUrl.includes('/employee-performance-dashboard') ||
         proxyUrl.includes('/exec-trend-leads');
@@ -8167,7 +8169,7 @@ const server = http.createServer(async (req, res) => {
         method: req.method,
         headers: proxyHeaders,
         agent: false,
-        timeout: isLongRunning ? 120000 : 30000
+        timeout: isLongRunning ? 120000 : 60000
       };
       
       const proxyReq = http.request(backendUrl, options, (backendRes) => {
@@ -30739,22 +30741,20 @@ server.listen(port, hostname, () => {
   // DC_CACHE_WATCHER: Start watching HTML files for changes so edits are served without server restart
   setupHtmlCacheWatcher();
 
-  // Secondary listeners on ports 3000 and 5001 for backwards compatibility
-  [3000, 5001].forEach((altPort) => {
-    if (boundPort !== altPort) {
-      try {
-        const secServer = http.createServer(server.listeners('request')[0]);
-        secServer.on('error', (e) => {
-          if (e.code !== 'EADDRINUSE') console.error(`Secondary server (${altPort}) error:`, e.message);
-        });
-        secServer.listen(altPort, () => {
-          console.log(`✅ Secondary static server running at http://localhost:${altPort}/`);
-        });
-      } catch (e) {
-        /* ignore */
-      }
+  // Secondary listener on port 3000 for backwards compatibility
+  if (boundPort !== 3000) {
+    try {
+      const secServer = http.createServer(server.listeners('request')[0]);
+      secServer.on('error', (e) => {
+        if (e.code !== 'EADDRINUSE') console.error('Secondary server (3000) error:', e.message);
+      });
+      secServer.listen(3000, () => {
+        console.log('✅ Secondary static server running at http://localhost:3000/');
+      });
+    } catch (e) {
+      /* ignore */
     }
-  });
+  }
 });
 
 module.exports = server;

@@ -480,9 +480,14 @@
     </div>
     
     <script>
+        // Auto-correct port in local development if port 5001 was omitted
+        if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (window.location.port === '' || window.location.port === '80')) {
+            window.location.replace('http://127.0.0.1:5001' + window.location.pathname + window.location.search);
+        }
+
         function resolveApiUrl(url) {
             if (!url) return url;
-            if (window.location.protocol === 'file:') {
+            if (window.location.protocol === 'file:' || ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (window.location.port === '' || window.location.port === '80'))) {
                 return 'http://127.0.0.1:5001' + url;
             }
             return url;
@@ -553,19 +558,36 @@
         }
         
         document.addEventListener('DOMContentLoaded', async function() {
-            const token = localStorage.getItem('staff_token');
-            if (token) {
-                const valid = await isTokenValid(token);
-                if (valid) {
-                    window.location.href = getRedirectUrl();
-                    return;
-                } else {
-                    localStorage.removeItem('staff_token');
-                    localStorage.removeItem('staff_user');
+            // 1. Immediately bind form submission listener synchronously
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', handleLogin);
+            }
+
+            // 2. Handle explicit logout
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('logout') === 'true') {
+                localStorage.removeItem('staff_token');
+                localStorage.removeItem('staff_user');
+                sessionStorage.removeItem('staff_logout_reason');
+                document.cookie = "staff_token=; path=/; max-age=0";
+                document.cookie = "session_token=; path=/; max-age=0";
+                document.cookie = "session=; path=/; max-age=0";
+            } else {
+                const token = localStorage.getItem('staff_token');
+                if (token) {
+                    const valid = await isTokenValid(token);
+                    if (valid) {
+                        window.location.href = getRedirectUrl();
+                        return;
+                    } else {
+                        localStorage.removeItem('staff_token');
+                        localStorage.removeItem('staff_user');
+                    }
                 }
             }
             
-            // Check for auto-logout message
+            // 3. Check for auto-logout message
             const logoutReason = sessionStorage.getItem('staff_logout_reason');
             if (logoutReason) {
                 const alertContainer = document.getElementById('alertContainer');
@@ -587,8 +609,6 @@
                 // Clear the message after displaying
                 sessionStorage.removeItem('staff_logout_reason');
             }
-            
-            document.getElementById('loginForm').addEventListener('submit', handleLogin);
         });
         
         function togglePassword() {
@@ -613,11 +633,11 @@
             const alertContainer = document.getElementById('alertContainer');
             
             loginBtn.disabled = true;
-            loginBtn.innerHTML = '<span class="spinner-border me-2"></span>Logging in...';
+            loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Logging in...';
             alertContainer.innerHTML = '';
             
             try {
-                const response = await fetchWithRetry('/api/v1/staff/auth/login', {
+                const response = await fetch('/api/v1/staff/auth/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -646,7 +666,7 @@
 
                     setTimeout(() => {
                         window.location.href = getRedirectUrl();
-                    }, 500);
+                    }, 400);
                 } else {
                     const errorMsg = (typeof data.detail === 'string' ? data.detail : (data.message || data.error)) || 'Invalid Employee ID or password';
                     throw new Error(errorMsg);

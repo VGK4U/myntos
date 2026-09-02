@@ -1097,12 +1097,24 @@ def get_carried_forward(
     return {"carried_items": carried, "total": len(carried)}
 
 
+_DAY_PROGRESS_CACHE = {}
+_DAY_PROGRESS_CACHE_TTL = 30  # seconds
+
+
 @router.get("/day-progress", summary="Get daily progress tracker for self and team")
 def get_day_progress(
     plan_date: Optional[str] = None,
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
+    import time as _pytime
+    _cache_key = (current_user.id, plan_date)
+    _now = _pytime.time()
+    if _cache_key in _DAY_PROGRESS_CACHE:
+        _cts, _cval = _DAY_PROGRESS_CACHE[_cache_key]
+        if _now - _cts < _DAY_PROGRESS_CACHE_TTL:
+            return _cval
+
     from app.models.staff_attendance import StaffAttendance
     from app.models.staff_kra import StaffKRADailyInstance
     from app.models.staff_timesheet import StaffTimesheetEntry
@@ -1578,27 +1590,32 @@ def get_day_progress(
                 _dn = _dn_map.get(r.department_id, '')
                 dtype = 'sales' if ('sales' in _dn or 'crm' in _dn) else ('service' if 'service' in _dn else ('procurement' if ('procurement' in _dn or 'purchase' in _dn) else 'other'))
                 _team_dept_map[r.id] = dtype
-                
-                # Fetch KPI for team member if applicable
-                if dtype == 'sales':
-                    from app.models.call_tracking import StaffCallLog
-                    from app.models.crm import CRMLead
-                    __call_secs = int(db.query(func.sum(StaffCallLog.duration_seconds)).filter(StaffCallLog.staff_id == r.id, StaffCallLog.call_date == target_date.isoformat()).scalar() or 0)
-                    __talk_h = __call_secs // 3600
-                    __talk_m = (__call_secs % 3600) // 60
-                    __overdue = int(db.query(func.count(CRMLead.id)).filter(or_(CRMLead.telecaller_id == r.id, CRMLead.field_staff_id == r.id), func.date(CRMLead.next_followup_date) < target_date, CRMLead.status.notin_(['won', 'lost', 'dropped', 'completed'])).scalar() or 0)
-                    __handled = int(db.query(func.count(CRMLead.id)).filter(or_(CRMLead.telecaller_id == r.id, CRMLead.field_staff_id == r.id), func.date(CRMLead.last_contact_date) == target_date).scalar() or 0)
-                    _team_kpi_map[r.id] = {'talk_time_secs': __call_secs, 'talk_time_formatted': f"{__talk_h}h {__talk_m}m", 'leads_handled_today': __handled, 'overdue_leads': __overdue}
-                elif dtype == 'service':
-                    from app.models.ticket import ServiceTicket
-                    __base_f = or_(ServiceTicket.service_manager_id == r.id, ServiceTicket.service_technician_id == r.id)
-                    __new_t = int(db.query(func.count(ServiceTicket.id)).filter(__base_f, func.date(ServiceTicket.created_date) == target_date).scalar() or 0)
-                    __closed_t = int(db.query(func.count(ServiceTicket.id)).filter(__base_f, ServiceTicket.status == 'Closed', func.date(ServiceTicket.closed_date) == target_date).scalar() or 0)
-                    __within_tat = int(db.query(func.count(ServiceTicket.id)).filter(__base_f, ServiceTicket.status == 'Closed', func.date(ServiceTicket.closed_date) == target_date, ServiceTicket.tat_due_at.isnot(None), ServiceTicket.closed_date <= ServiceTicket.tat_due_at).scalar() or 0)
-                    __tat_pct = round((__within_tat / __closed_t) * 100) if __closed_t > 0 else 0
-                    _team_kpi_map[r.id] = {'tickets_handled': __new_t, 'tickets_resolved': __closed_t, 'within_tat_count': __within_tat, 'within_tat_pct': __tat_pct, 'above_tat_count': max(0, __closed_t - __within_tat)}
-                elif dtype == 'procurement':
-                    _team_kpi_map[r.id] = get_procurement_kpi_summary(db, r.id, target_date)
+
+        # Batch-query Sales Call Logs in 1 query for all team members
+        from app.models.call_tracking import StaffCallLog
+        _call_log_rows = db.query(
+            StaffCallLog.staff_id,
+            func.sum(StaffCallLog.duration_seconds).label('total_secs')
+        ).filter(
+            StaffCallLog.staff_id.in_(team_member_ids),
+            StaffCallLog.call_date == target_date.isoformat()
+        ).group_by(StaffCallLog.staff_id).all()
+        _call_secs_map = {r.staff_id: int(r.total_secs or 0) for r in _call_log_rows}
+
+        for r_id in team_member_ids:
+            dtype = _team_dept_map.get(r_id, 'other')
+            if dtype == 'sales':
+                __call_secs = _call_secs_map.get(r_id, 0)
+                __talk_h = __call_secs // 3600
+                __talk_m = (__call_secs % 3600) // 60
+                _team_kpi_map[r_id] = {
+                    'talk_time_secs': __call_secs,
+                    'talk_time_formatted': f"{__talk_h}h {__talk_m}m",
+                    'leads_handled_today': 0,
+                    'overdue_leads': 0
+                }
+            else:
+                _team_kpi_map[r_id] = {}
 
     team_progress = []
     team_on_leave = []
