@@ -338,7 +338,7 @@ export class SideDrawer {
           { menu_code: "KRA_STATUS", label: `<i class="fas fa-chart-bar" style="margin-right: 8px; width: 18px; text-align: center;"></i> KRA Status`, route: "kras" },
           { menu_code: "TIME_SHEET", label: `<i class="fas fa-clock" style="margin-right: 8px; width: 18px; text-align: center;"></i> Time Sheet`, route: "timesheet" },
           { menu_code: "WHATSAPP_CENTER", label: `<i class="fab fa-whatsapp" style="margin-right: 8px; width: 18px; text-align: center; color: #25d366;"></i> WhatsApp Center`, route: "staff-whatsapp" },
-          { menu_code: "CALLING_PAGE", label: `<i class="fas fa-phone-alt" style="margin-right: 8px; width: 18px; text-align: center; color: #3b82f6;"></i> Calling Page`, route: "auto-dialer" }
+          { menu_code: "SOFTPHONE", label: `<i class="fas fa-phone-alt" style="margin-right: 8px; width: 18px; text-align: center; color: #3b82f6;"></i> Softphone`, route: "softphone" }
         ];
       }
     }
@@ -510,39 +510,49 @@ export class SideDrawer {
     }
 
     const WORKFLOWS_ORDER: Record<string, number> = {
-      'MNR_BANK_WISE_LEADS': 1,
-      'BANK_WISE_LEADS': 1,
-      'staff_bank_wise_leads': 1,
-      'SOLAR_LEADS': 2,
-      'staff_solar_leads': 2,
-      'mnr_solar_leads': 2,
-      'ZYN_REAL_ESTATE': 3,
-      'staff_real_dreams_leads': 3,
-      'mnr_real_dreams_leads': 3,
-      'EV_B2B_LEADS': 4,
-      'staff_ev_b2b_leads': 4,
-      'mnr_ev_b2b_leads': 4,
-      'EV_B2C_LEADS': 5,
-      'staff_ev_b2c_leads': 5,
-      'mnr_ev_b2c_leads': 5,
-      'EV_SPARES_LEADS': 6,
-      'staff_ev_spares_leads': 6,
-      'mnr_ev_spares_leads': 6,
-      'ZYN_INSURANCE': 7,
-      'staff_insurance_leads': 7,
-      'mnr_insurance_leads': 7,
-      'ETC_LEADS': 8,
-      'staff_etc_leads': 8,
-      'mnr_etc_leads': 8,
-      'MNR_LEADS': 9,
-      'staff_mnr_leads': 9,
-      'mnr_category_leads': 9,
-      'EXECUTIVE_DASHBOARD': 10,
-      'staff_executive_dashboard': 10,
-      'mnr_executive_dashboard': 10,
-      'CATEGORY_LEADS_MASTER': 11,
-      'mnr_leads_master': 11,
-      'staff_mnr_leads_master': 11
+      'EXECUTIVE_DASHBOARD': 1,
+      'staff_executive_dashboard': 1,
+      'mnr_executive_dashboard': 1,
+
+      'MNR_BANK_WISE_LEADS': 2,
+      'BANK_WISE_LEADS': 2,
+      'staff_bank_wise_leads': 2,
+
+      'CATEGORY_LEADS_MASTER': 3,
+      'mnr_leads_master': 3,
+      'staff_mnr_leads_master': 3,
+
+      'SOLAR_LEADS': 4,
+      'staff_solar_leads': 4,
+      'mnr_solar_leads': 4,
+
+      'EV_B2B_LEADS': 5,
+      'staff_ev_b2b_leads': 5,
+      'mnr_ev_b2b_leads': 5,
+
+      'EV_B2C_LEADS': 6,
+      'staff_ev_b2c_leads': 6,
+      'mnr_ev_b2c_leads': 6,
+
+      'EV_SPARES_LEADS': 7,
+      'staff_ev_spares_leads': 7,
+      'mnr_ev_spares_leads': 7,
+
+      'ZYN_REAL_ESTATE': 8,
+      'staff_real_dreams_leads': 8,
+      'mnr_real_dreams_leads': 8,
+
+      'ZYN_INSURANCE': 9,
+      'staff_insurance_leads': 9,
+      'mnr_insurance_leads': 9,
+
+      'ETC_LEADS': 10,
+      'staff_etc_leads': 10,
+      'mnr_etc_leads': 10,
+
+      'MNR_LEADS': 11,
+      'staff_mnr_leads': 11,
+      'mnr_category_leads': 11
     };
 
     const sectionMap = new Map<string, MenuSection>();
@@ -560,12 +570,16 @@ export class SideDrawer {
       const routeLower = (rawRoutePath || '').toLowerCase();
 
       if (codeUpper.includes('BANK_WISE_LEADS') || routeLower.includes('bank-wise-leads')) {
-        label = 'Field Sales';
+        label = 'Field staff leads';
       } else if (codeUpper.includes('REAL_DREAMS') || routeLower.includes('real-dreams-leads')) {
         label = 'Real Dreams Leads';
+      } else if (codeUpper.includes('ETC_LEADS') || routeLower.includes('etc-leads')) {
+        label = 'ETC Training Students';
+      } else if (codeUpper.includes('CATEGORY_LEADS_MASTER') || codeUpper.includes('MNR_LEADS_MASTER') || routeLower.includes('mnr-leads-master')) {
+        label = 'Category Lead Master';
       }
 
-      const iconClass = rawIcon || (label === 'Field Sales' ? 'fas fa-users-gear' : 'fas fa-file-alt');
+      const iconClass = rawIcon || (label.includes('Field') ? 'fas fa-users-gear' : 'fas fa-file-alt');
       const iconHtml = `<i class="${iconClass}" style="margin-right: 8px; width: 18px; text-align: center;"></i>`;
 
       return {

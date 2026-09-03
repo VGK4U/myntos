@@ -42,6 +42,7 @@ import { StaffCRMPage } from './pages/StaffCRMPage';
 import { StaffCallTrackingPage } from './pages/StaffCallTrackingPage';
 import { StaffMyPayoutsPage } from './pages/StaffMyPayoutsPage';
 import { AutoDialerPage } from './pages/AutoDialerPage';
+import { SoftphonePage } from './pages/SoftphonePage';
 import { CallHistoryPage } from './pages/CallHistoryPage';
 import { OperatorCallsPage } from './pages/OperatorCallsPage';
 import { StaffExpenseEntriesPage } from './pages/StaffExpenseEntriesPage';
@@ -442,7 +443,7 @@ class MNRApp {
 
     App.addListener('backButton', () => {
       const currentRoute = routerService.getCurrentRoute();
-      const portalDashboards: PageRoute[] = ['progress', 'auto-dialer', 'mnr-dashboard', 'partner-dashboard', 'vgk-member-hub'];
+      const portalDashboards: PageRoute[] = ['progress', 'mnr-dashboard', 'partner-dashboard', 'vgk-member-hub'];
       if (portalDashboards.includes(currentRoute)) {
         App.minimizeApp();
       } else {
@@ -450,7 +451,7 @@ class MNRApp {
           const authState = authService.getAuthState();
           const portal = authState.user?.portal || 'staff';
           const homeRoute: PageRoute = portal === 'mnr' ? 'mnr-dashboard'
-            : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'auto-dialer';
+            : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'progress';
           routerService.navigate(homeRoute);
         }
       }
@@ -611,10 +612,10 @@ class MNRApp {
       if (!config.portal || config.portal === portal) {
         targetRoute = savedRoute;
       } else {
-        targetRoute = portal === 'mnr' ? 'mnr-dashboard' : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'auto-dialer';
+        targetRoute = portal === 'mnr' ? 'mnr-dashboard' : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'progress';
       }
     } else {
-      targetRoute = portal === 'mnr' ? 'mnr-dashboard' : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'auto-dialer';
+      targetRoute = portal === 'mnr' ? 'mnr-dashboard' : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'progress';
     }
 
     console.log('[DC_APP] Initializing with route:', targetRoute);
@@ -732,6 +733,9 @@ class MNRApp {
         break;
       case 'auto-dialer':
         page = new AutoDialerPage(this.pageContainer);
+        break;
+      case 'softphone':
+        page = new SoftphonePage(this.pageContainer);
         break;
       case 'call-history':
         page = new CallHistoryPage(this.pageContainer);

@@ -142,25 +142,49 @@ export class ProgressPage {
   }
 
   private async loadProgress(): Promise<void> {
-    this.loading = true;
-    this.updateContent();
+    // 1. Instant Cache Render: load instantly from local storage if available
+    if (!this.progressData) {
+      try {
+        const cached = localStorage.getItem('mnr_cached_progress_summary');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.data) {
+            this.progressData = parsed.data;
+            this.canViewTeam = parsed.data.permissions?.can_view_team || false;
+            this.downlineOptions = parsed.data.downline_options || [];
+            this.loading = false;
+            this.updateContent();
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (!this.progressData) {
+      this.loading = true;
+      this.updateContent();
+    }
 
     try {
       const params = new URLSearchParams();
       params.append('date', this.selectedDate);
+      params.append('include_aggregates', 'false');
       if (this.selectedEmployeeId) {
         params.append('employee_id', this.selectedEmployeeId.toString());
       }
 
       const url = `${API_ENDPOINTS.PROGRESS.SUMMARY}?${params.toString()}`;
-      console.log('[ProgressPage] Fetching:', url);
       const response = await apiService.get<any>(url);
-      console.log('[ProgressPage] API response:', response);
 
       if (response.success && response.data) {
         this.progressData = response.data;
         this.canViewTeam = response.data.permissions?.can_view_team || false;
         this.downlineOptions = response.data.downline_options || [];
+        try {
+          localStorage.setItem('mnr_cached_progress_summary', JSON.stringify({
+            selectedDate: this.selectedDate,
+            data: response.data
+          }));
+        } catch (e) {}
       }
     } catch (error) {
       console.error('[ProgressPage] Failed to load:', error);
