@@ -587,11 +587,39 @@ async function checkGatewayConnectionStatus() {
   } catch(e) {
     return { connected: false };
   }
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('open');
 }
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('open');
+  if (qrPollerInterval) {
+    clearInterval(qrPollerInterval);
+    qrPollerInterval = null;
+  }
+}
+
+let qrPollerInterval = null;
 
 async function openScanQrModal() {
   openModal('scanQrModal');
   await refreshGatewayQr();
+
+  if (qrPollerInterval) clearInterval(qrPollerInterval);
+  qrPollerInterval = setInterval(async () => {
+    try {
+      const res = await apiFetch(`${API}/whatsapp/bot-status`);
+      if (res && res.connected === true) {
+        clearInterval(qrPollerInterval);
+        qrPollerInterval = null;
+        closeModal('scanQrModal');
+        showToast('WhatsApp account linked & connected successfully!', 'success');
+        checkGatewayConnectionStatus();
+      }
+    } catch (_) {}
+  }, 2500);
 }
 
 async function refreshGatewayQr() {
@@ -599,14 +627,27 @@ async function refreshGatewayQr() {
   const img = document.getElementById('qrImageElement');
   if (spinner) {
     spinner.style.display = 'flex';
-    spinner.innerHTML = '<i class="fas fa-qrcode fa-spin fa-2x" style="color:#059669;margin-bottom:8px"></i><span style="font-size:12px;font-weight:600">Generating QR code...</span>';
+    spinner.innerHTML = '<i class="fas fa-qrcode fa-spin fa-2x" style="color:#059669;margin-bottom:8px"></i><span style="font-size:12px;font-weight:600">Fetching live QR code...</span>';
   }
   if (img) img.style.display = 'none';
 
   try {
     const res = await apiFetch(`${API}/whatsapp/gateway-status-qr`);
+    if (res.connected) {
+      if (spinner) spinner.innerHTML = '<i class="fas fa-check-circle fa-2x" style="color:#10b981;margin-bottom:8px"></i><span style="font-size:13px;font-weight:700;color:#10b981">Already Connected & Active</span>';
+      setTimeout(() => {
+        closeModal('scanQrModal');
+        checkGatewayConnectionStatus();
+      }, 1000);
+      return;
+    }
+
     if (res.qr) {
-      img.src = res.qr.startsWith('data:') ? res.qr : `data:image/png;base64,${res.qr}`;
+      if (res.qr.startsWith('http://') || res.qr.startsWith('https://') || res.qr.startsWith('data:')) {
+        img.src = res.qr;
+      } else {
+        img.src = `data:image/png;base64,${res.qr}`;
+      }
       img.style.display = 'block';
       if (spinner) spinner.style.display = 'none';
     } else {
