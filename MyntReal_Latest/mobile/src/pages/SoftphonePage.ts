@@ -425,11 +425,8 @@ export class SoftphonePage {
     this.dialNumber = target;
     if (contactName) this.selectedContactName = contactName;
 
-    if (isDirectSim) {
-      this.saveSoftphoneCall(target, this.selectedContactName, 0);
-      window.location.href = `tel:${cleanNumber}`;
-      return;
-    }
+    // Trigger real carrier dialing so the phone physically rings and connects
+    window.location.href = `tel:${cleanNumber}`;
 
     this.isInCall = true;
     this.callDuration = 0;
@@ -437,19 +434,19 @@ export class SoftphonePage {
     this.isMuted = false;
     this.isSpeaker = false;
     this.isHold = false;
-    this.callStatusText = 'Connecting...';
+    this.callStatusText = 'Dialing · Cellular Carrier...';
 
-    // Dispatch real telephone call to backend
+    // Dispatch background call session to backend CRM
     this.dispatchBackendCall(target);
 
-    // Transition status to Connected
+    // Transition status to Connected after dialer opens
     setTimeout(() => {
       if (this.isInCall) {
-        this.callStatusText = 'Connected / In Call';
+        this.callStatusText = 'Call Active · Connected';
         const st = document.getElementById('softphoneCallStatusText');
         if (st) st.textContent = this.callStatusText;
       }
-    }, 1200);
+    }, 2000);
 
     if (this.callTimerInterval) clearInterval(this.callTimerInterval);
     this.callTimerInterval = setInterval(() => {
