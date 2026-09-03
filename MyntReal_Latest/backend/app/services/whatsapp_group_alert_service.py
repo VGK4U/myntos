@@ -189,6 +189,16 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, An
         except Exception:
             pass
 
+    # Company name resolution
+    company_name = None
+    if getattr(lead, 'company_id', None):
+        if lead.company_id == 2:
+            company_name = "Zynova Mobility (Zynovia)"
+        elif lead.company_id == 4:
+            company_name = "MyntReal"
+        elif lead.company_id == 1:
+            company_name = "Real Dreams"
+
     # Build structured alert text
     msg_lines = [
         "🚨 *NEW LEAD RECEIVED!* 🚨\n",
@@ -197,6 +207,8 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, An
         f"📍 *Location*: {city}" + (f" (PIN: {pincode})" if pincode else ""),
     ]
 
+    if company_name:
+        msg_lines.append(f"🏢 *Company*: {company_name}")
     if category_name:
         msg_lines.append(f"🎯 *Service / Category*: {category_name}")
     if electricity_bill:

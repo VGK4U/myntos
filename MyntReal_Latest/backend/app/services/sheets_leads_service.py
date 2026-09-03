@@ -142,8 +142,25 @@ def row_to_crm_lead(row: List[str], col_map: Dict[str, int],
 
     phone = get('phone')
     email = get('email') or None
-    city  = get('city') or None
-    state = get('state') or None
+    city    = get('city') or None
+    state   = get('state') or None
+    pincode = get('pincode') or get('zip_code') or get('post_code') or get('zip') or None
+
+    # Auto-resolve State and City from 6-digit Pincode/ZIP code via India Post Lookup
+    if pincode:
+        clean_pin = str(pincode).strip().replace(" ", "")[:6]
+        if clean_pin.isdigit() and len(clean_pin) == 6:
+            pincode = clean_pin
+            try:
+                from app.services.staff_accounts_service import PinCodeLookupService
+                pin_info = PinCodeLookupService.lookup_pincode(clean_pin)
+                if pin_info:
+                    if not city or str(city).lower() in ['', 'none', 'null', 'not specified']:
+                        city = pin_info.get('city') or pin_info.get('district') or pin_info.get('division')
+                    if not state or str(state).lower() in ['', 'none', 'null', 'not specified']:
+                        state = pin_info.get('state')
+            except Exception as _pin_err:
+                logger.warning(f"[SHEETS-IMPORT] Pincode lookup error for {pincode}: {_pin_err}")
 
     looking  = get('looking_for') or get('property_type') or get('electricity_bill') or None
     req      = get('requirements') or None
@@ -167,19 +184,23 @@ def row_to_crm_lead(row: List[str], col_map: Dict[str, int],
     source_details = f"{{'source': '{source_tag}', 'lead_id': '{lead_id}', 'ad': '{ad_name}'}}"
 
     # Automatic Company Routing Engine based on Category & Product Interest
-    # Rules: Solar, EV, BEB, B2C -> MyntReal (4); Training, Insurance -> Zynova (2); Real Estate -> Real Dreams (1)
+    # Rules: ETC/Training/Career -> Zynovia (2); Insurance -> Zynova (2); Solar/EV -> MyntReal (4); Real Estate -> Real Dreams (1)
     combined_ctx = f"{looking or ''} {ad_name or ''} {source_tag or ''}".lower()
     target_company_id = company_id
-    if any(k in combined_ctx for k in ['solar', 'ev', 'electric vehicle', 'beb', 'b2c', 'energy', 'battery', 'har ghar solar']):
+    if any(k in combined_ctx for k in ['etc', 'training', 'ev career', 'career & trading', 'career', 'trading', 'zynova', 'zynovia', 'insurance', 'health', 'life', 'motor']):
+        target_company_id = 2  # Zynova Mobility (Zynovia)
+        if any(k in combined_ctx for k in ['etc', 'training', 'career', 'trading']):
+            looking = looking or 'ETC Training'
+    elif any(k in combined_ctx for k in ['solar', 'ev', 'electric vehicle', 'beb', 'b2c', 'energy', 'battery', 'har ghar solar']):
         target_company_id = 4  # MyntReal LLP
-    elif any(k in combined_ctx for k in ['training', 'insurance', 'health', 'life', 'motor']):
-        target_company_id = 2  # Zynova Mobility
     elif any(k in combined_ctx for k in ['real estate', 'property', 'plot', 'flat', 'apartment', 'villa', 'venture', 'land', 'real dreams']):
         target_company_id = 1  # Real Dreams
 
-    # Automatic Category Resolution (Solar=19, EV B2C=15, Insurance=17, Real Dreams=18)
+    # Automatic Category Resolution (Solar=19, EV B2C=15, Insurance=17, Real Dreams=18, ETC Training=16)
     target_category_id = 19
-    if any(k in combined_ctx for k in ['solar', 'har ghar solar', 'hrs', 'sun', 'panel', 'electricity']):
+    if any(k in combined_ctx for k in ['etc', 'training', 'career', 'trading']):
+        target_category_id = 16  # ETC Training
+    elif any(k in combined_ctx for k in ['solar', 'har ghar solar', 'hrs', 'sun', 'panel', 'electricity']):
         target_category_id = 19  # Solar
     elif any(k in combined_ctx for k in ['ev b2c', 'ev', 'vehicle', 'car', 'bike']):
         target_category_id = 15  # EV B2C
@@ -196,6 +217,7 @@ def row_to_crm_lead(row: List[str], col_map: Dict[str, int],
         'email':                email[:200] if email else None,
         'city':                 city[:100]  if city  else None,
         'state':                state[:100] if state else None,
+        'pincode':              pincode[:20] if pincode else None,
         'source':               'Online - M',
         'source_details':       source_details[:1000],
         'status':               'new',

@@ -314,6 +314,22 @@ class FacebookLeadsService:
                    fields.get('comments') or None)
         budget  = fields.get('budget') or fields.get('budget_range') or None
 
+        # Auto-resolve State and City from 6-digit Pincode/ZIP code via India Post Lookup
+        if pincode:
+            clean_pin = str(pincode).strip().replace(" ", "")[:6]
+            if clean_pin.isdigit() and len(clean_pin) == 6:
+                pincode = clean_pin
+                try:
+                    from app.services.staff_accounts_service import PinCodeLookupService
+                    pin_info = PinCodeLookupService.lookup_pincode(clean_pin)
+                    if pin_info:
+                        if not city or str(city).lower() in ['', 'none', 'null', 'not specified']:
+                            city = pin_info.get('city') or pin_info.get('district') or pin_info.get('division')
+                        if not state or str(state).lower() in ['', 'none', 'null', 'not specified']:
+                            state = pin_info.get('state')
+                except Exception as _pin_err:
+                    logger.warning(f"Pincode lookup error for {pincode}: {_pin_err}")
+
         # Parse Meta created_time to IST datetime
         meta_created_str = lead_data.get('created_time')
         meta_created_dt = None
@@ -410,6 +426,18 @@ class FacebookLeadsService:
 
         target_company_id = company_id
         target_category_id = category_id
+
+        # Detect ETC / EV Career & Trading Leads and Route to Zynovia Company (Company ID 2)
+        ad_name = str(lead_data.get('ad_name') or '')
+        form_name = str(lead_data.get('form_name') or page_name or '')
+        campaign_name = str(lead_data.get('campaign_name') or '')
+        all_text = f"{form_name} {ad_name} {campaign_name} {looking or ''} {req or ''}".lower()
+
+        if any(k in all_text for k in ['etc', 'ev career', 'career & trading', 'training', 'zynova', 'zynovia']):
+            target_company_id = 2  # Zynova Mobility Pvt Ltd (Zynovia)
+            looking = looking or 'ETC Training'
+            target_category_id = 16  # ETC Training
+            seg_tag = 'etc_training'
 
         crm = {
             'company_id':          target_company_id,
