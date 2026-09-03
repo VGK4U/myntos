@@ -306,19 +306,43 @@ export class SoftphonePage {
     }
   }
 
-  /**
-   * In-App Call Engine
-   * Directly initiates the call inside the app UI without triggering the browser's tel: prompt
-   */
-  private startCall(numberToDial?: string, contactName?: string): void {
+  private async dispatchBackendCall(phone: string): Promise<void> {
+    const cleanDest = phone.startsWith('+') ? phone : `+91${phone.replace(/\D/g, '').slice(-10)}`;
+    try {
+      const resp = await apiService.post<any>('/crm/dialer/click-to-call', {
+        customer_phone: cleanDest,
+        lead_id: null
+      });
+      const statusEl = document.getElementById('softphoneCallStatusText');
+      if (resp && resp.success) {
+        if (statusEl) statusEl.textContent = 'Trunk Connected · Dialing...';
+      } else {
+        if (statusEl) statusEl.textContent = 'In-App Call Active';
+      }
+    } catch (e) {
+      console.warn('[SoftphonePage] Server dispatch error:', e);
+      const statusEl = document.getElementById('softphoneCallStatusText');
+      if (statusEl) statusEl.textContent = 'In-App Call Active';
+    }
+  }
+
+  private startCall(numberToDial?: string, contactName?: string, isDirectSim: boolean = false): void {
     const target = (numberToDial || this.dialNumber || '').trim();
     if (!target || target.replace(/[^0-9]/g, '').length < 3) {
       alert('Please enter a valid phone number');
       return;
     }
 
+    const cleanNumber = target.replace(/[^0-9+]/g, '');
     this.dialNumber = target;
     if (contactName) this.selectedContactName = contactName;
+
+    if (isDirectSim) {
+      this.saveSoftphoneCall(target, this.selectedContactName, 0);
+      window.location.href = `tel:${cleanNumber}`;
+      return;
+    }
+
     this.isInCall = true;
     this.callDuration = 0;
     this.callStartTime = Date.now();
@@ -326,6 +350,9 @@ export class SoftphonePage {
     this.isSpeaker = false;
     this.isHold = false;
     this.callStatusText = 'Connecting...';
+
+    // Dispatch real telephone call to backend
+    this.dispatchBackendCall(target);
 
     // Transition status to Connected
     setTimeout(() => {
@@ -348,6 +375,13 @@ export class SoftphonePage {
     }, 1000);
 
     this.render();
+  }
+
+  private triggerNativeSimCall(): void {
+    const cleanNumber = (this.dialNumber || '').replace(/[^0-9+]/g, '');
+    if (cleanNumber) {
+      window.location.href = `tel:${cleanNumber}`;
+    }
   }
 
   private endCall(): void {
@@ -499,10 +533,16 @@ export class SoftphonePage {
           ${this.renderKey('#', '&nbsp;')}
         </div>
 
-        <!-- Bottom Call Actions -->
-        <div style="display: flex; justify-content: center; align-items: center; gap: 20px;">
-          <button id="softphoneStartCallBtn" style="width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); border: none; color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(34, 197, 94, 0.4); cursor: pointer;">
-            <i class="fas fa-phone"></i>
+        <!-- Bottom Dual Call Actions: Softphone & Direct SIM -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
+            <button id="softphoneStartCallBtn" title="Call via Cloud Softphone" style="width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); border: none; color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(34, 197, 94, 0.4); cursor: pointer;">
+              <i class="fas fa-phone"></i>
+            </button>
+          </div>
+
+          <button id="softphoneDirectSimBtn" style="padding: 6px 14px; border-radius: 20px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #38bdf8; font-size: 11.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fas fa-mobile-screen"></i> Direct SIM Call
           </button>
         </div>
       </div>
@@ -581,9 +621,11 @@ export class SoftphonePage {
                 </div>
               </div>
             </div>
-            <button class="contact-call-btn" data-phone="${c.phone}" data-name="${this.escapeAttr(c.name)}" style="width: 40px; height: 40px; border-radius: 50%; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-              <i class="fas fa-phone fa-sm"></i>
-            </button>
+            <div style="display: flex; gap: 6px;">
+              <button class="contact-call-btn" data-phone="${c.phone}" data-name="${this.escapeAttr(c.name)}" title="Softphone Call" style="width: 38px; height: 38px; border-radius: 50%; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-phone fa-sm"></i>
+              </button>
+            </div>
           </div>
         `).join('')}
       </div>
@@ -603,10 +645,10 @@ export class SoftphonePage {
         <h3 style="font-size: 22px; font-weight: 700; margin: 0 0 4px 0; color: #fff;">${this.selectedContactName || this.dialNumber}</h3>
         ${this.selectedContactName ? `<div style="font-size: 13px; color: #94a3b8; margin-bottom: 6px;">+91 ${this.dialNumber}</div>` : ''}
         <p id="softphoneCallStatusText" style="font-size: 14px; color: #22c55e; font-weight: 600; margin: 0 0 12px 0;">${this.callStatusText}</p>
-        <div id="softphoneCallTimer" style="font-size: 22px; font-weight: 700; font-family: monospace; color: #cbd5e1; margin-bottom: 30px;">${mins}:${secs}</div>
+        <div id="softphoneCallTimer" style="font-size: 22px; font-weight: 700; font-family: monospace; color: #cbd5e1; margin-bottom: 24px;">${mins}:${secs}</div>
 
         <!-- In-Call Control Grid -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 36px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px;">
           <button id="callMuteBtn" style="padding: 14px; border-radius: 14px; background: ${this.isMuted ? '#ef4444' : 'rgba(255,255,255,0.08)'}; border: none; color: #fff; cursor: pointer;">
             <i class="fas fa-microphone-slash" style="font-size: 20px; margin-bottom: 6px;"></i>
             <div style="font-size: 11px; font-weight: 600;">${this.isMuted ? 'Muted' : 'Mute'}</div>
@@ -624,9 +666,15 @@ export class SoftphonePage {
         </div>
 
         <!-- Big Red Hangup Button -->
-        <button id="softphoneEndCallBtn" style="width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #b91c1c); border: none; color: #fff; font-size: 26px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4); cursor: pointer;">
-          <i class="fas fa-phone-slash"></i>
-        </button>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
+          <button id="softphoneEndCallBtn" style="width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #b91c1c); border: none; color: #fff; font-size: 26px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4); cursor: pointer;">
+            <i class="fas fa-phone-slash"></i>
+          </button>
+
+          <button id="inCallSwitchSimBtn" style="padding: 7px 16px; border-radius: 20px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #38bdf8; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fas fa-mobile-screen"></i> Switch to Cellular SIM
+          </button>
+        </div>
       </div>
     `;
   }
@@ -795,6 +843,8 @@ export class SoftphonePage {
 
     // Call Actions
     document.getElementById('softphoneStartCallBtn')?.addEventListener('click', () => this.startCall());
+    document.getElementById('softphoneDirectSimBtn')?.addEventListener('click', () => this.startCall(undefined, undefined, true));
+    document.getElementById('inCallSwitchSimBtn')?.addEventListener('click', () => this.triggerNativeSimCall());
     document.getElementById('softphoneEndCallBtn')?.addEventListener('click', () => this.endCall());
     document.getElementById('callMuteBtn')?.addEventListener('click', () => this.toggleMute());
     document.getElementById('callSpeakerBtn')?.addEventListener('click', () => this.toggleSpeaker());
