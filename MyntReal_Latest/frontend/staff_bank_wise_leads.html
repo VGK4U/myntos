@@ -2297,6 +2297,38 @@
         let currentModalBank = '';
         let currentModalBranch = '';
 
+        function updateMapPreviewLink() {
+            const url = (document.getElementById('bcGoogleMapsUrl')?.value || '').trim();
+            const link = document.getElementById('bcMapPreviewLink');
+            if (link) {
+                link.href = url || ('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(currentModalBank + ' ' + currentModalBranch));
+            }
+        }
+
+        function copyToClipboardFallback(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                return navigator.clipboard.writeText(text);
+            }
+            return new Promise((resolve, reject) => {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                textArea.style.top = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    const successful = document.execCommand('copy');
+                    textArea.remove();
+                    successful ? resolve() : reject(new Error('execCommand failed'));
+                } catch (err) {
+                    textArea.remove();
+                    reject(err);
+                }
+            });
+        }
+
         function openBranchContactModal(bankName, branchName) {
             currentModalBank = (bankName || '').trim();
             currentModalBranch = (branchName || '').trim();
@@ -2322,7 +2354,10 @@
             document.getElementById('bcCustomPhone').value = bc?.custom_phone || '';
             document.getElementById('bcCustomAltPhone').value = bc?.custom_alt_phone || '';
 
-            document.getElementById('bcGoogleMapsUrl').value = bc?.google_maps_url || '';
+            const defaultMapUrl = bc?.google_maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentModalBank + ' ' + currentModalBranch)}`;
+            document.getElementById('bcGoogleMapsUrl').value = defaultMapUrl;
+            updateMapPreviewLink();
+
             document.getElementById('bcBranchAddress').value = bc?.branch_address || '';
             document.getElementById('bcNotes').value = bc?.notes || '';
 
@@ -2485,7 +2520,7 @@
 
         function copyBranchDetails(bankName, branchName) {
             const msg = getBranchShareMessage(bankName, branchName);
-            navigator.clipboard.writeText(msg).then(() => {
+            copyToClipboardFallback(msg).then(() => {
                 showToast('Branch details copied to clipboard!', 'success');
             }).catch(() => {
                 showToast('Could not copy text.', 'error');
@@ -2524,6 +2559,27 @@
             const bName = document.getElementById('bcBankName').value;
             const brName = document.getElementById('bcBranchName').value;
             if (!bName || !brName) return;
+
+            // Update temporary map first
+            const contactKey = (bName + ':::' + brName).toLowerCase();
+            branchContactsMap[contactKey] = {
+                bank_name: bName,
+                branch_name: brName,
+                manager_name: document.getElementById('bcManagerName')?.value || '',
+                manager_phone: document.getElementById('bcManagerPhone')?.value || '',
+                manager_alt_phone: document.getElementById('bcManagerAltPhone')?.value || '',
+                officer_name: document.getElementById('bcOfficerName')?.value || '',
+                officer_phone: document.getElementById('bcOfficerPhone')?.value || '',
+                officer_alt_phone: document.getElementById('bcOfficerAltPhone')?.value || '',
+                custom_designation: document.getElementById('bcCustomDesignation')?.value || '',
+                custom_name: document.getElementById('bcCustomName')?.value || '',
+                custom_phone: document.getElementById('bcCustomPhone')?.value || '',
+                custom_alt_phone: document.getElementById('bcCustomAltPhone')?.value || '',
+                google_maps_url: document.getElementById('bcGoogleMapsUrl')?.value || '',
+                branch_address: document.getElementById('bcBranchAddress')?.value || '',
+                notes: document.getElementById('bcNotes')?.value || '',
+            };
+
             copyBranchDetails(bName, brName);
         }
     </script>
@@ -2550,8 +2606,11 @@
 
                 <!-- Google Maps Location & Branch Address -->
                 <div class="col-md-6 col-12">
-                  <label class="form-label fw-bold text-dark"><i class="fas fa-map-marker-alt text-danger me-1"></i>Google Maps Location Link</label>
-                  <input type="url" class="form-control form-control-sm" id="bcGoogleMapsUrl" placeholder="https://maps.app.goo.gl/... or Google Map URL">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label class="form-label fw-bold text-dark mb-0"><i class="fas fa-map-marker-alt text-danger me-1"></i>Google Maps Location Link</label>
+                    <a id="bcMapPreviewLink" href="#" target="_blank" class="btn btn-xs btn-outline-danger py-0 px-2 fw-semibold" style="font-size:11px" title="Test / Open Map Location"><i class="fas fa-arrow-up-right-from-square me-1"></i>Test Map</a>
+                  </div>
+                  <input type="url" class="form-control form-control-sm" id="bcGoogleMapsUrl" placeholder="https://maps.app.goo.gl/... or Google Map URL" oninput="updateMapPreviewLink()">
                 </div>
                 <div class="col-md-6 col-12">
                   <label class="form-label fw-bold text-dark"><i class="fas fa-building text-secondary me-1"></i>Branch Address / Landmark</label>

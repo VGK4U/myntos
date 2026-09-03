@@ -13,7 +13,7 @@
 
   /* ── Modal HTML ──────────────────────────────────────────────────────────── */
   var MODAL_HTML = [
-    '<div id="_lwaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;align-items:center;justify-content:center;padding:16px;box-sizing:border-box">',
+    '<div id="_lwaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000000;align-items:center;justify-content:center;padding:16px;box-sizing:border-box">',
     '<div style="background:#fff;border-radius:16px;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.3)">',
 
     /* header */
