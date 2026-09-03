@@ -501,7 +501,9 @@ export class SideDrawer {
       return MENU_MASTER;
     }
 
-    const sections: MenuSection[] = [];
+    const sectionMap = new Map<string, MenuSection>();
+    const sectionOrderList: string[] = [];
+
     for (const sec of this.staffMenuTree) {
       if (sec.id === 'progress' || sec.section_id === 'progress' || (sec.title || '').toUpperCase() === 'PROGRESS') {
         continue;
@@ -518,10 +520,10 @@ export class SideDrawer {
           }
           const route = ROUTE_PATH_MAP[item.route_path];
           if (route) {
-            const iconHtml = item.menu_icon ? `<i class="${item.menu_icon}" style="margin-right: 8px; width: 18px; text-align: center;"></i>` : '';
+            const iconHtml = item.menu_icon ? `<i class="${item.menu_icon}" style="margin-right: 8px; width: 18px; text-align: center;"></i>` : '<i class="fas fa-file-alt" style="margin-right: 8px; width: 18px; text-align: center;"></i>';
             items.push({
               menu_code: item.menu_code,
-              label: `${iconHtml}${item.menu_name}`,
+              label: `${iconHtml}${item.menu_name || item.label || item.name}`,
               route: route
             });
           }
@@ -539,10 +541,10 @@ export class SideDrawer {
               }
               const route = ROUTE_PATH_MAP[item.route_path];
               if (route) {
-                const iconHtml = item.menu_icon ? `<i class="${item.menu_icon}" style="margin-right: 8px; width: 18px; text-align: center;"></i>` : '';
+                const iconHtml = item.menu_icon ? `<i class="${item.menu_icon}" style="margin-right: 8px; width: 18px; text-align: center;"></i>` : '<i class="fas fa-file-alt" style="margin-right: 8px; width: 18px; text-align: center;"></i>';
                 subItems.push({
                   menu_code: item.menu_code,
-                  label: `${iconHtml}${item.menu_name}`,
+                  label: `${iconHtml}${item.menu_name || item.label || item.name}`,
                   route: route
                 });
               }
@@ -559,22 +561,46 @@ export class SideDrawer {
       }
 
       if (items.length > 0 || subSections.length > 0) {
-        let secTitle = sec.title || 'Other';
-        const secIdLower = (sec.id || sec.section_id || '').toLowerCase();
-        if (secIdLower === 'mynt_real' || secIdLower === 'myntreal' || secIdLower === 'workflows' || secTitle.toUpperCase() === 'MYNT REAL' || secTitle.toUpperCase() === 'MYNTREAL') {
+        let secCode = (sec.id || sec.section_id || 'other').toString().trim();
+        let secTitle = (sec.title || sec.name || 'Other').toString().trim();
+        const secIdLower = secCode.toLowerCase();
+        const secTitleUpper = secTitle.toUpperCase();
+
+        if (secIdLower === 'mynt_real' || secIdLower === 'myntreal' || secIdLower === 'workflows' || secTitleUpper === 'MYNT REAL' || secTitleUpper === 'MYNTREAL' || secTitleUpper === 'WORK FLOWS' || secTitleUpper === 'WORKFLOWS') {
+          secCode = 'WORKFLOWS';
           secTitle = 'WORK FLOWS';
         }
 
-        sections.push({
-          section_code: sec.id || sec.section_id || 'other',
-          section_label: secTitle,
-          order: sec.order || 999,
-          items: items.length > 0 ? items : undefined,
-          subSections: subSections.length > 0 ? subSections : undefined
-        });
+        if (sectionMap.has(secCode)) {
+          const existing = sectionMap.get(secCode)!;
+          if (items.length > 0) {
+            existing.items = existing.items || [];
+            const existingCodes = new Set(existing.items.map(i => i.menu_code));
+            for (const it of items) {
+              if (!existingCodes.has(it.menu_code)) {
+                existing.items.push(it);
+                existingCodes.add(it.menu_code);
+              }
+            }
+          }
+          if (subSections.length > 0) {
+            existing.subSections = existing.subSections || [];
+            existing.subSections.push(...subSections);
+          }
+        } else {
+          sectionOrderList.push(secCode);
+          sectionMap.set(secCode, {
+            section_code: secCode,
+            section_label: secTitle,
+            order: sec.order !== undefined ? sec.order : 999,
+            items: items.length > 0 ? items : undefined,
+            subSections: subSections.length > 0 ? subSections : undefined
+          });
+        }
       }
     }
 
+    const sections = sectionOrderList.map(code => sectionMap.get(code)!);
     sections.sort((a, b) => a.order - b.order);
     return sections;
   }
