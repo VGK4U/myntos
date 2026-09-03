@@ -92,7 +92,12 @@ const ROUTE_PATH_MAP: Record<string, string> = {
   '/staff/crm/team-leads': 'staff-team-leads',
   '/staff/crm/lead-sources': 'staff-lead-sources',
   '/staff/call-management': 'staff-call-tracking',
-  '/staff/dialer': 'auto-dialer',
+  '/staff/dialer': 'softphone',
+  '/staff/softphone': 'softphone',
+  '/staff/calling-page': 'softphone',
+  '/staff/calling': 'softphone',
+  '/staff/phone-dialpad': 'softphone',
+  '/staff/softphone-hub': 'softphone',
   '/staff/tasks/tracker': 'staff-task-tracker',
   '/staff/service-tickets/dashboard': 'staff-service',
   '/staff/service-tickets/performance': 'staff-service-performance',
@@ -338,7 +343,7 @@ export class SideDrawer {
           { menu_code: "KRA_STATUS", label: `<i class="fas fa-chart-bar" style="margin-right: 8px; width: 18px; text-align: center;"></i> KRA Status`, route: "kras" },
           { menu_code: "TIME_SHEET", label: `<i class="fas fa-clock" style="margin-right: 8px; width: 18px; text-align: center;"></i> Time Sheet`, route: "timesheet" },
           { menu_code: "WHATSAPP_CENTER", label: `<i class="fab fa-whatsapp" style="margin-right: 8px; width: 18px; text-align: center; color: #25d366;"></i> WhatsApp Center`, route: "staff-whatsapp" },
-          { menu_code: "SOFTPHONE", label: `<i class="fas fa-phone-alt" style="margin-right: 8px; width: 18px; text-align: center; color: #3b82f6;"></i> Softphone`, route: "softphone" }
+          { menu_code: "CALLING_PAGE", label: `<i class="fas fa-phone-alt" style="margin-right: 8px; width: 18px; text-align: center; color: #3b82f6;"></i> Calling Page`, route: "softphone" }
         ];
       }
     }
