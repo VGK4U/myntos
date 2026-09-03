@@ -1282,6 +1282,7 @@ export class StaffTeamLeadsPage {
     const lastInteracted = lead.last_interacted_at ? new Date(lead.last_interacted_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '-';
     const nextFollowup = lead.next_followup ? new Date(lead.next_followup).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '-';
     const completedDate = lead.completed_at ? new Date(lead.completed_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : '—';
+    const maskedPhone = this.maskPhone(phone);
     
     return `
       <tr class="${isSelected ? 'selected' : ''}" data-lead-id="${lead.id}">
@@ -1291,7 +1292,7 @@ export class StaffTeamLeadsPage {
         <td class="lead-cell">
           <div class="lead-name">${lead.name}</div>
           <div class="lead-contact-links">
-            <a href="tel:${phone}" class="mobile-link" onclick="event.stopPropagation()">${phone || '-'}</a>
+            <a href="#/staff/softphone?dial=${encodeURIComponent(phone)}&name=${encodeURIComponent(lead.name)}" class="mobile-link" onclick="event.stopPropagation()" title="Call with Softphone">${maskedPhone}</a>
             ${phone ? `<button class="whatsapp-link open-team-lead-wa-btn" data-phone="${whatsappNumber}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" onclick="event.stopPropagation()" style="background:none;border:none;cursor:pointer;padding:0 2px;">💬</button>` : ''}
           </div>
         </td>
@@ -1308,13 +1309,23 @@ export class StaffTeamLeadsPage {
         <td class="date-cell ${lead.next_followup && new Date(lead.next_followup) < new Date() ? 'overdue' : ''}">${nextFollowup}</td>
         <td class="days-cell">${lead.days_since_created || 0}</td>
         <td class="actions-cell">
-          <a href="tel:${phone}" class="action-btn call-btn" onclick="event.stopPropagation()" title="Call">📞</a>
+          <a href="#/staff/softphone?dial=${encodeURIComponent(phone)}&name=${encodeURIComponent(lead.name)}" class="action-btn call-btn" onclick="event.stopPropagation()" title="Call via Softphone">📞</a>
           <button class="action-btn whatsapp-btn open-team-lead-wa-btn" data-phone="${whatsappNumber}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" onclick="event.stopPropagation()" style="border:none;cursor:pointer;" title="Send WhatsApp">💬</button>
           <button class="action-btn view-btn" data-id="${lead.id}" title="View">👁</button>
           <button class="action-btn edit-btn" data-id="${lead.id}" title="Edit">✏️</button>
         </td>
       </tr>
     `;
+  }
+
+  private maskPhone(phone: string): string {
+    if (!phone) return '-';
+    const clean = phone.replace(/\D/g, '');
+    if (clean.length < 6) return phone;
+    const first2 = clean.slice(0, 2);
+    const last4 = clean.slice(-4);
+    const dots = '•'.repeat(Math.max(2, clean.length - 6));
+    return `${first2}${dots}${last4}`;
   }
 
   private formatCurrency(value: number): string {
@@ -1608,7 +1619,7 @@ export class StaffTeamLeadsPage {
           <button class="btn btn-primary" id="detailEditBtn" style="flex: 1; min-width: 120px;">Edit</button>
           <button class="btn btn-info" id="detailFollowupBtn" style="flex: 1; min-width: 120px;">Follow-up</button>
           <button class="btn btn-warning" id="detailStatusBtn" style="flex: 1; min-width: 120px;">Status</button>
-          <button class="btn btn-secondary" onclick="window.location.href='tel:${lead.phone}'" style="flex: 1; min-width: 100px;">Call</button>
+          <button class="btn btn-secondary" onclick="window.location.hash='#/staff/softphone?dial=${encodeURIComponent(lead.phone || '')}&name=${encodeURIComponent(lead.name || '')}'" style="flex: 1; min-width: 100px;">Softphone</button>
           <button class="btn btn-success open-team-lead-wa-btn" data-phone="${(lead.phone || '').replace(/\D/g, '')}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" style="flex: 1; min-width: 100px;">WhatsApp</button>
         </div>
       </div>

@@ -94,7 +94,24 @@ export class SoftphonePage {
     this.container = container;
   }
 
-  async init(): Promise<void> {
+  async init(params?: any): Promise<void> {
+    const hash = window.location.hash || '';
+    const queryIndex = hash.indexOf('?');
+    if (queryIndex !== -1) {
+      const urlParams = new URLSearchParams(hash.substring(queryIndex));
+      const dial = urlParams.get('dial') || (params && params.dial);
+      const name = urlParams.get('name') || (params && params.name);
+      if (dial) {
+        this.dialNumber = dial;
+        if (name) this.selectedContactName = name;
+        this.activeTab = 'dialer';
+      }
+    } else if (params && params.dial) {
+      this.dialNumber = params.dial;
+      if (params.name) this.selectedContactName = params.name;
+      this.activeTab = 'dialer';
+    }
+
     this.render();
     this.loadRecentCalls();
   }
