@@ -1,7 +1,7 @@
 /**
  * Mobile Softphone Page
  * DC Protocol: DC_MOBILE_SOFTPHONE_001
- * Dedicated mobile softphone dialer with dialpad, in-call screen, contact search, and call history
+ * Dedicated mobile softphone dialer with in-app call engine, synced mobile call logs, and filters
  */
 
 import { apiService } from '../services/api.service';
@@ -11,9 +11,11 @@ interface CallRecord {
   id?: string | number;
   phone_number: string;
   contact_name?: string;
-  call_type?: 'incoming' | 'outgoing' | 'missed';
+  call_type?: 'INCOMING' | 'OUTGOING' | 'MISSED' | 'REJECTED' | 'incoming' | 'outgoing' | 'missed';
   timestamp?: string;
+  dialed_at?: string;
   duration_seconds?: number;
+  source?: 'softphone' | 'native' | 'dialer';
   status?: string;
 }
 
@@ -33,16 +35,21 @@ export class SoftphonePage {
   private selectedContactName: string = '';
   private agentStatus: 'available' | 'busy' | 'break' = 'available';
   private activeTab: 'dialer' | 'contacts' | 'history' = 'dialer';
+  private historyFilter: 'ALL' | 'SOFTPHONE' | 'MOBILE' = 'ALL';
+
+  // In-App Call Engine
   private isInCall: boolean = false;
+  private callStatusText: string = 'Calling...';
   private isMuted: boolean = false;
   private isSpeaker: boolean = false;
   private isHold: boolean = false;
   private callDuration: number = 0;
   private callTimerInterval: any = null;
+  private callStartTime: number = 0;
+
+  // History & Contacts
   private recentCalls: CallRecord[] = [];
   private isLoadingHistory: boolean = false;
-  
-  // Contact Search State
   private contactsList: ContactItem[] = [];
   private searchContactsQuery: string = '';
   private isSearchingContacts: boolean = false;
@@ -68,23 +75,83 @@ export class SoftphonePage {
   private async loadRecentCalls(): Promise<void> {
     this.isLoadingHistory = true;
     try {
-      const response = await apiService.get<any>('/staff/call-tracking?limit=20');
-      if (response && response.success && response.data) {
-        this.recentCalls = response.data.calls || response.data.records || [];
-      } else {
-        this.recentCalls = [
-          { phone_number: '+91 98765 43210', contact_name: 'Rajesh Kumar (Solar Lead)', call_type: 'outgoing', timestamp: 'Today, 11:20 AM', duration_seconds: 145 },
-          { phone_number: '+91 91234 56789', contact_name: 'Priya Sharma (EV B2B)', call_type: 'incoming', timestamp: 'Today, 10:05 AM', duration_seconds: 82 },
-          { phone_number: '+91 99887 76655', contact_name: 'Vikram Real Estate', call_type: 'missed', timestamp: 'Yesterday, 04:30 PM', duration_seconds: 0 }
-        ];
+      // 1. Fetch synced native & dialer history from backend API
+      const response = await apiService.get<any>('/crm/dialer/call-history?per_page=50');
+      let apiEntries: CallRecord[] = [];
+      if (response && response.success && response.data && response.data.entries) {
+        apiEntries = response.data.entries.map((e: any) => ({
+          phone_number: e.phone || '',
+          contact_name: e.name || e.contact_name || '',
+          call_type: (e.call_type || 'OUTGOING').toUpperCase(),
+          dialed_at: e.dialed_at,
+          duration_seconds: e.duration_seconds || 0,
+          source: (e.source === 'native' ? 'native' : 'dialer') as any
+        }));
+      } else if (response && response.entries) {
+        apiEntries = response.entries.map((e: any) => ({
+          phone_number: e.phone || '',
+          contact_name: e.name || e.contact_name || '',
+          call_type: (e.call_type || 'OUTGOING').toUpperCase(),
+          dialed_at: e.dialed_at,
+          duration_seconds: e.duration_seconds || 0,
+          source: (e.source === 'native' ? 'native' : 'dialer') as any
+        }));
       }
+
+      // 2. Merge with locally saved in-app softphone calls
+      let localSoftphoneCalls: CallRecord[] = [];
+      try {
+        const stored = localStorage.getItem('mnr_softphone_call_logs');
+        if (stored) {
+          localSoftphoneCalls = JSON.parse(stored);
+        }
+      } catch (e) {}
+
+      // Combine and sort by timestamp descending
+      const combined = [...localSoftphoneCalls, ...apiEntries];
+      combined.sort((a, b) => {
+        const tA = new Date(a.dialed_at || a.timestamp || 0).getTime();
+        const tB = new Date(b.dialed_at || b.timestamp || 0).getTime();
+        return tB - tA;
+      });
+
+      this.recentCalls = combined;
     } catch (e) {
       console.warn('[SoftphonePage] Error loading call history:', e);
     } finally {
       this.isLoadingHistory = false;
       if (this.activeTab === 'history') {
-        this.render();
+        this.renderHistoryList();
       }
+    }
+  }
+
+  private saveSoftphoneCall(phone: string, name: string, duration: number): void {
+    try {
+      const record: CallRecord = {
+        phone_number: phone,
+        contact_name: name,
+        call_type: 'OUTGOING',
+        dialed_at: new Date().toISOString(),
+        timestamp: this.formatRelativeTime(new Date().toISOString()),
+        duration_seconds: duration,
+        source: 'softphone',
+        status: 'Completed'
+      };
+
+      let stored: CallRecord[] = [];
+      const raw = localStorage.getItem('mnr_softphone_call_logs');
+      if (raw) {
+        stored = JSON.parse(raw);
+      }
+      stored.unshift(record);
+      if (stored.length > 50) stored = stored.slice(0, 50);
+      localStorage.setItem('mnr_softphone_call_logs', JSON.stringify(stored));
+
+      // Prepend to current list
+      this.recentCalls.unshift(record);
+    } catch (e) {
+      console.warn('[SoftphonePage] Could not save softphone log:', e);
     }
   }
 
@@ -141,7 +208,7 @@ export class SoftphonePage {
         class="softphone-matched-item" 
         data-phone="${c.phone}" 
         data-name="${this.escapeAttr(c.name)}"
-        style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.06); transition: background 0.15s; background: rgba(30, 41, 59, 0.9);"
+        style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.06); transition: background 0.15s; background: rgba(30, 41, 59, 0.95);"
       >
         <div style="display: flex; align-items: center; gap: 10px;">
           <div style="width: 32px; height: 32px; border-radius: 50%; background: ${c.badge_color || '#3b82f6'}; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff;">
@@ -239,9 +306,13 @@ export class SoftphonePage {
     }
   }
 
+  /**
+   * In-App Call Engine
+   * Directly initiates the call inside the app UI without triggering the browser's tel: prompt
+   */
   private startCall(numberToDial?: string, contactName?: string): void {
-    const target = numberToDial || this.dialNumber;
-    if (!target || target.trim().length < 3) {
+    const target = (numberToDial || this.dialNumber || '').trim();
+    if (!target || target.replace(/[^0-9]/g, '').length < 3) {
       alert('Please enter a valid phone number');
       return;
     }
@@ -250,13 +321,20 @@ export class SoftphonePage {
     if (contactName) this.selectedContactName = contactName;
     this.isInCall = true;
     this.callDuration = 0;
+    this.callStartTime = Date.now();
     this.isMuted = false;
     this.isSpeaker = false;
     this.isHold = false;
+    this.callStatusText = 'Connecting...';
 
-    // Launch system/tel dialer for native calls
-    const cleanNumber = target.replace(/[^0-9+]/g, '');
-    window.location.href = `tel:${cleanNumber}`;
+    // Transition status to Connected
+    setTimeout(() => {
+      if (this.isInCall) {
+        this.callStatusText = 'Connected / In Call';
+        const st = document.getElementById('softphoneCallStatusText');
+        if (st) st.textContent = this.callStatusText;
+      }
+    }, 1200);
 
     if (this.callTimerInterval) clearInterval(this.callTimerInterval);
     this.callTimerInterval = setInterval(() => {
@@ -278,6 +356,12 @@ export class SoftphonePage {
       clearInterval(this.callTimerInterval);
       this.callTimerInterval = null;
     }
+
+    // Save softphone call record
+    if (this.dialNumber) {
+      this.saveSoftphoneCall(this.dialNumber, this.selectedContactName, this.callDuration);
+    }
+
     this.render();
   }
 
@@ -298,6 +382,32 @@ export class SoftphonePage {
 
   private escapeAttr(str: string): string {
     return (str || '').replace(/"/g, '&quot;');
+  }
+
+  private formatRelativeTime(dateStr?: string): string {
+    if (!dateStr) return 'Recent';
+    try {
+      const d = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now.getTime() - d.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+      if (diffDays === 0) return `Today, ${timeStr}`;
+      if (diffDays === 1) return `Yesterday, ${timeStr}`;
+      if (diffDays < 7) return `${diffDays}d ago, ${timeStr}`;
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + `, ${timeStr}`;
+    } catch {
+      return dateStr;
+    }
+  }
+
+  private formatDuration(seconds: number): string {
+    if (!seconds || seconds <= 0) return '0s';
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.floor(seconds / 60);
+    const rem = seconds % 60;
+    return rem > 0 ? `${mins}m ${rem}s` : `${mins}m`;
   }
 
   private render(): void {
@@ -415,7 +525,6 @@ export class SoftphonePage {
   private renderContacts(): string {
     return `
       <div style="padding: 16px; max-width: 500px; margin: 0 auto;">
-        
         <!-- Search Input Header -->
         <div style="background: #1e293b; border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,0.1);">
           <i class="fas fa-search" style="color: #94a3b8; font-size: 14px;"></i>
@@ -493,8 +602,8 @@ export class SoftphonePage {
 
         <h3 style="font-size: 22px; font-weight: 700; margin: 0 0 4px 0; color: #fff;">${this.selectedContactName || this.dialNumber}</h3>
         ${this.selectedContactName ? `<div style="font-size: 13px; color: #94a3b8; margin-bottom: 6px;">+91 ${this.dialNumber}</div>` : ''}
-        <p style="font-size: 14px; color: #22c55e; font-weight: 600; margin: 0 0 12px 0;">Connected / In Call</p>
-        <div id="softphoneCallTimer" style="font-size: 20px; font-weight: 700; font-family: monospace; color: #cbd5e1; margin-bottom: 30px;">${mins}:${secs}</div>
+        <p id="softphoneCallStatusText" style="font-size: 14px; color: #22c55e; font-weight: 600; margin: 0 0 12px 0;">${this.callStatusText}</p>
+        <div id="softphoneCallTimer" style="font-size: 22px; font-weight: 700; font-family: monospace; color: #cbd5e1; margin-bottom: 30px;">${mins}:${secs}</div>
 
         <!-- In-Call Control Grid -->
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 36px;">
@@ -523,46 +632,93 @@ export class SoftphonePage {
   }
 
   private renderHistory(): string {
+    return `
+      <div style="padding: 16px; max-width: 500px; margin: 0 auto;">
+        
+        <!-- Recents Filters: All, Softphone, Mobile -->
+        <div style="display: flex; gap: 8px; margin-bottom: 16px; background: #1e293b; padding: 4px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+          <button id="filterAllCallsBtn" style="flex: 1; padding: 7px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; transition: all 0.15s; background: ${this.historyFilter === 'ALL' ? '#3b82f6' : 'transparent'}; color: ${this.historyFilter === 'ALL' ? '#fff' : '#94a3b8'};">
+            All Calls
+          </button>
+          <button id="filterSoftphoneCallsBtn" style="flex: 1; padding: 7px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; transition: all 0.15s; background: ${this.historyFilter === 'SOFTPHONE' ? '#3b82f6' : 'transparent'}; color: ${this.historyFilter === 'SOFTPHONE' ? '#fff' : '#94a3b8'};">
+            <i class="fas fa-phone" style="margin-right: 4px;"></i>Softphone
+          </button>
+          <button id="filterMobileCallsBtn" style="flex: 1; padding: 7px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; transition: all 0.15s; background: ${this.historyFilter === 'MOBILE' ? '#3b82f6' : 'transparent'}; color: ${this.historyFilter === 'MOBILE' ? '#fff' : '#94a3b8'};">
+            <i class="fas fa-mobile-screen" style="margin-right: 4px;"></i>Mobile
+          </button>
+        </div>
+
+        <div id="softphoneHistoryContainer">
+          ${this.renderHistoryListHtml()}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderHistoryList(): void {
+    const container = document.getElementById('softphoneHistoryContainer');
+    if (container) {
+      container.innerHTML = this.renderHistoryListHtml();
+      this.attachHistoryCardListeners();
+    }
+  }
+
+  private renderHistoryListHtml(): string {
     if (this.isLoadingHistory) {
       return `<div style="text-align: center; padding: 40px; color: #94a3b8;"><i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Loading call history...</div>`;
     }
 
-    if (this.recentCalls.length === 0) {
+    // Filter calls based on selected filter
+    const filtered = this.recentCalls.filter(c => {
+      if (this.historyFilter === 'SOFTPHONE') return c.source === 'softphone' || c.source === 'dialer';
+      if (this.historyFilter === 'MOBILE') return c.source === 'native' || !c.source;
+      return true;
+    });
+
+    if (filtered.length === 0) {
       return `
         <div style="text-align: center; padding: 60px 20px; color: #64748b;">
           <i class="fas fa-phone-slash" style="font-size: 40px; margin-bottom: 12px; color: #475569;"></i>
-          <p style="font-weight: 600; font-size: 15px;">No recent calls found</p>
+          <p style="font-weight: 600; font-size: 14px;">No ${this.historyFilter === 'SOFTPHONE' ? 'softphone' : (this.historyFilter === 'MOBILE' ? 'mobile' : '')} calls found</p>
         </div>
       `;
     }
 
     return `
-      <div style="padding: 16px; max-width: 500px; margin: 0 auto;">
-        <h4 style="font-size: 13px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin: 0 0 12px 4px; letter-spacing: 0.5px;">Recent Call Logs</h4>
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          ${this.recentCalls.map(c => {
-            const isMissed = c.call_type === 'missed';
-            const icon = c.call_type === 'outgoing' ? 'fa-arrow-up-right text-success' : (isMissed ? 'fa-phone-slash text-danger' : 'fa-arrow-down-left text-primary');
-            return `
-              <div style="background: #1e293b; border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.06);">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                  <div style="width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; font-size: 14px;">
-                    <i class="fa-solid ${icon}"></i>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        ${filtered.map(c => {
+          const typeUpper = (c.call_type || 'OUTGOING').toUpperCase();
+          const isMissed = typeUpper === 'MISSED' || typeUpper === 'REJECTED';
+          const isIncoming = typeUpper === 'INCOMING';
+          const icon = isIncoming ? 'fa-arrow-down-left text-primary' : (isMissed ? 'fa-phone-slash text-danger' : 'fa-arrow-up-right text-success');
+          const isSoftphone = c.source === 'softphone' || c.source === 'dialer';
+          const durationFormatted = this.formatDuration(c.duration_seconds || 0);
+          const timeFormatted = this.formatRelativeTime(c.dialed_at || c.timestamp);
+
+          return `
+            <div style="background: #1e293b; border-radius: 14px; padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 38px; height: 38px; border-radius: 50%; background: ${isSoftphone ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255,255,255,0.06)'}; display: flex; align-items: center; justify-content: center; font-size: 14px;">
+                  <i class="fa-solid ${icon}"></i>
+                </div>
+                <div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-weight: 700; font-size: 14.5px; color: ${isMissed ? '#f87171' : '#fff'};">${c.contact_name || c.phone_number}</span>
+                    <span style="font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: ${isSoftphone ? 'rgba(59, 130, 246, 0.2)' : 'rgba(148, 163, 184, 0.15)'}; color: ${isSoftphone ? '#60a5fa' : '#94a3b8'};">
+                      ${isSoftphone ? 'Softphone' : 'Mobile'}
+                    </span>
                   </div>
-                  <div>
-                    <div style="font-weight: 700; font-size: 15px; color: ${isMissed ? '#f87171' : '#fff'};">${c.contact_name || c.phone_number}</div>
-                    <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">
-                      ${c.contact_name ? `${c.phone_number} • ` : ''}${c.timestamp || 'Recent'}
-                    </div>
+                  <div style="font-size: 11.5px; color: #94a3b8; margin-top: 2px;">
+                    ${c.contact_name ? `${c.phone_number} • ` : ''}${timeFormatted} ${durationFormatted ? `(${durationFormatted})` : ''}
                   </div>
                 </div>
-                <button class="history-call-btn" data-phone="${c.phone_number}" data-name="${this.escapeAttr(c.contact_name || '')}" style="width: 40px; height: 40px; border-radius: 50%; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                  <i class="fas fa-phone fa-sm"></i>
-                </button>
               </div>
-            `;
-          }).join('')}
-        </div>
+              <button class="history-call-btn" data-phone="${c.phone_number}" data-name="${this.escapeAttr(c.contact_name || '')}" style="width: 40px; height: 40px; border-radius: 50%; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-phone fa-sm"></i>
+              </button>
+            </div>
+          `;
+        }).join('')}
       </div>
     `;
   }
@@ -578,12 +734,26 @@ export class SoftphonePage {
       this.activeTab = 'contacts';
       this.render();
       if (this.contactsList.length === 0) {
-        this.searchContacts('a'); // Preload active contacts
+        this.searchContacts('a');
       }
     });
 
     document.getElementById('tabHistoryBtn')?.addEventListener('click', () => {
       this.activeTab = 'history';
+      this.render();
+    });
+
+    // Recents Filter Buttons
+    document.getElementById('filterAllCallsBtn')?.addEventListener('click', () => {
+      this.historyFilter = 'ALL';
+      this.render();
+    });
+    document.getElementById('filterSoftphoneCallsBtn')?.addEventListener('click', () => {
+      this.historyFilter = 'SOFTPHONE';
+      this.render();
+    });
+    document.getElementById('filterMobileCallsBtn')?.addEventListener('click', () => {
+      this.historyFilter = 'MOBILE';
       this.render();
     });
 
@@ -630,7 +800,11 @@ export class SoftphonePage {
     document.getElementById('callSpeakerBtn')?.addEventListener('click', () => this.toggleSpeaker());
     document.getElementById('callHoldBtn')?.addEventListener('click', () => this.toggleHold());
 
-    // History item direct call
+    this.attachHistoryCardListeners();
+    this.attachContactCardListeners();
+  }
+
+  private attachHistoryCardListeners(): void {
     this.container.querySelectorAll('.history-call-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const phone = (btn as HTMLElement).dataset.phone;
@@ -638,8 +812,6 @@ export class SoftphonePage {
         if (phone) this.startCall(phone, name);
       });
     });
-
-    this.attachContactCardListeners();
   }
 
   private attachContactCardListeners(): void {

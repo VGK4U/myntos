@@ -2163,21 +2163,25 @@ async def get_call_history(
             if call_type and call_type in ("INCOMING", "MISSED", "OUTGOING", "REJECTED"):
                 type_filter = "AND call_type = :ctype"
             rows = db.execute(text(f"""
-                SELECT matched_lead_id, NULL AS name, phone_number, call_type,
-                       call_datetime, duration_seconds, NULL AS call_outcome,
-                       contact_name
-                FROM staff_call_logs
-                WHERE staff_id = :sid {type_filter}
-                ORDER BY call_datetime DESC
+                SELECT scl.matched_lead_id, 
+                       COALESCE(NULLIF(TRIM(scl.contact_name), ''), NULLIF(TRIM(l.name), ''), '') AS name,
+                       scl.phone_number, scl.call_type,
+                       scl.call_datetime, scl.duration_seconds, NULL AS call_outcome,
+                       COALESCE(NULLIF(TRIM(scl.contact_name), ''), NULLIF(TRIM(l.name), ''), '') AS contact_name
+                FROM staff_call_logs scl
+                LEFT JOIN crm_leads l ON scl.matched_lead_id = l.id
+                WHERE scl.staff_id = :sid {type_filter}
+                ORDER BY scl.call_datetime DESC
                 LIMIT :lim OFFSET :off
             """), {"sid": staff_id, "ctype": call_type or "", "lim": per_page, "off": offset}).fetchall()
             for r in rows:
+                cname = (r[7] or "").strip().rstrip(', ')
                 entries.append({
-                    "lead_id": r[0], "name": r[7] or "", "phone": r[2] or "",
+                    "lead_id": r[0], "name": cname, "phone": r[2] or "",
                     "call_type": r[3] or "OUTGOING",
                     "dialed_at": r[4].isoformat() if r[4] else None,
                     "duration_seconds": r[5] or 0, "call_outcome": "",
-                    "contact_name": r[7] or "", "source": "native",
+                    "contact_name": cname, "source": "native",
                 })
 
     return {"success": True, "entries": entries, "page": page, "per_page": per_page}
