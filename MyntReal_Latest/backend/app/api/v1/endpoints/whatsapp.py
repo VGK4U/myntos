@@ -3933,17 +3933,24 @@ def search_whatsapp_contacts(
     except Exception as e:
         logger.warning(f"Error searching CRM leads: {e}")
 
-    # 2. Search Staff Call Logs (Synced Mobile Contacts)
+    # 2. Search Staff Call Logs (Synced Mobile Contacts - prioritized by real contact_name)
     try:
         from sqlalchemy import text
         calls_sql = text("""
-            SELECT DISTINCT ON (RIGHT(REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g'), 10))
-                   contact_name, phone_number
-            FROM staff_call_logs
-            WHERE (contact_name IS NOT NULL AND contact_name <> '' AND contact_name ILIKE :q_like)
-               OR phone_number LIKE :q_like
-               OR (:digits <> '' AND REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g') LIKE :d_like)
-            LIMIT 20;
+            SELECT contact_name, phone_number
+            FROM (
+                SELECT contact_name, phone_number,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY RIGHT(REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g'), 10) 
+                           ORDER BY (CASE WHEN contact_name IS NOT NULL AND TRIM(contact_name) <> '' AND LOWER(TRIM(contact_name)) <> 'null' THEN 0 ELSE 1 END), id DESC
+                       ) as rn
+                FROM staff_call_logs
+                WHERE (contact_name IS NOT NULL AND contact_name <> '' AND contact_name ILIKE :q_like)
+                   OR phone_number LIKE :q_like
+                   OR (:digits <> '' AND REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g') LIKE :d_like)
+            ) sub
+            WHERE rn = 1
+            LIMIT 30;
         """)
         call_rows = db.execute(calls_sql, {
             "q_like": f"%{query_str}%",
@@ -3957,8 +3964,9 @@ def search_whatsapp_contacts(
             if len(cp) == 10 and cp not in seen_phones:
                 seen_phones.add(cp)
                 masked = f"+91 {cp[:4]}••••{cp[-2:]}"
+                cleaned_name = (c_name or "").strip().rstrip(', ')
                 results.append({
-                    "name": (c_name or "Mobile Contact").strip(),
+                    "name": cleaned_name if cleaned_name else "Mobile Contact",
                     "phone": cp,
                     "masked_phone": masked,
                     "source": "Mobile Contact",
