@@ -39,6 +39,10 @@ class BankBranchContact(BaseModel):
     custom_phone = Column(String(50), nullable=True)
     custom_alt_phone = Column(String(50), nullable=True)
 
+    # Location & Address
+    google_maps_url = Column(String(500), nullable=True)
+    branch_address = Column(Text, nullable=True)
+
     # General Notes & Audit
     notes = Column(Text, nullable=True)
     updated_by_staff_id = Column(Integer, nullable=True)
@@ -67,6 +71,8 @@ class BankBranchContact(BaseModel):
             "custom_name": self.custom_name or "",
             "custom_phone": self.custom_phone or "",
             "custom_alt_phone": self.custom_alt_phone or "",
+            "google_maps_url": self.google_maps_url or "",
+            "branch_address": self.branch_address or "",
             "notes": self.notes or "",
             "updated_by_staff_id": self.updated_by_staff_id,
             "updated_by_staff_name": self.updated_by_staff_name or "",

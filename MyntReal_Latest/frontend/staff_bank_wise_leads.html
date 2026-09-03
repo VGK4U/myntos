@@ -1493,13 +1493,19 @@
                 const isExpanded = expandedSummaryGroups.has(groupId);
                 const valText = g.totalValue ? `₹${(g.totalValue / 100000).toFixed(2)}L` : '—';
 
+                const contactKey = (g.bankName + ':::' + g.branchName).toLowerCase();
+                const bc = branchContactsMap[contactKey] || null;
+                const mapLink = bc?.google_maps_url || (g.leads.find(l => l.google_maps_url)?.google_maps_url) || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(g.bankName + ' ' + g.branchName)}`;
+
                 html += `
                 <div class="card mb-3 border-0 shadow-sm" style="border-radius:12px;overflow:hidden;background:#ffffff">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 py-2 px-3 border-bottom">
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center flex-wrap gap-2">
                             <span class="badge bg-primary px-2 py-1" style="font-size:13px;font-weight:800">${esc(g.bankName)}</span>
                             <span class="fw-bold text-dark" style="font-size:14px"><i class="fas fa-code-branch text-muted me-1"></i>${esc(g.branchName)}</span>
                             <span class="badge bg-info text-dark px-2 py-1" style="font-weight:700">${g.leads.length} Files</span>
+                            <a href="${mapLink}" target="_blank" class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold" style="font-size:11px" onclick="event.stopPropagation()" title="Open Google Maps Location"><i class="fas fa-map-marker-alt me-1"></i>Location</a>
+                            <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 fw-semibold" style="font-size:11px" onclick="event.stopPropagation(); shareBranchDetails('${escJs(g.bankName)}', '${escJs(g.branchName)}')" title="Share Branch & Officials Details on WhatsApp"><i class="fab fa-whatsapp me-1"></i>Share</button>
                         </div>
                         <div class="d-flex align-items-center gap-3">
                             <span class="fw-bold text-success" style="font-size:14px" title="Total Portfolio Value"><i class="fas fa-indian-rupee-sign me-1"></i>${valText}</span>
@@ -1521,10 +1527,7 @@
                 `;
 
                 // Branch Officials & Contacts Sub-Card (Manager, Field Officer, Custom Staff)
-                const contactKey = (g.bankName + ':::' + g.branchName).toLowerCase();
-                const bc = branchContactsMap[contactKey] || null;
-
-                if (bc && (bc.manager_name || bc.manager_phone || bc.officer_name || bc.officer_phone || bc.custom_name || bc.custom_phone)) {
+                if (bc && (bc.manager_name || bc.manager_phone || bc.officer_name || bc.officer_phone || bc.custom_name || bc.custom_phone || bc.branch_address)) {
                     const mgrPhoneBtn = bc.manager_phone ? `<button type="button" class="btn btn-sm btn-outline-success py-0 px-2 ms-1" style="font-size:11px;font-weight:700" onclick="event.stopPropagation(); triggerLeadCall('${escJs(bc.manager_phone)}', '${escJs(bc.manager_name || 'Branch Manager')} (BM)')" title="Call Branch Manager"><i class="fas fa-phone-alt me-1"></i>${esc(bc.manager_phone)}</button>` : '';
                     const mgrAltBtn = bc.manager_alt_phone ? `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 ms-1" style="font-size:10.5px" onclick="event.stopPropagation(); triggerLeadCall('${escJs(bc.manager_alt_phone)}', '${escJs(bc.manager_name || 'Branch Manager')} (Alt)')" title="Call Alternate Number"><i class="fas fa-phone-alt me-1"></i>${esc(bc.manager_alt_phone)}</button>` : '';
                     
@@ -1550,12 +1553,17 @@
                         <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle p-1 px-2">
                             <i class="fas fa-id-badge me-1"></i><b>${esc(custTitle)}:</b> ${esc(bc.custom_name || 'Staff')} ${custPhoneBtn} ${custAltBtn}
                         </span>` : ''}
+                        ${bc.branch_address ? `
+                        <span class="badge bg-light text-secondary border p-1 px-2" title="Branch Address">
+                            <i class="fas fa-location-dot text-danger me-1"></i>${esc(bc.branch_address)}
+                        </span>` : ''}
                         ${bc.updated_by_staff_name ? `<small class="text-muted ms-auto" style="font-size:10px"><i class="fas fa-clock-rotate-left me-1"></i>Updated by ${esc(bc.updated_by_staff_name)}</small>` : ''}
-                        <button type="button" class="btn btn-sm btn-link p-0 text-primary ms-1" style="font-size:11.5px;text-decoration:none;font-weight:700" onclick="openBranchContactModal('${escJs(g.bankName)}', '${escJs(g.branchName)}')"><i class="fas fa-pen me-1"></i>Edit Contacts</button>
+                        <button type="button" class="btn btn-sm btn-link p-0 text-primary ms-1" style="font-size:11.5px;text-decoration:none;font-weight:700" onclick="openBranchContactModal('${escJs(g.bankName)}', '${escJs(g.branchName)}')"><i class="fas fa-pen me-1"></i>Edit</button>
+                        <button type="button" class="btn btn-sm btn-link p-0 text-success ms-2" style="font-size:11.5px;text-decoration:none;font-weight:700" onclick="shareBranchDetails('${escJs(g.bankName)}', '${escJs(g.branchName)}')"><i class="fab fa-whatsapp me-1"></i>Share</button>
                     </div>`;
                 } else {
                     html += `
-                    <div class="d-flex align-items-center p-2 mt-2 rounded border border-dashed" style="background:#fafafa;font-size:11.5px">
+                    <div class="d-flex align-items-center p-2 mt-2 rounded border border-dashed flex-wrap gap-2" style="background:#fafafa;font-size:11.5px">
                         <span class="text-muted me-2"><i class="fas fa-info-circle me-1"></i>No branch official contacts added yet.</span>
                         <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 fw-bold ms-auto" style="font-size:11px" onclick="openBranchContactModal('${escJs(g.bankName)}', '${escJs(g.branchName)}')">
                             <i class="fas fa-user-plus me-1"></i>+ Add Branch Manager & Field Officer Contacts
@@ -2313,6 +2321,8 @@
             document.getElementById('bcCustomPhone').value = bc?.custom_phone || '';
             document.getElementById('bcCustomAltPhone').value = bc?.custom_alt_phone || '';
 
+            document.getElementById('bcGoogleMapsUrl').value = bc?.google_maps_url || '';
+            document.getElementById('bcBranchAddress').value = bc?.branch_address || '';
             document.getElementById('bcNotes').value = bc?.notes || '';
 
             const stUser = JSON.parse(localStorage.getItem('staff_user') || '{}');
@@ -2352,6 +2362,8 @@
                 custom_name: document.getElementById('bcCustomName').value,
                 custom_phone: document.getElementById('bcCustomPhone').value,
                 custom_alt_phone: document.getElementById('bcCustomAltPhone').value,
+                google_maps_url: document.getElementById('bcGoogleMapsUrl').value,
+                branch_address: document.getElementById('bcBranchAddress').value,
                 notes: document.getElementById('bcNotes').value,
                 staff_name: stUser.full_name || stUser.username || 'Staff',
                 staff_id: stUser.id || null
@@ -2383,6 +2395,104 @@
                 if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save me-1"></i>Save Branch Contacts'; }
             }
         }
+
+        // ── Branch Details WhatsApp & Clipboard Sharing ──
+        function getBranchShareMessage(bankName, branchName) {
+            const bName = (bankName || '').trim();
+            const brName = (branchName || '').trim();
+            const contactKey = (bName + ':::' + brName).toLowerCase();
+            const bc = branchContactsMap[contactKey] || null;
+
+            // Find matching leads count and total deal value
+            const matchingLeads = (allBankLeads || []).filter(l => 
+                (l.bank_name || '').trim().toLowerCase() === bName.toLowerCase() &&
+                (l.bank_branch || '').trim().toLowerCase() === brName.toLowerCase()
+            );
+            const totalVal = matchingLeads.reduce((sum, l) => sum + (l.deal_value || 0), 0);
+            const valStr = totalVal ? `₹${(totalVal / 100000).toFixed(2)} Lakhs` : '—';
+
+            let msg = `🏦 *Bank Branch Details — MyntReal CRM*\n`;
+            msg += `━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            msg += `🏢 *Bank:* ${bName}\n`;
+            msg += `📍 *Branch:* ${brName}\n`;
+
+            const mapLink = bc?.google_maps_url || (matchingLeads.find(l => l.google_maps_url)?.google_maps_url) || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(bName + ' ' + brName)}`;
+            if (mapLink) {
+                msg += `🗺️ *Google Location:* ${mapLink}\n`;
+            }
+            if (bc?.branch_address) {
+                msg += `📌 *Address:* ${bc.branch_address}\n`;
+            }
+
+            msg += `\n👥 *BRANCH OFFICIALS & CONTACTS:*\n`;
+
+            let hasOfficial = false;
+            if (bc?.manager_name || bc?.manager_phone) {
+                hasOfficial = true;
+                msg += `👔 *Branch Manager (BM):* ${bc.manager_name || 'BM'}\n`;
+                if (bc.manager_phone) msg += `   📞 Primary: ${bc.manager_phone}\n`;
+                if (bc.manager_alt_phone) msg += `   📱 Alternate: ${bc.manager_alt_phone}\n`;
+            }
+
+            if (bc?.officer_name || bc?.officer_phone) {
+                hasOfficial = true;
+                msg += `🛡️ *Field / Loan Officer (FO):* ${bc.officer_name || 'Officer'}\n`;
+                if (bc.officer_phone) msg += `   📞 Primary: ${bc.officer_phone}\n`;
+                if (bc.officer_alt_phone) msg += `   📱 Alternate: ${bc.officer_alt_phone}\n`;
+            }
+
+            if (bc?.custom_name || bc?.custom_phone) {
+                hasOfficial = true;
+                const cTitle = bc.custom_designation || 'Staff / Official';
+                msg += `💼 *${cTitle}:* ${bc.custom_name || 'Staff'}\n`;
+                if (bc.custom_phone) msg += `   📞 Primary: ${bc.custom_phone}\n`;
+                if (bc.custom_alt_phone) msg += `   📱 Alternate: ${bc.custom_alt_phone}\n`;
+            }
+
+            if (!hasOfficial) {
+                msg += `_(No official contacts recorded yet)_\n`;
+            }
+
+            if (bc?.notes) {
+                msg += `\n📝 *Branch Notes & Instructions:*\n${bc.notes}\n`;
+            }
+
+            if (matchingLeads.length > 0) {
+                msg += `\n📊 *Active CRM Pipeline:* ${matchingLeads.length} Files (${valStr})\n`;
+            }
+
+            msg += `━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            msg += `_Generated via MyntReal OS_`;
+            return msg;
+        }
+
+        function shareBranchDetails(bankName, branchName) {
+            const msg = getBranchShareMessage(bankName, branchName);
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
+        function copyBranchDetails(bankName, branchName) {
+            const msg = getBranchShareMessage(bankName, branchName);
+            navigator.clipboard.writeText(msg).then(() => {
+                showToast('Branch details copied to clipboard!', 'success');
+            }).catch(() => {
+                showToast('Could not copy text.', 'error');
+            });
+        }
+
+        function shareCurrentModalBranch() {
+            const bName = document.getElementById('bcBankName').value;
+            const brName = document.getElementById('bcBranchName').value;
+            if (!bName || !brName) return;
+            shareBranchDetails(bName, brName);
+        }
+
+        function copyCurrentModalBranch() {
+            const bName = document.getElementById('bcBankName').value;
+            const brName = document.getElementById('bcBranchName').value;
+            if (!bName || !brName) return;
+            copyBranchDetails(bName, brName);
+        }
     </script>
 
     <!-- Branch Officials & Contacts Modal -->
@@ -2403,6 +2513,16 @@
                 <div class="col-md-6 col-12">
                   <label class="form-label fw-bold text-dark">Branch Name</label>
                   <input type="text" class="form-control bg-light fw-bold" id="bcBranchName" readonly>
+                </div>
+
+                <!-- Google Maps Location & Branch Address -->
+                <div class="col-md-6 col-12">
+                  <label class="form-label fw-bold text-dark"><i class="fas fa-map-marker-alt text-danger me-1"></i>Google Maps Location Link</label>
+                  <input type="url" class="form-control form-control-sm" id="bcGoogleMapsUrl" placeholder="https://maps.app.goo.gl/... or Google Map URL">
+                </div>
+                <div class="col-md-6 col-12">
+                  <label class="form-label fw-bold text-dark"><i class="fas fa-building text-secondary me-1"></i>Branch Address / Landmark</label>
+                  <input type="text" class="form-control form-control-sm" id="bcBranchAddress" placeholder="e.g. Main Road, Opp. RTC Complex, Pendurthi">
                 </div>
 
                 <!-- Branch Manager -->
@@ -2483,9 +2603,15 @@
                   <i class="fas fa-user-edit me-1"></i>Updating as logged-in staff member.
                 </div>
               </div>
-              <div class="modal-footer px-0 pb-0 mt-3 border-0">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-primary fw-bold px-4" id="btnSaveBranchContact"><i class="fas fa-save me-1"></i>Save Branch Contacts</button>
+              <div class="modal-footer d-flex justify-content-between px-0 pb-0 mt-3 border-0">
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-outline-success btn-sm fw-bold" onclick="shareCurrentModalBranch()"><i class="fab fa-whatsapp me-1"></i>Share on WhatsApp</button>
+                  <button type="button" class="btn btn-outline-secondary btn-sm fw-semibold" onclick="copyCurrentModalBranch()"><i class="fas fa-copy me-1"></i>Copy Details</button>
+                </div>
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                  <button type="submit" class="btn btn-primary fw-bold px-4" id="btnSaveBranchContact"><i class="fas fa-save me-1"></i>Save Branch Contacts</button>
+                </div>
               </div>
             </form>
           </div>

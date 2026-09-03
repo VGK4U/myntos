@@ -32,6 +32,8 @@ class BankBranchContactCreate(BaseModel):
     custom_name: Optional[str] = None
     custom_phone: Optional[str] = None
     custom_alt_phone: Optional[str] = None
+    google_maps_url: Optional[str] = None
+    branch_address: Optional[str] = None
     notes: Optional[str] = None
     staff_name: Optional[str] = None
     staff_id: Optional[int] = None
@@ -126,6 +128,9 @@ def upsert_bank_branch_contact(
     contact.custom_name = (payload.custom_name or "").strip() or None
     contact.custom_phone = (payload.custom_phone or "").strip() or None
     contact.custom_alt_phone = (payload.custom_alt_phone or "").strip() or None
+
+    contact.google_maps_url = (payload.google_maps_url or "").strip() or None
+    contact.branch_address = (payload.branch_address or "").strip() or None
 
     contact.notes = (payload.notes or "").strip() or None
     contact.updated_by_staff_id = staff_id
