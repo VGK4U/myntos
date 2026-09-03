@@ -1445,8 +1445,13 @@ export class StaffWhatsAppInboxPage {
         clearInterval(this.qrPollingTimer);
         modalWrap.innerHTML = '';
         this.render();
+      } else if (this.gatewayQr) {
+        const container = modalWrap.querySelector('div[style*="background: #fff"]');
+        if (container) {
+          container.innerHTML = `<img src="${this.gatewayQr}" alt="QR Code" style="width: 200px; height: 200px; display: block; border-radius: 8px;" />`;
+        }
       }
-    }, 5000);
+    }, 3000);
   }
 
   private openNewMessageModal(phoneNum?: string, initialText?: string): void {

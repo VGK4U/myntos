@@ -1,0 +1,610 @@
+[DC-DB-INIT] Database module loading...
+[DC-DB-INIT] DATABASE_URL found: postgresql://postgres:***@myntreal-database.c5gywaicq6zu.ap-south-2.rds.amazonaws.com:5432/postgres
+[DC-DB-INIT] Using config DATABASE_URL: postgresql://postgres:***@myntreal-database.c5gywaicq6zu.ap-south-2.rds.amazonaws.com:5432/postgres
+[DC-DB-INIT] Creating PostgreSQL engine (Optimized 5-Connection Pool mode)...
+[DC-DB-INIT] Engine created successfully
+[DC-STATIC] ✅ Public assets mounted: /public -> /Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/frontend/public
+[DC-STATIC] ✅ Marketplace images mounted: /marketplace/product-images -> /Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/frontend/public/marketplace/product-images
+[DC-STATIC] ✅ Mobile Web SPA mounted: /mobile and /app -> /Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/frontend/public/mobile
+[DC-STATIC] ✅ Mobile Assets mounted: /assets -> /Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/frontend/public/mobile/assets
+[DC-MODULE-PRELOAD] ✅ 199 migration keys cached for module-level blocks
+[DC-VEH-COLOR-001] ✅ Tables already exist (skipped)
+[DC-VEH-COLOR-SEED-001] ✅ Already seeded (skipped)
+[DC-VEH-COLOR-OB-001] ✅ Already seeded (skipped)
+[DC-VEH-COLOR-PARTY-002] ✅ Already applied (skipped)
+[DC-VEH-COLOR-BATCH-PARTY-003] ✅ Already applied (skipped)
+[DC-ACC-INV-001] ✅ Tables already exist (skipped)
+[DC-ACC-INV-SEED-001] ✅ Seed already applied (skipped)
+[DC-ACC-SUBTYPE-001] ✅ Already applied (skipped)
+[DC-ACC-DATA-V2-001] ✅ Already applied (skipped)
+[DC-PL-ACCT-BACKFILL-001] ✅ Already applied (skipped)
+[DC-PL-CONSTRAINT-FIX-001] ✅ Already applied (skipped)
+[DC-VENDOR-REPAIR-TRACKER-001] ✅ Already applied — skip
+[DC-CUSTOMER-SPARE-001] ✅ Already applied — skip
+[DC-STANDALONE-SPARE-001] ✅ Already applied — skip
+[DC-VGK-STAGE1-001] ✅ Already applied — skip
+[DC-PURCHASE-DEDUP-001] ✅ Already applied — skip
+[DC-SI-NET-PAY-001] ✅ Already applied — skip
+[DC-VGK-MKT-ENHANCE-001] ✅ Already applied — skip
+[DC-OPCALL-CALLNOTE-001] ✅ Already applied — skip
+[DC-WA-ACK-TEMPLATES-001] ✅ Already applied — skip
+[DC-INCENTIVE-EMP-TARGETS-001] ✅ Already applied — skip
+[DC-VGK-L4CORE-001] ✅ Already applied — skip
+[DC-CRM-DATE-BACKFILL-001] ✅ Already applied — skip
+[DC-PL-JV-PARTY-REPAIR-001] ✅ Already applied — skip
+[DC-REFERRAL-BONUS-001] ✅ Already applied — skip
+[DC-SHOWROOM-CFG-001] ✅ Already applied — skip
+[DC-SUBMIT-DATE-REPAIR-001] ✅ Already applied — skip
+[DC-CANCEL-REGEN-001] ✅ Already applied — skip
+[DC-VGK-BRAND-001] ✅ Already applied — skip
+[DC-VGK-BRAND-LEVEL-001] ✅ Already applied — skip
+[DC-VGK-BRAND-LEAD-001] ✅ Already applied — skip
+[DC-VGK-MULTI-ADV-001] ✅ Already applied — skip
+[DC-VGK-CASH-KIND-001] ✅ Already applied — skip
+[DC-VGK-CASH-KIND-002] ✅ Already applied — skip
+[DC-VGK-BRAND-SEED-001] ✅ Already applied — skip
+[DC-RETURN-001] ✅ Already applied — skip
+[DC-RETURN-INV-001] ✅ Already applied — skip
+[DC-LEDGER-TYPE-001] ✅ Already applied — skip
+[DC-JV-COMPOUND-001] ✅ Already applied — skip
+[DC-AL-CHAIN-REPAIR-001] ✅ Already applied — skip
+[DC-AL-SIGN-REPAIR-001] ✅ Already applied — skip
+[DC-TDS-CHALLAN-001] ✅ Already applied — skip
+[DC-DRAFT-001] ⏭️ Already applied — skipping
+[DC-CIBIL-DATE-OVERRIDE-001] ⏭️ Already applied — skipping
+[DC-ADV-CONSTRAINT-FIX-001] ⏭️ Already applied — skipping
+[DC-BONANZA-TRACK-IDX-001] ⏭️ Already applied — skipping
+[DC-TEAM-UPLINE-BACKFILL-001] ⏭️ Already applied — skipping
+[DC-TEAM-CORE-BACKFILL-001] ⏭️ Already applied — skipping
+[DC-VGK-NO-AUTO-JV-001] ⏭️ Already applied — skipping
+[DC-SUPPORT-TECH1-STAFF-001] ⏭️ Already applied — skipping
+[DC-HCI-001] ⏭️ Already applied — skipping
+[DC-SLAB-L1-ONLY-CLEANUP-001] ⏭️ Already applied — skipping
+[DC-ADV-KIND-CONSTRAINT-001] ⏭️ Already applied — skipping
+[DC-BKFILL-001] ⏭️ Already applied — skipping
+[DC-KIND-DVR-ADVANCE-001] ⏭️ Already applied — skipping
+[DC-DVR-MIRROR-BKFILL] ⏭️ Already applied — skipping
+[DC-ADVANCE-4000-FIX] ⏭️ Already applied — skipping
+[DC-VCI-4000-FIX2] ⏭️ Already applied — skipping
+[DC-SLAB-NISSI-LOOP-FIX] ⏭️ Already applied — skipping
+[DC-PREMATURE-SOLAR-DRAFT] ⏭️ Already applied — skipping
+[DC-EXTRA-COMM-001] ⏭️ Already applied — skipping
+[DC-FIRST-PMT-001] ⏭️ Already applied — skipping
+[DC-FIRST-PMT-BACKFILL-V2] ⏭️ Already applied — skipping
+[DC-ASSOC-PARTNER-SRC-BACKFILL] ⏭️ Already applied — skipping
+[DC-AWARD-TRIGGER-001] ⏭️  Already applied — skipping
+[DC-EC-PER-LEVEL-TRIGGER-001] ⏭️  Already applied — skipping
+[DC-EC-POSITIVE-TARGET-RELAX-001] ⏭️  Already applied — skipping
+[DC-FREELANCER-ACCESS-001] ⏭️  Already applied — skipping
+INFO:     Started server process [5608]
+INFO:     Waiting for application startup.
+[DC-STARTUP] Background startup worker started
+[DC-STARTUP] ✅ Server ready — background startup in progress
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+[DC-STARTUP] ✅ DB connected (attempt 1)
+[DC-STARTUP] ✅ Migration key cache: 199 keys preloaded (fast-skip active)
+[DC-STARTUP] ✅ Critical unique indexes & constraints verified/ensured on DB tables
+[DC-OP-SCHEMA-001] ✅ official_partners (7) + vendor_master (2) missing columns ensured + manual_party_master table ready
+[DC_CONSOLIDATED_EARLY_001] ✅ is_direct_expense column ensured on expense_main_category
+[DC_EXPENSE_SUBCATEGORY_NULLABLE_001] ✅ expense_entries.sub_category_id is now nullable
+[DC-NAME-GENDER] ✅ name_title/first_name/last_name/gender columns ensured on official_partners + promo_influencers
+[DC-VGK-SEED] ✅ VGK07102207 root member already exists — skipping
+[DC-WELCOME-FIX] Current positive_amounts: CHECK (((package_value >= 0) AND (total_amount >= (0)::numeric) AND (payment_amount >= (0)::numeric)))
+[DC-WELCOME-FIX] Current valid_package_type: CHECK (((package_type)::text = ANY (ARRAY[('15000'::character varying)::text, ('7500'::character varying)::text, ('1000'::character varying)::text, ('500'::character varying)::text, ('0'::character varying)::text])))
+[DC-WELCOME-FIX] Constraints already correct — no changes needed
+[DC-VGK-COUPON] ✅ vgk_coupon_ledger schema updated: bonus_credit, manual_adjustment, reference_id
+INFO:     127.0.0.1:55110 - "GET /api/v1/whatsapp/templates-list HTTP/1.1" 401 Unauthorized
+[DC-VGK-HOLD] ✅ vgk_team_income_entries: HOLD status + required_points_debit added
+[DC-VGK-LOYAL] ✅ is_loyal_coupon column + LOYAL_BONUS reason code added
+[DC-RD-VGK] ✅ vgk_l1_pct..l4_pct columns added to rd_properties
+[DC-MARKET-SEG] ✅ segment_type column added to marketplace_segments
+[DC-VGK-CASH] ✅ vgk_cash_income_entries + Universal Incentive schema created
+[DC-VGK-WALLET] ✅ vgk_cash_earned_total + vgk_wallet_transactions created
+[DC-FIX-2605-TXN-CHECK] ✅ vgk_wallet_transactions txn_type CHECK constraint expanded (11 types)
+[DC-VGK-VENDOR] ✅ All 8 VGK Vendor system tables created
+[DC-VGK-VENDOR] ✅ logo_url + banner_url columns ensured on vgk_vendors
+[DC-STARTUP] ✅ marketplace_spares columns all present — no ALTER TABLE needed
+[DC-STARTUP] ✅ marketplace_category_config.segment_id already present
+[DC-STARTUP] ✅ company_bank_accounts table already present
+[DC-STARTUP] ✅ staff_kra_templates.target_time already present
+[DC-MKT-UQFIX-001] ✅ marketplace_spares unique constraint migrated to (sku, company_id)
+[DC-SEGMENT-BACKFILL] ✅ All EV Spares products already have a valid segment_id
+INFO:     127.0.0.1:55121 - "GET /api/v1/whatsapp/bot-status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55123 - "GET /api/v1/whatsapp/bot-status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55129 - "GET /api/v1/whatsapp/bot-status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55131 - "GET /api/v1/whatsapp/bot-status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55125 - "GET /api/v1/whatsapp/conversations-hub?scope=assigned_tagged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55138 - "GET /api/v1/whatsapp/search-contacts?q=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55140 - "GET /api/v1/whatsapp/search-contacts?q=87 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55133 - "GET /api/v1/whatsapp/conversations-hub?scope=assigned_tagged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55141 - "GET /api/v1/whatsapp/search-contacts?q=8 HTTP/1.1" 200 OK
+WARNING:root:[DC-META-ADS-BOOTSTRAP] ⚠️ Meta Ads bootstrap (non-fatal): (psycopg2.errors.NotNullViolation) null value in column "company_id" of relation "staff_employee_menu_settings" violates not-null constraint
+DETAIL:  Failing row contains (330202, null, 33, 76686, t, t, null, null, null, null, 2026-09-02 04:12:43.592305, 2026-09-02 04:12:43.592305).
+
+[SQL: 
+                                INSERT INTO staff_employee_menu_settings (employee_id, menu_id, can_view, can_edit, created_at, updated_at)
+                                SELECT e.id, %(mid)s, TRUE, TRUE, NOW(), NOW()
+                                FROM staff_employees e
+                                WHERE e.status = 'active'
+                                  AND NOT EXISTS (
+                                    SELECT 1 FROM staff_employee_menu_settings s
+                                    WHERE s.employee_id = e.id AND s.menu_id = %(mid)s
+                                  )
+                            ]
+[parameters: {'mid': 76686}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+WARNING:root:[MARKETPLACE] Staff perf/PO tables error (non-fatal): (psycopg2.errors.InFailedSqlTransaction) current transaction is aborted, commands ignored until end of transaction block
+
+[SQL: SET statement_timeout = 0]
+(Background on this error at: https://sqlalche.me/e/20/2j85)
+[DC-IMG-FIX] No legacy uc?export=view URLs found in marketplace_spares
+INFO:     127.0.0.1:55145 - "GET /api/v1/whatsapp/search-contacts?q=9 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55147 - "GET /api/v1/whatsapp/search-contacts?q=91 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55148 - "GET /api/v1/whatsapp/search-contacts?q=915 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55150 - "GET /api/v1/whatsapp/search-contacts?q=9154 HTTP/1.1" 200 OK
+[DC-WALLET-MIGRATION] ✅ No legacy wallet users found — nothing to migrate
+[DC-PROMO] ✅ promo_influencers / promo_referral_events / promo_influencer_auth / promo_marketplace_products / promo_product_clicks / promo_cross_auth_tokens / promo_nda_versions / promo_nda_acceptances tables ready
+[DC-QBONUS] Seeded default quarterly bonus eligible employees
+[DC-VGK-PROMO] ✅ vgk_promo_codes / vgk_promo_redemptions tables ready
+[DC-VGK-PROMO] ✅ vgk_points_ledger reason_code constraint updated with CAMPAIGN_BONUS
+[DC-CP-CARD] ✅ CP designation schema migration complete
+[DC-GALLERY-001] ✅ Gallery schema migration complete
+[DC-VGK-SUPPORT] ✅ Support confirmation columns added to vgk_team_income_entries
+[DC-VGK-DEMO] ✅ Support scenario seeds already present — skipping
+[DC-VGK4U-PARITY] ✅ 16 VGK4U toggle columns added to app_settings (single source of truth)
+INFO:     127.0.0.1:55155 - "GET /api/v1/whatsapp/search-contacts?q=88 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55156 - "GET /api/v1/whatsapp/search-contacts?q=887 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55159 - "GET /api/v1/whatsapp/search-contacts?q=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55161 - "GET /api/v1/whatsapp/search-contacts?q=81 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55162 - "GET /api/v1/whatsapp/search-contacts?q=814 HTTP/1.1" 200 OK
+[DC-VGK4U-PARITY-MENU] ✅ Seeded 0 new registry + 0 new master rows (vgk_member, zero-default-access)
+[DC-VGK4U-PARITY-P2] ✅ 7 VGK4U Phase-2 toggle columns added to app_settings (Zero-Default)
+[DC-VGK4U-PARITY-P2] ✅ Phase-2 tables (kyc/bank/feedback/announcements/settings) created/verified
+INFO:     127.0.0.1:55169 - "GET /api/v1/whatsapp/templates-list HTTP/1.1" 200 OK
+[DC-VGK4U-P2-MENU] ✅ Seeded 0 registry + 0 master rows (zero-default)
+INFO:     127.0.0.1:55176 - "GET /api/v1/whatsapp/templates-list HTTP/1.1" 200 OK
+[DC-STARTUP] ✅ valid_break_type + valid_break_type_check both dropped; clean constraint added
+[DC-STARTUP] ✅ Task-26: valid_ticket_status constraint updated + data integrity patched
+[DC-STARTUP] ✅ DC-PROC-RETURN-001: RETURNED_FOR_QUALITY status + return_notes column ready
+[DC-STARTUP] ✅ DC-STOCK-CAT-001: stock_item_category_check constraint dropped (free-text categories enabled)
+[DC_DAR_003] ✅ service_ticket + staff_attendance_sheets company_id ensured + back-filled
+🔄 Verifying schema integrity...
+   ⏭️  Constraint OK: valid_account_status_expansion
+   ⏭️  Constraint OK: task_activity_action_expansion
+   ⏭️  Constraint OK: valid_source_gps_expansion
+   ⏭️  Already exists: staff_employees.base_company_id
+   ⏭️  Already exists: idx_staff_employees_base_company_id
+   ⏭️  Already exists: staff_employees.data_companies
+   ⏭️  Already exists: rd_properties.hidden_fields
+   ⏭️  Already exists: rd_properties.property_options
+   ⏭️  Already exists: crm_leads.deal_value_total
+   ⏭️  Already exists: crm_leads.deal_value_received
+   ⏭️  Already exists: crm_leads.deal_value_balance
+   ⏭️  Already exists: ticket_log.staff_performer_id
+   ⏭️  Already exists: ticket_attachment.is_scanned
+   ⏭️  Already exists: ticket_attachment.scan_status
+   ⏭️  Already exists: ticket_attachment.download_filename
+   ⏭️  Already exists: ticket_attachment.uses_new_naming
+   ⏭️  Already exists: staff_attendance.gps_status
+   ⏭️  Already exists: staff_attendance.gps_status_reason
+   ⏭️  Already exists: staff_attendance.gps_status_at
+   ⏭️  Already exists: staff_attendance.last_gps_at
+   ⏭️  Already exists: staff_attendance.last_battery_pct
+   ⏭️  Already exists: message_log.read_at
+   ⏭️  Already exists: dynamic_bonanza_reward.criteria_type
+   ⏭️  Already exists: dynamic_bonanza_reward.criteria_value
+   ⏭️  Already exists: dynamic_bonanza_reward.criteria_operator
+   ⏭️  Already exists: dynamic_bonanza_reward.reward_amount
+   ⏭️  Already exists: dynamic_bonanza_reward.award_name
+   ⏭️  Already exists: dynamic_bonanza_reward.award_image
+   ⏭️  Already exists: dynamic_bonanza_reward.is_monetary
+   ⏭️  Already exists: dynamic_bonanza_reward.budget_amount
+   ⏭️  Already exists: dynamic_bonanza_reward.max_recipients
+   ⏭️  Already exists: dynamic_bonanza_reward.current_recipients
+   ⏭️  Already exists: crm_lead_transactions.revenue_category_id
+   ⏭️  Already exists: crm_lead_transactions.deal_id
+   ⏭️  Already exists: income_entries.revenue_category_id
+   ⏭️  Already exists: income_entries.crm_transaction_id
+   ⏭️  Already exists: crm_lead_transactions.income_entry_id
+   ⏭️  Already exists: income_entries.lead_id
+   ⏭️  Already exists: income_entries.lead_owner_id
+   ⏭️  Already exists: income_entries.collected_by_id
+   ⏭️  Already exists: income_entries.payer_city
+   ⏭️  Already exists: income_entries.payer_state
+   ⏭️  Already exists: income_entries.transaction_type
+   ⏭️  Already exists: income_entries.confirmed_by_id
+   ⏭️  Already exists: income_entries.confirmed_at
+   ⏭️  Already exists: crm_lead_deals.deal_code
+   ⏭️  Already exists: crm_lead_deals.deal_fy_seq
+   ⏭️  Already exists: crm_lead_deals.deal_date
+   ⏭️  Already exists: crm_lead_deals.notes
+   ⏭️  Already exists: pending_income.matching_contributors_snapshot
+   ⏭️  Already exists: staff_employees.call_tracking_enabled
+   ⏭️  Already exists: staff_tasks.contact_phone
+   ⏭️  Already exists: staff_tasks.contact_person_name
+   ⏭️  Already exists: staff_task_phases.contact_phone
+   ⏭️  Already exists: staff_task_phases.contact_person_name
+   ⏭️  Already exists: staff_call_recordings_table
+   ⏭️  Already exists: staff_call_logs.has_recording
+   ⏭️  Already exists: staff_call_logs.recording_id
+   ⏭️  Already exists: staff_call_logs.contact_name
+   ⏭️  Already exists: service_ticket_spare_request.is_custom
+   ⏭️  Already exists: service_ticket_spare_request.original_item_name
+   ⏭️  Already exists: service_ticket_spare_request.verified_by_id
+   ⏭️  Already exists: service_ticket_spare_request.verified_at
+   ⏭️  Already exists: service_ticket_spare_request.verification_notes
+   ⏭️  Already exists: staff_attendance.activity_minutes_total
+   ⏭️  Already exists: staff_attendance.kra_minutes
+   ⏭️  Already exists: staff_attendance.task_minutes
+   ⏭️  Already exists: staff_attendance.dayplan_minutes
+   ⏭️  Already exists: staff_attendance.lead_minutes
+   ⏭️  Already exists: staff_attendance.ticket_minutes
+   ⏭️  Already exists: staff_attendance.journey_minutes
+   ⏭️  Already exists: staff_attendance.custom_minutes
+   ⏭️  Already exists: staff_day_plan_items.time_spent_minutes
+   ⏭️  Already exists: staff_day_plan_items.plan_type
+   ⏭️  Already exists: staff_day_plan_items.is_followup
+   ⏭️  Already exists: staff_activity_time_log_table
+   ⏭️  Already exists: idx_activity_time_emp_date
+   ⏭️  Already exists: idx_activity_time_source
+   ⏭️  Already exists: staff_activity_time_log.approval_status
+   ⏭️  Already exists: staff_activity_time_log.approved_minutes
+   ⏭️  Already exists: staff_activity_time_log.approved_by
+   ⏭️  Already exists: staff_activity_time_log.approved_at
+   ⏭️  Already exists: staff_activity_time_log.rejection_reason
+   ⏭️  Already exists: staff_timesheet_entries.approved_minutes
+   ⏭️  Column type OK: scheduler_log status columns VARCHAR(20) → VARCHAR(100)
+   ⏭️  Constraint OK: income_status_check_v2
+   ⚠️  FK repoint warning for crm_lead_deals.revenue_category_id -> signup_categories: (psycopg2.errors.InvalidForeignKey) there is no unique constraint matching given keys for referenced
+   ⚠️  FK repoint warning for crm_lead_transactions.revenue_category_id -> signup_categories: (psycopg2.errors.InvalidForeignKey) there is no unique constraint matching given keys for referenced
+   ⚠️  FK repoint warning for income_entries.revenue_category_id -> signup_categories: (psycopg2.errors.InvalidForeignKey) there is no unique constraint matching given keys for referenced
+   ⏭️  Constraint OK: valid_criteria_type
+   ⏭️  Constraint OK: valid_criteria_operator
+   ⏭️  Constraint OK: valid_reward_type_bonanza
+   ⏭️  Constraint OK: positive_or_null_reward_amount
+   ⏭️  Constraint OK: positive_criteria_value
+   ⏭️  Index OK: uq_income_entry_company_number
+   ⏭️  Index OK: uq_expense_entry_company_number
+   ⏭️  Already exists: income_entries.payment_type
+   ⏭️  Already exists: sales_invoices.document_type
+   ⏭️  Already exists: sales_invoices.billing_company_id
+   ⏭️  Already exists: sales_invoices.coupon_code
+   ⏭️  Already exists: sales_invoices.coupon_discount_pct
+   ⏭️  Already exists: sales_invoices.coupon_discount_amount
+   ⏭️  Already exists: sales_invoices.manual_discount_amount
+   ⏭️  Already exists: sales_invoices.manual_discount_note
+   ⏭️  Already exists: sales_invoices.net_payable
+   ⏭️  Already exists: income_entries.is_deleted
+   ⏭️  Already exists: income_entries.deleted_by_id
+   ⏭️  Already exists: income_entries.deleted_at
+   ⏭️  Already exists: idx_income_entries_is_deleted
+   ⏭️  Already exists: associated_companies.phone
+   ⏭️  Already exists: associated_companies.email
+   ⏭️  Already exists: associated_companies.website
+   ✅ DC-NEW-LEADS-UNASSIGNED-POOL-001: All 'new' status leads unassigned for universal telecaller availability
+✅ Database initialized with preserved schema
+[DC-MARKET-FLOOR] ✅ margin_floor_percent raised to 20% on 0 category config rows
+[DC-CRM-INDEX] ✅ idx_crm_leads_company_owner ensured
+[DC-NDA-LOGO-FIX-001] ✅ NDA logo URLs patched to /hub/Assets/Myntreal.logo.png
+[DC-AGREEMENT-TYPE-001] ✅ document_type columns ensured on NDA tables
+[DC-FB-PAGES] ✅ facebook_pages table ensured
+[PHASE-2] Skipped table init (non-fatal): (psycopg2.errors.InvalidForeignKey) there is no unique constraint matching given keys for referenced table "staff_employees"
+
+[SQL: 
+                CREATE TABLE IF NOT EXISTS meta_leads_attribution (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER UNIQUE NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    meta_lead_id VARCHAR(50) NOT NULL,
+                    meta_campaign_id VARCHAR(50),
+                    meta_campaign_name VARCHAR(200),
+                    meta_adset_id VARCHAR(50),
+                    meta_adset_name VARCHAR(200),
+                    meta_ad_id VARCHAR(50),
+                    meta_ad_name VARCHAR(200),
+                    meta_form_id VARCHAR(50),
+                    meta_form_name VARCHAR(200),
+                    utm_source VARCHAR(100),
+                    utm_medium VARCHAR(100),
+                    utm_campaign VARCHAR(100),
+                    utm_content VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS system_jobs (
+                    id BIGSERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    job_type VARCHAR(50) NOT NULL,
+                    payload JSONB NOT NULL,
+                    status VARCHAR(20) NOT NULL DEFAULT 'QUEUED',
+                    attempts INTEGER NOT NULL DEFAULT 0,
+                    max_attempts INTEGER NOT NULL DEFAULT 5,
+                    next_attempt_at TIMESTAMP DEFAULT NOW(),
+                    locked_by VARCHAR(100),
+                    locked_until TIMESTAMP,
+                    idempotency_key VARCHAR(150) UNIQUE NOT NULL,
+                    correlation_id VARCHAR(100),
+                    error_log TEXT,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    processed_at TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS wa_conversations (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    phone VARCHAR(20) NOT NULL,
+                    session_uuid VARCHAR(100) UNIQUE NOT NULL,
+                    current_state VARCHAR(50) NOT NULL DEFAULT 'NEW_LEAD',
+                    previous_state VARCHAR(50),
+                    channel_provider VARCHAR(30) NOT NULL DEFAULT 'META_CLOUD_API',
+                    window_24h_expires_at TIMESTAMP NOT NULL,
+                    service_window_open BOOLEAN NOT NULL DEFAULT TRUE,
+                    messaging_policy_window_type VARCHAR(30) NOT NULL DEFAULT '24H_SERVICE',
+                    is_human_takeover BOOLEAN DEFAULT FALSE,
+                    assigned_staff_id INTEGER,
+                    last_inbound_at TIMESTAMP,
+                    last_outbound_at TIMESTAMP,
+                    last_inbound_wamid VARCHAR(250),
+                    session_started_at TIMESTAMP DEFAULT NOW(),
+                    session_closed_at TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS wa_messages (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    conversation_id INTEGER NOT NULL REFERENCES wa_conversations(id) ON DELETE CASCADE,
+                    lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    wamid VARCHAR(250) UNIQUE,
+                    direction VARCHAR(10) NOT NULL,
+                    sender_type VARCHAR(20) NOT NULL DEFAULT 'CUSTOMER',
+                    message_type VARCHAR(20) NOT NULL DEFAULT 'TEXT',
+                    body_text TEXT,
+                    delivery_status VARCHAR(20) DEFAULT 'QUEUED',
+                    sent_at TIMESTAMP DEFAULT NOW(),
+                    delivered_at TIMESTAMP,
+                    read_at TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS meta_daily_insights (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    ad_account_id VARCHAR(50) NOT NULL,
+                    campaign_id VARCHAR(50) NOT NULL,
+                    campaign_name VARCHAR(200),
+                    adset_id VARCHAR(50) NOT NULL,
+                    adset_name VARCHAR(200),
+                    ad_id VARCHAR(50) NOT NULL,
+                    ad_name VARCHAR(200),
+                    meta_ad_account_timezone VARCHAR(50) NOT NULL DEFAULT 'Asia/Kolkata',
+                    meta_reporting_date DATE NOT NULL,
+                    myntos_display_timezone VARCHAR(50) NOT NULL DEFAULT 'Asia/Kolkata',
+                    myntos_display_date DATE,
+                    spend NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+                    impressions INTEGER NOT NULL DEFAULT 0,
+                    reach INTEGER NOT NULL DEFAULT 0,
+                    clicks INTEGER NOT NULL DEFAULT 0,
+                    ctr NUMERIC(6,4) DEFAULT 0.0000,
+                    cpc NUMERIC(10,2) DEFAULT 0.00,
+                    cpm NUMERIC(10,2) DEFAULT 0.00,
+                    leads_count INTEGER NOT NULL DEFAULT 0,
+                    cpl NUMERIC(10,2) DEFAULT 0.00,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_meta_daily_insights UNIQUE (company_id, ad_id, meta_reporting_date)
+                );
+                CREATE TABLE IF NOT EXISTS system_feature_flags (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    vertical VARCHAR(50) NOT NULL DEFAULT 'GENERAL',
+                    feature_key VARCHAR(100) NOT NULL,
+                    is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+                    updated_by_staff_id INTEGER REFERENCES staff_employees(id),
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_feature_flag UNIQUE (company_id, vertical, feature_key)
+                );
+                CREATE TABLE IF NOT EXISTS meta_capi_logs (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    event_name VARCHAR(50) NOT NULL,
+                    event_id VARCHAR(150) UNIQUE NOT NULL,
+                    status VARCHAR(20) NOT NULL DEFAULT 'QUEUED',
+                    request_payload JSONB,
+                    response_payload TEXT,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    processed_at TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS lead_feature_matrix (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER UNIQUE NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    vertical VARCHAR(50) NOT NULL DEFAULT 'GENERAL',
+                    acquisition_source VARCHAR(50),
+                    campaign_id VARCHAR(50),
+                    lead_age_days INTEGER NOT NULL DEFAULT 0,
+                    has_phone BOOLEAN NOT NULL DEFAULT TRUE,
+                    has_email BOOLEAN NOT NULL DEFAULT FALSE,
+                    has_budget BOOLEAN NOT NULL DEFAULT FALSE,
+                    wa_message_count INTEGER NOT NULL DEFAULT 0,
+                    wa_response_rate FLOAT NOT NULL DEFAULT 0.0,
+                    call_count INTEGER NOT NULL DEFAULT 0,
+                    appointment_scheduled BOOLEAN NOT NULL DEFAULT FALSE,
+                    site_visit_completed BOOLEAN NOT NULL DEFAULT FALSE,
+                    raw_features JSONB,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS lead_outcome_labels (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER UNIQUE NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    is_qualified BOOLEAN NOT NULL DEFAULT FALSE,
+                    is_won BOOLEAN NOT NULL DEFAULT FALSE,
+                    realized_cash_revenue FLOAT NOT NULL DEFAULT 0.0,
+                    outcome_stage VARCHAR(50) NOT NULL DEFAULT 'NEW',
+                    recorded_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS lead_score_history (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    score INTEGER NOT NULL,
+                    score_version VARCHAR(20) NOT NULL DEFAULT 'v1.0_RULES_PLUS_AI',
+                    rule_score INTEGER NOT NULL,
+                    ai_intent_score INTEGER NOT NULL,
+                    ai_confidence FLOAT NOT NULL DEFAULT 0.0,
+                    positive_factors JSONB NOT NULL DEFAULT '[]',
+                    negative_factors JSONB NOT NULL DEFAULT '[]',
+                    explanation TEXT,
+                    calculated_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS ai_knowledge_categories (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    vertical VARCHAR(50) NOT NULL DEFAULT 'GENERAL',
+                    category_code VARCHAR(50) NOT NULL,
+                    display_name VARCHAR(100) NOT NULL,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_knowledge_cat UNIQUE (company_id, vertical, category_code)
+                );
+                CREATE TABLE IF NOT EXISTS ai_knowledge_items (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    category_id INTEGER NOT NULL REFERENCES ai_knowledge_categories(id) ON DELETE CASCADE,
+                    title VARCHAR(200) NOT NULL,
+                    fact_content TEXT NOT NULL,
+                    keywords VARCHAR(300),
+                    is_approved BOOLEAN NOT NULL DEFAULT TRUE,
+                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                    version VARCHAR(20) NOT NULL DEFAULT 'v1.0',
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS voice_call_records (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    phone VARCHAR(20) NOT NULL,
+                    provider_name VARCHAR(50) NOT NULL DEFAULT 'NULL_VOICE_PROVIDER',
+                    provider_call_id VARCHAR(100) UNIQUE,
+                    call_direction VARCHAR(10) NOT NULL DEFAULT 'OUTBOUND',
+                    status VARCHAR(30) NOT NULL DEFAULT 'QUEUED',
+                    duration_seconds INTEGER NOT NULL DEFAULT 0,
+                    transcript TEXT,
+                    ai_summary TEXT,
+                    intent_detected VARCHAR(50),
+                    qualification_result VARCHAR(50),
+                    is_transferred_to_human BOOLEAN NOT NULL DEFAULT FALSE,
+                    scheduled_at TIMESTAMP,
+                    started_at TIMESTAMP,
+                    ended_at TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS ai_action_logs (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    vertical VARCHAR(50) NOT NULL DEFAULT 'GENERAL',
+                    channel VARCHAR(30) NOT NULL DEFAULT 'WHATSAPP',
+                    action_type VARCHAR(50) NOT NULL,
+                    model_name VARCHAR(100) NOT NULL DEFAULT 'mock_llm_v1',
+                    prompt_version VARCHAR(50) NOT NULL DEFAULT 'v1.0',
+                    confidence_score FLOAT NOT NULL DEFAULT 0.0,
+                    ai_recommendation JSONB,
+                    final_action_taken VARCHAR(50) NOT NULL,
+                    human_override BOOLEAN NOT NULL DEFAULT FALSE,
+                    correlation_id VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS ai_usage_logs (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    lead_id INTEGER REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    provider_name VARCHAR(50) NOT NULL,
+                    model_name VARCHAR(100) NOT NULL,
+                    task_name VARCHAR(50) NOT NULL,
+                    input_tokens INTEGER NOT NULL DEFAULT 0,
+                    output_tokens INTEGER NOT NULL DEFAULT 0,
+                    estimated_cost_usd FLOAT NOT NULL DEFAULT 0.000000,
+                    latency_ms INTEGER NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS meta_campaigns (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    campaign_id VARCHAR(50) NOT NULL,
+                    account_id VARCHAR(50) NOT NULL,
+                    name VARCHAR(200) NOT NULL,
+                    objective VARCHAR(50),
+                    status VARCHAR(30) NOT NULL DEFAULT 'PAUSED',
+                    daily_budget FLOAT,
+                    lifetime_budget FLOAT,
+                    start_time TIMESTAMP,
+                    stop_time TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_meta_campaign_company_id UNIQUE (company_id, campaign_id)
+                );
+                CREATE TABLE IF NOT EXISTS meta_adsets (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    adset_id VARCHAR(50) NOT NULL,
+                    campaign_id VARCHAR(50) NOT NULL,
+                    name VARCHAR(200) NOT NULL,
+                    status VARCHAR(30) NOT NULL DEFAULT 'PAUSED',
+                    targeting_summary JSONB,
+                    optimization_goal VARCHAR(50),
+                    billing_event VARCHAR(50),
+                    daily_budget FLOAT,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_meta_adset_company_id UNIQUE (company_id, adset_id)
+                );
+                CREATE TABLE IF NOT EXISTS meta_ads (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    ad_id VARCHAR(50) NOT NULL,
+                    adset_id VARCHAR(50) NOT NULL,
+                    campaign_id VARCHAR(50) NOT NULL,
+                    name VARCHAR(200) NOT NULL,
+                    creative_id VARCHAR(50),
+                    status VARCHAR(30) NOT NULL DEFAULT 'PAUSED',
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_meta_ad_company_id UNIQUE (company_id, ad_id)
+                );
+                CREATE TABLE IF NOT EXISTS meta_creatives (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    creative_id VARCHAR(50) NOT NULL,
+                    headline VARCHAR(300),
+                    primary_text TEXT,
+                    description TEXT,
+                    call_to_action_type VARCHAR(50),
+                    image_url_ref TEXT,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_meta_creative_company_id UNIQUE (company_id, creative_id)
+                );
+                CREATE TABLE IF NOT EXISTS meta_permissions (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
+                    permission_name VARCHAR(100) NOT NULL,
+                    endpoint_requiring VARCHAR(150) NOT NULL,
+                    token_type VARCHAR(50) NOT NULL DEFAULT 'PAGE_ACCESS_TOKEN',
+                    verification_status VARCHAR(50) NOT NULL DEFAULT 'VERIFIED',
+                    notes TEXT,
+                    checked_at TIMESTAMP DEFAULT NOW()
+                );
+            ]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+[DC-MEDIA-THUMB] ✅ feedback_media.thumbnail_url column ensured
+[DC-TICKET-MEDIA] ✅ ticket_attachment.media_type column ensured
+[DC-TICKET-ATTACH] ✅ ticket_attachment uploaded_by columns ensured
+[DC-TICKET-ATTACH-PS] ✅ ticket_attachment compression columns ensured (6 cols)
+[DC-CAT-PRIORITY] ✅ staff_employees.dialer_category_priority column ensured
+[DC-PDF-CANONICAL-DDL] Advisory lock released
+[DC-PDF-CANONICAL-DDL] ✅ Table+seed complete: True
+[DC-CANONICAL-SEED] ✅ 0 routes seeded
+[DC-SIDEBAR-SYNC] ✅ {'registry': 350, 'master': 3773}
+[DC-TESTING-SCHEMA-CLEANUP-001] ✅ testing.vendor_master dropped (or was already gone)

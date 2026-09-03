@@ -3842,25 +3842,26 @@ def get_whatsapp_bot_status():
     Queries local Baileys gateway on port 5002 and returns real-time connection status and QR code if available.
     """
     try:
+        rqr = requests.get("http://localhost:5002/qr-data", timeout=3)
+        if rqr.status_code == 200:
+            qdata = rqr.json()
+            is_conn = qdata.get("status") == "connected"
+            return {
+                "success": True,
+                "connected": is_conn,
+                "status": qdata.get("status", "disconnected"),
+                "qr": qdata.get("qr_url") or "",
+                "qr_available": bool(qdata.get("qr_url")) and not is_conn
+            }
         r = requests.get("http://localhost:5002/status", timeout=3)
         if r.status_code == 200:
             data = r.json()
-            qr_code = data.get("qr", "")
-            # Try fetching QR if not in status
-            if not qr_code and (data.get("status") != "connected" or data.get("qr_available")):
-                try:
-                    rqr = requests.get("http://localhost:5002/qr", timeout=2)
-                    if rqr.status_code == 200:
-                        qr_code = rqr.text.strip()
-                except Exception:
-                    pass
-
             return {
                 "success": True,
                 "connected": data.get("status") == "connected",
                 "status": data.get("status", "disconnected"),
-                "qr": qr_code,
-                "qr_available": bool(qr_code) or data.get("qr_available", False)
+                "qr": "",
+                "qr_available": data.get("qr_available", False)
             }
     except Exception:
         pass

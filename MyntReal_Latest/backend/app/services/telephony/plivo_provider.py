@@ -43,7 +43,7 @@ class PlivoTelephonyProvider(BaseTelephonyProvider):
         self.auth_token = auth_token or getattr(settings, 'PLIVO_AUTH_TOKEN', None) or os.getenv("PLIVO_AUTH_TOKEN", "mock_plivo_auth_token_secret_12345")
         self.app_id = app_id or getattr(settings, 'PLIVO_APP_ID', None) or os.getenv("PLIVO_APP_ID", "mock_app_id")
         self.default_caller_id = default_caller_id or getattr(settings, 'PLIVO_DEFAULT_CALLER_ID', '+918031728899')
-        self.webhook_url = webhook_url or os.getenv("PLIVO_WEBHOOK_URL", "")
+        self.webhook_url = webhook_url or os.getenv("PLIVO_WEBHOOK_URL") or "https://www.myntreal.com"
 
     @property
     def provider_name(self) -> str:
@@ -77,8 +77,8 @@ class PlivoTelephonyProvider(BaseTelephonyProvider):
         metadata: Optional[Dict[str, Any]] = None
     ) -> TelephonyCallResult:
         """
-        Prepares and initiates an outbound PSTN call via Plivo.
-        Returns ephemeral connection details for Plivo Browser SDK.
+        Prepares an outbound PSTN call session via Plivo.
+        Returns connection details for Plivo Browser SDK or Server Bridge.
         """
         caller_id_val = caller_id or self.default_caller_id
         dest_val = destination_phone.strip()
@@ -96,25 +96,6 @@ class PlivoTelephonyProvider(BaseTelephonyProvider):
             "agent_username": operator_info.get("username", f"agent_{operator_info.get('id', 1)}"),
             "metadata": metadata or {}
         }
-
-        # If live REST API dispatch is requested
-        if self.auth_id and self.auth_token and not self.auth_id.startswith("mock_"):
-            try:
-                plivo_url = f"https://api.plivo.com/v1/Account/{self.auth_id}/Call/"
-                body = {
-                    "from": caller_id_val,
-                    "to": dest_val,
-                    "answer_url": f"{self.webhook_url}/api/v1/telephony/plivo/outbound-answer?session_id={call_session_id}",
-                    "answer_method": "POST",
-                    "hangup_url": f"{self.webhook_url}/api/v1/telephony/plivo/hangup?session_id={call_session_id}",
-                    "hangup_method": "POST"
-                }
-                resp = requests.post(plivo_url, json=body, auth=(self.auth_id, self.auth_token), timeout=8)
-                if resp.status_code in (200, 201):
-                    res_json = resp.json()
-                    provider_call_id = res_json.get("request_uuid") or provider_call_id
-            except Exception as e:
-                logger.error(f"[PLIVO-CALL-DISPATCH-ERROR] Failed to dispatch via Plivo API: {e}")
 
         return TelephonyCallResult(
             success=True,

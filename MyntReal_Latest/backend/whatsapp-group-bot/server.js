@@ -101,23 +101,30 @@ async function startWhatsAppBot() {
 
         if (connection === 'close') {
             const errDetail = lastDisconnect?.error?.message || lastDisconnect?.error;
-            const statusCode = lastDisconnect?.error?.output?.statusCode;
-            const isLoggedOut = (statusCode === DisconnectReason.loggedOut || statusCode === 401);
+            const statusCode = lastDisconnect?.error?.output?.statusCode || lastDisconnect?.error?.statusCode;
+            
+            // Only consider genuinely logged out if explicit 401 DisconnectReason.loggedOut is received
+            const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
             
             if (isLoggedOut) {
                 connectionStatus = 'qr_ready';
                 currentQr = null;
-                console.log("🧹 Clearing stale auth_info session credentials to generate fresh QR code...");
+                console.log(`🧹 WhatsApp account unlinked/logged out (Status: ${statusCode}). Clearing auth_info to prepare fresh QR code...`);
                 try {
-                    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                    if (fs.existsSync(AUTH_DIR)) {
+                        fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                    }
                 } catch (e) {
                     console.error("Error clearing auth_info:", e.message);
                 }
+                setTimeout(startWhatsAppBot, 2000);
             } else {
+                // Transient disconnect (428 connectionClosed, 408 timedOut, 515 restartRequired, 503 unavailableService, ECONNRESET, etc.)
+                // ALWAYS preserve AUTH_DIR so Baileys re-reads saved creds.json and auto-reconnects seamlessly without re-scanning QR.
                 connectionStatus = 'reconnecting';
-                console.log(`⚠️ Temporary connection reset (Status: ${statusCode}, Err: ${errDetail}). Auto-reconnecting saved session in 3s...`);
+                console.log(`⚠️ Temporary network/socket reset (Status: ${statusCode || 'unknown'}, Reason: ${errDetail || 'Connection lost'}). Preserving session credentials and auto-reconnecting in 3s...`);
+                setTimeout(startWhatsAppBot, 3000);
             }
-            setTimeout(startWhatsAppBot, 3000);
         }
     });
 }

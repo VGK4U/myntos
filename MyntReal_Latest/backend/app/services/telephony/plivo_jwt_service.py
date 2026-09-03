@@ -149,25 +149,50 @@ class PlivoJWTService:
         now = int(time.time())
         exp = now + PLIVO_JWT_EXPIRATION_SECONDS
 
-        # 3. Construct Plivo standard JWT payload
-        payload = {
-            "iss": auth_id,
-            "sub": endpoint.plivo_username,
-            "nbf": now - 5,
-            "iat": now,
-            "exp": exp,
-            "context": {
-                "staff_id": staff.id,
-                "emp_code": staff.emp_code,
-                "company_id": company_id,
-                "name": staff.full_name
-            }
-        }
-        if app_id:
-            payload["app"] = app_id
+        signed_token = None
+        if auth_id and auth_token and not auth_id.startswith("mock_"):
+            try:
+                plivo_jwt_url = f"https://api.plivo.com/v1/Account/{auth_id}/JWT/Token/"
+                jwt_payload = {
+                    "iss": auth_id,
+                    "sub": endpoint.plivo_username,
+                    "per": {
+                        "voice": {
+                            "incoming_allow": True,
+                            "outgoing_allow": True
+                        }
+                    }
+                }
+                if app_id:
+                    jwt_payload["app"] = app_id
+                
+                resp = requests.post(plivo_jwt_url, json=jwt_payload, auth=(auth_id, auth_token), timeout=6)
+                if resp.status_code == 200:
+                    signed_token = resp.json().get("token")
+                    logger.info(f"[PLIVO-JWT] Successfully acquired official JWT from Plivo API for {endpoint.plivo_username}")
+                else:
+                    logger.warning(f"[PLIVO-JWT] Plivo JWT API returned {resp.status_code}: {resp.text}")
+            except Exception as e:
+                logger.error(f"[PLIVO-JWT-ERROR] Error calling Plivo JWT API: {e}")
 
-        # 4. Sign JWT using HMAC-SHA256 with server-side Auth Token
-        signed_token = jwt.encode(payload, auth_token, algorithm="HS256")
+        if not signed_token:
+            # Compliant fallback token with official Plivo v1 header and permissions
+            fallback_payload = {
+                "iss": auth_id,
+                "sub": endpoint.plivo_username,
+                "nbf": now - 5,
+                "iat": now,
+                "exp": exp,
+                "per": {
+                    "voice": {
+                        "incoming_allow": True,
+                        "outgoing_allow": True
+                    }
+                }
+            }
+            if app_id:
+                fallback_payload["app"] = app_id
+            signed_token = jwt.encode(fallback_payload, auth_token, algorithm="HS256", headers={"typ": "JWT", "cty": "plivo;v=1"})
 
         return {
             "success": True,
