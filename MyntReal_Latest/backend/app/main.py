@@ -16637,22 +16637,46 @@ if os.path.exists(MARKETPLACE_IMAGES_DIR):
 else:
     print(f"[DC-STATIC] ⚠️ Marketplace images dir not found: {MARKETPLACE_IMAGES_DIR}", flush=True)
 
-# DC_MOBILE_WEB_MOUNT_001: Mount compiled mobile SPA under /mobile and /app
+# DC_MOBILE_WEB_MOUNT_001: Mount compiled mobile SPA under /mobile
 MOBILE_DIR = os.path.join(FRONTEND_PUBLIC_DIR, "mobile")
 if os.path.exists(MOBILE_DIR):
     app.mount("/mobile", StaticFiles(directory=MOBILE_DIR, html=True), name="mobile_app")
-    app.mount("/app", StaticFiles(directory=MOBILE_DIR, html=True), name="app_web")
-    print(f"[DC-STATIC] ✅ Mobile Web SPA mounted: /mobile and /app -> {MOBILE_DIR}", flush=True)
+    print(f"[DC-STATIC] ✅ Mobile Web SPA mounted: /mobile -> {MOBILE_DIR}", flush=True)
     
     MOBILE_ASSETS_DIR = os.path.join(MOBILE_DIR, "assets")
     if os.path.exists(MOBILE_ASSETS_DIR):
         app.mount("/assets", StaticFiles(directory=MOBILE_ASSETS_DIR), name="mobile_assets")
         print(f"[DC-STATIC] ✅ Mobile Assets mounted: /assets -> {MOBILE_ASSETS_DIR}", flush=True)
 
-@app.get("/mobile", include_in_schema=False)
-@app.get("/mobile/", include_in_schema=False)
 @app.get("/app", include_in_schema=False)
 @app.get("/app/", include_in_schema=False)
+@app.get("/download-app", include_in_schema=False)
+@app.get("/get-app", include_in_schema=False)
+async def serve_download_app_page():
+    from fastapi.responses import HTMLResponse
+    download_page = os.path.join(FRONTEND_PUBLIC_DIR, "download_app.html")
+    if os.path.exists(download_page):
+        with open(download_page, "r", encoding="utf-8") as f:
+            content = f.read()
+        return HTMLResponse(
+            content=content,
+            status_code=200,
+            headers={
+                "Content-Type": "text/html; charset=utf-8",
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Content-Disposition": "inline"
+            }
+        )
+    # Fallback to mobile index
+    mobile_index = os.path.join(FRONTEND_PUBLIC_DIR, "mobile", "index.html")
+    if os.path.exists(mobile_index):
+        with open(mobile_index, "r", encoding="utf-8") as f:
+            content = f.read()
+        return HTMLResponse(content=content, status_code=200, headers={"Content-Type": "text/html; charset=utf-8"})
+    raise HTTPException(status_code=404, detail="App download page not found")
+
+@app.get("/mobile", include_in_schema=False)
+@app.get("/mobile/", include_in_schema=False)
 async def serve_mobile_spa_root():
     from fastapi.responses import HTMLResponse
     mobile_index = os.path.join(FRONTEND_PUBLIC_DIR, "mobile", "index.html")
