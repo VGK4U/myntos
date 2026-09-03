@@ -287,11 +287,25 @@ export class SideDrawer {
   private isStaffMenuLoaded = false;
 
   constructor() {
+    try {
+      const cached = localStorage.getItem('mnr_staff_menu_tree_cache');
+      if (cached) {
+        this.staffMenuTree = JSON.parse(cached);
+        this.isStaffMenuLoaded = true;
+      }
+    } catch (e) {}
+
     this.createElements();
+    this.loadStaffMenus();
     
     window.addEventListener('logout', () => {
       this.staffMenuTree = null;
       this.isStaffMenuLoaded = false;
+      try { localStorage.removeItem('mnr_staff_menu_tree_cache'); } catch (e) {}
+    });
+
+    window.addEventListener('auth-changed', () => {
+      this.loadStaffMenus();
     });
   }
 
@@ -305,6 +319,35 @@ export class SideDrawer {
     this.container.className = 'side-drawer';
     this.container.innerHTML = this.render();
     document.body.appendChild(this.container);
+
+    if (!document.getElementById('myntos-drawer-styles')) {
+      const style = document.createElement('style');
+      style.id = 'myntos-drawer-styles';
+      style.textContent = `
+        .side-drawer { position: fixed; top: 0; left: 0; width: 290px; height: 100vh; background: #0f172a; color: #fff; z-index: 9999; transform: translateX(-100%); transition: transform 0.25s ease-in-out; overflow-y: auto; box-shadow: 2px 0 16px rgba(0,0,0,0.5); }
+        .side-drawer.open { transform: translateX(0); }
+        .drawer-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 9998; opacity: 0; pointer-events: none; transition: opacity 0.25s ease-in-out; }
+        .drawer-overlay.visible { opacity: 1; pointer-events: auto; }
+        .drawer-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .drawer-logo .logo-text { font-size: 1.1rem; font-weight: 700; color: #38bdf8; }
+        .drawer-close { background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px; }
+        .drawer-content { padding: 10px 0 40px; }
+        .top-menu-items { border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; margin-bottom: 8px; }
+        .menu-item.top-item { display: flex; align-items: center; padding: 10px 20px; font-size: 13.5px; font-weight: 600; color: #f1f5f9; cursor: pointer; transition: background 0.15s; }
+        .menu-item.top-item:active { background: rgba(59,130,246,0.2); color: #38bdf8; }
+        .drawer-section { border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 13px 20px; font-size: 12.5px; font-weight: 700; color: #94a3b8; letter-spacing: 0.5px; cursor: pointer; user-select: none; }
+        .section-header:active { background: rgba(255,255,255,0.05); color: #fff; }
+        .section-arrow { transition: transform 0.2s; }
+        .drawer-subsection { padding-left: 8px; border-left: 2px solid rgba(255,255,255,0.05); margin-left: 16px; margin-bottom: 4px; }
+        .subsection-header { display: flex; justify-content: space-between; align-items: center; padding: 9px 16px; font-size: 12px; font-weight: 600; color: #cbd5e1; cursor: pointer; }
+        .drawer-menu-item { display: flex; align-items: center; padding: 9px 24px; font-size: 13px; color: #e2e8f0; text-decoration: none; cursor: pointer; transition: background 0.15s; }
+        .drawer-menu-item:active { background: rgba(59,130,246,0.2); color: #38bdf8; }
+        .drawer-menu-item .menu-label { display: flex; align-items: center; }
+        .drawer-menu-item .menu-label i { font-size: 14px; margin-right: 10px; width: 18px; text-align: center; color: #38bdf8; }
+      `;
+      document.head.appendChild(style);
+    }
 
     this.attachEventListeners();
   }
@@ -398,7 +441,7 @@ export class SideDrawer {
             <span class="section-title">${section.section_label}</span>
             <svg class="section-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${isExpanded ? '<polyline points="6 9 12 15 18 9"/>' : '<polyline points="9 18 15 12 9 6"/>'}</svg>
           </div>
-          <div class="section-items ${isExpanded ? 'expanded' : ''}">
+          <div class="section-items ${isExpanded ? 'expanded' : ''}" style="display: ${isExpanded ? 'block' : 'none'};">
             ${section.subSections!.map(sub => this.renderSubSection(sub)).join('')}
           </div>
         </div>
@@ -412,7 +455,7 @@ export class SideDrawer {
             <span class="section-title">${section.section_label}</span>
             <svg class="section-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${isExpanded ? '<polyline points="6 9 12 15 18 9"/>' : '<polyline points="9 18 15 12 9 6"/>'}</svg>
           </div>
-          <div class="section-items ${isExpanded ? 'expanded' : ''}">
+          <div class="section-items ${isExpanded ? 'expanded' : ''}" style="display: ${isExpanded ? 'block' : 'none'};">
             ${section.items!.map(item => this.renderMenuItem(item)).join('')}
           </div>
         </div>
@@ -430,7 +473,7 @@ export class SideDrawer {
           <span class="subsection-title">${sub.sub_section_label}</span>
           <svg class="section-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${isExpanded ? '<polyline points="6 9 12 15 18 9"/>' : '<polyline points="9 18 15 12 9 6"/>'}</svg>
         </div>
-        <div class="subsection-items ${isExpanded ? 'expanded' : ''}">
+        <div class="subsection-items ${isExpanded ? 'expanded' : ''}" style="display: ${isExpanded ? 'block' : 'none'};">
           ${sub.items.map(item => this.renderMenuItem(item)).join('')}
         </div>
       </div>
@@ -496,12 +539,14 @@ export class SideDrawer {
   }
 
   private async loadStaffMenus(): Promise<void> {
-    if (this.isStaffMenuLoaded) return;
     try {
       const response = await apiService.get<any>('/staff/menu-settings/my-menus?unified=true');
       if (response.success && response.data && response.data.sidebar_tree) {
         this.staffMenuTree = response.data.sidebar_tree;
         this.isStaffMenuLoaded = true;
+        try {
+          localStorage.setItem('mnr_staff_menu_tree_cache', JSON.stringify(this.staffMenuTree));
+        } catch (e) {}
         this.updateUI();
       }
     } catch (e) {
@@ -564,13 +609,13 @@ export class SideDrawer {
     const sectionOrderList: string[] = [];
 
     const formatMenuItem = (rawCode: string, rawName: string, rawRoutePath: string, rawIcon?: string): MenuItem | null => {
-      if (rawCode === 'CRM_WA_INBOX' || rawCode === 'WHATSAPP_CENTER' || rawRoutePath === '/staff/whatsapp-center' || rawRoutePath === '/staff/whatsapp') {
-        return null;
-      }
-      const route = ROUTE_PATH_MAP[rawRoutePath];
+      const route = ROUTE_PATH_MAP[rawRoutePath] || ROUTE_PATH_MAP[rawRoutePath?.replace(/\/$/, '')] || (rawRoutePath ? rawRoutePath.replace(/^\/staff\//, '').replace(/\//g, '-') : null);
       if (!route) return null;
 
-      let label = rawName || '';
+      let label = rawName;
+      if (!label || label === 'None' || label.trim() === '') {
+        label = (rawCode || '').replace(/^staff_|^_staff_|^mnr_/i, '').replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
+      }
       const codeUpper = (rawCode || '').toUpperCase();
       const routeLower = (rawRoutePath || '').toLowerCase();
 
@@ -582,10 +627,15 @@ export class SideDrawer {
         label = 'ETC Training Students';
       } else if (codeUpper.includes('CATEGORY_LEADS_MASTER') || codeUpper.includes('MNR_LEADS_MASTER') || routeLower.includes('mnr-leads-master')) {
         label = 'Category Lead Master';
+      } else if (codeUpper.includes('WHATSAPP') || routeLower.includes('whatsapp')) {
+        label = 'WhatsApp Center';
+      } else if (codeUpper.includes('SOFTPHONE') || codeUpper.includes('DIALER') || routeLower.includes('softphone') || routeLower.includes('dialer')) {
+        label = 'Calling & Softphone';
       }
 
-      const iconClass = rawIcon || (label.includes('Field') ? 'fas fa-users-gear' : 'fas fa-file-alt');
-      const iconHtml = `<i class="${iconClass}" style="margin-right: 8px; width: 18px; text-align: center;"></i>`;
+      const iconClass = rawIcon || (label.includes('WhatsApp') ? 'fab fa-whatsapp' : label.includes('Softphone') || label.includes('Calling') ? 'fas fa-headset' : label.includes('Field') ? 'fas fa-users-gear' : 'fas fa-file-alt');
+      const iconColor = label.includes('WhatsApp') ? 'color: #25d366;' : label.includes('Softphone') || label.includes('Calling') ? 'color: #38bdf8;' : '';
+      const iconHtml = `<i class="${iconClass}" style="margin-right: 8px; width: 18px; text-align: center; ${iconColor}"></i>`;
 
       return {
         menu_code: rawCode,
@@ -604,7 +654,7 @@ export class SideDrawer {
       // Add items from direct section.items
       if (sec.items) {
         for (const item of sec.items) {
-          const menuItem = formatMenuItem(item.menu_code, item.menu_name || item.label || item.name, item.route_path, item.menu_icon);
+          const menuItem = formatMenuItem(item.menu_code, item.menu_name || item.label || item.name || item.title, item.route_path, item.menu_icon);
           if (menuItem) items.push(menuItem);
         }
       }
@@ -615,14 +665,18 @@ export class SideDrawer {
           const subItems: MenuItem[] = [];
           if (sub.items) {
             for (const item of sub.items) {
-              const menuItem = formatMenuItem(item.menu_code, item.menu_name || item.label || item.name, item.route_path, item.menu_icon);
+              const menuItem = formatMenuItem(item.menu_code, item.menu_name || item.label || item.name || item.title, item.route_path, item.menu_icon);
               if (menuItem) subItems.push(menuItem);
             }
+          }
+          let subTitle = sub.title || sub.name || sub.id || 'Subsection';
+          if (subTitle === 'None' || !subTitle) {
+            subTitle = (sub.id || '').replace(/^staff_|^vm_/i, '').replace(/_/g, ' ').replace(/\b\w/g, (p: string) => p.toUpperCase());
           }
           if (subItems.length > 0) {
             subSections.push({
               sub_section_code: sub.id || sub.section_id || 'sub',
-              sub_section_label: sub.title || 'Subsection',
+              sub_section_label: subTitle,
               items: subItems
             });
           }
@@ -632,6 +686,9 @@ export class SideDrawer {
       if (items.length > 0 || subSections.length > 0) {
         let secCode = (sec.id || sec.section_id || 'other').toString().trim();
         let secTitle = (sec.title || sec.name || 'Other').toString().trim();
+        if (secTitle === 'None' || !secTitle) {
+          secTitle = secCode.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+        }
         const secIdLower = secCode.toLowerCase();
         const secTitleUpper = secTitle.toUpperCase();
 
@@ -669,17 +726,17 @@ export class SideDrawer {
       }
     }
 
-    const sections = sectionOrderList.map(code => sectionMap.get(code)!);
-    sections.sort((a, b) => a.order - b.order);
+    const result = sectionOrderList.map(code => sectionMap.get(code)!);
+    result.sort((a, b) => a.order - b.order);
 
     // Apply strict web ordering for WORKFLOWS items
-    for (const section of sections) {
+    for (const section of result) {
       if (section.section_code === 'WORKFLOWS' && section.items) {
         section.items.sort((a, b) => (WORKFLOWS_ORDER[a.menu_code] || 99) - (WORKFLOWS_ORDER[b.menu_code] || 99));
       }
     }
 
-    return sections;
+    return result;
   }
 
   open(): void {

@@ -92,6 +92,10 @@
     <!-- Contacts Permission (DC_CONTACTS_PERM_001) - for enriching call logs with contact names -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
+    <!-- Audio & VoIP Calling Permissions -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
     <!-- Hardware Feature Declarations (graceful degradation) -->
     <uses-feature android:name="android.hardware.location" android:required="false" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />

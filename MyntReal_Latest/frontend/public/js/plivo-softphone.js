@@ -120,8 +120,11 @@
             this.client.on('onLogin', (data) => this.onLoginSuccess(data));
             this.client.on('onLogout', () => this.onLogoutSuccess());
             this.client.on('onLoginFailed', (reason) => {
-                console.warn('[PLIVO-SOFTPHONE] WebRTC registration in offline mode:', reason);
-                this.updateUIStatus('offline', 'Ready');
+                console.warn('[PLIVO-SOFTPHONE] WebRTC registration failed:', reason);
+                this.isRegistered = false;
+                this.updateUIStatus('offline', 'Connecting...');
+                // Auto-retry token refresh & login after delay
+                setTimeout(() => this.refreshAndLogin(), 5000);
             });
             this.client.on('onIncomingCall', (callerName, extraHeaders, callInfo) => {
                 this.handleIncomingCall(callerName, extraHeaders, callInfo);
@@ -360,6 +363,17 @@
                 console.warn('[PLIVO-SOFTPHONE] A call is already active. Duplicate dial ignored.');
                 return;
             }
+
+            if (!this.isRegistered) {
+                console.log('[PLIVO-SOFTPHONE] Registration not yet confirmed. Refreshing token...');
+                await this.refreshAndLogin();
+            }
+
+            if (!this.isRegistered) {
+                alert('Softphone is currently connecting to the telephony network. Please wait a few seconds and try again.');
+                return;
+            }
+
             this.isCallActive = true;
             this.activeDestination = destinationPhone;
             this.activeLeadName = leadName;
@@ -404,41 +418,29 @@
                 }
 
                 this.activeSessionId = sessData.call_session_id || ('vcs_local_' + Date.now());
-                this.activeLeadContext = sessData.lead_context || null;
 
-                // 2. Dispatch call through Plivo WebRTC SDK or Direct Server-Side Click-to-Call
+                // 2. Dispatch call through Plivo WebRTC SDK
                 const cleanDest = destinationPhone.startsWith('+') ? destinationPhone : `+91${destinationPhone.replace(/\D/g, '').slice(-10)}`;
                 const extraHeaders = {
                     'X-PH-Call-Session-ID': this.activeSessionId,
                     'X-PH-Lead-ID': String(leadId || '')
                 };
 
-                if (this.isRegistered && this.client && typeof this.client.call === 'function') {
-                    this.client.call(cleanDest, extraHeaders);
-                } else {
-                    // Fallback to Server-Side Direct Click-to-Call Bridge
-                    console.log(`[PLIVO-SOFTPHONE] WebRTC unauthenticated — dispatching server-side Click-to-Call to ${cleanDest}`);
-                    const c2cResp = await fetch('/api/v1/telephony/plivo/click-to-call', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({ to: cleanDest, lead_id: leadId })
-                    });
-                    if (c2cResp.ok) {
-                        const resData = await c2cResp.json();
-                        this.onCallConnected({ direction: 'outbound', destination: cleanDest });
-                    } else {
-                        // In local / development mode without live PSTN trunk, keep the session inside the in-browser dock
-                        console.log(`[PLIVO-SOFTPHONE] Connected in in-browser softphone mode for ${cleanDest}`);
-                        this.onCallConnected({ direction: 'outbound', destination: cleanDest });
+                // Immediately dispatch dialing event for Hub and view synchronization
+                document.dispatchEvent(new CustomEvent('plivo:call-dialing', {
+                    detail: {
+                        phone: cleanDest,
+                        name: this.activeLeadName || 'Contact Lead',
+                        sessionId: this.activeSessionId
                     }
+                }));
+
+                if (this.client && typeof this.client.call === 'function') {
+                    this.client.call(cleanDest, extraHeaders);
                 }
             } catch (err) {
                 console.error('[PLIVO-SOFTPHONE] Outbound dial error:', err);
-                const cleanDest = destinationPhone.startsWith('+') ? destinationPhone : `+91${destinationPhone.replace(/\D/g, '').slice(-10)}`;
-                this.onCallConnected({ direction: 'outbound', destination: cleanDest });
+                this.onCallTerminated();
             }
         }
 
@@ -486,7 +488,35 @@
             if (banner) banner.style.display = 'none';
         }
 
-        // ── ACTIVE CALL CONTROLS ─────────────────────────────────────────────
+        // ── ACTIVE CALL CONTROLS & CARRIER DISCONNECT POLLER ────────────────
+
+        startSessionWatcher(sessionId) {
+            this.stopSessionWatcher();
+            if (!sessionId || sessionId.startsWith('vcs_local_')) return;
+            const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
+            this.sessionWatcherInterval = setInterval(async () => {
+                try {
+                    const resp = await fetch(`/api/v1/telephony/plivo/calls/session-status/${sessionId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        if (data && data.is_terminal) {
+                            console.log(`[PLIVO-SOFTPHONE] Carrier disconnected call ${sessionId} (Status: ${data.status}, Duration: ${data.duration_seconds}s)`);
+                            this.stopSessionWatcher();
+                            this.onCallTerminated();
+                        }
+                    }
+                } catch (_) {}
+            }, 2000);
+        }
+
+        stopSessionWatcher() {
+            if (this.sessionWatcherInterval) {
+                clearInterval(this.sessionWatcherInterval);
+                this.sessionWatcherInterval = null;
+            }
+        }
 
         onCallConnected(callInfo) {
             console.log('[PLIVO-SOFTPHONE] Call connected / active');
@@ -496,6 +526,11 @@
             this.startCallTimer();
 
             this.syncCallEvent('connected');
+
+            // Start carrier status watcher to detect remote hangup
+            if (this.activeSessionId) {
+                this.startSessionWatcher(this.activeSessionId);
+            }
 
             // Dispatch global event for hub page and listeners
             document.dispatchEvent(new CustomEvent('plivo:call-connected', {
@@ -509,6 +544,7 @@
 
         onCallTerminated() {
             console.log('[PLIVO-SOFTPHONE] Call terminated');
+            this.stopSessionWatcher();
             this.isCallActive = false;
             this.stopCallTimer();
             this.hideCallInProgressUI();
@@ -519,6 +555,16 @@
                     this.localAudioStream.getTracks().forEach(t => t.stop());
                 } catch (_) {}
                 this.localAudioStream = null;
+            }
+
+            // Reset speakerphone and audio routing to normal communication mode
+            if (this.isSpeakerOn) {
+                this.isSpeakerOn = false;
+                try {
+                    if (window.Capacitor?.Plugins?.AudioRouting) {
+                        window.Capacitor.Plugins.AudioRouting.setSpeakerphoneOn({ enabled: false });
+                    }
+                } catch (_) {}
             }
 
             const sid = this.activeSessionId;
@@ -569,7 +615,7 @@
             this.syncCallEvent(this.isHeld ? 'held' : 'active');
         }
 
-        toggleSpeaker() {
+        async toggleSpeaker() {
             this.isSpeakerOn = !this.isSpeakerOn;
             const btn = document.getElementById('btnSpeakerCall');
             if (btn) {
@@ -577,6 +623,36 @@
                 btn.style.color = this.isSpeakerOn ? '#38bdf8' : '#ffffff';
                 btn.style.borderColor = this.isSpeakerOn ? '#38bdf8' : 'rgba(255,255,255,0.2)';
             }
+
+            // Real WebRTC audio output device sink routing
+            try {
+                if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
+                    const audioElements = Array.from(document.querySelectorAll('audio, video'));
+                    
+                    if (audioOutputs.length > 0 && audioElements.length > 0) {
+                        const targetDevice = this.isSpeakerOn 
+                            ? (audioOutputs.find(d => /speaker|loudspeaker|external/i.test(d.label)) || audioOutputs[0])
+                            : (audioOutputs.find(d => /default|earpiece|headset|internal/i.test(d.label)) || audioOutputs[0]);
+                            
+                        for (const el of audioElements) {
+                            if (typeof el.setSinkId === 'function' && targetDevice?.deviceId) {
+                                await el.setSinkId(targetDevice.deviceId);
+                                console.log(`[PLIVO-SOFTPHONE] WebRTC audio sink routed to: ${targetDevice.label || targetDevice.deviceId}`);
+                            }
+                        }
+                    }
+                }
+                
+                // Capacitor / Native Android audio routing bridge if present
+                if (window.Capacitor?.Plugins?.AudioRouting) {
+                    await window.Capacitor.Plugins.AudioRouting.setSpeakerphoneOn({ enabled: this.isSpeakerOn });
+                }
+            } catch (err) {
+                console.warn('[PLIVO-SOFTPHONE] Audio routing notice:', err.message);
+            }
+
             this.showToast(this.isSpeakerOn ? 'Speaker mode enabled' : 'Default audio output', 'info');
         }
 
