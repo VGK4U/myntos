@@ -16654,10 +16654,20 @@ if os.path.exists(MOBILE_DIR):
 @app.get("/app", include_in_schema=False)
 @app.get("/app/", include_in_schema=False)
 async def serve_mobile_spa_root():
-    from fastapi.responses import FileResponse
+    from fastapi.responses import HTMLResponse
     mobile_index = os.path.join(FRONTEND_PUBLIC_DIR, "mobile", "index.html")
     if os.path.exists(mobile_index):
-        return FileResponse(mobile_index, media_type="text/html")
+        with open(mobile_index, "r", encoding="utf-8") as f:
+            content = f.read()
+        return HTMLResponse(
+            content=content,
+            status_code=200,
+            headers={
+                "Content-Type": "text/html; charset=utf-8",
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Content-Disposition": "inline"
+            }
+        )
     raise HTTPException(status_code=404, detail="Mobile application not found")
 
 @app.get("/privacy-policy.html", include_in_schema=False)
