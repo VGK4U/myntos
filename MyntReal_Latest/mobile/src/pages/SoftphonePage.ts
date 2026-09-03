@@ -341,7 +341,6 @@ export class SoftphonePage {
       this.dialNumber += digit;
       this.selectedContactName = '';
       this.updateDialDisplay();
-      this.triggerLiveSearch();
     }
   }
 
@@ -350,7 +349,6 @@ export class SoftphonePage {
       this.dialNumber = this.dialNumber.slice(0, -1);
       this.selectedContactName = '';
       this.updateDialDisplay();
-      this.triggerLiveSearch();
     }
   }
 
@@ -359,21 +357,6 @@ export class SoftphonePage {
     this.selectedContactName = '';
     this.liveMatchingContacts = [];
     this.updateDialDisplay();
-    const drawer = document.getElementById('softphoneMatchingDrawer');
-    if (drawer) drawer.style.display = 'none';
-  }
-
-  private triggerLiveSearch(): void {
-    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
-    if (!this.dialNumber || this.dialNumber.trim().length < 2) {
-      this.liveMatchingContacts = [];
-      this.updateMatchingDrawer();
-      return;
-    }
-
-    this.searchDebounceTimer = setTimeout(() => {
-      this.searchContacts(this.dialNumber);
-    }, 200);
   }
 
   private updateDialDisplay(): void {
@@ -393,6 +376,10 @@ export class SoftphonePage {
     const clearBtn = document.getElementById('softphoneClearBtn');
     if (clearBtn) {
       clearBtn.style.visibility = this.dialNumber ? 'visible' : 'hidden';
+    }
+    const clearAllBtn = document.getElementById('softphoneClearAllBtn');
+    if (clearAllBtn) {
+      clearAllBtn.style.display = this.dialNumber ? 'inline-block' : 'none';
     }
   }
 
@@ -647,7 +634,7 @@ export class SoftphonePage {
     return `
       <div style="max-width: 380px; margin: 0 auto; padding: 16px; position: relative;">
         
-        <!-- Number Screen & Contact Match Display -->
+        <!-- Number Screen & Clean Dial Display -->
         <div style="background: #1e293b; border-radius: 16px; padding: 14px 18px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative;">
           
           <div id="softphoneMatchedNameLabel" style="display: ${this.selectedContactName ? 'block' : 'none'}; font-size: 12px; font-weight: 700; color: #38bdf8; margin-bottom: 4px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
@@ -656,26 +643,22 @@ export class SoftphonePage {
 
           <div style="display: flex; align-items: center; justify-content: space-between;">
             <input 
-              type="text" 
+              type="tel" 
+              inputmode="tel"
               id="softphoneDialInput" 
               value="${this.dialNumber}" 
-              placeholder="Search name or dial number..." 
-              style="background: transparent; border: none; outline: none; color: #fff; font-size: 22px; font-weight: 700; width: 100%; letter-spacing: 0.5px;"
+              placeholder="Enter phone number..." 
+              style="background: transparent; border: none; outline: none; color: #fff; font-size: 24px; font-weight: 700; width: 100%; letter-spacing: 0.5px;"
             />
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span id="softphoneSearchSpinner" style="display: none; color: #38bdf8; font-size: 13px;">
-                <i class="fas fa-spinner fa-spin"></i>
-              </span>
-              <button id="softphoneClearBtn" style="background: transparent; border: none; color: #94a3b8; font-size: 18px; cursor: pointer; visibility: ${this.dialNumber ? 'visible' : 'hidden'}; padding: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button id="softphoneClearAllBtn" title="Clear all" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; font-size: 11px; font-weight: 700; border-radius: 12px; padding: 3px 8px; cursor: pointer; display: ${this.dialNumber ? 'inline-block' : 'none'};">
+                Clear
+              </button>
+              <button id="softphoneClearBtn" title="Backspace (Hold to clear all)" style="background: transparent; border: none; color: #94a3b8; font-size: 22px; cursor: pointer; visibility: ${this.dialNumber ? 'visible' : 'hidden'}; padding: 4px; display: flex; align-items: center; user-select: none;">
                 <i class="fas fa-delete-left"></i>
               </button>
             </div>
           </div>
-        </div>
-
-        <!-- Live Matching Contacts Dropdown Drawer -->
-        <div id="softphoneMatchingDrawer" style="display: none; background: #1e293b; border: 1px solid #475569; border-radius: 12px; margin-bottom: 16px; max-height: 200px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
-          <div id="softphoneMatchingList" style="padding: 4px;"></div>
         </div>
 
         <!-- 3x4 Dialpad Grid -->
@@ -1118,16 +1101,48 @@ export class SoftphonePage {
       });
     });
 
-    // Clear / Backspace
-    document.getElementById('softphoneClearBtn')?.addEventListener('click', () => this.backspace());
+    // Clear All Button (One-tap full clear)
+    document.getElementById('softphoneClearAllBtn')?.addEventListener('click', () => this.clearNumber());
 
-    // Manual input sync
+    // Backspace with Long-Press Detection (Tap = delete 1 digit, Hold > 320ms = clear all)
+    const clearBtn = document.getElementById('softphoneClearBtn');
+    if (clearBtn) {
+      let longPressTimer: any = null;
+      let didLongPress = false;
+
+      const handlePressStart = () => {
+        didLongPress = false;
+        longPressTimer = setTimeout(() => {
+          didLongPress = true;
+          this.clearNumber();
+        }, 320);
+      };
+
+      const handlePressEnd = () => {
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+      };
+
+      clearBtn.addEventListener('pointerdown', handlePressStart);
+      clearBtn.addEventListener('pointerup', handlePressEnd);
+      clearBtn.addEventListener('pointercancel', handlePressEnd);
+      clearBtn.addEventListener('pointerleave', handlePressEnd);
+      clearBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!didLongPress) {
+          this.backspace();
+        }
+      });
+    }
+
+    // Manual input sync (clean, no search interference)
     const input = document.getElementById('softphoneDialInput') as HTMLInputElement;
     input?.addEventListener('input', () => {
       this.dialNumber = input.value;
       this.selectedContactName = '';
       this.updateDialDisplay();
-      this.triggerLiveSearch();
     });
 
     // Contacts Tab search input
