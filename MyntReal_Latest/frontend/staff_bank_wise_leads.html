@@ -2440,11 +2440,11 @@
             const bc = branchContactsMap[contactKey] || null;
 
             // Find matching leads count and total deal value
-            const matchingLeads = (allBankLeads || []).filter(l => 
+            const matchingLeads = (Array.isArray(globalBankLeads) ? globalBankLeads : []).filter(l => 
                 (l.bank_name || '').trim().toLowerCase() === bName.toLowerCase() &&
                 (l.bank_branch || '').trim().toLowerCase() === brName.toLowerCase()
             );
-            const totalVal = matchingLeads.reduce((sum, l) => sum + (l.deal_value || 0), 0);
+            const totalVal = matchingLeads.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
             const valStr = totalVal ? `₹${(totalVal / 100000).toFixed(2)} Lakhs` : '—';
 
             let msg = `🏦 *Bank Branch Details — MyntReal CRM*\n`;
@@ -2503,84 +2503,106 @@
         }
 
         function shareBranchDetails(bankName, branchName) {
-            const bName = (bankName || '').trim();
-            const brName = (branchName || '').trim();
-            const contactKey = (bName + ':::' + brName).toLowerCase();
-            const bc = branchContactsMap[contactKey] || null;
+            try {
+                const bName = (bankName || '').trim();
+                const brName = (branchName || '').trim();
+                const contactKey = (bName + ':::' + brName).toLowerCase();
+                const bc = branchContactsMap[contactKey] || null;
 
-            const msg = getBranchShareMessage(bName, brName);
-            const targetPhone = bc?.manager_phone || bc?.officer_phone || bc?.custom_phone || '';
+                const msg = getBranchShareMessage(bName, brName);
+                const targetPhone = bc?.manager_phone || bc?.officer_phone || bc?.custom_phone || '';
 
-            if (typeof window.openLeadWAModal === 'function') {
-                window.openLeadWAModal('branch_' + encodeURIComponent(bName + '_' + brName), targetPhone, `${bName} (${brName})`, 4, msg);
-            } else {
-                window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+                if (typeof window.openLeadWAModal === 'function') {
+                    window.openLeadWAModal('branch_' + encodeURIComponent(bName + '_' + brName), targetPhone, `${bName} (${brName})`, 4, msg);
+                } else {
+                    const waUrl = targetPhone ? `https://wa.me/91${targetPhone.replace(/\D/g,'').slice(-10)}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+                    window.open(waUrl, '_blank');
+                }
+            } catch (err) {
+                console.error('[SHARE-ERROR]', err);
+                showToast('Share error: ' + err.message, 'error');
             }
         }
 
         function copyBranchDetails(bankName, branchName) {
-            const msg = getBranchShareMessage(bankName, branchName);
-            copyToClipboardFallback(msg).then(() => {
-                showToast('Branch details copied to clipboard!', 'success');
-            }).catch(() => {
-                showToast('Could not copy text.', 'error');
-            });
+            try {
+                const msg = getBranchShareMessage(bankName, branchName);
+                copyToClipboardFallback(msg).then(() => {
+                    showToast('Branch details copied to clipboard!', 'success');
+                }).catch((err) => {
+                    console.error('[COPY-ERROR]', err);
+                    showToast('Could not copy text automatically.', 'error');
+                });
+            } catch (err) {
+                console.error('[COPY-ERROR]', err);
+                showToast('Copy error: ' + err.message, 'error');
+            }
         }
 
         function shareCurrentModalBranch() {
-            const bName = (document.getElementById('bcBankName').value || '').trim();
-            const brName = (document.getElementById('bcBranchName').value || '').trim();
-            if (!bName || !brName) return;
+            try {
+                const bName = (document.getElementById('bcBankName')?.value || '').trim();
+                const brName = (document.getElementById('bcBranchName')?.value || '').trim();
+                if (!bName || !brName) return;
 
-            // Update temporary map with current modal form values so share message has latest inputs
-            const contactKey = (bName + ':::' + brName).toLowerCase();
-            branchContactsMap[contactKey] = {
-                bank_name: bName,
-                branch_name: brName,
-                manager_name: document.getElementById('bcManagerName')?.value || '',
-                manager_phone: document.getElementById('bcManagerPhone')?.value || '',
-                manager_alt_phone: document.getElementById('bcManagerAltPhone')?.value || '',
-                officer_name: document.getElementById('bcOfficerName')?.value || '',
-                officer_phone: document.getElementById('bcOfficerPhone')?.value || '',
-                officer_alt_phone: document.getElementById('bcOfficerAltPhone')?.value || '',
-                custom_designation: document.getElementById('bcCustomDesignation')?.value || '',
-                custom_name: document.getElementById('bcCustomName')?.value || '',
-                custom_phone: document.getElementById('bcCustomPhone')?.value || '',
-                custom_alt_phone: document.getElementById('bcCustomAltPhone')?.value || '',
-                google_maps_url: document.getElementById('bcGoogleMapsUrl')?.value || '',
-                branch_address: document.getElementById('bcBranchAddress')?.value || '',
-                notes: document.getElementById('bcNotes')?.value || '',
-            };
+                // Update temporary map with current modal form values so share message has latest inputs
+                const contactKey = (bName + ':::' + brName).toLowerCase();
+                branchContactsMap[contactKey] = {
+                    bank_name: bName,
+                    branch_name: brName,
+                    manager_name: document.getElementById('bcManagerName')?.value || '',
+                    manager_phone: document.getElementById('bcManagerPhone')?.value || '',
+                    manager_alt_phone: document.getElementById('bcManagerAltPhone')?.value || '',
+                    officer_name: document.getElementById('bcOfficerName')?.value || '',
+                    officer_phone: document.getElementById('bcOfficerPhone')?.value || '',
+                    officer_alt_phone: document.getElementById('bcOfficerAltPhone')?.value || '',
+                    custom_designation: document.getElementById('bcCustomDesignation')?.value || '',
+                    custom_name: document.getElementById('bcCustomName')?.value || '',
+                    custom_phone: document.getElementById('bcCustomPhone')?.value || '',
+                    custom_alt_phone: document.getElementById('bcCustomAltPhone')?.value || '',
+                    google_maps_url: document.getElementById('bcGoogleMapsUrl')?.value || '',
+                    branch_address: document.getElementById('bcBranchAddress')?.value || '',
+                    notes: document.getElementById('bcNotes')?.value || '',
+                };
 
-            shareBranchDetails(bName, brName);
+                shareBranchDetails(bName, brName);
+            } catch (err) {
+                console.error('[MODAL-SHARE-ERROR]', err);
+                showToast('Share error: ' + err.message, 'error');
+            }
         }
 
         function copyCurrentModalBranch() {
-            const bName = document.getElementById('bcBankName').value;
-            const brName = document.getElementById('bcBranchName').value;
-            if (!bName || !brName) return;
+            try {
+                const bName = (document.getElementById('bcBankName')?.value || '').trim();
+                const brName = (document.getElementById('bcBranchName')?.value || '').trim();
+                if (!bName || !brName) return;
 
-            // Update temporary map first
-            const contactKey = (bName + ':::' + brName).toLowerCase();
-            branchContactsMap[contactKey] = {
-                bank_name: bName,
-                branch_name: brName,
-                manager_name: document.getElementById('bcManagerName')?.value || '',
-                manager_phone: document.getElementById('bcManagerPhone')?.value || '',
-                manager_alt_phone: document.getElementById('bcManagerAltPhone')?.value || '',
-                officer_name: document.getElementById('bcOfficerName')?.value || '',
-                officer_phone: document.getElementById('bcOfficerPhone')?.value || '',
-                officer_alt_phone: document.getElementById('bcOfficerAltPhone')?.value || '',
-                custom_designation: document.getElementById('bcCustomDesignation')?.value || '',
-                custom_name: document.getElementById('bcCustomName')?.value || '',
-                custom_phone: document.getElementById('bcCustomPhone')?.value || '',
-                custom_alt_phone: document.getElementById('bcCustomAltPhone')?.value || '',
-                google_maps_url: document.getElementById('bcGoogleMapsUrl')?.value || '',
-                branch_address: document.getElementById('bcBranchAddress')?.value || '',
-                notes: document.getElementById('bcNotes')?.value || '',
-            };
+                // Update temporary map first
+                const contactKey = (bName + ':::' + brName).toLowerCase();
+                branchContactsMap[contactKey] = {
+                    bank_name: bName,
+                    branch_name: brName,
+                    manager_name: document.getElementById('bcManagerName')?.value || '',
+                    manager_phone: document.getElementById('bcManagerPhone')?.value || '',
+                    manager_alt_phone: document.getElementById('bcManagerAltPhone')?.value || '',
+                    officer_name: document.getElementById('bcOfficerName')?.value || '',
+                    officer_phone: document.getElementById('bcOfficerPhone')?.value || '',
+                    officer_alt_phone: document.getElementById('bcOfficerAltPhone')?.value || '',
+                    custom_designation: document.getElementById('bcCustomDesignation')?.value || '',
+                    custom_name: document.getElementById('bcCustomName')?.value || '',
+                    custom_phone: document.getElementById('bcCustomPhone')?.value || '',
+                    custom_alt_phone: document.getElementById('bcCustomAltPhone')?.value || '',
+                    google_maps_url: document.getElementById('bcGoogleMapsUrl')?.value || '',
+                    branch_address: document.getElementById('bcBranchAddress')?.value || '',
+                    notes: document.getElementById('bcNotes')?.value || '',
+                };
 
-            copyBranchDetails(bName, brName);
+                copyBranchDetails(bName, brName);
+            } catch (err) {
+                console.error('[MODAL-COPY-ERROR]', err);
+                showToast('Copy error: ' + err.message, 'error');
+            }
         }
     </script>
 
