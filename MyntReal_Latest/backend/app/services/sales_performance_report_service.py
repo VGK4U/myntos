@@ -264,10 +264,6 @@ def generate_bi_hourly_performance_message(db: Session, slot_name: str = "Bi-Hou
     msg = (
         f"{header_title}\n"
         f"📅 *Date*: {current_stats['date_str']}\n\n"
-        f"📞 *Total Calls Handled*: {current_stats['total_calls']} calls{delta_calls_str}\n"
-        f"🗣️ *Total Talk Time*: {current_stats['total_talk_formatted']}{delta_talk_str}\n"
-        f"🔴 *Missed Calls Received*: {current_stats['missed_calls']} calls{delta_missed_str} *(100% WA ACK Sent)*\n"
-        f"🎯 *New Leads Intake*: {current_stats['new_leads']} leads{delta_leads_str}\n\n"
         f"🏆 *STAFF LEADERBOARD TODAY*:\n"
         f"{lb_formatted}\n\n"
         f"{solar_section}\n\n"
