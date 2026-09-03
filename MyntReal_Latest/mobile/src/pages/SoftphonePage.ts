@@ -183,7 +183,11 @@ export class SoftphonePage {
       try {
         const stored = localStorage.getItem('mnr_softphone_call_logs');
         if (stored) {
-          localSoftphoneCalls = JSON.parse(stored);
+          localSoftphoneCalls = JSON.parse(stored).map((c: any) => ({
+            ...c,
+            has_recording: true,
+            source: 'softphone'
+          }));
         }
       } catch (e) {}
 
@@ -965,11 +969,11 @@ export class SoftphonePage {
 
                 <!-- Right Action Buttons: Play Recording & Call -->
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  ${c.has_recording && c.recording_stream_url ? `
+                  ${(isSoftphone || c.has_recording || c.recording_stream_url) ? `
                     <button 
                       class="history-play-rec-btn" 
                       data-rec-id="${recId}" 
-                      data-stream-url="${c.recording_stream_url}"
+                      data-stream-url="${c.recording_stream_url || `/api/v1/call-tracking/recordings/${recId}/stream`}"
                       title="${isPlaying ? 'Pause Recording' : 'Listen to Call Recording'}"
                       style="width: 36px; height: 36px; border-radius: 50%; background: ${isPlaying ? '#eab308' : 'rgba(56, 189, 248, 0.15)'}; border: 1px solid ${isPlaying ? '#facc15' : 'rgba(56, 189, 248, 0.3)'}; color: ${isPlaying ? '#000' : '#38bdf8'}; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.1s;"
                     >
