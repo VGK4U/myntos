@@ -3880,6 +3880,76 @@ def get_gateway_status_qr():
     return get_whatsapp_bot_status()
 
 
+# ── Baileys Multi-Device Database Session Persistence ────────────────────────
+@router.post("/bot-session-backup")
+async def backup_bot_session_files(
+    payload: dict = Body(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Saves/Upserts Baileys WhatsApp authentication credentials into PostgreSQL RDS.
+    Survives server restarts, zip deployments, and container rebuilds forever.
+    """
+    session_id = payload.get("session_id", "default_baileys")
+    files = payload.get("files", {})
+    if not files:
+        return {"success": True, "saved": 0}
+
+    try:
+        from sqlalchemy import text
+        for file_key, file_data in files.items():
+            db.execute(text("""
+                INSERT INTO whatsapp_bot_session_store (session_id, file_key, file_data, updated_at)
+                VALUES (:sid, :k, :d, NOW())
+                ON CONFLICT (session_id, file_key) DO UPDATE
+                SET file_data = EXCLUDED.file_data, updated_at = NOW();
+            """), {"sid": session_id, "k": file_key, "d": str(file_data)})
+        db.commit()
+        return {"success": True, "saved": len(files)}
+    except Exception as e:
+        db.rollback()
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/bot-session-restore")
+def restore_bot_session_files(
+    session_id: str = "default_baileys",
+    db: Session = Depends(get_db)
+):
+    """
+    Restores Baileys WhatsApp authentication credentials from PostgreSQL RDS.
+    """
+    try:
+        from sqlalchemy import text
+        rows = db.execute(text("""
+            SELECT file_key, file_data FROM whatsapp_bot_session_store 
+            WHERE session_id = :sid
+        """), {"sid": session_id}).fetchall()
+        
+        files = {r[0]: r[1] for r in rows}
+        return {"success": True, "session_id": session_id, "files": files, "count": len(files)}
+    except Exception as e:
+        return {"success": False, "error": str(e), "files": {}}
+
+
+@router.post("/bot-session-clear")
+def clear_bot_session_files(
+    session_id: str = "default_baileys",
+    db: Session = Depends(get_db)
+):
+    """
+    Purges session credentials from database upon explicit logout.
+    """
+    try:
+        from sqlalchemy import text
+        db.execute(text("DELETE FROM whatsapp_bot_session_store WHERE session_id = :sid"), {"sid": session_id})
+        db.commit()
+        return {"success": True, "message": "Session cleared from database"}
+    except Exception as e:
+        db.rollback()
+        return {"success": False, "error": str(e)}
+
+
 @router.get("/search-contacts")
 def search_whatsapp_contacts(
     q: str = Query("", min_length=1),
