@@ -558,10 +558,9 @@ async def plivo_application_hangup(
     }
 
 
-# ── 6. DIRECT CLICK-TO-CALL BRIDGE & SESSION STATUS ─────────────────────────
-
 @router.post("/plivo/click-to-call")
 def initiate_click_to_call(
+    request: Request,
     payload: Dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user_hybrid)
@@ -622,17 +621,24 @@ def initiate_click_to_call(
         db.add(session)
         db.flush()
 
+    forwarded_proto = request.headers.get("x-forwarded-proto", "https")
+    forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+    if forwarded_host and "localhost" not in forwarded_host and "127.0.0.1" not in forwarded_host:
+        base_domain = f"{forwarded_proto}://{forwarded_host}"
+    else:
+        base_domain = "https://www.myntreal.com"
+
     plivo_url = f"https://api.plivo.com/v1/Account/{auth_id}/Call/"
     call_payload = {
         "from": from_number,
         "to": to_phone,
-        "answer_url": f"https://www.myntreal.com/api/v1/telephony/plivo/inbound?session_id={session.call_session_id}",
+        "answer_url": f"{base_domain}/api/v1/telephony/plivo/inbound?session_id={session.call_session_id}",
         "answer_method": "POST",
-        "hangup_url": f"https://www.myntreal.com/api/v1/telephony/plivo/hangup?session_id={session.call_session_id}",
+        "hangup_url": f"{base_domain}/api/v1/telephony/plivo/hangup?session_id={session.call_session_id}",
         "hangup_method": "POST",
         "record": "true",
         "record_direction": "both",
-        "recording_callback_url": f"https://www.myntreal.com/api/v1/telephony/plivo/recording-callback?session_id={session.call_session_id}",
+        "recording_callback_url": f"{base_domain}/api/v1/telephony/plivo/recording-callback?session_id={session.call_session_id}",
         "recording_callback_method": "POST"
     }
 
