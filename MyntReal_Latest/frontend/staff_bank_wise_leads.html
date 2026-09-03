@@ -504,6 +504,7 @@
     <script src="/shared/staff_inactivity_manager.js"></script>
     <script src="/staff_header.js"></script>
     <script src="/public/js/plivo-softphone.js?v=2.0"></script>
+    <script src="/public/js/wa-lead-modal.js?v=2.0"></script>
     <script>
         // Global Lead Softphone Call Trigger
         function triggerLeadCall(phone, name, leadId) {
@@ -2467,8 +2468,19 @@
         }
 
         function shareBranchDetails(bankName, branchName) {
-            const msg = getBranchShareMessage(bankName, branchName);
-            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+            const bName = (bankName || '').trim();
+            const brName = (branchName || '').trim();
+            const contactKey = (bName + ':::' + brName).toLowerCase();
+            const bc = branchContactsMap[contactKey] || null;
+
+            const msg = getBranchShareMessage(bName, brName);
+            const targetPhone = bc?.manager_phone || bc?.officer_phone || bc?.custom_phone || '';
+
+            if (typeof window.openLeadWAModal === 'function') {
+                window.openLeadWAModal('branch_' + encodeURIComponent(bName + '_' + brName), targetPhone, `${bName} (${brName})`, 4, msg);
+            } else {
+                window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+            }
         }
 
         function copyBranchDetails(bankName, branchName) {
@@ -2481,9 +2493,30 @@
         }
 
         function shareCurrentModalBranch() {
-            const bName = document.getElementById('bcBankName').value;
-            const brName = document.getElementById('bcBranchName').value;
+            const bName = (document.getElementById('bcBankName').value || '').trim();
+            const brName = (document.getElementById('bcBranchName').value || '').trim();
             if (!bName || !brName) return;
+
+            // Update temporary map with current modal form values so share message has latest inputs
+            const contactKey = (bName + ':::' + brName).toLowerCase();
+            branchContactsMap[contactKey] = {
+                bank_name: bName,
+                branch_name: brName,
+                manager_name: document.getElementById('bcManagerName')?.value || '',
+                manager_phone: document.getElementById('bcManagerPhone')?.value || '',
+                manager_alt_phone: document.getElementById('bcManagerAltPhone')?.value || '',
+                officer_name: document.getElementById('bcOfficerName')?.value || '',
+                officer_phone: document.getElementById('bcOfficerPhone')?.value || '',
+                officer_alt_phone: document.getElementById('bcOfficerAltPhone')?.value || '',
+                custom_designation: document.getElementById('bcCustomDesignation')?.value || '',
+                custom_name: document.getElementById('bcCustomName')?.value || '',
+                custom_phone: document.getElementById('bcCustomPhone')?.value || '',
+                custom_alt_phone: document.getElementById('bcCustomAltPhone')?.value || '',
+                google_maps_url: document.getElementById('bcGoogleMapsUrl')?.value || '',
+                branch_address: document.getElementById('bcBranchAddress')?.value || '',
+                notes: document.getElementById('bcNotes')?.value || '',
+            };
+
             shareBranchDetails(bName, brName);
         }
 

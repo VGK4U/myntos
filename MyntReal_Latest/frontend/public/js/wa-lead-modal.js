@@ -71,6 +71,12 @@
     '<div id="_lwaVarBox"></div>',
     '</div>',
 
+    /* recipient phone */
+    '<div style="margin-bottom:12px">',
+    '<label style="font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Recipient Mobile Number</label>',
+    '<input type="tel" id="_lwaPhoneInp" style="width:100%;font-size:13px;border:1px solid #e5e7eb;border-radius:7px;padding:7px 10px;box-sizing:border-box" placeholder="10-digit mobile number">',
+    '</div>',
+
     /* message */
     '<div style="margin-bottom:12px">',
     '<label style="font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Message <small style="text-transform:none;font-weight:400">(auto-filled from template, or write custom)</small></label>',
@@ -81,16 +87,22 @@
     '<div id="_lwaResult" style="display:none;padding:9px 12px;border-radius:8px;font-size:12px;margin-bottom:12px"></div>',
 
     /* buttons */
-    '<div style="display:flex;gap:8px;justify-content:flex-end">',
-    '<button onclick="window._lwaClose()" style="padding:8px 18px;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;color:#374151;font-size:12px;cursor:pointer">Cancel</button>',
-    '<button id="_lwaSend" onclick="window._lwaDoSend()" style="padding:8px 20px;background:#25D366;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;min-width:140px"><i class="fab fa-whatsapp"></i> <span id="_lwaSendLbl">Send via Meta</span></button>',
+    '<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap">',
+    '<div style="display:flex;gap:6px">',
+    '<button type="button" onclick="window._lwaDirectWeb()" style="padding:8px 12px;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer" title="Open direct chat in WhatsApp Web"><i class="fab fa-whatsapp me-1"></i>Direct Web</button>',
+    '<button type="button" onclick="window._lwaCopyText()" style="padding:8px 12px;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" title="Copy message to clipboard"><i class="fas fa-copy me-1"></i>Copy</button>',
+    '</div>',
+    '<div style="display:flex;gap:8px">',
+    '<button onclick="window._lwaClose()" style="padding:8px 16px;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;color:#374151;font-size:12px;cursor:pointer">Cancel</button>',
+    '<button id="_lwaSend" onclick="window._lwaDoSend()" style="padding:8px 20px;background:#25D366;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;min-width:140px"><i class="fab fa-whatsapp"></i> <span id="_lwaSendLbl">Send via Scanned Bot</span></button>',
+    '</div>',
     '</div>',
 
     '</div></div></div>'
   ].join('');
 
   /* ── State ───────────────────────────────────────────────────────────────── */
-  var _s = { leadId: null, phone: null, name: null, companyId: null, mode: 'company', tpls: [], bodyTpl: '' };
+  var _s = { leadId: null, phone: null, name: null, companyId: null, mode: 'scanned', tpls: [], bodyTpl: '' };
 
   /* ── Inject modal ────────────────────────────────────────────────────────── */
   function _ensure() {
@@ -108,201 +120,183 @@
 
   function _showRes(msg, ok) {
     var el = document.getElementById('_lwaResult');
+    if (!el) return;
     if (!msg) { el.style.display = 'none'; return; }
-    el.style.display = 'block';
-    el.style.background = ok === true ? '#f0fdf4' : ok === null ? '#f0f9ff' : '#fef2f2';
-    el.style.color      = ok === true ? '#166534' : ok === null ? '#0369a1' : '#991b1b';
-    el.textContent = msg;
+    el.style.display    = 'block';
+    el.style.background = ok === true ? '#ecfdf5' : ok === false ? '#fef2f2' : '#f0f9ff';
+    el.style.color      = ok === true ? '#065f46' : ok === false ? '#991b1b' : '#0369a1';
+    el.style.border     = '1px solid ' + (ok === true ? '#a7f3d0' : ok === false ? '#fecaca' : '#bae6fd');
+    el.innerHTML        = msg;
   }
 
   function _applyModeStyle() {
-    var mode = _s.mode;
-    var btnComp = document.getElementById('_lwaBtnComp');
-    var btnScan = document.getElementById('_lwaBtnScanned');
-    [btnComp, btnScan].forEach(function(b) {
-      if (!b) return;
-      b.style.background  = 'none';
-      b.style.boxShadow   = 'none';
-      b.style.color       = '#6b7280';
-    });
-    var active = mode === 'company' ? btnComp : btnScan;
-    if (active) {
-      active.style.background = '#fff';
-      active.style.boxShadow  = '0 1px 4px rgba(0,0,0,.12)';
-      active.style.color      = mode === 'company' ? '#2563eb' : '#15803d';
+    var isScanned = _s.mode === 'scanned';
+    var bScan = document.getElementById('_lwaBtnScanned');
+    var bComp = document.getElementById('_lwaBtnComp');
+    if (bScan && bComp) {
+      bScan.style.background = isScanned ? '#fff' : 'transparent';
+      bScan.style.color      = isScanned ? '#128c7e' : '#6b7280';
+      bScan.style.boxShadow  = isScanned ? '0 1px 4px rgba(0,0,0,.1)' : 'none';
+
+      bComp.style.background = !isScanned ? '#fff' : 'transparent';
+      bComp.style.color      = !isScanned ? '#2563eb' : '#6b7280';
+      bComp.style.boxShadow  = !isScanned ? '0 1px 4px rgba(0,0,0,.1)' : 'none';
     }
-    document.getElementById('_lwaTplLbl').textContent = mode === 'company'
-      ? 'Template (Meta-approved only)'
-      : 'Template (optional — any active)';
-    document.getElementById('_lwaSendLbl').textContent = mode === 'company'
-      ? 'Send via WhatsApp API'
-      : 'Send via Scan WhatsApp';
-    document.getElementById('_lwaSend').style.background = mode === 'company'
-      ? '#2563eb'
-      : '#16a34a';
+
+    var lbl = document.getElementById('_lwaSendLbl');
+    if (lbl) lbl.textContent = isScanned ? 'Send via Scanned Bot' : 'Send via Meta';
+
+    var sendBtn = document.getElementById('_lwaSend');
+    if (sendBtn) {
+      sendBtn.style.background = isScanned ? '#128c7e' : '#2563eb';
+    }
+
+    var tplLbl = document.getElementById('_lwaTplLbl');
+    if (tplLbl) {
+      tplLbl.textContent = isScanned ? 'Template (Scanned Session Approved)' : 'Template (Meta Cloud Approved)';
+    }
   }
 
-  /* ── Load templates ───────────────────────────────────────────────────────── */
+  /* ── Load templates ──────────────────────────────────────────────────────── */
   function _loadTpls() {
-    var seg = (document.getElementById('_lwaSeg') || {}).value || '';
-    var cat = (document.getElementById('_lwaCat') || {}).value || '';
+    var seg = document.getElementById('_lwaSeg') ? document.getElementById('_lwaSeg').value : '';
+    var cat = document.getElementById('_lwaCat') ? document.getElementById('_lwaCat').value : '';
     var sel = document.getElementById('_lwaTpl');
-    sel.innerHTML = '<option value="">— Loading… —</option>';
-    var url;
-    if (_s.mode === 'company') {
-      url = API + '/templates/approved?';
-      if (seg) url += 'segment=' + encodeURIComponent(seg) + '&';
-      if (cat) url += 'category=' + encodeURIComponent(cat);
-    } else {
-      url = API + '/templates?is_active=true';
-      if (seg) url += '&segment=' + encodeURIComponent(seg);
-    }
-    return fetch(url, { credentials: 'include' })
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        _s.tpls = d.templates || [];
-        sel.innerHTML = '<option value="">— Write custom message —</option>';
-        var noTpl = document.getElementById('_lwaNoTpl');
-        if (_s.mode === 'company' && _s.tpls.length === 0) {
-          noTpl.style.display = 'block';
-        } else {
-          noTpl.style.display = 'none';
+    if (!sel) return;
+
+    sel.innerHTML = '<option value="">— Loading templates… —</option>';
+    document.getElementById('_lwaNoTpl').style.display = 'none';
+
+    var url = API + '/templates?mode=' + encodeURIComponent(_s.mode);
+    if (seg) url += '&segment=' + encodeURIComponent(seg);
+    if (cat) url += '&category=' + encodeURIComponent(cat);
+    if (_s.companyId) url += '&company_id=' + encodeURIComponent(_s.companyId);
+
+    fetch(url, { credentials: 'include' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var list = (d.templates || d.data || d || []);
+        _s.tpls = Array.isArray(list) ? list : [];
+
+        if (!_s.tpls.length) {
+          sel.innerHTML = '<option value="">— No approved templates found —</option>';
+          document.getElementById('_lwaNoTpl').style.display = 'block';
+          return;
         }
-        var bySegment = {};
-        _s.tpls.forEach(function(t) {
-          if (!bySegment[t.segment]) bySegment[t.segment] = [];
-          bySegment[t.segment].push(t);
+
+        var optHtml = '<option value="">— Select a template (' + _s.tpls.length + ' available) —</option>';
+        _s.tpls.forEach(function (t) {
+          optHtml += '<option value="' + t.id + '">' + _esc(t.template_name || t.name) + ' (' + (t.category || 'MARKETING') + ')</option>';
         });
-        var segLabels = { ev_b2b:'EV B2B', ev_b2c:'EV B2C', etc_training:'ETC Training', real_estate:'Real Estate', general:'MNR General', system:'System', vgk:'VGK Members', solar:'Solar', myntreal_real:'Myntreal Real' };
-        Object.keys(bySegment).forEach(function(sg) {
-          var grp = document.createElement('optgroup');
-          grp.label = segLabels[sg] || sg;
-          bySegment[sg].forEach(function(t) {
-            var opt = document.createElement('option');
-            opt.value = t.id;
-            opt.textContent = t.name + (t.meta_category ? ' (' + t.meta_category + ')' : '');
-            opt.dataset.body     = t.body_text || '';
-            opt.dataset.examples = JSON.stringify(t.example_values || []);
-            grp.appendChild(opt);
-          });
-          sel.appendChild(grp);
-        });
-        /* auto-select if exactly one */
-        if (_s.tpls.length === 1) { sel.value = String(_s.tpls[0].id); _onTplChange(); }
+        sel.innerHTML = optHtml;
       })
-      .catch(function(e) {
-        sel.innerHTML = '<option value="">— Failed to load —</option>';
-        console.error('[lwa] template load error', e);
+      .catch(function () {
+        sel.innerHTML = '<option value="">— Error loading templates —</option>';
       });
   }
 
-  /* ── Template change ─────────────────────────────────────────────────────── */
+  /* ── Template change handler ─────────────────────────────────────────────── */
   function _onTplChange() {
-    var sel  = document.getElementById('_lwaTpl');
-    var opt  = sel.options[sel.selectedIndex];
-    var vars = document.getElementById('_lwaVars');
-    var box  = document.getElementById('_lwaVarBox');
-    if (!opt || !opt.value) {
-      vars.style.display = 'none';
-      box.innerHTML = '';
-      document.getElementById('_lwaMsg').value = '';
-      _s.bodyTpl = '';
+    var tplId = document.getElementById('_lwaTpl').value;
+    var varBox = document.getElementById('_lwaVarBox');
+    var varWrap = document.getElementById('_lwaVars');
+    var msgBox = document.getElementById('_lwaMsg');
+
+    if (!tplId) {
+      varWrap.style.display = 'none';
+      varBox.innerHTML = '';
       return;
     }
-    _s.bodyTpl = opt.dataset.body || '';
-    var examples = [];
-    try { examples = JSON.parse(opt.dataset.examples || '[]'); } catch(e) {}
-    /* detect {{n}} placeholders, deduplicated, in order */
-    var seen = {};
-    var keys = [];
-    (_s.bodyTpl.match(/\{\{(\w+)\}\}/g) || []).forEach(function(m) {
-      var k = m.replace(/[{}]/g, '');
-      if (!seen[k]) { seen[k] = true; keys.push(k); }
+
+    var tpl = _s.tpls.find(function (t) { return String(t.id) === String(tplId); });
+    if (!tpl) return;
+
+    _s.bodyTpl = tpl.body_text || tpl.content || tpl.body || '';
+
+    /* Parse {{1}}, {{2}}, etc. */
+    var matches = _s.bodyTpl.match(/\{\{(\d+)\}\}/g) || [];
+    var uniqueIndices = [];
+    matches.forEach(function (m) {
+      var idx = m.replace(/[\{\}]/g, '');
+      if (uniqueIndices.indexOf(idx) === -1) uniqueIndices.push(idx);
     });
-    if (keys.length > 0) {
-      vars.style.display = 'block';
-      box.innerHTML = keys.map(function(v, i) {
-        var ex      = examples[i] != null ? examples[i] : '';
-        var prefill = (v === '1') ? (_s.name || ex) : ex;
-        return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">'
-          + '<span style="font-size:11px;font-weight:700;color:#374151;white-space:nowrap;min-width:36px">{{' + v + '}}</span>'
-          + '<input id="_lwaV_' + _esc(v) + '" type="text" value="' + _esc(prefill) + '" placeholder="' + (_esc(ex) || 'Value for {{' + v + '}}') + '" oninput="window._lwaPreview()" style="flex:1;font-size:12px;border:1px solid #e5e7eb;border-radius:6px;padding:5px 8px;box-sizing:border-box">'
-          + '</div>';
-      }).join('');
+    uniqueIndices.sort(function (a, b) { return Number(a) - Number(b); });
+
+    if (uniqueIndices.length) {
+      var html = '';
+      uniqueIndices.forEach(function (idx) {
+        var defaultVal = (idx === '1') ? (_s.name || '') : '';
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+          '<label style="font-size:11px;font-weight:600;width:30px">#' + idx + '</label>' +
+          '<input type="text" id="_lwaVar_' + idx + '" value="' + _esc(defaultVal) + '" oninput="window._lwaPreview()" ' +
+          'style="flex:1;font-size:12px;border:1px solid #e5e7eb;border-radius:6px;padding:5px 8px" placeholder="Value for {{' + idx + '}}">' +
+          '</div>';
+      });
+      varBox.innerHTML = html;
+      varWrap.style.display = 'block';
     } else {
-      vars.style.display = 'none';
-      box.innerHTML = '';
+      varWrap.style.display = 'none';
+      varBox.innerHTML = '';
     }
+
     _buildPreview();
   }
 
-  /* ── Live preview ────────────────────────────────────────────────────────── */
   function _buildPreview() {
-    if (!_s.bodyTpl) return;
-    var preview = _s.bodyTpl;
-    var inputs  = document.getElementById('_lwaVarBox').querySelectorAll('input');
-    inputs.forEach(function(inp) {
-      var k = inp.id.replace('_lwaV_', '');
-      var re = new RegExp('\\{\\{' + k + '\\}\\}', 'g');
-      preview = preview.replace(re, inp.value || ('{{' + k + '}}'));
+    var text = _s.bodyTpl || '';
+    var matches = text.match(/\{\{(\d+)\}\}/g) || [];
+    matches.forEach(function (m) {
+      var idx = m.replace(/[\{\}]/g, '');
+      var inp = document.getElementById('_lwaVar_' + idx);
+      var val = inp ? (inp.value || m) : m;
+      text = text.split(m).join(val);
     });
-    document.getElementById('_lwaMsg').value = preview;
-  }
-
-  /* ── Collect variable_values from inputs ─────────────────────────────────── */
-  function _collectVars() {
-    var out = {};
-    document.getElementById('_lwaVarBox').querySelectorAll('input').forEach(function(inp) {
-      out[inp.id.replace('_lwaV_', '')] = inp.value;
-    });
-    return out;
-  }
-
-  /* ── Send ────────────────────────────────────────────────────────────────── */
-  function _doSend() {
-    var msg    = (document.getElementById('_lwaMsg').value || '').trim();
-    var tplId  = document.getElementById('_lwaTpl').value;
-    var btn    = document.getElementById('_lwaSend');
-    var varVals = _collectVars();
-
-    if (!msg) { _showRes('Please enter a message or select a template.', false); return; }
-
-    /* append signature if not present */
-    var sig = _getStaffSignature();
-    if (msg && msg.indexOf('Regards,') === -1 && msg.indexOf('MyntReal') === -1) {
-      msg = msg + sig;
+    if (document.getElementById('_lwaMsg')) {
+      document.getElementById('_lwaMsg').value = text;
     }
+  }
 
-    if (_s.mode === 'direct') {
-      var cleaned = (_s.phone || '').replace(/\D/g, '').slice(-10);
-      var waUrl   = cleaned
-        ? 'https://wa.me/91' + cleaned + '?text=' + encodeURIComponent(msg)
-        : 'https://wa.me/?text=' + encodeURIComponent(msg);
-      window.open(waUrl, '_blank');
-      _showRes('WhatsApp opened — logging action…', null);
-      fetch(API + '/crm-lead-send/' + _s.leadId + '/log-direct', {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: _s.phone, message_preview: msg.slice(0, 200), message_body: msg, template_id: tplId ? parseInt(tplId, 10) : null })
-      }).catch(function(e) { console.warn('[lwa] log-direct non-fatal', e); });
-      _showRes('✅ WhatsApp opened. Activity logged to lead.', true);
-      setTimeout(function() { document.getElementById('_lwaModal').style.display = 'none'; }, 2500);
+  /* ── Send dispatch ───────────────────────────────────────────────────────── */
+  function _doSend() {
+    var phoneInput = document.getElementById('_lwaPhoneInp');
+    var targetPhone = (phoneInput ? phoneInput.value : '') || _s.phone || '';
+    var targetNum = targetPhone.replace(/\D/g, '').slice(-10);
+
+    if (!targetNum || targetNum.length < 10) {
+      _showRes('Please provide a valid 10-digit recipient phone number.', false);
       return;
     }
 
+    var tplId = document.getElementById('_lwaTpl') ? document.getElementById('_lwaTpl').value : null;
+    var msg   = document.getElementById('_lwaMsg') ? document.getElementById('_lwaMsg').value.trim() : '';
+
+    if (!msg && !tplId) {
+      _showRes('Please enter a message or select a template.', false);
+      return;
+    }
+
+    var varVals = {};
+    var inputs = document.querySelectorAll('[id^="_lwaVar_"]');
+    inputs.forEach(function (inp) {
+      var k = inp.id.replace('_lwaVar_', '');
+      varVals[k] = inp.value;
+    });
+
+    var btn = document.getElementById('_lwaSend');
+    btn.disabled = true;
+
+    /* Scanned mode send */
     if (_s.mode === 'scanned') {
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Dispatched via Bot…';
-      _showRes('Dispatching via Scanned Connected Bot…', null);
-      var targetNum = (_s.phone || '').replace(/\D/g, '').slice(-10);
-      fetch('/api/v1/whatsapp/send-message', {
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending via Bot…';
+      _showRes('', null);
+      fetch('/api/v1/whatsapp-chat/send', {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recipient: targetNum,
           message: msg,
           recipient_type: 'individual',
-          recipient_name: _s.name || 'Customer'
+          recipient_name: _s.name || 'Contact'
         })
       })
       .then(function(r) { return r.json(); })
@@ -310,11 +304,11 @@
         if (d.success) {
           btn.innerHTML = '<i class="fas fa-check"></i> Sent via Bot ✓';
           _showRes('✅ Sent via Scanned WhatsApp Bot! (Signed & Tracked)', true);
-          if (_s.leadId && _s.leadId !== 'new') {
+          if (_s.leadId && _s.leadId !== 'new' && !isNaN(parseInt(_s.leadId, 10))) {
             fetch(API + '/crm-lead-send/' + _s.leadId + '/log-direct', {
               method: 'POST', credentials: 'include',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ phone: _s.phone, message_preview: msg.slice(0, 200), message_body: msg, template_id: tplId ? parseInt(tplId, 10) : null })
+              body: JSON.stringify({ phone: targetNum, message_preview: msg.slice(0, 200), message_body: msg, template_id: tplId ? parseInt(tplId, 10) : null })
             }).catch(function(e) { console.warn('[lwa] log-scanned non-fatal', e); });
           }
           setTimeout(function() { document.getElementById('_lwaModal').style.display = 'none'; }, 2500);
@@ -333,29 +327,38 @@
       return;
     }
 
-    /* Company send */
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
+    /* Company mode send */
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending via Meta…';
     _showRes('', null);
-    fetch(API + '/crm-lead-send/' + _s.leadId, {
+
+    var isNumericLead = _s.leadId && !isNaN(parseInt(_s.leadId, 10)) && parseInt(_s.leadId, 10) > 0;
+    var sendUrl = isNumericLead ? (API + '/crm-lead-send/' + _s.leadId) : (API + '/test-send');
+    var sendPayload = isNumericLead ? {
+      phone: targetNum,
+      template_id: tplId ? parseInt(tplId, 10) : null,
+      custom_message: !tplId ? msg : null,
+      variable_values: varVals,
+      send_mode: 'company'
+    } : {
+      phone: targetNum,
+      company_id: _s.companyId || 4,
+      template_id: tplId ? parseInt(tplId, 10) : null,
+      custom_message: msg
+    };
+
+    fetch(sendUrl, {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        phone: _s.phone,
-        template_id: tplId ? parseInt(tplId, 10) : null,
-        custom_message: !tplId ? msg : null,
-        variable_values: varVals,
-        send_mode: 'company'
-      })
+      body: JSON.stringify(sendPayload)
     })
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (d.success) {
         btn.innerHTML = '<i class="fas fa-check"></i> Sent ✓';
-        _showRes('✅ Sent via Meta. WAMID: ' + (d.wamid || 'N/A') + ' — delivery status updates in ~6 s.', true);
+        _showRes('✅ Sent via Meta Cloud API! WAMID: ' + (d.wamid || 'N/A') + ' — delivered.', true);
         setTimeout(function() { document.getElementById('_lwaModal').style.display = 'none'; }, 3000);
       } else {
-        var reason = d.reason || 'Unknown error';
+        var reason = d.reason || d.detail || 'Unknown error';
         _showRes('❌ ' + reason, false);
         btn.disabled = false;
         btn.innerHTML = '<i class="fab fa-whatsapp"></i> <span id="_lwaSendLbl">Send via Meta</span>';
@@ -384,6 +387,27 @@
     return '\n\n—\nRegards,\nMyntReal Workflows';
   }
 
+  /* ── Direct Web WhatsApp & Copy Actions ─────────────────────────────────── */
+  function _directWeb() {
+    var phoneInput = document.getElementById('_lwaPhoneInp');
+    var targetPhone = (phoneInput ? phoneInput.value : '') || _s.phone || '';
+    var cleanP = targetPhone.replace(/\D/g, '').slice(-10);
+    var msg = document.getElementById('_lwaMsg') ? document.getElementById('_lwaMsg').value : '';
+    var url = cleanP ? ('https://wa.me/91' + cleanP + '?text=' + encodeURIComponent(msg)) : ('https://wa.me/?text=' + encodeURIComponent(msg));
+    window.open(url, '_blank');
+  }
+
+  function _copyText() {
+    var msg = document.getElementById('_lwaMsg') ? document.getElementById('_lwaMsg').value : '';
+    if (!msg) return;
+    navigator.clipboard.writeText(msg).then(function() {
+      _showRes('📋 Message copied to clipboard!', true);
+    }).catch(function() {
+      var inp = document.getElementById('_lwaMsg');
+      if (inp) { inp.select(); document.execCommand('copy'); _showRes('📋 Message copied to clipboard!', true); }
+    });
+  }
+
   /* ── Expose window functions (called from inline HTML) ───────────────────── */
   function _bindGlobals() {
     window._lwaClose     = function() { document.getElementById('_lwaModal').style.display = 'none'; };
@@ -392,25 +416,36 @@
     window._lwaTplChange = function() { _onTplChange(); };
     window._lwaPreview   = function() { _buildPreview(); };
     window._lwaDoSend    = function() { _doSend(); };
+    window._lwaDirectWeb = function() { _directWeb(); };
+    window._lwaCopyText  = function() { _copyText(); };
   }
 
   /* ── Public entry point ──────────────────────────────────────────────────── */
-  window.openLeadWAModal = function(leadId, phone, name, companyId) {
+  window.openLeadWAModal = function(leadId, phone, name, companyId, initialMessage) {
     _ensure();
     _bindGlobals();
-    _s = { leadId: leadId, phone: phone, name: name, companyId: companyId, mode: 'scanned', tpls: [], bodyTpl: '' };
+    var cleanP = phone ? String(phone).replace(/\D/g, '').slice(-10) : '';
+    _s = { leadId: leadId, phone: cleanP, name: name, companyId: companyId, mode: 'scanned', tpls: [], bodyTpl: '' };
 
     /* reset UI */
-    document.getElementById('_lwaSub').textContent     = (name || '') + ' · ' + (phone || '');
+    document.getElementById('_lwaSub').textContent     = (name || 'Contact') + (cleanP ? (' · ' + cleanP) : '');
+    if (document.getElementById('_lwaPhoneInp')) {
+      document.getElementById('_lwaPhoneInp').value = cleanP;
+    }
     document.getElementById('_lwaSeg').value           = '';
     document.getElementById('_lwaCat').value           = '';
-    document.getElementById('_lwaMsg').value           = 'Namaskaram ' + (name || 'Customer') + '! ' + _getStaffSignature();
+    
+    if (initialMessage) {
+      document.getElementById('_lwaMsg').value = initialMessage;
+    } else {
+      document.getElementById('_lwaMsg').value = 'Namaskaram ' + (name || 'Customer') + '! ' + _getStaffSignature();
+    }
+    
     document.getElementById('_lwaVars').style.display  = 'none';
     document.getElementById('_lwaVarBox').innerHTML    = '';
     document.getElementById('_lwaNoTpl').style.display = 'none';
     document.getElementById('_lwaResult').style.display= 'none';
     document.getElementById('_lwaSend').disabled       = false;
-    document.getElementById('_lwaSend').innerHTML      = '<i class="fas fa-qrcode"></i> <span id="_lwaSendLbl">Send via Scanned Bot</span>';
     _applyModeStyle();
 
     document.getElementById('_lwaModal').style.display = 'flex';
