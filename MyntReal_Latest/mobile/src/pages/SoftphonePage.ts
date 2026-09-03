@@ -208,7 +208,9 @@ export class SoftphonePage {
 
   private saveSoftphoneCall(phone: string, name: string, duration: number): void {
     try {
+      const recId = `soft_rec_${Date.now()}`;
       const record: CallRecord = {
+        id: recId,
         phone_number: phone,
         contact_name: name,
         call_type: 'OUTGOING',
@@ -216,7 +218,10 @@ export class SoftphonePage {
         timestamp: this.formatRelativeTime(new Date().toISOString()),
         duration_seconds: duration,
         source: 'softphone',
-        status: 'Completed'
+        status: 'Completed',
+        has_recording: true,
+        recording_id: Date.now(),
+        recording_stream_url: `/api/v1/telephony/plivo/recordings/${recId}/stream`
       };
 
       let stored: CallRecord[] = [];

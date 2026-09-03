@@ -301,13 +301,15 @@ async def plivo_inbound_answer(
 ):
     """
     Plivo Primary Answer URL.
-    Invoked when customer dials the MyntOS Plivo DID (+91 80 3172 8899).
+    Invoked when customer dials the MyntOS Plivo DID (+91 80 3172 8899)
+    or when an outbound click-to-call is answered by the customer.
     Returns dynamic Plivo XML.
     """
     form_data = await request.form()
     caller_phone = form_data.get("From", "")
     called_did = form_data.get("To", "")
     call_uuid = form_data.get("CallUUID", "")
+    session_id_param = request.query_params.get("session_id") or form_data.get("session_id") or form_data.get("X-PH-Call-Session-ID", "")
 
     base_url = str(request.base_url).rstrip('/')
     xml_str = CallFlowInterpreter.handle_inbound_call(
@@ -315,7 +317,8 @@ async def plivo_inbound_answer(
         caller_phone=caller_phone,
         called_did=called_did,
         provider_call_id=call_uuid,
-        base_api_url=base_url
+        base_api_url=base_url,
+        call_session_id=session_id_param
     )
     return Response(content=xml_str, media_type="application/xml")
 
@@ -554,7 +557,7 @@ async def plivo_application_hangup(
     }
 
 
-# ── 6. DIRECT CLICK-TO-CALL BRIDGE ──────────────────────────────────────────
+# ── 6. DIRECT CLICK-TO-CALL BRIDGE & SESSION STATUS ─────────────────────────
 
 @router.post("/plivo/click-to-call")
 def initiate_click_to_call(
@@ -564,12 +567,12 @@ def initiate_click_to_call(
 ):
     """
     Direct Server-Side Click-to-Call Bridge.
-    Dials customer or agent directly via Plivo Cloud Trunk, ensuring immediate connection
-    without requiring local browser WebRTC certificates.
+    Dials customer or agent directly via Plivo Cloud Trunk, ensuring immediate connection,
+    tracking VoIPCallSession, and logging into call history.
     """
+    import uuid
     import requests as _req
     from app.core.config import settings
-    from app.core.config import get_safe_base_url
 
     to_phone = str(payload.get("to") or payload.get("destination") or "").strip()
     if not to_phone:
@@ -585,26 +588,158 @@ def initiate_click_to_call(
     if not auth_id or not auth_token:
         raise HTTPException(status_code=503, detail="Plivo credentials not configured on server")
 
+    company_id = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', 1) or 1
+    branch_id = getattr(current_user, 'branch_id', None)
+    lead_id = payload.get("lead_id")
+    call_session_id = payload.get("call_session_id")
+
+    session = None
+    if call_session_id:
+        session = db.query(VoIPCallSession).filter(VoIPCallSession.call_session_id == call_session_id).first()
+
+    now = get_indian_time()
+    if not session:
+        call_session_id = call_session_id or f"vcs_{uuid.uuid4().hex[:16]}"
+        session = VoIPCallSession(
+            call_session_id=call_session_id,
+            company_id=company_id,
+            branch_id=branch_id,
+            lead_id=lead_id,
+            operator_id=current_user.id,
+            operator_user_ref=getattr(current_user, 'emp_code', None) or str(current_user.id),
+            operator_name=getattr(current_user, 'full_name', 'Operator'),
+            customer_phone=to_phone,
+            direction='outbound',
+            call_method='click_to_call',
+            provider='plivo',
+            caller_id=from_number,
+            destination_number=to_phone,
+            status=CallStateEnum.DIALING.value,
+            started_at=now,
+            dialing_at=now
+        )
+        db.add(session)
+        db.flush()
+
     plivo_url = f"https://api.plivo.com/v1/Account/{auth_id}/Call/"
     call_payload = {
         "from": from_number,
         "to": to_phone,
-        "answer_url": f"https://www.myntreal.com/api/v1/telephony/plivo/inbound",
+        "answer_url": f"https://www.myntreal.com/api/v1/telephony/plivo/inbound?session_id={session.call_session_id}",
         "answer_method": "POST",
-        "hangup_url": f"https://www.myntreal.com/api/v1/telephony/plivo/hangup",
-        "hangup_method": "POST"
+        "hangup_url": f"https://www.myntreal.com/api/v1/telephony/plivo/hangup?session_id={session.call_session_id}",
+        "hangup_method": "POST",
+        "record": "true",
+        "record_direction": "both",
+        "recording_callback_url": f"https://www.myntreal.com/api/v1/telephony/plivo/recording-callback?session_id={session.call_session_id}",
+        "recording_callback_method": "POST"
     }
 
     try:
         resp = _req.post(plivo_url, json=call_payload, auth=(auth_id, auth_token), timeout=10)
         res_json = resp.json()
         logger.info(f"[CLICK-TO-CALL] Initiated outbound call to {to_phone}: status={resp.status_code} res={res_json}")
+
+        request_uuid = res_json.get("request_uuid")
+        if request_uuid:
+            session.provider_call_id = request_uuid
+            session.status = CallStateEnum.CONNECTED.value
+            session.answered_at = get_indian_time()
+
+        db.commit()
+
         return {
             "success": True,
+            "call_session_id": session.call_session_id,
+            "provider_call_id": session.provider_call_id,
             "message": f"Outbound call initiated to {to_phone}",
             "status_code": resp.status_code,
             "data": res_json
         }
     except Exception as e:
         logger.error(f"[CLICK-TO-CALL] Failed to dispatch Plivo call to {to_phone}: {e}")
+        session.status = CallStateEnum.FAILED.value
+        session.ended_at = get_indian_time()
+        session.failure_reason = str(e)
+        db.commit()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/plivo/calls/session-status/{session_id}")
+def get_call_session_status(
+    session_id: str,
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Returns the real-time live status and duration of an ongoing call session.
+    Actively checks Plivo Carrier REST API to detect disconnects instantly even without inbound webhooks.
+    """
+    from app.core.config import settings
+
+    session = db.query(VoIPCallSession).filter(
+        VoIPCallSession.call_session_id == session_id
+    ).first()
+
+    if not session:
+        # Try searching by provider_call_id
+        session = db.query(VoIPCallSession).filter(
+            VoIPCallSession.provider_call_id == session_id
+        ).first()
+
+    if not session:
+        return {
+            "success": False,
+            "call_session_id": session_id,
+            "status": "ended",
+            "is_terminal": True,
+            "duration_seconds": 0
+        }
+
+    status_val = session.status or "ended"
+    is_terminal = CallStateEnum(status_val).is_terminal() if status_val in CallStateEnum._value2member_map_ else (status_val in ("ended", "completed", "failed", "busy", "no-answer", "rejected"))
+
+    # Active Live Plivo Carrier Query to detect disconnection in real-time
+    if not is_terminal and session.provider_call_id and not session.provider_call_id.startswith("plivo_vcs_"):
+        auth_id = getattr(settings, 'PLIVO_AUTH_ID', None)
+        auth_token = getattr(settings, 'PLIVO_AUTH_TOKEN', None)
+        if auth_id and auth_token and not auth_id.startswith("mock_"):
+            try:
+                import requests as _req
+                p_url = f"https://api.plivo.com/v1/Account/{auth_id}/Call/{session.provider_call_id}/"
+                p_resp = _req.get(p_url, auth=(auth_id, auth_token), timeout=2.5)
+                if p_resp.status_code == 200:
+                    p_data = p_resp.json()
+                    end_t = p_data.get("end_time")
+                    call_st = (p_data.get("call_state") or "").upper()
+                    if end_t or call_st in ("COMPLETED", "HANGUP", "FAILED", "BUSY", "NO_ANSWER"):
+                        is_terminal = True
+                        status_val = "ended"
+                        session.status = CallStateEnum.ENDED.value
+                        dur = int(p_data.get("call_duration") or 0)
+                        session.duration_seconds = dur
+                        session.ended_at = get_indian_time()
+                        hang_cause = p_data.get("hangup_cause_name") or "Normal Hangup"
+                        hang_src = p_data.get("hangup_source") or "Carrier"
+                        session.termination_reason = f"{hang_cause} ({hang_src})"
+                        db.commit()
+            except Exception as pe:
+                logger.warning(f"[POLLER-PLIVO-CHECK] Failed live query: {pe}")
+
+    # Compute live duration
+    dur_sec = session.duration_seconds or 0
+    if not is_terminal and session.answered_at:
+        now = get_indian_time()
+        ans_t = session.answered_at.replace(tzinfo=None) if session.answered_at.tzinfo else session.answered_at
+        now_t = now.replace(tzinfo=None) if now.tzinfo else now
+        dur_sec = max(0, int((now_t - ans_t).total_seconds()))
+
+    return {
+        "success": True,
+        "call_session_id": session.call_session_id,
+        "provider_call_id": session.provider_call_id,
+        "status": status_val,
+        "is_terminal": is_terminal,
+        "duration_seconds": dur_sec,
+        "destination": session.destination_number or session.customer_phone
+    }
