@@ -7982,7 +7982,7 @@ Recordings will be synced on next sync.`)):alert("This folder is already in the 
           </div>
         `).join("")}
       </div>
-    `}renderInCallScreen(){const e=Math.floor(this.callDuration/60).toString().padStart(2,"0"),t=(this.callDuration%60).toString().padStart(2,"0");return`
+    `}renderInCallScreen(){const e=Math.floor(this.callDuration/60).toString().padStart(2,"0"),t=(this.callDuration%60).toString().padStart(2,"0"),a=(this.dialNumber||"").replace(/[^0-9+]/g,"");return`
       <div style="max-width: 380px; margin: 20px auto; padding: 20px; text-align: center;">
         <div style="width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #1d4ed8); display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 800; color: #fff; margin: 0 auto 16px auto; box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);">
           <i class="fas fa-user"></i>
@@ -7991,7 +7991,12 @@ Recordings will be synced on next sync.`)):alert("This folder is already in the 
         <h3 style="font-size: 22px; font-weight: 700; margin: 0 0 4px 0; color: #fff;">${this.selectedContactName||this.dialNumber}</h3>
         ${this.selectedContactName?`<div style="font-size: 13px; color: #94a3b8; margin-bottom: 6px;">+91 ${this.dialNumber}</div>`:""}
         <p id="softphoneCallStatusText" style="font-size: 14px; color: #22c55e; font-weight: 600; margin: 0 0 12px 0;">${this.callStatusText}</p>
-        <div id="softphoneCallTimer" style="font-size: 22px; font-weight: 700; font-family: monospace; color: #cbd5e1; margin-bottom: 24px;">${e}:${t}</div>
+        <div id="softphoneCallTimer" style="font-size: 22px; font-weight: 700; font-family: monospace; color: #cbd5e1; margin-bottom: 18px;">${e}:${t}</div>
+
+        <!-- Direct Cellular Dial Link Banner (Guarantees call placed on all iOS/Android phones) -->
+        <a href="tel:${a}" id="inCallDirectDialLink" style="display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.4); color: #4ade80; text-decoration: none; padding: 11px 16px; border-radius: 12px; font-size: 13px; font-weight: 700; margin-bottom: 22px;">
+          <i class="fas fa-phone-volume"></i> Tap to Connect Call via Phone SIM
+        </a>
 
         <!-- In-Call Control Grid -->
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px;">
@@ -8015,10 +8020,6 @@ Recordings will be synced on next sync.`)):alert("This folder is already in the 
         <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
           <button id="softphoneEndCallBtn" style="width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #b91c1c); border: none; color: #fff; font-size: 26px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4); cursor: pointer;">
             <i class="fas fa-phone-slash"></i>
-          </button>
-
-          <button id="inCallSwitchSimBtn" style="padding: 7px 16px; border-radius: 20px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #38bdf8; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-            <i class="fas fa-mobile-screen"></i> Switch to Cellular SIM
           </button>
         </div>
       </div>
