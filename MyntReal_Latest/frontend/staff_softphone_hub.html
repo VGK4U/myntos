@@ -553,7 +553,37 @@
             }
         }
 
-        function startHubCallUI(phone, name) {
+        let hubSessionWatcherInterval = null;
+
+        function startHubSessionWatcher(sessionId) {
+            stopHubSessionWatcher();
+            if (!sessionId || sessionId.startsWith('vcs_local_')) return;
+            const token = getHubAuthToken();
+            hubSessionWatcherInterval = setInterval(async () => {
+                try {
+                    const resp = await fetch(`/api/v1/telephony/plivo/calls/session-status/${sessionId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        if (data && data.is_terminal) {
+                            console.log(`[HUB-SOFTPHONE] Call session ${sessionId} ended (Status: ${data.status}, Duration: ${data.duration_seconds}s)`);
+                            stopHubSessionWatcher();
+                            endCallFromHub(false);
+                        }
+                    }
+                } catch (_) {}
+            }, 2000);
+        }
+
+        function stopHubSessionWatcher() {
+            if (hubSessionWatcherInterval) {
+                clearInterval(hubSessionWatcherInterval);
+                hubSessionWatcherInterval = null;
+            }
+        }
+
+        function startHubCallUI(phone, name, sessionId = null, isConnected = false) {
             document.getElementById('hubKeypadView').style.display = 'none';
             document.getElementById('hubInCallView').style.display = 'flex';
             document.getElementById('hubInCallName').textContent = name || 'Contact Lead';
@@ -565,14 +595,31 @@
             isHubHeld = false;
             updateHubButtonStates();
 
-            // Start timer
             clearInterval(hubTimerInterval);
-            hubCallSeconds = 0;
-            updateTimerDisplay();
-            hubTimerInterval = setInterval(() => {
-                hubCallSeconds++;
+            hubTimerInterval = null;
+
+            const timerEl = document.getElementById('hubInCallTimer');
+            if (isConnected) {
+                // Connected state — run call duration timer
+                hubCallSeconds = 0;
                 updateTimerDisplay();
-            }, 1000);
+                hubTimerInterval = setInterval(() => {
+                    hubCallSeconds++;
+                    updateTimerDisplay();
+                }, 1000);
+            } else {
+                // Dialing / Calling state — show calling indicator with timer at 00:00
+                hubCallSeconds = 0;
+                if (timerEl) {
+                    timerEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-1 text-warning"></i> Calling...`;
+                }
+            }
+
+            // Start carrier status poller for remote disconnect detection
+            const activeSid = sessionId || window.PlivoSoftphone?.activeSessionId;
+            if (activeSid) {
+                startHubSessionWatcher(activeSid);
+            }
         }
 
         function updateTimerDisplay() {
@@ -580,12 +627,14 @@
             const s = (hubCallSeconds % 60).toString().padStart(2, '0');
             const timerEl = document.getElementById('hubInCallTimer');
             if (timerEl) {
-                timerEl.innerHTML = `<i class="fa-solid fa-phone-volume me-1"></i> Connected • ${m}:${s}`;
+                timerEl.innerHTML = `<i class="fa-solid fa-phone-volume me-1 text-success"></i> Connected • ${m}:${s}`;
             }
         }
 
         function endCallFromHub(triggerHangup = true) {
+            stopHubSessionWatcher();
             clearInterval(hubTimerInterval);
+            hubTimerInterval = null;
             hubCallSeconds = 0;
             const inCallView = document.getElementById('hubInCallView');
             const keypadView = document.getElementById('hubKeypadView');
@@ -595,8 +644,11 @@
             if (triggerHangup && window.PlivoSoftphone) {
                 window.PlivoSoftphone.hangup();
             }
-            // Auto refresh call logs
-            setTimeout(loadCallLogsHub, 1200);
+            // Auto refresh call logs and top analytics metrics
+            setTimeout(() => {
+                loadCallLogsHub();
+                loadAnalyticsSummaryHub();
+            }, 600);
         }
 
         function toggleHubMute() {
@@ -619,6 +671,9 @@
             isHubSpeakerOn = !isHubSpeakerOn;
             const btn = document.getElementById('hubBtnSpeaker');
             if (btn) btn.classList.toggle('active', isHubSpeakerOn);
+            if (window.PlivoSoftphone) {
+                window.PlivoSoftphone.toggleSpeaker();
+            }
         }
 
         function toggleHubDTMFPad() {
@@ -1152,9 +1207,14 @@
             if (typeof window.StaffBackButton !== 'undefined') window.StaffBackButton.init();
 
             // Real-time synchronization with Plivo WebRTC Client lifecycle
+            document.addEventListener('plivo:call-dialing', function(e) {
+                const d = e.detail || {};
+                startHubCallUI(d.phone, d.name, d.sessionId, false);
+            });
+
             document.addEventListener('plivo:call-connected', function(e) {
                 const d = e.detail || {};
-                startHubCallUI(d.phone, d.name);
+                startHubCallUI(d.phone, d.name, d.sessionId, true);
             });
 
             document.addEventListener('plivo:call-terminated', function() {

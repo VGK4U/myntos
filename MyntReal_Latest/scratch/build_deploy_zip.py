@@ -66,6 +66,9 @@ EXCLUDE_FILES = {
 }
 
 def should_exclude(rel_path: Path, abs_file: Path) -> bool:
+    if abs_file == OUTPUT_ZIP or abs_file == ALIAS_ZIP:
+        return True
+
     rel_str = str(rel_path).replace("\\", "/")
     
     # Always keep production APK files

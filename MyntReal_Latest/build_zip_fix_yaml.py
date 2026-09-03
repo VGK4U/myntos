@@ -1,10 +1,12 @@
 import os
 import zipfile
 
-source_dir = 'C:/Desktop/VGK4U/MyntReal_Latest'
-output_zip = 'C:/Desktop/VGK4U/MyntReal_Latest/MyntReal_AWS_Deploy_Final.zip'
-old_zip = 'C:/Desktop/VGK4U/MyntReal_Latest/MyntReal_AWS_Deploy.zip'
-env_file_path = 'C:/Desktop/VGK4U/MyntReal_Latest/backend/.env'
+from pathlib import Path
+
+source_dir = str(Path(__file__).resolve().parent)
+output_zip = str(Path(__file__).resolve().parent / 'MyntReal_AWS_Deploy.zip')
+old_zip = str(Path(__file__).resolve().parent / 'deployment.zip')
+env_file_path = str(Path(__file__).resolve().parent / 'backend' / '.env')
 
 # Minimal exclusions to ensure we don't accidentally remove anything the user needs.
 exclusions = [
