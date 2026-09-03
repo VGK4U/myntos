@@ -8,7 +8,21 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="/public/js/staff-token-manager.js"></script>
     <script src="/public/js/staff-fetch.js"></script>
-  <script src="/public/js/nda-enforcement.js"></script>
+    <script src="/public/js/nda-enforcement.js"></script>
+    <script src="/public/js/plivo-softphone.js?v=2.0"></script>
+    <script>
+        function triggerLeadCall(phone, name, leadId) {
+            if (!phone) return;
+            const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+            if (!cleanPhone) return;
+            const safeName = (name || 'Contact').trim();
+            if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+                window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
+                return;
+            }
+            window.location.href = `/staff/softphone?dial=${encodeURIComponent(cleanPhone)}&name=${encodeURIComponent(safeName)}&lead_id=${encodeURIComponent(leadId || '')}`;
+        }
+    </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
@@ -2891,7 +2905,7 @@
                 ${task.contact_phone ? `
                 <div class="mb-3">
                     <strong><i class="fas fa-phone-alt me-1 text-info"></i>Contact:</strong>
-                    <a href="tel:${escapeHtml(task.contact_phone)}" class="text-info text-decoration-none ms-1">${escapeHtml(task.contact_phone)}</a>
+                    <button type="button" class="btn btn-sm btn-outline-info py-0 px-2 ms-1" onclick="triggerLeadCall('${escapeHtml(task.contact_phone)}', '${escapeHtml(task.contact_person_name || task.title)}')" style="font-size:12px;font-weight:600;"><i class="fas fa-phone-alt me-1"></i>${escapeHtml(task.contact_phone)}</button>
                     ${task.contact_person_name ? `<span class="text-muted ms-1">(${escapeHtml(task.contact_person_name)})</span>` : ''}
                 </div>` : ''}
 
@@ -3718,7 +3732,7 @@
                                             ${(phase.secondary_assignees && phase.secondary_assignees.length > 0) ? phase.secondary_assignees.map(sa => `<span class="text-info"><i class="fas fa-user-plus me-1"></i>${escapeHtml(sa.employee_name || sa.full_name || 'Unknown')}</span>`).join('') : ''}
                                             <span><i class="fas fa-calendar me-1"></i>${targetDate}</span>
                                             ${completedDate ? `<span class="text-success"><i class="fas fa-check me-1"></i>Completed: ${completedDate}</span>` : ''}
-                                            ${phase.contact_phone ? `<span class="text-info"><i class="fas fa-phone-alt me-1"></i><a href="tel:${escapeHtml(phase.contact_phone)}" class="text-info text-decoration-none">${escapeHtml(phase.contact_phone)}</a>${phase.contact_person_name ? ` (${escapeHtml(phase.contact_person_name)})` : ''}</span>` : ''}
+                                            ${phase.contact_phone ? `<span class="text-info"><button type="button" class="btn btn-sm btn-outline-info py-0 px-1" onclick="triggerLeadCall('${escapeHtml(phase.contact_phone)}', '${escapeHtml(phase.contact_person_name || phase.title)}')" style="font-size:11px;font-weight:600"><i class="fas fa-phone-alt me-1"></i>${escapeHtml(phase.contact_phone)}</button>${phase.contact_person_name ? ` (${escapeHtml(phase.contact_person_name)})` : ''}</span>` : ''}
                                         </div>
                                         ${phase.description ? `<div class="phase-description mt-1">${escapeHtml(phase.description)}</div>` : ''}
                                         ${phase.child_task_id ? `<div class="phase-task-link mt-1"><a href="javascript:void(0)" onclick="viewTask(${phase.child_task_id})" class="text-info"><i class="fas fa-external-link-alt me-1"></i>View Sub-Task</a></div>` : ''}

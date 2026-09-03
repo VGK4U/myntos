@@ -503,14 +503,49 @@
     <script src="/staff_sidebar.js"></script>
     <script src="/shared/staff_inactivity_manager.js"></script>
     <script src="/staff_header.js"></script>
+    <script src="/public/js/plivo-softphone.js?v=2.0"></script>
     <script>
+        // Global Lead Softphone Call Trigger
+        function triggerLeadCall(phone, name, leadId) {
+            if (!phone) return;
+            const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+            if (!cleanPhone) return;
+            const safeName = (name || 'Contact').trim();
+            console.log(`[BANK-LEADS] Triggering Softphone Call to: ${cleanPhone} (${safeName}, Lead ID: ${leadId})`);
+
+            // 1. If Plivo Softphone is initialized, dial directly through WebRTC
+            if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+                window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
+                return;
+            }
+
+            // 2. Redirect to Softphone Hub with auto-dial parameters
+            window.location.href = `/staff/softphone?dial=${encodeURIComponent(cleanPhone)}&name=${encodeURIComponent(safeName)}&lead_id=${encodeURIComponent(leadId || '')}`;
+        }
+
         let globalBankLeads = [];
         let globalRawData = null;
+        let branchContactsMap = {};
         let currentMainTab = 'bank-files';
         let currentHeaderCol = 'ground_source_name';
         let currentHeaderDir = 'asc';
 
-        document.addEventListener("DOMContentLoaded", function() {
+        async function loadBranchContacts() {
+            try {
+                const resp = await staffFetch('/api/v1/crm/bank-branch-contacts');
+                if (resp.ok) {
+                    const resJson = await resp.json();
+                    if (resJson && resJson.map) {
+                        branchContactsMap = resJson.map;
+                    }
+                }
+            } catch (err) {
+                console.warn('[BRANCH-CONTACTS] Could not load contacts:', err);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", async function() {
+            await loadBranchContacts();
             loadBankLeads();
 
             if (typeof StaffSidebar !== 'undefined') StaffSidebar.init();
@@ -1180,18 +1215,22 @@
                 const gsStaffName = l.ground_support_name || l.field_staff_name || '—';
                 const upStaffName = l.uport_staff_name || '—';
 
+                const cleanGsP = (l.ground_source_phone || '').replace(/\D/g, '').slice(-10);
                 const gsCallBtn = l.ground_source_phone 
-                    ? `<br><a href="tel:${esc(l.ground_source_phone)}" class="btn btn-sm btn-outline-warning py-0 px-2 mt-1" style="font-size:10px;font-weight:600;display:inline-block" title="Call Ground Source"><i class="fas fa-phone-alt me-1"></i>${esc(l.ground_source_phone)}</a>` 
+                    ? `<br><button type="button" class="btn btn-sm btn-outline-warning py-0 px-2 mt-1" style="font-size:10px;font-weight:600;display:inline-block" onclick="event.stopPropagation(); triggerLeadCall('${cleanGsP}', '${escJs(l.ground_source_name)} (Ground Source)')" title="Call Ground Source via Softphone"><i class="fas fa-phone-alt me-1"></i>${esc(l.ground_source_phone)}</button>` 
                     : '';
 
+                const cleanUpP = (l.upliner_phone || '').replace(/\D/g, '').slice(-10);
                 const gsUplinerInfo = (l.upliner_name && l.upliner_name !== '—' && l.upliner_name !== 'Direct / None')
-                    ? `<br><small class="text-muted" style="font-size:10px;font-weight:600" title="Ground Source Upliner"><i class="fas fa-user-shield text-warning me-1"></i>${esc(l.upliner_name)}${l.upliner_phone ? ` <a href="tel:${esc(l.upliner_phone)}" class="text-decoration-none text-warning fw-bold">(${esc(l.upliner_phone)})</a>` : ''}</small>`
+                    ? `<br><small class="text-muted" style="font-size:10px;font-weight:600" title="Ground Source Upliner"><i class="fas fa-user-shield text-warning me-1"></i>${esc(l.upliner_name)}${l.upliner_phone ? ` <button type="button" class="btn btn-link p-0 text-warning fw-bold" style="font-size:10px;text-decoration:none" onclick="event.stopPropagation(); triggerLeadCall('${cleanUpP}', '${escJs(l.upliner_name)} (Upliner)')">(${esc(l.upliner_phone)})</button>` : ''}</small>`
                     : '';
 
+                const cleanGsSupportP = (l.ground_support_phone || '').replace(/\D/g, '').slice(-10);
                 const gsSupportCallBtn = l.ground_support_phone 
-                    ? `<br><a href="tel:${esc(l.ground_support_phone)}" class="btn btn-sm btn-outline-success py-0 px-2 mt-1" style="font-size:10px;font-weight:600;display:inline-block" title="Call Ground Support"><i class="fas fa-phone-alt me-1"></i>${esc(l.ground_support_phone)}</a>` 
+                    ? `<br><button type="button" class="btn btn-sm btn-outline-success py-0 px-2 mt-1" style="font-size:10px;font-weight:600;display:inline-block" onclick="event.stopPropagation(); triggerLeadCall('${cleanGsSupportP}', '${escJs(gsStaffName)} (Ground Support)')" title="Call Ground Support via Softphone"><i class="fas fa-phone-alt me-1"></i>${esc(l.ground_support_phone)}</button>` 
                     : '';
 
+                const cleanCustPhone = (l.phone_number || '').replace(/\D/g, '').slice(-10);
                 const dealCellHtml = (currentMainTab === 'balance-pending')
                     ? `<span class="badge bg-warning text-dark px-2 py-1" style="font-size:12px;font-weight:800;border:1px solid #d97706" title="Balance Pending: ${balText}">${balText} Pending</span><br><small class="text-muted" style="font-size:10px">Total: ${valText} | Paid: ${paidText}</small>`
                     : (currentMainTab === 'net-meter-pending')
@@ -1218,7 +1257,7 @@
                     <td style="font-weight:600;color:#1e293b">
                         <span class="clickable-label" onclick="applyCustomFilter('search', '${escJs(l.customer_name)}')" title="Click to filter by Lead Name: ${esc(l.customer_name)}">${esc(l.customer_name)}</span>
                     </td>
-                    <td><a href="tel:${esc(l.phone_number)}" style="color:#2563eb;text-decoration:none;font-weight:600"><i class="fas fa-phone-alt me-1"></i>${esc(l.phone_number)}</a></td>
+                    <td><button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 text-nowrap" onclick="triggerLeadCall('${cleanCustPhone}', '${escJs(l.customer_name)}', ${l.id})" style="font-size:11px;font-weight:600"><i class="fas fa-phone-alt me-1"></i>${esc(l.phone_number)}</button></td>
                     <td style="white-space:nowrap">
                         <button class="btn btn-sm btn-outline-success py-0 px-2 text-nowrap" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'discom_link')" title="DISCOM Document Link" style="font-size:10.5px;font-weight:700">
                             <i class="fas fa-bolt me-1"></i>DISCOM
@@ -1266,6 +1305,8 @@
                 const valText = l.deal_value ? `₹${(l.deal_value / 100000).toFixed(2)}L` : '—';
                 const gsStaffName = l.ground_support_name || l.field_staff_name || '—';
                 const upStaffName = l.uport_staff_name || '—';
+                const cleanCustPhone = (l.phone_number || '').replace(/\D/g, '').slice(-10);
+                const cleanGsPhone = (l.ground_source_phone || '').replace(/\D/g, '').slice(-10);
 
                 html += `<div class="mobile-card">
                     <div class="d-flex justify-content-between align-items-start mb-2">
@@ -1298,8 +1339,8 @@
                     <div class="d-flex flex-wrap gap-1 pt-2 border-top">
                         <button class="btn btn-sm btn-outline-success py-1 px-2 flex-grow-1" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'discom_link')" style="font-size:11px;font-weight:700"><i class="fas fa-bolt me-1"></i>DISCOM</button>
                         <button class="btn btn-sm btn-outline-info py-1 px-2 flex-grow-1" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'bank_link')" style="font-size:11px;font-weight:700"><i class="fas fa-university me-1"></i>Bank</button>
-                        <a href="tel:${esc(l.phone_number)}" class="btn btn-sm btn-outline-primary py-1 px-2 flex-grow-1" style="font-size:11px"><i class="fas fa-phone-alt me-1"></i>Call</a>
-                        ${l.ground_source_phone ? `<a href="tel:${esc(l.ground_source_phone)}" class="btn btn-sm btn-outline-warning py-1 px-2 flex-grow-1" style="font-size:11px"><i class="fas fa-phone-alt me-1"></i>Source</a>` : ''}
+                        <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 flex-grow-1" onclick="triggerLeadCall('${cleanCustPhone}', '${escJs(l.customer_name)}', ${l.id})" style="font-size:11px;font-weight:600"><i class="fas fa-phone-alt me-1"></i>Call</button>
+                        ${l.ground_source_phone ? `<button type="button" class="btn btn-sm btn-outline-warning py-1 px-2 flex-grow-1" onclick="triggerLeadCall('${cleanGsPhone}', '${escJs(l.ground_source_name)} (Ground Source)')" style="font-size:11px;font-weight:600"><i class="fas fa-phone-alt me-1"></i>Source</button>` : ''}
                         <a href="${l.google_maps_url}" target="_blank" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size:11px"><i class="fas fa-map-marker-alt me-1"></i>Map</a>
                     </div>
                 </div>`;
@@ -1479,6 +1520,49 @@
                         </div>
                 `;
 
+                // Branch Officials & Contacts Sub-Card (Manager, Field Officer, Custom Staff)
+                const contactKey = (g.bankName + ':::' + g.branchName).toLowerCase();
+                const bc = branchContactsMap[contactKey] || null;
+
+                if (bc && (bc.manager_name || bc.manager_phone || bc.officer_name || bc.officer_phone || bc.custom_name || bc.custom_phone)) {
+                    const mgrPhoneBtn = bc.manager_phone ? `<button type="button" class="btn btn-sm btn-outline-success py-0 px-2 ms-1" style="font-size:11px;font-weight:700" onclick="event.stopPropagation(); triggerLeadCall('${escJs(bc.manager_phone)}', '${escJs(bc.manager_name || 'Branch Manager')} (BM)')" title="Call Branch Manager"><i class="fas fa-phone-alt me-1"></i>${esc(bc.manager_phone)}</button>` : '';
+                    const mgrAltBtn = bc.manager_alt_phone ? `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 ms-1" style="font-size:10.5px" onclick="event.stopPropagation(); triggerLeadCall('${escJs(bc.manager_alt_phone)}', '${escJs(bc.manager_name || 'Branch Manager')} (Alt)')" title="Call Alternate Number"><i class="fas fa-phone-alt me-1"></i>${esc(bc.manager_alt_phone)}</button>` : '';
+                    
+                    const offPhoneBtn = bc.officer_phone ? `<button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 ms-1" style="font-size:11px;font-weight:700" onclick="event.stopPropagation(); triggerLeadCall('${escJs(bc.officer_phone)}', '${escJs(bc.officer_name || 'Field Officer')} (FO)')" title="Call Field Officer"><i class="fas fa-phone-alt me-1"></i>${esc(bc.officer_phone)}</button>` : '';
+                    const offAltBtn = bc.officer_alt_phone ? `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 ms-1" style="font-size:10.5px" onclick="event.stopPropagation(); triggerLeadCall('${escJs(bc.officer_alt_phone)}', '${escJs(bc.officer_name || 'Field Officer')} (Alt)')" title="Call Alternate Number"><i class="fas fa-phone-alt me-1"></i>${esc(bc.officer_alt_phone)}</button>` : '';
+                    
+                    const custTitle = bc.custom_designation || 'Staff / Officer';
+                    const custPhoneBtn = bc.custom_phone ? `<button type="button" class="btn btn-sm btn-outline-info py-0 px-2 ms-1" style="font-size:11px;font-weight:700" onclick="event.stopPropagation(); triggerLeadCall('${escJs(bc.custom_phone)}', '${escJs(bc.custom_name || custTitle)}')" title="Call ${esc(custTitle)}"><i class="fas fa-phone-alt me-1"></i>${esc(bc.custom_phone)}</button>` : '';
+                    const custAltBtn = bc.custom_alt_phone ? `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 ms-1" style="font-size:10.5px" onclick="event.stopPropagation(); triggerLeadCall('${escJs(bc.custom_alt_phone)}', '${escJs(bc.custom_name || custTitle)} (Alt)')" title="Call Alternate Number"><i class="fas fa-phone-alt me-1"></i>${esc(bc.custom_alt_phone)}</button>` : '';
+
+                    html += `
+                    <div class="d-flex flex-wrap gap-2 align-items-center p-2 mt-2 rounded border" style="background:#f8fafc;font-size:12px">
+                        <span class="badge bg-dark text-white"><i class="fas fa-address-book me-1"></i>Branch Officials</span>
+                        ${bc.manager_name || bc.manager_phone ? `
+                        <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle p-1 px-2">
+                            <i class="fas fa-user-tie me-1"></i><b>Branch Manager:</b> ${esc(bc.manager_name || 'BM')} ${mgrPhoneBtn} ${mgrAltBtn}
+                        </span>` : ''}
+                        ${bc.officer_name || bc.officer_phone ? `
+                        <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle p-1 px-2">
+                            <i class="fas fa-user-shield me-1"></i><b>Field Officer:</b> ${esc(bc.officer_name || 'Officer')} ${offPhoneBtn} ${offAltBtn}
+                        </span>` : ''}
+                        ${bc.custom_name || bc.custom_phone ? `
+                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle p-1 px-2">
+                            <i class="fas fa-id-badge me-1"></i><b>${esc(custTitle)}:</b> ${esc(bc.custom_name || 'Staff')} ${custPhoneBtn} ${custAltBtn}
+                        </span>` : ''}
+                        ${bc.updated_by_staff_name ? `<small class="text-muted ms-auto" style="font-size:10px"><i class="fas fa-clock-rotate-left me-1"></i>Updated by ${esc(bc.updated_by_staff_name)}</small>` : ''}
+                        <button type="button" class="btn btn-sm btn-link p-0 text-primary ms-1" style="font-size:11.5px;text-decoration:none;font-weight:700" onclick="openBranchContactModal('${escJs(g.bankName)}', '${escJs(g.branchName)}')"><i class="fas fa-pen me-1"></i>Edit Contacts</button>
+                    </div>`;
+                } else {
+                    html += `
+                    <div class="d-flex align-items-center p-2 mt-2 rounded border border-dashed" style="background:#fafafa;font-size:11.5px">
+                        <span class="text-muted me-2"><i class="fas fa-info-circle me-1"></i>No branch official contacts added yet.</span>
+                        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 fw-bold ms-auto" style="font-size:11px" onclick="openBranchContactModal('${escJs(g.bankName)}', '${escJs(g.branchName)}')">
+                            <i class="fas fa-user-plus me-1"></i>+ Add Branch Manager & Field Officer Contacts
+                        </button>
+                    </div>`;
+                }
+
                 if (isExpanded) {
                     html += `<div class="table-responsive mt-3 border rounded">
                         <table class="table table-sm table-hover mb-0 align-middle" style="font-size:12px">
@@ -1501,6 +1585,7 @@
                         const lVal = l.deal_value ? ('₹' + (l.deal_value / 100000).toFixed(2) + 'L') : '—';
                         const gsStaffName = l.ground_support_name || l.field_staff_name || '—';
                         const stageLabel = l.solar_pipeline_stage || l.stage || (currentMainTab === 'balance-pending' ? 'Bal Pending' : 'At Bank');
+                        const cleanCustPhone = (l.phone_number || '').replace(/\D/g, '').slice(-10);
                         html += `<tr>
                             <td>${idx + 1}</td>
                             <td class="fw-semibold text-warning-emphasis">${esc(l.ground_source_name || '—')}</td>
@@ -1508,7 +1593,7 @@
                             <td class="fw-semibold text-success">${esc(gsStaffName)}</td>
                             <td><span class="badge bg-secondary">${l.stage_days}d</span></td>
                             <td class="fw-bold text-dark">${esc(l.customer_name)}</td>
-                            <td><a href="tel:${esc(l.phone_number)}" class="text-decoration-none fw-semibold"><i class="fas fa-phone-alt me-1"></i>${esc(l.phone_number)}</a></td>
+                            <td><button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 text-nowrap" onclick="triggerLeadCall('${cleanCustPhone}', '${escJs(l.customer_name)}', ${l.id})" style="font-size:11px;font-weight:600"><i class="fas fa-phone-alt me-1"></i>${esc(l.phone_number)}</button></td>
                             <td style="white-space:nowrap">
                                 <button class="btn btn-sm btn-outline-success py-0 px-2 text-nowrap" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'discom_link')" title="DISCOM Document Link" style="font-size:10px;font-weight:700"><i class="fas fa-bolt me-1"></i>DISCOM</button>
                                 <button class="btn btn-sm btn-outline-info py-0 px-2 text-nowrap ms-1" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'bank_link')" title="Bank Document Link" style="font-size:10px;font-weight:700"><i class="fas fa-university me-1"></i>Bank</button>
@@ -1606,11 +1691,13 @@
                 const groupId = 'gs_' + g.key.replace(/[^a-zA-Z0-9]/g, '_');
                 const isExpanded = expandedSummaryGroups.has(groupId);
                 const valText = g.totalValue ? `₹${(g.totalValue / 100000).toFixed(2)}L` : '—';
-                const callBtn = g.sourcePhone ? `<a href="tel:${esc(g.sourcePhone)}" class="btn btn-sm btn-outline-warning py-0 px-2" style="font-size:11px;font-weight:600" title="Call Ground Source"><i class="fas fa-phone-alt me-1"></i>${esc(g.sourcePhone)}</a>` : '';
+                const cleanGsPhone = (g.sourcePhone || '').replace(/\D/g, '').slice(-10);
+                const callBtn = g.sourcePhone ? `<button type="button" class="btn btn-sm btn-outline-warning py-0 px-2" style="font-size:11px;font-weight:600" onclick="event.stopPropagation(); triggerLeadCall('${cleanGsPhone}', '${escJs(g.sourceName)} (Ground Source)')" title="Call Ground Source via Softphone"><i class="fas fa-phone-alt me-1"></i>${esc(g.sourcePhone)}</button>` : '';
 
                 // Upliner Badge & Call Button
                 const hasUpliner = g.uplinerName && g.uplinerName !== '—' && g.uplinerName !== 'Direct / None';
-                const uplinerCallBtn = g.uplinerPhone ? `<a href="tel:${esc(g.uplinerPhone)}" class="btn btn-sm btn-outline-warning py-0 px-2 ms-1" style="font-size:10.5px;font-weight:600" title="Call Upliner"><i class="fas fa-phone-alt me-1"></i>${esc(g.uplinerPhone)}</a>` : '';
+                const cleanUpPhone = (g.uplinerPhone || '').replace(/\D/g, '').slice(-10);
+                const uplinerCallBtn = g.uplinerPhone ? `<button type="button" class="btn btn-sm btn-outline-warning py-0 px-2 ms-1" style="font-size:10.5px;font-weight:600" onclick="event.stopPropagation(); triggerLeadCall('${cleanUpPhone}', '${escJs(g.uplinerName)} (Upliner)')" title="Call Upliner via Softphone"><i class="fas fa-phone-alt me-1"></i>${esc(g.uplinerPhone)}</button>` : '';
                 const uplinerBadge = hasUpliner ? `
                     <div class="d-inline-flex align-items-center">
                         <span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1 clickable-label" style="font-size:11.5px;font-weight:700" onclick="applyCustomFilter('upliner', '${escJs(g.uplinerName)}')" title="Click to filter by Upliner: ${esc(g.uplinerName)}">
@@ -1692,12 +1779,13 @@
                         const leadLoc = (l.area && l.area !== '—') ? `${l.area}, ${l.city_district || l.city || ''}` : (l.city_district || l.city || '—');
                         const leadUp = (l.upliner_name && l.upliner_name !== '—') ? `${esc(l.upliner_name)}${l.upliner_phone ? `<br><small class="text-muted">${esc(l.upliner_phone)}</small>` : ''}` : '—';
 
+                        const cleanCustPhone = (l.phone_number || '').replace(/\D/g, '').slice(-10);
                         html += `<tr>
                             <td>${idx + 1}</td>
                             <td class="fw-semibold text-primary clickable-label" onclick="applyCustomFilter('telecaller', '${escJs(l.telecaller_name)}')">${esc(l.telecaller_name || '—')}</td>
                             <td class="fw-bold text-success clickable-label" onclick="applyCustomFilter('bank', '${escJs(l.bank_name)}')">${esc(l.bank_name || '—')} (${esc(l.bank_branch || 'N/A')})</td>
                             <td class="fw-bold text-dark clickable-label" onclick="applyCustomFilter('search', '${escJs(l.customer_name)}')">${esc(l.customer_name)}</td>
-                            <td><a href="tel:${esc(l.phone_number)}" class="text-decoration-none fw-semibold"><i class="fas fa-phone-alt me-1"></i>${esc(l.phone_number)}</a></td>
+                            <td><button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 text-nowrap" onclick="triggerLeadCall('${cleanCustPhone}', '${escJs(l.customer_name)}', ${l.id})" style="font-size:11px;font-weight:600"><i class="fas fa-phone-alt me-1"></i>${esc(l.phone_number)}</button></td>
                             <td style="white-space:nowrap">
                                 <button class="btn btn-sm btn-outline-success py-0 px-2 text-nowrap" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'discom_link')" title="DISCOM Document Link" style="font-size:10px;font-weight:700"><i class="fas fa-bolt me-1"></i>DISCOM</button>
                                 <button class="btn btn-sm btn-outline-info py-0 px-2 text-nowrap ms-1" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'bank_link')" title="Bank Document Link" style="font-size:10px;font-weight:700"><i class="fas fa-university me-1"></i>Bank</button>
@@ -2195,7 +2283,215 @@
           const msg = 'Solar Documents – ' + leadName + '\n' + url;
           window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
         }
+
+        // ── Branch Officials Contacts Modal Handlers ──
+        let currentModalBank = '';
+        let currentModalBranch = '';
+
+        function openBranchContactModal(bankName, branchName) {
+            currentModalBank = (bankName || '').trim();
+            currentModalBranch = (branchName || '').trim();
+            if (!currentModalBank || !currentModalBranch) return;
+
+            document.getElementById('bcModalTitle').textContent = `${currentModalBank} (${currentModalBranch}) — Branch Officials`;
+            document.getElementById('bcBankName').value = currentModalBank;
+            document.getElementById('bcBranchName').value = currentModalBranch;
+
+            const contactKey = (currentModalBank + ':::' + currentModalBranch).toLowerCase();
+            const bc = branchContactsMap[contactKey] || null;
+
+            document.getElementById('bcManagerName').value = bc?.manager_name || '';
+            document.getElementById('bcManagerPhone').value = bc?.manager_phone || '';
+            document.getElementById('bcManagerAltPhone').value = bc?.manager_alt_phone || '';
+
+            document.getElementById('bcOfficerName').value = bc?.officer_name || '';
+            document.getElementById('bcOfficerPhone').value = bc?.officer_phone || '';
+            document.getElementById('bcOfficerAltPhone').value = bc?.officer_alt_phone || '';
+
+            document.getElementById('bcCustomDesignation').value = bc?.custom_designation || '';
+            document.getElementById('bcCustomName').value = bc?.custom_name || '';
+            document.getElementById('bcCustomPhone').value = bc?.custom_phone || '';
+            document.getElementById('bcCustomAltPhone').value = bc?.custom_alt_phone || '';
+
+            document.getElementById('bcNotes').value = bc?.notes || '';
+
+            const stUser = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const stName = stUser.full_name || stUser.username || 'System User';
+            const auditInfo = document.getElementById('bcAuditInfo');
+            if (bc?.updated_by_staff_name && bc?.updated_at) {
+                const updatedDt = new Date(bc.updated_at).toLocaleString('en-IN');
+                auditInfo.innerHTML = `<i class="fas fa-clock-rotate-left me-1"></i>Last updated by <b>${esc(bc.updated_by_staff_name)}</b> on ${updatedDt}. (Updating as: <b>${esc(stName)}</b>)`;
+            } else {
+                auditInfo.innerHTML = `<i class="fas fa-user-edit me-1"></i>Updating as logged-in staff member: <b>${esc(stName)}</b>`;
+            }
+
+            const modalEl = document.getElementById('modalBranchContact');
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            }
+        }
+
+        async function saveBranchContact(e) {
+            if (e) e.preventDefault();
+            const btn = document.getElementById('btnSaveBranchContact');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...'; }
+
+            const stUser = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const payload = {
+                bank_name: document.getElementById('bcBankName').value,
+                branch_name: document.getElementById('bcBranchName').value,
+                company_id: 4,
+                manager_name: document.getElementById('bcManagerName').value,
+                manager_phone: document.getElementById('bcManagerPhone').value,
+                manager_alt_phone: document.getElementById('bcManagerAltPhone').value,
+                officer_name: document.getElementById('bcOfficerName').value,
+                officer_phone: document.getElementById('bcOfficerPhone').value,
+                officer_alt_phone: document.getElementById('bcOfficerAltPhone').value,
+                custom_designation: document.getElementById('bcCustomDesignation').value,
+                custom_name: document.getElementById('bcCustomName').value,
+                custom_phone: document.getElementById('bcCustomPhone').value,
+                custom_alt_phone: document.getElementById('bcCustomAltPhone').value,
+                notes: document.getElementById('bcNotes').value,
+                staff_name: stUser.full_name || stUser.username || 'Staff',
+                staff_id: stUser.id || null
+            };
+
+            try {
+                const resp = await staffFetch('/api/v1/crm/bank-branch-contacts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const resJson = await resp.json();
+                if (resJson.success) {
+                    showToast('Branch contacts saved successfully!', 'success');
+                    await loadBranchContacts();
+                    renderCurrentView();
+
+                    const modalEl = document.getElementById('modalBranchContact');
+                    if (modalEl && typeof bootstrap !== 'undefined') {
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                    }
+                } else {
+                    showToast(resJson.detail || 'Could not save branch contacts', 'error');
+                }
+            } catch (err) {
+                showToast('Save error: ' + err.message, 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save me-1"></i>Save Branch Contacts'; }
+            }
+        }
     </script>
+
+    <!-- Branch Officials & Contacts Modal -->
+    <div class="modal fade" id="modalBranchContact" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow" style="border-radius:14px;overflow:hidden">
+          <div class="modal-header bg-primary text-white py-3">
+            <h5 class="modal-title fw-bold"><i class="fas fa-university me-2"></i><span id="bcModalTitle">Branch Officials & Personnel Contacts</span></h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body p-4">
+            <form id="branchContactForm" onsubmit="saveBranchContact(event)">
+              <div class="row g-3">
+                <div class="col-md-6 col-12">
+                  <label class="form-label fw-bold text-dark">Bank Name</label>
+                  <input type="text" class="form-control bg-light fw-bold" id="bcBankName" readonly>
+                </div>
+                <div class="col-md-6 col-12">
+                  <label class="form-label fw-bold text-dark">Branch Name</label>
+                  <input type="text" class="form-control bg-light fw-bold" id="bcBranchName" readonly>
+                </div>
+
+                <!-- Branch Manager -->
+                <div class="col-12 mt-2">
+                  <div class="p-3 border rounded-3" style="background:#f8fafc">
+                    <h6 class="fw-bold text-success mb-2"><i class="fas fa-user-tie me-2"></i>1. Branch Manager (BM)</h6>
+                    <div class="row g-2">
+                      <div class="col-md-4 col-12">
+                        <label class="form-label small fw-semibold">Manager Name</label>
+                        <input type="text" class="form-control form-control-sm" id="bcManagerName" placeholder="e.g. Ramesh Varma">
+                      </div>
+                      <div class="col-md-4 col-12">
+                        <label class="form-label small fw-semibold">Primary Contact Number</label>
+                        <input type="tel" class="form-control form-control-sm" id="bcManagerPhone" placeholder="10-digit mobile number">
+                      </div>
+                      <div class="col-md-4 col-12">
+                        <label class="form-label small fw-semibold">Alternate Contact Number</label>
+                        <input type="tel" class="form-control form-control-sm" id="bcManagerAltPhone" placeholder="Landline / Alternate">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Field Officer -->
+                <div class="col-12">
+                  <div class="p-3 border rounded-3" style="background:#f8fafc">
+                    <h6 class="fw-bold text-primary mb-2"><i class="fas fa-user-shield me-2"></i>2. Field Officer / Loan Officer (FO)</h6>
+                    <div class="row g-2">
+                      <div class="col-md-4 col-12">
+                        <label class="form-label small fw-semibold">Officer Name</label>
+                        <input type="text" class="form-control form-control-sm" id="bcOfficerName" placeholder="e.g. Suresh Kumar">
+                      </div>
+                      <div class="col-md-4 col-12">
+                        <label class="form-label small fw-semibold">Primary Contact Number</label>
+                        <input type="tel" class="form-control form-control-sm" id="bcOfficerPhone" placeholder="10-digit mobile number">
+                      </div>
+                      <div class="col-md-4 col-12">
+                        <label class="form-label small fw-semibold">Alternate Contact Number</label>
+                        <input type="tel" class="form-control form-control-sm" id="bcOfficerAltPhone" placeholder="Landline / Alternate">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Custom Field Designation / Staff -->
+                <div class="col-12">
+                  <div class="p-3 border rounded-3" style="background:#f8fafc">
+                    <h6 class="fw-bold text-info-emphasis mb-2"><i class="fas fa-id-badge me-2"></i>3. Additional Official / Field Designation</h6>
+                    <div class="row g-2">
+                      <div class="col-md-3 col-12">
+                        <label class="form-label small fw-semibold">Designation Title</label>
+                        <input type="text" class="form-control form-control-sm" id="bcCustomDesignation" placeholder="e.g. Assistant Manager / Cashier">
+                      </div>
+                      <div class="col-md-3 col-12">
+                        <label class="form-label small fw-semibold">Official Name</label>
+                        <input type="text" class="form-control form-control-sm" id="bcCustomName" placeholder="e.g. K. Srinivas">
+                      </div>
+                      <div class="col-md-3 col-12">
+                        <label class="form-label small fw-semibold">Primary Contact Number</label>
+                        <input type="tel" class="form-control form-control-sm" id="bcCustomPhone" placeholder="10-digit mobile number">
+                      </div>
+                      <div class="col-md-3 col-12">
+                        <label class="form-label small fw-semibold">Alternate Contact Number</label>
+                        <input type="tel" class="form-control form-control-sm" id="bcCustomAltPhone" placeholder="Landline / Alternate">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="col-12">
+                  <label class="form-label fw-semibold text-dark">Branch Notes & Solar Loan Processing Instructions</label>
+                  <textarea class="form-control form-control-sm" id="bcNotes" rows="2" placeholder="e.g. Requires hard copies signed on Wednesdays, fast processing for Surya Ghar files..."></textarea>
+                </div>
+
+                <!-- Audit info -->
+                <div class="col-12 text-muted small" id="bcAuditInfo">
+                  <i class="fas fa-user-edit me-1"></i>Updating as logged-in staff member.
+                </div>
+              </div>
+              <div class="modal-footer px-0 pb-0 mt-3 border-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary fw-bold px-4" id="btnSaveBranchContact"><i class="fas fa-save me-1"></i>Save Branch Contacts</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Solar Documents Modal -->
     <div class="sdoc-modal-overlay" id="sdocOverlay" onclick="if(event.target===this)closeSolarDocs()">

@@ -52,6 +52,7 @@ from app.api.v1.endpoints import (
     call_flow_api,
     plivo_softphone_api,
     account_deletion,
+    bank_contacts,
 )
 
 # Scaffold routers are mounted in main.py at ROOT level to match Flask routing
@@ -198,6 +199,7 @@ api_router.include_router(partner_auth.router, tags=["Partner Authentication"])
 
 # Universal CRM/Lead Management System (DC Protocol - Dec 08, 2025)
 api_router.include_router(crm.router, prefix="/crm", tags=["Universal CRM - Lead Management"])
+api_router.include_router(bank_contacts.router, prefix="/crm", tags=["CRM - Bank Branch Contacts"])
 
 # Universal Engagement System (DC Protocol - Dec 08, 2025)
 api_router.include_router(universal_engagement.router, tags=["Universal Engagement - Ratings, Comments, Shares"])

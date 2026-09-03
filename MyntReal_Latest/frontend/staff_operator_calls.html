@@ -672,9 +672,22 @@
             <button class="btn-submit" onclick="submitNote()"><i class="fas fa-check"></i> Save Note</button>
         </div>
     </div>
-</div>
-
+<script src="/staff_header.js"></script>
+<script src="/public/js/plivo-softphone.js?v=2.0"></script>
 <script>
+// Global Lead Softphone Call Trigger
+function triggerLeadCall(phone, name, leadId) {
+    if (!phone) return;
+    const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+    if (!cleanPhone) return;
+    const safeName = (name || 'Contact').trim();
+    if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+        window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
+        return;
+    }
+    window.location.href = `/staff/softphone?dial=${encodeURIComponent(cleanPhone)}&name=${encodeURIComponent(safeName)}&lead_id=${encodeURIComponent(leadId || '')}`;
+}
+
 const API_BASE = '/api/v1/operator-calls';
 let currentTab = 'all';
 let currentPage = 1;
@@ -842,10 +855,9 @@ function renderRow(c) {
     const esc = s => (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
     const escUrl = s => (s||'').replace(/"/g,'&quot;');
     const cid = esc(c.call_id);
-    const cphone = esc(c.caller_number);
-
     const actions = [];
-    actions.push(`<a href="tel:${c.caller_number}" class="btn-action btn-dial" title="Dial"><i class="fas fa-phone"></i></a>`);
+    const cleanCallerP = (c.caller_number || '').replace(/\D/g, '').slice(-10);
+    actions.push(`<button type="button" class="btn-action btn-dial" onclick="event.stopPropagation(); triggerLeadCall('${cleanCallerP}', 'Caller ${cleanCallerP}', ${c.crm_lead_id || 'null'})" title="Call via WebRTC Softphone"><i class="fas fa-phone"></i></button>`);
     actions.push(`<button class="btn-action btn-detail" onclick="event.stopPropagation();openDetail('${cid}')" title="View Details"><i class="fas fa-eye"></i></button>`);
     actions.push(`<button class="btn-action btn-history" onclick="event.stopPropagation();openCallerHistory('${cphone}')" title="Caller History"><i class="fas fa-history"></i></button>`);
     if (['missed','voicemail'].includes(c.status) || !c.crm_lead_id) {
@@ -985,12 +997,13 @@ function _renderExpandPanel(c) {
     const statusLabel = isMissedOutbound ? 'Not Answered' : (c.status||'ended').charAt(0).toUpperCase() + (c.status||'ended').slice(1);
     const statusClass = isMissedOutbound ? 'badge-not-answered' : `badge-${c.status||'ended'}`;
 
+    const cleanExpCallerP = (c.caller_number || '').replace(/\D/g, '').slice(-10);
     // ── Col 1: Call Info ──
     let col1 = `<div class="expand-section">
         <h6><i class="fas fa-phone"></i> Call Info</h6>
         <div class="expand-kv"><span class="k">Status</span><span class="v"><span class="badge-status ${statusClass}" style="font-size:10px;">${statusLabel}</span></span></div>
         <div class="expand-kv"><span class="k">Type</span><span class="v">${(c.call_type||'inbound').toUpperCase()}</span></div>
-        <div class="expand-kv"><span class="k">Caller</span><span class="v"><a href="tel:${c.caller_number}" style="color:#059669;">${c.caller_number||'—'}</a></span></div>
+        <div class="expand-kv"><span class="k">Caller</span><span class="v"><button type="button" class="btn btn-link p-0 fw-bold" style="color:#059669;text-decoration:none" onclick="event.stopPropagation(); triggerLeadCall('${cleanExpCallerP}', 'Caller ${cleanExpCallerP}', ${c.crm_lead_id || 'null'})"><i class="fas fa-phone-alt me-1"></i>${c.caller_number||'—'}</button></span></div>
         <div class="expand-kv"><span class="k">Called</span><span class="v">${c.called_number||'—'}</span></div>
         <div class="expand-kv"><span class="k">Operator</span><span class="v">${c.operator_name||'—'}</span></div>
         <div class="expand-kv"><span class="k">Duration</span><span class="v">${fmtDuration(c.duration_seconds)}</span></div>
@@ -1054,7 +1067,7 @@ function _renderExpandPanel(c) {
 
     // ── Col 3: Quick Actions ──
     let col3 = `<div class="expand-section"><h6><i class="fas fa-bolt"></i> Quick Actions</h6><div class="expand-actions">`;
-    col3 += `<a href="tel:${c.caller_number}" class="btn-action btn-dial" style="font-size:11px;padding:4px 10px;"><i class="fas fa-phone"></i> Dial ${c.caller_number||''}</a>`;
+    col3 += `<button type="button" class="btn-action btn-dial" style="font-size:11px;padding:4px 10px;" onclick="event.stopPropagation(); triggerLeadCall('${cleanExpCallerP}', 'Caller ${cleanExpCallerP}', ${c.crm_lead_id || 'null'})"><i class="fas fa-phone"></i> Dial ${c.caller_number||''}</button>`;
     col3 += `<button class="btn-action btn-history" onclick="event.stopPropagation();openCallerHistory('${cphone}')" style="font-size:11px;padding:4px 10px;"><i class="fas fa-history"></i> Call History</button>`;
     col3 += `<button class="btn-action btn-followup" onclick="event.stopPropagation();openFollowupModal('${cid}','${cphone}')" style="font-size:11px;padding:4px 10px;"><i class="fas fa-calendar-plus"></i> Follow-up</button>`;
     if (!c.crm_lead_id) {
@@ -1435,11 +1448,12 @@ function _renderDetailContent(content, c) {
     const statusClass = detailIsMissedOutbound ? 'badge-not-answered' : `badge-${s}`;
     const statusLabel = detailIsMissedOutbound ? 'Not Answered' : (s.charAt(0).toUpperCase()+s.slice(1));
 
+    const cleanDetCallerP = (c.caller_number || '').replace(/\D/g, '').slice(-10);
     let html = `
     <div class="detail-grid">
         <div class="detail-item"><label>Status</label><div class="val"><span class="badge-status ${statusClass}">${statusLabel}</span></div></div>
         <div class="detail-item"><label>Call Type</label><div class="val">${(c.call_type||'inbound').toUpperCase()}</div></div>
-        <div class="detail-item"><label>Caller Number</label><div class="val"><a href="tel:${c.caller_number}" style="color:#059669;text-decoration:none;"><i class="fas fa-phone"></i> ${c.caller_number||'—'}</a></div></div>
+        <div class="detail-item"><label>Caller Number</label><div class="val"><button type="button" class="btn btn-link p-0 fw-bold" style="color:#059669;text-decoration:none;" onclick="triggerLeadCall('${cleanDetCallerP}', 'Caller ${cleanDetCallerP}', ${c.crm_lead_id || 'null'})"><i class="fas fa-phone"></i> ${c.caller_number||'—'}</button></div></div>
         <div class="detail-item"><label>Called Number</label><div class="val">${c.called_number||'—'}</div></div>
         <div class="detail-item"><label>Operator</label><div class="val">${c.operator_name||'—'} ${c.operator_number?'('+c.operator_number+')':''}</div></div>
         <div class="detail-item"><label>Duration</label><div class="val">${fmtDuration(c.duration_seconds)}</div></div>
@@ -1467,7 +1481,7 @@ function _renderDetailContent(content, c) {
     }
 
     html += `<div style="display:flex;gap:6px;margin:12px 0;flex-wrap:wrap;">
-        <a href="tel:${c.caller_number}" class="btn-action btn-dial" style="padding:6px 14px;font-size:12px;"><i class="fas fa-phone"></i> Dial Caller</a>
+        <button type="button" class="btn-action btn-dial" style="padding:6px 14px;font-size:12px;" onclick="triggerLeadCall('${cleanDetCallerP}', 'Caller ${cleanDetCallerP}', ${c.crm_lead_id || 'null'})"><i class="fas fa-phone"></i> Dial Caller</button>
         <button class="btn-action btn-history" onclick="closeModal('detail-modal');openCallerHistory('${(c.caller_number||'').replace(/'/g,"\\'")}')"><i class="fas fa-history"></i> View Call History (${c.caller_total_calls || 1})</button>`;
 
     if (!c.crm_lead_id) {
@@ -1589,8 +1603,9 @@ async function openCallerHistory(phone) {
             <div class="detail-item"><label>Total Talk Time</label><div class="val">${fmtDuration(s.total_duration)}</div></div>
         </div>`;
 
+        const cleanHistP = (phone || '').replace(/\D/g, '').slice(-10);
         html += `<div style="display:flex;gap:6px;margin:12px 0;">
-            <a href="tel:${phone}" class="btn-action btn-dial" style="padding:6px 14px;"><i class="fas fa-phone"></i> Dial ${phone}</a>
+            <button type="button" class="btn-action btn-dial" style="padding:6px 14px;" onclick="triggerLeadCall('${cleanHistP}', 'Caller ${cleanHistP}', ${data.lead ? data.lead.id : 'null'})"><i class="fas fa-phone"></i> Dial ${phone}</button>
         </div>`;
 
         const calls = data.data || [];
