@@ -75,6 +75,7 @@ export class SoftphonePage {
   private callStartTime: number = 0;
   private activeCallSessionId: string | null = null;
   private callStatusPollInterval: any = null;
+  private isCallConnected: boolean = false;
 
   // History & Contacts
   private recentCalls: CallRecord[] = [];
@@ -445,7 +446,29 @@ export class SoftphonePage {
         const statusData = await apiService.get<any>(`/telephony/plivo/calls/session-status/${sessionId}`);
         if (statusData) {
           const st = String(statusData.status || statusData.call_state || '').toLowerCase();
-          if (st === 'completed' || st === 'failed' || st === 'hungup' || st === 'busy' || st === 'no-answer') {
+          
+          // Call Answered / In Progress ➔ Start Timer Now!
+          if (st === 'in-progress' || st === 'answered' || st === 'connected' || statusData.is_connected === true) {
+            if (!this.isCallConnected) {
+              this.isCallConnected = true;
+              this.callStatusText = 'Connected / In Call';
+              const statusEl = document.getElementById('softphoneCallStatusText');
+              if (statusEl) {
+                statusEl.textContent = this.callStatusText;
+                statusEl.style.color = '#22c55e';
+              }
+              this.startCallTimer();
+            }
+          } else if (st === 'ringing' || st === 'initiated' || st === 'queued') {
+            if (!this.isCallConnected) {
+              this.callStatusText = 'Ringing...';
+              const statusEl = document.getElementById('softphoneCallStatusText');
+              if (statusEl) {
+                statusEl.textContent = this.callStatusText;
+                statusEl.style.color = '#38bdf8';
+              }
+            }
+          } else if (st === 'completed' || st === 'failed' || st === 'hungup' || st === 'busy' || st === 'no-answer') {
             console.log('[SoftphonePage] Call ended remotely on server:', st);
             this.endCall();
           }
@@ -453,7 +476,27 @@ export class SoftphonePage {
       } catch (err) {
         // Continue polling
       }
-    }, 1500);
+    }, 1200);
+  }
+
+  private startCallTimer(): void {
+    if (this.callTimerInterval) clearInterval(this.callTimerInterval);
+    this.callDuration = 0;
+    const timerEl = document.getElementById('softphoneCallTimer');
+    if (timerEl) {
+      timerEl.style.fontSize = '26px';
+      timerEl.style.color = '#cbd5e1';
+      timerEl.textContent = '00:00';
+    }
+    this.callTimerInterval = setInterval(() => {
+      this.callDuration++;
+      const el = document.getElementById('softphoneCallTimer');
+      if (el) {
+        const mins = Math.floor(this.callDuration / 60).toString().padStart(2, '0');
+        const secs = (this.callDuration % 60).toString().padStart(2, '0');
+        el.textContent = `${mins}:${secs}`;
+      }
+    }, 1000);
   }
 
   private startCall(numberToDial?: string, contactName?: string, isDirectSim: boolean = false): void {
@@ -468,35 +511,21 @@ export class SoftphonePage {
     if (contactName) this.selectedContactName = contactName;
 
     this.isInCall = true;
+    this.isCallConnected = false;
     this.callDuration = 0;
     this.callStartTime = Date.now();
     this.isMuted = false;
     this.isSpeaker = false;
     this.isHold = false;
-    this.callStatusText = 'Dialing · Cloud Softphone...';
+    this.callStatusText = 'Calling · Ringing...';
+
+    if (this.callTimerInterval) {
+      clearInterval(this.callTimerInterval);
+      this.callTimerInterval = null;
+    }
 
     // Dispatch background call session to backend CRM & Plivo Cloud Trunk
     this.dispatchBackendCall(target);
-
-    // Transition status to Connected after dialer opens
-    setTimeout(() => {
-      if (this.isInCall) {
-        this.callStatusText = 'Call Active · Connected';
-        const st = document.getElementById('softphoneCallStatusText');
-        if (st) st.textContent = this.callStatusText;
-      }
-    }, 2000);
-
-    if (this.callTimerInterval) clearInterval(this.callTimerInterval);
-    this.callTimerInterval = setInterval(() => {
-      this.callDuration++;
-      const timerEl = document.getElementById('softphoneCallTimer');
-      if (timerEl) {
-        const mins = Math.floor(this.callDuration / 60).toString().padStart(2, '0');
-        const secs = (this.callDuration % 60).toString().padStart(2, '0');
-        timerEl.textContent = `${mins}:${secs}`;
-      }
-    }, 1000);
 
     this.render();
   }
@@ -510,6 +539,7 @@ export class SoftphonePage {
 
   private endCall(): void {
     this.isInCall = false;
+    this.isCallConnected = false;
     if (this.callTimerInterval) {
       clearInterval(this.callTimerInterval);
       this.callTimerInterval = null;
@@ -825,8 +855,11 @@ export class SoftphonePage {
 
         <h3 style="font-size: 22px; font-weight: 700; margin: 0 0 4px 0; color: #fff;">${this.selectedContactName || this.dialNumber}</h3>
         ${this.selectedContactName ? `<div style="font-size: 13px; color: #94a3b8; margin-bottom: 6px;">+91 ${this.dialNumber}</div>` : ''}
-        <p id="softphoneCallStatusText" style="font-size: 14px; color: #22c55e; font-weight: 600; margin: 0 0 12px 0;">${this.callStatusText}</p>
-        <div id="softphoneCallTimer" style="font-size: 26px; font-weight: 700; font-family: monospace; color: #cbd5e1; margin-bottom: 28px;">${mins}:${secs}</div>
+        <p id="softphoneCallStatusText" style="font-size: 14px; color: ${this.isCallConnected ? '#22c55e' : '#38bdf8'}; font-weight: 600; margin: 0 0 12px 0;">${this.callStatusText}</p>
+        
+        <div id="softphoneCallTimer" style="font-size: ${this.isCallConnected ? '26px' : '17px'}; font-weight: 700; font-family: ${this.isCallConnected ? 'monospace' : 'inherit'}; color: ${this.isCallConnected ? '#cbd5e1' : '#38bdf8'}; margin-bottom: 28px;">
+          ${this.isCallConnected ? `${mins}:${secs}` : `<i class="fas fa-phone-volume fa-shake" style="margin-right: 6px;"></i> Ringing...`}
+        </div>
 
         <!-- In-Call Control Grid -->
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px;">
