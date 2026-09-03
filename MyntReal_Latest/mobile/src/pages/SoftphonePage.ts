@@ -73,6 +73,8 @@ export class SoftphonePage {
   private callDuration: number = 0;
   private callTimerInterval: any = null;
   private callStartTime: number = 0;
+  private activeCallSessionId: string | null = null;
+  private callStatusPollInterval: any = null;
 
   // History & Contacts
   private recentCalls: CallRecord[] = [];
@@ -403,6 +405,10 @@ export class SoftphonePage {
         customer_phone: cleanDest,
         lead_id: null
       });
+      if (resp && resp.call_session_id) {
+        this.activeCallSessionId = resp.call_session_id;
+        this.startSessionStatusPolling(resp.call_session_id);
+      }
       const statusEl = document.getElementById('softphoneCallStatusText');
       if (resp && resp.success) {
         if (statusEl) statusEl.textContent = '📞 Cloud Trunk Connected · Ringing...';
@@ -418,6 +424,29 @@ export class SoftphonePage {
     }
   }
 
+  private startSessionStatusPolling(sessionId: string): void {
+    if (this.callStatusPollInterval) clearInterval(this.callStatusPollInterval);
+    this.callStatusPollInterval = setInterval(async () => {
+      if (!this.isInCall) {
+        clearInterval(this.callStatusPollInterval);
+        this.callStatusPollInterval = null;
+        return;
+      }
+      try {
+        const statusData = await apiService.get<any>(`/telephony/plivo/calls/session-status/${sessionId}`);
+        if (statusData) {
+          const st = String(statusData.status || statusData.call_state || '').toLowerCase();
+          if (st === 'completed' || st === 'failed' || st === 'hungup' || st === 'busy' || st === 'no-answer') {
+            console.log('[SoftphonePage] Call ended remotely on server:', st);
+            this.endCall();
+          }
+        }
+      } catch (err) {
+        // Continue polling
+      }
+    }, 1500);
+  }
+
   private startCall(numberToDial?: string, contactName?: string, isDirectSim: boolean = false): void {
     const target = (numberToDial || this.dialNumber || '').trim();
     if (!target || target.replace(/[^0-9]/g, '').length < 3) {
@@ -429,18 +458,15 @@ export class SoftphonePage {
     this.dialNumber = target;
     if (contactName) this.selectedContactName = contactName;
 
-    // Trigger real carrier dialing so the phone physically rings and connects
-    window.location.href = `tel:${cleanNumber}`;
-
     this.isInCall = true;
     this.callDuration = 0;
     this.callStartTime = Date.now();
     this.isMuted = false;
     this.isSpeaker = false;
     this.isHold = false;
-    this.callStatusText = 'Dialing · Cellular Carrier...';
+    this.callStatusText = 'Dialing · Cloud Softphone...';
 
-    // Dispatch background call session to backend CRM
+    // Dispatch background call session to backend CRM & Plivo Cloud Trunk
     this.dispatchBackendCall(target);
 
     // Transition status to Connected after dialer opens
@@ -479,11 +505,17 @@ export class SoftphonePage {
       clearInterval(this.callTimerInterval);
       this.callTimerInterval = null;
     }
+    if (this.callStatusPollInterval) {
+      clearInterval(this.callStatusPollInterval);
+      this.callStatusPollInterval = null;
+    }
 
     if (this.dialNumber) {
       this.saveSoftphoneCall(this.dialNumber, this.selectedContactName, this.callDuration);
     }
 
+    this.activeCallSessionId = null;
+    this.callDuration = 0;
     this.render();
   }
 
@@ -778,15 +810,10 @@ export class SoftphonePage {
         <h3 style="font-size: 22px; font-weight: 700; margin: 0 0 4px 0; color: #fff;">${this.selectedContactName || this.dialNumber}</h3>
         ${this.selectedContactName ? `<div style="font-size: 13px; color: #94a3b8; margin-bottom: 6px;">+91 ${this.dialNumber}</div>` : ''}
         <p id="softphoneCallStatusText" style="font-size: 14px; color: #22c55e; font-weight: 600; margin: 0 0 12px 0;">${this.callStatusText}</p>
-        <div id="softphoneCallTimer" style="font-size: 22px; font-weight: 700; font-family: monospace; color: #cbd5e1; margin-bottom: 18px;">${mins}:${secs}</div>
-
-        <!-- Direct Cellular Dial Link Banner (Guarantees call placed on all iOS/Android phones) -->
-        <a href="tel:${cleanNumber}" id="inCallDirectDialLink" style="display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.4); color: #4ade80; text-decoration: none; padding: 11px 16px; border-radius: 12px; font-size: 13px; font-weight: 700; margin-bottom: 22px;">
-          <i class="fas fa-phone-volume"></i> Tap to Connect Call via Phone SIM
-        </a>
+        <div id="softphoneCallTimer" style="font-size: 26px; font-weight: 700; font-family: monospace; color: #cbd5e1; margin-bottom: 28px;">${mins}:${secs}</div>
 
         <!-- In-Call Control Grid -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px;">
           <button id="callMuteBtn" style="padding: 14px; border-radius: 14px; background: ${this.isMuted ? '#ef4444' : 'rgba(255,255,255,0.08)'}; border: none; color: #fff; cursor: pointer;">
             <i class="fas fa-microphone-slash" style="font-size: 20px; margin-bottom: 6px;"></i>
             <div style="font-size: 11px; font-weight: 600;">${this.isMuted ? 'Muted' : 'Mute'}</div>
@@ -803,10 +830,14 @@ export class SoftphonePage {
           </button>
         </div>
 
-        <!-- Big Red Hangup Button -->
+        <!-- Big Red Hangup Button & Direct SIM Fallback Below -->
         <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
           <button id="softphoneEndCallBtn" style="width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #b91c1c); border: none; color: #fff; font-size: 26px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4); cursor: pointer;">
             <i class="fas fa-phone-slash"></i>
+          </button>
+
+          <button id="softphoneDirectSimBtn" style="padding: 6px 14px; border-radius: 20px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #38bdf8; font-size: 11.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fas fa-mobile-screen"></i> Direct SIM Call
           </button>
         </div>
       </div>

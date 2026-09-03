@@ -46,7 +46,8 @@ class CallFlowInterpreter:
         caller_phone: str,
         called_did: str,
         provider_call_id: str,
-        base_api_url: str = ""
+        base_api_url: str = "",
+        call_session_id: str = ""
     ) -> str:
         """
         Primary entry point when Plivo invokes Answer URL.
@@ -55,7 +56,7 @@ class CallFlowInterpreter:
         3. Evaluates inbound IVR flow
         4. Returns Plivo XML
         """
-        logger.info(f"[FLOW-INTERPRETER] Call received on DID/Destination '{called_did}' from '{caller_phone}' (UUID: {provider_call_id})")
+        logger.info(f"[FLOW-INTERPRETER] Call received on DID/Destination '{called_did}' from '{caller_phone}' (UUID: {provider_call_id}, Session: {call_session_id})")
 
         # 0. Robust Detection for Outbound Browser Softphone Calling (WebRTC SIP Leg -> Customer PSTN)
         caller_str = str(caller_phone or '').strip()
@@ -102,12 +103,86 @@ class CallFlowInterpreter:
             logger.warning(f"[FLOW-INTERPRETER] DID lookup error: {e}")
 
         if not is_inbound_did:
-            logger.info(f"[FLOW-INTERPRETER] Bridging Outbound call from {caller_str} to customer {clean_dest} with callerId {outbound_caller_id}")
-            return cls._generate_xml_response([
-                f'<Dial callerId="{outbound_caller_id}">',
-                f'  <Number>{clean_dest}</Number>',
-                f'</Dial>'
-            ])
+            # Dynamically resolve registered staff Plivo endpoint from DB
+            operator_sip = None
+            ep_rec = None
+            try:
+                # 1. Locate VoIPCallSession
+                session_obj = None
+                if call_session_id:
+                    session_obj = db.query(VoIPCallSession).filter(VoIPCallSession.call_session_id == call_session_id).first()
+                if not session_obj and provider_call_id:
+                    session_obj = db.query(VoIPCallSession).filter(VoIPCallSession.provider_call_id == provider_call_id).first()
+                if not session_obj and clean_dest:
+                    session_obj = db.query(VoIPCallSession).filter(
+                        VoIPCallSession.customer_phone == clean_dest,
+                        VoIPCallSession.direction == 'outbound'
+                    ).order_by(VoIPCallSession.id.desc()).first()
+
+                op_id = session_obj.operator_id if session_obj else None
+                comp_id = session_obj.company_id if session_obj else None
+
+                # 2. Match exact TelephonyPlivoEndpoint
+                if op_id and comp_id:
+                    ep_rec = db.query(TelephonyPlivoEndpoint).filter(
+                        TelephonyPlivoEndpoint.staff_id == op_id,
+                        TelephonyPlivoEndpoint.company_id == comp_id
+                    ).first()
+
+                if not ep_rec and op_id:
+                    ep_rec = db.query(TelephonyPlivoEndpoint).filter(
+                        TelephonyPlivoEndpoint.staff_id == op_id
+                    ).order_by(TelephonyPlivoEndpoint.is_registered.desc(), TelephonyPlivoEndpoint.id.desc()).first()
+
+                if not ep_rec and comp_id:
+                    ep_rec = db.query(TelephonyPlivoEndpoint).filter(
+                        TelephonyPlivoEndpoint.company_id == comp_id
+                    ).order_by(TelephonyPlivoEndpoint.is_registered.desc(), TelephonyPlivoEndpoint.id.desc()).first()
+
+                if not ep_rec:
+                    ep_rec = db.query(TelephonyPlivoEndpoint).filter(
+                        TelephonyPlivoEndpoint.is_registered == True
+                    ).order_by(TelephonyPlivoEndpoint.id.desc()).first()
+
+                if ep_rec and ep_rec.plivo_username:
+                    operator_sip = f"sip:{ep_rec.plivo_username}@phone.plivo.com"
+            except Exception as e:
+                logger.warning(f"[FLOW-INTERPRETER] Dynamic endpoint lookup error: {e}")
+
+            agent_phone = None
+            if op_id:
+                staff_user = db.query(StaffEmployee).filter(StaffEmployee.id == op_id).first()
+                if staff_user and staff_user.phone:
+                    clean_ag_phone = re.sub(r'[^\d+]', '', str(staff_user.phone))
+                    if not clean_ag_phone.startswith('+'):
+                        clean_ag_phone = f"+91{clean_ag_phone[-10:]}"
+                    agent_phone = clean_ag_phone
+
+            if operator_sip:
+                logger.info(
+                    f"[FLOW-INTERPRETER] Outbound call to customer {clean_dest} answered. Bridging to agent SIP {operator_sip} "
+                    f"with callerId {outbound_caller_id}"
+                )
+                return cls._generate_xml_response([
+                    f'<Dial callerId="{outbound_caller_id}">',
+                    f'  <User>{operator_sip}</User>',
+                    f'</Dial>'
+                ])
+            elif agent_phone:
+                logger.info(
+                    f"[FLOW-INTERPRETER] Outbound call to customer {clean_dest} answered. Bridging to agent phone {agent_phone} "
+                    f"with callerId {outbound_caller_id}"
+                )
+                return cls._generate_xml_response([
+                    f'<Dial callerId="{outbound_caller_id}">',
+                    f'  <Number>{agent_phone}</Number>',
+                    f'</Dial>'
+                ])
+            else:
+                return cls._generate_xml_response([
+                    f'<Speak voice="Polly.Aditi" language="en-IN">Connecting your call with Mynt Real staff. Please hold the line.</Speak>',
+                    f'<Wait length="30" />'
+                ])
 
         # 1. Resolve Company from DID
         company_id = cls._resolve_company_from_did(db, called_did) or 1
