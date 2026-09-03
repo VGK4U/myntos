@@ -2113,78 +2113,164 @@ async def get_recent_calls(
 @router.get("/dialer/call-history")
 async def get_call_history(
     call_type: Optional[str] = Query(None),
+    staff_id: Optional[str] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
-    per_page: int = Query(20, le=50),
+    per_page: int = Query(50, le=100),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user_hybrid)
 ):
     """
     DC_CALLHIST_001: Full paginated call history from staff_call_logs + dialer attempts.
-    call_type filter: INCOMING | OUTGOING | MISSED | REJECTED | DIALER (empty = all)
+    Includes date range filtering, call recording player metadata, and upline manager access to downline staff calls.
     """
-    staff_id = None
+    current_staff_id = None
     user_ref = None
+    is_admin = False
+    
     if hasattr(current_user, 'emp_code'):
         staff = db.query(StaffEmployee).filter(StaffEmployee.id == current_user.id).first()
         if not staff:
             raise HTTPException(status_code=404, detail="Staff not found")
-        staff_id = staff.id
+        current_staff_id = staff.id
         user_ref = str(staff.id)
+        role_str = str(getattr(staff, 'designation', '') or getattr(staff, 'role', '')).lower()
+        is_admin = getattr(staff, 'is_admin', False) or any(x in role_str for x in ('admin', 'director', 'manager', 'lead', 'head', 'management'))
     else:
         user_ref = str(current_user.id)
+        is_admin = getattr(current_user, 'is_superuser', False)
 
-    offset = (page - 1) * per_page
+    # 1. Resolve downline staff list for upline managers
+    downline_members = []
+    allowed_staff_ids = set()
+    if current_staff_id:
+        allowed_staff_ids.add(current_staff_id)
+        
+        # Check direct and indirect reports
+        from sqlalchemy import or_
+        reports = db.query(StaffEmployee).filter(
+            StaffEmployee.reporting_manager_id == current_staff_id,
+            StaffEmployee.status == 'active'
+        ).all()
+        
+        for r in reports:
+            allowed_staff_ids.add(r.id)
+            r_name = f"{r.first_name or ''} {r.last_name or ''}".strip() or r.emp_code
+            downline_members.append({
+                "id": r.id,
+                "name": f"{r_name} ({r.emp_code})",
+                "emp_code": r.emp_code,
+                "designation": r.designation or "Staff"
+            })
+
+    if is_admin and len(downline_members) == 0:
+        # If company admin, allow selecting all active staff in company
+        comp_id = getattr(current_user, 'base_company_id', 1) or 1
+        all_staff = db.query(StaffEmployee).filter(
+            StaffEmployee.status == 'active',
+            StaffEmployee.id != current_staff_id
+        ).limit(50).all()
+        for r in all_staff:
+            allowed_staff_ids.add(r.id)
+            r_name = f"{r.first_name or ''} {r.last_name or ''}".strip() or r.emp_code
+            downline_members.append({
+                "id": r.id,
+                "name": f"{r_name} ({r.emp_code})",
+                "emp_code": r.emp_code,
+                "designation": r.designation or "Staff"
+            })
+
+    # 2. Determine target staff query filter
+    target_staff_ids = list(allowed_staff_ids)
+    if staff_id and str(staff_id).lower() not in ('all', '', 'none'):
+        try:
+            req_id = int(staff_id)
+            if req_id in allowed_staff_ids or is_admin:
+                target_staff_ids = [req_id]
+        except (ValueError, TypeError):
+            pass
+    elif not staff_id or str(staff_id).lower() == 'self':
+        if current_staff_id:
+            target_staff_ids = [current_staff_id]
+
+    page_num = int(page) if not hasattr(page, 'default') else 1
+    per_page_num = int(per_page) if not hasattr(per_page, 'default') else 50
+    offset = (page_num - 1) * per_page_num
     entries: list = []
 
-    if call_type == "DIALER":
-        # Only CRM dialer attempts
-        if user_ref:
-            rows = db.execute(text("""
-                SELECT a.lead_id, l.name, l.phone, 'OUTGOING' AS call_type,
-                       a.dialed_at, 0 AS duration_seconds, a.call_outcome,
-                       NULL AS contact_name
-                FROM crm_dialer_attempts a
-                JOIN crm_leads l ON a.lead_id = l.id
-                WHERE a.user_ref = :ref AND a.call_outcome != 'skip'
-                ORDER BY a.dialed_at DESC
-                LIMIT :lim OFFSET :off
-            """), {"ref": user_ref, "lim": per_page, "off": offset}).fetchall()
-            for r in rows:
-                entries.append({
-                    "lead_id": r[0], "name": r[1] or "", "phone": r[2] or "",
-                    "call_type": "OUTGOING", "dialed_at": r[4].isoformat() if r[4] else None,
-                    "duration_seconds": 0, "call_outcome": r[6] or "",
-                    "contact_name": r[1] or "", "source": "dialer",
-                })
-    else:
-        # Native call log
-        if staff_id:
-            type_filter = ""
-            if call_type and call_type in ("INCOMING", "MISSED", "OUTGOING", "REJECTED"):
-                type_filter = "AND call_type = :ctype"
-            rows = db.execute(text(f"""
-                SELECT scl.matched_lead_id, 
-                       COALESCE(NULLIF(TRIM(scl.contact_name), ''), NULLIF(TRIM(l.name), ''), '') AS name,
-                       scl.phone_number, scl.call_type,
-                       scl.call_datetime, scl.duration_seconds, NULL AS call_outcome,
-                       COALESCE(NULLIF(TRIM(scl.contact_name), ''), NULLIF(TRIM(l.name), ''), '') AS contact_name
-                FROM staff_call_logs scl
-                LEFT JOIN crm_leads l ON scl.matched_lead_id = l.id
-                WHERE scl.staff_id = :sid {type_filter}
-                ORDER BY scl.call_datetime DESC
-                LIMIT :lim OFFSET :off
-            """), {"sid": staff_id, "ctype": call_type or "", "lim": per_page, "off": offset}).fetchall()
-            for r in rows:
-                cname = (r[7] or "").strip().rstrip(', ')
-                entries.append({
-                    "lead_id": r[0], "name": cname, "phone": r[2] or "",
-                    "call_type": r[3] or "OUTGOING",
-                    "dialed_at": r[4].isoformat() if r[4] else None,
-                    "duration_seconds": r[5] or 0, "call_outcome": "",
-                    "contact_name": cname, "source": "native",
-                })
+    # 3. Build SQL filters for call_type & date range
+    filters = ["scl.staff_id = ANY(:sids)"]
+    params = {"sids": target_staff_ids if target_staff_ids else [0], "lim": per_page_num, "off": offset}
 
-    return {"success": True, "entries": entries, "page": page, "per_page": per_page}
+    if isinstance(call_type, str) and call_type.strip().upper() in ("INCOMING", "MISSED", "OUTGOING", "REJECTED"):
+        filters.append("scl.call_type = :ctype")
+        params["ctype"] = call_type.strip().upper()
+
+    if isinstance(start_date, str) and start_date.strip():
+        filters.append("scl.call_datetime >= :sdate")
+        params["sdate"] = f"{start_date.strip()} 00:00:00"
+
+    if isinstance(end_date, str) and end_date.strip():
+        filters.append("scl.call_datetime <= :edate")
+        params["edate"] = f"{end_date.strip()} 23:59:59"
+
+    where_clause = " AND ".join(filters)
+
+    try:
+        rows = db.execute(text(f"""
+            SELECT scl.matched_lead_id, 
+                   COALESCE(NULLIF(TRIM(scl.contact_name), ''), NULLIF(TRIM(l.name), ''), '') AS name,
+                   scl.phone_number, scl.call_type,
+                   scl.call_datetime, scl.duration_seconds, NULL AS call_outcome,
+                   COALESCE(NULLIF(TRIM(scl.contact_name), ''), NULLIF(TRIM(l.name), ''), '') AS contact_name,
+                   COALESCE(scl.has_recording, false) AS has_recording,
+                   scl.recording_id,
+                   scl.staff_id,
+                   e.first_name, e.last_name, e.emp_code
+            FROM staff_call_logs scl
+            LEFT JOIN crm_leads l ON scl.matched_lead_id = l.id
+            LEFT JOIN staff_employees e ON scl.staff_id = e.id
+            WHERE {where_clause}
+            ORDER BY scl.call_datetime DESC
+            LIMIT :lim OFFSET :off
+        """), params).fetchall()
+
+        for r in rows:
+            cname = (r[7] or "").strip().rstrip(', ')
+            staff_full = f"{r[11] or ''} {r[12] or ''}".strip()
+            rec_id = r[9]
+            has_rec = bool(r[8] or rec_id)
+
+            entries.append({
+                "lead_id": r[0],
+                "name": cname,
+                "phone": r[2] or "",
+                "call_type": (r[3] or "OUTGOING").upper(),
+                "dialed_at": r[4].isoformat() if r[4] else None,
+                "duration_seconds": r[5] or 0,
+                "call_outcome": "",
+                "contact_name": cname,
+                "source": "native",
+                "has_recording": has_rec,
+                "recording_id": rec_id,
+                "recording_stream_url": f"/api/v1/call-tracking/recordings/{rec_id}/stream" if rec_id else None,
+                "staff_id": r[10],
+                "staff_name": staff_full if staff_full else (r[13] or "Staff"),
+                "staff_emp_code": r[13] or "",
+                "is_downline": bool(current_staff_id and r[10] != current_staff_id)
+            })
+    except Exception as e:
+        logger.error(f"[CALL-HISTORY] Query error: {e}")
+
+    return {
+        "success": True, 
+        "entries": entries, 
+        "page": page, 
+        "per_page": per_page,
+        "downline_members": downline_members,
+        "is_manager": len(downline_members) > 0 or is_admin
+    }
 
 
 # ── DC_ACTIVE_CALL: Mobile dial-in-progress sync ──────────────────────────────
