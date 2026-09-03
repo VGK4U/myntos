@@ -649,13 +649,23 @@
                 
                 if (response.ok && data.access_token) {
                     // Commit session immediately upon valid authentication
-                    localStorage.setItem('staff_token', data.access_token);
-                    document.cookie = `staff_token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
-                    document.cookie = `session_token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
-                    document.cookie = `session=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
+                    try {
+                        localStorage.setItem('staff_token', data.access_token);
+                    } catch (e) {
+                        console.warn('[STAFF-AUTH] localStorage warning:', e);
+                    }
+                    try {
+                        document.cookie = `staff_token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
+                        document.cookie = `session_token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
+                        document.cookie = `session=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
+                    } catch (e) {
+                        console.warn('[STAFF-AUTH] cookie warning:', e);
+                    }
 
                     if (data.employee) {
-                        localStorage.setItem('staff_user', JSON.stringify(data.employee));
+                        try {
+                            localStorage.setItem('staff_user', JSON.stringify(data.employee));
+                        } catch (e) {}
                     }
 
                     alertContainer.innerHTML = `
@@ -672,9 +682,21 @@
                     throw new Error(errorMsg);
                 }
             } catch (error) {
+                let userMessage = 'Unable to complete login. Please try again.';
+                const rawMsg = error && error.message ? String(error.message) : '';
+                
+                // Preserve legitimate application-level authentication messages
+                if (rawMsg && !/pattern|syntaxerror|domexception|object error/i.test(rawMsg)) {
+                    if (/failed to fetch|network error|networkrequestfailed/i.test(rawMsg)) {
+                        userMessage = 'Unable to connect to server. Please check your network connection.';
+                    } else {
+                        userMessage = rawMsg;
+                    }
+                }
+                
                 alertContainer.innerHTML = `
                     <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-circle me-2"></i>${error.message}
+                        <i class="fas fa-exclamation-circle me-2"></i>${userMessage}
                     </div>
                 `;
                 

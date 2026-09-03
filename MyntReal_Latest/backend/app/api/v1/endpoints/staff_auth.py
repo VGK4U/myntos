@@ -309,62 +309,70 @@ def staff_login(
     
     t_lookup_start = time.time()
     
-    # 1. Exact Employee Code / Username Match (e.g. MR10001, ZMP18080088, TECO_ADMIN)
-    employee = db.query(StaffEmployee).options(
-        joinedload(StaffEmployee.role)
-    ).filter(
-        StaffEmployee.is_deleted == False,
-        (StaffEmployee.emp_code == emp_id) | (StaffEmployee.email.ilike(raw_ident))
-    ).first()
-
-    # 2. Company ID Login Pattern (e.g., ZMP18080088, ZMP18080092... ZMP1808XXXX)
-    if not employee:
-        company_id_match = re.match(r"^ZMP1808(\d{4})$", emp_id)
-        if company_id_match:
-            target_company_id = int(company_id_match.group(1))
-            target_comp = db.query(AssociatedCompany).filter_by(id=target_company_id).first()
-            
-            # Company 88 / SaaS Segment Administrator
-            if target_company_id == 88:
-                employee = db.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter(
-                    StaffEmployee.is_deleted == False,
-                    StaffEmployee.base_company_id == 88,
-                    StaffEmployee.staff_type == 'SAAS_SEGMENT_ADMIN',
-                    StaffEmployee.status == 'active'
-                ).first()
-            
-            if not employee:
-                # Look for primary tenant admin belonging directly to this company (base_company_id)
-                base_emps = db.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter(
-                    StaffEmployee.is_deleted == False,
-                    StaffEmployee.base_company_id == target_company_id,
-                    StaffEmployee.status == 'active'
-                ).order_by(StaffEmployee.id).all()
-                
-                ta_emps = [e for e in base_emps if (e.role_id == 17 or getattr(e, 'role', None) and e.role.role_code in ['tenant_admin', 'saas_segment_admin'] or getattr(e, 'staff_type', '') in ['TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN', 'SAAS_CLIENT'] or any(k in ((getattr(e, 'designation', '') or '') + (e.role.role_name if e.role else '')).upper() for k in ['ADMIN', 'MANAGER', 'LEAD', 'DIRECTOR', 'HEAD']))]
-                
-                if ta_emps:
-                    employee = ta_emps[0]
-                elif base_emps:
-                    employee = base_emps[0]
-
-    # 2. Mobile Number Login (e.g. 10 digits or with country code +91)
-    if not employee:
-        clean_phone = re.sub(r"\D", "", raw_ident)
-        if len(clean_phone) >= 10:
-            last10 = clean_phone[-10:]
-            employee = db.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter(
-                StaffEmployee.is_deleted == False,
-                StaffEmployee.phone.like(f"%{last10}")
-            ).first()
-
-    # 3. Employee Code / Email Login
-    if not employee:
+    try:
+        # 1. Exact Employee Code / Username Match (e.g. MR10001, ZMP18080088, TECO_ADMIN)
         employee = db.query(StaffEmployee).options(
             joinedload(StaffEmployee.role)
         ).filter(
+            StaffEmployee.is_deleted == False,
             (StaffEmployee.emp_code == emp_id) | (StaffEmployee.email.ilike(raw_ident))
         ).first()
+
+        # 2. Company ID Login Pattern (e.g., ZMP18080088, ZMP18080092... ZMP1808XXXX)
+        if not employee:
+            company_id_match = re.match(r"^ZMP1808(\d{4})$", emp_id)
+            if company_id_match:
+                target_company_id = int(company_id_match.group(1))
+                target_comp = db.query(AssociatedCompany).filter_by(id=target_company_id).first()
+                
+                # Company 88 / SaaS Segment Administrator
+                if target_company_id == 88:
+                    employee = db.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter(
+                        StaffEmployee.is_deleted == False,
+                        StaffEmployee.base_company_id == 88,
+                        StaffEmployee.staff_type == 'SAAS_SEGMENT_ADMIN',
+                        StaffEmployee.status == 'active'
+                    ).first()
+                
+                if not employee:
+                    # Look for primary tenant admin belonging directly to this company (base_company_id)
+                    base_emps = db.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter(
+                        StaffEmployee.is_deleted == False,
+                        StaffEmployee.base_company_id == target_company_id,
+                        StaffEmployee.status == 'active'
+                    ).order_by(StaffEmployee.id).all()
+                    
+                    ta_emps = [e for e in base_emps if (e.role_id == 17 or getattr(e, 'role', None) and e.role.role_code in ['tenant_admin', 'saas_segment_admin'] or getattr(e, 'staff_type', '') in ['TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN', 'SAAS_CLIENT'] or any(k in ((getattr(e, 'designation', '') or '') + (e.role.role_name if e.role else '')).upper() for k in ['ADMIN', 'MANAGER', 'LEAD', 'DIRECTOR', 'HEAD']))]
+                    
+                    if ta_emps:
+                        employee = ta_emps[0]
+                    elif base_emps:
+                        employee = base_emps[0]
+
+        # 2. Mobile Number Login (e.g. 10 digits or with country code +91)
+        if not employee:
+            clean_phone = re.sub(r"\D", "", raw_ident)
+            if len(clean_phone) >= 10:
+                last10 = clean_phone[-10:]
+                employee = db.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter(
+                    StaffEmployee.is_deleted == False,
+                    StaffEmployee.phone.like(f"%{last10}")
+                ).first()
+
+        # 3. Employee Code / Email Login
+        if not employee:
+            employee = db.query(StaffEmployee).options(
+                joinedload(StaffEmployee.role)
+            ).filter(
+                (StaffEmployee.emp_code == emp_id) | (StaffEmployee.email.ilike(raw_ident))
+            ).first()
+    except Exception as db_exc:
+        import logging
+        logging.getLogger(__name__).error(f"[STAFF-AUTH-DB] Database connection error during login: {db_exc}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service temporarily unavailable. Please try again in a moment."
+        )
     t_lookup_ms = (time.time() - t_lookup_start) * 1000
     
     if not employee:

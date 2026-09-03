@@ -1837,111 +1837,115 @@ async def get_public_announcements(
     ]
     if category_id:
         base_filter.append(FeedbackSubmission.category_id == category_id)
-    # Audience targeting: filter by platform if provided
-    # 'mnr' callers see 'mnr' + 'both'; 'vgk' callers see 'vgk' + 'both'; None sees all
-    # DC-FIX: for vgk platform also include anything in the "VGK4U Shoutouts" category
-    # regardless of visible_to — staff intent is clear from category choice.
-    # Category ID is looked up dynamically so hardcoding is avoided.
-    if platform in ('mnr', 'vgk'):
-        from sqlalchemy import or_, text as _text
-        if platform == 'vgk':
-            _vgk_cat_rows = db.execute(
-                _text("SELECT id FROM feedback_categories WHERE LOWER(name) LIKE '%vgk%shoutout%' OR LOWER(name) LIKE '%vgk4u shoutout%'")
-            ).fetchall()
-            _vgk_cat_ids = [r[0] for r in _vgk_cat_rows] or [11]
-            _vgk_or_clauses = [
-                FeedbackSubmission.visible_to == 'vgk',
-                FeedbackSubmission.visible_to == 'both',
+    try:
+        # Audience targeting: filter by platform if provided
+        # 'mnr' callers see 'mnr' + 'both'; 'vgk' callers see 'vgk' + 'both'; None sees all
+        # DC-FIX: for vgk platform also include anything in the "VGK4U Shoutouts" category
+        # regardless of visible_to — staff intent is clear from category choice.
+        # Category ID is looked up dynamically so hardcoding is avoided.
+        if platform in ('mnr', 'vgk'):
+            from sqlalchemy import or_, text as _text
+            if platform == 'vgk':
+                _vgk_cat_rows = db.execute(
+                    _text("SELECT id FROM feedback_categories WHERE LOWER(name) LIKE '%vgk%shoutout%' OR LOWER(name) LIKE '%vgk4u shoutout%'")
+                ).fetchall()
+                _vgk_cat_ids = [r[0] for r in _vgk_cat_rows] or [11]
+                _vgk_or_clauses = [
+                    FeedbackSubmission.visible_to == 'vgk',
+                    FeedbackSubmission.visible_to == 'both',
+                ]
+                for _cid in _vgk_cat_ids:
+                    _vgk_or_clauses.append(FeedbackSubmission.category_id == _cid)
+                base_filter.append(or_(*_vgk_or_clauses))
+            else:
+                base_filter.append(
+                    or_(FeedbackSubmission.visible_to == platform, FeedbackSubmission.visible_to == 'both')
+                )
+
+        subquery = db.query(
+            FeedbackSubmission.id,
+            func.coalesce(User.name, FeedbackSubmission.user_id).label('user_name'),
+            func.coalesce(User.city, '').label('city'),
+            func.coalesce(func.avg(AnnouncementRating.rating), 0).label('average_rating'),
+            func.count(AnnouncementRating.id).label('total_ratings')
+        ).outerjoin(
+            User, FeedbackSubmission.user_id == User.id
+        ).outerjoin(
+            AnnouncementRating, FeedbackSubmission.id == AnnouncementRating.submission_id
+        ).filter(
+            *base_filter
+        ).group_by(
+            FeedbackSubmission.id,
+            User.name,
+            User.city,
+            FeedbackSubmission.user_id,
+            FeedbackSubmission.submitted_at,
+            FeedbackSubmission.approved_at
+        ).order_by(
+            FeedbackSubmission.approved_at.desc().nullslast(),
+            FeedbackSubmission.submitted_at.desc()
+        ).limit(limit).all()
+        
+        if not subquery:
+            return []
+        
+        # Step 2: Fetch full announcements with eager-loaded media (single query)
+        announcement_ids = [row[0] for row in subquery]
+        announcements_map = {}
+        
+        full_announcements = db.query(FeedbackSubmission).options(
+            joinedload(FeedbackSubmission.media_files),
+            joinedload(FeedbackSubmission.category)
+        ).filter(FeedbackSubmission.id.in_(announcement_ids)).all()
+        
+        for ann in full_announcements:
+            announcements_map[ann.id] = ann
+        
+        # Build response maintaining original order
+        results = []
+        for row in subquery:
+            ann_id, user_name_val, city_val, avg_rating, total_ratings_val = row
+            ann = announcements_map.get(ann_id)
+            if ann:
+                results.append((ann, user_name_val, city_val, avg_rating, total_ratings_val))
+        
+        # Build response (DC Protocol: optimized with pre-fetched data)
+        response_list = []
+        for ann, user_name_value, city_value, avg_rating, total_ratings_value in results:
+            avg_rating = float(avg_rating) if avg_rating else 0.0
+            total_ratings_value = int(total_ratings_value) if total_ratings_value else 0
+            
+            approved_media = [
+                build_media_response(m) for m in ann.media_files 
+                if m.media_status == MediaStatus.APPROVED
             ]
-            for _cid in _vgk_cat_ids:
-                _vgk_or_clauses.append(FeedbackSubmission.category_id == _cid)
-            base_filter.append(or_(*_vgk_or_clauses))
-        else:
-            base_filter.append(
-                or_(FeedbackSubmission.visible_to == platform, FeedbackSubmission.visible_to == 'both')
-            )
+            
+            display_datetime = ann.approved_at or ann.last_reviewed_at or ann.submitted_at
+            
+            response_list.append(AnnouncementResponse(
+                id=ann.id,
+                title=ann.title,
+                description=ann.description,
+                submission_type=ann.submission_type.value,
+                category=build_category_response(ann.category),
+                approved_at=display_datetime,
+                updated_at=display_datetime,
+                is_visible=ann.is_visible,
+                media=approved_media,
+                user_id=ann.user_id,
+                user_name=user_name_value or "Unknown",
+                city=city_value,
+                average_rating=round(avg_rating, 2),
+                total_ratings=total_ratings_value,
+                shares_count=ann.shares_count or 0,
+                views_count=ann.views_count or 0,
+                visible_to=getattr(ann, 'visible_to', 'both') or 'both'
+            ))
 
-    subquery = db.query(
-        FeedbackSubmission.id,
-        func.coalesce(User.name, FeedbackSubmission.user_id).label('user_name'),
-        func.coalesce(User.city, '').label('city'),
-        func.coalesce(func.avg(AnnouncementRating.rating), 0).label('average_rating'),
-        func.count(AnnouncementRating.id).label('total_ratings')
-    ).outerjoin(
-        User, FeedbackSubmission.user_id == User.id
-    ).outerjoin(
-        AnnouncementRating, FeedbackSubmission.id == AnnouncementRating.submission_id
-    ).filter(
-        *base_filter
-    ).group_by(
-        FeedbackSubmission.id,
-        User.name,
-        User.city,
-        FeedbackSubmission.user_id,
-        FeedbackSubmission.submitted_at,
-        FeedbackSubmission.approved_at
-    ).order_by(
-        FeedbackSubmission.approved_at.desc().nullslast(),
-        FeedbackSubmission.submitted_at.desc()
-    ).limit(limit).all()
-    
-    if not subquery:
+        return response_list
+    except Exception as exc:
+        logger.warning(f"[PUBLIC-ANNOUNCEMENTS] Non-fatal announcements query error (safe fallback): {exc}")
         return []
-    
-    # Step 2: Fetch full announcements with eager-loaded media (single query)
-    announcement_ids = [row[0] for row in subquery]
-    announcements_map = {}
-    
-    full_announcements = db.query(FeedbackSubmission).options(
-        joinedload(FeedbackSubmission.media_files),
-        joinedload(FeedbackSubmission.category)
-    ).filter(FeedbackSubmission.id.in_(announcement_ids)).all()
-    
-    for ann in full_announcements:
-        announcements_map[ann.id] = ann
-    
-    # Build response maintaining original order
-    results = []
-    for row in subquery:
-        ann_id, user_name_val, city_val, avg_rating, total_ratings_val = row
-        ann = announcements_map.get(ann_id)
-        if ann:
-            results.append((ann, user_name_val, city_val, avg_rating, total_ratings_val))
-    
-    # Build response (DC Protocol: optimized with pre-fetched data)
-    response_list = []
-    for ann, user_name_value, city_value, avg_rating, total_ratings_value in results:
-        avg_rating = float(avg_rating) if avg_rating else 0.0
-        total_ratings_value = int(total_ratings_value) if total_ratings_value else 0
-        
-        approved_media = [
-            build_media_response(m) for m in ann.media_files 
-            if m.media_status == MediaStatus.APPROVED
-        ]
-        
-        display_datetime = ann.approved_at or ann.last_reviewed_at or ann.submitted_at
-        
-        response_list.append(AnnouncementResponse(
-            id=ann.id,
-            title=ann.title,
-            description=ann.description,
-            submission_type=ann.submission_type.value,
-            category=build_category_response(ann.category),
-            approved_at=display_datetime,
-            updated_at=display_datetime,
-            is_visible=ann.is_visible,
-            media=approved_media,
-            user_id=ann.user_id,
-            user_name=user_name_value or "Unknown",
-            city=city_value,
-            average_rating=round(avg_rating, 2),
-            total_ratings=total_ratings_value,
-            shares_count=ann.shares_count or 0,
-            views_count=ann.views_count or 0,
-            visible_to=getattr(ann, 'visible_to', 'both') or 'both'
-        ))
-
-    return response_list
 
 
 @router.get("/public/categories", response_model=List[CategoryResponse])
