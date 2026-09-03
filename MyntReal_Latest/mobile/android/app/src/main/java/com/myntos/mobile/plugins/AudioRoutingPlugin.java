@@ -50,37 +50,37 @@ public class AudioRoutingPlugin extends Plugin {
         }
 
         try {
-            if (enabled) {
-                // Set audio mode for active VoIP communication
-                audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+            audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
 
-                // Android 12+ (API 31+) modern communication device routing
+            if (enabled) {
+                // Route audio to external loudspeaker
+                audioManager.setSpeakerphoneOn(true);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     List<AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
-                    AudioDeviceInfo speakerDevice = null;
                     for (AudioDeviceInfo device : devices) {
                         if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
-                            speakerDevice = device;
+                            audioManager.setCommunicationDevice(device);
                             break;
                         }
                     }
-                    if (speakerDevice != null) {
-                        boolean res = audioManager.setCommunicationDevice(speakerDevice);
-                        Log.d(TAG, "setCommunicationDevice(BUILTIN_SPEAKER) result: " + res);
-                    } else {
-                        audioManager.setSpeakerphoneOn(true);
-                    }
-                } else {
-                    // Legacy Android fallback
-                    audioManager.setSpeakerphoneOn(true);
                 }
             } else {
-                // Restore standard communication audio routing
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    audioManager.clearCommunicationDevice();
-                }
+                // Route audio to normal in-call EARPIECE (default during call)
                 audioManager.setSpeakerphoneOn(false);
-                audioManager.setMode(AudioManager.MODE_NORMAL);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    List<AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
+                    boolean foundEarpiece = false;
+                    for (AudioDeviceInfo device : devices) {
+                        if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE) {
+                            audioManager.setCommunicationDevice(device);
+                            foundEarpiece = true;
+                            break;
+                        }
+                    }
+                    if (!foundEarpiece) {
+                        audioManager.clearCommunicationDevice();
+                    }
+                }
             }
 
             JSObject ret = new JSObject();
@@ -90,6 +90,22 @@ public class AudioRoutingPlugin extends Plugin {
         } catch (Exception e) {
             Log.e(TAG, "Failed to set audio routing: " + e.getMessage(), e);
             call.reject("Failed to set audio routing: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void resetAudioMode(PluginCall call) {
+        try {
+            if (audioManager != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    audioManager.clearCommunicationDevice();
+                }
+                audioManager.setSpeakerphoneOn(false);
+                audioManager.setMode(AudioManager.MODE_NORMAL);
+            }
+            call.resolve(new JSObject().put("success", true));
+        } catch (Exception e) {
+            call.reject("Failed to reset audio mode: " + e.getMessage());
         }
     }
 

@@ -130,56 +130,79 @@ export class SoftphonePage {
 
   private async initPlivoWebRTC(): Promise<void> {
     try {
+      if (typeof (window as any).Plivo === 'undefined') {
+        await new Promise((resolve) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.plivo.com/sdk/browser/v2/plivo.min.js';
+          script.async = true;
+          script.onload = () => resolve(true);
+          script.onerror = () => resolve(false);
+          document.head.appendChild(script);
+        });
+      }
+
       if (typeof (window as any).Plivo !== 'undefined') {
         const PlivoConstructor = (window as any).Plivo;
-        if (typeof PlivoConstructor === 'function') {
-          const sdk = new PlivoConstructor({ allowMultipleIncomingCalls: true });
-          this.plivoClient = sdk.client || sdk;
-        } else if (PlivoConstructor.Client) {
-          this.plivoClient = new PlivoConstructor.Client();
+        if (!this.plivoClient) {
+          if (typeof PlivoConstructor === 'function') {
+            const sdk = new PlivoConstructor({ allowMultipleIncomingCalls: true });
+            this.plivoClient = sdk.client || sdk;
+          } else if (PlivoConstructor.Client) {
+            this.plivoClient = new PlivoConstructor.Client();
+          }
+
+          if (this.plivoClient) {
+            this.plivoClient.on('onLogin', (data: any) => {
+              console.log('[SoftphonePage] Plivo WebRTC logged in successfully:', data);
+              this.isWebRTCRegistered = true;
+            });
+
+            this.plivoClient.on('onLogout', () => {
+              this.isWebRTCRegistered = false;
+            });
+
+            this.plivoClient.on('onLoginFailed', (reason: any) => {
+              console.warn('[SoftphonePage] Plivo WebRTC login failed:', reason);
+              this.isWebRTCRegistered = false;
+            });
+
+            this.plivoClient.on('onCallAnswered', (callInfo: any) => {
+              console.log('[SoftphonePage] Plivo WebRTC call connected / answered:', callInfo);
+              this.isCallConnected = true;
+              this.callStatusText = 'Connected / In Call';
+              const statusEl = document.getElementById('softphoneCallStatusText');
+              if (statusEl) {
+                statusEl.textContent = this.callStatusText;
+                statusEl.style.color = '#22c55e';
+              }
+              this.startCallTimer();
+            });
+
+            this.plivoClient.on('onMediaConnected', () => {
+              console.log('[SoftphonePage] Plivo WebRTC media stream established');
+            });
+
+            this.plivoClient.on('onCallTerminated', () => {
+              console.log('[SoftphonePage] Plivo WebRTC call terminated');
+              this.endCall();
+            });
+
+            this.plivoClient.on('onCallFailed', (reason: any) => {
+              console.warn('[SoftphonePage] Plivo WebRTC call failed:', reason);
+              this.endCall();
+            });
+          }
         }
 
-        if (this.plivoClient) {
-          this.plivoClient.on('onLogin', (data: any) => {
-            console.log('[SoftphonePage] Plivo WebRTC logged in successfully:', data);
-            this.isWebRTCRegistered = true;
-          });
-
-          this.plivoClient.on('onLoginFailed', (reason: any) => {
-            console.warn('[SoftphonePage] Plivo WebRTC login failed:', reason);
-            this.isWebRTCRegistered = false;
-          });
-
-          this.plivoClient.on('onCallAnswered', (callInfo: any) => {
-            console.log('[SoftphonePage] Plivo WebRTC call connected / answered:', callInfo);
-            this.isCallConnected = true;
-            this.callStatusText = 'Connected / In Call';
-            const statusEl = document.getElementById('softphoneCallStatusText');
-            if (statusEl) {
-              statusEl.textContent = this.callStatusText;
-              statusEl.style.color = '#22c55e';
-            }
-            this.startCallTimer();
-          });
-
-          this.plivoClient.on('onCallTerminated', () => {
-            console.log('[SoftphonePage] Plivo WebRTC call terminated');
-            this.endCall();
-          });
-
-          this.plivoClient.on('onCallFailed', (reason: any) => {
-            console.warn('[SoftphonePage] Plivo WebRTC call failed:', reason);
-            this.endCall();
-          });
-
-          // Fetch token & register
-          const tokenResp = await apiService.get<any>('/telephony/plivo/browser/token');
-          if (tokenResp && tokenResp.access_token) {
-            if (typeof this.plivoClient.loginWithAccessToken === 'function') {
-              this.plivoClient.loginWithAccessToken(tokenResp.access_token);
-            } else if (typeof this.plivoClient.login === 'function') {
-              this.plivoClient.login(tokenResp.access_token);
-            }
+        // Fetch token & register
+        const tokenResp = await apiService.get<any>('/telephony/plivo/browser/token');
+        const payload = tokenResp?.data || tokenResp;
+        const accessToken = payload?.access_token || tokenResp?.access_token;
+        if (accessToken && this.plivoClient) {
+          if (typeof this.plivoClient.loginWithAccessToken === 'function') {
+            this.plivoClient.loginWithAccessToken(accessToken);
+          } else if (typeof this.plivoClient.login === 'function') {
+            this.plivoClient.login(accessToken);
           }
         }
       }
@@ -472,32 +495,24 @@ export class SoftphonePage {
     }
   }
 
-  private async dispatchBackendCall(phone: string): Promise<void> {
+  private async createCallSession(phone: string): Promise<string> {
     const cleanDest = phone.startsWith('+') ? phone : `+91${phone.replace(/\D/g, '').slice(-10)}`;
     try {
-      const resp = await apiService.post<any>('/telephony/plivo/click-to-call', {
-        to_phone: cleanDest,
-        to: cleanDest,
-        customer_phone: cleanDest,
+      const resp = await apiService.post<any>('/telephony/plivo/browser/call/initiate', {
+        destination_phone: cleanDest,
         lead_id: null
       });
-      if (resp && resp.call_session_id) {
-        this.activeCallSessionId = resp.call_session_id;
-        this.startSessionStatusPolling(resp.call_session_id);
-      }
-      const statusEl = document.getElementById('softphoneCallStatusText');
-      if (resp && resp.success) {
-        if (statusEl) statusEl.textContent = '📞 Cloud Trunk Connected · Ringing...';
+      const data = resp?.data || resp;
+      if (data && data.call_session_id) {
+        this.activeCallSessionId = data.call_session_id;
+        return data.call_session_id;
       }
     } catch (e) {
-      console.warn('[SoftphonePage] Plivo trunk call error:', e);
-      try {
-        await apiService.post<any>('/crm/dialer/click-to-call', {
-          customer_phone: cleanDest,
-          lead_id: null
-        });
-      } catch (err) {}
+      console.warn('[SoftphonePage] Session initiation error:', e);
     }
+    const fallbackId = `vcs_mob_${Date.now()}`;
+    this.activeCallSessionId = fallbackId;
+    return fallbackId;
   }
 
   private startSessionStatusPolling(sessionId: string): void {
@@ -509,7 +524,8 @@ export class SoftphonePage {
         return;
       }
       try {
-        const statusData = await apiService.get<any>(`/telephony/plivo/calls/session-status/${sessionId}`);
+        const res = await apiService.get<any>(`/telephony/plivo/calls/session-status/${sessionId}`);
+        const statusData = res?.data || res;
         if (statusData) {
           const st = String(statusData.status || statusData.call_state || '').toLowerCase();
           
@@ -572,9 +588,24 @@ export class SoftphonePage {
       return;
     }
 
-    const cleanNumber = target.replace(/[^0-9+]/g, '');
+    const cleanNumber = target.startsWith('+') ? target : `+91${target.replace(/\D/g, '').slice(-10)}`;
     this.dialNumber = target;
     if (contactName) this.selectedContactName = contactName;
+
+    // 1. Verify Plivo WebRTC registration before placing call
+    if (!this.isWebRTCRegistered) {
+      const statusEl = document.getElementById('softphoneCallStatusText');
+      if (statusEl) {
+        statusEl.textContent = 'Connecting to calling network...';
+        statusEl.style.color = '#f59e0b';
+      }
+      await this.initPlivoWebRTC();
+    }
+
+    if (!this.isWebRTCRegistered || !this.plivoClient || typeof this.plivoClient.call !== 'function') {
+      alert('Softphone is currently connecting to the telephony network. Please wait a few seconds and try again.');
+      return;
+    }
 
     this.isInCall = true;
     this.isCallConnected = false;
@@ -583,14 +614,14 @@ export class SoftphonePage {
     this.isMuted = false;
     this.isSpeaker = false;
     this.isHold = false;
-    this.callStatusText = 'Calling · Ringing...';
+    this.callStatusText = 'Calling...';
 
     if (this.callTimerInterval) {
       clearInterval(this.callTimerInterval);
       this.callTimerInterval = null;
     }
 
-    // 1. Request microphone access for real-time 2-way WebRTC audio
+    // 2. Request microphone access for real-time 2-way WebRTC audio
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
         this.localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -600,20 +631,33 @@ export class SoftphonePage {
       }
     }
 
-    // 2. Dispatch background call session to backend CRM & Plivo Cloud Trunk
-    await this.dispatchBackendCall(target);
+    // 3. Prepare backend VoIPCallSession for CRM tracking & audit logs (WITHOUT creating secondary REST PSTN call)
+    const sessionId = await this.createCallSession(cleanNumber);
 
-    // 3. Dispatch WebRTC client call if available
-    if (this.plivoClient && typeof this.plivoClient.call === 'function') {
-      try {
-        const extraHeaders = {
-          'X-PH-Call-Session-ID': this.activeCallSessionId || '',
-          'X-PH-Destination': cleanNumber
-        };
-        this.plivoClient.call(cleanNumber, extraHeaders);
-      } catch (err) {
-        console.warn('[SoftphonePage] Plivo WebRTC client dial error:', err);
+    // 4. Initiate the SINGLE Plivo WebRTC call directly from the client
+    try {
+      const extraHeaders = {
+        'X-PH-Call-Session-ID': sessionId,
+        'X-PH-Destination': cleanNumber
+      };
+      this.plivoClient.call(cleanNumber, extraHeaders);
+    } catch (err) {
+      console.warn('[SoftphonePage] Plivo WebRTC client dial error:', err);
+      this.endCall();
+      return;
+    }
+
+    // 5. Route audio to normal in-call EARPIECE by default (speaker OFF)
+    this.isSpeaker = false;
+    try {
+      if ((window as any).Capacitor?.Plugins?.AudioRouting) {
+        (window as any).Capacitor.Plugins.AudioRouting.setSpeakerphoneOn({ enabled: false });
       }
+    } catch (_) {}
+
+    // 6. Start carrier status polling watcher
+    if (sessionId) {
+      this.startSessionStatusPolling(sessionId);
     }
 
     this.render();
@@ -637,6 +681,19 @@ export class SoftphonePage {
       clearInterval(this.callStatusPollInterval);
       this.callStatusPollInterval = null;
     }
+
+    // Reset Audio Routing back to normal media mode
+    this.isSpeaker = false;
+    try {
+      if ((window as any).Capacitor?.Plugins?.AudioRouting) {
+        const ar = (window as any).Capacitor.Plugins.AudioRouting;
+        if (typeof ar.resetAudioMode === 'function') {
+          ar.resetAudioMode();
+        } else {
+          ar.setSpeakerphoneOn({ enabled: false });
+        }
+      }
+    } catch (_) {}
 
     // Hangup Plivo WebRTC client
     if (this.plivoClient && typeof this.plivoClient.hangup === 'function') {
@@ -673,11 +730,28 @@ export class SoftphonePage {
 
   private toggleMute(): void {
     this.isMuted = !this.isMuted;
+    if (this.plivoClient) {
+      if (this.isMuted && typeof this.plivoClient.mute === 'function') {
+        this.plivoClient.mute();
+      } else if (!this.isMuted && typeof this.plivoClient.unmute === 'function') {
+        this.plivoClient.unmute();
+      }
+    }
+    if (this.localAudioStream) {
+      this.localAudioStream.getAudioTracks().forEach(t => { t.enabled = !this.isMuted; });
+    }
     this.render();
   }
 
-  private toggleSpeaker(): void {
+  private async toggleSpeaker(): Promise<void> {
     this.isSpeaker = !this.isSpeaker;
+    try {
+      if ((window as any).Capacitor?.Plugins?.AudioRouting) {
+        await (window as any).Capacitor.Plugins.AudioRouting.setSpeakerphoneOn({ enabled: this.isSpeaker });
+      }
+    } catch (err) {
+      console.warn('[SoftphonePage] AudioRouting toggle error:', err);
+    }
     this.render();
   }
 
