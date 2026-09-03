@@ -1198,7 +1198,59 @@
             }
         }
 
+        // ── Auto-Dial & Lead Resolution via WhatsApp link / URL Parameters ──
+        async function handleUrlAutoDial(leadId, phone, name, autoDial) {
+            let targetPhone = phone || '';
+            let targetName = name || 'Contact Lead';
+
+            // If leadId is present, fetch lead from backend to get verified customer details securely
+            if (leadId) {
+                try {
+                    const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
+                    const resp = await fetch(`/api/v1/crm/leads/${leadId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        const lead = data.data || data.lead || data;
+                        if (lead) {
+                            targetName = lead.name || (lead.first_name ? lead.first_name + ' ' + (lead.last_name || '') : '') || targetName;
+                            targetPhone = lead.phone || lead.mobile || targetPhone;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[SOFTPHONE-HUB] Could not fetch lead details by ID:', e);
+                }
+            }
+
+            if (targetPhone) {
+                const cleanNum = String(targetPhone).replace(/\D/g, '').slice(-10);
+                const dialerInp = document.getElementById('hubDialerInput');
+                if (dialerInp) dialerInp.value = cleanNum;
+
+                if (autoDial) {
+                    console.log(`[SOFTPHONE-HUB] Auto-dialing lead: ${cleanNum} (${targetName}, Lead ID: ${leadId})`);
+                    // Allow Plivo WebRTC client 1.5 seconds to complete registration
+                    setTimeout(() => {
+                        if (window.PlivoSoftphone) {
+                            window.PlivoSoftphone.dial(cleanNum, leadId, targetName);
+                        } else {
+                            startHubCallUI(cleanNum, targetName);
+                        }
+                    }, 1500);
+                }
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', async function() {
+            // Check authentication gate
+            const stToken = localStorage.getItem('staff_token') || localStorage.getItem('token') || (document.cookie.match(/staff_token=([^;]+)/) || [])[1];
+            if (!stToken) {
+                console.warn('[SOFTPHONE-HUB] Staff user not authenticated. Redirecting to login with return target.');
+                window.location.href = `/staff_login.html?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+                return;
+            }
+
             if (typeof window.StaffSidebar !== 'undefined') await window.StaffSidebar.init();
             if (typeof window.StaffHeader !== 'undefined') {
                 window.StaffHeader.inject('Calling & Softphone', 'fas fa-phone-volume');
@@ -1224,6 +1276,17 @@
             searchContactsHub('a');
             loadAnalyticsSummaryHub();
             loadCallLogsHub();
+
+            // Handle URL Parameters (from WhatsApp group / external link)
+            const urlParams = new URLSearchParams(window.location.search);
+            const leadIdParam = urlParams.get('lead_id') || urlParams.get('leadId') || urlParams.get('lead');
+            const dialPhoneParam = urlParams.get('dial') || urlParams.get('phone') || urlParams.get('number');
+            const dialNameParam = urlParams.get('name') || urlParams.get('customer') || '';
+            const autoDialParam = urlParams.get('auto_dial') === '1' || urlParams.get('autocall') === '1' || urlParams.get('call') === '1';
+
+            if (leadIdParam || dialPhoneParam) {
+                handleUrlAutoDial(leadIdParam, dialPhoneParam, dialNameParam, autoDialParam);
+            }
         });
     </script>
 </body>
