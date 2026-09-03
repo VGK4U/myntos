@@ -394,6 +394,8 @@ class MNRApp {
   private registerEventListeners(): void {
     window.addEventListener('login-success', () => {
       this.isLoggedIn = true;
+      localStorage.removeItem('mnr_current_route');
+      localStorage.removeItem('mnr_pre_expiry_route');
       this.showApp();
       // Start bridge init now that user is logged in
       initMobileRuntime().catch(() => {});
@@ -412,7 +414,7 @@ class MNRApp {
       console.log('[DC_APP] Session expired event received');
       if (this.isLoggedIn) {
         const currentRoute = routerService.getCurrentRoute();
-        const portalDashboards: PageRoute[] = ['progress', 'mnr-dashboard', 'partner-dashboard', 'vgk-member-hub'];
+        const portalDashboards: PageRoute[] = ['progress', 'auto-dialer', 'mnr-dashboard', 'partner-dashboard', 'vgk-member-hub'];
         if (!portalDashboards.includes(currentRoute)) {
           localStorage.setItem('mnr_pre_expiry_route', currentRoute);
         }
@@ -424,7 +426,7 @@ class MNRApp {
       console.log('[DC_APP] Auth token expired event received');
       if (this.isLoggedIn) {
         const currentRoute = routerService.getCurrentRoute();
-        const portalDashboards: PageRoute[] = ['progress', 'mnr-dashboard', 'partner-dashboard', 'vgk-member-hub'];
+        const portalDashboards: PageRoute[] = ['progress', 'auto-dialer', 'mnr-dashboard', 'partner-dashboard', 'vgk-member-hub'];
         if (!portalDashboards.includes(currentRoute)) {
           localStorage.setItem('mnr_pre_expiry_route', currentRoute);
         }
@@ -440,7 +442,7 @@ class MNRApp {
 
     App.addListener('backButton', () => {
       const currentRoute = routerService.getCurrentRoute();
-      const portalDashboards: PageRoute[] = ['progress', 'mnr-dashboard', 'partner-dashboard', 'vgk-member-hub'];
+      const portalDashboards: PageRoute[] = ['progress', 'auto-dialer', 'mnr-dashboard', 'partner-dashboard', 'vgk-member-hub'];
       if (portalDashboards.includes(currentRoute)) {
         App.minimizeApp();
       } else {
@@ -448,7 +450,7 @@ class MNRApp {
           const authState = authService.getAuthState();
           const portal = authState.user?.portal || 'staff';
           const homeRoute: PageRoute = portal === 'mnr' ? 'mnr-dashboard'
-            : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'progress';
+            : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'auto-dialer';
           routerService.navigate(homeRoute);
         }
       }
@@ -609,10 +611,10 @@ class MNRApp {
       if (!config.portal || config.portal === portal) {
         targetRoute = savedRoute;
       } else {
-        targetRoute = portal === 'mnr' ? 'mnr-dashboard' : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'progress';
+        targetRoute = portal === 'mnr' ? 'mnr-dashboard' : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'auto-dialer';
       }
     } else {
-      targetRoute = portal === 'mnr' ? 'mnr-dashboard' : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'progress';
+      targetRoute = portal === 'mnr' ? 'mnr-dashboard' : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'auto-dialer';
     }
 
     console.log('[DC_APP] Initializing with route:', targetRoute);

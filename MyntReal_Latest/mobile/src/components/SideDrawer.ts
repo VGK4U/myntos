@@ -244,10 +244,17 @@ const MENU_MASTER: MenuSection[] = [
     section_label: "WORK FLOWS",
     order: 10,
     items: [
-      { menu_code: "MNR_BANK_WISE_LEADS", label: "Field staff leads", route: "staff-bank-wise-leads" },
+      { menu_code: "MNR_BANK_WISE_LEADS", label: "Field Sales", route: "staff-bank-wise-leads" },
       { menu_code: "SOLAR_LEADS", label: "Solar Leads", route: "staff-leads" },
-      { menu_code: "ZYN_REAL_ESTATE", label: "Real Estate Leads", route: "zynova-real-estate" },
-      { menu_code: "ZYN_INSURANCE", label: "Insurance Leads", route: "zynova-insurance" }
+      { menu_code: "ZYN_REAL_ESTATE", label: "Real Dreams Leads", route: "zynova-real-estate" },
+      { menu_code: "EV_B2B_LEADS", label: "EV B2B Leads", route: "staff-leads" },
+      { menu_code: "EV_B2C_LEADS", label: "EV B2C Leads", route: "staff-leads" },
+      { menu_code: "EV_SPARES_LEADS", label: "EV Spares Leads", route: "staff-leads" },
+      { menu_code: "ZYN_INSURANCE", label: "Insurance Leads", route: "zynova-insurance" },
+      { menu_code: "ETC_LEADS", label: "ETC Leads", route: "staff-training-videos" },
+      { menu_code: "MNR_LEADS", label: "MNR Leads", route: "staff-leads" },
+      { menu_code: "EXECUTIVE_DASHBOARD", label: "Executive Dashboard", route: "dashboard" },
+      { menu_code: "CATEGORY_LEADS_MASTER", label: "Category Leads Master", route: "staff-leads" }
     ]
   },
   {
@@ -330,7 +337,8 @@ export class SideDrawer {
           { menu_code: "TASK_PLANNER", label: `<i class="fas fa-calendar-day" style="margin-right: 8px; width: 18px; text-align: center;"></i> Task Planner`, route: "day-planner" },
           { menu_code: "KRA_STATUS", label: `<i class="fas fa-chart-bar" style="margin-right: 8px; width: 18px; text-align: center;"></i> KRA Status`, route: "kras" },
           { menu_code: "TIME_SHEET", label: `<i class="fas fa-clock" style="margin-right: 8px; width: 18px; text-align: center;"></i> Time Sheet`, route: "timesheet" },
-          { menu_code: "WHATSAPP_CENTER", label: `<i class="fab fa-whatsapp" style="margin-right: 8px; width: 18px; text-align: center; color: #25d366;"></i> WhatsApp Center`, route: "staff-whatsapp" }
+          { menu_code: "WHATSAPP_CENTER", label: `<i class="fab fa-whatsapp" style="margin-right: 8px; width: 18px; text-align: center; color: #25d366;"></i> WhatsApp Center`, route: "staff-whatsapp" },
+          { menu_code: "CALLING_PAGE", label: `<i class="fas fa-phone-alt" style="margin-right: 8px; width: 18px; text-align: center; color: #3b82f6;"></i> Calling Page`, route: "auto-dialer" }
         ];
       }
     }
@@ -501,8 +509,71 @@ export class SideDrawer {
       return MENU_MASTER;
     }
 
+    const WORKFLOWS_ORDER: Record<string, number> = {
+      'MNR_BANK_WISE_LEADS': 1,
+      'BANK_WISE_LEADS': 1,
+      'staff_bank_wise_leads': 1,
+      'SOLAR_LEADS': 2,
+      'staff_solar_leads': 2,
+      'mnr_solar_leads': 2,
+      'ZYN_REAL_ESTATE': 3,
+      'staff_real_dreams_leads': 3,
+      'mnr_real_dreams_leads': 3,
+      'EV_B2B_LEADS': 4,
+      'staff_ev_b2b_leads': 4,
+      'mnr_ev_b2b_leads': 4,
+      'EV_B2C_LEADS': 5,
+      'staff_ev_b2c_leads': 5,
+      'mnr_ev_b2c_leads': 5,
+      'EV_SPARES_LEADS': 6,
+      'staff_ev_spares_leads': 6,
+      'mnr_ev_spares_leads': 6,
+      'ZYN_INSURANCE': 7,
+      'staff_insurance_leads': 7,
+      'mnr_insurance_leads': 7,
+      'ETC_LEADS': 8,
+      'staff_etc_leads': 8,
+      'mnr_etc_leads': 8,
+      'MNR_LEADS': 9,
+      'staff_mnr_leads': 9,
+      'mnr_category_leads': 9,
+      'EXECUTIVE_DASHBOARD': 10,
+      'staff_executive_dashboard': 10,
+      'mnr_executive_dashboard': 10,
+      'CATEGORY_LEADS_MASTER': 11,
+      'mnr_leads_master': 11,
+      'staff_mnr_leads_master': 11
+    };
+
     const sectionMap = new Map<string, MenuSection>();
     const sectionOrderList: string[] = [];
+
+    const formatMenuItem = (rawCode: string, rawName: string, rawRoutePath: string, rawIcon?: string): MenuItem | null => {
+      if (rawCode === 'CRM_WA_INBOX' || rawCode === 'WHATSAPP_CENTER' || rawRoutePath === '/staff/whatsapp-center' || rawRoutePath === '/staff/whatsapp') {
+        return null;
+      }
+      const route = ROUTE_PATH_MAP[rawRoutePath];
+      if (!route) return null;
+
+      let label = rawName || '';
+      const codeUpper = (rawCode || '').toUpperCase();
+      const routeLower = (rawRoutePath || '').toLowerCase();
+
+      if (codeUpper.includes('BANK_WISE_LEADS') || routeLower.includes('bank-wise-leads')) {
+        label = 'Field Sales';
+      } else if (codeUpper.includes('REAL_DREAMS') || routeLower.includes('real-dreams-leads')) {
+        label = 'Real Dreams Leads';
+      }
+
+      const iconClass = rawIcon || (label === 'Field Sales' ? 'fas fa-users-gear' : 'fas fa-file-alt');
+      const iconHtml = `<i class="${iconClass}" style="margin-right: 8px; width: 18px; text-align: center;"></i>`;
+
+      return {
+        menu_code: rawCode,
+        label: `${iconHtml}${label}`,
+        route: route
+      };
+    };
 
     for (const sec of this.staffMenuTree) {
       if (sec.id === 'progress' || sec.section_id === 'progress' || (sec.title || '').toUpperCase() === 'PROGRESS') {
@@ -514,19 +585,8 @@ export class SideDrawer {
       // Add items from direct section.items
       if (sec.items) {
         for (const item of sec.items) {
-          // Skip WhatsApp Center from nested sections since it is pinned at the top under Time Sheet
-          if (item.menu_code === 'CRM_WA_INBOX' || item.menu_code === 'WHATSAPP_CENTER' || item.route_path === '/staff/whatsapp-center' || item.route_path === '/staff/whatsapp') {
-            continue;
-          }
-          const route = ROUTE_PATH_MAP[item.route_path];
-          if (route) {
-            const iconHtml = item.menu_icon ? `<i class="${item.menu_icon}" style="margin-right: 8px; width: 18px; text-align: center;"></i>` : '<i class="fas fa-file-alt" style="margin-right: 8px; width: 18px; text-align: center;"></i>';
-            items.push({
-              menu_code: item.menu_code,
-              label: `${iconHtml}${item.menu_name || item.label || item.name}`,
-              route: route
-            });
-          }
+          const menuItem = formatMenuItem(item.menu_code, item.menu_name || item.label || item.name, item.route_path, item.menu_icon);
+          if (menuItem) items.push(menuItem);
         }
       }
 
@@ -536,18 +596,8 @@ export class SideDrawer {
           const subItems: MenuItem[] = [];
           if (sub.items) {
             for (const item of sub.items) {
-              if (item.menu_code === 'CRM_WA_INBOX' || item.menu_code === 'WHATSAPP_CENTER' || item.route_path === '/staff/whatsapp-center' || item.route_path === '/staff/whatsapp') {
-                continue;
-              }
-              const route = ROUTE_PATH_MAP[item.route_path];
-              if (route) {
-                const iconHtml = item.menu_icon ? `<i class="${item.menu_icon}" style="margin-right: 8px; width: 18px; text-align: center;"></i>` : '<i class="fas fa-file-alt" style="margin-right: 8px; width: 18px; text-align: center;"></i>';
-                subItems.push({
-                  menu_code: item.menu_code,
-                  label: `${iconHtml}${item.menu_name || item.label || item.name}`,
-                  route: route
-                });
-              }
+              const menuItem = formatMenuItem(item.menu_code, item.menu_name || item.label || item.name, item.route_path, item.menu_icon);
+              if (menuItem) subItems.push(menuItem);
             }
           }
           if (subItems.length > 0) {
@@ -602,6 +652,14 @@ export class SideDrawer {
 
     const sections = sectionOrderList.map(code => sectionMap.get(code)!);
     sections.sort((a, b) => a.order - b.order);
+
+    // Apply strict web ordering for WORKFLOWS items
+    for (const section of sections) {
+      if (section.section_code === 'WORKFLOWS' && section.items) {
+        section.items.sort((a, b) => (WORKFLOWS_ORDER[a.menu_code] || 99) - (WORKFLOWS_ORDER[b.menu_code] || 99));
+      }
+    }
+
     return sections;
   }
 
