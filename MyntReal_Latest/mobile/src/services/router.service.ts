@@ -487,3 +487,6 @@ class RouterService {
 }
 
 export const routerService = new RouterService();
+if (typeof window !== 'undefined') {
+  (window as any).routerService = routerService;
+}

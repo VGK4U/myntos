@@ -39,12 +39,15 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 export async function initMobileRuntime(): Promise<void> {
   console.log('[DC_RUNTIME] Initializing Mobile Runtime Compatibility Layer...');
 
-  // DC_RUNTIME_TIMEOUT_001: Each init is individually time-boxed at 5s.
+  const isWeb = typeof window !== 'undefined' && (!window.Capacitor?.isNativePlatform?.() || window.Capacitor?.getPlatform?.() === 'web');
+  const timeoutMs = isWeb ? 300 : 5000;
+
+  // DC_RUNTIME_TIMEOUT_001: Each init is individually time-boxed.
   // A hung Capacitor bridge call on any one of these must NEVER block the login page.
   await Promise.all([
-    withTimeout(mobileScheduler.init(), 5000, 'mobileScheduler.init'),
-    withTimeout(networkRuntime.init(), 5000, 'networkRuntime.init'),
-    withTimeout(permissionsRuntime.init(), 5000, 'permissionsRuntime.init')
+    withTimeout(mobileScheduler.init(), timeoutMs, 'mobileScheduler.init'),
+    withTimeout(networkRuntime.init(), timeoutMs, 'networkRuntime.init'),
+    withTimeout(permissionsRuntime.init(), timeoutMs, 'permissionsRuntime.init')
   ]);
 
   try {
@@ -63,7 +66,7 @@ export async function initMobileRuntime(): Promise<void> {
         console.error('[DC_RUNTIME] Auth error:', error);
       }
     }),
-    5000,
+    timeoutMs,
     'authLifecycle.init'
   );
 

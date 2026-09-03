@@ -471,6 +471,8 @@ class MNRApp {
       }
     });
 
+    window.addEventListener('hashchange', () => this.handleHashChange());
+
     routerService.onRouteChange((route) => {
       if (this.isLoggedIn) {
         authService.updateActivity();
@@ -479,6 +481,68 @@ class MNRApp {
         this.bottomTabs?.render();
       }
     });
+  }
+
+  private resolveHashRoute(hash: string): { route: PageRoute; params: Record<string, string> } | null {
+    if (!hash || hash === '#') return null;
+    const cleanHash = hash.replace(/^#/, '');
+    if (!cleanHash) return null;
+
+    const [pathPart, queryPart] = cleanHash.split('?');
+    const normalizedPath = pathPart.startsWith('/') ? pathPart : '/' + pathPart;
+
+    const routeMap: Record<string, PageRoute> = {
+      '/staff/softphone': 'softphone',
+      '/staff/dialer': 'softphone',
+      '/staff/calling-page': 'softphone',
+      '/staff/calling': 'softphone',
+      '/staff/phone-dialpad': 'softphone',
+      '/staff/softphone-hub': 'softphone',
+      '/staff/auto-dialer': 'auto-dialer',
+      '/staff/leads': 'staff-leads',
+      '/staff/my-leads': 'staff-my-leads',
+      '/staff/team-leads': 'staff-team-leads',
+      '/staff/bank-wise-leads': 'staff-bank-wise-leads',
+      '/staff/call-tracking': 'staff-call-tracking',
+      '/staff/call-history': 'call-history',
+      '/staff/operator-calls': 'operator-calls',
+      '/staff/whatsapp': 'staff-whatsapp',
+      '/staff/whatsapp-center': 'staff-whatsapp',
+      '/staff/whatsapp-inbox': 'staff-whatsapp-inbox',
+      '/staff/dashboard': 'dashboard',
+      '/staff/progress': 'progress'
+    };
+
+    let targetRoute: PageRoute | null = routeMap[normalizedPath] || routeMap[normalizedPath.replace(/\/$/, '')] || null;
+
+    if (!targetRoute) {
+      const rawName = normalizedPath.replace(/^\/staff\//, '').replace(/^\//, '').replace(/\/$/, '');
+      if (routerService.getRouteConfig(rawName as PageRoute)) {
+        targetRoute = rawName as PageRoute;
+      }
+    }
+
+    if (!targetRoute) return null;
+
+    const params: Record<string, string> = {};
+    if (queryPart) {
+      const urlParams = new URLSearchParams(queryPart);
+      urlParams.forEach((val, key) => {
+        params[key] = val;
+      });
+    }
+
+    return { route: targetRoute, params };
+  }
+
+  private handleHashChange(): void {
+    const hash = window.location.hash;
+    if (!hash) return;
+    const resolved = this.resolveHashRoute(hash);
+    if (resolved && resolved.route) {
+      console.log('[DC_APP] Hash route resolved:', resolved.route, resolved.params);
+      routerService.navigate(resolved.route, resolved.params, true);
+    }
   }
 
   /**
@@ -606,8 +670,15 @@ class MNRApp {
       || localStorage.getItem('mnr_current_route') as PageRoute | null;
     localStorage.removeItem('mnr_pre_expiry_route');
 
+    const initialHash = window.location.hash;
+    const resolvedFromHash = this.resolveHashRoute(initialHash);
     let targetRoute: PageRoute;
-    if (savedRoute && routerService.getRouteConfig(savedRoute)) {
+    let targetParams: Record<string, string> | undefined;
+
+    if (resolvedFromHash && resolvedFromHash.route) {
+      targetRoute = resolvedFromHash.route;
+      targetParams = resolvedFromHash.params;
+    } else if (savedRoute && routerService.getRouteConfig(savedRoute)) {
       const config = routerService.getRouteConfig(savedRoute);
       if (!config.portal || config.portal === portal) {
         targetRoute = savedRoute;
@@ -618,8 +689,8 @@ class MNRApp {
       targetRoute = portal === 'mnr' ? 'mnr-dashboard' : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'progress';
     }
 
-    console.log('[DC_APP] Initializing with route:', targetRoute);
-    routerService.navigate(targetRoute, false);
+    console.log('[DC_APP] Initializing with route:', targetRoute, targetParams);
+    routerService.navigate(targetRoute, targetParams, false);
   }
 
   private async renderPage(route: PageRoute): Promise<void> {
@@ -1196,7 +1267,7 @@ class MNRApp {
     }
 
     try {
-      await page.init();
+      await page.init(routerService.getRouteParams());
       this.currentPageInstance = page;
 
       // Automatically attach header listeners for PageHeader if it is rendered

@@ -156,8 +156,9 @@ class ApiService {
       const headers: Record<string, string> = {};
       
       if (!this.token) {
-        const { value } = await Preferences.get({ key: 'auth_token' });
-        this.token = value;
+        try {
+          this.token = localStorage.getItem('auth_token');
+        } catch (_) {}
       }
       
       if (this.token) {
@@ -165,8 +166,9 @@ class ApiService {
       }
       
       if (!this.companyId) {
-        const { value } = await Preferences.get({ key: STORAGE_KEY_COMPANY_ID });
-        this.companyId = value;
+        try {
+          this.companyId = localStorage.getItem(STORAGE_KEY_COMPANY_ID);
+        } catch (_) {}
       }
       
       if (this.companyId) {

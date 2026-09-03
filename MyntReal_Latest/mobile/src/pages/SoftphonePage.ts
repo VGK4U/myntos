@@ -103,6 +103,10 @@ export class SoftphonePage {
   }
 
   async init(params?: any): Promise<void> {
+    let shouldAutoStart = false;
+    let autoDialNum = '';
+    let autoDialName = '';
+
     const hash = window.location.hash || '';
     const queryIndex = hash.indexOf('?');
     if (queryIndex !== -1) {
@@ -110,22 +114,39 @@ export class SoftphonePage {
       const dial = urlParams.get('dial') || (params && params.dial);
       const name = urlParams.get('name') || (params && params.name);
       const returnParam = urlParams.get('return') || (params && params.return);
+      const autoStart = urlParams.get('auto_start') === 'true' || urlParams.get('autostart') === 'true' || (params && (params.auto_start || params.autostart));
       if (returnParam) this.returnUrl = returnParam;
       if (dial) {
         this.dialNumber = dial;
-        if (name) this.selectedContactName = name;
+        autoDialNum = dial;
+        if (name) {
+          this.selectedContactName = name;
+          autoDialName = name;
+        }
         this.activeTab = 'dialer';
+        if (autoStart) shouldAutoStart = true;
       }
     } else if (params && params.dial) {
       this.dialNumber = params.dial;
-      if (params.name) this.selectedContactName = params.name;
+      autoDialNum = params.dial;
+      if (params.name) {
+        this.selectedContactName = params.name;
+        autoDialName = params.name;
+      }
       if (params.return) this.returnUrl = params.return;
       this.activeTab = 'dialer';
+      if (params.auto_start || params.autostart) shouldAutoStart = true;
     }
 
     this.render();
     this.loadRecentCalls();
-    this.initPlivoWebRTC();
+    await this.initPlivoWebRTC();
+
+    if (shouldAutoStart && autoDialNum) {
+      setTimeout(() => {
+        this.startCall(autoDialNum, autoDialName);
+      }, 400);
+    }
   }
 
   private async initPlivoWebRTC(): Promise<void> {

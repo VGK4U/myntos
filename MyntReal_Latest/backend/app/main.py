@@ -16861,23 +16861,30 @@ app.include_router(careers.router, prefix="/api/v1", tags=["careers"])
 
 # DC-APPLIED-KEYS-MODULE-PRELOAD: Populate _applied_keys for all module-level
 # migration blocks below (these run at import time, outside _startup_worker).
-# _startup_worker has its own independent local copy populated the same way.
+class _AlwaysContainsSet(set):
+    def __contains__(self, item):
+        return True
+
 _applied_keys = set()
-import time as _mk_time
-for _attempt in range(3):
-    try:
-        from sqlalchemy import text as _mk_preload_text
-        with engine.connect() as _mk_preload_conn:
-            _applied_keys = set(
-                r[0] for r in _mk_preload_conn.execute(
-                    _mk_preload_text("SELECT key FROM dc_migrations")
-                ).fetchall()
-            )
-        print(f"[DC-MODULE-PRELOAD] ✅ {len(_applied_keys)} migration keys cached for module-level blocks", flush=True)
-        break
-    except Exception as _mk_preload_err:
-        if _attempt < 2:
-            _mk_time.sleep(1)
+if os.getenv("SKIP_MODULE_MIGRATIONS", "").lower() in ("1", "true"):
+    print("[DC-MODULE-PRELOAD] ⏩ SKIP_MODULE_MIGRATIONS enabled — skipping import-time DB migrations", flush=True)
+    _applied_keys = _AlwaysContainsSet()
+else:
+    import time as _mk_time
+    for _attempt in range(3):
+        try:
+            from sqlalchemy import text as _mk_preload_text
+            with engine.connect() as _mk_preload_conn:
+                _applied_keys = set(
+                    r[0] for r in _mk_preload_conn.execute(
+                        _mk_preload_text("SELECT key FROM dc_migrations")
+                    ).fetchall()
+                )
+            print(f"[DC-MODULE-PRELOAD] ✅ {len(_applied_keys)} migration keys cached for module-level blocks", flush=True)
+            break
+        except Exception as _mk_preload_err:
+            if _attempt < 2:
+                _mk_time.sleep(1)
         else:
             print(f"[DC-MODULE-PRELOAD] ⚠️ Preload failed (safe fallback): {_mk_preload_err}", flush=True)
 

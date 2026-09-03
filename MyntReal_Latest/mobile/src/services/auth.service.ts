@@ -359,10 +359,13 @@ class AuthService {
         const allowedMenus = menus
           .filter((m: any) => m.is_enabled)
           .map((m: any) => m.menu_key || m.route);
-        await Preferences.set({ 
-          key: MENU_SETTINGS_KEY, 
-          value: JSON.stringify(allowedMenus) 
-        });
+        try {
+          localStorage.setItem(MENU_SETTINGS_KEY, JSON.stringify(allowedMenus));
+          Preferences.set({ 
+            key: MENU_SETTINGS_KEY, 
+            value: JSON.stringify(allowedMenus) 
+          }).catch(() => {});
+        } catch (_) {}
       }
     } catch (error) {
       console.error('[DC_AUTH] Failed to fetch menu settings:', error);

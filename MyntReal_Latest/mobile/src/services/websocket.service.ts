@@ -46,7 +46,16 @@ class WebSocketService {
     this.employeeId = employeeId;
     
     try {
-      const { value: token } = await Preferences.get({ key: 'auth_token' });
+      let token = localStorage.getItem('auth_token');
+      if (!token) {
+        try {
+          const res = await Promise.race([
+            Preferences.get({ key: 'auth_token' }),
+            new Promise<{ value: null }>(r => setTimeout(() => r({ value: null }), 1000))
+          ]);
+          token = res.value;
+        } catch (_) {}
+      }
       if (!token) {
         console.warn('[DC_WS] No auth token, cannot connect');
         return false;

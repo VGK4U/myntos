@@ -1478,18 +1478,29 @@ export class LoginPage {
     this.showLoading(loginBtn, true);
     this.hideError();
 
-    const result = await authService.loginWithPassword(userId, password, this.selectedPortal);
+    try {
+      const result = await Promise.race([
+        authService.loginWithPassword(userId, password, this.selectedPortal),
+        new Promise<{ success: boolean; error?: string }>(r => 
+          setTimeout(() => r({ success: false, error: 'Login request timed out. Please check your network connection.' }), 15000)
+        )
+      ]);
 
-    if (result.success) {
-      if (enableBiometric?.checked && this.hasBiometric) {
-        await authService.saveCredentialsForBiometric(userId, password, this.selectedPortal);
+      if (result.success) {
+        if (enableBiometric?.checked && this.hasBiometric) {
+          authService.saveCredentialsForBiometric(userId, password, this.selectedPortal).catch(() => {});
+        }
+        this.stopAnnouncementRotation();
+        localStorage.removeItem('mnr_current_route');
+        localStorage.removeItem('mnr_pre_expiry_route');
+        window.dispatchEvent(new CustomEvent('login-success'));
+      } else {
+        this.showError(result.error || 'Login failed');
+        this.showLoading(loginBtn, false);
       }
-      this.stopAnnouncementRotation();
-      localStorage.removeItem('mnr_current_route');
-      localStorage.removeItem('mnr_pre_expiry_route');
-      window.dispatchEvent(new CustomEvent('login-success'));
-    } else {
-      this.showError(result.error || 'Login failed');
+    } catch (err: any) {
+      console.error('[Login] Login submission error:', err);
+      this.showError(err?.message || 'Login failed. Please try again.');
       this.showLoading(loginBtn, false);
     }
   }

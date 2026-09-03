@@ -1291,9 +1291,10 @@ export class StaffTeamLeadsPage {
         <td class="date-cell">${leadDate}</td>
         <td class="lead-cell">
           <div class="lead-name">${lead.name}</div>
-          <div class="lead-contact-links">
-            <a href="#/staff/softphone?dial=${encodeURIComponent(phone)}&name=${encodeURIComponent(lead.name)}&return=%23%2Fstaff%2Fteam-leads" class="mobile-link" onclick="event.stopPropagation()" title="Call with Softphone">${maskedPhone}</a>
-            ${phone ? `<button class="whatsapp-link open-team-lead-wa-btn" data-phone="${whatsappNumber}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" onclick="event.stopPropagation()" style="background:none;border:none;cursor:pointer;padding:0 2px;">💬</button>` : ''}
+          <div class="lead-contact-links" style="display:flex;align-items:center;gap:4px;margin-top:2px;">
+            <a href="#/staff/softphone?dial=${encodeURIComponent(phone)}&name=${encodeURIComponent(lead.name)}&auto_start=true&return=%23%2Fstaff%2Fteam-leads" class="mobile-link" onclick="event.stopPropagation();if(window.routerService){window.routerService.navigate('softphone',{dial:'${phone}',name:'${lead.name.replace(/'/g, "\\'")}',auto_start:'true',return:'#/staff/team-leads'});return false;}" title="Call with Softphone" style="display:inline-flex;align-items:center;gap:3px;color:#38bdf8;text-decoration:none;font-weight:600;"><span style="font-size:12px;">📞</span> ${maskedPhone}</a>
+            ${phone ? `<a href="#/staff/softphone?dial=${encodeURIComponent(phone)}&name=${encodeURIComponent(lead.name)}&auto_start=true&return=%23%2Fstaff%2Fteam-leads" class="dial-btn-badge" onclick="event.stopPropagation();if(window.routerService){window.routerService.navigate('softphone',{dial:'${phone}',name:'${lead.name.replace(/'/g, "\\'")}',auto_start:'true',return:'#/staff/team-leads'});return false;}" title="Call via Softphone" style="display:inline-flex;align-items:center;justify-content:center;padding:1px 5px;background:rgba(56,189,248,0.2);border:1px solid rgba(56,189,248,0.4);border-radius:4px;color:#38bdf8;text-decoration:none;font-size:11px;font-weight:600;margin-left:2px;">📞 Call</a>` : ''}
+            ${phone ? `<button class="whatsapp-link open-team-lead-wa-btn" data-phone="${whatsappNumber}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" onclick="event.stopPropagation()" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:13px;" title="Send WhatsApp">💬</button>` : ''}
           </div>
         </td>
         <td>${lead.category_name || lead.category || '-'}</td>
@@ -1309,7 +1310,7 @@ export class StaffTeamLeadsPage {
         <td class="date-cell ${lead.next_followup && new Date(lead.next_followup) < new Date() ? 'overdue' : ''}">${nextFollowup}</td>
         <td class="days-cell">${lead.days_since_created || 0}</td>
         <td class="actions-cell">
-          <a href="#/staff/softphone?dial=${encodeURIComponent(phone)}&name=${encodeURIComponent(lead.name)}&return=%23%2Fstaff%2Fteam-leads" class="action-btn call-btn" onclick="event.stopPropagation()" title="Call via Softphone">📞</a>
+          <a href="#/staff/softphone?dial=${encodeURIComponent(phone)}&name=${encodeURIComponent(lead.name)}&auto_start=true&return=%23%2Fstaff%2Fteam-leads" class="action-btn call-btn" onclick="event.stopPropagation();if(window.routerService){window.routerService.navigate('softphone',{dial:'${phone}',name:'${lead.name.replace(/'/g, "\\'")}',auto_start:'true',return:'#/staff/team-leads'});return false;}" title="Call via Softphone">📞</a>
           <button class="action-btn whatsapp-btn open-team-lead-wa-btn" data-phone="${whatsappNumber}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" onclick="event.stopPropagation()" style="border:none;cursor:pointer;" title="Send WhatsApp">💬</button>
           <button class="action-btn view-btn" data-id="${lead.id}" title="View">👁</button>
           <button class="action-btn edit-btn" data-id="${lead.id}" title="Edit">✏️</button>

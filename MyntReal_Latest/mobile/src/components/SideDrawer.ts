@@ -362,7 +362,7 @@ export class SideDrawer {
     } else if (portal === 'staff') {
       const authState = authService.getAuthState();
       const user = authState.user || {};
-      const roleCode = (user.role_code || user.role?.role_code || '').toString().toLowerCase().trim();
+      const roleCode = (user.role_code || user.role?.role_code || user.user_type || '').toString().toLowerCase().trim();
       const roleName = (user.role_name || user.role?.role_name || '').toString().toUpperCase().trim();
       const staffType = (user.staff_type || '').toString().toUpperCase().trim();
       
@@ -391,7 +391,17 @@ export class SideDrawer {
       }
     }
 
-    const menuMaster = isVgk ? VGK_MENU_MASTER : (portal === 'staff' ? this.getStaffMenuMaster() : MENU_MASTER);
+    const isAccountsStaff = (
+      ['account', 'accounts', 'finance', 'payroll', 'billing', 'bookkeeper', 'auditor'].some(r => roleCode.includes(r)) ||
+      ['ACCOUNT', 'ACCOUNTS', 'FINANCE', 'PAYROLL', 'BILLING', 'BOOKKEEPER', 'AUDITOR'].some(r => roleName.includes(r)) ||
+      ['ACCOUNT', 'ACCOUNTS', 'FINANCE', 'PAYROLL', 'BILLING', 'BOOKKEEPER', 'AUDITOR'].some(r => staffType.includes(r)) ||
+      ['ACCOUNT', 'ACCOUNTS', 'FINANCE', 'PAYROLL'].some(r => (user.department || user.department_name || '').toString().toUpperCase().includes(r))
+    );
+
+    const isAllowedAccounts = isManagerOrEa || isAccountsStaff;
+
+    const rawMenuMaster = isVgk ? VGK_MENU_MASTER : (portal === 'staff' ? this.getStaffMenuMaster() : MENU_MASTER);
+    const menuMaster = portal === 'staff' ? this.filterMenusForRole(rawMenuMaster, isManagerOrEa, isAllowedAccounts) : rawMenuMaster;
 
     return `
       <div class="drawer-header">
@@ -554,6 +564,106 @@ export class SideDrawer {
     }
   }
 
+  private filterMenusForRole(sections: MenuSection[], isManagerOrEa: boolean, isAllowedAccounts: boolean = false): MenuSection[] {
+    if (isManagerOrEa) {
+      return sections; // Managers & EAs see ALL management, system, and accounts menus
+    }
+
+    // Management/System-only sections to hide from regular non-manager staff
+    // Note: VGK4U and VGK Team are available to ALL staff members per user requirement.
+    const RESTRICTED_SECTIONS = new Set([
+      'SAAS',
+      'SAAS_MANAGEMENT',
+      'SAAS CONFIGURATION',
+      'CONFIGURATION',
+      'SYSTEM_CONFIGURATION',
+      'SYSTEM CONFIG',
+      'META_ADS',
+      'META ADS',
+      'VENDOR_MANAGEMENT',
+      'VENDOR MANAGEMENT',
+      'VENDORS',
+      'HR',
+      'HR_MANAGEMENT',
+      'ZYNOVA',
+      'ZYNOVA_REAL_ESTATE',
+      'MNR',
+      'MNR_USER_SIDEBAR',
+      'MNR USER SIDEBAR',
+      'MNR_USER',
+      'MNR USER'
+    ]);
+
+    // Restrict Accounts & Finance section if user is NOT in Accounts Department and NOT Manager/EA
+    if (!isAllowedAccounts) {
+      RESTRICTED_SECTIONS.add('ACCOUNTS');
+      RESTRICTED_SECTIONS.add('ACCOUNTS_EARNINGS');
+      RESTRICTED_SECTIONS.add('ACCOUNTS & EARNINGS');
+      RESTRICTED_SECTIONS.add('FINANCE');
+      RESTRICTED_SECTIONS.add('FINANCE & EARNINGS');
+      RESTRICTED_SECTIONS.add('FINANCE_EARNINGS');
+      RESTRICTED_SECTIONS.add('ACCOUNTS_MANAGEMENT');
+    }
+
+    // Admin/Management-only items to hide from regular staff
+    const RESTRICTED_ITEM_CODES = new Set([
+      'EXECUTIVE_DASHBOARD',
+      'CATEGORY_LEADS_MASTER',
+      'SAAS_CONFIG',
+      'SYSTEM_CONFIG'
+    ]);
+
+    if (!isAllowedAccounts) {
+      RESTRICTED_ITEM_CODES.add('PAYROLL_PROFILE');
+      RESTRICTED_ITEM_CODES.add('SALARY_SLIPS');
+      RESTRICTED_ITEM_CODES.add('EXPENSE_ENTRIES');
+    }
+
+    const filtered: MenuSection[] = [];
+
+    for (const section of sections) {
+      const codeUpper = (section.section_code || '').toUpperCase().trim();
+      const labelUpper = (section.section_label || '').toUpperCase().trim();
+
+      // Skip restricted management sections for non-manager regular staff
+      if (RESTRICTED_SECTIONS.has(codeUpper) || RESTRICTED_SECTIONS.has(labelUpper)) {
+        continue;
+      }
+
+      let items = section.items;
+      if (items && items.length > 0) {
+        items = items.filter(item => {
+          const itemCode = (item.menu_code || '').toUpperCase().trim();
+          return !RESTRICTED_ITEM_CODES.has(itemCode);
+        });
+      }
+
+      let subSections = section.subSections;
+      if (subSections && subSections.length > 0) {
+        subSections = subSections.map(sub => ({
+          ...sub,
+          items: sub.items.filter(item => {
+            const itemCode = (item.menu_code || '').toUpperCase().trim();
+            return !RESTRICTED_ITEM_CODES.has(itemCode);
+          })
+        })).filter(sub => sub.items.length > 0);
+      }
+
+      const hasItems = items && items.length > 0;
+      const hasSubSections = subSections && subSections.length > 0;
+
+      if (hasItems || hasSubSections) {
+        filtered.push({
+          ...section,
+          items: hasItems ? items : undefined,
+          subSections: hasSubSections ? subSections : undefined
+        });
+      }
+    }
+
+    return filtered;
+  }
+
   private getStaffMenuMaster(): MenuSection[] {
     if (!this.staffMenuTree) {
       return MENU_MASTER;
@@ -602,7 +712,11 @@ export class SideDrawer {
 
       'MNR_LEADS': 11,
       'staff_mnr_leads': 11,
-      'mnr_category_leads': 11
+      'mnr_category_leads': 11,
+
+      'AUTO_DIALER': 12,
+      'staff_auto_dialer': 12,
+      'auto-dialer': 12
     };
 
     const sectionMap = new Map<string, MenuSection>();
@@ -619,7 +733,9 @@ export class SideDrawer {
       const codeUpper = (rawCode || '').toUpperCase();
       const routeLower = (rawRoutePath || '').toLowerCase();
 
-      if (codeUpper.includes('BANK_WISE_LEADS') || routeLower.includes('bank-wise-leads')) {
+      if (codeUpper.includes('AUTO_DIALER') || routeLower.includes('auto-dialer') || codeUpper === 'AUTO_DIALER') {
+        label = 'Auto Dialer';
+      } else if (codeUpper.includes('BANK_WISE_LEADS') || routeLower.includes('bank-wise-leads')) {
         label = 'Field staff leads';
       } else if (codeUpper.includes('REAL_DREAMS') || routeLower.includes('real-dreams-leads')) {
         label = 'Real Dreams Leads';
@@ -633,8 +749,8 @@ export class SideDrawer {
         label = 'Calling & Softphone';
       }
 
-      const iconClass = rawIcon || (label.includes('WhatsApp') ? 'fab fa-whatsapp' : label.includes('Softphone') || label.includes('Calling') ? 'fas fa-headset' : label.includes('Field') ? 'fas fa-users-gear' : 'fas fa-file-alt');
-      const iconColor = label.includes('WhatsApp') ? 'color: #25d366;' : label.includes('Softphone') || label.includes('Calling') ? 'color: #38bdf8;' : '';
+      const iconClass = rawIcon || (label.includes('WhatsApp') ? 'fab fa-whatsapp' : label.includes('Auto Dialer') ? 'fas fa-phone-volume' : label.includes('Softphone') || label.includes('Calling') ? 'fas fa-headset' : label.includes('Field') ? 'fas fa-users-gear' : 'fas fa-file-alt');
+      const iconColor = label.includes('WhatsApp') ? 'color: #25d366;' : (label.includes('Auto Dialer') || label.includes('Softphone') || label.includes('Calling')) ? 'color: #38bdf8;' : '';
       const iconHtml = `<i class="${iconClass}" style="margin-right: 8px; width: 18px; text-align: center; ${iconColor}"></i>`;
 
       return {
@@ -723,6 +839,20 @@ export class SideDrawer {
             subSections: subSections.length > 0 ? subSections : undefined
           });
         }
+      }
+    }
+
+    // Ensure Auto Dialer is guaranteed in CRM_MODULE or WORKFLOWS section
+    let crmSec = sectionMap.get('CRM_MODULE') || sectionMap.get('CRM_LEADS') || sectionMap.get('WORKFLOWS');
+    if (crmSec) {
+      crmSec.items = crmSec.items || [];
+      const hasAutoDialer = crmSec.items.some(i => i.route === 'auto-dialer' || i.menu_code === 'AUTO_DIALER');
+      if (!hasAutoDialer) {
+        crmSec.items.push({
+          menu_code: "AUTO_DIALER",
+          label: `<i class="fas fa-phone-volume" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Auto Dialer`,
+          route: "auto-dialer"
+        });
       }
     }
 
