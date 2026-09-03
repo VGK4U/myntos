@@ -14,6 +14,7 @@ import json
 
 from app.core.database import get_db
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
+from app.core.security import get_current_user_hybrid
 from app.models.staff import StaffEmployee
 from app.models.telephony_call_flow import (
     TelephonyCallFlow, TelephonyCallFlowVersion, TelephonyRingGroup,
@@ -563,7 +564,7 @@ async def plivo_application_hangup(
 def initiate_click_to_call(
     payload: Dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
-    current_user: StaffEmployee = Depends(get_current_staff_user)
+    current_user=Depends(get_current_user_hybrid)
 ):
     """
     Direct Server-Side Click-to-Call Bridge.
@@ -574,7 +575,7 @@ def initiate_click_to_call(
     import requests as _req
     from app.core.config import settings
 
-    to_phone = str(payload.get("to") or payload.get("destination") or "").strip()
+    to_phone = str(payload.get("to") or payload.get("destination") or payload.get("to_phone") or payload.get("customer_phone") or payload.get("phone") or "").strip()
     if not to_phone:
         raise HTTPException(status_code=400, detail="Destination phone number is required")
 

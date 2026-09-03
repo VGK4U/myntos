@@ -397,20 +397,24 @@ export class SoftphonePage {
   private async dispatchBackendCall(phone: string): Promise<void> {
     const cleanDest = phone.startsWith('+') ? phone : `+91${phone.replace(/\D/g, '').slice(-10)}`;
     try {
-      const resp = await apiService.post<any>('/crm/dialer/click-to-call', {
+      const resp = await apiService.post<any>('/telephony/plivo/click-to-call', {
+        to_phone: cleanDest,
+        to: cleanDest,
         customer_phone: cleanDest,
         lead_id: null
       });
       const statusEl = document.getElementById('softphoneCallStatusText');
       if (resp && resp.success) {
-        if (statusEl) statusEl.textContent = 'Trunk Connected · Dialing...';
-      } else {
-        if (statusEl) statusEl.textContent = 'In-App Call Active';
+        if (statusEl) statusEl.textContent = '📞 Cloud Trunk Connected · Ringing...';
       }
     } catch (e) {
-      console.warn('[SoftphonePage] Server dispatch error:', e);
-      const statusEl = document.getElementById('softphoneCallStatusText');
-      if (statusEl) statusEl.textContent = 'In-App Call Active';
+      console.warn('[SoftphonePage] Plivo trunk call error:', e);
+      try {
+        await apiService.post<any>('/crm/dialer/click-to-call', {
+          customer_phone: cleanDest,
+          lead_id: null
+        });
+      } catch (err) {}
     }
   }
 
