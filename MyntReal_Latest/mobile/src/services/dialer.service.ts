@@ -7,6 +7,7 @@
 import { Preferences } from '@capacitor/preferences';
 import { apiService } from './api.service';
 import { APP_CONFIG } from '../config/app.config';
+import { routerService } from './router.service';
 
 const SESSION_KEY = 'dialer_session';
 const QUEUE_KEY = 'dialer_queue';
@@ -277,11 +278,11 @@ class DialerService {
 
   // ── Dial + Call-End Detection ────────────────────────────────────────────────
 
-  dial(phone: string): void {
+  dial(phone: string, name?: string): void {
     this.isDialing = true;
     this.lastDialedAt = Date.now();
     const cleaned = phone.replace(/[^+\d]/g, '');
-    window.location.href = `tel:${cleaned}`;
+    routerService.navigate('softphone', { dial: cleaned, name: name || '', auto_start: 'true' });
     // Start polling for call end on Android
     if (APP_CONFIG.isNativeApp()) {
       this._startCallEndPoll(phone);

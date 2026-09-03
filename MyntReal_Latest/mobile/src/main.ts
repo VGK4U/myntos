@@ -471,6 +471,38 @@ class MNRApp {
       }
     });
 
+    document.addEventListener('click', (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      // Allow direct device SIM button inside SoftphonePage to place raw tel: calls
+      if (target.id === 'softphoneDirectSimBtn' || target.closest('#softphoneDirectSimBtn')) {
+        return;
+      }
+
+      const telLink = target.closest('a[href^="tel:"]') as HTMLAnchorElement | null;
+      if (telLink) {
+        const rawHref = telLink.getAttribute('href') || '';
+        const rawPhone = rawHref.replace(/^tel:/i, '').trim();
+        if (rawPhone) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const leadCard = target.closest('[data-id], .lead-card, .bl-card, .contact-card, .list-item') as HTMLElement | null;
+          const nameEl = leadCard?.querySelector('.lead-name, .customer-name, .contact-name, h4, strong');
+          const contactName = telLink.getAttribute('data-name') || nameEl?.textContent?.trim() || '';
+
+          const currentRoute = routerService.getCurrentRoute();
+          routerService.navigate('softphone', {
+            dial: rawPhone,
+            name: contactName,
+            auto_start: 'true',
+            return: currentRoute !== 'softphone' ? currentRoute : ''
+          });
+        }
+      }
+    }, true);
+
     window.addEventListener('hashchange', () => this.handleHashChange());
 
     routerService.onRouteChange((route) => {
