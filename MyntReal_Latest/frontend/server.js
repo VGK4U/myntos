@@ -7822,116 +7822,13 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Render Mobile Download Portal Landing Page (Supports all browsers and platforms)
-    const downloadPageHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Download MyntReal Mobile App</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: radial-gradient(circle at 50% 20%, #1e2952 0%, #0b1120 70%, #040711 100%);
-      color: #ffffff;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1.5rem;
+    const downloadPagePath = path.join(__dirname, 'public', 'download_app.html');
+    let downloadPageHtml = '';
+    if (fs.existsSync(downloadPagePath)) {
+      downloadPageHtml = fs.readFileSync(downloadPagePath, 'utf8');
+    } else {
+      downloadPageHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Download MyntReal App</title></head><body><a href="/download/mobile.apk">Download APK</a></body></html>`;
     }
-    .card {
-      background: rgba(15, 23, 42, 0.85);
-      border: 1px solid rgba(245, 158, 11, 0.35);
-      border-radius: 1.5rem;
-      padding: 2.5rem 2rem;
-      max-width: 440px;
-      width: 100%;
-      text-align: center;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(245, 158, 11, 0.15);
-      backdrop-filter: blur(16px);
-    }
-    .app-icon {
-      width: 88px;
-      height: 88px;
-      border-radius: 22px;
-      margin: 0 auto 1.5rem;
-      background: linear-gradient(135deg, #f59e0b, #d97706);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2.5rem;
-      color: #ffffff;
-      box-shadow: 0 10px 25px rgba(245, 158, 11, 0.4);
-    }
-    h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.5rem; background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .subtitle { color: #94a3b8; font-size: 0.95rem; margin-bottom: 1.8rem; line-height: 1.5; }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid rgba(16, 185, 129, 0.4);
-      color: #34d399;
-      font-size: 0.8rem;
-      font-weight: 600;
-      padding: 0.35rem 0.8rem;
-      border-radius: 50px;
-      margin-bottom: 1.8rem;
-    }
-    .btn-download {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.75rem;
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-      color: #040711;
-      font-size: 1.1rem;
-      font-weight: 700;
-      padding: 1.1rem 1.5rem;
-      border-radius: 0.85rem;
-      text-decoration: none;
-      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.35);
-      transition: all 0.2s ease;
-      margin-bottom: 1.2rem;
-    }
-    .btn-download:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 25px rgba(245, 158, 11, 0.5);
-    }
-    .file-info { font-size: 0.82rem; color: #64748b; line-height: 1.6; }
-    .file-info strong { color: #94a3b8; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="app-icon">
-      <i class="fas fa-mobile-alt"></i>
-    </div>
-    <h1>MyntReal Official App</h1>
-    <p class="subtitle">Complete EV, Solar, Real Estate & Member Rewards Program on your mobile device.</p>
-    <div class="badge">
-      <i class="fas fa-shield-alt"></i> Verified Official Release v1.0
-    </div>
-    <a href="/app?direct=1" class="btn-download">
-      <i class="fas fa-download"></i> Download Android App (APK)
-    </a>
-    <div class="file-info">
-      Package Size: <strong>10.9 MB</strong> &bull; Requires <strong>Android 8.0+</strong><br>
-      Tap the button above to begin direct download.
-    </div>
-  </div>
-  <script>
-    // Auto trigger direct download for mobile devices
-    if (/Android/i.test(navigator.userAgent)) {
-      setTimeout(function() {
-        window.location.href = '/app?direct=1';
-      }, 1200);
-    }
-  </script>
-</body>
-</html>`;
 
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(downloadPageHtml);
