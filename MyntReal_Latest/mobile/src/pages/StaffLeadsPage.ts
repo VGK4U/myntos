@@ -1579,7 +1579,7 @@ export class StaffLeadsPage {
           <div class="lead-name-cell">
             <span class="lead-name">${lead.name}</span>
             <div class="lead-contact-links">
-              <a href="#/staff/softphone?dial=${encodeURIComponent(phone)}&name=${encodeURIComponent(lead.name)}" class="mobile-link" onclick="event.stopPropagation()" title="Call with Softphone">${maskedPhone}</a>
+              <a href="#/staff/softphone?dial=${encodeURIComponent(phone)}&name=${encodeURIComponent(lead.name)}&return=%23%2Fstaff%2Fleads" class="mobile-link" onclick="event.stopPropagation()" title="Call with Softphone">${maskedPhone}</a>
               ${phone ? `<button class="whatsapp-link open-lead-wa-btn" data-phone="${whatsappNumber}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" onclick="event.stopPropagation()" style="background:none;border:none;cursor:pointer;padding:0 2px;">💬</button>` : ''}
             </div>
           </div>
@@ -1594,7 +1594,7 @@ export class StaffLeadsPage {
         <td class="deal-value">${dealValue}</td>
         <td>
           <div class="action-btns">
-            <a href="#/staff/softphone?dial=${encodeURIComponent(phone)}&name=${encodeURIComponent(lead.name)}" class="action-btn call" onclick="event.stopPropagation()" title="Call via Softphone">📞</a>
+            <a href="#/staff/softphone?dial=${encodeURIComponent(phone)}&name=${encodeURIComponent(lead.name)}&return=%23%2Fstaff%2Fleads" class="action-btn call" onclick="event.stopPropagation()" title="Call via Softphone">📞</a>
             <button class="action-btn whatsapp open-lead-wa-btn" data-phone="${whatsappNumber}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" onclick="event.stopPropagation()" style="border:none;cursor:pointer;" title="Send WhatsApp">💬</button>
             <button class="action-btn followup" data-id="${lead.id}" title="Follow-up">📅</button>
             <button class="action-btn edit" data-id="${lead.id}" title="Edit">✏️</button>
@@ -1615,7 +1615,7 @@ export class StaffLeadsPage {
           <div class="lead-info">
             <h4>${lead.name}</h4>
             <p class="lead-contact">
-              <a href="#/staff/softphone?dial=${encodeURIComponent(lead.phone || '')}&name=${encodeURIComponent(lead.name)}" style="color: #38bdf8; text-decoration: none; font-weight: 600;">
+              <a href="#/staff/softphone?dial=${encodeURIComponent(lead.phone || '')}&name=${encodeURIComponent(lead.name)}&return=%23%2Fstaff%2Fleads" style="color: #38bdf8; text-decoration: none; font-weight: 600;">
                 📞 ${this.maskPhone(lead.phone || '')}
               </a>
             </p>
@@ -1688,7 +1688,7 @@ export class StaffLeadsPage {
       <div id="sl-mob-vgk-banner" style="margin:0 0 10px"></div>
 
       <div class="lead-contact-section">
-        <a href="#/staff/softphone?dial=${encodeURIComponent(lead.phone || '')}&name=${encodeURIComponent(lead.name)}" class="contact-btn" style="text-decoration: none;">
+        <a href="#/staff/softphone?dial=${encodeURIComponent(lead.phone || '')}&name=${encodeURIComponent(lead.name)}&return=%23%2Fstaff%2Fleads" class="contact-btn" style="text-decoration: none;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
           </svg>

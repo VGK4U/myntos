@@ -1292,7 +1292,7 @@ export class StaffTeamLeadsPage {
         <td class="lead-cell">
           <div class="lead-name">${lead.name}</div>
           <div class="lead-contact-links">
-            <a href="#/staff/softphone?dial=${encodeURIComponent(phone)}&name=${encodeURIComponent(lead.name)}" class="mobile-link" onclick="event.stopPropagation()" title="Call with Softphone">${maskedPhone}</a>
+            <a href="#/staff/softphone?dial=${encodeURIComponent(phone)}&name=${encodeURIComponent(lead.name)}&return=%23%2Fstaff%2Fteam-leads" class="mobile-link" onclick="event.stopPropagation()" title="Call with Softphone">${maskedPhone}</a>
             ${phone ? `<button class="whatsapp-link open-team-lead-wa-btn" data-phone="${whatsappNumber}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" onclick="event.stopPropagation()" style="background:none;border:none;cursor:pointer;padding:0 2px;">💬</button>` : ''}
           </div>
         </td>
@@ -1309,7 +1309,7 @@ export class StaffTeamLeadsPage {
         <td class="date-cell ${lead.next_followup && new Date(lead.next_followup) < new Date() ? 'overdue' : ''}">${nextFollowup}</td>
         <td class="days-cell">${lead.days_since_created || 0}</td>
         <td class="actions-cell">
-          <a href="#/staff/softphone?dial=${encodeURIComponent(phone)}&name=${encodeURIComponent(lead.name)}" class="action-btn call-btn" onclick="event.stopPropagation()" title="Call via Softphone">📞</a>
+          <a href="#/staff/softphone?dial=${encodeURIComponent(phone)}&name=${encodeURIComponent(lead.name)}&return=%23%2Fstaff%2Fteam-leads" class="action-btn call-btn" onclick="event.stopPropagation()" title="Call via Softphone">📞</a>
           <button class="action-btn whatsapp-btn open-team-lead-wa-btn" data-phone="${whatsappNumber}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" onclick="event.stopPropagation()" style="border:none;cursor:pointer;" title="Send WhatsApp">💬</button>
           <button class="action-btn view-btn" data-id="${lead.id}" title="View">👁</button>
           <button class="action-btn edit-btn" data-id="${lead.id}" title="Edit">✏️</button>
@@ -1619,7 +1619,7 @@ export class StaffTeamLeadsPage {
           <button class="btn btn-primary" id="detailEditBtn" style="flex: 1; min-width: 120px;">Edit</button>
           <button class="btn btn-info" id="detailFollowupBtn" style="flex: 1; min-width: 120px;">Follow-up</button>
           <button class="btn btn-warning" id="detailStatusBtn" style="flex: 1; min-width: 120px;">Status</button>
-          <button class="btn btn-secondary" onclick="window.location.hash='#/staff/softphone?dial=${encodeURIComponent(lead.phone || '')}&name=${encodeURIComponent(lead.name || '')}'" style="flex: 1; min-width: 100px;">Softphone</button>
+          <button class="btn btn-secondary" onclick="window.location.hash='#/staff/softphone?dial=${encodeURIComponent(lead.phone || '')}&name=${encodeURIComponent(lead.name || '')}&return=%23%2Fstaff%2Fteam-leads'" style="flex: 1; min-width: 100px;">Softphone</button>
           <button class="btn btn-success open-team-lead-wa-btn" data-phone="${(lead.phone || '').replace(/\D/g, '')}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" style="flex: 1; min-width: 100px;">WhatsApp</button>
         </div>
       </div>

@@ -89,6 +89,8 @@ export class SoftphonePage {
   private currentAudio: HTMLAudioElement | null = null;
   private playingRecordingId: number | string | null = null;
   private audioPlayProgress: number = 0;
+  // Return route (for automatic return to CRM page after call)
+  private returnUrl: string | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -101,6 +103,8 @@ export class SoftphonePage {
       const urlParams = new URLSearchParams(hash.substring(queryIndex));
       const dial = urlParams.get('dial') || (params && params.dial);
       const name = urlParams.get('name') || (params && params.name);
+      const returnParam = urlParams.get('return') || (params && params.return);
+      if (returnParam) this.returnUrl = returnParam;
       if (dial) {
         this.dialNumber = dial;
         if (name) this.selectedContactName = name;
@@ -109,6 +113,7 @@ export class SoftphonePage {
     } else if (params && params.dial) {
       this.dialNumber = params.dial;
       if (params.name) this.selectedContactName = params.name;
+      if (params.return) this.returnUrl = params.return;
       this.activeTab = 'dialer';
     }
 
@@ -520,6 +525,17 @@ export class SoftphonePage {
 
     this.activeCallSessionId = null;
     this.callDuration = 0;
+
+    // If navigated from CRM leads/pages with a return route, navigate straight back!
+    if (this.returnUrl) {
+      const dest = this.returnUrl;
+      this.returnUrl = null;
+      setTimeout(() => {
+        window.location.hash = dest.startsWith('#') ? dest : `#${dest}`;
+      }, 600);
+      return;
+    }
+
     this.render();
   }
 
