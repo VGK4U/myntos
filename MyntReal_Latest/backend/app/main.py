@@ -4659,6 +4659,16 @@ def _startup_worker():
                 # vendor_master missing columns (same root cause — model ahead of DB)
                 "ALTER TABLE vendor_master ADD COLUMN IF NOT EXISTS gst_type VARCHAR(10) NOT NULL DEFAULT 'CGST_SGST'",
                 "ALTER TABLE vendor_master ADD COLUMN IF NOT EXISTS vendor_logo_url VARCHAR(500)",
+                # staff_employees missing columns
+                "ALTER TABLE staff_employees ADD COLUMN IF NOT EXISTS admin_scope VARCHAR(50) DEFAULT 'CLIENT_SPECIFIC'",
+                # associated_companies missing columns
+                "ALTER TABLE associated_companies ADD COLUMN IF NOT EXISTS company_segment VARCHAR(50) DEFAULT 'SEGMENT_A_INTERNAL'",
+                "ALTER TABLE associated_companies ADD COLUMN IF NOT EXISTS licensed_modules JSONB DEFAULT '[]'::jsonb",
+                # staff_day_plan_items missing columns
+                "ALTER TABLE staff_day_plan_items ADD COLUMN IF NOT EXISTS plan_type VARCHAR(50) DEFAULT 'TASK'",
+                "ALTER TABLE staff_day_plan_items ADD COLUMN IF NOT EXISTS is_followup BOOLEAN DEFAULT FALSE",
+                # platform_clients missing columns
+                "ALTER TABLE platform_clients ADD COLUMN IF NOT EXISTS subscribed_modules JSONB DEFAULT '[]'::jsonb",
             ]:
                 _c.execute(_text(_sql))
             # manual_party_master: persisted external parties for future party-search results
