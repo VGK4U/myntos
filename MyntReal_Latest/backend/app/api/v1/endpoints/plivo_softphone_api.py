@@ -911,3 +911,96 @@ def get_staff_telephony_performance(
         },
         "records": staff_records
     }
+
+
+# ── Universal Smart Public Lead Call Bridge Endpoints ────────────────────────
+@router.get("/public-lead-preview")
+def get_public_lead_preview_for_call(
+    lead_id: int = Query(..., description="CRM Lead ID to preview for calling"),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns non-sensitive public calling metadata for a lead.
+    Phone number is strictly masked (+91 98480 *****) so external callers never see the raw contact number.
+    """
+    lead = db.query(CRMLead).get(lead_id)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    lead_name = getattr(lead, 'first_name', '') or getattr(lead, 'name', '') or 'Valued Customer'
+    city = getattr(lead, 'city', '') or getattr(lead, 'location', '') or 'Not Specified'
+    pincode = getattr(lead, 'pincode', '') or ''
+    phone = str(getattr(lead, 'phone', '') or '')
+    clean_digits = ''.join(c for c in phone if c.isdigit())[-10:]
+    masked_phone = f"+91 {clean_digits[:5]} *****" if len(clean_digits) == 10 else "+91 ***** *****"
+
+    company_name = "MyntReal"
+    if lead.company_id == 2:
+        company_name = "Zynova Mobility"
+    elif lead.company_id == 1:
+        company_name = "Real Dreams"
+
+    service_name = getattr(lead, 'looking_for', '') or 'General Enquiry'
+    if getattr(lead, 'category_id', None):
+        try:
+            from app.models.crm import CRMCategory
+            cat = db.query(CRMCategory).get(lead.category_id)
+            if cat:
+                service_name = cat.name
+        except Exception:
+            pass
+
+    return {
+        "success": True,
+        "lead_id": lead.id,
+        "name": lead_name,
+        "masked_phone": masked_phone,
+        "location": f"{city} (PIN: {pincode})" if pincode else city,
+        "company_name": company_name,
+        "service": service_name,
+        "created_at": lead.created_at.strftime("%d %b %Y, %I:%M %p IST") if lead.created_at else None
+    }
+
+
+@router.post("/public-browser-token")
+def issue_public_browser_token_for_call(
+    payload: Dict[str, Any] = Body(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Issues a secure, limited-scope Plivo browser WebRTC token for external partners/guests
+    calling a specific lead_id. Number masking is strictly preserved on the backend.
+    """
+    lead_id = payload.get("lead_id")
+    caller_name = payload.get("caller_name", "External Partner")
+    
+    if not lead_id:
+        raise HTTPException(status_code=400, detail="lead_id is required")
+        
+    lead = db.query(CRMLead).get(lead_id)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    company_id = lead.company_id or 1
+    
+    # Generate WebRTC token for guest dialer
+    try:
+        token_data = PlivoJWTService.generate_browser_token(
+            db=db,
+            company_id=company_id,
+            staff=None
+        )
+        return {
+            "success": True,
+            "token": token_data.get("token"),
+            "username": token_data.get("username"),
+            "lead_id": lead.id,
+            "caller_name": caller_name,
+            "masked_phone": f"+91 {str(lead.phone)[-10:][:5]} *****" if lead.phone else "+91 ***** *****"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "fallback_call_bridge": True
+        }

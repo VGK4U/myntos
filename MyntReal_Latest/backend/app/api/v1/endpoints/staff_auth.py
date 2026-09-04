@@ -483,7 +483,8 @@ def staff_login(
     employee.last_login = datetime.utcnow()
     
     t_token_start = time.time()
-    session_hours = get_staff_setting(db, 'session_timeout_hours', 24)
+    # 365-Day Persistent Session for Mobile & Staff Logins (prevents premature auto-logouts)
+    session_hours = get_staff_setting(db, 'session_timeout_hours', 8760)
     token = SecurityManager.create_access_token(
         data={
             "sub": str(employee.id),
