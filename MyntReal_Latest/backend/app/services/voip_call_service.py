@@ -235,7 +235,31 @@ class VoIPCallService:
                 new_value=call_session_id,
                 change_category='call'
             )
-            db.add(audit)
+        # 12. Immediately record in StaffCallLog (DC_SOFTPHONE_IMMEDIATE_LOG)
+        if operator_id:
+            try:
+                from app.models.call_tracking import StaffCallLog
+                existing_scl = db.query(StaffCallLog).filter(StaffCallLog.device_call_id == call_session_id).first()
+                if not existing_scl:
+                    db.add(StaffCallLog(
+                        company_id=company_id or 1,
+                        staff_id=operator_id,
+                        phone_number=dest_e164 or '',
+                        contact_name=operator_name or '',
+                        call_type='MISSED',
+                        call_datetime=now,
+                        call_date=now.strftime('%Y-%m-%d'),
+                        duration_seconds=0,
+                        source='softphone',
+                        device_call_id=call_session_id,
+                        matched_lead_id=lead_id,
+                        matched_at=now if lead_id else None,
+                        has_recording=False,
+                        synced_at=now,
+                        created_at=now
+                    ))
+            except Exception as e:
+                logger.warning(f"[VOIP-SOFTPHONE-INIT-LOG] Error: {e}")
 
         db.commit()
         db.refresh(session)
