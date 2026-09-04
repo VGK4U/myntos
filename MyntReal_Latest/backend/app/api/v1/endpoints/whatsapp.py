@@ -2129,24 +2129,50 @@ def get_whatsapp_delivery_logs(
 ):
     """Fetch all mobile/system sent WhatsApp delivery logs filtered by days & trigger type (auto vs manual)."""
     try:
+        from sqlalchemy import or_
+        from datetime import datetime, timedelta
+
         query = db.query(MessageLog)
 
         # Handle days cutoff filter (default 3 days)
-        days_val = int(days.default if hasattr(days, 'default') else days) if days is not None else 3
+        try:
+            days_val = int(days) if (days is not None and not hasattr(days, 'default')) else 3
+        except (ValueError, TypeError):
+            days_val = 3
+
         if days_val and days_val > 0:
-            from datetime import datetime, timedelta
             cutoff = datetime.now() - timedelta(days=days_val)
             query = query.filter(MessageLog.sent_at >= cutoff)
 
-        # Handle trigger_type filter (auto vs manual vs all)
-        t_type = str(trigger_type.default if hasattr(trigger_type, 'default') else trigger_type) if trigger_type else ''
-        if t_type and t_type.lower() != 'all' and t_type.lower() != 'none':
-            if t_type.lower() == 'manual':
-                query = query.filter(MessageLog.message_type.in_(['manual_staff', 'direct_send', 'manual']))
-            elif t_type.lower() == 'auto':
-                query = query.filter(~MessageLog.message_type.in_(['manual_staff', 'direct_send', 'manual']))
+        # Broadcast message types
+        broadcast_types = {
+            'auto_staff_morning_leadership', 'vgk4u_wish', 'field_journey',
+            'field_staff_journey_report', 'sales_performance', 'sales_perf_report',
+            'auto_staff_alert', 'template'
+        }
+        manual_types = {'manual_staff', 'manual'}
 
-        status_val = str(status.default if hasattr(status, 'default') else status) if status else ''
+        # Handle trigger_type filter (broadcast vs auto vs manual vs otp vs all)
+        t_type = str(trigger_type).strip() if (trigger_type and isinstance(trigger_type, str) and not hasattr(trigger_type, 'default')) else ''
+        if t_type and t_type.lower() not in ('all', 'none'):
+            t_low = t_type.lower()
+            if t_low == 'manual':
+                query = query.filter(MessageLog.message_type.in_(list(manual_types)))
+            elif t_low in ('broadcast', 'broadcasts'):
+                query = query.filter(
+                    or_(
+                        MessageLog.message_type.in_(list(broadcast_types)),
+                        MessageLog.message_type == 'auto_direct_send'
+                    )
+                )
+            elif t_low in ('auto', 'bot', 'auto_bot'):
+                query = query.filter(
+                    ~MessageLog.message_type.in_(list(manual_types | broadcast_types | {'auto_direct_send', 'whatsapp_otp', 'otp'}))
+                )
+            elif t_low == 'otp':
+                query = query.filter(MessageLog.message_type.in_(['whatsapp_otp', 'otp']))
+
+        status_val = str(status).strip() if (status and isinstance(status, str) and not hasattr(status, 'default')) else ''
         if status_val and status_val.lower() != 'none':
             if status_val.lower() == 'success':
                 query = query.filter(MessageLog.current_status.in_(['delivered', 'sent', 'read', 'success']))
@@ -2155,9 +2181,9 @@ def get_whatsapp_delivery_logs(
             else:
                 query = query.filter(MessageLog.current_status.ilike(f"%{status_val}%"))
 
-        search_val = str(search.default if hasattr(search, 'default') else search) if search else ''
+        search_val = str(search).strip() if (search and isinstance(search, str) and not hasattr(search, 'default')) else ''
         if search_val and search_val.lower() != 'none':
-            term = f"%{search_val.strip()}%"
+            term = f"%{search_val}%"
             query = query.filter(
                 (MessageLog.mobile_number.ilike(term)) |
                 (MessageLog.user_name.ilike(term)) |
@@ -2165,8 +2191,11 @@ def get_whatsapp_delivery_logs(
                 (MessageLog.message_sid.ilike(term))
             )
 
+        limit_val = int(limit) if (isinstance(limit, int) and not hasattr(limit, 'default')) else 100
+        offset_val = int(offset) if (isinstance(offset, int) and not hasattr(offset, 'default')) else 0
+
         total = query.count()
-        logs = query.order_by(desc(MessageLog.sent_at)).offset(offset).limit(limit).all()
+        logs = query.order_by(desc(MessageLog.sent_at)).offset(offset_val).limit(limit_val).all()
 
         import pytz
         ist = pytz.timezone('Asia/Kolkata')
@@ -2182,11 +2211,58 @@ def get_whatsapp_delivery_logs(
                     dt = dt.astimezone(ist)
                 sent_at_str = dt.strftime('%d %b %Y, %I:%M %p')
 
+            m_type = (l.message_type or 'direct_send').lower()
+            m_body = (l.message_body or '').lower()
+
+            # Accurate trigger source classification
+            if m_type == 'whatsapp_otp' or 'otp' in m_type:
+                trig_cat = 'otp'
+                trig_lbl = '🔐 OTP Auth'
+            elif m_type == 'auto_staff_morning_leadership':
+                trig_cat = 'broadcast'
+                trig_lbl = '📢 Leadership Broadcast'
+            elif m_type in ('vgk4u_wish', 'field_journey', 'field_staff_journey_report', 'sales_performance', 'sales_perf_report', 'auto_staff_alert', 'template'):
+                trig_cat = 'broadcast'
+                if 'journey' in m_type: trig_lbl = '📢 Field Journey'
+                elif 'sales' in m_type: trig_lbl = '📢 Sales Report'
+                elif 'wish' in m_type: trig_lbl = '📢 Morning Wish'
+                elif 'template' in m_type: trig_lbl = '📢 Template Campaign'
+                else: trig_lbl = '📢 Scheduled Broadcast'
+            elif m_type == 'auto_direct_send':
+                trig_cat = 'broadcast'
+                if any(k in m_body for k in ['statement', 'revenue', 'points balance', 'namaskaram', 'update', 'gross']):
+                    trig_lbl = '📢 Revenue Statement'
+                else:
+                    trig_lbl = '📢 Broadcast Message'
+            elif m_type in manual_types or (l.sender_type == 'staff' and not m_type.startswith('auto_')):
+                trig_cat = 'manual'
+                trig_lbl = '👤 Manual Staff'
+            elif 'lead' in m_type or 'walkin' in m_type:
+                trig_cat = 'auto'
+                trig_lbl = '🤖 Lead Auto Bot'
+            elif 'ticket' in m_type:
+                trig_cat = 'auto'
+                trig_lbl = '🤖 Support Bot'
+            elif 'missed' in m_type:
+                trig_cat = 'auto'
+                trig_lbl = '🤖 Missed Call ACK'
+            elif 'status' in m_type:
+                trig_cat = 'auto'
+                trig_lbl = '🤖 CRM Status Bot'
+            elif 'task' in m_type or 'reminder' in m_type:
+                trig_cat = 'auto'
+                trig_lbl = '🤖 Task Reminder Bot'
+            else:
+                trig_cat = 'broadcast' if (l.sender_type == 'system' or not l.sent_by_staff_id) else 'auto'
+                trig_lbl = '📢 System Broadcast' if trig_cat == 'broadcast' else '🤖 Auto Bot'
+
             serialized_logs.append({
                 "id": l.id,
                 "message_sid": l.message_sid or '—',
                 "message_type": l.message_type or 'direct_send',
-                "trigger_source": 'manual' if (l.message_type in ['manual_staff', 'direct_send', 'manual']) else 'auto',
+                "trigger_source": trig_cat,
+                "trigger_category": trig_cat,
+                "trigger_label": trig_lbl,
                 "mobile_number": l.mobile_number or '—',
                 "user_name": l.user_name or '—',
                 "message_body": l.message_body or '—',
