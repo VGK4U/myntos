@@ -545,15 +545,29 @@
     ]
   },
   "2026-09-03": {
-    "timestamp_ist": "2026-09-03 13:30:00",
+    "timestamp_ist": "2026-09-03 17:30:00",
     "date_str": "03 September 2026",
-    "time_str": "01:30 PM",
-    "total_calls": 54,
-    "total_talk_seconds": 2535,
-    "total_talk_formatted": "00h 42m 15s",
-    "missed_calls": 9,
-    "new_leads": 25,
+    "time_str": "05:30 PM",
+    "total_calls": 206,
+    "total_talk_seconds": 12976,
+    "total_talk_formatted": "03h 36m 16s",
+    "missed_calls": 28,
+    "new_leads": 26,
     "leaderboard": [
+      {
+        "handled_by": "Ms. Oleti Gayatri Nandana",
+        "call_count": 84,
+        "missed_count": 13,
+        "talk_seconds": 6590,
+        "talk_time_formatted": "01h 49m"
+      },
+      {
+        "handled_by": "Mrs. Sontayana Appala Nookalakshmi",
+        "call_count": 73,
+        "missed_count": 11,
+        "talk_seconds": 3327,
+        "talk_time_formatted": "55m"
+      },
       {
         "handled_by": "Ms. Anushka Karri",
         "call_count": 48,
@@ -562,28 +576,14 @@
         "talk_time_formatted": "41m"
       },
       {
-        "handled_by": "Mrs. Sontayana Appala Nookalakshmi",
-        "call_count": 6,
-        "missed_count": 5,
-        "talk_seconds": 41,
-        "talk_time_formatted": "0m"
+        "handled_by": "Ms. Bhoolakshmi Pathakamsetti",
+        "call_count": 1,
+        "missed_count": 0,
+        "talk_seconds": 565,
+        "talk_time_formatted": "9m"
       },
       {
         "handled_by": "Ms. Anusha Moyyi",
-        "call_count": 0,
-        "missed_count": 0,
-        "talk_seconds": 0,
-        "talk_time_formatted": "0m"
-      },
-      {
-        "handled_by": "Ms. Bhoolakshmi Pathakamsetti",
-        "call_count": 0,
-        "missed_count": 0,
-        "talk_seconds": 0,
-        "talk_time_formatted": "0m"
-      },
-      {
-        "handled_by": "Ms. Oleti Gayatri Nandana",
         "call_count": 0,
         "missed_count": 0,
         "talk_seconds": 0,

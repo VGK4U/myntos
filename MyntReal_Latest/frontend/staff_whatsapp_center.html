@@ -596,6 +596,23 @@ let debounceTimer   = null;
 let companyChannelFilter = 'all';
 let broadcastFilter      = 'all';
 
+function maskPhone(p) {
+  if (!p || p === '—' || p === '-' || p === 'null') return '—';
+  const s = String(p).trim();
+  if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
+  const digits = s.replace(/\D/g, '');
+  if (digits.length < 6) return s;
+  const clean10 = digits.slice(-10);
+  return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
+}
+
+function formatContactName(name, phone) {
+  if (name && name !== '0' && name !== 'None' && name !== 'null' && !/^\d+$/.test(name) && !name.startsWith('+91')) {
+    return name;
+  }
+  return phone ? `Customer (${maskPhone(phone)})` : 'Customer';
+}
+
 function onCompanyChannelFilter(chan) {
   companyChannelFilter = chan;
   document.querySelectorAll('#companyChannelFilterBar .channel-pill-btn').forEach(btn => {
@@ -938,7 +955,7 @@ function renderInboxRows(items) {
         <span>${isUnread ? '<div class="unread-dot"></div>' : ''}</span>
         <span><i class="fab fa-whatsapp" style="color:#25d366"></i></span>
         <div style="font-size:11px;color:#374151;white-space:nowrap;font-weight:600">${timeIst}</div>
-        <div><strong>${name}</strong><br><small style="color:#6b7280">${phone}</small></div>
+        <div><strong>${formatContactName(name, phone)}</strong><br><small style="color:#6b7280">${maskPhone(phone)}</small></div>
         <div style="color:#4b5563;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${msg}</div>
         <div><span class="ei-chip ${sourceChipClass}">${sourceIcon} ${sourceType}</span></div>
         <div><span class="ei-chip ei-crm">CRM Lead</span></div>
@@ -1041,13 +1058,14 @@ function renderConversationsList(convs) {
     if (activeScope === 'broadcasts') {
       badgeLabel = isGroup ? 'Group Broadcast' : (c.category || 'Individual');
     }
+    const displayName = (isGroup || isChannel) ? (c.name || c.phone) : formatContactName(c.name, c.phone);
 
     html += `
       <div class="conv-card ${activeChatPhone === c.phone ? 'active' : ''} ${isArchived ? 'conv-archived' : (isInProgress ? 'conv-in-progress' : '')}" onclick="selectChatByIndex(${idx})">
         <div class="conv-avatar" style="${isArchived ? 'filter:grayscale(100%);opacity:0.6;' : ''}">${isGroup ? '👥' : (isChannel ? '📢' : (isUnassigned ? '🏢' : (isArchived ? '📁' : (activeScope === 'broadcasts' ? '📡' : '👤'))))}</div>
         <div class="conv-info">
           <div class="conv-name">
-            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;${isArchived ? 'color:#64748b;' : ''}">${escapeHtmlText(c.name || c.phone)}</span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;${isArchived ? 'color:#64748b;' : ''}">${escapeHtmlText(displayName)}</span>
             <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
               ${statusBadge}
               ${chanBadge}
@@ -1099,9 +1117,12 @@ async function selectChat(phone, recType, name, isUnassigned = false, channel = 
 
   const st = (status || 'active').toLowerCase();
   const isArchived = (st === 'archived' || st === 'closed');
+  const isGroupOrChan = (recType === 'group' || recType === 'channel');
+  const headerName = isGroupOrChan ? (name || phone) : formatContactName(name, phone);
+  const headerPhoneDisplay = isGroupOrChan ? phone : maskPhone(phone);
 
-  document.getElementById('chatHeaderName').textContent = name || phone;
-  document.getElementById('chatHeaderSub').textContent = `${recType.toUpperCase()} • ${phone}${channel ? ' • ' + (channel === 'META_API' ? 'Meta API' : 'Scanned Bot') : ''}${isArchived ? ' • 📁 ARCHIVED' : ''}`;
+  document.getElementById('chatHeaderName').textContent = headerName;
+  document.getElementById('chatHeaderSub').textContent = `${recType.toUpperCase()} • ${headerPhoneDisplay}${channel ? ' • ' + (channel === 'META_API' ? 'Meta API' : 'Scanned Bot') : ''}${isArchived ? ' • 📁 ARCHIVED' : ''}`;
 
   const actionsContainer = document.getElementById('chatHeaderActions');
   let actionsHtml = `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">`;
@@ -1541,7 +1562,7 @@ async function loadAuditLogHub() {
           <td style="padding:10px 8px;font-size:11.5px;color:#4b5563">${timestamp}</td>
           <td style="padding:10px 8px">${triggerBadge}</td>
           <td style="padding:10px 8px">
-            <strong>${recipient}</strong> <span style="font-size:11px;color:#6b7280">${userName}</span>
+            <strong>${maskPhone(recipient)}</strong> <span style="font-size:11px;color:#6b7280">${userName}</span>
           </td>
           <td style="padding:10px 8px">${statusBadge}</td>
           <td style="padding:10px 8px"><code style="font-size:10.5px;color:#374151">${wamid}</code></td>
@@ -1567,7 +1588,8 @@ function openAuditMsgModal(idx) {
   if (!l) return;
 
   const timestamp = l.sent_at || l.time_str || l.created_at || 'LOG';
-  const recipient = (l.mobile_number || l.recipient || '—') + ((l.user_name && l.user_name !== '—') ? ` (${l.user_name})` : '');
+  const rawRecipient = l.mobile_number || l.recipient || '—';
+  const recipient = maskPhone(rawRecipient) + ((l.user_name && l.user_name !== '—') ? ` (${l.user_name})` : '');
   const wamid = l.message_sid || l.wamid || '—';
   
   let bodyText = l.message_body || l.body_text || l.message || '';
@@ -1577,7 +1599,7 @@ function openAuditMsgModal(idx) {
     } else if (l.message_type && l.message_type.includes('otp')) {
       bodyText = `🔐 Verification Code (${l.message_type}) was dispatched via WhatsApp.`;
     } else {
-      bodyText = `📱 WhatsApp Notification (${l.message_type || 'Automated Dispatch'}) was delivered to ${l.mobile_number || 'recipient'}.`;
+      bodyText = `📱 WhatsApp Notification (${l.message_type || 'Automated Dispatch'}) was delivered to ${maskPhone(l.mobile_number || 'recipient')}.`;
     }
   }
 
@@ -1593,7 +1615,7 @@ function openAuditMsgModal(idx) {
 
 // ── ASSIGNMENT MODAL ───────────────────────────────────────────────────────
 function openAssignModal(phone, name) {
-  document.getElementById('assignTargetInfo').textContent = `Assigning Customer: ${name} (${phone})`;
+  document.getElementById('assignTargetInfo').textContent = `Assigning Customer: ${formatContactName(name, phone)} (${maskPhone(phone)})`;
   document.getElementById('assignModal').classList.add('open');
 }
 function closeModal(id) {

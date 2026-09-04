@@ -22,6 +22,16 @@
             }
             window.location.href = `/staff/softphone?dial=${encodeURIComponent(cleanPhone)}&name=${encodeURIComponent(safeName)}&lead_id=${encodeURIComponent(leadId || '')}`;
         }
+
+        function maskPhone(p) {
+            if (!p || p === '—' || p === '-' || p === 'null') return '—';
+            const s = String(p).trim();
+            if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
+            const digits = s.replace(/\D/g, '');
+            if (digits.length < 6) return s;
+            const clean10 = digits.slice(-10);
+            return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
+        }
     </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -2905,7 +2915,7 @@
                 ${task.contact_phone ? `
                 <div class="mb-3">
                     <strong><i class="fas fa-phone-alt me-1 text-info"></i>Contact:</strong>
-                    <button type="button" class="btn btn-sm btn-outline-info py-0 px-2 ms-1" onclick="triggerLeadCall('${escapeHtml(task.contact_phone)}', '${escapeHtml(task.contact_person_name || task.title)}')" style="font-size:12px;font-weight:600;"><i class="fas fa-phone-alt me-1"></i>${escapeHtml(task.contact_phone)}</button>
+                    <button type="button" class="btn btn-sm btn-outline-info py-0 px-2 ms-1" onclick="triggerLeadCall('${escapeHtml(task.contact_phone)}', '${escapeHtml(task.contact_person_name || task.title)}')" style="font-size:12px;font-weight:600;"><i class="fas fa-phone-alt me-1"></i>${maskPhone(task.contact_phone)}</button>
                     ${task.contact_person_name ? `<span class="text-muted ms-1">(${escapeHtml(task.contact_person_name)})</span>` : ''}
                 </div>` : ''}
 
@@ -3732,7 +3742,7 @@
                                             ${(phase.secondary_assignees && phase.secondary_assignees.length > 0) ? phase.secondary_assignees.map(sa => `<span class="text-info"><i class="fas fa-user-plus me-1"></i>${escapeHtml(sa.employee_name || sa.full_name || 'Unknown')}</span>`).join('') : ''}
                                             <span><i class="fas fa-calendar me-1"></i>${targetDate}</span>
                                             ${completedDate ? `<span class="text-success"><i class="fas fa-check me-1"></i>Completed: ${completedDate}</span>` : ''}
-                                            ${phase.contact_phone ? `<span class="text-info"><button type="button" class="btn btn-sm btn-outline-info py-0 px-1" onclick="triggerLeadCall('${escapeHtml(phase.contact_phone)}', '${escapeHtml(phase.contact_person_name || phase.title)}')" style="font-size:11px;font-weight:600"><i class="fas fa-phone-alt me-1"></i>${escapeHtml(phase.contact_phone)}</button>${phase.contact_person_name ? ` (${escapeHtml(phase.contact_person_name)})` : ''}</span>` : ''}
+                                            ${phase.contact_phone ? `<span class="text-info"><button type="button" class="btn btn-sm btn-outline-info py-0 px-1" onclick="triggerLeadCall('${escapeHtml(phase.contact_phone)}', '${escapeHtml(phase.contact_person_name || phase.title)}')" style="font-size:11px;font-weight:600"><i class="fas fa-phone-alt me-1"></i>${maskPhone(phase.contact_phone)}</button>${phase.contact_person_name ? ` (${escapeHtml(phase.contact_person_name)})` : ''}</span>` : ''}
                                         </div>
                                         ${phase.description ? `<div class="phase-description mt-1">${escapeHtml(phase.description)}</div>` : ''}
                                         ${phase.child_task_id ? `<div class="phase-task-link mt-1"><a href="javascript:void(0)" onclick="viewTask(${phase.child_task_id})" class="text-info"><i class="fas fa-external-link-alt me-1"></i>View Sub-Task</a></div>` : ''}

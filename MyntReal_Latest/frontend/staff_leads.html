@@ -1670,6 +1670,16 @@
             window.location.href = `/staff/softphone?dial=${encodeURIComponent(cleanPhone)}&name=${encodeURIComponent(safeName)}&lead_id=${encodeURIComponent(leadId || '')}`;
         }
 
+        function maskPhone(p) {
+            if (!p || p === '—' || p === '-' || p === 'null') return '—';
+            const s = String(p).trim();
+            if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
+            const digits = s.replace(/\D/g, '');
+            if (digits.length < 6) return s;
+            const clean10 = digits.slice(-10);
+            return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
+        }
+
         const API_BASE = '/api/v1/crm';
         let companyId = null;
         let selectedLeadCompanyId = null;
@@ -2941,7 +2951,7 @@
                     <td>
                         <div class="lead-name">${lead.name}</div>
                         <div class="lead-contact">
-                            ${lead.email || ''} ${lead.phone ? '| <strong>' + lead.phone + '</strong>' + rowCallIcon + rowWAIcon : ''}
+                            ${lead.email || ''} ${lead.phone ? '| <strong>' + maskPhone(lead.phone) + '</strong>' + rowCallIcon + rowWAIcon : ''}
                         </div>
                     </td>
                     <td>${lead.category_name || '-'}</td>
@@ -4571,7 +4581,7 @@
                     const cleanP10 = rawP.replace(/\D/g, '').slice(-10);
                     const callBtnHtml = cleanP10 ? `<button type="button" class="btn btn-sm btn-outline-primary btn-call-direct ms-2" onclick="triggerLeadCall('${cleanP10}', '${(lead.name || '').replace(/'/g, "\\'")}', ${lead.id})" title="Softphone WebRTC Call"><i class="fas fa-phone-alt me-1"></i> Call</button>` : '';
                     const waBtnHtml = cleanP10 ? `<button type="button" class="btn btn-sm btn-outline-success btn-whatsapp-direct ms-1" onclick="openLeadWAModal('${lead.id}', '${cleanP10}', '${(lead.name || '').replace(/'/g, "\\'")}', '${lead.company_id}')" title="Send WhatsApp"><i class="fab fa-whatsapp me-1"></i> Chat</button>` : '';
-                    document.getElementById('detailPhone').innerHTML = `${rawP} ${callBtnHtml} ${waBtnHtml}`;
+                    document.getElementById('detailPhone').innerHTML = `${maskPhone(rawP)} ${callBtnHtml} ${waBtnHtml}`;
                     document.getElementById('detailCategory').textContent = lead.category_name || '-';
                     document.getElementById('detailSource').textContent = lead.source || '-';
                     document.getElementById('detailBudget').textContent = lead.budget_min || lead.budget_max ? 
