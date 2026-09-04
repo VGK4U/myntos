@@ -4287,7 +4287,7 @@ def get_gateway_status_qr():
 
 # ── Baileys Multi-Device Database Session Persistence ────────────────────────
 @router.post("/bot-session-backup")
-async def backup_bot_session_files(
+def backup_bot_session_files(
     payload: dict = Body(...),
     db: Session = Depends(get_db)
 ):
@@ -4302,13 +4302,13 @@ async def backup_bot_session_files(
 
     try:
         from sqlalchemy import text
-        for file_key, file_data in files.items():
-            db.execute(text("""
-                INSERT INTO whatsapp_bot_session_store (session_id, file_key, file_data, updated_at)
-                VALUES (:sid, :k, :d, NOW())
-                ON CONFLICT (session_id, file_key) DO UPDATE
-                SET file_data = EXCLUDED.file_data, updated_at = NOW();
-            """), {"sid": session_id, "k": file_key, "d": str(file_data)})
+        params = [{"sid": session_id, "k": k, "d": str(v)} for k, v in files.items()]
+        db.execute(text("""
+            INSERT INTO whatsapp_bot_session_store (session_id, file_key, file_data, updated_at)
+            VALUES (:sid, :k, :d, NOW())
+            ON CONFLICT (session_id, file_key) DO UPDATE
+            SET file_data = EXCLUDED.file_data, updated_at = NOW();
+        """), params)
         db.commit()
         return {"success": True, "saved": len(files)}
     except Exception as e:

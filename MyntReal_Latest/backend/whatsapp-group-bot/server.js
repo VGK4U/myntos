@@ -132,15 +132,21 @@ async function startWhatsAppBot() {
         emitOwnEvents: false
     });
 
+    let backupDebounceTimer = null;
     sock.ev.on('creds.update', async () => {
         await saveCreds();
-        await backupSessionToDatabase();
+        if (!backupDebounceTimer) {
+            backupDebounceTimer = setTimeout(() => {
+                backupDebounceTimer = null;
+                backupSessionToDatabase().catch(() => {});
+            }, 60000);
+        }
     });
 
-    // Schedule background DB backup every 60 seconds (singleton)
+    // Schedule background DB backup every 300 seconds (singleton)
     if (!backupIntervalStarted) {
         backupIntervalStarted = true;
-        setInterval(backupSessionToDatabase, 60000);
+        setInterval(backupSessionToDatabase, 300000);
     }
 
     sock.ev.on('connection.update', async (update) => {
