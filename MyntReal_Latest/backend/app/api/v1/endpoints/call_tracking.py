@@ -749,6 +749,7 @@ async def get_call_management_overview(
     staff_map = {}
     sync_map = {}
     if staff_ids:
+        dept_cache = {}
         rows = db.query(
             StaffEmployee.id, StaffEmployee.full_name, StaffEmployee.emp_code,
             StaffEmployee.department_id, StaffEmployee.reporting_manager_id,
@@ -760,7 +761,21 @@ async def get_call_management_overview(
             ~StaffEmployee.emp_code.like('EMP_TEST_%'),
             or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN']))
         ).all()
-        staff_map = {r.id: {'name': r.full_name, 'emp_code': r.emp_code, 'dept_id': r.department_id, 'mgr_id': r.reporting_manager_id, 'call_tracking_enabled': r.call_tracking_enabled} for r in rows}
+        dept_ids = list({r.department_id for r in rows if r.department_id})
+        if dept_ids:
+            depts = db.query(StaffDepartment.id, StaffDepartment.name).filter(StaffDepartment.id.in_(dept_ids)).all()
+            dept_cache = {d.id: d.name for d in depts}
+        staff_map = {
+            r.id: {
+                'name': r.full_name,
+                'staff_name': r.full_name,
+                'emp_code': r.emp_code,
+                'dept_id': r.department_id,
+                'department': dept_cache.get(r.department_id, ''),
+                'mgr_id': r.reporting_manager_id,
+                'call_tracking_enabled': r.call_tracking_enabled
+            } for r in rows
+        }
         sync_rows = db.query(
             StaffCallSyncLog.staff_id,
             func.max(StaffCallSyncLog.sync_completed_at).label('last_synced_at')
@@ -882,13 +897,16 @@ async def get_call_management_overview(
         },
         "per_staff": [{
             'staff_id': s.staff_id,
+            'name': staff_map.get(s.staff_id, {}).get('name', 'Unknown'),
             'staff_name': staff_map.get(s.staff_id, {}).get('name', 'Unknown'),
             'emp_code': staff_map.get(s.staff_id, {}).get('emp_code', ''),
             'dept_id': staff_map.get(s.staff_id, {}).get('dept_id'),
+            'department': staff_map.get(s.staff_id, {}).get('department', ''),
             'mgr_id': staff_map.get(s.staff_id, {}).get('mgr_id'),
             'call_tracking_enabled': staff_map.get(s.staff_id, {}).get('call_tracking_enabled', False),
             'total_calls': s.total_calls,
             'total_duration': int(s.total_duration or 0),
+            'total_duration_seconds': int(s.total_duration or 0),
             'outgoing': s.outgoing or 0,
             'incoming': s.incoming or 0,
             'missed': s.missed or 0,

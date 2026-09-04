@@ -870,18 +870,29 @@
 
         function setupTabs() {
             if (!dashData) return;
+            const canViewFin = Boolean(dashData.can_view_financials);
+            const isLeaderOrAdmin = Boolean(dashData.is_leader || dashData.is_admin);
             const tabs = document.querySelectorAll('.dash-tab');
             tabs.forEach(t => {
                 const tab = t.dataset.tab;
-                if (['my','calls','quality','dialer','earnings'].includes(tab)) {
+                if (['my','calls','quality','dialer'].includes(tab)) {
                     t.classList.remove('hidden');
-                } else if (['team','status','category','company'].includes(tab)) {
-                    t.classList.toggle('hidden', !dashData.is_leader && !dashData.is_admin);
+                } else if (['team','status','category'].includes(tab)) {
+                    t.classList.toggle('hidden', !isLeaderOrAdmin);
+                } else if (['company','earnings'].includes(tab)) {
+                    t.classList.toggle('hidden', !canViewFin);
                 }
             });
         }
 
         function switchTab(tab) {
+            // Guard restricted tabs
+            if (['company', 'earnings'].includes(tab) && !dashData?.can_view_financials) {
+                tab = 'my';
+            }
+            if (['team', 'status', 'category'].includes(tab) && !dashData?.is_leader && !dashData?.is_admin) {
+                tab = 'my';
+            }
             activeTab = tab;
             document.querySelectorAll('.dash-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
             document.querySelectorAll('.tab-content-area').forEach(el => el.classList.remove('active'));
@@ -1288,28 +1299,36 @@
                 tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-muted">No call records found</td></tr>';
                 return;
             }
-            tbody.innerHTML = staffList.map((s, idx) => `<tr>
+            tbody.innerHTML = staffList.map((s, idx) => {
+                const sName = s.name || s.staff_name || 'Staff';
+                const sDept = s.department || '';
+                const safeName = sName.replace(/'/g, "\\'");
+                return `<tr>
                 <td class="text-start">${idx + 1}</td>
                 <td class="text-start">
                     <div class="emp-info">
-                        <div class="emp-avatar">${initials(s.name)}</div>
-                        <div><div class="emp-name">${s.name || '-'}</div><div class="emp-id">${s.emp_code || ''} ${s.department ? '· '+s.department : ''}</div></div>
+                        <div class="emp-avatar">${initials(sName)}</div>
+                        <div>
+                            <div class="emp-name font-semibold text-dark">${escapeHtml(sName)}</div>
+                            <div class="emp-id text-muted small">${escapeHtml(s.emp_code || '')}${sDept ? ' · ' + escapeHtml(sDept) : ''}</div>
+                        </div>
                     </div>
                 </td>
                 <td><strong>${fmtNum(s.total_calls)}</strong></td>
                 <td class="text-success font-semibold">${fmtNum(s.outgoing)}</td>
                 <td class="text-primary font-semibold">${fmtNum(s.incoming)}</td>
                 <td class="${s.missed > 0 ? 'text-danger font-semibold' : 'val-zero'}">${fmtNum(s.missed)}</td>
-                <td>${fmtDurationSec(s.total_duration_seconds)}</td>
+                <td>${fmtDurationSec(s.total_duration_seconds || s.total_duration)}</td>
                 <td>${fmtDurationSec(s.avg_daily_talk_time)}</td>
                 <td>${fmtNum(s.unique_numbers)}</td>
                 <td class="text-warning font-semibold">${fmtNum(s.crm_matched)}</td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="openStaffCallDrilldown(${s.staff_id}, '${s.name || 'Staff'}')">
+                    <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="openStaffCallDrilldown(${s.staff_id}, '${safeName}')">
                         <i class="fas fa-list-ul me-1"></i>View Calls
                     </button>
                 </td>
-            </tr>`).join('');
+            </tr>`;
+            }).join('');
         }
 
         function renderCtSlotsTable(d) {
@@ -1326,8 +1345,8 @@
             </tr>`;
 
             document.getElementById('ctSlotsBody').innerHTML = perStaff.map(row => `<tr>
-                <td class="text-start font-semibold">${row.name || '-'} <small class="text-muted">(${row.emp_code||''})</small></td>
-                <td>${row.department || '-'}</td>
+                <td class="text-start font-semibold">${escapeHtml(row.name || '-')} <small class="text-muted">(${escapeHtml(row.emp_code||'')})</small></td>
+                <td>${escapeHtml(row.department || '-')}</td>
                 ${CA_SLOT_KEYS.map(sk => `<td>${(row.slots && row.slots[sk] && row.slots[sk].calls) || 0}</td>`).join('')}
                 <td><strong>${(row.total && row.total.calls) || 0}</strong></td>
             </tr>`).join('');
@@ -1369,19 +1388,23 @@
                 tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-muted">No call records found</td></tr>';
                 return;
             }
-            tbody.innerHTML = calls.map((c, i) => `<tr>
+            tbody.innerHTML = calls.map((c, i) => {
+                const hasRec = Boolean((c.has_recording || c.recording_id) && c.recording_id);
+                const leadDisplay = c.matched_lead_name || c.contact_name_crm || c.contact_name || '-';
+                return `<tr>
                 <td class="text-start">${i + 1}</td>
-                <td>${new Date(c.call_datetime).toLocaleString('en-IN')}</td>
-                <td><strong>${c.phone_number || '-'}</strong></td>
+                <td>${c.call_datetime ? new Date(c.call_datetime).toLocaleString('en-IN') : '-'}</td>
+                <td><strong>${escapeHtml(c.phone_number || '-')}</strong></td>
                 <td><span class="badge ${c.call_type==='OUTGOING'?'bg-success':c.call_type==='INCOMING'?'bg-primary':'bg-danger'}">${c.call_type}</span></td>
                 <td>${fmtDurationSec(c.duration_seconds)}</td>
-                <td>${c.matched_lead_name || c.contact_name || '-'}</td>
+                <td>${escapeHtml(leadDisplay)}</td>
                 <td>
-                    ${c.has_recording && c.recording_id
+                    ${hasRec
                         ? `<button class="btn btn-sm btn-outline-info py-0 px-2" onclick="playAudioStream(${c.recording_id})"><i class="fas fa-play me-1"></i>Play</button>`
-                        : '<span class="text-muted">-</span>'}
+                        : '<span class="text-muted" title="No recording file uploaded for this call">-</span>'}
                 </td>
-            </tr>`).join('');
+            </tr>`;
+            }).join('');
         }
 
         function playAudioStream(recordingId) {

@@ -221,6 +221,39 @@ def sync_browser_call_event(
             if session.answered_at:
                 session.duration_seconds = int((session.ended_at - session.answered_at).total_seconds())
 
+            # DC_SOFTPHONE_SYNC: Sync to StaffCallLog for unified CRM performance & talk time
+            if session.operator_id:
+                try:
+                    from app.models.call_tracking import StaffCallLog
+                    existing_log = db.query(StaffCallLog).filter(
+                        StaffCallLog.device_call_id == session.call_session_id
+                    ).first()
+                    call_dt = session.answered_at or session.created_at or get_indian_time()
+                    call_type_val = 'OUTGOING' if new_state == CallStateEnum.ENDED.value and (session.duration_seconds or 0) > 0 else 'MISSED'
+                    if not existing_log:
+                        db.add(StaffCallLog(
+                            company_id=session.company_id or company_id or 1,
+                            staff_id=session.operator_id,
+                            phone_number=session.destination_number or '',
+                            contact_name=session.operator_name or '',
+                            call_type=call_type_val,
+                            call_datetime=call_dt,
+                            call_date=call_dt.strftime('%Y-%m-%d'),
+                            duration_seconds=session.duration_seconds or 0,
+                            source='softphone',
+                            device_call_id=session.call_session_id,
+                            matched_lead_id=session.lead_id,
+                            matched_at=get_indian_time() if session.lead_id else None,
+                            has_recording=False,
+                            synced_at=get_indian_time(),
+                            created_at=get_indian_time()
+                        ))
+                    else:
+                        existing_log.duration_seconds = session.duration_seconds or 0
+                        existing_log.call_type = call_type_val
+                except Exception as e:
+                    logger.warning(f"[SOFTPHONE-STAFF-CALL-LOG] Sync error: {e}")
+
         db.commit()
 
     return {

@@ -1993,6 +1993,21 @@ def get_crm_dashboard_v2(
     is_admin = is_vgk_admin(current_employee.staff_type) or current_employee.emp_code == 'MR10001'
     is_leader = has_direct_reports(current_employee.id, db, StaffEmployee) if not is_admin else True
 
+    # DC_FINANCIALS_TAB_GATE: Company-wise and Earnings tabs are strictly restricted to MR10001 and Accounts (Subhash)
+    from app.models.staff import StaffDepartment
+    is_subhash = (
+        current_employee.emp_code == 'MR10025' or 
+        'subhash' in (current_employee.first_name or '').lower() or 
+        'subhash' in (current_employee.last_name or '').lower()
+    )
+    is_accounts_dept = False
+    if current_employee.department_id:
+        dept = db.query(StaffDepartment).filter(StaffDepartment.id == current_employee.department_id).first()
+        if dept and 'account' in (dept.name or '').lower():
+            is_accounts_dept = True
+
+    can_view_financials = (current_employee.emp_code == 'MR10001') or is_subhash or is_accounts_dept
+
     today = get_indian_time().date()
     today_start = datetime.combine(today, datetime.min.time())
     today_end = datetime.combine(today, datetime.max.time())
@@ -2684,7 +2699,7 @@ def get_crm_dashboard_v2(
             category_wise_data.append(entry)
         category_wise_data.sort(key=lambda x: x['total'], reverse=True)
 
-    if is_admin or is_leader:
+    if can_view_financials:
         comp_owner_filter = []
         if not is_admin:
             comp_owner_filter = [
@@ -2825,6 +2840,7 @@ def get_crm_dashboard_v2(
         'data': {
             'is_leader': is_leader,
             'is_admin': is_admin,
+            'can_view_financials': can_view_financials,
             'daily_dates': daily_date_strs,
             'avg_num_days': avg_num_days,
             'current_employee': {

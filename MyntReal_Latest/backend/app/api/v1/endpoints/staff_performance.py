@@ -1531,6 +1531,24 @@ def get_incentive_achievements(
     elif employee_id == '':
         employee_id = None
 
+    # Financial gate: Only MR10001, Subhash (MR10025), and Accounts dept can view organization-wide achievements.
+    # Other staff/managers can only view their own incentive achievement data.
+    from app.models.staff import StaffDepartment
+    is_subhash = (
+        me.emp_code == 'MR10025' or 
+        'subhash' in (me.first_name or '').lower() or 
+        'subhash' in (me.last_name or '').lower()
+    )
+    is_accounts_dept = False
+    if me.department_id:
+        dept = db.query(StaffDepartment).filter(StaffDepartment.id == me.department_id).first()
+        if dept and 'account' in (dept.name or '').lower():
+            is_accounts_dept = True
+
+    can_view_all_financials = (me.emp_code == 'MR10001') or is_subhash or is_accounts_dept
+    if not can_view_all_financials:
+        employee_id = me.emp_code
+
     all_companies = not company_id or company_id == 0
     cfg_company_id = 1 if all_companies else company_id
 
