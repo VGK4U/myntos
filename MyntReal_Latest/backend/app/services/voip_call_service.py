@@ -74,14 +74,15 @@ class VoIPCallService:
         current_user: Any,
         customer_phone: str,
         lead_id: Optional[int] = None,
-        provider_name: Optional[str] = None
+        provider_name: Optional[str] = None,
+        dispatch_provider_call: bool = True
     ) -> VoIPCallSession:
         """
         Initiate an authoritative In-App PSTN call session.
         - Validates operator and lead
         - Normalizes customer number to E.164
         - Resolves dedicated MyntReal outbound caller ID
-        - Dispatches call via provider-agnostic telephony adapter
+        - Dispatches call via provider-agnostic telephony adapter (if dispatch_provider_call=True)
         - Idempotently links OperatorCall & CRM Lead history
         """
         # 1. Resolve Operator Identity & Company ID
@@ -130,7 +131,7 @@ class VoIPCallService:
         caller_id = (
             getattr(settings, 'MYNTREAL_OUTBOUND_CALLING_NUMBER', None) or 
             os.getenv('MYNTREAL_OUTBOUND_CALLING_NUMBER') or 
-            "+912269470537"
+            "+918031728899"
         )
 
         # 6. Instantiate Provider & Generate Unique Session ID
@@ -154,49 +155,52 @@ class VoIPCallService:
             provider=provider.provider_name,
             caller_id=caller_id,
             destination_number=dest_e164,
-            status=CallStateEnum.CREATED.value,
+            status=CallStateEnum.DIALING.value,
             started_at=now,
+            dialing_at=now,
             recording_status=RecordingStatusEnum.NOT_STARTED.value
         )
         db.add(session)
-        db.flush()
+        db.commit()
+        db.refresh(session)
 
-        # 8. Dispatch Call to Telephony Provider
-        operator_info = {
-            "id": operator_id,
-            "user_ref": operator_user_ref,
-            "name": operator_name,
-            "phone": operator_phone,
-            "company_id": company_id
-        }
-        metadata = {
-            "lead_id": lead_id,
-            "company_id": company_id,
-            "branch_id": branch_id
-        }
+        # 8. Dispatch Call to Telephony Provider (If Server Originated / Click-To-Call)
+        if dispatch_provider_call:
+            operator_info = {
+                "id": operator_id,
+                "user_ref": operator_user_ref,
+                "name": operator_name,
+                "phone": operator_phone,
+                "company_id": company_id
+            }
+            metadata = {
+                "lead_id": lead_id,
+                "company_id": company_id,
+                "branch_id": branch_id
+            }
 
-        call_result = provider.create_call(
-            call_session_id=call_session_id,
-            destination_phone=dest_e164,
-            caller_id=caller_id,
-            operator_info=operator_info,
-            metadata=metadata
-        )
+            call_result = provider.create_call(
+                call_session_id=call_session_id,
+                destination_phone=dest_e164,
+                caller_id=caller_id,
+                operator_info=operator_info,
+                metadata=metadata
+            )
 
-        if not call_result.success:
-            session.status = CallStateEnum.FAILED.value
-            session.failure_reason = call_result.error_message or "Telephony provider rejected call dispatch"
-            session.ended_at = get_indian_time()
+            if not call_result.success:
+                session.status = CallStateEnum.FAILED.value
+                session.failure_reason = call_result.error_message or "Telephony provider rejected call dispatch"
+                session.ended_at = get_indian_time()
+                db.commit()
+                logger.error(f"[VOIP-CALL-FAILED] Session {call_session_id} failed: {session.failure_reason}")
+                raise HTTPException(status_code=502, detail=f"Telephony Provider Error: {session.failure_reason}")
+
+            # Update Session with Provider Call ID
+            session.provider_call_id = call_result.provider_call_id
+            if call_result.client_token:
+                session.client_token = json.dumps(call_result.client_token)
             db.commit()
-            logger.error(f"[VOIP-CALL-FAILED] Session {call_session_id} failed: {session.failure_reason}")
-            raise HTTPException(status_code=502, detail=f"Telephony Provider Error: {session.failure_reason}")
-
-        # 9. Update Session with Provider Call ID & DIALING state
-        session.provider_call_id = call_result.provider_call_id
-        session.status = CallStateEnum.DIALING.value
-        session.dialing_at = get_indian_time()
-        if call_result.client_token:
-            session.client_token = json.dumps(call_result.client_token)
+            db.refresh(session)
 
         # 10. Idempotently Associate with OperatorCall Tracking
         op_call = db.query(OperatorCall).filter(

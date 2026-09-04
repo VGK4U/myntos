@@ -160,7 +160,7 @@ export class SoftphonePage {
           await apiService.post('/telephony/plivo/browser/register', {
             is_registered: true,
             in_call: true,
-            call_session_id: this.currentCallSessionId
+            call_session_id: this.activeCallSessionId
           });
         } catch (_) {}
       }
@@ -325,45 +325,10 @@ export class SoftphonePage {
       }
     } catch (e) {
       console.warn('[SoftphonePage] Plivo WebRTC init error:', e);
+      this.isWebRTCRegistered = false;
     } finally {
       this.isInitializingWebRTC = false;
     }
-
-    if (!this.plivoClient) {
-      this.setupFallbackClient();
-    }
-  }
-
-  private setupFallbackClient(): void {
-    if (this.plivoClient) return;
-    console.log('[SoftphonePage] Initialized in-app Softphone WebRTC client fallback');
-    this.plivoClient = {
-      loginWithAccessToken: (_token: string) => {
-        this.isWebRTCRegistered = true;
-      },
-      login: (_token: string) => {
-        this.isWebRTCRegistered = true;
-      },
-      call: (destination: string, extraHeaders: any) => {
-        console.log('[SoftphonePage] Outbound softphone call dispatched:', destination, extraHeaders);
-        this.isCallConnected = true;
-        this.callStatusText = 'Connected / In Call';
-        const statusEl = document.getElementById('softphoneCallStatusText');
-        if (statusEl) {
-          statusEl.textContent = this.callStatusText;
-          statusEl.style.color = '#22c55e';
-        }
-        this.startCallTimer();
-        this.startHeartbeatLoop();
-      },
-      hangup: () => {
-        this.stopHeartbeatLoop();
-        this.endCall();
-      },
-      mute: () => { this.isMuted = true; },
-      unmute: () => { this.isMuted = false; }
-    };
-    this.isWebRTCRegistered = true;
   }
 
   public cleanup(): void {
@@ -748,13 +713,18 @@ export class SoftphonePage {
     if (contactName) this.selectedContactName = contactName;
 
     // 1. Attempt Plivo WebRTC registration if not yet registered
-    if (!this.isWebRTCRegistered && !isDirectSim) {
+    if (!this.isWebRTCRegistered) {
       const statusEl = document.getElementById('softphoneCallStatusText');
       if (statusEl) {
         statusEl.textContent = 'Connecting to calling network...';
         statusEl.style.color = '#f59e0b';
       }
       await this.initPlivoWebRTC();
+    }
+
+    if (!this.plivoClient || !this.isWebRTCRegistered) {
+      alert('Softphone WebRTC service is initializing or unavailable. Please check microphone permissions and network connection.');
+      return;
     }
 
     this.isInCall = true;
@@ -774,11 +744,7 @@ export class SoftphonePage {
     // 2. Prepare backend VoIPCallSession for CRM tracking & audit logs
     const sessionId = await this.createCallSession(cleanNumber);
 
-    // 3. Dispatch call strictly through In-App Softphone UI (No native mobile dialer)
-    if (!this.plivoClient) {
-      this.setupFallbackClient();
-    }
-
+    // 3. Dispatch call strictly through In-App WebRTC Softphone UI
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
         this.localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -811,13 +777,6 @@ export class SoftphonePage {
     }
 
     this.render();
-  }
-
-  private triggerNativeSimCall(): void {
-    const cleanNumber = (this.dialNumber || '').replace(/[^0-9+]/g, '');
-    if (cleanNumber) {
-      window.location.href = `tel:${cleanNumber}`;
-    }
   }
 
   private endCall(): void {

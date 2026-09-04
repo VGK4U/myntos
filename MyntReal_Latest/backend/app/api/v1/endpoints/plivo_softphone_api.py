@@ -119,7 +119,8 @@ def initiate_browser_outbound_call(
             current_user=current_user,
             customer_phone=destination_phone,
             lead_id=lead_id,
-            provider_name="plivo"
+            provider_name="plivo",
+            dispatch_provider_call=False
         )
     except Exception as e:
         logger.warning(f"[VOIP-SOFTPHONE] initiate_in_app_call error: {e}")
