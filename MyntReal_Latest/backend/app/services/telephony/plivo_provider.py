@@ -100,16 +100,26 @@ class PlivoTelephonyProvider(BaseTelephonyProvider):
 
         # Check if real Plivo API credentials are available
         if self.auth_id and self.auth_token and not self.auth_id.startswith("mock_"):
-            answer_url = getattr(settings, 'PLIVO_ANSWER_URL', None) or "https://raw.githubusercontent.com/plivo/plivoxml/master/xml/speak.xml"
+            base_domain = getattr(settings, 'PLIVO_WEBHOOK_BASE_URL', None) or os.getenv('PLIVO_WEBHOOK_BASE_URL') or "https://www.myntreal.com"
+            answer_url = getattr(settings, 'PLIVO_ANSWER_URL', None) or f"{base_domain}/api/v1/telephony/plivo/inbound?session_id={call_session_id}"
+            hangup_url = f"{base_domain}/api/v1/telephony/plivo/hangup?session_id={call_session_id}"
+            recording_callback_url = f"{base_domain}/api/v1/telephony/plivo/recording-callback?session_id={call_session_id}"
+
             payload = {
                 "from": clean_caller_digits,
                 "to": clean_dest_digits,
                 "answer_url": answer_url,
-                "answer_method": "GET"
+                "answer_method": "POST",
+                "hangup_url": hangup_url,
+                "hangup_method": "POST",
+                "record": "true",
+                "record_direction": "both",
+                "recording_callback_url": recording_callback_url,
+                "recording_callback_method": "POST"
             }
             try:
                 url = f"https://api.plivo.com/v1/Account/{self.auth_id}/Call/"
-                logger.info(f"[PLIVO-CALL-POST] Initiating call via Plivo API to {clean_dest_digits} (from: {clean_caller_digits})")
+                logger.info(f"[PLIVO-CALL-POST] Initiating call via Plivo API to {clean_dest_digits} (from: {clean_caller_digits}) with answer_url: {answer_url}")
                 resp = requests.post(url, auth=(self.auth_id, self.auth_token), json=payload, timeout=10)
                 resp_json = {}
                 try:
