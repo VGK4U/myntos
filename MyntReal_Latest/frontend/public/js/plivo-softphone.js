@@ -871,17 +871,11 @@
                 <!-- Mobile & Desktop Backdrop -->
                 <div id="myntosSoftphoneBackdrop" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(3px); z-index: 99998; transition: opacity 0.2s ease;" onclick="window.PlivoSoftphone.onBackdropClick()"></div>
 
-                <!-- Global Softphone Floating Dock & Overlay -->
-                <div id="myntosSoftphoneWidget" style="position: fixed; bottom: 84px; right: 24px; z-index: 99999; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-                    
-                    <!-- Minimized Floating Pill Button -->
-                    <button id="plivoSoftphoneToggleBtn" class="btn btn-primary shadow-lg rounded-pill px-3 py-2 d-flex align-items-center gap-2" onclick="window.PlivoSoftphone.toggleDock()" style="border: 2px solid rgba(255,255,255,0.4); box-shadow: 0 10px 25px rgba(37,99,235,0.35) !important;">
-                        <i class="fa-solid fa-headset fa-lg"></i>
-                        <span class="fw-bold" id="softphoneStatusText">Softphone (Ready)</span>
-                    </button>
+                <!-- Global Softphone Floating Dock & Overlay (Floating toggle button removed; dedicated page available) -->
+                <div id="myntosSoftphoneWidget" style="position: fixed; bottom: 84px; right: 24px; z-index: 99999; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; pointer-events: none;">
 
-                    <!-- Expanded Mobile Softphone Modal Card -->
-                    <div id="plivoSoftphoneDockCard" class="card shadow-lg border-0 rounded-4 mt-2" style="display: none; width: 360px; background: #ffffff; box-shadow: 0 20px 45px rgba(15,23,42,0.3) !important; overflow: hidden; border: 1px solid #e2e8f0; position: relative;">
+                    <!-- Expanded Mobile Softphone Modal Card (shown only when dialing programmatically) -->
+                    <div id="plivoSoftphoneDockCard" class="card shadow-lg border-0 rounded-4 mt-2" style="display: none; width: 360px; background: #ffffff; box-shadow: 0 20px 45px rgba(15,23,42,0.3) !important; overflow: hidden; border: 1px solid #e2e8f0; position: relative; pointer-events: auto;">
                         
                         <!-- Header -->
                         <div style="background: linear-gradient(135deg, #1e293b, #0f172a); padding: 14px 16px; color: #ffffff; display: flex; align-items: center; justify-content: space-between;">
