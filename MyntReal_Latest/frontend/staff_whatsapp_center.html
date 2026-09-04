@@ -803,43 +803,6 @@ async function apiFetch(url, opts = {}) {
   return res.json();
 }
 
-function showToast(msg, type='green') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast ${type} show`;
-  setTimeout(() => t.classList.remove('show'), 3000);
-}
-
-function switchCenterTab(tabName) {
-  activeCenterTab = tabName;
-  document.querySelectorAll('.wa-tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-
-  const btn = document.getElementById(`btn-tab-${tabName}`);
-  if (btn) btn.classList.add('active');
-  
-  if (tabName === 'messenger') {
-    document.getElementById('pane-messenger')?.classList.add('active');
-    activeScope = 'assigned_tagged';
-    loadMessengerHub();
-  } else if (tabName === 'team') {
-    document.getElementById('pane-messenger')?.classList.add('active');
-    activeScope = 'downline';
-    loadMessengerHub();
-  } else if (tabName === 'inbox') {
-    document.getElementById('pane-inbox')?.classList.add('active');
-    loadInbox(1);
-  } else if (tabName === 'templates') {
-    document.getElementById('pane-templates')?.classList.add('active');
-    loadTemplatesHub();
-  } else if (tabName === 'automations') {
-    document.getElementById('pane-automations')?.classList.add('active');
-    loadAutomationsHub();
-  } else if (tabName === 'audit') {
-    document.getElementById('pane-audit')?.classList.add('active');
-    loadAuditLogHub();
-  }
-}
 
 // ── TAB 1: CRM INBOX ────────────────────────────────────────────────────────
 async function loadInbox(page = 1) {
@@ -963,8 +926,21 @@ async function loadMessengerHub() {
   }
 }
 
+let currentRenderedConvs = [];
+
+function escapeHtmlText(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function renderConversationsList(convs) {
-  if (!convs.length) {
+  currentRenderedConvs = convs || [];
+  if (!convs || !convs.length) {
     const emptyMsg = activeScope === 'company' 
       ? 'No unassigned company messages found.' 
       : (activeScope === 'downline' ? 'No team conversations found.' : 'No personal conversations found.');
@@ -973,7 +949,7 @@ function renderConversationsList(convs) {
   }
 
   let html = '';
-  convs.forEach(c => {
+  convs.forEach((c, idx) => {
     const isGroup = c.recipient_type === 'group';
     const isChannel = c.recipient_type === 'channel';
     const isUnassigned = c.is_unassigned === true || activeScope === 'company';
@@ -982,22 +958,29 @@ function renderConversationsList(convs) {
     const badgeLabel = isGroup ? 'Group' : (isChannel ? 'Channel' : (c.badge || 'Contact'));
 
     html += `
-      <div class="conv-card ${activeChatPhone === c.phone ? 'active' : ''}" onclick="selectChat('${c.phone}', '${c.recipient_type || 'individual'}', '${this.escapeHtml ? this.escapeHtml(c.name) : c.name.replace(/'/g, "\\'")}', ${isUnassigned}, '${c.channel || ''}')">
+      <div class="conv-card ${activeChatPhone === c.phone ? 'active' : ''}" onclick="selectChatByIndex(${idx})">
         <div class="conv-avatar">${isGroup ? '👥' : (isChannel ? '📢' : (isUnassigned ? '🏢' : '👤'))}</div>
         <div class="conv-info">
           <div class="conv-name">
-            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px;">${c.name}</span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px;">${escapeHtmlText(c.name || c.phone)}</span>
             <div style="display:flex;align-items:center;gap:4px">
               ${chanBadge}
               <span class="type-badge ${badgeClass}">${badgeLabel}</span>
             </div>
           </div>
-          <div class="conv-snippet">${c.last_message || ''}</div>
+          <div class="conv-snippet">${escapeHtmlText(c.last_message || '')}</div>
         </div>
       </div>
     `;
   });
   document.getElementById('convList').innerHTML = html;
+}
+
+function selectChatByIndex(idx) {
+  const c = currentRenderedConvs[idx];
+  if (!c) return;
+  const isUnassigned = c.is_unassigned === true || activeScope === 'company';
+  selectChat(c.phone, c.recipient_type || 'individual', c.name || c.phone, isUnassigned, c.channel || '');
 }
 
 function onMsgScopeChange(scope) {
