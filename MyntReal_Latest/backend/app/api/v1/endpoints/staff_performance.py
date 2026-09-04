@@ -1531,6 +1531,24 @@ def get_incentive_achievements(
     elif employee_id == '':
         employee_id = None
 
+    # Financial gate: Only MR10001, Subhash (MR10025), and Accounts dept can view organization-wide achievements.
+    # Other staff/managers can only view their own incentive achievement data.
+    from app.models.staff import StaffDepartment
+    is_subhash = (
+        me.emp_code == 'MR10025' or 
+        'subhash' in (me.first_name or '').lower() or 
+        'subhash' in (me.last_name or '').lower()
+    )
+    is_accounts_dept = False
+    if me.department_id:
+        dept = db.query(StaffDepartment).filter(StaffDepartment.id == me.department_id).first()
+        if dept and 'account' in (dept.name or '').lower():
+            is_accounts_dept = True
+
+    can_view_all_financials = (me.emp_code == 'MR10001') or is_subhash or is_accounts_dept
+    if not can_view_all_financials:
+        employee_id = me.emp_code
+
     all_companies = not company_id or company_id == 0
     cfg_company_id = 1 if all_companies else company_id
 
@@ -1960,7 +1978,9 @@ def get_incentive_achievements(
             "COALESCE(d.name, 'Unassigned') as department_name "
             "FROM staff_employees e "
             "LEFT JOIN staff_departments d ON d.id = e.department_id "
-            "WHERE e.status = 'active'"
+            "WHERE e.status = 'active' AND e.is_deleted = FALSE "
+            "AND e.emp_code NOT LIKE 'EMP_TEST_%' "
+            "AND (e.staff_type IS NULL OR e.staff_type NOT IN ('SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'))"
             + (" AND e.base_company_id = :co" if not all_companies else "")
             + " ORDER BY e.full_name, e.emp_code"
         )
@@ -1983,7 +2003,9 @@ def get_incentive_achievements(
                 "COALESCE(d.name, 'Unassigned') as department_name "
                 "FROM staff_employees e "
                 "LEFT JOIN staff_departments d ON d.id = e.department_id "
-                "WHERE e.id = ANY(:ids)"
+                "WHERE e.id = ANY(:ids) AND e.status = 'active' AND e.is_deleted = FALSE "
+                "AND e.emp_code NOT LIKE 'EMP_TEST_%' "
+                "AND (e.staff_type IS NULL OR e.staff_type NOT IN ('SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'))"
             ), {'ids': int_ids}).fetchall()
             emp_map = {str(r[0]): {'emp_code': r[1], 'name': r[2], 'dept_id': r[3], 'department': r[4]} for r in emps}
             for eid in emp_map:

@@ -1650,7 +1650,39 @@
     <script src="/staff_sidebar.js?v=20260602c"></script>
     <script src="/shared/staff_inactivity_manager.js"></script>
     <script src="/staff_header.js"></script>
+    <script src="/public/js/plivo-softphone.js?v=2.0"></script>
     <script>
+        // Global Lead Softphone Call Trigger
+        function triggerLeadCall(phone, name, leadId) {
+            if (!phone) return;
+            const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+            if (!cleanPhone) return;
+            const safeName = (name || 'Customer Lead').trim();
+            console.log(`[STAFF-LEADS] Triggering Softphone Call to: ${cleanPhone} (${safeName}, Lead ID: ${leadId})`);
+
+            if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+                window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
+            } else if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
+                window.PlivoSoftphone.dial(cleanPhone, leadId, safeName);
+            } else {
+                setTimeout(() => {
+                    if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+                        window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
+                    }
+                }, 300);
+            }
+        }
+
+        function maskPhone(p) {
+            if (!p || p === '—' || p === '-' || p === 'null') return '—';
+            const s = String(p).trim();
+            if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
+            const digits = s.replace(/\D/g, '');
+            if (digits.length < 6) return s;
+            const clean10 = digits.slice(-10);
+            return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
+        }
+
         const API_BASE = '/api/v1/crm';
         let companyId = null;
         let selectedLeadCompanyId = null;
@@ -2911,8 +2943,8 @@
                 // DC Protocol (Jan 22, 2026): Calculate Days Since Interaction
                 const daysSince = calculateDaysSince(lead);
                 const cleanP = (lead.phone || '').replace(/\D/g, '').slice(-10);
-                const rowCallIcon = cleanP ? `<a href="tel:+91${cleanP}" onclick="event.stopPropagation()" class="btn btn-sm btn-outline-primary p-0 px-1 ms-1" style="font-size:10px;" title="Direct Call"><i class="fas fa-phone-alt"></i> Call</a>` : '';
                 const safeNameEsc = (lead.name || '').replace(/'/g, "\\'");
+                const rowCallIcon = cleanP ? `<button type="button" onclick="event.stopPropagation(); triggerLeadCall('${cleanP}', '${safeNameEsc}', ${lead.id})" class="btn btn-sm btn-outline-primary p-0 px-1 ms-1" style="font-size:10px;" title="Softphone WebRTC Call"><i class="fas fa-phone-alt"></i> Call</button>` : '';
                 const rowWAIcon = cleanP ? `<button type="button" onclick="event.stopPropagation(); openLeadWAModal('${lead.id}', '${cleanP}', '${safeNameEsc}', ${leadCompanyIdParam})" class="btn btn-sm btn-outline-success p-0 px-1 ms-1" style="font-size:10px;" title="WhatsApp Chat & Scanned Bot"><i class="fab fa-whatsapp"></i> Chat</button>` : '';
 
                 return `
@@ -2922,7 +2954,7 @@
                     <td>
                         <div class="lead-name">${lead.name}</div>
                         <div class="lead-contact">
-                            ${lead.email || ''} ${lead.phone ? '| <strong>' + lead.phone + '</strong>' + rowCallIcon + rowWAIcon : ''}
+                            ${lead.email || ''} ${lead.phone ? '| <strong>' + maskPhone(lead.phone) + '</strong>' + rowCallIcon + rowWAIcon : ''}
                         </div>
                     </td>
                     <td>${lead.category_name || '-'}</td>
@@ -3067,10 +3099,18 @@
             const digits = (phoneVal || '').replace(/[^0-9]/g, '');
             const clean10 = digits.slice(-10);
             if (clean10.length === 10) {
-                btn.href = 'tel:+91' + clean10;
+                btn.removeAttribute('href');
+                btn.onclick = (e) => {
+                    e.preventDefault();
+                    const name = document.getElementById('leadName')?.value || 'Customer Lead';
+                    const leadId = currentLeadId || null;
+                    triggerLeadCall(clean10, name, leadId);
+                };
                 btn.classList.remove('disabled');
             } else {
-                btn.href = 'tel:';
+                btn.removeAttribute('href');
+                btn.onclick = (e) => e.preventDefault();
+                btn.classList.add('disabled');
             }
         }
 
@@ -4542,9 +4582,9 @@
                     document.getElementById('detailEmail').textContent = lead.email || '-';
                     const rawP = lead.phone || '';
                     const cleanP10 = rawP.replace(/\D/g, '').slice(-10);
-                    const callBtnHtml = cleanP10 ? `<a class="btn btn-sm btn-outline-primary btn-call-direct ms-2" href="tel:+91${cleanP10}" title="Direct Call"><i class="fas fa-phone-alt me-1"></i> Call</a>` : '';
+                    const callBtnHtml = cleanP10 ? `<button type="button" class="btn btn-sm btn-outline-primary btn-call-direct ms-2" onclick="triggerLeadCall('${cleanP10}', '${(lead.name || '').replace(/'/g, "\\'")}', ${lead.id})" title="Softphone WebRTC Call"><i class="fas fa-phone-alt me-1"></i> Call</button>` : '';
                     const waBtnHtml = cleanP10 ? `<button type="button" class="btn btn-sm btn-outline-success btn-whatsapp-direct ms-1" onclick="openLeadWAModal('${lead.id}', '${cleanP10}', '${(lead.name || '').replace(/'/g, "\\'")}', '${lead.company_id}')" title="Send WhatsApp"><i class="fab fa-whatsapp me-1"></i> Chat</button>` : '';
-                    document.getElementById('detailPhone').innerHTML = `${rawP} ${callBtnHtml} ${waBtnHtml}`;
+                    document.getElementById('detailPhone').innerHTML = `${maskPhone(rawP)} ${callBtnHtml} ${waBtnHtml}`;
                     document.getElementById('detailCategory').textContent = lead.category_name || '-';
                     document.getElementById('detailSource').textContent = lead.source || '-';
                     document.getElementById('detailBudget').textContent = lead.budget_min || lead.budget_max ? 

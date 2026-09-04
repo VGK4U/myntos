@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRM Dashboard - Staff Portal</title>
+    <title>CRM & Team Performance 360° - Staff Portal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/nda-enforcement.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
@@ -14,63 +17,66 @@
         .content-area { padding: 24px; }
 
         .page-banner {
-            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-            border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+            background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%);
+            border-radius: 12px; padding: 22px 24px; margin-bottom: 20px; color: white;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
         }
-        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
-        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        .page-banner h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 13px; }
 
         .filter-bar {
-            background: white; border-radius: 12px; padding: 16px 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;
+            background: white; border-radius: 12px; padding: 14px 18px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 18px;
         }
-        .filter-bar .filter-grid { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
-        .filter-bar .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-bar .filter-grid { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+        .filter-bar .filter-group { display: flex; flex-direction: column; gap: 3px; }
         .filter-bar .filter-group label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
-        .filter-bar .form-control, .filter-bar .form-select { font-size: 13px; padding: 6px 10px; border-radius: 6px; min-width: 140px; border: 1px solid #e5e7eb; }
-        .filter-bar .form-control:focus, .filter-bar .form-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .filter-bar .form-control, .filter-bar .form-select { font-size: 13px; padding: 6px 10px; border-radius: 6px; min-width: 130px; border: 1px solid #e5e7eb; }
+        .filter-bar .form-control:focus, .filter-bar .form-select:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
 
-        .dashboard-tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+        .dashboard-tabs { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; background: #fff; padding: 6px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
         .dash-tab {
-            padding: 8px 18px; border-radius: 8px; border: 1px solid #e5e7eb; background: white;
-            color: #6b7280; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;
+            padding: 7px 16px; border-radius: 8px; border: 1px solid transparent; background: transparent;
+            color: #6b7280; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s;
             display: flex; flex-direction: column; align-items: center; gap: 2px;
         }
-        .dash-tab:hover { border-color: #6366f1; color: #6366f1; }
-        .dash-tab.active { background: #6366f1; border-color: #6366f1; color: white; }
+        .dash-tab:hover { background: #f0f4ff; color: #4f46e5; }
+        .dash-tab.active { background: #4f46e5; color: white; }
         .dash-tab.hidden { display: none; }
-        .tab-main { display: flex; align-items: center; gap: 4px; }
+        .tab-main { display: flex; align-items: center; gap: 6px; }
         .tab-sub { font-size: 10px; font-weight: 400; opacity: 0.75; white-space: nowrap; }
-        .dash-tab.active .tab-sub { opacity: 0.85; }
+        .dash-tab.active .tab-sub { opacity: 0.9; }
 
-        .stat-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
-        .stat-card { background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-align: center; }
-        .stat-card .val { font-size: 24px; font-weight: 700; color: #1f2937; }
-        .stat-card .lbl { color: #6b7280; font-size: 11px; margin-top: 2px; text-transform: uppercase; font-weight: 600; }
-        .stat-card.highlight { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+        .stat-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .stat-card { background: white; border-radius: 10px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); text-align: center; }
+        .stat-card .val { font-size: 22px; font-weight: 700; color: #1f2937; }
+        .stat-card .lbl { color: #6b7280; font-size: 10px; margin-top: 2px; text-transform: uppercase; font-weight: 600; }
+        .stat-card.highlight { background: linear-gradient(135deg, #4f46e5, #3b82f6); }
         .stat-card.highlight .val, .stat-card.highlight .lbl { color: white; }
         .stat-card.green { border-left: 3px solid #059669; }
         .stat-card.orange { border-left: 3px solid #d97706; }
         .stat-card.red { border-left: 3px solid #dc2626; }
         .stat-card.blue { border-left: 3px solid #2563eb; }
+        .stat-card.purple { border-left: 3px solid #7c3aed; }
+        .stat-card.teal { border-left: 3px solid #0d9488; }
 
         .data-table-wrap {
-            background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            overflow: hidden; margin-bottom: 24px;
+            background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            overflow: hidden; margin-bottom: 22px;
         }
-        .data-table-header { padding: 16px 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-        .data-table-title { font-weight: 600; color: #1f2937; margin: 0; font-size: 15px; }
+        .data-table-header { padding: 14px 18px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .data-table-title { font-weight: 600; color: #1f2937; margin: 0; font-size: 14px; }
         .table-scroll { overflow-x: auto; overflow-y: auto; max-height: 70vh; }
-        .data-table { width: 100%; border-collapse: collapse; min-width: 1200px; }
+        .data-table { width: 100%; border-collapse: collapse; min-width: 1100px; font-size: 13px; }
         .data-table th {
             font-size: 10px; font-weight: 700; text-transform: uppercase; color: #6b7280;
-            padding: 10px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;
+            padding: 9px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;
             text-align: center; white-space: nowrap; position: sticky; top: 0; z-index: 3;
         }
         .data-table th.text-start { text-align: left; }
-        .data-table td { padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: center; font-size: 13px; color: #374151; }
+        .data-table td { padding: 9px 10px; border-bottom: 1px solid #f3f4f6; text-align: center; font-size: 13px; color: #374151; vertical-align: middle; }
         .data-table td.text-start { text-align: left; }
-        .data-table tbody tr:hover { background: #f9fafb; }
+        .data-table tbody tr:hover { background: #f8faff; }
         .data-table tfoot td { font-weight: 700; background: #f3f4f6; border-top: 2px solid #e5e7eb; }
 
         .data-table .th-contacted-today { background: #dbeafe; color: #1e40af; }
@@ -80,117 +86,104 @@
         .data-table .th-daily-leads { background: #ede9fe; color: #5b21b6; }
         .data-table .th-avg-leads { background: #e0f2fe; color: #0369a1; }
 
-        .table-scroll { position: relative; }
         .data-table .sticky-col { position: sticky; z-index: 2; background: #fff; }
         .data-table thead .sticky-col { z-index: 4 !important; }
         .data-table tfoot .sticky-col { z-index: 3 !important; background: #f3f4f6 !important; }
-        .data-table tbody tr:hover .sticky-col { background: #f9fafb !important; }
+        .data-table tbody tr:hover .sticky-col { background: #f8faff !important; }
         .data-table .sticky-col-last::after {
             content: ''; position: absolute; top: 0; right: -4px; bottom: 0; width: 4px;
             box-shadow: inset 4px 0 4px -4px rgba(0,0,0,0.15); pointer-events: none;
         }
 
-        .team-filter-bar {
-            padding: 12px 20px; border-bottom: 1px solid #e5e7eb;
-            display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-        }
-        .team-filter-bar .form-check { margin: 0; }
-        .team-filter-bar .form-check-input { cursor: pointer; }
-        .team-filter-bar .form-check-label { font-size: 12px; cursor: pointer; }
-        .team-select-toggle { font-size: 12px; color: #6366f1; cursor: pointer; font-weight: 600; text-decoration: underline; }
-        .team-select-toggle:hover { color: #4f46e5; }
-        .emp-select-panel {
-            padding: 10px 20px; border-bottom: 1px solid #e5e7eb;
-            background: #f9fafb; display: none; max-height: 200px; overflow-y: auto;
-        }
-        .emp-select-panel.open { display: flex; flex-wrap: wrap; gap: 8px; }
-        .emp-chip {
-            display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
-            border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid #e5e7eb;
-            background: white; transition: all 0.2s; user-select: none;
-        }
-        .emp-chip:hover { border-color: #6366f1; }
-        .emp-chip.selected { background: #6366f1; color: white; border-color: #6366f1; }
+        .team-filter-bar { padding: 10px 18px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .team-select-toggle { font-size: 12px; color: #4f46e5; cursor: pointer; font-weight: 600; text-decoration: underline; }
+        .emp-select-panel { padding: 8px 18px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; display: none; max-height: 180px; overflow-y: auto; }
+        .emp-select-panel.open { display: flex; flex-wrap: wrap; gap: 6px; }
+        .emp-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid #e5e7eb; background: white; user-select: none; }
+        .emp-chip.selected { background: #4f46e5; color: white; border-color: #4f46e5; }
         .emp-chip input { display: none; }
-        .data-table th.th-checkbox { width: 32px; min-width: 32px; background: #f9fafb; }
 
-        .emp-info { display: flex; align-items: center; gap: 10px; }
-        .emp-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 11px; flex-shrink: 0; }
+        .emp-info { display: flex; align-items: center; gap: 8px; }
+        .emp-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #3b82f6); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 10px; flex-shrink: 0; }
         .emp-name { font-weight: 600; color: #1f2937; font-size: 13px; }
         .emp-id { font-size: 10px; color: #9ca3af; }
 
-        .self-highlight { background: #fefce8; }
+        .self-highlight { background: #fefce8 !important; }
         .val-zero { color: #d1d5db; }
         .val-positive { color: #059669; font-weight: 600; }
         .val-alert { color: #dc2626; font-weight: 600; }
 
-        .loading-overlay { position: relative; min-height: 100px; }
-        .loading-overlay.is-loading::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); z-index: 10; }
-        .loading-overlay.is-loading::after { content: ''; position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border: 3px solid #e5e7eb; border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; z-index: 11; }
+        .tab-content-area { display: none; position: relative; min-height: 120px; }
+        .tab-content-area.active { display: block; }
+        .tab-content-area.is-loading::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.75); z-index: 10; border-radius: 12px; }
+        .tab-content-area.is-loading::after { content: ''; position: absolute; top: 50px; left: 50%; width: 36px; height: 36px; margin: -18px 0 0 -18px; border: 3px solid #e5e7eb; border-top-color: #4f46e5; border-radius: 50%; animation: spin 0.8s linear infinite; z-index: 11; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        .empty-state { text-align: center; padding: 48px 20px; color: #9ca3af; }
-        .empty-state i { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
-
-        .btn-primary { background: #6366f1; border: none; }
-        .btn-primary:hover { background: #4f46e5; }
-
-        .error-alert { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin-bottom: 20px; color: #991b1b; display: none; }
-
-        .tab-content-area { display: none; }
-        .tab-content-area.active { display: block; }
+        .empty-state { text-align: center; padding: 40px 20px; color: #9ca3af; }
+        .empty-state i { font-size: 36px; margin-bottom: 10px; opacity: 0.4; }
+        .error-alert { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; color: #991b1b; display: none; }
 
         .rupee { font-family: 'Segoe UI', sans-serif; }
-
-        .data-table th.sortable { cursor: pointer; user-select: none; position: relative; padding-right: 18px; }
+        .data-table th.sortable { cursor: pointer; user-select: none; position: relative; padding-right: 16px; }
         .data-table th.sortable:hover { background: #e5e7eb; }
         .data-table th.sortable::after { content: '\f0dc'; font-family: 'Font Awesome 6 Free'; font-weight: 900; font-size: 8px; position: absolute; right: 4px; top: 50%; transform: translateY(-50%); opacity: 0.3; }
-        .data-table th.sortable.sort-asc::after { content: '\f0de'; opacity: 1; color: #6366f1; }
-        .data-table th.sortable.sort-desc::after { content: '\f0dd'; opacity: 1; color: #6366f1; }
+        .data-table th.sortable.sort-asc::after { content: '\f0de'; opacity: 1; color: #4f46e5; }
+        .data-table th.sortable.sort-desc::after { content: '\f0dd'; opacity: 1; color: #4f46e5; }
 
-        /* ── Call Activity Tab ── */
-        .ca-filter-card { background: white; border-radius: 12px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 16px; }
-        .ca-quick-btns { display: flex; flex-wrap: wrap; gap: 6px; }
-        .ca-quick-btn { padding: 5px 12px; border-radius: 6px; border: 1px solid #e5e7eb; background: white; font-size: 12px; cursor: pointer; font-weight: 500; color: #6b7280; transition: all 0.15s; }
-        .ca-quick-btn:hover { border-color: #6366f1; color: #6366f1; }
-        .ca-quick-btn.active { background: #6366f1; border-color: #6366f1; color: white; }
-        .ca-avg-badge { display: inline-block; background: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 20px; font-size: 11px; font-weight: 600; padding: 2px 10px; margin-left: 8px; }
-        .ca-slot-cell { font-size: 13px; font-weight: 700; color: #1f2937; line-height: 1.3; }
-        .ca-slot-dur { font-size: 10px; color: #9ca3af; font-weight: 400; }
-        .ca-slot-detail { font-size: 10px; color: #6b7280; }
-        .ca-slot-detail span { display: inline-block; margin-right: 4px; }
-        .ca-staff-name { font-weight: 600; color: #1f2937; font-size: 13px; }
-        .ca-emp-code { font-size: 10px; color: #9ca3af; }
-        .ca-dept { font-size: 11px; color: #6b7280; }
-        .ca-slot-hdr { background: #ede9fe; color: #5b21b6; }
-        .ca-slot-hdr.other { background: #f3f4f6; color: #4b5563; }
-        .ca-slot-hdr.total { background: #dbeafe; color: #1e40af; }
-        .ca-zero { color: #d1d5db; }
-        .ca-stat-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; }
-        .ca-stat-card { background: white; border-radius: 10px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-align: center; }
-        .ca-stat-card .ca-val { font-size: 22px; font-weight: 700; color: #1f2937; }
-        .ca-stat-card .ca-lbl { color: #6b7280; font-size: 10px; margin-top: 2px; text-transform: uppercase; font-weight: 600; }
-        .ca-stat-card.green { border-left: 3px solid #059669; }
-        .ca-stat-card.orange { border-left: 3px solid #d97706; }
-        .ca-stat-card.red { border-left: 3px solid #dc2626; }
-        .ca-stat-card.blue { border-left: 3px solid #2563eb; }
-        .ca-stat-card.purple { border-left: 3px solid #7c3aed; }
-        .ca-tfoot td { font-weight: 700 !important; background: #f3f4f6 !important; border-top: 2px solid #e5e7eb !important; }
+        /* Quality QA pill badges */
+        .score-pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+        .score-exc { background: #d1fae5; color: #065f46; }
+        .score-good { background: #dbeafe; color: #1e40af; }
+        .score-avg { background: #fef3c7; color: #92400e; }
+        .score-poor { background: #fee2e2; color: #991b1b; }
+        .score-na { background: #f3f4f6; color: #9ca3af; }
+
+        /* Trend bar chart */
+        .trend-row { display: flex; gap: 4px; align-items: flex-end; height: 60px; }
+        .trend-bar { flex: 1; background: #4f46e5; border-radius: 2px 2px 0 0; min-width: 4px; transition: height 0.3s; cursor: pointer; position: relative; }
+        .trend-bar:hover { background: #2563eb; }
+        .trend-bar .tip { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 4px 8px; border-radius: 4px; font-size: 10px; white-space: nowrap; z-index: 10; }
+        .trend-bar:hover .tip { display: block; }
+
+        .quick-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+        .quick-btn { padding: 4px 10px; border-radius: 6px; border: 1px solid #e5e7eb; background: white; color: #6b7280; cursor: pointer; font-size: 11px; font-weight: 600; transition: all 0.2s; }
+        .quick-btn:hover { border-color: #4f46e5; color: #4f46e5; }
+        .quick-btn.active { background: #4f46e5; border-color: #4f46e5; color: white; }
+
+        .mode-toggle { display: flex; gap: 0; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+        .mode-btn { padding: 5px 14px; border: none; background: #fff; color: #6b7280; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .2s; }
+        .mode-btn.active { background: #4f46e5; color: #fff; }
+
+        .expandable-row { display: none; }
+        .expandable-row.open { display: table-row; }
+        .expand-inner { padding: 12px 16px; background: #f8faff; border-top: 1px dashed #bfdbfe; }
+        .mini-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .mini-table th { padding: 5px 8px; font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; background: #e8f0fe; border: 1px solid #dbeafe; }
+        .mini-table td { padding: 5px 8px; border: 1px solid #e5e7eb; }
+
+        .btn-share { background: #f0fdf4; color: #065f46; border: 1px solid #86efac; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .btn-share:hover { background: #d1fae5; }
     </style>
+</head>
 <body>
-<script src="/public/js/menu-master.js"></script>
+<script src="/public/js/menu-master.js?v=20260904_unified"></script>
 <script src="/staff_header.js"></script>
-<script src="/staff_sidebar.js"></script>
+<script src="/staff_sidebar.js?v=20260904_unified"></script>
 
     <nav id="staffSidebar"></nav>
     <div class="main-content">
         <div id="headerContainer"></div>
         <div class="content-area">
             <div class="page-banner">
-                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                     <div>
-                        <h1><i class="fas fa-chart-line"></i> CRM Dashboard</h1>
-                        <p id="dashboardSubtitle">Performance overview across all leads</p>
+                        <h1><i class="fas fa-chart-line"></i> CRM &amp; Team Performance 360°</h1>
+                        <p id="dashboardSubtitle">Comprehensive lead pipeline, staff conversions, call tracking, and QA overview</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn-share" onclick="exportActiveTabToCSV()" style="background:#ecfdf5;color:#065f46;border-color:#a7f3d0;"><i class="fas fa-file-excel"></i>Export CSV</button>
+                        <button class="btn-share" onclick="shareDashboard()"><i class="fas fa-share-alt"></i>Share</button>
+                        <button class="btn-share" onclick="window.print()" style="background:#e0e7ff;color:#3730a3;border-color:#c7d2fe;"><i class="fas fa-print"></i>Print</button>
                     </div>
                 </div>
             </div>
@@ -201,6 +194,7 @@
                 <button class="btn btn-sm btn-outline-danger ms-3" onclick="location.reload()"><i class="fas fa-redo me-1"></i>Retry</button>
             </div>
 
+            <!-- Global Filter Bar -->
             <div class="filter-bar" id="filterBar">
                 <div class="filter-grid">
                     <div class="filter-group">
@@ -220,10 +214,9 @@
                     <div class="filter-group">
                         <label>Status</label>
                         <select class="form-select" id="filterStatus">
-                            <option value="">All</option>
+                            <option value="">All Statuses</option>
                             <option value="new">New</option>
                             <option value="contacted">Contacted</option>
-                            <option value="not_answered">Not Answered</option>
                             <option value="interested">Interested</option>
                             <option value="qualified">Qualified</option>
                             <option value="proposal">Proposal</option>
@@ -233,15 +226,6 @@
                             <option value="completed">Completed</option>
                             <option value="lost">Lost</option>
                             <option value="on_hold">On Hold</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Priority</label>
-                        <select class="form-select" id="filterPriority">
-                            <option value="">All</option>
-                            <option value="normal">Normal</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
                         </select>
                     </div>
                     <div class="filter-group">
@@ -257,12 +241,13 @@
                         </select>
                     </div>
                     <div class="filter-group" style="align-self:flex-end;">
-                        <button class="btn btn-primary btn-sm" onclick="loadDashboard()"><i class="fas fa-search me-1"></i>Apply</button>
+                        <button class="btn btn-primary btn-sm" style="background:#4f46e5;border-color:#4f46e5;" onclick="loadDashboard()"><i class="fas fa-search me-1"></i>Apply Filters</button>
                         <button class="btn btn-outline-secondary btn-sm ms-1" onclick="resetFilters()"><i class="fas fa-undo me-1"></i>Reset</button>
                     </div>
                 </div>
             </div>
 
+            <!-- Unified Navigation Tabs -->
             <div class="dashboard-tabs" id="tabBar">
                 <button class="dash-tab active" data-tab="my" onclick="switchTab('my')">
                     <span class="tab-main"><i class="fas fa-user"></i> My Performance</span>
@@ -271,6 +256,18 @@
                 <button class="dash-tab hidden" data-tab="team" onclick="switchTab('team')">
                     <span class="tab-main"><i class="fas fa-users"></i> Team Performance</span>
                     <span class="tab-sub" id="tabBadgeTeam"></span>
+                </button>
+                <button class="dash-tab" data-tab="calls" onclick="switchTab('calls')">
+                    <span class="tab-main"><i class="fas fa-phone-alt"></i> Call Tracking &amp; Logs</span>
+                    <span class="tab-sub" id="tabBadgeCalls"></span>
+                </button>
+                <button class="dash-tab" data-tab="quality" onclick="switchTab('quality')">
+                    <span class="tab-main"><i class="fas fa-clipboard-check"></i> Quality &amp; QA Audits</span>
+                    <span class="tab-sub" id="tabBadgeQuality"></span>
+                </button>
+                <button class="dash-tab" data-tab="dialer" onclick="switchTab('dialer')">
+                    <span class="tab-main"><i class="fas fa-headset"></i> Auto Dialer</span>
+                    <span class="tab-sub" id="tabBadgeDialer"></span>
                 </button>
                 <button class="dash-tab hidden" data-tab="status" onclick="switchTab('status')">
                     <span class="tab-main"><i class="fas fa-list-ol"></i> Status Wise</span>
@@ -284,21 +281,18 @@
                     <span class="tab-main"><i class="fas fa-building"></i> Company Wise</span>
                     <span class="tab-sub" id="tabBadgeCompany"></span>
                 </button>
-                <button class="dash-tab" data-tab="calls" onclick="switchTab('calls')">
-                    <span class="tab-main"><i class="fas fa-phone-alt"></i> Call Activity</span>
-                    <span class="tab-sub" id="tabBadgeCalls"></span>
-                </button>
                 <button class="dash-tab" data-tab="earnings" onclick="switchTab('earnings')">
                     <span class="tab-main"><i class="fas fa-wallet"></i> Earnings</span>
                     <span class="tab-sub" id="tabBadgeEarnings"></span>
                 </button>
             </div>
 
-            <div id="tabMy" class="tab-content-area active loading-overlay">
+            <!-- ===== TAB 1: MY PERFORMANCE ===== -->
+            <div id="tabMy" class="tab-content-area active">
                 <div class="stat-cards" id="myStatCards"></div>
                 <div class="data-table-wrap">
                     <div class="data-table-header">
-                        <h5 class="data-table-title"><i class="fas fa-tags me-2"></i>Category Breakdown</h5>
+                        <h5 class="data-table-title"><i class="fas fa-tags me-2"></i>My Category Breakdown</h5>
                     </div>
                     <div class="table-scroll">
                         <table class="data-table" id="myCategoryTable">
@@ -313,10 +307,11 @@
                 </div>
             </div>
 
-            <div id="tabTeam" class="tab-content-area loading-overlay">
+            <!-- ===== TAB 2: TEAM PERFORMANCE (STAFF-WISE MATRIX) ===== -->
+            <div id="tabTeam" class="tab-content-area">
                 <div class="data-table-wrap">
                     <div class="data-table-header">
-                        <h5 class="data-table-title"><i class="fas fa-users me-2"></i>Team Performance</h5>
+                        <h5 class="data-table-title"><i class="fas fa-users me-2"></i>Staff-Wise Lead Breakdown Matrix</h5>
                         <div class="d-flex align-items-center gap-3">
                             <span class="text-muted" style="font-size:12px;" id="teamCount"></span>
                             <span class="team-select-toggle" id="teamSelectToggle" onclick="toggleEmpSelectPanel()"><i class="fas fa-filter me-1"></i>Select Employees</span>
@@ -336,7 +331,243 @@
                 </div>
             </div>
 
-            <div id="tabStatus" class="tab-content-area loading-overlay">
+            <!-- ===== TAB 3: CALL TRACKING & LOGS ===== -->
+            <div id="tabCalls" class="tab-content-area">
+                <!-- Sub-filter for Calls -->
+                <div class="ca-filter-card mb-3 p-3 bg-white rounded-3 shadow-sm">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span style="font-size:12px;font-weight:700;color:#374151;">Quick Range:</span>
+                            <div class="quick-btns">
+                                <button class="quick-btn" data-ct-range="today" onclick="setCtQuickRange('today')">Today</button>
+                                <button class="quick-btn" data-ct-range="yesterday" onclick="setCtQuickRange('yesterday')">Yesterday</button>
+                                <button class="quick-btn" data-ct-range="this_week" onclick="setCtQuickRange('this_week')">This Week</button>
+                                <button class="quick-btn active" data-ct-range="last_7" onclick="setCtQuickRange('last_7')">Last 7 Days</button>
+                                <button class="quick-btn" data-ct-range="this_month" onclick="setCtQuickRange('this_month')">This Month</button>
+                                <button class="quick-btn" data-ct-range="last_30" onclick="setCtQuickRange('last_30')">Last 30 Days</button>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary active" id="callSubTabStaffBtn" onclick="switchCallSubTab('staff')"><i class="fas fa-users me-1"></i>Staff Activity</button>
+                                <button class="btn btn-outline-primary" id="callSubTabSlotsBtn" onclick="switchCallSubTab('slots')"><i class="fas fa-clock me-1"></i>2-Hour Slots</button>
+                            </div>
+                            <button class="btn btn-sm btn-primary" style="background:#4f46e5;border-color:#4f46e5;" onclick="loadCallTrackingData()"><i class="fas fa-sync me-1"></i>Refresh</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Call Tracking KPI Summary Cards -->
+                <div class="stat-cards" id="ctStatCards"></div>
+
+                <!-- Daily Trend Card -->
+                <div class="data-table-wrap mb-3">
+                    <div class="data-table-header">
+                        <h5 class="data-table-title"><i class="fas fa-chart-bar me-2"></i>Daily Call Trend</h5>
+                        <span id="ctTrendDateRange" class="text-muted" style="font-size:12px;"></span>
+                    </div>
+                    <div style="padding:16px;">
+                        <div class="trend-row" id="ctTrendChart"></div>
+                        <div class="d-flex justify-content-between mt-1" style="font-size:10px;color:#9ca3af;">
+                            <span id="ctTrendStart"></span>
+                            <span id="ctTrendEnd"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View 1: Staff Call Activity Summary Table -->
+                <div id="ctStaffView" class="data-table-wrap">
+                    <div class="data-table-header">
+                        <h5 class="data-table-title"><i class="fas fa-user-check me-2"></i>Staff Call Activity &amp; Recordings</h5>
+                        <span id="ctStaffCount" class="text-muted" style="font-size:12px;"></span>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="data-table" id="ctStaffTable">
+                            <thead>
+                                <tr>
+                                    <th class="text-start" style="width:40px;">S.No</th>
+                                    <th class="text-start">Employee</th>
+                                    <th>Total Calls</th>
+                                    <th>Outgoing</th>
+                                    <th>Incoming</th>
+                                    <th>Missed</th>
+                                    <th>Total Talk Time</th>
+                                    <th>Avg Daily Talk</th>
+                                    <th>Unique Numbers</th>
+                                    <th>CRM Matched</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ctStaffTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- View 2: Hourly 2-Hour Slot Breakdown Table -->
+                <div id="ctSlotsView" class="data-table-wrap" style="display:none;">
+                    <div class="data-table-header">
+                        <h5 class="data-table-title"><i class="fas fa-clock me-2"></i>2-Hour Slot Breakdown</h5>
+                        <span id="ctSlotsRangeLabel" class="text-muted" style="font-size:12px;"></span>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="data-table" id="ctSlotsTable">
+                            <thead id="ctSlotsHead"></thead>
+                            <tbody id="ctSlotsBody"></tbody>
+                            <tfoot id="ctSlotsFoot" class="ca-tfoot"></tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Staff Call Logs & Recording Drill-down Section -->
+                <div class="data-table-wrap mt-3" id="ctDrilldownSection" style="display:none;">
+                    <div class="data-table-header">
+                        <h5 class="data-table-title"><i class="fas fa-headphones me-2" style="color:#2563eb;"></i>Call Logs: <span id="ctDrilldownStaffName"></span></h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="text" id="ctDrilldownPhone" class="form-control form-control-sm" placeholder="Search phone..." style="width:160px;" oninput="filterDrilldownCalls()">
+                            <select id="ctDrilldownType" class="form-select form-select-sm" style="width:120px;" onchange="filterDrilldownCalls()">
+                                <option value="">All Types</option>
+                                <option value="OUTGOING">Outgoing</option>
+                                <option value="INCOMING">Incoming</option>
+                                <option value="MISSED">Missed</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="closeCallDrilldown()"><i class="fas fa-times me-1"></i>Close</button>
+                        </div>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="text-start" style="width:30px;">#</th>
+                                    <th>Date &amp; Time</th>
+                                    <th>Phone Number</th>
+                                    <th>Type</th>
+                                    <th>Duration</th>
+                                    <th>Lead Name</th>
+                                    <th>Recording</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ctDrilldownTbody"></tbody>
+                        </table>
+                    </div>
+                    <div id="audioPlayerContainer" style="display:none;padding:10px 18px;background:#f0f9ff;border-top:1px solid #bfdbfe;">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-volume-up text-primary"></i>
+                            <audio controls id="callAudioPlayer" style="flex:1;height:32px;"></audio>
+                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="closeAudioPlayer()"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== TAB 4: CALL QUALITY & QA AUDITS ===== -->
+            <div id="tabQuality" class="tab-content-area">
+                <div class="filter-bar mb-3">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <div>
+                                <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:2px;">QA Mode</label>
+                                <div class="mode-toggle">
+                                    <button class="mode-btn active" id="qaModeDay" onclick="setQaMode('day')"><i class="fas fa-calendar-day me-1"></i>Day</button>
+                                    <button class="mode-btn" id="qaModeRange" onclick="setQaMode('range')"><i class="fas fa-calendar-alt me-1"></i>Range</button>
+                                </div>
+                            </div>
+                            <div id="qaDayWrap">
+                                <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:2px;">Audit Date</label>
+                                <input type="date" id="qaDateInput" class="form-control form-control-sm" style="min-width:140px;">
+                            </div>
+                            <div id="qaRangeWrap" style="display:none;gap:8px;">
+                                <div>
+                                    <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:2px;">From</label>
+                                    <input type="date" id="qaRangeFrom" class="form-control form-control-sm" style="min-width:130px;">
+                                </div>
+                                <div>
+                                    <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:2px;">To</label>
+                                    <input type="date" id="qaRangeTo" class="form-control form-control-sm" style="min-width:130px;">
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-primary" style="background:#4f46e5;border-color:#4f46e5;" onclick="loadQualityReport()"><i class="fas fa-sync me-1"></i>Generate QA Report</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QA Summary Cards -->
+                <div class="stat-cards" id="qaStatCards"></div>
+
+                <!-- Executive QA Breakdown Table -->
+                <div class="data-table-wrap">
+                    <div class="data-table-header">
+                        <h5 class="data-table-title"><i class="fas fa-users me-2"></i>Executive Quality Breakdown</h5>
+                        <span id="qaDateLabel" style="font-size:11px;color:#6b7280;"></span>
+                    </div>
+                    <div id="qaTableWrap" class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:30px;"></th>
+                                    <th class="text-start">Executive</th>
+                                    <th>Total Calls</th>
+                                    <th>Outgoing</th>
+                                    <th>Incoming</th>
+                                    <th>Missed</th>
+                                    <th>Leads Touched</th>
+                                    <th>Avg Duration</th>
+                                    <th>QA Sampled</th>
+                                    <th>QA Reviewed</th>
+                                    <th>Avg Score</th>
+                                </tr>
+                            </thead>
+                            <tbody id="qaTbody"></tbody>
+                        </table>
+                    </div>
+                    <div id="qaEmpty" class="empty-state" style="display:none;">
+                        <i class="fas fa-clipboard-check"></i><p>No quality audit records found for this period</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== TAB 5: AUTO DIALER ANALYTICS ===== -->
+            <div id="tabDialer" class="tab-content-area">
+                <div class="ca-filter-card mb-3 p-3 bg-white rounded-3 shadow-sm d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span style="font-size:12px;font-weight:700;color:#374151;">Period:</span>
+                        <div class="quick-btns">
+                            <button class="quick-btn active" id="dialerPeriodToday" onclick="loadDialerData('today')">Today</button>
+                            <button class="quick-btn" id="dialerPeriodWeek" onclick="loadDialerData('week')">This Week</button>
+                            <button class="quick-btn" id="dialerPeriodMonth" onclick="loadDialerData('month')">This Month</button>
+                        </div>
+                    </div>
+                    <a href="/staff/dialer" class="btn btn-sm btn-success"><i class="fas fa-phone-alt me-1"></i>Open Auto Dialer</a>
+                </div>
+
+                <div class="stat-cards" id="dialerStatCards"></div>
+
+                <div class="data-table-wrap">
+                    <div class="data-table-header">
+                        <h5 class="data-table-title"><i class="fas fa-list-alt me-2"></i>Recent Dialer Attempts</h5>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="text-start" style="width:40px;">#</th>
+                                    <th class="text-start">Lead</th>
+                                    <th>Outcome</th>
+                                    <th>Duration</th>
+                                    <th>Status Updated</th>
+                                    <th class="text-start">Note</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dialerAttemptsTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== TAB 6: STATUS WISE ===== -->
+            <div id="tabStatus" class="tab-content-area">
                 <div class="data-table-wrap">
                     <div class="data-table-header">
                         <h5 class="data-table-title"><i class="fas fa-list-ol me-2"></i>Status Wise Breakdown</h5>
@@ -349,13 +580,11 @@
                             <tfoot id="statusFoot"></tfoot>
                         </table>
                     </div>
-                    <div id="statusEmpty" class="empty-state" style="display:none;">
-                        <i class="fas fa-list-ol"></i><p>No status data available</p>
-                    </div>
                 </div>
             </div>
 
-            <div id="tabCategory" class="tab-content-area loading-overlay">
+            <!-- ===== TAB 7: CATEGORY WISE ===== -->
+            <div id="tabCategory" class="tab-content-area">
                 <div class="data-table-wrap">
                     <div class="data-table-header">
                         <h5 class="data-table-title"><i class="fas fa-tags me-2"></i>Category Wise Performance</h5>
@@ -367,13 +596,11 @@
                             <tfoot id="catFoot"></tfoot>
                         </table>
                     </div>
-                    <div id="catEmpty" class="empty-state" style="display:none;">
-                        <i class="fas fa-tags"></i><p>No category data available</p>
-                    </div>
                 </div>
             </div>
 
-            <div id="tabCompany" class="tab-content-area loading-overlay">
+            <!-- ===== TAB 8: COMPANY WISE ===== -->
+            <div id="tabCompany" class="tab-content-area">
                 <div class="data-table-wrap">
                     <div class="data-table-header">
                         <h5 class="data-table-title"><i class="fas fa-building me-2"></i>Company Wise Performance</h5>
@@ -385,81 +612,15 @@
                             <tfoot id="compFoot"></tfoot>
                         </table>
                     </div>
-                    <div id="compEmpty" class="empty-state" style="display:none;">
-                        <i class="fas fa-building"></i><p>No company data available</p>
-                    </div>
                 </div>
             </div>
 
-            <!-- ══════════════════════ CALL ACTIVITY TAB ══════════════════════ -->
-            <div id="tabCalls" class="tab-content-area loading-overlay">
-
-                <!-- Auto-fallback info banner -->
-                <div id="caFallbackBanner" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin-bottom:14px;color:#1e40af;font-size:13px;align-items:center;gap:8px;"></div>
-
-                <!-- Filter bar -->
-                <div class="ca-filter-card">
-                    <div class="d-flex flex-wrap align-items-end gap-3">
-                        <div>
-                            <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px;">Quick Range</label>
-                            <div class="ca-quick-btns">
-                                <button class="ca-quick-btn active" data-ca-range="today" onclick="setCaQuickRange('today')">Today</button>
-                                <button class="ca-quick-btn" data-ca-range="yesterday" onclick="setCaQuickRange('yesterday')">Yesterday</button>
-                                <button class="ca-quick-btn" data-ca-range="this_week" onclick="setCaQuickRange('this_week')">This Week</button>
-                                <button class="ca-quick-btn" data-ca-range="last_7" onclick="setCaQuickRange('last_7')">Last 7 Days</button>
-                                <button class="ca-quick-btn" data-ca-range="this_month" onclick="setCaQuickRange('this_month')">This Month</button>
-                                <button class="ca-quick-btn" data-ca-range="last_30" onclick="setCaQuickRange('last_30')">Last 30 Days</button>
-                            </div>
-                        </div>
-                        <div>
-                            <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px;">From</label>
-                            <input type="date" class="form-control form-control-sm" id="caDateFrom" style="min-width:130px;" oninput="onCaDateChange()">
-                        </div>
-                        <div>
-                            <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px;">To</label>
-                            <input type="date" class="form-control form-control-sm" id="caDateTo" style="min-width:130px;" oninput="onCaDateChange()">
-                        </div>
-                        <div class="ms-auto d-flex gap-2">
-                            <button class="btn btn-sm btn-outline-secondary" onclick="resetCaFilters()"><i class="fas fa-undo me-1"></i>Reset</button>
-                            <button class="btn btn-sm btn-primary" onclick="loadCallActivity()"><i class="fas fa-sync me-1"></i>Refresh</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Summary cards -->
-                <div class="ca-stat-cards" id="caStatCards"></div>
-
-                <!-- Slot breakdown table -->
-                <div class="data-table-wrap">
-                    <div class="data-table-header">
-                        <h5 class="data-table-title"><i class="fas fa-phone-alt me-2"></i>2-Hour Slot Breakdown
-                            <span id="caAvgBadge" class="ca-avg-badge" style="display:none;">Avg / Day</span>
-                        </h5>
-                        <span id="caDateRangeLabel" class="text-muted" style="font-size:12px;"></span>
-                    </div>
-                    <div class="table-scroll">
-                        <table class="data-table" id="caTable" style="min-width:1100px;">
-                            <thead id="caHead"></thead>
-                            <tbody id="caBody"></tbody>
-                            <tfoot id="caFoot" class="ca-tfoot"></tfoot>
-                        </table>
-                    </div>
-                    <div id="caEmpty" class="empty-state" style="display:none;">
-                        <i class="fas fa-phone-slash"></i><p>No call data found for this period</p>
-                    </div>
-                </div>
-
-            </div>
-            <!-- ══════════════════════ END CALL ACTIVITY TAB ══════════════════ -->
-
-            <!-- ══════════════════════ EARNINGS TAB ══════════════════════════ -->
+            <!-- ===== TAB 9: EARNINGS ===== -->
             <div id="tabEarnings" class="tab-content-area">
-
-                <!-- Filter bar -->
-                <div class="ca-filter-card" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+                <div class="ca-filter-card mb-3 p-3 bg-white rounded-3 shadow-sm">
                     <div class="d-flex flex-wrap align-items-end gap-3">
                         <div>
-                            <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px;">Month</label>
+                            <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:3px;">Month</label>
                             <select id="earnMonth" class="form-select form-select-sm" style="min-width:110px;">
                                 <option value="1">January</option><option value="2">February</option>
                                 <option value="3">March</option><option value="4">April</option>
@@ -470,17 +631,17 @@
                             </select>
                         </div>
                         <div>
-                            <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px;">Year</label>
+                            <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:3px;">Year</label>
                             <select id="earnYear" class="form-select form-select-sm" style="min-width:90px;"></select>
                         </div>
                         <div>
-                            <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px;">Company</label>
+                            <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:3px;">Company</label>
                             <select id="earnCompany" class="form-select form-select-sm" style="min-width:130px;">
                                 <option value="">All Companies</option>
                             </select>
                         </div>
-                        <div class="ms-auto d-flex gap-2 align-items-end">
-                            <button class="btn btn-sm btn-primary" onclick="loadEarnings()"><i class="fas fa-calculator me-1"></i>Calculate</button>
+                        <div class="ms-auto">
+                            <button class="btn btn-sm btn-primary" style="background:#4f46e5;border-color:#4f46e5;" onclick="loadEarnings()"><i class="fas fa-calculator me-1"></i>Calculate</button>
                         </div>
                     </div>
                     <div id="earnDueLine" style="display:none;margin-top:10px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:7px 12px;font-size:12px;color:#92400e;font-weight:600;">
@@ -488,79 +649,29 @@
                     </div>
                 </div>
 
-                <!-- Section 1: Incentive Rate Configuration -->
-                <div class="data-table-wrap" id="earnConfigWrap" style="display:none;margin-bottom:16px;">
-                    <div class="data-table-header">
-                        <h5 class="data-table-title"><i class="fas fa-sliders-h me-2" style="color:#6d28d9;"></i>Incentive Rate Configuration</h5>
-                        <span id="earnConfigNote" class="text-muted" style="font-size:11px;"></span>
-                    </div>
-                    <div class="table-scroll">
-                        <table class="data-table" id="earnConfigTable" style="min-width:820px;">
-                            <thead>
-                                <tr>
-                                    <th class="text-start" style="min-width:120px;">Category</th>
-                                    <th>Min Target</th>
-                                    <th>Rate (No Support)</th>
-                                    <th>Rate (With Support)</th>
-                                    <th>Type</th>
-                                    <th>Bonus Trigger</th>
-                                    <th>Multiplier</th>
-                                </tr>
-                            </thead>
-                            <tbody id="earnConfigTbody"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Section 2: Achievement + Earnings side by side -->
                 <div id="earnSideBySide" style="display:none;">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;">
-
-                        <!-- Left: Achievement -->
                         <div class="data-table-wrap">
                             <div class="data-table-header">
-                                <h5 class="data-table-title"><i class="fas fa-star me-2" style="color:#f59e0b;"></i>Achievement</h5>
+                                <h5 class="data-table-title"><i class="fas fa-star me-2" style="color:#f59e0b;"></i>Achievement Matrix</h5>
                                 <span id="earnCount" class="text-muted" style="font-size:12px;"></span>
                             </div>
                             <div class="table-scroll">
-                                <table class="data-table" id="earnAchTable" style="min-width:620px;">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-start" style="min-width:140px;">Employee</th>
-                                            <th title="Solar">Solar</th>
-                                            <th title="EV B2C">EV B2C</th>
-                                            <th title="EV B2B">EV B2B</th>
-                                            <th title="Training">Train</th>
-                                            <th title="Insurance">Insure</th>
-                                            <th title="Real Estate">RE</th>
-                                        </tr>
-                                    </thead>
+                                <table class="data-table" id="earnAchTable" style="min-width:550px;">
+                                    <thead id="earnAchThead"></thead>
                                     <tbody id="earnAchTbody"></tbody>
+                                    <tfoot id="earnAchTfoot"></tfoot>
                                 </table>
                             </div>
                         </div>
 
-                        <!-- Right: Earnings & Payout -->
                         <div class="data-table-wrap">
                             <div class="data-table-header">
-                                <h5 class="data-table-title"><i class="fas fa-wallet me-2" style="color:#059669;"></i>Earnings &amp; Payout</h5>
+                                <h5 class="data-table-title"><i class="fas fa-wallet me-2" style="color:#059669;"></i>Earnings &amp; Payout Summary</h5>
                             </div>
                             <div class="table-scroll">
-                                <table class="data-table" id="earnPayTable" style="min-width:620px;">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-start" style="min-width:140px;">Employee</th>
-                                            <th>Solar ₹</th>
-                                            <th>EV B2C ₹</th>
-                                            <th>EV B2B ₹</th>
-                                            <th>Train ₹</th>
-                                            <th>Insure ₹</th>
-                                            <th>RE ₹</th>
-                                            <th style="background:#fef3c7;color:#92400e;">Total</th>
-                                            <th style="background:#ede9fe;color:#5b21b6;min-width:110px;">Status</th>
-                                            <th style="background:#ecfdf5;color:#065f46;min-width:90px;">Due</th>
-                                        </tr>
-                                    </thead>
+                                <table class="data-table" id="earnPayTable" style="min-width:550px;">
+                                    <thead id="earnPayThead"></thead>
                                     <tbody id="earnTbody"></tbody>
                                     <tfoot id="earnTfoot"></tfoot>
                                 </table>
@@ -568,12 +679,8 @@
                         </div>
                     </div>
                 </div>
-
-                <div id="earnEmpty" class="empty-state">
-                    <i class="fas fa-wallet"></i><p>Click Calculate to load earnings for the selected month</p>
-                </div>
+                <div id="earnEmpty" class="empty-state"><i class="fas fa-wallet"></i><p>Click Calculate to load earnings for the selected month</p></div>
             </div>
-            <!-- ══════════════════════ END EARNINGS TAB ════════════════════════ -->
 
         </div>
     </div>
@@ -598,22 +705,44 @@
         }
         function hideError() { document.getElementById('initErrorAlert').style.display = 'none'; }
 
+        /* ── Resilient safe staff fetch with 10s AbortController timeout ── */
         async function safeStaffFetch(url, options = {}) {
-            if (typeof staffFetchJson === 'function') return await staffFetchJson(url, options);
-            const token = localStorage.getItem('staff_token');
-            if (!options.headers) options.headers = {};
-            if (token) options.headers['Authorization'] = `Bearer ${token}`;
-            const r = await fetch(url, options);
-            return await r.json();
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            options.signal = controller.signal;
+            try {
+                if (typeof staffFetchJson === 'function') {
+                    const res = await staffFetchJson(url, options);
+                    clearTimeout(timeoutId);
+                    return res;
+                }
+                const token = localStorage.getItem('staff_token');
+                if (!options.headers) options.headers = {};
+                if (token) options.headers['Authorization'] = `Bearer ${token}`;
+                const r = await fetch(url, options);
+                clearTimeout(timeoutId);
+                return await r.json();
+            } catch(e) {
+                clearTimeout(timeoutId);
+                if (e.name === 'AbortError') {
+                    console.warn(`[FETCH TIMEOUT] Request timed out for: ${url}`);
+                    return { success: false, detail: 'Request timed out after 10s. Please retry.' };
+                }
+                console.error('safeStaffFetch error:', e);
+                return { success: false, detail: e.message || 'Network error' };
+            }
         }
 
         document.addEventListener('DOMContentLoaded', async function() {
             try {
                 if (typeof StaffSidebar !== 'undefined' && StaffSidebar.init) await StaffSidebar.init();
-            } catch(e) { console.warn('Sidebar init:', e); }
+            } catch(e) {}
             try {
                 if (typeof StaffHeader !== 'undefined' && StaffHeader.inject) StaffHeader.inject('CRM Dashboard', 'fas fa-chart-line');
             } catch(e) {}
+
+            initQaDates();
+            initEarningsFilters();
 
             try {
                 const data = await safeStaffFetch('/api/v1/staff/accounts/companies');
@@ -628,7 +757,7 @@
                         sel.appendChild(o);
                     });
                 }
-            } catch(e) { console.warn('Failed to load companies filter:', e); }
+            } catch(e) {}
 
             try {
                 const deptData = await safeStaffFetch('/api/v1/crm/departments-list');
@@ -641,12 +770,22 @@
                     o.textContent = d.name;
                     deptSel.appendChild(o);
                 });
-            } catch(e) { console.warn('Failed to load departments:', e); }
+            } catch(e) {}
 
             loadCategories();
-            loadDashboard();
-            initCallActivityFilters();
-            initEarningsFilters();
+
+            // Read URL params for active tab pre-selection
+            const p = new URLSearchParams(window.location.search);
+            const reqTab = p.get('tab');
+            if (reqTab && ['my','team','calls','quality','dialer','status','category','company','earnings'].includes(reqTab)) {
+                activeTab = reqTab;
+            }
+
+            await loadDashboard();
+
+            if (activeTab === 'calls') loadCallTrackingData();
+            if (activeTab === 'quality') loadQualityReport();
+            if (activeTab === 'dialer') loadDialerData('today');
         });
 
         function onCompanyChange() {
@@ -659,40 +798,21 @@
             try {
                 const sel = document.getElementById('filterCategory');
                 sel.innerHTML = '<option value="">All Categories</option>';
-                if (!companyId) {
-                    const compSel = document.getElementById('companySelector');
-                    const compIds = [];
-                    for (let i = 0; i < compSel.options.length; i++) {
-                        if (compSel.options[i].value) compIds.push(compSel.options[i].value);
-                    }
-                    const allCats = new Map();
-                    for (const cid of compIds) {
-                        try {
-                            const data = await safeStaffFetch(`/api/v1/signup-categories/list?company_id=${cid}`);
-                            const cats = data.categories || [];
-                            cats.forEach(c => {
-                                const key = (c.name || '').toLowerCase().trim();
-                                if (!allCats.has(key)) allCats.set(key, c);
-                            });
-                        } catch(e) {}
-                    }
-                    allCats.forEach(c => {
-                        const o = document.createElement('option');
-                        o.value = c.id;
-                        o.textContent = c.name;
-                        sel.appendChild(o);
-                    });
-                } else {
-                    const data = await safeStaffFetch(`/api/v1/signup-categories/list?company_id=${companyId}`);
-                    const cats = data.categories || [];
-                    cats.forEach(c => {
-                        const o = document.createElement('option');
-                        o.value = c.id;
-                        o.textContent = c.name;
-                        sel.appendChild(o);
-                    });
-                }
-            } catch(e) { console.warn('Failed to load categories:', e); }
+                const url = companyId ? `/api/v1/signup-categories/list?company_id=${companyId}` : `/api/v1/signup-categories/list`;
+                const data = await safeStaffFetch(url);
+                const cats = data.categories || (Array.isArray(data.data) ? data.data : []);
+                const seenNames = new Set();
+                cats.forEach(c => {
+                    const cleanName = (c.name || '').trim();
+                    if (!cleanName) return;
+                    if (!companyId && seenNames.has(cleanName.toLowerCase())) return;
+                    seenNames.add(cleanName.toLowerCase());
+                    const o = document.createElement('option');
+                    o.value = c.id;
+                    o.textContent = cleanName;
+                    sel.appendChild(o);
+                });
+            } catch(e) {}
         }
 
         function resetFilters() {
@@ -701,7 +821,6 @@
             document.getElementById('filterStartDate').value = '';
             document.getElementById('filterEndDate').value = '';
             document.getElementById('filterStatus').value = '';
-            document.getElementById('filterPriority').value = '';
             document.getElementById('filterDepartment').value = '';
             document.getElementById('filterCategory').value = '';
             loadDashboard();
@@ -713,13 +832,11 @@
             const sd = document.getElementById('filterStartDate').value;
             const ed = document.getElementById('filterEndDate').value;
             const st = document.getElementById('filterStatus').value;
-            const pr = document.getElementById('filterPriority').value;
             const dept = document.getElementById('filterDepartment').value;
             const cat = document.getElementById('filterCategory').value;
             if (sd) params.set('start_date', sd);
             if (ed) params.set('end_date', ed);
             if (st) params.set('status', st);
-            if (pr) params.set('priority', pr);
             if (dept) params.set('department_id', dept);
             if (cat) params.set('category_id', cat);
             return params.toString();
@@ -735,12 +852,8 @@
                 if (!data.success) { showError(data.detail || 'Failed to load dashboard'); setLoading(false); return; }
                 dashData = data.data;
                 teamSelectedEmpIds = null;
-                const panel = document.getElementById('empSelectPanel');
-                if (panel) panel.classList.remove('open');
-                const toggle = document.getElementById('teamSelectToggle');
-                if (toggle) toggle.innerHTML = '<i class="fas fa-filter me-1"></i>Select Employees';
                 setupTabs();
-                renderActiveTab();
+                switchTab(activeTab);
                 updateTabBadges();
             } catch(e) {
                 showError('Failed to load dashboard data');
@@ -757,44 +870,49 @@
 
         function setupTabs() {
             if (!dashData) return;
+            const canViewFin = Boolean(dashData.can_view_financials);
+            const isLeaderOrAdmin = Boolean(dashData.is_leader || dashData.is_admin);
             const tabs = document.querySelectorAll('.dash-tab');
             tabs.forEach(t => {
                 const tab = t.dataset.tab;
-                if (tab === 'my') { t.classList.remove('hidden'); }
-                else if (tab === 'calls') { t.classList.remove('hidden'); }
-                else if (tab === 'earnings') { t.classList.remove('hidden'); }
-                else if (tab === 'team' || tab === 'status') {
-                    t.classList.toggle('hidden', !dashData.is_leader && !dashData.is_admin);
-                }
-                else if (tab === 'category') {
-                    t.classList.toggle('hidden', !dashData.is_leader && !dashData.is_admin);
-                }
-                else if (tab === 'company') {
-                    t.classList.toggle('hidden', !dashData.is_leader && !dashData.is_admin);
+                if (['my','calls','quality','dialer'].includes(tab)) {
+                    t.classList.remove('hidden');
+                } else if (['team','status','category'].includes(tab)) {
+                    t.classList.toggle('hidden', !isLeaderOrAdmin);
+                } else if (['company','earnings'].includes(tab)) {
+                    t.classList.toggle('hidden', !canViewFin);
                 }
             });
-            if (activeTab !== 'my' && activeTab !== 'calls' && activeTab !== 'earnings') {
-                const tabBtn = document.querySelector(`.dash-tab[data-tab="${activeTab}"]`);
-                if (tabBtn && tabBtn.classList.contains('hidden')) {
-                    activeTab = 'my';
-                    document.querySelectorAll('.dash-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'my'));
-                }
-            }
         }
 
         function switchTab(tab) {
+            // Guard restricted tabs
+            if (['company', 'earnings'].includes(tab) && !dashData?.can_view_financials) {
+                tab = 'my';
+            }
+            if (['team', 'status', 'category'].includes(tab) && !dashData?.is_leader && !dashData?.is_admin) {
+                tab = 'my';
+            }
             activeTab = tab;
             document.querySelectorAll('.dash-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
             document.querySelectorAll('.tab-content-area').forEach(el => el.classList.remove('active'));
             const tabEl = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
             if (tabEl) tabEl.classList.add('active');
+
             if (tab === 'calls') {
-                if (!callActivityData) loadCallActivity();
+                if (!ctData) loadCallTrackingData();
                 return;
             }
-            if (tab === 'earnings') {
+            if (tab === 'quality') {
+                if (!qaData) loadQualityReport();
                 return;
             }
+            if (tab === 'dialer') {
+                if (!dialerData) loadDialerData('today');
+                return;
+            }
+            if (tab === 'earnings') return;
+
             renderActiveTab();
         }
 
@@ -828,29 +946,10 @@
                 el.textContent = parts.join(' · ');
             }
             const my = dashData.my_performance;
-            const myCount = my?.summary?.total_leads || 0;
-            const myVal = my?.deal_value || 0;
-            setBadge('tabBadgeMy', myCount, myVal);
+            setBadge('tabBadgeMy', my?.summary?.total_leads || 0, my?.deal_value || 0);
 
             const teamRows = dashData.team_performance?.employees || [];
-            const teamCount = teamRows.reduce((s,r) => s + (r.total||0), 0);
-            const teamVal = teamRows.reduce((s,r) => s + (r.deal_value||0), 0);
-            setBadge('tabBadgeTeam', teamCount, teamVal);
-
-            const statusRows = dashData.status_wise?.employees || [];
-            const statusCount = statusRows.reduce((s,r) => s + (r.total||0), 0);
-            const statusVal = statusRows.reduce((s,r) => s + (r.deal_value||0), 0);
-            setBadge('tabBadgeStatus', statusCount, statusVal);
-
-            const catRows = dashData.category_wise || [];
-            const catCount = catRows.reduce((s,r) => s + (r.total||0), 0);
-            const catVal = catRows.reduce((s,r) => s + (r.deal_value||0), 0);
-            setBadge('tabBadgeCategory', catCount, catVal);
-
-            const compRows = dashData.company_wise || [];
-            const compCount = compRows.reduce((s,r) => s + (r.total||0), 0);
-            const compVal = compRows.reduce((s,r) => s + (r.deal_value||0), 0);
-            setBadge('tabBadgeCompany', compCount, compVal);
+            setBadge('tabBadgeTeam', teamRows.reduce((s,r) => s + (r.total||0), 0), teamRows.reduce((s,r) => s + (r.deal_value||0), 0));
         }
 
         function fmtNum(n) { return (n || 0).toLocaleString('en-IN'); }
@@ -859,24 +958,14 @@
         function initials(name) { return (name || '?').split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase(); }
 
         const sortState = {};
-        const STANDARD_KEYS = ['contacted_today','avg_daily_leads','overdue',...STATUS_COLS,'total','self_leads','company_leads','actual_revenue','deal_value','avg_daily_talk_time','vgk_created','wa_shares'];
-        function getStandardLabels() {
-            const days = (dashData && dashData.avg_num_days) || 3;
-            return {'contacted_today':'Contacted<br>Today','avg_daily_leads':`Avg Daily<br>Leads <small style="font-size:8px;opacity:0.7;">(${days}d)</small>`,'overdue':'Overdue','total':'Total','self_leads':'Self<br>Leads','company_leads':'Company<br>Leads','actual_revenue':'Actual<br>Revenue','deal_value':'Value','avg_daily_talk_time':'Avg Daily<br>Talk Time','vgk_created':'VGK<br>Created','wa_shares':'WA<br>Shares'};
-        }
-        const STANDARD_LABELS = {'contacted_today':'Contacted<br>Today','avg_daily_leads':'Avg Daily<br>Leads','overdue':'Overdue','total':'Total','self_leads':'Self<br>Leads','company_leads':'Company<br>Leads','actual_revenue':'Actual<br>Revenue','deal_value':'Value','avg_daily_talk_time':'Avg Daily<br>Talk Time','vgk_created':'VGK Created','wa_shares':'WA Shares'};
-        const STANDARD_TH_CLASS = {};
-        STANDARD_KEYS.forEach(k => {
-            if (k === 'contacted_today') STANDARD_TH_CLASS[k] = 'th-contacted-today';
-            else if (k === 'avg_daily_leads') STANDARD_TH_CLASS[k] = 'th-avg-leads';
-            else if (k === 'overdue') STANDARD_TH_CLASS[k] = 'th-overdue';
-            else if (k === 'actual_revenue' || k === 'deal_value') STANDARD_TH_CLASS[k] = 'th-revenue';
-            else if (k === 'vgk_created' || k === 'wa_shares') STANDARD_TH_CLASS[k] = 'th-status';
-            else STANDARD_TH_CLASS[k] = 'th-status';
-        });
+        const STANDARD_KEYS = ['contacted_today','avg_daily_leads','overdue',...STATUS_COLS,'total','self_leads','company_leads','actual_revenue','deal_value','avg_daily_talk_time'];
+        const STANDARD_LABELS = {'contacted_today':'Contacted<br>Today','avg_daily_leads':'Avg Daily<br>Leads','overdue':'Overdue','total':'Total','self_leads':'Self<br>Leads','company_leads':'Company<br>Leads','actual_revenue':'Actual<br>Revenue','deal_value':'Value','avg_daily_talk_time':'Avg Daily<br>Talk Time'};
+        const STANDARD_TH_CLASS = {
+            'contacted_today': 'th-contacted-today', 'avg_daily_leads': 'th-avg-leads', 'overdue': 'th-overdue',
+            'actual_revenue': 'th-revenue', 'deal_value': 'th-revenue'
+        };
 
         let teamSelectedEmpIds = null;
-
         function toggleEmpSelectPanel() {
             const panel = document.getElementById('empSelectPanel');
             panel.classList.toggle('open');
@@ -922,17 +1011,10 @@
             e.preventDefault();
             const tp = dashData && dashData.team_performance;
             if (!tp || !tp.employees) return;
-            if (!teamSelectedEmpIds) {
-                teamSelectedEmpIds = new Set(tp.employees.map(emp => emp.emp_id));
-            }
-            if (teamSelectedEmpIds.has(empId)) {
-                teamSelectedEmpIds.delete(empId);
-            } else {
-                teamSelectedEmpIds.add(empId);
-            }
-            if (teamSelectedEmpIds.size === tp.employees.length) {
-                teamSelectedEmpIds = null;
-            }
+            if (!teamSelectedEmpIds) teamSelectedEmpIds = new Set(tp.employees.map(emp => emp.emp_id));
+            if (teamSelectedEmpIds.has(empId)) teamSelectedEmpIds.delete(empId);
+            else teamSelectedEmpIds.add(empId);
+            if (teamSelectedEmpIds.size === tp.employees.length) teamSelectedEmpIds = null;
             buildEmpSelectPanel();
             renderTeamPerformance();
         }
@@ -944,10 +1026,7 @@
             return tp.employees.filter(emp => teamSelectedEmpIds.has(emp.emp_id));
         }
 
-        function getDailyDates() {
-            return (dashData && dashData.daily_dates) ? dashData.daily_dates : [];
-        }
-
+        function getDailyDates() { return (dashData && dashData.daily_dates) ? dashData.daily_dates : []; }
         function fmtDateLabel(dateStr) {
             const d = new Date(dateStr + 'T00:00:00');
             const day = d.getDate();
@@ -957,77 +1036,19 @@
 
         function buildSortableHead(tableKey, extraCols) {
             let html = '<tr>';
-            let leftPos = 0;
-            const stickyCount = Math.min(extraCols.length, 2);
-            extraCols.forEach((ec, idx) => {
-                const w = ec.width || 200;
-                const isSticky = idx < stickyCount;
-                const isLast = idx === stickyCount - 1;
-                const stickyStyle = isSticky ? `position:sticky;left:${leftPos}px;z-index:4;background:#f9fafb;` : '';
-                const stickyClass = isSticky ? (' sticky-col' + (isLast ? ' sticky-col-last' : '')) : '';
-                const sortAttr = ec.sortKey
-                    ? `class="sortable text-start${stickyClass}" data-table="${tableKey}" data-key="${ec.sortKey}"`
-                    : `class="text-start${stickyClass}"`;
-                html += `<th ${sortAttr} style="${ec.style || ''}min-width:${w}px;${stickyStyle}">${ec.label}</th>`;
-                if (isSticky) leftPos += w;
+            extraCols.forEach(ec => {
+                html += `<th class="text-start sticky-col" style="min-width:${ec.width||200}px;">${ec.label}</th>`;
             });
-            const dates = getDailyDates();
-            dates.forEach(ds => {
-                html += `<th class="sortable th-daily-leads" data-table="${tableKey}" data-key="dc_${ds}">${fmtDateLabel(ds)}</th>`;
+            getDailyDates().forEach(ds => {
+                html += `<th class="th-daily-leads">${fmtDateLabel(ds)}</th>`;
             });
-            const dynLabels = getStandardLabels();
             STANDARD_KEYS.forEach(k => {
-                const label = STATUS_LABELS[k] || dynLabels[k] || STANDARD_LABELS[k] || k;
-                const cls = STANDARD_TH_CLASS[k] || '';
-                html += `<th class="sortable ${cls}" data-table="${tableKey}" data-key="${k}">${label}</th>`;
+                const label = STATUS_LABELS[k] || STANDARD_LABELS[k] || k;
+                const cls = STANDARD_TH_CLASS[k] || 'th-status';
+                html += `<th class="${cls}">${label}</th>`;
             });
             html += '</tr>';
             return html;
-        }
-
-        function applySortIndicators(tableKey, headEl) {
-            const st = sortState[tableKey];
-            headEl.querySelectorAll('th.sortable').forEach(th => {
-                th.classList.remove('sort-asc','sort-desc');
-                if (st && th.dataset.key === st.key) th.classList.add(st.dir === 'asc' ? 'sort-asc' : 'sort-desc');
-            });
-        }
-
-        function attachSortListeners(tableKey, headEl, renderFn) {
-            headEl.querySelectorAll('th.sortable').forEach(th => {
-                th.addEventListener('click', function() {
-                    const key = this.dataset.key;
-                    const cur = sortState[tableKey];
-                    if (cur && cur.key === key) {
-                        if (cur.dir === 'desc') sortState[tableKey] = {key, dir:'asc'};
-                        else sortState[tableKey] = null;
-                    } else {
-                        sortState[tableKey] = {key, dir:'desc'};
-                    }
-                    renderFn();
-                });
-            });
-        }
-
-        function sortRows(rows, tableKey) {
-            const st = sortState[tableKey];
-            if (!st) return rows;
-            const sorted = [...rows];
-            const k = st.key;
-            sorted.sort((a,b) => {
-                let va, vb;
-                if (k.startsWith('dc_')) {
-                    const ds = k.substring(3);
-                    va = (a.daily_contacted || {})[ds] || 0;
-                    vb = (b.daily_contacted || {})[ds] || 0;
-                } else {
-                    va = a[k]; vb = b[k];
-                }
-                if (typeof va === 'string') { va = va.toLowerCase(); vb = (vb || '').toLowerCase(); return st.dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
-                va = va || 0; vb = vb || 0;
-                return st.dir === 'asc' ? va - vb : vb - va;
-            });
-            return sorted;
         }
 
         function fmtTalkTime(seconds) {
@@ -1061,15 +1082,11 @@
             html += `<td class="val-positive">${fmtCur(row.actual_revenue || 0)}</td>`;
             html += `<td class="val-positive">${fmtCur(row.deal_value || 0)}</td>`;
             html += `<td>${fmtTalkTime(row.avg_daily_talk_time || 0)}</td>`;
-            const vgk = row.vgk_created || 0;
-            const was = row.wa_shares || 0;
-            html += `<td class="${vgk > 0 ? 'val-positive' : 'val-zero'}" style="font-weight:${vgk>0?'700':'400'}">${fmtNum(vgk)}</td>`;
-            html += `<td class="${was > 0 ? 'val-positive' : 'val-zero'}">${fmtNum(was)}</td>`;
             return html;
         }
 
         function calcTotals(rows) {
-            const totals = {contacted_today:0, avg_daily_leads:0, overdue:0, total:0, self_leads:0, company_leads:0, actual_revenue:0, deal_value:0, avg_daily_talk_time:0, vgk_created:0, wa_shares:0};
+            const totals = {contacted_today:0, avg_daily_leads:0, overdue:0, total:0, self_leads:0, company_leads:0, actual_revenue:0, deal_value:0, avg_daily_talk_time:0};
             STATUS_COLS.forEach(s => totals[s] = 0);
             const dailyTotals = {};
             getDailyDates().forEach(ds => { dailyTotals[ds] = 0; });
@@ -1084,9 +1101,6 @@
                 getDailyDates().forEach(ds => { dailyTotals[ds] += (dc[ds] || 0); });
             });
             totals.avg_daily_leads = rows.length > 0 ? Math.round(avgSum / rows.length * 10) / 10 : 0;
-            const talkSum = rows.reduce((s, r) => s + (r.avg_daily_talk_time || 0), 0);
-            const talkActive = rows.filter(r => (r.avg_daily_talk_time || 0) > 0).length;
-            totals.avg_daily_talk_time = talkActive > 0 ? Math.floor(talkSum / talkActive) : 0;
             totals.daily_contacted = dailyTotals;
             return totals;
         }
@@ -1095,667 +1109,649 @@
             const my = dashData.my_performance;
             if (!my) return;
             const s = my.summary;
+            const winRate = s.total_leads > 0 ? ((s.won || 0) / s.total_leads * 100).toFixed(1) + '%' : '0%';
+            const contactRate = s.total_leads > 0 ? (((s.contacted || 0) + (s.contacted_today || 0)) / s.total_leads * 100).toFixed(1) + '%' : '0%';
             const cards = document.getElementById('myStatCards');
-            let dailyCards = '';
-            const myDC = s.daily_contacted || {};
-            getDailyDates().forEach(ds => {
-                const v = myDC[ds] || 0;
-                dailyCards += `<div class="stat-card" style="border-left:3px solid #7c3aed;"><div class="val">${fmtNum(v)}</div><div class="lbl">${fmtDateLabel(ds)}</div></div>`;
-            });
             cards.innerHTML = `
                 <div class="stat-card highlight"><div class="val">${fmtNum(s.total_leads)}</div><div class="lbl">Total Leads</div></div>
-                ${dailyCards}
                 <div class="stat-card blue"><div class="val">${fmtNum(s.contacted_today)}</div><div class="lbl">Contacted Today</div></div>
-                <div class="stat-card" style="border-left:3px solid #0369a1;"><div class="val">${s.avg_daily_leads || 0}</div><div class="lbl">Avg Daily Leads<br><small style="font-size:9px;opacity:0.7;">(${dashData.avg_num_days || 3} days)</small></div></div>
+                <div class="stat-card"><div class="val">${s.avg_daily_leads || 0}</div><div class="lbl">Avg Daily Leads</div></div>
                 <div class="stat-card red"><div class="val">${fmtNum(s.overdue)}</div><div class="lbl">Overdue</div></div>
                 <div class="stat-card"><div class="val">${fmtNum(s.new)}</div><div class="lbl">New</div></div>
-                <div class="stat-card"><div class="val">${fmtNum(s.contacted)}</div><div class="lbl">Contacted</div></div>
                 <div class="stat-card"><div class="val">${fmtNum(s.interested)}</div><div class="lbl">Interested</div></div>
-                <div class="stat-card"><div class="val">${fmtNum(s.qualified)}</div><div class="lbl">Qualified</div></div>
-                <div class="stat-card"><div class="val">${fmtNum(s.proposal)}</div><div class="lbl">Proposal</div></div>
-                <div class="stat-card orange"><div class="val">${fmtNum(s.loan_process)}</div><div class="lbl">At Bank</div></div>
-                <div class="stat-card green"><div class="val">${fmtNum(s.won)}</div><div class="lbl">Won</div></div>
-                <div class="stat-card orange"><div class="val">${fmtNum(s.processing||0)}</div><div class="lbl">Processing</div></div>
-                <div class="stat-card green"><div class="val">${fmtNum(s.completed)}</div><div class="lbl">Completed</div></div>
-                <div class="stat-card"><div class="val">${fmtNum(s.lost)}</div><div class="lbl">Lost</div></div>
-                <div class="stat-card"><div class="val">${fmtNum(s.on_hold)}</div><div class="lbl">On Hold</div></div>
+                <div class="stat-card green"><div class="val">${fmtNum(s.won)}</div><div class="lbl">Won (${winRate})</div></div>
                 <div class="stat-card green"><div class="val">${fmtCur(my.actual_revenue)}</div><div class="lbl">Actual Revenue</div></div>
-                <div class="stat-card green"><div class="val">${fmtCur(my.deal_value)}</div><div class="lbl">Value</div></div>
-                <div class="stat-card blue"><div class="val">${fmtNum(my.self_leads)}</div><div class="lbl">Self Leads</div></div>
-                <div class="stat-card"><div class="val">${fmtNum(my.company_leads)}</div><div class="lbl">Company Leads</div></div>
-                <div class="stat-card" style="border-left:3px solid #7c3aed;"><div class="val">${fmtNum(my.vgk_created||0)}</div><div class="lbl">VGK Created</div></div>
-                <div class="stat-card" style="border-left:3px solid #0d9488;"><div class="val">${fmtNum(my.wa_shares||0)}</div><div class="lbl">WA Shares</div></div>
+                <div class="stat-card teal"><div class="val">${fmtCur(my.deal_value)}</div><div class="lbl">Pipeline Value</div></div>
             `;
-
             const cats = my.category_breakdown || [];
             const headEl = document.getElementById('myCategoryHead');
             const bodyEl = document.getElementById('myCategoryBody');
             const footEl = document.getElementById('myCategoryFoot');
             const emptyEl = document.getElementById('myCategoryEmpty');
-
-            if (cats.length === 0) {
-                headEl.innerHTML = ''; bodyEl.innerHTML = ''; footEl.innerHTML = '';
-                emptyEl.style.display = 'block';
-                return;
-            }
+            if (!cats.length) { headEl.innerHTML = ''; bodyEl.innerHTML = ''; footEl.innerHTML = ''; emptyEl.style.display = 'block'; return; }
             emptyEl.style.display = 'none';
-
-            const TK = 'myCategory';
-            headEl.innerHTML = buildSortableHead(TK, [{label:'Category', sortKey:'category_name', width:200}]);
-            const sorted = sortRows(cats, TK);
-            let bodyHtml = '';
-            sorted.forEach(c => {
-                bodyHtml += '<tr>';
-                bodyHtml += `<td class="text-start sticky-col sticky-col-last" style="position:sticky;left:0;background:#fff;min-width:200px;"><strong>${c.category_name || 'Unknown'}</strong></td>`;
-                bodyHtml += buildStandardRow(c);
-                bodyHtml += '</tr>';
-            });
-            bodyEl.innerHTML = bodyHtml;
-            const totals = calcTotals(cats);
-            let footHtml = '<tr><td class="text-start sticky-col sticky-col-last" style="position:sticky;left:0;min-width:200px;"><strong>TOTAL</strong></td>';
-            footHtml += buildStandardRow(totals);
-            footHtml += '</tr>';
-            footEl.innerHTML = footHtml;
-            applySortIndicators(TK, headEl);
-            attachSortListeners(TK, headEl, renderMyPerformance);
-        }
-
-        function renderEmployeeTable(tableId, data, countElId) {
-            if (!data) return;
-            const employees = data.employees || [];
-            const prefix = tableId.replace('Table','').replace('table','');
-            const headEl = document.getElementById(prefix + 'Head');
-            const bodyEl = document.getElementById(prefix + 'Body');
-            const footEl = document.getElementById(prefix + 'Foot');
-            const emptyEl = document.getElementById(prefix + 'Empty');
-            if (countElId) {
-                const ce = document.getElementById(countElId);
-                if (ce) ce.textContent = `${employees.length} employees`;
-            }
-
-            if (employees.length === 0) {
-                headEl.innerHTML = ''; bodyEl.innerHTML = ''; footEl.innerHTML = '';
-                if (emptyEl) emptyEl.style.display = 'block';
-                return;
-            }
-            if (emptyEl) emptyEl.style.display = 'none';
-
-            const TK = prefix;
-            headEl.innerHTML = buildSortableHead(TK, [
-                {label:'S.No', width:50},
-                {label:'Employee', sortKey:'name', width:200}
-            ]);
-            const sorted = sortRows(employees, TK);
-            let bodyHtml = '';
-            sorted.forEach((emp, idx) => {
-                const isSelf = emp.emp_id === (dashData.current_employee && dashData.current_employee.id);
-                bodyHtml += `<tr class="${isSelf ? 'self-highlight' : ''}">`;
-                bodyHtml += `<td class="text-start sticky-col" style="position:sticky;left:0;background:#fff;min-width:50px;">${idx + 1}</td>`;
-                bodyHtml += `<td class="text-start sticky-col sticky-col-last" style="position:sticky;left:50px;background:#fff;min-width:200px;">
-                    <div class="emp-info">
-                        <div class="emp-avatar">${initials(emp.name)}</div>
-                        <div>
-                            <div class="emp-name">${emp.name || '-'}</div>
-                            <div class="emp-id">${emp.emp_code || ''}</div>
-                        </div>
-                    </div>
-                </td>`;
-                bodyHtml += buildStandardRow(emp);
-                bodyHtml += '</tr>';
-            });
-            bodyEl.innerHTML = bodyHtml;
-            const totals = calcTotals(employees);
-            let footHtml = '<tr><td class="sticky-col" style="position:sticky;left:0;min-width:50px;"></td><td class="text-start sticky-col sticky-col-last" style="position:sticky;left:50px;min-width:200px;"><strong>TOTAL</strong></td>';
-            footHtml += buildStandardRow(totals);
-            footHtml += '</tr>';
-            footEl.innerHTML = footHtml;
-            applySortIndicators(TK, headEl);
-            attachSortListeners(TK, headEl, () => renderEmployeeTable(tableId, data, countElId));
+            headEl.innerHTML = buildSortableHead('myCat', [{label:'Category', width:180}]);
+            bodyEl.innerHTML = cats.map(c => `<tr><td class="text-start sticky-col sticky-col-last" style="left:0;background:#fff;min-width:180px;"><strong>${c.category_name||'General'}</strong></td>${buildStandardRow(c)}</tr>`).join('');
+            footEl.innerHTML = `<tr><td class="text-start sticky-col sticky-col-last" style="left:0;min-width:180px;"><strong>TOTAL</strong></td>${buildStandardRow(calcTotals(cats))}</tr>`;
         }
 
         function renderTeamPerformance() {
-            const filtered = getFilteredTeamEmployees();
-            const filteredData = { employees: filtered, totals: dashData.team_performance ? dashData.team_performance.totals : {} };
-            renderEmployeeTable('teamTable', filteredData, 'teamCount');
+            const employees = getFilteredTeamEmployees();
+            const headEl = document.getElementById('teamHead');
+            const bodyEl = document.getElementById('teamBody');
+            const footEl = document.getElementById('teamFoot');
+            const emptyEl = document.getElementById('teamEmpty');
             const ce = document.getElementById('teamCount');
-            if (ce && dashData.team_performance) {
-                const total = dashData.team_performance.employees ? dashData.team_performance.employees.length : 0;
-                if (teamSelectedEmpIds) {
-                    ce.textContent = `${filtered.length} of ${total} employees selected`;
-                } else {
-                    ce.textContent = `${total} employees`;
-                }
-            }
+            if (ce) ce.textContent = `${employees.length} team members`;
+
+            if (!employees.length) { headEl.innerHTML = ''; bodyEl.innerHTML = ''; footEl.innerHTML = ''; emptyEl.style.display = 'block'; return; }
+            emptyEl.style.display = 'none';
+
+            // Find top converter
+            let topEmpId = null;
+            let maxWon = 0;
+            employees.forEach(e => {
+                if ((e.won || 0) > maxWon) { maxWon = e.won; topEmpId = e.emp_id; }
+            });
+
+            headEl.innerHTML = buildSortableHead('team', [{label:'#', width:40}, {label:'Staff Member', width:200}]);
+            bodyEl.innerHTML = employees.map((emp, idx) => {
+                const isTop = (emp.emp_id === topEmpId && maxWon > 0);
+                const winRate = emp.total > 0 ? ((emp.won || 0) / emp.total * 100).toFixed(1) + '%' : '0%';
+                return `<tr>
+                    <td class="text-start sticky-col" style="left:0;background:#fff;min-width:40px;">${idx + 1}</td>
+                    <td class="text-start sticky-col sticky-col-last" style="left:40px;background:#fff;min-width:200px;">
+                        <div class="emp-info">
+                            <div class="emp-avatar">${initials(emp.name)}</div>
+                            <div>
+                                <div class="emp-name">
+                                    ${emp.name||'-'}
+                                    ${isTop ? '<span class="badge bg-warning text-dark ms-1" style="font-size:9px;"><i class="fas fa-crown me-1"></i>Top</span>' : ''}
+                                </div>
+                                <div class="emp-id">${emp.emp_code||''} <span class="text-muted">· Win: ${winRate}</span></div>
+                            </div>
+                        </div>
+                    </td>
+                    ${buildStandardRow(emp)}
+                </tr>`;
+            }).join('');
+            footEl.innerHTML = `<tr><td class="sticky-col" style="left:0;"></td><td class="text-start sticky-col sticky-col-last" style="left:40px;"><strong>TOTAL</strong></td>${buildStandardRow(calcTotals(employees))}</tr>`;
         }
 
-        function renderStatusWise() {
-            renderEmployeeTable('statusTable', dashData.status_wise, 'statusCount');
-        }
+        function renderStatusWise() { renderGenericEmpTable('statusTable', dashData.status_wise, 'statusCount'); }
+        function renderCategoryWise() { renderGenericGroupTable('catTable', dashData.category_wise, 'category_name'); }
+        function renderCompanyWise() { renderGenericGroupTable('compTable', dashData.company_wise, 'company_name'); }
 
-        function renderGroupTable(tableId, rows, labelField, emptyId) {
-            const prefix = tableId.replace('Table','').replace('table','');
+        function renderGenericEmpTable(tableId, data, countId) {
+            const emps = (data && data.employees) || [];
+            const prefix = tableId.replace('Table','');
             const headEl = document.getElementById(prefix + 'Head');
             const bodyEl = document.getElementById(prefix + 'Body');
             const footEl = document.getElementById(prefix + 'Foot');
-            const emptyEl = document.getElementById(emptyId);
-
-            if (!rows || rows.length === 0) {
-                headEl.innerHTML = ''; bodyEl.innerHTML = ''; footEl.innerHTML = '';
-                if (emptyEl) emptyEl.style.display = 'block';
-                return;
-            }
-            if (emptyEl) emptyEl.style.display = 'none';
-
-            const TK = prefix;
-            const label = labelField === 'category_name' ? 'Category' : 'Company';
-            headEl.innerHTML = buildSortableHead(TK, [{label, sortKey: labelField, width:200}]);
-            const sorted = sortRows(rows, TK);
-            let bodyHtml = '';
-            sorted.forEach(r => {
-                bodyHtml += '<tr>';
-                bodyHtml += `<td class="text-start sticky-col sticky-col-last" style="position:sticky;left:0;background:#fff;min-width:200px;"><strong>${r[labelField] || 'Unknown'}</strong></td>`;
-                bodyHtml += buildStandardRow(r);
-                bodyHtml += '</tr>';
-            });
-            bodyEl.innerHTML = bodyHtml;
-            const totals = calcTotals(rows);
-            let footHtml = '<tr><td class="text-start sticky-col sticky-col-last" style="position:sticky;left:0;min-width:200px;"><strong>TOTAL</strong></td>';
-            footHtml += buildStandardRow(totals);
-            footHtml += '</tr>';
-            footEl.innerHTML = footHtml;
-            applySortIndicators(TK, headEl);
-            attachSortListeners(TK, headEl, () => renderGroupTable(tableId, rows, labelField, emptyId));
+            if (countId) document.getElementById(countId).textContent = `${emps.length} employees`;
+            if (!emps.length) return;
+            headEl.innerHTML = buildSortableHead(prefix, [{label:'#', width:40}, {label:'Employee', width:200}]);
+            bodyEl.innerHTML = emps.map((emp, idx) => `<tr>
+                <td class="text-start sticky-col" style="left:0;background:#fff;min-width:40px;">${idx + 1}</td>
+                <td class="text-start sticky-col sticky-col-last" style="left:40px;background:#fff;min-width:200px;"><strong>${emp.name}</strong><br><small class="text-muted">${emp.emp_code||''}</small></td>
+                ${buildStandardRow(emp)}
+            </tr>`).join('');
+            footEl.innerHTML = `<tr><td class="sticky-col" style="left:0;"></td><td class="text-start sticky-col sticky-col-last" style="left:40px;"><strong>TOTAL</strong></td>${buildStandardRow(calcTotals(emps))}</tr>`;
         }
 
-        function renderCategoryWise() {
-            renderGroupTable('catTable', dashData.category_wise, 'category_name', 'catEmpty');
+        function renderGenericGroupTable(tableId, rows, field) {
+            const prefix = tableId.replace('Table','');
+            const headEl = document.getElementById(prefix + 'Head');
+            const bodyEl = document.getElementById(prefix + 'Body');
+            const footEl = document.getElementById(prefix + 'Foot');
+            if (!rows || !rows.length) return;
+            headEl.innerHTML = buildSortableHead(prefix, [{label: field === 'category_name' ? 'Category' : 'Company', width:200}]);
+            bodyEl.innerHTML = rows.map(r => `<tr>
+                <td class="text-start sticky-col sticky-col-last" style="left:0;background:#fff;min-width:200px;"><strong>${r[field]||'General'}</strong></td>
+                ${buildStandardRow(r)}
+            </tr>`).join('');
+            footEl.innerHTML = `<tr><td class="text-start sticky-col sticky-col-last" style="left:0;"><strong>TOTAL</strong></td>${buildStandardRow(calcTotals(rows))}</tr>`;
         }
 
-        function renderCompanyWise() {
-            renderGroupTable('compTable', dashData.company_wise, 'company_name', 'compEmpty');
-        }
+        /* ══════════════════════ TAB 3: CALL TRACKING ══════════════════════ */
+        let ctData = null;
+        let ctCurrentRange = 'last_7';
+        let ctCurrentDrilldownCalls = [];
 
-        /* ══════════════════════ CALL ACTIVITY TAB ══════════════════════ */
-        let callActivityData = null;
-        const CA_SLOT_KEYS = ['slot_1', 'slot_2', 'slot_3', 'slot_4', 'slot_5', 'other'];
-
-        function initCallActivityFilters() {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('caDateFrom').value = today;
-            document.getElementById('caDateTo').value = today;
-        }
-
-        function setCaQuickRange(range) {
-            document.querySelectorAll('.ca-quick-btn').forEach(b => b.classList.remove('active'));
-            const btn = document.querySelector(`.ca-quick-btn[data-ca-range="${range}"]`);
+        function setCtQuickRange(range) {
+            ctCurrentRange = range;
+            document.querySelectorAll('.quick-btn[data-ct-range]').forEach(b => b.classList.remove('active'));
+            const btn = document.querySelector(`.quick-btn[data-ct-range="${range}"]`);
             if (btn) btn.classList.add('active');
-            document.getElementById('caDateFrom').value = '';
-            document.getElementById('caDateTo').value = '';
-            loadCallActivity(range);
+            loadCallTrackingData();
         }
 
-        function onCaDateChange() {
-            document.querySelectorAll('.ca-quick-btn').forEach(b => b.classList.remove('active'));
-            const df = document.getElementById('caDateFrom').value;
-            const dt = document.getElementById('caDateTo').value;
-            if (df && dt) loadCallActivity(null, df, dt);
+        function switchCallSubTab(sub) {
+            document.getElementById('callSubTabStaffBtn').classList.toggle('active', sub === 'staff');
+            document.getElementById('callSubTabSlotsBtn').classList.toggle('active', sub === 'slots');
+            document.getElementById('ctStaffView').style.display = sub === 'staff' ? 'block' : 'none';
+            document.getElementById('ctSlotsView').style.display = sub === 'slots' ? 'block' : 'none';
         }
 
-        function resetCaFilters() {
-            document.querySelectorAll('.ca-quick-btn').forEach(b => b.classList.remove('active'));
-            const btn = document.querySelector('.ca-quick-btn[data-ca-range="today"]');
-            if (btn) btn.classList.add('active');
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('caDateFrom').value = today;
-            document.getElementById('caDateTo').value = today;
-            loadCallActivity('today');
-        }
-
-        async function loadCallActivity(quickRange, df, dt) {
+        async function loadCallTrackingData() {
             const panel = document.getElementById('tabCalls');
             panel.classList.add('is-loading');
-            hideCaFallbackBanner();
-            const params = new URLSearchParams();
-            if (quickRange) {
-                params.set('quick_range', quickRange);
-            } else {
-                if (df) params.set('date_from', df);
-                if (dt) params.set('date_to', dt);
-            }
             try {
-                const data = await safeStaffFetch(`/api/v1/call-tracking/management/slot-breakdown?${params.toString()}`);
+                const data = await safeStaffFetch(`/api/v1/call-tracking/management/overview?quick_range=${ctCurrentRange}`);
                 if (data && data.success) {
-                    /* Auto-fallback: if "today" returns 0 records, silently load last_30 and show banner */
-                    const isEmpty = !data.per_staff || data.per_staff.length === 0;
-                    if (isEmpty && (quickRange === 'today' || (!quickRange && !df && !dt))) {
-                        const fallback = await safeStaffFetch('/api/v1/call-tracking/management/slot-breakdown?quick_range=last_30');
-                        if (fallback && fallback.success && fallback.per_staff && fallback.per_staff.length > 0) {
-                            callActivityData = fallback;
-                            showCaFallbackBanner(data.date_range ? data.date_range.from : 'today');
-                            /* Sync filter UI to last_30 */
-                            document.querySelectorAll('.ca-quick-btn').forEach(b => b.classList.remove('active'));
-                            const lb = document.querySelector('.ca-quick-btn[data-ca-range="last_30"]');
-                            if (lb) lb.classList.add('active');
-                        } else {
-                            callActivityData = data;
-                        }
-                    } else {
-                        callActivityData = data;
-                    }
-                    renderCallActivityView();
-                } else {
-                    console.error('Call Activity: API returned failure', data);
+                    ctData = data;
+                    renderCtSummary(data.overview || {});
+                    renderCtTrend(data.daily_trend || [], data.date_range || {});
+                    renderCtStaffTable(data.per_staff || []);
                 }
-            } catch (e) {
-                console.error('Call Activity load error:', e);
-            }
+                const slotData = await safeStaffFetch(`/api/v1/call-tracking/management/slot-breakdown?quick_range=${ctCurrentRange}`);
+                if (slotData && slotData.success) {
+                    renderCtSlotsTable(slotData);
+                }
+            } catch(e) { console.error('Call tracking error:', e); }
             panel.classList.remove('is-loading');
         }
 
-        function showCaFallbackBanner(todayDate) {
-            const el = document.getElementById('caFallbackBanner');
-            if (el) {
-                el.innerHTML = `<i class="fas fa-info-circle me-2"></i>No calls logged for <strong>${todayDate}</strong> — showing last 30 days automatically.`;
-                el.style.display = 'flex';
-            }
-        }
-        function hideCaFallbackBanner() {
-            const el = document.getElementById('caFallbackBanner');
-            if (el) el.style.display = 'none';
-        }
-
-        function fmtDur(secs) {
-            if (!secs || secs <= 0) return '0m';
+        function fmtDurationSec(secs) {
+            if (!secs || secs <= 0) return '<span class="val-zero">0m</span>';
             const h = Math.floor(secs / 3600);
             const m = Math.floor((secs % 3600) / 60);
-            if (h > 0) return `${h}h ${m}m`;
-            return `${m}m`;
+            return h > 0 ? `${h}h ${m}m` : `${m}m`;
         }
 
-        function fmtAvgDur(secs, days) {
-            if (!secs || secs <= 0) return '0m';
-            return fmtDur(Math.round(secs / days));
+        function renderCtSummary(o) {
+            const connectedCalls = Math.max((o.outgoing || 0) + (o.incoming || 0) - (o.missed || 0), 0);
+            const ansRate = o.total_calls > 0 ? (connectedCalls / o.total_calls * 100).toFixed(1) + '%' : '0%';
+            const cards = document.getElementById('ctStatCards');
+            cards.innerHTML = `
+                <div class="stat-card blue"><div class="val">${fmtNum(o.total_calls)}</div><div class="lbl">Total Calls</div></div>
+                <div class="stat-card green"><div class="val">${ansRate}</div><div class="lbl">Connect / Answer Rate</div></div>
+                <div class="stat-card green"><div class="val">${fmtDurationSec(o.total_duration_seconds)}</div><div class="lbl">Total Talk Time</div></div>
+                <div class="stat-card purple"><div class="val">${fmtDurationSec(o.avg_daily_talk_time)}</div><div class="lbl">Avg Daily Talk</div></div>
+                <div class="stat-card"><div class="val">${fmtNum(o.outgoing)}</div><div class="lbl">Outgoing</div></div>
+                <div class="stat-card"><div class="val">${fmtNum(o.incoming)}</div><div class="lbl">Incoming</div></div>
+                <div class="stat-card red"><div class="val">${fmtNum(o.missed)}</div><div class="lbl">Missed</div></div>
+                <div class="stat-card orange"><div class="val">${fmtNum(o.crm_matched)}</div><div class="lbl">CRM Matched</div></div>
+                <div class="stat-card teal"><div class="val">${fmtNum(o.active_staff)}</div><div class="lbl">Active Staff</div></div>
+            `;
         }
 
-        function renderCallActivityView() {
-            const d = callActivityData;
-            if (!d) return;
-            const isAvg = d.is_multi_day;
-            const days = d.day_count || 1;
+        function renderCtTrend(trend, dr) {
+            const chart = document.getElementById('ctTrendChart');
+            if (!trend || !trend.length) { chart.innerHTML = '<div class="text-center text-muted w-100 py-3">No trend data</div>'; return; }
+            const reversed = [...trend].reverse();
+            const maxCalls = Math.max(...reversed.map(d => d.calls), 1);
+            chart.innerHTML = reversed.map(d => {
+                const h = Math.max((d.calls / maxCalls) * 100, 4);
+                return `<div class="trend-bar" style="height:${h}%;">
+                    <div class="tip">${d.date}<br>${d.calls} calls (${Math.floor((d.duration||0)/60)}m)<br>Out:${d.outgoing||0} In:${d.incoming||0} Miss:${d.missed||0}</div>
+                </div>`;
+            }).join('');
+            document.getElementById('ctTrendStart').textContent = reversed[0]?.date || '';
+            document.getElementById('ctTrendEnd').textContent = reversed[reversed.length - 1]?.date || '';
+            document.getElementById('ctTrendDateRange').textContent = `${dr.from || ''} → ${dr.to || ''}`;
+        }
+
+        function renderCtStaffTable(staffList) {
+            const tbody = document.getElementById('ctStaffTbody');
+            document.getElementById('ctStaffCount').textContent = `${staffList.length} staff members`;
+            if (!staffList.length) {
+                tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-muted">No call records found</td></tr>';
+                return;
+            }
+            tbody.innerHTML = staffList.map((s, idx) => {
+                const sName = s.name || s.staff_name || 'Staff';
+                const sDept = s.department || '';
+                const safeName = sName.replace(/'/g, "\\'");
+                return `<tr>
+                <td class="text-start">${idx + 1}</td>
+                <td class="text-start">
+                    <div class="emp-info">
+                        <div class="emp-avatar">${initials(sName)}</div>
+                        <div>
+                            <div class="emp-name font-semibold text-dark">${escapeHtml(sName)}</div>
+                            <div class="emp-id text-muted small">${escapeHtml(s.emp_code || '')}${sDept ? ' · ' + escapeHtml(sDept) : ''}</div>
+                        </div>
+                    </div>
+                </td>
+                <td><strong>${fmtNum(s.total_calls)}</strong></td>
+                <td class="text-success font-semibold">${fmtNum(s.outgoing)}</td>
+                <td class="text-primary font-semibold">${fmtNum(s.incoming)}</td>
+                <td class="${s.missed > 0 ? 'text-danger font-semibold' : 'val-zero'}">${fmtNum(s.missed)}</td>
+                <td>${fmtDurationSec(s.total_duration_seconds || s.total_duration)}</td>
+                <td>${fmtDurationSec(s.avg_daily_talk_time)}</td>
+                <td>${fmtNum(s.unique_numbers)}</td>
+                <td class="text-warning font-semibold">${fmtNum(s.crm_matched)}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="openStaffCallDrilldown(${s.staff_id}, '${safeName}')">
+                        <i class="fas fa-list-ul me-1"></i>View Calls
+                    </button>
+                </td>
+            </tr>`;
+            }).join('');
+        }
+
+        function renderCtSlotsTable(d) {
             const labels = d.slot_labels || {};
             const perStaff = d.per_staff || [];
             const orgTotals = d.org_totals || {};
             const orgSlots = orgTotals.slots || {};
-            const orgTotal = orgTotals.total || {};
+            const CA_SLOT_KEYS = ['slot_1', 'slot_2', 'slot_3', 'slot_4', 'slot_5', 'other'];
 
-            /* ─── avg badge ─── */
-            const badge = document.getElementById('caAvgBadge');
-            badge.style.display = isAvg ? '' : 'none';
-
-            /* ─── date label ─── */
-            const rangeLabel = document.getElementById('caDateRangeLabel');
-            const dr = d.date_range || {};
-            if (dr.from === dr.to) {
-                rangeLabel.textContent = dr.from || '';
-            } else {
-                rangeLabel.textContent = `${dr.from || ''} → ${dr.to || ''}${isAvg ? ` (${days} days)` : ''}`;
-            }
-
-            /* ─── summary cards ─── */
-            const divider = isAvg ? days : 1;
-            const ot = orgTotal;
-            const cards = document.getElementById('caStatCards');
-            cards.innerHTML = [
-                { cls: 'blue',   icon: 'fa-phone', val: isAvg ? (ot.calls/divider).toFixed(1) : ot.calls, lbl: isAvg ? 'Avg Calls/Day' : 'Total Calls' },
-                { cls: 'green',  icon: 'fa-phone-volume', val: isAvg ? (ot.answered/divider).toFixed(1) : ot.answered, lbl: isAvg ? 'Avg Answered/Day' : 'Answered' },
-                { cls: 'orange', icon: 'fa-phone-alt', val: isAvg ? (ot.outgoing/divider).toFixed(1) : ot.outgoing, lbl: isAvg ? 'Avg Outgoing/Day' : 'Outgoing' },
-                { cls: 'purple', icon: 'fa-phone-slash', val: isAvg ? (ot.missed/divider).toFixed(1) : ot.missed, lbl: isAvg ? 'Avg Missed/Day' : 'Missed' },
-                { cls: 'green',  icon: 'fa-clock', val: isAvg ? fmtAvgDur(ot.duration_seconds, divider) : fmtDur(ot.duration_seconds), lbl: isAvg ? 'Avg Talk Time/Day' : 'Total Talk Time' },
-                { cls: 'blue',   icon: 'fa-link', val: isAvg ? (ot.crm_matched/divider).toFixed(1) : ot.crm_matched, lbl: isAvg ? 'Avg CRM Matched/Day' : 'CRM Matched' },
-                { cls: 'orange', icon: 'fa-users', val: perStaff.length, lbl: 'Active Staff' },
-            ].map(c => `
-                <div class="ca-stat-card ${c.cls}">
-                    <div class="ca-val"><i class="fas ${c.icon}" style="font-size:14px;opacity:0.6;"></i> ${c.val}</div>
-                    <div class="ca-lbl">${c.lbl}</div>
-                </div>`).join('');
-
-            /* ─── table header ─── */
-            const head = document.getElementById('caHead');
-            let hHtml = '<tr><th class="text-start sticky-col" style="position:sticky;left:0;min-width:180px;z-index:4;">Staff</th><th style="min-width:80px;">Dept</th>';
-            CA_SLOT_KEYS.forEach(sk => {
-                const isOther = sk === 'other';
-                hHtml += `<th class="ca-slot-hdr${isOther ? ' other' : ''}" style="min-width:115px;">${labels[sk] || sk}</th>`;
-            });
-            hHtml += `<th class="ca-slot-hdr total" style="min-width:115px;">Total</th></tr>`;
-            head.innerHTML = hHtml;
-
-            /* ─── build a slot cell ─── */
-            function slotCell(s, isDivided) {
-                if (!s || s.calls === 0) return `<td class="ca-zero">—</td>`;
-                const calls = isDivided ? (s.calls / days).toFixed(1) : s.calls;
-                const dur   = isDivided ? fmtAvgDur(s.duration_seconds, days) : fmtDur(s.duration_seconds);
-                const ans   = isDivided ? (s.answered / days).toFixed(1) : s.answered;
-                const out   = isDivided ? (s.outgoing / days).toFixed(1) : s.outgoing;
-                const inc   = isDivided ? (s.incoming / days).toFixed(1) : s.incoming;
-                const mis   = isDivided ? (s.missed / days).toFixed(1)   : s.missed;
-                const crm   = isDivided ? (s.crm_matched / days).toFixed(1) : s.crm_matched;
-                return `<td>
-                    <div class="ca-slot-cell">${calls}</div>
-                    <div class="ca-slot-dur">${dur}</div>
-                    <div class="ca-slot-detail">
-                        <span title="Answered" style="color:#059669;">✓${ans}</span>
-                        <span title="Outgoing" style="color:#2563eb;">↑${out}</span>
-                        <span title="Incoming" style="color:#7c3aed;">↓${inc}</span>
-                        <span title="Missed" style="color:#dc2626;">✗${mis}</span>
-                        ${crm > 0 ? `<span title="CRM Matched" style="color:#d97706;">⚑${crm}</span>` : ''}
-                    </div>
-                </td>`;
-            }
-
-            /* ─── table body ─── */
-            const body = document.getElementById('caBody');
-            const emptyEl = document.getElementById('caEmpty');
-            if (perStaff.length === 0) {
-                body.innerHTML = '';
-                document.getElementById('caFoot').innerHTML = '';
-                emptyEl.style.display = '';
-                return;
-            }
-            emptyEl.style.display = 'none';
-
-            let bHtml = '';
-            perStaff.forEach(row => {
-                const av = row.emp_code ? ` <span style="color:#9ca3af;font-weight:400;">(${row.emp_code})</span>` : '';
-                bHtml += `<tr>
-                    <td class="text-start sticky-col" style="position:sticky;left:0;background:#fff;">
-                        <div class="ca-staff-name">${row.name || '—'}${av}</div>
-                        ${row.call_tracking_enabled ? '<div style="font-size:10px;color:#059669;">● Tracking On</div>' : '<div style="font-size:10px;color:#9ca3af;">○ No Tracking</div>'}
-                    </td>
-                    <td class="ca-dept">${row.department || '—'}</td>`;
-                CA_SLOT_KEYS.forEach(sk => { bHtml += slotCell(row.slots[sk], isAvg); });
-                bHtml += slotCell(row.total, isAvg);
-                bHtml += '</tr>';
-            });
-            body.innerHTML = bHtml;
-
-            /* ─── totals footer ─── */
-            const foot = document.getElementById('caFoot');
-            let fHtml = `<tr class="ca-tfoot">
-                <td class="text-start sticky-col" style="position:sticky;left:0;background:#f3f4f6;font-weight:700;">ORG TOTAL${isAvg ? ' (avg/day)' : ''}</td>
-                <td>—</td>`;
-            CA_SLOT_KEYS.forEach(sk => { fHtml += slotCell(orgSlots[sk], isAvg); });
-            fHtml += slotCell(orgTotal, isAvg);
-            fHtml += '</tr>';
-            foot.innerHTML = fHtml;
-        }
-        /* ══════════════════════ END CALL ACTIVITY TAB ══════════════════ */
-
-        /* ══════════════════════ EARNINGS TAB ════════════════════════════ */
-        const EARN_SLUGS = ['solar','ev_b2c','ev_b2b','training','insurance','real_estate'];
-
-        function initEarningsFilters() {
-            const now   = new Date();
-            const curMo = now.getMonth() + 1;
-            const curYr = now.getFullYear();
-            // Set month dropdown
-            document.getElementById('earnMonth').value = curMo;
-            // Populate year dropdown
-            const yrSel = document.getElementById('earnYear');
-            yrSel.innerHTML = '';
-            for (let y = curYr; y >= 2024; y--) {
-                const o = document.createElement('option');
-                o.value = y; o.textContent = y;
-                if (y === curYr) o.selected = true;
-                yrSel.appendChild(o);
-            }
-            // Populate earnCompany — keep "All Companies" as first option
-            try {
-                safeStaffFetch('/api/v1/staff/accounts/companies').then(data => {
-                    if (!data.success) return;
-                    const companies = data.companies || (Array.isArray(data.data) ? data.data : []);
-                    if (!companies.length) return;
-                    const sel = document.getElementById('earnCompany');
-                    sel.innerHTML = '<option value="">All Companies</option>';
-                    companies.forEach(c => {
-                        const o = document.createElement('option');
-                        o.value = c.id;
-                        o.textContent = c.company_name || c.name;
-                        sel.appendChild(o);
-                    });
-                });
-            } catch(e) {}
-        }
-
-        function earnPayoutBadge(status) {
-            const cfg = {
-                in_progress: { cls: 'background:#fef3c7;color:#92400e;border:1px solid #fde68a;', icon: 'fa-clock',        label: 'In Progress' },
-                pending:     { cls: 'background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;', icon: 'fa-hourglass-half', label: 'Pending'      },
-                cleared:     { cls: 'background:#dcfce7;color:#166534;border:1px solid #86efac;', icon: 'fa-check-circle',  label: 'Cleared'      },
-            };
-            const c = cfg[status] || cfg.pending;
-            return `<span style="${c.cls}padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">
-                <i class="fas ${c.icon}"></i>${c.label}</span>`;
-        }
-
-        function earnFmt(val) {
-            if (!val || val === 0) return '<span style="color:#d1d5db;">—</span>';
-            return `<span style="color:#7c3aed;font-weight:600;">₹${parseFloat(val).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:0})}</span>`;
-        }
-
-        // ── Reusable: render achievement + earnings side-by-side ─────────
-        function _renderEarningsSideBySide(rows, payoutMap, month, year) {
-            const tbody    = document.getElementById('earnTbody');
-            const achTbody = document.getElementById('earnAchTbody');
-            const tfoot    = document.getElementById('earnTfoot');
-            const emptyEl  = document.getElementById('earnEmpty');
-            const countEl  = document.getElementById('earnCount');
-            const dueLine  = document.getElementById('earnDueLine');
-            const dueText  = document.getElementById('earnDueText');
-            const sideBy   = document.getElementById('earnSideBySide');
-
-            const nextMo  = month === 12 ? 1 : month + 1;
-            const nextYr  = month === 12 ? year + 1 : year;
-            const moNames = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            const noData  = (cols) => `<tr><td colspan="${cols}" class="text-center py-3" style="color:#9ca3af;font-size:12px;"><i class="fas fa-inbox me-1"></i>No achievement data for this period</td></tr>`;
-
-            emptyEl.style.display = 'none';
-            sideBy.style.display  = '';
-
-            if (!rows.length) {
-                achTbody.innerHTML = noData(7);
-                tbody.innerHTML    = noData(10);
-                tfoot.innerHTML    = '';
-                countEl.textContent = '0 employees';
-                dueLine.style.display = 'none';
-                return;
-            }
-
-            dueText.textContent   = `Incentive clearance due: 15 ${moNames[nextMo]} ${nextYr}`;
-            dueLine.style.display = '';
-
-            // Achievement (left panel)
-            let achHtml = '';
-            rows.forEach(r => {
-                let slugAch = {};
-                (r.categories || []).forEach(c => { slugAch[c.slug] = c; });
-                achHtml += `<tr>
-                    <td class="text-start">
-                        <div style="font-weight:600;font-size:12px;">${r.name || '—'}</div>
-                        <div style="font-size:10px;color:#9ca3af;">${r.emp_code || ''}${r.companyLabel ? ` · ${r.companyLabel}` : ''}</div>
-                    </td>
-                    ${EARN_SLUGS.map(s => {
-                        const c = slugAch[s];
-                        if (!c) return '<td style="color:#d1d5db;font-size:11px;">—</td>';
-                        const metColor = c.target_met ? '#059669' : '#9ca3af';
-                        const metIcon  = c.target_met ? '✓' : '·';
-                        const val = c.min_target_unit === 'count'
-                            ? `${c.achieved_count || 0}`
-                            : `₹${parseFloat(c.achieved_amount || 0).toLocaleString('en-IN',{maximumFractionDigits:0})}`;
-                        return `<td style="font-size:11px;text-align:center;"><div style="color:${metColor};font-weight:600;">${metIcon} ${val}</div></td>`;
-                    }).join('')}
-                </tr>`;
-            });
-            achTbody.innerHTML = achHtml;
-            countEl.textContent = `${rows.length} employee${rows.length !== 1 ? 's' : ''}`;
-
-            // Earnings & Payout (right panel)
-            let html = ''; let totals = {}; EARN_SLUGS.forEach(s => totals[s] = 0); let grandTotal = 0;
-            rows.forEach(r => {
-                const payout   = payoutMap[r.employee_id];
-                const status   = payout ? payout.payout_status : ((new Date().getFullYear() === year && new Date().getMonth()+1 === month) ? 'in_progress' : 'pending');
-                const dueLabel = payout ? (payout.due_date_label || `15 ${moNames[nextMo]} ${nextYr}`) : `15 ${moNames[nextMo]} ${nextYr}`;
-                let slugMap    = {};
-                (r.categories || []).forEach(c => { slugMap[c.slug] = c.incentive_earned; });
-                EARN_SLUGS.forEach(s => totals[s] += slugMap[s] || 0);
-                grandTotal += r.total_incentive_earned || 0;
-                html += `<tr>
-                    <td class="text-start">
-                        <div style="font-weight:600;font-size:12px;">${r.name || '—'}</div>
-                        <div style="font-size:10px;color:#9ca3af;">${r.emp_code || ''}${r.companyLabel ? ` · ${r.companyLabel}` : ''}</div>
-                    </td>
-                    ${EARN_SLUGS.map(s => `<td style="font-size:11px;">${earnFmt(slugMap[s] || 0)}</td>`).join('')}
-                    <td style="font-weight:700;color:#d97706;font-size:12px;">${earnFmt(r.total_incentive_earned)}</td>
-                    <td>${earnPayoutBadge(status)}</td>
-                    <td style="font-size:11px;color:#065f46;font-weight:500;">${dueLabel}</td>
-                </tr>`;
-            });
-            tbody.innerHTML = html;
-            tfoot.innerHTML = `<tr>
-                <td class="text-start" style="background:#f3f4f6;font-weight:700;font-size:12px;">TOTAL</td>
-                ${EARN_SLUGS.map(s => `<td style="font-weight:700;font-size:11px;">${earnFmt(totals[s])}</td>`).join('')}
-                <td style="font-weight:700;color:#d97706;font-size:12px;">${earnFmt(grandTotal)}</td>
-                <td></td><td></td>
+            document.getElementById('ctSlotsHead').innerHTML = `<tr>
+                <th class="text-start">Staff</th><th>Dept</th>
+                ${CA_SLOT_KEYS.map(sk => `<th>${labels[sk]||sk}</th>`).join('')}
+                <th>Total</th>
             </tr>`;
+
+            document.getElementById('ctSlotsBody').innerHTML = perStaff.map(row => `<tr>
+                <td class="text-start font-semibold">${escapeHtml(row.name || '-')} <small class="text-muted">(${escapeHtml(row.emp_code||'')})</small></td>
+                <td>${escapeHtml(row.department || '-')}</td>
+                ${CA_SLOT_KEYS.map(sk => `<td>${(row.slots && row.slots[sk] && row.slots[sk].calls) || 0}</td>`).join('')}
+                <td><strong>${(row.total && row.total.calls) || 0}</strong></td>
+            </tr>`).join('');
         }
 
-        // ── Reusable: render incentive config table ────────────────────────
-        function _renderEarningsConfig(cfgRows, month, year) {
-            const configWrap = document.getElementById('earnConfigWrap');
-            const configNote = document.getElementById('earnConfigNote');
-            const cfgTbody   = document.getElementById('earnConfigTbody');
-            if (!cfgRows.length) {
-                if (configNote) configNote.textContent = 'No config for this period';
-                cfgTbody.innerHTML = `<tr><td colspan="7" class="text-center py-3" style="color:#9ca3af;font-size:12px;"><i class="fas fa-inbox me-1"></i>No incentive configuration found for this company / month</td></tr>`;
-                configWrap.style.display = '';
+        async function openStaffCallDrilldown(staffId, staffName) {
+            const sec = document.getElementById('ctDrilldownSection');
+            document.getElementById('ctDrilldownStaffName').textContent = staffName;
+            sec.style.display = 'block';
+            sec.scrollIntoView({ behavior: 'smooth' });
+
+            const tbody = document.getElementById('ctDrilldownTbody');
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Loading calls...</td></tr>';
+            try {
+                const res = await safeStaffFetch(`/api/v1/call-tracking/staff/${staffId}/calls?quick_range=${ctCurrentRange}&per_page=50`);
+                if (res && res.success) {
+                    ctCurrentDrilldownCalls = (res.data && res.data.calls) || [];
+                    renderDrilldownCalls(ctCurrentDrilldownCalls);
+                }
+            } catch(e) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-danger">Failed to load calls</td></tr>';
+            }
+        }
+
+        function filterDrilldownCalls() {
+            const phone = document.getElementById('ctDrilldownPhone').value.trim().toLowerCase();
+            const type = document.getElementById('ctDrilldownType').value;
+            const filtered = ctCurrentDrilldownCalls.filter(c => {
+                const matchPhone = !phone || (c.phone_number && c.phone_number.toLowerCase().includes(phone));
+                const matchType = !type || c.call_type === type;
+                return matchPhone && matchType;
+            });
+            renderDrilldownCalls(filtered);
+        }
+
+        function renderDrilldownCalls(calls) {
+            const tbody = document.getElementById('ctDrilldownTbody');
+            if (!calls.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-muted">No call records found</td></tr>';
                 return;
             }
-            if (configNote) configNote.textContent = `${cfgRows.length} categories · ${month}/${year}`;
-            cfgTbody.innerHTML = cfgRows.map(cfg => {
-                const rateType = cfg.incentive_type === 'fixed_per_unit' ? 'fixed/unit' : '%';
-                const minTgt   = cfg.min_target_unit === 'count' ? `${cfg.min_target_value} units` : `₹${parseFloat(cfg.min_target_value).toLocaleString('en-IN')}`;
-                const rateNS   = cfg.incentive_rate_without_support != null ? `${cfg.incentive_rate_without_support}${rateType === '%' ? '%' : ''}` : '—';
-                const rateWS   = cfg.incentive_rate_with_support   != null ? `${cfg.incentive_rate_with_support}${rateType === '%' ? '%' : ''}` : '—';
-                const bonus    = cfg.bonus_trigger_value != null ? `${cfg.bonus_trigger_value} ${cfg.min_target_unit === 'count' ? 'units' : '₹'}` : '—';
-                const mult     = cfg.bonus_multiplier != null ? `×${cfg.bonus_multiplier}` : '—';
+            tbody.innerHTML = calls.map((c, i) => {
+                const hasRec = Boolean((c.has_recording || c.recording_id) && c.recording_id);
+                const leadDisplay = c.matched_lead_name || c.contact_name_crm || c.contact_name || '-';
                 return `<tr>
-                    <td class="text-start fw-semibold">${cfg.category_label || cfg.category_slug || '—'}</td>
-                    <td>${minTgt}</td>
-                    <td style="color:#7c3aed;">${rateNS}</td>
-                    <td style="color:#059669;">${rateWS}</td>
-                    <td style="font-size:11px;color:#6b7280;">${rateType}</td>
-                    <td style="color:#d97706;">${bonus}</td>
-                    <td style="color:#b91c1c;">${mult}</td>
+                <td class="text-start">${i + 1}</td>
+                <td>${c.call_datetime ? new Date(c.call_datetime).toLocaleString('en-IN') : '-'}</td>
+                <td><strong>${escapeHtml(c.phone_number || '-')}</strong></td>
+                <td><span class="badge ${c.call_type==='OUTGOING'?'bg-success':c.call_type==='INCOMING'?'bg-primary':'bg-danger'}">${c.call_type}</span></td>
+                <td>${fmtDurationSec(c.duration_seconds)}</td>
+                <td>${escapeHtml(leadDisplay)}</td>
+                <td>
+                    ${hasRec
+                        ? `<button class="btn btn-sm btn-outline-info py-0 px-2" onclick="playAudioStream(${c.recording_id})"><i class="fas fa-play me-1"></i>Play</button>`
+                        : '<span class="text-muted" title="No recording file uploaded for this call">-</span>'}
+                </td>
+            </tr>`;
+            }).join('');
+        }
+
+        function playAudioStream(recordingId) {
+            const container = document.getElementById('audioPlayerContainer');
+            const player = document.getElementById('callAudioPlayer');
+            player.src = `/api/v1/call-tracking/recordings/${recordingId}/stream`;
+            container.style.display = 'block';
+            player.play().catch(() => {});
+        }
+        function closeAudioPlayer() {
+            const container = document.getElementById('audioPlayerContainer');
+            const player = document.getElementById('callAudioPlayer');
+            if (player) { player.pause(); player.src = ''; }
+            if (container) container.style.display = 'none';
+        }
+        function closeCallDrilldown() { document.getElementById('ctDrilldownSection').style.display = 'none'; closeAudioPlayer(); }
+
+        /* ══════════════════════ TAB 4: QUALITY QA AUDITS ══════════════════ */
+        let qaData = null;
+        let qaMode = 'day';
+
+        function initQaDates() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('qaDateInput').value = today;
+            const past7 = new Date(); past7.setDate(past7.getDate() - 6);
+            document.getElementById('qaRangeFrom').value = past7.toISOString().split('T')[0];
+            document.getElementById('qaRangeTo').value = today;
+        }
+
+        function setQaMode(mode) {
+            qaMode = mode;
+            document.getElementById('qaModeDay').classList.toggle('active', mode === 'day');
+            document.getElementById('qaModeRange').classList.toggle('active', mode === 'range');
+            document.getElementById('qaDayWrap').style.display = mode === 'day' ? 'block' : 'none';
+            document.getElementById('qaRangeWrap').style.display = mode === 'range' ? 'flex' : 'none';
+        }
+
+        async function loadQualityReport() {
+            const panel = document.getElementById('tabQuality');
+            panel.classList.add('is-loading');
+            try {
+                let url;
+                if (qaMode === 'day') {
+                    const d = document.getElementById('qaDateInput').value;
+                    url = `/api/v1/call-quality/day-report?report_date=${d}`;
+                    document.getElementById('qaDateLabel').textContent = `Day: ${d}`;
+                } else {
+                    const df = document.getElementById('qaRangeFrom').value;
+                    const dt = document.getElementById('qaRangeTo').value;
+                    url = `/api/v1/call-quality/range-report?date_from=${df}&date_to=${dt}`;
+                    document.getElementById('qaDateLabel').textContent = `${df} → ${dt}`;
+                }
+                const res = await safeStaffFetch(url);
+                if (res) {
+                    qaData = res;
+                    renderQaSummary(res.summary || {});
+                    renderQaTable(res.executives || []);
+                }
+            } catch(e) { console.error('QA load error:', e); }
+            panel.classList.remove('is-loading');
+        }
+
+        function scoreLabel(s) {
+            if (!s && s !== 0) return '<span class="score-pill score-na">N/A</span>';
+            const n = parseFloat(s);
+            if (n >= 4.5) return `<span class="score-pill score-exc">${n.toFixed(1)}</span>`;
+            if (n >= 3.5) return `<span class="score-pill score-good">${n.toFixed(1)}</span>`;
+            if (n >= 2.5) return `<span class="score-pill score-avg">${n.toFixed(1)}</span>`;
+            return `<span class="score-pill score-poor">${n.toFixed(1)}</span>`;
+        }
+
+        function renderQaSummary(s) {
+            const qaCoverage = s.total_calls > 0 ? ((s.quality_sampled || 0) / s.total_calls * 100).toFixed(1) + '%' : '0%';
+            const cards = document.getElementById('qaStatCards');
+            cards.innerHTML = `
+                <div class="stat-card blue"><div class="val">${fmtNum(s.total_executives)}</div><div class="lbl">Executives</div></div>
+                <div class="stat-card teal"><div class="val">${fmtNum(s.total_calls)}</div><div class="lbl">Total Calls</div></div>
+                <div class="stat-card purple"><div class="val">${fmtNum(s.total_leads_touched)}</div><div class="lbl">Leads Touched</div></div>
+                <div class="stat-card orange"><div class="val">${fmtNum(s.quality_sampled)}</div><div class="lbl">QA Sampled (${qaCoverage})</div></div>
+                <div class="stat-card green"><div class="val">${fmtNum(s.quality_reviewed)}</div><div class="lbl">Reviews Done</div></div>
+                <div class="stat-card green"><div class="val">${s.avg_quality_score ? s.avg_quality_score.toFixed(1) : '—'}</div><div class="lbl">Avg Quality Score</div></div>
+            `;
+        }
+
+        function renderQaTable(execs) {
+            const tbody = document.getElementById('qaTbody');
+            const empty = document.getElementById('qaEmpty');
+            if (!execs.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+            empty.style.display = 'none';
+
+            tbody.innerHTML = execs.map((e, idx) => {
+                const c = e.calls || {};
+                const q = e.quality || {};
+                return `
+                <tr onclick="toggleQaExpand(${idx})" style="cursor:pointer;">
+                    <td><i id="qaExpandIcon_${idx}" class="fas fa-chevron-right" style="font-size:10px;color:#9ca3af;transition:transform .2s;"></i></td>
+                    <td class="text-start"><strong>${e.staff_name}</strong><br><small class="text-muted">${e.emp_code||''} ${e.role?'· '+e.role:''}</small></td>
+                    <td><strong>${fmtNum(c.total)}</strong></td>
+                    <td class="text-success font-semibold">${fmtNum(c.outgoing)}</td>
+                    <td class="text-primary font-semibold">${fmtNum(c.incoming)}</td>
+                    <td class="${c.missed>0?'text-danger font-semibold':'val-zero'}">${fmtNum(c.missed)}</td>
+                    <td class="text-purple font-semibold">${fmtNum(e.leads_touched)}</td>
+                    <td>${fmtDurationSec(c.avg_duration_seconds)}</td>
+                    <td>${fmtNum(q.sampled)}</td>
+                    <td><span class="text-success font-semibold">${fmtNum(q.reviewed)}</span></td>
+                    <td>${scoreLabel(q.avg_score)}</td>
+                </tr>
+                <tr id="qaExpand_${idx}" class="expandable-row">
+                    <td colspan="11">
+                        <div class="expand-inner">
+                            <div class="d-flex gap-4">
+                                <div style="flex:1;">
+                                    <div style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;margin-bottom:6px;"><i class="fas fa-phone me-1"></i>Call Metrics</div>
+                                    <table class="mini-table">
+                                        <tr><td>Outgoing: <strong>${c.outgoing||0}</strong></td><td>Incoming: <strong>${c.incoming||0}</strong></td></tr>
+                                        <tr><td>Missed: <strong>${c.missed||0}</strong></td><td>Avg Duration: <strong>${fmtDurationSec(c.avg_duration_seconds)}</strong></td></tr>
+                                    </table>
+                                </div>
+                                <div style="flex:1;">
+                                    <div style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;margin-bottom:6px;"><i class="fas fa-clipboard-check me-1"></i>Quality Scorecard</div>
+                                    <table class="mini-table">
+                                        <tr><td>Sampled: <strong>${q.sampled||0}</strong></td><td>Reviewed: <strong>${q.reviewed||0}</strong></td></tr>
+                                        <tr><td>Pending: <strong>${q.pending||0}</strong></td><td>Avg Score: <strong>${scoreLabel(q.avg_score)}</strong></td></tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
                 </tr>`;
             }).join('');
-            configWrap.style.display = '';
+        }
+
+        function toggleQaExpand(idx) {
+            const row = document.getElementById(`qaExpand_${idx}`);
+            const icon = document.getElementById(`qaExpandIcon_${idx}`);
+            if (row.classList.contains('open')) {
+                row.classList.remove('open');
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                row.classList.add('open');
+                icon.style.transform = 'rotate(90deg)';
+            }
+        }
+
+        /* ══════════════════════ TAB 5: AUTO DIALER ════════════════════════ */
+        let dialerData = null;
+        async function loadDialerData(period = 'today') {
+            ['dialerPeriodToday','dialerPeriodWeek','dialerPeriodMonth'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+            if (period === 'today') document.getElementById('dialerPeriodToday')?.classList.add('active');
+            if (period === 'week') document.getElementById('dialerPeriodWeek')?.classList.add('active');
+            if (period === 'month') document.getElementById('dialerPeriodMonth')?.classList.add('active');
+
+            const panel = document.getElementById('tabDialer');
+            panel.classList.add('is-loading');
+            try {
+                const res = await safeStaffFetch(`/api/v1/crm/dialer/analytics?period=${period}`);
+                if (res && res.success) {
+                    dialerData = res;
+                    const o = res.overview || {};
+                    const dialConnectRate = o.total_dials > 0 ? ((o.answered || 0) / o.total_dials * 100).toFixed(1) + '%' : '0%';
+                    document.getElementById('dialerStatCards').innerHTML = `
+                        <div class="stat-card blue"><div class="val">${fmtNum(o.total_sessions)}</div><div class="lbl">Sessions</div></div>
+                        <div class="stat-card teal"><div class="val">${fmtNum(o.total_dials)}</div><div class="lbl">Total Dials</div></div>
+                        <div class="stat-card green"><div class="val">${fmtNum(o.answered)}</div><div class="lbl">Answered (${dialConnectRate})</div></div>
+                        <div class="stat-card orange"><div class="val">${fmtNum(o.no_answer)}</div><div class="lbl">No Answer</div></div>
+                        <div class="stat-card purple"><div class="val">${fmtNum(o.busy)}</div><div class="lbl">Busy</div></div>
+                        <div class="stat-card red"><div class="val">${fmtNum(o.do_not_call)}</div><div class="lbl">DNC</div></div>
+                    `;
+                    const attempts = res.recent_attempts || [];
+                    const tbody = document.getElementById('dialerAttemptsTbody');
+                    if (!attempts.length) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No dialer activity in this period</td></tr>';
+                    } else {
+                        tbody.innerHTML = attempts.map((a, i) => `<tr>
+                            <td class="text-start">${i + 1}</td>
+                            <td class="text-start"><strong>${a.lead_name || 'Lead #'+a.lead_id}</strong><br><small class="text-muted">${a.lead_phone || ''}</small></td>
+                            <td><span class="badge ${a.call_outcome==='answered'?'bg-success':a.call_outcome==='no_answer'?'bg-warning text-dark':'bg-secondary'}">${a.call_outcome||'-'}</span></td>
+                            <td>${fmtDurationSec(a.duration_seconds)}</td>
+                            <td>${a.status_updated_to || '-'}</td>
+                            <td class="text-start"><small>${(a.note || '').slice(0, 50)}</small></td>
+                            <td>${a.dialed_at ? new Date(a.dialed_at).toLocaleString('en-IN') : '-'}</td>
+                        </tr>`).join('');
+                    }
+                }
+            } catch(e) { console.error('Dialer load error:', e); }
+            panel.classList.remove('is-loading');
+        }
+
+        /* ══════════════════════ TAB 9: EARNINGS ══════════════════════════ */
+        function initEarningsFilters() {
+            const now = new Date();
+            document.getElementById('earnMonth').value = now.getMonth() + 1;
+            const yrSel = document.getElementById('earnYear');
+            yrSel.innerHTML = '';
+            for (let y = now.getFullYear(); y >= 2024; y--) {
+                const o = document.createElement('option');
+                o.value = y; o.textContent = y;
+                yrSel.appendChild(o);
+            }
         }
 
         async function loadEarnings() {
-            const month      = parseInt(document.getElementById('earnMonth').value);
-            const year       = parseInt(document.getElementById('earnYear').value);
-            const company_id = parseInt(document.getElementById('earnCompany').value) || 0;
-
-            const tbody      = document.getElementById('earnTbody');
-            const achTbody   = document.getElementById('earnAchTbody');
-            const configWrap = document.getElementById('earnConfigWrap');
-            const sideBy     = document.getElementById('earnSideBySide');
-            const emptyEl    = document.getElementById('earnEmpty');
-
-            // Reset to loading state
-            tbody.innerHTML    = '<tr><td colspan="10" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
-            achTbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
-            document.getElementById('earnTfoot').innerHTML = '';
-            configWrap.style.display = 'none';
-            sideBy.style.display     = 'none';
-            emptyEl.style.display    = 'none';
-            document.getElementById('earnDueLine').style.display = 'none';
-
+            const m = document.getElementById('earnMonth').value;
+            const y = document.getElementById('earnYear').value;
+            const cid = document.getElementById('earnCompany').value;
+            const panel = document.getElementById('tabEarnings');
+            panel.classList.add('is-loading');
             try {
-                // ── "All Companies" mode: fetch each company in parallel ────
-                if (!company_id) {
-                    const sel = document.getElementById('earnCompany');
-                    const companyOpts = [...sel.options].filter(o => o.value).map(o => ({ id: parseInt(o.value), name: o.textContent }));
+                const url = cid ? `/api/v1/staff/incentive-achievements?month=${m}&year=${y}&company_id=${cid}` : `/api/v1/staff/incentive-achievements?month=${m}&year=${y}`;
+                const res = await safeStaffFetch(url);
+                const sideBy = document.getElementById('earnSideBySide');
+                const empty = document.getElementById('earnEmpty');
+                const rows = (res && res.data) || [];
+                if (!rows.length) { sideBy.style.display = 'none'; empty.style.display = 'block'; }
+                else {
+                    empty.style.display = 'none'; sideBy.style.display = 'block';
+                    document.getElementById('earnCount').textContent = `${rows.length} employees`;
 
-                    const results = await Promise.all(companyOpts.map(c =>
-                        Promise.all([
-                            safeStaffFetch(`/api/v1/staff/incentive-achievements?month=${month}&year=${year}&company_id=${c.id}`),
-                            safeStaffFetch(`/api/v1/staff/incentive-payouts/list?month=${month}&year=${year}&company_id=${c.id}`)
-                        ]).then(([achData, payoutData]) => ({ company: c, achData, payoutData })).catch(() => null)
-                    ));
-
-                    let allRows = []; let allPayoutMap = {};
-                    results.filter(Boolean).forEach(({ company, achData, payoutData }) => {
-                        if (achData.success) (achData.data || []).forEach(r => allRows.push({ ...r, companyLabel: company.name }));
-                        if (payoutData.success) (payoutData.data || []).forEach(p => { allPayoutMap[p.employee_id] = p; });
-                        // Auto-upsert payouts (fire-and-forget)
-                        if (achData.success) (achData.data || []).forEach(r => {
-                            if (!r.total_incentive_earned) return;
-                            safeStaffFetch('/api/v1/staff/incentive-payouts/upsert', {
-                                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ employee_id: r.employee_id, company_id: company.id, month, year, total_incentive: r.total_incentive_earned })
-                            }).catch(() => {});
+                    // Extract category slugs/names
+                    const catMap = new Map();
+                    rows.forEach(r => {
+                        (r.categories || []).forEach(c => {
+                            if (!catMap.has(c.slug)) {
+                                const cleanLabel = (c.slug || '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                catMap.set(c.slug, cleanLabel);
+                            }
                         });
                     });
+                    const catSlugs = Array.from(catMap.keys());
 
-                    // Config hidden for multi-company (no single config to show)
-                    configWrap.style.display = 'none';
-                    _renderEarningsSideBySide(allRows, allPayoutMap, month, year);
-                    return;
+                    // Render Achievement Header & Rows & Totals
+                    document.getElementById('earnAchThead').innerHTML = `<tr>
+                        <th class="text-start">Employee</th>
+                        ${catSlugs.map(s => `<th>${catMap.get(s)}</th>`).join('')}
+                    </tr>`;
+
+                    const achTotals = {};
+                    catSlugs.forEach(s => achTotals[s] = 0);
+
+                    document.getElementById('earnAchTbody').innerHTML = rows.map(r => {
+                        const empCats = {};
+                        (r.categories || []).forEach(c => empCats[c.slug] = c.achieved_count || 0);
+                        catSlugs.forEach(s => achTotals[s] += (empCats[s] || 0));
+                        return `<tr>
+                            <td class="text-start"><strong>${r.name||'-'}</strong><br><small class="text-muted">${r.emp_code||''}</small></td>
+                            ${catSlugs.map(s => `<td>${empCats[s] || 0}</td>`).join('')}
+                        </tr>`;
+                    }).join('');
+
+                    document.getElementById('earnAchTfoot').innerHTML = `<tr>
+                        <td class="text-start"><strong>TOTAL UNITS</strong></td>
+                        ${catSlugs.map(s => `<td><strong>${achTotals[s] || 0}</strong></td>`).join('')}
+                    </tr>`;
+
+                    // Render Earnings Header & Rows & Totals
+                    document.getElementById('earnPayThead').innerHTML = `<tr>
+                        <th class="text-start">Employee</th>
+                        ${catSlugs.map(s => `<th>${catMap.get(s)} ₹</th>`).join('')}
+                        <th>Total Payout ₹</th>
+                        <th>Status</th>
+                        <th>Payout Due</th>
+                    </tr>`;
+
+                    const payTotals = {};
+                    catSlugs.forEach(s => payTotals[s] = 0);
+                    let grandPayoutTotal = 0;
+
+                    document.getElementById('earnTbody').innerHTML = rows.map(r => {
+                        const empPay = {};
+                        (r.categories || []).forEach(c => empPay[c.slug] = c.incentive_earned || 0);
+                        catSlugs.forEach(s => payTotals[s] += (empPay[s] || 0));
+                        grandPayoutTotal += (r.total_incentive_earned || 0);
+                        return `<tr>
+                            <td class="text-start"><strong>${r.name||'-'}</strong><br><small class="text-muted">${r.emp_code||''}</small></td>
+                            ${catSlugs.map(s => `<td>₹${fmtNum(empPay[s] || 0)}</td>`).join('')}
+                            <td><strong class="text-success">₹${fmtNum(r.total_incentive_earned||0)}</strong></td>
+                            <td><span class="badge bg-warning text-dark">In Progress</span></td>
+                            <td>15th Next Mo</td>
+                        </tr>`;
+                    }).join('');
+
+                    document.getElementById('earnTfoot').innerHTML = `<tr>
+                        <td class="text-start"><strong>TOTAL PAYOUT</strong></td>
+                        ${catSlugs.map(s => `<td><strong>₹${fmtNum(payTotals[s] || 0)}</strong></td>`).join('')}
+                        <td><strong class="text-success">₹${fmtNum(grandPayoutTotal)}</strong></td>
+                        <td><span class="badge bg-success">Calculated</span></td>
+                        <td>-</td>
+                    </tr>`;
                 }
+            } catch(e) { console.error('Earnings error:', e); }
+            panel.classList.remove('is-loading');
+        }
 
-                // ── Single company mode: fetch all three in parallel ───────
-                const [achData, cfgData, payoutData] = await Promise.all([
-                    safeStaffFetch(`/api/v1/staff/incentive-achievements?month=${month}&year=${year}&company_id=${company_id}`),
-                    safeStaffFetch(`/api/v1/staff/incentive-config?month=${month}&year=${year}&company_id=${company_id}`),
-                    safeStaffFetch(`/api/v1/staff/incentive-payouts/list?month=${month}&year=${year}&company_id=${company_id}`)
-                ]);
+        /* ══════════════════════ EXPORT ACTIVE TAB TO CSV ══════════════════ */
+        function exportActiveTabToCSV() {
+            let activeTable = null;
+            let filename = `CRM_Export_${activeTab}_${new Date().toISOString().split('T')[0]}.csv`;
 
-                // Always show config section (empty state if no rows)
-                const cfgRows = (cfgData.success && cfgData.config) ? cfgData.config : [];
-                _renderEarningsConfig(cfgRows, month, year);
+            switch(activeTab) {
+                case 'my': activeTable = document.getElementById('myCategoryTable'); filename = `CRM_My_Performance_${new Date().toISOString().split('T')[0]}.csv`; break;
+                case 'team': activeTable = document.getElementById('teamTable'); filename = `CRM_Team_Performance_Matrix_${new Date().toISOString().split('T')[0]}.csv`; break;
+                case 'calls': activeTable = document.getElementById('ctStaffTable'); filename = `CRM_Staff_Call_Tracking_${new Date().toISOString().split('T')[0]}.csv`; break;
+                case 'quality': activeTable = document.querySelector('#qaTableWrap table'); filename = `CRM_Call_Quality_Report_${new Date().toISOString().split('T')[0]}.csv`; break;
+                case 'dialer': activeTable = document.querySelector('#tabDialer table'); filename = `CRM_Auto_Dialer_Attempts_${new Date().toISOString().split('T')[0]}.csv`; break;
+                case 'status': activeTable = document.getElementById('statusTable'); filename = `CRM_Status_Wise_Report_${new Date().toISOString().split('T')[0]}.csv`; break;
+                case 'category': activeTable = document.getElementById('catTable'); filename = `CRM_Category_Wise_Report_${new Date().toISOString().split('T')[0]}.csv`; break;
+                case 'company': activeTable = document.getElementById('compTable'); filename = `CRM_Company_Wise_Report_${new Date().toISOString().split('T')[0]}.csv`; break;
+                case 'earnings': activeTable = document.getElementById('earnPayTable'); filename = `CRM_Staff_Earnings_Payout_${new Date().toISOString().split('T')[0]}.csv`; break;
+            }
 
-                // Achievements
-                if (!achData.success) {
-                    achTbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">${achData.detail || 'Failed to load'}</td></tr>`;
-                    tbody.innerHTML    = `<tr><td colspan="10" class="text-center text-danger py-4">${achData.detail || 'Failed to load'}</td></tr>`;
-                    sideBy.style.display = '';
-                    return;
-                }
+            if (!activeTable) {
+                alert('No data table available for export in current tab.');
+                return;
+            }
 
-                const rows = achData.data || [];
-                let payoutMap = {};
-                if (payoutData.success) (payoutData.data || []).forEach(p => { payoutMap[p.employee_id] = p; });
+            const rows = Array.from(activeTable.querySelectorAll('tr'));
+            if (!rows.length) {
+                alert('Table is currently empty.');
+                return;
+            }
 
-                // Auto-upsert payout rows (fire-and-forget)
-                rows.forEach(r => {
-                    if (!r.total_incentive_earned) return;
-                    safeStaffFetch('/api/v1/staff/incentive-payouts/upsert', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ employee_id: r.employee_id, company_id, month, year, total_incentive: r.total_incentive_earned })
-                    }).catch(() => {});
-                });
+            const csvContent = rows.map(r => {
+                const cells = Array.from(r.querySelectorAll('th, td'));
+                return cells.map(c => {
+                    let text = c.innerText.replace(/(\r\n|\n|\r)/gm, ' ').replace(/\s+/g, ' ').trim();
+                    text = text.replace(/"/g, '""');
+                    return `"${text}"`;
+                }).join(',');
+            }).join('\n');
 
-                _renderEarningsSideBySide(rows, payoutMap, month, year);
+            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
 
-            } catch(e) {
-                document.getElementById('earnTbody').innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">Error: ${e.message}</td></tr>`;
-                document.getElementById('earnAchTbody').innerHTML = '';
-                sideBy.style.display = '';
-                console.error('loadEarnings error:', e);
+        function shareDashboard() {
+            const url = `${window.location.origin}/staff/crm/dashboard?tab=${activeTab}`;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(url).then(() => alert('Dashboard link copied to clipboard!'));
+            } else {
+                window.prompt('Copy this link:', url);
             }
         }
-        /* ══════════════════════ END EARNINGS TAB ════════════════════════ */
-
     </script>
 </body>
 </html>

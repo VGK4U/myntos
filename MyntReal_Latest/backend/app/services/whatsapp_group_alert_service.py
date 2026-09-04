@@ -189,14 +189,35 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, An
         except Exception:
             pass
 
+    # Company name resolution
+    company_name = None
+    if getattr(lead, 'company_id', None):
+        if lead.company_id == 2:
+            company_name = "Zynova Mobility (Zynovia)"
+        elif lead.company_id == 4:
+            company_name = "MyntReal"
+        elif lead.company_id == 1:
+            company_name = "Real Dreams"
+
+    # Phone masking & softphone secure call link
+    clean_digits = ''.join(c for c in str(phone) if c.isdigit())[-10:]
+    if len(clean_digits) == 10:
+        masked_phone = f"+91 {clean_digits[:5]} *****"
+    else:
+        masked_phone = phone
+
+    softphone_call_link = f"https://myntreal.com/staff/softphone?lead_id={lead.id}&auto_dial=1"
+
     # Build structured alert text
     msg_lines = [
         "🚨 *NEW LEAD RECEIVED!* 🚨\n",
         f"👤 *Customer Name*: {lead_name}",
-        f"📱 *Phone*: {phone}",
+        f"📱 *Phone*: {masked_phone} 🔒 _(Masked for Security)_",
         f"📍 *Location*: {city}" + (f" (PIN: {pincode})" if pincode else ""),
     ]
 
+    if company_name:
+        msg_lines.append(f"🏢 *Company*: {company_name}")
     if category_name:
         msg_lines.append(f"🎯 *Service / Category*: {category_name}")
     if electricity_bill:
@@ -231,7 +252,8 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, An
         msg_lines.extend(qa_parts)
 
     msg_lines.append(f"\n👉 *Assigned Staff*: {assigned_name}")
-    msg_lines.append("🔗 *CRM Link*: https://myntreal.com/staff/leads")
+    msg_lines.append(f"📞 *Direct Softphone Call*: {softphone_call_link}")
+    msg_lines.append(f"🔗 *View Lead in CRM*: https://myntreal.com/staff/leads")
 
     message_text = "\n".join(msg_lines)
     return send_group_bot_message(

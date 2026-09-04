@@ -37,14 +37,73 @@ let targetJid = null;
 process.on('unhandledRejection', (reason, promise) => {
     console.log('⚠️ Process captured unhandledRejection (socket reset/reconnect):', reason?.message || reason);
 });
-process.on('uncaughtException', (err) => {
-    console.log('⚠️ Process captured uncaughtException:', err?.message || err);
-});
+const BACKEND_API_BASE = process.env.BACKEND_API_URL || 'http://127.0.0.1:8000';
+
+// ── Database Session Sync Functions ──────────────────────────────────────────
+async function restoreSessionFromDatabase() {
+    try {
+        const resp = await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-session-restore?session_id=default_baileys`);
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data.success && data.files && Object.keys(data.files).length > 0) {
+                if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
+                for (const [fileKey, fileData] of Object.entries(data.files)) {
+                    const filePath = path.join(AUTH_DIR, fileKey);
+                    fs.writeFileSync(filePath, fileData, 'utf8');
+                }
+                console.log(`[DB-SESSION-SYNC] ✅ Restored ${Object.keys(data.files).length} WhatsApp session files from PostgreSQL RDS!`);
+                return true;
+            }
+        }
+    } catch (err) {
+        console.log(`[DB-SESSION-SYNC] ℹ️ Session restore check: ${err.message}`);
+    }
+    return false;
+}
+
+async function backupSessionToDatabase() {
+    try {
+        if (!fs.existsSync(AUTH_DIR)) return;
+        const fileNames = fs.readdirSync(AUTH_DIR);
+        if (!fileNames || fileNames.length === 0) return;
+
+        const files = {};
+        for (const f of fileNames) {
+            const fPath = path.join(AUTH_DIR, f);
+            if (fs.statSync(fPath).isFile()) {
+                files[f] = fs.readFileSync(fPath, 'utf8');
+            }
+        }
+
+        if (Object.keys(files).length === 0) return;
+
+        const resp = await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-session-backup`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                session_id: 'default_baileys',
+                files: files
+            })
+        });
+
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data.success) {
+                console.log(`[DB-SESSION-SYNC] 💾 Synced ${Object.keys(files).length} session files to PostgreSQL RDS database.`);
+            }
+        }
+    } catch (err) {
+        console.log(`[DB-SESSION-SYNC] ⚠️ Backup error: ${err.message}`);
+    }
+}
 
 async function startWhatsAppBot() {
     if (!fs.existsSync(AUTH_DIR)) {
         fs.mkdirSync(AUTH_DIR, { recursive: true });
     }
+
+    // Attempt restoring session from RDS database before loading auth state
+    await restoreSessionFromDatabase();
 
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
     const { version } = await fetchLatestBaileysVersion();
@@ -62,7 +121,13 @@ async function startWhatsAppBot() {
         emitOwnEvents: false
     });
 
-    sock.ev.on('creds.update', saveCreds);
+    sock.ev.on('creds.update', async () => {
+        await saveCreds();
+        await backupSessionToDatabase();
+    });
+
+    // Schedule background DB backup every 60 seconds
+    setInterval(backupSessionToDatabase, 60000);
 
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
@@ -81,6 +146,7 @@ async function startWhatsAppBot() {
             connectionStatus = 'connected';
             currentQr = null;
             console.log("✅ WHATSAPP WEB GROUP BOT CONNECTED SUCCESSFULLY!");
+            await backupSessionToDatabase();
 
             // If DEFAULT_INVITE_CODE is already a Group JID (ends with @g.us or contains @), assign directly
             if (DEFAULT_INVITE_CODE && (DEFAULT_INVITE_CODE.includes('@g.us') || DEFAULT_INVITE_CODE.includes('@'))) {

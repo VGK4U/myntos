@@ -532,7 +532,7 @@ class MNRApp {
       '/staff/softphone-hub': 'softphone',
       '/staff/auto-dialer': 'auto-dialer',
       '/staff/leads': 'staff-leads',
-      '/staff/my-leads': 'staff-my-leads',
+      '/staff/my-leads': 'staff-leads',
       '/staff/team-leads': 'staff-team-leads',
       '/staff/bank-wise-leads': 'staff-bank-wise-leads',
       '/staff/call-tracking': 'staff-call-tracking',

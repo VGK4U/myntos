@@ -8,7 +8,37 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="/public/js/staff-token-manager.js"></script>
     <script src="/public/js/staff-fetch.js"></script>
-  <script src="/public/js/nda-enforcement.js"></script>
+    <script src="/public/js/nda-enforcement.js"></script>
+    <script src="/public/js/plivo-softphone.js?v=2.0"></script>
+    <script>
+        function triggerLeadCall(phone, name, leadId) {
+            if (!phone) return;
+            const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+            if (!cleanPhone) return;
+            const safeName = (name || 'Contact').trim();
+            if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+                window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
+            } else if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
+                window.PlivoSoftphone.dial(cleanPhone, leadId, safeName);
+            } else {
+                setTimeout(() => {
+                    if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+                        window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
+                    }
+                }, 300);
+            }
+        }
+
+        function maskPhone(p) {
+            if (!p || p === '—' || p === '-' || p === 'null') return '—';
+            const s = String(p).trim();
+            if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
+            const digits = s.replace(/\D/g, '');
+            if (digits.length < 6) return s;
+            const clean10 = digits.slice(-10);
+            return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
+        }
+    </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
@@ -1936,7 +1966,7 @@
                 ${task.contact_phone ? `
                 <div class="mb-3">
                     <strong><i class="fas fa-phone-alt me-1 text-info"></i>Contact:</strong>
-                    <a href="tel:${escapeHtml(task.contact_phone)}" class="text-info text-decoration-none ms-1">${escapeHtml(task.contact_phone)}</a>
+                    <button type="button" class="btn btn-sm btn-outline-info py-0 px-2 ms-1" onclick="triggerLeadCall('${escapeHtml(task.contact_phone)}', '${escapeHtml(task.contact_person_name || task.title)}')" style="font-size:12px;font-weight:600;"><i class="fas fa-phone-alt me-1"></i>${maskPhone(task.contact_phone)}</button>
                     ${task.contact_person_name ? `<span class="text-muted ms-1">(${escapeHtml(task.contact_person_name)})</span>` : ''}
                 </div>` : ''}
                 ${renderPhasesSection(phases, task.id, task.status)}
@@ -3240,7 +3270,7 @@
                                         <i class="fas ${statusIcon} me-1"></i>
                                         <span id="phaseStatus_${phase.id}">${formatStatus(phase.phase_status)}</span>
                                     </span>
-                                    ${phase.contact_phone ? `<span class="text-info"><i class="fas fa-phone-alt me-1"></i><a href="tel:${escapeHtml(phase.contact_phone)}" class="text-info text-decoration-none">${escapeHtml(phase.contact_phone)}</a>${phase.contact_person_name ? ` (${escapeHtml(phase.contact_person_name)})` : ''}</span>` : ''}
+                                    ${phase.contact_phone ? `<span class="text-info"><button type="button" class="btn btn-sm btn-outline-info py-0 px-1" onclick="triggerLeadCall('${escapeHtml(phase.contact_phone)}', '${escapeHtml(phase.contact_person_name || phase.title)}')" style="font-size:11px;font-weight:600"><i class="fas fa-phone-alt me-1"></i>${maskPhone(phase.contact_phone)}</button>${phase.contact_person_name ? ` (${escapeHtml(phase.contact_person_name)})` : ''}</span>` : ''}
                                 </div>
                             </div>
                             <div class="d-flex align-items-center gap-2">

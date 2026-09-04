@@ -11,6 +11,36 @@
   <script src="/public/js/nda-enforcement.js"></script>
 <script src="/public/js/mnr-map-modal.js"></script>
 <script src="/public/js/modal-resizable.js"></script>
+<script src="/public/js/plivo-softphone.js?v=2.0"></script>
+<script>
+    function triggerLeadCall(phone, name, leadId) {
+        if (!phone) return;
+        const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+        if (!cleanPhone) return;
+        const safeName = (name || 'Contact').trim();
+        if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+            window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
+        } else if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
+            window.PlivoSoftphone.dial(cleanPhone, leadId, safeName);
+        } else {
+            setTimeout(() => {
+                if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+                    window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
+                }
+            }, 300);
+        }
+    }
+
+    function maskPhone(p) {
+        if (!p || p === '—' || p === '-' || p === 'null') return '—';
+        const s = String(p).trim();
+        if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
+        const digits = s.replace(/\D/g, '');
+        if (digits.length < 6) return s;
+        const clean10 = digits.slice(-10);
+        return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
+    }
+</script>
 <style>
 *{box-sizing:border-box}
 body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f3f4f6;min-height:100vh;margin:0}
@@ -2747,7 +2777,7 @@ function _edRenderLeadsTrend(leads) {
           <td style="text-align:center;font-size:10px;color:#9ca3af;padding:5px 6px">${i+1}</td>
           <td style="font-size:10px;font-weight:600;color:#0284c7;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis" title="${esc(segVal)}"><span style="display:inline-block;padding:2px 7px;border-radius:10px;background:#e0f2fe;color:#0369a1;font-size:9.5px;font-weight:700">${esc(segVal)}</span></td>
           <td style="font-weight:600;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 6px">${esc(l.name)}</td>
-          <td style="font-size:10.5px;padding:5px 6px;white-space:nowrap"><a href="tel:${esc(l.phone_raw||'')}" style="color:#2563eb;text-decoration:none;font-weight:600">${esc(phoneDisplay)}</a></td>
+          <td style="font-size:10.5px;padding:5px 6px;white-space:nowrap"><button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:10.5px;font-weight:600" onclick="event.stopPropagation(); triggerLeadCall('${esc(l.phone_raw||'')}', '${esc(l.name)}', ${l.id})"><i class="fas fa-phone-alt me-1"></i>${maskPhone(phoneDisplay)}</button></td>
           <td style="font-size:10px;padding:5px 6px;white-space:nowrap">${stageBadge}</td>
           <td style="font-size:10px;color:#7c3aed;white-space:nowrap;padding:5px 6px;max-width:100px;overflow:hidden;text-overflow:ellipsis" title="${esc(brandVal)}">${esc(brandVal)}</td>
           <td style="font-size:10px;color:#334155;white-space:nowrap;padding:5px 6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(areaVal)}">${esc(areaVal)}</td>

@@ -1039,10 +1039,21 @@ export class SoftphonePage {
     `;
   }
 
+  private maskPhone(p: string): string {
+    if (!p || p === '—' || p === '-' || p === 'null') return '—';
+    const s = String(p).trim();
+    if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
+    const digits = s.replace(/\D/g, '');
+    if (digits.length < 6) return s;
+    const clean10 = digits.slice(-10);
+    return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
+  }
+
   private renderInCallScreen(): string {
     const mins = Math.floor(this.callDuration / 60).toString().padStart(2, '0');
     const secs = (this.callDuration % 60).toString().padStart(2, '0');
     const cleanNumber = (this.dialNumber || '').replace(/[^0-9+]/g, '');
+    const maskedPhone = this.maskPhone(this.dialNumber);
 
     return `
       <div style="max-width: 380px; margin: 20px auto; padding: 20px; text-align: center;">
@@ -1050,8 +1061,8 @@ export class SoftphonePage {
           <i class="fas fa-user"></i>
         </div>
 
-        <h3 style="font-size: 22px; font-weight: 700; margin: 0 0 4px 0; color: #fff;">${this.selectedContactName || this.dialNumber}</h3>
-        ${this.selectedContactName ? `<div style="font-size: 13px; color: #94a3b8; margin-bottom: 6px;">+91 ${this.dialNumber}</div>` : ''}
+        <h3 style="font-size: 22px; font-weight: 700; margin: 0 0 4px 0; color: #fff;">${this.selectedContactName || maskedPhone}</h3>
+        ${this.selectedContactName ? `<div style="font-size: 13px; color: #94a3b8; margin-bottom: 6px;">${maskedPhone}</div>` : ''}
         <p id="softphoneCallStatusText" style="font-size: 14px; color: ${this.isCallConnected ? '#22c55e' : '#38bdf8'}; font-weight: 600; margin: 0 0 12px 0;">${this.callStatusText}</p>
         
         <div id="softphoneCallTimer" style="font-size: ${this.isCallConnected ? '26px' : '17px'}; font-weight: 700; font-family: ${this.isCallConnected ? 'monospace' : 'inherit'}; color: ${this.isCallConnected ? '#cbd5e1' : '#38bdf8'}; margin-bottom: 28px;">

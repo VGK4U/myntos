@@ -86,11 +86,9 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
       { menu_code: "TEAM_LEADS", label: "Team Leads", route: "/staff/crm/team-leads", audience: ["STAFF"] },
       { menu_code: "MY_LEADS", label: "My Leads", route: "/staff/my-leads", audience: ["STAFF"] },
       { menu_code: "LEAD_SOURCES", label: "Lead Sources", route: "/staff/crm/lead-sources", audience: ["STAFF"] },
-      { menu_code: "CALL_TRACKING_DASHBOARD", label: "Call Management", route: "/staff/call-management", audience: ["STAFF"] },
       { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "/staff/dialer", audience: ["STAFF"] },
       { menu_code: "CALL_QUALITY_REVIEW", label: "Call Quality Review", route: "/staff/call-quality", audience: ["STAFF"] },
       { menu_code: "STAFF_OPERATOR_CALLS", label: "Operator Calls", route: "/staff/operator-calls", audience: ["STAFF"] },
-      { menu_code: "CRM_SALES_REPORT", label: "Sales Team Report", route: "/staff/crm/sales-report", audience: ["STAFF"] },
       { menu_code: "CRM_WA_INBOX", label: "WhatsApp Center", route: "/staff/whatsapp-center", icon: "fab fa-whatsapp", audience: ["STAFF"] },
       { menu_code: "CRM_WA_BOT_HUB", label: "WhatsApp Bot Hub", route: "/staff/crm/whatsapp-bot", icon: "fab fa-whatsapp", audience: ["STAFF"] },
       { menu_code: "CRM_SOFTPHONE_DIALER", label: "Calling & Softphone", route: "/staff/softphone-hub", icon: "fas fa-headset", audience: ["STAFF"] }

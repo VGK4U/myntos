@@ -1198,13 +1198,103 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            if (typeof window.StaffSidebar !== 'undefined') await window.StaffSidebar.init();
-            if (typeof window.StaffHeader !== 'undefined') {
-                window.StaffHeader.inject('Calling & Softphone', 'fas fa-phone-volume');
-                window.StaffHeader.init();
+        // ── Auto-Dial & Lead Resolution via WhatsApp link / URL Parameters ──
+        async function handleUrlAutoDial(leadId, phone, name, autoDial) {
+            let targetPhone = phone || '';
+            let targetName = name || 'Contact Lead';
+
+            // If leadId is present, fetch lead from backend to get verified customer details securely
+            if (leadId) {
+                try {
+                    const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
+                    const resp = await fetch(`/api/v1/crm/leads/${leadId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        const lead = data.data || data.lead || data;
+                        if (lead) {
+                            targetName = lead.name || (lead.first_name ? lead.first_name + ' ' + (lead.last_name || '') : '') || targetName;
+                            targetPhone = lead.phone || lead.mobile || targetPhone;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[SOFTPHONE-HUB] Could not fetch lead details by ID:', e);
+                }
             }
-            if (typeof window.StaffBackButton !== 'undefined') window.StaffBackButton.init();
+
+            if (targetPhone) {
+                const cleanNum = String(targetPhone).replace(/\D/g, '').slice(-10);
+                const dialerInp = document.getElementById('hubDialerInput');
+                if (dialerInp) dialerInp.value = cleanNum;
+
+                if (autoDial) {
+                    console.log(`[SOFTPHONE-HUB] Auto-dialing lead: ${cleanNum} (${targetName}, Lead ID: ${leadId})`);
+                    // Allow Plivo WebRTC client 1.5 seconds to complete registration
+                    setTimeout(() => {
+                        if (window.PlivoSoftphone) {
+                            window.PlivoSoftphone.dial(cleanNum, leadId, targetName);
+                        } else {
+                            startHubCallUI(cleanNum, targetName);
+                        }
+                    }, 1500);
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const leadIdParam = urlParams.get('lead_id') || urlParams.get('leadId') || urlParams.get('lead');
+            const dialPhoneParam = urlParams.get('dial') || urlParams.get('phone') || urlParams.get('number');
+            const dialNameParam = urlParams.get('name') || urlParams.get('customer') || '';
+            const autoDialParam = urlParams.get('auto_dial') === '1' || urlParams.get('autocall') === '1' || urlParams.get('call') === '1';
+
+            // Check authentication gate
+            const stToken = localStorage.getItem('staff_token') || localStorage.getItem('token') || (document.cookie.match(/staff_token=([^;]+)/) || [])[1];
+            
+            if (stToken) {
+                // Authenticated Staff Flow
+                if (typeof window.StaffSidebar !== 'undefined') await window.StaffSidebar.init();
+                if (typeof window.StaffHeader !== 'undefined') {
+                    window.StaffHeader.inject('Calling & Softphone', 'fas fa-phone-volume');
+                    window.StaffHeader.init();
+                }
+                if (typeof window.StaffBackButton !== 'undefined') window.StaffBackButton.init();
+
+                searchContactsHub('a');
+                loadAnalyticsSummaryHub();
+                loadCallLogsHub();
+            } else if (leadIdParam) {
+                // Guest / External Partner Calling Flow (Zero Login Required, Number Masked)
+                console.log('[SOFTPHONE-HUB] Guest / External Partner Mode active for Lead ID:', leadIdParam);
+                
+                // Hide staff-only sections
+                const recSec = document.getElementById('recentContactsTabContent');
+                const logSec = document.getElementById('hubCallLogsTabContent');
+                if (recSec) recSec.innerHTML = `<div class="text-center py-4 text-muted"><i class="fa-solid fa-shield-halved fa-2x mb-2 text-success"></i><div style="font-size:13px;font-weight:600">Secure Calling Bridge Active</div><div style="font-size:11px">Customer contact numbers are 100% masked for privacy.</div></div>`;
+                
+                // Fetch public preview
+                try {
+                    const prevResp = await fetch(`/api/v1/telephony/plivo/public-lead-preview?lead_id=${leadIdParam}`);
+                    if (prevResp.ok) {
+                        const pData = await prevResp.json();
+                        const bannerTitle = document.querySelector('.banner-title');
+                        const bannerSub = document.querySelector('.banner-sub');
+                        if (bannerTitle) bannerTitle.innerHTML = `<i class="fa-solid fa-phone-volume text-success"></i> Calling: ${pData.name} <span class="badge bg-success ms-2" style="font-size:11px">🔒 Masked Call</span>`;
+                        if (bannerSub) bannerSub.innerHTML = `${pData.company_name} &bull; ${pData.service} &bull; ${pData.location} &bull; <a href="/staff_login.html?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}" style="color:#60a5fa;text-decoration:underline">Staff Login</a>`;
+                        
+                        const dialerInp = document.getElementById('hubDialerInput');
+                        if (dialerInp) dialerInp.value = pData.masked_phone;
+                    }
+                } catch (e) {
+                    console.warn('[SOFTPHONE-HUB] Public lead preview note:', e);
+                }
+            } else {
+                // Not logged in and no lead_id -> redirect to login
+                console.warn('[SOFTPHONE-HUB] Staff user not authenticated. Redirecting to login.');
+                window.location.href = `/staff_login.html?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+                return;
+            }
 
             // Real-time synchronization with Plivo WebRTC Client lifecycle
             document.addEventListener('plivo:call-dialing', function(e) {
@@ -1221,9 +1311,9 @@
                 endCallFromHub(false);
             });
 
-            searchContactsHub('a');
-            loadAnalyticsSummaryHub();
-            loadCallLogsHub();
+            if (leadIdParam || dialPhoneParam) {
+                handleUrlAutoDial(leadIdParam, dialPhoneParam, dialNameParam, autoDialParam);
+            }
         });
     </script>
 </body>

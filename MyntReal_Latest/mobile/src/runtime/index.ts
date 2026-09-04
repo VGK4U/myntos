@@ -39,7 +39,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 export async function initMobileRuntime(): Promise<void> {
   console.log('[DC_RUNTIME] Initializing Mobile Runtime Compatibility Layer...');
 
-  const isWeb = typeof window !== 'undefined' && (!window.Capacitor?.isNativePlatform?.() || window.Capacitor?.getPlatform?.() === 'web');
+  const isWeb = typeof window !== 'undefined' && (!(window as any).Capacitor?.isNativePlatform?.() || (window as any).Capacitor?.getPlatform?.() === 'web');
   const timeoutMs = isWeb ? 300 : 5000;
 
   // DC_RUNTIME_TIMEOUT_001: Each init is individually time-boxed.

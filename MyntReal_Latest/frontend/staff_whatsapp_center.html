@@ -133,6 +133,59 @@
     .toast.show{opacity:1}
     .toast.green{background:#059669}
     .toast.red{background:#dc2626}
+
+    .channel-pill-btn{border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;transition:.15s;border:1px solid #d1d5db;background:#fff;color:#374151}
+    .channel-pill-btn.active{background:#059669;color:#fff;border-color:#059669;box-shadow:0 2px 4px rgba(5,150,105,.2)}
+
+    @keyframes pulse-green {
+      0%, 100% { transform: scale(1); box-shadow: 0 2px 6px rgba(5,150,105,.3); }
+      50% { transform: scale(1.03); box-shadow: 0 4px 12px rgba(5,150,105,.5); }
+    }
+    .pulse-claim { animation: pulse-green 2.5s infinite; }
+
+    /* Archived & Lifecycle Status Styles */
+    .conv-card.conv-archived {
+      background: #f1f5f9 !important;
+      border-left: 4px solid #94a3b8 !important;
+      opacity: 0.72;
+    }
+    .conv-card.conv-archived:hover {
+      opacity: 0.95;
+      background: #e2e8f0 !important;
+    }
+    .conv-card.conv-archived .conv-name span {
+      color: #64748b !important;
+    }
+    .conv-card.conv-in-progress {
+      border-left: 4px solid #f59e0b !important;
+    }
+    .badge-archived {
+      background: #e2e8f0 !important;
+      color: #475569 !important;
+      border: 1px solid #cbd5e1;
+    }
+    .badge-inprogress {
+      background: #fef3c7 !important;
+      color: #b45309 !important;
+      border: 1px solid #fde68a;
+    }
+    .badge-active-st {
+      background: #dcfce7 !important;
+      color: #15803d !important;
+      border: 1px solid #bbf7d0;
+    }
+
+    /* Mobile Responsive Split View */
+    @media(max-width:768px){
+      .messenger-container{height:calc(100vh - 210px);min-height:380px;position:relative}
+      .msg-sidebar{width:100% !important;border-right:none}
+      .msg-chat-pane{display:none;width:100%}
+      .messenger-container.chat-active .msg-sidebar{display:none}
+      .messenger-container.chat-active .msg-chat-pane{display:flex}
+      .mobile-back-btn{display:inline-flex !important}
+      .wa-tab-bar{padding:4px;gap:2px}
+      .wa-tab-btn{padding:7px 10px;font-size:11px}
+    }
   </style>
 </head>
 <body>
@@ -193,14 +246,16 @@
         </button>
       </div>
 
-      <!-- ═══ 6-TAB NAVIGATION ══════════════════════════════════════════════════ -->
+      <!-- ═══ 8-TAB NAVIGATION ══════════════════════════════════════════════════ -->
       <div class="wa-tab-bar">
         <button class="wa-tab-btn active" id="btn-tab-messenger" onclick="switchCenterTab('messenger')"><i class="fas fa-comments"></i> 1. My Messages</button>
         <button class="wa-tab-btn" id="btn-tab-team" onclick="switchCenterTab('team')"><i class="fas fa-users"></i> 2. Team Messages</button>
-        <button class="wa-tab-btn" id="btn-tab-inbox" onclick="switchCenterTab('inbox')"><i class="fas fa-robot"></i> 3. WhatsApp API Bot <span class="badge-num" id="tb-inbox-num">0</span></button>
-        <button class="wa-tab-btn admin-only-tab" id="btn-tab-templates" onclick="switchCenterTab('templates')"><i class="fas fa-file-alt"></i> 4. Templates</button>
-        <button class="wa-tab-btn admin-only-tab" id="btn-tab-automations" onclick="switchCenterTab('automations')"><i class="fas fa-cogs"></i> 5. Automations</button>
-        <button class="wa-tab-btn admin-only-tab" id="btn-tab-audit" onclick="switchCenterTab('audit')"><i class="fas fa-shield-alt"></i> 6. Audit Log</button>
+        <button class="wa-tab-btn" id="btn-tab-company" onclick="switchCenterTab('company')"><i class="fas fa-building"></i> 3. Company Messages <span class="badge-num" id="tb-company-num" style="display:none;background:#ef4444">0</span></button>
+        <button class="wa-tab-btn" id="btn-tab-broadcasts" onclick="switchCenterTab('broadcasts')"><i class="fas fa-bullhorn"></i> 4. Broadcasts &amp; Dispatches</button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-inbox" onclick="switchCenterTab('inbox')"><i class="fas fa-robot"></i> 5. WhatsApp API Bot <span class="badge-num" id="tb-inbox-num">0</span></button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-templates" onclick="switchCenterTab('templates')"><i class="fas fa-file-alt"></i> 6. Templates</button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-automations" onclick="switchCenterTab('automations')"><i class="fas fa-cogs"></i> 7. Automations</button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-audit" onclick="switchCenterTab('audit')"><i class="fas fa-shield-alt"></i> 8. Audit Log</button>
       </div>
 
       <!-- ═══ TAB 1: CRM INBOX ═════════════════════════════════════════════════ -->
@@ -266,18 +321,37 @@
         </div>
       </div>
 
-      <!-- ═══ TAB 1: MESSENGER ═════════════════════════════════════════════════ -->
+      <!-- ═══ MESSENGER SPLIT VIEW (Tabs 1, 2, 3, 4) ══════════════════════════════ -->
       <div class="tab-pane active" id="pane-messenger">
         <div class="messenger-container">
 
           <!-- Sidebar -->
           <div class="msg-sidebar">
             <div class="msg-sidebar-header">
-              <select class="msg-scope-select" id="msgScopeSelect" onchange="onMsgScopeChange(this.value)">
+              <select class="msg-scope-select" id="msgScopeSelect" onchange="onMsgScopeChange(this.value)" style="display:none">
                 <option value="assigned_tagged">📍 My Assigned + Tagged Leads</option>
                 <option value="downline">👥 My Downline Team</option>
+                <option value="company">🏢 Unassigned Company Messages</option>
+                <option value="broadcasts">📢 Broadcasts &amp; Bot Dispatches</option>
                 <option value="all">🌐 All System Conversations (Admin)</option>
               </select>
+
+              <!-- Company Messages Channel Filter Bar (Tab 3) -->
+              <div id="companyChannelFilterBar" style="display:none;align-items:center;gap:4px;margin-bottom:8px;overflow-x:auto;">
+                <button type="button" class="channel-pill-btn active" id="cpFilt-all" onclick="onCompanyChannelFilter('all')">All Inbound</button>
+                <button type="button" class="channel-pill-btn" id="cpFilt-scanned" onclick="onCompanyChannelFilter('scanned')">📲 Scanned QR</button>
+                <button type="button" class="channel-pill-btn" id="cpFilt-api" onclick="onCompanyChannelFilter('api')">⚡ Meta API</button>
+              </div>
+
+              <!-- Broadcasts & Dispatches Filter Bar (Tab 4) -->
+              <div id="broadcastFilterBar" style="display:none;align-items:center;gap:4px;margin-bottom:8px;overflow-x:auto;">
+                <button type="button" class="channel-pill-btn active" id="bcFilt-all" onclick="onBroadcastFilter('all')">All</button>
+                <button type="button" class="channel-pill-btn" id="bcFilt-groups" onclick="onBroadcastFilter('groups')">👥 Groups</button>
+                <button type="button" class="channel-pill-btn" id="bcFilt-individuals" onclick="onBroadcastFilter('individuals')">👤 Individuals</button>
+                <button type="button" class="channel-pill-btn" id="bcFilt-scanned" onclick="onBroadcastFilter('scanned')">📲 Scanned</button>
+                <button type="button" class="channel-pill-btn" id="bcFilt-api" onclick="onBroadcastFilter('api')">⚡ Meta API</button>
+              </div>
+
               <div style="position:relative">
                 <i class="fas fa-search" style="position:absolute;left:10px;top:8px;color:#9ca3af;font-size:11px"></i>
                 <input type="text" class="msg-search-input" id="msgSearchInput" placeholder="Search contact, group, phone..." oninput="onMsgSearchInput(this.value)">
@@ -289,11 +363,14 @@
           <!-- Chat Pane -->
           <div class="msg-chat-pane">
             <div class="chat-header">
-              <div class="chat-title">
-                <h3 id="chatHeaderName">Select a conversation</h3>
-                <p id="chatHeaderSub">Select a contact or group from the left sidebar to view messages</p>
+              <button type="button" class="btn-custom btn-outline-custom mobile-back-btn" id="mobileChatBackBtn" onclick="closeMobileChat()" style="display:none;padding:6px 10px;margin-right:8px;border-radius:6px;" title="Back to conversations">
+                <i class="fas fa-arrow-left"></i>
+              </button>
+              <div class="chat-title" style="flex:1;min-width:0;">
+                <h3 id="chatHeaderName" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Select a conversation</h3>
+                <p id="chatHeaderSub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Select a contact or group from the left sidebar to view messages</p>
               </div>
-              <div id="chatHeaderActions"></div>
+              <div id="chatHeaderActions" style="display:flex;align-items:center;gap:8px"></div>
             </div>
 
             <div class="chat-history-box" id="chatHistoryBox">
@@ -398,9 +475,11 @@
                 <option value="0">📅 All Time</option>
               </select>
               <select id="auditTriggerTypeSel" onchange="loadAuditLogHub()">
-                <option value="all" selected>🔄 All Triggers (Auto + Manual)</option>
-                <option value="auto">🤖 Auto Bot Triggers Only</option>
-                <option value="manual">⚡ Manual Staff Dispatches Only</option>
+                <option value="all" selected>🔄 All Triggers (Broadcasts, Bots, Manual)</option>
+                <option value="broadcast">📢 Broadcasts &amp; Campaigns</option>
+                <option value="auto">🤖 Auto Event Bots (Lead &amp; CRM)</option>
+                <option value="manual">👤 Manual Staff Dispatches</option>
+                <option value="otp">🔐 OTP Authentication</option>
               </select>
               <select id="auditStatusSel" onchange="loadAuditLogHub()">
                 <option value="" selected>All Statuses</option>
@@ -514,8 +593,118 @@ let activeChatType  = 'individual';
 let activeMediaUrl  = null;
 let pollTimer       = null;
 let debounceTimer   = null;
+let companyChannelFilter = 'all';
+let broadcastFilter      = 'all';
 
-// WhatsApp Native Emoji Palette
+function maskPhone(p) {
+  if (!p || p === '—' || p === '-' || p === 'null') return '—';
+  const s = String(p).trim();
+  if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
+  const digits = s.replace(/\D/g, '');
+  if (digits.length < 6) return s;
+  const clean10 = digits.slice(-10);
+  return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
+}
+
+function formatContactName(name, phone) {
+  if (name && name !== '0' && name !== 'None' && name !== 'null' && !/^\d+$/.test(name) && !name.startsWith('+91')) {
+    return name;
+  }
+  return phone ? `Customer (${maskPhone(phone)})` : 'Customer';
+}
+
+function onCompanyChannelFilter(chan) {
+  companyChannelFilter = chan;
+  document.querySelectorAll('#companyChannelFilterBar .channel-pill-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.id === `cpFilt-${chan}`);
+  });
+  loadMessengerHub();
+}
+
+function onBroadcastFilter(filt) {
+  broadcastFilter = filt;
+  document.querySelectorAll('#broadcastFilterBar .channel-pill-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.id === `bcFilt-${filt}`);
+  });
+  loadMessengerHub();
+}
+
+function closeMobileChat() {
+  document.querySelector('.messenger-container')?.classList.remove('chat-active');
+}
+
+function getToken() {
+  return localStorage.getItem('staff_token') || localStorage.getItem('token') || sessionStorage.getItem('staff_token') || '';
+}
+
+async function apiFetch(url, opts = {}) {
+  const token = getToken();
+  opts.headers = Object.assign({'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'}, opts.headers || {});
+  if (opts.body && typeof opts.body !== 'string') opts.body = JSON.stringify(opts.body);
+  const res = await fetch(url, opts);
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(errText || res.statusText);
+  }
+  return res.json();
+}
+
+function showToast(msg, type='green') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function switchCenterTab(tabName) {
+  activeCenterTab = tabName;
+  document.querySelectorAll('.wa-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+
+  const btn = document.getElementById(`btn-tab-${tabName}`);
+  if (btn) btn.classList.add('active');
+
+  const compFilterBar = document.getElementById('companyChannelFilterBar');
+  const bcFilterBar   = document.getElementById('broadcastFilterBar');
+  
+  if (tabName === 'messenger') {
+    if (compFilterBar) compFilterBar.style.display = 'none';
+    if (bcFilterBar) bcFilterBar.style.display = 'none';
+    document.getElementById('pane-messenger')?.classList.add('active');
+    activeScope = 'assigned_tagged';
+    loadMessengerHub();
+  } else if (tabName === 'team') {
+    if (compFilterBar) compFilterBar.style.display = 'none';
+    if (bcFilterBar) bcFilterBar.style.display = 'none';
+    document.getElementById('pane-messenger')?.classList.add('active');
+    activeScope = 'downline';
+    loadMessengerHub();
+  } else if (tabName === 'company') {
+    if (compFilterBar) compFilterBar.style.display = 'flex';
+    if (bcFilterBar) bcFilterBar.style.display = 'none';
+    document.getElementById('pane-messenger')?.classList.add('active');
+    activeScope = 'company';
+    loadMessengerHub();
+  } else if (tabName === 'broadcasts') {
+    if (compFilterBar) compFilterBar.style.display = 'none';
+    if (bcFilterBar) bcFilterBar.style.display = 'flex';
+    document.getElementById('pane-messenger')?.classList.add('active');
+    activeScope = 'broadcasts';
+    loadMessengerHub();
+  } else if (tabName === 'inbox') {
+    document.getElementById('pane-inbox')?.classList.add('active');
+    loadInbox(1);
+  } else if (tabName === 'templates') {
+    document.getElementById('pane-templates')?.classList.add('active');
+    loadTemplatesHub();
+  } else if (tabName === 'automations') {
+    document.getElementById('pane-automations')?.classList.add('active');
+    loadAutomationsHub();
+  } else if (tabName === 'audit') {
+    document.getElementById('pane-audit')?.classList.add('active');
+    loadAuditLogHub();
+  }
+}
 const EMOJI_DATA = {
   smileys: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','😉','😌','😍','🥰','😘','😋','😛','😜','🤪','😎','🤩','🥳','😏','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','😱','🤗','🤔','🤫','😴','😷'],
   hands: ['👍','👎','👌','🤌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👏','🙌','👐','🤲','🤝','🙏','💪','👋','✍️'],
@@ -589,9 +778,39 @@ async function checkGatewayConnectionStatus() {
   }
 }
 
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('open');
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('open');
+  if (qrPollerInterval) {
+    clearInterval(qrPollerInterval);
+    qrPollerInterval = null;
+  }
+}
+
+let qrPollerInterval = null;
+
 async function openScanQrModal() {
   openModal('scanQrModal');
   await refreshGatewayQr();
+
+  if (qrPollerInterval) clearInterval(qrPollerInterval);
+  qrPollerInterval = setInterval(async () => {
+    try {
+      const res = await apiFetch(`${API}/whatsapp/bot-status`);
+      if (res && res.connected === true) {
+        clearInterval(qrPollerInterval);
+        qrPollerInterval = null;
+        closeModal('scanQrModal');
+        showToast('WhatsApp account linked & connected successfully!', 'success');
+        checkGatewayConnectionStatus();
+      }
+    } catch (_) {}
+  }, 2500);
 }
 
 async function refreshGatewayQr() {
@@ -599,14 +818,27 @@ async function refreshGatewayQr() {
   const img = document.getElementById('qrImageElement');
   if (spinner) {
     spinner.style.display = 'flex';
-    spinner.innerHTML = '<i class="fas fa-qrcode fa-spin fa-2x" style="color:#059669;margin-bottom:8px"></i><span style="font-size:12px;font-weight:600">Generating QR code...</span>';
+    spinner.innerHTML = '<i class="fas fa-qrcode fa-spin fa-2x" style="color:#059669;margin-bottom:8px"></i><span style="font-size:12px;font-weight:600">Fetching live QR code...</span>';
   }
   if (img) img.style.display = 'none';
 
   try {
     const res = await apiFetch(`${API}/whatsapp/gateway-status-qr`);
+    if (res.connected) {
+      if (spinner) spinner.innerHTML = '<i class="fas fa-check-circle fa-2x" style="color:#10b981;margin-bottom:8px"></i><span style="font-size:13px;font-weight:700;color:#10b981">Already Connected & Active</span>';
+      setTimeout(() => {
+        closeModal('scanQrModal');
+        checkGatewayConnectionStatus();
+      }, 1000);
+      return;
+    }
+
     if (res.qr) {
-      img.src = res.qr.startsWith('data:') ? res.qr : `data:image/png;base64,${res.qr}`;
+      if (res.qr.startsWith('http://') || res.qr.startsWith('https://') || res.qr.startsWith('data:')) {
+        img.src = res.qr;
+      } else {
+        img.src = `data:image/png;base64,${res.qr}`;
+      }
       img.style.display = 'block';
       if (spinner) spinner.style.display = 'none';
     } else {
@@ -652,43 +884,6 @@ async function apiFetch(url, opts = {}) {
   return res.json();
 }
 
-function showToast(msg, type='green') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast ${type} show`;
-  setTimeout(() => t.classList.remove('show'), 3000);
-}
-
-function switchCenterTab(tabName) {
-  activeCenterTab = tabName;
-  document.querySelectorAll('.wa-tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-
-  const btn = document.getElementById(`btn-tab-${tabName}`);
-  if (btn) btn.classList.add('active');
-  
-  if (tabName === 'messenger') {
-    document.getElementById('pane-messenger')?.classList.add('active');
-    activeScope = 'assigned_tagged';
-    loadMessengerHub();
-  } else if (tabName === 'team') {
-    document.getElementById('pane-messenger')?.classList.add('active');
-    activeScope = 'downline';
-    loadMessengerHub();
-  } else if (tabName === 'inbox') {
-    document.getElementById('pane-inbox')?.classList.add('active');
-    loadInbox(1);
-  } else if (tabName === 'templates') {
-    document.getElementById('pane-templates')?.classList.add('active');
-    loadTemplatesHub();
-  } else if (tabName === 'automations') {
-    document.getElementById('pane-automations')?.classList.add('active');
-    loadAutomationsHub();
-  } else if (tabName === 'audit') {
-    document.getElementById('pane-audit')?.classList.add('active');
-    loadAuditLogHub();
-  }
-}
 
 // ── TAB 1: CRM INBOX ────────────────────────────────────────────────────────
 async function loadInbox(page = 1) {
@@ -760,7 +955,7 @@ function renderInboxRows(items) {
         <span>${isUnread ? '<div class="unread-dot"></div>' : ''}</span>
         <span><i class="fab fa-whatsapp" style="color:#25d366"></i></span>
         <div style="font-size:11px;color:#374151;white-space:nowrap;font-weight:600">${timeIst}</div>
-        <div><strong>${name}</strong><br><small style="color:#6b7280">${phone}</small></div>
+        <div><strong>${formatContactName(name, phone)}</strong><br><small style="color:#6b7280">${maskPhone(phone)}</small></div>
         <div style="color:#4b5563;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${msg}</div>
         <div><span class="ei-chip ${sourceChipClass}">${sourceIcon} ${sourceType}</span></div>
         <div><span class="ei-chip ei-crm">CRM Lead</span></div>
@@ -798,43 +993,98 @@ function openChatFromInbox(phone) {
   loadChatHistory(phone, 'individual');
 }
 
-// ── TAB 2: MESSENGER ────────────────────────────────────────────────────────
+// ── TABS 1, 2, 3, 4: MESSENGER (My, Team, Company, Broadcasts) ────────────
 async function loadMessengerHub() {
   try {
-    const data = await apiFetch(`${API}/whatsapp/conversations-hub?scope=${activeScope}`);
+    let url = `${API}/whatsapp/conversations-hub?scope=${activeScope}`;
+    if (activeScope === 'company') {
+      url += `&source_filter=${companyChannelFilter}`;
+    } else if (activeScope === 'broadcasts') {
+      url += `&source_filter=${broadcastFilter}`;
+    }
+    const data = await apiFetch(url);
     renderConversationsList(data.conversations || []);
   } catch(err) {
     document.getElementById('convList').innerHTML = `<div style="padding:20px;color:#dc2626">Error loading conversations: ${err.message}</div>`;
   }
 }
 
+let currentRenderedConvs = [];
+
+function escapeHtmlText(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function renderConversationsList(convs) {
-  if (!convs.length) {
-    document.getElementById('convList').innerHTML = '<div style="padding:20px;text-align:center;color:#9ca3af">No conversations found.</div>';
+  currentRenderedConvs = convs || [];
+  if (!convs || !convs.length) {
+    let emptyMsg = 'No personal conversations found.';
+    if (activeScope === 'company') {
+      emptyMsg = 'No unassigned company messages found.';
+    } else if (activeScope === 'downline') {
+      emptyMsg = 'No team conversations found.';
+    } else if (activeScope === 'broadcasts') {
+      emptyMsg = 'No broadcast dispatches found for this filter.';
+    }
+    document.getElementById('convList').innerHTML = `<div style="padding:30px 20px;text-align:center;color:#9ca3af"><i class="fas fa-inbox fa-2x" style="margin-bottom:8px;opacity:.5"></i><br>${emptyMsg}</div>`;
     return;
   }
 
   let html = '';
-  convs.forEach(c => {
-    const isGroup = c.recipient_type === 'group';
-    const isChannel = c.recipient_type === 'channel';
+  convs.forEach((c, idx) => {
+    const isGroup = c.recipient_type === 'group' || c.contact_type === 'GROUP' || c.broadcast_type === 'group';
+    const isChannel = c.recipient_type === 'channel' || c.contact_type === 'CHANNEL';
+    const isUnassigned = c.is_unassigned === true || activeScope === 'company';
+    const st = (c.status || '').toLowerCase();
+    const isArchived = (st === 'archived' || st === 'closed');
+    const isInProgress = (st === 'in_progress');
+
+    let statusBadge = '';
+    if (isArchived) {
+      statusBadge = `<span class="type-badge badge-archived" title="Archived / Handled"><i class="fas fa-archive"></i> Archived</span>`;
+    } else if (isInProgress) {
+      statusBadge = `<span class="type-badge badge-inprogress" title="In Progress"><i class="fas fa-clock"></i> In Progress</span>`;
+    }
+
+    const chanBadge = c.channel ? `<span class="type-badge" style="background:#e0f2fe;color:#0369a1;font-size:9.5px;padding:2px 6px;">${c.channel === 'META_API' ? '⚡ Meta API' : '📲 Scanned'}</span>` : '';
     const badgeClass = isGroup ? 'badge-group' : (isChannel ? 'badge-channel' : 'badge-customer');
-    const badgeLabel = isGroup ? 'Group' : (isChannel ? 'Channel' : (c.badge || 'Contact'));
+    let badgeLabel = isGroup ? 'Group' : (isChannel ? 'Channel' : (c.badge || 'Contact'));
+    if (activeScope === 'broadcasts') {
+      badgeLabel = isGroup ? 'Group Broadcast' : (c.category || 'Individual');
+    }
+    const displayName = (isGroup || isChannel) ? (c.name || c.phone) : formatContactName(c.name, c.phone);
 
     html += `
-      <div class="conv-card ${activeChatPhone === c.phone ? 'active' : ''}" onclick="selectChat('${c.phone}', '${c.recipient_type || 'individual'}', '${c.name}')">
-        <div class="conv-avatar">${isGroup ? '👥' : (isChannel ? '📢' : '👤')}</div>
+      <div class="conv-card ${activeChatPhone === c.phone ? 'active' : ''} ${isArchived ? 'conv-archived' : (isInProgress ? 'conv-in-progress' : '')}" onclick="selectChatByIndex(${idx})">
+        <div class="conv-avatar" style="${isArchived ? 'filter:grayscale(100%);opacity:0.6;' : ''}">${isGroup ? '👥' : (isChannel ? '📢' : (isUnassigned ? '🏢' : (isArchived ? '📁' : (activeScope === 'broadcasts' ? '📡' : '👤'))))}</div>
         <div class="conv-info">
           <div class="conv-name">
-            <span>${c.name}</span>
-            <span class="type-badge ${badgeClass}">${badgeLabel}</span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;${isArchived ? 'color:#64748b;' : ''}">${escapeHtmlText(displayName)}</span>
+            <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+              ${statusBadge}
+              ${chanBadge}
+              <span class="type-badge ${badgeClass}">${badgeLabel}</span>
+            </div>
           </div>
-          <div class="conv-snippet">${c.last_message || ''}</div>
+          <div class="conv-snippet" style="${isArchived ? 'color:#94a3b8;' : ''}">${escapeHtmlText(c.last_message || '')}</div>
         </div>
       </div>
     `;
   });
   document.getElementById('convList').innerHTML = html;
+}
+
+function selectChatByIndex(idx) {
+  const c = currentRenderedConvs[idx];
+  if (!c) return;
+  const isUnassigned = c.is_unassigned === true || activeScope === 'company';
+  selectChat(c.phone, c.recipient_type || 'individual', c.name || c.phone, isUnassigned, c.channel || '', c.status || 'active');
 }
 
 function onMsgScopeChange(scope) {
@@ -847,18 +1097,128 @@ function onMsgSearchInput(val) {
   debounceTimer = setTimeout(async () => {
     if (!val) return loadMessengerHub();
     try {
-      const data = await apiFetch(`${API}/whatsapp/contacts-search?query=${encodeURIComponent(val)}&scope=${activeScope}`);
+      let searchUrl = `${API}/whatsapp/contacts-search?query=${encodeURIComponent(val)}&scope=${activeScope}`;
+      if (activeScope === 'company') searchUrl += `&source_filter=${companyChannelFilter}`;
+      else if (activeScope === 'broadcasts') searchUrl += `&source_filter=${broadcastFilter}`;
+      const data = await apiFetch(searchUrl);
       renderConversationsList(data.results || []);
     } catch(_) {}
   }, 300);
 }
 
-async function selectChat(phone, recType, name) {
+async function selectChat(phone, recType, name, isUnassigned = false, channel = '', status = 'active') {
   activeChatPhone = phone;
   activeChatType = recType;
-  document.getElementById('chatHeaderName').textContent = name || phone;
-  document.getElementById('chatHeaderSub').textContent = `${recType.toUpperCase()} • ${phone}`;
+  
+  // Mobile responsive view transition
+  if (window.innerWidth <= 768) {
+    document.querySelector('.messenger-container')?.classList.add('chat-active');
+  }
+
+  const st = (status || 'active').toLowerCase();
+  const isArchived = (st === 'archived' || st === 'closed');
+  const isGroupOrChan = (recType === 'group' || recType === 'channel');
+  const headerName = isGroupOrChan ? (name || phone) : formatContactName(name, phone);
+  const headerPhoneDisplay = isGroupOrChan ? phone : maskPhone(phone);
+
+  document.getElementById('chatHeaderName').textContent = headerName;
+  document.getElementById('chatHeaderSub').textContent = `${recType.toUpperCase()} • ${headerPhoneDisplay}${channel ? ' • ' + (channel === 'META_API' ? 'Meta API' : 'Scanned Bot') : ''}${isArchived ? ' • 📁 ARCHIVED' : ''}`;
+
+  const actionsContainer = document.getElementById('chatHeaderActions');
+  let actionsHtml = `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">`;
+
+  // General Status Dropdown
+  actionsHtml += `
+    <select id="chatStatusSelect" onchange="setConversationStatus(this.value)" style="font-size:11.5px;font-weight:600;padding:5px 8px;border-radius:6px;border:1px solid ${isArchived ? '#94a3b8' : '#cbd5e1'};background:${isArchived ? '#f1f5f9' : '#fff'};color:${isArchived ? '#475569' : '#1e293b'};cursor:pointer">
+      <option value="active" ${!isArchived && st !== 'in_progress' ? 'selected' : ''}>🟢 Active</option>
+      <option value="in_progress" ${st === 'in_progress' ? 'selected' : ''}>🟡 In Progress</option>
+      <option value="archived" ${isArchived ? 'selected' : ''}>📁 Archived / Handled</option>
+    </select>
+  `;
+
+  // Quick Archive / Unarchive Button
+  if (isArchived) {
+    actionsHtml += `
+      <button type="button" class="btn-custom" onclick="setConversationStatus('active')" title="Restore conversation to Active" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;padding:5px 10px;font-size:11.5px;font-weight:600;">
+        <i class="fas fa-box-open"></i> Unarchive
+      </button>
+    `;
+  } else {
+    actionsHtml += `
+      <button type="button" class="btn-custom" onclick="setConversationStatus('archived')" title="Archive conversation so you do not need to refer to it again" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:5px 10px;font-size:11.5px;font-weight:600;">
+        <i class="fas fa-archive"></i> Archive
+      </button>
+    `;
+  }
+
+  // Claim Button for Company / Unassigned Messages
+  if (isUnassigned || activeScope === 'company') {
+    actionsHtml += `
+      <button type="button" class="btn-custom btn-green pulse-claim" onclick="claimActiveChat()" style="padding:5px 12px;font-size:11.5px;font-weight:700;">
+        <i class="fas fa-hand-paper"></i> Assign to Me
+      </button>
+    `;
+  }
+
+  actionsHtml += `</div>`;
+  actionsContainer.innerHTML = actionsHtml;
+
   loadChatHistory(phone, recType);
+}
+
+async function setConversationStatus(newStatus) {
+  if (!activeChatPhone) return;
+  try {
+    const res = await apiFetch(`${API}/whatsapp/update-conversation-status`, {
+      method: 'POST',
+      body: { phone: activeChatPhone, status: newStatus }
+    });
+
+    if (res && res.success) {
+      const isArchived = (newStatus === 'archived' || newStatus === 'closed');
+      const msg = isArchived 
+        ? 'Conversation marked as Archived / Handled.' 
+        : `Conversation marked as ${newStatus.replace('_', ' ').toUpperCase()}.`;
+      showToast(msg, isArchived ? 'gray' : 'green');
+
+      // Update in-memory item status
+      const item = currentRenderedConvs.find(c => c.phone === activeChatPhone);
+      if (item) {
+        item.status = newStatus;
+      }
+      renderConversationsList(currentRenderedConvs);
+
+      const curName = document.getElementById('chatHeaderName').textContent;
+      const isUnassigned = (activeScope === 'company');
+      selectChat(activeChatPhone, activeChatType, curName, isUnassigned, '', newStatus);
+    } else {
+      showToast(res.error || 'Failed to update status', 'red');
+    }
+  } catch(e) {
+    showToast('Status error: ' + e.message, 'red');
+  }
+}
+
+async function claimActiveChat() {
+  if (!activeChatPhone) return;
+  try {
+    const res = await apiFetch(`${API}/whatsapp/claim-conversation`, {
+      method: 'POST',
+      body: { phone: activeChatPhone, recipient_type: activeChatType }
+    });
+
+    if (res && res.success) {
+      showToast('Chat assigned to you! Moved to My Messages.', 'green');
+      const curName = document.getElementById('chatHeaderName').textContent;
+      // Switch cleanly to My Messages tab
+      switchCenterTab('messenger');
+      selectChat(activeChatPhone, activeChatType, curName, false);
+    } else {
+      showToast(res.error || 'Could not assign chat.', 'red');
+    }
+  } catch(e) {
+    showToast('Failed to assign chat: ' + e.message, 'red');
+  }
 }
 
 async function loadChatHistory(phone, recType) {
@@ -948,6 +1308,8 @@ async function sendChatMessage() {
     client_msg_id: `wa_center_${Date.now()}`
   };
 
+  const wasCompanyTab = (activeScope === 'company');
+
   try {
     const res = await apiFetch(`${API}/whatsapp/send-message`, {
       method: 'POST',
@@ -957,8 +1319,16 @@ async function sendChatMessage() {
     if (res.success || res.status === 'sent') {
       textInput.value = '';
       clearAttachment();
-      showToast('Message sent');
-      loadChatHistory(activeChatPhone, activeChatType);
+      
+      if (wasCompanyTab) {
+        showToast('Reply sent! Chat assigned to you & moved to My Messages.', 'green');
+        const curName = document.getElementById('chatHeaderName').textContent;
+        switchCenterTab('messenger');
+        selectChat(activeChatPhone, activeChatType, curName, false);
+      } else {
+        showToast('Message sent');
+        loadChatHistory(activeChatPhone, activeChatType);
+      }
     } else {
       showToast(res.message || 'Send failed', 'red');
     }
@@ -1176,17 +1546,23 @@ async function loadAuditLogHub() {
         ? `<span class="ei-chip ei-contacts" style="background:#ecfdf5;color:#047857"><i class="fas fa-check-circle"></i> ${status}</span>`
         : `<span class="ei-chip" style="background:#fef2f2;color:#dc2626"><i class="fas fa-exclamation-circle"></i> ${status}</span>`;
 
-      const isManual = l.trigger_source === 'manual' || l.message_type === 'manual_staff' || l.message_type === 'direct_send';
-      const triggerBadge = isManual
-        ? `<span class="ei-chip ei-crm" style="background:#f3e8ff;color:#6b21a8"><i class="fas fa-bolt"></i> ⚡ Manual Staff</span>`
-        : `<span class="ei-chip ei-service" style="background:#e0f2fe;color:#0369a1"><i class="fas fa-robot"></i> 🤖 Auto Bot</span>`;
+      let triggerBadge = '';
+      if (l.trigger_category === 'broadcast' || (l.trigger_source && l.trigger_source.includes('broadcast'))) {
+        triggerBadge = `<span class="ei-chip" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-weight:600;"><i class="fas fa-bullhorn"></i> ${l.trigger_label || '📢 Broadcast Message'}</span>`;
+      } else if (l.trigger_category === 'manual' || l.trigger_source === 'manual') {
+        triggerBadge = `<span class="ei-chip ei-crm" style="background:#f3e8ff;color:#6b21a8;font-weight:600;"><i class="fas fa-user-edit"></i> ${l.trigger_label || '👤 Manual Staff'}</span>`;
+      } else if (l.trigger_category === 'otp') {
+        triggerBadge = `<span class="ei-chip" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-weight:600;"><i class="fas fa-key"></i> ${l.trigger_label || '🔐 OTP Auth'}</span>`;
+      } else {
+        triggerBadge = `<span class="ei-chip ei-service" style="background:#e0f2fe;color:#0369a1;font-weight:600;"><i class="fas fa-robot"></i> ${l.trigger_label || '🤖 Auto Bot'}</span>`;
+      }
 
       html += `
         <tr style="border-bottom:1px solid #f3f4f6;align-items:center">
           <td style="padding:10px 8px;font-size:11.5px;color:#4b5563">${timestamp}</td>
           <td style="padding:10px 8px">${triggerBadge}</td>
           <td style="padding:10px 8px">
-            <strong>${recipient}</strong> <span style="font-size:11px;color:#6b7280">${userName}</span>
+            <strong>${maskPhone(recipient)}</strong> <span style="font-size:11px;color:#6b7280">${userName}</span>
           </td>
           <td style="padding:10px 8px">${statusBadge}</td>
           <td style="padding:10px 8px"><code style="font-size:10.5px;color:#374151">${wamid}</code></td>
@@ -1212,7 +1588,8 @@ function openAuditMsgModal(idx) {
   if (!l) return;
 
   const timestamp = l.sent_at || l.time_str || l.created_at || 'LOG';
-  const recipient = (l.mobile_number || l.recipient || '—') + ((l.user_name && l.user_name !== '—') ? ` (${l.user_name})` : '');
+  const rawRecipient = l.mobile_number || l.recipient || '—';
+  const recipient = maskPhone(rawRecipient) + ((l.user_name && l.user_name !== '—') ? ` (${l.user_name})` : '');
   const wamid = l.message_sid || l.wamid || '—';
   
   let bodyText = l.message_body || l.body_text || l.message || '';
@@ -1222,7 +1599,7 @@ function openAuditMsgModal(idx) {
     } else if (l.message_type && l.message_type.includes('otp')) {
       bodyText = `🔐 Verification Code (${l.message_type}) was dispatched via WhatsApp.`;
     } else {
-      bodyText = `📱 WhatsApp Notification (${l.message_type || 'Automated Dispatch'}) was delivered to ${l.mobile_number || 'recipient'}.`;
+      bodyText = `📱 WhatsApp Notification (${l.message_type || 'Automated Dispatch'}) was delivered to ${maskPhone(l.mobile_number || 'recipient')}.`;
     }
   }
 
@@ -1238,7 +1615,7 @@ function openAuditMsgModal(idx) {
 
 // ── ASSIGNMENT MODAL ───────────────────────────────────────────────────────
 function openAssignModal(phone, name) {
-  document.getElementById('assignTargetInfo').textContent = `Assigning Customer: ${name} (${phone})`;
+  document.getElementById('assignTargetInfo').textContent = `Assigning Customer: ${formatContactName(name, phone)} (${maskPhone(phone)})`;
   document.getElementById('assignModal').classList.add('open');
 }
 function closeModal(id) {

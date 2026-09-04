@@ -527,6 +527,16 @@
         let activeTab = 'my-calls';
 
         // ===== SHARED UTILS =====
+        function maskPhone(p) {
+            if (!p || p === '—' || p === '-' || p === 'null') return '—';
+            const s = String(p).trim();
+            if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
+            const digits = s.replace(/\D/g, '');
+            if (digits.length < 6) return s;
+            const clean10 = digits.slice(-10);
+            return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
+        }
+
         function fmtDuration(seconds) {
             if (!seconds || seconds <= 0) return '<span class="val-zero">0m</span>';
             const h = Math.floor(seconds / 3600);
@@ -570,7 +580,7 @@
             return `<tr>
                 <td class="text-start">${sno}</td>
                 <td><small>${dateStr}<br><span class="text-muted">${timeStr}</span></small></td>
-                <td><strong style="font-size:13px;">${call.phone_number || '-'}</strong></td>
+                <td><strong style="font-size:13px;">${maskPhone(call.phone_number)}</strong></td>
                 <td>${typeBadge}</td>
                 <td class="duration-fmt">${fmtDuration(call.duration_seconds)}</td>
                 <td><small>${leadLink}</small></td>
@@ -636,7 +646,7 @@
                     const outcomeLabel = (a.call_outcome||'').replace(/_/g,' ');
                     return `<tr>
                         <td>${i+1}</td>
-                        <td class="text-start"><b>${a.lead_name || 'Lead #'+a.lead_id}</b><br><small class="text-muted">${a.lead_phone || ''}</small></td>
+                        <td class="text-start"><b>${a.lead_name || 'Lead #'+a.lead_id}</b><br><small class="text-muted">${maskPhone(a.lead_phone)}</small></td>
                         <td><span style="padding:3px 10px;border-radius:20px;background:${color}20;color:${color};font-size:12px;font-weight:700">${outcomeLabel || '-'}</span></td>
                         <td>${dur}</td>
                         <td><small style="color:#6b7280">${(a.status_updated_to||'').replace(/_/g,' ') || '-'}</small></td>
@@ -795,7 +805,7 @@
                             return `<tr>
                                 <td class="text-start">${sno}</td>
                                 <td><small>${dateStr}<br><span class="text-muted">${timeStr}</span></small></td>
-                                <td><strong class="phone-link" onclick="openPhoneDetail('${call.phone_number}',${myStaffId})" style="font-size:13px;cursor:pointer;color:#3b82f6;text-decoration:underline dotted;">${call.phone_number || '-'}</strong></td>
+                                <td><strong class="phone-link" onclick="openPhoneDetail('${call.phone_number}',${myStaffId})" style="font-size:13px;cursor:pointer;color:#3b82f6;text-decoration:underline dotted;">${maskPhone(call.phone_number)}</strong></td>
                                 <td>${contactHtml}</td>
                                 <td>${typeBadge}</td>
                                 <td class="duration-fmt">${fmtDuration(call.duration_seconds)}</td>
@@ -1237,7 +1247,7 @@
                             return `<tr>
                                 <td class="text-start">${sno}</td>
                                 <td><small>${dateStr}<br><span class="text-muted">${timeStr}</span></small></td>
-                                <td><strong class="phone-link" onclick="openPhoneDetail('${call.phone_number}',${callDetailsStaffId})" style="font-size:13px;cursor:pointer;color:#3b82f6;text-decoration:underline dotted;">${call.phone_number || '-'}</strong></td>
+                                <td><strong class="phone-link" onclick="openPhoneDetail('${call.phone_number}',${callDetailsStaffId})" style="font-size:13px;cursor:pointer;color:#3b82f6;text-decoration:underline dotted;">${maskPhone(call.phone_number)}</strong></td>
                                 <td>${contactHtml}</td>
                                 <td>${typeBadge}</td>
                                 <td class="duration-fmt">${fmtDuration(call.duration_seconds)}</td>
@@ -1303,7 +1313,7 @@
                 _pdDateTo = document.getElementById('dateTo').value;
                 _pdQuickRange = currentQuickRange;
             }
-            document.getElementById('pdModalPhone').textContent = phone;
+            document.getElementById('pdModalPhone').textContent = maskPhone(phone);
             document.getElementById('pdTypeFilter').value = '';
             loadPhoneDetail(1);
             const modal = new bootstrap.Modal(document.getElementById('phoneDetailModal'));

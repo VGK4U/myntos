@@ -1993,6 +1993,21 @@ def get_crm_dashboard_v2(
     is_admin = is_vgk_admin(current_employee.staff_type) or current_employee.emp_code == 'MR10001'
     is_leader = has_direct_reports(current_employee.id, db, StaffEmployee) if not is_admin else True
 
+    # DC_FINANCIALS_TAB_GATE: Company-wise and Earnings tabs are strictly restricted to MR10001 and Accounts (Subhash)
+    from app.models.staff import StaffDepartment
+    is_subhash = (
+        current_employee.emp_code == 'MR10025' or 
+        'subhash' in (current_employee.first_name or '').lower() or 
+        'subhash' in (current_employee.last_name or '').lower()
+    )
+    is_accounts_dept = False
+    if current_employee.department_id:
+        dept = db.query(StaffDepartment).filter(StaffDepartment.id == current_employee.department_id).first()
+        if dept and 'account' in (dept.name or '').lower():
+            is_accounts_dept = True
+
+    can_view_financials = (current_employee.emp_code == 'MR10001') or is_subhash or is_accounts_dept
+
     today = get_indian_time().date()
     today_start = datetime.combine(today, datetime.min.time())
     today_end = datetime.combine(today, datetime.max.time())
@@ -2224,32 +2239,43 @@ def get_crm_dashboard_v2(
     ).group_by(CRMLead.category_id).all()
     cat_self_map = {r[0]: r[1] for r in cat_self_raw}
 
-    cat_map = {}
+    cat_name_map = {}
     for row in cat_breakdown_raw:
-        cid = row[0]
-        if cid not in cat_map:
-            cat_map[cid] = {'category_name': row[1], 'statuses': {}}
+        c_name = (row[1] or 'Unknown').strip()
+        if c_name not in cat_name_map:
+            cat_name_map[c_name] = {'category_name': c_name, 'statuses': {}, 'cids': []}
+        if row[0]:
+            cat_name_map[c_name]['cids'].append(row[0])
         if row[2]:
-            cat_map[cid]['statuses'][row[2]] = row[3]
+            cat_name_map[c_name]['statuses'][row[2]] = cat_name_map[c_name]['statuses'].get(row[2], 0) + row[3]
 
     category_breakdown = []
-    for cid, cdata in cat_map.items():
+    for c_name, cdata in cat_name_map.items():
         st = cdata['statuses']
         total = sum(st.values())
-        if total == 0 and not cat_contacted_map.get(cid) and not cat_overdue_map.get(cid):
+        cids = cdata['cids']
+        c_contacted = sum(cat_contacted_map.get(cid, 0) for cid in cids)
+        c_overdue = sum(cat_overdue_map.get(cid, 0) for cid in cids)
+        c_revenue = sum(cat_revenue_map.get(cid, 0.0) for cid in cids)
+        c_deal = sum(cat_deal_map.get(cid, 0.0) for cid in cids)
+        c_self = sum(cat_self_map.get(cid, 0) for cid in cids)
+        c_avg = sum(cat_avg_map.get(cid, 0.0) for cid in cids)
+        if total == 0 and not c_contacted and not c_overdue:
             continue
-        cat_self = cat_self_map.get(cid, 0)
+        daily_contacted = {}
+        for ds in daily_date_strs:
+            daily_contacted[ds] = sum(cat_daily_map.get(cid, {}).get(ds, 0) for cid in cids)
         entry = {
-            'category_name': cdata['category_name'],
+            'category_name': c_name,
             'total': total,
-            'contacted_today': cat_contacted_map.get(cid, 0),
-            'overdue': cat_overdue_map.get(cid, 0),
-            'actual_revenue': cat_revenue_map.get(cid, 0),
-            'deal_value': cat_deal_map.get(cid, 0),
-            'self_leads': cat_self,
-            'company_leads': total - cat_self,
-            'daily_contacted': {ds: cat_daily_map.get(cid, {}).get(ds, 0) for ds in daily_date_strs},
-            'avg_daily_leads': cat_avg_map.get(cid, 0),
+            'contacted_today': c_contacted,
+            'overdue': c_overdue,
+            'actual_revenue': c_revenue,
+            'deal_value': c_deal,
+            'self_leads': c_self,
+            'company_leads': total - c_self,
+            'daily_contacted': daily_contacted,
+            'avg_daily_leads': round(c_avg, 1),
         }
         for s in ALL_STATUSES:
             entry[s] = st.get(s, 0)
@@ -2281,7 +2307,12 @@ def get_crm_dashboard_v2(
     if is_leader or is_admin:
         hidden_ids_team = _get_hidden_employee_ids(db, StaffEmployee)
         if is_admin:
-            emp_query = db.query(StaffEmployee).filter(StaffEmployee.status == 'active')
+            emp_query = db.query(StaffEmployee).filter(
+                StaffEmployee.status == 'active',
+                StaffEmployee.is_deleted == False,
+                ~StaffEmployee.emp_code.like('EMP_TEST_%'),
+                or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN']))
+            )
             if company_id:
                 emp_query = emp_query.filter(
                     or_(
@@ -2297,7 +2328,10 @@ def get_crm_dashboard_v2(
             downline_ids = [eid for eid in downline_ids if eid not in hidden_ids_team]
             emp_query = db.query(StaffEmployee).filter(
                 StaffEmployee.id.in_(downline_ids),
-                StaffEmployee.status == 'active'
+                StaffEmployee.status == 'active',
+                StaffEmployee.is_deleted == False,
+                ~StaffEmployee.emp_code.like('EMP_TEST_%'),
+                or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN']))
             )
             if department_id:
                 emp_query = emp_query.filter(StaffEmployee.department_id == department_id)
@@ -2615,29 +2649,57 @@ def get_crm_dashboard_v2(
         ).group_by(CRMLead.category_id).all()
         cw_self_map = {r[0]: r[1] for r in cat_wise_self}
 
-        category_wise_data = []
-        for cid in set(list(cw_status_map.keys()) + list(cw_contacted_map.keys()) + list(cw_overdue_map.keys())):
+        # Aggregate by clean Category Name to eliminate duplicates across companies
+        cw_by_name = {}
+        all_cids = set(list(cw_status_map.keys()) + list(cw_contacted_map.keys()) + list(cw_overdue_map.keys()))
+        for cid in all_cids:
+            c_name = cat_names.get(cid, 'Unknown').strip()
+            if c_name not in cw_by_name:
+                cw_by_name[c_name] = {
+                    'category_name': c_name,
+                    'cids': [],
+                    'statuses': {},
+                }
+            cw_by_name[c_name]['cids'].append(cid)
             st = cw_status_map.get(cid, {})
+            for s_key, s_val in st.items():
+                cw_by_name[c_name]['statuses'][s_key] = cw_by_name[c_name]['statuses'].get(s_key, 0) + s_val
+
+        category_wise_data = []
+        for c_name, cdata in cw_by_name.items():
+            st = cdata['statuses']
             total = sum(st.values())
-            cw_self = cw_self_map.get(cid, 0)
+            cids = cdata['cids']
+            c_contacted = sum(cw_contacted_map.get(cid, 0) for cid in cids)
+            c_overdue = sum(cw_overdue_map.get(cid, 0) for cid in cids)
+            c_revenue = sum(cw_revenue_map.get(cid, 0.0) for cid in cids)
+            c_deal = sum(cw_deal_map.get(cid, 0.0) for cid in cids)
+            c_self = sum(cw_self_map.get(cid, 0) for cid in cids)
+            c_avg = sum(cw_avg_map.get(cid, 0.0) for cid in cids)
+            
+            daily_contacted = {}
+            for ds in daily_date_strs:
+                daily_contacted[ds] = sum(cw_daily_map.get(cid, {}).get(ds, 0) for cid in cids)
+
             entry = {
-                'category_id': cid,
-                'category_name': cat_names.get(cid, 'Unknown'),
-                'daily_contacted': {ds: cw_daily_map.get(cid, {}).get(ds, 0) for ds in daily_date_strs},
-                'contacted_today': cw_contacted_map.get(cid, 0),
-                'avg_daily_leads': cw_avg_map.get(cid, 0),
-                'overdue': cw_overdue_map.get(cid, 0),
+                'category_name': c_name,
+                'category_id': cids[0] if len(cids) == 1 else None,
+                'daily_contacted': daily_contacted,
+                'contacted_today': c_contacted,
+                'avg_daily_leads': round(c_avg, 1),
+                'overdue': c_overdue,
                 'total': total,
-                'actual_revenue': cw_revenue_map.get(cid, 0),
-                'deal_value': cw_deal_map.get(cid, 0),
-                'self_leads': cw_self,
-                'company_leads': total - cw_self,
+                'actual_revenue': c_revenue,
+                'deal_value': c_deal,
+                'self_leads': c_self,
+                'company_leads': total - c_self,
             }
             for s in ALL_STATUSES:
                 entry[s] = st.get(s, 0)
             category_wise_data.append(entry)
+        category_wise_data.sort(key=lambda x: x['total'], reverse=True)
 
-    if is_admin or is_leader:
+    if can_view_financials:
         comp_owner_filter = []
         if not is_admin:
             comp_owner_filter = [
@@ -2778,6 +2840,7 @@ def get_crm_dashboard_v2(
         'data': {
             'is_leader': is_leader,
             'is_admin': is_admin,
+            'can_view_financials': can_view_financials,
             'daily_dates': daily_date_strs,
             'avg_num_days': avg_num_days,
             'current_employee': {

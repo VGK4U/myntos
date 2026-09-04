@@ -439,6 +439,45 @@ class VoIPCallService:
             )
             db.add(audit)
 
+        # DC_SOFTPHONE_TALKTIME_SYNC: Auto-sync VoIP & Softphone duration into StaffCallLog
+        # Ensures browser softphone, WebRTC, and VoIP calls are counted across Team Performance, Call Tracking & QA Audits
+        if session.operator_id and CallStateEnum(session.status).is_terminal():
+            try:
+                from app.models.call_tracking import StaffCallLog
+                existing_log = db.query(StaffCallLog).filter(
+                    StaffCallLog.device_call_id == session.call_session_id
+                ).first()
+                call_dt = session.answered_at or session.created_at or now
+                call_type_val = 'OUTGOING' if getattr(session, 'direction', 'outbound') == 'outbound' else 'INCOMING'
+                if session.status in (CallStateEnum.BUSY.value, CallStateEnum.NO_ANSWER.value, CallStateEnum.REJECTED.value, CallStateEnum.FAILED.value, CallStateEnum.CANCELLED.value):
+                    call_type_val = 'MISSED'
+
+                if not existing_log:
+                    new_call_log = StaffCallLog(
+                        company_id=session.company_id or 1,
+                        staff_id=session.operator_id,
+                        phone_number=session.destination_number or session.customer_phone_masked or '',
+                        contact_name=session.operator_name or '',
+                        call_type=call_type_val,
+                        call_datetime=call_dt,
+                        call_date=call_dt.strftime('%Y-%m-%d'),
+                        duration_seconds=session.duration_seconds or 0,
+                        source='softphone',
+                        device_call_id=session.call_session_id,
+                        matched_lead_id=session.lead_id,
+                        matched_at=now if session.lead_id else None,
+                        has_recording=bool(session.recording_storage_key),
+                        synced_at=now,
+                        created_at=now
+                    )
+                    db.add(new_call_log)
+                else:
+                    existing_log.duration_seconds = session.duration_seconds or existing_log.duration_seconds
+                    existing_log.call_type = call_type_val
+                    existing_log.has_recording = bool(session.recording_storage_key)
+            except Exception as e:
+                logger.warning(f"[VOIP-STAFF-CALL-LOG-SYNC] Sync failed: {e}")
+
         db.commit()
         db.refresh(session)
         logger.info(f"[VOIP-WEBHOOK-PROCESSED] Session {session.call_session_id} -> Status: {session.status}, Recording: {session.recording_status}")

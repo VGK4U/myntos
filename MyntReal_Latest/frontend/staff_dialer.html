@@ -1310,7 +1310,11 @@
 
   // ── Dial ─────────────────────────────────────────────────────────────────────
   async function doDial(phone, leadId) {
-    window.open('tel:' + phone, '_self');
+    if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+      window.PlivoSoftphone.dialOutboundCall(phone, leadId, currentLead?.name);
+    } else {
+      window.open('tel:' + phone, '_self');
+    }
     currentLeadId = leadId;
     callTimerStart = Date.now();
     await loadAndShowLeadEdit(leadId);
@@ -2223,7 +2227,11 @@
 
   window.rchDial = function(phone, name) {
     rchSaveLocal(phone, name);
-    window.location.href = `tel:${phone}`;
+    if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+      window.PlivoSoftphone.dialOutboundCall(phone, null, name);
+    } else {
+      window.location.href = `tel:${phone}`;
+    }
   };
 
   // Filter buttons

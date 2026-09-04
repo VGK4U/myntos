@@ -155,6 +155,29 @@ def run_vgk_member_zero_lead_motivational_dispatch(db: Session, trigger_type: st
     from app.services.wa_template_storage_service import get_job_template
     custom_tpl = get_job_template("vgk_member_zero_lead_motivational")
 
+    # Fetch numbers sent today for strict deduplication from message_log AND wa_inbox
+    ist_now = datetime.datetime.utcnow() + datetime.timedelta(hours=5, minutes=30)
+    start_of_today_utc = (ist_now.replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(hours=5, minutes=30))
+    
+    sent_today_numbers = set()
+    try:
+        from app.models.whatsapp import MessageLog
+        log_rows = db.query(MessageLog.mobile_number).filter(MessageLog.sent_at >= start_of_today_utc).all()
+        for r in log_rows:
+            if r[0]:
+                cp = ''.join(c for c in str(r[0]) if c.isdigit())[-10:]
+                if len(cp) == 10:
+                    sent_today_numbers.add(cp)
+
+        inbox_rows = db.execute(text("SELECT from_phone FROM wa_inbox WHERE received_at >= :t"), {"t": start_of_today_utc}).fetchall()
+        for r in inbox_rows:
+            if r[0]:
+                cp = ''.join(c for c in str(r[0]) if c.isdigit())[-10:]
+                if len(cp) == 10:
+                    sent_today_numbers.add(cp)
+    except Exception as e:
+        logger.warning(f"[VGK-0LEAD] Dedup check warning: {e}")
+
     for p in zero_lead_partners:
         p_id = p[0]
         p_name = p[1] or "Channel Partner"
@@ -166,6 +189,16 @@ def run_vgk_member_zero_lead_motivational_dispatch(db: Session, trigger_type: st
             failed_count += 1
             results.append({"member_id": p_id, "name": p_name, "status": "FAILED", "error": "Invalid phone"})
             continue
+
+        clean_10 = clean_phone[-10:]
+        if trigger_type == "SCHEDULED" and clean_10 in sent_today_numbers:
+            logger.info(f"⏩ Zero-lead member {p_name} ({clean_10}) already received a message today. Skipping.")
+            skipped_count += 1
+            results.append({"member_id": p_id, "name": p_name, "status": "SKIPPED", "reason": "Already sent today"})
+            continue
+
+        # Mark as seen in this run to prevent duplicate dispatches if multiple partner records share the same phone
+        sent_today_numbers.add(clean_10)
 
         try:
             msg_text = custom_tpl.format(
