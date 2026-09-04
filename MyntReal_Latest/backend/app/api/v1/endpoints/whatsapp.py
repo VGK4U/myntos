@@ -2378,6 +2378,63 @@ class WAClaimConversationPayload(BaseModel):
     recipient_type: Optional[str] = "individual"
 
 
+class WAConversationStatusPayload(BaseModel):
+    phone: str = Field(..., description="10-digit phone number or international format")
+    status: str = Field(..., description="Status: 'active', 'in_progress', 'archived', 'closed'")
+    recipient_type: Optional[str] = "individual"
+    notes: Optional[str] = None
+
+
+@router.post("/update-conversation-status")
+def update_whatsapp_conversation_status(
+    payload: WAConversationStatusPayload,
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(_require_staff)
+):
+    """
+    Update the operational lifecycle status of a conversation (e.g. 'active', 'in_progress', 'archived', 'closed').
+    Allows staff to mark conversations as Archived/Handled so they do not need to refer to them again.
+    """
+    raw_phone = (payload.phone or "").strip()
+    digits = ''.join(filter(str.isdigit, raw_phone))
+    if len(digits) < 10:
+        raise HTTPException(status_code=400, detail="A valid 10-digit mobile number is required")
+    clean_phone = digits[-10:]
+    st_val = (payload.status or "active").strip().lower()
+
+    try:
+        from app.models.whatsapp import WAInbox
+        from sqlalchemy import or_
+
+        now_utc = datetime.utcnow()
+        inbox_records = db.query(WAInbox).filter(
+            or_(
+                WAInbox.from_phone.like(f"%{clean_phone}"),
+                WAInbox.from_phone == clean_phone,
+                WAInbox.from_phone == f"91{clean_phone}"
+            )
+        ).all()
+
+        for rec in inbox_records:
+            rec.status = st_val
+            if payload.notes:
+                rec.assigned_notes = payload.notes
+            if st_val in ('archived', 'closed'):
+                rec.is_read = True
+
+        db.commit()
+        return {
+            "success": True,
+            "message": f"Conversation with {clean_phone} marked as '{st_val}'.",
+            "phone": clean_phone,
+            "status": st_val
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error(f"[WA-STATUS] Failed to update conversation status: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to update conversation status: {e}")
+
+
 @router.post("/claim-conversation")
 def claim_whatsapp_conversation(
     payload: WAClaimConversationPayload,
