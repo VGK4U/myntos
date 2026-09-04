@@ -1660,14 +1660,17 @@
             const safeName = (name || 'Customer Lead').trim();
             console.log(`[STAFF-LEADS] Triggering Softphone Call to: ${cleanPhone} (${safeName}, Lead ID: ${leadId})`);
 
-            // 1. If Plivo Softphone is initialized on page, dial directly through WebRTC
             if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
                 window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
-                return;
+            } else if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
+                window.PlivoSoftphone.dial(cleanPhone, leadId, safeName);
+            } else {
+                setTimeout(() => {
+                    if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+                        window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
+                    }
+                }, 300);
             }
-
-            // 2. Redirect to Softphone Hub with auto-dial parameters
-            window.location.href = `/staff/softphone?dial=${encodeURIComponent(cleanPhone)}&name=${encodeURIComponent(safeName)}&lead_id=${encodeURIComponent(leadId || '')}`;
         }
 
         function maskPhone(p) {

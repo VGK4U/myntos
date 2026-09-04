@@ -20,9 +20,15 @@
         const safeName = (name || 'Contact').trim();
         if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
             window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
-            return;
+        } else if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
+            window.PlivoSoftphone.dial(cleanPhone, leadId, safeName);
+        } else {
+            setTimeout(() => {
+                if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+                    window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
+                }
+            }, 300);
         }
-        window.location.href = `/staff/softphone?dial=${encodeURIComponent(cleanPhone)}&name=${encodeURIComponent(safeName)}&lead_id=${encodeURIComponent(leadId || '')}`;
     }
 
     function maskPhone(p) {

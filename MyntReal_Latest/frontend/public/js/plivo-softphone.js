@@ -213,6 +213,24 @@
 
         // ── OUTBOUND CALLING WITH MULTI-METHOD SELECTOR ──────────────────────
 
+        dialOutboundCall(number, leadId = null, leadName = null) {
+            return this.dial(number, leadId, leadName);
+        }
+
+        openDialpadAndCall(number, leadName = null, leadId = null) {
+            return this.dial(number, leadId, leadName);
+        }
+
+        openDialpad(phoneNumber = '', contactName = '', leadId = null) {
+            this.openSoftphoneDock();
+            this.switchTab('keypad');
+            const input = document.getElementById('softphoneDisplayInput');
+            if (input && phoneNumber) {
+                input.value = phoneNumber.replace(/\D/g, '').slice(-10);
+                this.onKeypadInputChange(input.value);
+            }
+        }
+
         async dial(destinationPhone, leadId = null, leadName = null, forceMethod = null) {
             if (!destinationPhone) {
                 alert('Please enter a valid destination phone number.');
@@ -521,8 +539,11 @@
         onCallConnected(callInfo) {
             console.log('[PLIVO-SOFTPHONE] Call connected / active');
             this.isCallActive = true;
-            document.getElementById('callStatusLabel').textContent = 'Connected (In Call)';
-            document.getElementById('callStatusLabel').className = 'badge bg-success';
+            const statusLabel = document.getElementById('callStatusLabel');
+            if (statusLabel) {
+                statusLabel.textContent = 'Connected (In Call)';
+                statusLabel.className = 'badge bg-success px-2 py-1';
+            }
             this.startCallTimer();
 
             this.syncCallEvent('connected');
@@ -546,8 +567,21 @@
             console.log('[PLIVO-SOFTPHONE] Call terminated');
             this.stopSessionWatcher();
             this.isCallActive = false;
+            
+            const mins = String(Math.floor(this.callSeconds / 60)).padStart(2, '0');
+            const secs = String(this.callSeconds % 60).padStart(2, '0');
+            const finalDuration = `${mins}:${secs}`;
             this.stopCallTimer();
-            this.hideCallInProgressUI();
+
+            const statusLabel = document.getElementById('callStatusLabel');
+            if (statusLabel) {
+                statusLabel.textContent = `Call Ended (${finalDuration})`;
+                statusLabel.className = 'badge bg-danger px-2 py-1';
+            }
+
+            // Auto-submit quick disposition if selected
+            this.submitQuickDisposition();
+
             this.syncCallEvent('ended');
 
             if (this.localAudioStream) {
@@ -573,8 +607,45 @@
 
             // Dispatch global event so all page UI resets immediately
             document.dispatchEvent(new CustomEvent('plivo:call-terminated', {
-                detail: { sessionId: sid }
+                detail: { sessionId: sid, duration: finalDuration }
             }));
+
+            // Gracefully close overlay after 1.8s, returning user untouched to their existing window
+            setTimeout(() => {
+                if (!this.isCallActive) {
+                    this.hideCallInProgressUI();
+                    this.closeSoftphoneDock();
+                }
+            }, 1800);
+        }
+
+        async submitQuickDisposition() {
+            try {
+                const dispEl = document.getElementById('activeCallDispositionSelect');
+                const noteEl = document.getElementById('activeCallQuickNote');
+                const disposition = dispEl ? dispEl.value : '';
+                const note = noteEl ? noteEl.value.trim() : '';
+
+                if ((disposition || note) && this.activeDestination) {
+                    const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
+                    await fetch('/api/v1/crm/dialer/attempt-outcome', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            lead_id: this.activeLeadId ? parseInt(this.activeLeadId) : null,
+                            customer_phone: this.activeDestination,
+                            call_outcome: disposition || 'answered',
+                            note: note || 'Softphone call completed',
+                            duration_seconds: this.callSeconds || 0
+                        })
+                    });
+                }
+            } catch (err) {
+                console.warn('[PLIVO-SOFTPHONE] Could not submit quick disposition:', err);
+            }
         }
 
         hangup() {
@@ -718,12 +789,25 @@
 
         // ── UI INJECTION & MOBILE DIALER WITH CONTACT SEARCH ────────────────
 
+        maskPhone(p) {
+            if (!p || p === '—' || p === '-' || p === 'null') return '—';
+            const s = String(p).trim();
+            if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
+            const digits = s.replace(/\D/g, '');
+            if (digits.length < 6) return s;
+            const clean10 = digits.slice(-10);
+            return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
+        }
+
         injectUIElements() {
             if (document.getElementById('myntosSoftphoneWidget')) return;
 
             const html = `
-                <!-- Global Softphone Floating Dock -->
-                <div id="myntosSoftphoneWidget" style="position: fixed; bottom: 88px; right: 24px; z-index: 99999; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                <!-- Mobile & Desktop Backdrop -->
+                <div id="myntosSoftphoneBackdrop" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(3px); z-index: 99998; transition: opacity 0.2s ease;" onclick="window.PlivoSoftphone.onBackdropClick()"></div>
+
+                <!-- Global Softphone Floating Dock & Overlay -->
+                <div id="myntosSoftphoneWidget" style="position: fixed; bottom: 84px; right: 24px; z-index: 99999; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
                     
                     <!-- Minimized Floating Pill Button -->
                     <button id="plivoSoftphoneToggleBtn" class="btn btn-primary shadow-lg rounded-pill px-3 py-2 d-flex align-items-center gap-2" onclick="window.PlivoSoftphone.toggleDock()" style="border: 2px solid rgba(255,255,255,0.4); box-shadow: 0 10px 25px rgba(37,99,235,0.35) !important;">
@@ -732,12 +816,12 @@
                     </button>
 
                     <!-- Expanded Mobile Softphone Modal Card -->
-                    <div id="plivoSoftphoneDockCard" class="card shadow-lg border-0 rounded-4 mt-2" style="display: none; width: 340px; background: #ffffff; box-shadow: 0 20px 40px rgba(15,23,42,0.25) !important; overflow: hidden; border: 1px solid #e2e8f0;">
+                    <div id="plivoSoftphoneDockCard" class="card shadow-lg border-0 rounded-4 mt-2" style="display: none; width: 360px; background: #ffffff; box-shadow: 0 20px 45px rgba(15,23,42,0.3) !important; overflow: hidden; border: 1px solid #e2e8f0; position: relative;">
                         
                         <!-- Header -->
                         <div style="background: linear-gradient(135deg, #1e293b, #0f172a); padding: 14px 16px; color: #ffffff; display: flex; align-items: center; justify-content: space-between;">
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <div style="width: 28px; height: 28px; border-radius: 8px; background: rgba(37,99,235,0.2); color: #60a5fa; display: flex; align-items: center; justify-content: center; font-size: 14px;">
+                                <div style="width: 30px; height: 30px; border-radius: 8px; background: rgba(37,99,235,0.25); color: #60a5fa; display: flex; align-items: center; justify-content: center; font-size: 14px;">
                                     <i class="fa-solid fa-phone"></i>
                                 </div>
                                 <div>
@@ -751,7 +835,7 @@
                                     <option value="busy">🔴 Busy</option>
                                     <option value="break">🟡 Break</option>
                                 </select>
-                                <button onclick="window.PlivoSoftphone.toggleDock()" style="background: rgba(255,255,255,0.1); border: none; color: #94a3b8; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px;">✕</button>
+                                <button onclick="window.PlivoSoftphone.closeSoftphoneDock()" style="background: rgba(255,255,255,0.15); border: none; color: #cbd5e1; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px;" title="Close dialpad">✕</button>
                             </div>
                         </div>
 
@@ -769,7 +853,7 @@
                         </div>
 
                         <!-- Card Body (Tab Views) -->
-                        <div class="card-body p-0" style="min-height: 380px; position: relative;">
+                        <div class="card-body p-0" style="min-height: 400px; position: relative;">
                             
                             <!-- TAB 1: KEYPAD / MOBILE DIALER -->
                             <div id="softphoneTabKeypad" style="padding: 16px;">
@@ -859,7 +943,7 @@
                                 </div>
 
                                 <!-- Search Results Scroll List -->
-                                <div id="softphoneSearchResults" style="height: 310px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px;">
+                                <div id="softphoneSearchResults" style="height: 330px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px;">
                                     <div style="text-align: center; color: #94a3b8; font-size: 12px; padding: 40px 10px;">
                                         <i class="fa-solid fa-users-viewfinder fa-2x mb-2" style="opacity: 0.5;"></i>
                                         <div>Type a name, phone, or code to search CRM Leads & Staff Directory</div>
@@ -869,7 +953,7 @@
 
                             <!-- TAB 3: RECENTS -->
                             <div id="softphoneTabRecents" style="display: none; padding: 14px;">
-                                <div id="softphoneRecentsList" style="height: 340px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                                <div id="softphoneRecentsList" style="height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
                                     <div style="text-align: center; color: #94a3b8; font-size: 12px; padding: 40px 10px;">
                                         <i class="fa-solid fa-phone-slash fa-2x mb-2" style="opacity: 0.5;"></i>
                                         <div>No recent calls in this session</div>
@@ -878,50 +962,68 @@
                             </div>
 
                             <!-- IN-CALL ACTIVE CALL SCREEN OVERLAY -->
-                            <div id="softphoneInCallView" style="display: none; position: absolute; inset: 0; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 24px 20px; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; align-items: center; border-radius: 0 0 16px 16px;">
+                            <div id="softphoneInCallView" style="display: none; position: absolute; inset: 0; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 20px 18px; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; align-items: center; border-radius: 0 0 16px 16px; overflow-y: auto;">
                                 
-                                <div style="text-align: center; margin-top: 10px;">
-                                    <div style="width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 12px auto; box-shadow: 0 0 20px rgba(59,130,246,0.5);">
+                                <div style="text-align: center; margin-top: 4px; width: 100%;">
+                                    <div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 10px auto; box-shadow: 0 0 20px rgba(59,130,246,0.5);">
                                         <i class="fa-solid fa-user"></i>
                                     </div>
-                                    <div class="fw-bold fs-5" id="activeCallCustomerName" style="color: #ffffff; letter-spacing: -0.01em;">Customer Lead</div>
-                                    <div style="font-size: 13px; color: #94a3b8; margin-top: 2px;" id="activeCallPhoneDisplay">+91 00000 00000</div>
+                                    <div class="fw-bold fs-5" id="activeCallCustomerName" style="color: #ffffff; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 10px;">Customer Lead</div>
+                                    <div style="font-size: 13px; color: #94a3b8; margin-top: 2px;" id="activeCallPhoneDisplay">+91 XX••••XXXX</div>
                                     <div style="margin-top: 8px;">
                                         <span id="callStatusLabel" class="badge bg-warning text-dark px-2 py-1" style="font-size: 11px;">Dialing...</span>
                                         <span id="callTimerDisplay" class="fw-bold ms-2" style="font-size: 13px; color: #38bdf8;">00:00</span>
                                     </div>
                                 </div>
 
+                                <!-- Quick Call Disposition & Note (In-Call Log) -->
+                                <div style="width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 10px 12px; margin: 10px 0; font-size: 12px;">
+                                    <div style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                                        <span>QUICK CALL DISPOSITION</span>
+                                        <span style="color: #38bdf8; font-size: 10px;"><i class="fa-solid fa-bolt"></i> Auto-saves</span>
+                                    </div>
+                                    <select id="activeCallDispositionSelect" style="width: 100%; background: #0f172a; color: #ffffff; border: 1px solid #334155; border-radius: 6px; padding: 5px 8px; font-size: 11px; margin-bottom: 6px; outline: none;">
+                                        <option value="">-- Select Call Outcome --</option>
+                                        <option value="interested">✅ Interested / Followup</option>
+                                        <option value="callback">📞 Callback Requested</option>
+                                        <option value="no_answer">⏳ Ringing / No Answer</option>
+                                        <option value="busy">🔴 Busy / Line Engaged</option>
+                                        <option value="not_interested">❌ Not Interested</option>
+                                        <option value="wrong_number">⚠️ Wrong / Invalid Number</option>
+                                    </select>
+                                    <input type="text" id="activeCallQuickNote" placeholder="Add quick note or key takeaways..." style="width: 100%; background: #0f172a; color: #ffffff; border: 1px solid #334155; border-radius: 6px; padding: 5px 8px; font-size: 11px; outline: none;">
+                                </div>
+
                                 <!-- In-Call Mini DTMF Keypad (Collapsible) -->
-                                <div id="inCallDTMFPad" style="display: none; width: 100%; max-width: 220px; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0;">
+                                <div id="inCallDTMFPad" style="display: none; width: 100%; max-width: 220px; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 4px 0;">
                                     ${['1','2','3','4','5','6','7','8','9','*','0','#'].map(k => `
                                         <button onclick="window.PlivoSoftphone.sendDTMF('${k}')" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 8px; font-weight: bold; padding: 6px; cursor: pointer;">${k}</button>
                                     `).join('')}
                                 </div>
 
                                 <!-- In-Call 4-Action Button Grid -->
-                                <div style="display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%;">
-                                    <div style="display: flex; justify-content: center; gap: 14px; width: 100%;">
-                                        <button id="btnMuteCall" onclick="window.PlivoSoftphone.toggleMute()" style="width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 15px; cursor: pointer;">
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%;">
+                                    <div style="display: flex; justify-content: center; gap: 12px; width: 100%;">
+                                        <button id="btnMuteCall" onclick="window.PlivoSoftphone.toggleMute()" style="width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; cursor: pointer;">
                                             <i class="fa-solid fa-microphone"></i>
-                                            <span style="font-size: 9px; margin-top: 2px;">Mute</span>
+                                            <span style="font-size: 9px; margin-top: 1px;">Mute</span>
                                         </button>
-                                        <button id="btnSpeakerCall" onclick="window.PlivoSoftphone.toggleSpeaker()" style="width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 15px; cursor: pointer;">
+                                        <button id="btnSpeakerCall" onclick="window.PlivoSoftphone.toggleSpeaker()" style="width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; cursor: pointer;">
                                             <i class="fa-solid fa-volume-high"></i>
-                                            <span style="font-size: 9px; margin-top: 2px;">Speaker</span>
+                                            <span style="font-size: 9px; margin-top: 1px;">Speaker</span>
                                         </button>
-                                        <button id="btnHoldCall" onclick="window.PlivoSoftphone.toggleHold()" style="width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 15px; cursor: pointer;">
+                                        <button id="btnHoldCall" onclick="window.PlivoSoftphone.toggleHold()" style="width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; cursor: pointer;">
                                             <i class="fa-solid fa-pause"></i>
-                                            <span style="font-size: 9px; margin-top: 2px;">Hold</span>
+                                            <span style="font-size: 9px; margin-top: 1px;">Hold</span>
                                         </button>
-                                        <button onclick="window.PlivoSoftphone.toggleDTMFPad()" style="width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 15px; cursor: pointer;">
+                                        <button onclick="window.PlivoSoftphone.toggleDTMFPad()" style="width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; cursor: pointer;">
                                             <i class="fa-solid fa-grip"></i>
-                                            <span style="font-size: 9px; margin-top: 2px;">Keypad</span>
+                                            <span style="font-size: 9px; margin-top: 1px;">Keypad</span>
                                         </button>
                                     </div>
 
                                     <!-- Hangup Red Button -->
-                                    <button onclick="window.PlivoSoftphone.hangup()" style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #dc2626); border: none; color: white; font-size: 22px; cursor: pointer; box-shadow: 0 8px 20px rgba(239,68,68,0.4); display: flex; align-items: center; justify-content: center;">
+                                    <button onclick="window.PlivoSoftphone.hangup()" style="width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #dc2626); border: none; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 8px 20px rgba(239,68,68,0.4); display: flex; align-items: center; justify-content: center;" title="End Call">
                                         <i class="fa-solid fa-phone-slash"></i>
                                     </button>
                                 </div>
@@ -948,7 +1050,7 @@
                     </div>
                 </div>
 
-                <!-- Keypad Button Styles -->
+                <!-- Responsive Styles -->
                 <style>
                     .sp-key-btn {
                         background: #f8fafc;
@@ -985,6 +1087,26 @@
                         line-height: 1;
                         margin-top: 2px;
                     }
+
+                    @media (max-width: 768px) {
+                        #myntosSoftphoneWidget {
+                            bottom: 12px !important;
+                            right: 12px !important;
+                            left: 12px !important;
+                        }
+                        #plivoSoftphoneDockCard {
+                            position: fixed !important;
+                            bottom: 0 !important;
+                            left: 0 !important;
+                            right: 0 !important;
+                            width: 100% !important;
+                            max-width: 100% !important;
+                            border-radius: 20px 20px 0 0 !important;
+                            margin: 0 !important;
+                            max-height: 90vh !important;
+                            box-shadow: 0 -10px 40px rgba(0,0,0,0.35) !important;
+                            z-index: 100000 !important;
+                        }
                 </style>
             `;
 
@@ -1229,24 +1351,60 @@
 
         toggleDock() {
             const card = document.getElementById('plivoSoftphoneDockCard');
+            const backdrop = document.getElementById('myntosSoftphoneBackdrop');
             if (card) {
-                card.style.display = card.style.display === 'none' ? 'block' : 'none';
+                const isOpening = card.style.display === 'none' || !card.style.display;
+                card.style.display = isOpening ? 'block' : 'none';
+                if (backdrop) backdrop.style.display = isOpening ? 'block' : 'none';
             }
         }
 
         openSoftphoneDock() {
             const card = document.getElementById('plivoSoftphoneDockCard');
+            const backdrop = document.getElementById('myntosSoftphoneBackdrop');
             if (card) card.style.display = 'block';
+            if (backdrop) backdrop.style.display = 'block';
+        }
+
+        closeSoftphoneDock() {
+            const card = document.getElementById('plivoSoftphoneDockCard');
+            const backdrop = document.getElementById('myntosSoftphoneBackdrop');
+            if (card) card.style.display = 'none';
+            if (backdrop) backdrop.style.display = 'none';
+        }
+
+        onBackdropClick() {
+            if (!this.isCallActive) {
+                this.closeSoftphoneDock();
+            }
         }
 
         showCallInProgressUI(phone, name) {
+            this.openSoftphoneDock();
             const inCallView = document.getElementById('softphoneInCallView');
             if (inCallView) inCallView.style.display = 'flex';
-            document.getElementById('activeCallCustomerName').textContent = name || 'Customer Lead';
-            document.getElementById('activeCallPhoneDisplay').textContent = phone;
-            document.getElementById('callStatusLabel').textContent = 'Dialing...';
-            document.getElementById('callStatusLabel').className = 'badge bg-warning text-dark px-2 py-1';
-            document.getElementById('callTimerDisplay').textContent = '00:00';
+            
+            const nameEl = document.getElementById('activeCallCustomerName');
+            if (nameEl) nameEl.textContent = name || 'Customer Lead';
+
+            const phoneEl = document.getElementById('activeCallPhoneDisplay');
+            if (phoneEl) phoneEl.textContent = this.maskPhone(phone);
+
+            const statusEl = document.getElementById('callStatusLabel');
+            if (statusEl) {
+                statusEl.textContent = 'Dialing...';
+                statusEl.className = 'badge bg-warning text-dark px-2 py-1';
+            }
+
+            const timerEl = document.getElementById('callTimerDisplay');
+            if (timerEl) timerEl.textContent = '00:00';
+
+            const noteInput = document.getElementById('activeCallQuickNote');
+            if (noteInput) noteInput.value = '';
+
+            const dispSelect = document.getElementById('activeCallDispositionSelect');
+            if (dispSelect) dispSelect.value = '';
+
             this.addRecentCall(phone, name, 'outbound');
         }
 
@@ -1271,8 +1429,13 @@
     // Mount singleton on window
     const instance = new MyntOSPlivoSoftphone();
     window.PlivoSoftphone = instance;
+
+    window.triggerLeadCall = (phone, name, leadId) => {
+        instance.dialOutboundCall(phone, leadId, name);
+    };
+
     window.makeMyntOSCall = (phone, leadId, leadName) => {
-        instance.dial(phone, leadId, leadName);
+        instance.dialOutboundCall(phone, leadId, leadName);
     };
 
     // Global interceptor for all telephone / dial buttons across CRM and Auto Dialer

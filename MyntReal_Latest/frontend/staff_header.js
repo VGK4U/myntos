@@ -1009,6 +1009,25 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
         softphoneScript.async = true;
         document.head.appendChild(softphoneScript);
     }
+
+    // Universal Softphone Trigger — opens floating dialpad/in-call overlay directly on top of active window
+    window.triggerLeadCall = function(phone, name, leadId) {
+        if (!phone) return;
+        const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+        if (!cleanPhone) return;
+        const safeName = (name || 'Contact Lead').trim();
+        if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+            window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
+        } else if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
+            window.PlivoSoftphone.dial(cleanPhone, leadId, safeName);
+        } else {
+            setTimeout(() => {
+                if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+                    window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
+                }
+            }, 300);
+        }
+    };
 }
 
 if (typeof module !== 'undefined' && module.exports) {

@@ -237,8 +237,9 @@ const MENU_MASTER: MenuSection[] = [
     section_label: "CRM & LEADS",
     order: 9,
     items: [
+      { menu_code: "MY_CRM_DASHBOARD", label: "CRM Dashboard", route: "staff-crm" },
       { menu_code: "MY_LEADS", label: "My Leads", route: "staff-my-leads" },
-      { menu_code: "LEADS_MASTER", label: "Leads Master", route: "staff-leads" },
+      { menu_code: "LEADS_MASTER", label: "Staff Leads", route: "staff-leads" },
       { menu_code: "BANK_WISE_LEADS", label: "Field staff leads", route: "staff-bank-wise-leads" },
       { menu_code: "TEAM_LEADS", label: "Team Leads", route: "staff-team-leads" },
       { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "auto-dialer" }
@@ -355,17 +356,24 @@ export class SideDrawer {
   private render(): string {
     const portal = portalService.getPortal();
     const isVgk = portal === 'vgk';
+    const authState = authService.getAuthState();
+    const user = (authState.user || {}) as any;
+    const roleCode = (user.role_code || user.role?.role_code || user.user_type || '').toString().toLowerCase().trim();
+    const roleName = (user.role_name || user.role?.role_name || '').toString().toUpperCase().trim();
+    const staffType = (user.staff_type || '').toString().toUpperCase().trim();
+    const isManagerOrEa = (
+      ['vgk4u', 'vgk4u_supreme', 'key_leadership', 'ea', 'executive_admin', 'manager', 'director', 'admin'].includes(roleCode) ||
+      roleCode.includes('vgk') || roleCode.includes('manager') || roleCode.includes('lead') ||
+      ['VGK4U', 'VGK4U SUPREME', 'VGK MENTOR', 'KEY LEADERSHIP', 'EA', 'EXECUTIVE ADMIN', 'MANAGER'].includes(roleName) ||
+      roleName.includes('VGK') || roleName.includes('MANAGER') ||
+      ['VGK4U', 'VGK4U SUPREME'].includes(staffType) ||
+      Boolean(user.is_manager || user.is_admin || user.is_super_admin)
+    );
     
     let topItems = TOP_MENU_ITEMS;
     if (isVgk) {
       topItems = VGK_TOP_MENU_ITEMS;
     } else if (portal === 'staff') {
-      const authState = authService.getAuthState();
-      const user = authState.user || {};
-      const roleCode = (user.role_code || user.role?.role_code || user.user_type || '').toString().toLowerCase().trim();
-      const roleName = (user.role_name || user.role?.role_name || '').toString().toUpperCase().trim();
-      const staffType = (user.staff_type || '').toString().toUpperCase().trim();
-      
       const showOverview = (
         ['vgk4u', 'vgk4u_supreme', 'key_leadership', 'ea', 'executive_admin'].includes(roleCode) ||
         roleCode.includes('vgk') ||
