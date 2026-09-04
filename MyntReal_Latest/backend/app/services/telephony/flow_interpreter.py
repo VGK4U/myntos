@@ -70,21 +70,42 @@ class CallFlowInterpreter:
             len(re.sub(r'\D', '', caller_str)) < 10
         )
 
-        clean_dest = re.sub(r'[^\d+]', '', called_str)
-        if not clean_dest.startswith('+'):
-            digits_only = re.sub(r'[^\d]', '', clean_dest)
-            clean_dest = f"+91{digits_only[-10:]}" if len(digits_only) >= 10 else f"+{digits_only}"
+        clean_dest_digits = "".join([c for c in called_str if c.isdigit()])
+        if len(clean_dest_digits) == 10:
+            clean_dest_digits = f"91{clean_dest_digits}"
+        elif len(clean_dest_digits) > 10 and not clean_dest_digits.startswith('91'):
+            clean_dest_digits = f"91{clean_dest_digits[-10:]}"
 
-        outbound_caller_id = (
-            getattr(settings, 'PLIVO_DEFAULT_CALLER_ID', None) or 
-            os.getenv("PLIVO_DEFAULT_CALLER_ID", "+918031728899")
-        )
+        clean_caller_id = "".join([c for c in (getattr(settings, 'PLIVO_DEFAULT_CALLER_ID', None) or os.getenv("PLIVO_DEFAULT_CALLER_ID", "918031728899")) if c.isdigit()])
+        if not clean_caller_id:
+            clean_caller_id = "918031728899"
 
         if is_sip_caller:
-            logger.info(f"[FLOW-INTERPRETER] Bridging Outbound WebRTC call from {caller_str} to customer {clean_dest} with callerId {outbound_caller_id}")
+            logger.info(f"[FLOW-INTERPRETER] Bridging Outbound WebRTC call from {caller_str} to customer {clean_dest_digits} with callerId {clean_caller_id}")
+
+            # Idempotently associate Plivo provider_call_id (CallUUID) with active VoIPCallSession
+            if provider_call_id or call_session_id:
+                try:
+                    sess = None
+                    if call_session_id:
+                        sess = db.query(VoIPCallSession).filter(VoIPCallSession.call_session_id == call_session_id).first()
+                    if not sess and clean_dest_digits:
+                        sess = db.query(VoIPCallSession).filter(
+                            VoIPCallSession.destination_number.ilike(f"%{clean_dest_digits[-10:]}%"),
+                            VoIPCallSession.direction == 'outbound'
+                        ).order_by(VoIPCallSession.id.desc()).first()
+                    if sess:
+                        if provider_call_id:
+                            sess.provider_call_id = provider_call_id
+                        if not CallStateEnum(sess.status).is_terminal():
+                            sess.status = CallStateEnum.RINGING.value
+                        db.commit()
+                except Exception as e:
+                    logger.warning(f"[FLOW-INTERPRETER] Session provider_call_id update error: {e}")
+
             return cls._generate_xml_response([
-                f'<Dial callerId="{outbound_caller_id}">',
-                f'  <Number>{clean_dest}</Number>',
+                f'<Dial callerId="{clean_caller_id}">',
+                f'  <Number>{clean_dest_digits}</Number>',
                 f'</Dial>'
             ])
 

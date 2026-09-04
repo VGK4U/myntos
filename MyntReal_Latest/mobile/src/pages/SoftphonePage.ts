@@ -677,7 +677,6 @@ export class SoftphonePage {
         if (statusData) {
           const st = String(statusData.status || statusData.call_state || '').toLowerCase();
           
-          // Call Answered / In Progress ➔ Start Timer Now!
           if (st === 'in-progress' || st === 'answered' || st === 'connected' || statusData.is_connected === true) {
             if (!this.isCallConnected) {
               this.isCallConnected = true;
@@ -689,7 +688,7 @@ export class SoftphonePage {
               }
               this.startCallTimer();
             }
-          } else if (st === 'ringing' || st === 'initiated' || st === 'queued') {
+          } else if (st === 'ringing' || st === 'early_media') {
             if (!this.isCallConnected) {
               this.callStatusText = 'Ringing...';
               const statusEl = document.getElementById('softphoneCallStatusText');
@@ -698,7 +697,16 @@ export class SoftphonePage {
                 statusEl.style.color = '#38bdf8';
               }
             }
-          } else if (st === 'completed' || st === 'failed' || st === 'hungup' || st === 'busy' || st === 'no-answer') {
+          } else if (st === 'dialing' || st === 'queued' || st === 'initiated') {
+            if (!this.isCallConnected) {
+              this.callStatusText = 'Calling...';
+              const statusEl = document.getElementById('softphoneCallStatusText');
+              if (statusEl) {
+                statusEl.textContent = this.callStatusText;
+                statusEl.style.color = '#f59e0b';
+              }
+            }
+          } else if (st === 'completed' || st === 'ended' || st === 'failed' || st === 'hungup' || st === 'busy' || st === 'no-answer' || st === 'rejected') {
             console.log('[SoftphonePage] Call ended remotely on server:', st);
             this.endCall();
           }
@@ -706,7 +714,7 @@ export class SoftphonePage {
       } catch (err) {
         // Continue polling
       }
-    }, 1200);
+    }, 1000);
   }
 
   private startCallTimer(): void {

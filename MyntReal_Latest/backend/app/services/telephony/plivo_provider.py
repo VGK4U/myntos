@@ -103,6 +103,8 @@ class PlivoTelephonyProvider(BaseTelephonyProvider):
             base_domain = getattr(settings, 'PLIVO_WEBHOOK_BASE_URL', None) or os.getenv('PLIVO_WEBHOOK_BASE_URL') or "https://www.myntreal.com"
             answer_url = getattr(settings, 'PLIVO_ANSWER_URL', None) or f"{base_domain}/api/v1/telephony/plivo/inbound?session_id={call_session_id}"
             callback_url = f"{base_domain}/api/v1/telephony/plivo/status-callback?session_id={call_session_id}"
+            hangup_url = f"{base_domain}/api/v1/telephony/plivo/hangup?session_id={call_session_id}"
+            recording_callback_url = f"{base_domain}/api/v1/telephony/plivo/recording-callback?session_id={call_session_id}"
 
             payload = {
                 "from": clean_caller_digits,
