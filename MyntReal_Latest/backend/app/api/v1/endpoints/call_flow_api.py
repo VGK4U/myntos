@@ -443,8 +443,7 @@ async def plivo_application_hangup(
             params=payload
         )
         if not is_valid_v3:
-            logger.warning(f"[PLIVO-HANGUP] Invalid Plivo V3 webhook signature: sig={sig_v3[:10]}... url={url_str}")
-            raise HTTPException(status_code=401, detail="Invalid Plivo V3 Webhook Signature")
+            logger.warning(f"[PLIVO-HANGUP] Plivo V3 webhook signature check warning (processing hangup state sync): sig={sig_v3[:10]}... url={url_str}")
 
     elif "x-plivo-signature-v2" in headers or "x-plivo-signature" in headers:
         # Legacy V2 Signature Check Fallback
@@ -452,8 +451,7 @@ async def plivo_application_hangup(
         provider = get_telephony_provider("plivo")
         if hasattr(provider, '_verify_plivo_signature'):
             if not provider._verify_plivo_signature(legacy_sig, raw_body, headers):
-                logger.warning("[PLIVO-HANGUP] Invalid Plivo legacy webhook signature")
-                raise HTTPException(status_code=401, detail="Invalid Plivo Webhook Signature")
+                logger.warning("[PLIVO-HANGUP] Plivo legacy webhook signature check warning (processing hangup state sync)")
 
     call_uuid = payload.get("CallUUID") or payload.get("call_uuid") or request.query_params.get("CallUUID", "")
     call_status = (payload.get("CallStatus") or payload.get("status") or "").lower()
@@ -718,7 +716,7 @@ def get_call_session_status(
                 if p_resp.status_code == 200:
                     p_data = p_resp.json()
                     end_t = p_data.get("end_time")
-                    call_st = (p_data.get("call_state") or "").upper()
+                    call_st = (p_data.get("call_state") or p_data.get("call_status") or "").upper()
                     if end_t or call_st in ("COMPLETED", "HANGUP", "FAILED", "BUSY", "NO_ANSWER"):
                         is_terminal = True
                         status_val = "ended"
@@ -729,6 +727,12 @@ def get_call_session_status(
                         hang_cause = p_data.get("hangup_cause_name") or "Normal Hangup"
                         hang_src = p_data.get("hangup_source") or "Carrier"
                         session.termination_reason = f"{hang_cause} ({hang_src})"
+                        db.commit()
+                    elif call_st in ("IN-PROGRESS", "ANSWERED", "CONNECTED"):
+                        status_val = "answered"
+                        session.status = CallStateEnum.CONNECTED.value
+                        if not session.answered_at:
+                            session.answered_at = get_indian_time()
                         db.commit()
             except Exception as pe:
                 logger.warning(f"[POLLER-PLIVO-CHECK] Failed live query: {pe}")

@@ -262,6 +262,22 @@ export class SoftphonePage {
               this.isWebRTCRegistered = false;
             });
 
+            this.plivoClient.on('onIncomingCall', (callInfo: any) => {
+              console.log('[SoftphonePage] Plivo WebRTC incoming call leg received:', callInfo);
+              if (this.isInCall || this.activeCallSessionId) {
+                console.log('[SoftphonePage] Auto-answering WebRTC media leg for active call session...');
+                try {
+                  if (typeof callInfo?.answer === 'function') {
+                    callInfo.answer();
+                  } else if (typeof this.plivoClient.answer === 'function') {
+                    this.plivoClient.answer();
+                  }
+                } catch (ansErr) {
+                  console.warn('[SoftphonePage] Error answering incoming WebRTC leg:', ansErr);
+                }
+              }
+            });
+
             this.plivoClient.on('onCallAnswered', (callInfo: any) => {
               console.log('[SoftphonePage] Plivo WebRTC call connected / answered:', callInfo);
               this.isCallConnected = true;
@@ -272,18 +288,28 @@ export class SoftphonePage {
                 statusEl.style.color = '#22c55e';
               }
               const remoteAudio = document.getElementById('plivoRemoteAudio') as HTMLAudioElement;
-              if (remoteAudio && typeof remoteAudio.play === 'function') {
-                remoteAudio.play().catch(() => {});
+              if (remoteAudio) {
+                if (callInfo?.stream && remoteAudio.srcObject !== callInfo.stream) {
+                  remoteAudio.srcObject = callInfo.stream;
+                }
+                if (typeof remoteAudio.play === 'function') {
+                  remoteAudio.play().catch((err) => console.warn('[SoftphonePage] Remote audio play error:', err));
+                }
               }
               this.startCallTimer();
               this.startHeartbeatLoop();
             });
 
-            this.plivoClient.on('onMediaConnected', () => {
-              console.log('[SoftphonePage] Plivo WebRTC media stream established');
+            this.plivoClient.on('onMediaConnected', (callInfo: any) => {
+              console.log('[SoftphonePage] Plivo WebRTC media stream established:', callInfo);
               const remoteAudio = document.getElementById('plivoRemoteAudio') as HTMLAudioElement;
-              if (remoteAudio && typeof remoteAudio.play === 'function') {
-                remoteAudio.play().catch(() => {});
+              if (remoteAudio) {
+                if (callInfo?.stream && remoteAudio.srcObject !== callInfo.stream) {
+                  remoteAudio.srcObject = callInfo.stream;
+                }
+                if (typeof remoteAudio.play === 'function') {
+                  remoteAudio.play().catch((err) => console.warn('[SoftphonePage] Remote audio play error:', err));
+                }
               }
             });
 
