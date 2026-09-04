@@ -4,17 +4,20 @@
 # Automatically manages PostgreSQL, FastAPI Backend, Frontend, and WhatsApp Bot
 # ==============================================================================
 
-PROJECT_DIR="/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_DIR="$PROJECT_DIR/artifacts/daemon_logs"
 mkdir -p "$LOG_DIR"
 
 cd "$PROJECT_DIR"
 
 # 1. Start Local PostgreSQL on Port 5433 if not already running
-if ! /opt/homebrew/opt/postgresql@16/bin/pg_ctl -D "$PROJECT_DIR/postgres_data" status > /dev/null 2>&1; then
-    echo "[$(date)] Starting local PostgreSQL on port 5433..." >> "$LOG_DIR/supervisor.log"
-    /opt/homebrew/opt/postgresql@16/bin/pg_ctl -D "$PROJECT_DIR/postgres_data" -l "$PROJECT_DIR/postgres_data/server.log" -o "-p 5433 -h 127.0.0.1" start >> "$LOG_DIR/supervisor.log" 2>&1 || true
-    sleep 2
+PG_CTL=$(which pg_ctl 2>/dev/null || echo "/opt/homebrew/opt/postgresql@16/bin/pg_ctl")
+if [ -x "$PG_CTL" ]; then
+    if ! "$PG_CTL" -D "$PROJECT_DIR/postgres_data" status > /dev/null 2>&1; then
+        echo "[$(date)] Starting local PostgreSQL on port 5433..." >> "$LOG_DIR/supervisor.log"
+        "$PG_CTL" -D "$PROJECT_DIR/postgres_data" -l "$PROJECT_DIR/postgres_data/server.log" -o "-p 5433 -h 127.0.0.1" start >> "$LOG_DIR/supervisor.log" 2>&1 || true
+        sleep 2
+    fi
 fi
 
 # Load environment variables
@@ -24,18 +27,26 @@ elif [ -f "$PROJECT_DIR/.env" ]; then
     export $(grep -v '^#' "$PROJECT_DIR/.env" | xargs)
 fi
 
-export DATABASE_URL="${DATABASE_URL:-postgresql://127.0.0.1:5433/myntreal_dev}"
-export PROD_DATABASE_URL="${PROD_DATABASE_URL:-$DATABASE_URL}"
+# Always use local PostgreSQL for local development to prevent AWS RDS network timeouts
+export DATABASE_URL="postgresql://127.0.0.1:5433/myntreal_dev"
+export PROD_DATABASE_URL="postgresql://127.0.0.1:5433/myntreal_dev"
 export SECRET_KEY="${SECRET_KEY:-dev-secret-key-123}"
 export AI_AUDIO_DIR="$PROJECT_DIR/tmp_ai_audio"
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+
+PYTHON_BIN="$PROJECT_DIR/venv/bin/python"
+if [ ! -f "$PYTHON_BIN" ]; then
+    PYTHON_BIN=$(which python3 2>/dev/null || which python 2>/dev/null || echo "python3")
+fi
+
+NODE_BIN=$(which node 2>/dev/null || echo "/opt/homebrew/bin/node")
 
 # Function to run Backend Supervisor
 run_backend() {
     while true; do
         echo "[$(date)] Starting FastAPI Backend on port 8000..." >> "$LOG_DIR/backend.log"
         cd "$PROJECT_DIR/backend"
-        "$PROJECT_DIR/venv/bin/python" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 >> "$LOG_DIR/backend.log" 2>&1 || true
+        "$PYTHON_BIN" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 >> "$LOG_DIR/backend.log" 2>&1 || true
         echo "[$(date)] FastAPI Backend exited. Restarting in 2s..." >> "$LOG_DIR/backend.log"
         sleep 2
     done
@@ -47,7 +58,7 @@ run_frontend() {
         echo "[$(date)] Starting Node Frontend on port 5001..." >> "$LOG_DIR/frontend.log"
         cd "$PROJECT_DIR/frontend"
         export PORT=5001
-        /opt/homebrew/bin/node server.js >> "$LOG_DIR/frontend.log" 2>&1 || true
+        "$NODE_BIN" server.js >> "$LOG_DIR/frontend.log" 2>&1 || true
         echo "[$(date)] Node Frontend exited. Restarting in 2s..." >> "$LOG_DIR/frontend.log"
         sleep 2
     done
@@ -60,7 +71,7 @@ run_whatsapp() {
             echo "[$(date)] Starting WhatsApp Bot on port 5002..." >> "$LOG_DIR/whatsapp.log"
             cd "$PROJECT_DIR/backend/whatsapp-group-bot"
             export PORT=5002
-            /opt/homebrew/bin/node server.js >> "$LOG_DIR/whatsapp.log" 2>&1 || true
+            "$NODE_BIN" server.js >> "$LOG_DIR/whatsapp.log" 2>&1 || true
             echo "[$(date)] WhatsApp Bot exited. Restarting in 3s..." >> "$LOG_DIR/whatsapp.log"
             sleep 3
         done

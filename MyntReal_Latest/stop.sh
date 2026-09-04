@@ -9,8 +9,16 @@ if [ -f "$SCRIPT_DIR/artifacts/daemon_logs/supervisor.pid" ]; then
     rm -f "$SCRIPT_DIR/artifacts/daemon_logs/supervisor.pid"
 fi
 
-pkill -f "uvicorn app.main:app" 2>/dev/null || true
-pkill -f "node server.js" 2>/dev/null || true
-pkill -f "daemon_supervisor.sh" 2>/dev/null || true
+pkill -9 -f "daemon_supervisor.sh" 2>/dev/null || true
+pkill -9 -f "uvicorn" 2>/dev/null || true
+pkill -9 -f "server.js" 2>/dev/null || true
+
+# Free ports directly if still bound
+for port in 8000 5001 5002; do
+    PIDS=$(lsof -ti :$port 2>/dev/null || true)
+    if [ -n "$PIDS" ]; then
+        kill -9 $PIDS 2>/dev/null || true
+    fi
+done
 
 echo "Backend, Frontend, and WhatsApp Bot stopped."

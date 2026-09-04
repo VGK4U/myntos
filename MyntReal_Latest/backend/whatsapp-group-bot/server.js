@@ -97,13 +97,24 @@ async function backupSessionToDatabase() {
     }
 }
 
+let backupIntervalStarted = false;
+
 async function startWhatsAppBot() {
     if (!fs.existsSync(AUTH_DIR)) {
         fs.mkdirSync(AUTH_DIR, { recursive: true });
     }
 
     // Attempt restoring session from RDS database before loading auth state
-    await restoreSessionFromDatabase();
+    if (!fs.existsSync(path.join(AUTH_DIR, 'creds.json'))) {
+        await restoreSessionFromDatabase();
+    }
+
+    if (sock) {
+        try {
+            sock.ev.removeAllListeners();
+            sock.ws?.close();
+        } catch (e) {}
+    }
 
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
     const { version } = await fetchLatestBaileysVersion();
@@ -126,8 +137,11 @@ async function startWhatsAppBot() {
         await backupSessionToDatabase();
     });
 
-    // Schedule background DB backup every 60 seconds
-    setInterval(backupSessionToDatabase, 60000);
+    // Schedule background DB backup every 60 seconds (singleton)
+    if (!backupIntervalStarted) {
+        backupIntervalStarted = true;
+        setInterval(backupSessionToDatabase, 60000);
+    }
 
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
