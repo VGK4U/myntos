@@ -4580,10 +4580,11 @@ def init_scheduler():
     }
 
     # Job defaults (max instances, coalescing, etc.)
+    # DC Protocol: coalesce=True and max_instances=1 prevents duplicate triggers on server reload/misfire
     job_defaults = {
-        'coalesce': False,  # Don't combine missed job executions
-        'max_instances': 3,  # Max 3 instances of same job
-        'misfire_grace_time': 60  # 60 seconds grace period for missed jobs
+        'coalesce': True,    # Combine missed job executions into 1 single run
+        'max_instances': 1,  # Strict limit: Max 1 instance of any background job at a time
+        'misfire_grace_time': 120  # 120 seconds grace period for missed jobs
     }
 
     scheduler = BackgroundScheduler(

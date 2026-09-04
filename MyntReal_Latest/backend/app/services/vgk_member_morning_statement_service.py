@@ -68,16 +68,28 @@ def run_vgk_member_daily_morning_statement_dispatch(db: Session, trigger_type: s
 
     logger.info(f"📊 [VGK-MEMBER-STATEMENT] Found {len(qualifying_members)} qualifying members with >= 1 lead.")
 
-    # Fetch numbers sent today for deduplication
+    # Fetch numbers sent today for strict deduplication from message_log AND wa_inbox
     ist_now = datetime.utcnow() + timedelta(hours=5, minutes=30)
     start_of_today_utc = (ist_now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=5, minutes=30))
     
     sent_today_numbers = set()
     try:
+        from app.models.whatsapp import MessageLog
+        log_rows = db.query(MessageLog.mobile_number).filter(MessageLog.sent_at >= start_of_today_utc).all()
+        for r in log_rows:
+            if r[0]:
+                cp = ''.join(c for c in str(r[0]) if c.isdigit())[-10:]
+                if len(cp) == 10:
+                    sent_today_numbers.add(cp)
+
         inbox_rows = db.execute(text("SELECT from_phone FROM wa_inbox WHERE received_at >= :t"), {"t": start_of_today_utc}).fetchall()
-        sent_today_numbers = set(''.join(c for c in (r[0] or '') if c.isdigit())[-10:] for r in inbox_rows if r[0])
-    except Exception:
-        pass
+        for r in inbox_rows:
+            if r[0]:
+                cp = ''.join(c for c in str(r[0]) if c.isdigit())[-10:]
+                if len(cp) == 10:
+                    sent_today_numbers.add(cp)
+    except Exception as e:
+        logger.warning(f"[VGK-STATEMENT] Dedup check warning: {e}")
 
     dispatched_count = 0
     skipped_count = 0
@@ -105,6 +117,9 @@ def run_vgk_member_daily_morning_statement_dispatch(db: Session, trigger_type: s
             skipped_count += 1
             results.append({"member_id": p_id, "name": p_name, "status": "SKIPPED", "reason": "Already sent today"})
             continue
+
+        # Mark as seen in this run to prevent duplicate dispatches if multiple partner records share the same phone
+        sent_today_numbers.add(clean_10)
 
         try:
             summary = get_member_executive_summary(partner_id=str(p_id), db=db, current_employee=MagicMock())
