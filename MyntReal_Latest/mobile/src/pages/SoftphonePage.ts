@@ -615,12 +615,14 @@ export class SoftphonePage {
     }
   }
 
-  private async createCallSession(phone: string): Promise<string> {
+  private async createCallSession(phone: string, isWebRTC: boolean = false): Promise<string> {
     const cleanDest = phone.startsWith('+') ? phone : `+91${phone.replace(/\D/g, '').slice(-10)}`;
     try {
       const resp = await apiService.post<any>('/telephony/plivo/browser/call/initiate', {
         destination_phone: cleanDest,
-        lead_id: null
+        lead_id: null,
+        is_webrtc: isWebRTC,
+        dispatch_provider_call: !isWebRTC
       });
       const data = resp?.data || resp;
       if (data && data.call_session_id) {
@@ -701,7 +703,7 @@ export class SoftphonePage {
     }, 1000);
   }
 
-  private async startCall(numberToDial?: string, contactName?: string, isDirectSim: boolean = false): Promise<void> {
+  private async startCall(numberToDial?: string, contactName?: string): Promise<void> {
     const target = (numberToDial || this.dialNumber || '').trim();
     if (!target || target.replace(/[^0-9]/g, '').length < 3) {
       alert('Please enter a valid phone number');
@@ -722,10 +724,7 @@ export class SoftphonePage {
       await this.initPlivoWebRTC();
     }
 
-    if (!this.plivoClient || !this.isWebRTCRegistered) {
-      alert('Softphone WebRTC service is initializing or unavailable. Please check microphone permissions and network connection.');
-      return;
-    }
+    const isWebRTCActive = Boolean(this.isWebRTCRegistered && this.plivoClient);
 
     this.isInCall = true;
     this.isCallConnected = false;
@@ -742,25 +741,27 @@ export class SoftphonePage {
     }
 
     // 2. Prepare backend VoIPCallSession for CRM tracking & audit logs
-    const sessionId = await this.createCallSession(cleanNumber);
+    const sessionId = await this.createCallSession(cleanNumber, isWebRTCActive);
 
-    // 3. Dispatch call strictly through In-App WebRTC Softphone UI
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      try {
-        this.localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch (micErr) {
-        console.warn('[SoftphonePage] Mic permission notice:', micErr);
+    // 3. Dispatch call strictly through In-App WebRTC Softphone UI if active
+    if (isWebRTCActive) {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          this.localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (micErr) {
+          console.warn('[SoftphonePage] Mic permission notice:', micErr);
+        }
       }
-    }
 
-    try {
-      const extraHeaders = {
-        'X-PH-Call-Session-ID': sessionId,
-        'X-PH-Destination': cleanNumber
-      };
-      this.plivoClient.call(cleanNumber, extraHeaders);
-    } catch (err) {
-      console.warn('[SoftphonePage] Plivo WebRTC client dial error:', err);
+      try {
+        const extraHeaders = {
+          'X-PH-Call-Session-ID': sessionId,
+          'X-PH-Destination': cleanNumber
+        };
+        this.plivoClient.call(cleanNumber, extraHeaders);
+      } catch (err) {
+        console.warn('[SoftphonePage] Plivo WebRTC client dial error:', err);
+      }
     }
 
     // 5. Route audio to normal in-call EARPIECE by default (speaker OFF)
