@@ -103,8 +103,13 @@ class CallFlowInterpreter:
                 except Exception as e:
                     logger.warning(f"[FLOW-INTERPRETER] Session provider_call_id update error: {e}")
 
+            sess_id_val = sess.call_session_id if sess else (call_session_id or '')
+            domain = base_api_url.rstrip('/') if base_api_url else "https://www.myntreal.com"
+            action_url = f"{domain}/api/v1/telephony/plivo/dial-action?session_id={sess_id_val}"
+            callback_url = f"{domain}/api/v1/telephony/plivo/dial-callback?session_id={sess_id_val}"
+
             return cls._generate_xml_response([
-                f'<Dial callerId="{clean_caller_id}">',
+                f'<Dial callerId="{clean_caller_id}" action="{action_url}" method="POST" callbackUrl="{callback_url}" callbackMethod="POST" redirect="false">',
                 f'  <Number>{clean_dest_digits}</Number>',
                 f'</Dial>'
             ])

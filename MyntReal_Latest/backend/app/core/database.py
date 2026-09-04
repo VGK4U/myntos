@@ -81,17 +81,19 @@ else:
             settings.DATABASE_URL,
             pool_pre_ping=True,       # Detect stale connections before use
             pool_recycle=1800,        # Recycle every 30m — local postgres never drops idle conns
-            pool_size=5,              # Generous pool for dev — no external connection ceiling
-            max_overflow=10,
+            pool_size=10,              # Generous pool for dev — no external connection ceiling
+            max_overflow=20,
             pool_timeout=30,          # Standard 30s wait for a free slot
             pool_use_lifo=True,       # Reuse warm connections
             connect_args={
-                "connect_timeout": 10,  # Fail fast if Helium unreachable
-                # DC-MIGRATION-TIMEOUT-001: statement_timeout is NOT set at connection level.
-                # It is applied per-session inside get_db() so API requests are still protected
-                # but startup migration sessions (engine.connect() / SessionLocal() direct) are
-                # never killed mid-migration-key-check.
+                "connect_timeout": 10,
             },
+            echo=False
+        )
+        ddl_engine = create_engine(
+            settings.DATABASE_URL,
+            poolclass=NullPool,
+            connect_args={"connect_timeout": 10},
             echo=False
         )
     else:
@@ -100,18 +102,27 @@ else:
         engine = create_engine(
             _db_url_str,
             pool_pre_ping=True,
-            pool_size=15,
-            max_overflow=15,
+            pool_size=30,
+            max_overflow=30,
             pool_timeout=30,
             pool_recycle=300,
             pool_use_lifo=True,
             connect_args={
-                "connect_timeout": 15,
+                "connect_timeout": 45,
                 "sslmode": "require",
                 "keepalives": 1,
                 "keepalives_idle": 30,
                 "keepalives_interval": 10,
                 "keepalives_count": 3,
+            },
+            echo=False
+        )
+        ddl_engine = create_engine(
+            _db_url_str,
+            poolclass=NullPool,
+            connect_args={
+                "connect_timeout": 45,
+                "sslmode": "require",
             },
             echo=False
         )
@@ -701,7 +712,7 @@ def run_pending_migrations():
     
     for fix in constraint_fixes:
         try:
-            with engine.begin() as conn:
+            with ddl_engine.begin() as conn:
                 result = conn.execute(text(fix["check"]))
                 if result.fetchone() is None:
                     conn.execute(text(fix["drop"]))
@@ -741,7 +752,7 @@ def run_pending_migrations():
             _other_m_names.add(_m["name"])
 
     try:
-        with engine.connect() as _bconn:
+        with ddl_engine.connect() as _bconn:
             if _col_m_names:
                 _pairs = ", ".join(
                     f"('{t}', '{c}')" for t, c in _col_m_names.values()
@@ -781,14 +792,14 @@ def run_pending_migrations():
             elif _name in _tbl_m_names:
                 _exists = _tbl_m_names[_name] in _tbl_names_set
             else:
-                with engine.connect() as conn:
+                with ddl_engine.connect() as conn:
                     _r = conn.execute(text(migration["check"]))
                     _exists = _r.fetchone() is not None
 
             if _exists:
                 print(f"   ⏭️  Already exists: {_name}")
             else:
-                with engine.begin() as conn:
+                with ddl_engine.begin() as conn:
                     conn.execute(text(migration["migrate"]))
                 print(f"   ✅ Migration applied: {_name}")
         except Exception as e:
@@ -800,7 +811,7 @@ def run_pending_migrations():
 
     for fix in column_type_fixes:
         try:
-            with engine.begin() as conn:
+            with ddl_engine.begin() as conn:
                 result = conn.execute(text(fix["check"]))
                 if result.fetchone() is None:
                     conn.execute(text(fix["migrate"]))

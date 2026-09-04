@@ -41,7 +41,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from app.core.config import settings
-from app.core.database import engine, SessionLocal
+from app.core.database import engine, ddl_engine, SessionLocal
 from app.api.v1.api import api_router
 from app.core.security import get_current_user
 from app.core.exceptions import (
@@ -4583,7 +4583,7 @@ def _startup_worker():
     db_connected = False
     for _attempt in range(3):
         try:
-            with engine.connect() as _conn:
+            with ddl_engine.connect() as _conn:
                 _conn.execute(_text("SELECT 1"))
             db_connected = True
             print(f"[DC-STARTUP] ✅ DB connected (attempt {_attempt + 1})", flush=True)
@@ -4606,7 +4606,7 @@ def _startup_worker():
     from sqlalchemy import text as _sa_text
     _applied_keys: set = set()
     try:
-        with engine.connect() as _kc:
+        with ddl_engine.connect() as _kc:
             _applied_keys = {r[0] for r in _kc.execute(_sa_text("SELECT key FROM dc_migrations")).fetchall()}
         print(f"[DC-STARTUP] ✅ Migration key cache: {len(_applied_keys)} keys preloaded (fast-skip active)", flush=True)
     except Exception as _ke:
@@ -4615,7 +4615,7 @@ def _startup_worker():
     # ── DC-STARTUP: Ensure Critical Unique Indexes & Constraints ─────────────
     # Guarantees ON CONFLICT clauses (route_path, menu_code, name) never fail with InvalidColumnReference
     try:
-        with engine.begin() as _conn:
+        with ddl_engine.begin() as _conn:
             _conn.execute(_sa_text("DELETE FROM staff_menu_registry a USING staff_menu_registry b WHERE a.id > b.id AND a.route_path = b.route_path"))
             _conn.execute(_sa_text("CREATE UNIQUE INDEX IF NOT EXISTS idx_menu_registry_route_unique ON staff_menu_registry(route_path)"))
             _conn.execute(_sa_text("DELETE FROM staff_menu_registry a USING staff_menu_registry b WHERE a.id > b.id AND a.menu_code = b.menu_code"))
@@ -4635,7 +4635,7 @@ def _startup_worker():
         """Mark migration as applied in DB + update local cache atomically."""
         try:
             from sqlalchemy import text as _sa_text2
-            with engine.begin() as _mc:
+            with ddl_engine.begin() as _mc:
                 _mc.execute(_sa_text2("INSERT INTO dc_migrations(key) VALUES(:k) ON CONFLICT DO NOTHING"), {"k": key})
             _applied_keys.add(key)
         except Exception:
@@ -4646,7 +4646,7 @@ def _startup_worker():
     # ANY db.query(OfficialPartner) emits a full SELECT and crashes with UndefinedColumn.
     # Running this first ensures every subsequent migration that touches official_partners works.
     try:
-        with engine.begin() as _c:
+        with ddl_engine.begin() as _c:
             for _sql in [
                 # company_id: no FK constraint here — companies table may not exist yet at this point in startup
                 "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS company_id INTEGER",
