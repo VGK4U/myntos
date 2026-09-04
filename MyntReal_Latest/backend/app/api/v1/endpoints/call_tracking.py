@@ -23,7 +23,27 @@ from app.models.staff import StaffEmployee, StaffDepartment
 from app.utils.staff_hierarchy import get_team_member_ids
 
 # CT Protocol: Roles with full org visibility in call tracking (not limited to their downline)
-CT_FULL_ACCESS = {'vgk4u', 'key_leadership', 'leadership_role', 'ea', 'hr', 'accounts'}
+CT_FULL_ACCESS = {
+    'vgk4u', 'key_leadership', 'leadership_role', 'ea', 'hr', 'accounts',
+    'super_admin', 'admin', 'tenant_admin', 'saas_segment_admin', 'management', 'director'
+}
+
+
+def is_ct_full_access(user) -> bool:
+    """Determine if user has unrestricted organization-wide visibility in call tracking."""
+    if not user:
+        return False
+    if getattr(user, 'emp_code', '') == 'MR10001':
+        return True
+    staff_type = (getattr(user, 'staff_type', '') or '').upper()
+    if staff_type in {'VGK4U', 'ADMIN', 'SUPERADMIN', 'SUPER_ADMIN', 'CHIEF_EXECUTIVE', 'EXECUTIVE_DIRECTOR', 'DIRECTOR', 'LEADERSHIP', 'HR', 'ACCOUNTS', 'MANAGEMENT'}:
+        return True
+    if getattr(user, 'admin_scope', None) in ('PLATFORM', 'GLOBAL_SUPERADMIN', 'COMPANY_ADMIN'):
+        return True
+    ct_role = user.role.role_code.lower() if hasattr(user, 'role') and user.role and getattr(user.role, 'role_code', None) else None
+    if ct_role in CT_FULL_ACCESS:
+        return True
+    return False
 from datetime import datetime, timedelta
 import pytz
 import re
@@ -64,8 +84,7 @@ async def sync_call_logs(
 
     # CT Protocol: FULL_ACCESS roles (VGK4U Supreme, Key Leadership, EA, HR, Accounts)
     # bypass the call_tracking_enabled gate — they can always sync their calls
-    _ct_role = staff.role.role_code.lower() if staff.role and staff.role.role_code else None
-    if not staff.call_tracking_enabled and _ct_role not in CT_FULL_ACCESS:
+    if not staff.call_tracking_enabled and not is_ct_full_access(staff):
         return {
             "success": False,
             "message": "Call tracking is not enabled for your account. Contact your manager to enable Quality Test tracking.",
@@ -660,9 +679,9 @@ async def get_call_management_overview(
 
     # CT Protocol: Role-based team scoping
     # CT_FULL_ACCESS roles → full org visibility | all others → their reporting downline only
-    ct_role = current_user.role.role_code.lower() if current_user.role and current_user.role.role_code else None
+    is_full_access = is_ct_full_access(current_user)
     team_scope_ids = None  # None = unrestricted (FULL_ACCESS)
-    if ct_role not in CT_FULL_ACCESS:
+    if not is_full_access:
         team_scope_ids = get_team_member_ids(current_user, db, StaffEmployee)
         if not team_scope_ids:
             return {
@@ -1003,8 +1022,7 @@ async def get_call_slot_breakdown(
         date_to = today.strftime('%Y-%m-%d')
 
     # CT Protocol: Role-based team scoping — mirrors management/overview exactly
-    ct_role = current_user.role.role_code.lower() if current_user.role and current_user.role.role_code else None
-    is_full_access = ct_role in CT_FULL_ACCESS
+    is_full_access = is_ct_full_access(current_user)
     team_scope_ids = None
 
     if not is_full_access:
@@ -1172,8 +1190,7 @@ async def get_staff_call_details(
         raise HTTPException(status_code=404, detail="Staff record not found")
 
     # CT Protocol: scope check — CT_FULL_ACCESS see any staff; others only their downline or self
-    viewer_ct_role = viewer.role.role_code.lower() if viewer.role and viewer.role.role_code else None
-    if viewer_ct_role not in CT_FULL_ACCESS and target_staff_id != current_user.id:
+    if not is_ct_full_access(viewer) and target_staff_id != current_user.id:
         allowed_ids = get_team_member_ids(current_user, db, StaffEmployee)
         if not allowed_ids or target_staff_id not in set(allowed_ids):
             raise HTTPException(status_code=403, detail="Access denied: staff member not in your team")
@@ -1396,8 +1413,7 @@ async def upload_call_recording(
     if not staff:
         raise HTTPException(status_code=404, detail="Staff not found")
 
-    _rec_ct_role = staff.role.role_code.lower() if staff.role and staff.role.role_code else None
-    if not staff.call_tracking_enabled and _rec_ct_role not in CT_FULL_ACCESS:
+    if not staff.call_tracking_enabled and not is_ct_full_access(staff):
         raise HTTPException(status_code=403, detail="Call tracking not enabled for your account")
 
     company_id = staff.base_company_id
