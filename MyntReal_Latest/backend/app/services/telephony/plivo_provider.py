@@ -77,8 +77,8 @@ class PlivoTelephonyProvider(BaseTelephonyProvider):
         metadata: Optional[Dict[str, Any]] = None
     ) -> TelephonyCallResult:
         """
-        Prepares an outbound PSTN call session via Plivo.
-        Returns connection details for Plivo Browser SDK or Server Bridge.
+        Prepares and dispatches an outbound PSTN call session via Plivo REST API.
+        Returns connection details for Plivo SDK or Server Bridge.
         """
         caller_id_val = caller_id or self.default_caller_id
         dest_val = destination_phone.strip()
@@ -86,8 +86,77 @@ class PlivoTelephonyProvider(BaseTelephonyProvider):
             clean = "".join([c for c in dest_val if c.isdigit()])
             dest_val = f"+91{clean[-10:]}" if len(clean) >= 10 else f"+{clean}"
 
-        provider_call_id = f"plivo_{call_session_id}_{os.urandom(4).hex()}"
+        # Clean destination number digits for Plivo (e.g. 916300286103)
+        clean_dest_digits = "".join([c for c in dest_val if c.isdigit()])
+        if len(clean_dest_digits) == 10:
+            clean_dest_digits = f"91{clean_dest_digits}"
+        elif len(clean_dest_digits) == 11 and clean_dest_digits.startswith('0'):
+            clean_dest_digits = f"91{clean_dest_digits[1:]}"
 
+        # Clean caller ID digits for Plivo (e.g. 918031728899)
+        clean_caller_digits = "".join([c for c in (self.default_caller_id or caller_id_val) if c.isdigit()])
+        if not clean_caller_digits:
+            clean_caller_digits = "918031728899"
+
+        # Check if real Plivo API credentials are available
+        if self.auth_id and self.auth_token and not self.auth_id.startswith("mock_"):
+            answer_url = getattr(settings, 'PLIVO_ANSWER_URL', None) or "https://raw.githubusercontent.com/plivo/plivoxml/master/xml/speak.xml"
+            payload = {
+                "from": clean_caller_digits,
+                "to": clean_dest_digits,
+                "answer_url": answer_url,
+                "answer_method": "GET"
+            }
+            try:
+                url = f"https://api.plivo.com/v1/Account/{self.auth_id}/Call/"
+                logger.info(f"[PLIVO-CALL-POST] Initiating call via Plivo API to {clean_dest_digits} (from: {clean_caller_digits})")
+                resp = requests.post(url, auth=(self.auth_id, self.auth_token), json=payload, timeout=10)
+                resp_json = {}
+                try:
+                    resp_json = resp.json()
+                except Exception:
+                    pass
+
+                if resp.status_code in (200, 201, 202):
+                    provider_call_id = resp_json.get("request_uuid") or resp_json.get("api_id") or f"plivo_{call_session_id}"
+                    logger.info(f"[PLIVO-CALL-SUCCESS] Plivo queued call request_uuid: {provider_call_id}")
+                    
+                    client_token = {
+                        "token_type": "PlivoBrowserLeg",
+                        "call_session_id": call_session_id,
+                        "caller_id": clean_caller_digits,
+                        "destination": clean_dest_digits,
+                        "agent_username": operator_info.get("username", f"agent_{operator_info.get('id', 1)}"),
+                        "metadata": metadata or {}
+                    }
+                    return TelephonyCallResult(
+                        success=True,
+                        provider_call_id=provider_call_id,
+                        initial_status=CallStateEnum.DIALING,
+                        client_token=client_token,
+                        raw_response=resp_json
+                    )
+                else:
+                    err_detail = resp_json.get("error") or resp.text
+                    logger.error(f"[PLIVO-CALL-REJECTED] HTTP {resp.status_code}: {err_detail}")
+                    return TelephonyCallResult(
+                        success=False,
+                        provider_call_id="",
+                        initial_status=CallStateEnum.FAILED,
+                        error_message=f"Plivo Call API rejected call (HTTP {resp.status_code}): {err_detail}",
+                        raw_response=resp_json
+                    )
+            except Exception as e:
+                logger.error(f"[PLIVO-CALL-EXCEPTION] Failed to send Call request to Plivo: {e}")
+                return TelephonyCallResult(
+                    success=False,
+                    provider_call_id="",
+                    initial_status=CallStateEnum.FAILED,
+                    error_message=f"Plivo connection error: {str(e)}"
+                )
+
+        # Mock fallback for development without valid Plivo credentials
+        provider_call_id = f"plivo_{call_session_id}_{os.urandom(4).hex()}"
         client_token = {
             "token_type": "PlivoBrowserLeg",
             "call_session_id": call_session_id,
