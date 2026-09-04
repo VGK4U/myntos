@@ -12,7 +12,7 @@ from app.models.user import User
 from app.models.whatsapp import WhatsAppControl, MessageLog
 from app.models.system_control import AppSettings
 from app.models.staff import StaffEmployee
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List, Any, Union, Dict
 from datetime import datetime, timedelta
 import logging
@@ -2373,156 +2373,297 @@ def _get_permitted_phones_for_staff(db: Session, staff: StaffEmployee, scope: st
     return permitted_phones
 
 
+class WAClaimConversationPayload(BaseModel):
+    phone: str = Field(..., description="10-digit phone number or international format")
+    recipient_type: Optional[str] = "individual"
+
+
+@router.post("/claim-conversation")
+def claim_whatsapp_conversation(
+    payload: WAClaimConversationPayload,
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(_require_staff)
+):
+    """
+    Assign an unassigned company conversation to the currently logged-in staff member.
+    Updates matching WAInbox records and links/assigns the CRM lead if unassigned.
+    """
+    raw_phone = (payload.phone or "").strip()
+    digits = ''.join(filter(str.isdigit, raw_phone))
+    if len(digits) < 10:
+        raise HTTPException(status_code=400, detail="A valid 10-digit mobile number is required")
+    clean_phone = digits[-10:]
+
+    try:
+        from app.models.whatsapp import WAInbox
+        from app.models.crm import CRMLead
+        from sqlalchemy import or_
+
+        now_utc = datetime.utcnow()
+        # 1. Update all WAInbox entries for this phone number
+        inbox_records = db.query(WAInbox).filter(
+            or_(
+                WAInbox.from_phone.like(f"%{clean_phone}"),
+                WAInbox.from_phone == clean_phone,
+                WAInbox.from_phone == f"91{clean_phone}"
+            )
+        ).all()
+
+        for rec in inbox_records:
+            rec.assigned_to_emp_id = current_user.id
+            rec.assigned_at = now_utc
+            if rec.status == 'new' or not rec.status:
+                rec.status = 'in_progress'
+            rec.is_read = True
+
+        # 2. If CRM Lead exists and is unassigned, assign handler to staff member
+        crm_lead = db.query(CRMLead).filter(
+            or_(CRMLead.phone.like(f"%{clean_phone}"), CRMLead.alternate_phone.like(f"%{clean_phone}"))
+        ).first()
+        if crm_lead:
+            if not crm_lead.telecaller_id and not crm_lead.field_staff_id and (not crm_lead.handler_id or crm_lead.handler_type == 'unassigned'):
+                crm_lead.handler_type = 'staff'
+                crm_lead.handler_id = current_user.emp_code
+                crm_lead.telecaller_id = current_user.id
+
+        db.commit()
+        return {
+            "success": True,
+            "message": f"Conversation with {clean_phone} successfully assigned to you.",
+            "assigned_to": f"{current_user.first_name} {current_user.last_name or ''}".strip(),
+            "emp_code": current_user.emp_code,
+            "phone": clean_phone
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error(f"[WA-CLAIM] Failed to claim conversation: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to claim conversation: {e}")
+
+
 @router.get("/conversations-hub")
 def get_whatsapp_conversations_hub(
     search: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
     scope: Optional[str] = Query('assigned_tagged'),
+    source_filter: Optional[str] = Query('all'),
     db: Session = Depends(get_db),
     current_user=Depends(_require_staff)
 ):
-    """Aggregate all recent conversations sent or received from the scanned WhatsApp bot number across wa_inbox and message_log with Group & Channel parity."""
+    """
+    Unified WhatsApp Conversations Hub.
+    - scope='assigned_tagged' (Tab 1: My Messages): Shows two-way conversations assigned to or replied by current staff.
+    - scope='downline' (Tab 2: Team Messages): Shows conversations assigned to or handled by downline staff. Excludes automated background API/OTP logs.
+    - scope='company' (Tab 3: Company Messages): Shows unassigned/unreplied inbound messages on company numbers with channel filters (all, scanned, api).
+    """
     try:
         from app.models.crm import CRMLead
-        from app.models.whatsapp import WAInbox
+        from app.models.whatsapp import WAInbox, MessageLog
         from sqlalchemy import or_
 
         staff = current_user
-        permitted_phones = _get_permitted_phones_for_staff(db, staff, scope=scope or 'assigned_tagged')
-
-        # Load system configured target groups and channels
-        targets = _load_targets_from_db(db)
-        target_map = {}
-        for j_id, g_list in targets.items():
-            for g in (g_list or []):
-                t_type = (g.get("type") or "group").upper()
-                g_name = g.get("name") or "WhatsApp Target"
-                ident = g.get("identifier") or ""
-                clean_ident = ''.join(filter(str.isdigit, ident))[-10:]
-                if clean_ident and len(clean_ident) == 10:
-                    target_map[clean_ident] = {"name": g_name, "type": t_type}
-                if ident:
-                    target_map[ident.lower()] = {"name": g_name, "type": t_type}
-
         contact_map = {}
 
-        # 1. Fetch recent messages from WAInbox
-        inbox_query = db.query(WAInbox).filter(WAInbox.from_phone.isnot(None))
-        if search:
-            s = f"%{search.strip()}%"
-            inbox_query = inbox_query.filter(or_(WAInbox.from_phone.ilike(s), WAInbox.from_name.ilike(s), WAInbox.body_text.ilike(s)))
-        
-        for m in inbox_query.order_by(desc(WAInbox.received_at)).limit(300).all():
-            raw_phone = m.from_phone or ''
-            clean_phone = ''.join(filter(str.isdigit, raw_phone))[-10:]
-            if not clean_phone or len(clean_phone) < 10:
-                continue
+        # ── Scope 3: COMPANY UNASSIGNED MESSAGES (Tab 3) ──────────────────────
+        if scope in ('company', 'company_unassigned'):
+            inbox_q = db.query(WAInbox).filter(
+                WAInbox.from_phone.isnot(None),
+                WAInbox.assigned_to_emp_id.is_(None),
+                (WAInbox.replied.is_(False) | WAInbox.replied_by_id.is_(None)),
+                WAInbox.message_type != 'outbound'
+            )
+            
+            # Channel / Source Filter (all / scanned / api)
+            s_filt = (source_filter or 'all').lower()
+            if s_filt == 'scanned':
+                inbox_q = inbox_q.filter(
+                    or_(
+                        WAInbox.wamid.is_(None),
+                        WAInbox.wamid.like('scanned_%'),
+                        WAInbox.wamid.like('scanned%'),
+                        WAInbox.message_type.in_(['scanned_inbound', 'auto_staff_alert', 'text', 'image', 'audio', 'document']) & ~WAInbox.wamid.like('wamid.%')
+                    )
+                )
+            elif s_filt == 'api':
+                inbox_q = inbox_q.filter(
+                    WAInbox.wamid.isnot(None),
+                    WAInbox.wamid.like('wamid.%')
+                )
 
-            msg_body = (m.body_text or '').lower()
-            msg_type = (m.message_type or '').lower()
+            if search:
+                s = f"%{search.strip()}%"
+                inbox_q = inbox_q.filter(or_(WAInbox.from_phone.ilike(s), WAInbox.from_name.ilike(s), WAInbox.body_text.ilike(s)))
 
-            cat = "Direct Messages"
-            if "congratulations" in msg_body or "payout" in msg_body or "earning" in msg_body:
-                cat = "Payout Alerts"
-            elif "lead" in msg_type or "lead" in msg_body or "chatbot" in msg_body or "service" in msg_body:
-                cat = "Lead Enquiries"
-            elif "ticket" in msg_body or "support" in msg_body or "overdue" in msg_body:
-                cat = "Support Tickets"
-            elif "otp" in msg_type or "verification" in msg_body:
-                cat = "OTP / Auth"
+            for m in inbox_q.order_by(desc(WAInbox.received_at)).limit(300).all():
+                raw_phone = m.from_phone or ''
+                clean_phone = ''.join(filter(str.isdigit, raw_phone))[-10:]
+                if not clean_phone or len(clean_phone) < 10:
+                    continue
 
-            # Determine contact type from target_map
-            c_type = "CONTACT"
-            resolved_name = m.from_name or f"Contact (+91 {clean_phone})"
-            if clean_phone in target_map:
-                c_type = target_map[clean_phone]["type"]
-                resolved_name = target_map[clean_phone]["name"]
+                w_id = str(m.wamid or '')
+                channel_label = "META_API" if w_id.startswith("wamid.") else "SCANNED"
 
-            if clean_phone not in contact_map:
-                contact_map[clean_phone] = {
-                    "phone": clean_phone,
-                    "name": resolved_name,
-                    "contact_type": c_type,
-                    "status": "Active",
-                    "category": cat,
-                    "last_message": m.body_text or "—",
-                    "last_time": m.received_at.strftime('%d %b, %I:%M %p') if m.received_at else '—',
-                    "last_timestamp": m.received_at or datetime.min,
-                    "message_type": m.message_type or 'text',
-                    "delivery_status": m.status or 'delivered',
-                    "unread_count": 1 if (m.message_type == "inbound" and not m.is_read) else 0
+                if clean_phone not in contact_map or (m.received_at and m.received_at > contact_map[clean_phone]["last_timestamp"]):
+                    contact_map[clean_phone] = {
+                        "phone": clean_phone,
+                        "name": m.from_name or f"Customer (+91 {clean_phone})",
+                        "contact_type": "CONTACT",
+                        "status": m.status or "new",
+                        "category": "Direct Messages",
+                        "last_message": m.body_text or "—",
+                        "last_time": m.received_at.strftime('%d %b, %I:%M %p') if m.received_at else '—',
+                        "last_timestamp": m.received_at or datetime.min,
+                        "message_type": m.message_type or 'text',
+                        "delivery_status": m.status or 'delivered',
+                        "unread_count": 1 if not m.is_read else 0,
+                        "channel": channel_label,
+                        "is_unassigned": True
+                    }
+
+        # ── Scope 1 & 2: MY MESSAGES & TEAM MESSAGES ────────────────────────
+        else:
+            permitted_phones = _get_permitted_phones_for_staff(db, staff, scope=scope or 'assigned_tagged')
+
+            # Load system configured target groups and channels
+            targets = _load_targets_from_db(db)
+            target_map = {}
+            for j_id, g_list in targets.items():
+                for g in (g_list or []):
+                    t_type = (g.get("type") or "group").upper()
+                    g_name = g.get("name") or "WhatsApp Target"
+                    ident = g.get("identifier") or ""
+                    clean_ident = ''.join(filter(str.isdigit, ident))[-10:]
+                    if clean_ident and len(clean_ident) == 10:
+                        target_map[clean_ident] = {"name": g_name, "type": t_type}
+                    if ident:
+                        target_map[ident.lower()] = {"name": g_name, "type": t_type}
+
+            # 1. Fetch recent messages from WAInbox
+            inbox_query = db.query(WAInbox).filter(WAInbox.from_phone.isnot(None))
+            if search:
+                s = f"%{search.strip()}%"
+                inbox_query = inbox_query.filter(or_(WAInbox.from_phone.ilike(s), WAInbox.from_name.ilike(s), WAInbox.body_text.ilike(s)))
+            
+            for m in inbox_query.order_by(desc(WAInbox.received_at)).limit(300).all():
+                raw_phone = m.from_phone or ''
+                clean_phone = ''.join(filter(str.isdigit, raw_phone))[-10:]
+                if not clean_phone or len(clean_phone) < 10:
+                    continue
+
+                msg_body = (m.body_text or '').lower()
+                msg_type = (m.message_type or '').lower()
+
+                cat = "Direct Messages"
+                if "congratulations" in msg_body or "payout" in msg_body or "earning" in msg_body:
+                    cat = "Payout Alerts"
+                elif "lead" in msg_type or "lead" in msg_body or "chatbot" in msg_body or "service" in msg_body:
+                    cat = "Lead Enquiries"
+                elif "ticket" in msg_body or "support" in msg_body or "overdue" in msg_body:
+                    cat = "Support Tickets"
+                elif "otp" in msg_type or "verification" in msg_body:
+                    cat = "OTP / Auth"
+
+                # Determine contact type from target_map
+                c_type = "CONTACT"
+                resolved_name = m.from_name or f"Contact (+91 {clean_phone})"
+                if clean_phone in target_map:
+                    c_type = target_map[clean_phone]["type"]
+                    resolved_name = target_map[clean_phone]["name"]
+
+                if clean_phone not in contact_map:
+                    contact_map[clean_phone] = {
+                        "phone": clean_phone,
+                        "name": resolved_name,
+                        "contact_type": c_type,
+                        "status": "Active",
+                        "category": cat,
+                        "last_message": m.body_text or "—",
+                        "last_time": m.received_at.strftime('%d %b, %I:%M %p') if m.received_at else '—',
+                        "last_timestamp": m.received_at or datetime.min,
+                        "message_type": m.message_type or 'text',
+                        "delivery_status": m.status or 'delivered',
+                        "unread_count": 1 if (m.message_type == "inbound" and not m.is_read) else 0,
+                        "is_unassigned": False
+                    }
+                elif m.message_type == "inbound" and not m.is_read:
+                    contact_map[clean_phone]["unread_count"] = contact_map[clean_phone].get("unread_count", 0) + 1
+
+            # 2. Fetch recent human/staff messages from MessageLog (EXCLUDING automated API background logs)
+            target_staff_ids = {staff.id}
+            if scope == 'downline':
+                target_staff_ids = _get_downline_staff_ids(db, staff.id)
+
+            log_query = db.query(MessageLog).filter(
+                MessageLog.mobile_number.isnot(None),
+                or_(
+                    MessageLog.sent_by_staff_id.in_(target_staff_ids),
+                    MessageLog.sent_by_name.like(f"%{staff.emp_code}%"),
+                    MessageLog.sender_type == 'staff'
+                ),
+                ~MessageLog.message_type.in_(['whatsapp_otp', 'otp', 'cron_reminder', 'auto_broadcast'])
+            )
+            if search:
+                s = f"%{search.strip()}%"
+                log_query = log_query.filter(or_(MessageLog.mobile_number.ilike(s), MessageLog.user_name.ilike(s), MessageLog.message_body.ilike(s)))
+
+            for l in log_query.order_by(desc(MessageLog.sent_at)).limit(300).all():
+                raw_phone = l.mobile_number or ''
+                clean_phone = ''.join(filter(str.isdigit, raw_phone))[-10:]
+                if not clean_phone or len(clean_phone) < 10:
+                    continue
+
+                msg_body = (l.message_body or '').lower()
+                msg_type = (l.message_type or '').lower()
+
+                cat = "Direct Messages"
+                if "congratulations" in msg_body or "payout" in msg_body or "earning" in msg_body:
+                    cat = "Payout Alerts"
+                elif "lead" in msg_type or "lead" in msg_body or "chatbot" in msg_body or "service" in msg_body:
+                    cat = "Lead Enquiries"
+                elif "ticket" in msg_body or "support" in msg_body or "overdue" in msg_body:
+                    cat = "Support Tickets"
+
+                last_msg = l.message_body
+                if not last_msg or str(last_msg).strip() in ("", "—", "None", "null"):
+                    last_msg = "Staff Message"
+
+                c_type = contact_map.get(clean_phone, {}).get("contact_type", "CONTACT")
+                raw_uname = str(l.user_name or '').strip()
+                resolved_name = raw_uname if raw_uname and raw_uname not in ("0", "None", "null") and not raw_uname.isdigit() else (contact_map.get(clean_phone, {}).get("name") or f"Customer (+91 {clean_phone})")
+                if clean_phone in target_map:
+                    c_type = target_map[clean_phone]["type"]
+                    resolved_name = target_map[clean_phone]["name"]
+
+                if clean_phone not in contact_map or (l.sent_at and l.sent_at > contact_map[clean_phone]["last_timestamp"]):
+                    unread_prev = contact_map.get(clean_phone, {}).get("unread_count", 0)
+                    contact_map[clean_phone] = {
+                        "phone": clean_phone,
+                        "name": resolved_name,
+                        "contact_type": c_type,
+                        "status": "Active",
+                        "category": cat,
+                        "last_message": last_msg,
+                        "last_time": l.sent_at.strftime('%d %b, %I:%M %p') if l.sent_at else '—',
+                        "last_timestamp": l.sent_at or datetime.min,
+                        "message_type": l.message_type or 'text',
+                        "delivery_status": l.current_status or 'sent',
+                        "unread_count": unread_prev,
+                        "is_unassigned": False
+                    }
+
+            # Filter by permitted phones for staff (strictly personal for assigned_tagged)
+            if permitted_phones is not None:
+                contact_map = {
+                    p: info for p, info in contact_map.items() 
+                    if p in permitted_phones
                 }
-            elif m.message_type == "inbound" and not m.is_read:
-                contact_map[clean_phone]["unread_count"] = contact_map[clean_phone].get("unread_count", 0) + 1
 
-        # 2. Fetch recent messages from MessageLog
-        log_query = db.query(MessageLog).filter(MessageLog.mobile_number.isnot(None))
-        if search:
-            s = f"%{search.strip()}%"
-            log_query = log_query.filter(or_(MessageLog.mobile_number.ilike(s), MessageLog.user_name.ilike(s), MessageLog.message_body.ilike(s)))
-
-        for l in log_query.order_by(desc(MessageLog.sent_at)).limit(300).all():
-            raw_phone = l.mobile_number or ''
-            clean_phone = ''.join(filter(str.isdigit, raw_phone))[-10:]
-            if not clean_phone or len(clean_phone) < 10:
-                continue
-
-            msg_body = (l.message_body or '').lower()
-            msg_type = (l.message_type or '').lower()
-
-            cat = "Direct Messages"
-            if "congratulations" in msg_body or "payout" in msg_body or "earning" in msg_body:
-                cat = "Payout Alerts"
-            elif "lead" in msg_type or "lead" in msg_body or "chatbot" in msg_body or "service" in msg_body:
-                cat = "Lead Enquiries"
-            elif "ticket" in msg_body or "support" in msg_body or "overdue" in msg_body:
-                cat = "Support Tickets"
-            elif "otp" in msg_type or "verification" in msg_body:
-                cat = "OTP / Auth"
-
-            last_msg = l.message_body
-            if not last_msg or str(last_msg).strip() in ("", "—", "None", "null"):
-                m_type = (l.message_type or '').lower()
-                if m_type in ('template', 'morning_wish', 'auto_staff_alert'):
-                    last_msg = "🌅 Good Morning! Wishing you a productive day."
-                elif m_type == 'otp':
-                    last_msg = "🔐 Your OTP verification code"
-                elif m_type:
-                    last_msg = f"[{m_type.replace('_', ' ').title()}]"
-                else:
-                    last_msg = "Automated System Notification"
-
-            c_type = contact_map.get(clean_phone, {}).get("contact_type", "CONTACT")
-            raw_uname = str(l.user_name or '').strip()
-            resolved_name = raw_uname if raw_uname and raw_uname not in ("0", "None", "null") and not raw_uname.isdigit() else (contact_map.get(clean_phone, {}).get("name") or f"Customer (+91 {clean_phone})")
-            if clean_phone in target_map:
-                c_type = target_map[clean_phone]["type"]
-                resolved_name = target_map[clean_phone]["name"]
-
-            if clean_phone not in contact_map or (l.sent_at and l.sent_at > contact_map[clean_phone]["last_timestamp"]):
-                unread_prev = contact_map.get(clean_phone, {}).get("unread_count", 0)
-                contact_map[clean_phone] = {
-                    "phone": clean_phone,
-                    "name": resolved_name,
-                    "contact_type": c_type,
-                    "status": "Active",
-                    "category": cat,
-                    "last_message": last_msg,
-                    "last_time": l.sent_at.strftime('%d %b, %I:%M %p') if l.sent_at else '—',
-                    "last_timestamp": l.sent_at or datetime.min,
-                    "message_type": l.message_type or 'bot_dispatch',
-                    "delivery_status": l.current_status or 'sent',
-                    "unread_count": unread_prev
-                }
-
-        # 3. Enhanced Identity Resolution: Query ONLY matching phones (high-performance targeted lookup)
+        # 3. Enhanced Identity Resolution: Query matching phone names
         from app.models.crm import CRMLead
         from app.models.staff import StaffEmployee
         from app.models.user import User
 
         contact_phones_10 = [p for p in contact_map.keys() if len(p) == 10 and contact_map[p].get("contact_type") not in ("GROUP", "CHANNEL")]
         if contact_phones_10:
-            # Map CRM Leads matching these specific numbers
             leads = db.query(CRMLead.name, CRMLead.phone, CRMLead.alternate_phone).filter(
                 or_(*[CRMLead.phone.like(f"%{p}%") for p in contact_phones_10], *[CRMLead.alternate_phone.like(f"%{p}%") for p in contact_phones_10])
             ).all()
@@ -2535,7 +2676,6 @@ def get_whatsapp_conversations_hub(
                             contact_map[cp]["name"] = l_name
                             contact_map[cp]["contact_type"] = "CONTACT"
 
-            # Map Staff Employees matching these specific numbers
             staff_members = db.query(StaffEmployee.first_name, StaffEmployee.last_name, StaffEmployee.emp_code, StaffEmployee.phone).filter(
                 or_(*[StaffEmployee.phone.like(f"%{p}%") for p in contact_phones_10])
             ).all()
@@ -2548,7 +2688,6 @@ def get_whatsapp_conversations_hub(
                             contact_map[cp]["name"] = f"{full_n} ({ecode})"
                             contact_map[cp]["contact_type"] = "STAFF"
 
-            # Map Registered Users matching these specific numbers
             users = db.query(User.name, User.phone_number).filter(
                 or_(*[User.phone_number.like(f"%{p}%") for p in contact_phones_10])
             ).all()
@@ -2564,7 +2703,6 @@ def get_whatsapp_conversations_hub(
         for p, info in contact_map.items():
             curr_name = str(info.get("name") or "").strip()
             if not curr_name or curr_name in ("System/Auto", "All", "Missed Call", "0", "None", "null", "Staff Lead Dispatch") or curr_name.isdigit():
-                # Check if we have a user or customer name in message_log
                 ml_name_row = db.query(MessageLog.user_name).filter(
                     MessageLog.mobile_number.like(f"%{p}%"),
                     MessageLog.user_name.isnot(None),
@@ -2576,13 +2714,6 @@ def get_whatsapp_conversations_hub(
                     info["name"] = f"Customer (+91 {p})"
             if "contact_type" not in info:
                 info["contact_type"] = "CONTACT"
-
-        # Filter by permitted phones for staff (strictly personal for assigned_tagged)
-        if permitted_phones is not None:
-            contact_map = {
-                p: info for p, info in contact_map.items() 
-                if p in permitted_phones
-            }
 
         sorted_contacts = sorted(contact_map.values(), key=lambda x: str(x["last_timestamp"]), reverse=True)
 
@@ -3059,9 +3190,11 @@ def send_manual_whatsapp_message(
         db.rollback()
         logger.warning(f"[WA-SEND] Could not persist MessageLog: {log_err}")
 
-    # Ingest outbound entry into WAInbox
+    # Ingest outbound entry into WAInbox and auto-assign pending inbound messages
     try:
         from app.models.whatsapp import WAInbox
+        from sqlalchemy import or_
+
         outbound_inbox = WAInbox(
             wamid=wamid,
             from_phone=clean_target[:50],
@@ -3072,14 +3205,34 @@ def send_manual_whatsapp_message(
             is_read=True,
             replied=False,
             replied_by_id=current_user.id,
+            assigned_to_emp_id=current_user.id,
             received_at=now_utc,
             status="sent" if sent_success else "failed"
         )
         db.add(outbound_inbox)
+
+        # Auto-claim/assign all unassigned inbound messages for this contact to replying staff
+        unassigned_inbox = db.query(WAInbox).filter(
+            or_(
+                WAInbox.from_phone.like(f"%{clean_target}"),
+                WAInbox.from_phone == clean_target,
+                WAInbox.from_phone == f"91{clean_target}"
+            ),
+            WAInbox.assigned_to_emp_id.is_(None)
+        ).all()
+        for u_inb in unassigned_inbox:
+            u_inb.assigned_to_emp_id = current_user.id
+            u_inb.assigned_at = now_utc
+            u_inb.replied = True
+            u_inb.replied_by_id = current_user.id
+            u_inb.replied_at = now_utc
+            if u_inb.status == 'new' or not u_inb.status:
+                u_inb.status = 'in_progress'
+
         db.commit()
     except Exception as inb_err:
         db.rollback()
-        logger.warning(f"[WA-SEND] Could not persist WAInbox outbound: {inb_err}")
+        logger.warning(f"[WA-SEND] Could not persist WAInbox outbound/auto-assign: {inb_err}")
 
     if sent_success:
         if client_id:
