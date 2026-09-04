@@ -60,7 +60,7 @@ window._menuMasterReady = window._menuMasterReady || (function loadMenuMaster() 
             return resolve();
         }
         var script = document.createElement("script");
-        script.src = "/public/js/menu-master.js?v=20260902";
+        script.src = "/public/js/menu-master.js?v=20260904_unified";
         script.onload = function() {
             const loadedMaster = window.MENU_MASTER || (typeof MENU_MASTER !== "undefined" ? MENU_MASTER : null);
             if (loadedMaster && loadedMaster.length > 0) {

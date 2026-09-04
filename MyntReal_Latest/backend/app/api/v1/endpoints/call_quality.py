@@ -570,6 +570,8 @@ def day_report(
     result_execs = []
     for sid in all_staff_ids:
         emp = db.query(StaffEmployee).filter_by(id=sid).first()
+        if not emp or emp.status != 'active' or emp.is_deleted or (emp.emp_code and emp.emp_code.startswith('EMP_TEST_')) or (emp.staff_type and emp.staff_type in ('SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN')):
+            continue
         e_logs = exec_logs[sid]
         e_revs = exec_reviews[sid]
 
@@ -695,6 +697,8 @@ def range_report(
     result_execs = []
     for sid in all_staff_ids:
         emp = db.query(StaffEmployee).filter_by(id=sid).first()
+        if not emp or emp.status != 'active' or emp.is_deleted or (emp.emp_code and emp.emp_code.startswith('EMP_TEST_')) or (emp.staff_type and emp.staff_type in ('SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN')):
+            continue
         e_logs = exec_logs[sid]
         e_revs = exec_reviews[sid]
 

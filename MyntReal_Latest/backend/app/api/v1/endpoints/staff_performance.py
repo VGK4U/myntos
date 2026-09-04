@@ -1960,7 +1960,9 @@ def get_incentive_achievements(
             "COALESCE(d.name, 'Unassigned') as department_name "
             "FROM staff_employees e "
             "LEFT JOIN staff_departments d ON d.id = e.department_id "
-            "WHERE e.status = 'active'"
+            "WHERE e.status = 'active' AND e.is_deleted = FALSE "
+            "AND e.emp_code NOT LIKE 'EMP_TEST_%' "
+            "AND (e.staff_type IS NULL OR e.staff_type NOT IN ('SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'))"
             + (" AND e.base_company_id = :co" if not all_companies else "")
             + " ORDER BY e.full_name, e.emp_code"
         )
@@ -1983,7 +1985,9 @@ def get_incentive_achievements(
                 "COALESCE(d.name, 'Unassigned') as department_name "
                 "FROM staff_employees e "
                 "LEFT JOIN staff_departments d ON d.id = e.department_id "
-                "WHERE e.id = ANY(:ids)"
+                "WHERE e.id = ANY(:ids) AND e.status = 'active' AND e.is_deleted = FALSE "
+                "AND e.emp_code NOT LIKE 'EMP_TEST_%' "
+                "AND (e.staff_type IS NULL OR e.staff_type NOT IN ('SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'))"
             ), {'ids': int_ids}).fetchall()
             emp_map = {str(r[0]): {'emp_code': r[1], 'name': r[2], 'dept_id': r[3], 'department': r[4]} for r in emps}
             for eid in emp_map:

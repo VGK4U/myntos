@@ -19983,11 +19983,11 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.setHeader('Content-Type', 'text/html'); res.end(data);
     });
   } else if (url.startsWith('/staff/crm/sales-report')) {
-    const filePath = path.join(__dirname, 'staff_sales_report.html');
-    readFileWithRetry(filePath, (err, data) => {
-      if (err) { console.error('[DC] staff_sales_report.html not found:', err.message); res.status(404).send('Page not found'); return; }
-      res.setHeader('Content-Type', 'text/html'); res.end(data);
-    });
+    const qIdx = url.indexOf('?');
+    const query = qIdx !== -1 ? '&' + url.slice(qIdx + 1) : '';
+    res.writeHead(302, { 'Location': '/staff/crm/dashboard?tab=quality' + query });
+    res.end();
+    return;
   } else if (url.startsWith('/staff/crm/ai-segments')) {
     const filePath = path.join(__dirname, 'staff_ai_segments.html');
     readFileWithRetry(filePath, (err, data) => {
@@ -20001,13 +20001,10 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.setHeader('Content-Type', 'text/html'); res.end(data);
     });
   } else if (url.startsWith('/staff/call-management')) {
-    const filePath = path.join(__dirname, 'staff_call_management.html');
-    readFileWithRetry(filePath, (err, data) => {
-      if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
-      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
-      res.writeHead(200, getStrictNoCacheHeaders());
-      res.end(html);
-    });
+    const qIdx = url.indexOf('?');
+    const query = qIdx !== -1 ? '&' + url.slice(qIdx + 1) : '';
+    res.writeHead(302, { 'Location': '/staff/crm/dashboard?tab=calls' + query });
+    res.end();
     return;
   } else if (url.startsWith('/staff/operator-calls')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';

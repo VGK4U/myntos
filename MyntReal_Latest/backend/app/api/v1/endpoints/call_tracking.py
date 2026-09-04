@@ -753,7 +753,13 @@ async def get_call_management_overview(
             StaffEmployee.id, StaffEmployee.full_name, StaffEmployee.emp_code,
             StaffEmployee.department_id, StaffEmployee.reporting_manager_id,
             StaffEmployee.call_tracking_enabled
-        ).filter(StaffEmployee.id.in_(staff_ids)).all()
+        ).filter(
+            StaffEmployee.id.in_(staff_ids),
+            StaffEmployee.status == 'active',
+            StaffEmployee.is_deleted == False,
+            ~StaffEmployee.emp_code.like('EMP_TEST_%'),
+            or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN']))
+        ).all()
         staff_map = {r.id: {'name': r.full_name, 'emp_code': r.emp_code, 'dept_id': r.department_id, 'mgr_id': r.reporting_manager_id, 'call_tracking_enabled': r.call_tracking_enabled} for r in rows}
         sync_rows = db.query(
             StaffCallSyncLog.staff_id,
@@ -814,7 +820,10 @@ async def get_call_management_overview(
     staff_list_q = db.query(
         StaffEmployee.id, StaffEmployee.full_name, StaffEmployee.emp_code, StaffEmployee.call_tracking_enabled
     ).filter(
-        StaffEmployee.status == 'active'
+        StaffEmployee.status == 'active',
+        StaffEmployee.is_deleted == False,
+        ~StaffEmployee.emp_code.like('EMP_TEST_%'),
+        or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN']))
     )
     if team_scope_ids is not None:
         staff_list_q = staff_list_q.filter(StaffEmployee.id.in_(team_scope_ids))
@@ -826,6 +835,9 @@ async def get_call_management_overview(
 
     managers = db.query(StaffEmployee.id, StaffEmployee.full_name, StaffEmployee.emp_code).filter(
         StaffEmployee.status == 'active',
+        StaffEmployee.is_deleted == False,
+        ~StaffEmployee.emp_code.like('EMP_TEST_%'),
+        or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'])),
         StaffEmployee.id.in_(
             db.query(distinct(StaffEmployee.reporting_manager_id)).filter(
                 StaffEmployee.reporting_manager_id.isnot(None)
@@ -886,7 +898,7 @@ async def get_call_management_overview(
             'last_synced_at': sync_map[s.staff_id].isoformat() if sync_map.get(s.staff_id) else None,
             'vgk_created': vgk_map_ct.get(s.staff_id, 0),
             'wa_shares': wa_map_ct.get(s.staff_id, 0),
-        } for s in per_staff],
+        } for s in per_staff if s.staff_id in staff_map],
         "daily_trend": [{
             'date': d.call_date,
             'calls': d.calls,
@@ -1063,7 +1075,13 @@ async def get_call_slot_breakdown(
         rows = db.query(
             StaffEmployee.id, StaffEmployee.full_name, StaffEmployee.emp_code,
             StaffEmployee.department_id, StaffEmployee.call_tracking_enabled
-        ).filter(StaffEmployee.id.in_(staff_ids)).all()
+        ).filter(
+            StaffEmployee.id.in_(staff_ids),
+            StaffEmployee.status == 'active',
+            StaffEmployee.is_deleted == False,
+            ~StaffEmployee.emp_code.like('EMP_TEST_%'),
+            or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN']))
+        ).all()
         dept_ids = list({r.department_id for r in rows if r.department_id})
         if dept_ids:
             depts = db.query(StaffDepartment.id, StaffDepartment.name).filter(StaffDepartment.id.in_(dept_ids)).all()
@@ -1079,7 +1097,9 @@ async def get_call_slot_breakdown(
     org_slots = {k: _empty() for k in ALL_SLOT_KEYS}
     per_staff_result = []
     for sid, slots in sorted(staff_data.items(), key=lambda x: -_total(x[1])['calls']):
-        info = staff_info_map.get(sid, {'name': 'Unknown', 'emp_code': '', 'department': '', 'call_tracking_enabled': False})
+        info = staff_info_map.get(sid)
+        if not info:
+            continue
         total = _total(slots)
         for sk in ALL_SLOT_KEYS:
             for metric in org_slots[sk]:
