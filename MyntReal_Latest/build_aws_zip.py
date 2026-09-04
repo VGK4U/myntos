@@ -3,10 +3,13 @@ import zipfile
 import shutil
 from pathlib import Path
 
+import tempfile
+
 def create_zip():
     source_dir = str(Path(__file__).resolve().parent)
     final_zip_path = str(Path(__file__).resolve().parent / "MyntReal_AWS_Deploy.zip")
-    temp_zip_path = "/tmp/MyntReal_AWS_Deploy_temp.zip"
+    deploy_zip_path = str(Path(__file__).resolve().parent / "deployment.zip")
+    temp_zip_path = os.path.join(tempfile.gettempdir(), "MyntReal_AWS_Deploy_temp.zip")
     
     # Exclude non-production directory names anywhere in the tree
     exclude_dir_names = {
@@ -62,8 +65,12 @@ def create_zip():
                     
                 zipf.write(file_path, arcname)
                 
-    shutil.move(temp_zip_path, final_zip_path)
-    print("Deployment zip created successfully!")
+    shutil.copy2(temp_zip_path, final_zip_path)
+    shutil.copy2(temp_zip_path, deploy_zip_path)
+    shutil.copy2(temp_zip_path, str(Path(__file__).resolve().parent / "MyntReal_AWS_Deploy_Full.zip"))
+    if os.path.exists(temp_zip_path):
+        os.remove(temp_zip_path)
+    print(f"Deployment zips updated successfully: {final_zip_path}, {deploy_zip_path}")
 
 if __name__ == "__main__":
     create_zip()
