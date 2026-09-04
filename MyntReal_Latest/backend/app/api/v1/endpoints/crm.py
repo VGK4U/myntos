@@ -2310,7 +2310,10 @@ def get_crm_dashboard_v2(
             emp_query = db.query(StaffEmployee).filter(
                 StaffEmployee.status == 'active',
                 StaffEmployee.is_deleted == False,
-                ~StaffEmployee.emp_code.like('EMP_TEST_%'),
+                ~StaffEmployee.emp_code.like('EMP_%'),
+                ~StaffEmployee.emp_code.like('SA_%'),
+                ~StaffEmployee.full_name.ilike('Test%'),
+                ~StaffEmployee.full_name.ilike('Super Admin%'),
                 or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN']))
             )
             if company_id:
@@ -2330,7 +2333,10 @@ def get_crm_dashboard_v2(
                 StaffEmployee.id.in_(downline_ids),
                 StaffEmployee.status == 'active',
                 StaffEmployee.is_deleted == False,
-                ~StaffEmployee.emp_code.like('EMP_TEST_%'),
+                ~StaffEmployee.emp_code.like('EMP_%'),
+                ~StaffEmployee.emp_code.like('SA_%'),
+                ~StaffEmployee.full_name.ilike('Test%'),
+                ~StaffEmployee.full_name.ilike('Super Admin%'),
                 or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN']))
             )
             if department_id:
