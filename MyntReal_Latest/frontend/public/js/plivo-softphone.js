@@ -202,6 +202,12 @@
                         } else if (typeof this.client.login === 'function') {
                             this.client.login(this.jwtToken);
                         }
+
+                        // Wait up to 4 seconds for onLoginSuccess event to set isRegistered = true
+                        for (let i = 0; i < 20; i++) {
+                            if (this.isRegistered) break;
+                            await new Promise((r) => setTimeout(r, 200));
+                        }
                     }
                 }
             } catch (err) {

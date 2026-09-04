@@ -285,6 +285,12 @@ export class SoftphonePage {
           } else if (typeof this.plivoClient.login === 'function') {
             this.plivoClient.login(accessToken);
           }
+
+          // Wait up to 4 seconds for onLogin event to set isWebRTCRegistered = true
+          for (let i = 0; i < 20; i++) {
+            if (this.isWebRTCRegistered) break;
+            await new Promise((r) => setTimeout(r, 200));
+          }
         }
       }
     } catch (e) {

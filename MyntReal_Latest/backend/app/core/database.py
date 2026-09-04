@@ -100,10 +100,10 @@ else:
         engine = create_engine(
             _db_url_str,
             pool_pre_ping=True,
-            pool_size=5,
-            max_overflow=5,
-            pool_timeout=15,
-            pool_recycle=180,
+            pool_size=15,
+            max_overflow=15,
+            pool_timeout=30,
+            pool_recycle=300,
             pool_use_lifo=True,
             connect_args={
                 "connect_timeout": 15,
