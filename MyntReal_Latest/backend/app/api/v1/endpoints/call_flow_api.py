@@ -310,17 +310,7 @@ async def plivo_inbound_answer(
     caller_phone = form_data.get("From", "")
     called_did = form_data.get("To", "")
     call_uuid = form_data.get("CallUUID", "")
-    
-    headers = {k.lower(): v for k, v in request.headers.items()}
-    session_id_param = (
-        request.query_params.get("session_id") or
-        form_data.get("session_id") or
-        form_data.get("X-PH-Call-Session-ID") or
-        form_data.get("SIP-H-X-PH-Call-Session-ID") or
-        headers.get("sip-h-x-ph-call-session-id") or
-        headers.get("x-ph-call-session-id") or
-        ""
-    )
+    session_id_param = request.query_params.get("session_id") or form_data.get("session_id") or form_data.get("X-PH-Call-Session-ID", "")
 
     base_url = str(request.base_url).rstrip('/')
     xml_str = CallFlowInterpreter.handle_inbound_call(
@@ -358,175 +348,34 @@ async def plivo_flow_step(
     return Response(content=xml_str, media_type="application/xml")
 
 
-@router.post("/plivo/dial-callback")
-async def plivo_dial_callback(
-    request: Request,
-    session_id: Optional[str] = Query(None),
-    db: Session = Depends(get_db)
-):
-    """
-    Real-time Plivo Dial Status Callback URL.
-    Invoked when Leg B (Customer PSTN) rings, answers, or hangs up during a WebRTC <Dial> call.
-    Idempotently updates VoIPCallSession status to 'connected' / 'answered' / 'ended',
-    captures ALegUUID and BLegUUID in session metadata, and records answer time and talk duration.
-    """
-    form_data = await request.form()
-    payload = dict(form_data)
-    
-    sess_id = session_id or payload.get("session_id") or payload.get("X-PH-Call-Session-ID")
-    call_uuid = payload.get("CallUUID") or payload.get("ALegUUID") or payload.get("provider_call_id")
-    bleg_uuid = payload.get("DialBLegUUID") or payload.get("BLegUUID")
-    event_name = (payload.get("Event") or payload.get("event") or "").lower()
-    dial_status = (payload.get("DialStatus") or payload.get("DialBLegStatus") or payload.get("Status") or "").lower()
-
-    logger.info(f"[PLIVO-DIAL-CALLBACK] Session '{sess_id}' | CallUUID: {call_uuid} | BLegUUID: {bleg_uuid} | Event: '{event_name}' | DialStatus: '{dial_status}'")
-
-    session = None
-    if sess_id:
-        session = db.query(VoIPCallSession).filter(VoIPCallSession.call_session_id == sess_id).first()
-    if not session and call_uuid:
-        session = db.query(VoIPCallSession).filter(VoIPCallSession.provider_call_id == call_uuid).first()
-
-    if session:
-        # Idempotently update metadata JSON with both call leg UUIDs
-        meta = {}
-        if session.metadata_json:
-            try:
-                meta = json.loads(session.metadata_json) if isinstance(session.metadata_json, str) else dict(session.metadata_json)
-            except Exception:
-                meta = {}
-        
-        if call_uuid:
-            meta["aleg_uuid"] = call_uuid
-            if not session.provider_call_id:
-                session.provider_call_id = call_uuid
-        if bleg_uuid:
-            meta["bleg_uuid"] = bleg_uuid
-
-        meta["last_dial_event"] = event_name
-        meta["last_dial_status"] = dial_status
-        session.metadata_json = json.dumps(meta)
-
-        now = get_indian_time()
-
-        # Handle Answer Event
-        if event_name == 'answer' or dial_status in ('answered', 'in-progress'):
-            if not CallStateEnum(session.status).is_terminal():
-                session.status = CallStateEnum.CONNECTED.value
-                if not session.answered_at:
-                    session.answered_at = now
-                logger.info(f"[PLIVO-DIAL-CALLBACK] Session '{session.call_session_id}' status updated to CONNECTED (Answered at {now.isoformat()})")
-
-        # Handle Hangup / Completed Event
-        elif event_name in ('hangup', 'completed') or dial_status in ('completed', 'busy', 'no-answer', 'failed', 'cancelled', 'timeout', 'rejected'):
-            if not CallStateEnum(session.status).is_terminal():
-                status_map = {
-                    "completed": CallStateEnum.ENDED.value,
-                    "hangup": CallStateEnum.ENDED.value,
-                    "busy": CallStateEnum.BUSY.value,
-                    "no-answer": CallStateEnum.NO_ANSWER.value,
-                    "failed": CallStateEnum.FAILED.value,
-                    "rejected": CallStateEnum.REJECTED.value,
-                    "cancelled": CallStateEnum.ENDED.value,
-                }
-                session.status = status_map.get(dial_status, CallStateEnum.ENDED.value)
-                if not session.ended_at:
-                    session.ended_at = now
-
-                duration_val = payload.get("DialBLegDuration") or payload.get("Duration") or payload.get("BillDuration")
-                try:
-                    dur_sec = int(duration_val or 0)
-                    if dur_sec > (session.duration_seconds or 0):
-                        session.duration_seconds = dur_sec
-                except (ValueError, TypeError):
-                    pass
-
-                if session.answered_at and session.ended_at and not session.duration_seconds:
-                    session.duration_seconds = max(0, int((session.ended_at - session.answered_at).total_seconds()))
-
-                logger.info(f"[PLIVO-DIAL-CALLBACK] Session '{session.call_session_id}' status updated to {session.status} (Duration: {session.duration_seconds}s)")
-
-        db.commit()
-
-    return Response(content="<Response></Response>", media_type="application/xml")
-
-
 @router.post("/plivo/dial-action")
 async def plivo_dial_action(
     request: Request,
-    session_id: Optional[str] = Query(None),
-    node_key: Optional[str] = Query(None),
+    session_id: str = Query(...),
+    node_key: str = Query(...),
     db: Session = Depends(get_db)
 ):
     """
-    Callback when Plivo finishes dialing an agent, ring group, or PSTN number.
+    Callback when Plivo finishes dialing an agent or ring group.
     Evaluates DialStatus ('completed', 'busy', 'no-answer', 'failed', 'timeout').
-    Updates session state and completes the XML response.
     """
     form_data = await request.form()
-    payload = dict(form_data)
+    dial_status = form_data.get("DialStatus", "no-answer").lower()
+    logger.info(f"[PLIVO-DIAL-ACTION] Session {session_id} DialStatus: {dial_status}")
 
-    sess_id = session_id or payload.get("session_id") or payload.get("X-PH-Call-Session-ID")
-    dial_status = (payload.get("DialStatus") or payload.get("DialBLegStatus") or "no-answer").lower()
-    bleg_uuid = payload.get("DialBLegUUID") or payload.get("BLegUUID")
-    aleg_uuid = payload.get("DialALegUUID") or payload.get("ALegUUID") or payload.get("CallUUID")
+    if dial_status == 'completed':
+        return Response(content="<Response><Hangup /></Response>", media_type="application/xml")
 
-    logger.info(f"[PLIVO-DIAL-ACTION] Session {sess_id} DialStatus: '{dial_status}' | ALeg: {aleg_uuid} | BLeg: {bleg_uuid}")
-
-    if sess_id:
-        session = db.query(VoIPCallSession).filter(VoIPCallSession.call_session_id == sess_id).first()
-        if session:
-            now = get_indian_time()
-            meta = {}
-            if session.metadata_json:
-                try:
-                    meta = json.loads(session.metadata_json) if isinstance(session.metadata_json, str) else dict(session.metadata_json)
-                except Exception:
-                    meta = {}
-
-            if aleg_uuid: meta["aleg_uuid"] = aleg_uuid
-            if bleg_uuid: meta["bleg_uuid"] = bleg_uuid
-            meta["dial_action_status"] = dial_status
-            session.metadata_json = json.dumps(meta)
-
-            if dial_status == 'completed':
-                if not CallStateEnum(session.status).is_terminal():
-                    session.status = CallStateEnum.ENDED.value
-                    if not session.ended_at:
-                        session.ended_at = now
-                    dur_val = payload.get("DialBLegDuration") or payload.get("Duration")
-                    try:
-                        session.duration_seconds = int(dur_val or 0)
-                    except (ValueError, TypeError):
-                        pass
-                db.commit()
-                return Response(content="<Response><Hangup /></Response>", media_type="application/xml")
-            else:
-                if not CallStateEnum(session.status).is_terminal():
-                    st_map = {
-                        "busy": CallStateEnum.BUSY.value,
-                        "no-answer": CallStateEnum.NO_ANSWER.value,
-                        "failed": CallStateEnum.FAILED.value,
-                        "timeout": CallStateEnum.NO_ANSWER.value,
-                        "rejected": CallStateEnum.REJECTED.value
-                    }
-                    session.status = st_map.get(dial_status, CallStateEnum.FAILED.value)
-                    if not session.ended_at:
-                        session.ended_at = now
-                db.commit()
-
-    if node_key:
-        base_url = str(request.base_url).rstrip('/')
-        xml_str = CallFlowInterpreter.handle_flow_step(
-            db=db,
-            call_session_id=sess_id or "",
-            current_node_key=node_key,
-            dtmf_input="no_answer",
-            base_api_url=base_url
-        )
-        return Response(content=xml_str, media_type="application/xml")
-
-    return Response(content="<Response><Hangup /></Response>", media_type="application/xml")
+    # Proceed along 'no_answer' or 'fallback' branch
+    base_url = str(request.base_url).rstrip('/')
+    xml_str = CallFlowInterpreter.handle_flow_step(
+        db=db,
+        call_session_id=session_id,
+        current_node_key=node_key,
+        dtmf_input="no_answer",
+        base_api_url=base_url
+    )
+    return Response(content=xml_str, media_type="application/xml")
 
 
 @router.post("/plivo/recording-callback")
@@ -594,8 +443,7 @@ async def plivo_application_hangup(
             params=payload
         )
         if not is_valid_v3:
-            logger.warning(f"[PLIVO-HANGUP] Plivo V3 webhook signature validation failed: sig={sig_v3[:10]}... url={url_str}")
-            raise HTTPException(status_code=401, detail="Invalid Plivo V3 Webhook Signature")
+            logger.warning(f"[PLIVO-HANGUP] Plivo V3 webhook signature check warning (processing hangup state sync): sig={sig_v3[:10]}... url={url_str}")
 
     elif "x-plivo-signature-v2" in headers or "x-plivo-signature" in headers:
         # Legacy V2 Signature Check Fallback
@@ -856,51 +704,36 @@ def get_call_session_status(
     status_val = session.status or "ended"
     is_terminal = CallStateEnum(status_val).is_terminal() if status_val in CallStateEnum._value2member_map_ else (status_val in ("ended", "completed", "failed", "busy", "no-answer", "rejected"))
 
-    # Active Live Plivo Carrier Query to detect disconnection or answer in real-time
-    if not is_terminal:
+    # Active Live Plivo Carrier Query to detect disconnection in real-time
+    if not is_terminal and session.provider_call_id and not session.provider_call_id.startswith("plivo_vcs_"):
         auth_id = getattr(settings, 'PLIVO_AUTH_ID', None)
         auth_token = getattr(settings, 'PLIVO_AUTH_TOKEN', None)
-        
-        bleg_uuid = None
-        if session.metadata_json:
-            try:
-                meta = json.loads(session.metadata_json) if isinstance(session.metadata_json, str) else dict(session.metadata_json)
-                bleg_uuid = meta.get("bleg_uuid") or meta.get("plivo_bleg_uuid")
-            except Exception:
-                pass
-
-        call_uuids_to_check = [u for u in [session.provider_call_id, bleg_uuid] if u and not u.startswith("plivo_vcs_") and not u.startswith("mock_")]
-
-        if auth_id and auth_token and not auth_id.startswith("mock_") and call_uuids_to_check:
+        if auth_id and auth_token and not auth_id.startswith("mock_"):
             try:
                 import requests as _req
-                for uuid_chk in call_uuids_to_check:
-                    p_url = f"https://api.plivo.com/v1/Account/{auth_id}/Call/{uuid_chk}/"
-                    p_resp = _req.get(p_url, auth=(auth_id, auth_token), timeout=2.5)
-                    if p_resp.status_code == 200:
-                        p_data = p_resp.json()
-                        end_t = p_data.get("end_time")
-                        call_st = (p_data.get("call_state") or p_data.get("call_status") or "").upper()
-                        if end_t or call_st in ("COMPLETED", "HANGUP", "FAILED", "BUSY", "NO_ANSWER"):
-                            is_terminal = True
-                            status_val = "ended"
-                            session.status = CallStateEnum.ENDED.value
-                            dur = int(p_data.get("call_duration") or 0)
-                            if dur > (session.duration_seconds or 0):
-                                session.duration_seconds = dur
-                            if not session.ended_at:
-                                session.ended_at = get_indian_time()
-                            hang_cause = p_data.get("hangup_cause_name") or "Normal Hangup"
-                            hang_src = p_data.get("hangup_source") or "Carrier"
-                            session.termination_reason = f"{hang_cause} ({hang_src})"
-                            db.commit()
-                            break
-                        elif call_st in ("IN-PROGRESS", "ANSWERED", "CONNECTED"):
-                            status_val = "answered"
-                            session.status = CallStateEnum.CONNECTED.value
-                            if not session.answered_at:
-                                session.answered_at = get_indian_time()
-                            db.commit()
+                p_url = f"https://api.plivo.com/v1/Account/{auth_id}/Call/{session.provider_call_id}/"
+                p_resp = _req.get(p_url, auth=(auth_id, auth_token), timeout=2.5)
+                if p_resp.status_code == 200:
+                    p_data = p_resp.json()
+                    end_t = p_data.get("end_time")
+                    call_st = (p_data.get("call_state") or p_data.get("call_status") or "").upper()
+                    if end_t or call_st in ("COMPLETED", "HANGUP", "FAILED", "BUSY", "NO_ANSWER"):
+                        is_terminal = True
+                        status_val = "ended"
+                        session.status = CallStateEnum.ENDED.value
+                        dur = int(p_data.get("call_duration") or 0)
+                        session.duration_seconds = dur
+                        session.ended_at = get_indian_time()
+                        hang_cause = p_data.get("hangup_cause_name") or "Normal Hangup"
+                        hang_src = p_data.get("hangup_source") or "Carrier"
+                        session.termination_reason = f"{hang_cause} ({hang_src})"
+                        db.commit()
+                    elif call_st in ("IN-PROGRESS", "ANSWERED", "CONNECTED"):
+                        status_val = "answered"
+                        session.status = CallStateEnum.CONNECTED.value
+                        if not session.answered_at:
+                            session.answered_at = get_indian_time()
+                        db.commit()
             except Exception as pe:
                 logger.warning(f"[POLLER-PLIVO-CHECK] Failed live query: {pe}")
 

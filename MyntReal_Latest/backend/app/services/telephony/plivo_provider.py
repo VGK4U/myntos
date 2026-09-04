@@ -215,30 +215,16 @@ class PlivoTelephonyProvider(BaseTelephonyProvider):
             status=CallStateEnum.IN_PROGRESS
         )
 
-    def hangup_call(self, provider_call_id: str, bleg_uuid: Optional[str] = None) -> bool:
-        """Terminate call leg(s) via Plivo REST API (hangs up both WebRTC ALeg and PSTN BLeg)"""
-        if not provider_call_id:
-            return True
-            
-        success = True
-        uuids_to_hangup = set()
-        if provider_call_id and not provider_call_id.startswith("mock_") and not provider_call_id.startswith("plivo_vcs_"):
-            uuids_to_hangup.add(provider_call_id)
-        if bleg_uuid and not bleg_uuid.startswith("mock_") and not bleg_uuid.startswith("plivo_vcs_"):
-            uuids_to_hangup.add(bleg_uuid)
-
+    def hangup_call(self, provider_call_id: str) -> bool:
+        """Terminate call via Plivo REST API"""
         if self.auth_id and self.auth_token and not self.auth_id.startswith("mock_"):
-            for uuid_val in uuids_to_hangup:
-                try:
-                    url = f"https://api.plivo.com/v1/Account/{self.auth_id}/Call/{uuid_val}/"
-                    resp = requests.delete(url, auth=(self.auth_id, self.auth_token), timeout=6)
-                    logger.info(f"[PLIVO-HANGUP] Terminated call leg UUID '{uuid_val}': HTTP {resp.status_code}")
-                    if resp.status_code not in (200, 204, 404):
-                        success = False
-                except Exception as e:
-                    logger.error(f"[PLIVO-HANGUP-ERROR] Failed to hangup leg '{uuid_val}': {e}")
-                    success = False
-        return success
+            try:
+                url = f"https://api.plivo.com/v1/Account/{self.auth_id}/Call/{provider_call_id}/"
+                resp = requests.delete(url, auth=(self.auth_id, self.auth_token), timeout=6)
+                return resp.status_code in (200, 204)
+            except Exception as e:
+                logger.error(f"[PLIVO-HANGUP-ERROR] Failed to hangup: {e}")
+        return True
 
     def get_recording(self, provider_call_id: str, recording_url: Optional[str] = None) -> Optional[bytes]:
         """Download raw recording audio bytes from Plivo storage"""

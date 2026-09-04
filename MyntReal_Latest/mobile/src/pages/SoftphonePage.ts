@@ -186,14 +186,25 @@ export class SoftphonePage {
 
     try {
       // 1. Ensure remote audio DOM element exists for zero-latency audio playback
-      let remoteAudio = document.getElementById('plivoRemoteAudio') as HTMLAudioElement;
-      if (typeof document !== 'undefined' && !remoteAudio) {
-        remoteAudio = document.createElement('audio');
-        remoteAudio.id = 'plivoRemoteAudio';
-        remoteAudio.autoplay = true;
-        remoteAudio.setAttribute('playsinline', 'true');
-        remoteAudio.style.display = 'none';
-        document.body.appendChild(remoteAudio);
+      if (typeof document !== 'undefined' && !document.getElementById('plivoRemoteAudio')) {
+        const audioEl = document.createElement('audio');
+        audioEl.id = 'plivoRemoteAudio';
+        audioEl.autoplay = true;
+        audioEl.setAttribute('playsinline', 'true');
+        audioEl.style.display = 'none';
+        document.body.appendChild(audioEl);
+      }
+
+      // 2. Pre-warm local microphone tracks so audio is instant when call connects
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia && !this.localAudioStream) {
+        try {
+          this.localAudioStream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+          });
+          console.log('[SoftphonePage] Microphone pre-warmed and audio tracks ready');
+        } catch (micErr) {
+          console.warn('[SoftphonePage] Mic pre-warm notice:', micErr);
+        }
       }
 
       if (typeof (window as any).Plivo === 'undefined') {
@@ -221,10 +232,6 @@ export class SoftphonePage {
           }
 
           if (this.plivoClient) {
-            if (remoteAudio && typeof this.plivoClient.setAudioElement === 'function') {
-              try { this.plivoClient.setAudioElement(remoteAudio); } catch (_) {}
-            }
-
             this.plivoClient.on('onLogin', (data: any) => {
               console.log('[SoftphonePage] Plivo WebRTC logged in successfully:', data);
               this.isWebRTCRegistered = true;
@@ -272,27 +279,36 @@ export class SoftphonePage {
             });
 
             this.plivoClient.on('onCallAnswered', (callInfo: any) => {
-              console.log('[SoftphonePage] Plivo WebRTC Agent Leg A connected:', callInfo);
-              const audioEl = document.getElementById('plivoRemoteAudio') as HTMLAudioElement;
-              if (audioEl) {
-                if (callInfo?.stream && audioEl.srcObject !== callInfo.stream) {
-                  audioEl.srcObject = callInfo.stream;
+              console.log('[SoftphonePage] Plivo WebRTC call connected / answered:', callInfo);
+              this.isCallConnected = true;
+              this.callStatusText = 'Connected / In Call';
+              const statusEl = document.getElementById('softphoneCallStatusText');
+              if (statusEl) {
+                statusEl.textContent = this.callStatusText;
+                statusEl.style.color = '#22c55e';
+              }
+              const remoteAudio = document.getElementById('plivoRemoteAudio') as HTMLAudioElement;
+              if (remoteAudio) {
+                if (callInfo?.stream && remoteAudio.srcObject !== callInfo.stream) {
+                  remoteAudio.srcObject = callInfo.stream;
                 }
-                if (typeof audioEl.play === 'function') {
-                  audioEl.play().catch((err) => console.warn('[SoftphonePage] Remote audio play error:', err));
+                if (typeof remoteAudio.play === 'function') {
+                  remoteAudio.play().catch((err) => console.warn('[SoftphonePage] Remote audio play error:', err));
                 }
               }
+              this.startCallTimer();
+              this.startHeartbeatLoop();
             });
 
             this.plivoClient.on('onMediaConnected', (callInfo: any) => {
               console.log('[SoftphonePage] Plivo WebRTC media stream established:', callInfo);
-              const audioEl = document.getElementById('plivoRemoteAudio') as HTMLAudioElement;
-              if (audioEl) {
-                if (callInfo?.stream && audioEl.srcObject !== callInfo.stream) {
-                  audioEl.srcObject = callInfo.stream;
+              const remoteAudio = document.getElementById('plivoRemoteAudio') as HTMLAudioElement;
+              if (remoteAudio) {
+                if (callInfo?.stream && remoteAudio.srcObject !== callInfo.stream) {
+                  remoteAudio.srcObject = callInfo.stream;
                 }
-                if (typeof audioEl.play === 'function') {
-                  audioEl.play().catch((err) => console.warn('[SoftphonePage] Remote audio play error:', err));
+                if (typeof remoteAudio.play === 'function') {
+                  remoteAudio.play().catch((err) => console.warn('[SoftphonePage] Remote audio play error:', err));
                 }
               }
             });
@@ -632,16 +648,15 @@ export class SoftphonePage {
         destination_phone: cleanDest,
         lead_id: null,
         is_webrtc: isWebRTC,
-        dispatch_provider_call: true
+        dispatch_provider_call: !isWebRTC
       });
       const data = resp?.data || resp;
       if (data && data.call_session_id) {
         this.activeCallSessionId = data.call_session_id;
         return data.call_session_id;
       }
-    } catch (e: any) {
+    } catch (e) {
       console.warn('[SoftphonePage] Session initiation error:', e);
-      throw e;
     }
     const fallbackId = `vcs_mob_${Date.now()}`;
     this.activeCallSessionId = fallbackId;
@@ -672,7 +687,6 @@ export class SoftphonePage {
                 statusEl.style.color = '#22c55e';
               }
               this.startCallTimer();
-              this.startHeartbeatLoop();
             }
           } else if (st === 'ringing' || st === 'early_media') {
             if (!this.isCallConnected) {
@@ -735,7 +749,7 @@ export class SoftphonePage {
     if (contactName) this.selectedContactName = contactName;
 
     // 1. Attempt Plivo WebRTC registration if not yet registered
-    if (!this.isWebRTCRegistered && !this.plivoClient) {
+    if (!this.isWebRTCRegistered) {
       const statusEl = document.getElementById('softphoneCallStatusText');
       if (statusEl) {
         statusEl.textContent = 'Connecting to calling network...';
@@ -744,18 +758,7 @@ export class SoftphonePage {
       await this.initPlivoWebRTC();
     }
 
-    // 2. Resume WebAudio / Remote Audio element on user gesture context
-    try {
-      const audioEl = document.getElementById('plivoRemoteAudio') as HTMLAudioElement;
-      if (audioEl && typeof audioEl.play === 'function') {
-        audioEl.play().catch(() => {});
-      }
-      if (typeof (window as any).AudioContext !== 'undefined' || typeof (window as any).webkitAudioContext !== 'undefined') {
-        const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
-        const ctx = new AudioCtx();
-        if (ctx.state === 'suspended') ctx.resume();
-      }
-    } catch (_) {}
+    const isWebRTCActive = Boolean(this.isWebRTCRegistered && this.plivoClient);
 
     this.isInCall = true;
     this.isCallConnected = false;
@@ -771,25 +774,19 @@ export class SoftphonePage {
       this.callTimerInterval = null;
     }
 
-    // 3. Prepare backend VoIPCallSession and dispatch provider outbound call
-    const isWebRTCActive = Boolean(this.plivoClient || this.isWebRTCRegistered);
-    let sessionId = '';
-    try {
-      sessionId = await this.createCallSession(cleanNumber, isWebRTCActive);
-    } catch (err: any) {
-      console.error('[SoftphonePage] Call creation failed:', err);
-      this.callStatusText = 'Call Failed';
-      const statusEl = document.getElementById('softphoneCallStatusText');
-      if (statusEl) {
-        statusEl.textContent = `Call Failed: ${err?.message || err?.detail || 'Provider rejected call'}`;
-        statusEl.style.color = '#ef4444';
-      }
-      this.endCall();
-      return;
-    }
+    // 2. Prepare backend VoIPCallSession for CRM tracking & audit logs
+    const sessionId = await this.createCallSession(cleanNumber, isWebRTCActive);
 
-    // 4. Dispatch call strictly through In-App WebRTC Softphone UI
-    if (this.plivoClient && typeof this.plivoClient.call === 'function') {
+    // 3. Dispatch call strictly through In-App WebRTC Softphone UI if active
+    if (isWebRTCActive) {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          this.localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (micErr) {
+          console.warn('[SoftphonePage] Mic permission notice:', micErr);
+        }
+      }
+
       try {
         const extraHeaders = {
           'X-PH-Call-Session-ID': sessionId,
@@ -818,8 +815,6 @@ export class SoftphonePage {
   }
 
   private endCall(): void {
-    const endingSessionId = this.activeCallSessionId;
-
     this.isInCall = false;
     this.isCallConnected = false;
     this.stopHeartbeatLoop();
@@ -830,19 +825,6 @@ export class SoftphonePage {
     if (this.callStatusPollInterval) {
       clearInterval(this.callStatusPollInterval);
       this.callStatusPollInterval = null;
-    }
-
-    // Terminate call session on backend (triggers Plivo REST API delete for Leg A & Leg B)
-    if (endingSessionId) {
-      apiService.post('/telephony/plivo/browser/call/end', {
-        call_session_id: endingSessionId
-      }).catch((err) => {
-        console.warn('[SoftphonePage] Error ending call session on backend:', err);
-      });
-      apiService.post('/telephony/plivo/browser/call-event', {
-        call_session_id: endingSessionId,
-        event_type: 'ended'
-      }).catch(() => {});
     }
 
     // Reset Audio Routing back to normal media mode
@@ -1082,13 +1064,17 @@ export class SoftphonePage {
           ${this.renderKey('#', '&nbsp;')}
         </div>
 
-        <!-- Bottom Call Action: In-App Softphone -->
+        <!-- Bottom Dual Call Actions: Softphone & Direct SIM -->
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
           <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
             <button id="softphoneStartCallBtn" title="Call via Cloud Softphone" style="width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); border: none; color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(34, 197, 94, 0.4); cursor: pointer;">
               <i class="fas fa-phone"></i>
             </button>
           </div>
+
+          <button id="softphoneDirectSimBtn" style="padding: 6px 14px; border-radius: 20px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #38bdf8; font-size: 11.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fas fa-mobile-screen"></i> Direct SIM Call
+          </button>
         </div>
       </div>
     `;
@@ -1225,10 +1211,14 @@ export class SoftphonePage {
           </button>
         </div>
 
-        <!-- Big Red Hangup Button Below -->
+        <!-- Big Red Hangup Button & Direct SIM Fallback Below -->
         <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
           <button id="softphoneEndCallBtn" style="width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #b91c1c); border: none; color: #fff; font-size: 26px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4); cursor: pointer;">
             <i class="fas fa-phone-slash"></i>
+          </button>
+
+          <button id="softphoneDirectSimBtn" style="padding: 6px 14px; border-radius: 20px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #38bdf8; font-size: 11.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fas fa-mobile-screen"></i> Direct SIM Call
           </button>
         </div>
       </div>
@@ -1565,6 +1555,8 @@ export class SoftphonePage {
 
     // Call Actions (Strictly In-App Softphone)
     document.getElementById('softphoneStartCallBtn')?.addEventListener('click', () => this.startCall());
+    document.getElementById('softphoneDirectSimBtn')?.addEventListener('click', () => this.startCall());
+    document.getElementById('inCallSwitchSimBtn')?.addEventListener('click', () => this.startCall());
     document.getElementById('softphoneEndCallBtn')?.addEventListener('click', () => this.endCall());
     document.getElementById('callMuteBtn')?.addEventListener('click', () => this.toggleMute());
     document.getElementById('callSpeakerBtn')?.addEventListener('click', () => this.toggleSpeaker());

@@ -73,9 +73,6 @@ class TestPlivoBrowserSoftphone(unittest.TestCase):
                 status="active"
             )
             self.db.add(self.staff_1)
-        else:
-            self.staff_1.status = "active"
-            self.staff_1.base_company_id = 1
 
         self.staff_2 = self.db.query(StaffEmployee).filter_by(emp_code="EMP_TEST_102").first()
         if not self.staff_2:
@@ -93,9 +90,6 @@ class TestPlivoBrowserSoftphone(unittest.TestCase):
                 status="active"
             )
             self.db.add(self.staff_2)
-        else:
-            self.staff_2.status = "active"
-            self.staff_2.base_company_id = 1
 
         self.staff_inactive = self.db.query(StaffEmployee).filter_by(emp_code="EMP_TEST_103").first()
         if not self.staff_inactive:
@@ -113,8 +107,6 @@ class TestPlivoBrowserSoftphone(unittest.TestCase):
                 status="inactive"
             )
             self.db.add(self.staff_inactive)
-        else:
-            self.staff_inactive.status = "inactive"
 
         self.staff_company_2 = self.db.query(StaffEmployee).filter_by(emp_code="EMP_TEST_201").first()
         if not self.staff_company_2:
@@ -132,26 +124,12 @@ class TestPlivoBrowserSoftphone(unittest.TestCase):
                 status="active"
             )
             self.db.add(self.staff_company_2)
-        else:
-            self.staff_company_2.status = "active"
-            self.staff_company_2.base_company_id = 2
-
-        self.staff_company_2.is_super_admin = False
-        if getattr(self.staff_company_2, 'role', None):
-            self.staff_company_2.role.hierarchy_level = 10
-            self.staff_company_2.role.role_code = 'agent'
 
         self.db.commit()
         self.db.refresh(self.staff_1)
         self.db.refresh(self.staff_2)
         self.db.refresh(self.staff_inactive)
         self.db.refresh(self.staff_company_2)
-
-        # Clean existing test endpoints to avoid stale endpoint mapping mismatches
-        self.db.query(TelephonyPlivoEndpoint).filter(
-            TelephonyPlivoEndpoint.staff_id.in_([self.staff_1.id, self.staff_2.id, self.staff_company_2.id])
-        ).delete(synchronize_session=False)
-        self.db.commit()
 
         # Seed CRM Lead
         self.lead = self.db.query(CRMLead).filter_by(phone="9876500001").first()
@@ -190,8 +168,8 @@ class TestPlivoBrowserSoftphone(unittest.TestCase):
         )
         self.assertTrue(token_data['success'])
         self.assertIn('access_token', token_data)
-        ep = PlivoJWTService.get_or_create_staff_endpoint(db=self.db, company_id=1, staff=self.staff_1)
-        self.assertEqual(token_data['endpoint']['username'], ep.plivo_username)
+        expected_username = f"agent_c1_s{self.staff_1.id}"
+        self.assertEqual(token_data['endpoint']['username'], expected_username)
         self.assertGreater(token_data['expires_in_seconds'], 0)
 
     # 2. Unauthenticated request / missing staff rejected
@@ -241,8 +219,9 @@ class TestPlivoBrowserSoftphone(unittest.TestCase):
         # Decode JWT to verify standard Plivo claims
         token = token_data['access_token']
         decoded = jwt.decode(token, key="mock_plivo_auth_token_secret_12345", algorithms=["HS256"], options={"verify_signature": False})
-        ep = PlivoJWTService.get_or_create_staff_endpoint(db=self.db, company_id=1, staff=self.staff_1)
-        self.assertEqual(decoded['sub'], ep.plivo_username)
+        expected_username = f"agent_c1_s{self.staff_1.id}"
+        self.assertEqual(decoded['sub'], expected_username)
+        self.assertEqual(decoded['context']['staff_id'], self.staff_1.id)
 
     # 6. Correct staff-to-Plivo endpoint mapping
     def test_06_correct_staff_to_plivo_endpoint_mapping(self):
@@ -252,9 +231,10 @@ class TestPlivoBrowserSoftphone(unittest.TestCase):
             staff=self.staff_1
         )
         self.test_endpoint_ids.append(endpoint.id)
+        expected_username = f"agent_c1_s{self.staff_1.id}"
         self.assertEqual(endpoint.company_id, 1)
         self.assertEqual(endpoint.staff_id, self.staff_1.id)
-        self.assertTrue(endpoint.plivo_username.startswith("agent"))
+        self.assertEqual(endpoint.plivo_username, expected_username)
 
     # 7. Duplicate endpoint creation prevented
     def test_07_duplicate_endpoint_creation_prevented(self):

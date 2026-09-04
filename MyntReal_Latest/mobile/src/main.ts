@@ -475,6 +475,11 @@ class MNRApp {
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
+      // Allow direct device SIM button inside SoftphonePage to place raw tel: calls
+      if (target.id === 'softphoneDirectSimBtn' || target.closest('#softphoneDirectSimBtn')) {
+        return;
+      }
+
       const telLink = target.closest('a[href^="tel:"]') as HTMLAnchorElement | null;
       if (telLink) {
         const rawHref = telLink.getAttribute('href') || '';

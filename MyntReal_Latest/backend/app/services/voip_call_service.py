@@ -273,22 +273,10 @@ class VoIPCallService:
         if CallStateEnum(session.status).is_terminal():
             return session
 
-        # Dispatch hangup to provider (hangs up both ALeg and BLeg)
+        # Dispatch hangup to provider
         provider = get_telephony_provider(session.provider)
-        bleg_uuid = None
-        if session.metadata_json:
-            try:
-                meta = json.loads(session.metadata_json) if isinstance(session.metadata_json, str) else dict(session.metadata_json)
-                bleg_uuid = meta.get("bleg_uuid") or meta.get("plivo_bleg_uuid")
-            except Exception:
-                pass
-
-        if session.provider_call_id or bleg_uuid:
-            try:
-                if hasattr(provider, 'hangup_call'):
-                    provider.hangup_call(session.provider_call_id, bleg_uuid=bleg_uuid)
-            except Exception as h_err:
-                logger.warning(f"[VOIP-HANGUP] Error terminating provider call legs: {h_err}")
+        if session.provider_call_id:
+            provider.hangup_call(session.provider_call_id)
 
         session.status = CallStateEnum.ENDED.value
         session.ended_at = get_indian_time()
