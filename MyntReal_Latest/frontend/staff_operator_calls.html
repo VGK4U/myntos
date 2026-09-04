@@ -855,6 +855,7 @@ function renderRow(c) {
     const esc = s => (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
     const escUrl = s => (s||'').replace(/"/g,'&quot;');
     const cid = esc(c.call_id);
+    const cphone = esc(c.caller_number);
     const actions = [];
     const cleanCallerP = (c.caller_number || '').replace(/\D/g, '').slice(-10);
     actions.push(`<button type="button" class="btn-action btn-dial" onclick="event.stopPropagation(); triggerLeadCall('${cleanCallerP}', 'Caller ${cleanCallerP}', ${c.crm_lead_id || 'null'})" title="Call via WebRTC Softphone"><i class="fas fa-phone"></i></button>`);
