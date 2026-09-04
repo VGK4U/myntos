@@ -38,7 +38,34 @@
         async init() {
             console.log('[PLIVO-SOFTPHONE] Initializing MyntOS Browser Softphone...');
             this.injectUIElements();
+            this.ensureRemoteAudioElement();
+            this.prewarmMicrophone();
             this.loadPlivoSDK();
+        }
+
+        ensureRemoteAudioElement() {
+            if (!document.getElementById('plivoRemoteAudio')) {
+                const audioEl = document.createElement('audio');
+                audioEl.id = 'plivoRemoteAudio';
+                audioEl.autoplay = true;
+                audioEl.setAttribute('playsinline', 'true');
+                audioEl.style.display = 'none';
+                document.body.appendChild(audioEl);
+            }
+        }
+
+        async prewarmMicrophone() {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && !this.localAudioStream) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+                    });
+                    this.localAudioStream = stream;
+                    console.log('[PLIVO-SOFTPHONE] Microphone pre-warmed and audio tracks ready');
+                } catch (micErr) {
+                    console.warn('[PLIVO-SOFTPHONE] Mic pre-warm notice:', micErr);
+                }
+            }
         }
 
         loadPlivoSDK() {
@@ -536,6 +563,38 @@
             }
         }
 
+        startHeartbeatLoop() {
+            this.stopHeartbeatLoop();
+            this.heartbeatInterval = setInterval(async () => {
+                if (this.isCallActive) {
+                    try {
+                        const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
+                        if (token) {
+                            await fetch('/api/v1/telephony/plivo/browser/register', {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    is_registered: true,
+                                    in_call: true,
+                                    call_session_id: this.activeSessionId
+                                })
+                            });
+                        }
+                    } catch (_) {}
+                }
+            }, 15000);
+        }
+
+        stopHeartbeatLoop() {
+            if (this.heartbeatInterval) {
+                clearInterval(this.heartbeatInterval);
+                this.heartbeatInterval = null;
+            }
+        }
+
         onCallConnected(callInfo) {
             console.log('[PLIVO-SOFTPHONE] Call connected / active');
             this.isCallActive = true;
@@ -544,7 +603,12 @@
                 statusLabel.textContent = 'Connected (In Call)';
                 statusLabel.className = 'badge bg-success px-2 py-1';
             }
+            const remoteAudio = document.getElementById('plivoRemoteAudio');
+            if (remoteAudio && typeof remoteAudio.play === 'function') {
+                remoteAudio.play().catch(() => {});
+            }
             this.startCallTimer();
+            this.startHeartbeatLoop();
 
             this.syncCallEvent('connected');
 
@@ -566,6 +630,7 @@
         onCallTerminated() {
             console.log('[PLIVO-SOFTPHONE] Call terminated');
             this.stopSessionWatcher();
+            this.stopHeartbeatLoop();
             this.isCallActive = false;
             
             const mins = String(Math.floor(this.callSeconds / 60)).padStart(2, '0');

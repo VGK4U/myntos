@@ -149,8 +149,54 @@ export class SoftphonePage {
     }
   }
 
+  private heartbeatInterval: any = null;
+
+  private startHeartbeatLoop(): void {
+    if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+    this.heartbeatInterval = setInterval(async () => {
+      if (this.isInCall) {
+        try {
+          await apiService.post('/telephony/plivo/browser/register', {
+            is_registered: true,
+            in_call: true,
+            call_session_id: this.currentCallSessionId
+          });
+        } catch (_) {}
+      }
+    }, 15000);
+  }
+
+  private stopHeartbeatLoop(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+  }
+
   private async initPlivoWebRTC(): Promise<void> {
     try {
+      // 1. Ensure remote audio DOM element exists for zero-latency audio playback
+      if (typeof document !== 'undefined' && !document.getElementById('plivoRemoteAudio')) {
+        const audioEl = document.createElement('audio');
+        audioEl.id = 'plivoRemoteAudio';
+        audioEl.autoplay = true;
+        audioEl.setAttribute('playsinline', 'true');
+        audioEl.style.display = 'none';
+        document.body.appendChild(audioEl);
+      }
+
+      // 2. Pre-warm local microphone tracks so audio is instant when call connects
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia && !this.localAudioStream) {
+        try {
+          this.localAudioStream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+          });
+          console.log('[SoftphonePage] Microphone pre-warmed and audio tracks ready');
+        } catch (micErr) {
+          console.warn('[SoftphonePage] Mic pre-warm notice:', micErr);
+        }
+      }
+
       if (typeof (window as any).Plivo === 'undefined') {
         await new Promise((resolve) => {
           const script = document.createElement('script');
@@ -166,7 +212,10 @@ export class SoftphonePage {
         const PlivoConstructor = (window as any).Plivo;
         if (!this.plivoClient) {
           if (typeof PlivoConstructor === 'function') {
-            const sdk = new PlivoConstructor({ allowMultipleIncomingCalls: true });
+            const sdk = new PlivoConstructor({
+              allowMultipleIncomingCalls: true,
+              enableDscp: true
+            });
             this.plivoClient = sdk.client || sdk;
           } else if (PlivoConstructor.Client) {
             this.plivoClient = new PlivoConstructor.Client();
@@ -196,20 +245,31 @@ export class SoftphonePage {
                 statusEl.textContent = this.callStatusText;
                 statusEl.style.color = '#22c55e';
               }
+              const remoteAudio = document.getElementById('plivoRemoteAudio') as HTMLAudioElement;
+              if (remoteAudio && typeof remoteAudio.play === 'function') {
+                remoteAudio.play().catch(() => {});
+              }
               this.startCallTimer();
+              this.startHeartbeatLoop();
             });
 
             this.plivoClient.on('onMediaConnected', () => {
               console.log('[SoftphonePage] Plivo WebRTC media stream established');
+              const remoteAudio = document.getElementById('plivoRemoteAudio') as HTMLAudioElement;
+              if (remoteAudio && typeof remoteAudio.play === 'function') {
+                remoteAudio.play().catch(() => {});
+              }
             });
 
             this.plivoClient.on('onCallTerminated', () => {
               console.log('[SoftphonePage] Plivo WebRTC call terminated');
+              this.stopHeartbeatLoop();
               this.endCall();
             });
 
             this.plivoClient.on('onCallFailed', (reason: any) => {
               console.warn('[SoftphonePage] Plivo WebRTC call failed:', reason);
+              this.stopHeartbeatLoop();
               this.endCall();
             });
           }
@@ -694,6 +754,7 @@ export class SoftphonePage {
   private endCall(): void {
     this.isInCall = false;
     this.isCallConnected = false;
+    this.stopHeartbeatLoop();
     if (this.callTimerInterval) {
       clearInterval(this.callTimerInterval);
       this.callTimerInterval = null;
