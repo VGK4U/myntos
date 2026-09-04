@@ -2510,34 +2510,152 @@ def get_whatsapp_conversations_hub(
     Unified WhatsApp Conversations Hub.
     - scope='assigned_tagged' (Tab 1: My Messages): Shows two-way conversations assigned to or replied by current staff.
     - scope='downline' (Tab 2: Team Messages): Shows conversations assigned to or handled by downline staff. Excludes automated background API/OTP logs.
-    - scope='company' (Tab 3: Company Messages): Shows unassigned/unreplied inbound messages on company numbers with channel filters (all, scanned, api).
+    - scope='company' (Tab 3: Company Messages): Shows strictly inbound unassigned/unreplied customer inquiries received on company numbers.
+    - scope='broadcasts' (Tab 4: Broadcasts & Dispatches): Shows outbound campaign logs and system dispatches split into Groups and Individuals.
     """
     try:
         from app.models.crm import CRMLead
         from app.models.whatsapp import WAInbox, MessageLog
         from sqlalchemy import or_
 
+        # Safe parameter normalization
+        search_val = str(search).strip() if (search is not None and isinstance(search, str) and not hasattr(search, 'default')) else None
+        category_val = str(category).strip() if (category is not None and isinstance(category, str) and not hasattr(category, 'default')) else None
+        scope_val = str(scope).strip().lower() if (scope is not None and isinstance(scope, str) and not hasattr(scope, 'default')) else 'assigned_tagged'
+        source_filt_val = str(source_filter).strip().lower() if (source_filter is not None and isinstance(source_filter, str) and not hasattr(source_filter, 'default')) else 'all'
+
         staff = current_user
         contact_map = {}
 
-        # ── Scope 3: COMPANY UNASSIGNED MESSAGES (Tab 3) ──────────────────────
-        if scope in ('company', 'company_unassigned'):
+        # ── Scope 4: BROADCASTS & BOT DISPATCHES (Tab 4) ──────────────────────
+        if scope_val in ('broadcasts', 'dispatches', 'broadcast'):
+            s_filt = source_filt_val
+
+            # 1. WhatsApp Groups & Broadcast Channels
+            if s_filt in ('all', 'groups', 'scanned', 'api'):
+                targets = _load_targets_from_db(db)
+                for j_id, g_list in targets.items():
+                    for g in (g_list or []):
+                        g_name = g.get("name") or "WhatsApp Group"
+                        ident = g.get("identifier") or ""
+                        if not ident:
+                            continue
+
+                        # Fetch latest message sent into this group
+                        last_m = db.query(WAInbox).filter(
+                            or_(WAInbox.from_phone.like(f"%{ident}%"), WAInbox.from_name.ilike(f"%{g_name}%"))
+                        ).order_by(desc(WAInbox.received_at)).first()
+
+                        last_body = last_m.body_text if last_m else "Scheduled broadcast channel active."
+                        last_dt = last_m.received_at if last_m else datetime.utcnow()
+
+                        g_chan = "SCANNED"
+                        if last_m and str(last_m.wamid or '').startswith('wamid.'):
+                            g_chan = "META_API"
+
+                        if s_filt == 'scanned' and g_chan != 'SCANNED':
+                            continue
+                        if s_filt == 'api' and g_chan != 'META_API':
+                            continue
+
+                        contact_map[ident] = {
+                            "phone": ident,
+                            "name": g_name,
+                            "recipient_type": "group",
+                            "contact_type": "GROUP",
+                            "status": "active",
+                            "category": "Group Broadcast",
+                            "last_message": last_body,
+                            "last_time": last_dt.strftime('%d %b, %I:%M %p') if last_dt else '—',
+                            "last_timestamp": last_dt or datetime.min,
+                            "message_type": "broadcast",
+                            "delivery_status": "SENT",
+                            "unread_count": 0,
+                            "channel": g_chan,
+                            "broadcast_type": "group",
+                            "badge": "Group",
+                            "is_unassigned": False
+                        }
+
+            # 2. Individual Dispatches (1-on-1 Messages & Bot Notifications)
+            if s_filt in ('all', 'individuals', 'scanned', 'api'):
+                logs_q = db.query(MessageLog).filter(
+                    MessageLog.mobile_number.isnot(None),
+                    MessageLog.mobile_number != ""
+                )
+                if search:
+                    s = f"%{search.strip()}%"
+                    logs_q = logs_q.filter(or_(MessageLog.mobile_number.ilike(s), MessageLog.user_name.ilike(s), MessageLog.message_body.ilike(s)))
+
+                for l in logs_q.order_by(desc(MessageLog.sent_at)).limit(300).all():
+                    raw_phone = l.mobile_number or ''
+                    clean_phone = ''.join(filter(str.isdigit, raw_phone))[-10:]
+                    if not clean_phone or len(clean_phone) < 10:
+                        continue
+
+                    provider = (l.provider or "").upper()
+                    w_sid = str(l.message_sid or "")
+                    indiv_chan = "META_API" if ("META" in provider or w_sid.startswith("wamid.")) else "SCANNED"
+
+                    if s_filt == 'scanned' and indiv_chan != 'SCANNED':
+                        continue
+                    if s_filt == 'api' and indiv_chan != 'META_API':
+                        continue
+
+                    if clean_phone not in contact_map or (l.sent_at and l.sent_at > contact_map[clean_phone]["last_timestamp"]):
+                        m_type = (l.message_type or "").lower()
+                        cat = "Individual Broadcast"
+                        if "wish" in m_type or "statement" in m_type:
+                            cat = "Revenue Statement"
+                        elif "otp" in m_type:
+                            cat = "OTP / Auth"
+                        elif "lead" in m_type:
+                            cat = "Lead Update"
+                        elif "journey" in m_type:
+                            cat = "Field Journey"
+
+                        raw_uname = str(l.user_name or '').strip()
+                        resolved_name = raw_uname if raw_uname and raw_uname not in ("0", "None", "null") and not raw_uname.isdigit() else f"Partner/Lead (+91 {clean_phone})"
+
+                        contact_map[clean_phone] = {
+                            "phone": clean_phone,
+                            "name": resolved_name,
+                            "recipient_type": "individual",
+                            "contact_type": "CONTACT",
+                            "status": l.current_status or "sent",
+                            "category": cat,
+                            "last_message": l.message_body or "Automated Notification",
+                            "last_time": l.sent_at.strftime('%d %b, %I:%M %p') if l.sent_at else '—',
+                            "last_timestamp": l.sent_at or datetime.min,
+                            "message_type": l.message_type or "template",
+                            "delivery_status": l.current_status or "sent",
+                            "unread_count": 0,
+                            "channel": indiv_chan,
+                            "broadcast_type": "individual",
+                            "badge": "Individual",
+                            "is_unassigned": False
+                        }
+
+        # ── Scope 3: COMPANY UNASSIGNED INBOUND INQUIRIES (Tab 3) ────────────
+        elif scope_val in ('company', 'company_unassigned'):
             inbox_q = db.query(WAInbox).filter(
                 WAInbox.from_phone.isnot(None),
                 WAInbox.assigned_to_emp_id.is_(None),
                 (WAInbox.replied.is_(False) | WAInbox.replied_by_id.is_(None)),
-                WAInbox.message_type != 'outbound'
+                ~WAInbox.from_phone.like('%@g.us'),
+                ~WAInbox.message_type.in_(['outbound', 'auto_staff_alert', 'system']),
+                WAInbox.message_type.in_(['text', 'image', 'audio', 'document', 'video', 'inbound', 'scanned_inbound', 'unsupported'])
             )
             
             # Channel / Source Filter (all / scanned / api)
-            s_filt = (source_filter or 'all').lower()
+            s_filt = source_filt_val
             if s_filt == 'scanned':
                 inbox_q = inbox_q.filter(
                     or_(
                         WAInbox.wamid.is_(None),
                         WAInbox.wamid.like('scanned_%'),
                         WAInbox.wamid.like('scanned%'),
-                        WAInbox.message_type.in_(['scanned_inbound', 'auto_staff_alert', 'text', 'image', 'audio', 'document']) & ~WAInbox.wamid.like('wamid.%')
+                        ~WAInbox.wamid.like('wamid.%')
                     )
                 )
             elif s_filt == 'api':
@@ -2546,8 +2664,8 @@ def get_whatsapp_conversations_hub(
                     WAInbox.wamid.like('wamid.%')
                 )
 
-            if search:
-                s = f"%{search.strip()}%"
+            if search_val:
+                s = f"%{search_val}%"
                 inbox_q = inbox_q.filter(or_(WAInbox.from_phone.ilike(s), WAInbox.from_name.ilike(s), WAInbox.body_text.ilike(s)))
 
             for m in inbox_q.order_by(desc(WAInbox.received_at)).limit(300).all():
@@ -2573,12 +2691,13 @@ def get_whatsapp_conversations_hub(
                         "delivery_status": m.status or 'delivered',
                         "unread_count": 1 if not m.is_read else 0,
                         "channel": channel_label,
+                        "badge": "Inbound Lead",
                         "is_unassigned": True
                     }
 
         # ── Scope 1 & 2: MY MESSAGES & TEAM MESSAGES ────────────────────────
         else:
-            permitted_phones = _get_permitted_phones_for_staff(db, staff, scope=scope or 'assigned_tagged')
+            permitted_phones = _get_permitted_phones_for_staff(db, staff, scope=scope_val)
 
             # Load system configured target groups and channels
             targets = _load_targets_from_db(db)
@@ -2596,8 +2715,8 @@ def get_whatsapp_conversations_hub(
 
             # 1. Fetch recent messages from WAInbox
             inbox_query = db.query(WAInbox).filter(WAInbox.from_phone.isnot(None))
-            if search:
-                s = f"%{search.strip()}%"
+            if search_val:
+                s = f"%{search_val}%"
                 inbox_query = inbox_query.filter(or_(WAInbox.from_phone.ilike(s), WAInbox.from_name.ilike(s), WAInbox.body_text.ilike(s)))
             
             for m in inbox_query.order_by(desc(WAInbox.received_at)).limit(300).all():
@@ -2646,7 +2765,7 @@ def get_whatsapp_conversations_hub(
 
             # 2. Fetch recent human/staff messages from MessageLog (EXCLUDING automated API background logs)
             target_staff_ids = {staff.id}
-            if scope == 'downline':
+            if scope_val == 'downline':
                 target_staff_ids = _get_downline_staff_ids(db, staff.id)
 
             log_query = db.query(MessageLog).filter(
@@ -2658,8 +2777,8 @@ def get_whatsapp_conversations_hub(
                 ),
                 ~MessageLog.message_type.in_(['whatsapp_otp', 'otp', 'cron_reminder', 'auto_broadcast'])
             )
-            if search:
-                s = f"%{search.strip()}%"
+            if search_val:
+                s = f"%{search_val}%"
                 log_query = log_query.filter(or_(MessageLog.mobile_number.ilike(s), MessageLog.user_name.ilike(s), MessageLog.message_body.ilike(s)))
 
             for l in log_query.order_by(desc(MessageLog.sent_at)).limit(300).all():

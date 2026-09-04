@@ -246,15 +246,16 @@
         </button>
       </div>
 
-      <!-- ═══ 7-TAB NAVIGATION ══════════════════════════════════════════════════ -->
+      <!-- ═══ 8-TAB NAVIGATION ══════════════════════════════════════════════════ -->
       <div class="wa-tab-bar">
         <button class="wa-tab-btn active" id="btn-tab-messenger" onclick="switchCenterTab('messenger')"><i class="fas fa-comments"></i> 1. My Messages</button>
         <button class="wa-tab-btn" id="btn-tab-team" onclick="switchCenterTab('team')"><i class="fas fa-users"></i> 2. Team Messages</button>
         <button class="wa-tab-btn" id="btn-tab-company" onclick="switchCenterTab('company')"><i class="fas fa-building"></i> 3. Company Messages <span class="badge-num" id="tb-company-num" style="display:none;background:#ef4444">0</span></button>
-        <button class="wa-tab-btn" id="btn-tab-inbox" onclick="switchCenterTab('inbox')"><i class="fas fa-robot"></i> 4. WhatsApp API Bot <span class="badge-num" id="tb-inbox-num">0</span></button>
-        <button class="wa-tab-btn admin-only-tab" id="btn-tab-templates" onclick="switchCenterTab('templates')"><i class="fas fa-file-alt"></i> 5. Templates</button>
-        <button class="wa-tab-btn admin-only-tab" id="btn-tab-automations" onclick="switchCenterTab('automations')"><i class="fas fa-cogs"></i> 6. Automations</button>
-        <button class="wa-tab-btn admin-only-tab" id="btn-tab-audit" onclick="switchCenterTab('audit')"><i class="fas fa-shield-alt"></i> 7. Audit Log</button>
+        <button class="wa-tab-btn" id="btn-tab-broadcasts" onclick="switchCenterTab('broadcasts')"><i class="fas fa-bullhorn"></i> 4. Broadcasts &amp; Dispatches</button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-inbox" onclick="switchCenterTab('inbox')"><i class="fas fa-robot"></i> 5. WhatsApp API Bot <span class="badge-num" id="tb-inbox-num">0</span></button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-templates" onclick="switchCenterTab('templates')"><i class="fas fa-file-alt"></i> 6. Templates</button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-automations" onclick="switchCenterTab('automations')"><i class="fas fa-cogs"></i> 7. Automations</button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-audit" onclick="switchCenterTab('audit')"><i class="fas fa-shield-alt"></i> 8. Audit Log</button>
       </div>
 
       <!-- ═══ TAB 1: CRM INBOX ═════════════════════════════════════════════════ -->
@@ -320,7 +321,7 @@
         </div>
       </div>
 
-      <!-- ═══ MESSENGER SPLIT VIEW (Tabs 1, 2, 3) ══════════════════════════════ -->
+      <!-- ═══ MESSENGER SPLIT VIEW (Tabs 1, 2, 3, 4) ══════════════════════════════ -->
       <div class="tab-pane active" id="pane-messenger">
         <div class="messenger-container">
 
@@ -331,14 +332,24 @@
                 <option value="assigned_tagged">📍 My Assigned + Tagged Leads</option>
                 <option value="downline">👥 My Downline Team</option>
                 <option value="company">🏢 Unassigned Company Messages</option>
+                <option value="broadcasts">📢 Broadcasts &amp; Bot Dispatches</option>
                 <option value="all">🌐 All System Conversations (Admin)</option>
               </select>
 
               <!-- Company Messages Channel Filter Bar (Tab 3) -->
               <div id="companyChannelFilterBar" style="display:none;align-items:center;gap:4px;margin-bottom:8px;overflow-x:auto;">
-                <button type="button" class="channel-pill-btn active" id="cpFilt-all" onclick="onCompanyChannelFilter('all')">All</button>
-                <button type="button" class="channel-pill-btn" id="cpFilt-scanned" onclick="onCompanyChannelFilter('scanned')">📲 Scanned Bot</button>
+                <button type="button" class="channel-pill-btn active" id="cpFilt-all" onclick="onCompanyChannelFilter('all')">All Inbound</button>
+                <button type="button" class="channel-pill-btn" id="cpFilt-scanned" onclick="onCompanyChannelFilter('scanned')">📲 Scanned QR</button>
                 <button type="button" class="channel-pill-btn" id="cpFilt-api" onclick="onCompanyChannelFilter('api')">⚡ Meta API</button>
+              </div>
+
+              <!-- Broadcasts & Dispatches Filter Bar (Tab 4) -->
+              <div id="broadcastFilterBar" style="display:none;align-items:center;gap:4px;margin-bottom:8px;overflow-x:auto;">
+                <button type="button" class="channel-pill-btn active" id="bcFilt-all" onclick="onBroadcastFilter('all')">All</button>
+                <button type="button" class="channel-pill-btn" id="bcFilt-groups" onclick="onBroadcastFilter('groups')">👥 Groups</button>
+                <button type="button" class="channel-pill-btn" id="bcFilt-individuals" onclick="onBroadcastFilter('individuals')">👤 Individuals</button>
+                <button type="button" class="channel-pill-btn" id="bcFilt-scanned" onclick="onBroadcastFilter('scanned')">📲 Scanned</button>
+                <button type="button" class="channel-pill-btn" id="bcFilt-api" onclick="onBroadcastFilter('api')">⚡ Meta API</button>
               </div>
 
               <div style="position:relative">
@@ -581,11 +592,20 @@ let activeMediaUrl  = null;
 let pollTimer       = null;
 let debounceTimer   = null;
 let companyChannelFilter = 'all';
+let broadcastFilter      = 'all';
 
 function onCompanyChannelFilter(chan) {
   companyChannelFilter = chan;
-  document.querySelectorAll('.channel-pill-btn').forEach(btn => {
+  document.querySelectorAll('#companyChannelFilterBar .channel-pill-btn').forEach(btn => {
     btn.classList.toggle('active', btn.id === `cpFilt-${chan}`);
+  });
+  loadMessengerHub();
+}
+
+function onBroadcastFilter(filt) {
+  broadcastFilter = filt;
+  document.querySelectorAll('#broadcastFilterBar .channel-pill-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.id === `bcFilt-${filt}`);
   });
   loadMessengerHub();
 }
@@ -626,21 +646,31 @@ function switchCenterTab(tabName) {
   if (btn) btn.classList.add('active');
 
   const compFilterBar = document.getElementById('companyChannelFilterBar');
+  const bcFilterBar   = document.getElementById('broadcastFilterBar');
   
   if (tabName === 'messenger') {
     if (compFilterBar) compFilterBar.style.display = 'none';
+    if (bcFilterBar) bcFilterBar.style.display = 'none';
     document.getElementById('pane-messenger')?.classList.add('active');
     activeScope = 'assigned_tagged';
     loadMessengerHub();
   } else if (tabName === 'team') {
     if (compFilterBar) compFilterBar.style.display = 'none';
+    if (bcFilterBar) bcFilterBar.style.display = 'none';
     document.getElementById('pane-messenger')?.classList.add('active');
     activeScope = 'downline';
     loadMessengerHub();
   } else if (tabName === 'company') {
     if (compFilterBar) compFilterBar.style.display = 'flex';
+    if (bcFilterBar) bcFilterBar.style.display = 'none';
     document.getElementById('pane-messenger')?.classList.add('active');
     activeScope = 'company';
+    loadMessengerHub();
+  } else if (tabName === 'broadcasts') {
+    if (compFilterBar) compFilterBar.style.display = 'none';
+    if (bcFilterBar) bcFilterBar.style.display = 'flex';
+    document.getElementById('pane-messenger')?.classList.add('active');
+    activeScope = 'broadcasts';
     loadMessengerHub();
   } else if (tabName === 'inbox') {
     document.getElementById('pane-inbox')?.classList.add('active');
@@ -944,12 +974,14 @@ function openChatFromInbox(phone) {
   loadChatHistory(phone, 'individual');
 }
 
-// ── TABS 1, 2, 3: MESSENGER (My, Team, Company) ───────────────────────────
+// ── TABS 1, 2, 3, 4: MESSENGER (My, Team, Company, Broadcasts) ────────────
 async function loadMessengerHub() {
   try {
     let url = `${API}/whatsapp/conversations-hub?scope=${activeScope}`;
     if (activeScope === 'company') {
       url += `&source_filter=${companyChannelFilter}`;
+    } else if (activeScope === 'broadcasts') {
+      url += `&source_filter=${broadcastFilter}`;
     }
     const data = await apiFetch(url);
     renderConversationsList(data.conversations || []);
@@ -973,17 +1005,22 @@ function escapeHtmlText(str) {
 function renderConversationsList(convs) {
   currentRenderedConvs = convs || [];
   if (!convs || !convs.length) {
-    const emptyMsg = activeScope === 'company' 
-      ? 'No unassigned company messages found.' 
-      : (activeScope === 'downline' ? 'No team conversations found.' : 'No personal conversations found.');
+    let emptyMsg = 'No personal conversations found.';
+    if (activeScope === 'company') {
+      emptyMsg = 'No unassigned company messages found.';
+    } else if (activeScope === 'downline') {
+      emptyMsg = 'No team conversations found.';
+    } else if (activeScope === 'broadcasts') {
+      emptyMsg = 'No broadcast dispatches found for this filter.';
+    }
     document.getElementById('convList').innerHTML = `<div style="padding:30px 20px;text-align:center;color:#9ca3af"><i class="fas fa-inbox fa-2x" style="margin-bottom:8px;opacity:.5"></i><br>${emptyMsg}</div>`;
     return;
   }
 
   let html = '';
   convs.forEach((c, idx) => {
-    const isGroup = c.recipient_type === 'group';
-    const isChannel = c.recipient_type === 'channel';
+    const isGroup = c.recipient_type === 'group' || c.contact_type === 'GROUP' || c.broadcast_type === 'group';
+    const isChannel = c.recipient_type === 'channel' || c.contact_type === 'CHANNEL';
     const isUnassigned = c.is_unassigned === true || activeScope === 'company';
     const st = (c.status || '').toLowerCase();
     const isArchived = (st === 'archived' || st === 'closed');
@@ -998,11 +1035,14 @@ function renderConversationsList(convs) {
 
     const chanBadge = c.channel ? `<span class="type-badge" style="background:#e0f2fe;color:#0369a1;font-size:9.5px;padding:2px 6px;">${c.channel === 'META_API' ? '⚡ Meta API' : '📲 Scanned'}</span>` : '';
     const badgeClass = isGroup ? 'badge-group' : (isChannel ? 'badge-channel' : 'badge-customer');
-    const badgeLabel = isGroup ? 'Group' : (isChannel ? 'Channel' : (c.badge || 'Contact'));
+    let badgeLabel = isGroup ? 'Group' : (isChannel ? 'Channel' : (c.badge || 'Contact'));
+    if (activeScope === 'broadcasts') {
+      badgeLabel = isGroup ? 'Group Broadcast' : (c.category || 'Individual');
+    }
 
     html += `
       <div class="conv-card ${activeChatPhone === c.phone ? 'active' : ''} ${isArchived ? 'conv-archived' : (isInProgress ? 'conv-in-progress' : '')}" onclick="selectChatByIndex(${idx})">
-        <div class="conv-avatar" style="${isArchived ? 'filter:grayscale(100%);opacity:0.6;' : ''}">${isGroup ? '👥' : (isChannel ? '📢' : (isUnassigned ? '🏢' : (isArchived ? '📁' : '👤')))}</div>
+        <div class="conv-avatar" style="${isArchived ? 'filter:grayscale(100%);opacity:0.6;' : ''}">${isGroup ? '👥' : (isChannel ? '📢' : (isUnassigned ? '🏢' : (isArchived ? '📁' : (activeScope === 'broadcasts' ? '📡' : '👤'))))}</div>
         <div class="conv-info">
           <div class="conv-name">
             <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;${isArchived ? 'color:#64748b;' : ''}">${escapeHtmlText(c.name || c.phone)}</span>
@@ -1039,6 +1079,7 @@ function onMsgSearchInput(val) {
     try {
       let searchUrl = `${API}/whatsapp/contacts-search?query=${encodeURIComponent(val)}&scope=${activeScope}`;
       if (activeScope === 'company') searchUrl += `&source_filter=${companyChannelFilter}`;
+      else if (activeScope === 'broadcasts') searchUrl += `&source_filter=${broadcastFilter}`;
       const data = await apiFetch(searchUrl);
       renderConversationsList(data.results || []);
     } catch(_) {}
