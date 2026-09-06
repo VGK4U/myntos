@@ -415,6 +415,28 @@
     <!-- RIGHT PANEL -->
     <div class="dialer-right" id="dialerRight">
 
+      <!-- CANONICAL CLAIM PROMPT (Rendered on genuine interaction) -->
+      <div id="dc-claim-prompt-banner" style="display:none; background: linear-gradient(135deg, #059669, #10b981); color: white; padding: 14px 18px; border-radius: 14px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(5,150,105,0.25);">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:800; font-size:14px; display:flex; align-items:center; gap:6px;">
+              <span>🎉</span> Genuine Customer Interaction Verified!
+            </div>
+            <div style="font-size:12px; opacity:0.92; margin-top:2px;" id="dc-claim-prompt-msg">
+              This unassigned lead is now eligible to be claimed into your personal My Leads workspace.
+            </div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button id="dc-claim-btn" onclick="executeClaimForCurrentLead()" style="background:white; color:#065f46; font-weight:800; font-size:13px; padding:8px 16px; border:none; border-radius:10px; cursor:pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+              <i class="fas fa-hand-holding-usd me-1"></i> Claim Lead Now
+            </button>
+            <button onclick="dismissClaimPrompt()" style="background:rgba(255,255,255,0.2); color:white; font-size:12px; font-weight:600; padding:8px 12px; border:none; border-radius:10px; cursor:pointer;">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Lead Header Banner (shown when dial active) -->
       <div id="dc-lead-banner" class="dc-lead-banner" style="display:none">
         <div class="dc-banner-name" id="banner-name">—</div>
@@ -756,7 +778,7 @@
     <!-- Filter row -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;align-items:center">
       <button class="rch-filter-btn active" data-type="ALL">All Calls</button>
-      <button class="rch-filter-btn" data-type="MISSED">📵 Missed</button>
+      <button class="rch-filter-btn" data-type="MISSED">📵 Not Answered</button>
       <button class="rch-filter-btn" data-type="INCOMING">📲 Received</button>
       <button class="rch-filter-btn" data-type="OUTGOING">📞 Outgoing</button>
       <button class="rch-filter-btn" data-type="REJECTED">🚫 Rejected</button>
@@ -1211,11 +1233,108 @@
     renderQueueList();
   }
 
-  function renderLeadCard() {
+  // ── DC_JIT_RESERVATION: Single-lead reservation management ──────────────────
+  let activeReservationLeadId = null;
+  let reservationHeartbeatTimer = null;
+
+  async function acquireReservation(leadId) {
+    if (reservationHeartbeatTimer) { clearInterval(reservationHeartbeatTimer); reservationHeartbeatTimer = null; }
+    activeReservationLeadId = leadId;
+    const res = await apiCall('POST', `/crm/dialer/lead/${leadId}/reserve`, { session_id: sessionId, ttl_seconds: 60 });
+    if (!res.success) {
+      if (res.cooldown_blocked) {
+        toast(`⏳ Redial Cooldown: ${res.message || 'Recently attempted — 1-hour cooldown active'}`, 4500);
+        return false;
+      }
+      if (res.compliance_blocked) {
+        toast(`⚠️ Compliance: ${res.error}`, 4000);
+        return false;
+      }
+      toast(`⚠️ Lead #${leadId} is currently in another agent's active preview. Skipping to next lead...`, 2500);
+      return false;
+    }
+    // Start heartbeat every 30s
+    reservationHeartbeatTimer = setInterval(async () => {
+      if (activeReservationLeadId === leadId) {
+        await apiCall('POST', `/crm/dialer/lead/${leadId}/heartbeat`, { extend_seconds: 60 });
+      }
+    }, 30000);
+    return true;
+  }
+
+  async function releaseCurrentReservation() {
+    if (reservationHeartbeatTimer) { clearInterval(reservationHeartbeatTimer); reservationHeartbeatTimer = null; }
+    if (activeReservationLeadId) {
+      const lid = activeReservationLeadId;
+      activeReservationLeadId = null;
+      await apiCall('POST', `/crm/dialer/lead/${lid}/release-reservation`, {});
+    }
+  }
+
+  // ── CANONICAL CLAIM PROMPT HELPERS ──────────────────────────────────────────
+  let claimEligibleLeadId = null;
+  let claimEligibleCompanyId = null;
+
+  function showClaimPrompt(leadId, companyId, message) {
+    claimEligibleLeadId = leadId;
+    claimEligibleCompanyId = companyId || currentLead?.company_id || 1;
+    const banner = document.getElementById('dc-claim-prompt-banner');
+    if (banner) {
+      if (message) document.getElementById('dc-claim-prompt-msg').textContent = message;
+      banner.style.display = 'block';
+    }
+  }
+
+  function dismissClaimPrompt() {
+    const banner = document.getElementById('dc-claim-prompt-banner');
+    if (banner) banner.style.display = 'none';
+    claimEligibleLeadId = null;
+  }
+
+  async function executeClaimForCurrentLead() {
+    if (!claimEligibleLeadId) return;
+    const lid = claimEligibleLeadId;
+    const cid = claimEligibleCompanyId || 1;
+    const btn = document.getElementById('dc-claim-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Claiming…'; }
+
+    const res = await apiCall('POST', `/crm/leads/${lid}/claim?company_id=${cid}`);
+    if (res.success) {
+      toast('✅ ' + (res.message || 'Lead claimed successfully! It is now in your personal My Leads.'), 4000);
+      dismissClaimPrompt();
+      if (currentLead && currentLead.id === lid) {
+        currentLead.handler_type = 'staff';
+        currentLead.telecaller_id = 'me';
+        populateBanner(currentLead, currentLead);
+      }
+    } else {
+      toast('❌ ' + (res.message || 'Claim failed. Check qualification requirements.'), 4000);
+      if (btn) { btn.disabled = false; btn.textContent = 'Claim Lead Now'; }
+    }
+  }
+
+  async function renderLeadCard() {
     const lead = queue[currentIndex];
     const cardEl = document.getElementById('dc-lead-card');
     const posEl = document.getElementById('dc-queue-pos');
     if (!lead) { if (sessionStatus === 'active') showQueueComplete(); return; }
+
+    // JIT Reservation check when session is active
+    if (sessionStatus === 'active' && lead) {
+      const resOk = await acquireReservation(lead.id);
+      if (!resOk) {
+        // Skip locked lead and advance smoothly
+        currentIndex++;
+        if (currentIndex < queue.length) {
+          renderLeadCard();
+          renderQueueList();
+        } else {
+          showQueueComplete();
+        }
+        return;
+      }
+    }
+
     posEl.textContent = `Lead ${currentIndex + 1} of ${queue.length}`;
 
     const priorLabel = PRIORITY_LABELS[lead.queue_priority] || '⚪ Upcoming';
@@ -1678,7 +1797,7 @@
 
     // 2. Log attempt
     const dncChecked = document.getElementById('e-dnc').checked;
-    await apiCall('POST', '/crm/dialer/attempt', {
+    const attemptRes = await apiCall('POST', '/crm/dialer/attempt', {
       session_id: sessionId,
       lead_id: currentLeadId,
       call_outcome: selectedOutcome || 'answered',
@@ -1698,6 +1817,16 @@
     statsDialed++;
     document.getElementById('stat-dialed').textContent = statsDialed;
     document.getElementById('stat-answered').textContent = statsAnswered;
+
+    // Check for Claim Eligibility
+    if (attemptRes && attemptRes.claim_eligible && attemptRes.is_unassigned) {
+      showClaimPrompt(currentLeadId, companyId, attemptRes.claim_reason);
+    } else {
+      dismissClaimPrompt();
+    }
+
+    // Release JIT reservation for this lead
+    await releaseCurrentReservation();
 
     // Reset
     btn.disabled = false; btn.textContent = 'Save & Next →';
@@ -1739,6 +1868,8 @@
     await apiCall('POST', '/crm/dialer/attempt', {
       session_id: sessionId, lead_id: currentLeadId, call_outcome: 'skip', current_index: currentIndex,
     });
+    // Release JIT reservation on skip
+    await releaseCurrentReservation();
     statsSkipped++;
     document.getElementById('stat-skipped').textContent = statsSkipped;
     resetEditPanel();
@@ -2103,7 +2234,7 @@
   const RCH_TYPE = {
     INCOMING:  { icon: '📲', color: '#059669', label: 'Received' },
     OUTGOING:  { icon: '📞', color: '#0ea5e9', label: 'Outgoing' },
-    MISSED:    { icon: '📵', color: '#dc2626', label: 'Missed' },
+    MISSED:    { icon: '📵', color: '#dc2626', label: 'Not Answered' },
     REJECTED:  { icon: '🚫', color: '#7c3aed', label: 'Rejected' },
     DIALER:    { icon: '🎯', color: '#d97706', label: 'CRM Dialer' },
   };

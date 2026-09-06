@@ -25,6 +25,17 @@ const SCHEDULER_BACKGROUND_ID = 'gps-background';
 
 const GPS_DEBUG = () => localStorage.getItem('DC_GPS_DEBUG') === '1';
 
+function generateObservationId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 interface GpsLocation {
   latitude: number;
   longitude: number;
@@ -33,6 +44,7 @@ interface GpsLocation {
   speed_kmh: number | null;
   heading: number | null;
   timestamp: number;
+  client_observation_id?: string;
 }
 
 export interface TrackingStatus {
@@ -123,7 +135,8 @@ class GpsService {
             altitude: null,
             speed_kmh: data.speed * 3.6,
             heading: null,
-            timestamp: data.timestamp
+            timestamp: data.timestamp,
+            client_observation_id: data.client_observation_id || generateObservationId()
           };
           
           if (websocketService.getConnectionStatus()) {
@@ -181,10 +194,12 @@ class GpsService {
         }
       }
 
-      const batteryOptResult = await BackgroundLocation.isIgnoringBatteryOptimizations();
-      if (!batteryOptResult.isIgnoring) {
-        if (GPS_DEBUG()) console.log('[DC_GPS_NATIVE] Requesting battery optimization exemption...');
-        await BackgroundLocation.requestBatteryOptimizationExemption();
+      if (Capacitor.getPlatform() === 'android' && BackgroundLocation.isIgnoringBatteryOptimizations) {
+        const batteryOptResult = await BackgroundLocation.isIgnoringBatteryOptimizations();
+        if (!batteryOptResult.isIgnoring && BackgroundLocation.requestBatteryOptimizationExemption) {
+          if (GPS_DEBUG()) console.log('[DC_GPS_NATIVE] Requesting battery optimization exemption on Android...');
+          await BackgroundLocation.requestBatteryOptimizationExemption();
+        }
       }
 
       const authToken = await apiService.getToken();
@@ -673,7 +688,8 @@ class GpsService {
       altitude: position.coords.altitude,
       speed_kmh: position.coords.speed ? position.coords.speed * 3.6 : null,
       heading: position.coords.heading,
-      timestamp: position.timestamp
+      timestamp: position.timestamp,
+      client_observation_id: generateObservationId()
     };
   }
 
@@ -847,7 +863,9 @@ class GpsService {
         loc.latitude,
         loc.longitude,
         loc.accuracy_m,
-        batteryPct
+        batteryPct,
+        loc.client_observation_id,
+        loc.timestamp
       );
 
       if (response.success) {
@@ -872,7 +890,7 @@ class GpsService {
         // DC_OFFLINE_001: Queue for offline sync if API fails
         if (this.isOfflineMode) {
           const originalTs = loc.timestamp ? new Date(loc.timestamp).toISOString() : new Date().toISOString();
-          await offlineQueueService.enqueueLocation(loc.latitude, loc.longitude, loc.accuracy_m, undefined, batteryPct, originalTs);
+          await offlineQueueService.enqueueLocation(loc.latitude, loc.longitude, loc.accuracy_m, undefined, batteryPct, originalTs, loc.client_observation_id);
           if (GPS_DEBUG()) console.log('[DC_GPS] Heartbeat queued for offline sync');
         }
       }
@@ -880,7 +898,7 @@ class GpsService {
       console.error('[DC_GPS] Heartbeat error:', error);
       
       const originalTs = loc.timestamp ? new Date(loc.timestamp).toISOString() : new Date().toISOString();
-      await offlineQueueService.enqueueLocation(loc.latitude, loc.longitude, loc.accuracy_m, undefined, batteryPct, originalTs);
+      await offlineQueueService.enqueueLocation(loc.latitude, loc.longitude, loc.accuracy_m, undefined, batteryPct, originalTs, loc.client_observation_id);
       if (GPS_DEBUG()) console.log('[DC_GPS] Heartbeat queued for offline sync');
     }
   }
@@ -961,10 +979,14 @@ class GpsService {
           altitude: loc.altitude ?? undefined,
           speed: loc.speed_kmh ?? undefined,
           heading: loc.heading ?? undefined,
-          battery_percentage: batteryPct
+          battery_percentage: batteryPct,
+          client_observation_id: loc.client_observation_id,
+          timestamp: loc.timestamp
         },
         speed_kmh: loc.speed_kmh ?? undefined,
-        battery_percentage: batteryPct
+        battery_percentage: batteryPct,
+        client_observation_id: loc.client_observation_id,
+        timestamp: loc.timestamp
       });
 
       if (response.success) {
@@ -977,7 +999,7 @@ class GpsService {
       } else {
         if (this.isOfflineMode) {
           const originalTs = loc.timestamp ? new Date(loc.timestamp).toISOString() : new Date().toISOString();
-          await offlineQueueService.enqueueLocation(loc.latitude, loc.longitude, loc.accuracy_m, journeyId, batteryPct, originalTs);
+          await offlineQueueService.enqueueLocation(loc.latitude, loc.longitude, loc.accuracy_m, journeyId, batteryPct, originalTs, loc.client_observation_id);
           if (GPS_DEBUG()) console.log('[DC_GPS] Track point queued for offline sync');
         }
       }
@@ -985,7 +1007,7 @@ class GpsService {
       console.error('[DC_GPS] Track point error:', error);
       
       const originalTs = loc.timestamp ? new Date(loc.timestamp).toISOString() : new Date().toISOString();
-      await offlineQueueService.enqueueLocation(loc.latitude, loc.longitude, loc.accuracy_m, journeyId, batteryPct, originalTs);
+      await offlineQueueService.enqueueLocation(loc.latitude, loc.longitude, loc.accuracy_m, journeyId, batteryPct, originalTs, loc.client_observation_id);
       if (GPS_DEBUG()) console.log('[DC_GPS] Track point queued for offline sync');
     }
   }

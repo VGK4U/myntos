@@ -323,6 +323,12 @@
                         <option value="">All Sources</option>
                     </select>
                     <div style="position:relative;">
+                        <input type="text" class="form-control form-control-sm" id="filterTeamMemberSearch" placeholder="👥 Team Member..." style="width:150px;padding-right:24px;border-color:#6366f1;" autocomplete="off" oninput="onStaffFilterInput('team_member',this.value)">
+                        <input type="hidden" id="filterTeamMemberId">
+                        <span id="filterTeamMemberClearBtn" onclick="clearStaffFilter('team_member', true)" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;color:#aaa;font-size:12px;"><i class="fas fa-times"></i></span>
+                        <div id="filterTeamMemberDropdown" style="display:none;position:absolute;top:100%;left:0;z-index:1050;background:#fff;border:1px solid #dee2e6;border-radius:8px;max-height:200px;overflow-y:auto;width:260px;box-shadow:0 4px 16px rgba(0,0,0,0.14);"></div>
+                    </div>
+                    <div style="position:relative;">
                         <input type="text" class="form-control form-control-sm" id="filterPartnerSearch" placeholder="Business Partner..." style="width:150px;padding-right:24px;" autocomplete="off" oninput="onPartnerFilterInput(this.value)">
                         <input type="hidden" id="filterPartnerId">
                         <span id="filterPartnerClearBtn" onclick="clearPartnerFilter(true)" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;color:#aaa;font-size:12px;"><i class="fas fa-times"></i></span>
@@ -2592,9 +2598,13 @@
             _staffFilterTimeout[role] = setTimeout(() => _searchStaffFilter(role, q), 300);
         }
         async function _searchStaffFilter(role, q) {
-            const ddId = role === 'telecaller' ? 'filterTelecallerDropdown' : 'filterFieldStaffDropdown';
+            const ddId = role === 'telecaller' ? 'filterTelecallerDropdown' : (role === 'field_staff' ? 'filterFieldStaffDropdown' : 'filterTeamMemberDropdown');
             try {
-                const data = await staffFetchJson(`/api/v1/staff/employees?search=${encodeURIComponent(q)}&limit=10&status=active`);
+                let url = `/api/v1/staff/employees?search=${encodeURIComponent(q)}&limit=15&status=active`;
+                if (role === 'team_member' && companyId && companyId !== 'all') {
+                    url += `&company_id=${companyId}`;
+                }
+                const data = await staffFetchJson(url);
                 const dd = document.getElementById(ddId);
                 const list = data.employees || data.data || data || [];
                 if (!list.length) {
@@ -2611,10 +2621,10 @@
             } catch(e) { console.error('Staff filter search error', e); }
         }
         function selectStaffFilter(role, id, name, code) {
-            const hidId  = role === 'telecaller' ? 'filterTelecallerId'       : 'filterFieldStaffId';
-            const txtId  = role === 'telecaller' ? 'filterTelecallerSearch'   : 'filterFieldStaffSearch';
-            const ddId   = role === 'telecaller' ? 'filterTelecallerDropdown' : 'filterFieldStaffDropdown';
-            const cbId   = role === 'telecaller' ? 'filterTelecallerClearBtn' : 'filterFieldStaffClearBtn';
+            const hidId  = role === 'telecaller' ? 'filterTelecallerId'       : (role === 'field_staff' ? 'filterFieldStaffId'       : 'filterTeamMemberId');
+            const txtId  = role === 'telecaller' ? 'filterTelecallerSearch'   : (role === 'field_staff' ? 'filterFieldStaffSearch'   : 'filterTeamMemberSearch');
+            const ddId   = role === 'telecaller' ? 'filterTelecallerDropdown' : (role === 'field_staff' ? 'filterFieldStaffDropdown' : 'filterTeamMemberDropdown');
+            const cbId   = role === 'telecaller' ? 'filterTelecallerClearBtn' : (role === 'field_staff' ? 'filterFieldStaffClearBtn' : 'filterTeamMemberClearBtn');
             document.getElementById(hidId).value = id;
             document.getElementById(txtId).value = code ? `${name} (${code})` : name;
             document.getElementById(ddId).style.display = 'none';
@@ -2624,10 +2634,10 @@
             highlightActiveCards();
         }
         function clearStaffFilter(role, reload = false) {
-            const hidId = role === 'telecaller' ? 'filterTelecallerId'       : 'filterFieldStaffId';
-            const txtId = role === 'telecaller' ? 'filterTelecallerSearch'   : 'filterFieldStaffSearch';
-            const ddId  = role === 'telecaller' ? 'filterTelecallerDropdown' : 'filterFieldStaffDropdown';
-            const cbId  = role === 'telecaller' ? 'filterTelecallerClearBtn' : 'filterFieldStaffClearBtn';
+            const hidId = role === 'telecaller' ? 'filterTelecallerId'       : (role === 'field_staff' ? 'filterFieldStaffId'       : 'filterTeamMemberId');
+            const txtId = role === 'telecaller' ? 'filterTelecallerSearch'   : (role === 'field_staff' ? 'filterFieldStaffSearch'   : 'filterTeamMemberSearch');
+            const ddId  = role === 'telecaller' ? 'filterTelecallerDropdown' : (role === 'field_staff' ? 'filterFieldStaffDropdown' : 'filterTeamMemberDropdown');
+            const cbId  = role === 'telecaller' ? 'filterTelecallerClearBtn' : (role === 'field_staff' ? 'filterFieldStaffClearBtn' : 'filterTeamMemberClearBtn');
             document.getElementById(hidId).value = '';
             document.getElementById(txtId).value = '';
             document.getElementById(ddId).style.display = 'none';
@@ -2640,9 +2650,9 @@
             }
         }
         document.addEventListener('click', function(e) {
-            ['filterTelecallerDropdown','filterFieldStaffDropdown'].forEach(ddId => {
+            ['filterTelecallerDropdown','filterFieldStaffDropdown','filterTeamMemberDropdown'].forEach(ddId => {
                 const dd = document.getElementById(ddId);
-                const srcId = ddId === 'filterTelecallerDropdown' ? 'filterTelecallerSearch' : 'filterFieldStaffSearch';
+                const srcId = ddId === 'filterTelecallerDropdown' ? 'filterTelecallerSearch' : (ddId === 'filterFieldStaffDropdown' ? 'filterFieldStaffSearch' : 'filterTeamMemberSearch');
                 if (dd && !dd.contains(e.target) && e.target.id !== srcId) dd.style.display = 'none';
             });
         });
@@ -2766,7 +2776,8 @@
                     baseEndpoint += `&category_id=${categoryId}`;
                 }
             }
-            if (search) baseEndpoint += `&search=${encodeURIComponent(search)}`;
+            const filterTeamMemberId = document.getElementById('filterTeamMemberId')?.value;
+            if (filterTeamMemberId) baseEndpoint += `&team_member_id=${filterTeamMemberId}`;
             const filterPartnerId = document.getElementById('filterPartnerId')?.value;
             if (filterPartnerId) baseEndpoint += `&associated_partner_id=${filterPartnerId}`;
             const filterTelecallerId = document.getElementById('filterTelecallerId')?.value;

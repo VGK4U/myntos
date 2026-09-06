@@ -929,6 +929,30 @@ async def list_revenue_categories(
     return JSONResponse(content={"success": True, "categories": result, "total": len(result), "source": "signup_categories"})
 
 
+@router.get("/revenue-categories/all-names")
+async def list_all_revenue_category_names(
+    active_only: bool = Query(True, description="Only active categories"),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """Return deduplicated category names across all companies for category filtering"""
+    validate_accounts_access(current_user)
+    from app.models.signup_category import SignupCategory
+    query = db.query(SignupCategory)
+    if active_only:
+        query = query.filter(SignupCategory.is_active == True)
+    all_cats = query.order_by(SignupCategory.display_order, SignupCategory.name).all()
+    seen = set()
+    names = []
+    for cat in all_cats:
+        n = cat.name
+        if n and n not in seen:
+            seen.add(n)
+            names.append(n)
+    return JSONResponse(content={"success": True, "names": names})
+
+
+
 @router.post("/revenue-categories")
 async def create_revenue_category(
     data: RevenueCategoryCreate = Body(...),
@@ -3524,13 +3548,18 @@ async def get_opening_balance(
         
         entries = query.all()
         
+        company_ids = {e.company_id for e in entries if e.company_id}
+        companies_map = {}
+        if company_ids:
+            for c in db.query(AssociatedCompany.id, AssociatedCompany.company_name).filter(AssociatedCompany.id.in_(company_ids)).all():
+                companies_map[c[0]] = c[1]
+        
         results = []
         for entry in entries:
-            company = db.query(AssociatedCompany).filter(AssociatedCompany.id == entry.company_id).first()
             results.append({
                 "id": entry.id,
                 "company_id": entry.company_id,
-                "company_name": company.company_name if company else "Unknown",
+                "company_name": companies_map.get(entry.company_id, "Unknown"),
                 "quantity": float(entry.quantity_in or 0),
                 "unit_rate": float(entry.rate or 0),
                 "total_value": float(entry.total_value or 0),
@@ -4247,6 +4276,15 @@ async def list_income_entries(
             d['destination_employee_name'] = staff_map.get(e.destination_employee_id, {}).get('name') if getattr(e, 'destination_employee_id', None) else None
             d['destination_employee_emp_code'] = staff_map.get(e.destination_employee_id, {}).get('emp_code') if getattr(e, 'destination_employee_id', None) else None
             d['destination_company_name'] = comp_map.get(e.destination_company_id) if getattr(e, 'destination_company_id', None) else None
+
+            # Fallback enrichment for legacy service ticket entries
+            _ref_type = (e.reference_type or '').upper()
+            if _ref_type == 'SERVICE_TICKET_SPARE' and (not d.get('spares_amount') or float(d.get('spares_amount') or 0) == 0):
+                d['spares_amount'] = float(e.amount or 0)
+                d['service_amount'] = 0.0
+                if not d.get('ticket_total_amount'):
+                    d['ticket_total_amount'] = float(e.amount or 0)
+
             entry_list.append(d)
         
         return JSONResponse(content={
@@ -4380,6 +4418,22 @@ async def list_estimated_income_entries(
             d['income_source_name'] = src_map.get(e.income_source_id) if e.income_source_id else None
             result.append(d)
         return JSONResponse(content={"success": True, "entries": result, "total": total})
+    except Exception as e:
+        return handle_accounts_error(e)
+
+
+@router.get("/income-entries/bulk-estimation-payments")
+async def list_bulk_estimation_payments(
+    entry_ids: Optional[str] = Query(None, description="Comma-separated entry IDs"),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """DC-ESTIMATIONS-001: Bulk list payments recorded against estimated income entries."""
+    try:
+        from app.services.staff_accounts_service import EstimationService
+        ids = [int(x.strip()) for x in entry_ids.split(",") if x.strip().isdigit()] if entry_ids else None
+        payments = EstimationService.list_bulk_payments(db, current_user, ids)
+        return JSONResponse(content={"success": True, "payments": payments})
     except Exception as e:
         return handle_accounts_error(e)
 
@@ -7317,6 +7371,9 @@ async def get_expense_behalf_employees(
             .order_by(StaffEmployee.full_name)
             .all()
         )
+    # Hide System Administrator (VGK4U Supreme, MR10001) from ALL staff EXCEPT when logged in as MR10001
+    if getattr(current_user, 'emp_code', None) != 'MR10001':
+        employees = [e for e in employees if getattr(e, 'emp_code', None) != 'MR10001' and getattr(e, 'id', None) != 1]
     return {
         "success": True,
         "employees": [
@@ -7333,7 +7390,7 @@ async def get_expense_behalf_employees(
 
 
 @router.get("/expense-consolidated")
-async def get_expense_consolidated(
+def get_expense_consolidated(
     company_id: Optional[int] = Query(None, description="Filter by company"),
     from_date: Optional[date] = Query(None, description="Filter expense date from"),
     to_date: Optional[date] = Query(None, description="Filter expense date to"),
@@ -7346,187 +7403,217 @@ async def get_expense_consolidated(
     Privileged (Accounts/VGK/EA/MR10001) → ALL active employees.
     Reporting managers (non-privileged) → their direct reports only.
     """
-    from sqlalchemy import func as _func, case as _case, or_ as _or
+    try:
+        from sqlalchemy import func as _func, case as _case, or_ as _or
+        from sqlalchemy.orm import joinedload
 
-    _is_privileged = is_accounts_allowed_employee(current_user)
+        _is_privileged = is_accounts_allowed_employee(current_user)
 
-    # Determine which employees are visible to this viewer
-    emp_q = db.query(StaffEmployee).filter(StaffEmployee.status == 'active')
-    if not _is_privileged:
-        # Reporting managers see only their direct reports
-        direct_report_ids = [
-            r[0] for r in db.query(StaffEmployee.id).filter(
-                StaffEmployee.reporting_manager_id == current_user.id
-            ).all()
-        ]
-        if not direct_report_ids:
-            raise HTTPException(status_code=403, detail="No team data available. Only Accounts/VGK/EA/Managers can view consolidated expenses.")
-        emp_q = emp_q.filter(StaffEmployee.id.in_(direct_report_ids))
+        # Determine which employees are visible to this viewer
+        from app.utils.staff_hierarchy import get_recursive_downline
+        emp_q = db.query(StaffEmployee).options(
+            joinedload(StaffEmployee.department),
+            joinedload(StaffEmployee.role)
+        ).filter(StaffEmployee.status == 'active')
 
-    if search:
-        _s = f"%{search}%"
-        emp_q = emp_q.filter(
+        # Hide System Administrator (VGK4U Supreme, MR10001) from ALL staff EXCEPT when logged in as MR10001
+        if getattr(current_user, 'emp_code', None) != 'MR10001':
+            emp_q = emp_q.filter(StaffEmployee.emp_code != 'MR10001', StaffEmployee.id != 1)
+
+        if not _is_privileged:
+            # Reporting managers see their entire recursive downline
+            downline_ids = get_recursive_downline(current_user.id, db, StaffEmployee, include_manager=False)
+            if not downline_ids:
+                return {"success": True, "rows": [], "total": 0}
+            emp_q = emp_q.filter(StaffEmployee.id.in_(downline_ids))
+
+        if search:
+            _s = f"%{search}%"
+            emp_q = emp_q.filter(
+                _or(
+                    StaffEmployee.full_name.ilike(_s),
+                    StaffEmployee.emp_code.ilike(_s)
+                )
+            )
+        employees = emp_q.order_by(StaffEmployee.full_name).all()
+        emp_ids = [e.id for e in employees]
+        if not emp_ids:
+            return {"success": True, "rows": [], "total": 0}
+
+        from app.models.staff_accounts import (
+            IncomeEntry, ExpenseEntry, FundAllocation, EmployeeFundTransfer
+        )
+
+        # 1. Income entries
+        q_ie = db.query(IncomeEntry).filter(
+            IncomeEntry.is_deleted == False,
+            IncomeEntry.destination_employee_id.in_(emp_ids)
+        )
+        if company_id:
+            q_ie = q_ie.filter(IncomeEntry.company_id == company_id)
+        if from_date:
+            q_ie = q_ie.filter(IncomeEntry.income_date >= from_date)
+        if to_date:
+            q_ie = q_ie.filter(IncomeEntry.income_date <= to_date)
+        ie_records = q_ie.all()
+
+        # 2. Fund Allocations (Bank Ledgers)
+        q_fa = db.query(FundAllocation).filter(
+            FundAllocation.to_employee_id.in_(emp_ids)
+        )
+        if company_id:
+            q_fa = q_fa.filter(FundAllocation.company_id == company_id)
+        if from_date:
+            q_fa = q_fa.filter(FundAllocation.allocation_date >= from_date)
+        if to_date:
+            q_fa = q_fa.filter(FundAllocation.allocation_date <= to_date)
+        fa_records = q_fa.all()
+
+        # 3. Fund Transfers
+        q_ft = db.query(EmployeeFundTransfer).filter(
             _or(
-                StaffEmployee.full_name.ilike(_s),
-                StaffEmployee.emp_code.ilike(_s)
+                EmployeeFundTransfer.to_employee_id.in_(emp_ids),
+                EmployeeFundTransfer.from_employee_id.in_(emp_ids)
             )
         )
-    employees = emp_q.order_by(StaffEmployee.full_name).all()
-    emp_ids = [e.id for e in employees]
-    if not emp_ids:
-        return {"success": True, "rows": [], "total": 0}
+        if company_id:
+            q_ft = q_ft.filter(EmployeeFundTransfer.company_id == company_id)
+        if from_date:
+            q_ft = q_ft.filter(EmployeeFundTransfer.transfer_date >= from_date)
+        if to_date:
+            q_ft = q_ft.filter(EmployeeFundTransfer.transfer_date <= to_date)
+        ft_records = q_ft.all()
 
-    # Aggregate fund allocations per employee
-    fa_q = (
-        db.query(
-            FundAllocation.to_employee_id,
-            _func.sum(FundAllocation.amount).label('total_allocated'),
-            _func.sum(FundAllocation.balance_remaining).label('total_balance'),
-            _func.sum(FundAllocation.total_expensed).label('total_expensed'),
+        # 4. Expense Entries
+        q_exp = db.query(ExpenseEntry).filter(
+            ExpenseEntry.created_by_id.in_(emp_ids)
         )
-        .filter(
-            FundAllocation.to_employee_id.in_(emp_ids),
-            FundAllocation.status.in_(['PENDING', 'CONFIRMED', 'PARTIALLY_SETTLED', 'SETTLED'])
-        )
-    )
-    if company_id:
-        fa_q = fa_q.filter(FundAllocation.company_id == company_id)
-    fa_rows = fa_q.group_by(FundAllocation.to_employee_id).all()
-    fa_map = {r.to_employee_id: r for r in fa_rows}
+        if company_id:
+            q_exp = q_exp.filter(ExpenseEntry.company_id == company_id)
+        if from_date:
+            q_exp = q_exp.filter(ExpenseEntry.expense_date >= from_date)
+        if to_date:
+            q_exp = q_exp.filter(ExpenseEntry.expense_date <= to_date)
+        exp_records = q_exp.all()
+        print(f"[CONSO-API-DEBUG] emp_ids={emp_ids} exp_records_count={len(exp_records)} ft_records_count={len(ft_records)} fa_records_count={len(fa_records)}", flush=True)
 
-    # DC_CONSO_TRANSFER_001: Aggregate fund transfers per employee (sent / received)
-    # This ensures fund_balance correctly reflects transfers out/in — not just allocations.
-    from app.models.staff_accounts import EmployeeFundTransfer as _EFT
-    ft_sent_q = (
-        db.query(
-            _EFT.from_employee_id.label('employee_id'),
-            _func.coalesce(_func.sum(_EFT.amount), 0).label('total_sent'),
-        )
-        .filter(
-            _EFT.from_employee_id.in_(emp_ids),
-            _EFT.status == 'CONFIRMED',
-        )
-    )
-    ft_recv_q = (
-        db.query(
-            _EFT.to_employee_id.label('employee_id'),
-            _func.coalesce(_func.sum(_EFT.amount), 0).label('total_received'),
-        )
-        .filter(
-            _EFT.to_employee_id.in_(emp_ids),
-            _EFT.status == 'CONFIRMED',
-        )
-    )
-    if company_id:
-        ft_sent_q = ft_sent_q.filter(_EFT.company_id == company_id)
-        ft_recv_q = ft_recv_q.filter(_EFT.company_id == company_id)
-    ft_sent_map = {r.employee_id: float(r.total_sent or 0) for r in ft_sent_q.group_by(_EFT.from_employee_id).all()}
-    ft_recv_map = {r.employee_id: float(r.total_received or 0) for r in ft_recv_q.group_by(_EFT.to_employee_id).all()}
+        # Group by employee_id
+        from collections import defaultdict
+        ie_by_emp = defaultdict(list)
+        for r in ie_records:
+            ie_by_emp[r.destination_employee_id].append(r)
 
-    # Aggregate expense entries per employee
-    exp_q = (
-        db.query(
-            ExpenseEntry.created_by_id,
-            _func.count().label('total_count'),
-            _func.sum(_case((ExpenseEntry.status == 'DRAFT', 1), else_=0)).label('draft_count'),
-            _func.sum(_case((ExpenseEntry.status == 'SUBMITTED', 1), else_=0)).label('submitted_count'),
-            _func.sum(_case((ExpenseEntry.status == 'APPROVED', 1), else_=0)).label('approved_count'),
-            _func.sum(_case((ExpenseEntry.status == 'REJECTED', 1), else_=0)).label('rejected_count'),
-            _func.sum(_case((ExpenseEntry.is_paid == True, 1), else_=0)).label('paid_count'),
-            _func.sum(ExpenseEntry.amount).label('total_amount'),
-            _func.sum(_case((ExpenseEntry.status == 'DRAFT', ExpenseEntry.amount), else_=0)).label('draft_amount'),
-            _func.sum(_case((ExpenseEntry.status == 'SUBMITTED', ExpenseEntry.amount), else_=0)).label('submitted_amount'),
-            _func.sum(_case((ExpenseEntry.status == 'APPROVED', ExpenseEntry.amount), else_=0)).label('approved_amount'),
-            _func.sum(_case((ExpenseEntry.status == 'REJECTED', ExpenseEntry.amount), else_=0)).label('rejected_amount'),
-            _func.sum(_case((ExpenseEntry.is_paid == True, ExpenseEntry.amount), else_=0)).label('paid_amount'),
-        )
-        .filter(ExpenseEntry.created_by_id.in_(emp_ids))
-    )
-    if company_id:
-        exp_q = exp_q.filter(ExpenseEntry.company_id == company_id)
-    if from_date:
-        exp_q = exp_q.filter(ExpenseEntry.expense_date >= from_date)
-    if to_date:
-        exp_q = exp_q.filter(ExpenseEntry.expense_date <= to_date)
-    exp_rows = exp_q.group_by(ExpenseEntry.created_by_id).all()
-    exp_map = {r.created_by_id: r for r in exp_rows}
+        fa_by_emp = defaultdict(list)
+        for r in fa_records:
+            fa_by_emp[r.to_employee_id].append(r)
 
-    # DC_CONSO_CASH_RECV_001: Aggregate cash received by each employee as IE destination
-    # Field staff receive customer payments (IE destination_type='EMPLOYEE'); show as Cash IN
-    ie_recv_q = (
-        db.query(
-            IncomeEntry.destination_employee_id,
-            _func.sum(IncomeEntry.amount).label('total_received'),
-            _func.count().label('receipt_count'),
-        )
-        .filter(
-            IncomeEntry.destination_employee_id.in_(emp_ids),
-            IncomeEntry.destination_type == 'EMPLOYEE',
-            IncomeEntry.reference_type != 'JOURNAL_VOUCHER',
-            IncomeEntry.is_deleted == False,
-        )
-    )
-    if company_id:
-        ie_recv_q = ie_recv_q.filter(IncomeEntry.company_id == company_id)
-    ie_recv_rows = ie_recv_q.group_by(IncomeEntry.destination_employee_id).all()
-    ie_map = {r.destination_employee_id: r for r in ie_recv_rows}
+        ft_in_by_emp = defaultdict(list)
+        ft_out_by_emp = defaultdict(list)
+        for r in ft_records:
+            if r.to_employee_id in emp_ids:
+                ft_in_by_emp[r.to_employee_id].append(r)
+            if r.from_employee_id in emp_ids:
+                ft_out_by_emp[r.from_employee_id].append(r)
 
-    rows = []
-    for emp in employees:
-        fa = fa_map.get(emp.id)
-        ex = exp_map.get(emp.id)
-        ir = ie_map.get(emp.id)
-        sent = ft_sent_map.get(emp.id, 0.0)
-        received = ft_recv_map.get(emp.id, 0.0)
-        if fa is None and ex is None and ir is None and sent == 0 and received == 0:
-            continue  # skip employees with zero data across all cash flows
-        # DC_CONSO_TRANSFER_001: fund_balance = allocated + received_transfers - sent_transfers - approved_expenses
-        total_allocated = float(fa.total_allocated or 0) if fa else 0
-        approved_amount = float(ex.approved_amount or 0) if ex else 0
-        cust_cash_received = float(ir.total_received or 0) if ir else 0
-        cash_receipt_count = int(ir.receipt_count or 0) if ir else 0
+        exp_by_emp = defaultdict(list)
+        for r in exp_records:
+            exp_by_emp[r.created_by_id].append(r)
 
-        # DC_CONSO_TRANSFER_002: Total non-salary cash/funds received by employee
-        # Includes Customer Cash Receipts + Fund Allocations + Staff Transfers Received
-        total_cash_inflow = cust_cash_received + total_allocated + received
+        rows = []
+        for emp in employees:
+            e_ies = ie_by_emp.get(emp.id, [])
+            e_fas = fa_by_emp.get(emp.id, [])
+            e_ft_in = ft_in_by_emp.get(emp.id, [])
+            e_ft_out = ft_out_by_emp.get(emp.id, [])
+            e_exps = exp_by_emp.get(emp.id, [])
 
-        # Net cash balance holding with employee right now:
-        # Total Cash/Funds Received - Transfers Sent to Others - Approved Expenses
-        cash_balance = total_cash_inflow - sent - approved_amount
+            # Has any activity? If not, skip
+            if not e_ies and not e_fas and not e_ft_in and not e_ft_out and not e_exps:
+                continue
 
-        # Fund balance: allocated balance + received transfers - sent transfers - approved expenses
-        fund_balance = total_allocated + received - sent - approved_amount
+            # SECTION 1: Confirmed Flow (Inflow)
+            ie_amt = round(sum(float(x.amount or 0) for x in e_ies if getattr(x, 'status', 'CONFIRMED') != 'DRAFT'), 2)
+            ie_cnt = sum(1 for x in e_ies if getattr(x, 'status', 'CONFIRMED') != 'DRAFT')
+            fa_amt = round(sum(float(x.amount or 0) for x in e_fas if getattr(x, 'status', 'CONFIRMED') != 'DRAFT'), 2)
+            ft_in_amt = round(sum(float(x.amount or 0) for x in e_ft_in if getattr(x, 'status', 'CONFIRMED') != 'DRAFT'), 2)
+            tot_in_conf = round(ie_amt + fa_amt + ft_in_amt, 2)
 
-        rows.append({
-            "employee_id": emp.id,
-            "emp_code": emp.emp_code,
-            "full_name": emp.full_name or "",
-            "department": emp.department.name if emp.department else None,
-            "role": emp.role.role_name if emp.role else None,
-            "fund_allocated": total_allocated,
-            "fund_transferred_out": sent,
-            "fund_transferred_in": received,
-            "fund_balance": fund_balance,
-            "fund_used": float(fa.total_expensed or 0) if fa else 0,
-            "cash_received": total_cash_inflow,
-            "cust_cash_received": cust_cash_received,
-            "cash_receipt_count": cash_receipt_count,
-            "cash_balance": cash_balance,
-            "total_expenses": int(ex.total_count or 0) if ex else 0,
-            "draft_count": int(ex.draft_count or 0) if ex else 0,
-            "submitted_count": int(ex.submitted_count or 0) if ex else 0,
-            "approved_count": int(ex.approved_count or 0) if ex else 0,
-            "rejected_count": int(ex.rejected_count or 0) if ex else 0,
-            "paid_count": int(ex.paid_count or 0) if ex else 0,
-            "total_amount": float(ex.total_amount or 0) if ex else 0,
-            "draft_amount": float(ex.draft_amount or 0) if ex else 0,
-            "submitted_amount": float(ex.submitted_amount or 0) if ex else 0,
-            "approved_amount": float(ex.approved_amount or 0) if ex else 0,
-            "rejected_amount": float(ex.rejected_amount or 0) if ex else 0,
-            "paid_amount": float(ex.paid_amount or 0) if ex else 0,
-        })
+            # SECTION 1: Confirmed Flow (Outflow - Excludes Drafts)
+            ledg_exp_conf = round(sum(float(x.amount or 0) for x in e_exps if not getattr(x, 'is_external', False) and x.status in ['SUBMITTED', 'APPROVED', 'PAID']), 2)
+            ext_exp_conf = round(sum(float(x.amount or 0) for x in e_exps if getattr(x, 'is_external', False) and x.status in ['SUBMITTED', 'APPROVED', 'PAID']), 2)
+            ft_out_conf = round(sum(float(x.amount or 0) for x in e_ft_out if getattr(x, 'status', 'CONFIRMED') != 'DRAFT'), 2)
+            tot_out_conf = round(ledg_exp_conf + ext_exp_conf + ft_out_conf, 2)
+            net_bal_conf = round(tot_in_conf - tot_out_conf, 2)
 
-    return {"success": True, "rows": rows, "total": len(rows)}
+            # SECTION 2: Drafts Only Flow
+            draft_exps = [x for x in e_exps if x.status == 'DRAFT']
+            draft_ies = [x for x in e_ies if getattr(x, 'status', '') == 'DRAFT']
+            draft_in_amt = round(sum(float(x.amount or 0) for x in draft_ies), 2)
+            draft_out_amt = round(sum(float(x.amount or 0) for x in draft_exps), 2)
+            draft_bal = round(draft_in_amt - draft_out_amt, 2)
+            final_bal = round(net_bal_conf + draft_bal, 2)
+
+            # SECTION 3: Status Breakdown
+            submitted_exps = [x for x in e_exps if x.status == 'SUBMITTED']
+            approved_exps = [x for x in e_exps if x.status == 'APPROVED']
+            rejected_exps = [x for x in e_exps if x.status == 'REJECTED']
+            paid_exps = [x for x in e_exps if getattr(x, 'is_paid', False)]
+
+            rows.append({
+                "employee_id": emp.id,
+                "emp_code": emp.emp_code,
+                "full_name": emp.full_name or "",
+                "department": emp.department.name if emp.department else None,
+                "role": emp.role.role_name if emp.role else None,
+                # SECTION 1: INFLOW
+                "income_entries": ie_amt,
+                "income_receipt_count": ie_cnt,
+                "bank_alloc_in": fa_amt,
+                "fund_allocated": fa_amt,
+                "fund_transferred_in": ft_in_amt,
+                "total_in": tot_in_conf,
+                "cash_received": tot_in_conf,
+                "cust_cash_received": ie_amt,
+                "cash_receipt_count": ie_cnt,
+                # SECTION 1: OUTFLOW
+                "ledger_exp": ledg_exp_conf,
+                "ledger_exp_amount": ledg_exp_conf,
+                "ext_exp": ext_exp_conf,
+                "ext_exp_amount": ext_exp_conf,
+                "fund_transferred_out": ft_out_conf,
+                "total_out": tot_out_conf,
+                # SECTION 1: NET BALANCE
+                "balance": net_bal_conf,
+                "net_balance": net_bal_conf,
+                "fund_balance": net_bal_conf,
+                "fund_used": round(ledg_exp_conf + ext_exp_conf, 2),
+                "cash_balance": net_bal_conf,
+                # SECTION 2: DRAFTS ONLY FLOW & FINAL BALANCE
+                "draft_in": draft_in_amt,
+                "draft_out": draft_out_amt,
+                "draft_balance": draft_bal,
+                "final_balance": final_bal,
+                # SECTION 3: EXPENSE COUNTS
+                "total_expenses": len(e_exps),
+                "draft_count": len(draft_exps),
+                "submitted_count": len(submitted_exps),
+                "approved_count": len(approved_exps),
+                "rejected_count": len(rejected_exps),
+                "paid_count": len(paid_exps),
+                # SECTION 3: EXPENSE AMOUNTS
+                "total_amount": round(sum(float(x.amount or 0) for x in e_exps), 2),
+                "draft_amount": round(sum(float(x.amount or 0) for x in draft_exps), 2),
+                "submitted_amount": round(sum(float(x.amount or 0) for x in submitted_exps), 2),
+                "approved_amount": round(sum(float(x.amount or 0) for x in approved_exps), 2),
+                "rejected_amount": round(sum(float(x.amount or 0) for x in rejected_exps), 2),
+                "paid_amount": round(sum(float(x.amount or 0) for x in paid_exps), 2),
+            })
+
+        return {"success": True, "rows": rows, "total": len(rows)}
+    except Exception as e:
+        import logging, traceback
+        logging.getLogger(__name__).error(f"[EXPENSE-CONSOLIDATED-ERR] {e}\n{traceback.format_exc()}")
+        return {"success": False, "message": str(e), "rows": [], "total": 0}
 
 
 @router.post("/fund-allocations", response_model=FundAllocationResponse, status_code=201)
@@ -7753,7 +7840,124 @@ async def create_expense_entry_endpoint(
         return handle_accounts_error(e)
 
 
-@router.get("/expense-entries", response_model=ExpenseEntryListResponse)
+@router.get("/expense-entries/bootstrap")
+async def get_expense_entries_bootstrap(
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC_EXP_BOOTSTRAP_001: Consolidated bootstrap endpoint for Expense Entries page.
+    Fetches companies, categories, vendors, confirmed fund allocations, and behalf employees
+    in a single database session / request to eliminate client-side connection starvation.
+    """
+    try:
+        # 1. Companies
+        companies, _ = AssociatedCompanyService.list_companies(
+            db, current_user, page=1, page_size=100, status_filter='ACTIVE'
+        )
+        comp_list = [AssociatedCompanyResponse.model_validate(c).model_dump(mode='json') for c in companies]
+
+        # 2. Categories (with subcategories)
+        categories, _ = ExpenseMainCategoryService.list_main_categories(
+            db, current_user, page=1, page_size=100, include_inactive=False, include_sub_categories=True
+        )
+        cat_list = [ExpenseMainCategoryResponse.model_validate(c).model_dump(mode='json') for c in categories]
+
+        # 3. Vendors
+        vendors, _ = VendorMasterService.list_vendors(
+            db, current_user, page=1, page_size=500, is_active=True
+        )
+        vendor_list = [VendorMasterResponse.model_validate(v).model_dump(mode='json') for v in vendors]
+
+        # 4. Confirmed Fund Allocations for current user
+        allocations, _ = list_fund_allocations(
+            db, current_user, filters={'status': 'CONFIRMED', 'to_employee_id': current_user.id, 'page': 1, 'page_size': 100}
+        )
+        emp_ids = set()
+        co_ids = set()
+        for a in allocations:
+            if a.to_employee_id: emp_ids.add(a.to_employee_id)
+            if a.from_employee_id: emp_ids.add(a.from_employee_id)
+            if a.company_id: co_ids.add(a.company_id)
+
+        emp_map = {}
+        if emp_ids:
+            emps = db.query(StaffEmployee).filter(StaffEmployee.id.in_(emp_ids)).all()
+            emp_map = {e.id: e.full_name or f"{e.first_name or ''} {e.last_name or ''}".strip() for e in emps}
+
+        co_map = {}
+        if co_ids:
+            cos = db.query(AssociatedCompany).filter(AssociatedCompany.id.in_(co_ids)).all()
+            co_map = {c.id: c.company_name or c.name for c in cos}
+
+        alloc_list = []
+        for a in allocations:
+            amt = float(a.amount) if a.amount is not None else 0.0
+            bal = float(a.balance_remaining) if a.balance_remaining is not None else amt
+            to_name = emp_map.get(a.to_employee_id, '')
+            from_name = emp_map.get(a.from_employee_id, '')
+            alloc_list.append({
+                'id': a.id,
+                'allocation_number': a.allocation_number,
+                'company_id': a.company_id,
+                'company_name': co_map.get(a.company_id, ''),
+                'segment_id': a.segment_id,
+                'from_employee_id': a.from_employee_id,
+                'from_employee_name': from_name,
+                'to_employee_id': a.to_employee_id,
+                'to_employee_name': to_name,
+                'recipient_name': to_name,
+                'allocation_date': a.allocation_date.isoformat() if a.allocation_date else None,
+                'amount': amt,
+                'purpose': a.purpose,
+                'category_id': a.category_id,
+                'payment_mode': a.payment_mode,
+                'payment_reference': a.payment_reference,
+                'bank_account_id': a.bank_account_id,
+                'status': a.status,
+                'balance_remaining': bal,
+                'balance_used': round(amt - bal, 2),
+                'total_expensed': float(a.total_expensed) if a.total_expensed is not None else 0.0,
+                'settlement_date': a.settlement_date.isoformat() if a.settlement_date else None,
+                'settlement_remarks': a.settlement_remarks,
+                'confirmed_by_id': a.confirmed_by_id,
+                'confirmed_at': a.confirmed_at.isoformat() if a.confirmed_at else None,
+                'ledger_entry_id': a.ledger_entry_id,
+                'created_at': a.created_at.isoformat() if a.created_at else None,
+                'updated_at': a.updated_at.isoformat() if a.updated_at else None,
+            })
+
+        # 5. Behalf Employees
+        if is_accounts_allowed_employee(current_user):
+            behalf_employees = db.query(StaffEmployee).filter(StaffEmployee.status == 'active').order_by(StaffEmployee.full_name).all()
+        else:
+            behalf_employees = db.query(StaffEmployee).filter(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.status == 'active').order_by(StaffEmployee.full_name).all()
+        if getattr(current_user, 'emp_code', None) != 'MR10001':
+            behalf_employees = [e for e in behalf_employees if getattr(e, 'emp_code', None) != 'MR10001' and getattr(e, 'id', None) != 1]
+        emp_list = [
+            {
+                "id": e.id,
+                "emp_code": e.emp_code,
+                "full_name": e.full_name or f"{e.first_name or ''} {e.last_name or ''}".strip(),
+                "department": e.department.name if e.department else None,
+                "role": e.role.role_name if e.role else None,
+            }
+            for e in behalf_employees
+        ]
+
+        return JSONResponse(content={
+            "success": True,
+            "companies": comp_list,
+            "categories": cat_list,
+            "vendors": vendor_list,
+            "allocations": alloc_list,
+            "employees": emp_list
+        })
+    except Exception as e:
+        return handle_accounts_error(e)
+
+
+@router.get("/expense-entries")
 async def list_expense_entries_endpoint(
     company_id: Optional[int] = Query(None, description="Filter by company"),
     status: Optional[str] = Query(None, description="Filter by status"),
@@ -7763,16 +7967,19 @@ async def list_expense_entries_endpoint(
     to_date: Optional[date] = Query(None, description="Filter to date"),
     team_view: bool = Query(False, description="Show team members' expenses (reporting managers only)"),
     employee_id: Optional[int] = Query(None, description="Filter by specific employee (team_view only)"),
+    entry_type: Optional[str] = Query(None, description="Filter by entry type (IN, OUT, INCOME, EXPENSE, TRANSFER, ALLOCATION)"),
+    view_mode: Optional[str] = Query(None, description="View mode: 'ledger' for unified statement with IN/OUT/balance columns"),
+    ledger_filter: Optional[str] = Query(None, description="Filter by ledger posting: all, in_ledger, excluded"),
+    external_filter: Optional[str] = Query(None, description="Filter by external flag: all, external, internal"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(get_current_staff_user)
 ):
     """
-    List expense entries with filters
-    DC_SFMS_001: VGK/EA see all, others see only their entries (ownership enforced in service)
-    When team_view=true, reporting managers see their direct reports' expenses
-    employee_id: further narrow team_view to a single employee (Accounts staff only)
+    List expense entries or unified ledger statement with filters
+    When view_mode='ledger' (or on personal ledger view): returns unified IN (Credits: income, bank allocations, transfers in)
+    and OUT (Debits: expenses, transfers out) with running balances.
     """
     try:
         filters = {
@@ -7784,9 +7991,26 @@ async def list_expense_entries_endpoint(
             'to_date': to_date,
             'team_view': team_view,
             'employee_id': employee_id,
+            'entry_type': entry_type,
+            'view_mode': view_mode,
+            'ledger_filter': ledger_filter,
+            'external_filter': external_filter,
             'page': page,
             'page_size': page_size
         }
+
+        if view_mode in ['ledger', 'all', 'statement'] or (not team_view and view_mode != 'expenses_only'):
+            from app.services.staff_accounts_service import list_unified_employee_ledger
+            entries, total, summary = list_unified_employee_ledger(db, current_user, filters)
+            return JSONResponse(content={
+                "success": True,
+                "entries": entries,
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "summary": summary
+            })
+
         entries, total, summary = list_expense_entries(db, current_user, filters)
         from app.schemas.staff_accounts import ExpenseEntrySummary
         return ExpenseEntryListResponse(
@@ -7797,6 +8021,55 @@ async def list_expense_entries_endpoint(
             page_size=page_size,
             summary=ExpenseEntrySummary(**summary)
         )
+    except Exception as e:
+        return handle_accounts_error(e)
+
+
+@router.get("/employee-ledger-statement")
+async def get_unified_employee_ledger_statement_endpoint(
+    employee_id: Optional[int] = Query(None, description="Target employee ID (privileged users only)"),
+    company_id: Optional[int] = Query(None, description="Filter by company"),
+    status: Optional[str] = Query(None, description="Filter by status"),
+    entry_type: Optional[str] = Query(None, description="Filter by transaction type (IN, OUT, INCOME, EXPENSE, TRANSFER, ALLOCATION)"),
+    ledger_filter: Optional[str] = Query(None, description="Filter by ledger posting: all, in_ledger, excluded"),
+    external_filter: Optional[str] = Query(None, description="Filter by external flag: all, external, internal"),
+    main_category_id: Optional[int] = Query(None, description="Filter by category"),
+    from_date: Optional[date] = Query(None, description="Filter from date"),
+    to_date: Optional[date] = Query(None, description="Filter to date"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Unified Employee Ledger & Passbook Statement:
+    Returns IN (Credits: Income, Bank Allocations, Transfers In, Opening Balance)
+    and OUT (Debits: Expenses, Transfers Out) with running balances.
+    """
+    try:
+        from app.services.staff_accounts_service import list_unified_employee_ledger
+        filters = {
+            'employee_id': employee_id,
+            'company_id': company_id,
+            'status': status,
+            'entry_type': entry_type,
+            'ledger_filter': ledger_filter,
+            'external_filter': external_filter,
+            'main_category_id': main_category_id,
+            'from_date': from_date,
+            'to_date': to_date,
+            'page': page,
+            'page_size': page_size
+        }
+        entries, total, summary = list_unified_employee_ledger(db, current_user, filters)
+        return JSONResponse(content={
+            "success": True,
+            "entries": entries,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "summary": summary
+        })
     except Exception as e:
         return handle_accounts_error(e)
 
@@ -7872,10 +8145,61 @@ async def approve_expense_entry_endpoint(
     """
     Approve/Reject/Return expense entry
     DC_SFMS_001: VGK/EA only (role enforced in service), updates fund allocation if linked
+    MR10001 / MR10025 can override company_id and amount during approval.
     """
     try:
-        expense = approve_expense_entry(db, current_user, entry_id, data.action, data.remarks)
+        expense = approve_expense_entry(
+            db=db,
+            employee=current_user,
+            entry_id=entry_id,
+            action=data.action,
+            remarks=data.remarks,
+            company_id=data.company_id,
+            amount=data.amount
+        )
         return ExpenseEntryResponse.model_validate(expense)
+    except HTTPException:
+        raise
+    except Exception as e:
+        return handle_accounts_error(e)
+
+
+@router.patch("/expense-entries/{entry_id}/external", response_model=ExpenseEntryResponse)
+@router.post("/expense-entries/{entry_id}/external", response_model=ExpenseEntryResponse)
+async def toggle_expense_external_endpoint(
+    entry_id: int = Path(..., description="Expense entry ID"),
+    is_external: bool = Body(..., embed=True),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC-EXTERNAL-001: toggle external party flag on expense entry.
+    """
+    try:
+        from app.services.staff_accounts_service import toggle_expense_external
+        expense = toggle_expense_external(db, current_user, entry_id, is_external)
+        return ExpenseEntryResponse.model_validate(expense)
+    except HTTPException:
+        raise
+    except Exception as e:
+        return handle_accounts_error(e)
+
+
+@router.patch("/income-entries/{entry_id}/external", response_model=IncomeEntryResponse)
+@router.post("/income-entries/{entry_id}/external", response_model=IncomeEntryResponse)
+async def toggle_income_external_endpoint(
+    entry_id: int = Path(..., description="Income entry ID"),
+    is_external: bool = Body(..., embed=True),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC-EXTERNAL-001: toggle external party flag on income entry.
+    """
+    try:
+        from app.services.staff_accounts_service import toggle_income_external
+        entry = toggle_income_external(db, current_user, entry_id, is_external)
+        return IncomeEntryResponse.model_validate(entry)
     except HTTPException:
         raise
     except Exception as e:
@@ -16113,14 +16437,17 @@ async def list_staff_for_parties(
             q = q.filter(_SE.full_name.ilike(pat) | _SE.emp_code.ilike(pat) | _SE.phone.ilike(pat))
         if status:
             q = q.filter(_SE.status == status)
+        from app.models.staff import StaffRole as _SR, StaffDepartment as _SD
+        role_map = {r.id: r for r in db.query(_SR).all()}
+        dept_map = {d.id: d for d in db.query(_SD).all()}
         staff = q.order_by(_SE.full_name).all()
         return JSONResponse(content={
             "success": True,
             "staff": [{
                 "id": s.id, "code": s.emp_code, "name": s.full_name,
-                "role": s.role.role_name if s.role else None,
-                "role_code": s.role.role_code if s.role else None,
-                "department": s.department.department_name if s.department else None,
+                "role": role_map.get(s.role_id).role_name if role_map.get(s.role_id) else None,
+                "role_code": role_map.get(s.role_id).role_code if role_map.get(s.role_id) else None,
+                "department": dept_map.get(s.department_id).name if dept_map.get(s.department_id) else None,
                 "phone": s.phone, "status": s.status
             } for s in staff]
         })
@@ -16336,6 +16663,7 @@ async def create_journal_voucher(
         from decimal import Decimal as _D
         lines = payload.get('lines')
         v_type = payload.get('voucher_type', 'JOURNAL')
+        is_exp_adv = bool(payload.get('is_expense_advance', False))
 
         if lines and isinstance(lines, list) and len(lines) >= 2:
             # DC-SGV-001: structural validation before any DB write (advisory mode)
@@ -16352,6 +16680,7 @@ async def create_journal_voucher(
                 reference_number=payload.get('reference_number'),
                 category_id=int(payload['category_id']) if payload.get('category_id') else None,
                 income_category_id=int(payload['income_category_id']) if payload.get('income_category_id') else None,
+                is_expense_advance=is_exp_adv,
             )
         else:
             # DC-SGV-001: synthesise lines from simple dr/cr fields for validation
@@ -16392,6 +16721,7 @@ async def create_journal_voucher(
                 linked_doc_id=int(payload['linked_doc_id']) if payload.get('linked_doc_id') else None,
                 category_id=int(payload['category_id']) if payload.get('category_id') else None,
                 income_category_id=int(payload['income_category_id']) if payload.get('income_category_id') else None,
+                is_expense_advance=is_exp_adv,
             )
         return JSONResponse(content={"success": True, "voucher": _jv_dict(jv)})
     except HTTPException:
@@ -16428,6 +16758,7 @@ async def update_journal_voucher(
             reference_number=payload.get('reference_number'),
             category_id=int(payload['category_id']) if payload.get('category_id') else None,
             income_category_id=int(payload['income_category_id']) if payload.get('income_category_id') else None,
+            is_expense_advance=payload.get('is_expense_advance') if 'is_expense_advance' in payload else None,
         )
         return JSONResponse(content={"success": True, "voucher": _jv_dict(jv)})
     except HTTPException:
@@ -16478,6 +16809,7 @@ def _jv_dict(jv, main_category_name: str = None, sub_category_name: str = None) 
         "created_at": jv.created_at.isoformat() if jv.created_at else None,
         "category_id": jv.category_id if hasattr(jv, 'category_id') else None,
         "income_category_id": jv.income_category_id if hasattr(jv, 'income_category_id') else None,
+        "is_expense_advance": bool(getattr(jv, 'is_expense_advance', False)),
         "main_category_name": main_category_name,
         "sub_category_name": sub_category_name,
     }

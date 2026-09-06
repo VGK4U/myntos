@@ -11,6 +11,7 @@ import uuid
 import logging
 from typing import Optional, Dict, Any
 from datetime import datetime
+from app.core.timezone import get_indian_time
 from app.models.voip_enums import CallStateEnum, RecordingStatusEnum
 from app.services.telephony.base import (
     BaseTelephonyProvider,
@@ -57,7 +58,7 @@ class MockTelephonyProvider(BaseTelephonyProvider):
             "operator_info": operator_info,
             "metadata": metadata or {},
             "status": CallStateEnum.DIALING,
-            "started_at": datetime.utcnow(),
+            "started_at": get_indian_time(),
             "answered_at": None,
             "ended_at": None,
             "duration_seconds": 0,
@@ -109,7 +110,7 @@ class MockTelephonyProvider(BaseTelephonyProvider):
         if not call:
             return False
         call["status"] = CallStateEnum.ENDED
-        call["ended_at"] = datetime.utcnow()
+        call["ended_at"] = get_indian_time()
         call["termination_reason"] = "operator_hangup"
         logger.info(f"[MOCK-TELEPHONY] Hangup call: {provider_call_id}")
         return True

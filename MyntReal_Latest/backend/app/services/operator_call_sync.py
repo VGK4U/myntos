@@ -21,10 +21,10 @@ from sqlalchemy.exc import IntegrityError
 from app.core.database import SessionLocal
 from app.models.operator_calls import OperatorCall
 from app.models.crm import CRMLead, CRMLeadFollowUp
+from app.core.timezone import get_indian_time, IST, from_epoch_to_ist, parse_to_ist
 
 logger = logging.getLogger(__name__)
 
-IST = pytz.timezone('Asia/Kolkata')
 def get_effective_token(db: Optional[Session] = None) -> str:
     tok = os.getenv('MYOPERATOR_API_TOKEN', '')
     if tok:
@@ -70,7 +70,7 @@ def get_last_sync_status(db: Optional[Session] = None) -> dict:
 
 
 def get_ist_now():
-    return datetime.now(IST).replace(tzinfo=None)
+    return get_indian_time()
 
 
 def normalize_phone(phone: str) -> Optional[str]:
@@ -238,8 +238,8 @@ def _normalize_source_record(source: dict) -> dict:
 
     start_ts = source.get('start_time') or 0
     end_ts = source.get('end_time') or 0
-    started_at = datetime.utcfromtimestamp(int(start_ts)) if start_ts else None
-    ended_at = datetime.utcfromtimestamp(int(end_ts)) if end_ts else None
+    started_at = from_epoch_to_ist(start_ts)
+    ended_at = from_epoch_to_ist(end_ts)
 
     # Recording URL
     recording_url = source.get('fileurl') or source.get('recording_url') or None

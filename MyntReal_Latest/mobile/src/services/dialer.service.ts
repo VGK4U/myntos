@@ -8,6 +8,7 @@ import { Preferences } from '@capacitor/preferences';
 import { apiService } from './api.service';
 import { APP_CONFIG } from '../config/app.config';
 import { routerService } from './router.service';
+import { callController } from './call-controller';
 
 const SESSION_KEY = 'dialer_session';
 const QUEUE_KEY = 'dialer_queue';
@@ -282,7 +283,7 @@ class DialerService {
     this.isDialing = true;
     this.lastDialedAt = Date.now();
     const cleaned = phone.replace(/[^+\d]/g, '');
-    routerService.navigate('softphone', { dial: cleaned, name: name || '', auto_start: 'true' });
+    callController.openCallDialer({ phoneNumber: cleaned, name: name || '', autoStart: true });
     // Start polling for call end on Android
     if (APP_CONFIG.isNativeApp()) {
       this._startCallEndPoll(phone);
@@ -475,10 +476,91 @@ class DialerService {
     }
   }
 
+  // ── Just-In-Time (JIT) Reservation ─────────────────────────────────────────
+
+  async reserveLead(leadId: number, sessionId?: number): Promise<{
+    success: boolean;
+    message?: string;
+    compliance_blocked?: boolean;
+    cooldown_blocked?: boolean;
+    cooldown_until?: string;
+    error?: string;
+  }> {
+    try {
+      const res = await apiService.post<{
+        success: boolean;
+        message?: string;
+        compliance_blocked?: boolean;
+        cooldown_blocked?: boolean;
+        cooldown_until?: string;
+        error?: string;
+      }>(
+        `/crm/dialer/lead/${leadId}/reserve`,
+        { session_id: sessionId ?? this.session?.id ?? null, ttl_seconds: 60 }
+      );
+      const data = res.data as {
+        success?: boolean;
+        message?: string;
+        compliance_blocked?: boolean;
+        cooldown_blocked?: boolean;
+        cooldown_until?: string;
+        error?: string;
+      } | undefined;
+      return {
+        success: !!(res.success && data?.success),
+        message: data?.message,
+        compliance_blocked: data?.compliance_blocked,
+        cooldown_blocked: data?.cooldown_blocked,
+        cooldown_until: data?.cooldown_until,
+        error: data?.error,
+      };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  }
+
+  async releaseReservation(leadId: number): Promise<void> {
+    try {
+      await apiService.post(`/crm/dialer/lead/${leadId}/release-reservation`, {});
+    } catch (_) { /* silent */ }
+  }
+
+  async heartbeatReservation(leadId: number): Promise<void> {
+    try {
+      await apiService.post(`/crm/dialer/lead/${leadId}/heartbeat`, { extend_seconds: 60 });
+    } catch (_) { /* silent */ }
+  }
+
+  // ── Canonical Lead Claim ───────────────────────────────────────────────────
+
+  async claimLead(leadId: number, companyId: number): Promise<{ success: boolean; message?: string }> {
+    try {
+      const res = await apiService.post<{ success: boolean; message?: string }>(
+        `/crm/leads/${leadId}/claim?company_id=${companyId}`,
+        {}
+      );
+      const data = res.data as { success?: boolean; message?: string } | undefined;
+      return { success: !!(res.success && data?.success), message: data?.message };
+    } catch (e: any) {
+      return { success: false, message: e.message };
+    }
+  }
+
   // ── Attempt Logging ─────────────────────────────────────────────────────────
 
-  async logAttempt(result: AttemptResult): Promise<{ success: boolean; attempt_id?: number }> {
-    const res = await apiService.post<{ attempt_id?: number }>('/crm/dialer/attempt', {
+  async logAttempt(result: AttemptResult): Promise<{
+    success: boolean;
+    attempt_id?: number;
+    claim_eligible?: boolean;
+    claim_reason?: string;
+    is_unassigned?: boolean;
+  }> {
+    const res = await apiService.post<{
+      attempt_id?: number;
+      claim_eligible?: boolean;
+      claim_reason?: string;
+      is_unassigned?: boolean;
+    }>('/crm/dialer/attempt', {
       session_id: result.session_id,
       lead_id: result.lead_id,
       call_outcome: result.call_outcome,
@@ -497,11 +579,22 @@ class DialerService {
       activity_minutes: result.activity_minutes ?? null,
       lead_update_minutes: result.lead_update_minutes ?? null,
     });
-    const data = res.data as { attempt_id?: number } | undefined;
+    const data = res.data as {
+      attempt_id?: number;
+      claim_eligible?: boolean;
+      claim_reason?: string;
+      is_unassigned?: boolean;
+    } | undefined;
     if (res.success && data?.attempt_id) {
       this.lastAttemptId = data.attempt_id;
     }
-    return { success: res.success, attempt_id: data?.attempt_id };
+    return {
+      success: res.success,
+      attempt_id: data?.attempt_id,
+      claim_eligible: data?.claim_eligible,
+      claim_reason: data?.claim_reason,
+      is_unassigned: data?.is_unassigned,
+    };
   }
 
   // ── Local State Persistence ─────────────────────────────────────────────────

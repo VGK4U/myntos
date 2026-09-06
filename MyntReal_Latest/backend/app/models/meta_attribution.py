@@ -3,7 +3,7 @@ Immutable Meta Attribution Model (Release 1A Attribution Layer)
 Stores original, unalterable acquisition source parameters for Meta Lead Ads.
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Index
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Index, Boolean
 from datetime import datetime
 from app.models.base import Base
 
@@ -20,7 +20,7 @@ class MetaLeadsAttribution(Base):
     company_id = Column(Integer, ForeignKey('associated_companies.id', ondelete='RESTRICT'), nullable=False, default=1, index=True)
     lead_id = Column(Integer, ForeignKey('crm_leads.id', ondelete='CASCADE'), nullable=False, unique=True, index=True)
     
-    meta_lead_id = Column(String(50), nullable=False, index=True)
+    meta_lead_id = Column(String(50), nullable=False, unique=True, index=True)
     meta_campaign_id = Column(String(50), nullable=True, index=True)
     meta_campaign_name = Column(String(200), nullable=True)
     meta_adset_id = Column(String(50), nullable=True, index=True)
@@ -39,3 +39,30 @@ class MetaLeadsAttribution(Base):
 
     def __repr__(self):
         return f'<MetaLeadsAttribution lead_id={self.lead_id} fb_lead_id={self.meta_lead_id} campaign={self.meta_campaign_id}>'
+
+
+class MetaLeadFormMapping(Base):
+    """
+    Persistent Configuration-Driven Meta Lead Form Routing Registry.
+    Maps (page_id, form_id) -> company_id, category_id, crm_segment, and segment_tag.
+    Enables dynamic registration of new Meta Lead Forms without backend code deployments.
+    """
+    __tablename__ = 'meta_form_mappings'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    page_id = Column(String(50), nullable=False, index=True)
+    form_id = Column(String(50), nullable=False, unique=True, index=True)
+    form_name = Column(String(200), nullable=True)
+    company_id = Column(Integer, nullable=False, index=True)
+    category_id = Column(Integer, nullable=True)
+    crm_segment = Column(String(50), nullable=False, default='GENERAL')
+    segment_tag = Column(String(50), nullable=True)
+    looking_for = Column(String(200), nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f'<MetaLeadFormMapping form_id={self.form_id} company_id={self.company_id} segment={self.crm_segment}>'
+

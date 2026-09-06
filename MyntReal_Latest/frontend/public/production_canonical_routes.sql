@@ -16,7 +16,7 @@ INSERT INTO pdf_canonical_routes (route_path, section_id, section_title, section
 ('/staff/my-leaves', 'attendance', 'ATTENDANCE', 3, NULL, false, NULL, 'My Leaves', 'fas fa-calendar-minus'),
 ('/staff/team-attendance', 'attendance', 'ATTENDANCE', 3, NULL, false, NULL, 'In/Out Records - Admin', 'fas fa-user-clock'),
 ('/staff/crm/dashboard', 'crm', 'CRM & LEADS', 4, NULL, false, NULL, 'My CRM Dashboard', 'fas fa-funnel-dollar'),
-('/staff/crm/lead-sources', 'crm', 'CRM & LEADS', 4, NULL, false, NULL, 'Lead Sources', 'fas fa-sitemap'),
+('/staff/crm/settings', 'crm', 'CRM & LEADS', 4, NULL, false, NULL, 'CRM Settings', 'fas fa-sliders-h'),
 ('/staff/crm/team-leads', 'crm', 'CRM & LEADS', 4, NULL, false, NULL, 'Team Leads', 'fas fa-users-cog'),
 ('/staff/leads', 'crm', 'CRM & LEADS', 4, NULL, false, NULL, 'Staff Leads', 'fas fa-user-tie'),
 ('/staff/my-leads', 'crm', 'CRM & LEADS', 4, NULL, false, NULL, 'My Leads', 'fas fa-user-plus'),

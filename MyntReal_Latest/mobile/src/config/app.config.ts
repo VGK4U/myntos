@@ -3,21 +3,17 @@
  * DC Protocol: DC_MOBILE_APP_CONFIG_001
  * Central configuration for app version, build info, and API endpoints
  * SINGLE SOURCE OF TRUTH for all domain/URL configurations
- *
- * DC Protocol Feb 2026 - Browser Parity Fix:
- * When the mobile SPA is served from a browser (not native Capacitor),
- * use RELATIVE paths so API calls hit the SAME server that served the page.
- * This ensures mobile-in-browser always matches web data.
  */
 
 const PRODUCTION_DOMAIN = 'www.myntreal.com';
-const DEVELOPMENT_DOMAIN = '5305e65f-c4f9-487a-b990-7fdd5e743de1-00-2fjho41r6u5wb.worf.replit.dev';
+const DEFAULT_LAN_DEV_URL = 'http://192.168.1.10:5001';
+
+const STORAGE_KEY_DEV_MODE = 'MNR_DEV_MODE';
+const STORAGE_KEY_API_OVERRIDE = 'MNR_API_SERVER_OVERRIDE';
 
 function isDevMode(): boolean {
-  // Dev mode is ONLY controlled by the in-app Settings toggle (localStorage).
-  // Never auto-enable based on build mode — fresh install must always default to production.
   try {
-    return localStorage.getItem('MNR_DEV_MODE') === 'true';
+    return localStorage.getItem(STORAGE_KEY_DEV_MODE) === 'true';
   } catch {
     return false;
   }
@@ -36,32 +32,75 @@ function isBrowserServed(): boolean {
   return !isNativeApp();
 }
 
+function getApiServerOverride(): string | null {
+  try {
+    const override = localStorage.getItem(STORAGE_KEY_API_OVERRIDE);
+    return override ? override.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+function getBaseServerUrl(): string {
+  // 1. Browser-served mode uses current origin
+  if (isBrowserServed()) {
+    return window.location.origin;
+  }
+
+  // 2. Explicit custom API server override (e.g. set in developer settings)
+  const override = getApiServerOverride();
+  if (override) {
+    return override.replace(/\/+$/, '');
+  }
+
+  // 3. In-app Developer/LAN Mode
+  if (isDevMode()) {
+    const viteEnvUrl = (import.meta as any)?.env?.VITE_API_URL;
+    if (viteEnvUrl) return viteEnvUrl.replace(/\/+$/, '');
+    return DEFAULT_LAN_DEV_URL;
+  }
+
+  // 4. Default Production
+  return `https://${PRODUCTION_DOMAIN}`;
+}
+
 function getCurrentDomain(): string {
   if (isBrowserServed()) {
     return window.location.host;
   }
-  return isDevMode() ? DEVELOPMENT_DOMAIN : PRODUCTION_DOMAIN;
+  try {
+    const url = new URL(getBaseServerUrl());
+    return url.host;
+  } catch {
+    return PRODUCTION_DOMAIN;
+  }
 }
 
 function getProtocol(): string {
   if (isBrowserServed()) {
     return window.location.protocol.replace(':', '');
   }
-  return 'https';
+  try {
+    const url = new URL(getBaseServerUrl());
+    return url.protocol.replace(':', '');
+  } catch {
+    return 'https';
+  }
 }
 
 function getApiBaseUrl(): string {
   if (isBrowserServed()) {
     return '/api/v1';
   }
-  return `${getProtocol()}://${getCurrentDomain()}/api/v1`;
+  const base = getBaseServerUrl();
+  return `${base}/api/v1`;
 }
 
 function getMediaBaseUrl(): string {
   if (isBrowserServed()) {
     return '';
   }
-  return `${getProtocol()}://${getCurrentDomain()}`;
+  return getBaseServerUrl();
 }
 
 function getWsBaseUrl(): string {
@@ -69,7 +108,8 @@ function getWsBaseUrl(): string {
     const wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws';
     return `${wsProto}://${window.location.host}/ws/v1`;
   }
-  return `wss://${getCurrentDomain()}/ws/v1`;
+  const proto = getProtocol() === 'https' ? 'wss' : 'ws';
+  return `${proto}://${getCurrentDomain()}/ws/v1`;
 }
 
 export const APP_CONFIG = {
@@ -79,6 +119,7 @@ export const APP_CONFIG = {
   MIN_SUPPORTED_VERSION: '1.0.0',
   
   get DOMAIN() { return getCurrentDomain(); },
+  get BASE_SERVER_URL() { return getBaseServerUrl(); },
   get API_BASE_URL() { return getApiBaseUrl(); },
   get MEDIA_BASE_URL() { return getMediaBaseUrl(); },
   get WS_BASE_URL() { return getWsBaseUrl(); },
@@ -86,11 +127,34 @@ export const APP_CONFIG = {
   isDevMode,
   isNativeApp,
   isBrowserServed,
+  getApiServerOverride,
+  
+  setApiServerOverride(url: string): void {
+    try {
+      if (!url || !url.trim()) {
+        localStorage.removeItem(STORAGE_KEY_API_OVERRIDE);
+      } else {
+        localStorage.setItem(STORAGE_KEY_API_OVERRIDE, url.trim());
+      }
+      console.log('[APP_CONFIG] API Server Override set to:', url);
+    } catch (e) {
+      console.error('[APP_CONFIG] Failed to save API override:', e);
+    }
+  },
+
+  clearApiServerOverride(): void {
+    try {
+      localStorage.removeItem(STORAGE_KEY_API_OVERRIDE);
+      console.log('[APP_CONFIG] API Server Override cleared.');
+    } catch (e) {
+      console.error('[APP_CONFIG] Failed to clear API override:', e);
+    }
+  },
   
   enableDevMode(): void {
     try {
-      localStorage.setItem('MNR_DEV_MODE', 'true');
-      console.log('[APP_CONFIG] Dev mode ENABLED - using:', DEVELOPMENT_DOMAIN);
+      localStorage.setItem(STORAGE_KEY_DEV_MODE, 'true');
+      console.log('[APP_CONFIG] Dev mode ENABLED - Base URL:', getBaseServerUrl());
       window.location.reload();
     } catch (e) {
       console.error('[APP_CONFIG] Failed to enable dev mode:', e);
@@ -99,8 +163,8 @@ export const APP_CONFIG = {
   
   disableDevMode(): void {
     try {
-      localStorage.removeItem('MNR_DEV_MODE');
-      console.log('[APP_CONFIG] Dev mode DISABLED - using:', PRODUCTION_DOMAIN);
+      localStorage.removeItem(STORAGE_KEY_DEV_MODE);
+      console.log('[APP_CONFIG] Dev mode DISABLED - Base URL:', getBaseServerUrl());
       window.location.reload();
     } catch (e) {
       console.error('[APP_CONFIG] Failed to disable dev mode:', e);
@@ -115,16 +179,18 @@ export const APP_CONFIG = {
     }
   },
   
-  getServerInfo(): { mode: string; domain: string; native: boolean } {
+  getServerInfo(): { mode: string; domain: string; baseServerUrl: string; native: boolean; apiBase: string } {
     return {
-      mode: isBrowserServed() ? 'BROWSER' : (isDevMode() ? 'DEVELOPMENT' : 'PRODUCTION'),
+      mode: isBrowserServed() ? 'BROWSER' : (isDevMode() ? 'LAN_DEV' : 'PRODUCTION'),
       domain: getCurrentDomain(),
-      native: isNativeApp()
+      baseServerUrl: getBaseServerUrl(),
+      native: isNativeApp(),
+      apiBase: getApiBaseUrl()
     };
   },
   
   getVersionString(): string {
-    const modeTag = isBrowserServed() ? ' [BROWSER]' : (isDevMode() ? ' [DEV]' : '');
+    const modeTag = isBrowserServed() ? ' [BROWSER]' : (isDevMode() ? ' [LAN_DEV]' : '');
     return `v${this.VERSION} (Build ${this.BUILD_NUMBER})${modeTag}`;
   },
   
@@ -133,4 +199,4 @@ export const APP_CONFIG = {
   }
 };
 
-console.log(`[APP_CONFIG] Mode: ${APP_CONFIG.getServerInfo().mode}, Domain: ${getCurrentDomain()}, Native: ${isNativeApp()}, API: ${APP_CONFIG.API_BASE_URL}`);
+console.log(`[APP_CONFIG] Mode: ${APP_CONFIG.getServerInfo().mode}, Base Server: ${APP_CONFIG.BASE_SERVER_URL}, Native: ${isNativeApp()}, API: ${APP_CONFIG.API_BASE_URL}`);

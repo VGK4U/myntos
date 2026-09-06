@@ -253,7 +253,7 @@
                     <span class="tab-main"><i class="fas fa-user"></i> My Performance</span>
                     <span class="tab-sub" id="tabBadgeMy"></span>
                 </button>
-                <button class="dash-tab hidden" data-tab="team" onclick="switchTab('team')">
+                <button class="dash-tab" data-tab="team" onclick="switchTab('team')">
                     <span class="tab-main"><i class="fas fa-users"></i> Team Performance</span>
                     <span class="tab-sub" id="tabBadgeTeam"></span>
                 </button>
@@ -269,15 +269,15 @@
                     <span class="tab-main"><i class="fas fa-headset"></i> Auto Dialer</span>
                     <span class="tab-sub" id="tabBadgeDialer"></span>
                 </button>
-                <button class="dash-tab hidden" data-tab="status" onclick="switchTab('status')">
+                <button class="dash-tab" data-tab="status" onclick="switchTab('status')">
                     <span class="tab-main"><i class="fas fa-list-ol"></i> Status Wise</span>
                     <span class="tab-sub" id="tabBadgeStatus"></span>
                 </button>
-                <button class="dash-tab hidden" data-tab="category" onclick="switchTab('category')">
+                <button class="dash-tab" data-tab="category" onclick="switchTab('category')">
                     <span class="tab-main"><i class="fas fa-tags"></i> Category Wise</span>
                     <span class="tab-sub" id="tabBadgeCategory"></span>
                 </button>
-                <button class="dash-tab hidden" data-tab="company" onclick="switchTab('company')">
+                <button class="dash-tab" data-tab="company" onclick="switchTab('company')">
                     <span class="tab-main"><i class="fas fa-building"></i> Company Wise</span>
                     <span class="tab-sub" id="tabBadgeCompany"></span>
                 </button>
@@ -390,7 +390,7 @@
                                     <th>Total Calls</th>
                                     <th>Outgoing</th>
                                     <th>Incoming</th>
-                                    <th>Missed</th>
+                                    <th>Not Answered</th>
                                     <th>Total Talk Time</th>
                                     <th>Avg Daily Talk</th>
                                     <th>Unique Numbers</th>
@@ -424,11 +424,11 @@
                         <h5 class="data-table-title"><i class="fas fa-headphones me-2" style="color:#2563eb;"></i>Call Logs: <span id="ctDrilldownStaffName"></span></h5>
                         <div class="d-flex align-items-center gap-2">
                             <input type="text" id="ctDrilldownPhone" class="form-control form-control-sm" placeholder="Search phone..." style="width:160px;" oninput="filterDrilldownCalls()">
-                            <select id="ctDrilldownType" class="form-select form-select-sm" style="width:120px;" onchange="filterDrilldownCalls()">
+                            <select id="ctDrilldownType" class="form-select form-select-sm" style="width:140px;" onchange="filterDrilldownCalls()">
                                 <option value="">All Types</option>
                                 <option value="OUTGOING">Outgoing</option>
                                 <option value="INCOMING">Incoming</option>
-                                <option value="MISSED">Missed</option>
+                                <option value="MISSED">Not Answered</option>
                             </select>
                             <button class="btn btn-sm btn-outline-secondary" onclick="closeCallDrilldown()"><i class="fas fa-times me-1"></i>Close</button>
                         </div>
@@ -510,7 +510,7 @@
                                     <th>Total Calls</th>
                                     <th>Outgoing</th>
                                     <th>Incoming</th>
-                                    <th>Missed</th>
+                                    <th>Not Answered</th>
                                     <th>Leads Touched</th>
                                     <th>Avg Duration</th>
                                     <th>QA Sampled</th>
@@ -1282,7 +1282,7 @@
                 <div class="stat-card purple"><div class="val">${fmtDurationSec(o.avg_daily_talk_time)}</div><div class="lbl">Avg Daily Talk</div></div>
                 <div class="stat-card"><div class="val">${fmtNum(o.outgoing)}</div><div class="lbl">Outgoing</div></div>
                 <div class="stat-card"><div class="val">${fmtNum(o.incoming)}</div><div class="lbl">Incoming</div></div>
-                <div class="stat-card red"><div class="val">${fmtNum(o.missed)}</div><div class="lbl">Missed</div></div>
+                <div class="stat-card red"><div class="val">${fmtNum(o.missed)}</div><div class="lbl">Not Answered</div></div>
                 <div class="stat-card orange"><div class="val">${fmtNum(o.crm_matched)}</div><div class="lbl">CRM Matched</div></div>
                 <div class="stat-card teal"><div class="val">${fmtNum(o.active_staff)}</div><div class="lbl">Active Staff</div></div>
             `;
@@ -1296,7 +1296,7 @@
             chart.innerHTML = reversed.map(d => {
                 const h = Math.max((d.calls / maxCalls) * 100, 4);
                 return `<div class="trend-bar" style="height:${h}%;">
-                    <div class="tip">${d.date}<br>${d.calls} calls (${Math.floor((d.duration||0)/60)}m)<br>Out:${d.outgoing||0} In:${d.incoming||0} Miss:${d.missed||0}</div>
+                    <div class="tip">${d.date}<br>${d.calls} calls (${Math.floor((d.duration||0)/60)}m)<br>Out:${d.outgoing||0} In:${d.incoming||0} Not Answered:${d.missed||0}</div>
                 </div>`;
             }).join('');
             document.getElementById('ctTrendStart').textContent = reversed[0]?.date || '';
@@ -1394,6 +1394,35 @@
             renderDrilldownCalls(filtered);
         }
 
+        function formatCallTypeBadge(c) {
+            const type = (c.call_type || '').toUpperCase();
+            const source = (c.source || '').toLowerCase();
+            const isOutbound = type === 'OUTGOING' || type === 'OUTBOUND' || c.direction === 'outbound' || source === 'softphone' || source === 'dialer' || source === 'direct' || source === 'in_app_pstn' || source === 'myoperator';
+            
+            if (c.duration_seconds > 0 && isOutbound) {
+                return '<span class="badge bg-success"><i class="fas fa-arrow-up me-1"></i>Outgoing</span>';
+            }
+            if (type === 'MISSED') {
+                if (isOutbound) {
+                    return '<span class="badge bg-danger" title="Staff dialed - customer did not pick up"><i class="fas fa-phone-slash me-1"></i>Not Answered</span>';
+                }
+                return '<span class="badge" style="background:#b91c1c;color:#fff;" title="Customer called - staff did not answer"><i class="fas fa-phone-slash me-1"></i>Missed by Staff</span>';
+            }
+            if (type === 'OUTGOING' || type === 'OUTBOUND') {
+                if ((c.duration_seconds || 0) === 0 && (c.call_outcome === 'no_answer' || c.status === 'missed' || c.status === 'no-answer')) {
+                    return '<span class="badge bg-danger" title="Customer did not pick up"><i class="fas fa-phone-slash me-1"></i>Not Answered</span>';
+                }
+                return '<span class="badge bg-success"><i class="fas fa-arrow-up me-1"></i>Outgoing</span>';
+            }
+            if (type === 'INCOMING' || type === 'INBOUND') {
+                return '<span class="badge bg-primary"><i class="fas fa-arrow-down me-1"></i>Incoming</span>';
+            }
+            if (type === 'REJECTED') {
+                return '<span class="badge bg-warning text-dark"><i class="fas fa-ban me-1"></i>Rejected</span>';
+            }
+            return `<span class="badge bg-secondary">${escapeHtml(type || 'Unknown')}</span>`;
+        }
+
         function renderDrilldownCalls(calls) {
             const tbody = document.getElementById('ctDrilldownTbody');
             if (!calls.length) {
@@ -1407,7 +1436,7 @@
                 <td class="text-start">${i + 1}</td>
                 <td>${c.call_datetime ? new Date(c.call_datetime).toLocaleString('en-IN') : '-'}</td>
                 <td><strong>${escapeHtml(c.phone_number || '-')}</strong></td>
-                <td><span class="badge ${c.call_type==='OUTGOING'?'bg-success':c.call_type==='INCOMING'?'bg-primary':'bg-danger'}">${c.call_type}</span></td>
+                <td>${formatCallTypeBadge(c)}</td>
                 <td>${fmtDurationSec(c.duration_seconds)}</td>
                 <td>${escapeHtml(leadDisplay)}</td>
                 <td>
@@ -1455,28 +1484,35 @@
         }
 
         async function loadQualityReport() {
-            const panel = document.getElementById('tabQuality');
-            panel.classList.add('is-loading');
+            const btn = event?.target;
+            const orig = btn?.innerHTML;
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...'; }
             try {
                 let url;
                 if (qaMode === 'day') {
                     const d = document.getElementById('qaDateInput').value;
                     url = `/api/v1/call-quality/day-report?report_date=${d}`;
-                    document.getElementById('qaDateLabel').textContent = `Day: ${d}`;
+                    if (companyId) url += `&company_id=${companyId}`;
+                    document.getElementById('qaDateLabel').textContent = d ? `Day: ${d}` : '';
                 } else {
                     const df = document.getElementById('qaRangeFrom').value;
                     const dt = document.getElementById('qaRangeTo').value;
                     url = `/api/v1/call-quality/range-report?date_from=${df}&date_to=${dt}`;
+                    if (companyId) url += `&company_id=${companyId}`;
                     document.getElementById('qaDateLabel').textContent = `${df} → ${dt}`;
                 }
                 const res = await safeStaffFetch(url);
-                if (res) {
-                    qaData = res;
-                    renderQaSummary(res.summary || {});
-                    renderQaTable(res.executives || []);
+                if (res && res.success !== false) {
+                    qaData = res.data || res;
+                    renderQaOverview(qaData.summary || qaData.overview || {});
+                    renderQaExecutiveTable(qaData.executives || qaData.executive_breakdown || []);
                 }
-            } catch(e) { console.error('QA load error:', e); }
-            panel.classList.remove('is-loading');
+            } catch (err) {
+                console.error('[loadQualityReport] Error:', err);
+                document.getElementById('qaStatCards').innerHTML = `<div class="alert alert-danger w-100">Failed to load QA report: ${err.message}</div>`;
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+            }
         }
 
         function scoreLabel(s) {
@@ -1488,25 +1524,32 @@
             return `<span class="score-pill score-poor">${n.toFixed(1)}</span>`;
         }
 
-        function renderQaSummary(s) {
-            const qaCoverage = s.total_calls > 0 ? ((s.quality_sampled || 0) / s.total_calls * 100).toFixed(1) + '%' : '0%';
+        function renderQaOverview(o) {
             const cards = document.getElementById('qaStatCards');
+            const totalCalls = o.total_calls || 0;
+            const qaSampled = o.quality_sampled ?? o.total_qa_sampled ?? 0;
+            const qaReviewed = o.quality_reviewed ?? o.total_qa_reviewed ?? 0;
+            const qaPending = o.quality_pending ?? o.total_qa_pending ?? 0;
+            const leadsTouched = o.total_leads_touched || 0;
+            const avgScore = o.avg_quality_score;
+            const covRate = totalCalls > 0 ? ((qaSampled / totalCalls) * 100).toFixed(1) + '%' : '0%';
             cards.innerHTML = `
-                <div class="stat-card blue"><div class="val">${fmtNum(s.total_executives)}</div><div class="lbl">Executives</div></div>
-                <div class="stat-card teal"><div class="val">${fmtNum(s.total_calls)}</div><div class="lbl">Total Calls</div></div>
-                <div class="stat-card purple"><div class="val">${fmtNum(s.total_leads_touched)}</div><div class="lbl">Leads Touched</div></div>
-                <div class="stat-card orange"><div class="val">${fmtNum(s.quality_sampled)}</div><div class="lbl">QA Sampled (${qaCoverage})</div></div>
-                <div class="stat-card green"><div class="val">${fmtNum(s.quality_reviewed)}</div><div class="lbl">Reviews Done</div></div>
-                <div class="stat-card green"><div class="val">${s.avg_quality_score ? s.avg_quality_score.toFixed(1) : '—'}</div><div class="lbl">Avg Quality Score</div></div>
+                <div class="stat-card blue"><div class="val">${fmtNum(totalCalls)}</div><div class="lbl">Total Monitored Calls</div></div>
+                <div class="stat-card"><div class="val">${fmtNum(leadsTouched)}</div><div class="lbl">Unique Leads Touched</div></div>
+                <div class="stat-card purple"><div class="val">${fmtNum(qaSampled)}</div><div class="lbl">QA Sampled</div></div>
+                <div class="stat-card green"><div class="val">${fmtNum(qaReviewed)}</div><div class="lbl">QA Reviewed</div></div>
+                <div class="stat-card orange"><div class="val">${fmtNum(qaPending)}</div><div class="lbl">QA Pending</div></div>
+                <div class="stat-card teal"><div class="val">${scoreLabel(avgScore)}</div><div class="lbl">Avg Quality Score</div></div>
+                <div class="stat-card"><div class="val">${covRate}</div><div class="lbl">QA Audit Coverage</div></div>
             `;
         }
 
-        function renderQaTable(execs) {
-            const tbody = document.getElementById('qaTbody');
-            const empty = document.getElementById('qaEmpty');
-            if (!execs.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
-            empty.style.display = 'none';
-
+        function renderQaExecutiveTable(execs) {
+            const tbody = document.getElementById('qaTableWrap').querySelector('tbody') || document.getElementById('qaTableWrap');
+            if (!execs.length) {
+                tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-muted">No QA audit records found for this period</td></tr>';
+                return;
+            }
             tbody.innerHTML = execs.map((e, idx) => {
                 const c = e.calls || {};
                 const q = e.quality || {};
@@ -1532,7 +1575,7 @@
                                     <div style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;margin-bottom:6px;"><i class="fas fa-phone me-1"></i>Call Metrics</div>
                                     <table class="mini-table">
                                         <tr><td>Outgoing: <strong>${c.outgoing||0}</strong></td><td>Incoming: <strong>${c.incoming||0}</strong></td></tr>
-                                        <tr><td>Missed: <strong>${c.missed||0}</strong></td><td>Avg Duration: <strong>${fmtDurationSec(c.avg_duration_seconds)}</strong></td></tr>
+                                        <tr><td>Not Answered: <strong>${c.missed||0}</strong></td><td>Avg Duration: <strong>${fmtDurationSec(c.avg_duration_seconds)}</strong></td></tr>
                                     </table>
                                 </div>
                                 <div style="flex:1;">

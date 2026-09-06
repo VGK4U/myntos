@@ -32,6 +32,8 @@ let sock = null;
 let currentQr = null;
 let connectionStatus = 'disconnected';
 let targetJid = null;
+let clientGen = 0;
+let skipRestoreOnce = false;
 
 // Prevent process exit on background Baileys socket disconnection (1006 / connection reset)
 process.on('unhandledRejection', (reason, promise) => {
@@ -39,8 +41,13 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 const BACKEND_API_BASE = process.env.BACKEND_API_URL || 'http://127.0.0.1:8000';
 
-// ── Database Session Sync Functions ──────────────────────────────────────────
+// ── S3 Cloud Session Sync Functions (Zero PostgreSQL Contention) ─────────────
 async function restoreSessionFromDatabase() {
+    if (skipRestoreOnce) {
+        console.log(`[S3-SESSION-SYNC] ℹ️ Skipping session restore (flagged fresh start after terminal logout).`);
+        skipRestoreOnce = false;
+        return false;
+    }
     try {
         const resp = await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-session-restore?session_id=default_baileys`);
         if (resp.ok) {
@@ -51,17 +58,41 @@ async function restoreSessionFromDatabase() {
                     const filePath = path.join(AUTH_DIR, fileKey);
                     fs.writeFileSync(filePath, fileData, 'utf8');
                 }
-                console.log(`[DB-SESSION-SYNC] ✅ Restored ${Object.keys(data.files).length} WhatsApp session files from PostgreSQL RDS!`);
+                console.log(`[S3-SESSION-SYNC] ✅ Restored ${Object.keys(data.files).length} WhatsApp session files from S3 (${data.source || 's3'})!`);
                 return true;
             }
         }
     } catch (err) {
-        console.log(`[DB-SESSION-SYNC] ℹ️ Session restore check: ${err.message}`);
+        console.log(`[S3-SESSION-SYNC] ℹ️ Session restore check: ${err.message}`);
     }
     return false;
 }
 
+async function purgeS3Session() {
+    try {
+        const resp = await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-session-clear?session_id=default_baileys`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (resp.ok) {
+            console.log(`[S3-SESSION-SYNC] 🧹 Purged dead session from S3 durable storage.`);
+        }
+    } catch (err) {
+        console.log(`[S3-SESSION-SYNC] ⚠️ Note on S3 purge: ${err.message}`);
+    }
+}
+
+let isBackingUp = false;
+let hasPendingChanges = false;
+let backupDebounceTimer = null;
+
 async function backupSessionToDatabase() {
+    if (isBackingUp) {
+        hasPendingChanges = true;
+        return;
+    }
+    isBackingUp = true;
+    hasPendingChanges = false;
     try {
         if (!fs.existsSync(AUTH_DIR)) return;
         const fileNames = fs.readdirSync(AUTH_DIR);
@@ -77,34 +108,60 @@ async function backupSessionToDatabase() {
 
         if (Object.keys(files).length === 0) return;
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
         const resp = await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-session-backup`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 session_id: 'default_baileys',
                 files: files
-            })
+            }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         if (resp.ok) {
             const data = await resp.json();
             if (data.success) {
-                console.log(`[DB-SESSION-SYNC] 💾 Synced ${Object.keys(files).length} session files to PostgreSQL RDS database.`);
+                console.log(`[S3-SESSION-SYNC] 💾 Synced ${Object.keys(files).length} session files to S3 durable storage.`);
             }
         }
     } catch (err) {
-        console.log(`[DB-SESSION-SYNC] ⚠️ Backup error: ${err.message}`);
+        console.log(`[S3-SESSION-SYNC] ⚠️ Backup error: ${err.message}`);
+    } finally {
+        isBackingUp = false;
+        if (hasPendingChanges) {
+            hasPendingChanges = false;
+            scheduleDebouncedBackup();
+        }
     }
+}
+
+function scheduleDebouncedBackup() {
+    if (isBackingUp) {
+        hasPendingChanges = true;
+    }
+    if (backupDebounceTimer) clearTimeout(backupDebounceTimer);
+    backupDebounceTimer = setTimeout(() => {
+        backupDebounceTimer = null;
+        backupSessionToDatabase();
+    }, 3000);
 }
 
 let backupIntervalStarted = false;
 
 async function startWhatsAppBot() {
+    clientGen += 1;
+    const thisGen = clientGen;
+    console.log(`[WA-LIFECYCLE] 🚀 Initializing WhatsApp Socket (Generation ID: ${thisGen})...`);
+
     if (!fs.existsSync(AUTH_DIR)) {
         fs.mkdirSync(AUTH_DIR, { recursive: true });
     }
 
-    // Attempt restoring session from RDS database before loading auth state
+    // Attempt restoring session from RDS/S3 database before loading auth state
     if (!fs.existsSync(path.join(AUTH_DIR, 'creds.json'))) {
         await restoreSessionFromDatabase();
     }
@@ -124,17 +181,18 @@ async function startWhatsAppBot() {
         auth: state,
         logger: pino({ level: 'silent' }),
         printQRInTerminal: false,
-        browser: Browsers.macOS('Desktop'),
+        browser: ['MyntOS Group Dispatcher', 'Chrome', '1.0.0'],
         syncFullHistory: false,
-        connectTimeoutMs: 180000,
+        connectTimeoutMs: 60000,
         qrTimeout: 180000,
         keepAliveIntervalMs: 30000,
         emitOwnEvents: false
     });
 
     sock.ev.on('creds.update', async () => {
+        if (thisGen !== clientGen) return; // Stale client guard
         await saveCreds();
-        await backupSessionToDatabase();
+        scheduleDebouncedBackup();
     });
 
     // Schedule background DB backup every 60 seconds (singleton)
@@ -144,69 +202,85 @@ async function startWhatsAppBot() {
     }
 
     sock.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect, qr } = update;
-
-        if (qr) {
-            currentQr = qr;
-            connectionStatus = 'qr_ready';
-            console.log("\n==================================================");
-            console.log("📲 SCAN THIS QR CODE WITH YOUR WHATSAPP PHONE:");
-            console.log("==================================================");
-            qrcodeTerminal.generate(qr, { small: true });
-            console.log(`\nAlternatively, open: http://localhost:${PORT}/qr in browser.\n`);
-        }
-
-        if (connection === 'open') {
-            connectionStatus = 'connected';
-            currentQr = null;
-            console.log("✅ WHATSAPP WEB GROUP BOT CONNECTED SUCCESSFULLY!");
-            await backupSessionToDatabase();
-
-            // If DEFAULT_INVITE_CODE is already a Group JID (ends with @g.us or contains @), assign directly
-            if (DEFAULT_INVITE_CODE && (DEFAULT_INVITE_CODE.includes('@g.us') || DEFAULT_INVITE_CODE.includes('@'))) {
-                targetJid = DEFAULT_INVITE_CODE;
-                console.log(`📌 Using Direct Target Group JID: ${targetJid}`);
-            } else if (DEFAULT_INVITE_CODE) {
-                try {
-                    const groupInfo = await sock.groupGetInviteInfo(DEFAULT_INVITE_CODE);
-                    if (groupInfo && groupInfo.id) {
-                        targetJid = groupInfo.id.includes('@g.us') ? groupInfo.id : `${groupInfo.id}@g.us`;
-                        console.log(`📌 Resolved Target Group JID: ${targetJid} (${groupInfo.subject || 'Sales Group'})`);
-                    }
-                } catch (err) {
-                    console.log(`ℹ️ Group invite lookup note: ${err.message}`);
-                }
-            }
-        }
-
-        if (connection === 'close') {
-            const errDetail = lastDisconnect?.error?.message || lastDisconnect?.error;
-            const statusCode = lastDisconnect?.error?.output?.statusCode || lastDisconnect?.error?.statusCode;
-            
-            // Only consider genuinely logged out if explicit 401 DisconnectReason.loggedOut is received
-            const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
-            
-            if (isLoggedOut) {
-                connectionStatus = 'qr_ready';
-                currentQr = null;
-                console.log(`🧹 WhatsApp account unlinked/logged out (Status: ${statusCode}). Clearing auth_info to prepare fresh QR code...`);
-                try {
-                    if (fs.existsSync(AUTH_DIR)) {
-                        fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-                    }
-                } catch (e) {
-                    console.error("Error clearing auth_info:", e.message);
-                }
-                setTimeout(startWhatsAppBot, 2000);
-            } else {
-                // Transient disconnect (428 connectionClosed, 408 timedOut, 515 restartRequired, 503 unavailableService, ECONNRESET, etc.)
-                // ALWAYS preserve AUTH_DIR so Baileys re-reads saved creds.json and auto-reconnects seamlessly without re-scanning QR.
-                connectionStatus = 'reconnecting';
-                console.log(`⚠️ Temporary network/socket reset (Status: ${statusCode || 'unknown'}, Reason: ${errDetail || 'Connection lost'}). Preserving session credentials and auto-reconnecting in 3s...`);
-                setTimeout(startWhatsAppBot, 3000);
-            }
-        }
+        await processConnectionUpdate(thisGen, update);
     });
+}
+
+async function processConnectionUpdate(thisGen, update) {
+    if (thisGen !== clientGen) {
+        console.log(`[WA-LIFECYCLE] 🛡️ Ignored event from obsolete Client Generation ${thisGen} (Current: ${clientGen})`);
+        return { dropped: true, gen: thisGen, currentGen: clientGen };
+    }
+
+    const { connection, lastDisconnect, qr } = update;
+
+    if (qr) {
+        currentQr = qr;
+        connectionStatus = 'qr_ready';
+        console.log("\n==================================================");
+        console.log(`📲 SCAN THIS QR CODE WITH YOUR WHATSAPP PHONE (Gen ${thisGen}):`);
+        console.log("==================================================");
+        qrcodeTerminal.generate(qr, { small: true });
+        console.log(`\nAlternatively, open: http://localhost:${PORT}/qr in browser.\n`);
+    }
+
+    if (connection === 'open') {
+        connectionStatus = 'connected';
+        currentQr = null;
+        console.log(`✅ [WA-LIFECYCLE] WHATSAPP CONNECTED (Gen ${thisGen})! Session is active and authoritative.`);
+        await backupSessionToDatabase();
+
+        // If DEFAULT_INVITE_CODE is already a Group JID (ends with @g.us or contains @), assign directly
+        if (DEFAULT_INVITE_CODE && (DEFAULT_INVITE_CODE.includes('@g.us') || DEFAULT_INVITE_CODE.includes('@'))) {
+            targetJid = DEFAULT_INVITE_CODE;
+            console.log(`📌 Using Direct Target Group JID: ${targetJid}`);
+        } else if (DEFAULT_INVITE_CODE && sock) {
+            try {
+                const groupInfo = await sock.groupGetInviteInfo(DEFAULT_INVITE_CODE);
+                if (groupInfo && groupInfo.id) {
+                    targetJid = groupInfo.id.includes('@g.us') ? groupInfo.id : `${groupInfo.id}@g.us`;
+                    console.log(`📌 Resolved Target Group JID: ${targetJid} (${groupInfo.subject || 'Sales Group'})`);
+                }
+            } catch (err) {
+                console.log(`ℹ️ Group invite lookup note: ${err.message}`);
+            }
+        }
+    }
+
+    if (connection === 'close') {
+        const errDetail = lastDisconnect?.error?.message || lastDisconnect?.error;
+        const statusCode = lastDisconnect?.error?.output?.statusCode || lastDisconnect?.error?.statusCode;
+        
+        // Only consider genuinely logged out if explicit 401 DisconnectReason.loggedOut is received
+        const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
+        
+        if (isLoggedOut) {
+            connectionStatus = 'qr_ready';
+            currentQr = null;
+            console.log(`🧹 [WA-LIFECYCLE] Terminal logout confirmed (Status: ${statusCode}, Gen: ${thisGen}). Purging dead session and preparing fresh QR...`);
+            skipRestoreOnce = true;
+            await purgeS3Session();
+            try {
+                if (fs.existsSync(AUTH_DIR)) {
+                    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                }
+            } catch (e) {
+                console.error("Error clearing auth_info:", e.message);
+            }
+            setTimeout(() => {
+                if (thisGen === clientGen) startWhatsAppBot();
+            }, 2000);
+        } else {
+            // Transient disconnect (428 connectionClosed, 408 timedOut, 515 restartRequired, 503 unavailableService, ECONNRESET, etc.)
+            // ALWAYS preserve AUTH_DIR so Baileys re-reads saved creds.json and auto-reconnects seamlessly without re-scanning QR.
+            connectionStatus = 'reconnecting';
+            console.log(`⚠️ [WA-LIFECYCLE] Temporary socket reset (Status: ${statusCode || 'unknown'}, Reason: ${errDetail || 'Connection lost'}). Preserving session credentials and auto-reconnecting in 3s...`);
+            setTimeout(() => {
+                if (thisGen === clientGen) startWhatsAppBot();
+            }, 3000);
+        }
+    }
+    return { dropped: false, status: connectionStatus };
 }
 
 // ── API ENDPOINTS ─────────────────────────────────────────────────────────────
@@ -225,6 +299,9 @@ async function logoutBotSession() {
         }
         currentQr = null;
         targetJid = null;
+
+        skipRestoreOnce = true;
+        await purgeS3Session();
 
         if (fs.existsSync(AUTH_DIR)) {
             fs.rmSync(AUTH_DIR, { recursive: true, force: true });
@@ -261,9 +338,26 @@ app.all(['/logout', '/api/logout'], async (req, res) => {
 app.get('/status', (req, res) => {
     return res.json({
         status: connectionStatus,
-        qr_available: !!currentQr,
+        connection_state: connectionStatus,
+        can_send_now: connectionStatus === 'connected',
+        qr_available: !!currentQr && (connectionStatus === 'qr_ready' || connectionStatus === 'disconnected'),
+        generation_id: clientGen,
         target_jid: targetJid,
-        invite_code: DEFAULT_INVITE_CODE
+        invite_code: DEFAULT_INVITE_CODE,
+        timestamp: Date.now()
+    });
+});
+
+app.get('/qr-data', (req, res) => {
+    return res.json({
+        status: connectionStatus,
+        connection_state: connectionStatus,
+        can_send_now: connectionStatus === 'connected',
+        qr: currentQr,
+        qr_url: currentQr ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(currentQr)}` : null,
+        qr_available: !!currentQr && (connectionStatus === 'qr_ready' || connectionStatus === 'disconnected'),
+        generation_id: clientGen,
+        timestamp: Date.now()
     });
 });
 
@@ -455,9 +549,18 @@ function cleanTargetCode(raw) {
 
 app.post('/api/send-group-message', async (req, res) => {
     try {
-        const { message, inviteCode, groupId, imageUrl, imagePath } = req.body;
-        if (!message && !imageUrl && !imagePath) {
-            return res.status(400).json({ success: false, error: "message or image parameter required" });
+        const { message, inviteCode, groupId, imageUrl, imagePath, media_url, mediaUrl } = req.body;
+        const mediaSource = imageUrl || imagePath || media_url || mediaUrl || null;
+        if (!message && !mediaSource) {
+            return res.status(400).json({ success: false, error: "message or media parameter required" });
+        }
+
+        // Graceful wait if socket is actively reconnecting
+        if (connectionStatus === 'reconnecting') {
+            const startWait = Date.now();
+            while (connectionStatus === 'reconnecting' && (Date.now() - startWait) < 4000) {
+                await new Promise(r => setTimeout(r, 400));
+            }
         }
 
         if (connectionStatus !== 'connected' || !sock) {
@@ -467,7 +570,8 @@ app.post('/api/send-group-message', async (req, res) => {
             return res.status(503).json({
                 success: false,
                 error: err_msg,
-                status: connectionStatus
+                status: connectionStatus,
+                can_send_now: false
             });
         }
 
@@ -591,7 +695,7 @@ app.post('/api/send-group-message', async (req, res) => {
             }
 
             let contentPayload = { text: message || '' };
-            const mediaSrc = imageUrl || imagePath;
+            const mediaSrc = mediaSource;
             if (mediaSrc) {
                 let imgBuffer = null;
                 if (typeof mediaSrc === 'string' && (mediaSrc.startsWith('http://') || mediaSrc.startsWith('https://'))) {
@@ -675,16 +779,28 @@ async function logDispatchToBackend(target, message, targetName = "Scanned Bot A
 
 app.post('/api/send-message', async (req, res) => {
     try {
-        const { phone, message, imageUrl, imagePath } = req.body;
-        if (!phone || (!message && !imageUrl && !imagePath)) {
-            return res.status(400).json({ success: false, error: "phone and message/image parameters required" });
+        const { phone, message, imageUrl, imagePath, media_url, mediaUrl } = req.body;
+        const mediaSource = imageUrl || imagePath || media_url || mediaUrl || null;
+        if (!phone || (!message && !mediaSource)) {
+            return res.status(400).json({ success: false, error: "phone and message or media parameter required" });
+        }
+
+        // Graceful wait if socket is actively reconnecting
+        if (connectionStatus === 'reconnecting') {
+            const startWait = Date.now();
+            while (connectionStatus === 'reconnecting' && (Date.now() - startWait) < 4000) {
+                await new Promise(r => setTimeout(r, 400));
+            }
         }
 
         if (connectionStatus !== 'connected' || !sock) {
             return res.status(503).json({
                 success: false,
-                error: "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
-                status: connectionStatus
+                error: connectionStatus === 'reconnecting' 
+                    ? "WhatsApp bot is reconnecting. Please retry in a moment."
+                    : "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+                status: connectionStatus,
+                can_send_now: false
             });
         }
 
@@ -693,7 +809,7 @@ app.post('/api/send-message', async (req, res) => {
         const recipientJid = cleanPhone.includes('@s.whatsapp.net') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
 
         let contentPayload = { text: message || '' };
-        const mediaSrc = imageUrl || imagePath;
+        const mediaSrc = mediaSource;
         if (mediaSrc) {
             let imgBuffer = null;
             if (typeof mediaSrc === 'string' && (mediaSrc.startsWith('http://') || mediaSrc.startsWith('https://'))) {
@@ -715,7 +831,8 @@ app.post('/api/send-message', async (req, res) => {
         return res.json({
             success: true,
             recipient_jid: recipientJid,
-            message_id: sentMsg?.key?.id
+            message_id: sentMsg?.key?.id,
+            key: sentMsg?.key
         });
 
     } catch (err) {
@@ -724,7 +841,25 @@ app.post('/api/send-message', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 Self-Hosted WhatsApp Web Group Bot running on http://localhost:${PORT}`);
-    startWhatsAppBot();
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`🚀 Self-Hosted WhatsApp Web Group Bot running on http://localhost:${PORT}`);
+        startWhatsAppBot();
+    });
+}
+
+module.exports = {
+    app,
+    processConnectionUpdate,
+    startWhatsAppBot,
+    logoutBotSession,
+    restoreSessionFromDatabase,
+    purgeS3Session,
+    getConnectionStatus: () => connectionStatus,
+    setConnectionStatus: (s) => { connectionStatus = s; },
+    getClientGen: () => clientGen,
+    setClientGen: (g) => { clientGen = g; },
+    getSkipRestoreOnce: () => skipRestoreOnce,
+    setSkipRestoreOnce: (b) => { skipRestoreOnce = b; },
+    AUTH_DIR
+};

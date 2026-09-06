@@ -2641,6 +2641,18 @@ def create_marketplace_tables():
                         WHERE NOT EXISTS (SELECT 1 FROM income_source_types WHERE source_code = 'SVC_SPARE')
                     """))
                     conn.execute(text("""
+                        INSERT INTO income_source_types 
+                            (source_code, source_name, description, requires_reference, reference_type, applicable_companies, is_active, display_order, is_taxable, default_tax_rate, requires_receipt, created_at, updated_at)
+                        SELECT 'SVC_SERVICE', 'Service Ticket Labour & Service', 'Payment for labour and service charges on service tickets', 
+                               true, 'OTHER', '[1]'::jsonb, true, 11, true, 18.00, true, NOW(), NOW()
+                        WHERE NOT EXISTS (SELECT 1 FROM income_source_types WHERE source_code = 'SVC_SERVICE')
+                    """))
+                    conn.execute(text("""
+                        ALTER TABLE income_entries ADD COLUMN IF NOT EXISTS spares_amount NUMERIC(15, 2) DEFAULT 0;
+                        ALTER TABLE income_entries ADD COLUMN IF NOT EXISTS service_amount NUMERIC(15, 2) DEFAULT 0;
+                        ALTER TABLE income_entries ADD COLUMN IF NOT EXISTS ticket_total_amount NUMERIC(15, 2);
+                    """))
+                    conn.execute(text("""
                         INSERT INTO staff_employee_additional_departments (employee_id, department_id, assigned_at)
                         SELECT e.id, d.id, NOW()
                         FROM staff_employees e, staff_departments d
@@ -3087,6 +3099,35 @@ def create_marketplace_tables():
                     ))
                 except Exception:
                     pass
+                try:
+                    conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS crm_dialer_reservations (
+                            id SERIAL PRIMARY KEY,
+                            lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                            session_id INTEGER REFERENCES crm_dialer_sessions(id) ON DELETE CASCADE,
+                            user_ref VARCHAR(50) NOT NULL,
+                            portal VARCHAR(10) NOT NULL DEFAULT 'staff',
+                            reserved_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                            expires_at TIMESTAMP NOT NULL
+                        )
+                    """))
+                    conn.execute(text(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS ix_dialer_res_lead ON crm_dialer_reservations(lead_id)"
+                    ))
+                    conn.execute(text(
+                        "CREATE INDEX IF NOT EXISTS ix_dialer_res_user ON crm_dialer_reservations(user_ref, session_id)"
+                    ))
+                    conn.execute(text(
+                        "CREATE INDEX IF NOT EXISTS ix_dialer_res_expires ON crm_dialer_reservations(expires_at)"
+                    ))
+                    conn.execute(text(
+                        "CREATE INDEX IF NOT EXISTS ix_dialer_attempts_lead_dialed ON crm_dialer_attempts(lead_id, dialed_at)"
+                    ))
+                    conn.execute(text(
+                        "CREATE INDEX IF NOT EXISTS ix_dialer_attempts_dialed_at ON crm_dialer_attempts(dialed_at)"
+                    ))
+                except Exception:
+                    pass
                 # DC Protocol (Mar 2026): Commit to release crm_dialer_sessions lock before
                 # isolated ALTER TABLE _dc connections — prevents self-deadlock where conn holds
                 # a CREATE INDEX lock on crm_dialer_sessions and _dc tries ALTER TABLE on it.
@@ -3098,6 +3139,7 @@ def create_marketplace_tables():
                 for _dcac_sql in [
                     "ALTER TABLE crm_dialer_sessions ADD COLUMN IF NOT EXISTS active_lead_id INTEGER",
                     "ALTER TABLE crm_dialer_sessions ADD COLUMN IF NOT EXISTS call_started_at TIMESTAMP",
+                    "ALTER TABLE crm_dialer_attempts ADD COLUMN IF NOT EXISTS call_method VARCHAR(50)",
                 ]:
                     try:
                         with engine.connect() as _dc:
@@ -4642,69 +4684,71 @@ def _startup_worker():
             pass
 
     # ── DC-OP-SCHEMA-001 (MUST run first): Add missing official_partners columns ──
-    # These 7 columns exist in the SQLAlchemy ORM model but were never migrated to DB.
-    # ANY db.query(OfficialPartner) emits a full SELECT and crashes with UndefinedColumn.
-    # Running this first ensures every subsequent migration that touches official_partners works.
-    try:
-        with engine.begin() as _c:
-            for _sql in [
-                # company_id: no FK constraint here — companies table may not exist yet at this point in startup
-                "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS company_id INTEGER",
-                "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS login_count INTEGER DEFAULT 0",
-                "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS vgk_points_refill_count INTEGER NOT NULL DEFAULT 0",
-                "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS vgk_points_last_refill_at TIMESTAMP",
-                "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS blood_group VARCHAR(5)",
-                "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS bank_details_status VARCHAR(30) NOT NULL DEFAULT 'Not Submitted'",
-                "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS bank_rejection_reason TEXT",
-                # vendor_master missing columns (same root cause — model ahead of DB)
-                "ALTER TABLE vendor_master ADD COLUMN IF NOT EXISTS gst_type VARCHAR(10) NOT NULL DEFAULT 'CGST_SGST'",
-                "ALTER TABLE vendor_master ADD COLUMN IF NOT EXISTS vendor_logo_url VARCHAR(500)",
-                # staff_employees missing columns
-                "ALTER TABLE staff_employees ADD COLUMN IF NOT EXISTS admin_scope VARCHAR(50) DEFAULT 'CLIENT_SPECIFIC'",
-                # associated_companies missing columns
-                "ALTER TABLE associated_companies ADD COLUMN IF NOT EXISTS company_segment VARCHAR(50) DEFAULT 'SEGMENT_A_INTERNAL'",
-                "ALTER TABLE associated_companies ADD COLUMN IF NOT EXISTS licensed_modules JSONB DEFAULT '[]'::jsonb",
-                # staff_day_plan_items missing columns
-                "ALTER TABLE staff_day_plan_items ADD COLUMN IF NOT EXISTS plan_type VARCHAR(50) DEFAULT 'TASK'",
-                "ALTER TABLE staff_day_plan_items ADD COLUMN IF NOT EXISTS is_followup BOOLEAN DEFAULT FALSE",
-                # platform_clients missing columns
-                "ALTER TABLE platform_clients ADD COLUMN IF NOT EXISTS subscribed_modules JSONB DEFAULT '[]'::jsonb",
-            ]:
-                _c.execute(_text(_sql))
-            # manual_party_master: persisted external parties for future party-search results
-            _c.execute(_text("""
-                CREATE TABLE IF NOT EXISTS manual_party_master (
-                    id            SERIAL PRIMARY KEY,
-                    name          VARCHAR(255) NOT NULL,
-                    phone         VARCHAR(20),
-                    email         VARCHAR(150),
-                    notes         VARCHAR(500),
-                    created_by_id INTEGER REFERENCES staff_employees(id) ON DELETE SET NULL,
-                    created_at    TIMESTAMP NOT NULL DEFAULT NOW(),
-                    updated_at    TIMESTAMP NOT NULL DEFAULT NOW()
-                )
-            """))
-            _c.execute(_text("CREATE INDEX IF NOT EXISTS idx_manual_party_name ON manual_party_master (name)"))
-        print("[DC-OP-SCHEMA-001] ✅ official_partners (7) + vendor_master (2) missing columns ensured + manual_party_master table ready", flush=True)
-    except Exception as _e:
-        print(f"[DC-OP-SCHEMA-001] ⚠️ {_e}", flush=True)
+    if "DC-OP-SCHEMA-001" not in _applied_keys:
+        try:
+            with engine.begin() as _c:
+                for _sql in [
+                    # company_id: no FK constraint here — companies table may not exist yet at this point in startup
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS company_id INTEGER",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS login_count INTEGER DEFAULT 0",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS vgk_points_refill_count INTEGER NOT NULL DEFAULT 0",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS vgk_points_last_refill_at TIMESTAMP",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS blood_group VARCHAR(5)",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS bank_details_status VARCHAR(30) NOT NULL DEFAULT 'Not Submitted'",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS bank_rejection_reason TEXT",
+                    # vendor_master missing columns (same root cause — model ahead of DB)
+                    "ALTER TABLE vendor_master ADD COLUMN IF NOT EXISTS gst_type VARCHAR(10) NOT NULL DEFAULT 'CGST_SGST'",
+                    "ALTER TABLE vendor_master ADD COLUMN IF NOT EXISTS vendor_logo_url VARCHAR(500)",
+                    # staff_employees missing columns
+                    "ALTER TABLE staff_employees ADD COLUMN IF NOT EXISTS admin_scope VARCHAR(50) DEFAULT 'CLIENT_SPECIFIC'",
+                    # associated_companies missing columns
+                    "ALTER TABLE associated_companies ADD COLUMN IF NOT EXISTS company_segment VARCHAR(50) DEFAULT 'SEGMENT_A_INTERNAL'",
+                    "ALTER TABLE associated_companies ADD COLUMN IF NOT EXISTS licensed_modules JSONB DEFAULT '[]'::jsonb",
+                    # staff_day_plan_items missing columns
+                    "ALTER TABLE staff_day_plan_items ADD COLUMN IF NOT EXISTS plan_type VARCHAR(50) DEFAULT 'TASK'",
+                    "ALTER TABLE staff_day_plan_items ADD COLUMN IF NOT EXISTS is_followup BOOLEAN DEFAULT FALSE",
+                    # platform_clients missing columns
+                    "ALTER TABLE platform_clients ADD COLUMN IF NOT EXISTS subscribed_modules JSONB DEFAULT '[]'::jsonb",
+                ]:
+                    _c.execute(_text(_sql))
+                # manual_party_master: persisted external parties for future party-search results
+                _c.execute(_text("""
+                    CREATE TABLE IF NOT EXISTS manual_party_master (
+                        id            SERIAL PRIMARY KEY,
+                        name          VARCHAR(255) NOT NULL,
+                        phone         VARCHAR(20),
+                        email         VARCHAR(150),
+                        notes         VARCHAR(500),
+                        created_by_id INTEGER REFERENCES staff_employees(id) ON DELETE SET NULL,
+                        created_at    TIMESTAMP NOT NULL DEFAULT NOW(),
+                        updated_at    TIMESTAMP NOT NULL DEFAULT NOW()
+                    )
+                """))
+                _c.execute(_text("CREATE INDEX IF NOT EXISTS idx_manual_party_name ON manual_party_master (name)"))
+            _mig_done("DC-OP-SCHEMA-001")
+            print("[DC-OP-SCHEMA-001] ✅ official_partners (7) + vendor_master (2) missing columns ensured + manual_party_master table ready", flush=True)
+        except Exception as _e:
+            print(f"[DC-OP-SCHEMA-001] ⚠️ {_e}", flush=True)
 
     # DC_CONSOLIDATED_EARLY_001: expense_main_category.is_direct_expense must exist
-    # before ANY SQLAlchemy ORM query on ExpenseMainCategory runs (it reads all columns)
-    try:
-        with engine.begin() as _c:
-            _c.execute(_text("ALTER TABLE expense_main_category ADD COLUMN IF NOT EXISTS is_direct_expense BOOLEAN NOT NULL DEFAULT FALSE"))
-        print("[DC_CONSOLIDATED_EARLY_001] ✅ is_direct_expense column ensured on expense_main_category", flush=True)
-    except Exception as _e:
-        print(f"[DC_CONSOLIDATED_EARLY_001] ⚠️ {_e}", flush=True)
+    if "DC_CONSOLIDATED_EARLY_001" not in _applied_keys:
+        try:
+            with engine.begin() as _c:
+                _c.execute(_text("ALTER TABLE expense_main_category ADD COLUMN IF NOT EXISTS is_direct_expense BOOLEAN NOT NULL DEFAULT FALSE"))
+            _mig_done("DC_CONSOLIDATED_EARLY_001")
+            print("[DC_CONSOLIDATED_EARLY_001] ✅ is_direct_expense column ensured on expense_main_category", flush=True)
+        except Exception as _e:
+            print(f"[DC_CONSOLIDATED_EARLY_001] ⚠️ {_e}", flush=True)
 
     # DC_EXPENSE_SUBCATEGORY_NULLABLE_001: sub_category_id must be nullable — form allows no sub-category
-    try:
-        with engine.begin() as _c:
-            _c.execute(_text("ALTER TABLE expense_entries ALTER COLUMN sub_category_id DROP NOT NULL"))
-        print("[DC_EXPENSE_SUBCATEGORY_NULLABLE_001] ✅ expense_entries.sub_category_id is now nullable", flush=True)
-    except Exception as _e:
-        print(f"[DC_EXPENSE_SUBCATEGORY_NULLABLE_001] ⚠️ {_e}", flush=True)
+    if "DC_EXPENSE_SUBCATEGORY_NULLABLE_001" not in _applied_keys:
+        try:
+            with engine.begin() as _c:
+                _c.execute(_text("ALTER TABLE expense_entries ALTER COLUMN sub_category_id DROP NOT NULL"))
+            _mig_done("DC_EXPENSE_SUBCATEGORY_NULLABLE_001")
+            print("[DC_EXPENSE_SUBCATEGORY_NULLABLE_001] ✅ expense_entries.sub_category_id is now nullable", flush=True)
+        except Exception as _e:
+            print(f"[DC_EXPENSE_SUBCATEGORY_NULLABLE_001] ⚠️ {_e}", flush=True)
 
     # ── Schema fix migrations ─────────────────────────────────────────────────
     _safe_run(fix_status_constraint)
@@ -7214,18 +7258,20 @@ def _startup_worker():
     _sil_sqls = [
         "ALTER TABLE expense_entries ADD COLUMN IF NOT EXISTS show_in_ledger BOOLEAN NOT NULL DEFAULT false",
         "ALTER TABLE income_entries ADD COLUMN IF NOT EXISTS show_in_ledger BOOLEAN NOT NULL DEFAULT false",
+        "ALTER TABLE expense_entries ADD COLUMN IF NOT EXISTS is_external BOOLEAN NOT NULL DEFAULT false",
+        "ALTER TABLE income_entries ADD COLUMN IF NOT EXISTS is_external BOOLEAN NOT NULL DEFAULT false",
     ]
-    if 'DC-SHOW-IN-LEDGER-COLS-20260301' not in _applied_keys:
+    if 'DC-SHOW-IN-LEDGER-COLS-20260301-EXT' not in _applied_keys:
         try:
             with engine.begin() as _c:
                 for _sql in _sil_sqls:
                     _c.execute(text(_sql))
-            _mig_done('DC-SHOW-IN-LEDGER-COLS-20260301')
-            print("[DC-SHOW-IN-LEDGER-001] ✅ show_in_ledger column ensured on expense_entries + income_entries", flush=True)
+            _mig_done('DC-SHOW-IN-LEDGER-COLS-20260301-EXT')
+            print("[DC-SHOW-IN-LEDGER-001] ✅ show_in_ledger and is_external columns ensured on expense_entries + income_entries", flush=True)
         except Exception as _e:
             print(f"[DC-SHOW-IN-LEDGER-001] ⚠️ {_e}", flush=True)
     else:
-        print("[DC-SHOW-IN-LEDGER-001] ⏭️ show_in_ledger columns — already applied", flush=True)
+        print("[DC-SHOW-IN-LEDGER-001] ⏭️ show_in_ledger & is_external columns — already applied", flush=True)
 
     # DC-SOLAR-DVR-ADV-20260701-001: first_dvr_confirmed_at on crm_leads +
     # advance_count_basis on bonanza for DVR Advance eligibility.
@@ -21323,6 +21369,74 @@ except Exception as _fa_e:
 finally:
     try:
         _fa_db.close()
+    except Exception:
+        pass
+
+# ── DC-CRM-SETTINGS-HANDLERS-001: Canonical CRM Handler & Routing Tables ──
+try:
+    from sqlalchemy import text as _h_sa_text
+    _h_db = SessionLocal()
+    _h_mk = "DC-CRM-SETTINGS-HANDLERS-001"
+    _h_applied = _h_db.execute(_h_sa_text("SELECT 1 FROM dc_migrations WHERE key = :k"), {"k": _h_mk}).fetchone()
+    if not _h_applied:
+        _h_db.execute(_h_sa_text("""
+            CREATE TABLE IF NOT EXISTS crm_lead_handlers (
+                id SERIAL PRIMARY KEY,
+                company_id INTEGER NOT NULL,
+                department_id INTEGER NOT NULL,
+                category_id INTEGER NOT NULL,
+                is_active BOOLEAN DEFAULT TRUE NOT NULL,
+                created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'Asia/Kolkata') NOT NULL,
+                updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'Asia/Kolkata'),
+                created_by_id INTEGER,
+                CONSTRAINT uq_crm_lead_handler_co_dept_cat UNIQUE (company_id, department_id, category_id)
+            );
+            CREATE INDEX IF NOT EXISTS ix_clh_company_category ON crm_lead_handlers(company_id, category_id);
+            CREATE INDEX IF NOT EXISTS ix_clh_department ON crm_lead_handlers(department_id);
+            CREATE INDEX IF NOT EXISTS ix_clh_is_active ON crm_lead_handlers(is_active);
+
+            CREATE TABLE IF NOT EXISTS crm_lead_handler_members (
+                id SERIAL PRIMARY KEY,
+                handler_id INTEGER NOT NULL REFERENCES crm_lead_handlers(id) ON DELETE CASCADE,
+                employee_id INTEGER NOT NULL,
+                is_active BOOLEAN DEFAULT TRUE NOT NULL,
+                created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'Asia/Kolkata') NOT NULL,
+                created_by_id INTEGER,
+                CONSTRAINT uq_crm_lead_handler_member UNIQUE (handler_id, employee_id)
+            );
+            CREATE INDEX IF NOT EXISTS ix_clhm_handler_id ON crm_lead_handler_members(handler_id);
+            CREATE INDEX IF NOT EXISTS ix_clhm_employee_id ON crm_lead_handler_members(employee_id);
+            CREATE INDEX IF NOT EXISTS ix_clhm_is_active ON crm_lead_handler_members(is_active);
+
+            CREATE TABLE IF NOT EXISTS crm_lead_handler_audits (
+                id SERIAL PRIMARY KEY,
+                handler_id INTEGER,
+                action VARCHAR(50) NOT NULL,
+                details TEXT,
+                performed_by_id INTEGER,
+                created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'Asia/Kolkata') NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS ix_clha_handler_id ON crm_lead_handler_audits(handler_id);
+            CREATE INDEX IF NOT EXISTS ix_clha_action ON crm_lead_handler_audits(action);
+            CREATE INDEX IF NOT EXISTS ix_clha_created_at ON crm_lead_handler_audits(created_at);
+        """))
+        _h_db.execute(
+            _h_sa_text("INSERT INTO dc_migrations(key) VALUES(:k) ON CONFLICT(key) DO NOTHING"),
+            {"k": _h_mk}
+        )
+        _h_db.commit()
+        print("[DC-CRM-SETTINGS-HANDLERS-001] ✅ CRM Lead Handler tables initialized", flush=True)
+    else:
+        print("[DC-CRM-SETTINGS-HANDLERS-001] ⏭️  Already applied — skipping", flush=True)
+except Exception as _h_e:
+    print(f"[DC-CRM-SETTINGS-HANDLERS-001] ⚠️ Non-fatal: {_h_e}", flush=True)
+    try:
+        _h_db.rollback()
+    except Exception:
+        pass
+finally:
+    try:
+        _h_db.close()
     except Exception:
         pass
 

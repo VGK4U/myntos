@@ -1002,31 +1002,41 @@ if (typeof document !== 'undefined' && !document.getElementById('staffHeaderStyl
 
 // Universal Plivo Softphone Loader for Staff Portal
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-    if (!document.getElementById('plivoSoftphoneScript')) {
+    if (!window.PlivoSoftphone && !window.PlivoSoftphoneLoaded && !document.getElementById('plivoSoftphoneScript')) {
+        window.PlivoSoftphoneLoaded = true;
         const softphoneScript = document.createElement('script');
         softphoneScript.id = 'plivoSoftphoneScript';
-        softphoneScript.src = '/public/js/plivo-softphone.js?v=' + Date.now();
+        softphoneScript.src = '/public/js/plivo-softphone.js?v=20260906_fix';
         softphoneScript.async = true;
         document.head.appendChild(softphoneScript);
     }
 
-    // Universal Softphone Trigger — opens floating dialpad/in-call overlay directly on top of active window
+    // Universal Softphone Trigger — opens centralized softphone dialer modal in-place
+    window.openCallDialer = function(intent) {
+        if (!intent) return;
+        if (window.PlivoSoftphone && typeof window.PlivoSoftphone.openCallDialer === 'function') {
+            window.PlivoSoftphone.openCallDialer(intent);
+        } else {
+            setTimeout(() => {
+                if (window.PlivoSoftphone && typeof window.PlivoSoftphone.openCallDialer === 'function') {
+                    window.PlivoSoftphone.openCallDialer(intent);
+                }
+            }, 300);
+        }
+    };
+
     window.triggerLeadCall = function(phone, name, leadId) {
         if (!phone) return;
         const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
         if (!cleanPhone) return;
         const safeName = (name || 'Contact Lead').trim();
-        if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
-            window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
-        } else if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
-            window.PlivoSoftphone.dial(cleanPhone, leadId, safeName);
-        } else {
-            setTimeout(() => {
-                if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
-                    window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
-                }
-            }, 300);
-        }
+        window.openCallDialer({
+            phoneNumber: cleanPhone,
+            name: safeName,
+            entityId: leadId || null,
+            entityType: 'lead',
+            autoStart: true
+        });
     };
 }
 

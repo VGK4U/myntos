@@ -749,6 +749,10 @@ class StaffRealtimeLocation(Base):
     app_version = Column(String(32), nullable=True)
     app_platform = Column(String(16), nullable=True)
     
+    # Canonical Observation Identity (UUIDv4 generated at sensor capture)
+    client_observation_id = Column(String(36), nullable=True, index=True)
+    server_received_at = Column(DateTime, default=get_indian_time, nullable=True)
+
     # Timestamps
     captured_at = Column(DateTime, nullable=False, index=True)
     created_at = Column(DateTime, default=get_indian_time, nullable=False)
@@ -818,6 +822,8 @@ class StaffRealtimeLocation(Base):
             "battery_percentage": battery_percentage,
             "is_wvv_compliant": is_wvv_compliant,
             "accuracy_quality": accuracy_quality,
+            "client_observation_id": self.client_observation_id,
+            "server_received_at": self.server_received_at.isoformat() if self.server_received_at else None,
             "captured_at": self.captured_at.isoformat() if self.captured_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None
         }

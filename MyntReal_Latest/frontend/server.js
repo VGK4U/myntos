@@ -7617,62 +7617,8 @@ const VGK_TOKEN_PROPAGATION_SCRIPT = `
 </script>
 `;
 
-let waBotProcess = null;
-let waBotStarting = false;
-function ensureWhatsAppBotRunning() {
-  if (waBotProcess || waBotStarting) return;
-  
-  // First check if port 5002 is already active
-  const checkReq = http.get('http://127.0.0.1:5002/status', (res) => {
-    // Port 5002 is already running and responsive
-    console.log('[DC-WA-BOT] WhatsApp bot daemon is already running on port 5002.');
-    waBotStarting = false;
-  });
-  checkReq.on('error', () => {
-    // Port 5002 is not listening, proceed to spawn
-    const botPathCandidates = [
-      path.join(__dirname, '../backend/whatsapp-group-bot/server.js'),
-      path.join(__dirname, 'backend/whatsapp-group-bot/server.js'),
-      path.join(process.cwd(), 'backend/whatsapp-group-bot/server.js'),
-      path.join(process.cwd(), 'MyntReal_Latest/backend/whatsapp-group-bot/server.js')
-    ];
-    let botScriptPath = null;
-    for (const p of botPathCandidates) {
-      if (fs.existsSync(p)) {
-        botScriptPath = p;
-        break;
-      }
-    }
-    if (!botScriptPath) {
-      console.warn('[DC-WA-BOT] Could not locate whatsapp-group-bot/server.js script');
-      return;
-    }
-    waBotStarting = true;
-    console.log(`[DC-WA-BOT] Auto-spawning WhatsApp Group Bot daemon on port 5002 from ${botScriptPath}...`);
-    try {
-      const { fork } = require('child_process');
-      waBotProcess = fork(botScriptPath, [], {
-        cwd: path.dirname(botScriptPath),
-        env: { ...process.env, PORT: '5002' },
-        stdio: 'inherit'
-      });
-      waBotProcess.on('exit', (code) => {
-        console.warn(`[DC-WA-BOT] WhatsApp bot daemon exited with code ${code}. Auto-respawning in 5s...`);
-        waBotProcess = null;
-        waBotStarting = false;
-        setTimeout(ensureWhatsAppBotRunning, 5000);
-      });
-    } catch (err) {
-      console.error('[DC-WA-BOT] Failed to spawn WhatsApp bot:', err.message);
-      waBotStarting = false;
-    }
-  });
-  checkReq.setTimeout(1500, () => {
-    checkReq.abort();
-  });
-}
-// Auto-start WhatsApp Bot daemon on server boot
-setTimeout(ensureWhatsAppBotRunning, 2000);
+// DC Protocol: WhatsApp Gateway (Port 5002) is managed as a standalone service
+// by daemon_supervisor.sh and start.sh to prevent multi-process EADDRINUSE collisions.
 
 const server = http.createServer(async (req, res) => {
   // DC Protocol: Global error handler wrapper for production stability
@@ -7721,7 +7667,6 @@ const server = http.createServer(async (req, res) => {
     });
     proxyReq.on('error', (err) => {
       console.warn('[DC-PROXY-QR] WhatsApp bot service on port 5002 error:', err.message);
-      ensureWhatsAppBotRunning();
       res.writeHead(503, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(`
         <!DOCTYPE html>
@@ -18773,28 +18718,9 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     });
     return;
   } else if (url.startsWith('/staff/team-leads')) {
-    // Team Portal Leads - View leads from team hierarchy
-    // DC Protocol: Require staff authentication
-    if (!isStaffLoggedIn) {
-      res.writeHead(302, { 'Location': `/login?v=${BUILD_ID}` });
-      res.end();
-      return;
-    }
-    const filePath = path.join(__dirname, 'team_leads.html');
-    readFileWithRetry(filePath, (err, data) => {
-      if (err) {
-        console.error('Team leads page not found');
-        res.writeHead(404);
-        res.end('Team leads page not found');
-        return;
-      }
-      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
-      res.writeHead(200, {
-        'Content-Type': 'text/html',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      });
-      res.end(html);
-    });
+    // Team Leads Consolidated into Staff Leads (Phase 2)
+    res.writeHead(302, { 'Location': `/staff/leads?view=team` });
+    res.end();
     return;
   } else if (url.startsWith('/staff/leads')) {
     // Staff Portal Leads - View leads where user is assigned as handler
@@ -19979,9 +19905,12 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
   } else if (url.startsWith('/staff/call-quality')) {
     const filePath = path.join(__dirname, 'staff_call_quality.html');
     readFileWithRetry(filePath, (err, data) => {
-      if (err) { console.error('[DC] staff_call_quality.html not found:', err.message); res.status(404).send('Page not found'); return; }
-      res.setHeader('Content-Type', 'text/html'); res.end(data);
+      if (err) { console.error('[DC] staff_call_quality.html not found:', err.message); res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.toString().replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, getStrictNoCacheHeaders());
+      res.end(html);
     });
+    return;
   } else if (url.startsWith('/staff/crm/sales-report')) {
     const qIdx = url.indexOf('?');
     const query = qIdx !== -1 ? '&' + url.slice(qIdx + 1) : '';
@@ -20067,10 +19996,19 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
-  } else if (url.startsWith('/staff/softphone-hub') || url.startsWith('/staff/softphone') || url.startsWith('/staff/crm/softphone')) {
-    const filePath = path.join(__dirname, 'staff_softphone_hub.html');
+  } else if (url.startsWith('/staff/softphone-center') || url.startsWith('/staff/softphone-hub') || url.startsWith('/staff/incoming-calls') || url.startsWith('/staff/calling') || url.startsWith('/staff/calling-page') || url.startsWith('/staff/telephony/incoming-calls') || url.startsWith('/staff/telephony/calls')) {
+    const filePath = path.join(__dirname, 'staff_incoming_calls.html');
     readFileWithRetry(filePath, (err, data) => {
-      if (err) { res.writeHead(404); res.end('Softphone Hub not found'); return; }
+      if (err) { res.writeHead(404); res.end('Softphone Center not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
+  } else if (url.startsWith('/staff/call-flow-studio') || url.startsWith('/staff/call-flow') || url.startsWith('/staff/configuration/call-routing') || url.startsWith('/staff/configuration/telephony')) {
+    const filePath = path.join(__dirname, 'staff_call_flow_studio.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('Call Flow Studio not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
@@ -20140,22 +20078,16 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     });
     return;
   } else if (url.startsWith('/staff/crm/team-leads')) {
-    const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    // DC Protocol: Client-side LocalStorage token authentication handles user validation
-    const filePath = path.join(__dirname, 'team_leads.html');
-    readFileWithRetry(filePath, (err, data) => {
-      if (err) { res.writeHead(404); res.end('Team Leads page not found'); return; }
-      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
-      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
-      res.end(html);
-    });
+    // Team Leads Consolidated into Staff Leads (Phase 2)
+    res.writeHead(302, { 'Location': `/staff/leads?view=team` });
+    res.end();
     return;
-  } else if (url.startsWith('/staff/crm/lead-sources')) {
+  } else if (url.startsWith('/staff/crm/settings') || url.startsWith('/staff/crm/lead-sources')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
     // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_lead_sources.html');
     readFileWithRetry(filePath, (err, data) => {
-      if (err) { res.writeHead(404); res.end('Lead Sources page not found'); return; }
+      if (err) { res.writeHead(404); res.end('CRM Settings page not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
       res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
@@ -30121,8 +30053,28 @@ async function processAction(id, action){
       res.end(data);
     });
     return;
-  } else if (url === '/rvz/real-dreams/dashboard' || url.startsWith('/rvz/real-dreams/dashboard?')) {
+  } else if (url === '/rvz/real-dreams/dashboard' || url.startsWith('/rvz/real-dreams/dashboard?') || url === '/rvz/real-dreams-dashboard' || url.startsWith('/rvz/real-dreams-dashboard?')) {
     // DC Protocol: Redirect dashboard URL to consolidated route
+    res.writeHead(302, { 'Location': '/staff/mnr/real-dreams' });
+    res.end();
+    return;
+  } else if (url === '/rvz/real-dreams/marketplace' || url.startsWith('/rvz/real-dreams/marketplace?')) {
+    res.writeHead(302, { 'Location': '/staff/mnr/real-dreams/marketplace' });
+    res.end();
+    return;
+  } else if (url === '/rvz/real-dreams/partners' || url.startsWith('/rvz/real-dreams/partners?')) {
+    res.writeHead(302, { 'Location': '/staff/mnr/real-dreams/partners' });
+    res.end();
+    return;
+  } else if (url === '/rvz/real-dreams/properties' || url.startsWith('/rvz/real-dreams/properties?')) {
+    res.writeHead(302, { 'Location': '/staff/mnr/real-dreams/properties' });
+    res.end();
+    return;
+  } else if (url === '/rvz/real-dreams/banners' || url.startsWith('/rvz/real-dreams/banners?')) {
+    res.writeHead(302, { 'Location': '/staff/mnr/real-dreams/banners' });
+    res.end();
+    return;
+  } else if (url === '/rvz/real-dreams' || url.startsWith('/rvz/real-dreams?')) {
     res.writeHead(302, { 'Location': '/staff/mnr/real-dreams' });
     res.end();
     return;
@@ -30160,6 +30112,31 @@ async function processAction(id, action){
       res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
+    return;
+  } else if (url.startsWith('/staff/crm/settings') || url.startsWith('/staff/crm/lead-sources')) {
+    const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
+    // DC Protocol: Client-side LocalStorage token authentication handles user validation
+    const filePath = path.join(__dirname, 'staff_lead_sources.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('CRM Settings page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
+  } else if (url.startsWith('/staff/crm/dashboard')) {
+    const filePath = path.join(__dirname, 'staff_crm_dashboard.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('CRM Dashboard page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
+  } else if (url === '/staff/crm' || url === '/staff/crm/' || url === '/crm' || url === '/crm/') {
+    res.writeHead(302, { 'Location': '/staff/crm/dashboard' });
+    res.end();
+    return;
   } else if (url.startsWith('/staff/crm') || url.startsWith('/crm')) {
     // CRM Leads - serve without server-side auth (client handles auth)
     const filePath = path.join(__dirname, 'rvz_crm_leads.html');
@@ -30175,9 +30152,21 @@ async function processAction(id, action){
       });
       res.end(data);
     });
+    return;
   } else if (url.startsWith('/rvz/menu-access-config')) {
     // RVZ: Menu Access Control — served directly (like KRA) so its own sidebar renders correctly
     const filePath = path.join(__dirname, 'rvz_menu_access_config.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`);
+      html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, getStrictNoCacheHeaders());
+      res.end(html);
+    });
+    return;
+  } else if (url.startsWith('/rvz/sales-revenue')) {
+    // RVZ: Sales Revenue Dashboard — served directly
+    const filePath = path.join(__dirname, 'rvz_sales_revenue.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`);
@@ -30473,20 +30462,27 @@ async function processAction(id, action){
       res.end(html);
     });
 
-  } else if (url.startsWith('/staff/crm') || url.startsWith('/crm')) {
-    const filePath = path.join(__dirname, 'rvz_crm_leads.html');
+  } else if (url.startsWith('/staff/crm/settings') || url.startsWith('/staff/crm/lead-sources')) {
+    const filePath = path.join(__dirname, 'staff_lead_sources.html');
     readFileWithRetry(filePath, (err, data) => {
-      if (err) {
-        res.writeHead(404);
-        res.end('CRM page not found');
-        return;
-      }
-      res.writeHead(200, { 
-        'Content-Type': 'text/html',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      });
-      res.end(data);
+      if (err) { res.writeHead(404); res.end('CRM Settings page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
     });
+
+  } else if (url.startsWith('/staff/crm/dashboard')) {
+    const filePath = path.join(__dirname, 'staff_crm_dashboard.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('CRM Dashboard page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+
+  } else if (url.startsWith('/staff/crm') || url.startsWith('/crm')) {
+    res.writeHead(302, { 'Location': '/staff/crm/dashboard' });
+    res.end();
 
 
   } else if (url.toLowerCase() === '/mnrcatalog' || url.toLowerCase().startsWith('/mnrcatalog?') || url.toLowerCase() === '/catalog' || url.toLowerCase().startsWith('/catalog?')) {

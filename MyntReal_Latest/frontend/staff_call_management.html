@@ -210,7 +210,7 @@
                                 <option value="">All Types</option>
                                 <option value="INCOMING">Incoming</option>
                                 <option value="OUTGOING">Outgoing</option>
-                                <option value="MISSED">Missed</option>
+                                <option value="MISSED">Not Answered</option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -337,7 +337,7 @@
                                 <option value="">All Types</option>
                                 <option value="INCOMING">Incoming</option>
                                 <option value="OUTGOING">Outgoing</option>
-                                <option value="MISSED">Missed</option>
+                                <option value="MISSED">Not Answered</option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -400,7 +400,7 @@
                                 <option value="">All Types</option>
                                 <option value="INCOMING">Incoming</option>
                                 <option value="OUTGOING">Outgoing</option>
-                                <option value="MISSED">Missed</option>
+                                <option value="MISSED">Not Answered</option>
                             </select>
                             <button class="btn btn-sm btn-outline-secondary" onclick="closeCallDetails()"><i class="fas fa-times me-1"></i>Close</button>
                         </div>
@@ -559,19 +559,41 @@
             return (name || '?').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
         }
 
+        function getCallBadge(call) {
+            const type = (call.call_type || '').toUpperCase();
+            const source = (call.source || '').toLowerCase();
+            const isOutbound = type === 'OUTGOING' || type === 'OUTBOUND' || call.direction === 'outbound' || source === 'softphone' || source === 'dialer' || source === 'direct' || source === 'in_app_pstn' || source === 'myoperator';
+            
+            if (call.duration_seconds > 0 && isOutbound) {
+                return '<span class="badge bg-success"><i class="fas fa-arrow-up me-1"></i>Outgoing</span>';
+            }
+            if (type === 'MISSED') {
+                if (isOutbound) {
+                    return '<span class="badge bg-danger" title="Staff dialed - customer did not pick up"><i class="fas fa-phone-slash me-1"></i>Not Answered</span>';
+                }
+                return '<span class="badge" style="background:#b91c1c;color:#fff;" title="Customer called - staff did not answer"><i class="fas fa-phone-slash me-1"></i>Missed by Staff</span>';
+            }
+            if (type === 'OUTGOING' || type === 'OUTBOUND') {
+                if ((call.duration_seconds || 0) === 0 && (call.call_outcome === 'no_answer' || call.status === 'missed' || call.status === 'no-answer')) {
+                    return '<span class="badge bg-danger" title="Customer did not pick up"><i class="fas fa-phone-slash me-1"></i>Not Answered</span>';
+                }
+                return '<span class="badge bg-success"><i class="fas fa-arrow-up me-1"></i>Outgoing</span>';
+            }
+            if (type === 'INCOMING' || type === 'INBOUND') {
+                return '<span class="badge bg-primary"><i class="fas fa-arrow-down me-1"></i>Incoming</span>';
+            }
+            if (type === 'REJECTED') {
+                return '<span class="badge bg-warning text-dark"><i class="fas fa-ban me-1"></i>Rejected</span>';
+            }
+            return `<span class="badge bg-secondary">${call.call_type || 'Unknown'}</span>`;
+        }
+
         function buildCallRow(call, sno) {
             const dt = new Date(call.call_datetime);
             const dateStr = dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
             const timeStr = dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-            let typeBadge = '';
-            switch(call.call_type) {
-                case 'OUTGOING': typeBadge = '<span class="badge bg-success"><i class="fas fa-arrow-up me-1"></i>Outgoing</span>'; break;
-                case 'INCOMING': typeBadge = '<span class="badge bg-primary"><i class="fas fa-arrow-down me-1"></i>Incoming</span>'; break;
-                case 'MISSED': typeBadge = '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Missed</span>'; break;
-                case 'REJECTED': typeBadge = '<span class="badge bg-warning text-dark"><i class="fas fa-ban me-1"></i>Rejected</span>'; break;
-                default: typeBadge = `<span class="badge bg-secondary">${call.call_type}</span>`;
-            }
+            const typeBadge = getCallBadge(call);
 
             const leadLink = call.matched_lead_name
                 ? `<span class="text-info"><i class="fas fa-link me-1"></i>${call.matched_lead_name}</span>`
@@ -777,14 +799,7 @@
                             const dt = new Date(call.call_datetime);
                             const dateStr = dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
                             const timeStr = dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                            let typeBadge = '';
-                            switch(call.call_type) {
-                                case 'OUTGOING': typeBadge = '<span class="badge bg-success"><i class="fas fa-arrow-up me-1"></i>Outgoing</span>'; break;
-                                case 'INCOMING': typeBadge = '<span class="badge bg-primary"><i class="fas fa-arrow-down me-1"></i>Incoming</span>'; break;
-                                case 'MISSED': typeBadge = '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Missed</span>'; break;
-                                case 'REJECTED': typeBadge = '<span class="badge bg-warning text-dark"><i class="fas fa-ban me-1"></i>Rejected</span>'; break;
-                                default: typeBadge = `<span class="badge bg-secondary">${call.call_type}</span>`;
-                            }
+                            const typeBadge = getCallBadge(call);
                             const crmName = call.contact_name_crm || call.matched_lead_name || '';
                             const deviceName = call.contact_name || '';
                             const displayName = crmName || deviceName;
@@ -836,7 +851,7 @@
                 <div class="stat-card green"><div class="val">${fmtDuration(s.total_duration_seconds)}</div><div class="lbl">Total Talk Time</div></div>
                 <div class="stat-card"><div class="val">${s.outgoing || 0}</div><div class="lbl">Outgoing</div></div>
                 <div class="stat-card"><div class="val">${s.incoming || 0}</div><div class="lbl">Incoming</div></div>
-                <div class="stat-card red"><div class="val">${s.missed || 0}</div><div class="lbl">Missed</div></div>
+                <div class="stat-card red"><div class="val">${s.missed || 0}</div><div class="lbl">Not Answered</div></div>
                 <div class="stat-card orange"><div class="val">${s.rejected || 0}</div><div class="lbl">Rejected</div></div>
                 <div class="stat-card"><div class="val">${s.unique_numbers || 0}</div><div class="lbl">Unique Numbers</div></div>
                 <div class="stat-card purple"><div class="val">${s.crm_matched || 0}</div><div class="lbl">CRM Matched</div></div>
@@ -856,7 +871,7 @@
                 const h = Math.max((d.calls / maxCalls) * 100, 2);
                 const dur = Math.floor((d.duration || 0) / 60);
                 return `<div class="trend-bar" style="height:${h}%;" title="${d.date}: ${d.calls} calls">
-                    <div class="tip">${d.date}<br>${d.calls} calls, ${dur}m talk<br>Missed:${d.missed||0}</div>
+                    <div class="tip">${d.date}<br>${d.calls} calls, ${dur}m talk<br>Not Answered:${d.missed||0}</div>
                 </div>`;
             }).join('');
             document.getElementById('myTrendStart').textContent = reversed[0]?.date || '';
@@ -1010,7 +1025,7 @@
                 <div class="stat-card purple"><div class="val">${fmtDuration(o.avg_daily_talk_time)}</div><div class="lbl">Avg Daily Talk</div></div>
                 <div class="stat-card"><div class="val">${o.outgoing || 0}</div><div class="lbl">Outgoing</div></div>
                 <div class="stat-card"><div class="val">${o.incoming || 0}</div><div class="lbl">Incoming</div></div>
-                <div class="stat-card red"><div class="val">${o.missed || 0}</div><div class="lbl">Missed</div></div>
+                <div class="stat-card red"><div class="val">${o.missed || 0}</div><div class="lbl">Not Answered</div></div>
                 <div class="stat-card"><div class="val">${o.unique_numbers || 0}</div><div class="lbl">Unique Numbers</div></div>
                 <div class="stat-card orange"><div class="val">${o.crm_matched || 0}</div><div class="lbl">CRM Matched</div></div>
                 <div class="stat-card"><div class="val">${o.active_staff || 0}</div><div class="lbl">Active Staff</div></div>
@@ -1030,7 +1045,7 @@
                 const h = Math.max((d.calls / maxCalls) * 100, 2);
                 const dur = Math.floor((d.duration || 0) / 60);
                 return `<div class="trend-bar" style="height:${h}%;" title="${d.date}: ${d.calls} calls">
-                    <div class="tip">${d.date}<br>${d.calls} calls, ${dur}m talk<br>Out:${d.outgoing||0} In:${d.incoming||0} Miss:${d.missed||0}</div>
+                    <div class="tip">${d.date}<br>${d.calls} calls, ${dur}m talk<br>Out:${d.outgoing||0} In:${d.incoming||0} Not Answered:${d.missed||0}</div>
                 </div>`;
             }).join('');
             document.getElementById('trendStart').textContent = reversed[0]?.date || '';
@@ -1093,7 +1108,7 @@
                 <th>Total Calls</th>
                 <th>Outgoing</th>
                 <th>Incoming</th>
-                <th>Missed</th>
+                <th>Not Answered</th>
                 <th>Total Talk Time</th>
                 <th>Avg Daily Talk</th>
                 <th>Unique Numbers</th>
@@ -1218,14 +1233,7 @@
                             const dt = new Date(call.call_datetime);
                             const dateStr = dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
                             const timeStr = dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                            let typeBadge = '';
-                            switch(call.call_type) {
-                                case 'OUTGOING': typeBadge = '<span class="badge bg-success"><i class="fas fa-arrow-up me-1"></i>Outgoing</span>'; break;
-                                case 'INCOMING': typeBadge = '<span class="badge bg-primary"><i class="fas fa-arrow-down me-1"></i>Incoming</span>'; break;
-                                case 'MISSED': typeBadge = '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Missed</span>'; break;
-                                case 'REJECTED': typeBadge = '<span class="badge bg-warning text-dark"><i class="fas fa-ban me-1"></i>Rejected</span>'; break;
-                                default: typeBadge = `<span class="badge bg-secondary">${call.call_type}</span>`;
-                            }
+                            const typeBadge = getCallBadge(call);
                             const crmName = call.contact_name_crm || call.matched_lead_name || '';
                             const deviceName = call.contact_name || '';
                             const displayName = crmName || deviceName;
@@ -1345,7 +1353,7 @@
                         `<span style="font-weight:600;color:#374151;">${pg.total} calls</span>
                          <span style="color:#16a34a;">↑ ${outCnt} outgoing</span>
                          <span style="color:#2563eb;">↓ ${inCnt} incoming</span>
-                         <span style="color:#dc2626;">✕ ${misCnt} missed/rejected</span>
+                         <span style="color:#dc2626;">✕ ${misCnt} not answered/missed</span>
                          <span style="color:#6b7280;">⏱ ${durStr} total</span>`;
                     if (calls.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><i class="fas fa-phone-slash me-2"></i>No calls found for this number</td></tr>';
@@ -1355,14 +1363,7 @@
                             const dt = new Date(call.call_datetime);
                             const dateStr = dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
                             const timeStr = dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                            let badge = '';
-                            switch(call.call_type) {
-                                case 'OUTGOING': badge = '<span class="badge bg-success"><i class="fas fa-arrow-up me-1"></i>Out</span>'; break;
-                                case 'INCOMING': badge = '<span class="badge bg-primary"><i class="fas fa-arrow-down me-1"></i>In</span>'; break;
-                                case 'MISSED': badge = '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Missed</span>'; break;
-                                case 'REJECTED': badge = '<span class="badge bg-warning text-dark"><i class="fas fa-ban me-1"></i>Rejected</span>'; break;
-                                default: badge = `<span class="badge bg-secondary">${call.call_type}</span>`;
-                            }
+                            const badge = getCallBadge(call);
                             const crmName = call.contact_name_crm || call.matched_lead_name || '';
                             const devName = call.contact_name || '';
                             const name = crmName || devName;
@@ -1420,7 +1421,7 @@
                             <option value="">All Types</option>
                             <option value="OUTGOING">Outgoing</option>
                             <option value="INCOMING">Incoming</option>
-                            <option value="MISSED">Missed</option>
+                            <option value="MISSED">Not Answered</option>
                             <option value="REJECTED">Rejected</option>
                         </select>
                     </div>

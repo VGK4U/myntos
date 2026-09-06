@@ -74,6 +74,7 @@ from app.models.crm import (
 from app.models.staff_accounts import PartyLedger
 from decimal import Decimal
 from app.models.signup_category import SignupCategory
+from app.models.crm_handler import CRMLeadHandler, CRMLeadHandlerMember, get_staff_handler_eligibility
 from app.models.staff import StaffEmployee
 from app.models.staff_accounts import VendorMaster, OfficialPartner
 from app.models.solar import CRMSolarLeadTech
@@ -3854,6 +3855,97 @@ def get_bank_wise_leads(
     }
 
 
+def is_lead_claim_eligible_for_staff(lead: CRMLead, emp_id: int, emp_code: str, db: Session) -> tuple[bool, str]:
+    """
+    DC Protocol & Strict Business Rule:
+    A fresh/unassigned lead is claim-eligible ONLY when:
+    1. Lead is unassigned (telecaller_id IS NULL and primary_owner_id IS NULL).
+    2. Lead is not closed (won / completed / lost).
+    3. The requesting authenticated employee has performed a GENUINE CUSTOMER INTERACTION:
+       - `crm_dialer_attempts`: call_outcome == 'answered' or duration_seconds > 0 by this user_ref.
+       - `staff_call_logs`: matched_lead_id == lead.id, staff_id == emp_id, and duration_seconds > 0.
+       - `crm_lead_followups`: status == 'completed', completed_date IS NOT NULL, with outcome recorded by this employee.
+    4. The interaction produced a meaningful, qualifying disposition/status:
+       - Non-qualifying dispositions: new, not_connected, callback, unreachable, busy, no_answer, switched_off, wrong_number, invalid_number, skip, missed, rejected.
+       - Meaningful qualifying dispositions: follow_up, contacted, interested, qualified, proposal, loan_process, processing, won, completed, not_interested, lost, on_hold, site_visit, in_progress.
+    5. Changing status manually, adding a note, or scheduling a future follow-up without a genuine completed customer interaction MUST NOT make a lead claimable.
+    """
+    # 1. Unassigned check
+    if lead.telecaller_id is not None or lead.primary_owner_id is not None:
+        return False, "Lead already claimed or assigned to another staff member"
+    
+    # 2. Closed check
+    if (lead.status or '').lower() in ('won', 'completed', 'lost'):
+        return False, f"Lead is closed ({lead.status}) and cannot be claimed"
+
+    # 3. Check for genuine customer interaction by this employee
+    dialer_attempt = db.execute(text("""
+        SELECT id, call_outcome, duration_seconds, status_updated_to, dialed_at
+        FROM crm_dialer_attempts
+        WHERE lead_id = :lid AND user_ref = :ref
+        ORDER BY dialed_at DESC, id DESC
+    """), {"lid": lead.id, "ref": str(emp_id)}).fetchall()
+
+    staff_call = db.execute(text("""
+        SELECT id, call_type, duration_seconds, call_datetime
+        FROM staff_call_logs
+        WHERE matched_lead_id = :lid AND staff_id = :sid AND duration_seconds > 0
+        ORDER BY call_datetime DESC, id DESC
+    """), {"lid": lead.id, "sid": emp_id}).fetchall()
+
+    completed_fu = db.execute(text("""
+        SELECT id, followup_type, status, outcome, completed_date
+        FROM crm_lead_followups
+        WHERE lead_id = :lid 
+          AND created_by_id IN (:sid_str, :code)
+          AND status = 'completed'
+          AND completed_date IS NOT NULL
+        ORDER BY completed_date DESC, id DESC
+    """), {"lid": lead.id, "sid_str": str(emp_id), "code": emp_code}).fetchall()
+
+    has_connected_dialer = any(
+        (row[1] == 'answered' or (row[2] is not None and row[2] > 0)) for row in dialer_attempt
+    )
+    has_connected_call = len(staff_call) > 0
+    has_completed_interaction = len(completed_fu) > 0
+
+    if not (has_connected_dialer or has_connected_call or has_completed_interaction):
+        return False, "No genuine completed customer interaction recorded by you on this lead. Calls must be connected with actual duration."
+
+    # 4. Check interaction outcomes and lead disposition
+    non_qualifying_outcomes = {
+        'new', 'not_connected', 'not connected', 'callback', 'call_back', 'call back',
+        'unreachable', 'busy', 'no_answer', 'switched_off', 'wrong_number', 'invalid_number',
+        'skip', 'missed', 'rejected', 'failed', 'not_my_category'
+    }
+
+    lead_status_clean = (lead.status or '').strip().lower().replace('-', '_').replace(' ', '_')
+    if lead_status_clean in non_qualifying_outcomes:
+        return False, f"Call/interaction outcome '{lead.status}' (Not Connected / Callback / New) does not qualify for claiming. A meaningful outcome must be recorded."
+
+    if dialer_attempt and not has_connected_call and not has_completed_interaction:
+        latest_attempt = dialer_attempt[0]
+        latest_outcome = (latest_attempt[1] or '').strip().lower()
+        if latest_outcome in non_qualifying_outcomes:
+            return False, f"Call outcome '{latest_attempt[1]}' (Not Connected / Callback / No Answer) does not qualify for claiming."
+
+    qualifying_dispositions = {
+        'contacted', 'interested', 'qualified', 'proposal', 'loan_process',
+        'processing', 'not_interested', 'on_hold', 'follow_up', 'in_progress',
+        'site_visit', 'completed', 'won', 'lost'
+    }
+
+    if lead_status_clean in qualifying_dispositions:
+        return True, f"Eligible (Genuine interaction verified, disposition: {lead.status})"
+
+    for fu in completed_fu:
+        fu_outcome = (fu[3] or '').strip().lower().replace('-', '_').replace(' ', '_')
+        if fu_outcome and fu_outcome not in non_qualifying_outcomes:
+            return True, f"Eligible (Completed {fu[1]} interaction with outcome: {fu[3]})"
+
+    return False, f"Interaction disposition '{lead.status}' is not a qualifying meaningful disposition."
+
+
 @router.get("/leads")
 def list_leads(
     company_id: int = Query(..., description="Company ID for DC Protocol"),
@@ -3881,6 +3973,8 @@ def list_leads(
     involved_role: Optional[str] = Query(None, description="DC-INCENTIVE-LEADS-001: Restrict to a specific role for involved_employee_id: handler, telecaller, field_staff"),
     filter_telecaller_id: Optional[int] = Query(None, description="Filter by specific telecaller staff ID"),
     filter_field_staff_id: Optional[int] = Query(None, description="Filter by specific field staff ID"),
+    team_member_id: Optional[int] = Query(None, description="Filter leads by specific team member in authorized downline"),
+    scope: Optional[str] = Query(None, description="Scope filter: 'my', 'downline', 'fresh', 'all'"),
     source: Optional[str] = Query(None, description="Filter by lead source"),
     page: int = 1,
     per_page: int = 20,
@@ -3890,28 +3984,23 @@ def list_leads(
     """List leads with filters - DC Protocol enforced. Enhanced with follow-up, comment, and assignment filters.
     
     RBAC Visibility Rules:
-    - VGK/EA admins: Can view all leads
-    - Staff with direct reports (leaders): Can view all leads 
-    - Manager/Employee without reports: Can ONLY view leads assigned to them
+    - VGK/EA admins: Can view all company leads
+    - Leaders (with direct reports / downline): Can view authorized recursive downline leads
+    - Individual Sales Staff: Can ONLY view leads assigned to or owned by them (plus unassigned pool for claiming)
     """
     # DC Protocol (Feb 2026): Safety cap — prevents OOM crash from large per_page requests
     per_page = min(per_page, 100)
     # Check visibility permissions
     staff_type = (current_employee.staff_type or '').upper()
     is_admin = is_vgk_admin(staff_type)
-    is_leader = has_direct_reports(current_employee.id, db, StaffEmployee)
     
-    # Team A / Sales & Core Lead Handlers: Full lead visibility for sales staff and team A members
-    _team_tag_lower = (current_employee.team_tag or '').lower()
-    is_team_a_sales = (_team_tag_lower in ('team_a', 'team a') or 
-                       (current_employee.department and 'sales' in (current_employee.department.name or '').lower()) or
-                       current_employee.emp_code in ('MN10009', 'MN10003', 'MN10008', 'MN10010', 'MR10018', 'MR10001'))
-    
-    can_view_all = is_admin or is_leader or is_team_a_sales
+    all_downline_ids = get_recursive_downline(
+        current_employee.id, db, StaffEmployee,
+        max_depth=10, include_manager=True
+    )
+    is_leader = len(all_downline_ids) > 1 or has_direct_reports(current_employee.id, db, StaffEmployee)
     
     is_restricted_freelancer = (staff_type == 'FREELANCER' and getattr(current_employee, 'freelancer_access_mode', 'default') == 'only_leads')
-    if is_restricted_freelancer:
-        can_view_all = False
 
     # B2B SaaS Multi-Tenant Segment Entitlement Guard
     if category:
@@ -3930,25 +4019,24 @@ def list_leads(
             )
     
     # DC Protocol (Aug 2026): CATEGORY-WISE LEAD QUERYING.
-    # MyntReal menus operate Category-wise across company accounts (1, 2, 3, 4).
-    # Allows category menus (Solar, EV B2C, EV B2B, ETC Training, Real Dreams, EV Spares, Insurance)
-    # to query all leads in that category across all company IDs.
     query = db.query(CRMLead)
     if company_id and not (category or category_id is not None):
         query = query.filter(CRMLead.company_id == company_id)
     
     # VISIBILITY FILTER LOGIC:
-    # The visibility filters (primary_owner, assigned_to_me) work for ALL users.
-    # For non-privileged users, they filter within their allowed scope.
-    # For privileged users, they filter across all leads.
-    
-    # Apply visibility filters first (these apply to all users regardless of privilege)
-    if primary_owner:
-        # "My Leads" - filter to leads where staff is primary owner OR assigned as telecaller/field_staff
-        # DC Protocol (Mar 2026): Include all "my" leads: owned + handler roles, so synced leads
-        # assigned via telecaller_id (not just primary_owner_id) also appear in staff's own leads page.
-        # DC Protocol (Mar 2026): Also include truly unassigned sheet leads so all staff can see and claim them.
-        # However, restricted freelancer is still barred from fresh claimable leads unless explicitly owned.
+    # 1. Specific Team Member filter (for downline leaders or admins)
+    if team_member_id:
+        if not is_admin and team_member_id not in all_downline_ids:
+            raise HTTPException(status_code=403, detail="Specified team member is not in your authorized downline")
+        query = query.filter(
+            or_(
+                CRMLead.telecaller_id == team_member_id,
+                CRMLead.field_staff_id == team_member_id,
+                and_(CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id == team_member_id)
+            )
+        )
+    elif primary_owner or scope == 'my':
+        # "My Leads" scope - strictly leads where staff is primary owner or assigned handler
         if is_restricted_freelancer:
             query = query.filter(_crm_assignment_filter(current_employee.id, current_employee.emp_code))
         else:
@@ -3960,15 +4048,7 @@ def list_leads(
                     ),
                     CRMLead.telecaller_id == current_employee.id,
                     CRMLead.field_staff_id == current_employee.id,
-                    # DC-NEW-LEADS-UNASSIGNED-POOL-001: All 'new' status leads are open and available to all telecallers
-                    CRMLead.status == 'new',
-                    and_(
-                        CRMLead.handler_type == 'unassigned',
-                        ~CRMLead.status.in_(['won', 'lost']),
-                        CRMLead.primary_owner_id.is_(None),
-                        CRMLead.telecaller_id.is_(None),
-                        CRMLead.field_staff_id.is_(None),
-                    ),
+                    CRMLead.handler_id == current_employee.emp_code
                 )
             )
     elif assigned_to_me:
@@ -3978,33 +4058,78 @@ def list_leads(
             CRMLead.field_staff_id == current_employee.id,
             CRMLead.handler_id == current_employee.emp_code  # Legacy fallback
         ))
+    elif scope == 'fresh':
+        # Unassigned / fresh leads available for claiming
+        u_conds = [
+            ~CRMLead.status.in_(['won', 'lost']),
+            CRMLead.handler_type == 'unassigned',
+            CRMLead.telecaller_id.is_(None),
+            CRMLead.field_staff_id.is_(None),
+            CRMLead.primary_owner_id.is_(None)
+        ]
+        if not is_admin:
+            target_ids = all_downline_ids if is_leader else [current_employee.id]
+            eligibility = get_staff_handler_eligibility(db, target_ids)
+            if eligibility:
+                u_conds.append(or_(*[and_(CRMLead.company_id == co, CRMLead.category_id == cat) for co, cat in eligibility]))
+            else:
+                u_conds.append(CRMLead.id == -1)
+        query = query.filter(and_(*u_conds))
     elif is_restricted_freelancer:
-        # Restricted freelancers: strictly see their assigned leads only
         query = query.filter(_crm_assignment_filter(current_employee.id, current_employee.emp_code))
-    elif not can_view_all:
-        # Non-privileged users with no specific filter: see their scope only
-        # (owned/assigned leads + fresh/unassigned leads for claiming)
-        query = query.filter(or_(
-            # Leads where they are primary owner
-            and_(
-                CRMLead.primary_owner_type == 'staff',
-                CRMLead.primary_owner_id == current_employee.id
-            ),
-            # Leads assigned to them
-            CRMLead.telecaller_id == current_employee.id,
-            CRMLead.field_staff_id == current_employee.id,
-            CRMLead.handler_id == current_employee.emp_code,  # Legacy fallback
-            # DC-NEW-LEADS-UNASSIGNED-POOL-001: All 'new' status leads are open and available to all telecallers
-            CRMLead.status == 'new',
-            # New/Unassigned leads visible to all for claiming
-            and_(
-                ~CRMLead.status.in_(['won', 'lost']),
-                CRMLead.handler_type == 'unassigned',
-                CRMLead.telecaller_id.is_(None),
-                CRMLead.field_staff_id.is_(None),
-                CRMLead.primary_owner_id.is_(None)
+    elif is_admin:
+        # Admins: full company lead visibility
+        pass
+    elif is_leader:
+        # Leaders: view leads in recursive downline + eligible fresh pool
+        downline_eligibility = get_staff_handler_eligibility(db, all_downline_ids)
+        if downline_eligibility:
+            fresh_handler_clause = or_(*[and_(CRMLead.company_id == co, CRMLead.category_id == cat) for co, cat in downline_eligibility])
+        else:
+            fresh_handler_clause = False
+
+        query = query.filter(
+            or_(
+                and_(CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id.in_(all_downline_ids)),
+                CRMLead.telecaller_id.in_(all_downline_ids),
+                CRMLead.field_staff_id.in_(all_downline_ids),
+                and_(
+                    CRMLead.handler_type == 'unassigned',
+                    ~CRMLead.status.in_(['won', 'lost']),
+                    CRMLead.primary_owner_id.is_(None),
+                    CRMLead.telecaller_id.is_(None),
+                    CRMLead.field_staff_id.is_(None),
+                    fresh_handler_clause
+                )
             )
-        ))
+        )
+    else:
+        # Individual non-leader sales staff: own / assigned leads + unassigned claim pool for configured handlers
+        staff_eligibility = get_staff_handler_eligibility(db, [current_employee.id])
+        if staff_eligibility:
+            fresh_handler_clause = or_(*[and_(CRMLead.company_id == co, CRMLead.category_id == cat) for co, cat in staff_eligibility])
+        else:
+            fresh_handler_clause = False
+
+        query = query.filter(
+            or_(
+                and_(
+                    CRMLead.primary_owner_type == 'staff',
+                    CRMLead.primary_owner_id == current_employee.id
+                ),
+                CRMLead.telecaller_id == current_employee.id,
+                CRMLead.field_staff_id == current_employee.id,
+                CRMLead.handler_id == current_employee.emp_code,
+                and_(
+                    ~CRMLead.status.in_(['won', 'lost']),
+                    CRMLead.handler_type == 'unassigned',
+                    CRMLead.telecaller_id.is_(None),
+                    CRMLead.field_staff_id.is_(None),
+                    CRMLead.primary_owner_id.is_(None),
+                    fresh_handler_clause
+                )
+            )
+        )
     
     # DC Protocol (Jan 1, 2026): Handler role-based filtering for Staff Leads page
     # Filters leads where current user is assigned as a specific handler role
@@ -4367,6 +4492,19 @@ def list_leads(
                 lead_dict['last_interacted_at'] = max(_dates).isoformat() if _dates else None
             except Exception:
                 lead_dict['last_interacted_at'] = None
+
+            # Claim eligibility check for fresh/unassigned leads
+            try:
+                if lead.handler_type == 'unassigned' or (lead.telecaller_id is None and lead.primary_owner_id is None):
+                    _is_elig, _elig_reason = is_lead_claim_eligible_for_staff(lead, current_employee.id, current_employee.emp_code, db)
+                    lead_dict['claim_eligible'] = _is_elig
+                    lead_dict['claim_reason'] = _elig_reason
+                else:
+                    lead_dict['claim_eligible'] = False
+                    lead_dict['claim_reason'] = 'Already assigned'
+            except Exception:
+                lead_dict['claim_eligible'] = False
+                lead_dict['claim_reason'] = 'Error evaluating eligibility'
 
             leads_data.append(lead_dict)
         except Exception as e:
@@ -10867,6 +11005,8 @@ async def add_note(
     from app.models.staff_accounts import OfficialPartner as _OfficialPartner
     try:
         current_user = await get_current_user_hybrid_with_partner(request, db)
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(status_code=401, detail="Authentication required")
 
@@ -12471,10 +12611,22 @@ async def get_my_deals(
         credit_id = getattr(current_user, 'mnr_id', None) or getattr(current_user, 'id', None)
         if credit_id:
             credit_id = str(credit_id)
+    except HTTPException as http_err:
+        if http_err.status_code == 503:
+            raise
+        try:
+            current_user = await get_current_user_hybrid(request, db)
+            credit_id = getattr(current_user, 'emp_code', None) or str(getattr(current_user, 'id', ''))
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=401, detail="Authentication required")
     except Exception:
         try:
             current_user = await get_current_user_hybrid(request, db)
             credit_id = getattr(current_user, 'emp_code', None) or str(getattr(current_user, 'id', ''))
+        except HTTPException:
+            raise
         except Exception:
             raise HTTPException(status_code=401, detail="Authentication required")
 
@@ -13871,14 +14023,7 @@ async def get_unified_my_leads(
                     and_(
                         CRMLead.created_by_type == 'staff',
                         CRMLead.created_by_id == user_id_str
-                    ),
-                    and_(
-                        CRMLead.handler_type == 'unassigned',
-                        CRMLead.status == 'new',
-                        CRMLead.primary_owner_id.is_(None),
-                        CRMLead.telecaller_id.is_(None),
-                        CRMLead.field_staff_id.is_(None),
-                    ),
+                    )
                 )
             )
         elif is_partner_user:
@@ -18080,26 +18225,64 @@ def claim_lead(
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
-    """DC Protocol N004 — Atomically claim an unclaimed lead as telecaller."""
-    from sqlalchemy import update as _upd
+    """
+    DC Protocol N004 / HARD BUSINESS RULE:
+    Atomically claim an unclaimed lead ONLY after verifying a qualifying first interaction.
+    - An employee MUST NOT be allowed to claim without a genuine interaction.
+    - Non-qualifying outcomes (Not Connected, Callback, New) reject the claim.
+    - Qualifying outcomes (Follow-up, Interested, Qualified, Not Interested, Won, Lost, etc.) enable claim.
+    - Concurrency-safe atomic SQL update.
+    """
     from pytz import timezone as _tz
     _now = datetime.now(_tz('Asia/Kolkata')).replace(tzinfo=None)
 
+    lead = db.query(CRMLead).filter(CRMLead.id == lead_id, CRMLead.company_id == company_id).first()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    is_eligible, reason = is_lead_claim_eligible_for_staff(lead, current_employee.id, current_employee.emp_code, db)
+    if not is_eligible:
+        return {"success": False, "message": f"Claim rejected: {reason}"}
+
     result = db.execute(
         text(
-            "UPDATE crm_leads SET telecaller_id = :emp_id, updated_at = :ts "
-            "WHERE id = :lid AND company_id = :cid AND telecaller_id IS NULL "
+            "UPDATE crm_leads "
+            "SET telecaller_id = :emp_id, "
+            "    handler_type = 'staff', "
+            "    handler_id = :emp_code, "
+            "    primary_owner_type = 'staff', "
+            "    primary_owner_id = :emp_id, "
+            "    updated_at = :ts "
+            "WHERE id = :lid AND company_id = :cid AND telecaller_id IS NULL AND primary_owner_id IS NULL "
             "RETURNING id"
         ),
-        {"emp_id": current_employee.id, "ts": _now, "lid": lead_id, "cid": company_id}
+        {"emp_id": current_employee.id, "emp_code": current_employee.emp_code, "ts": _now, "lid": lead_id, "cid": company_id}
     )
     db.commit()
     claimed = result.fetchone()
     if not claimed:
-        return {"success": False, "message": "Lead already claimed by another staff member"}
+        return {"success": False, "message": "Lead was already claimed by another staff member"}
 
-    logger.info(f"[DC-N004] Lead #{lead_id} claimed by {current_employee.emp_code}")
-    return {"success": True, "message": f"Lead claimed! You are now the assigned telecaller.", "lead_id": lead_id}
+    # Log assignment record
+    try:
+        assignment = CRMLeadAssignment(
+            company_id=company_id,
+            lead_id=lead_id,
+            from_handler_type='unassigned',
+            from_handler_id=None,
+            to_handler_type='staff',
+            to_handler_id=current_employee.emp_code,
+            reason=f'Claimed by telecaller {current_employee.emp_code} after qualifying interaction (status: {lead.status})',
+            assigned_by_type='staff',
+            assigned_by_id=current_employee.emp_code
+        )
+        db.add(assignment)
+        db.commit()
+    except Exception as e:
+        logger.warning(f"Could not log CRMLeadAssignment: {e}")
+
+    logger.info(f"[CLAIM] Lead #{lead_id} claimed by {current_employee.emp_code}")
+    return {"success": True, "message": "Lead claimed successfully! It is now in your personal My Leads workspace.", "lead_id": lead_id}
 
 
 # ── DC_CIBIL_ADVANCE_001: Solar CIBIL Advance Staff Endpoints ─────────────────

@@ -19,13 +19,20 @@ public class AudioRoutingPlugin extends Plugin {
     private static final String TAG = "AudioRoutingPlugin";
     private AudioManager audioManager;
 
+    private AudioManager getAudioManager() {
+        if (audioManager == null) {
+            Context context = getContext();
+            if (context != null) {
+                audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+            }
+        }
+        return audioManager;
+    }
+
     @Override
     public void load() {
         super.load();
-        Context context = getContext();
-        if (context != null) {
-            audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-        }
+        getAudioManager();
         Log.d(TAG, "AudioRoutingPlugin loaded");
     }
 
@@ -37,48 +44,50 @@ public class AudioRoutingPlugin extends Plugin {
             return;
         }
 
-        if (audioManager == null) {
-            Context context = getContext();
-            if (context != null) {
-                audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-            }
-        }
-
-        if (audioManager == null) {
+        AudioManager am = getAudioManager();
+        if (am == null) {
             call.reject("AudioManager service unavailable");
             return;
         }
 
         try {
-            audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+            // Assert MODE_IN_COMMUNICATION for call audio routing and AEC
+            if (am.getMode() != AudioManager.MODE_IN_COMMUNICATION) {
+                am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+            }
+            am.setMicrophoneMute(false);
 
             if (enabled) {
                 // Route audio to external loudspeaker
-                audioManager.setSpeakerphoneOn(true);
+                am.setSpeakerphoneOn(true);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    List<AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
+                    List<AudioDeviceInfo> devices = am.getAvailableCommunicationDevices();
                     for (AudioDeviceInfo device : devices) {
                         if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
-                            audioManager.setCommunicationDevice(device);
+                            boolean res = am.setCommunicationDevice(device);
+                            Log.d(TAG, "Set communication device to SPEAKER: " + res);
                             break;
                         }
                     }
                 }
             } else {
                 // Route audio to normal in-call EARPIECE (default during call)
-                audioManager.setSpeakerphoneOn(false);
+                am.setSpeakerphoneOn(false);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    List<AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
+                    // Always clear first so any forced speaker route is dropped
+                    am.clearCommunicationDevice();
+                    List<AudioDeviceInfo> devices = am.getAvailableCommunicationDevices();
                     boolean foundEarpiece = false;
                     for (AudioDeviceInfo device : devices) {
                         if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE) {
-                            audioManager.setCommunicationDevice(device);
+                            boolean res = am.setCommunicationDevice(device);
+                            Log.d(TAG, "Set communication device to EARPIECE: " + res);
                             foundEarpiece = true;
                             break;
                         }
                     }
                     if (!foundEarpiece) {
-                        audioManager.clearCommunicationDevice();
+                        Log.d(TAG, "No builtin earpiece device found; default communication device retained.");
                     }
                 }
             }
@@ -96,35 +105,40 @@ public class AudioRoutingPlugin extends Plugin {
     @PluginMethod
     public void resetAudioMode(PluginCall call) {
         try {
-            if (audioManager != null) {
+            AudioManager am = getAudioManager();
+            if (am != null) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    audioManager.clearCommunicationDevice();
+                    am.clearCommunicationDevice();
                 }
-                audioManager.setSpeakerphoneOn(false);
-                audioManager.setMode(AudioManager.MODE_NORMAL);
+                am.setSpeakerphoneOn(false);
+                am.setMicrophoneMute(false);
+                am.setMode(AudioManager.MODE_NORMAL);
+                Log.d(TAG, "Audio mode reset to MODE_NORMAL");
             }
             call.resolve(new JSObject().put("success", true));
         } catch (Exception e) {
+            Log.e(TAG, "Failed to reset audio mode: " + e.getMessage(), e);
             call.reject("Failed to reset audio mode: " + e.getMessage());
         }
     }
 
     @PluginMethod
     public void isSpeakerphoneOn(PluginCall call) {
-        if (audioManager == null) {
+        AudioManager am = getAudioManager();
+        if (am == null) {
             call.resolve(new JSObject().put("speakerOn", false));
             return;
         }
         boolean isSpeaker = false;
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                AudioDeviceInfo commDevice = audioManager.getCommunicationDevice();
+                AudioDeviceInfo commDevice = am.getCommunicationDevice();
                 if (commDevice != null && commDevice.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
                     isSpeaker = true;
                 }
             }
             if (!isSpeaker) {
-                isSpeaker = audioManager.isSpeakerphoneOn();
+                isSpeaker = am.isSpeakerphoneOn();
             }
         } catch (Exception e) {
             Log.w(TAG, "Error checking speakerphone status: " + e.getMessage());

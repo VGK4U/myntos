@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Body, Request
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_, func, case
+from sqlalchemy import and_, or_, func, case, literal
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, date, timedelta
 from typing import Optional, List
@@ -1097,28 +1097,17 @@ def get_carried_forward(
     return {"carried_items": carried, "total": len(carried)}
 
 
-_DAY_PROGRESS_CACHE = {}
-_DAY_PROGRESS_CACHE_TTL = 30  # seconds
-
-
 @router.get("/day-progress", summary="Get daily progress tracker for self and team")
 def get_day_progress(
     plan_date: Optional[str] = None,
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
-    import time as _pytime
-    _cache_key = (current_user.id, plan_date)
-    _now = _pytime.time()
-    if _cache_key in _DAY_PROGRESS_CACHE:
-        _cts, _cval = _DAY_PROGRESS_CACHE[_cache_key]
-        if _now - _cts < _DAY_PROGRESS_CACHE_TTL:
-            return _cval
-
     from app.models.staff_attendance import StaffAttendance
     from app.models.staff_kra import StaffKRADailyInstance
     from app.models.staff_timesheet import StaffTimesheetEntry
     from app.models.staff_attendance_sheet import StaffAttendanceSheet, StaffLeaveRequest, LeaveRequestStatus
+    from app.models.staff import StaffDepartment
 
     target_date = get_indian_date()
     if plan_date and plan_date.strip():
@@ -1145,13 +1134,24 @@ def get_day_progress(
     all_emp_ids = [current_user.id] + list(team_member_ids)
 
     team_members = []
+    _team_dept_map = {}
     if team_member_ids:
-        team_members = db.query(
-            StaffEmployee.id, StaffEmployee.full_name, StaffEmployee.emp_code
+        team_rows = db.query(
+            StaffEmployee.id,
+            StaffEmployee.full_name,
+            StaffEmployee.emp_code,
+            StaffDepartment.name.label('dept_name')
+        ).outerjoin(
+            StaffDepartment, StaffEmployee.department_id == StaffDepartment.id
         ).filter(
             StaffEmployee.id.in_(team_member_ids),
             StaffEmployee.status == 'active'
         ).order_by(StaffEmployee.full_name).all()
+        for r in team_rows:
+            team_members.append(r)
+            dn = (r.dept_name or '').lower()
+            dtype = 'sales' if ('sales' in dn or 'crm' in dn) else ('service' if 'service' in dn else ('procurement' if ('procurement' in dn or 'purchase' in dn) else 'other'))
+            _team_dept_map[r.id] = dtype
 
     attendance_rows = db.query(
         StaffAttendance.employee_id,
@@ -1247,30 +1247,11 @@ def get_day_progress(
 
         return 'On Leave'
 
-    plan_rows = db.query(
+    plan_combined_rows = db.query(
         StaffDayPlan.employee_id,
         StaffDayPlan.status,
         StaffDayPlan.finalized_at,
-        func.count(StaffDayPlanItem.id).label('item_count')
-    ).outerjoin(StaffDayPlanItem, StaffDayPlanItem.day_plan_id == StaffDayPlan.id
-    ).filter(
-        StaffDayPlan.employee_id.in_(all_emp_ids),
-        StaffDayPlan.plan_date == target_date
-    ).group_by(StaffDayPlan.employee_id, StaffDayPlan.status, StaffDayPlan.finalized_at).all()
-    plan_map = {}
-    for r in plan_rows:
-        plan_map[r.employee_id] = {
-            "has_plan": r.item_count > 0,
-            "is_finalized": r.finalized_at is not None,
-            "item_count": r.item_count
-        }
-
-    plan_eod_rows = db.query(
-        StaffDayPlan.employee_id,
         func.count(StaffDayPlanItem.id).label('total_items'),
-        func.count(func.nullif(
-            func.coalesce(StaffDayPlanItem.eod_status, ''), 'completed'
-        )).label('not_completed'),
         func.sum(case(
             (func.coalesce(StaffDayPlanItem.eod_status, StaffDayPlanItem.planned_status) == 'completed', 1),
             else_=0
@@ -1286,33 +1267,43 @@ def get_day_progress(
             ), 1),
             else_=0
         )).label('left_count')
-    ).join(StaffDayPlanItem, StaffDayPlanItem.day_plan_id == StaffDayPlan.id
+    ).outerjoin(StaffDayPlanItem, StaffDayPlanItem.day_plan_id == StaffDayPlan.id
     ).filter(
         StaffDayPlan.employee_id.in_(all_emp_ids),
         StaffDayPlan.plan_date == target_date
-    ).group_by(StaffDayPlan.employee_id).all()
+    ).group_by(StaffDayPlan.employee_id, StaffDayPlan.status, StaffDayPlan.finalized_at).all()
+
+    plan_map = {}
     plan_eod_map = {}
-    for r in plan_eod_rows:
+    for r in plan_combined_rows:
+        tot = r.total_items or 0
+        plan_map[r.employee_id] = {
+            "has_plan": tot > 0,
+            "is_finalized": r.finalized_at is not None,
+            "item_count": tot
+        }
         plan_eod_map[r.employee_id] = {
-            "total_planned": r.total_items or 0,
-            "delivered": r.delivered_count or 0,
-            "eod_filled": r.eod_filled_count or 0,
-            "left": r.left_count or 0
+            "total_planned": tot,
+            "delivered": int(r.delivered_count or 0),
+            "eod_filled": int(r.eod_filled_count or 0),
+            "left": int(r.left_count or 0)
         }
 
     plan_item_task_ids = {}
-    plan_item_rows = db.query(
-        StaffDayPlan.employee_id,
-        StaffDayPlanItem.task_id
-    ).join(StaffDayPlanItem, StaffDayPlanItem.day_plan_id == StaffDayPlan.id
-    ).filter(
-        StaffDayPlan.employee_id.in_(all_emp_ids),
-        StaffDayPlan.plan_date == target_date
-    ).all()
-    for r in plan_item_rows:
-        if r.employee_id not in plan_item_task_ids:
-            plan_item_task_ids[r.employee_id] = set()
-        plan_item_task_ids[r.employee_id].add(r.task_id)
+    if plan_map:
+        plan_item_rows = db.query(
+            StaffDayPlan.employee_id,
+            StaffDayPlanItem.task_id
+        ).join(StaffDayPlanItem, StaffDayPlanItem.day_plan_id == StaffDayPlan.id
+        ).filter(
+            StaffDayPlan.employee_id.in_(all_emp_ids),
+            StaffDayPlan.plan_date == target_date,
+            StaffDayPlanItem.task_id.isnot(None)
+        ).all()
+        for r in plan_item_rows:
+            if r.employee_id not in plan_item_task_ids:
+                plan_item_task_ids[r.employee_id] = set()
+            plan_item_task_ids[r.employee_id].add(r.task_id)
 
     all_plan_task_ids = set()
     for tids in plan_item_task_ids.values():
@@ -1340,44 +1331,41 @@ def get_day_progress(
     for emp_id, task_ids in plan_item_task_ids.items():
         worked_map[emp_id] = len(task_ids & worked_task_ids)
 
-    overall_tasks_primary = db.query(
+    q_primary = db.query(
         StaffTask.primary_assignee_id.label('emp_id'),
-        StaffTask.id
+        StaffTask.id.label('item_id'),
+        literal('task').label('item_type')
     ).filter(
         StaffTask.primary_assignee_id.in_(all_emp_ids),
         StaffTask.status.in_(['pending', 'in_progress', 'on_hold', 'under_review']),
         StaffTask.is_deleted == False
-    ).all()
-
-    overall_tasks_secondary = db.query(
+    )
+    q_secondary = db.query(
         StaffTaskAssignee.employee_id.label('emp_id'),
-        StaffTask.id
+        StaffTask.id.label('item_id'),
+        literal('task').label('item_type')
     ).join(StaffTask, StaffTaskAssignee.task_id == StaffTask.id
     ).filter(
         StaffTaskAssignee.employee_id.in_(all_emp_ids),
         StaffTask.status.in_(['pending', 'in_progress', 'on_hold', 'under_review']),
         StaffTask.is_deleted == False
-    ).all()
-
-    overall_phases = db.query(
+    )
+    q_phases = db.query(
         StaffTaskPhase.phase_assignee_id.label('emp_id'),
-        StaffTaskPhase.id
+        StaffTaskPhase.id.label('item_id'),
+        literal('phase').label('item_type')
     ).filter(
         StaffTaskPhase.phase_assignee_id.in_(all_emp_ids),
         StaffTaskPhase.phase_status.in_(['pending', 'in_progress', 'on_hold']),
         StaffTaskPhase.is_deleted == False
-    ).all()
+    )
+    overall_rows = q_primary.union(q_secondary).union(q_phases).all()
 
     overall_map = {}
-    for r in overall_tasks_primary:
-        overall_map[r.emp_id] = overall_map.get(r.emp_id, set())
-        overall_map[r.emp_id].add(('task', r.id))
-    for r in overall_tasks_secondary:
-        overall_map[r.emp_id] = overall_map.get(r.emp_id, set())
-        overall_map[r.emp_id].add(('task', r.id))
-    for r in overall_phases:
-        overall_map[r.emp_id] = overall_map.get(r.emp_id, set())
-        overall_map[r.emp_id].add(('phase', r.id))
+    for r in overall_rows:
+        if r.emp_id not in overall_map:
+            overall_map[r.emp_id] = set()
+        overall_map[r.emp_id].add((r.item_type, r.item_id))
 
     kra_instances = db.query(
         StaffKRADailyInstance
@@ -1577,20 +1565,8 @@ def get_day_progress(
     self_progress['dept_kpi'] = _self_dept_kpi
 
     # ── Dept type/KPI for team members (batch lookup) ───────────────────────────
-    _team_dept_map = {}
     _team_kpi_map = {}
     if team_member_ids:
-        _emp_dept_rows = db.query(StaffEmployee.id, StaffEmployee.department_id).filter(StaffEmployee.id.in_(team_member_ids)).all()
-        _dept_ids = list({r.department_id for r in _emp_dept_rows if r.department_id})
-        if _dept_ids:
-            from app.models.staff import StaffDepartment
-            _dept_name_rows = db.query(StaffDepartment.id, StaffDepartment.name).filter(StaffDepartment.id.in_(_dept_ids)).all()
-            _dn_map = {d.id: (d.name or '').lower() for d in _dept_name_rows}
-            for r in _emp_dept_rows:
-                _dn = _dn_map.get(r.department_id, '')
-                dtype = 'sales' if ('sales' in _dn or 'crm' in _dn) else ('service' if 'service' in _dn else ('procurement' if ('procurement' in _dn or 'purchase' in _dn) else 'other'))
-                _team_dept_map[r.id] = dtype
-
         # Batch-query Sales Call Logs in 1 query for all team members
         from app.models.call_tracking import StaffCallLog
         _call_log_rows = db.query(

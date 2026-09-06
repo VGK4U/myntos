@@ -13,6 +13,7 @@ import { authService } from './services/auth.service';
 import { apiService } from './services/api.service';
 import { portalService } from './services/portal.service';
 import { routerService, PageRoute } from './services/router.service';
+import { callController } from './services/call-controller';
 import { LoginPage } from './pages/Login';
 import { PageHeader } from './components/PageHeader';
 // Staff Portal Pages
@@ -475,29 +476,43 @@ class MNRApp {
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
-      // Allow direct device SIM button inside SoftphonePage to place raw tel: calls
-      if (target.id === 'softphoneDirectSimBtn' || target.closest('#softphoneDirectSimBtn')) {
+      // Allow direct device SIM button inside SoftphonePage/Modal to place raw tel: calls
+      if (
+        target.id === 'softphoneDirectSimBtn' ||
+        target.closest('#softphoneDirectSimBtn') ||
+        target.id === 'spDirectSimBtn' ||
+        target.closest('#spDirectSimBtn')
+      ) {
         return;
       }
 
-      const telLink = target.closest('a[href^="tel:"]') as HTMLAnchorElement | null;
+      // Intercept explicit calling controls
+      const telLink = target.closest('a[href^="tel:"], .make-call-btn, .action-call, .btn-dial, .bl-btn-call, .bl-mini-call-btn, .bl-quick-btn.call') as HTMLElement | null;
       if (telLink) {
+        // Do not intercept if part of a non-call action (like WhatsApp or reveal)
+        if (telLink.closest('.btn-wa, .wa-btn, [data-wa], #unifiedWAModal')) {
+          return;
+        }
+
         const rawHref = telLink.getAttribute('href') || '';
-        const rawPhone = rawHref.replace(/^tel:/i, '').trim();
-        if (rawPhone) {
+        const rawPhone = (rawHref.startsWith('tel:') ? rawHref.replace(/^tel:/i, '') : telLink.getAttribute('data-phone') || telLink.getAttribute('data-dial') || '') || '';
+        const cleanPhone = rawPhone.replace(/[^\d+]/g, '').trim();
+
+        if (cleanPhone) {
           e.preventDefault();
           e.stopPropagation();
 
-          const leadCard = target.closest('[data-id], .lead-card, .bl-card, .contact-card, .list-item') as HTMLElement | null;
+          const leadCard = target.closest('[data-id], .lead-card, .bl-card, .contact-card, .list-item, tr') as HTMLElement | null;
           const nameEl = leadCard?.querySelector('.lead-name, .customer-name, .contact-name, h4, strong');
-          const contactName = telLink.getAttribute('data-name') || nameEl?.textContent?.trim() || '';
+          const contactName = telLink.getAttribute('data-name') || telLink.getAttribute('data-lead-name') || nameEl?.textContent?.trim() || '';
+          const entityId = telLink.getAttribute('data-lead-id') || telLink.getAttribute('data-id') || leadCard?.getAttribute('data-id') || null;
 
-          const currentRoute = routerService.getCurrentRoute();
-          routerService.navigate('softphone', {
-            dial: rawPhone,
+          callController.openCallDialer({
+            phoneNumber: cleanPhone,
             name: contactName,
-            auto_start: 'true',
-            return: currentRoute !== 'softphone' ? currentRoute : ''
+            entityId: entityId,
+            entityType: 'lead',
+            autoStart: true
           });
         }
       }
@@ -525,7 +540,7 @@ class MNRApp {
 
     const routeMap: Record<string, PageRoute> = {
       '/staff/softphone': 'softphone',
-      '/staff/dialer': 'softphone',
+      '/staff/dialer': 'auto-dialer',
       '/staff/calling-page': 'softphone',
       '/staff/calling': 'softphone',
       '/staff/phone-dialpad': 'softphone',
@@ -838,6 +853,8 @@ class MNRApp {
         page = new AutoDialerPage(this.pageContainer);
         break;
       case 'softphone':
+      case 'softphone-hub':
+      case 'incoming-calls':
         page = new SoftphonePage(this.pageContainer);
         break;
       case 'call-history':
@@ -1474,6 +1491,17 @@ class MNRApp {
 }
 
 (window as any).routerService = routerService;
+(window as any).callController = callController;
+(window as any).openCallDialer = (intent: any) => callController.openCallDialer(intent);
+(window as any).triggerLeadCall = (phone: string, name?: string, leadId?: any) => {
+  callController.openCallDialer({
+    phoneNumber: phone,
+    name: name || 'Contact Lead',
+    entityId: leadId || null,
+    entityType: 'lead',
+    autoStart: true
+  });
+};
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {

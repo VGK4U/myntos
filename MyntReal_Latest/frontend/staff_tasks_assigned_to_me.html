@@ -506,8 +506,8 @@
         let searchDebounceTimer = null;
         let currentSearchToken = 0;
         
-        document.addEventListener('DOMContentLoaded', async () => {
-            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+        async function initTasksPage() {
+            if (typeof StaffSidebar !== 'undefined') StaffSidebar.init();
             StaffHeader.inject('Tasks Assigned To Me', 'fas fa-inbox');
             if (typeof StaffHeader !== 'undefined') StaffHeader.init();
             currentUser = JSON.parse(localStorage.getItem('staff_user') || '{}');
@@ -544,22 +544,31 @@
             const secondaryInput = document.getElementById('secondaryAssigneeSearch');
             const customAssignerInput = document.getElementById('customAssignerSearch');
             
-            primaryInput.addEventListener('input', () => searchAssignees('primary'));
-            secondaryInput.addEventListener('input', () => searchAssignees('secondary'));
-            customAssignerInput.addEventListener('input', () => searchAssignees('customAssigner'));
+            if (primaryInput) primaryInput.addEventListener('input', () => searchAssignees('primary'));
+            if (secondaryInput) secondaryInput.addEventListener('input', () => searchAssignees('secondary'));
+            if (customAssignerInput) customAssignerInput.addEventListener('input', () => searchAssignees('customAssigner'));
             
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('#primaryAssigneeSearch') && !e.target.closest('#primarySearchResults')) {
-                    document.getElementById('primarySearchResults').style.display = 'none';
+                    const el = document.getElementById('primarySearchResults');
+                    if (el) el.style.display = 'none';
                 }
                 if (!e.target.closest('#secondaryAssigneeSearch') && !e.target.closest('#secondarySearchResults')) {
-                    document.getElementById('secondarySearchResults').style.display = 'none';
+                    const el = document.getElementById('secondarySearchResults');
+                    if (el) el.style.display = 'none';
                 }
                 if (!e.target.closest('#customAssignerSearch') && !e.target.closest('#customAssignerSearchResults')) {
-                    document.getElementById('customAssignerSearchResults').style.display = 'none';
+                    const el = document.getElementById('customAssignerSearchResults');
+                    if (el) el.style.display = 'none';
                 }
             });
-        });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initTasksPage);
+        } else {
+            initTasksPage();
+        }
         
         async function loadTasks() {
             const dateFilter = document.getElementById('dateFilter').value;

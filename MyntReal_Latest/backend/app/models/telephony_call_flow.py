@@ -185,6 +185,7 @@ class TelephonyRingGroup(BaseModel):
     members = relationship("TelephonyRingGroupMember", back_populates="ring_group", cascade="all, delete-orphan")
 
     def to_dict(self):
+        active_mems = [m for m in self.members if getattr(m, 'is_active', True)] if self.members else []
         return {
             'id': self.id,
             'company_id': self.company_id,
@@ -194,7 +195,8 @@ class TelephonyRingGroup(BaseModel):
             'fallback_action': self.fallback_action,
             'fallback_config': self.fallback_config or {},
             'is_active': self.is_active,
-            'members_count': len(self.members) if self.members else 0,
+            'member_staff_ids': [m.staff_id for m in active_mems],
+            'members_count': len(active_mems),
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }

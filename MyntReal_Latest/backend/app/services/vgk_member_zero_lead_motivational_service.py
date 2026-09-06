@@ -10,10 +10,10 @@ import os
 import json
 import logging
 import requests
-import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from app.core.timezone import get_indian_time, IST
 
 logger = logging.getLogger(__name__)
 
@@ -156,13 +156,13 @@ def run_vgk_member_zero_lead_motivational_dispatch(db: Session, trigger_type: st
     custom_tpl = get_job_template("vgk_member_zero_lead_motivational")
 
     # Fetch numbers sent today for strict deduplication from message_log AND wa_inbox
-    ist_now = datetime.datetime.utcnow() + datetime.timedelta(hours=5, minutes=30)
-    start_of_today_utc = (ist_now.replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(hours=5, minutes=30))
+    ist_now = get_indian_time()
+    start_of_today_ist = ist_now.replace(hour=0, minute=0, second=0, microsecond=0)
     
     sent_today_numbers = set()
     try:
         from app.models.whatsapp import MessageLog
-        log_rows = db.query(MessageLog.mobile_number).filter(MessageLog.sent_at >= start_of_today_utc).all()
+        log_rows = db.query(MessageLog.mobile_number).filter(MessageLog.sent_at >= start_of_today_ist).all()
         for r in log_rows:
             if r[0]:
                 cp = ''.join(c for c in str(r[0]) if c.isdigit())[-10:]

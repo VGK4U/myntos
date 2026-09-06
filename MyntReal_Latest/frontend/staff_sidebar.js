@@ -377,11 +377,20 @@ window.StaffSidebar = window.StaffSidebar || {
                         this.allowedMenuPaths.add('/staff/whatsapp-center');
                         this.allowedMenuPaths.add('/staff/crm/whatsapp-inbox');
                         this.allowedMenuPaths.add('/staff/crm/whatsapp-bot');
-                        this.allowedMenuPaths.add('/staff/whatsapp-config');
+                        this.allowedMenuPaths.add('/staff/softphone-center');
+                        this.allowedMenuPaths.add('/staff/softphone-hub');
+                        this.allowedMenuPaths.add('/staff/softphone');
+                        this.allowedMenuPaths.add('/staff/incoming-calls');
+                        this.allowedMenuPaths.add('/staff/call-flow-studio');
+                        this.allowedMenuPaths.add('/staff/call-flow');
                         this.allowedMenuCodes = new Set(data.menus.map(m => m.menu_code).filter(c => c));
                         this.allowedMenuCodes.add('CRM_WA_INBOX');
                         this.allowedMenuCodes.add('CRM_WA_BOT_HUB');
                         this.allowedMenuCodes.add('WHATSAPP_CONFIG');
+                        this.allowedMenuCodes.add('SOFTPHONE_CENTER');
+                        this.allowedMenuCodes.add('CRM_SOFTPHONE_DIALER');
+                        this.allowedMenuCodes.add('INCOMING_CALLS');
+                        this.allowedMenuCodes.add('CALL_FLOW_STUDIO');
                         this.rawMenus = data.menus || [];
                         this.menuRoutesForVGK = data.menus.filter(m => m.route_path && m.label).map(m => ({ label: m.label, route: m.route_path }));
                         console.log('[DC-SIDEBAR] Unified menus loaded:', this.allowedMenuPaths.size, '(unified_mode:', data.unified_mode, ')');
@@ -410,17 +419,23 @@ window.StaffSidebar = window.StaffSidebar || {
                         this.allowedMenuPaths = new Set();
                         this.zeroAccessMessage = data.message || 'No menu access granted.';
                     } else {
+                        this.allowedMenuPaths = new Set(data.menus.map(m => m.route_path).filter(p => p));
                         this.allowedMenuPaths.add('/staff/whatsapp-center');
                         this.allowedMenuPaths.add('/staff/crm/whatsapp-inbox');
-                        this.allowedMenuPaths.add('/staff/crm/whatsapp-bot');
-                        this.allowedMenuPaths.add('/staff/whatsapp-config');
+                        this.allowedMenuPaths.add('/staff/softphone-center');
                         this.allowedMenuPaths.add('/staff/softphone-hub');
                         this.allowedMenuPaths.add('/staff/softphone');
+                        this.allowedMenuPaths.add('/staff/incoming-calls');
+                        this.allowedMenuPaths.add('/staff/call-flow-studio');
+                        this.allowedMenuPaths.add('/staff/call-flow');
                         this.allowedMenuCodes = new Set(data.menus.map(m => m.menu_code).filter(c => c));
                         this.allowedMenuCodes.add('CRM_WA_INBOX');
                         this.allowedMenuCodes.add('CRM_WA_BOT_HUB');
                         this.allowedMenuCodes.add('WHATSAPP_CONFIG');
+                        this.allowedMenuCodes.add('SOFTPHONE_CENTER');
                         this.allowedMenuCodes.add('CRM_SOFTPHONE_DIALER');
+                        this.allowedMenuCodes.add('INCOMING_CALLS');
+                        this.allowedMenuCodes.add('CALL_FLOW_STUDIO');
                         this.rawMenus = data.menus || [];
                         this.menuRoutesForVGK = data.menus.filter(m => m.route_path && m.label).map(m => ({ label: m.label, route: m.route_path }));
                     }
@@ -1082,7 +1097,7 @@ window.StaffSidebar = window.StaffSidebar || {
         const isTimesheetActive = this.currentPath === '/staff/timesheet' || this.currentPath === '/staff/my-timesheet';
         const isKraStatusActive = this.currentPath === '/staff/kra-status';
         const isWhatsAppActive  = this.currentPath.startsWith('/staff/whatsapp') || this.currentPath.startsWith('/staff/crm/whatsapp');
-        const isSoftphoneActive = this.currentPath.startsWith('/staff/softphone');
+        const isSoftphoneCenterActive = this.currentPath.startsWith('/staff/softphone') || this.currentPath.startsWith('/staff/incoming-calls') || this.currentPath.startsWith('/staff/calling');
 
         // Overview link: key leadership roles only (DC Protocol: exact match)
         // Check role_code, role object sub-field, role_name, and staff_type for maximum compatibility
@@ -1127,9 +1142,9 @@ window.StaffSidebar = window.StaffSidebar || {
                     <i class="fab fa-whatsapp"></i>
                     <span>WhatsApp Center</span>
                 </a>
-                <a href="/staff/softphone-hub" class="nav-item pinned-top-link ${isSoftphoneActive ? 'active' : ''}">
+                <a href="/staff/softphone-center" class="nav-item pinned-top-link ${isSoftphoneCenterActive ? 'active' : ''}">
                     <i class="fas fa-headset"></i>
-                    <span>Calling & Softphone</span>
+                    <span>Softphone Center</span>
                 </a>
             `;
         }

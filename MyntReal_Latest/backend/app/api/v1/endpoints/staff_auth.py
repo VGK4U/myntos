@@ -10,7 +10,7 @@ from typing import Optional
 from pydantic import BaseModel, EmailStr, Field
 import pyotp
 
-from app.core.database import get_db
+from app.core.database import get_db, SessionLocal
 from app.core.security import SecurityManager
 from app.core.config import settings
 from app.models.staff import (
@@ -47,11 +47,27 @@ class StaffProfileResponse(BaseModel):
     employee: dict
 
 
+_SETTINGS_CACHE = {}
+_SETTINGS_CACHE_TTL = 300  # 5 minutes
+
 def get_staff_setting(db: Session, key: str, default=None):
-    """Get staff setting value"""
-    setting = db.query(StaffSetting).filter_by(setting_key=key, is_active=True).first()
-    if setting:
-        return setting.get_value()
+    """Get staff setting value with in-memory TTL caching"""
+    import time
+    now = time.time()
+    cached = _SETTINGS_CACHE.get(key)
+    if cached and (now - cached[0]) < _SETTINGS_CACHE_TTL:
+        return cached[1]
+    
+    try:
+        setting = db.query(StaffSetting).filter_by(setting_key=key, is_active=True).first()
+        if setting:
+            val = setting.get_value()
+            _SETTINGS_CACHE[key] = (now, val)
+            return val
+    except Exception:
+        pass
+        
+    _SETTINGS_CACHE[key] = (now, default)
     return default
 
 
@@ -205,6 +221,14 @@ def get_current_staff_user(request: Request, db: Session = Depends(get_db)) -> S
             headers={"WWW-Authenticate": "Bearer"}
         )
     except Exception as e:
+        import logging
+        from sqlalchemy.exc import SQLAlchemyError
+        if isinstance(e, SQLAlchemyError) or "connection" in str(e).lower() or "timeout" in str(e).lower() or "operationalerror" in str(e).lower():
+            logging.getLogger(__name__).error(f"[STAFF-AUTH-DB] Database dependency unavailable during authentication: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentication database service temporarily unavailable. Please try again."
+            )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -309,70 +333,102 @@ def staff_login(
     
     t_lookup_start = time.time()
     
-    try:
+    def _do_lookup(session):
+        from sqlalchemy import text
+        try:
+            session.execute(text("SET LOCAL statement_timeout = '15000ms'"))
+        except Exception:
+            pass
+
         # 1. Exact Employee Code / Username Match (e.g. MR10001, ZMP18080088, TECO_ADMIN)
-        employee = db.query(StaffEmployee).options(
-            joinedload(StaffEmployee.role)
+        emp = session.query(StaffEmployee).options(
+            joinedload(StaffEmployee.role),
+            joinedload(StaffEmployee.department),
+            joinedload(StaffEmployee.base_company),
+            joinedload(StaffEmployee.reporting_manager)
         ).filter(
             StaffEmployee.is_deleted == False,
-            (StaffEmployee.emp_code == emp_id) | (StaffEmployee.email.ilike(raw_ident))
+            StaffEmployee.emp_code == emp_id
         ).first()
 
+        # 1b. Email Match if raw_ident looks like email
+        if not emp and "@" in raw_ident:
+            emp = session.query(StaffEmployee).options(
+                joinedload(StaffEmployee.role),
+                joinedload(StaffEmployee.department),
+                joinedload(StaffEmployee.base_company),
+                joinedload(StaffEmployee.reporting_manager)
+            ).filter(
+                StaffEmployee.is_deleted == False,
+                StaffEmployee.email.ilike(raw_ident)
+            ).first()
+
         # 2. Company ID Login Pattern (e.g., ZMP18080088, ZMP18080092... ZMP1808XXXX)
-        if not employee:
+        if not emp:
             company_id_match = re.match(r"^ZMP1808(\d{4})$", emp_id)
             if company_id_match:
                 target_company_id = int(company_id_match.group(1))
-                target_comp = db.query(AssociatedCompany).filter_by(id=target_company_id).first()
-                
                 # Company 88 / SaaS Segment Administrator
                 if target_company_id == 88:
-                    employee = db.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter(
+                    emp = session.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter(
                         StaffEmployee.is_deleted == False,
                         StaffEmployee.base_company_id == 88,
                         StaffEmployee.staff_type == 'SAAS_SEGMENT_ADMIN',
                         StaffEmployee.status == 'active'
                     ).first()
-                
-                if not employee:
-                    # Look for primary tenant admin belonging directly to this company (base_company_id)
-                    base_emps = db.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter(
+                if not emp:
+                    base_emps = session.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter(
                         StaffEmployee.is_deleted == False,
                         StaffEmployee.base_company_id == target_company_id,
                         StaffEmployee.status == 'active'
                     ).order_by(StaffEmployee.id).all()
-                    
                     ta_emps = [e for e in base_emps if (e.role_id == 17 or getattr(e, 'role', None) and e.role.role_code in ['tenant_admin', 'saas_segment_admin'] or getattr(e, 'staff_type', '') in ['TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN', 'SAAS_CLIENT'] or any(k in ((getattr(e, 'designation', '') or '') + (e.role.role_name if e.role else '')).upper() for k in ['ADMIN', 'MANAGER', 'LEAD', 'DIRECTOR', 'HEAD']))]
-                    
                     if ta_emps:
-                        employee = ta_emps[0]
+                        emp = ta_emps[0]
                     elif base_emps:
-                        employee = base_emps[0]
+                        emp = base_emps[0]
 
-        # 2. Mobile Number Login (e.g. 10 digits or with country code +91)
-        if not employee:
+        # 3. Mobile Number Login (e.g. 10 digits or with country code +91)
+        if not emp:
             clean_phone = re.sub(r"\D", "", raw_ident)
             if len(clean_phone) >= 10:
                 last10 = clean_phone[-10:]
-                employee = db.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter(
+                emp = session.query(StaffEmployee).options(joinedload(StaffEmployee.role)).filter(
                     StaffEmployee.is_deleted == False,
                     StaffEmployee.phone.like(f"%{last10}")
                 ).first()
 
-        # 3. Employee Code / Email Login
-        if not employee:
-            employee = db.query(StaffEmployee).options(
+        # 4. Fallback Code / Email Login
+        if not emp:
+            emp = session.query(StaffEmployee).options(
                 joinedload(StaffEmployee.role)
             ).filter(
                 (StaffEmployee.emp_code == emp_id) | (StaffEmployee.email.ilike(raw_ident))
             ).first()
+        return emp
+
+    try:
+        employee = _do_lookup(db)
     except Exception as db_exc:
-        import logging
-        logging.getLogger(__name__).error(f"[STAFF-AUTH-DB] Database connection error during login: {db_exc}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Authentication service temporarily unavailable. Please try again in a moment."
-        )
+        # Retry once on a fresh session if initial checkout had a dropped/stale socket
+        try:
+            try: db.rollback()
+            except Exception: pass
+            fresh_db = SessionLocal()
+            try:
+                employee = _do_lookup(fresh_db)
+                db = fresh_db
+            except Exception:
+                try: fresh_db.close()
+                except Exception: pass
+                raise
+        except Exception as retry_exc:
+            import logging
+            logging.getLogger(__name__).error(f"[STAFF-AUTH-DB] Database connection error during login (after retry): {retry_exc}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentication service temporarily unavailable. Please try again in a moment."
+            )
     t_lookup_ms = (time.time() - t_lookup_start) * 1000
     
     if not employee:

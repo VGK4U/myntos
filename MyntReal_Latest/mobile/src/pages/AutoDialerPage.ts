@@ -276,6 +276,20 @@ export class AutoDialerPage {
   // DC_MYOP_001 / DC_MYOP_CTC: The actual dial — called after method is chosen in the modal.
   // MyOperator: uses Click-to-Call API (server-side bridge). Normal: uses tel: URI.
   private async _executeDial(phone: string, lead: QueueItem, method: string): Promise<void> {
+    const res = await dialerService.reserveLead(lead.lead_id, this.sessionId || undefined);
+    if (!res.success) {
+      if (res.cooldown_blocked) {
+        alert(`⏳ Redial Cooldown: ${res.message || 'Recently attempted — 1-hour cooldown active'}`);
+        return;
+      }
+      if (res.compliance_blocked) {
+        alert(`Compliance: ${res.error || 'Calling not permitted on this lead'}`);
+        return;
+      }
+      alert(`Lead #${lead.lead_id} is currently in another agent's active preview.`);
+      return;
+    }
+
     this.callMethod = method;
     if (method === 'myoperator') this.myoperatorAttemptsThisSession++;
     this.callStartTime = Date.now();
@@ -997,6 +1011,7 @@ export class AutoDialerPage {
         // DC_RESUME_FIX: Send updated queue order so the server knows Ram moved to the end
         queue_lead_ids: dialerService.getQueueLeadIds(),
       });
+      void dialerService.releaseReservation(leadId);
       this._closePopup(overlay);
       this.currentLead = dialerService.getCurrentLead();
       this._render();
@@ -1099,7 +1114,7 @@ export class AutoDialerPage {
 
       // Fire both calls in parallel: full lead PUT + call outcome logAttempt
       const companyId = this.popupLeadData?.company_id || '';
-      await Promise.all([
+      const [_, attemptRes] = await Promise.all([
         apiService.put(`/crm/leads/${leadId}?company_id=${companyId}`, leadPutPayload).catch(() => null),
         dialerService.logAttempt({
           session_id: this.sessionId,
@@ -1120,7 +1135,14 @@ export class AutoDialerPage {
         }),
       ]);
 
+      void dialerService.releaseReservation(leadId);
       this._closePopup(overlay);
+
+      // Check if eligible for canonical claim
+      if (attemptRes && attemptRes.claim_eligible && attemptRes.is_unassigned) {
+        this._showMobileClaimBanner(leadId, Number(companyId) || 1, attemptRes.claim_reason);
+      }
+
       // DC_SAME_DAY_EXCLUDE: Immediately remove this dialed/updated lead from the in-memory queue
       // so it never appears again during this session or today!
       dialerService.removeFromQueue(leadId);
@@ -1133,6 +1155,45 @@ export class AutoDialerPage {
         if (this.currentLead?.phone) this._maybeActivityThenDial(this.currentLead);
       }
     });
+  }
+
+  private _showMobileClaimBanner(leadId: number, companyId: number, reason?: string): void {
+    const existing = document.getElementById('dc-mobile-claim-toast');
+    if (existing) existing.remove();
+
+    const banner = document.createElement('div');
+    banner.id = 'dc-mobile-claim-toast';
+    banner.style.cssText = 'position:fixed;bottom:24px;left:16px;right:16px;background:linear-gradient(135deg,#059669,#10b981);color:white;padding:14px 18px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,0.3);z-index:10000;display:flex;align-items:center;justify-content:space-between;gap:12px;';
+    banner.innerHTML = `
+      <div>
+        <div style="font-weight:700;font-size:14px;">🎉 Qualifying Call Verified!</div>
+        <div style="font-size:12px;opacity:0.9;">${reason || 'Tap to claim this lead to your personal My Leads.'}</div>
+      </div>
+      <button id="dc-mobile-claim-btn" style="background:white;color:#065f46;font-weight:700;font-size:13px;padding:8px 14px;border:none;border-radius:8px;cursor:pointer;flex-shrink:0;">
+        Claim Lead
+      </button>
+    `;
+    document.body.appendChild(banner);
+
+    document.getElementById('dc-mobile-claim-btn')?.addEventListener('click', async () => {
+      const btn = document.getElementById('dc-mobile-claim-btn') as HTMLButtonElement | null;
+      if (btn) { btn.disabled = true; btn.textContent = 'Claiming...'; }
+      const res = await dialerService.claimLead(leadId, companyId);
+      if (res.success) {
+        banner.style.background = '#065f46';
+        banner.innerHTML = '<div style="font-weight:700;font-size:14px;padding:4px 0;">✅ Lead Claimed Successfully!</div>';
+        setTimeout(() => banner.remove(), 2500);
+      } else {
+        banner.innerHTML = `<div style="font-weight:700;font-size:13px;color:#fee2e2;">❌ ${res.message || 'Claim failed'}</div>`;
+        setTimeout(() => banner.remove(), 3000);
+      }
+    });
+
+    setTimeout(() => {
+      if (document.getElementById('dc-mobile-claim-toast')) {
+        banner.remove();
+      }
+    }, 12000);
   }
 
   private _closePopup(overlay: HTMLElement): void {

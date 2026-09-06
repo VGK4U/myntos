@@ -26,9 +26,11 @@ from app.models.staff import StaffEmployee
 from app.models.user import User
 from app.models.call_tracking import StaffCallLog
 from app.models.signup_category import SignupCategory
+from app.models.crm_handler import CRMLeadHandler, get_staff_handler_eligibility
 from app.models.operator_calls import OperatorCall
 from app.utils.staff_hierarchy import get_recursive_downline, get_team_member_ids
 from app.services.timesheet_auto_service import auto_upsert_timesheet_entry
+from app.core.timezone import get_indian_time, IST, parse_to_ist
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -252,8 +254,208 @@ def _normalize_phone_for_ctc(phone: str) -> str:
     return digits
 
 
-def get_ist_now():
+def _acquire_lead_reservation(lead_id: int, user_ref: str, session_id: Optional[int], portal: str, db: Session, ttl_seconds: int = 60) -> tuple[bool, str, Optional[datetime]]:
+    """
+    DC_DIALER_RESERVATION: Atomic Just-In-Time reservation for a single lead preview.
+    Prevents concurrent telecallers from dialing or previewing the same lead at the same time.
+    Reservation automatically expires in ttl_seconds (default 60s) unless renewed via heartbeat.
+    """
+    now = get_ist_now()
+    # 1. Scavenge expired reservations
+    try:
+        db.execute(text("DELETE FROM crm_dialer_reservations WHERE expires_at <= :now"), {"now": now})
+    except Exception as e:
+        logger.debug(f"[DC_RESERVATION] Scavenger error: {e}")
+
+    # 2. Check if currently reserved by someone else
+    res_row = db.execute(text("""
+        SELECT id, user_ref, expires_at
+        FROM crm_dialer_reservations
+        WHERE lead_id = :lid
+    """), {"lid": lead_id}).fetchone()
+
+    if res_row:
+        existing_user_ref = str(res_row[1])
+        existing_expires = res_row[2]
+        if existing_user_ref != str(user_ref) and existing_expires > now:
+            return False, "Lead is currently in another agent's active preview", existing_expires
+        
+        # Reserved by same user: extend
+        new_expires = now + timedelta(seconds=ttl_seconds)
+        db.execute(text("""
+            UPDATE crm_dialer_reservations
+            SET session_id = :sid, portal = :portal, expires_at = :expires
+            WHERE lead_id = :lid AND user_ref = :ref
+        """), {"sid": session_id, "portal": portal, "expires": new_expires, "lid": lead_id, "ref": str(user_ref)})
+        db.commit()
+        return True, "Reservation extended", new_expires
+
+    # 3. Not reserved by anyone: Release any prior single reservation held by this user, then acquire
+    try:
+        db.execute(text("""
+            DELETE FROM crm_dialer_reservations
+            WHERE user_ref = :ref AND portal = :portal
+        """), {"ref": str(user_ref), "portal": portal})
+
+        new_expires = now + timedelta(seconds=ttl_seconds)
+        db.execute(text("""
+            INSERT INTO crm_dialer_reservations
+                (lead_id, session_id, user_ref, portal, reserved_at, expires_at)
+            VALUES
+                (:lid, :sid, :ref, :portal, :now, :expires)
+            ON CONFLICT (lead_id) DO UPDATE
+                SET session_id = :sid, user_ref = :ref, portal = :portal, reserved_at = :now, expires_at = :expires
+        """), {"lid": lead_id, "sid": session_id, "ref": str(user_ref), "portal": portal, "now": now, "expires": new_expires})
+        db.commit()
+        return True, "Reserved successfully", new_expires
+    except Exception as e:
+        db.rollback()
+        logger.warning(f"[DC_RESERVATION] Acquire failed: {e}")
+        return False, f"Could not acquire reservation: {e}", None
+
+
+def _release_lead_reservation(lead_id: int, user_ref: str, db: Session) -> bool:
+    """Release active reservation for a lead by this user."""
+    try:
+        db.execute(text("""
+            DELETE FROM crm_dialer_reservations
+            WHERE lead_id = :lid AND user_ref = :ref
+        """), {"lid": lead_id, "ref": str(user_ref)})
+        db.commit()
+        return True
+    except Exception as e:
+        db.rollback()
+        logger.debug(f"[DC_RESERVATION] Release failed: {e}")
+        return False
+
+
+def _heartbeat_lead_reservation(lead_id: int, user_ref: str, db: Session, extend_seconds: int = 60) -> tuple[bool, Optional[datetime]]:
+    """Extend reservation while agent is actively previewing or on call."""
+    now = get_ist_now()
+    new_expires = now + timedelta(seconds=extend_seconds)
+    try:
+        res = db.execute(text("""
+            UPDATE crm_dialer_reservations
+            SET expires_at = :expires
+            WHERE lead_id = :lid AND user_ref = :ref AND expires_at > :now
+            RETURNING id
+        """), {"expires": new_expires, "lid": lead_id, "ref": str(user_ref), "now": now})
+        db.commit()
+        row = res.fetchone()
+        if row:
+            return True, new_expires
+        return False, None
+    except Exception as e:
+        db.rollback()
+        return False, None
+
+
+def get_ist_now() -> datetime:
     return datetime.now(IST).replace(tzinfo=None)
+
+
+# ── Global 1-Hour Non-Connected Redial Protection (DC_REDIAL_COOLDOWN_001) ───
+NON_CONNECTED_OUTCOMES = {
+    'no_answer', 'not_connected', 'busy', 'switched_off', 'failed',
+    'rejected', 'cancelled', 'canceled', 'ringing_timeout', 'timeout',
+    'zero_duration', 'unanswered', 'missed', 'wrong_number', 'call_failed',
+    'no-answer', 'not-connected', 'ringing-timeout'
+}
+
+
+def is_attempt_non_connected(outcome: Optional[str], duration_seconds: Optional[int]) -> bool:
+    """
+    DC_REDIAL_COOLDOWN: Evaluates whether a call attempt is non-connected according to canonical telephony semantics.
+    1. Explicit non-connected outcome label
+    2. Zero duration without an explicit connected state (answered/connected/completed)
+    """
+    outcome_clean = (outcome or '').strip().lower().replace(' ', '_').replace('-', '_')
+    if outcome_clean in NON_CONNECTED_OUTCOMES:
+        return True
+    dur = duration_seconds or 0
+    if dur == 0 and outcome_clean not in ('answered', 'connected', 'completed'):
+        return True
+    return False
+
+
+def get_lead_redial_cooldown(
+    lead_id: int,
+    phone: Optional[str],
+    db: Session
+) -> tuple[bool, Optional[datetime], Optional[str]]:
+    """
+    DC_REDIAL_COOLDOWN_001: Global 1-Hour Non-Connected Redial Protection.
+    Returns (is_cooling_down, cooldown_expires_at, reason).
+    
+    Rule: ANY Auto Dialer call attempt that was NOT connected places the lead / customer phone number
+    in a strict, server-authoritative 1-hour cooldown. During this 1-hour window (3600 seconds from
+    the authoritative server-side attempt timestamp), the lead CANNOT be dialed through Auto Dialer
+    by ANY employee (Agent A, Agent B, etc.), from ANY device/platform (Web, /mobile, Android, iOS),
+    or through ANY provider mode (Plivo, MyOperator, Native SIM).
+    
+    Applies at both lead_id level and phone number level.
+    """
+    now = get_ist_now()
+    cutoff = now - timedelta(hours=1)
+    phone_clean = re.sub(r'[^\d]', '', str(phone or ''))[-10:] if phone else None
+
+    query = """
+        SELECT a.id, a.lead_id, a.call_outcome, a.duration_seconds, a.dialed_at, a.created_at, a.user_ref
+        FROM crm_dialer_attempts a
+        LEFT JOIN crm_leads l ON a.lead_id = l.id
+        WHERE (
+            a.lead_id = :lid
+            OR (:phone IS NOT NULL AND (
+                RIGHT(REGEXP_REPLACE(COALESCE(l.phone, ''), '[^0-9]', '', 'g'), 10) = :phone
+                OR RIGHT(REGEXP_REPLACE(COALESCE(l.alternate_phone, ''), '[^0-9]', '', 'g'), 10) = :phone
+            ))
+        )
+        AND COALESCE(a.dialed_at, a.created_at) >= :cutoff
+        ORDER BY COALESCE(a.dialed_at, a.created_at) DESC
+        LIMIT 1
+    """
+    row = db.execute(text(query), {"lid": lead_id, "phone": phone_clean, "cutoff": cutoff}).fetchone()
+    if row:
+        attempt_id, a_lid, outcome, duration, dialed_at, created_at, u_ref = row
+        att_time = dialed_at or created_at
+        if att_time and is_attempt_non_connected(outcome, duration):
+            expires_at = att_time + timedelta(hours=1)
+            if now < expires_at:
+                remaining_secs = int((expires_at - now).total_seconds())
+                remaining_mins = max(1, remaining_secs // 60)
+                time_str = expires_at.strftime("%I:%M %p IST")
+                reason = f"Recently attempted ({outcome or 'not connected'}) — available again at {time_str} ({remaining_mins}m remaining)"
+                return True, expires_at, reason
+
+    return False, None, None
+
+
+def _check_calling_compliance(lead: CRMLead, current_user, communication_type: str = 'human_outbound') -> tuple[bool, str]:
+    """
+    DC_COMPLIANCE_001: Multi-tier compliance check before dial dispatch.
+    - DND / Do Not Call status enforcement
+    - Phone number validation
+    - Calling hours check based on communication type & company policy
+    """
+    if not lead:
+        return False, "Lead not found"
+
+    # 1. DND Status Check
+    if (lead.status or '').strip().lower() == 'do_not_call':
+        return False, "Lead is marked as Do Not Call (DNC). Dialing prohibited."
+
+    # 2. Phone validation
+    phone_clean = re.sub(r'[^\d]', '', str(lead.phone or ''))
+    if len(phone_clean) < 10:
+        return False, f"Invalid phone number on lead: {lead.phone}"
+
+    # 3. Time of day check for commercial / promotional outreach
+    now = get_ist_now()
+    if communication_type == 'promotional':
+        if now.hour < 9 or now.hour >= 21:
+            return False, "Promotional outreach is restricted outside 09:00 - 21:00 IST."
+
+    return True, "Compliant"
 
 
 def _is_overdue(lead) -> bool:
@@ -384,26 +586,25 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
     emp_code = staff.emp_code
     user_ref = str(staff.id)
 
-    # DC_DIALER_SAME_DAY_EXCLUDE: Exclude ALL leads dialed or contacted today (non-skip outcomes),
-    # or updated with last_contact_date/last_dialed_at today, or with a future next_followup_date set.
-    ist_today = get_ist_now().replace(hour=0, minute=0, second=0, microsecond=0)
+    # DC_DIALER_REDIAL_COOLDOWN: Exclude leads in 1-hour non-connected cooldown or deferred to future
+    _now = get_ist_now()
+    cutoff_1h = _now - timedelta(hours=1)
+    ist_today = _now.replace(hour=0, minute=0, second=0, microsecond=0)
     ist_today_end = ist_today + timedelta(days=1)
     dialed_rows = db.execute(text("""
+        -- Non-connected attempts actively in 1-hour cooldown
         SELECT DISTINCT lead_id FROM crm_dialer_attempts
-        WHERE call_outcome != 'skip' AND dialed_at >= :today
+        WHERE lead_id IS NOT NULL
+          AND COALESCE(dialed_at, created_at) >= :cutoff_1h
+          AND (
+              LOWER(call_outcome) IN ('no_answer', 'not_connected', 'busy', 'switched_off', 'failed', 'rejected', 'cancelled', 'canceled', 'ringing_timeout', 'timeout', 'zero_duration', 'unanswered', 'missed', 'wrong_number', 'call_failed')
+              OR (COALESCE(duration_seconds, 0) = 0 AND LOWER(COALESCE(call_outcome, '')) NOT IN ('answered', 'connected', 'completed'))
+          )
         UNION
-        SELECT DISTINCT matched_lead_id AS lead_id FROM staff_call_logs
-        WHERE matched_lead_id IS NOT NULL AND (created_at >= :today OR call_datetime >= :today)
-        UNION
-        SELECT DISTINCT crm_lead_id AS lead_id FROM operator_calls
-        WHERE crm_lead_id IS NOT NULL AND (created_at >= :today OR started_at >= :today)
-        UNION
-        SELECT id AS lead_id FROM crm_leads
-        WHERE last_contact_date >= :today
-        UNION
+        -- Future scheduled follow-ups
         SELECT id AS lead_id FROM crm_leads
         WHERE next_followup_date >= :today_end
-    """), {"ref": user_ref, "today": ist_today, "today_end": ist_today_end}).fetchall()
+    """), {"cutoff_1h": cutoff_1h, "today_end": ist_today_end}).fetchall()
     dialed_today = {r[0] for r in dialed_rows if r[0] is not None}
 
     # DC_NMC_FIX: Permanently exclude unassigned leads this user dismissed as "not my category"
@@ -497,6 +698,31 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
                 CRMLead.next_followup_date < _today_end,
             ),
         ]
+
+        # CRM Settings Handler eligibility scoping for unassigned leads
+        role_code = (getattr(staff, 'role_code', '') or '').lower()
+        staff_type = (getattr(staff, 'staff_type', '') or '').lower()
+        is_dialer_admin = bool(
+            getattr(staff, 'is_supreme', False)
+            or staff.id in (1, 16)
+            or staff.emp_code in ('MR10001', 'MR1001', 'MR10016')
+            or 'admin' in role_code
+            or 'supreme' in staff_type
+            or 'vgk' in role_code
+        )
+        if not is_dialer_admin:
+            staff_eligibility = get_staff_handler_eligibility(db, [emp_id])
+            co_cats = [(co, cat) for co, cat in staff_eligibility if co in co_ids]
+            if co_cats:
+                u_filter.append(or_(*[and_(CRMLead.company_id == co, CRMLead.category_id == cat) for co, cat in co_cats]))
+            else:
+                has_active_handlers = db.query(CRMLeadHandler.id).filter(
+                    CRMLeadHandler.company_id.in_(co_ids),
+                    CRMLeadHandler.is_active == True
+                ).first()
+                if has_active_handlers:
+                    u_filter.append(CRMLead.id == -1)
+
         if u_exclude:
             u_filter.append(CRMLead.id.notin_(u_exclude))
         u_q = db.query(CRMLead).filter(*u_filter).limit(200).all()
@@ -550,26 +776,25 @@ def _build_queue_for_mnr(user: User, db: Session) -> List[dict]:
     user_id = user.id
     user_ref = str(user.id)
 
-    # DC_DIALER_SAME_DAY_EXCLUDE: Exclude ALL leads dialed or contacted today (non-skip outcomes),
-    # or updated with last_contact_date/last_dialed_at today, or with a future next_followup_date set.
-    ist_today = get_ist_now().replace(hour=0, minute=0, second=0, microsecond=0)
+    # DC_DIALER_REDIAL_COOLDOWN: Exclude leads in 1-hour non-connected cooldown or deferred to future
+    _now = get_ist_now()
+    cutoff_1h = _now - timedelta(hours=1)
+    ist_today = _now.replace(hour=0, minute=0, second=0, microsecond=0)
     ist_today_end = ist_today + timedelta(days=1)
     dialed_rows = db.execute(text("""
+        -- Non-connected attempts actively in 1-hour cooldown
         SELECT DISTINCT lead_id FROM crm_dialer_attempts
-        WHERE call_outcome != 'skip' AND dialed_at >= :today
+        WHERE lead_id IS NOT NULL
+          AND COALESCE(dialed_at, created_at) >= :cutoff_1h
+          AND (
+              LOWER(call_outcome) IN ('no_answer', 'not_connected', 'busy', 'switched_off', 'failed', 'rejected', 'cancelled', 'canceled', 'ringing_timeout', 'timeout', 'zero_duration', 'unanswered', 'missed', 'wrong_number', 'call_failed')
+              OR (COALESCE(duration_seconds, 0) = 0 AND LOWER(COALESCE(call_outcome, '')) NOT IN ('answered', 'connected', 'completed'))
+          )
         UNION
-        SELECT DISTINCT matched_lead_id AS lead_id FROM staff_call_logs
-        WHERE matched_lead_id IS NOT NULL AND (created_at >= :today OR call_datetime >= :today)
-        UNION
-        SELECT DISTINCT crm_lead_id AS lead_id FROM operator_calls
-        WHERE crm_lead_id IS NOT NULL AND (created_at >= :today OR started_at >= :today)
-        UNION
+        -- Future scheduled follow-ups
         SELECT id AS lead_id FROM crm_leads
-        WHERE (last_contact_date >= :today OR last_dialed_at >= :today)
-        UNION
-        SELECT id FROM crm_leads
         WHERE next_followup_date >= :today_end
-    """), {"ref": user_ref, "today": ist_today, "today_end": ist_today_end}).fetchall()
+    """), {"cutoff_1h": cutoff_1h, "today_end": ist_today_end}).fetchall()
     dialed_today = {r[0] for r in dialed_rows if r[0] is not None}
 
     # DC_FUTURE_NFD_EXCLUDE: Compute today-end for MNR queue future-date filter
@@ -830,7 +1055,7 @@ async def get_missed_callbacks(
     then unassigned (no handled_by), then all others.
     Only returns calls from the last 7 days with missed_status='pending'.
     """
-    since = datetime.utcnow() - timedelta(days=7)
+    since = get_indian_time() - timedelta(days=7)
 
     # Get staff name for matching "self" missed calls
     agent_name = ''
@@ -1023,6 +1248,113 @@ async def get_dialer_lead_detail(
         "attempts": attempts,
         "notes": notes,
     }
+    is_cooling, cooldown_until, cooldown_msg = get_lead_redial_cooldown(lead.id, lead.phone, db)
+    lead_detail_resp["redial_cooldown"] = {
+        "is_cooling_down": is_cooling,
+        "cooldown_until": cooldown_until.isoformat() if cooldown_until else None,
+        "cooldown_reason": cooldown_msg
+    }
+    return lead_detail_resp
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# JUST-IN-TIME (JIT) QUEUE RESERVATION
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.post("/dialer/lead/{lead_id}/reserve")
+async def reserve_lead_for_dialer(
+    lead_id: int,
+    body: dict = Body(default={}),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user_hybrid)
+):
+    """
+    DC_DIALER_RESERVE: Just-In-Time reservation for an active lead preview.
+    Ensures that when an agent reaches a lead in their queue, only one agent can
+    actively preview / dial that lead. Auto-expires in 60s.
+    Strictly checks Global 1-Hour Non-Connected Redial Protection before granting reservation.
+    """
+    is_staff = hasattr(current_user, 'emp_code')
+    portal = 'staff' if is_staff else 'mnr'
+    user_ref = str(current_user.id)
+    session_id = body.get('session_id')
+    ttl_seconds = int(body.get('ttl_seconds', 60))
+
+    # Validate company scope
+    if is_staff:
+        staff = db.query(StaffEmployee).filter(StaffEmployee.id == current_user.id).first()
+        company_ids = _get_staff_company_ids(staff) if staff else []
+    else:
+        company_ids = _get_mnr_company_ids(current_user, db)
+
+    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    if company_ids and lead.company_id not in company_ids:
+        raise HTTPException(status_code=403, detail="Lead not in your accessible companies")
+
+    # Compliance check
+    compliant, comp_reason = _check_calling_compliance(lead, current_user)
+    if not compliant:
+        return {"success": False, "error": comp_reason, "compliance_blocked": True, "lead_id": lead_id}
+
+    # Global 1-Hour Non-Connected Redial Protection Check
+    is_cooling, cooldown_until, cooldown_msg = get_lead_redial_cooldown(lead_id, lead.phone, db)
+    if is_cooling and cooldown_until:
+        return {
+            "success": False,
+            "error": cooldown_msg,
+            "cooldown_blocked": True,
+            "cooldown_until": cooldown_until.isoformat(),
+            "message": cooldown_msg,
+            "lead_id": lead_id
+        }
+
+    success, msg, expires_at = _acquire_lead_reservation(
+        lead_id=lead_id,
+        user_ref=user_ref,
+        session_id=session_id,
+        portal=portal,
+        db=db,
+        ttl_seconds=ttl_seconds
+    )
+    return {
+        "success": success,
+        "message": msg,
+        "lead_id": lead_id,
+        "expires_at": expires_at.isoformat() if expires_at else None
+    }
+
+
+@router.post("/dialer/lead/{lead_id}/release-reservation")
+async def release_lead_reservation_endpoint(
+    lead_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user_hybrid)
+):
+    """DC_DIALER_RELEASE: Explicitly release JIT reservation when skipping or moving next."""
+    user_ref = str(current_user.id)
+    released = _release_lead_reservation(lead_id, user_ref, db)
+    return {"success": released, "lead_id": lead_id}
+
+
+@router.post("/dialer/lead/{lead_id}/heartbeat")
+async def heartbeat_lead_reservation_endpoint(
+    lead_id: int,
+    body: dict = Body(default={}),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user_hybrid)
+):
+    """DC_DIALER_HEARTBEAT: Extend reservation by 60s while actively on preview / call."""
+    user_ref = str(current_user.id)
+    extend_sec = int(body.get('extend_seconds', 60))
+    success, expires_at = _heartbeat_lead_reservation(lead_id, user_ref, db, extend_seconds=extend_sec)
+    return {
+        "success": success,
+        "lead_id": lead_id,
+        "expires_at": expires_at.isoformat() if expires_at else None
+    }
+
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -1327,21 +1659,7 @@ async def log_dialer_attempt(
                 pass
         if call_outcome and call_outcome != 'skip':
             lead.last_contact_date = now
-            # DC_DIALER_CLAIM_LEAD: If an active staff member handles an unassigned lead (sets outcome, status, or followup),
-            # automatically assign the lead to them so it is exclusive to them and avoided for all other telecallers.
-            if is_staff:
-                lead.handler_type = 'staff'
-                lead.handler_id = current_user.emp_code
-                lead.telecaller_id = current_user.id
-                lead.primary_owner_type = 'staff'
-                lead.primary_owner_id = current_user.id
-            else:
-                lead.mnr_handler_id = current_user.id
-        if next_followup_date:
-            try:
-                lead.next_followup_date = datetime.fromisoformat(next_followup_date.replace('Z', ''))
-            except Exception:
-                pass
+            lead.last_dialed_at = now
 
         # Auto-create follow-up record if next_followup_date provided
         if next_followup_date and not do_not_call:
@@ -1383,56 +1701,45 @@ async def log_dialer_attempt(
             )
             db.add(note_obj)
 
-        # DC_DIALER_CLIP_ASSIGN: Auto-assign unassigned lead when a followup date is set.
-        # The staff member who clips a date takes ownership — lead leaves the floating pool.
-        #
-        # Two-layer company guard (must pass BOTH):
-        #   1. Lead's company_id is within this staff member's accessible companies
-        #      (base_company_id + data_companies / signed segments).
-        #   2. Lead's category (if set) belongs to the same accessible company set.
-        #      SignupCategory.company_id determines which company owns a category.
-        #      A staff member from Company A cannot claim a lead categorised for Company B.
-        _staff_company_ids = _get_staff_company_ids(current_user) if is_staff else []
+        # Canonical StaffCallLog logging if duration > 0
+        if is_staff and duration_seconds and duration_seconds > 0:
+            try:
+                call_log = StaffCallLog(
+                    company_id=lead.company_id or (getattr(current_user, 'base_company_id', None) or 1),
+                    staff_id=current_user.id,
+                    phone_number=lead.phone or 'unknown',
+                    contact_name=lead.name or None,
+                    call_type='outbound',
+                    call_datetime=now,
+                    call_date=now.strftime('%Y-%m-%d'),
+                    duration_seconds=int(duration_seconds),
+                    source=call_method or 'dialer',
+                    matched_lead_id=lead.id,
+                    matched_at=now,
+                )
+                db.add(call_log)
+            except Exception as cl_err:
+                logger.warning(f"[DC_DIALER] StaffCallLog insertion error: {cl_err}")
 
-        # Category-company guard
-        _category_company_ok = True
-        if lead.category_id:
-            _cat = db.query(SignupCategory).filter(
-                SignupCategory.id == lead.category_id
-            ).first()
-            if _cat and _cat.company_id:
-                _category_company_ok = _cat.company_id in _staff_company_ids
+    # Release JIT reservation for this lead upon attempt completion
+    _release_lead_reservation(lead_id, user_ref, db)
 
-        if (
-            next_followup_date
-            and not do_not_call
-            and is_staff
-            and lead.handler_type == 'unassigned'
-            and lead.company_id in _staff_company_ids
-            and _category_company_ok
-        ):
-            prev_handler_type = lead.handler_type
-            prev_handler_id = lead.handler_id
-            lead.handler_type = 'staff'
-            lead.handler_id = handler_id
-            lead.updated_at = now
-            assignment_rec = CRMLeadAssignment(
-                company_id=lead.company_id,
-                lead_id=lead.id,
-                from_handler_type=prev_handler_type,
-                from_handler_id=prev_handler_id,
-                to_handler_type='staff',
-                to_handler_id=handler_id,
-                reason='Dialer clip-date auto-assign',
-                assigned_at=now,
-                assigned_by_type='staff',
-                assigned_by_id=handler_id,
-            )
-            db.add(assignment_rec)
-            logger.info(
-                f"[DC_CLIP_ASSIGN] Lead {lead.id} (company={lead.company_id}, "
-                f"cat={lead.category_id}) auto-assigned to {handler_id} via dialer clip-date"
-            )
+    # Evaluate canonical claim eligibility (ZERO automatic ownership mutation)
+    claim_eligible = False
+    claim_reason = "Not eligible"
+    is_unassigned = False
+    if lead:
+        is_unassigned = (lead.telecaller_id is None and lead.primary_owner_id is None)
+        if is_staff:
+            try:
+                from app.api.v1.endpoints.crm import is_lead_claim_eligible_for_staff
+                claim_eligible, claim_reason = is_lead_claim_eligible_for_staff(
+                    lead, current_user.id, current_user.emp_code, db
+                )
+            except Exception as ce_err:
+                logger.warning(f"[DC_DIALER] Claim eligibility evaluation error: {ce_err}")
+                claim_eligible = False
+                claim_reason = f"Check failed: {ce_err}"
 
     # DC_DIALER_WS: Emit pg_notify BEFORE commit so notification fires atomically.
     # Uses shared channel 'dialer_events'; user_ref is embedded in the envelope so the
@@ -1492,6 +1799,9 @@ async def log_dialer_attempt(
         "attempt_id": attempt_id,
         "lead_updated": lead is not None,
         "do_not_call_set": do_not_call,
+        "claim_eligible": claim_eligible,
+        "claim_reason": claim_reason,
+        "is_unassigned": is_unassigned,
     }
 
 
@@ -2471,6 +2781,23 @@ async def initiate_click_to_call(
     customer_norm = _normalize_phone_for_ctc(customer_phone)
     if len(customer_norm) != 10:
         raise HTTPException(status_code=400, detail=f"Invalid customer phone number: {customer_phone}")
+
+    # Lead compliance, scope guard, and Global 1-Hour Non-Connected Redial Protection
+    if lead_id:
+        lead_obj = db.query(CRMLead).filter(CRMLead.id == int(lead_id)).first()
+        if lead_obj:
+            comp_ok, comp_msg = _check_calling_compliance(lead_obj, current_user)
+            if not comp_ok:
+                raise HTTPException(status_code=403, detail=f"Compliance check failed: {comp_msg}")
+            
+            is_cooling, cooldown_until, cooldown_msg = get_lead_redial_cooldown(lead_obj.id, customer_norm or lead_obj.phone, db)
+            if is_cooling:
+                raise HTTPException(status_code=400, detail=f"Redial cooldown active: {cooldown_msg}")
+    elif customer_norm:
+        is_cooling, cooldown_until, cooldown_msg = get_lead_redial_cooldown(0, customer_norm, db)
+        if is_cooling:
+            raise HTTPException(status_code=400, detail=f"Redial cooldown active: {cooldown_msg}")
+
 
     # Resolve MyOperator agent from active MyOperator account
     agent_myop = _get_myop_agent_info(current_user)

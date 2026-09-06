@@ -62,15 +62,23 @@ def get_current_staff(authorization: str = None, db: Session = None):
         if not emp_id:
             raise HTTPException(status_code=401, detail="Invalid token")
         
-        employee = db.query(StaffEmployee).filter(
-            StaffEmployee.id == int(emp_id),
-            StaffEmployee.status == "active"
-        ).first()
+        try:
+            employee = db.query(StaffEmployee).filter(
+                StaffEmployee.id == int(emp_id),
+                StaffEmployee.status == "active"
+            ).first()
+        except Exception as db_err:
+            from sqlalchemy.exc import SQLAlchemyError
+            if isinstance(db_err, SQLAlchemyError) or "connection" in str(db_err).lower() or "timeout" in str(db_err).lower():
+                raise HTTPException(status_code=503, detail="Authentication database service temporarily unavailable")
+            raise
         
         if not employee:
             raise HTTPException(status_code=401, detail="Employee not found or inactive")
         
         return employee
+    except HTTPException:
+        raise
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 

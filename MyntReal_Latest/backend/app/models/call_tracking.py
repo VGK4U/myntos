@@ -6,7 +6,7 @@ Includes call recording storage and playback support
 Created: Feb 2026
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Float, ForeignKey, Index, BigInteger
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Float, ForeignKey, Index, BigInteger, text
 from app.models.base import BaseModel
 from datetime import datetime
 import pytz
@@ -126,6 +126,7 @@ class CallQualityReview(BaseModel):
         Index('ix_cqr_staff_date', 'staff_id', 'sample_date'),
         Index('ix_cqr_status', 'status'),
         Index('ix_cqr_reviewer', 'reviewer_id'),
+        Index('uq_cqr_call_log_id', 'call_log_id', unique=True, postgresql_where=text('call_log_id IS NOT NULL')),
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)

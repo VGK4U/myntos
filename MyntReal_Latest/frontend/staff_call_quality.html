@@ -6,9 +6,6 @@
 <title>Call Quality Review — Staff Portal</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-<script src="/public/js/staff-token-manager.js"></script>
-<script src="/public/js/staff-fetch.js"></script>
-  <script src="/public/js/nda-enforcement.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f3f4f6;min-height:100vh;}
@@ -97,6 +94,59 @@ table.dt tr:hover td{background:#f0fdf9;}
 .sample-btn{background:#0f766e;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;}
 .sample-btn:hover{background:#0d6460;}
 .sample-btn:disabled{opacity:.6;cursor:not-allowed;}
+
+/* Softphone Style Audio Scrubber Player */
+.audio-scrubber-player {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 4px 10px;
+    min-width: 175px;
+    max-width: 220px;
+}
+.audio-scrubber-player .play-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+.audio-scrubber-player .play-btn:hover { background: #1d4ed8; transform: scale(1.08); }
+.scrubber-track-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+.audio-slider {
+    height: 4px;
+    cursor: pointer;
+    accent-color: #38bdf8;
+    background: #334155;
+    border-radius: 2px;
+    outline: none;
+    margin: 2px 0;
+    width: 100%;
+}
+.audio-time-label {
+    font-size: 10px;
+    color: #94a3b8 !important;
+    font-family: monospace;
+    line-height: 1;
+    margin-top: 1px;
+    white-space: nowrap;
+}
 </style>
 </head>
 <body>
@@ -229,6 +279,12 @@ table.dt tr:hover td{background:#f0fdf9;}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<script src="/public/js/nda-enforcement.js"></script>
+<script src="/staff_sidebar.js?v=20260602c"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+<script src="/staff_header.js"></script>
 <script>
 const API = '/api/v1';
 let _cid = null;
@@ -236,8 +292,25 @@ let currentPage = 1, totalPages = 1;
 let currentReviewId = null, currentReviewData = null;
 let _scores = { score_script:null, score_tone:null, score_info_accuracy:null, score_customer_handling:null, score_closing:null, score_disposition:null };
 
-function _cidParam() { return _cid ? `company_id=${_cid}` : ''; }
-function _addCid(url) { const p = _cidParam(); return p ? (url.includes('?') ? url + '&' + p : url + '?' + p) : url; }
+function buildApiUrl(endpoint, params = {}) {
+  const query = new URLSearchParams();
+  if (_cid) query.set('company_id', _cid);
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== null && value !== undefined && value !== '') {
+      query.set(key, value);
+    }
+  }
+  const qs = query.toString();
+  return qs ? `${API}${endpoint}?${qs}` : `${API}${endpoint}`;
+}
+
+function getIstDateStr(offsetDays = 0) {
+  const d = new Date(Date.now() + 5.5 * 3600000);
+  if (offsetDays !== 0) {
+    d.setUTCDate(d.getUTCDate() + offsetDays);
+  }
+  return d.toISOString().split('T')[0];
+}
 
 function toast(msg, type='success') {
   const t = document.createElement('div');
@@ -278,7 +351,18 @@ function fmtDate(s) {
 
 function fmtDT(s) {
   if (!s) return '—';
-  return new Date(s).toLocaleString('en-IN', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  return d.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
 }
 
 function switchTab(tab) {
@@ -289,12 +373,33 @@ function switchTab(tab) {
   if (tab === 'dashboard') loadDashboard();
 }
 
-// ── Set default date range (last 7 days) ────────────────────────────────────
+// ── Set default date range (last 7 days in IST) ────────────────────────────
 function initDateFilters() {
-  const today = new Date();
-  const pastWeek = new Date(today); pastWeek.setDate(today.getDate() - 6);
-  document.getElementById('filterDateTo').value = today.toISOString().split('T')[0];
-  document.getElementById('filterDateFrom').value = pastWeek.toISOString().split('T')[0];
+  document.getElementById('filterDateTo').value = getIstDateStr(0);
+  document.getElementById('filterDateFrom').value = getIstDateStr(-6);
+}
+
+// ── Aggregate Summary Cards ──────────────────────────────────────────────────
+async function loadSummaryCards() {
+  const df = document.getElementById('filterDateFrom').value;
+  const dt = document.getElementById('filterDateTo').value;
+  const url = buildApiUrl('/call-quality/dashboard', { date_from: df, date_to: dt });
+  try {
+    const res = await staffFetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      const s = data.summary || {};
+      ['sCTotal', 'dCTotal'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = s.total_sampled ?? 0; });
+      ['sCPending', 'dCPending'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = s.pending ?? 0; });
+      ['sCReviewed', 'dCReviewed'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = s.reviewed ?? 0; });
+      const avgStr = (s.avg_overall_score !== null && s.avg_overall_score !== undefined) ? Number(s.avg_overall_score).toFixed(1) : '—';
+      ['sCAvgScore', 'dCAvgScore'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = avgStr; });
+      return data;
+    }
+  } catch(e) {
+    console.warn('[CQ] Failed to load summary stats:', e);
+  }
+  return null;
 }
 
 // ── Load Reviews ─────────────────────────────────────────────────────────────
@@ -307,20 +412,15 @@ async function loadReviews(page = 1) {
 
   document.getElementById('reviewTableWrap').innerHTML = '<div class="spinner-wrap"><div class="spinner-border text-success"></div></div>';
 
-  let url = _addCid(`${API}/call-quality/reviews?page=${page}&per_page=25`);
-  if (df) url += `&date_from=${df}`;
-  if (dt) url += `&date_to=${dt}`;
-  if (status) url += `&status=${status}`;
-  if (staffId) url += `&staff_id=${staffId}`;
+  const url = buildApiUrl('/call-quality/reviews', { page, per_page: 25, date_from: df, date_to: dt, status, staff_id: staffId });
 
   try {
+    loadSummaryCards();
     const res = await staffFetch(url);
     if (!res.ok) throw new Error('Failed to load reviews');
     const data = await res.json();
     totalPages = data.pages || 1;
 
-    // Update summary from reviews on the page
-    updateReviewSummaryFromData(data);
     renderReviewTable(data.reviews);
     renderPagination(data.total, page, totalPages);
     populateStaffFilter(data.reviews);
@@ -329,15 +429,14 @@ async function loadReviews(page = 1) {
   }
 }
 
-function updateReviewSummaryFromData(data) {
-  const all = data.reviews || [];
-  document.getElementById('sCTotal').textContent = data.total || 0;
-  const pending = all.filter(r => r.status === 'pending').length;
-  const reviewed = all.filter(r => r.status === 'reviewed').length;
-  document.getElementById('sCPending').textContent = data.total ? '…' : 0;
-  document.getElementById('sCReviewed').textContent = data.total ? '…' : 0;
-  const scores = all.filter(r => r.overall_score).map(r => r.overall_score);
-  document.getElementById('sCAvgScore').textContent = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : '—';
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 function renderReviewTable(reviews) {
@@ -346,24 +445,48 @@ function renderReviewTable(reviews) {
     return;
   }
   let html = `<div style="overflow-x:auto;"><table class="dt"><thead><tr>
-    <th>#</th><th>Executive</th><th>Sample Date</th><th>Phone / Contact</th><th>Call Type</th><th>Duration</th><th>Lead</th><th>Status</th><th>Overall Score</th><th>Actions</th>
+    <th>#</th><th>Executive</th><th>Call Date &amp; Time</th><th>Phone / Contact</th><th>Call Type</th><th>Duration</th><th>Recording</th><th>Lead</th><th>Audit Date &amp; Time</th><th>Status</th><th>Overall Score</th><th>Actions</th>
   </tr></thead><tbody>`;
   reviews.forEach((r, i) => {
     html += `<tr>
       <td style="color:#9ca3af;font-size:11px;">${r.id}</td>
       <td>
-        <div style="font-weight:600;font-size:13px;">${r.staff_name}</div>
-        <div style="font-size:10px;color:#6b7280;">${r.emp_code || ''} ${r.staff_role ? '· '+r.staff_role : ''}</div>
+        <div style="font-weight:600;font-size:13px;">${escapeHtml(r.staff_name)}</div>
+        <div style="font-size:10px;color:#6b7280;">${escapeHtml(r.emp_code || '')} ${r.staff_role ? '· '+escapeHtml(r.staff_role) : ''}</div>
       </td>
-      <td style="font-size:12px;">${r.sample_date}</td>
       <td>
-        <div style="font-size:12px;">${r.call_phone || '—'}</div>
-        ${r.call_contact_name ? `<div style="font-size:10px;color:#6b7280;">${r.call_contact_name}</div>` : ''}
+        <div style="font-size:12px;font-weight:500;">${fmtDT(r.call_datetime || r.sample_date)}</div>
       </td>
-      <td><span style="font-size:11px;font-weight:600;text-transform:capitalize;">${r.call_type || '—'}</span></td>
+      <td>
+        <div style="font-size:12px;">${escapeHtml(r.call_phone || '—')}</div>
+        ${r.call_contact_name ? `<div style="font-size:10px;color:#6b7280;">${escapeHtml(r.call_contact_name)}</div>` : ''}
+      </td>
+      <td><span style="font-size:11px;font-weight:600;text-transform:capitalize;">${escapeHtml(r.call_type || '—')}</span></td>
       <td style="font-size:12px;">${fmtDur(r.call_duration_seconds)}</td>
       <td>
-        ${r.lead_name ? `<div style="font-size:12px;font-weight:600;">${r.lead_name}</div><div style="font-size:10px;color:#6b7280;">${r.lead_status || ''}</div>` : '<span style="color:#d1d5db;">—</span>'}
+        ${r.has_recording || r.recording_url
+          ? `<div class="audio-scrubber-player" id="player-row-${r.id}">
+              <button class="play-btn" id="pbtn-${r.id}" onclick="toggleAudio('${escapeHtml(getAudioUrl(r.recording_url))}', '${r.id}', '${escapeHtml(fmtDur(r.call_duration_seconds))}')" title="Play Call Recording">
+                <i class="fas fa-play"></i>
+              </button>
+              <div class="scrubber-track-wrapper">
+                <input type="range" class="audio-slider" id="slider-${r.id}" min="0" max="100" value="0" 
+                       oninput="seekAudio(this.value, '${r.id}')" 
+                       onchange="commitSeekAudio(this.value, '${r.id}')" 
+                       title="Drag cursor to seek">
+                <div class="audio-time-label" id="timer-${r.id}">00:00 / ${escapeHtml(fmtDur(r.call_duration_seconds))}</div>
+              </div>
+            </div>`
+          : `<span class="badge bg-secondary bg-opacity-25 text-muted px-2 py-1" style="font-size:11px;"><i class="fas fa-microphone-slash me-1"></i>No Recording</span>`}
+      </td>
+      <td>
+        ${r.lead_name ? `<div style="font-size:12px;font-weight:600;"><a href="/staff/leads?lead_id=${r.lead_id}" target="_blank" style="color:#0f766e;text-decoration:none;">${escapeHtml(r.lead_name)} <i class="fas fa-external-link-alt" style="font-size:10px;"></i></a></div><div style="font-size:10px;color:#6b7280;">${escapeHtml(r.lead_status || '')}</div>` : '<span style="color:#d1d5db;">—</span>'}
+      </td>
+      <td>
+        ${r.reviewed_at ? `
+          <div style="font-size:12px;font-weight:500;">${fmtDT(r.reviewed_at)}</div>
+          ${r.reviewer_name ? `<div style="font-size:10px;color:#6b7280;">by ${escapeHtml(r.reviewer_name)}</div>` : ''}
+        ` : `<span class="badge bg-light text-muted border" style="font-size:10px;">Pending Audit</span>`}
       </td>
       <td><span class="badge-status badge-${r.status}">${r.status}</span></td>
       <td>${scoreLabel(r.overall_score)}</td>
@@ -412,10 +535,11 @@ function populateStaffFilter(reviews) {
 // ── Sample Trigger ───────────────────────────────────────────────────────────
 async function triggerSample() {
   const btn = document.getElementById('sampleBtn');
-  const today = new Date().toISOString().split('T')[0];
+  const today = getIstDateStr(0);
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sampling…';
   try {
-    const res = await staffFetch(_addCid(`${API}/call-quality/sample?sample_date=${today}`), { method: 'POST' });
+    const url = buildApiUrl('/call-quality/sample', { sample_date: today });
+    const res = await staffFetch(url, { method: 'POST' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Failed to sample');
     toast(`${data.sampled} review(s) created for today`, 'success');
@@ -438,13 +562,153 @@ async function openReview(reviewId) {
   document.getElementById('reviewModal').classList.add('open');
 
   try {
-    const res = await staffFetch(_addCid(`${API}/call-quality/reviews/${reviewId}`));
+    const url = buildApiUrl(`/call-quality/reviews/${reviewId}`);
+    const res = await staffFetch(url);
     if (!res.ok) throw new Error('Failed to load review');
     currentReviewData = await res.json();
     renderReviewModal(currentReviewData);
   } catch(e) {
     document.getElementById('rmBody').innerHTML = `<div class="empty-state text-danger"><i class="fas fa-exclamation-circle"></i>${e.message}</div>`;
   }
+}
+
+// ── Call Recording Audio Engine (Softphone Standard) ─────────────────────────
+let activeAudio = null;
+let activePlayerId = null;
+let isSeeking = false;
+
+function getStaffToken() {
+  return (typeof StaffTokenManager !== 'undefined' && StaffTokenManager.getToken ? StaffTokenManager.getToken() : null)
+    || localStorage.getItem('staff_token')
+    || localStorage.getItem('token')
+    || '';
+}
+
+function getAudioUrl(rawUrl) {
+  if (!rawUrl) return '';
+  const token = getStaffToken();
+  if (!token) return rawUrl;
+  const sep = rawUrl.includes('?') ? '&' : '?';
+  return `${rawUrl}${sep}token=${encodeURIComponent(token)}`;
+}
+
+function stopActiveAudio() {
+  if (activeAudio) {
+    activeAudio.pause();
+    activeAudio = null;
+  }
+  if (activePlayerId) {
+    const prevBtn = document.getElementById(`pbtn-${activePlayerId}`);
+    if (prevBtn) prevBtn.innerHTML = '<i class="fas fa-play"></i>';
+    const prevSlider = document.getElementById(`slider-${activePlayerId}`);
+    if (prevSlider) prevSlider.value = 0;
+    activePlayerId = null;
+  }
+}
+
+function toggleAudio(url, id, defaultDuration = '00:00') {
+  if (!url) {
+    toast('No recording audio file available for this session.', 'error');
+    return;
+  }
+  const btn = document.getElementById(`pbtn-${id}`);
+
+  // 1. If clicking the currently playing audio button, toggle pause / play
+  if (activeAudio && activePlayerId === id) {
+    if (activeAudio.paused) {
+      activeAudio.play().then(() => {
+        if (btn) btn.innerHTML = '<i class="fas fa-pause"></i>';
+      }).catch(err => {
+        console.warn('Audio resume error:', err);
+      });
+    } else {
+      activeAudio.pause();
+      if (btn) btn.innerHTML = '<i class="fas fa-play"></i>';
+    }
+    return;
+  }
+
+  // 2. Stop and fully reset ANY previously playing audio immediately
+  stopActiveAudio();
+
+  activePlayerId = id;
+  if (btn) btn.innerHTML = '<div class="spinner-border spinner-border-sm text-light" style="width:10px;height:10px;" role="status"></div>';
+
+  activeAudio = new Audio();
+  activeAudio.crossOrigin = 'anonymous';
+  activeAudio.preload = 'auto';
+
+  activeAudio.ontimeupdate = () => {
+    if (activeAudio && !isSeeking && activeAudio.duration && isFinite(activeAudio.duration)) {
+      const pct = (activeAudio.currentTime / activeAudio.duration) * 100;
+      const curSlider = document.getElementById(`slider-${id}`);
+      const curTimer = document.getElementById(`timer-${id}`);
+      if (curSlider) curSlider.value = pct;
+      if (curTimer) {
+        const curM = String(Math.floor(activeAudio.currentTime / 60)).padStart(2, '0');
+        const curS = String(Math.floor(activeAudio.currentTime % 60)).padStart(2, '0');
+        const totM = String(Math.floor(activeAudio.duration / 60)).padStart(2, '0');
+        const totS = String(Math.floor(activeAudio.duration % 60)).padStart(2, '0');
+        curTimer.textContent = `${curM}:${curS} / ${totM}:${totS}`;
+      }
+    }
+  };
+
+  activeAudio.onended = () => {
+    stopActiveAudio();
+  };
+
+  activeAudio.src = url;
+  activeAudio.play().then(() => {
+    if (btn) btn.innerHTML = '<i class="fas fa-pause"></i>';
+  }).catch(err => {
+    console.warn('Direct HTML5 play failed, trying Blob fallback:', err);
+    fetch(url)
+      .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.blob();
+      })
+      .then(blob => {
+        const blobUrl = URL.createObjectURL(blob);
+        if (activeAudio && activePlayerId === id) {
+          activeAudio.src = blobUrl;
+          activeAudio.play().then(() => {
+            if (btn) btn.innerHTML = '<i class="fas fa-pause"></i>';
+          }).catch(playErr => {
+            console.error('Blob play failed:', playErr);
+            toast('Failed to play audio recording', 'error');
+            stopActiveAudio();
+          });
+        }
+      })
+      .catch(fetchErr => {
+        console.error('Audio fetch failed:', fetchErr);
+        toast('Recording audio could not be loaded', 'error');
+        stopActiveAudio();
+      });
+  });
+}
+
+function seekAudio(val, id) {
+  isSeeking = true;
+  if (activeAudio && activePlayerId === id && activeAudio.duration && isFinite(activeAudio.duration)) {
+    const targetTime = (val / 100) * activeAudio.duration;
+    const curTimer = document.getElementById(`timer-${id}`);
+    if (curTimer) {
+      const curM = String(Math.floor(targetTime / 60)).padStart(2, '0');
+      const curS = String(Math.floor(targetTime % 60)).padStart(2, '0');
+      const totM = String(Math.floor(activeAudio.duration / 60)).padStart(2, '0');
+      const totS = String(Math.floor(activeAudio.duration % 60)).padStart(2, '0');
+      curTimer.textContent = `${curM}:${curS} / ${totM}:${totS}`;
+    }
+  }
+}
+
+function commitSeekAudio(val, id) {
+  if (activeAudio && activePlayerId === id && activeAudio.duration && isFinite(activeAudio.duration)) {
+    activeAudio.currentTime = (val / 100) * activeAudio.duration;
+  }
+  isSeeking = false;
 }
 
 function renderReviewModal(r) {
@@ -462,10 +726,11 @@ function renderReviewModal(r) {
 
   let html = `
   <div class="info-row">
-    <div class="info-col"><div class="lbl">Executive</div><div class="val">${r.staff_name} ${r.emp_code ? '<span style="color:#6b7280;font-size:11px;">('+r.emp_code+')</span>' : ''}</div></div>
-    <div class="info-col"><div class="lbl">Sample Date</div><div class="val">${r.sample_date}</div></div>
+    <div class="info-col"><div class="lbl">Executive</div><div class="val">${escapeHtml(r.staff_name)} ${r.emp_code ? '<span style="color:#6b7280;font-size:11px;">('+escapeHtml(r.emp_code)+')</span>' : ''}</div></div>
+    <div class="info-col"><div class="lbl">Sample Date</div><div class="val">${escapeHtml(r.sample_date)}</div></div>
     <div class="info-col"><div class="lbl">Status</div><div class="val"><span class="badge-status badge-${r.status}">${r.status}</span></div></div>
-    ${r.reviewer_name ? `<div class="info-col"><div class="lbl">Reviewed By</div><div class="val">${r.reviewer_name}</div></div>` : ''}
+    ${r.reviewer_name ? `<div class="info-col"><div class="lbl">Reviewed By</div><div class="val">${escapeHtml(r.reviewer_name)}</div></div>` : ''}
+    ${r.reviewed_at ? `<div class="info-col"><div class="lbl">Audited At</div><div class="val">${fmtDT(r.reviewed_at)}</div></div>` : ''}
   </div>`;
 
   if (r.call_phone || r.call_type) {
@@ -477,6 +742,29 @@ function renderReviewModal(r) {
       <div class="info-col"><div class="lbl">Duration</div><div class="val">${fmtDur(r.call_duration_seconds)}</div></div>
       <div class="info-col"><div class="lbl">Date & Time</div><div class="val">${fmtDT(r.call_datetime)}</div></div>
     </div>`;
+
+    if (r.has_recording || r.recording_url) {
+      html += `<div style="margin-top:12px;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px 16px;">
+        <div style="font-size:12px;font-weight:600;color:#38bdf8;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+          <span><i class="fas fa-play-circle me-1"></i>Call Audio Recording</span>
+          <span style="font-size:11px;color:#94a3b8;font-family:monospace;">${fmtDur(r.call_duration_seconds || r.recording_duration)}</span>
+        </div>
+        <div class="audio-scrubber-player" id="player-row-modal-${r.id}" style="width:100%;max-width:100%;">
+          <button class="play-btn" id="pbtn-modal-${r.id}" onclick="toggleAudio('${escapeHtml(getAudioUrl(r.recording_url))}', 'modal-${r.id}', '${escapeHtml(fmtDur(r.call_duration_seconds))}')" title="Play Call Recording">
+            <i class="fas fa-play"></i>
+          </button>
+          <div class="scrubber-track-wrapper">
+            <input type="range" class="audio-slider" id="slider-modal-${r.id}" min="0" max="100" value="0"
+                   oninput="seekAudio(this.value, 'modal-${r.id}')"
+                   onchange="commitSeekAudio(this.value, 'modal-${r.id}')"
+                   title="Drag cursor to seek">
+            <div class="audio-time-label" id="timer-modal-${r.id}">00:00 / ${escapeHtml(fmtDur(r.call_duration_seconds))}</div>
+          </div>
+        </div>
+      </div>`;
+    } else {
+      html += `<div style="margin-top:8px;font-size:11px;color:#9ca3af;"><i class="fas fa-info-circle me-1"></i>No audio recording attached to this call log.</div>`;
+    }
   } else {
     html += `<div style="background:#fffbeb;border:1px solid #fbbf24;border-radius:6px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:12px;"><i class="fas fa-exclamation-triangle me-1"></i>No call log linked. Review based on CRM interactions and lead feedback.</div>`;
   }
@@ -484,7 +772,7 @@ function renderReviewModal(r) {
   if (r.lead_name) {
     html += `<div class="section-hdr"><i class="fas fa-user me-1" style="color:#0f766e;"></i>Lead Details</div>
     <div class="info-row">
-      <div class="info-col"><div class="lbl">Lead Name</div><div class="val">${r.lead_name}</div></div>
+      <div class="info-col"><div class="lbl">Lead Name</div><div class="val">${r.lead_name} ${r.lead_id ? `<a href="/staff/leads?lead_id=${r.lead_id}" target="_blank" style="color:#0f766e;margin-left:6px;font-size:11px;text-decoration:none;"><i class="fas fa-external-link-alt me-1"></i>View CRM</a>` : ''}</div></div>
       <div class="info-col"><div class="lbl">Phone</div><div class="val">${r.lead_phone || '—'}</div></div>
       <div class="info-col"><div class="lbl">Status</div><div class="val">${r.lead_status || '—'}</div></div>
     </div>`;
@@ -536,7 +824,8 @@ async function submitReview() {
       overall_remarks: document.getElementById('rmRemarks')?.value || '',
       status: 'reviewed',
     };
-    const res = await staffFetch(_addCid(`${API}/call-quality/reviews/${currentReviewId}/submit`), {
+    const url = buildApiUrl(`/call-quality/reviews/${currentReviewId}/submit`);
+    const res = await staffFetch(url, {
       method: 'POST', body: JSON.stringify(payload),
     });
     const data = await res.json();
@@ -553,7 +842,8 @@ async function submitReview() {
 
 async function skipReview() {
   try {
-    await staffFetch(_addCid(`${API}/call-quality/reviews/${currentReviewId}/submit`), {
+    const url = buildApiUrl(`/call-quality/reviews/${currentReviewId}/submit`);
+    await staffFetch(url, {
       method: 'POST', body: JSON.stringify({ status: 'skipped', overall_remarks: 'Skipped by reviewer.' }),
     });
     toast('Review skipped.', 'info');
@@ -563,6 +853,7 @@ async function skipReview() {
 }
 
 function closeReviewModal() {
+  stopActiveAudio();
   document.getElementById('reviewModal').classList.remove('open');
   currentReviewId = null; currentReviewData = null;
 }
@@ -571,9 +862,7 @@ function closeReviewModal() {
 async function loadDashboard() {
   const df = document.getElementById('filterDateFrom').value;
   const dt = document.getElementById('filterDateTo').value;
-  let url = _addCid(`${API}/call-quality/dashboard`);
-  if (df) url += `&date_from=${df}`;
-  if (dt) url += `&date_to=${dt}`;
+  const url = buildApiUrl('/call-quality/dashboard', { date_from: df, date_to: dt });
 
   document.getElementById('catAvgsWrap').innerHTML = '<div class="spinner-wrap"><div class="spinner-border text-success" style="width:1.4rem;height:1.4rem;"></div></div>';
   document.getElementById('trendWrap').innerHTML = '<div class="spinner-wrap"><div class="spinner-border text-success" style="width:1.4rem;height:1.4rem;"></div></div>';
@@ -583,20 +872,17 @@ async function loadDashboard() {
     const res = await staffFetch(url);
     if (!res.ok) throw new Error('Failed to load dashboard');
     const data = await res.json();
-    const s = data.summary;
+    const s = data.summary || {};
 
-    document.getElementById('dCTotal').textContent = s.total_sampled;
-    document.getElementById('dCPending').textContent = s.pending;
-    document.getElementById('dCReviewed').textContent = s.reviewed;
-    document.getElementById('dCAvgScore').textContent = s.avg_overall_score ? s.avg_overall_score.toFixed(1) : '—';
-    document.getElementById('sCTotal').textContent = s.total_sampled;
-    document.getElementById('sCPending').textContent = s.pending;
-    document.getElementById('sCReviewed').textContent = s.reviewed;
-    document.getElementById('sCAvgScore').textContent = s.avg_overall_score ? s.avg_overall_score.toFixed(1) : '—';
+    ['dCTotal', 'sCTotal'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = s.total_sampled ?? 0; });
+    ['dCPending', 'sCPending'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = s.pending ?? 0; });
+    ['dCReviewed', 'sCReviewed'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = s.reviewed ?? 0; });
+    const avgStr = (s.avg_overall_score !== null && s.avg_overall_score !== undefined) ? Number(s.avg_overall_score).toFixed(1) : '—';
+    ['dCAvgScore', 'sCAvgScore'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = avgStr; });
 
-    renderCatAvgs(data.category_averages);
-    renderTrend(data.daily_trend);
-    renderExecTable(data.exec_breakdown);
+    renderCatAvgs(data.category_averages || {});
+    renderTrend(data.daily_trend || []);
+    renderExecTable(data.exec_breakdown || []);
   } catch(e) {
     ['catAvgsWrap','trendWrap','execTableWrap'].forEach(id => {
       document.getElementById(id).innerHTML = `<div class="empty-state text-danger">${e.message}</div>`;
@@ -698,8 +984,5 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadReviews(1);
 });
 </script>
-<script src="/staff_sidebar.js"></script>
-<script src="/shared/staff_inactivity_manager.js"></script>
-<script src="/staff_header.js"></script>
 </body>
 </html>

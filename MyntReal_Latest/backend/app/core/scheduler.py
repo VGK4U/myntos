@@ -4969,6 +4969,44 @@ def init_scheduler():
     except Exception as _tv_sched_e:
         logger.warning(f"[DC_TRAINING_SYNC_001] Could not schedule sync job: {_tv_sched_e}")
 
+    # ── META-HEALTH-CHECK-001: 12-Hour Meta Integration Health Check ─────────
+    try:
+        def run_meta_integration_health_check_job():
+            logger.info("📡 [META-HEALTH-CHECK] Running scheduled Meta integration health & token diagnostic...")
+            db = SessionLocal()
+            try:
+                from app.services.facebook_leads_service import facebook_leads_service
+                pages = db.execute(text("SELECT page_id, page_name, company_id, access_token, is_active FROM facebook_pages WHERE is_active = TRUE")).fetchall()
+                for p in pages:
+                    pid, pname, cid, enc_token = p[0], p[1], p[2], p[3]
+                    token = facebook_leads_service.get_page_access_token(pid, db) if pid else None
+                    if not token:
+                        logger.warning(f"📡 [META-HEALTH-CHECK] Page '{pname}' ({pid}, Company {cid}) has NO active decrypted access token.")
+                        continue
+                    probe_url = f"https://graph.facebook.com/v24.0/{pid}"
+                    res = facebook_leads_service._execute_graph_api_request(probe_url, params={'access_token': token, 'fields': 'id,name'}, timeout=8, max_retries=1)
+                    if res and res.get('id'):
+                        logger.info(f"📡 [META-HEALTH-CHECK] Page '{pname}' ({pid}) Graph v24.0 probe: HEALTHY")
+                    else:
+                        logger.warning(f"📡 [META-HEALTH-CHECK] Page '{pname}' ({pid}) Graph v24.0 probe: UNREACHABLE / TOKEN EXPIRED")
+            except Exception as meta_diag_err:
+                logger.error(f"📡 [META-HEALTH-CHECK] Error during scheduled Meta health check: {meta_diag_err}")
+            finally:
+                db.close()
+
+        scheduler.add_job(
+            run_meta_integration_health_check_job,
+            trigger=CronTrigger(hour='4,16', minute=0, timezone='Asia/Kolkata'),
+            id='meta_integration_health_check',
+            name='Meta Ads: 12-Hour Integration Health & Token Diagnostic',
+            replace_existing=True,
+            misfire_grace_time=600,
+            max_instances=1,
+        )
+        logger.info("   📡 Meta Ads: 12-Hour Integration Health & Token Diagnostic scheduled (4:00 AM, 4:00 PM IST)")
+    except Exception as _meta_sched_e:
+        logger.warning(f"   📡 Meta Ads: Health Check schedule failed: {_meta_sched_e}")
+
     scheduler.start()
     logger.info("✅ APScheduler initialized with IST timezone - All jobs scheduled in Asia/Kolkata time")
     logger.info(f"   📅 Next midnight run: {scheduler.get_job('midnight_income_calculation').next_run_time}")

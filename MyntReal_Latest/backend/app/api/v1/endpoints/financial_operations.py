@@ -379,7 +379,10 @@ async def get_direct_referral_transactions(
                     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="MNR session required")
             except HTTPException:
                 raise
-            except Exception:
+            except Exception as e:
+                from sqlalchemy.exc import SQLAlchemyError
+                if isinstance(e, SQLAlchemyError) or "connection" in str(e).lower() or "timeout" in str(e).lower():
+                    raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Authentication database service temporarily unavailable")
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired MNR session")
         else:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="MNR session required")
@@ -509,7 +512,10 @@ async def get_matching_referral_transactions(
                     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="MNR session required")
             except HTTPException:
                 raise
-            except Exception:
+            except Exception as e:
+                from sqlalchemy.exc import SQLAlchemyError
+                if isinstance(e, SQLAlchemyError) or "connection" in str(e).lower() or "timeout" in str(e).lower():
+                    raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Authentication database service temporarily unavailable")
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired MNR session")
         else:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="MNR session required")

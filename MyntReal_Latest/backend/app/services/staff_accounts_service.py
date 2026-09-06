@@ -3592,11 +3592,11 @@ class IncomeEntryService:
         
         valid_transitions = {
             'PENDING': ['CONFIRMED', 'ESTIMATED', 'EXCEPTION_TALLY', 'ADJUSTMENT'],
-            'CONFIRMED': ['EXCEPTION_TALLY', 'ADJUSTMENT', 'TALLY_DONE', 'PENDING'],
-            'ESTIMATED': ['CONFIRMED', 'PENDING'],
-            'EXCEPTION_TALLY': ['CONFIRMED', 'ADJUSTMENT', 'TALLY_DONE', 'PENDING'],
-            'ADJUSTMENT': ['CONFIRMED', 'TALLY_DONE', 'PENDING'],
-            'TALLY_DONE': ['EXCEPTION_TALLY', 'ADJUSTMENT', 'PENDING']
+            'CONFIRMED': ['CONFIRMED', 'EXCEPTION_TALLY', 'ADJUSTMENT', 'TALLY_DONE', 'PENDING'],
+            'ESTIMATED': ['CONFIRMED', 'ESTIMATED', 'PENDING'],
+            'EXCEPTION_TALLY': ['CONFIRMED', 'EXCEPTION_TALLY', 'ADJUSTMENT', 'TALLY_DONE', 'PENDING'],
+            'ADJUSTMENT': ['CONFIRMED', 'ADJUSTMENT', 'TALLY_DONE', 'PENDING'],
+            'TALLY_DONE': ['CONFIRMED', 'TALLY_DONE', 'EXCEPTION_TALLY', 'ADJUSTMENT', 'PENDING']
         }
 
         if new_status not in valid_transitions.get(current_status, []):
@@ -3611,8 +3611,16 @@ class IncomeEntryService:
         # entry_number is still unique in the destination company.  If it is
         # already taken (cross-company duplicate produced by the old COUNT bug),
         # generate a fresh number for the new company instead of crashing.
+        # DC: Restrict modifying company and amount to MR10001 and MR10025
+        is_override_allowed = getattr(employee, 'emp_code', None) in ['MR10001', 'MR10025']
+
         new_company_id = getattr(data, 'company_id', None)
         if new_company_id and new_company_id != entry.company_id:
+            if not is_override_allowed:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Only MR10001 and MR10025 are authorized to modify company during confirmation"
+                )
             conflict = (
                 db.query(IncomeEntry)
                 .filter(
@@ -3630,6 +3638,19 @@ class IncomeEntryService:
 
         entry.status = new_status
         now = get_indian_time()
+
+        # DC Protocol: Handle amount adjustment on confirmation (restricted to MR10001 & MR10025)
+        if getattr(data, 'amount', None) is not None:
+            new_amt = Decimal(str(data.amount))
+            if new_amt >= 0 and new_amt != entry.amount:
+                if not is_override_allowed:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Only MR10001 and MR10025 are authorized to modify amount during confirmation"
+                    )
+                entry.amount = new_amt
+                if (entry.reference_type or '').upper() == 'SERVICE_TICKET_SPARE' or 'SPARE' in (entry.reference_type or '').upper():
+                    entry.spares_amount = new_amt
 
         if new_status == 'CONFIRMED':
             entry.confirmed_by_id = employee.id
@@ -3753,31 +3774,46 @@ class IncomeEntryService:
                 elif _dest_type == 'EMPLOYEE':
                     entry.destination_employee_id = _dest_emp
                     entry.destination_company_id  = None
-                    if _dest_emp and _dest_emp != _prev_dest_emp:
+                    if _dest_emp:
                         try:
-                            _dest_emp_obj = db.query(StaffEmployee).filter(
-                                StaffEmployee.id == _dest_emp
+                            _existing_fl = db.query(EmployeeFundLedger).filter(
+                                EmployeeFundLedger.reference_type == 'INCOME_ENTRY',
+                                EmployeeFundLedger.reference_id == entry.id,
+                                EmployeeFundLedger.entry_type == 'FUND_RECEIVED',
                             ).first()
-                            if _dest_emp_obj:
-                                _last_fl = db.query(EmployeeFundLedger).filter(
-                                    EmployeeFundLedger.employee_id == _dest_emp
-                                ).order_by(EmployeeFundLedger.id.desc()).first()
-                                _run_bal = Decimal(str(_last_fl.balance)) if _last_fl else Decimal('0')
-                                _new_bal = _run_bal + Decimal(str(entry.amount))
-                                db.add(EmployeeFundLedger(
-                                    employee_id=_dest_emp,
-                                    company_id=entry.company_id,
-                                    transaction_date=entry.income_date,
-                                    entry_type='FUND_RECEIVED',
-                                    reference_type='INCOME_ENTRY',
-                                    reference_id=entry.id,
-                                    reference_number=entry.entry_number,
-                                    debit_amount=Decimal('0'),
-                                    credit_amount=Decimal(str(entry.amount)),
-                                    balance=_new_bal,
-                                    narration=f"Income credited from entry {entry.entry_number} (confirmed)",
-                                    updated_by_id=employee.id
-                                ))
+
+                            if _existing_fl:
+                                if _existing_fl.employee_id == _dest_emp:
+                                    diff = Decimal(str(entry.amount)) - Decimal(str(_existing_fl.credit_amount or 0))
+                                    _existing_fl.credit_amount = Decimal(str(entry.amount))
+                                    _existing_fl.balance = Decimal(str(_existing_fl.balance or 0)) + diff
+                                else:
+                                    _existing_fl.employee_id = _dest_emp
+                                    _existing_fl.credit_amount = Decimal(str(entry.amount))
+                            else:
+                                _dest_emp_obj = db.query(StaffEmployee).filter(
+                                    StaffEmployee.id == _dest_emp
+                                ).first()
+                                if _dest_emp_obj:
+                                    _last_fl = db.query(EmployeeFundLedger).filter(
+                                        EmployeeFundLedger.employee_id == _dest_emp
+                                    ).order_by(EmployeeFundLedger.id.desc()).first()
+                                    _run_bal = Decimal(str(_last_fl.balance)) if _last_fl else Decimal('0')
+                                    _new_bal = _run_bal + Decimal(str(entry.amount))
+                                    db.add(EmployeeFundLedger(
+                                        employee_id=_dest_emp,
+                                        company_id=entry.company_id,
+                                        transaction_date=entry.income_date,
+                                        entry_type='FUND_RECEIVED',
+                                        reference_type='INCOME_ENTRY',
+                                        reference_id=entry.id,
+                                        reference_number=entry.entry_number,
+                                        debit_amount=Decimal('0'),
+                                        credit_amount=Decimal(str(entry.amount)),
+                                        balance=_new_bal,
+                                        narration=f"Income credited from entry {entry.entry_number} (confirmed)",
+                                        updated_by_id=employee.id
+                                    ))
                         except Exception as _ef_e:
                             import logging as _lg3
                             _lg3.getLogger(__name__).warning(
@@ -6032,13 +6068,23 @@ class PartyLedgerService:
             subquery = subquery.filter(PartyLedger.company_id == company_id)
         
         results = subquery.all()
-        
+        if not results:
+            return []
+
+        max_ids = [r.max_id for r in results if r.max_id]
+        last_entries_map = {}
+        if max_ids:
+            for i in range(0, len(max_ids), 500):
+                chunk = max_ids[i:i+500]
+                entries = db.query(PartyLedger.id, PartyLedger.running_balance).filter(
+                    PartyLedger.id.in_(chunk)
+                ).all()
+                for entry_id, run_bal in entries:
+                    last_entries_map[entry_id] = run_bal or Decimal('0')
+
         balances = []
         for row in results:
-            last_entry = db.query(PartyLedger).filter(
-                PartyLedger.id == row.max_id
-            ).first()
-            
+            run_bal = last_entries_map.get(row.max_id, Decimal('0'))
             balances.append({
                 'party_type': row.party_type,
                 'party_id': row.party_id,
@@ -6046,7 +6092,7 @@ class PartyLedgerService:
                 'company_id': row.company_id,
                 'total_debit': row.total_debit or Decimal('0'),
                 'total_credit': row.total_credit or Decimal('0'),
-                'balance': last_entry.running_balance if last_entry else Decimal('0'),
+                'balance': run_bal,
                 'last_transaction_date': row.last_date
             })
         
@@ -7856,11 +7902,14 @@ def approve_expense_entry(
     employee: StaffEmployee,
     entry_id: int,
     action: str,
-    remarks: Optional[str] = None
+    remarks: Optional[str] = None,
+    company_id: Optional[int] = None,
+    amount: Optional[Decimal] = None
 ) -> ExpenseEntry:
     """
     Approve/Reject/Return expense entry
     DC: VGK/EA can approve, updates fund allocation if linked
+    MR10001 & MR10025 are authorized to modify company & amount during approval.
     """
     if not is_accounts_allowed_employee(employee):
         raise HTTPException(
@@ -7880,6 +7929,27 @@ def approve_expense_entry(
             status_code=400,
             detail=f"Cannot process expense in {expense.status} status"
         )
+    
+    # Check MR10001 / MR10025 permissions for company and amount override
+    is_override_allowed = getattr(employee, 'emp_code', None) in ['MR10001', 'MR10025']
+    if company_id is not None and company_id != expense.company_id:
+        if not is_override_allowed:
+            raise HTTPException(
+                status_code=403,
+                detail="Only MR10001 and MR10025 are authorized to modify company during approval"
+            )
+        expense.company_id = company_id
+
+    if amount is not None:
+        new_amt = Decimal(str(amount))
+        if new_amt >= 0 and new_amt != expense.amount:
+            if not is_override_allowed:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Only MR10001 and MR10025 are authorized to modify amount during approval"
+                )
+            expense.amount = new_amt
+            expense.net_amount = new_amt
     
     old_status = expense.status
     
@@ -8020,6 +8090,68 @@ def toggle_expense_show_in_ledger(
     return expense
 
 
+def toggle_expense_external(
+    db: Session,
+    employee: StaffEmployee,
+    entry_id: int,
+    is_external: bool
+) -> ExpenseEntry:
+    """DC-EXTERNAL-001: toggle external party flag on expense entry."""
+    expense = db.query(ExpenseEntry).filter(ExpenseEntry.id == entry_id).first()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense entry not found")
+
+    if not is_accounts_allowed_employee(employee) and expense.created_by_id != employee.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    expense.is_external = bool(is_external)
+    expense.updated_by_id = employee.id
+    expense.updated_at = get_indian_time()
+    db.commit()
+    db.refresh(expense)
+
+    log_accounts_audit(
+        db=db,
+        employee_id=employee.id,
+        action="TOGGLE_EXTERNAL",
+        entity_type="ExpenseEntry",
+        entity_id=expense.id,
+        new_values={"is_external": expense.is_external},
+        description=f"Expense entry {expense.entry_number} is_external set to {expense.is_external}"
+    )
+    return expense
+
+
+def toggle_income_external(
+    db: Session,
+    employee: StaffEmployee,
+    entry_id: int,
+    is_external: bool
+) -> IncomeEntry:
+    """DC-EXTERNAL-001: toggle external party flag on income entry."""
+    validate_accounts_access(employee)
+    entry = db.query(IncomeEntry).filter(IncomeEntry.id == entry_id).first()
+    if not entry:
+        raise AccountsNotFoundError(f"Income entry with ID {entry_id} not found")
+
+    entry.is_external = bool(is_external)
+    entry.updated_by_id = employee.id
+    entry.updated_at = get_indian_time()
+    db.commit()
+    db.refresh(entry)
+
+    log_accounts_audit(
+        db=db,
+        employee_id=employee.id,
+        action="TOGGLE_EXTERNAL",
+        entity_type="IncomeEntry",
+        entity_id=entry.id,
+        new_values={"is_external": entry.is_external},
+        description=f"Income entry {entry.entry_number} is_external set to {entry.is_external}"
+    )
+    return entry
+
+
 def list_expense_entries(
     db: Session,
     employee: StaffEmployee,
@@ -8052,6 +8184,10 @@ def list_expense_entries(
             query = query.filter(ExpenseEntry.created_by_id == filters['employee_id'])
     elif not is_accounts_allowed_employee(employee):
         query = query.filter(ExpenseEntry.created_by_id == employee.id)
+
+    # Hide MR10001 from all users except MR10001
+    if getattr(employee, 'emp_code', None) != 'MR10001':
+        query = query.filter(ExpenseEntry.created_by_id != 1)
     
     if filters.get('company_id'):
         query = query.filter(ExpenseEntry.company_id == filters['company_id'])
@@ -8112,6 +8248,674 @@ def list_expense_entries(
     entries = query.order_by(ExpenseEntry.created_at.desc()).offset(offset).limit(page_size).all()
     
     return entries, total, summary
+
+
+def list_unified_employee_ledger(
+    db: Session,
+    employee: StaffEmployee,
+    filters: dict
+) -> tuple:
+    """
+    Unified Employee Ledger & Passbook Statement:
+    Merges all financial movements for an employee in real time:
+    1. IN (Credits):
+       - Income entries credited to employee (service ticket collections & direct receipts)
+       - Bank / Fund Allocations allocated to employee
+       - Fund Transfers received from another employee
+       - Opening Balance
+    2. OUT (Debits):
+       - Expense entries recorded/spent by employee
+       - Fund Transfers sent to another employee
+    3. Calculates running balance chronologically across the unified timeline.
+    """
+    from app.models.staff_accounts import (
+        IncomeEntry, ExpenseEntry, FundAllocation, EmployeeFundTransfer,
+        EmployeeFundLedger, AssociatedCompany, ExpenseMainCategory, PartyLedger
+    )
+    from app.utils.staff_hierarchy import get_recursive_downline
+
+    team_view = bool(filters.get('team_view', False))
+    filter_emp_id = filters.get('employee_id')
+
+    target_emp_ids = None
+    if filters.get('employee_ids'):
+        target_emp_ids = [int(x) for x in filters['employee_ids']]
+    elif filter_emp_id:
+        target_emp_ids = [int(filter_emp_id)]
+    elif team_view:
+        if is_accounts_allowed_employee(employee) or getattr(employee, 'emp_code', None) in ['MR10001', 'MR10025']:
+            target_emp_ids = None  # Accounts / Admins see all active staff
+        else:
+            downlines = get_recursive_downline(employee.id, db, StaffEmployee, include_manager=False)
+            target_emp_ids = downlines if downlines else [-999999]
+    else:
+        target_emp_ids = [employee.id]
+
+    comp_id = filters.get('company_id')
+    from_d = filters.get('from_date')
+    to_d = filters.get('to_date')
+    status_f = filters.get('status')
+    type_f = filters.get('entry_type')
+    category_id = filters.get('main_category_id') or filters.get('category_id')
+    page = filters.get('page', 1)
+    page_size = filters.get('page_size', 20)
+
+    # 1. Income entries where destination is in target_emp_ids
+    q_ie = db.query(IncomeEntry).filter(IncomeEntry.is_deleted == False)
+    if target_emp_ids is not None:
+        q_ie = q_ie.filter(IncomeEntry.destination_employee_id.in_(target_emp_ids))
+    else:
+        q_ie = q_ie.filter(IncomeEntry.destination_employee_id.isnot(None))
+    if comp_id:
+        q_ie = q_ie.filter(IncomeEntry.company_id == comp_id)
+
+    # 2. Fund allocations
+    q_fa = db.query(FundAllocation)
+    if target_emp_ids is not None:
+        q_fa = q_fa.filter(FundAllocation.to_employee_id.in_(target_emp_ids))
+    if comp_id:
+        q_fa = q_fa.filter(FundAllocation.company_id == comp_id)
+
+    # 3. Fund transfers
+    q_ft = db.query(EmployeeFundTransfer)
+    if target_emp_ids is not None:
+        q_ft = q_ft.filter(
+            (EmployeeFundTransfer.to_employee_id.in_(target_emp_ids)) | (EmployeeFundTransfer.from_employee_id.in_(target_emp_ids))
+        )
+    if comp_id:
+        q_ft = q_ft.filter(EmployeeFundTransfer.company_id == comp_id)
+
+    # 4. Opening Balance
+    q_ob = db.query(EmployeeFundLedger).filter(EmployeeFundLedger.entry_type == 'OPENING_BALANCE')
+    if target_emp_ids is not None:
+        q_ob = q_ob.filter(EmployeeFundLedger.employee_id.in_(target_emp_ids))
+    if comp_id:
+        q_ob = q_ob.filter(EmployeeFundLedger.company_id == comp_id)
+
+    # 5. Expenses
+    q_exp = db.query(ExpenseEntry)
+    if target_emp_ids is not None:
+        q_exp = q_exp.filter(ExpenseEntry.created_by_id.in_(target_emp_ids))
+    if comp_id:
+        q_exp = q_exp.filter(ExpenseEntry.company_id == comp_id)
+    if category_id:
+        q_exp = q_exp.filter(ExpenseEntry.main_category_id == category_id)
+
+    comp_map = {c.id: c.company_name for c in db.query(AssociatedCompany).all()}
+    cat_map = {c.id: c.name for c in db.query(ExpenseMainCategory).all()}
+    all_staff = db.query(StaffEmployee).all()
+    emp_map = {e.id: f"{e.full_name} ({e.emp_code})" for e in all_staff}
+    emp_name_map = {e.id: e.full_name for e in all_staff}
+    emp_code_map = {e.id: e.emp_code for e in all_staff}
+
+    all_entries = []
+
+    ie_list = q_ie.all()
+    fa_list = q_fa.all()
+    ft_list = q_ft.all()
+    ob_list = q_ob.all()
+    exp_list = q_exp.all()
+
+    for ie in ie_list:
+        amt = float(ie.amount or 0)
+        sp_amt = float(ie.spares_amount or 0)
+        sv_amt = float(ie.service_amount or 0)
+        tot_amt = float(ie.ticket_total_amount or (sp_amt + sv_amt if (sp_amt or sv_amt) else amt))
+        sil = bool(getattr(ie, 'show_in_ledger', False))
+        ext = bool(getattr(ie, 'is_external', False))
+        dest_emp_id = ie.destination_employee_id
+        dest_emp_name = emp_name_map.get(dest_emp_id, 'Employee')
+        dest_emp_code = emp_code_map.get(dest_emp_id, '')
+
+        # Split into separate Spares and Labour entries if both exist
+        if sp_amt > 0 and sv_amt > 0:
+            # 1. Spares Entry
+            all_entries.append({
+                'id': f"{ie.id}_spares",
+                'real_id': ie.id,
+                'parent_income_id': ie.id,
+                'entry_number': f"{ie.entry_number or f'IE-{ie.id}'}-SP",
+                'expense_date': str(ie.income_date) if ie.income_date else '',
+                'company_id': ie.company_id,
+                'company_name': comp_map.get(ie.company_id, 'Company'),
+                'employee_id': dest_emp_id,
+                'employee_name': dest_emp_name,
+                'created_by_name': dest_emp_name,
+                'emp_code': dest_emp_code,
+                'entry_type': 'INCOME',
+                'sub_type': 'SPARES',
+                'direction': 'IN',
+                'category_name': 'Service Spares',
+                'party_name': ie.payer_name or 'Customer',
+                'narration': f"Spares: {ie.narration or ''}".strip(),
+                'credit_amount': sp_amt,
+                'debit_amount': 0.0,
+                'amount': sp_amt,
+                'status': ie.status or 'CONFIRMED',
+                'is_paid': True if ie.status == 'CONFIRMED' else False,
+                'show_in_ledger': sil,
+                'is_external': ext,
+                'spares_amount': sp_amt,
+                'service_amount': 0.0,
+                'ticket_total_amount': tot_amt,
+                'ticket_ref': ie.reference_id or ie.entry_number or str(ie.id),
+                'reference_id': ie.reference_id or ie.id,
+                'reference_type': ie.reference_type or 'INCOME_ENTRY',
+                'created_at': ie.created_at.isoformat() if ie.created_at else ''
+            })
+            # 2. Service/Labour Entry
+            all_entries.append({
+                'id': f"{ie.id}_labour",
+                'real_id': ie.id,
+                'parent_income_id': ie.id,
+                'entry_number': f"{ie.entry_number or f'IE-{ie.id}'}-SV",
+                'expense_date': str(ie.income_date) if ie.income_date else '',
+                'company_id': ie.company_id,
+                'company_name': comp_map.get(ie.company_id, 'Company'),
+                'employee_id': dest_emp_id,
+                'employee_name': dest_emp_name,
+                'created_by_name': dest_emp_name,
+                'emp_code': dest_emp_code,
+                'entry_type': 'INCOME',
+                'sub_type': 'LABOUR',
+                'direction': 'IN',
+                'category_name': 'Service Labour',
+                'party_name': ie.payer_name or 'Customer',
+                'narration': f"Labour: {ie.narration or ''}".strip(),
+                'credit_amount': sv_amt,
+                'debit_amount': 0.0,
+                'amount': sv_amt,
+                'status': ie.status or 'CONFIRMED',
+                'is_paid': True if ie.status == 'CONFIRMED' else False,
+                'show_in_ledger': sil,
+                'is_external': ext,
+                'spares_amount': 0.0,
+                'service_amount': sv_amt,
+                'ticket_total_amount': tot_amt,
+                'ticket_ref': ie.reference_id or ie.entry_number or str(ie.id),
+                'reference_id': ie.reference_id or ie.id,
+                'reference_type': ie.reference_type or 'INCOME_ENTRY',
+                'created_at': ie.created_at.isoformat() if ie.created_at else ''
+            })
+        else:
+            cat_name = 'Service Spares' if sp_amt > 0 else ('Service Labour' if sv_amt > 0 else ('Service Ticket Income' if ie.reference_type in ['SERVICE_TICKET', 'SERVICE_SPARE', 'SERVICE_BILLING'] else 'Direct Income'))
+            sub_t = 'SPARES' if sp_amt > 0 else ('LABOUR' if sv_amt > 0 else 'DIRECT')
+            all_entries.append({
+                'id': ie.id,
+                'real_id': ie.id,
+                'parent_income_id': ie.id,
+                'entry_number': ie.entry_number or f'IE-{ie.id}',
+                'expense_date': str(ie.income_date) if ie.income_date else '',
+                'company_id': ie.company_id,
+                'company_name': comp_map.get(ie.company_id, 'Company'),
+                'employee_id': dest_emp_id,
+                'employee_name': dest_emp_name,
+                'created_by_name': dest_emp_name,
+                'emp_code': dest_emp_code,
+                'entry_type': 'INCOME',
+                'sub_type': sub_t,
+                'direction': 'IN',
+                'category_name': cat_name,
+                'party_name': ie.payer_name or 'Customer',
+                'narration': ie.narration or '',
+                'credit_amount': amt,
+                'debit_amount': 0.0,
+                'amount': amt,
+                'status': ie.status or 'CONFIRMED',
+                'is_paid': True if ie.status == 'CONFIRMED' else False,
+                'show_in_ledger': sil,
+                'is_external': ext,
+                'spares_amount': sp_amt,
+                'service_amount': sv_amt,
+                'ticket_total_amount': tot_amt,
+                'ticket_ref': ie.reference_id or ie.entry_number or str(ie.id),
+                'reference_id': ie.reference_id or ie.id,
+                'reference_type': ie.reference_type or 'INCOME_ENTRY',
+                'created_at': ie.created_at.isoformat() if ie.created_at else ''
+            })
+
+    for fa in fa_list:
+        amt = float(fa.amount or 0)
+        fa_emp_name = emp_name_map.get(fa.to_employee_id, 'Employee')
+        fa_emp_code = emp_code_map.get(fa.to_employee_id, '')
+        all_entries.append({
+            'id': fa.id,
+            'real_id': fa.id,
+            'entry_number': fa.allocation_number or f'FA-{fa.id}',
+            'expense_date': str(fa.allocation_date) if fa.allocation_date else '',
+            'company_id': fa.company_id,
+            'company_name': comp_map.get(fa.company_id, 'Company'),
+            'employee_id': fa.to_employee_id,
+            'employee_name': fa_emp_name,
+            'created_by_name': fa_emp_name,
+            'emp_code': fa_emp_code,
+            'entry_type': 'FUND_ALLOCATION',
+            'sub_type': 'ALLOCATION',
+            'direction': 'IN',
+            'category_name': 'Bank / Fund Allocation',
+            'party_name': 'Company / Bank Allocation',
+            'narration': fa.purpose or '',
+            'credit_amount': amt,
+            'debit_amount': 0.0,
+            'amount': amt,
+            'status': fa.status or 'CONFIRMED',
+            'is_paid': True,
+            'show_in_ledger': True,
+            'is_external': False,
+            'reference_id': fa.id,
+            'reference_type': 'FUND_ALLOCATION',
+            'created_at': fa.created_at.isoformat() if fa.created_at else ''
+        })
+
+    for ft in ft_list:
+        amt = float(ft.amount or 0)
+        from_id = ft.from_employee_id
+        to_id = ft.to_employee_id
+
+        # 1. Receiver entry (IN)
+        if target_emp_ids is None or to_id in target_emp_ids:
+            from_party = emp_map.get(from_id, 'Employee')
+            all_entries.append({
+                'id': f"ft_in_{ft.id}",
+                'real_id': ft.id,
+                'entry_number': ft.transfer_number or f'FT-{ft.id}',
+                'expense_date': str(ft.transfer_date) if ft.transfer_date else '',
+                'company_id': ft.company_id,
+                'company_name': comp_map.get(ft.company_id, 'Company'),
+                'employee_id': to_id,
+                'employee_name': emp_name_map.get(to_id, 'Employee'),
+                'created_by_name': emp_name_map.get(to_id, 'Employee'),
+                'emp_code': emp_code_map.get(to_id, ''),
+                'entry_type': 'TRANSFER_IN',
+                'sub_type': 'TRANSFER',
+                'direction': 'IN',
+                'category_name': 'Employee Fund Transfer',
+                'party_name': f"From {from_party}",
+                'narration': ft.purpose or ft.remarks or '',
+                'credit_amount': amt,
+                'debit_amount': 0.0,
+                'amount': amt,
+                'status': ft.status or 'CONFIRMED',
+                'is_paid': True,
+                'show_in_ledger': True,
+                'is_external': False,
+                'reference_id': ft.id,
+                'reference_type': 'FUND_TRANSFER',
+                'created_at': ft.created_at.isoformat() if ft.created_at else ''
+            })
+
+        # 2. Sender entry (OUT)
+        if target_emp_ids is None or from_id in target_emp_ids:
+            to_party = emp_map.get(to_id, 'Employee')
+            all_entries.append({
+                'id': f"ft_out_{ft.id}",
+                'real_id': ft.id,
+                'entry_number': ft.transfer_number or f'FT-{ft.id}',
+                'expense_date': str(ft.transfer_date) if ft.transfer_date else '',
+                'company_id': ft.company_id,
+                'company_name': comp_map.get(ft.company_id, 'Company'),
+                'employee_id': from_id,
+                'employee_name': emp_name_map.get(from_id, 'Employee'),
+                'created_by_name': emp_name_map.get(from_id, 'Employee'),
+                'emp_code': emp_code_map.get(from_id, ''),
+                'entry_type': 'TRANSFER_OUT',
+                'sub_type': 'TRANSFER',
+                'direction': 'OUT',
+                'category_name': 'Employee Fund Transfer',
+                'party_name': f"To {to_party}",
+                'narration': ft.purpose or ft.remarks or '',
+                'credit_amount': 0.0,
+                'debit_amount': amt,
+                'amount': amt,
+                'status': ft.status or 'CONFIRMED',
+                'is_paid': True,
+                'show_in_ledger': True,
+                'is_external': False,
+                'reference_id': ft.id,
+                'reference_type': 'FUND_TRANSFER',
+                'created_at': ft.created_at.isoformat() if ft.created_at else ''
+            })
+
+    for ob in ob_list:
+        amt = float(ob.credit_amount or 0)
+        all_entries.append({
+            'id': ob.id,
+            'real_id': ob.id,
+            'entry_number': ob.reference_number or f'OB-{ob.id}',
+            'expense_date': str(ob.transaction_date) if ob.transaction_date else '',
+            'company_id': ob.company_id,
+            'company_name': comp_map.get(ob.company_id, 'Company'),
+            'employee_id': ob.employee_id,
+            'employee_name': emp_name_map.get(ob.employee_id, 'Employee'),
+            'created_by_name': emp_name_map.get(ob.employee_id, 'Employee'),
+            'emp_code': emp_code_map.get(ob.employee_id, ''),
+            'entry_type': 'OPENING_BALANCE',
+            'sub_type': 'OPENING_BAL',
+            'direction': 'IN',
+            'category_name': 'Opening Balance',
+            'party_name': 'Opening Balance',
+            'narration': ob.narration or '',
+            'credit_amount': amt,
+            'debit_amount': 0.0,
+            'amount': amt,
+            'status': 'CONFIRMED',
+            'is_paid': True,
+            'show_in_ledger': True,
+            'is_external': False,
+            'reference_id': ob.id,
+            'reference_type': 'OPENING_BALANCE',
+            'created_at': ob.created_at.isoformat() if ob.created_at else ''
+        })
+
+    for exp in exp_list:
+        amt = float(exp.amount or 0)
+        sil = bool(getattr(exp, 'show_in_ledger', False))
+        ext = bool(getattr(exp, 'is_external', False))
+        all_entries.append({
+            'id': exp.id,
+            'real_id': exp.id,
+            'entry_number': exp.entry_number or f'EXP-{exp.id}',
+            'expense_date': str(exp.expense_date) if exp.expense_date else '',
+            'company_id': exp.company_id,
+            'company_name': comp_map.get(exp.company_id, 'Company'),
+            'employee_id': exp.created_by_id,
+            'employee_name': emp_name_map.get(exp.created_by_id, 'Employee'),
+            'created_by_name': emp_name_map.get(exp.created_by_id, 'Employee'),
+            'emp_code': emp_code_map.get(exp.created_by_id, ''),
+            'entry_type': 'EXPENSE',
+            'sub_type': 'EXPENSE',
+            'direction': 'OUT',
+            'category_name': cat_map.get(exp.main_category_id, 'Expense'),
+            'party_name': exp.vendor_name or '-',
+            'narration': exp.narration or '',
+            'credit_amount': 0.0,
+            'debit_amount': amt,
+            'amount': amt,
+            'status': exp.status or 'DRAFT',
+            'is_paid': exp.is_paid or False,
+            'show_in_ledger': sil,
+            'is_external': ext,
+            'tally_status': exp.tally_status or 'NOT SYNCED',
+            'fund_allocation_id': exp.fund_allocation_id,
+            'bill_path': exp.bill_path,
+            'bank_ledger_category': exp.bank_ledger_category,
+            'custom_category_name': exp.custom_category_name,
+            'created_by_id': exp.created_by_id,
+            'reference_id': exp.id,
+            'reference_type': 'EXPENSE_ENTRY',
+            'created_at': exp.created_at.isoformat() if exp.created_at else ''
+        })
+
+    # 6. Bank & Party Ledger Vouchers for Employees
+    try:
+        fa_refs = {fa.allocation_number for fa in fa_list if fa.allocation_number}
+        fa_ids = {fa.id for fa in fa_list}
+        exp_refs = {exp.entry_number for exp in exp_list if exp.entry_number}
+        exp_ids = {exp.id for exp in exp_list}
+        ie_refs = {ie.entry_number for ie in ie_list if ie.entry_number}
+        ft_refs = {ft.transfer_number for ft in ft_list if ft.transfer_number}
+
+        q_pl = db.query(PartyLedger).filter(
+            PartyLedger.party_type == 'EMPLOYEE'
+        )
+        if target_emp_ids is not None:
+            from sqlalchemy import func, or_
+            target_names_lower = [emp_name_map[eid].lower() for eid in target_emp_ids if eid in emp_name_map]
+            q_pl = q_pl.filter(
+                or_(
+                    PartyLedger.party_id.in_(target_emp_ids),
+                    func.lower(PartyLedger.party_name).in_(target_names_lower)
+                )
+            )
+        if comp_id:
+            q_pl = q_pl.filter(PartyLedger.company_id == comp_id)
+
+        for pl in q_pl.all():
+            if (pl.reference_number and (pl.reference_number in fa_refs or pl.reference_number in exp_refs or pl.reference_number in ie_refs or pl.reference_number in ft_refs)) or (pl.reference_type in ['FUND_TRANSFER', 'FUND_ALLOCATION'] and pl.reference_id in fa_ids) or (pl.reference_type == 'EXPENSE_ENTRY' and pl.reference_id in exp_ids):
+                continue
+
+            dr = float(pl.debit_amount or 0)
+            cr = float(pl.credit_amount or 0)
+            v_type = (pl.voucher_type or '').upper()
+
+            pl_emp_id = pl.party_id if pl.party_id in emp_name_map else None
+            if not pl_emp_id:
+                for eid, nm in emp_name_map.items():
+                    if nm.lower() in (pl.party_name or '').lower() or (pl.party_name or '').lower() in nm.lower():
+                        pl_emp_id = eid
+                        break
+            if not pl_emp_id and target_emp_ids and len(target_emp_ids) == 1:
+                pl_emp_id = target_emp_ids[0]
+
+            pl_emp_name = emp_name_map.get(pl_emp_id, pl.party_name or 'Employee')
+            pl_emp_code = emp_code_map.get(pl_emp_id, '')
+
+            if v_type == 'PAYMENT':
+                amt = dr or cr
+                if amt <= 0:
+                    continue
+                all_entries.append({
+                    'id': f"pl_pay_{pl.id}",
+                    'real_id': pl.id,
+                    'entry_number': pl.reference_number or f'PAY-{pl.id}',
+                    'expense_date': str(pl.transaction_date) if pl.transaction_date else '',
+                    'company_id': pl.company_id,
+                    'company_name': comp_map.get(pl.company_id, 'Company'),
+                    'employee_id': pl_emp_id,
+                    'employee_name': pl_emp_name,
+                    'created_by_name': pl_emp_name,
+                    'emp_code': pl_emp_code,
+                    'entry_type': 'BANK_PAYMENT',
+                    'sub_type': 'BANK_VOUCHER',
+                    'direction': 'IN',
+                    'category_name': 'Bank Payment / Voucher',
+                    'party_name': pl.particulars or 'Bank Account',
+                    'narration': pl.narration or f"Bank Payment: {pl.particulars or ''}",
+                    'credit_amount': amt,
+                    'debit_amount': 0.0,
+                    'amount': amt,
+                    'status': 'CONFIRMED',
+                    'is_paid': True,
+                    'show_in_ledger': True,
+                    'is_external': False,
+                    'reference_id': pl.id,
+                    'reference_type': 'PARTY_LEDGER',
+                    'created_at': pl.created_at.isoformat() if pl.created_at else ''
+                })
+            elif v_type == 'RECEIPT':
+                amt = dr or cr
+                if amt <= 0:
+                    continue
+                all_entries.append({
+                    'id': f"pl_rcpt_{pl.id}",
+                    'real_id': pl.id,
+                    'entry_number': pl.reference_number or f'RCPT-{pl.id}',
+                    'expense_date': str(pl.transaction_date) if pl.transaction_date else '',
+                    'company_id': pl.company_id,
+                    'company_name': comp_map.get(pl.company_id, 'Company'),
+                    'employee_id': pl_emp_id,
+                    'employee_name': pl_emp_name,
+                    'created_by_name': pl_emp_name,
+                    'emp_code': pl_emp_code,
+                    'entry_type': 'BANK_RECEIPT',
+                    'sub_type': 'BANK_REFUND',
+                    'direction': 'OUT',
+                    'category_name': 'Bank Receipt / Refund',
+                    'party_name': pl.particulars or 'Bank Account',
+                    'narration': pl.narration or f"Bank Receipt: {pl.particulars or ''}",
+                    'credit_amount': 0.0,
+                    'debit_amount': amt,
+                    'amount': amt,
+                    'status': 'CONFIRMED',
+                    'is_paid': True,
+                    'show_in_ledger': True,
+                    'is_external': False,
+                    'reference_id': pl.id,
+                    'reference_type': 'PARTY_LEDGER',
+                    'created_at': pl.created_at.isoformat() if pl.created_at else ''
+                })
+            elif v_type == 'JOURNAL':
+                if cr > 0:
+                    all_entries.append({
+                        'id': f"pl_jv_cr_{pl.id}",
+                        'real_id': pl.id,
+                        'entry_number': pl.reference_number or f'JV-{pl.id}',
+                        'expense_date': str(pl.transaction_date) if pl.transaction_date else '',
+                        'company_id': pl.company_id,
+                        'company_name': comp_map.get(pl.company_id, 'Company'),
+                        'employee_id': pl_emp_id,
+                        'employee_name': pl_emp_name,
+                        'created_by_name': pl_emp_name,
+                        'emp_code': pl_emp_code,
+                        'entry_type': 'JOURNAL_VOUCHER',
+                        'sub_type': 'JOURNAL_CR',
+                        'direction': 'IN',
+                        'category_name': 'Journal Voucher',
+                        'party_name': pl.particulars or 'Journal Adjustment',
+                        'narration': pl.narration or f"Journal: {pl.particulars or ''}",
+                        'credit_amount': cr,
+                        'debit_amount': 0.0,
+                        'amount': cr,
+                        'status': 'CONFIRMED',
+                        'is_paid': True,
+                        'show_in_ledger': True,
+                        'is_external': False,
+                        'reference_id': pl.id,
+                        'reference_type': 'PARTY_LEDGER',
+                        'created_at': pl.created_at.isoformat() if pl.created_at else ''
+                    })
+                elif dr > 0:
+                    all_entries.append({
+                        'id': f"pl_jv_dr_{pl.id}",
+                        'real_id': pl.id,
+                        'entry_number': pl.reference_number or f'JV-{pl.id}',
+                        'expense_date': str(pl.transaction_date) if pl.transaction_date else '',
+                        'company_id': pl.company_id,
+                        'company_name': comp_map.get(pl.company_id, 'Company'),
+                        'employee_id': pl_emp_id,
+                        'employee_name': pl_emp_name,
+                        'created_by_name': pl_emp_name,
+                        'emp_code': pl_emp_code,
+                        'entry_type': 'JOURNAL_VOUCHER',
+                        'sub_type': 'JOURNAL_DR',
+                        'direction': 'OUT',
+                        'category_name': 'Journal Voucher',
+                        'party_name': pl.particulars or 'Journal Adjustment',
+                        'narration': pl.narration or f"Journal: {pl.particulars or ''}",
+                        'credit_amount': 0.0,
+                        'debit_amount': dr,
+                        'amount': dr,
+                        'status': 'CONFIRMED',
+                        'is_paid': True,
+                        'show_in_ledger': True,
+                        'is_external': False,
+                        'reference_id': pl.id,
+                        'reference_type': 'PARTY_LEDGER',
+                        'created_at': pl.created_at.isoformat() if pl.created_at else ''
+                    })
+    except Exception as _pl_err:
+        import logging
+        logging.getLogger(__name__).warning(f"[EXP-LEDGER-PL-VOUCHERS] Safe bypass on party ledger query: {_pl_err}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+    # Exclude MR10001 (id=1 or emp_code='MR10001') from unified ledger when viewer is not MR10001
+    if getattr(employee, 'emp_code', None) != 'MR10001':
+        all_entries = [
+            e for e in all_entries 
+            if str(e.get('emp_code', '')).strip().upper() != 'MR10001' and e.get('employee_id') != 1
+        ]
+
+    # Sort chronologically ASC to calculate exact running balance
+    all_entries.sort(key=lambda x: (x['expense_date'] or (x['created_at'][:10] if x['created_at'] else ''), x['created_at'] or '', str(x['id'])))
+
+    # Compute running balance per employee
+    emp_running = {}
+    for e in all_entries:
+        eid = e.get('employee_id')
+        bal = emp_running.get(eid, 0.0) + (e['credit_amount'] - e['debit_amount'])
+        emp_running[eid] = bal
+        e['running_balance'] = round(bal, 2)
+
+    # Apply user filters
+    filtered = all_entries
+    if from_d:
+        filtered = [e for e in filtered if e['expense_date'] and str(e['expense_date']) >= str(from_d)]
+    if to_d:
+        filtered = [e for e in filtered if e['expense_date'] and str(e['expense_date']) <= str(to_d)]
+    if status_f:
+        filtered = [e for e in filtered if e['status'] == status_f]
+    
+    # Ledger filter (All / In Ledger / Excluded)
+    ledger_f = filters.get('ledger_filter')
+    if ledger_f:
+        lf = ledger_f.lower().strip()
+        if lf in ['in_ledger', 'ledger', 'true', '1', 'ledger_only']:
+            filtered = [e for e in filtered if e.get('show_in_ledger')]
+        elif lf in ['excluded', 'non_ledger', 'false', '0']:
+            filtered = [e for e in filtered if not e.get('show_in_ledger')]
+
+    # External filter (All / External / Internal)
+    external_f = filters.get('external_filter')
+    if external_f:
+        ef = external_f.lower().strip()
+        if ef in ['external', 'true', '1', 'external_only']:
+            filtered = [e for e in filtered if e.get('is_external')]
+        elif ef in ['internal', 'false', '0', 'internal_only']:
+            filtered = [e for e in filtered if not e.get('is_external')]
+
+    if type_f:
+        tf = type_f.upper().strip()
+        if tf == 'IN':
+            filtered = [e for e in filtered if e['direction'] == 'IN']
+        elif tf == 'OUT':
+            filtered = [e for e in filtered if e['direction'] == 'OUT']
+        elif tf == 'SPARES':
+            filtered = [e for e in filtered if e.get('sub_type') == 'SPARES']
+        elif tf in ['LABOUR', 'SERVICE']:
+            filtered = [e for e in filtered if e.get('sub_type') == 'LABOUR' or (tf == 'SERVICE' and e.get('entry_type') == 'INCOME')]
+        elif tf in ['INCOME', 'EXPENSE', 'FUND_ALLOCATION', 'OPENING_BALANCE', 'BANK_PAYMENT', 'BANK_RECEIPT', 'JOURNAL_VOUCHER']:
+            filtered = [e for e in filtered if e['entry_type'] == tf]
+        elif tf == 'TRANSFER':
+            filtered = [e for e in filtered if 'TRANSFER' in e['entry_type']]
+
+    # Compute summary counters dynamically on the filtered slice
+    total_in = sum(e['credit_amount'] for e in filtered)
+    total_out = sum(e['debit_amount'] for e in filtered)
+    draft_entries = [e for e in filtered if e['entry_type'] == 'EXPENSE' and e['status'] == 'DRAFT']
+    submitted_entries = [e for e in filtered if e['entry_type'] == 'EXPENSE' and e['status'] == 'SUBMITTED']
+    approved_entries = [e for e in filtered if e['entry_type'] == 'EXPENSE' and e['status'] == 'APPROVED']
+    rejected_entries = [e for e in filtered if e['entry_type'] == 'EXPENSE' and e['status'] == 'REJECTED']
+    paid_entries = [e for e in filtered if e['entry_type'] == 'EXPENSE' and e.get('is_paid')]
+
+    summary = {
+        'total_in': round(total_in, 2),
+        'total_out': round(total_out, 2),
+        'net_balance': round(total_in - total_out, 2),
+        'total_amount': round(total_out, 2),
+        'draft_count': len(draft_entries),
+        'draft_amount': round(sum(e['debit_amount'] for e in draft_entries), 2),
+        'submitted_count': len(submitted_entries),
+        'submitted_amount': round(sum(e['debit_amount'] for e in submitted_entries), 2),
+        'approved_count': len(approved_entries),
+        'total_approved_amount': round(sum(e['debit_amount'] for e in approved_entries), 2),
+        'rejected_count': len(rejected_entries),
+        'rejected_amount': round(sum(e['debit_amount'] for e in rejected_entries), 2),
+        'paid_count': len(paid_entries),
+        'paid_amount': round(sum(e['debit_amount'] for e in paid_entries), 2),
+        'total_paid_amount': round(sum(e['debit_amount'] for e in paid_entries), 2)
+    }
+
+    # Sort DESC for user view (newest on top)
+    filtered.sort(key=lambda x: (x['expense_date'] or (x['created_at'][:10] if x['created_at'] else ''), x['created_at'] or '', str(x['id'])), reverse=True)
+
+    total_filtered = len(filtered)
+    offset = (page - 1) * page_size
+    paged_entries = filtered[offset:offset + page_size]
+
+    return paged_entries, total_filtered, summary
 
 
 def mark_expense_paid(
@@ -19717,7 +20521,8 @@ class LedgerPostingService:
     def _add_acct(db, company_id, account_type, account_name, txn_date, entry_type,
                   ref_type, ref_id, ref_number, amount, narration, voucher_type,
                   particulars, created_by_id, now,
-                  main_category_id=None, sub_category_id=None):
+                  main_category_id=None, sub_category_id=None,
+                  is_expense_advance=False):
         from app.models.staff_accounts import AccountLedger as _AL
         _DEBIT_NORMAL = {'BANK', 'CASH', 'UPI', 'EXPENSE', 'ASSET'}
         bal = LedgerPostingService._get_acct_balance(db, company_id, account_type, account_name)
@@ -19750,6 +20555,7 @@ class LedgerPostingService:
             voucher_type=voucher_type,
             particulars=particulars,
             source_status=_al_src,
+            is_expense_advance=bool(is_expense_advance),
             main_category_id=main_category_id,
             sub_category_id=sub_category_id,
             created_by_id=created_by_id,
@@ -19777,15 +20583,15 @@ class LedgerPostingService:
             ).first()
             if not existing:
                 _parent = (
-                    'Vendors & Sundry Creditors' if party_type in ('VENDOR',)
-                    else 'Customers & Debtors' if party_type in ('CUSTOMER', 'MNR_USER')
-                    else 'Staff & Employee Accounts' if party_type in ('EMPLOYEE', 'STAFF')
-                    else 'Parties & Sundry Creditors'
+                    'Sundry Debtors'   if party_type in ('CUSTOMER', 'USER')
+                    else 'Staff Ledger' if party_type == 'EMPLOYEE'
+                    else 'Sundry Creditors'
                 )
                 db.add(_ALM(
                     company_id=company_id,
                     account_type='PARTY',
                     account_name=_name,
+                    account_code=None,
                     description=f'Auto-created party ledger [{party_type}]',
                     parent_group=_parent,
                     opening_balance=Decimal('0'),
@@ -19807,7 +20613,8 @@ class LedgerPostingService:
     def _add_party(db, company_id, party_type, party_id, party_name, txn_date, entry_type,
                    ref_type, ref_id, ref_number, amount, narration, voucher_type,
                    particulars, updated_by_id, now,
-                   main_category_id=None, sub_category_id=None):
+                   main_category_id=None, sub_category_id=None,
+                   is_expense_advance=False):
         from app.models.staff_accounts import PartyLedger as _PL
         # DC-PL-TYPE-NORM-001: Normalise party_type to values accepted by party_ledger CHECK
         # constraint before every INSERT. 'STAFF' → 'EMPLOYEE'; 'USER'/'VGK_MEMBER' → 'USER'.
@@ -19843,6 +20650,7 @@ class LedgerPostingService:
             voucher_type=voucher_type,
             particulars=particulars,
             source_status=_pl_src,
+            is_expense_advance=bool(is_expense_advance),
             main_category_id=main_category_id,
             sub_category_id=sub_category_id,
             updated_by_id=updated_by_id,
@@ -20848,6 +21656,7 @@ class JournalVoucherService:
         linked_doc_id: int = None,     # DC-BANK-002: VendorTransactionHeader.id or GeneratedInvoice.id
         category_id: int = None,       # DC_CATPICKER_001: expense sub-category tag
         income_category_id: int = None,  # DC_INCOME_CAT_001: income sub-category tag
+        is_expense_advance: bool = False, # DC_EXP_ADVANCE_001: staff operational expense advance
     ):
         from app.models.staff_accounts import JournalVoucher as _JV
         validate_accounts_access(employee)
@@ -20882,6 +21691,7 @@ class JournalVoucherService:
             reference_number=reference_number,
             category_id=category_id if category_id else None,
             income_category_id=income_category_id if income_category_id else None,
+            is_expense_advance=bool(is_expense_advance),
             status='POSTED',
             created_by_id=employee.id,
             created_at=now,
@@ -20909,7 +21719,8 @@ class JournalVoucherService:
             voucher_date, 'DEBIT', 'JOURNAL', jv.id, vnum, amount,
             narration or vnum, vtype,
             cr_account_name, employee.id, now,
-            main_category_id=_jv_main_cat_id, sub_category_id=_jv_sub_cat_id
+            main_category_id=_jv_main_cat_id, sub_category_id=_jv_sub_cat_id,
+            is_expense_advance=bool(is_expense_advance)
         )
 
         # ── Post to account_ledger (CR side) ─────────────────────────────────
@@ -20918,7 +21729,8 @@ class JournalVoucherService:
             voucher_date, 'CREDIT', 'JOURNAL', jv.id, vnum, amount,
             narration or vnum, vtype,
             dr_account_name, employee.id, now,
-            main_category_id=_jv_main_cat_id, sub_category_id=_jv_sub_cat_id
+            main_category_id=_jv_main_cat_id, sub_category_id=_jv_sub_cat_id,
+            is_expense_advance=bool(is_expense_advance)
         )
 
         # ── Post to party_ledger ──────────────────────────────────────────────
@@ -21041,7 +21853,8 @@ class JournalVoucherService:
                     voucher_date, 'DEBIT',
                     'JOURNAL', jv.id, vnum, amount,
                     narration or vnum, vtype, cr_account_name, employee.id, now,
-                    main_category_id=_jv_main_cat_id, sub_category_id=_jv_sub_cat_id
+                    main_category_id=_jv_main_cat_id, sub_category_id=_jv_sub_cat_id,
+                    is_expense_advance=bool(is_expense_advance)
                 )
             if cr_account_type.upper() == 'PARTY' and _jv_cr_nm:
                 _jv_cr_tp, _jv_cr_pid, _canonical_cr_nm = JournalVoucherService._resolve_party_by_name(db, _jv_cr_nm, company_id)
@@ -21054,7 +21867,8 @@ class JournalVoucherService:
                     voucher_date, 'CREDIT',
                     'JOURNAL', jv.id, vnum, amount,
                     narration or vnum, vtype, dr_account_name, employee.id, now,
-                    main_category_id=_jv_main_cat_id, sub_category_id=_jv_sub_cat_id
+                    main_category_id=_jv_main_cat_id, sub_category_id=_jv_sub_cat_id,
+                    is_expense_advance=bool(is_expense_advance)
                 )
         elif _resolved_party_name:
             # PAYMENT / RECEIPT / CONTRA: use the resolved party
@@ -21080,7 +21894,8 @@ class JournalVoucherService:
                 narration or vnum, vtype,
                 _particulars,
                 employee.id, now,
-                main_category_id=_jv_main_cat_id, sub_category_id=_jv_sub_cat_id
+                main_category_id=_jv_main_cat_id, sub_category_id=_jv_sub_cat_id,
+                is_expense_advance=bool(is_expense_advance)
             )
 
         # ── DC-BANK-002: Link to purchase invoice → update balance ────────────
@@ -21149,6 +21964,7 @@ class JournalVoucherService:
         reference_number: str = None,
         category_id: int = None,
         income_category_id: int = None,
+        is_expense_advance: bool = False,
     ):
         """
         DC-JV-COMPOUND-001: Create a compound (multi-line) journal voucher.
@@ -21205,6 +22021,7 @@ class JournalVoucherService:
             reference_number=reference_number,
             category_id=category_id or None,
             income_category_id=income_category_id or None,
+            is_expense_advance=bool(is_expense_advance),
             status='POSTED',
             created_by_id=employee.id,
             created_at=now,
@@ -21254,6 +22071,7 @@ class JournalVoucherService:
                 voucher_date, entry_type, 'JOURNAL', jv.id, vnum, amt,
                 narration or vnum, vtype,
                 particulars, employee.id, now,
+                is_expense_advance=bool(is_expense_advance)
             )
 
             if acct_type == 'PARTY' or party_nm:
@@ -21275,6 +22093,7 @@ class JournalVoucherService:
                     'JOURNAL', jv.id, vnum, amt,
                     narration or vnum, vtype,
                     particulars, employee.id, now,
+                    is_expense_advance=bool(is_expense_advance)
                 )
 
         db.commit()
@@ -21400,6 +22219,7 @@ class JournalVoucherService:
         reference_number: str = None,
         category_id: int = None,
         income_category_id: int = None,  # DC_INCOME_CAT_001
+        is_expense_advance: bool = None,  # DC_EXP_ADVANCE_001
     ):
         """
         DC-JV-EDIT-001: Update a POSTED journal voucher.
@@ -21461,6 +22281,8 @@ class JournalVoucherService:
         jv.reference_number = reference_number
         jv.category_id = category_id if category_id else None
         jv.income_category_id = income_category_id if income_category_id else None
+        if is_expense_advance is not None:
+            jv.is_expense_advance = bool(is_expense_advance)
         jv.updated_at = now
 
         _resolved_party_name = (party_name or '').strip()
@@ -21549,7 +22371,8 @@ class JournalVoucherService:
             voucher_date, 'DEBIT', 'JOURNAL', jv.id, vnum, amount,
             narration or vnum, vtype,
             cr_account_name, employee.id, now,
-            main_category_id=_upd_main_cat_id, sub_category_id=_upd_sub_cat_id
+            main_category_id=_upd_main_cat_id, sub_category_id=_upd_sub_cat_id,
+            is_expense_advance=bool(jv.is_expense_advance)
         )
 
         # ── Step 4: Re-post account_ledger (CR side) ─────────────────────────
@@ -21558,7 +22381,8 @@ class JournalVoucherService:
             voucher_date, 'CREDIT', 'JOURNAL', jv.id, vnum, amount,
             narration or vnum, vtype,
             dr_account_name, employee.id, now,
-            main_category_id=_upd_main_cat_id, sub_category_id=_upd_sub_cat_id
+            main_category_id=_upd_main_cat_id, sub_category_id=_upd_sub_cat_id,
+            is_expense_advance=bool(jv.is_expense_advance)
         )
 
         # ── Step 5: Re-post party_ledger ──────────────────────────────────────
@@ -21579,7 +22403,8 @@ class JournalVoucherService:
                     voucher_date, 'DEBIT',
                     'JOURNAL', jv.id, vnum, amount,
                     narration or vnum, vtype, cr_account_name, employee.id, now,
-                    main_category_id=_upd_main_cat_id, sub_category_id=_upd_sub_cat_id
+                    main_category_id=_upd_main_cat_id, sub_category_id=_upd_sub_cat_id,
+                    is_expense_advance=bool(jv.is_expense_advance)
                 )
             if cr_account_type.upper() == 'PARTY' and _jv_edit_cr_nm:
                 _jv_edit_cr_tp, _jv_edit_cr_pid, _canonical_cr_nm = JournalVoucherService._resolve_party_by_name(db, _jv_edit_cr_nm, jv.company_id)
@@ -21592,7 +22417,8 @@ class JournalVoucherService:
                     voucher_date, 'CREDIT',
                     'JOURNAL', jv.id, vnum, amount,
                     narration or vnum, vtype, dr_account_name, employee.id, now,
-                    main_category_id=_upd_main_cat_id, sub_category_id=_upd_sub_cat_id
+                    main_category_id=_upd_main_cat_id, sub_category_id=_upd_sub_cat_id,
+                    is_expense_advance=bool(jv.is_expense_advance)
                 )
         elif _resolved_party_name:
             LedgerPostingService._ensure_party_ledger_master(
@@ -21615,7 +22441,8 @@ class JournalVoucherService:
                 narration or vnum, vtype,
                 _particulars_u,
                 employee.id, now,
-                main_category_id=_upd_main_cat_id, sub_category_id=_upd_sub_cat_id
+                main_category_id=_upd_main_cat_id, sub_category_id=_upd_sub_cat_id,
+                is_expense_advance=bool(jv.is_expense_advance)
             )
 
         # DC-JV-EDIT-REBALANCE-001: Cascade-recalculate stored running_balance for every
@@ -21970,6 +22797,21 @@ class EstimationService:
         validate_accounts_access(employee)
         rows = db.query(_EP).filter(_EP.income_entry_id == income_entry_id).order_by(_EP.payment_date.desc()).all()
         return [r.to_dict() for r in rows]
+
+    @staticmethod
+    def list_bulk_payments(db, employee, entry_ids: list = None):
+        from app.models.staff_accounts import EstimationPayment as _EP, IncomeEntry as _IE
+        validate_accounts_access(employee)
+        q = db.query(_EP, _IE.entry_number).join(_IE, _EP.income_entry_id == _IE.id)
+        if entry_ids:
+            q = q.filter(_EP.income_entry_id.in_(entry_ids))
+        rows = q.order_by(_EP.payment_date.desc()).all()
+        result = []
+        for pmt, entry_num in rows:
+            d = pmt.to_dict()
+            d["_entry_number"] = entry_num
+            result.append(d)
+        return result
 
     @staticmethod
     def add_payment(db, employee, income_entry_id: int, payload: dict):

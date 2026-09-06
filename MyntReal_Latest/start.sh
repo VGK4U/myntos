@@ -35,6 +35,8 @@ echo ""
 echo "Cleaning up existing processes..."
 pkill -f "uvicorn.*8000" 2>/dev/null || true
 pkill -f "gunicorn.*8000" 2>/dev/null || true
+pkill -f "whatsapp-group-bot/server.js" 2>/dev/null || true
+lsof -ti:5002 | xargs kill -9 2>/dev/null || true
 sleep 1
 
 # Start backend with auto-restart supervisor loop in background

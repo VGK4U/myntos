@@ -35,6 +35,20 @@ def _format_seconds_to_hm(total_seconds: int) -> str:
     return f"{minutes}m"
 
 
+def _format_seconds_to_smart_time(total_seconds: int) -> str:
+    total_seconds = int(total_seconds or 0)
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    if hours > 0:
+        return f"{hours:02d}h {minutes:02d}m"
+    if minutes > 0:
+        return f"{minutes}m {seconds:02d}s" if seconds > 0 else f"{minutes}m"
+    if seconds > 0:
+        return f"{seconds}s"
+    return "00m"
+
+
 def get_today_sales_performance_stats(db: Session, start_date=None, end_date=None, period_label="Today") -> Dict[str, Any]:
     """
     Aggregates sales performance statistics for a date range or today.
@@ -64,6 +78,8 @@ def get_today_sales_performance_stats(db: Session, start_date=None, end_date=Non
         date_display = f"{start_date.strftime('%d %b %Y')} – {end_date.strftime('%d %b %Y')}"
 
     from app.models.operator_calls import OperatorCall
+    from app.models.voip_call_session import VoIPCallSession
+    from sqlalchemy import and_
 
     # 1. Tele Sales / Telecaller Department Staff (Strictly excluding Freelancers & Non-Telecaller Departments)
     staff_rows = db.execute(text("""
@@ -124,9 +140,24 @@ def get_today_sales_performance_stats(db: Session, start_date=None, end_date=Non
         op_dur = sum(c.duration_seconds or 0 for c in op_calls if c.status == 'answered')
         op_missed = sum(1 for c in op_calls if c.status == 'missed')
 
-        staff_tot_calls = m_cnt + op_cnt
-        staff_tot_talk = m_dur + op_dur
-        staff_tot_missed = m_missed + op_missed
+        # 3. Browser Softphone (VoIP / Plivo / WebRTC in-app calls)
+        voip_filters = [VoIPCallSession.operator_id == s.id]
+        if words:
+            voip_filters.append(and_(VoIPCallSession.operator_name.isnot(None), or_(*[VoIPCallSession.operator_name.ilike(f'%{w}%') for w in words])))
+
+        voip_calls = db.query(VoIPCallSession).filter(
+            or_(*voip_filters),
+            VoIPCallSession.created_at >= start_dt_utc,
+            VoIPCallSession.created_at <= end_dt_utc
+        ).all()
+
+        v_cnt = len(voip_calls)
+        v_dur = sum(v.duration_seconds or 0 for v in voip_calls if (v.duration_seconds or 0) > 0)
+        v_missed = sum(1 for v in voip_calls if (v.duration_seconds or 0) == 0 and v.status in ('no_answer', 'failed', 'busy', 'cancelled', 'ended', 'dialing', 'rejected', 'missed'))
+
+        staff_tot_calls = m_cnt + op_cnt + v_cnt
+        staff_tot_talk = m_dur + op_dur + v_dur
+        staff_tot_missed = m_missed + op_missed + v_missed
 
         total_calls += staff_tot_calls
         total_talk_seconds += staff_tot_talk
@@ -137,7 +168,15 @@ def get_today_sales_performance_stats(db: Session, start_date=None, end_date=Non
             "call_count": staff_tot_calls,
             "missed_count": staff_tot_missed,
             "talk_seconds": staff_tot_talk,
-            "talk_time_formatted": _format_seconds_to_hm(staff_tot_talk)
+            "talk_time_formatted": _format_seconds_to_hm(staff_tot_talk),
+            "sim_call_count": m_cnt,
+            "sim_talk_seconds": m_dur,
+            "operator_call_count": op_cnt,
+            "operator_talk_seconds": op_dur,
+            "softphone_call_count": v_cnt,
+            "softphone_talk_seconds": v_dur,
+            "softphone_talk_formatted": _format_seconds_to_smart_time(v_dur),
+            "softphone_missed_count": v_missed
         })
 
     leaderboard.sort(key=lambda x: (x["talk_seconds"], x["call_count"]), reverse=True)
@@ -243,7 +282,13 @@ def generate_bi_hourly_performance_message(db: Session, slot_name: str = "Bi-Hou
                 staff_delta_str = f" *(📈 +{_format_seconds_to_hm(s_diff)} since last update)*"
 
         missed_str = f" *(🔴 {item['missed_count']} Missed)*" if item.get('missed_count', 0) > 0 else ""
-        lb_text_lines.append(f"{idx+1}. {medal} *{staff_name}* — {item['call_count']} Calls{missed_str} | {item['talk_time_formatted']} Talk Time{staff_delta_str}")
+        
+        # Softphone breakdown after overall talk time
+        softphone_detail_str = ""
+        if item.get('softphone_call_count', 0) > 0:
+            softphone_detail_str = f" *(💻 Softphone: {item['softphone_call_count']} Calls · {item['softphone_talk_formatted']})*"
+
+        lb_text_lines.append(f"{idx+1}. {medal} *{staff_name}* — {item['call_count']} Calls{missed_str} | {item['talk_time_formatted']} Talk Time{softphone_detail_str}{staff_delta_str}")
 
     if not active_staff:
         lb_text_lines.append("*(No staff calls recorded yet today)*")

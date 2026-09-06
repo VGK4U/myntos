@@ -10,12 +10,12 @@ Manages:
 
 import logging
 import requests
-import datetime
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, text
+from app.core.timezone import get_indian_time, IST
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +136,7 @@ def seed_and_submit_morning_wish_templates(db: Session) -> Dict[str, Any]:
                 buttons=tdef["buttons"],
                 is_active=True,
                 is_meta_approved=True,
-                created_at=datetime.datetime.utcnow()
+                created_at=get_indian_time()
             )
             db.add(tpl)
             db.commit()
@@ -222,7 +222,7 @@ def get_eligible_leads_for_morning_wish(db: Session) -> List[Any]:
     from app.models.crm import CRMLead
     from app.models.staff import StaffEmployee
 
-    ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
+    ist_now = get_indian_time()
     twenty_days_ago = ist_now - timedelta(days=20)
 
     # Exclude non-active statuses
@@ -263,8 +263,8 @@ def get_current_rotation_template(db: Session) -> Dict[str, Any]:
     """
     from app.models.whatsapp import WhatsAppTemplate
 
-    # IST adjustment (+5:30)
-    ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
+    # IST time
+    ist_now = get_indian_time()
     day_of_year = ist_now.timetuple().tm_yday
     rot_index = (day_of_year % 4) + 1
 
@@ -318,8 +318,8 @@ def dispatch_daily_morning_wishes(
         leads = leads[:limit_count]
 
     # Start of today IST for deduplication
-    ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
-    start_of_today = (ist_now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=5, minutes=30))
+    ist_now = get_indian_time()
+    start_of_today = ist_now.replace(hour=0, minute=0, second=0, microsecond=0)
 
     # Batch fetch all numbers sent today from MessageLog AND wa_inbox for 100% deduplication
     msg_log_numbers = set(
@@ -417,7 +417,7 @@ def dispatch_daily_morning_wishes(
             message_body=wish_body,
             initial_status="sent" if sent_success else "failed",
             current_status="sent" if sent_success else "failed",
-            sent_at=datetime.datetime.utcnow(),
+            sent_at=get_indian_time(),
             sender_type="bot"
         )
         db.add(history_item)

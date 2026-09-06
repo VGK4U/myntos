@@ -274,24 +274,61 @@
             </div>
             
             <!-- DC_QF_MY_001: Quick date filter strip -->
-            <div class="qf-strip" id="qfStripMy">
+            <div class="qf-strip" id="qfStripMy" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                 <span style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-right:4px;">Quick:</span>
                 <button class="qf-pill qf-active" data-tab="my" data-preset="overall" onclick="setQuickFilter('my','overall')">Overall</button>
                 <button class="qf-pill" data-tab="my" data-preset="today" onclick="setQuickFilter('my','today')">Today</button>
                 <button class="qf-pill" data-tab="my" data-preset="yesterday" onclick="setQuickFilter('my','yesterday')">Yesterday</button>
                 <button class="qf-pill" data-tab="my" data-preset="this_week" onclick="setQuickFilter('my','this_week')">This Week</button>
                 <button class="qf-pill" data-tab="my" data-preset="last_week" onclick="setQuickFilter('my','last_week')">Last Week</button>
-                <button class="qf-pill" data-tab="my" data-preset="custom" onclick="setQuickFilter('my','custom')">Custom ▾</button>
+                <button class="qf-pill" data-tab="my" data-preset="custom" onclick="toggleCustomDateUI('my')">Custom ▾</button>
+                <div id="customDateWrap_my" style="display:none;align-items:center;gap:6px;background:#f8fafc;padding:3px 8px;border-radius:6px;border:1px solid #cbd5e1;">
+                    <span style="font-size:11px;font-weight:600;color:#475569;">From:</span>
+                    <input type="date" id="filterFromDate" onchange="onManualDateChange('my')" style="padding:3px 6px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;background:#fff;">
+                    <span style="font-size:11px;font-weight:600;color:#475569;">To:</span>
+                    <input type="date" id="filterToDate" onchange="onManualDateChange('my')" style="padding:3px 6px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;background:#fff;">
+                </div>
             </div>
 
             <div class="filter-section">
                 <div class="filter-group">
+                    <label>Entry Type</label>
+                    <select id="filterType" onchange="loadExpenses()">
+                        <option value="">All Ledger Entries (IN & OUT)</option>
+                        <option value="IN">All IN (Credits / Receipts)</option>
+                        <option value="OUT">All OUT (Debits / Expenses)</option>
+                        <option value="SPARES">Service Spares (IN)</option>
+                        <option value="LABOUR">Service Labour (IN)</option>
+                        <option value="INCOME">All Income Entries (IN)</option>
+                        <option value="EXPENSE">Expense Entries (OUT)</option>
+                        <option value="TRANSFER">Fund Transfers (IN/OUT)</option>
+                        <option value="FUND_ALLOCATION">Bank / Fund Allocations (IN)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Ledger Status</label>
+                    <select id="filterLedger" onchange="loadExpenses()">
+                        <option value="">All (Ledger & Non-Ledger)</option>
+                        <option value="in_ledger">In Ledger Only (Ledger Yes)</option>
+                        <option value="excluded">Excluded (Non-Ledger)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>External</label>
+                    <select id="filterExternal" onchange="loadExpenses()">
+                        <option value="">All Parties</option>
+                        <option value="external">External Only</option>
+                        <option value="internal">Internal Only</option>
+                    </select>
+                </div>
+                <div class="filter-group">
                     <label>Status</label>
                     <select id="filterStatus" onchange="loadExpenses()">
                         <option value="">All Status</option>
-                        <option value="DRAFT">Draft</option>
-                        <option value="SUBMITTED">Submitted</option>
+                        <option value="CONFIRMED">Confirmed</option>
                         <option value="APPROVED">Approved</option>
+                        <option value="SUBMITTED">Submitted</option>
+                        <option value="DRAFT">Draft</option>
                         <option value="REJECTED">Rejected</option>
                     </select>
                 </div>
@@ -307,17 +344,24 @@
                         <option value="">All Categories</option>
                     </select>
                 </div>
-                <div class="filter-group">
-                    <label>From Date</label>
-                    <input type="date" id="filterFromDate" onchange="loadExpenses()">
-                </div>
-                <div class="filter-group">
-                    <label>To Date</label>
-                    <input type="date" id="filterToDate" onchange="loadExpenses()">
+                <div class="filter-group" style="align-self: flex-end;">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="resetMyFilters()" title="Reset all filters"><i class="fas fa-undo me-1"></i>Reset</button>
                 </div>
             </div>
             
             <div class="summary-row">
+                <div class="summary-item" style="border-top:3px solid #10b981;" onclick="setFilterType('IN')" title="View all IN entries (Income & Transfers)">
+                    <div class="value" id="totalInAmount" style="color:#059669;">₹0</div>
+                    <div class="label"><i class="fas fa-arrow-down text-success me-1"></i>Total IN (Credits)</div>
+                </div>
+                <div class="summary-item" style="border-top:3px solid #ef4444;" onclick="setFilterType('OUT')" title="View all OUT entries (Expenses & Transfers)">
+                    <div class="value" id="totalOutAmount" style="color:#dc2626;">₹0</div>
+                    <div class="label"><i class="fas fa-arrow-up text-danger me-1"></i>Total OUT (Expenses)</div>
+                </div>
+                <div class="summary-item" style="border-top:3px solid #3b82f6;" onclick="setFilterType('')" title="View all ledger records">
+                    <div class="value" id="netBalanceAmount" style="color:#1e40af;">₹0</div>
+                    <div class="label"><i class="fas fa-scale-balanced text-primary me-1"></i>Running Balance</div>
+                </div>
                 <div class="summary-item draft" onclick="openDrilldown('Draft Expenses','DRAFT','my')" title="Click to view drafts">
                     <div class="value" id="draftCount">0</div>
                     <div class="label">Drafts <i class="fas fa-search-plus" style="font-size:9px;opacity:.5;"></i></div>
@@ -328,25 +372,13 @@
                 </div>
                 <div class="summary-item approved" onclick="openDrilldown('Approved Expenses','APPROVED','my')" title="Click to view approved">
                     <div class="value" id="approvedCount">0</div>
-                    <div class="label">Approved <i class="fas fa-search-plus" style="font-size:9px;opacity:.5;"></i></div>
-                </div>
-                <div class="summary-item rejected" onclick="openDrilldown('Rejected Expenses','REJECTED','my')" title="Click to view rejected">
-                    <div class="value" id="rejectedCount">0</div>
-                    <div class="label">Rejected <i class="fas fa-search-plus" style="font-size:9px;opacity:.5;"></i></div>
-                </div>
-                <div class="summary-item" style="border-top:3px solid #7c3aed;" onclick="openDrilldown('Paid Expenses','APPROVED','my',true)" title="Click to view paid">
-                    <div class="value" id="paidCount" style="color:#7c3aed;">0</div>
-                    <div class="label">Paid <i class="fas fa-search-plus" style="font-size:9px;opacity:.5;"></i></div>
-                </div>
-                <div class="summary-item" onclick="openDrilldown('All Expenses','','my')" title="Click to view all">
-                    <div class="value" id="totalAmount">₹0</div>
-                    <div class="label">Total Approved <i class="fas fa-search-plus" style="font-size:9px;opacity:.5;"></i></div>
+                    <div class="label">Approved / Paid <i class="fas fa-search-plus" style="font-size:9px;opacity:.5;"></i></div>
                 </div>
             </div>
             
             <div class="card">
                 <div class="card-header">
-                    <span><i class="fas fa-list me-2"></i>Expense Records</span>
+                    <span><i class="fas fa-book me-2"></i>Employee Fund & Expense Ledger</span>
                     <span class="text-muted" id="recordCount">0 records</span>
                 </div>
                 <div class="card-body">
@@ -358,17 +390,18 @@
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>ID</th>
+                                        <th>Ref #</th>
                                         <th>Date</th>
                                         <th>Company</th>
-                                        <th>Category</th>
-                                        <th>Paid To</th>
-                                        <th>Ledger Cat</th>
+                                        <th>Type / Category</th>
+                                        <th>Party / Paid To</th>
                                         <th>Description</th>
-                                        <th>Amount</th>
+                                        <th style="text-align:right;color:#059669;font-weight:700;">IN (₹)</th>
+                                        <th style="text-align:right;color:#dc2626;font-weight:700;">OUT (₹)</th>
+                                        <th style="text-align:right;color:#1e40af;font-weight:700;">Balance (₹)</th>
+                                        <th style="text-align:center;" title="Include in formal financial ledger (P&L / Cash Ledger)">In Ledger</th>
+                                        <th style="text-align:center;" title="External Party Transaction">External</th>
                                         <th>Status</th>
-                                        <th>Tally</th>
-                                        <th>Fund Alloc</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -400,70 +433,144 @@
                 </div>
             </div>
             <!-- DC_QF_TEAM_001: Quick date filter strip -->
-            <div class="qf-strip">
+            <div class="qf-strip" id="qfStripTeam" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                 <span style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-right:4px;">Quick:</span>
                 <button class="qf-pill qf-active" data-tab="team" data-preset="overall" onclick="setQuickFilter('team','overall')">Overall</button>
                 <button class="qf-pill" data-tab="team" data-preset="today" onclick="setQuickFilter('team','today')">Today</button>
                 <button class="qf-pill" data-tab="team" data-preset="yesterday" onclick="setQuickFilter('team','yesterday')">Yesterday</button>
                 <button class="qf-pill" data-tab="team" data-preset="this_week" onclick="setQuickFilter('team','this_week')">This Week</button>
                 <button class="qf-pill" data-tab="team" data-preset="last_week" onclick="setQuickFilter('team','last_week')">Last Week</button>
-                <button class="qf-pill" data-tab="team" data-preset="custom" onclick="setQuickFilter('team','custom')">Custom ▾</button>
+                <button class="qf-pill" data-tab="team" data-preset="custom" onclick="toggleCustomDateUI('team')">Custom ▾</button>
+                <div id="customDateWrap_team" style="display:none;align-items:center;gap:6px;background:#f8fafc;padding:3px 8px;border-radius:6px;border:1px solid #cbd5e1;">
+                    <span style="font-size:11px;font-weight:600;color:#475569;">From:</span>
+                    <input type="date" id="teamFilterFrom" onchange="onManualDateChange('team')" style="padding:3px 6px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;background:#fff;">
+                    <span style="font-size:11px;font-weight:600;color:#475569;">To:</span>
+                    <input type="date" id="teamFilterTo" onchange="onManualDateChange('team')" style="padding:3px 6px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;background:#fff;">
+                </div>
             </div>
 
-            <!-- DC_TEAM_STATS_001: Team summary stat cards -->
-            <div class="team-stat-strip" id="teamStatStrip">
-                <div class="team-stat-card" onclick="openDrilldown('Team — Draft','DRAFT','team')" style="border-top:3px solid #9ca3af;">
-                    <div class="tsv" style="color:#6b7280;" id="tsDraft">—</div><div class="tsl">Drafts</div>
+            <!-- Team Filter Bar matching Tab 1 -->
+            <div class="filter-section" id="teamFilterSection">
+                <div class="filter-group">
+                    <label>Entry Type</label>
+                    <select id="teamFilterType" onchange="loadTeamExpenses(1)">
+                        <option value="">All Ledger Entries (IN & OUT)</option>
+                        <option value="IN">All IN (Credits / Receipts)</option>
+                        <option value="OUT">All OUT (Debits / Expenses)</option>
+                        <option value="SPARES">Service Spares (IN)</option>
+                        <option value="LABOUR">Service Labour (IN)</option>
+                        <option value="INCOME">All Income Entries (IN)</option>
+                        <option value="EXPENSE">Expense Entries (OUT)</option>
+                        <option value="TRANSFER">Fund Transfers (IN/OUT)</option>
+                        <option value="FUND_ALLOCATION">Bank / Fund Allocations (IN)</option>
+                    </select>
                 </div>
-                <div class="team-stat-card" onclick="openDrilldown('Team — Submitted','SUBMITTED','team')" style="border-top:3px solid #f59e0b;">
-                    <div class="tsv" style="color:#d97706;" id="tsSubmitted">—</div><div class="tsl">Submitted</div>
+                <div class="filter-group">
+                    <label>Ledger Status</label>
+                    <select id="teamFilterLedger" onchange="loadTeamExpenses(1)">
+                        <option value="">All (Ledger & Non-Ledger)</option>
+                        <option value="in_ledger">In Ledger Only (Ledger Yes)</option>
+                        <option value="excluded">Excluded (Non-Ledger)</option>
+                    </select>
                 </div>
-                <div class="team-stat-card" onclick="openDrilldown('Team — Approved','APPROVED','team')" style="border-top:3px solid #10b981;">
-                    <div class="tsv" style="color:#059669;" id="tsApproved">—</div><div class="tsl">Approved</div>
+                <div class="filter-group">
+                    <label>External</label>
+                    <select id="teamFilterExternal" onchange="loadTeamExpenses(1)">
+                        <option value="">All Parties</option>
+                        <option value="external">External Only</option>
+                        <option value="internal">Internal Only</option>
+                    </select>
                 </div>
-                <div class="team-stat-card" onclick="openDrilldown('Team — Rejected','REJECTED','team')" style="border-top:3px solid #ef4444;">
-                    <div class="tsv" style="color:#dc2626;" id="tsRejected">—</div><div class="tsl">Rejected</div>
+                <div class="filter-group">
+                    <label>Status</label>
+                    <select id="teamFilterStatus" onchange="loadTeamExpenses(1)">
+                        <option value="">All Status</option>
+                        <option value="CONFIRMED">Confirmed</option>
+                        <option value="APPROVED">Approved</option>
+                        <option value="SUBMITTED">Submitted</option>
+                        <option value="DRAFT">Draft</option>
+                        <option value="REJECTED">Rejected</option>
+                    </select>
                 </div>
-                <div class="team-stat-card" onclick="openDrilldown('Team — All','','team')" style="border-top:3px solid #6366f1;">
-                    <div class="tsv" style="color:#6366f1;" id="tsTotal">—</div><div class="tsl">Total Entries</div>
+                <div class="filter-group">
+                    <label>Company</label>
+                    <select id="teamFilterCompany" onchange="loadTeamExpenses(1)">
+                        <option value="">All Companies</option>
+                    </select>
                 </div>
-                <div class="team-stat-card" onclick="openDrilldown('Team — Approved Amount','APPROVED','team')" style="border-top:3px solid #059669;">
-                    <div class="tsv" style="color:#059669;font-size:16px;" id="tsTotalAmt">₹—</div><div class="tsl">Approved Amt</div>
+                <div class="filter-group">
+                    <label>Category</label>
+                    <select id="teamFilterCategory" onchange="loadTeamExpenses(1)">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Team Member</label>
+                    <select id="teamFilterEmployee" onchange="loadTeamExpenses(1)" style="min-width:160px;">
+                        <option value="">All Team Members</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="align-self: flex-end;">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="resetTeamFilters()" title="Reset team filters"><i class="fas fa-undo me-1"></i>Reset</button>
+                </div>
+            </div>
+
+            <!-- Team Summary Stat Cards matching Tab 1 -->
+            <div class="summary-row" id="teamSummaryRow">
+                <div class="summary-item" style="border-top:3px solid #10b981;" onclick="setTeamFilterType('IN')" title="View all team IN entries">
+                    <div class="value" id="teamTotalInAmount" style="color:#059669;">₹0</div>
+                    <div class="label"><i class="fas fa-arrow-down text-success me-1"></i>Total IN (Credits)</div>
+                </div>
+                <div class="summary-item" style="border-top:3px solid #ef4444;" onclick="setTeamFilterType('OUT')" title="View all team OUT entries">
+                    <div class="value" id="teamTotalOutAmount" style="color:#dc2626;">₹0</div>
+                    <div class="label"><i class="fas fa-arrow-up text-danger me-1"></i>Total OUT (Expenses)</div>
+                </div>
+                <div class="summary-item" style="border-top:3px solid #3b82f6;" onclick="setTeamFilterType('')" title="View all team records">
+                    <div class="value" id="teamNetBalanceAmount" style="color:#1e40af;">₹0</div>
+                    <div class="label"><i class="fas fa-scale-balanced text-primary me-1"></i>Running Balance</div>
+                </div>
+                <div class="summary-item draft" onclick="openDrilldown('Team — Draft Expenses','DRAFT','team')" title="Click to view drafts">
+                    <div class="value" id="tsDraft">0</div>
+                    <div class="label">Drafts <i class="fas fa-search-plus" style="font-size:9px;opacity:.5;"></i></div>
+                </div>
+                <div class="summary-item submitted" onclick="openDrilldown('Team — Submitted Expenses','SUBMITTED','team')" title="Click to view submitted">
+                    <div class="value" id="tsSubmitted">0</div>
+                    <div class="label">Submitted <i class="fas fa-search-plus" style="font-size:9px;opacity:.5;"></i></div>
+                </div>
+                <div class="summary-item approved" onclick="openDrilldown('Team — Approved Expenses','APPROVED','team')" title="Click to view approved">
+                    <div class="value" id="tsApproved">0</div>
+                    <div class="label">Approved / Paid <i class="fas fa-search-plus" style="font-size:9px;opacity:.5;"></i></div>
                 </div>
             </div>
 
             <div class="card">
                 <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-                    <span><i class="fas fa-users me-2"></i>Team Expense Entries</span>
-                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                        <select id="teamFilterCompany" onchange="loadTeamExpenses(1)" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
-                            <option value="">All Companies</option>
-                        </select>
-                        <select id="teamFilterStatus" onchange="loadTeamExpenses(1)" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
-                            <option value="">All Status</option>
-                            <option value="DRAFT">Draft</option>
-                            <option value="SUBMITTED">Submitted</option>
-                            <option value="APPROVED">Approved</option>
-                            <option value="REJECTED">Rejected</option>
-                        </select>
-                        <select id="teamFilterEmployee" onchange="loadTeamExpenses(1)" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:160px;">
-                            <option value="">All Members</option>
-                        </select>
-                        <input type="date" id="teamFilterFrom" onchange="loadTeamExpenses(1)" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
-                        <input type="date" id="teamFilterTo" onchange="loadTeamExpenses(1)" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
-                        <button onclick="loadTeamExpenses(1)" class="btn btn-sm btn-outline-primary"><i class="fas fa-sync-alt"></i></button>
-                    </div>
+                    <span><i class="fas fa-users me-2"></i>Team Unified Ledger & Expenses</span>
+                    <span class="text-muted" id="teamRecordCount">0 records</span>
                 </div>
-                <div class="card-body" style="padding:0;">
+                <div class="card-body">
                     <div id="teamLoadingState" class="loading-spinner"><div class="spinner"></div></div>
                     <div id="teamTableContainer" style="display:none;">
                         <div class="table-container">
                             <table class="data-table">
-                                <thead><tr>
-                                    <th>ID</th><th>Date</th><th>Employee</th><th>Company</th>
-                                    <th>Category</th><th>Paid To</th><th>Description</th><th style="text-align:right;">Amount (₹)</th>
-                                    <th>Status</th><th>Actions</th>
-                                </tr></thead>
+                                <thead>
+                                    <tr>
+                                        <th>Ref #</th>
+                                        <th>Date</th>
+                                        <th>Employee</th>
+                                        <th>Company</th>
+                                        <th>Type / Category</th>
+                                        <th>Party / Paid To</th>
+                                        <th>Description</th>
+                                        <th style="text-align:right;color:#059669;font-weight:700;">IN (₹)</th>
+                                        <th style="text-align:right;color:#dc2626;font-weight:700;">OUT (₹)</th>
+                                        <th style="text-align:right;color:#1e40af;font-weight:700;">Balance (₹)</th>
+                                        <th style="text-align:center;" title="Include in formal financial ledger">In Ledger</th>
+                                        <th style="text-align:center;" title="External Party Transaction">External</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
                                 <tbody id="teamExpenseTable"></tbody>
                             </table>
                         </div>
@@ -471,24 +578,8 @@
                     </div>
                     <div id="teamEmptyState" class="empty-state" style="display:none;">
                         <i class="fas fa-users"></i>
-                        <h3>No Team Expenses Found</h3>
-                        <p>Your team members' expenses will appear here</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- DC-IE-DEST-FILTER-001: Income Received section — shown when a specific employee is selected -->
-            <div id="teamIncomeReceiptsSection" style="display:none;margin-top:24px;">
-                <div class="card" style="border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;">
-                    <div style="background:linear-gradient(90deg,#0c4a6e,#0891b2);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;">
-                        <div style="display:flex;align-items:center;gap:10px;">
-                            <i class="fas fa-hand-holding-usd" style="color:#bae6fd;font-size:18px;"></i>
-                            <span id="teamIncomeReceiptsTitle" style="color:#fff;font-weight:700;font-size:15px;">Cash Received (Income Entries)</span>
-                        </div>
-                        <span id="teamIncomeReceiptsBadge" style="background:rgba(255,255,255,.2);color:#fff;padding:3px 10px;border-radius:12px;font-size:12px;">—</span>
-                    </div>
-                    <div id="teamIncomeReceiptsBody" style="padding:12px 16px;">
-                        <div style="text-align:center;padding:20px;color:#9ca3af;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+                        <h3>No Team Records Found</h3>
+                        <p>Your team members' unified entries and expenses will appear here</p>
                     </div>
                 </div>
             </div>
@@ -501,14 +592,21 @@
         <div id="sectionConsolidated" style="display:none;">
 
             <!-- DC_QF_CONSO_001: Quick date filter strip -->
-            <div class="qf-strip">
+            <!-- DC_QF_CONSO_001: Quick date filter strip -->
+            <div class="qf-strip" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                 <span style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-right:4px;">Quick:</span>
                 <button class="qf-pill qf-active" data-tab="consolidated" data-preset="overall" onclick="setQuickFilter('consolidated','overall')">Overall</button>
                 <button class="qf-pill" data-tab="consolidated" data-preset="today" onclick="setQuickFilter('consolidated','today')">Today</button>
                 <button class="qf-pill" data-tab="consolidated" data-preset="yesterday" onclick="setQuickFilter('consolidated','yesterday')">Yesterday</button>
                 <button class="qf-pill" data-tab="consolidated" data-preset="this_week" onclick="setQuickFilter('consolidated','this_week')">This Week</button>
                 <button class="qf-pill" data-tab="consolidated" data-preset="last_week" onclick="setQuickFilter('consolidated','last_week')">Last Week</button>
-                <button class="qf-pill" data-tab="consolidated" data-preset="custom" onclick="setQuickFilter('consolidated','custom')">Custom ▾</button>
+                <button class="qf-pill" data-tab="consolidated" data-preset="custom" onclick="toggleCustomDateUI('consolidated')">Custom ▾</button>
+                <div id="customDateWrap_consolidated" style="display:none;align-items:center;gap:6px;background:#f8fafc;padding:3px 8px;border-radius:6px;border:1px solid #cbd5e1;">
+                    <span style="font-size:11px;font-weight:600;color:#475569;">From:</span>
+                    <input type="date" id="consoFromDate" onchange="onManualDateChange('consolidated'); loadConsolidatedSummary();" style="padding:3px 6px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;background:#fff;">
+                    <span style="font-size:11px;font-weight:600;color:#475569;">To:</span>
+                    <input type="date" id="consoToDate" onchange="onManualDateChange('consolidated'); loadConsolidatedSummary();" style="padding:3px 6px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;background:#fff;">
+                </div>
             </div>
 
             <!-- Filters -->
@@ -516,24 +614,56 @@
                 <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
                     <div>
                         <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">COMPANY</label>
-                        <select id="consoCompany" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:150px;">
+                        <select id="consoCompany" onchange="loadConsolidatedSummary()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:150px;">
                             <option value="">All Companies</option>
                         </select>
                     </div>
                     <div>
-                        <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">FROM DATE</label>
-                        <input type="date" id="consoFromDate" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                        <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">ENTRY TYPE</label>
+                        <select id="consoFilterType" onchange="loadConsolidatedSummary()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:110px;">
+                            <option value="">All Types</option>
+                            <option value="INCOME">Cash In (Credit)</option>
+                            <option value="EXPENSE">Cash Out (Expense)</option>
+                            <option value="FUND_ALLOCATION">Fund Allocation</option>
+                            <option value="TRANSFER">Transfer</option>
+                        </select>
                     </div>
                     <div>
-                        <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">TO DATE</label>
-                        <input type="date" id="consoToDate" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                        <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">IN LEDGER</label>
+                        <select id="consoFilterLedger" onchange="loadConsolidatedSummary()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:120px;">
+                            <option value="">All Entries</option>
+                            <option value="ledger_only">In Ledger Only</option>
+                            <option value="non_ledger">Non-Ledger (Excluded)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">EXTERNAL</label>
+                        <select id="consoFilterExternal" onchange="loadConsolidatedSummary()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:110px;">
+                            <option value="">All Parties</option>
+                            <option value="external_only">External Only</option>
+                            <option value="internal_only">Internal Only</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">STATUS</label>
+                        <select id="consoFilterStatus" onchange="loadConsolidatedSummary()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:110px;">
+                            <option value="">All Statuses</option>
+                            <option value="DRAFT">Draft</option>
+                            <option value="SUBMITTED">Submitted</option>
+                            <option value="APPROVED">Approved</option>
+                            <option value="PAID">Paid</option>
+                            <option value="REJECTED">Rejected</option>
+                        </select>
                     </div>
                     <div>
                         <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">EMPLOYEE</label>
-                        <input type="text" id="consoSearch" placeholder="Search name or code..." style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:160px;">
+                        <input type="text" id="consoSearch" oninput="debounceConsoSearch()" placeholder="Search name or code..." style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:160px;">
                     </div>
-                    <button onclick="loadConsolidatedSummary()" style="padding:8px 18px;background:#1e40af;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
-                        <i class="fas fa-sync-alt me-1"></i>Load / Refresh
+                    <button onclick="loadConsolidatedSummary()" style="padding:8px 16px;background:#1e40af;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                    <button onclick="resetConsoFilters()" style="padding:8px 14px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+                        <i class="fas fa-undo me-1"></i>Reset
                     </button>
                     <button onclick="exportConsolidatedCSV()" style="padding:8px 14px;background:#fff;color:#374151;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;">
                         <i class="fas fa-download me-1"></i>Export
@@ -555,26 +685,71 @@
                 </div>
                 <table id="consoTable" style="display:none;width:100%;border-collapse:collapse;font-size:13px;">
                     <thead>
-                        <tr style="background:#f8fafc;border-bottom:2px solid #e5e7eb;">
-                            <th style="padding:10px 14px;text-align:left;font-weight:700;color:#374151;white-space:nowrap;">#</th>
-                            <th style="padding:10px 14px;text-align:left;font-weight:700;color:#374151;white-space:nowrap;">Employee</th>
-                            <th style="padding:10px 14px;text-align:left;font-weight:700;color:#374151;white-space:nowrap;">Dept / Role</th>
-                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#1e40af;white-space:nowrap;">Fund Allocated</th>
-                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#059669;white-space:nowrap;">Fund Balance</th>
-                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#dc2626;white-space:nowrap;">Fund Used</th>
-                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#0891b2;white-space:nowrap;">Cash Received (IN)</th>
-                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#7c3aed;white-space:nowrap;">Cash Balance</th>
-                            <th style="padding:10px 14px;text-align:center;font-weight:700;color:#374151;white-space:nowrap;">Total Exp</th>
-                            <th style="padding:10px 14px;text-align:center;font-weight:700;color:#6b7280;white-space:nowrap;">Draft</th>
-                            <th style="padding:10px 14px;text-align:center;font-weight:700;color:#d97706;white-space:nowrap;">Submitted</th>
-                            <th style="padding:10px 14px;text-align:center;font-weight:700;color:#059669;white-space:nowrap;">Approved</th>
-                            <th style="padding:10px 14px;text-align:center;font-weight:700;color:#dc2626;white-space:nowrap;">Rejected</th>
-                            <th style="padding:10px 14px;text-align:center;font-weight:700;color:#7c3aed;white-space:nowrap;">Paid</th>
-                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#059669;white-space:nowrap;">Approved Amt</th>
-                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#dc2626;white-space:nowrap;">Rejected Amt</th>
-                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#7c3aed;white-space:nowrap;">Paid Amt</th>
-                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#6b7280;white-space:nowrap;">Draft Amt</th>
-                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#d97706;white-space:nowrap;">Submitted Amt</th>
+                        <!-- Tier 1 Group Headers -->
+                        <tr style="border-bottom:1px solid #cbd5e1;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">
+                            <th colspan="4" style="background:#f1f5f9;color:#334155;padding:8px 10px;text-align:left;border-right:2px solid #cbd5e1;font-weight:700;">
+                                <i class="fas fa-user-circle me-1"></i> Staff Details
+                            </th>
+                            <th colspan="4" style="background:#ecfdf5;color:#065f46;padding:8px 10px;text-align:center;border-right:2px solid #a7f3d0;font-weight:700;">
+                                <i class="fas fa-arrow-circle-down me-1"></i> Section 1: Confirmed IN (Inflow)
+                            </th>
+                            <th colspan="4" style="background:#fef2f2;color:#991b1b;padding:8px 10px;text-align:center;border-right:2px solid #fecaca;font-weight:700;">
+                                <i class="fas fa-arrow-circle-up me-1"></i> Section 1: Confirmed OUT (Outflow)
+                            </th>
+                            <th colspan="1" style="background:#eff6ff;color:#1e40af;padding:8px 10px;text-align:right;border-right:2px solid #bfdbfe;font-weight:700;">
+                                <i class="fas fa-balance-scale me-1"></i> Net Balance
+                            </th>
+                            <th colspan="4" style="background:#fffbeb;color:#92400e;padding:8px 10px;text-align:center;border-right:2px solid #fde68a;font-weight:700;">
+                                <i class="fas fa-edit me-1"></i> Section 2: Drafts Only Flow
+                            </th>
+                            <th colspan="5" style="background:#f8fafc;color:#475569;padding:8px 10px;text-align:center;border-right:2px solid #e2e8f0;font-weight:700;">
+                                <i class="fas fa-list-ol me-1"></i> Section 3: Expense Counts
+                            </th>
+                            <th colspan="5" style="background:#f8fafc;color:#475569;padding:8px 10px;text-align:center;font-weight:700;">
+                                <i class="fas fa-rupee-sign me-1"></i> Section 3: Expense Amounts
+                            </th>
+                        </tr>
+                        <!-- Tier 2 Column Headers -->
+                        <tr style="background:#f8fafc;border-bottom:2px solid #cbd5e1;font-size:12px;">
+                            <th style="padding:10px 8px;text-align:center;font-weight:700;color:#374151;width:34px;"></th>
+                            <th style="padding:10px 10px;text-align:left;font-weight:700;color:#374151;white-space:nowrap;width:30px;">#</th>
+                            <th style="padding:10px 12px;text-align:left;font-weight:700;color:#374151;white-space:nowrap;">Employee</th>
+                            <th style="padding:10px 12px;text-align:left;font-weight:700;color:#374151;white-space:nowrap;border-right:2px solid #cbd5e1;">Dept / Role</th>
+                            
+                            <!-- SECTION 1: INFLOW -->
+                            <th style="padding:10px 12px;text-align:right;font-weight:700;color:#0891b2;white-space:nowrap;">Income Entries</th>
+                            <th style="padding:10px 12px;text-align:right;font-weight:700;color:#1e40af;white-space:nowrap;">Bank Ledgers</th>
+                            <th style="padding:10px 12px;text-align:right;font-weight:700;color:#059669;white-space:nowrap;">Fund Transfer (IN)</th>
+                            <th style="padding:10px 12px;text-align:right;font-weight:700;color:#047857;white-space:nowrap;background:#d1fae5;border-right:2px solid #a7f3d0;">Total IN</th>
+                            
+                            <!-- SECTION 1: OUTFLOW -->
+                            <th style="padding:10px 12px;text-align:right;font-weight:700;color:#dc2626;white-space:nowrap;">Ledger Expense</th>
+                            <th style="padding:10px 12px;text-align:right;font-weight:700;color:#ea580c;white-space:nowrap;">External Expense</th>
+                            <th style="padding:10px 12px;text-align:right;font-weight:700;color:#b91c1c;white-space:nowrap;">Fund Transfer (OUT)</th>
+                            <th style="padding:10px 12px;text-align:right;font-weight:700;color:#b91c1c;white-space:nowrap;background:#fee2e2;border-right:2px solid #fecaca;">Total OUT</th>
+                            
+                            <!-- SECTION 1: BALANCE -->
+                            <th style="padding:10px 12px;text-align:right;font-weight:700;color:#1e40af;white-space:nowrap;background:#dbeafe;border-right:2px solid #bfdbfe;">Net Balance</th>
+                            
+                            <!-- SECTION 2: DRAFTS FLOW -->
+                            <th style="padding:10px 12px;text-align:right;font-weight:700;color:#059669;white-space:nowrap;background:#fefce8;">Drafts IN</th>
+                            <th style="padding:10px 12px;text-align:right;font-weight:700;color:#d97706;white-space:nowrap;background:#fefce8;">Drafts OUT</th>
+                            <th style="padding:10px 12px;text-align:right;font-weight:700;color:#b45309;white-space:nowrap;background:#fef3c7;">Drafts Bal</th>
+                            <th style="padding:10px 12px;text-align:right;font-weight:800;color:#6d28d9;white-space:nowrap;background:#ede9fe;border-right:2px solid #ddd6fe;">Final Balance</th>
+
+                            <!-- SECTION 3: EXPENSE COUNTS -->
+                            <th style="padding:10px 10px;text-align:center;font-weight:700;color:#6b7280;white-space:nowrap;">Draft</th>
+                            <th style="padding:10px 10px;text-align:center;font-weight:700;color:#d97706;white-space:nowrap;">Submitted</th>
+                            <th style="padding:10px 10px;text-align:center;font-weight:700;color:#059669;white-space:nowrap;">Approved</th>
+                            <th style="padding:10px 10px;text-align:center;font-weight:700;color:#dc2626;white-space:nowrap;">Rejected</th>
+                            <th style="padding:10px 10px;text-align:center;font-weight:700;color:#7c3aed;white-space:nowrap;border-right:2px solid #e2e8f0;">Paid</th>
+                            
+                            <!-- SECTION 3: EXPENSE AMOUNTS -->
+                            <th style="padding:10px 12px;text-align:right;font-weight:700;color:#6b7280;white-space:nowrap;">Draft Amt</th>
+                            <th style="padding:10px 12px;text-align:right;font-weight:700;color:#d97706;white-space:nowrap;">Submitted Amt</th>
+                            <th style="padding:10px 12px;text-align:right;font-weight:700;color:#059669;white-space:nowrap;">Approved Amt</th>
+                            <th style="padding:10px 12px;text-align:right;font-weight:700;color:#dc2626;white-space:nowrap;">Rejected Amt</th>
+                            <th style="padding:10px 12px;text-align:right;font-weight:700;color:#7c3aed;white-space:nowrap;">Paid Amt</th>
                         </tr>
                     </thead>
                     <tbody id="consoTableBody"></tbody>
@@ -738,11 +913,21 @@
                 <p>Are you sure you want to approve this expense entry?</p>
                 <div class="alert alert-success mt-3">
                     <strong>Expense ID:</strong> <span id="approveExpenseId"></span><br>
-                    <strong>Amount:</strong> <span id="approveAmount"></span><br>
                     <strong>Description:</strong> <span id="approveDescription"></span>
                 </div>
+                <div class="form-group mt-2" id="approveCompanyGroup">
+                    <label style="font-weight:600;font-size:12px;">Company</label>
+                    <select id="approveCompanySelect" class="form-control" style="font-size:13px;padding:6px 10px;border-radius:6px;border:1px solid #d1d5db;"></select>
+                </div>
+                <div class="form-group mt-2" id="approveAmountGroup">
+                    <label style="font-weight:600;font-size:12px;">Amount (₹)</label>
+                    <input type="number" step="0.01" min="0" id="approveAmountInput" class="form-control" style="font-size:14px;font-weight:700;color:#059669;padding:6px 10px;border-radius:6px;border:1px solid #10b981;">
+                    <small id="approveOverrideNotice" class="text-muted" style="font-size:11px;display:none;color:#059669 !important;">
+                        <i class="fas fa-shield-alt text-success me-1"></i>Authorized Admin/Subhash (MR10001 / MR10025) modification enabled.
+                    </small>
+                </div>
                 <div class="form-group mt-3">
-                    <label>Approval Notes</label>
+                    <label style="font-weight:600;font-size:12px;">Approval Notes</label>
                     <textarea id="approveNotes" placeholder="Optional approval notes"></textarea>
                 </div>
             </div>
@@ -848,12 +1033,14 @@
         let allVendors = [];
         let _expenseEmployees = [];   // DC_EXP_BEHALF_001: cached employee list for behalf-of selector
         let _canCreateOnBehalf = false;
+        let _entryLookup = {};
         
         let _activeExpenseTab = 'my';
         let _teamPage = 1, _teamTotalPages = 1;
+        let _qfPreset = { my: 'overall', team: 'overall', consolidated: 'overall' };
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+        async function initExpensePage() {
+            if (typeof StaffSidebar !== 'undefined') StaffSidebar.init();
             StaffHeader.inject('Expense Entries', 'fas fa-receipt');
             if (typeof StaffHeader !== 'undefined') StaffHeader.init();
             if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
@@ -872,8 +1059,15 @@
             }
 
             document.getElementById('formDate').valueAsDate = new Date();
+            // Clear date filter inputs across all tabs so Overall preset displays all historical records
+            ['filterFromDate', 'filterToDate', 'teamFilterFrom', 'teamFilterTo', 'consoFromDate', 'consoToDate'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
             
-            await Promise.all([loadCompanies(), loadCategories(), loadVendors(), loadFundAllocations(), loadExpenseEmployees()]);
+            // Load bootstrap metadata in single flight, and main expenses
+            const mainExpensesPromise = loadExpenses();
+            const bootstrapPromise = loadBootstrap();
             
             // Attach vendor search listener
             document.getElementById('formVendorSearch').addEventListener('input', function() {
@@ -890,13 +1084,14 @@
                 populateVendorDropdown(filtered);
             });
 
-            await loadExpenses();
+            await mainExpensesPromise;
+        }
 
-            // Auto-show fund balance card on load
-            balanceCardVisible = true;
-            document.getElementById('fundBalanceCard').style.display = 'block';
-            refreshMyBalance();
-        });
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initExpensePage);
+        } else {
+            initExpensePage();
+        }
 
         function switchExpenseTab(tab) {
             _activeExpenseTab = tab;
@@ -926,102 +1121,201 @@
             if (tab === 'consolidated') { loadConsolidatedSummary(); }
         }
 
+        function setTeamFilterType(type) {
+            const el = document.getElementById('teamFilterType');
+            if (el) el.value = type;
+            loadTeamExpenses(1);
+        }
+
+        function resetTeamFilters() {
+            if (document.getElementById('teamFilterType')) document.getElementById('teamFilterType').value = '';
+            if (document.getElementById('teamFilterLedger')) document.getElementById('teamFilterLedger').value = '';
+            if (document.getElementById('teamFilterExternal')) document.getElementById('teamFilterExternal').value = '';
+            if (document.getElementById('teamFilterStatus')) document.getElementById('teamFilterStatus').value = '';
+            if (document.getElementById('teamFilterCompany')) document.getElementById('teamFilterCompany').value = '';
+            if (document.getElementById('teamFilterCategory')) document.getElementById('teamFilterCategory').value = '';
+            if (document.getElementById('teamFilterEmployee')) document.getElementById('teamFilterEmployee').value = '';
+            if (document.getElementById('teamFilterFrom')) document.getElementById('teamFilterFrom').value = '';
+            if (document.getElementById('teamFilterTo')) document.getElementById('teamFilterTo').value = '';
+            setQuickFilter('team', 'overall');
+        }
+
         async function loadTeamExpenses(page = 1) {
             _teamPage = page;
-            document.getElementById('teamLoadingState').style.display = '';
+            document.getElementById('teamLoadingState').style.display = 'flex';
             document.getElementById('teamTableContainer').style.display = 'none';
             document.getElementById('teamEmptyState').style.display = 'none';
-            const teamCo = document.getElementById('teamFilterCompany').value;
-            const status = document.getElementById('teamFilterStatus').value;
-            const from = document.getElementById('teamFilterFrom').value;
-            const to = document.getElementById('teamFilterTo').value;
-            const empFilter = document.getElementById('teamFilterEmployee')?.value;
-            let url = `${API_BASE}/expense-entries?team_view=true&page=${page}&page_size=30`;
-            if (teamCo) url += `&company_id=${teamCo}`;
+
+            const isOverall = (_qfPreset['team'] === 'overall');
+            if (isOverall) {
+                if (document.getElementById('teamFilterFrom')) document.getElementById('teamFilterFrom').value = '';
+                if (document.getElementById('teamFilterTo')) document.getElementById('teamFilterTo').value = '';
+            }
+
+            const entryType = document.getElementById('teamFilterType')?.value || '';
+            const ledgerFilter = document.getElementById('teamFilterLedger')?.value || '';
+            const externalFilter = document.getElementById('teamFilterExternal')?.value || '';
+            const status = document.getElementById('teamFilterStatus')?.value || '';
+            const company = document.getElementById('teamFilterCompany')?.value || '';
+            const category = document.getElementById('teamFilterCategory')?.value || '';
+            const empFilter = document.getElementById('teamFilterEmployee')?.value || '';
+            const from = isOverall ? '' : (document.getElementById('teamFilterFrom')?.value || '');
+            const to = isOverall ? '' : (document.getElementById('teamFilterTo')?.value || '');
+
+            let url = `${API_BASE}/expense-entries?team_view=true&view_mode=ledger&page=${page}&page_size=30`;
+            if (entryType) url += `&entry_type=${entryType}`;
+            if (ledgerFilter) url += `&ledger_filter=${ledgerFilter}`;
+            if (externalFilter) url += `&external_filter=${externalFilter}`;
             if (status) url += `&status=${status}`;
+            if (company) url += `&company_id=${company}`;
+            if (category) url += `&category_id=${category}`;
             if (empFilter) url += `&employee_id=${empFilter}`;
             if (from) url += `&from_date=${from}`;
             if (to) url += `&to_date=${to}`;
+
             try {
                 const resp = await staffFetch(url);
                 const d = resp.ok ? await resp.json() : {};
                 const entries = d.entries || [];
                 _teamTotalPages = Math.ceil((d.total || 0) / 30) || 1;
                 document.getElementById('teamLoadingState').style.display = 'none';
+
                 if (!entries.length) {
-                    document.getElementById('teamEmptyState').style.display = '';
+                    document.getElementById('teamEmptyState').style.display = 'block';
                     document.getElementById('teamPagination').innerHTML = '';
+                    updateTeamSummary(d.summary || {});
                     return;
                 }
-                const fmt = n => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
-                const statusBadge = s => {
-                    const cls = { DRAFT: 'warning', SUBMITTED: 'info', APPROVED: 'success', REJECTED: 'danger' }[s] || 'secondary';
-                    return `<span class="badge bg-${cls}">${s}</span>`;
-                };
-                // DC_TEAM_STATS_001: update team stat cards with count AND monetary values
-                const _ts = d.summary || {};
-                const fmtCardAmt = n => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                const renderTeamCardVal = (cnt, amt) => `
-                    <div style="font-size:20px;font-weight:800;line-height:1.1;">${cnt || 0}</div>
-                    <div style="font-size:12px;font-weight:700;margin-top:3px;opacity:0.95;">${fmtCardAmt(amt)}</div>
-                `;
 
-                const draftCnt = _ts.draft_count ?? entries.filter(e=>e.status==='DRAFT').length;
-                const draftAmt = _ts.draft_amount ?? entries.filter(e=>e.status==='DRAFT').reduce((s,e2)=>s+parseFloat(e2.amount||0),0);
-
-                const subCnt = _ts.submitted_count ?? entries.filter(e=>e.status==='SUBMITTED').length;
-                const subAmt = _ts.submitted_amount ?? entries.filter(e=>e.status==='SUBMITTED').reduce((s,e2)=>s+parseFloat(e2.amount||0),0);
-
-                const appCnt = _ts.approved_count ?? entries.filter(e=>e.status==='APPROVED').length;
-                const appAmt = _ts.total_approved_amount ?? entries.filter(e=>e.status==='APPROVED').reduce((s,e2)=>s+parseFloat(e2.amount||0),0);
-
-                const rejCnt = _ts.rejected_count ?? entries.filter(e=>e.status==='REJECTED').length;
-                const rejAmt = _ts.rejected_amount ?? entries.filter(e=>e.status==='REJECTED').reduce((s,e2)=>s+parseFloat(e2.amount||0),0);
-
-                const totCnt = d.total || entries.length;
-                const totAmt = _ts.total_amount ?? entries.reduce((s,e2)=>s+parseFloat(e2.amount||0),0);
-
-                document.getElementById('tsDraft').innerHTML     = renderTeamCardVal(draftCnt, draftAmt);
-                document.getElementById('tsSubmitted').innerHTML = renderTeamCardVal(subCnt, subAmt);
-                document.getElementById('tsApproved').innerHTML  = renderTeamCardVal(appCnt, appAmt);
-                document.getElementById('tsRejected').innerHTML  = renderTeamCardVal(rejCnt, rejAmt);
-                document.getElementById('tsTotal').innerHTML     = renderTeamCardVal(totCnt, totAmt);
-                document.getElementById('tsTotalAmt').innerHTML  = renderTeamCardVal(appCnt, appAmt);
+                updateTeamSummary(d.summary || {});
+                document.getElementById('teamRecordCount').textContent = `${d.total || entries.length} records`;
 
                 const tbody = document.getElementById('teamExpenseTable');
-                tbody.innerHTML = entries.map(e => {
-                    const descText = e.narration || e.description || e.notes || e.purpose || '—';
-                    const paidToText = e.vendor_name || e.paid_to || '—';
-                    return `<tr>
-                        <td class="mono" style="color:#6366f1;">#${e.id}</td>
-                        <td style="white-space:nowrap;">${e.expense_date || '—'}</td>
-                        <td style="font-weight:600;">${e.created_by_name || e.employee_name || '—'}</td>
-                        <td>${e.company_name || '—'}</td>
-                        <td>${e.category_name || e.main_category_name || '—'}</td>
-                        <td style="font-weight:500;">${paidToText}</td>
-                        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${descText.replace(/"/g,'&quot;')}">${descText}</td>
-                        <td style="text-align:right;font-weight:700;">${fmt(e.amount)}</td>
-                        <td>${statusBadge(e.status)}</td>
-                        <td style="white-space:nowrap;">${getActionButtons(e)}</td>
-                    </tr>`;
+                tbody.innerHTML = entries.map(exp => {
+                    const isCredit = exp.direction === 'IN' || (exp.credit_amount && exp.credit_amount > 0);
+                    const statusLabel = exp.is_paid
+                        ? `<span class="badge-status badge-approved">${exp.status}</span> <span class="badge-status badge-paid">PAID</span>`
+                        : `<span class="badge-status badge-${(exp.status||'').toLowerCase()}">${exp.status}</span>`;
+
+                    // Type badge
+                    let typeBadge = '';
+                    if (exp.entry_type === 'INCOME') {
+                        if (exp.sub_type === 'SPARES') {
+                            typeBadge = `<span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10px;font-weight:700;padding:3px 6px;border-radius:4px;"><i class="fas fa-wrench me-1"></i>SPARES IN</span>`;
+                        } else if (exp.sub_type === 'LABOUR') {
+                            typeBadge = `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:3px 6px;border-radius:4px;"><i class="fas fa-cog me-1"></i>LABOUR IN</span>`;
+                        } else {
+                            typeBadge = `<span class="badge" style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:3px 6px;border-radius:4px;"><i class="fas fa-arrow-down me-1"></i>INCOME</span>`;
+                        }
+                    } else if (exp.entry_type === 'FUND_ALLOCATION') {
+                        typeBadge = `<span class="badge" style="background:#cffafe;color:#0e7490;font-size:10px;font-weight:700;padding:3px 6px;border-radius:4px;"><i class="fas fa-university me-1"></i>BANK IN</span>`;
+                    } else if (exp.entry_type === 'TRANSFER_IN') {
+                        typeBadge = `<span class="badge" style="background:#e0e7ff;color:#4338ca;font-size:10px;font-weight:700;padding:3px 6px;border-radius:4px;"><i class="fas fa-exchange-alt me-1"></i>TRANSFER IN</span>`;
+                    } else if (exp.entry_type === 'TRANSFER_OUT') {
+                        typeBadge = `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:3px 6px;border-radius:4px;"><i class="fas fa-exchange-alt me-1"></i>TRANSFER OUT</span>`;
+                    } else if (exp.entry_type === 'OPENING_BALANCE') {
+                        typeBadge = `<span class="badge" style="background:#f3e8ff;color:#7e22ce;font-size:10px;font-weight:700;padding:3px 6px;border-radius:4px;"><i class="fas fa-flag me-1"></i>OPENING BAL</span>`;
+                    } else {
+                        typeBadge = `<span class="badge" style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:3px 6px;border-radius:4px;"><i class="fas fa-arrow-up me-1"></i>EXPENSE</span>`;
+                    }
+
+                    const catBadge = exp.category_name ? `<span class="badge-cat" style="margin-left:3px;">${exp.category_name}</span>` : '';
+                    const descText = exp.narration || exp.description || exp.notes || exp.purpose || '-';
+                    const partyText = exp.party_name || exp.vendor_name || exp.paid_to || '-';
+                    const empName = exp.created_by_name || exp.employee_name || '-';
+
+                    let breakdownHtml = '';
+                    if (exp.entry_type === 'INCOME' && (exp.spares_amount > 0 || exp.service_amount > 0 || exp.ticket_total_amount > 0)) {
+                        breakdownHtml = `
+                            <div style="margin-top:3px;font-size:10px;color:#0369a1;">
+                                <span style="background:#f0f9ff;border:1px solid #bae6fd;padding:1px 5px;border-radius:3px;font-weight:600;">
+                                    🔧 Spares: ₹${formatCurrency(exp.spares_amount)} | ⚙️ Service: ₹${formatCurrency(exp.service_amount)}
+                                </span>
+                                <a href="javascript:void(0)" onclick="openTicketBreakdownModal('${exp.ticket_ref || exp.reference_id || exp.real_id || exp.id}', ${exp.real_id || exp.id})" style="color:#2563eb;font-weight:700;text-decoration:none;margin-left:4px;" title="View Ticket Breakdown">Breakdown &rarr;</a>
+                            </div>
+                        `;
+                    }
+
+                    const inHtml = isCredit
+                        ? `<span style="color:#059669;font-weight:700;font-family:monospace;font-size:13px;">+₹${formatCurrency(exp.credit_amount || exp.amount)}</span>`
+                        : `<span style="color:#9ca3af;font-size:12px;">—</span>`;
+
+                    const outHtml = !isCredit
+                        ? `<span style="color:#dc2626;font-weight:700;font-family:monospace;font-size:13px;">₹${formatCurrency(exp.debit_amount || exp.amount)}</span>`
+                        : `<span style="color:#9ca3af;font-size:12px;">—</span>`;
+
+                    const balVal = exp.running_balance != null ? exp.running_balance : 0;
+                    const balColor = balVal >= 0 ? '#1e40af' : '#dc2626';
+
+                    return `
+                        <tr style="border-bottom:1px solid #f1f5f9;">
+                            <td class="mono" style="font-weight:600;color:#4f46e5;">${exp.entry_number || ('#' + exp.id)}</td>
+                            <td style="white-space:nowrap;font-size:12px;">${formatDate(exp.expense_date || exp.created_at)}</td>
+                            <td style="font-weight:600;color:#1e40af;font-size:12px;">${empName}</td>
+                            <td style="font-size:12px;">${exp.company_name || '-'}</td>
+                            <td>
+                                <div>${typeBadge} ${catBadge}</div>
+                            </td>
+                            <td style="font-size:12px;font-weight:500;">${partyText}</td>
+                            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;" title="${descText.replace(/"/g, '&quot;')}">
+                                ${descText}
+                                ${breakdownHtml}
+                            </td>
+                            <td style="text-align:right;">${inHtml}</td>
+                            <td style="text-align:right;">${outHtml}</td>
+                            <td style="text-align:right;font-family:monospace;font-weight:700;color:${balColor};font-size:12.5px;">
+                                ₹${formatCurrency(balVal)}
+                            </td>
+                            <td style="text-align:center;">
+                                <input type="checkbox" ${exp.show_in_ledger ? 'checked' : ''} 
+                                    onchange="toggleRowLedger('${exp.entry_type}', ${exp.real_id || exp.id}, this.checked, this)"
+                                    title="Toggle include in financial ledger"
+                                    style="cursor:pointer;width:15px;height:15px;accent-color:#16a34a;">
+                            </td>
+                            <td style="text-align:center;">
+                                <input type="checkbox" ${exp.is_external ? 'checked' : ''} 
+                                    onchange="toggleRowExternal('${exp.entry_type}', ${exp.real_id || exp.id}, this.checked, this)"
+                                    title="Toggle External Party flag"
+                                    style="cursor:pointer;width:15px;height:15px;accent-color:#0284c7;">
+                            </td>
+                            <td>${statusLabel}</td>
+                            <td style="white-space:nowrap;">${getActionButtons(exp)}</td>
+                        </tr>
+                    `;
                 }).join('');
-                document.getElementById('teamTableContainer').style.display = '';
+
+                document.getElementById('teamTableContainer').style.display = 'block';
                 renderTeamPagination();
-                // DC-IE-DEST-FILTER-001: Show income receipts section if filtering by a specific employee
-                const empSel = document.getElementById('teamFilterEmployee');
-                const empFilterVal = empSel ? empSel.value : '';
-                if (empFilterVal) {
-                    const empLabel = empSel.options[empSel.selectedIndex]?.text || 'Employee';
-                    loadTeamIncomeReceipts(empFilterVal, empLabel);
-                } else {
-                    document.getElementById('teamIncomeReceiptsSection').style.display = 'none';
-                }
             } catch (e) {
                 if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
                 document.getElementById('teamLoadingState').style.display = 'none';
-                document.getElementById('teamEmptyState').style.display = '';
+                document.getElementById('teamEmptyState').style.display = 'block';
                 console.error('Error loading team expenses:', e);
             }
+        }
+
+        function updateTeamSummary(summary) {
+            const fmtAmt = n => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const renderCardVal = (cnt, amt) => `
+                <div style="font-size:20px;font-weight:800;line-height:1.1;">${cnt || 0}</div>
+                <div style="font-size:12px;font-weight:700;margin-top:3px;opacity:0.95;">${fmtAmt(amt)}</div>
+            `;
+
+            if (document.getElementById('teamTotalInAmount')) {
+                document.getElementById('teamTotalInAmount').textContent = fmtAmt(summary.total_in || 0);
+            }
+            if (document.getElementById('teamTotalOutAmount')) {
+                document.getElementById('teamTotalOutAmount').textContent = fmtAmt(summary.total_out || 0);
+            }
+            if (document.getElementById('teamNetBalanceAmount')) {
+                const net = summary.net_balance != null ? summary.net_balance : ((summary.total_in || 0) - (summary.total_out || 0));
+                document.getElementById('teamNetBalanceAmount').textContent = fmtAmt(net);
+                document.getElementById('teamNetBalanceAmount').style.color = net >= 0 ? '#1e40af' : '#dc2626';
+            }
+
+            if (document.getElementById('tsDraft')) document.getElementById('tsDraft').innerHTML = renderCardVal(summary.draft_count, summary.draft_amount);
+            if (document.getElementById('tsSubmitted')) document.getElementById('tsSubmitted').innerHTML = renderCardVal(summary.submitted_count, summary.submitted_amount);
+            if (document.getElementById('tsApproved')) document.getElementById('tsApproved').innerHTML = renderCardVal(summary.approved_count, summary.total_approved_amount);
         }
 
         async function loadTeamIncomeReceipts(empId, empName) {
@@ -1123,6 +1417,19 @@
             }
         }
         
+        async function loadBootstrap() {
+            // Load dropdown metadata sequentially to prevent PostgreSQL connection checkout storms
+            try {
+                await loadCompanies();
+                await loadCategories();
+                await loadVendors();
+                await loadFundAllocations();
+                await loadExpenseEmployees();
+            } catch (err) {
+                console.warn('Dropdown metadata load error:', err);
+            }
+        }
+
         async function loadCompanies() {
             try {
                 const response = await staffFetch(`${API_BASE}/companies`);
@@ -1277,20 +1584,37 @@
             }
         }
         
+        function setFilterType(type) {
+            document.getElementById('filterType').value = type;
+            loadExpenses();
+        }
+
         async function loadExpenses() {
-            const params = new URLSearchParams({ page: currentPage, page_size: 20 });
+            const params = new URLSearchParams({ page: currentPage, page_size: 20, view_mode: 'ledger' });
             
-            const status = document.getElementById('filterStatus').value;
-            const company = document.getElementById('filterCompany').value;
-            const category = document.getElementById('filterCategory').value;
-            const fromDate = document.getElementById('filterFromDate').value;
-            const toDate = document.getElementById('filterToDate').value;
+            const isOverall = (_qfPreset['my'] === 'overall');
+            if (isOverall) {
+                if (document.getElementById('filterFromDate')) document.getElementById('filterFromDate').value = '';
+                if (document.getElementById('filterToDate')) document.getElementById('filterToDate').value = '';
+            }
+
+            const entryType = document.getElementById('filterType') ? document.getElementById('filterType').value : '';
+            const status = document.getElementById('filterStatus') ? document.getElementById('filterStatus').value : '';
+            const company = document.getElementById('filterCompany') ? document.getElementById('filterCompany').value : '';
+            const category = document.getElementById('filterCategory') ? document.getElementById('filterCategory').value : '';
+            const fromDate = isOverall ? '' : (document.getElementById('filterFromDate') ? document.getElementById('filterFromDate').value : '');
+            const toDate   = isOverall ? '' : (document.getElementById('filterToDate') ? document.getElementById('filterToDate').value : '');
+            const ledgerFilter = document.getElementById('filterLedger') ? document.getElementById('filterLedger').value : '';
+            const externalFilter = document.getElementById('filterExternal') ? document.getElementById('filterExternal').value : '';
             
+            if (entryType) params.append('entry_type', entryType);
             if (status) params.append('status', status);
             if (company) params.append('company_id', company);
             if (category) params.append('category_id', category);
             if (fromDate) params.append('from_date', fromDate);
             if (toDate) params.append('to_date', toDate);
+            if (ledgerFilter) params.append('ledger_filter', ledgerFilter);
+            if (externalFilter) params.append('external_filter', externalFilter);
             
             document.getElementById('loadingState').style.display = 'flex';
             document.getElementById('tableContainer').style.display = 'none';
@@ -1334,27 +1658,91 @@
             document.getElementById('recordCount').textContent = `${data.total || expenses.length} records`;
             
             tbody.innerHTML = expenses.map(exp => {
+                const isCredit = exp.direction === 'IN' || (exp.credit_amount && exp.credit_amount > 0);
                 const statusLabel = exp.is_paid
                     ? `<span class="badge-status badge-approved">${exp.status}</span> <span class="badge-status badge-paid">PAID</span>`
                     : `<span class="badge-status badge-${(exp.status||'').toLowerCase()}">${exp.status}</span>`;
-                const returnBadge = '';
-                const ledgerCatLabel = exp.bank_ledger_category
-                    ? `<span class="badge-cat">${exp.bank_ledger_category === 'CUSTOM' ? (exp.custom_category_name || 'CUSTOM') : exp.bank_ledger_category}</span>`
-                    : '<span style="color:#9ca3af;font-size:11px;">—</span>';
+                
+                // Type badge
+                let typeBadge = '';
+                if (exp.entry_type === 'INCOME') {
+                    if (exp.sub_type === 'SPARES') {
+                        typeBadge = `<span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10px;font-weight:700;padding:3px 6px;border-radius:4px;"><i class="fas fa-wrench me-1"></i>SPARES IN</span>`;
+                    } else if (exp.sub_type === 'LABOUR') {
+                        typeBadge = `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:3px 6px;border-radius:4px;"><i class="fas fa-cog me-1"></i>LABOUR IN</span>`;
+                    } else {
+                        typeBadge = `<span class="badge" style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:3px 6px;border-radius:4px;"><i class="fas fa-arrow-down me-1"></i>INCOME</span>`;
+                    }
+                } else if (exp.entry_type === 'FUND_ALLOCATION') {
+                    typeBadge = `<span class="badge" style="background:#cffafe;color:#0e7490;font-size:10px;font-weight:700;padding:3px 6px;border-radius:4px;"><i class="fas fa-university me-1"></i>BANK IN</span>`;
+                } else if (exp.entry_type === 'TRANSFER_IN') {
+                    typeBadge = `<span class="badge" style="background:#e0e7ff;color:#4338ca;font-size:10px;font-weight:700;padding:3px 6px;border-radius:4px;"><i class="fas fa-exchange-alt me-1"></i>TRANSFER IN</span>`;
+                } else if (exp.entry_type === 'TRANSFER_OUT') {
+                    typeBadge = `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:3px 6px;border-radius:4px;"><i class="fas fa-exchange-alt me-1"></i>TRANSFER OUT</span>`;
+                } else if (exp.entry_type === 'OPENING_BALANCE') {
+                    typeBadge = `<span class="badge" style="background:#f3e8ff;color:#7e22ce;font-size:10px;font-weight:700;padding:3px 6px;border-radius:4px;"><i class="fas fa-flag me-1"></i>OPENING BAL</span>`;
+                } else {
+                    typeBadge = `<span class="badge" style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:3px 6px;border-radius:4px;"><i class="fas fa-arrow-up me-1"></i>EXPENSE</span>`;
+                }
+
+                const catBadge = exp.category_name ? `<span class="badge-cat" style="margin-left:3px;">${exp.category_name}</span>` : '';
                 const descText = exp.narration || exp.description || exp.notes || exp.purpose || '-';
-                const paidToText = exp.vendor_name || exp.paid_to || '-';
+                const partyText = exp.party_name || exp.vendor_name || exp.paid_to || '-';
+
+                // Spares & Service breakdown link for service ticket income entries
+                let breakdownHtml = '';
+                if (exp.entry_type === 'INCOME' && (exp.spares_amount > 0 || exp.service_amount > 0 || exp.ticket_total_amount > 0)) {
+                    breakdownHtml = `
+                        <div style="margin-top:3px;font-size:10px;color:#0369a1;">
+                            <span style="background:#f0f9ff;border:1px solid #bae6fd;padding:1px 5px;border-radius:3px;font-weight:600;">
+                                🔧 Spares: ₹${formatCurrency(exp.spares_amount)} | ⚙️ Service: ₹${formatCurrency(exp.service_amount)}
+                            </span>
+                            <a href="javascript:void(0)" onclick="openTicketBreakdownModal('${exp.reference_id || exp.real_id || exp.id}', ${exp.real_id || exp.id})" style="color:#2563eb;font-weight:700;text-decoration:none;margin-left:4px;" title="View Ticket Breakdown">Breakdown &rarr;</a>
+                        </div>
+                    `;
+                }
+
+                // IN / OUT amounts
+                const inHtml = isCredit
+                    ? `<span style="color:#059669;font-weight:700;font-family:monospace;font-size:13px;">+₹${formatCurrency(exp.credit_amount || exp.amount)}</span>`
+                    : `<span style="color:#9ca3af;font-size:12px;">—</span>`;
+
+                const outHtml = !isCredit
+                    ? `<span style="color:#dc2626;font-weight:700;font-family:monospace;font-size:13px;">₹${formatCurrency(exp.debit_amount || exp.amount)}</span>`
+                    : `<span style="color:#9ca3af;font-size:12px;">—</span>`;
+
+                const balVal = exp.running_balance != null ? exp.running_balance : 0;
+                const balColor = balVal >= 0 ? '#1e40af' : '#dc2626';
+                const balHtml = `<span style="color:${balColor};font-weight:700;font-family:monospace;font-size:13px;">₹${formatCurrency(balVal)}</span>`;
+
+                // In Ledger checkbox
+                const inLedgerChecked = exp.show_in_ledger ? 'checked' : '';
+                const inLedgerHtml = `<div style="text-align:center;">
+                    <input type="checkbox" ${inLedgerChecked} onchange="toggleRowLedger('${exp.entry_type}', ${exp.real_id || exp.id}, this.checked)" title="Toggle Ledger Posting (Posts to Employee Cash Ledger & P&L)" style="cursor:pointer;width:16px;height:16px;accent-color:#2563eb;">
+                </div>`;
+
+                // External checkbox
+                const externalChecked = exp.is_external ? 'checked' : '';
+                const externalHtml = `<div style="text-align:center;">
+                    <input type="checkbox" ${externalChecked} onchange="toggleRowExternal('${exp.entry_type}', ${exp.real_id || exp.id}, this.checked)" title="Toggle External Party Transaction" style="cursor:pointer;width:16px;height:16px;accent-color:#f59e0b;">
+                </div>`;
+
                 return `<tr>
-                    <td><code>${exp.id}</code></td>
-                    <td>${formatDate(exp.expense_date)}</td>
-                    <td>${exp.company_name || '-'}</td>
-                    <td>${exp.category_name || '-'}</td>
-                    <td style="font-weight:500;">${paidToText}</td>
-                    <td>${ledgerCatLabel}</td>
-                    <td title="${descText.replace(/"/g,'&quot;')}">${truncate(descText, 30)}${returnBadge}</td>
-                    <td class="amount negative">₹${formatCurrency(exp.amount)}</td>
+                    <td><code>${exp.entry_number || ('#' + exp.id)}</code></td>
+                    <td style="white-space:nowrap;">${formatDate(exp.expense_date || exp.created_at)}</td>
+                    <td style="font-size:12px;">${exp.company_name || '-'}</td>
+                    <td>${typeBadge} ${catBadge}</td>
+                    <td style="font-weight:600;color:#1f2937;">${partyText}</td>
+                    <td>
+                        <div title="${descText.replace(/"/g,'&quot;')}">${truncate(descText, 35)}</div>
+                        ${breakdownHtml}
+                    </td>
+                    <td style="text-align:right;">${inHtml}</td>
+                    <td style="text-align:right;">${outHtml}</td>
+                    <td style="text-align:right;background:#fafafa;">${balHtml}</td>
+                    <td>${inLedgerHtml}</td>
+                    <td>${externalHtml}</td>
                     <td>${statusLabel}</td>
-                    <td>${exp.tally_status ? '<span class="badge-status badge-' + exp.tally_status.toLowerCase() + '">' + exp.tally_status.replace('_', ' ') + '</span>' : '<span style="color:#9ca3af;font-size:11px;">—</span>'}</td>
-                    <td>${exp.fund_allocation_id ? '#' + exp.fund_allocation_id : '-'}</td>
                     <td>${getActionButtons(exp)}</td>
                 </tr>`;
             }).join('');
@@ -1367,8 +1755,54 @@
             if (!str) return '-';
             return str.length > len ? str.substring(0, len) + '...' : str;
         }
+
+        async function toggleRowLedger(entryType, id, checked, el) {
+            try {
+                const endpoint = entryType === 'INCOME' 
+                    ? `${API_BASE}/income-entries/${id}/show-in-ledger`
+                    : `${API_BASE}/expense-entries/${id}/show-in-ledger`;
+                const res = await staffFetch(endpoint, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ show_in_ledger: checked })
+                });
+                if (!res.ok) {
+                    alert('Failed to update ledger status');
+                    if (el) el.checked = !checked;
+                }
+            } catch(e) {
+                console.error(e);
+                alert('Error updating ledger status');
+                if (el) el.checked = !checked;
+            }
+        }
+
+        async function toggleRowExternal(entryType, id, checked, el) {
+            try {
+                const endpoint = entryType === 'INCOME' 
+                    ? `${API_BASE}/income-entries/${id}/external`
+                    : `${API_BASE}/expense-entries/${id}/external`;
+                const res = await staffFetch(endpoint, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ is_external: checked })
+                });
+                if (!res.ok) {
+                    alert('Failed to update external status');
+                    if (el) el.checked = !checked;
+                }
+            } catch(e) {
+                console.error(e);
+                alert('Error updating external status');
+                if (el) el.checked = !checked;
+            }
+        }
         
         function getActionButtons(exp) {
+            if (!exp) return '';
+            const expId = String(exp.id || '');
+            const realId = String(exp.real_id || exp.id || '');
+            _entryLookup[expId] = exp;
+            if (realId) _entryLookup[realId] = exp;
+
             const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
             const isCreator = exp.created_by_id === userData.id;
             const hasFullAccess = ['VGK Mentor', 'VGK4U Supreme', 'VGK4U', 'Executive Assistant', 'EA', 'Executive Admin'].includes(userData.role_name)
@@ -1377,37 +1811,46 @@
                 || ['Accounts', 'Finance', 'VEA'].some(r => (userData.role_name || '').includes(r))
                 || ['accounts', 'finance'].some(d => (userData.department_name || '').toLowerCase().includes(d));
 
-            let buttons = `<button class="btn-action btn-view" onclick="viewExpense(${exp.id})" title="View"><i class="fas fa-eye"></i></button>`;
+            let buttons = '';
 
-            if (exp.status === 'DRAFT') {
+            if (exp.entry_type === 'INCOME') {
+                const targetRef = String(exp.reference_id || realId || expId || '').replace(/'/g, "\\'");
+                buttons += `<button class="btn-action" style="background:#e0f2fe;color:#0369a1;border-color:#bae6fd;" onclick="openTicketBreakdownModal('${targetRef}', '${realId}')" title="View Ticket Fee Breakdown"><i class="fas fa-receipt"></i></button>`;
+                return buttons;
+            }
+
+            buttons += `<button class="btn-action btn-view" onclick="viewExpense('${realId}')" title="View"><i class="fas fa-eye"></i></button>`;
+
+            if (exp.status === 'DRAFT' && exp.entry_type === 'EXPENSE') {
                 if (isCreator || hasFullAccess) {
-                    buttons += ` <button class="btn-action btn-submit" onclick="submitExpense(${exp.id})" title="Submit for Approval"><i class="fas fa-paper-plane"></i></button>`;
+                    buttons += ` <button class="btn-action btn-submit" onclick="submitExpense('${realId}')" title="Submit for Approval"><i class="fas fa-paper-plane"></i></button>`;
                 }
                 if (isCreator || hasAccountsAccess) {
-                    buttons += ` <button class="btn-action btn-edit" onclick="openEditExpenseModal(${exp.id})" title="Edit"><i class="fas fa-edit"></i></button>`;
+                    buttons += ` <button class="btn-action btn-edit" onclick="openEditExpenseModal('${realId}')" title="Edit"><i class="fas fa-edit"></i></button>`;
                 }
             }
 
-            if (exp.status === 'SUBMITTED' && hasAccountsAccess) {
-                buttons += ` <button class="btn-action btn-approve" onclick="openApproveModal(${JSON.stringify(exp).replace(/"/g, '&quot;')})" title="Approve"><i class="fas fa-check"></i></button>`;
-                buttons += ` <button class="btn-action btn-reject" onclick="openRejectModal(${JSON.stringify(exp).replace(/"/g, '&quot;')})" title="Reject"><i class="fas fa-times"></i></button>`;
+            if (exp.status === 'SUBMITTED' && hasAccountsAccess && exp.entry_type === 'EXPENSE') {
+                buttons += ` <button class="btn-action btn-approve" onclick="openApproveModal('${expId}')" title="Approve"><i class="fas fa-check"></i></button>`;
+                buttons += ` <button class="btn-action btn-reject" onclick="openRejectModal('${expId}')" title="Reject"><i class="fas fa-times"></i></button>`;
             }
 
-            if (!exp.is_paid && (exp.status === 'DRAFT' || exp.status === 'SUBMITTED' || exp.status === 'APPROVED') && hasAccountsAccess) {
-                buttons += ` <button class="btn-action btn-pay" onclick="openPayModal(${JSON.stringify(exp).replace(/"/g, '&quot;')})" title="Mark as Paid (auto-approves)"><i class="fas fa-money-bill-wave"></i></button>`;
+            if (!exp.is_paid && (exp.status === 'DRAFT' || exp.status === 'SUBMITTED' || exp.status === 'APPROVED') && hasAccountsAccess && exp.entry_type === 'EXPENSE') {
+                buttons += ` <button class="btn-action btn-pay" onclick="openPayModal('${expId}')" title="Mark as Paid (auto-approves)"><i class="fas fa-money-bill-wave"></i></button>`;
             }
 
-            if (exp.status === 'APPROVED' && hasAccountsAccess) {
+            if (exp.status === 'APPROVED' && hasAccountsAccess && exp.entry_type === 'EXPENSE') {
                 const tallyStatus = exp.tally_status || '';
                 if (tallyStatus !== 'SYNCED') {
-                    buttons += ` <button class="btn-action btn-tally-confirm" onclick="tallyAction(${exp.id},'confirm')" title="Tally Confirm"><i class="fas fa-check-double"></i></button>`;
-                    buttons += ` <button class="btn-action btn-tally-exception" onclick="tallyAction(${exp.id},'exception')" title="Tally Exception"><i class="fas fa-exclamation-triangle"></i></button>`;
-                    buttons += ` <button class="btn-action btn-tally-done" onclick="tallyAction(${exp.id},'tally_done')" title="Tally Done"><i class="fas fa-stamp"></i></button>`;
+                    buttons += ` <button class="btn-action btn-tally-confirm" onclick="tallyAction('${realId}','confirm')" title="Tally Confirm"><i class="fas fa-check-double"></i></button>`;
+                    buttons += ` <button class="btn-action btn-tally-exception" onclick="tallyAction('${realId}','exception')" title="Tally Exception"><i class="fas fa-exclamation-triangle"></i></button>`;
+                    buttons += ` <button class="btn-action btn-tally-done" onclick="tallyAction('${realId}','tally_done')" title="Tally Done"><i class="fas fa-stamp"></i></button>`;
                 }
             }
 
             if (exp.bill_path) {
-                buttons += ` <button class="btn-action" style="background:#e0f2fe;color:#0284c7;" onclick="viewReceipt('${exp.bill_path}')" title="View Payment Receipt / Invoice"><i class="fas fa-file-invoice"></i></button>`;
+                const safePath = (exp.bill_path || '').replace(/'/g, "\\'");
+                buttons += ` <button class="btn-action" style="background:#e0f2fe;color:#0284c7;" onclick="viewReceipt('${safePath}')" title="View Payment Receipt / Invoice"><i class="fas fa-file-invoice"></i></button>`;
             }
 
             return buttons;
@@ -1420,21 +1863,27 @@
         
         function updateSummary(summary) {
             if (!summary) return;
-            const fmtAmt = n => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            const fmtAmt = n => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             const renderCardVal = (cnt, amt) => `
-                <div style="font-size:22px;font-weight:800;line-height:1.1;">${cnt || 0}</div>
+                <div style="font-size:20px;font-weight:800;line-height:1.1;">${cnt || 0}</div>
                 <div style="font-size:12px;font-weight:700;margin-top:3px;opacity:0.95;">${fmtAmt(amt)}</div>
             `;
+
+            if (document.getElementById('totalInAmount')) {
+                document.getElementById('totalInAmount').textContent = fmtAmt(summary.total_in || 0);
+            }
+            if (document.getElementById('totalOutAmount')) {
+                document.getElementById('totalOutAmount').textContent = fmtAmt(summary.total_out || 0);
+            }
+            if (document.getElementById('netBalanceAmount')) {
+                const net = summary.net_balance != null ? summary.net_balance : ((summary.total_in || 0) - (summary.total_out || 0));
+                document.getElementById('netBalanceAmount').textContent = fmtAmt(net);
+                document.getElementById('netBalanceAmount').style.color = net >= 0 ? '#1e40af' : '#dc2626';
+            }
 
             document.getElementById('draftCount').innerHTML     = renderCardVal(summary.draft_count, summary.draft_amount);
             document.getElementById('submittedCount').innerHTML = renderCardVal(summary.submitted_count, summary.submitted_amount);
             document.getElementById('approvedCount').innerHTML  = renderCardVal(summary.approved_count, summary.total_approved_amount);
-            document.getElementById('rejectedCount').innerHTML  = renderCardVal(summary.rejected_count, summary.rejected_amount);
-            document.getElementById('paidCount').innerHTML      = renderCardVal(summary.paid_count, summary.total_paid_amount);
-            
-            const totalCount = (summary.draft_count||0) + (summary.submitted_count||0) + (summary.approved_count||0) + (summary.rejected_count||0);
-            const totalAmt = (summary.total_amount != null) ? summary.total_amount : ((summary.draft_amount||0) + (summary.submitted_amount||0) + (summary.total_approved_amount||0) + (summary.rejected_amount||0));
-            document.getElementById('totalAmount').innerHTML    = renderCardVal(totalCount, totalAmt);
         }
         
         function renderPagination() {
@@ -1559,11 +2008,36 @@
                 ).join('');
         }
 
+        let _consoSearchTimer = null;
+        function debounceConsoSearch() {
+            clearTimeout(_consoSearchTimer);
+            _consoSearchTimer = setTimeout(() => {
+                loadConsolidatedSummary();
+            }, 350);
+        }
+
+        function resetConsoFilters() {
+            if (document.getElementById('consoCompany')) document.getElementById('consoCompany').value = '';
+            if (document.getElementById('consoFilterType')) document.getElementById('consoFilterType').value = '';
+            if (document.getElementById('consoFilterLedger')) document.getElementById('consoFilterLedger').value = '';
+            if (document.getElementById('consoFilterExternal')) document.getElementById('consoFilterExternal').value = '';
+            if (document.getElementById('consoFilterStatus')) document.getElementById('consoFilterStatus').value = '';
+            if (document.getElementById('consoFromDate')) document.getElementById('consoFromDate').value = '';
+            if (document.getElementById('consoToDate')) document.getElementById('consoToDate').value = '';
+            if (document.getElementById('consoSearch')) document.getElementById('consoSearch').value = '';
+            setQuickFilter('consolidated', 'overall');
+        }
+
         async function loadConsolidatedSummary() {
-            const company  = document.getElementById('consoCompany').value;
-            const from     = document.getElementById('consoFromDate').value;
-            const to       = document.getElementById('consoToDate').value;
-            const search   = document.getElementById('consoSearch').value.trim();
+            const company  = document.getElementById('consoCompany') ? document.getElementById('consoCompany').value : '';
+            const isOverall = (_qfPreset['consolidated'] === 'overall');
+            if (isOverall) {
+                if (document.getElementById('consoFromDate')) document.getElementById('consoFromDate').value = '';
+                if (document.getElementById('consoToDate')) document.getElementById('consoToDate').value = '';
+            }
+            const from     = isOverall ? '' : (document.getElementById('consoFromDate') ? document.getElementById('consoFromDate').value : '');
+            const to       = isOverall ? '' : (document.getElementById('consoToDate') ? document.getElementById('consoToDate').value : '');
+            const search   = document.getElementById('consoSearch') ? document.getElementById('consoSearch').value.trim() : '';
 
             document.getElementById('consoLoading').style.display = 'block';
             document.getElementById('consoTable').style.display   = 'none';
@@ -1581,7 +2055,20 @@
                 document.getElementById('consoLoading').style.display = 'none';
                 if (!r.ok) { throw new Error(`HTTP ${r.status}`); }
                 const d = await r.json();
-                const rows = d.rows || [];
+                const rawRows = d.rows || [];
+                const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+                const loggedInEmpCode = (userData.emp_code || userData.employee_code || '').trim().toUpperCase();
+                const isMr10001 = loggedInEmpCode === 'MR10001';
+                const rows = rawRows.filter(r => {
+                    if (isMr10001) return true;
+                    const rowCode = (r.emp_code || r.employee_code || '').trim().toUpperCase();
+                    const rowId = Number(r.employee_id || r.id || 0);
+                    const rowName = (r.full_name || '').toLowerCase();
+                    if (rowCode === 'MR10001' || rowId === 1 || rowName.includes('mr10001') || rowName.includes('vgk4u supreme')) {
+                        return false;
+                    }
+                    return true;
+                });
 
                 if (!rows.length) {
                     document.getElementById('consoEmpty').style.display = 'block';
@@ -1593,121 +2080,214 @@
                 const fmt  = v => '₹' + Number(v || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
                 const fmtN = v => Number(v || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
 
+                // Map each row with full fallback safety so no field can ever be undefined or 0 inadvertently
+                const normalizedRows = rows.map(r => {
+                    const inc_in    = Number(r.income_entries ?? r.cust_cash_received ?? 0);
+                    const bank_in   = Number(r.bank_alloc_in ?? r.fund_allocated ?? 0);
+                    const ft_in     = Number(r.fund_transferred_in ?? 0);
+                    const tot_in    = Number(r.total_in ?? (inc_in + bank_in + ft_in));
+
+                    const ledg_exp  = Number(r.ledger_exp ?? r.ledger_exp_amount ?? 0);
+                    const ext_exp   = Number(r.ext_exp ?? r.ext_exp_amount ?? 0);
+                    const ft_out    = Number(r.fund_transferred_out ?? 0);
+                    const tot_out   = Number(r.total_out ?? (ledg_exp + ext_exp + ft_out));
+
+                    const bal       = Number(r.net_balance ?? r.balance ?? (tot_in - tot_out));
+
+                    const d_in      = Number(r.draft_in ?? 0);
+                    const d_out     = Number(r.draft_out ?? (r.draft_amount ?? 0));
+                    const d_bal     = Number(r.draft_balance ?? (d_in - d_out));
+                    const f_bal     = Number(r.final_balance ?? (bal + d_bal));
+
+                    return {
+                        ...r,
+                        income_entries: inc_in,
+                        bank_alloc_in: bank_in,
+                        fund_transferred_in: ft_in,
+                        total_in: tot_in,
+                        ledger_exp: ledg_exp,
+                        ext_exp: ext_exp,
+                        fund_transferred_out: ft_out,
+                        total_out: tot_out,
+                        net_balance: bal,
+                        draft_in: d_in,
+                        draft_out: d_out,
+                        draft_balance: d_bal,
+                        final_balance: f_bal,
+                        total_expenses: Number(r.total_expenses ?? 0),
+                        draft_count: Number(r.draft_count ?? 0),
+                        submitted_count: Number(r.submitted_count ?? 0),
+                        approved_count: Number(r.approved_count ?? 0),
+                        rejected_count: Number(r.rejected_count ?? 0),
+                        paid_count: Number(r.paid_count ?? 0),
+                        draft_amount: Number(r.draft_amount ?? 0),
+                        submitted_amount: Number(r.submitted_amount ?? 0),
+                        approved_amount: Number(r.approved_amount ?? 0),
+                        rejected_amount: Number(r.rejected_amount ?? 0),
+                        paid_amount: Number(r.paid_amount ?? 0),
+                    };
+                });
+
                 // Totals row
-                const T = rows.reduce((acc, r) => {
-                    acc.fund_allocated       += r.fund_allocated;
-                    acc.fund_balance         += r.fund_balance;
-                    acc.fund_used            += r.fund_used;
-                    acc.fund_transferred_out += (r.fund_transferred_out || 0);
-                    acc.fund_transferred_in  += (r.fund_transferred_in  || 0);
-                    acc.cash_received        += (r.cash_received  || 0);
-                    acc.cash_balance         += (r.cash_balance   || 0);
-                    acc.total_expenses       += r.total_expenses;
-                    acc.draft_count          += r.draft_count;
-                    acc.submitted_count      += r.submitted_count;
-                    acc.approved_count       += r.approved_count;
-                    acc.rejected_count       += r.rejected_count;
-                    acc.paid_count           += r.paid_count;
-                    acc.approved_amount      += r.approved_amount;
-                    acc.rejected_amount      += r.rejected_amount;
-                    acc.paid_amount          += r.paid_amount;
-                    acc.draft_amount         += r.draft_amount;
-                    acc.submitted_amount     += r.submitted_amount;
+                const T = normalizedRows.reduce((acc, r) => {
+                    acc.income_entries        += (r.income_entries || 0);
+                    acc.bank_alloc_in         += (r.bank_alloc_in || 0);
+                    acc.fund_transferred_in   += (r.fund_transferred_in || 0);
+                    acc.total_in              += (r.total_in || 0);
+                    acc.ledger_exp            += (r.ledger_exp || 0);
+                    acc.ext_exp               += (r.ext_exp || 0);
+                    acc.fund_transferred_out  += (r.fund_transferred_out || 0);
+                    acc.total_out             += (r.total_out || 0);
+                    acc.net_balance           += (r.net_balance || 0);
+                    acc.draft_in              += (r.draft_in || 0);
+                    acc.draft_out             += (r.draft_out || 0);
+                    acc.draft_balance         += (r.draft_balance || 0);
+                    acc.final_balance         += (r.final_balance || 0);
+                    acc.total_expenses        += (r.total_expenses || 0);
+                    acc.draft_count           += (r.draft_count || 0);
+                    acc.submitted_count       += (r.submitted_count || 0);
+                    acc.approved_count        += (r.approved_count || 0);
+                    acc.rejected_count        += (r.rejected_count || 0);
+                    acc.paid_count            += (r.paid_count || 0);
+                    acc.approved_amount       += (r.approved_amount || 0);
+                    acc.rejected_amount       += (r.rejected_amount || 0);
+                    acc.paid_amount           += (r.paid_amount || 0);
+                    acc.draft_amount          += (r.draft_amount || 0);
+                    acc.submitted_amount      += (r.submitted_amount || 0);
                     return acc;
-                }, {fund_allocated:0,fund_balance:0,fund_used:0,fund_transferred_out:0,fund_transferred_in:0,cash_received:0,cash_balance:0,total_expenses:0,draft_count:0,submitted_count:0,approved_count:0,rejected_count:0,paid_count:0,approved_amount:0,rejected_amount:0,paid_amount:0,draft_amount:0,submitted_amount:0});
+                }, {income_entries:0, bank_alloc_in:0, fund_transferred_in:0, total_in:0, ledger_exp:0, ext_exp:0, fund_transferred_out:0, total_out:0, net_balance:0, draft_in:0, draft_out:0, draft_balance:0, final_balance:0, total_expenses:0, draft_count:0, submitted_count:0, approved_count:0, rejected_count:0, paid_count:0, approved_amount:0, rejected_amount:0, paid_amount:0, draft_amount:0, submitted_amount:0});
 
                 // Stats bar
                 const statsEl = document.getElementById('consoStats');
                 statsEl.style.display = 'grid';
-                const totExpAmt = (T.draft_amount||0) + (T.submitted_amount||0) + (T.approved_amount||0) + (T.rejected_amount||0);
                 statsEl.innerHTML = [
-                    ['Employees', rows.length, ''],
-                    ['Total Allocated', fmt(T.fund_allocated), ''],
-                    ['Total Balance',   fmt(T.fund_balance), ''],
-                    ['Cash Received (IN)', fmt(T.cash_received), ''],
-                    ['Cash Balance',    fmt(T.cash_balance), ''],
-                    ['Total Expenses',  T.total_expenses, fmt(totExpAmt)],
-                    ['Drafts',          T.draft_count, fmt(T.draft_amount)],
-                    ['Pending Review',  T.submitted_count, fmt(T.submitted_amount)],
-                    ['Approved',        T.approved_count, fmt(T.approved_amount)],
-                    ['Rejected',        T.rejected_count, fmt(T.rejected_amount)],
-                    ['Paid',            T.paid_count, fmt(T.paid_amount)],
+                    ['Employees', normalizedRows.length, ''],
+                    ['Confirmed IN', fmt(T.total_in), ''],
+                    ['Confirmed OUT', fmt(T.total_out), ''],
+                    ['Net Balance', fmt(T.net_balance), ''],
+                    ['Drafts OUT', fmt(T.draft_out), `${T.draft_count} entries`],
+                    ['Draft Balance', fmt(T.draft_balance), ''],
+                    ['Final Balance', fmt(T.final_balance), 'Net + Drafts'],
+                    ['Pending Review', T.submitted_count, fmt(T.submitted_amount)],
+                    ['Approved', T.approved_count, fmt(T.approved_amount)],
+                    ['Paid', T.paid_count, fmt(T.paid_amount)],
                 ].map(([lbl, val, subVal]) =>
                     `<div style="text-align:center;padding:6px 0;">
                         <div style="font-size:16px;font-weight:700;">${val}</div>
-                        ${subVal ? `<div style="font-size:11px;font-weight:700;color:#2563eb;margin-top:1px;">${subVal}</div>` : ''}
-                        <div style="font-size:10px;opacity:.75;margin-top:2px;">${lbl}</div>
+                        ${subVal ? `<div style="font-size:11px;font-weight:700;color:#93c5fd;margin-top:1px;">${subVal}</div>` : ''}
+                        <div style="font-size:10px;opacity:.85;margin-top:2px;">${lbl}</div>
                     </div>`
                 ).join('');
 
                 // Table rows
                 const badge = (val, bg, fg) =>
-                    `<span style="display:inline-block;min-width:30px;padding:2px 8px;border-radius:10px;font-size:12px;background:${bg};color:${fg};">${val}</span>`;
+                    `<span style="display:inline-block;min-width:28px;padding:2px 7px;border-radius:10px;font-size:12px;font-weight:600;background:${bg};color:${fg};">${val}</span>`;
 
                 const tbody = document.getElementById('consoTableBody');
-                tbody.innerHTML = rows.map((row, idx) => `
+                tbody.innerHTML = normalizedRows.map((row, idx) => `
                     <tr data-emp-id="${row.employee_id}" data-emp-name="${(row.full_name||'').replace(/"/g,'&quot;')}"
-                        onclick="openIncomeReceiptsDrilldown(this.dataset.empId, this.dataset.empName)"
-                        title="Click to view cash receipts for ${(row.full_name||'').replace(/"/g,'&quot;')}"
-                        style="border-bottom:1px solid #f3f4f6;${idx%2===1?'background:#fafafa;':''}cursor:pointer;transition:background .15s;"
-                        onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='${idx%2===1?'#fafafa':''}'"
+                        style="border-bottom:1px solid #f1f5f9;${idx%2===1?'background:#fafafa;':''}transition:background .15s;"
                     >
-                        <td style="padding:10px 14px;color:#9ca3af;font-size:12px;">${idx+1}</td>
-                        <td style="padding:10px 14px;">
-                            <div style="font-weight:700;color:#1e40af;">${row.full_name} <i class="fas fa-external-link-alt" style="font-size:10px;opacity:.5;"></i></div>
+                        <td style="padding:10px 8px;text-align:center;">
+                            <button id="btnExpandConso_${row.employee_id}" 
+                                onclick="toggleConsoEmpLedger(${row.employee_id}, '${(row.full_name||'').replace(/'/g, "\\'")}', event)" 
+                                title="Expand individual passbook for ${row.full_name}"
+                                style="padding:3px 8px;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;font-weight:700;">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </td>
+                        <td style="padding:10px 10px;color:#9ca3af;font-size:12px;">${idx+1}</td>
+                        <td style="padding:10px 12px;cursor:pointer;" onclick="toggleConsoEmpLedger(${row.employee_id}, '${(row.full_name||'').replace(/'/g, "\\'")}', event)">
+                            <div style="font-weight:700;color:#1e40af;">${row.full_name} <i class="fas fa-chevron-right ms-1" style="font-size:10px;opacity:.6;"></i></div>
                             <div style="font-size:11px;color:#9ca3af;">${row.emp_code}</div>
                         </td>
-                        <td style="padding:10px 14px;">
+                        <td style="padding:10px 12px;border-right:2px solid #cbd5e1;">
                             <div style="font-size:12px;color:#374151;">${row.department || '—'}</div>
                             <div style="font-size:11px;color:#9ca3af;">${row.role || '—'}</div>
                         </td>
-                        <td style="padding:10px 14px;text-align:right;font-weight:600;color:#1e40af;">${fmt(row.fund_allocated)}</td>
-                        <td style="padding:10px 14px;text-align:right;font-weight:700;color:${row.fund_balance >= 0 ? '#059669' : '#dc2626'};">
-                            ${fmt(row.fund_balance)}
-                            ${(row.fund_transferred_out > 0 || row.fund_transferred_in > 0) ? `<div style="font-size:10px;font-weight:400;margin-top:2px;color:#6b7280;">${row.fund_transferred_in > 0 ? '<span style="color:#059669;">↑'+fmt(row.fund_transferred_in)+'</span> ' : ''}${row.fund_transferred_out > 0 ? '<span style="color:#dc2626;">↓'+fmt(row.fund_transferred_out)+'</span>' : ''}</div>` : ''}
+
+                        <!-- SECTION 1: INFLOW (CONFIRMED) -->
+                        <td style="padding:10px 12px;text-align:right;font-weight:600;color:#0891b2;">
+                            ${fmt(row.income_entries)}
+                            ${row.income_receipt_count > 0 ? `<div style="font-size:10px;font-weight:400;color:#6b7280;">${row.income_receipt_count} rcpt${row.income_receipt_count>1?'s':''}</div>` : ''}
                         </td>
-                        <td style="padding:10px 14px;text-align:right;color:#dc2626;">${fmt(row.fund_used)}</td>
-                        <td style="padding:10px 14px;text-align:right;font-weight:600;color:#0891b2;">
-                            ${fmt(row.cash_received)}
-                            <div style="font-size:10px;font-weight:400;margin-top:2px;color:#6b7280;">
-                                ${row.cash_receipt_count > 0 ? `${row.cash_receipt_count} receipt${row.cash_receipt_count>1?'s':''}` : ''}
-                                ${(row.fund_transferred_in > 0 || row.fund_allocated > 0) ? `${row.cash_receipt_count > 0 ? ' · ' : ''}Transfers/Alloc: ₹${fmt(row.fund_transferred_in + row.fund_allocated)}` : ''}
-                            </div>
+                        <td style="padding:10px 12px;text-align:right;font-weight:600;color:#1e40af;">${fmt(row.bank_alloc_in)}</td>
+                        <td style="padding:10px 12px;text-align:right;font-weight:600;color:#059669;">${fmt(row.fund_transferred_in)}</td>
+                        <td style="padding:10px 12px;text-align:right;font-weight:700;color:#047857;background:#ecfdf5;border-right:2px solid #a7f3d0;">${fmt(row.total_in)}</td>
+
+                        <!-- SECTION 1: OUTFLOW (CONFIRMED) -->
+                        <td style="padding:10px 12px;text-align:right;font-weight:600;color:#dc2626;">${fmt(row.ledger_exp)}</td>
+                        <td style="padding:10px 12px;text-align:right;font-weight:600;color:#ea580c;">${fmt(row.ext_exp)}</td>
+                        <td style="padding:10px 12px;text-align:right;font-weight:600;color:#b91c1c;">${fmt(row.fund_transferred_out)}</td>
+                        <td style="padding:10px 12px;text-align:right;font-weight:700;color:#b91c1c;background:#fef2f2;border-right:2px solid #fecaca;">${fmt(row.total_out)}</td>
+
+                        <!-- SECTION 1: NET BALANCE -->
+                        <td style="padding:10px 12px;text-align:right;font-weight:700;background:#eff6ff;border-right:2px solid #bfdbfe;color:${row.net_balance >= 0 ? '#059669' : '#dc2626'};">
+                            ${fmt(row.net_balance)}
                         </td>
-                        <td style="padding:10px 14px;text-align:right;font-weight:700;color:${(row.cash_balance||0) >= 0 ? '#7c3aed' : '#dc2626'};">${fmt(row.cash_balance||0)}</td>
-                        <td style="padding:10px 14px;text-align:center;font-weight:700;">${row.total_expenses}</td>
-                        <td style="padding:10px 14px;text-align:center;">${badge(row.draft_count,      '#f3f4f6','#6b7280')}</td>
-                        <td style="padding:10px 14px;text-align:center;">${badge(row.submitted_count,  '#fef3c7','#d97706')}</td>
-                        <td style="padding:10px 14px;text-align:center;">${badge(row.approved_count,   '#d1fae5','#059669')}</td>
-                        <td style="padding:10px 14px;text-align:center;">${badge(row.rejected_count,   '#fee2e2','#dc2626')}</td>
-                        <td style="padding:10px 14px;text-align:center;">${badge(row.paid_count,       '#ede9fe','#7c3aed')}</td>
-                        <td style="padding:10px 14px;text-align:right;color:#059669;">${fmt(row.approved_amount)}</td>
-                        <td style="padding:10px 14px;text-align:right;color:#dc2626;">${fmt(row.rejected_amount)}</td>
-                        <td style="padding:10px 14px;text-align:right;color:#7c3aed;">${fmt(row.paid_amount)}</td>
-                        <td style="padding:10px 14px;text-align:right;color:#6b7280;">${fmt(row.draft_amount)}</td>
-                        <td style="padding:10px 14px;text-align:right;color:#d97706;">${fmt(row.submitted_amount)}</td>
-                    </tr>`).join('');
+
+                        <!-- SECTION 2: DRAFTS FLOW -->
+                        <td style="padding:10px 12px;text-align:right;font-weight:600;color:#059669;background:#fefce8;">${fmt(row.draft_in)}</td>
+                        <td style="padding:10px 12px;text-align:right;font-weight:600;color:#d97706;background:#fefce8;">${fmt(row.draft_out)}</td>
+                        <td style="padding:10px 12px;text-align:right;font-weight:700;color:#b45309;background:#fef3c7;">${fmt(row.draft_balance)}</td>
+                        <td style="padding:10px 12px;text-align:right;font-weight:800;background:#ede9fe;border-right:2px solid #ddd6fe;color:${row.final_balance >= 0 ? '#059669' : '#7c3aed'};">
+                            ${fmt(row.final_balance)}
+                        </td>
+
+                        <!-- SECTION 3: EXPENSE COUNTS -->
+                        <td style="padding:10px 10px;text-align:center;">${badge(row.draft_count,     '#f3f4f6','#4b5563')}</td>
+                        <td style="padding:10px 10px;text-align:center;">${badge(row.submitted_count, '#fef3c7','#d97706')}</td>
+                        <td style="padding:10px 10px;text-align:center;">${badge(row.approved_count,  '#d1fae5','#059669')}</td>
+                        <td style="padding:10px 10px;text-align:center;">${badge(row.rejected_count,  '#fee2e2','#dc2626')}</td>
+                        <td style="padding:10px 10px;text-align:center;border-right:2px solid #e2e8f0;">${badge(row.paid_count, '#ede9fe','#7c3aed')}</td>
+
+                        <!-- SECTION 3: EXPENSE AMOUNTS -->
+                        <td style="padding:10px 12px;text-align:right;color:#6b7280;font-weight:600;">${fmt(row.draft_amount)}</td>
+                        <td style="padding:10px 12px;text-align:right;color:#d97706;font-weight:600;">${fmt(row.submitted_amount)}</td>
+                        <td style="padding:10px 12px;text-align:right;color:#059669;font-weight:600;">${fmt(row.approved_amount)}</td>
+                        <td style="padding:10px 12px;text-align:right;color:#dc2626;font-weight:600;">${fmt(row.rejected_amount)}</td>
+                        <td style="padding:10px 12px;text-align:right;color:#7c3aed;font-weight:600;">${fmt(row.paid_amount)}</td>
+                    </tr>
+                    <tr id="consoDetailRow_${row.employee_id}" style="display:none;background:#f8fafc;">
+                        <td colspan="27" style="padding:16px 20px;border-top:1px solid #e2e8f0;border-bottom:2px solid #cbd5e1;">
+                            <div id="consoDetailContent_${row.employee_id}"></div>
+                        </td>
+                    </tr>
+                `).join('');
 
                 // Totals footer
                 document.getElementById('consoTableFoot').innerHTML = `
-                    <tr>
-                        <td style="padding:10px 14px;" colspan="3"><strong>TOTAL (${rows.length} employees)</strong></td>
-                        <td style="padding:10px 14px;text-align:right;color:#1e40af;">${fmt(T.fund_allocated)}</td>
-                        <td style="padding:10px 14px;text-align:right;color:#059669;">${fmt(T.fund_balance)}</td>
-                        <td style="padding:10px 14px;text-align:right;color:#dc2626;">${fmt(T.fund_used)}</td>
-                        <td style="padding:10px 14px;text-align:right;color:#0891b2;">${fmt(T.cash_received)}</td>
-                        <td style="padding:10px 14px;text-align:right;color:#7c3aed;">${fmt(T.cash_balance)}</td>
-                        <td style="padding:10px 14px;text-align:center;">${T.total_expenses}</td>
-                        <td style="padding:10px 14px;text-align:center;">${T.draft_count}</td>
-                        <td style="padding:10px 14px;text-align:center;">${T.submitted_count}</td>
-                        <td style="padding:10px 14px;text-align:center;">${T.approved_count}</td>
-                        <td style="padding:10px 14px;text-align:center;">${T.rejected_count}</td>
-                        <td style="padding:10px 14px;text-align:center;">${T.paid_count}</td>
-                        <td style="padding:10px 14px;text-align:right;color:#059669;">${fmt(T.approved_amount)}</td>
-                        <td style="padding:10px 14px;text-align:right;color:#dc2626;">${fmt(T.rejected_amount)}</td>
-                        <td style="padding:10px 14px;text-align:right;color:#7c3aed;">${fmt(T.paid_amount)}</td>
-                        <td style="padding:10px 14px;text-align:right;color:#6b7280;">${fmt(T.draft_amount)}</td>
-                        <td style="padding:10px 14px;text-align:right;color:#d97706;">${fmt(T.submitted_amount)}</td>
+                    <tr style="font-weight:700;font-size:12px;">
+                        <td style="padding:10px 12px;" colspan="4"><strong>TOTAL (${normalizedRows.length} employees)</strong></td>
+                        <!-- SECTION 1: INFLOW -->
+                        <td style="padding:10px 12px;text-align:right;color:#0891b2;">${fmt(T.income_entries)}</td>
+                        <td style="padding:10px 12px;text-align:right;color:#1e40af;">${fmt(T.bank_alloc_in)}</td>
+                        <td style="padding:10px 12px;text-align:right;color:#059669;">${fmt(T.fund_transferred_in)}</td>
+                        <td style="padding:10px 12px;text-align:right;color:#047857;background:#d1fae5;border-right:2px solid #a7f3d0;">${fmt(T.total_in)}</td>
+                        <!-- SECTION 1: OUTFLOW -->
+                        <td style="padding:10px 12px;text-align:right;color:#dc2626;">${fmt(T.ledger_exp)}</td>
+                        <td style="padding:10px 12px;text-align:right;color:#ea580c;">${fmt(T.ext_exp)}</td>
+                        <td style="padding:10px 12px;text-align:right;color:#b91c1c;">${fmt(T.fund_transferred_out)}</td>
+                        <td style="padding:10px 12px;text-align:right;color:#b91c1c;background:#fee2e2;border-right:2px solid #fecaca;">${fmt(T.total_out)}</td>
+                        <!-- SECTION 1: BALANCE -->
+                        <td style="padding:10px 12px;text-align:right;background:#dbeafe;border-right:2px solid #bfdbfe;color:${T.net_balance >= 0 ? '#059669' : '#dc2626'};">${fmt(T.net_balance)}</td>
+                        <!-- SECTION 2: DRAFTS FLOW -->
+                        <td style="padding:10px 12px;text-align:right;color:#059669;background:#fefce8;">${fmt(T.draft_in)}</td>
+                        <td style="padding:10px 12px;text-align:right;color:#d97706;background:#fefce8;">${fmt(T.draft_out)}</td>
+                        <td style="padding:10px 12px;text-align:right;color:#b45309;background:#fef3c7;">${fmt(T.draft_balance)}</td>
+                        <td style="padding:10px 12px;text-align:right;background:#ede9fe;border-right:2px solid #ddd6fe;color:${T.final_balance >= 0 ? '#059669' : '#7c3aed'};">${fmt(T.final_balance)}</td>
+                        <!-- SECTION 3: EXPENSE COUNTS -->
+                        <td style="padding:10px 10px;text-align:center;">${T.draft_count}</td>
+                        <td style="padding:10px 10px;text-align:center;">${T.submitted_count}</td>
+                        <td style="padding:10px 10px;text-align:center;">${T.approved_count}</td>
+                        <td style="padding:10px 10px;text-align:center;">${T.rejected_count}</td>
+                        <td style="padding:10px 10px;text-align:center;border-right:2px solid #e2e8f0;">${T.paid_count}</td>
+                        <!-- SECTION 3: EXPENSE AMOUNTS -->
+                        <td style="padding:10px 12px;text-align:right;color:#6b7280;">${fmt(T.draft_amount)}</td>
+                        <td style="padding:10px 12px;text-align:right;color:#d97706;">${fmt(T.submitted_amount)}</td>
+                        <td style="padding:10px 12px;text-align:right;color:#059669;">${fmt(T.approved_amount)}</td>
+                        <td style="padding:10px 12px;text-align:right;color:#dc2626;">${fmt(T.rejected_amount)}</td>
+                        <td style="padding:10px 12px;text-align:right;color:#7c3aed;">${fmt(T.paid_amount)}</td>
                     </tr>`;
 
                 document.getElementById('consoTable').style.display = 'table';
@@ -1720,6 +2300,253 @@
             }
         }
 
+        async function toggleConsoEmpLedger(empId, empName, event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            const detailRow = document.getElementById(`consoDetailRow_${empId}`);
+            const btn = document.getElementById(`btnExpandConso_${empId}`);
+            if (!detailRow) return;
+
+            if (detailRow.style.display !== 'none') {
+                detailRow.style.display = 'none';
+                if (btn) btn.innerHTML = '<i class="fas fa-plus"></i>';
+                return;
+            }
+
+            // Show row
+            detailRow.style.display = 'table-row';
+            if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            const contentDiv = document.getElementById(`consoDetailContent_${empId}`);
+            contentDiv.innerHTML = `
+                <div style="padding:24px;text-align:center;color:#6b7280;">
+                    <i class="fas fa-spinner fa-spin fa-2x text-primary" style="margin-bottom:8px;"></i>
+                    <div>Loading detailed transaction ledger for <strong>${empName}</strong>...</div>
+                </div>
+            `;
+
+            try {
+                const params = new URLSearchParams({
+                    view_mode: 'ledger',
+                    employee_id: empId,
+                    page: 1,
+                    page_size: 100,
+                    _t: Date.now()
+                });
+
+                const company = document.getElementById('consoCompany') ? document.getElementById('consoCompany').value : '';
+                const from = (_qfPreset['consolidated'] === 'overall') ? '' : (document.getElementById('consoFromDate') ? document.getElementById('consoFromDate').value : '');
+                const to = (_qfPreset['consolidated'] === 'overall') ? '' : (document.getElementById('consoToDate') ? document.getElementById('consoToDate').value : '');
+                const entryType = document.getElementById('consoFilterType') ? document.getElementById('consoFilterType').value : '';
+                const ledgerFilter = document.getElementById('consoFilterLedger') ? document.getElementById('consoFilterLedger').value : '';
+                const externalFilter = document.getElementById('consoFilterExternal') ? document.getElementById('consoFilterExternal').value : '';
+                const status = document.getElementById('consoFilterStatus') ? document.getElementById('consoFilterStatus').value : '';
+
+                if (company) params.append('company_id', company);
+                if (from) params.append('from_date', from);
+                if (to) params.append('to_date', to);
+                if (entryType) params.append('entry_type', entryType);
+                if (ledgerFilter) params.append('ledger_filter', ledgerFilter);
+                if (externalFilter) params.append('external_filter', externalFilter);
+                if (status) params.append('status', status);
+
+                const res = await staffFetch(`${API_BASE}/expense-entries?${params.toString()}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                const entries = data.entries || [];
+                const summary = data.summary || {};
+
+                if (btn) btn.innerHTML = '<i class="fas fa-minus"></i>';
+
+                if (!entries.length) {
+                    contentDiv.innerHTML = `
+                        <div style="padding:20px;text-align:center;background:#fff;border-radius:8px;border:1px dashed #cbd5e1;color:#6b7280;">
+                            <i class="fas fa-folder-open fa-2x mb-2" style="color:#9ca3af;display:block;"></i>
+                            No ledger transactions found for <strong>${empName}</strong> with the selected filters.
+                        </div>
+                    `;
+                    return;
+                }
+
+                const fmt = v => '₹' + Number(v || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+                const fmtD = d => formatDate(d);
+
+                let tableRowsHtml = entries.map((exp, idx) => {
+                    const expId = String(exp.id || '');
+                    const realId = String(exp.real_id || exp.id || '');
+                    _entryLookup[expId] = exp;
+                    if (realId) _entryLookup[realId] = exp;
+
+                    const isCredit = exp.direction === 'IN' || (exp.credit_amount && exp.credit_amount > 0);
+                    const statusLabel = exp.is_paid
+                        ? `<span class="badge-status badge-approved">${exp.status}</span> <span class="badge-status badge-paid">PAID</span>`
+                        : `<span class="badge-status badge-${(exp.status||'').toLowerCase()}">${exp.status}</span>`;
+
+                    // Type badge
+                    let typeBadge = '';
+                    if (exp.entry_type === 'INCOME') {
+                        if (exp.sub_type === 'SPARES') {
+                            typeBadge = `<span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;"><i class="fas fa-wrench me-1"></i>SPARES IN</span>`;
+                        } else if (exp.sub_type === 'LABOUR') {
+                            typeBadge = `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;"><i class="fas fa-cog me-1"></i>LABOUR IN</span>`;
+                        } else {
+                            typeBadge = `<span class="badge" style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;"><i class="fas fa-arrow-down me-1"></i>INCOME</span>`;
+                        }
+                    } else if (exp.entry_type === 'FUND_ALLOCATION' || exp.entry_type === 'BANK_PAYMENT') {
+                        typeBadge = `<span class="badge" style="background:#cffafe;color:#0e7490;font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;"><i class="fas fa-university me-1"></i>BANK IN</span>`;
+                    } else if (exp.entry_type === 'BANK_RECEIPT') {
+                        typeBadge = `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;"><i class="fas fa-university me-1"></i>BANK REFUND</span>`;
+                    } else if (exp.entry_type === 'JOURNAL_VOUCHER') {
+                        typeBadge = `<span class="badge" style="background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;"><i class="fas fa-book me-1"></i>JOURNAL</span>`;
+                    } else if (exp.entry_type === 'TRANSFER_IN') {
+                        typeBadge = `<span class="badge" style="background:#e0e7ff;color:#4338ca;font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;"><i class="fas fa-exchange-alt me-1"></i>TRANSFER IN</span>`;
+                    } else if (exp.entry_type === 'TRANSFER_OUT') {
+                        typeBadge = `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;"><i class="fas fa-exchange-alt me-1"></i>TRANSFER OUT</span>`;
+                    } else if (exp.entry_type === 'OPENING_BALANCE') {
+                        typeBadge = `<span class="badge" style="background:#f3e8ff;color:#7e22ce;font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;"><i class="fas fa-flag me-1"></i>OPENING BAL</span>`;
+                    } else {
+                        typeBadge = `<span class="badge" style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;"><i class="fas fa-arrow-up me-1"></i>EXPENSE</span>`;
+                    }
+
+                    const catBadge = exp.category_name ? `<span class="badge-cat" style="margin-left:3px;font-size:10px;">${exp.category_name}</span>` : '';
+                    const descText = exp.narration || exp.description || exp.notes || exp.purpose || '-';
+                    const partyText = exp.party_name || exp.vendor_name || exp.paid_to || '-';
+
+                    let breakdownHtml = '';
+                    if (exp.entry_type === 'INCOME' && (exp.spares_amount > 0 || exp.service_amount > 0 || exp.ticket_total_amount > 0)) {
+                        const targetRef = (exp.reference_id || realId || expId).replace(/'/g, "\\'");
+                        breakdownHtml = `
+                            <div style="margin-top:2px;font-size:10px;color:#0369a1;">
+                                <span style="background:#f0f9ff;border:1px solid #bae6fd;padding:1px 4px;border-radius:3px;font-weight:600;">
+                                    🔧 Spares: ${fmt(exp.spares_amount)} | ⚙️ Service: ${fmt(exp.service_amount)}
+                                </span>
+                                <a href="javascript:void(0)" onclick="openTicketBreakdownModal('${targetRef}', '${realId}')" style="color:#2563eb;font-weight:700;text-decoration:none;margin-left:4px;" title="View Ticket Breakdown">Breakdown &rarr;</a>
+                            </div>
+                        `;
+                    }
+
+                    const inHtml = isCredit
+                        ? `<span style="color:#059669;font-weight:700;font-family:monospace;">+${fmt(exp.credit_amount || exp.amount)}</span>`
+                        : `<span style="color:#9ca3af;">—</span>`;
+
+                    const outHtml = !isCredit
+                        ? `<span style="color:#dc2626;font-weight:700;font-family:monospace;">${fmt(exp.debit_amount || exp.amount)}</span>`
+                        : `<span style="color:#9ca3af;">—</span>`;
+
+                    const balVal = exp.running_balance != null ? exp.running_balance : 0;
+                    const balColor = balVal >= 0 ? '#1e40af' : '#dc2626';
+                    const balHtml = `<span style="color:${balColor};font-weight:700;font-family:monospace;">${fmt(balVal)}</span>`;
+
+                    let inLedgerHtml = '<div style="text-align:center;"><i class="fas fa-check text-success" title="In Ledger"></i></div>';
+                    let externalHtml = '<div style="text-align:center;color:#9ca3af;">—</div>';
+                    if (exp.entry_type === 'INCOME' || exp.entry_type === 'EXPENSE') {
+                        const inLedgerChecked = exp.show_in_ledger ? 'checked' : '';
+                        inLedgerHtml = `<div style="text-align:center;">
+                            <input type="checkbox" ${inLedgerChecked} onchange="toggleRowLedger('${exp.entry_type}', '${realId}', this.checked, this)" title="Toggle Ledger Posting" style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;">
+                        </div>`;
+
+                        const externalChecked = exp.is_external ? 'checked' : '';
+                        externalHtml = `<div style="text-align:center;">
+                            <input type="checkbox" ${externalChecked} onchange="toggleRowExternal('${exp.entry_type}', '${realId}', this.checked, this)" title="Toggle External Party" style="cursor:pointer;width:15px;height:15px;accent-color:#f59e0b;">
+                        </div>`;
+                    }
+
+                    return `
+                        <tr style="border-bottom:1px solid #e5e7eb;font-size:12px;${idx%2===1?'background:#f9fafb;':'background:#ffffff;'}">
+                            <td style="padding:8px 10px;"><code>${exp.entry_number || ('#' + expId)}</code></td>
+                            <td style="padding:8px 10px;white-space:nowrap;">${fmtD(exp.expense_date || exp.created_at)}</td>
+                            <td style="padding:8px 10px;font-size:11px;">${exp.company_name || '-'}</td>
+                            <td style="padding:8px 10px;">${typeBadge} ${catBadge}</td>
+                            <td style="padding:8px 10px;font-weight:600;color:#1f2937;">${partyText}</td>
+                            <td style="padding:8px 10px;">
+                                <div title="${descText.replace(/"/g,'&quot;')}">${truncate(descText, 30)}</div>
+                                ${breakdownHtml}
+                            </td>
+                            <td style="padding:8px 10px;text-align:right;">${inHtml}</td>
+                            <td style="padding:8px 10px;text-align:right;">${outHtml}</td>
+                            <td style="padding:8px 10px;text-align:right;background:#fafafa;">${balHtml}</td>
+                            <td style="padding:8px 10px;">${inLedgerHtml}</td>
+                            <td style="padding:8px 10px;">${externalHtml}</td>
+                            <td style="padding:8px 10px;">${statusLabel}</td>
+                            <td style="padding:8px 10px;white-space:nowrap;">${getActionButtons(exp)}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                contentDiv.innerHTML = `
+                    <div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:10px;box-shadow:0 2px 4px rgba(0,0,0,0.05);overflow:hidden;">
+                        <!-- Employee Header & Mini Dashboard -->
+                        <div style="background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                            <div>
+                                <div style="font-size:15px;font-weight:700;"><i class="fas fa-book-open me-2"></i>${empName} - Individual Cash & Expense Ledger</div>
+                                <div style="font-size:11px;opacity:0.85;">Total Records: ${entries.length} | Showing live statements matching Tab 1 format</div>
+                            </div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                <div style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:6px;text-align:center;">
+                                    <div style="font-size:10px;opacity:0.8;">Total IN</div>
+                                    <div style="font-size:12px;font-weight:700;">${fmt(summary.total_in || 0)}</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:6px;text-align:center;">
+                                    <div style="font-size:10px;opacity:0.8;">Total OUT</div>
+                                    <div style="font-size:12px;font-weight:700;">${fmt(summary.total_out || 0)}</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.25);padding:4px 10px;border-radius:6px;text-align:center;border:1px solid rgba(255,255,255,0.3);">
+                                    <div style="font-size:10px;opacity:0.8;">Net Balance</div>
+                                    <div style="font-size:12px;font-weight:800;">${fmt(summary.net_balance != null ? summary.net_balance : ((summary.total_in||0)-(summary.total_out||0)))}</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:6px;text-align:center;">
+                                    <div style="font-size:10px;opacity:0.8;">Drafts</div>
+                                    <div style="font-size:12px;font-weight:700;">${summary.draft_count || 0} (${fmt(summary.draft_amount || 0)})</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:6px;text-align:center;">
+                                    <div style="font-size:10px;opacity:0.8;">Submitted</div>
+                                    <div style="font-size:12px;font-weight:700;">${summary.submitted_count || 0} (${fmt(summary.submitted_amount || 0)})</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:6px;text-align:center;">
+                                    <div style="font-size:10px;opacity:0.8;">Approved</div>
+                                    <div style="font-size:12px;font-weight:700;">${summary.approved_count || 0} (${fmt(summary.total_approved_amount || 0)})</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Passbook Table -->
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                                <thead>
+                                    <tr style="background:#f1f5f9;border-bottom:2px solid #cbd5e1;">
+                                        <th style="padding:8px 10px;text-align:left;font-weight:700;color:#334155;">REF #</th>
+                                        <th style="padding:8px 10px;text-align:left;font-weight:700;color:#334155;">DATE</th>
+                                        <th style="padding:8px 10px;text-align:left;font-weight:700;color:#334155;">COMPANY</th>
+                                        <th style="padding:8px 10px;text-align:left;font-weight:700;color:#334155;">TYPE / CAT</th>
+                                        <th style="padding:8px 10px;text-align:left;font-weight:700;color:#334155;">PARTY / PAID TO</th>
+                                        <th style="padding:8px 10px;text-align:left;font-weight:700;color:#334155;">DESCRIPTION</th>
+                                        <th style="padding:8px 10px;text-align:right;font-weight:700;color:#059669;">IN (+₹)</th>
+                                        <th style="padding:8px 10px;text-align:right;font-weight:700;color:#dc2626;">OUT (₹)</th>
+                                        <th style="padding:8px 10px;text-align:right;font-weight:700;color:#1e40af;">BALANCE</th>
+                                        <th style="padding:8px 10px;text-align:center;font-weight:700;color:#334155;">IN LEDGER</th>
+                                        <th style="padding:8px 10px;text-align:center;font-weight:700;color:#334155;">EXTERNAL</th>
+                                        <th style="padding:8px 10px;text-align:left;font-weight:700;color:#334155;">STATUS</th>
+                                        <th style="padding:8px 10px;text-align:left;font-weight:700;color:#334155;">ACTIONS</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${tableRowsHtml}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                if (btn) btn.innerHTML = '<i class="fas fa-plus"></i>';
+                contentDiv.innerHTML = `
+                    <div style="padding:16px;text-align:center;color:#ef4444;background:#fef2f2;border-radius:6px;">
+                        <i class="fas fa-exclamation-triangle me-1"></i>Failed to load transaction details for <strong>${empName}</strong>: ${err.message || 'Error'}
+                    </div>
+                `;
+            }
+        }
+
         function exportConsolidatedCSV() {
             const table = document.getElementById('consoTable');
             if (!table || table.style.display === 'none') {
@@ -1727,18 +2554,20 @@
                 return;
             }
             const rows = [];
-            const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+            const headerRow = table.querySelectorAll('thead tr')[1] || table.querySelector('thead tr');
+            const headers = Array.from(headerRow.querySelectorAll('th')).map(th => `"${th.textContent.trim()}"`);
             rows.push(headers.join(','));
             table.querySelectorAll('tbody tr').forEach(tr => {
+                if (tr.id && tr.id.startsWith('consoDetailRow_')) return; // skip expanded sub-rows
                 const cells = Array.from(tr.querySelectorAll('td')).map(td => {
-                    const t = td.textContent.trim().replace(/,/g, '').replace(/₹/g, '');
+                    const t = td.textContent.trim().replace(/"/g, '""').replace(/,/g, '').replace(/₹/g, '');
                     return `"${t}"`;
                 });
-                rows.push(cells.join(','));
+                if (cells.length) rows.push(cells.join(','));
             });
             const tfoot = table.querySelector('tfoot tr');
             if (tfoot) {
-                const cells = Array.from(tfoot.querySelectorAll('td')).map(td => `"${td.textContent.trim().replace(/,/g,'').replace(/₹/g,'')}"`);
+                const cells = Array.from(tfoot.querySelectorAll('td')).map(td => `"${td.textContent.trim().replace(/"/g, '""').replace(/,/g,'').replace(/₹/g,'')}"`);
                 rows.push(cells.join(','));
             }
             const blob = new Blob([rows.join('\n')], {type: 'text/csv'});
@@ -1750,10 +2579,53 @@
         
         function openApproveModal(exp) {
             selectedExpense = exp;
-            document.getElementById('approveExpenseId').textContent = exp.id;
-            document.getElementById('approveAmount').textContent = formatCurrency(exp.amount);
-            document.getElementById('approveDescription').textContent = exp.description;
+            document.getElementById('approveExpenseId').textContent = exp.real_id || exp.id;
+            document.getElementById('approveDescription').textContent = exp.narration || exp.description || '-';
             document.getElementById('approveNotes').value = '';
+            
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const canOverride = (userData.emp_code === 'MR10001' || userData.emp_code === 'MR10025');
+            
+            // Populate company dropdown
+            const compSel = document.getElementById('approveCompanySelect');
+            if (compSel) {
+                compSel.innerHTML = '';
+                if (typeof companiesCache !== 'undefined' && companiesCache.length) {
+                    companiesCache.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.id;
+                        opt.textContent = c.company_name || c.name;
+                        compSel.appendChild(opt);
+                    });
+                } else {
+                    // Fallback to options in filterCompany
+                    const filterComp = document.getElementById('filterCompany');
+                    if (filterComp) {
+                        Array.from(filterComp.options).forEach(opt => {
+                            if (opt.value) {
+                                const o = document.createElement('option');
+                                o.value = opt.value;
+                                o.textContent = opt.textContent;
+                                compSel.appendChild(o);
+                            }
+                        });
+                    }
+                }
+                compSel.value = exp.company_id || '';
+                compSel.disabled = !canOverride;
+            }
+
+            const amtInput = document.getElementById('approveAmountInput');
+            if (amtInput) {
+                amtInput.value = parseFloat(exp.amount || exp.debit_amount || 0).toFixed(2);
+                amtInput.disabled = !canOverride;
+            }
+
+            const notice = document.getElementById('approveOverrideNotice');
+            if (notice) {
+                notice.style.display = canOverride ? 'block' : 'none';
+            }
+
             document.getElementById('approveModal').classList.add('active');
         }
         
@@ -2056,12 +2928,23 @@
         async function approveExpense() {
             if (!selectedExpense) return;
             
+            const expId = selectedExpense.real_id || selectedExpense.id;
             const notes = document.getElementById('approveNotes').value;
+            const compEl = document.getElementById('approveCompanySelect');
+            const amtEl = document.getElementById('approveAmountInput');
+            
+            const payload = { action: 'APPROVE', remarks: notes };
+            if (compEl && !compEl.disabled && compEl.value) {
+                payload.company_id = parseInt(compEl.value);
+            }
+            if (amtEl && !amtEl.disabled && amtEl.value) {
+                payload.amount = parseFloat(amtEl.value);
+            }
             
             try {
-                const response = await staffFetch(`${API_BASE}/expense-entries/${selectedExpense.id}/approve`, {
+                const response = await staffFetch(`${API_BASE}/expense-entries/${expId}/approve`, {
                     method: 'POST',
-                    body: JSON.stringify({ action: 'APPROVE', remarks: notes })
+                    body: JSON.stringify(payload)
                 });
                 if (response.ok) {
                     closeModal('approveModal');
@@ -2568,11 +3451,15 @@
         // ═══════════════════════════════════════════════════
         // DC_QF_001: Quick Date Filter Strip
         // ═══════════════════════════════════════════════════
-        const _qfPreset = { my: 'overall', team: 'overall', consolidated: 'overall' };
 
         function _getQFDates(preset) {
             const today = new Date();
-            const fmt = d => d.toISOString().slice(0, 10);
+            const fmt = d => {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            };
             if (preset === 'today') return { from: fmt(today), to: fmt(today) };
             const yest = new Date(today); yest.setDate(today.getDate() - 1);
             if (preset === 'yesterday') return { from: fmt(yest), to: fmt(yest) };
@@ -2585,25 +3472,79 @@
             return { from: '', to: '' }; // overall / custom
         }
 
+        function onManualDateChange(tab) {
+            let from = '', to = '';
+            if (tab === 'my') {
+                from = document.getElementById('filterFromDate')?.value || '';
+                to = document.getElementById('filterToDate')?.value || '';
+            } else if (tab === 'team') {
+                from = document.getElementById('teamFilterFrom')?.value || '';
+                to = document.getElementById('teamFilterTo')?.value || '';
+            } else if (tab === 'consolidated') {
+                from = document.getElementById('consoFromDate')?.value || '';
+                to = document.getElementById('consoToDate')?.value || '';
+            }
+            const preset = (!from && !to) ? 'overall' : 'custom';
+            _qfPreset[tab] = preset;
+            document.querySelectorAll(`.qf-pill[data-tab="${tab}"]`).forEach(b => {
+                b.classList.toggle('qf-active', b.dataset.preset === preset);
+            });
+            if (tab === 'my') {
+                loadExpenses();
+            } else if (tab === 'team') {
+                loadTeamExpenses(1);
+            } else if (tab === 'consolidated') {
+                loadConsolidatedSummary();
+            }
+        }
+
+        function resetMyFilters() {
+            if (document.getElementById('filterType')) document.getElementById('filterType').value = '';
+            if (document.getElementById('filterLedger')) document.getElementById('filterLedger').value = '';
+            if (document.getElementById('filterExternal')) document.getElementById('filterExternal').value = '';
+            if (document.getElementById('filterStatus')) document.getElementById('filterStatus').value = '';
+            if (document.getElementById('filterCompany')) document.getElementById('filterCompany').value = '';
+            if (document.getElementById('filterCategory')) document.getElementById('filterCategory').value = '';
+            if (document.getElementById('filterFromDate')) document.getElementById('filterFromDate').value = '';
+            if (document.getElementById('filterToDate')) document.getElementById('filterToDate').value = '';
+            setQuickFilter('my', 'overall');
+        }
+
+        function toggleCustomDateUI(tab) {
+            const wrap = document.getElementById(`customDateWrap_${tab}`);
+            if (!wrap) return;
+            const isShown = wrap.style.display === 'inline-flex' || wrap.style.display === 'flex';
+            if (isShown) {
+                wrap.style.display = 'none';
+                setQuickFilter(tab, 'overall');
+            } else {
+                wrap.style.display = 'inline-flex';
+                setQuickFilter(tab, 'custom');
+            }
+        }
+
         function setQuickFilter(tab, preset) {
             _qfPreset[tab] = preset;
+            const wrap = document.getElementById(`customDateWrap_${tab}`);
+            if (wrap) {
+                wrap.style.display = (preset === 'custom') ? 'inline-flex' : 'none';
+            }
             // Update active pill for this tab
             document.querySelectorAll(`.qf-pill[data-tab="${tab}"]`).forEach(b => {
                 b.classList.toggle('qf-active', b.dataset.preset === preset);
             });
-            if (preset === 'custom') return; // user picks dates manually from existing pickers
             const { from, to } = _getQFDates(preset);
             if (tab === 'my') {
-                document.getElementById('filterFromDate').value = from;
-                document.getElementById('filterToDate').value = to;
+                if (document.getElementById('filterFromDate')) document.getElementById('filterFromDate').value = from;
+                if (document.getElementById('filterToDate')) document.getElementById('filterToDate').value = to;
                 loadExpenses();
             } else if (tab === 'team') {
-                document.getElementById('teamFilterFrom').value = from;
-                document.getElementById('teamFilterTo').value = to;
+                if (document.getElementById('teamFilterFrom')) document.getElementById('teamFilterFrom').value = from;
+                if (document.getElementById('teamFilterTo')) document.getElementById('teamFilterTo').value = to;
                 loadTeamExpenses(1);
             } else if (tab === 'consolidated') {
-                document.getElementById('consoFromDate').value = from;
-                document.getElementById('consoToDate').value = to;
+                if (document.getElementById('consoFromDate')) document.getElementById('consoFromDate').value = from;
+                if (document.getElementById('consoToDate')) document.getElementById('consoToDate').value = to;
                 loadConsolidatedSummary();
             }
         }
@@ -2614,17 +3555,17 @@
         function openDrilldown(title, statusFilter, tab, paidOnly) {
             let fromDate = '', toDate = '', company = '';
             if (tab === 'my') {
-                fromDate = document.getElementById('filterFromDate').value;
-                toDate   = document.getElementById('filterToDate').value;
-                company  = document.getElementById('filterCompany').value;
+                fromDate = (_qfPreset['my'] === 'overall') ? '' : (document.getElementById('filterFromDate')?.value || '');
+                toDate   = (_qfPreset['my'] === 'overall') ? '' : (document.getElementById('filterToDate')?.value || '');
+                company  = document.getElementById('filterCompany')?.value || '';
             } else if (tab === 'team') {
-                fromDate = document.getElementById('teamFilterFrom').value;
-                toDate   = document.getElementById('teamFilterTo').value;
-                company  = document.getElementById('teamFilterCompany').value;
+                fromDate = (_qfPreset['team'] === 'overall') ? '' : (document.getElementById('teamFilterFrom')?.value || '');
+                toDate   = (_qfPreset['team'] === 'overall') ? '' : (document.getElementById('teamFilterTo')?.value || '');
+                company  = document.getElementById('teamFilterCompany')?.value || '';
             } else if (tab === 'consolidated') {
-                fromDate = document.getElementById('consoFromDate').value;
-                toDate   = document.getElementById('consoToDate').value;
-                company  = document.getElementById('consoCompany').value;
+                fromDate = (_qfPreset['consolidated'] === 'overall') ? '' : (document.getElementById('consoFromDate')?.value || '');
+                toDate   = (_qfPreset['consolidated'] === 'overall') ? '' : (document.getElementById('consoToDate')?.value || '');
+                company  = document.getElementById('consoCompany')?.value || '';
             }
 
             const params = new URLSearchParams({ page: 1, page_size: 200 });
@@ -2981,6 +3922,162 @@
                 alert('Transfer failed');
             }
         }
+
+        async function openTicketBreakdownModal(ticketRef, entryId) {
+            const modal = document.getElementById('ticketBreakdownModal');
+            if (!modal) return;
+            modal.classList.add('active');
+            
+            document.getElementById('tktBkBody').innerHTML = '<div style="text-align:center;padding:30px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:#6366f1;"></i><p style="margin-top:10px;color:#6b7280;font-size:13px;">Loading ticket fee breakdown...</p></div>';
+
+            try {
+                const targetRef = ticketRef || entryId || '';
+                let r = await staffFetch('/api/v1/tickets/service/tickets/' + encodeURIComponent(targetRef) + '/payment-breakdown');
+                if (!r.ok && entryId && String(entryId) !== String(targetRef)) {
+                    r = await staffFetch('/api/v1/tickets/service/tickets/' + encodeURIComponent(entryId) + '/payment-breakdown');
+                }
+                const data = await r.json();
+                if (!data.success) throw new Error(data.detail || data.message || 'Ticket not found');
+
+                const tkt = data.ticket || {};
+                const bk = data.breakdown || {};
+                const items = data.items || [];
+                const pmts = data.payments || [];
+
+                document.getElementById('tktBkRefTitle').textContent = tkt.ticket_id || ('Ticket #' + targetRef);
+
+                const fmt = v => '₹' + Number(v || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+                let html = `
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:16px;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+                            <div>
+                                <div style="font-size:15px;font-weight:700;color:#1e293b;">${tkt.customer_name || 'Customer'}</div>
+                                <div style="font-size:12px;color:#64748b;margin-top:2px;">
+                                    <i class="fas fa-phone me-1"></i>${tkt.customer_phone || '—'} &nbsp;|&nbsp; 
+                                    <i class="fas fa-motorcycle me-1"></i>${tkt.vehicle_number || tkt.vehicle_model || 'EV'}
+                                </div>
+                            </div>
+                            <div>
+                                <span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:11px;padding:4px 8px;border-radius:6px;font-weight:600;text-transform:uppercase;">
+                                    ${tkt.status || 'OPEN'} ${tkt.sub_status ? '· ' + tkt.sub_status : ''}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4 Summary Metric Cards -->
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:10px;margin-bottom:18px;">
+                        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;">
+                            <div style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;"><i class="fas fa-wrench me-1"></i>Spares Fee</div>
+                            <div style="font-size:16px;font-weight:800;color:#0284c7;margin-top:3px;">${fmt(bk.spares_fee_total)}</div>
+                            <div style="font-size:10px;color:#0369a1;margin-top:2px;">Paid: ${fmt(bk.spares_paid || 0)}</div>
+                        </div>
+                        <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:10px 12px;">
+                            <div style="font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;"><i class="fas fa-cog me-1"></i>Service & Labour</div>
+                            <div style="font-size:16px;font-weight:800;color:#7c3aed;margin-top:3px;">${fmt(bk.combined_service_fee || bk.service_fee_total)}</div>
+                            <div style="font-size:10px;color:#6d28d9;margin-top:2px;">Paid: ${fmt(bk.service_paid || 0)}</div>
+                        </div>
+                        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;">
+                            <div style="font-size:10px;font-weight:700;color:#15803d;text-transform:uppercase;"><i class="fas fa-receipt me-1"></i>Overall Total</div>
+                            <div style="font-size:16px;font-weight:800;color:#16a34a;margin-top:3px;">${fmt(bk.grand_total)}</div>
+                            <div style="font-size:10px;color:#15803d;margin-top:2px;">Status: ${(bk.payment_status || 'PENDING').toUpperCase()}</div>
+                        </div>
+                        <div style="background:${bk.balance_due > 0 ? '#fffbeb' : '#f8fafc'};border:1px solid ${bk.balance_due > 0 ? '#fde68a' : '#e2e8f0'};border-radius:8px;padding:10px 12px;">
+                            <div style="font-size:10px;font-weight:700;color:${bk.balance_due > 0 ? '#b45309' : '#475569'};text-transform:uppercase;"><i class="fas fa-coins me-1"></i>Balance Due</div>
+                            <div style="font-size:16px;font-weight:800;color:${bk.balance_due > 0 ? '#d97706' : '#10b981'};margin-top:3px;">${fmt(bk.balance_due)}</div>
+                            <div style="font-size:10px;color:#64748b;margin-top:2px;">Paid: ${fmt(bk.total_paid)}</div>
+                        </div>
+                    </div>
+
+                    <!-- Items breakdown table -->
+                    <div style="margin-bottom:18px;">
+                        <div style="font-size:12px;font-weight:700;color:#334155;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                            <i class="fas fa-list-ul" style="color:#6366f1;"></i> Bill / Service Items Breakdown
+                        </div>
+                        <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;max-height:180px;overflow-y:auto;">
+                            <table style="width:100%;font-size:11px;border-collapse:collapse;text-align:left;">
+                                <thead style="background:#f1f5f9;color:#475569;font-weight:600;position:sticky;top:0;">
+                                    <tr>
+                                        <th style="padding:6px 10px;">Item / Description</th>
+                                        <th style="padding:6px 10px;">Type</th>
+                                        <th style="padding:6px 10px;text-align:center;">Qty</th>
+                                        <th style="padding:6px 10px;text-align:right;">Rate</th>
+                                        <th style="padding:6px 10px;text-align:right;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${items.length === 0 ? '<tr><td colspan="5" style="padding:12px;text-align:center;color:#94a3b8;">No specific items billed yet</td></tr>' : 
+                                      items.map(it => `
+                                        <tr style="border-top:1px solid #f1f5f9;">
+                                            <td style="padding:6px 10px;font-weight:500;">${it.description || 'Item'}</td>
+                                            <td style="padding:6px 10px;">
+                                                <span style="font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;background:${it.item_type==='spare'?'#e0f2fe':'#ede9fe'};color:${it.item_type==='spare'?'#0369a1':'#6d28d9'};">
+                                                    ${(it.item_type || 'spare').toUpperCase()}
+                                                </span>
+                                            </td>
+                                            <td style="padding:6px 10px;text-align:center;">${it.quantity || 1}</td>
+                                            <td style="padding:6px 10px;text-align:right;">${fmt(it.rate)}</td>
+                                            <td style="padding:6px 10px;text-align:right;font-weight:600;">${fmt(it.line_total)}</td>
+                                        </tr>
+                                      `).join('')
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Payment transactions table -->
+                    <div>
+                        <div style="font-size:12px;font-weight:700;color:#334155;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                            <i class="fas fa-history" style="color:#059669;"></i> Recorded Income Entries & Payments
+                        </div>
+                        <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;max-height:160px;overflow-y:auto;">
+                            <table style="width:100%;font-size:11px;border-collapse:collapse;text-align:left;">
+                                <thead style="background:#f1f5f9;color:#475569;font-weight:600;position:sticky;top:0;">
+                                    <tr>
+                                        <th style="padding:6px 10px;">Entry #</th>
+                                        <th style="padding:6px 10px;">Date</th>
+                                        <th style="padding:6px 10px;">Mode</th>
+                                        <th style="padding:6px 10px;text-align:right;">Spares</th>
+                                        <th style="padding:6px 10px;text-align:right;">Service</th>
+                                        <th style="padding:6px 10px;text-align:right;">Total Paid</th>
+                                        <th style="padding:6px 10px;text-align:center;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${pmts.length === 0 ? '<tr><td colspan="7" style="padding:12px;text-align:center;color:#94a3b8;">No payment entries found</td></tr>' :
+                                      pmts.map(p => `
+                                        <tr style="border-top:1px solid #f1f5f9;">
+                                            <td style="padding:6px 10px;font-weight:600;color:#1e40af;">${p.entry_number || ('#' + p.id)}</td>
+                                            <td style="padding:6px 10px;">${formatDate(p.payment_date || p.income_date)}</td>
+                                            <td style="padding:6px 10px;">${p.payment_mode || 'CASH'}</td>
+                                            <td style="padding:6px 10px;text-align:right;color:#0284c7;font-weight:600;">${fmt(p.spares_amount)}</td>
+                                            <td style="padding:6px 10px;text-align:right;color:#7c3aed;font-weight:600;">${fmt(p.service_amount)}</td>
+                                            <td style="padding:6px 10px;text-align:right;font-weight:700;color:#15803d;">${fmt(p.amount)}</td>
+                                            <td style="padding:6px 10px;text-align:center;">
+                                                <span style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:4px;background:#d1fae5;color:#065f46;">${p.status}</span>
+                                            </td>
+                                        </tr>
+                                      `).join('')
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('tktBkBody').innerHTML = html;
+            } catch (err) {
+                document.getElementById('tktBkBody').innerHTML = `
+                    <div style="text-align:center;padding:24px;color:#dc2626;">
+                        <i class="fas fa-exclamation-circle fa-2x"></i>
+                        <p style="margin-top:10px;font-weight:600;">Unable to load ticket details</p>
+                        <p style="font-size:12px;color:#6b7280;">${err.message || 'Details not available for this ticket'}</p>
+                    </div>
+                `;
+            }
+        }
     </script>
 
     <!-- ══ View Expense Slide-Over (DC-EXP-VIEW-001) ══ -->
@@ -3129,6 +4226,24 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="document.getElementById('transferModal').classList.remove('active')">Cancel</button>
                 <button class="btn btn-success" onclick="saveTransfer()"><i class="fas fa-exchange-alt me-1"></i>Transfer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Ticket Breakdown Modal -->
+    <div class="modal-overlay" id="ticketBreakdownModal">
+        <div class="modal-content" style="max-width:680px; max-height:92vh; overflow-y:auto; background:#fff; border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,0.22); padding:0;">
+            <div class="modal-header" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;">
+                <h5 class="modal-title" style="margin:0;font-size:15px;font-weight:700;color:#0f172a;">
+                    <i class="fas fa-file-invoice-dollar me-2" style="color:#6366f1;"></i>Service Ticket Fee Breakdown: <span id="tktBkRefTitle" style="color:#4f46e5;">-</span>
+                </h5>
+                <button class="modal-close" onclick="document.getElementById('ticketBreakdownModal').classList.remove('active')" style="background:none;border:none;font-size:22px;color:#64748b;cursor:pointer;">&times;</button>
+            </div>
+            <div class="modal-body" id="tktBkBody" style="padding:18px;">
+                <!-- Populated dynamically by openTicketBreakdownModal -->
+            </div>
+            <div class="modal-footer" style="padding:12px 18px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;">
+                <button onclick="document.getElementById('ticketBreakdownModal').classList.remove('active')" style="padding:8px 16px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;font-size:13px;font-weight:600;color:#334155;cursor:pointer;">Close</button>
             </div>
         </div>
     </div>

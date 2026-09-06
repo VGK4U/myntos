@@ -69,6 +69,7 @@ public class BackgroundLocationPlugin extends Plugin {
                     float speed = intent.getFloatExtra("speed", 0);
                     float batteryLevel = intent.getFloatExtra("batteryLevel", 100);
                     long timestamp = intent.getLongExtra("timestamp", System.currentTimeMillis());
+                    String clientObservationId = intent.getStringExtra("client_observation_id");
                     
                     JSObject data = new JSObject();
                     data.put("latitude", latitude);
@@ -77,6 +78,9 @@ public class BackgroundLocationPlugin extends Plugin {
                     data.put("speed", speed);
                     data.put("batteryLevel", batteryLevel);
                     data.put("timestamp", timestamp);
+                    if (clientObservationId != null) {
+                        data.put("client_observation_id", clientObservationId);
+                    }
                     
                     notifyListeners("locationUpdate", data);
                     Log.d(TAG, "Location update broadcast received: " + latitude + ", " + longitude);

@@ -168,10 +168,11 @@ class CallFlowValidator:
             outs = outgoing_edges.get(n_key, [])
 
             if n_type == 'ivr_menu':
-                # Must have transitions for defined digits + timeout/fallback
                 cfg = n_val.get('config', {})
-                valid_digits = [str(d) for d in cfg.get('valid_digits', ['1', '2', '3'])]
-                handled_conditions = {o['condition'] for o in outs}
+                valid_digits = [str(d) for d in cfg.get('valid_digits', [])]
+                if not valid_digits and cfg.get('options'):
+                    valid_digits = [str(opt.get('digit') or opt.get('key')) for opt in cfg.get('options') if opt.get('digit') or opt.get('key')]
+                handled_conditions = {o.get('condition', '').strip().lower() for o in outs}
 
                 for d in valid_digits:
                     expected_cond = f"digit_{d}"
@@ -179,11 +180,11 @@ class CallFlowValidator:
                         issues.append(FlowValidationError(n_key, 'UNHANDLED_IVR_DIGIT', f'IVR Menu "{n_val.get("name", n_key)}" defines option {d} but has no outgoing connection for it'))
 
                 # Check timeout/invalid fallback
-                if not any(c in handled_conditions for c in ('timeout', 'invalid', 'fallback', 'timeout_or_invalid', 'always', 'default')):
-                    issues.append(FlowValidationError(n_key, 'MISSING_IVR_FALLBACK', f'IVR Menu "{n_val.get("name", n_key)}" has no timeout or invalid fallback branch'))
+                if not any(c in handled_conditions for c in ('timeout', 'invalid', 'fallback', 'timeout_or_invalid', 'always', 'default', '0')):
+                    issues.append(FlowValidationError(n_key, 'MISSING_IVR_FALLBACK', f'IVR Menu "{n_val.get("name", n_key)}" has no timeout or invalid fallback branch', severity='warning'))
 
             elif n_type == 'time_router':
-                handled_conditions = {o['condition'] for o in outs}
+                handled_conditions = {o.get('condition', '').strip().lower() for o in outs}
                 if 'open' not in handled_conditions and 'always' not in handled_conditions:
                     issues.append(FlowValidationError(n_key, 'MISSING_OPEN_BRANCH', f'Time Router "{n_val.get("name", n_key)}" has no branch for "open" hours'))
                 if 'closed' not in handled_conditions and 'after_hours' not in handled_conditions and 'fallback' not in handled_conditions:
@@ -220,7 +221,7 @@ class CallFlowValidator:
                     issues.append(FlowValidationError(node_key, 'INVALID_DID_FORMAT', f'Trigger DID "{did}" is not a valid telephone number'))
 
         elif node_type == 'speak_prompt':
-            text = config.get('text')
+            text = config.get('text') or config.get('prompt_text')
             if not text or not str(text).strip():
                 issues.append(FlowValidationError(node_key, 'EMPTY_PROMPT_TEXT', f'Speak prompt in node "{node_key}" has no text to speak'))
 
@@ -230,7 +231,7 @@ class CallFlowValidator:
                 issues.append(FlowValidationError(node_key, 'INVALID_AUDIO_URL', f'Play audio node "{node_key}" requires a valid HTTP/HTTPS audio URL'))
 
         elif node_type == 'ivr_menu':
-            text = config.get('text')
+            text = config.get('text') or config.get('prompt_text')
             if not text or not str(text).strip():
                 issues.append(FlowValidationError(node_key, 'EMPTY_IVR_PROMPT', f'IVR Menu in node "{node_key}" requires prompt text'))
             timeout = config.get('timeout_seconds', 6)
@@ -241,6 +242,12 @@ class CallFlowValidator:
             staff_id = config.get('staff_id')
             if not staff_id:
                 issues.append(FlowValidationError(node_key, 'MISSING_STAFF_TARGET', f'Dial User node "{node_key}" requires a designated staff_id'))
+            elif db:
+                staff_emp = db.query(StaffEmployee).filter(StaffEmployee.id == staff_id).first()
+                if not staff_emp:
+                    issues.append(FlowValidationError(node_key, 'INVALID_STAFF_ID', f'Designated staff #{staff_id} does not exist'))
+                elif (staff_emp.status or '').lower() != 'active':
+                    issues.append(FlowValidationError(node_key, 'INACTIVE_STAFF_MEMBER', f'Staff member "{staff_emp.full_name}" (#{staff_id}) is not ACTIVE'))
 
         elif node_type == 'dial_ring_group':
             group_id = config.get('ring_group_id')

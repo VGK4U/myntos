@@ -108,17 +108,18 @@ def _build_template_components(template, context: Dict[str, Any]) -> list:
     if var_names and context:
         body_params = []
         for var in var_names:
-            val = str(context.get(var, '') or '').strip() or ' '
+            # Resolve named variable or positional variable {{1}} -> name
+            val = str(context.get(var, '') or (context.get('name', '') if var == '1' else '') or '').strip() or 'Customer'
             body_params.append({"type": "text", "text": val})
         if body_params:
             components.append({"type": "body", "parameters": body_params})
 
-    # ── Buttons (URL type — dynamic suffix parameter) ─────────────────────────
+    # ── Buttons (URL type with dynamic variable parameter) ────────────────────
     buttons = getattr(template, 'buttons', None) or []
     for i, btn in enumerate(buttons):
         if isinstance(btn, dict) and btn.get('type') == 'url':
             url_val = btn.get('url', '')
-            if url_val:
+            if '{{' in url_val:
                 components.append({
                     "type": "button",
                     "sub_type": "url",
@@ -539,7 +540,24 @@ def send_lead_welcome(
             logger.warning("[WA-WELCOME] Invalid phone %s — skipping", phone)
             return {"success": False, "reason": "invalid_phone"}
 
-        event_key = "lead_welcome_walkin" if partner_phone else "lead_welcome_general"
+        # Detect ETC Training leads to use dedicated ETC Training welcome template
+        is_etc_training = False
+        if lead_id:
+            try:
+                from app.models.crm import CRMLead
+                lead_obj = db.query(CRMLead).get(lead_id)
+                if lead_obj:
+                    if lead_obj.category_id == 16 or lead_obj.company_id == 2 or 'etc' in (lead_obj.tags or '').lower() or 'training' in (lead_obj.tags or '').lower():
+                        is_etc_training = True
+            except Exception:
+                pass
+
+        if is_etc_training:
+            event_key = "lead_welcome_etc_training"
+        elif partner_phone:
+            event_key = "lead_welcome_walkin"
+        else:
+            event_key = "lead_welcome_general"
 
         # Dedup: one welcome per lead
         dedup = _dedup_key(event_key, str(lead_id))
@@ -549,8 +567,11 @@ def send_lead_welcome(
         from app.models.whatsapp import WhatsAppTemplate
         template = db.query(WhatsAppTemplate).filter_by(slug=event_key, is_active=True).first()
         if not template:
-            logger.warning("[WA-WELCOME] Template '%s' not found — skipping", event_key)
-            return {"success": False, "reason": "template_not_found"}
+            # Fallback to general template if specific ETC template is missing
+            template = db.query(WhatsAppTemplate).filter_by(slug="lead_welcome_general", is_active=True).first()
+            if not template:
+                logger.warning("[WA-WELCOME] Template '%s' not found — skipping", event_key)
+                return {"success": False, "reason": "template_not_found"}
 
         context = {"name": lead_name or "there"}
         if partner_phone:

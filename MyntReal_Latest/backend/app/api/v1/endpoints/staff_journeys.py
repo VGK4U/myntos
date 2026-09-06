@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, R
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from datetime import datetime, date, timedelta
-from typing import Optional, List
+from typing import Optional, List, Any
 from pydantic import BaseModel, Field, validator
 import pytz
 import os
@@ -27,6 +27,7 @@ from app.models.staff_field_work import StaffTransportRate
 from app.models.staff_accounts import AssociatedCompany
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
 from app.utils.staff_hierarchy import get_accessible_employee_ids, get_team_member_ids
+from app.services.location_ingestion_service import LocationIngestionService
 
 router = APIRouter()
 
@@ -126,10 +127,16 @@ class LocationData(BaseModel):
     latitude: float
     longitude: float
     accuracy: Optional[float] = None
+    accuracy_m: Optional[float] = None
     altitude: Optional[float] = None
     speed: Optional[float] = None
     heading: Optional[float] = None
     address: Optional[str] = None  # DC_JOURNEY_ADDRESS_001: Location name for stop visualization
+    client_observation_id: Optional[str] = None
+    timestamp: Optional[Any] = None
+
+    class Config:
+        extra = "ignore"
 
 
 class StartJourneyRequest(BaseModel):
@@ -165,6 +172,12 @@ class StartJourneyRequest(BaseModel):
 class JourneyHeartbeatRequest(BaseModel):
     location: LocationData
     speed_kmh: Optional[float] = None
+    client_observation_id: Optional[str] = None
+    timestamp: Optional[Any] = None
+    source: Optional[str] = "journey_heartbeat"
+
+    class Config:
+        extra = "ignore"
 
 
 class EndJourneyRequest(BaseModel):
@@ -370,24 +383,36 @@ async def start_journey(
         # WVV Protocol Fix (Dec 05, 2025): Store WVV compliance for start point
         # Re-check since wvv_compliant might not be in scope if no location check was done
         start_wvv_compliant = True
-        start_compliance_reason = None
         if request_data.location.accuracy and request_data.location.accuracy > 100:
             start_wvv_compliant = False
             start_compliance_reason = f"GPS accuracy {request_data.location.accuracy:.0f}m exceeds WVV limit of 100m"
+        norm = LocationIngestionService.normalize_observation({
+            "latitude": request_data.location.latitude,
+            "longitude": request_data.location.longitude,
+            "accuracy": request_data.location.accuracy or request_data.location.accuracy_m,
+            "altitude": request_data.location.altitude,
+            "speed": request_data.location.speed,
+            "heading": request_data.location.heading,
+            "address": request_data.location.address,
+            "client_observation_id": request_data.location.client_observation_id,
+            "timestamp": request_data.location.timestamp or now,
+        }, employee_id=current_user.id)
 
         track_point = StaffJourneyTrackPoint(
-            latitude=request_data.location.latitude,
-            longitude=request_data.location.longitude,
-            accuracy=request_data.location.accuracy,
-            altitude=request_data.location.altitude,
-            speed_kmh=request_data.location.speed,
-            heading=request_data.location.heading,
+            client_observation_id=norm["client_observation_id"],
+            server_received_at=norm["server_received_at"],
+            latitude=norm["latitude"],
+            longitude=norm["longitude"],
+            accuracy=norm["accuracy_m"],
+            altitude=norm["altitude"],
+            speed_kmh=norm["speed_kmh"] or 0,
+            heading=norm["heading"],
             distance_from_prev=0,
             cumulative_distance=0,
             wvv_compliant=start_wvv_compliant,
             compliance_reason=start_compliance_reason,
             address=request_data.location.address,  # DC_JOURNEY_ADDRESS_001
-            timestamp=now
+            timestamp=norm["captured_at"]
         )
         journey.track_points.append(track_point)
 
@@ -449,109 +474,29 @@ async def journey_heartbeat(
         print(f"[DC_GPS_DEVICE_WARNING] Device validation warning: {str(e)}")
         # Don't block - just log the warning
 
-    # WVV Protocol Fix (Dec 05, 2025): Accept degraded GPS points for audit trail
-    # Only reject if GPS data is completely invalid (no location at all)
-    wvv_valid, wvv_compliant, wvv_reason = validate_wvv_gps(request.location, require_accuracy=True)
-    
-    if not wvv_valid:
-        # Only reject if GPS data is completely unusable
-        raise HTTPException(
-            status_code=400,
-            detail=f"WVV Error: {wvv_reason}. GPS heartbeat rejected - no valid location data."
-        )
-    
-    # Log if degraded but still proceeding
-    if not wvv_compliant:
-        print(f"[WVV_DEGRADED_POINT] Journey {journey_id}: {wvv_reason}")
+    # Prepare canonical observation payload
+    obs_payload = {
+        "latitude": request.location.latitude,
+        "longitude": request.location.longitude,
+        "accuracy": request.location.accuracy,
+        "accuracy_m": request.location.accuracy_m,
+        "altitude": request.location.altitude,
+        "speed": request.location.speed,
+        "speed_kmh": request.speed_kmh,
+        "heading": request.location.heading,
+        "address": request.location.address,
+        "client_observation_id": request.client_observation_id or request.location.client_observation_id,
+        "timestamp": request.timestamp or request.location.timestamp,
+        "source": getattr(request, 'source', 'journey_heartbeat')
+    }
 
-    last_point = db.query(StaffJourneyTrackPoint).filter(
-        StaffJourneyTrackPoint.journey_id == journey_id
-    ).order_by(StaffJourneyTrackPoint.timestamp.desc()).first()
-
-    distance_from_prev = 0.0
-    cumulative_distance = 0.0
-    reimbursable_distance = 0.0
-
-    if last_point:
-        distance_from_prev = StaffJourneyTrackPoint.haversine_distance(
-            last_point.latitude, last_point.longitude,
-            request.location.latitude, request.location.longitude
-        )
-        cumulative_distance = last_point.cumulative_distance + distance_from_prev
-        
-        # WVV Protocol: Only count distance toward reimbursement if BOTH points are compliant
-        if wvv_compliant and last_point.wvv_compliant:
-            # Get current reimbursable distance from journey
-            reimbursable_distance = (journey.reimbursable_distance_km or 0) + distance_from_prev
-        else:
-            reimbursable_distance = journey.reimbursable_distance_km or 0
-
-    speed_kmh = request.speed_kmh
-    if speed_kmh is None and request.location.speed:
-        speed_kmh = request.location.speed * 3.6
-
-    # Preserve original mobile GPS timestamp for offline sync points
-    point_timestamp = now
-    req_loc_ts = getattr(request.location, 'timestamp', None) or getattr(request, 'timestamp', None)
-    if req_loc_ts:
-        try:
-            if isinstance(req_loc_ts, datetime):
-                point_timestamp = req_loc_ts
-            else:
-                ts_str = str(req_loc_ts).replace('Z', '+00:00')
-                point_timestamp = datetime.fromisoformat(ts_str)
-        except Exception as ts_err:
-            print(f"[DC_GPS_TIMESTAMP] Failed to parse request timestamp '{req_loc_ts}': {ts_err}")
-
-    # Idempotency / Duplicate Check: Avoid inserting exact same point multiple times during offline sync retries
-    existing_point = db.query(StaffJourneyTrackPoint).filter(
-        StaffJourneyTrackPoint.journey_id == journey_id,
-        StaffJourneyTrackPoint.latitude == request.location.latitude,
-        StaffJourneyTrackPoint.longitude == request.location.longitude,
-        StaffJourneyTrackPoint.timestamp == point_timestamp
-    ).first()
-
-    if existing_point:
-        return {
-            "success": True,
-            "duplicate": True,
-            "message": "Track point already recorded (idempotent duplicate response)",
-            "distance_km": round(journey.total_distance_km or 0, 2),
-            "reimbursable_distance_km": round(journey.reimbursable_distance_km or 0, 2),
-            "current_speed_kmh": round(speed_kmh, 1) if speed_kmh else 0,
-            "max_speed_kmh": round(journey.max_speed_kmh or 0, 1)
-        }
-
-    # WVV Protocol Fix: Store track point with compliance flag
-    # DC_JOURNEY_ADDRESS_001: Include address for stop point visualization
-    track_point = StaffJourneyTrackPoint(
+    result = LocationIngestionService.ingest_journey_track_point(
+        db=db,
         journey_id=journey_id,
-        latitude=request.location.latitude,
-        longitude=request.location.longitude,
-        accuracy=request.location.accuracy,
-        altitude=request.location.altitude,
-        speed_kmh=speed_kmh,
-        heading=request.location.heading,
-        distance_from_prev=distance_from_prev,
-        cumulative_distance=cumulative_distance,
-        wvv_compliant=wvv_compliant,
-        compliance_reason=wvv_reason if not wvv_compliant else None,
-        address=request.location.address,  # DC_JOURNEY_ADDRESS_001
-        timestamp=point_timestamp
+        employee_id=current_user.id,
+        observation_data=obs_payload,
+        http_request=http_request
     )
-    db.add(track_point)
-
-    # Update journey totals
-    journey.total_distance_km = cumulative_distance
-    if speed_kmh and speed_kmh > journey.max_speed_kmh:
-        journey.max_speed_kmh = speed_kmh
-
-    # WVV Protocol: Only use reimbursable distance for payment calculation
-    if journey.is_reimbursable:
-        journey.reimbursable_distance_km = reimbursable_distance
-        journey.calculate_reimbursement()
-
-    db.commit()
 
     # DC_SESSION_EXTEND_001: Generate extended session token during active journey
     # This prevents session expiry while the user is actively tracking a journey
@@ -566,19 +511,9 @@ async def journey_heartbeat(
                 extended_token = SecurityManager.create_extended_session_token(payload, extend_minutes=30)
     except Exception as e:
         print(f"[DC_SESSION_EXTEND_001] Token refresh warning: {e}")
-    
-    return {
-        "success": True,
-        "distance_km": round(cumulative_distance, 2),
-        "reimbursable_distance_km": round(reimbursable_distance, 2),
-        "current_speed_kmh": round(speed_kmh, 1) if speed_kmh else 0,
-        "max_speed_kmh": round(journey.max_speed_kmh, 1),
-        "reimbursement_amount": journey.reimbursement_amount if journey.is_reimbursable else 0,
-        "wvv_compliant": wvv_compliant,
-        "wvv_reason": wvv_reason if not wvv_compliant else None,
-        "wvv_accuracy_m": round(request.location.accuracy, 0) if request.location.accuracy else None,
-        "extended_token": extended_token  # DC_SESSION_EXTEND_001: Refreshed token for session continuity
-    }
+
+    result["extended_token"] = extended_token
+    return result
 
 
 @router.post("/{journey_id}/end", summary="End journey")
@@ -597,11 +532,14 @@ async def end_journey(
     """
     now = get_indian_time()
 
-    # First, find the journey belonging to current user (any status)
-    journey = db.query(StaffJourney).filter(
+    # First, find the journey belonging to current user (any status) with concurrency lock
+    query = db.query(StaffJourney).filter(
         StaffJourney.id == journey_id,
         StaffJourney.employee_id == current_user.id
-    ).first()
+    )
+    if db.bind and db.bind.dialect.name != 'sqlite':
+        query = query.with_for_update()
+    journey = query.first()
 
     if not journey:
         raise HTTPException(status_code=404, detail="Journey not found")
@@ -655,20 +593,51 @@ async def end_journey(
             end_wvv_compliant = False
             end_compliance_reason = f"GPS accuracy {request.location.accuracy:.0f}m exceeds WVV limit of 100m"
 
+        norm = LocationIngestionService.normalize_observation({
+            "latitude": request.location.latitude,
+            "longitude": request.location.longitude,
+            "accuracy": request.location.accuracy or request.location.accuracy_m,
+            "altitude": request.location.altitude,
+            "speed": request.location.speed,
+            "heading": request.location.heading,
+            "address": request.location.address,
+            "client_observation_id": request.location.client_observation_id,
+            "timestamp": request.location.timestamp or now,
+        }, employee_id=current_user.id)
+
+        # Calculate distance from last track point to end location
+        last_tp = db.query(StaffJourneyTrackPoint).filter(
+            StaffJourneyTrackPoint.journey_id == journey_id
+        ).order_by(StaffJourneyTrackPoint.timestamp.desc(), StaffJourneyTrackPoint.id.desc()).first()
+
+        distance_from_prev = 0.0
+        cumulative_dist = journey.total_distance_km or 0.0
+        if last_tp and last_tp.latitude and last_tp.longitude:
+            distance_from_prev = StaffJourneyTrackPoint.haversine_distance(
+                last_tp.latitude, last_tp.longitude,
+                norm["latitude"], norm["longitude"]
+            )
+            cumulative_dist = round((last_tp.cumulative_distance or journey.total_distance_km or 0.0) + distance_from_prev, 2)
+            journey.total_distance_km = cumulative_dist
+            if end_wvv_compliant and last_tp.wvv_compliant:
+                journey.reimbursable_distance_km = round((journey.reimbursable_distance_km or 0.0) + distance_from_prev, 2)
+
         track_point = StaffJourneyTrackPoint(
             journey_id=journey_id,
-            latitude=request.location.latitude,
-            longitude=request.location.longitude,
-            accuracy=request.location.accuracy,
-            altitude=request.location.altitude,
-            speed_kmh=0,
-            heading=request.location.heading,
-            distance_from_prev=0,
-            cumulative_distance=journey.total_distance_km,
+            client_observation_id=norm["client_observation_id"],
+            server_received_at=norm["server_received_at"],
+            latitude=norm["latitude"],
+            longitude=norm["longitude"],
+            accuracy=norm["accuracy_m"],
+            altitude=norm["altitude"],
+            speed_kmh=norm["speed_kmh"] or 0,
+            heading=norm["heading"],
+            distance_from_prev=distance_from_prev,
+            cumulative_distance=cumulative_dist,
             wvv_compliant=end_wvv_compliant,
             compliance_reason=end_compliance_reason,
             address=request.location.address,  # DC_JOURNEY_ADDRESS_001
-            timestamp=now
+            timestamp=norm["captured_at"]
         )
         db.add(track_point)
         
@@ -700,12 +669,14 @@ async def end_journey(
             
             final_location = StaffRealtimeLocation(
                 employee_id=current_user.id,
-                latitude=request.location.latitude,
-                longitude=request.location.longitude,
+                client_observation_id=norm["client_observation_id"],
+                server_received_at=norm["server_received_at"],
+                latitude=norm["latitude"],
+                longitude=norm["longitude"],
                 accuracy_m=validated_accuracy,
-                altitude=request.location.altitude,
-                speed_kmh=0,
-                heading=request.location.heading,
+                altitude=norm["altitude"],
+                speed_kmh=norm["speed_kmh"] or 0,
+                heading=norm["heading"],
                 source='journey',
                 attendance_id=attendance.id if attendance else None,
                 journey_id=journey_id,

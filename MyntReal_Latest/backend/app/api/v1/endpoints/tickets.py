@@ -3482,12 +3482,23 @@ async def record_spare_payment(
         company_id = 2  # Zynova Mobility Pvt Ltd — spare payments always booked to Zynova
         # Derive payment_type (CASH|BANK) from payment_mode per check constraint
         _payment_type = 'CASH' if payment_mode == 'CASH' else 'BANK'
+        # Calculate ticket total spares amount
+        _all_spares = db.query(ServiceTicketSpareRequest).filter(
+            ServiceTicketSpareRequest.ticket_id == spare.ticket_id,
+            ServiceTicketSpareRequest.procurement_status != 'cancelled'
+        ).all()
+        _spares_calc_total = sum(float(s.payment_amount or s.total_with_gst or s.actual_cost or s.estimated_cost or 0) for s in _all_spares)
+        _ticket_total_spares = max(_spares_calc_total, float(round(amount, 2)))
+
         income_entry = IncomeEntry(
             entry_number=ie_number,
             company_id=company_id,
             income_source_id=income_source.id,
             income_date=pay_date.date(),
             amount=decimal.Decimal(str(round(amount, 2))),
+            spares_amount=decimal.Decimal(str(round(amount, 2))),
+            service_amount=decimal.Decimal('0'),
+            ticket_total_amount=decimal.Decimal(str(round(_ticket_total_spares, 2))),
             reference_type='SERVICE_TICKET_SPARE',
             reference_id=ticket.ticket_id,
             payment_mode=payment_mode,
@@ -3496,7 +3507,7 @@ async def record_spare_payment(
             payment_date=pay_date.date(),
             payer_name=getattr(ticket, 'customer_name', None),
             payer_contact=getattr(ticket, 'customer_phone', None),
-            narration=f'Spare payment: ticket {ticket.ticket_id} | {spare.spare_item_name}'
+            narration=f'Spare payment: ticket {ticket.ticket_id} | {spare.spare_item_name} (Spares: ₹{amount:.2f}, Total: ₹{_ticket_total_spares:.2f})'
                       + (f' | Ref: {payment_reference}' if payment_reference else ''),
             collected_by_id=staff.id,
             destination_type='COMPANY_ACCOUNT',
@@ -4132,8 +4143,10 @@ async def record_billing_payment(
         except Exception:
             pass
 
-    # Find income source (SVC_BILLING → SERVICE → first active)
+    # Find income source (SVC_SERVICE → SVC_BILLING → SERVICE → first active)
     income_source = db.query(IncomeSourceType).filter(
+        IncomeSourceType.source_code == 'SVC_SERVICE', IncomeSourceType.is_active == True
+    ).first() or db.query(IncomeSourceType).filter(
         IncomeSourceType.source_code == 'SVC_BILLING', IncomeSourceType.is_active == True
     ).first() or db.query(IncomeSourceType).filter(
         IncomeSourceType.source_code == 'SERVICE', IncomeSourceType.is_active == True
@@ -4153,12 +4166,37 @@ async def record_billing_payment(
         company_id = billing.company_id or (staff.company_id if hasattr(staff, 'company_id') else 2)
         # Derive payment_type (CASH|BANK) from payment_mode per check constraint
         _billing_payment_type = 'CASH' if payment_mode == 'CASH' else 'BANK'
+
+        # Compute itemized breakdown of spares vs service/labour charges for this billing
+        from app.models.ticket import ServiceTicketBillingItem
+        billing_items = db.query(ServiceTicketBillingItem).filter(
+            ServiceTicketBillingItem.billing_id == billing_id
+        ).all()
+        
+        bill_spares_sum = sum(float(i.line_total or 0) for i in billing_items if i.item_type == 'spare')
+        bill_service_sum = sum(float(i.line_total or 0) for i in billing_items if i.item_type in ('service', 'labour'))
+        bill_net_total = float(billing.net_payable or (bill_spares_sum + bill_service_sum) or 0)
+
+        # Calculate proportional breakdown for this payment
+        if bill_net_total > 0:
+            spares_ratio = bill_spares_sum / bill_net_total
+            calc_spares_amt = round(amount * spares_ratio, 2)
+            calc_service_amt = round(amount - calc_spares_amt, 2)
+        else:
+            calc_spares_amt = 0.0
+            calc_service_amt = round(amount, 2)
+
+        ticket_overall_total = bill_net_total if bill_net_total > 0 else amount
+
         ie = IncomeEntry(
             entry_number=ie_number,
             company_id=company_id,
             income_source_id=income_source.id,
             income_date=pay_date_obj.date(),
             amount=decimal.Decimal(str(round(amount, 2))),
+            spares_amount=decimal.Decimal(str(calc_spares_amt)),
+            service_amount=decimal.Decimal(str(calc_service_amt)),
+            ticket_total_amount=decimal.Decimal(str(round(ticket_overall_total, 2))),
             reference_type='SERVICE_TICKET_BILLING',
             reference_id=ticket.ticket_id if ticket else str(billing.ticket_id),
             payment_mode=payment_mode,
@@ -4167,7 +4205,7 @@ async def record_billing_payment(
             payment_date=pay_date_obj.date(),
             payer_name=getattr(ticket, 'customer_name', None) if ticket else None,
             payer_contact=getattr(ticket, 'customer_phone', None) if ticket else None,
-            narration=f'Service billing payment: ticket {billing.ticket_id} | billing #{billing_id}'
+            narration=f'Service billing payment: ticket {ticket.ticket_id if ticket else billing.ticket_id} (Spares: ₹{calc_spares_amt:.2f}, Service: ₹{calc_service_amt:.2f}, Total: ₹{ticket_overall_total:.2f}) | billing #{billing_id}'
                       + (f' | {payment_notes}' if payment_notes else '')
                       + (f' | Ref: {payment_reference}' if payment_reference else ''),
             collected_by_id=staff.id,
@@ -6515,3 +6553,232 @@ async def get_repair_queue(
         result.append(sd)
 
     return {"spare_repairs": result, "route": route, "count": len(result)}
+
+
+@router.get("/service/tickets/{ticket_id}/payment-breakdown")
+@router.get("/service/reference/{ticket_id}/payment-breakdown")
+async def get_service_ticket_payment_breakdown(
+    ticket_id: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user_hybrid)
+):
+    """
+    DC Protocol Sep 2026: Comprehensive Service Ticket Payment Breakdown
+    Returns itemized Spares Fee, Service & Labour Fee, Overall Grand Total,
+    Payments Recorded, and Balance Due for the Income Entries modal.
+    """
+    from app.core.security import get_current_staff_user_from_hybrid
+    from app.models.ticket import (
+        ServiceTicket, ServiceTicketBilling, ServiceTicketBillingItem,
+        ServiceTicketSpareRequest, ServiceTicketSpareTransaction
+    )
+    from app.models.staff_accounts import IncomeEntry
+
+    staff = get_current_staff_user_from_hybrid(current_user, db)
+    if not staff:
+        raise HTTPException(status_code=403, detail="Staff authentication required")
+
+    # Resolve ticket by integer ID, string ticket_id, or related income entry/billing
+    ticket = None
+    clean_tid = (ticket_id or "").strip()
+
+    if clean_tid.isdigit():
+        ticket = db.query(ServiceTicket).filter(ServiceTicket.id == int(clean_tid)).first()
+
+    if not ticket:
+        ticket = db.query(ServiceTicket).filter(ServiceTicket.ticket_id == clean_tid).first()
+
+    # If ticket_id contains TKT... format, extract and search
+    if not ticket:
+        import re
+        tkt_match = re.search(r'TKT\d+', clean_tid)
+        if tkt_match:
+            ticket = db.query(ServiceTicket).filter(ServiceTicket.ticket_id == tkt_match.group(0)).first()
+
+    # If still not found, check if clean_tid is an IncomeEntry ID or entry_number
+    if not ticket:
+        ie = None
+        if clean_tid.isdigit():
+            ie = db.query(IncomeEntry).filter(IncomeEntry.id == int(clean_tid)).first()
+        if not ie:
+            ie_lookup = clean_tid.replace('-SP', '').replace('-SV', '')
+            ie = db.query(IncomeEntry).filter(
+                (IncomeEntry.entry_number == ie_lookup) | (IncomeEntry.entry_number == clean_tid)
+            ).first()
+        if ie:
+            if ie.reference_id:
+                ticket = db.query(ServiceTicket).filter(
+                    (ServiceTicket.ticket_id == ie.reference_id) |
+                    ((ServiceTicket.id == int(ie.reference_id)) if ie.reference_id.isdigit() else False)
+                ).first()
+            if not ticket and ie.narration:
+                import re
+                tkt_match = re.search(r'TKT\d+', ie.narration)
+                if tkt_match:
+                    ticket = db.query(ServiceTicket).filter(ServiceTicket.ticket_id == tkt_match.group(0)).first()
+
+    # If still not found, check if clean_tid is a billing ID
+    billing = None
+    if not ticket and clean_tid.isdigit():
+        billing = db.query(ServiceTicketBilling).filter(ServiceTicketBilling.id == int(clean_tid)).first()
+        if billing:
+            ticket = db.query(ServiceTicket).filter(ServiceTicket.id == billing.ticket_id).first()
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail=f"Service ticket '{clean_tid}' not found")
+
+    if not billing:
+        billing = db.query(ServiceTicketBilling).filter(
+            ServiceTicketBilling.ticket_id == ticket.id
+        ).order_by(ServiceTicketBilling.id.desc()).first()
+
+    billing_items = []
+    if billing:
+        billing_items = db.query(ServiceTicketBillingItem).filter(
+            ServiceTicketBillingItem.billing_id == billing.id
+        ).all()
+
+    spare_requests = db.query(ServiceTicketSpareRequest).filter(
+        ServiceTicketSpareRequest.ticket_id == ticket.id,
+        ServiceTicketSpareRequest.procurement_status != 'cancelled'
+    ).all()
+
+    # Calculate itemized totals
+    spares_fee_total = 0.0
+    service_fee_total = 0.0
+    labour_fee_total = 0.0
+
+    if billing_items:
+        for it in billing_items:
+            lt = float(it.line_total or 0)
+            if it.item_type == 'spare':
+                spares_fee_total += lt
+            elif it.item_type == 'labour':
+                labour_fee_total += lt
+            else:
+                service_fee_total += lt
+    else:
+        # Fallback to spare requests
+        for sp in spare_requests:
+            spares_fee_total += float(sp.payment_amount or sp.total_with_gst or sp.actual_cost or sp.estimated_cost or 0)
+
+    combined_service_fee = round(service_fee_total + labour_fee_total, 2)
+    spares_fee_total = round(spares_fee_total, 2)
+    grand_total = float(billing.net_payable) if (billing and billing.net_payable) else round(spares_fee_total + combined_service_fee, 2)
+
+    # Fetch all linked Income Entries
+    ref_ids = [str(ticket.id), ticket.ticket_id]
+    if getattr(ticket, 'ticket_number', None):
+        ref_ids.append(ticket.ticket_number)
+    if billing:
+        ref_ids.append(str(billing.id))
+
+    income_entries = db.query(IncomeEntry).filter(
+        IncomeEntry.reference_type.in_(['SERVICE_TICKET_BILLING', 'SERVICE_TICKET_SPARE', 'SERVICE_TICKET', 'SERVICE']),
+        IncomeEntry.reference_id.in_(ref_ids),
+        IncomeEntry.is_deleted == False
+    ).order_by(IncomeEntry.income_date.desc(), IncomeEntry.id.desc()).all()
+
+    # Calculate total paid
+    total_paid = 0.0
+    spares_paid = 0.0
+    service_paid = 0.0
+
+    for ie in income_entries:
+        if ie.status != 'REJECTED':
+            amt = float(ie.amount or 0)
+            total_paid += amt
+            sp_amt = float(ie.spares_amount or 0)
+            sv_amt = float(ie.service_amount or 0)
+            if sp_amt > 0 or sv_amt > 0:
+                spares_paid += sp_amt
+                service_paid += sv_amt
+            elif ie.reference_type == 'SERVICE_TICKET_SPARE':
+                spares_paid += amt
+            else:
+                service_paid += amt
+
+    # If billing has recorded amount_paid, reconcile
+    if billing and billing.amount_paid and float(billing.amount_paid) > total_paid:
+        total_paid = float(billing.amount_paid)
+
+    total_paid = round(total_paid, 2)
+    spares_paid = round(spares_paid, 2)
+    service_paid = round(service_paid, 2)
+    balance_due = round(max(0.0, grand_total - total_paid), 2)
+
+    payment_status = 'paid' if balance_due <= 0.01 and grand_total > 0 else ('partial' if total_paid > 0 else 'pending')
+
+    # Items summary list
+    items_list = []
+    for bi in billing_items:
+        items_list.append({
+            "id": bi.id,
+            "item_type": bi.item_type,
+            "description": bi.description,
+            "quantity": bi.quantity,
+            "rate": float(bi.rate or 0),
+            "line_total": float(bi.line_total or 0),
+            "tax_rate": float(bi.tax_rate or 0),
+            "hsn_code": bi.hsn_code
+        })
+    if not items_list:
+        for sp in spare_requests:
+            items_list.append({
+                "id": sp.id,
+                "item_type": "spare",
+                "description": sp.spare_item_name,
+                "quantity": sp.quantity_required or 1,
+                "rate": float(sp.unit_price or 0),
+                "line_total": float(sp.payment_amount or sp.total_with_gst or sp.estimated_cost or 0),
+                "tax_rate": float(sp.gst_rate or 0),
+                "hsn_code": sp.hsn_code
+            })
+
+    # Payment transactions list
+    txns_list = []
+    for ie in income_entries:
+        txns_list.append({
+            "id": ie.id,
+            "entry_number": ie.entry_number,
+            "income_date": ie.income_date.isoformat() if ie.income_date else None,
+            "amount": float(ie.amount or 0),
+            "spares_amount": float(ie.spares_amount or 0),
+            "service_amount": float(ie.service_amount or 0),
+            "payment_mode": ie.payment_mode,
+            "payment_reference": ie.payment_reference,
+            "payer_name": ie.payer_name,
+            "status": ie.status,
+            "narration": ie.narration
+        })
+
+    return {
+        "success": True,
+        "ticket": {
+            "id": ticket.id,
+            "ticket_id": ticket.ticket_id,
+            "ticket_number": getattr(ticket, 'ticket_number', None) or ticket.ticket_id,
+            "customer_name": ticket.customer_name or "Customer",
+            "customer_phone": ticket.customer_phone or "—",
+            "customer_email": getattr(ticket, 'customer_email', None),
+            "vehicle_number": getattr(ticket, 'vehicle_number', None) or getattr(ticket, 'vehicle_reg_no', None) or getattr(ticket, 'product_serial', None) or '—',
+            "vehicle_model": getattr(ticket, 'vehicle_model', None) or getattr(ticket, 'product_model', None) or getattr(ticket, 'product_name', None) or 'EV',
+            "status": ticket.status,
+            "sub_status": ticket.sub_status
+        },
+        "breakdown": {
+            "spares_fee_total": spares_fee_total,
+            "service_fee_total": service_fee_total,
+            "labour_fee_total": labour_fee_total,
+            "combined_service_fee": combined_service_fee,
+            "grand_total": grand_total,
+            "spares_paid": spares_paid,
+            "service_paid": service_paid,
+            "total_paid": total_paid,
+            "balance_due": balance_due,
+            "payment_status": payment_status
+        },
+        "items": items_list,
+        "payments": txns_list
+    }
+

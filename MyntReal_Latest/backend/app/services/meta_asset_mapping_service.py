@@ -20,8 +20,8 @@ TARGET_AD_ACCOUNT_ID = "560062103113819"
 TARGET_ACT_ACCOUNT_ID = "act_560062103113819"
 TARGET_PAGE_ID = "894208310452980"
 TARGET_PAGE_NAME = "Myntreal - Har Ghar Solar"
-DESIGNATED_LEAD_FORM_ID = "form_3kw_solar_ap"
-DESIGNATED_LEAD_FORM_NAME = "3KW Solar Rooftop Lead Form AP"
+DESIGNATED_LEAD_FORM_ID = "940528145175748"
+DESIGNATED_LEAD_FORM_NAME = "Har Ghar Solar Lead Form"
 
 
 def evaluate_phase2g_preflight_checks(db: Session, company_id: int = 1) -> Dict[str, Any]:

@@ -1545,14 +1545,16 @@ async def stream_call_recording(
         raise HTTPException(status_code=404, detail="Recording not found")
 
     s3_key = recording.storage_path.replace('\\', '/')
+    from fastapi.responses import RedirectResponse
+    if s3_key.startswith("http://") or s3_key.startswith("https://"):
+        return RedirectResponse(url=s3_key)
+
     if "uploads/" in s3_key:
         s3_key = s3_key.split("uploads/")[-1].lstrip("/")
     elif "call_recordings/" in s3_key:
         s3_key = s3_key[s3_key.find("call_recordings/"):]
         
     from app.services.object_storage import storage_service
-    from fastapi.responses import RedirectResponse
-    
     file_url = storage_service.get_file_url(s3_key)
     return RedirectResponse(url=file_url)
 

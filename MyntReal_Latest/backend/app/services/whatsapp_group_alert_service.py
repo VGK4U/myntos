@@ -3,18 +3,13 @@ DC_WA_GROUP_ALERT_001 — WhatsApp Group Alert Dispatcher
 Sends messages to Sales Team WhatsApp Group via Self-Hosted WhatsApp Web Bot (port 5002).
 """
 
-import logging
-import requests
-import datetime
-from typing import Dict, Any, Optional
-from sqlalchemy.orm import Session
-
 import os
 import logging
 import requests
-import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
+from app.core.timezone import get_indian_time, IST
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +121,7 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, An
         if created_at:
             time_str = created_at.strftime("%d %b %Y, %I:%M %p IST")
         else:
-            ist_now = datetime.datetime.utcnow() + datetime.timedelta(hours=5, minutes=30)
+            ist_now = get_indian_time()
             time_str = ist_now.strftime("%d %b %Y, %I:%M %p IST")
 
     # Extract form questions & answers

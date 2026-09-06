@@ -475,11 +475,19 @@
         let editSelectedProductIds = [];
         let productSearchTimeout = null;
         
-        document.addEventListener('DOMContentLoaded', async function() {
-            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+        async function initVendorPage() {
+            if (typeof StaffSidebar !== 'undefined') StaffSidebar.init();
             StaffHeader.inject('Vendors', 'fas fa-truck'); if (typeof StaffHeader !== 'undefined') StaffHeader.init(); if (typeof StaffBackButton !== 'undefined') StaffBackButton.init(); updateHeaderUserInfo();
-            await Promise.all([loadCompanies(), loadProducts(), loadVendors()]);
-        });
+            // Controlled bootstrap: dropdown metadata first (bounded concurrency 2), then primary table
+            await Promise.all([loadCompanies(), loadProducts()]);
+            await loadVendors();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initVendorPage);
+        } else {
+            initVendorPage();
+        }
         
         function updateHeaderUserInfo() {
             const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');

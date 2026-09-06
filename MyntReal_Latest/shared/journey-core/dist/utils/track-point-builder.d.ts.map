@@ -1,0 +1,1 @@
+{"version":3,"file":"track-point-builder.d.ts","sourceRoot":"","sources":["../../src/utils/track-point-builder.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,UAAU,EAAE,cAAc,EAAE,sBAAsB,EAAE,MAAM,yBAAyB,CAAC;AAK7F,wBAAgB,eAAe,CAAC,KAAK,EAAE,sBAAsB,GAAG,UAAU,CA2DzE;AAED,wBAAgB,qBAAqB,CACnC,WAAW,EAAE,cAAc,EAC3B,UAAU,EAAE,MAAM,GAAG,IAAI,GACxB,UAAU,CAOZ"}

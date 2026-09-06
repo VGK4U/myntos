@@ -405,6 +405,19 @@
                     </div>
                 </div>
 
+                <!-- DC_EXP_ADVANCE_001: Operational expense advance checkbox -->
+                <div id="expenseAdvanceSection" style="margin-bottom:12px; padding:10px 14px; background:#eff6ff; border:1px solid #93c5fd; border-radius:8px; display:flex; align-items:flex-start; gap:10px;">
+                    <input type="checkbox" id="fvIsExpenseAdvance" style="width:18px; height:18px; margin-top:2px; cursor:pointer;">
+                    <div>
+                        <label for="fvIsExpenseAdvance" style="font-size:12.5px; font-weight:700; color:#1e40af; cursor:pointer; display:block;">
+                            Treat as Staff Operational Expense Advance
+                        </label>
+                        <div style="font-size:11px; color:#3b82f6; margin-top:2px;">
+                            Check this to include this voucher in the <strong>Staff Expense Passbook (Bank IN)</strong> and Consolidated Expense balance. Statutory accounting (Party Ledger, Account Ledger, P&L, Balance Sheet) remains 100% active and unaffected.
+                        </div>
+                    </div>
+                </div>
+
                 <!-- DC-ADD-PARTY-001: Quick add party link -->
                 <div style="margin-bottom:12px;text-align:right;">
                     <button type="button" onclick="openAddPartyModal()" style="background:none;border:1px dashed #6366f1;color:#6366f1;border-radius:7px;padding:5px 13px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">
@@ -658,6 +671,18 @@
                     <select id="jvEditSubCat" disabled style="padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;">
                         <option value="">— Sub Category —</option>
                     </select>
+                </div>
+            </div>
+            <!-- DC_EXP_ADVANCE_001: Operational expense advance checkbox (Edit Modal) -->
+            <div id="jvEditExpenseAdvanceSection" style="margin-top:12px; padding:10px 14px; background:#eff6ff; border:1px solid #93c5fd; border-radius:8px; display:flex; align-items:flex-start; gap:10px;">
+                <input type="checkbox" id="jvEditIsExpenseAdvance" style="width:18px; height:18px; margin-top:2px; cursor:pointer;">
+                <div>
+                    <label for="jvEditIsExpenseAdvance" style="font-size:12.5px; font-weight:700; color:#1e40af; cursor:pointer; display:block;">
+                        Treat as Staff Operational Expense Advance
+                    </label>
+                    <div style="font-size:11px; color:#3b82f6; margin-top:2px;">
+                        Check this to show in <strong>Staff Expense Passbook (Bank IN)</strong> and Consolidated Expense balance.
+                    </div>
                 </div>
             </div>
             <div style="margin-top:12px;">
@@ -1368,8 +1393,9 @@
             document.getElementById('fvDrType').value = 'PARTY';
             const staffName = document.getElementById('fvPartyName').value.trim();
             if (staffName) document.getElementById('fvDrName').value = staffName;
+            if (document.getElementById('fvIsExpenseAdvance')) document.getElementById('fvIsExpenseAdvance').checked = true;
             hint.style.display = '';
-            hintText.textContent = 'Advance: DR Staff Party A/C → CR Bank. Shown in staff ledger as advance given.';
+            hintText.textContent = 'Advance: DR Staff Party A/C → CR Bank. Checked as Staff Operational Expense Advance.';
         } else {
             // Expense payment: DR switches to expense head
             let headName = info.head;
@@ -1378,6 +1404,7 @@
             }
             document.getElementById('fvDrType').value = 'EXPENSE';
             if (headName) document.getElementById('fvDrName').value = headName;
+            if (document.getElementById('fvIsExpenseAdvance')) document.getElementById('fvIsExpenseAdvance').checked = false;
             hint.style.display = '';
             hintText.textContent = `DR ${headName} (Expense Head) → CR Bank. Staff party ledger debited as EMPLOYEE.`;
         }
@@ -1567,6 +1594,7 @@
         document.getElementById('fvMainCat').value = '';
         document.getElementById('fvSubCat').value = '';
         document.getElementById('fvSubCat').disabled = true;
+        if (document.getElementById('fvIsExpenseAdvance')) document.getElementById('fvIsExpenseAdvance').checked = false;
         document.getElementById('formSuccess').style.display = 'none';
         document.getElementById('formError').style.display = 'none';
         document.getElementById('invoiceLinkSection').style.display = 'none';
@@ -1677,6 +1705,7 @@
             }
             if (category_id) payload.category_id = category_id;
             if (income_category_id) payload.income_category_id = income_category_id;
+            payload.is_expense_advance = document.getElementById('fvIsExpenseAdvance') ? document.getElementById('fvIsExpenseAdvance').checked : false;
             console.log('[Entries] Posting voucher payload:', JSON.stringify(payload));
             const resp = await staffFetch(`${API_BASE}/journal-vouchers`, { method: 'POST', body: JSON.stringify(payload) });
             if (!resp.ok) {
@@ -2222,6 +2251,7 @@
             };
             if (category_id) payload.category_id = category_id;
             if (income_category_id) payload.income_category_id = income_category_id;
+            payload.is_expense_advance = document.getElementById('fvIsExpenseAdvance') ? document.getElementById('fvIsExpenseAdvance').checked : false;
 
             const resp = await staffFetch(`${API_BASE}/journal-vouchers`, { method: 'POST', body: JSON.stringify(payload) });
             if (!resp.ok) {
@@ -2402,7 +2432,10 @@
                     ${_showCo ? `<td style="white-space:nowrap; font-size:11px; color:#4b5563; max-width:100px; overflow:hidden; text-overflow:ellipsis;" title="${(_companyMap[r.company_id]||'').replace(/"/g,'')}">${_companyMap[r.company_id] || r.company_id}</td>` : ''}
                     <td class="mono" style="color:#6366f1; white-space:nowrap;">${r.voucher_number}</td>
                     <td style="white-space:nowrap;">${r.voucher_date || '—'}</td>
-                    <td><span class="badge-vtype badge-${r.voucher_type}">${r.voucher_type}</span></td>
+                    <td>
+                        <span class="badge-vtype badge-${r.voucher_type}">${r.voucher_type}</span>
+                        ${r.is_expense_advance ? `<br><span style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-size:9.5px; font-weight:700; padding:1px 5px; border-radius:4px; display:inline-block; margin-top:2px;" title="Treat as Operational Expense Advance">Exp Adv</span>` : ''}
+                    </td>
                     <td style="max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r.dr_account_name}">
                         <small style="color:#dc2626; font-weight:700;">DR</small> ${r.dr_account_name}
                     </td>
@@ -2671,6 +2704,9 @@
         document.getElementById('jvEditPartyType').value = _editPtNorm[_editPt] || _editPt;
         document.getElementById('jvEditPartyName').value = r.party_name || '';
         document.getElementById('jvEditNarration').value = r.narration || '';
+        if (document.getElementById('jvEditIsExpenseAdvance')) {
+            document.getElementById('jvEditIsExpenseAdvance').checked = !!r.is_expense_advance;
+        }
 
         // ── Category picker pre-fill (DC_CATPICKER_001 + DC_INCOME_CAT_001) ──
         const mainSel = document.getElementById('jvEditMainCat');
@@ -2731,6 +2767,7 @@
             narration: document.getElementById('jvEditNarration').value.trim() || null,
             category_id: _editCatId || null,
             income_category_id: _editIncId || null,
+            is_expense_advance: document.getElementById('jvEditIsExpenseAdvance') ? document.getElementById('jvEditIsExpenseAdvance').checked : false,
         };
 
         btn.disabled = true;

@@ -877,6 +877,38 @@
                 return prefix + '<small>' + inc.lead_owner_name + '</small>';
             }
 
+            // Helper: render itemized breakdown badges for service tickets
+            function serviceTicketBreakdownHtml(inc) {
+                const refType = (inc.reference_type || '').toUpperCase();
+                const catName = (inc.revenue_category_name || inc.income_source_name || '').toLowerCase();
+                const isSvc = refType.includes('SERVICE_TICKET') || catName.includes('service') || catName.includes('spare') ||
+                              parseFloat(inc.spares_amount || 0) > 0 || parseFloat(inc.service_amount || 0) > 0;
+                if (!isSvc) return '';
+
+                const sp = parseFloat(inc.spares_amount || 0);
+                const sv = parseFloat(inc.service_amount || 0);
+                const tot = parseFloat(inc.ticket_total_amount || inc.amount || 0);
+                const refId = (inc.reference_id || inc.entry_number || '').toString().replace(/'/g, "\\'");
+
+                let h = '<div style="margin-top:4px;display:flex;flex-direction:column;gap:2px;font-size:10px;text-align:left;">';
+                if (sp > 0 || sv > 0) {
+                    h += '<div style="display:flex;gap:3px;flex-wrap:wrap;">';
+                    if (sp > 0) h += '<span style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;padding:1px 4px;border-radius:3px;font-weight:600;"><i class="fas fa-wrench me-1"></i>Spares: ' + fmt(sp) + '</span>';
+                    if (sv > 0) h += '<span style="background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe;padding:1px 4px;border-radius:3px;font-weight:600;"><i class="fas fa-cog me-1"></i>Service: ' + fmt(sv) + '</span>';
+                    h += '</div>';
+                }
+                if (tot > 0) {
+                    h += '<div style="display:flex;align-items:center;justify-content:space-between;background:#f3f4f6;border:1px solid #e5e7eb;padding:1px 5px;border-radius:3px;">';
+                    h += '<span style="color:#374151;font-weight:600;"><i class="fas fa-receipt me-1"></i>Overall: ' + fmt(tot) + '</span>';
+                    if (inc.reference_id) {
+                        h += '<a href="javascript:void(0)" onclick="openTicketBreakdownModal(\''+refId+'\','+inc.id+')" style="color:#2563eb;font-weight:700;text-decoration:none;margin-left:4px;" title="View Ticket Breakdown">Breakdown &rarr;</a>';
+                    }
+                    h += '</div>';
+                }
+                h += '</div>';
+                return h;
+            }
+
             let rows = '';
             viewable.forEach(function(inc) {
                 const isRejected = inc.status === 'REJECTED';
@@ -895,7 +927,7 @@
                     '<td>'+dealBadge+'</td>' +
                     '<td>'+(inc.lead_name || inc.payer_name || '-')+'</td>' +
                     '<td><small>'+(inc.lead_city || inc.payer_city || '-')+'</small></td>' +
-                    '<td class="amount positive">'+fmt(inc.amount)+'</td>' +
+                    '<td class="amount positive">' + fmt(inc.amount) + serviceTicketBreakdownHtml(inc) + '</td>' +
                     '<td><small>'+(inc.payment_mode || '-')+'</small></td>' +
                     '<td>'+(inc.payment_type ? '<span class="badge bg-secondary" style="font-size:10px;">'+inc.payment_type+'</span>' : '<span style="color:#9ca3af;font-size:10px;">-</span>')+'</td>' +
                     '<td>'+txnTypeBadge(inc.transaction_type)+'</td>' +
@@ -1905,7 +1937,14 @@
             confirmingEntryId = id;
             confirmingEntry = filteredIncomes.find(i => i.id === id) || allIncomes.find(i => i.id === id) || {};
             document.getElementById('confEntryNum').textContent = confirmingEntry.entry_number || id;
-            document.getElementById('confAmount').textContent = fmt(confirmingEntry.amount);
+            const uData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const canOverride = (uData.emp_code === 'MR10001' || uData.emp_code === 'MR10025');
+
+            const topAmtInput = document.getElementById('confAmountInput');
+            if (topAmtInput) {
+                topAmtInput.value = parseFloat(confirmingEntry.amount || 0).toFixed(2);
+                topAmtInput.disabled = !canOverride;
+            }
             document.getElementById('confDate').textContent = fmtD(confirmingEntry.income_date);
             document.getElementById('confPayer').value = confirmingEntry.payer_name || '';
             document.getElementById('confMode').textContent = confirmingEntry.payment_mode || '-';
@@ -1920,6 +1959,7 @@
                 compSel.appendChild(o);
             });
             compSel.value = confirmingEntry.company_id || '';
+            compSel.disabled = !canOverride;
 
             // Load solar vendors
             await loadSolarVendors();
@@ -2020,6 +2060,30 @@
             if (val !== 'EMPLOYEE') document.getElementById('confEmpBalanceBox').style.display = 'none';
         }
 
+        let confCurrentPrevBal = 0;
+
+        function onConfAmountInputChange() {
+            const rawVal = parseFloat(document.getElementById('confAmountInput').value);
+            const cleanAmt = (!isNaN(rawVal) && rawVal >= 0) ? rawVal : 0;
+            const empInput = document.getElementById('confEmpTxnAmt');
+            if (empInput) empInput.value = cleanAmt.toFixed(2);
+            if (typeof confCurrentPrevBal === 'number') {
+                const afterBal = confCurrentPrevBal + cleanAmt;
+                const afterEl = document.getElementById('confBalAfter');
+                if (afterEl) afterEl.textContent = fmt(afterBal);
+            }
+        }
+
+        function onConfEmpTxnAmtChange() {
+            const rawVal = parseFloat(document.getElementById('confEmpTxnAmt').value);
+            const cleanAmt = (!isNaN(rawVal) && rawVal >= 0) ? rawVal : 0;
+            const topInput = document.getElementById('confAmountInput');
+            if (topInput) topInput.value = cleanAmt.toFixed(2);
+            const afterBal = confCurrentPrevBal + cleanAmt;
+            const afterEl = document.getElementById('confBalAfter');
+            if (afterEl) afterEl.textContent = fmt(afterBal);
+        }
+
         async function loadConfEmployeeBalance(empId) {
             if (!empId) { document.getElementById('confEmpBalanceBox').style.display = 'none'; return; }
             try {
@@ -2028,12 +2092,14 @@
                 const d = await r.json();
                 const b = d.balance_summary;
                 if (!b) return;
-                const prevBal  = parseFloat(b.available_balance) || 0;
-                const txnAmt   = parseFloat(confirmingEntry.amount) || 0;
-                const afterBal = prevBal + txnAmt;
+                confCurrentPrevBal = parseFloat(b.available_balance) || 0;
+                const currentInputAmt = parseFloat(document.getElementById('confAmountInput')?.value || confirmingEntry.amount || 0);
+                const txnAmt = (!isNaN(currentInputAmt) && currentInputAmt >= 0) ? currentInputAmt : (parseFloat(confirmingEntry.amount) || 0);
                 document.getElementById('confEmpBalName').textContent  = (d.employee_name || 'Employee') + ' — Fund Balance';
-                document.getElementById('confBalPrev').textContent     = fmt(prevBal);
-                document.getElementById('confBalTxn').textContent      = '+\u20b9' + txnAmt.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+                document.getElementById('confBalPrev').textContent     = fmt(confCurrentPrevBal);
+                const inputEl = document.getElementById('confEmpTxnAmt');
+                if (inputEl) inputEl.value = txnAmt.toFixed(2);
+                const afterBal = confCurrentPrevBal + txnAmt;
                 document.getElementById('confBalAfter').textContent    = fmt(afterBal);
                 document.getElementById('confEmpBalanceBox').style.display = 'block';
             } catch(e) {}
@@ -2054,12 +2120,19 @@
             }
 
             const selComp = document.getElementById('confCompanySelect');
+            const amtInput = document.getElementById('confAmountInput');
+            const customAmt = amtInput ? parseFloat(amtInput.value) : NaN;
+
             const payload = {
                 status: 'CONFIRMED',
                 confirmation_type: 'TAXED',
                 company_id: selComp.value ? parseInt(selComp.value) : null,
                 destination_type: destType || null
             };
+
+            if (!isNaN(customAmt) && customAmt >= 0) {
+                payload.amount = customAmt;
+            }
 
             // Destination-specific fields
             if (destType === 'COMPANY_ACCOUNT') {
@@ -2547,7 +2620,13 @@
                 <!-- Summary strip -->
                 <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:12px; margin-bottom:14px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                     <div><div style="font-size:10px;color:#6b7280;font-weight:600;">ENTRY #</div><div style="font-weight:700;color:#1f2937;" id="confEntryNum">-</div></div>
-                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">AMOUNT</div><div style="font-weight:700;color:#059669;" id="confAmount">-</div></div>
+                    <div>
+                        <div style="font-size:10px;color:#6b7280;font-weight:600;">CONFIRM AMOUNT (₹)</div>
+                        <div style="display:flex;align-items:center;gap:3px;margin-top:2px;">
+                            <span style="font-weight:700;color:#059669;font-size:14px;">₹</span>
+                            <input type="number" id="confAmountInput" step="0.01" min="0" oninput="onConfAmountInputChange()" style="width:100%;padding:4px 8px;border:1.5px solid #10b981;border-radius:6px;font-weight:700;color:#059669;font-size:14px;background:#fff;" title="Edit confirm amount (addition only)">
+                        </div>
+                    </div>
                     <div><div style="font-size:10px;color:#6b7280;font-weight:600;">DATE</div><div style="font-size:13px;" id="confDate">-</div></div>
                     <div><div style="font-size:10px;color:#6b7280;font-weight:600;">PAYMENT MODE</div><div style="font-size:13px;" id="confMode">-</div></div>
                     <div style="grid-column:1/-1;"><div style="font-size:10px;color:#6b7280;font-weight:600;">COMPANY</div><select id="confCompanySelect" onchange="onConfCompanyChange()" style="width:100%;padding:6px 10px;font-size:13px;font-weight:600;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#1f2937;"></select></div>
@@ -2596,7 +2675,13 @@
                     <div id="confEmpBalanceBox" style="display:none;" class="balance-info-box">
                         <div style="font-size:11px;font-weight:700;color:#065f46;margin-bottom:8px;" id="confEmpBalName">Employee Fund Balance</div>
                         <div class="balance-row"><span class="label">Previous Balance</span><span class="value positive" id="confBalPrev">-</span></div>
-                        <div class="balance-row"><span class="label">This Transaction</span><span class="value positive" id="confBalTxn" style="color:#2563eb;">-</span></div>
+                        <div class="balance-row" style="display:flex;align-items:center;justify-content:space-between;">
+                            <span class="label">This Transaction (Addition)</span>
+                            <div style="display:flex;align-items:center;gap:4px;">
+                                <span style="font-weight:700;color:#059669;font-size:13px;">+₹</span>
+                                <input type="number" id="confEmpTxnAmt" step="0.01" min="0" oninput="onConfEmpTxnAmtChange()" style="width:115px;padding:3px 7px;border:1.5px solid #10b981;border-radius:6px;font-weight:700;color:#059669;font-size:13px;text-align:right;background:#fff;" title="Modify addition amount">
+                            </div>
+                        </div>
                         <hr style="margin:6px 0; border-color:#bbf7d0;">
                         <div class="balance-row"><span class="label" style="font-weight:600;">Balance After</span><span class="value positive" id="confBalAfter" style="font-weight:700;">-</span></div>
                     </div>
@@ -2839,16 +2924,179 @@
                 </div>
             </div>
             <div>
-                <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Notes</label>
-                <textarea id="svlRetNotes" rows="2" placeholder="Any notes…" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:7px;resize:vertical;"></textarea>
+        async function openTicketBreakdownModal(ticketRef, entryId) {
+            const modal = document.getElementById('ticketBreakdownModal');
+            if (!modal) return;
+            modal.classList.add('active');
+            
+            document.getElementById('tktBkBody').innerHTML = '<div style="text-align:center;padding:30px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:#6366f1;"></i><p style="margin-top:10px;color:#6b7280;font-size:13px;">Loading ticket fee breakdown...</p></div>';
+
+            try {
+                const targetRef = ticketRef || entryId || '';
+                let r = await staffFetch('/api/v1/tickets/service/tickets/' + encodeURIComponent(targetRef) + '/payment-breakdown');
+                if (!r.ok && entryId && String(entryId) !== String(targetRef)) {
+                    r = await staffFetch('/api/v1/tickets/service/tickets/' + encodeURIComponent(entryId) + '/payment-breakdown');
+                }
+                const data = await r.json();
+                if (!data.success) throw new Error(data.detail || data.message || 'Ticket not found');
+
+                const tkt = data.ticket || {};
+                const bk = data.breakdown || {};
+                const items = data.items || [];
+                const pmts = data.payments || [];
+
+                document.getElementById('tktBkRefTitle').textContent = tkt.ticket_id || ('Ticket #' + targetRef);
+
+                let html = `
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:16px;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+                            <div>
+                                <div style="font-size:15px;font-weight:700;color:#1e293b;">${tkt.customer_name || 'Customer'}</div>
+                                <div style="font-size:12px;color:#64748b;margin-top:2px;">
+                                    <i class="fas fa-phone me-1"></i>${tkt.customer_phone || '—'} &nbsp;|&nbsp; 
+                                    <i class="fas fa-motorcycle me-1"></i>${tkt.vehicle_number || tkt.vehicle_model || 'EV'}
+                                </div>
+                            </div>
+                            <div>
+                                <span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:11px;padding:4px 8px;border-radius:6px;font-weight:600;text-transform:uppercase;">
+                                    ${tkt.status || 'OPEN'} ${tkt.sub_status ? '· ' + tkt.sub_status : ''}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4 Summary Metric Cards -->
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:10px;margin-bottom:18px;">
+                        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;">
+                            <div style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;"><i class="fas fa-wrench me-1"></i>Spares Fee</div>
+                            <div style="font-size:16px;font-weight:800;color:#0284c7;margin-top:3px;">${fmt(bk.spares_fee_total)}</div>
+                            <div style="font-size:10px;color:#0369a1;margin-top:2px;">Paid: ${fmt(bk.spares_paid || 0)}</div>
+                        </div>
+                        <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:10px 12px;">
+                            <div style="font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;"><i class="fas fa-cog me-1"></i>Service & Labour</div>
+                            <div style="font-size:16px;font-weight:800;color:#7c3aed;margin-top:3px;">${fmt(bk.combined_service_fee || bk.service_fee_total)}</div>
+                            <div style="font-size:10px;color:#6d28d9;margin-top:2px;">Paid: ${fmt(bk.service_paid || 0)}</div>
+                        </div>
+                        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;">
+                            <div style="font-size:10px;font-weight:700;color:#15803d;text-transform:uppercase;"><i class="fas fa-receipt me-1"></i>Overall Total</div>
+                            <div style="font-size:16px;font-weight:800;color:#16a34a;margin-top:3px;">${fmt(bk.grand_total)}</div>
+                            <div style="font-size:10px;color:#15803d;margin-top:2px;">Status: ${(bk.payment_status || 'PENDING').toUpperCase()}</div>
+                        </div>
+                        <div style="background:${bk.balance_due > 0 ? '#fffbeb' : '#f8fafc'};border:1px solid ${bk.balance_due > 0 ? '#fde68a' : '#e2e8f0'};border-radius:8px;padding:10px 12px;">
+                            <div style="font-size:10px;font-weight:700;color:${bk.balance_due > 0 ? '#b45309' : '#475569'};text-transform:uppercase;"><i class="fas fa-coins me-1"></i>Balance Due</div>
+                            <div style="font-size:16px;font-weight:800;color:${bk.balance_due > 0 ? '#d97706' : '#10b981'};margin-top:3px;">${fmt(bk.balance_due)}</div>
+                            <div style="font-size:10px;color:#64748b;margin-top:2px;">Paid: ${fmt(bk.total_paid)}</div>
+                        </div>
+                    </div>
+
+                    <!-- Items breakdown table -->
+                    <div style="margin-bottom:18px;">
+                        <div style="font-size:12px;font-weight:700;color:#334155;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                            <i class="fas fa-list-ul" style="color:#6366f1;"></i> Bill / Service Items Breakdown
+                        </div>
+                        <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;max-height:180px;overflow-y:auto;">
+                            <table style="width:100%;font-size:11px;border-collapse:collapse;text-align:left;">
+                                <thead style="background:#f1f5f9;color:#475569;font-weight:600;position:sticky;top:0;">
+                                    <tr>
+                                        <th style="padding:6px 10px;">Item / Description</th>
+                                        <th style="padding:6px 10px;">Type</th>
+                                        <th style="padding:6px 10px;text-align:center;">Qty</th>
+                                        <th style="padding:6px 10px;text-align:right;">Rate</th>
+                                        <th style="padding:6px 10px;text-align:right;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${items.length === 0 ? '<tr><td colspan="5" style="padding:12px;text-align:center;color:#94a3b8;">No specific items billed yet</td></tr>' : 
+                                      items.map(it => `
+                                        <tr style="border-top:1px solid #f1f5f9;">
+                                            <td style="padding:6px 10px;font-weight:500;">${it.description || 'Item'}</td>
+                                            <td style="padding:6px 10px;">
+                                                <span style="font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;background:${it.item_type==='spare'?'#e0f2fe':'#ede9fe'};color:${it.item_type==='spare'?'#0369a1':'#6d28d9'};">
+                                                    ${(it.item_type || 'spare').toUpperCase()}
+                                                </span>
+                                            </td>
+                                            <td style="padding:6px 10px;text-align:center;">${it.quantity || 1}</td>
+                                            <td style="padding:6px 10px;text-align:right;">${fmt(it.rate)}</td>
+                                            <td style="padding:6px 10px;text-align:right;font-weight:600;">${fmt(it.line_total)}</td>
+                                        </tr>
+                                      `).join('')
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Payment transactions table -->
+                    <div>
+                        <div style="font-size:12px;font-weight:700;color:#334155;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                            <i class="fas fa-history" style="color:#059669;"></i> Recorded Income Entries & Payments
+                        </div>
+                        <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;max-height:160px;overflow-y:auto;">
+                            <table style="width:100%;font-size:11px;border-collapse:collapse;text-align:left;">
+                                <thead style="background:#f1f5f9;color:#475569;font-weight:600;position:sticky;top:0;">
+                                    <tr>
+                                        <th style="padding:6px 10px;">Entry #</th>
+                                        <th style="padding:6px 10px;">Date</th>
+                                        <th style="padding:6px 10px;">Mode</th>
+                                        <th style="padding:6px 10px;text-align:right;">Spares</th>
+                                        <th style="padding:6px 10px;text-align:right;">Service</th>
+                                        <th style="padding:6px 10px;text-align:right;">Total Paid</th>
+                                        <th style="padding:6px 10px;text-align:center;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${pmts.length === 0 ? '<tr><td colspan="7" style="padding:12px;text-align:center;color:#94a3b8;">No payment entries recorded yet</td></tr>' : 
+                                      pmts.map(p => `
+                                        <tr style="border-top:1px solid #f1f5f9;">
+                                            <td style="padding:6px 10px;"><code style="font-size:10px;">${p.entry_number || p.id}</code></td>
+                                            <td style="padding:6px 10px;color:#64748b;">${fmtD(p.income_date)}</td>
+                                            <td style="padding:6px 10px;">${p.payment_mode || '—'}</td>
+                                            <td style="padding:6px 10px;text-align:right;color:#0369a1;">${fmt(p.spares_amount || 0)}</td>
+                                            <td style="padding:6px 10px;text-align:right;color:#6d28d9;">${fmt(p.service_amount || 0)}</td>
+                                            <td style="padding:6px 10px;text-align:right;font-weight:700;color:#059669;">${fmt(p.amount)}</td>
+                                            <td style="padding:6px 10px;text-align:center;">
+                                                <span style="font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;background:${p.status==='CONFIRMED'?'#d1fae5':'#fef3c7'};color:${p.status==='CONFIRMED'?'#065f46':'#92400e'};">
+                                                    ${p.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                      `).join('')
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('tktBkBody').innerHTML = html;
+            } catch(err) {
+                document.getElementById('tktBkBody').innerHTML = `
+                    <div style="text-align:center;padding:24px;color:#dc2626;">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        <p style="margin-top:8px;font-size:13px;font-weight:600;">Unable to load ticket breakdown</p>
+                        <p style="font-size:12px;color:#6b7280;">${err.message || 'Reference ticket details could not be retrieved.'}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+
+    <!-- DC-SVC-BREAKDOWN-001: Service Ticket Breakdown Modal -->
+    <div class="modal-overlay" id="ticketBreakdownModal">
+        <div class="modal-container" style="max-width:680px; max-height:92vh; overflow-y:auto; background:#fff; border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,0.22);">
+            <div class="modal-header" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;">
+                <h5 class="modal-title" style="margin:0;font-size:15px;font-weight:700;color:#0f172a;">
+                    <i class="fas fa-file-invoice-dollar me-2" style="color:#6366f1;"></i>Service Ticket Fee Breakdown: <span id="tktBkRefTitle" style="color:#4f46e5;">-</span>
+                </h5>
+                <button class="modal-close" onclick="closeModal('ticketBreakdownModal')" style="background:none;border:none;font-size:22px;color:#64748b;cursor:pointer;">&times;</button>
+            </div>
+            <div class="modal-body" id="tktBkBody" style="padding:18px;">
+                <!-- Populated dynamically by openTicketBreakdownModal -->
+            </div>
+            <div class="modal-footer" style="padding:12px 18px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;">
+                <button onclick="closeModal('ticketBreakdownModal')" style="padding:8px 16px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;font-size:13px;font-weight:600;color:#334155;cursor:pointer;">Close</button>
             </div>
         </div>
-        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;">
-            <button onclick="closeSvlReturnModal()" style="padding:9px 18px;border:1px solid #d1d5db;background:#fff;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;">Cancel</button>
-            <button onclick="submitSvlReturn()" style="padding:9px 18px;background:#059669;border:none;color:#fff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;"><i class="fas fa-save me-1"></i> Save Return</button>
-        </div>
     </div>
-</div>
 
 </body>
 </html>

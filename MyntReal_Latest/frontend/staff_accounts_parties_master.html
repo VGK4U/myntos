@@ -1105,20 +1105,26 @@
     }
 
     // ── Bootstrap ──
-    document.addEventListener('DOMContentLoaded', async function () {
-        if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+    async function initPartiesMasterPage() {
+        if (typeof StaffSidebar !== 'undefined') StaffSidebar.init();
         StaffHeader.inject('Parties Master', 'fas fa-users');
         if (typeof StaffHeader !== 'undefined') StaffHeader.init();
         if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
         // Set today's date for ledger entry modal
         document.getElementById('ldg-add-date').value = new Date().toISOString().slice(0, 10);
         await loadAll();
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initPartiesMasterPage);
+    } else {
+        initPartiesMasterPage();
+    }
 
     async function loadAll() {
-        await Promise.all([
-            loadCompanies(), loadVendors(), loadPartners(), loadStaff(), loadLedgerData()
-        ]);
+        // Bounded concurrency (batch 1: companies & vendors, batch 2: partners, staff & ledger)
+        await Promise.all([loadCompanies(), loadVendors()]);
+        await Promise.all([loadPartners(), loadStaff(), loadLedgerData()]);
         buildCombined();
         renderAll();
     }

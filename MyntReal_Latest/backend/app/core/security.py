@@ -430,7 +430,17 @@ async def get_current_user(
             detail="Could not validate credentials"
         )
     
-    user = SecurityManager.get_user_by_id(db, user_id)
+    try:
+        user = SecurityManager.get_user_by_id(db, user_id)
+    except Exception as db_err:
+        from sqlalchemy.exc import SQLAlchemyError
+        if isinstance(db_err, SQLAlchemyError) or "timeout" in str(db_err).lower():
+            logger.error(f"[AUTH-DB-ERROR] DB failure in get_current_user: {db_err}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentication database service temporarily unavailable. Please try again."
+            )
+        raise
     
     if user is None:
         raise HTTPException(
@@ -474,6 +484,7 @@ async def get_current_user_hybrid(
     
     def resolve_staff_employee(payload: dict) -> StaffEmployee:
         """Helper to resolve StaffEmployee from token payload"""
+        from sqlalchemy.exc import SQLAlchemyError
         employee_id = payload.get("sub")
         if not employee_id:
             return None
@@ -481,17 +492,24 @@ async def get_current_user_hybrid(
         staff = None
         # Try numeric ID first (sub is stored as str(employee.id))
         try:
-            numeric_id = int(employee_id)
-            staff = db.query(StaffEmployee).filter(StaffEmployee.id == numeric_id).first()
-        except (ValueError, TypeError):
-            # Not a numeric ID - try emp_code lookup
-            staff = db.query(StaffEmployee).filter(StaffEmployee.emp_code == employee_id).first()
-        
-        # Also try emp_code from payload if sub lookup failed
-        if not staff and payload.get("emp_code"):
-            staff = db.query(StaffEmployee).filter(
-                StaffEmployee.emp_code == payload.get("emp_code")
-            ).first()
+            try:
+                numeric_id = int(employee_id)
+                staff = db.query(StaffEmployee).filter(StaffEmployee.id == numeric_id).first()
+            except (ValueError, TypeError):
+                # Not a numeric ID - try emp_code lookup
+                staff = db.query(StaffEmployee).filter(StaffEmployee.emp_code == employee_id).first()
+            
+            # Also try emp_code from payload if sub lookup failed
+            if not staff and payload.get("emp_code"):
+                staff = db.query(StaffEmployee).filter(
+                    StaffEmployee.emp_code == payload.get("emp_code")
+                ).first()
+        except SQLAlchemyError as e:
+            logger.error(f"[AUTH-DB-ERROR] DB failure resolving staff employee: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentication database service temporarily unavailable. Please try again."
+            )
         
         # DC Protocol: StaffEmployee uses 'status' column, not 'is_active'
         if staff and staff.status == 'active':
@@ -515,9 +533,20 @@ async def get_current_user_hybrid(
                     if staff:
                         return staff
                 else:
-                    user = SecurityManager.get_user_by_id(db, payload["sub"])
-                    if user:
-                        return user
+                    try:
+                        user = SecurityManager.get_user_by_id(db, payload["sub"])
+                        if user:
+                            return user
+                    except Exception as db_err:
+                        from sqlalchemy.exc import SQLAlchemyError
+                        if isinstance(db_err, SQLAlchemyError) or "timeout" in str(db_err).lower():
+                            raise HTTPException(
+                                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                                detail="Authentication database service temporarily unavailable. Please try again."
+                            )
+                        raise
+        except HTTPException:
+            raise
         except Exception as e:
             logger.debug(f"Authorization header token verification failed: {e}")
     
@@ -530,6 +559,8 @@ async def get_current_user_hybrid(
                 staff = resolve_staff_employee(payload)
                 if staff:
                     return staff
+        except HTTPException:
+            raise
         except Exception as e:
             logger.debug(f"Staff token cookie verification failed: {e}")
     
@@ -539,7 +570,16 @@ async def get_current_user_hybrid(
         try:
             payload = SecurityManager.verify_token(session_token)
             if payload and payload.get("sub"):
-                user = SecurityManager.get_user_by_id(db, payload["sub"])
+                try:
+                    user = SecurityManager.get_user_by_id(db, payload["sub"])
+                except Exception as db_err:
+                    from sqlalchemy.exc import SQLAlchemyError
+                    if isinstance(db_err, SQLAlchemyError) or "timeout" in str(db_err).lower():
+                        raise HTTPException(
+                            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="Authentication database service temporarily unavailable. Please try again."
+                        )
+                    raise
                 if user:
                     # Same security checks as get_current_user
                     if getattr(user, 'account_locked', False):
@@ -555,7 +595,9 @@ async def get_current_user_hybrid(
                             detail="Account locked due to Red Coupon status"
                         )
                     return user
-        except:
+        except HTTPException:
+            raise
+        except Exception:
             pass
     
     # No valid authentication found
@@ -576,6 +618,7 @@ async def get_current_vgk_partner_any(
     For write/claim endpoints, use get_current_user_hybrid_with_partner which enforces is_active=True.
     """
     from app.models.staff_accounts import OfficialPartner
+    from sqlalchemy.exc import SQLAlchemyError
     import logging
     logger = logging.getLogger(__name__)
 
@@ -592,23 +635,32 @@ async def get_current_vgk_partner_any(
                     partner = None
                     partner_id = payload.get("sub") or payload.get("partner_id")
                     partner_code = payload.get("partner_code")
-                    if partner_id:
-                        try:
-                            numeric_id = int(partner_id)
+                    try:
+                        if partner_id:
+                            try:
+                                numeric_id = int(partner_id)
+                                partner = db.query(OfficialPartner).filter(
+                                    OfficialPartner.id == numeric_id
+                                ).first()
+                            except (ValueError, TypeError):
+                                partner = db.query(OfficialPartner).filter(
+                                    OfficialPartner.partner_code == partner_id
+                                ).first()
+                        if not partner and partner_code:
                             partner = db.query(OfficialPartner).filter(
-                                OfficialPartner.id == numeric_id
+                                OfficialPartner.partner_code == partner_code
                             ).first()
-                        except (ValueError, TypeError):
-                            partner = db.query(OfficialPartner).filter(
-                                OfficialPartner.partner_code == partner_id
-                            ).first()
-                    if not partner and partner_code:
-                        partner = db.query(OfficialPartner).filter(
-                            OfficialPartner.partner_code == partner_code
-                        ).first()
+                    except SQLAlchemyError as db_err:
+                        logger.error(f"[AUTH-DB-ERROR] DB failure in get_current_vgk_partner_any: {db_err}")
+                        raise HTTPException(
+                            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="Authentication database service temporarily unavailable. Please try again."
+                        )
                     # DC Protocol: Accept partner regardless of is_active status
                     if partner:
                         return partner
+        except HTTPException:
+            raise
         except Exception as e:
             logger.debug(f"VGK partner (any) token check failed: {e}")
 
@@ -629,6 +681,7 @@ async def get_current_user_hybrid_with_partner(
     """
     from app.models.staff import StaffEmployee
     from app.models.staff_accounts import OfficialPartner
+    from sqlalchemy.exc import SQLAlchemyError
     import logging
     logger = logging.getLogger(__name__)
     
@@ -653,27 +706,42 @@ async def get_current_user_hybrid_with_partner(
                     partner_id = payload.get("sub") or payload.get("partner_id")
                     partner_code = payload.get("partner_code")
                     
-                    # Try numeric ID lookup first
-                    if partner_id:
-                        try:
-                            numeric_id = int(partner_id)
+                    try:
+                        # Try numeric ID lookup first
+                        if partner_id:
+                            try:
+                                numeric_id = int(partner_id)
+                                partner = db.query(OfficialPartner).filter(
+                                    OfficialPartner.id == numeric_id
+                                ).first()
+                            except (ValueError, TypeError):
+                                # sub might be partner_code string (e.g., "PRT0001")
+                                partner = db.query(OfficialPartner).filter(
+                                    OfficialPartner.partner_code == partner_id
+                                ).first()
+                        
+                        # Fallback to partner_code from payload
+                        if not partner and partner_code:
                             partner = db.query(OfficialPartner).filter(
-                                OfficialPartner.id == numeric_id
+                                OfficialPartner.partner_code == partner_code
                             ).first()
-                        except (ValueError, TypeError):
-                            # sub might be partner_code string (e.g., "PRT0001")
-                            partner = db.query(OfficialPartner).filter(
-                                OfficialPartner.partner_code == partner_id
-                            ).first()
+                    except SQLAlchemyError as db_err:
+                        logger.error(f"[AUTH-DB-ERROR] DB failure in get_current_user_hybrid_with_partner: {db_err}")
+                        raise HTTPException(
+                            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="Authentication database service temporarily unavailable. Please try again."
+                        )
                     
-                    # Fallback to partner_code from payload
-                    if not partner and partner_code:
-                        partner = db.query(OfficialPartner).filter(
-                            OfficialPartner.partner_code == partner_code
-                        ).first()
-                    
-                    if partner and partner.is_active:
-                        return partner
+                    if partner:
+                        if partner.is_active:
+                            return partner
+                        else:
+                            raise HTTPException(
+                                status_code=status.HTTP_403_FORBIDDEN,
+                                detail="Partner account is inactive"
+                            )
+        except HTTPException:
+            raise
         except Exception as e:
             logger.debug(f"Partner token check failed: {e}")
     

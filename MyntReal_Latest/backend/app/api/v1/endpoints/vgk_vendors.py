@@ -93,20 +93,33 @@ def _get_vendor_auth(token: str, db: Session):
     from jose import jwt, JWTError
     from app.models.vgk_vendor import VGKVendorLogin, VGKVendor
     try:
+        from jose import jwt, JWTError
+        from sqlalchemy.exc import SQLAlchemyError
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         if payload.get("user_type") != "vgk_vendor":
             raise HTTPException(status_code=401, detail="Invalid token type")
         vendor_login_id = int(payload.get("sub"))
-        vl = db.query(VGKVendorLogin).filter(VGKVendorLogin.id == vendor_login_id).first()
+        try:
+            vl = db.query(VGKVendorLogin).filter(VGKVendorLogin.id == vendor_login_id).first()
+        except SQLAlchemyError as db_err:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Authentication database service temporarily unavailable")
         if not vl or not vl.is_active:
             raise HTTPException(status_code=401, detail="Vendor account not active")
-        vendor = db.query(VGKVendor).filter(VGKVendor.id == vl.vendor_id).first()
+        try:
+            vendor = db.query(VGKVendor).filter(VGKVendor.id == vl.vendor_id).first()
+        except SQLAlchemyError as db_err:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Authentication database service temporarily unavailable")
         if not vendor:
             raise HTTPException(status_code=404, detail="Vendor not found")
         return vl, vendor
     except HTTPException:
         raise
-    except Exception:
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    except Exception as e:
+        from sqlalchemy.exc import SQLAlchemyError
+        if isinstance(e, SQLAlchemyError) or "connection" in str(e).lower() or "timeout" in str(e).lower():
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Authentication database service temporarily unavailable")
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 

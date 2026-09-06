@@ -77,6 +77,8 @@ export type PageRoute =
   | 'auto-dialer'
   // Softphone Page
   | 'softphone'
+  | 'softphone-hub'
+  | 'incoming-calls'
   // Call History
   | 'call-history'
   // Operator Calls
@@ -262,6 +264,8 @@ class RouterService {
     'staff-call-tracking': { id: 'staff-call-tracking', title: 'Call Tracking', icon: 'call', showInTabs: false, portal: 'staff' },
     'auto-dialer': { id: 'auto-dialer', title: 'Auto Dialer', icon: 'phone-call', showInTabs: false, portal: 'staff' },
     'softphone': { id: 'softphone', title: 'Softphone', icon: 'phone', showInTabs: false, portal: 'staff' },
+    'softphone-hub': { id: 'softphone-hub', title: 'Softphone', icon: 'phone', showInTabs: false, portal: 'staff' },
+    'incoming-calls': { id: 'incoming-calls', title: 'Softphone & Call History', icon: 'phone', showInTabs: false, portal: 'staff' },
     'call-history': { id: 'call-history', title: 'Call History', icon: 'phone', showInTabs: false, portal: 'staff' },
     'operator-calls': { id: 'operator-calls', title: 'Operator Calls', icon: 'headphones', showInTabs: false, portal: 'staff' },
     // Day Planner Section

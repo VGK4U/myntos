@@ -7,13 +7,7 @@ Created: Mar 2026
 
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Float, Index, BigInteger, UniqueConstraint
 from app.models.base import BaseModel
-from datetime import datetime
-import pytz
-
-
-def get_indian_time():
-    indian_tz = pytz.timezone('Asia/Kolkata')
-    return datetime.now(indian_tz).replace(tzinfo=None)
+from app.core.timezone import get_indian_time
 
 
 class OperatorCall(BaseModel):
@@ -70,11 +64,9 @@ class OperatorCall(BaseModel):
 
     @staticmethod
     def _fmt_dt(dt):
-        """Serialize datetime: append 'Z' for naive (UTC) datetimes so JS correctly converts to IST."""
+        """Serialize datetime to ISO format. All DB timestamps are in IST."""
         if not dt:
             return None
-        if dt.tzinfo is None:
-            return dt.isoformat() + 'Z'
         return dt.isoformat()
 
     def to_dict(self):

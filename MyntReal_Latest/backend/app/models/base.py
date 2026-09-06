@@ -11,13 +11,7 @@ import pytz
 # DC PROTOCOL: Import Base from core.database to ensure single source of truth
 from app.core.database import Base
 
-def get_indian_time():
-    """
-    Get current time in Indian timezone (IST)
-    Preserves exact Flask app time handling
-    """
-    indian_tz = pytz.timezone('Asia/Kolkata')
-    return datetime.now(indian_tz).replace(tzinfo=None)
+from app.core.timezone import get_indian_time, IST, parse_to_ist, from_epoch_to_ist, to_ist_iso, format_indian_time
 
 class TimestampMixin:
     """

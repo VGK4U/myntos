@@ -97,22 +97,26 @@ else:
     else:
         # RDS PostgreSQL — Robust connection pool sized for concurrent API traffic
         print("[DC-DB-INIT] Creating PostgreSQL engine (High-Throughput Pool mode)...", flush=True)
+
+        _connect_args = {
+            "connect_timeout": 10,
+            "sslmode": "require",
+            "keepalives": 1,
+            "keepalives_idle": 60,
+            "keepalives_interval": 10,
+            "keepalives_count": 5,
+        }
+
         engine = create_engine(
             _db_url_str,
             pool_pre_ping=True,
-            pool_size=20,
-            max_overflow=20,
-            pool_timeout=15,
-            pool_recycle=300,
+            pool_size=10,
+            max_overflow=10,
+            pool_timeout=30,
+            pool_recycle=1800,
             pool_use_lifo=True,
-            connect_args={
-                "connect_timeout": 30,
-                "sslmode": "require",
-                "keepalives": 1,
-                "keepalives_idle": 30,
-                "keepalives_interval": 10,
-                "keepalives_count": 3,
-            },
+            pool_reset_on_return='rollback',
+            connect_args=_connect_args,
             echo=False
         )
 
@@ -636,6 +640,37 @@ def run_pending_migrations():
             "name": "staff_timesheet_entries.approved_minutes",
             "check": "SELECT column_name FROM information_schema.columns WHERE table_name='staff_timesheet_entries' AND column_name='approved_minutes'",
             "migrate": "ALTER TABLE staff_timesheet_entries ADD COLUMN approved_minutes INTEGER"
+        },
+        # Canonical Location Architecture (Phase 6 Step 1): Ingestion Foundation
+        {
+            "name": "staff_journey_track_points.client_observation_id",
+            "check": "SELECT column_name FROM information_schema.columns WHERE table_name='staff_journey_track_points' AND column_name='client_observation_id'",
+            "migrate": "ALTER TABLE staff_journey_track_points ADD COLUMN client_observation_id VARCHAR(36)"
+        },
+        {
+            "name": "staff_journey_track_points.server_received_at",
+            "check": "SELECT column_name FROM information_schema.columns WHERE table_name='staff_journey_track_points' AND column_name='server_received_at'",
+            "migrate": "ALTER TABLE staff_journey_track_points ADD COLUMN server_received_at TIMESTAMP DEFAULT NOW()"
+        },
+        {
+            "name": "idx_journey_track_points_client_obs_id",
+            "check": "SELECT indexname FROM pg_indexes WHERE tablename='staff_journey_track_points' AND indexname='idx_journey_track_points_client_obs_id'",
+            "migrate": "CREATE INDEX idx_journey_track_points_client_obs_id ON staff_journey_track_points(journey_id, client_observation_id)"
+        },
+        {
+            "name": "staff_realtime_locations.client_observation_id",
+            "check": "SELECT column_name FROM information_schema.columns WHERE table_name='staff_realtime_locations' AND column_name='client_observation_id'",
+            "migrate": "ALTER TABLE staff_realtime_locations ADD COLUMN client_observation_id VARCHAR(36)"
+        },
+        {
+            "name": "staff_realtime_locations.server_received_at",
+            "check": "SELECT column_name FROM information_schema.columns WHERE table_name='staff_realtime_locations' AND column_name='server_received_at'",
+            "migrate": "ALTER TABLE staff_realtime_locations ADD COLUMN server_received_at TIMESTAMP DEFAULT NOW()"
+        },
+        {
+            "name": "idx_realtime_loc_client_obs_id",
+            "check": "SELECT indexname FROM pg_indexes WHERE tablename='staff_realtime_locations' AND indexname='idx_realtime_loc_client_obs_id'",
+            "migrate": "CREATE INDEX idx_realtime_loc_client_obs_id ON staff_realtime_locations(employee_id, client_observation_id)"
         }
     ]
 

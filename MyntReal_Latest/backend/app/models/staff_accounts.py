@@ -895,6 +895,7 @@ class IncomeEntry(BaseModel):
     
     ledger_updated = Column(Boolean, default=False, nullable=False)
     show_in_ledger = Column(Boolean, default=False, nullable=False)  # DC-SHOW-IN-LEDGER-001: optional, editable anytime
+    is_external = Column(Boolean, default=False, nullable=False)  # DC-EXTERNAL-001: external party flag
     # DC-ESTIMATIONS-001: confirmation split
     confirmation_type = Column(String(10), nullable=True)   # TAXED / ESTIMATED
     bank_account_id   = Column(Integer, nullable=True)       # account_ledger_masters.id used for TAXED
@@ -911,6 +912,11 @@ class IncomeEntry(BaseModel):
     is_deleted = Column(Boolean, default=False, nullable=False, index=True)
     deleted_by_id = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
     deleted_at = Column(DateTime, nullable=True)
+
+    # Service Ticket breakdown fields (Spares Fee, Service Fee, Overall Ticket Total)
+    spares_amount       = Column(Numeric(15, 2), nullable=True, default=0)
+    service_amount      = Column(Numeric(15, 2), nullable=True, default=0)
+    ticket_total_amount = Column(Numeric(15, 2), nullable=True)
 
     created_by_id = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
     updated_by_id = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
@@ -1468,6 +1474,7 @@ class PartyLedger(BaseModel):
     category = Column(String(100), nullable=True)  # DC-PL-CAT-001: Optional user-entered category label for manual entries
     main_category_id = Column(Integer, nullable=True)   # DC_LEDGER_CATEGORY_001: expense_main_category.id (display only, no accounting effect)
     sub_category_id  = Column(Integer, nullable=True)   # DC_LEDGER_CATEGORY_001: expense_sub_category.id (display only, no accounting effect)
+    is_expense_advance = Column(Boolean, nullable=False, default=False, index=True)  # DC_EXP_ADVANCE_001: True if operational cash advance for expense passbook
 
     created_at = Column(DateTime, default=get_indian_time, nullable=False)
     updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
@@ -1535,6 +1542,7 @@ class AccountLedger(BaseModel):
     source_status = Column(String(30), nullable=True, index=True)  # DC-SOURCE-STATUS-001: CONFIRMED/MANUAL/TALLY_IMPORT/OPENING_BALANCE
     main_category_id = Column(Integer, nullable=True)   # DC_LEDGER_CATEGORY_001: expense_main_category.id (display only, no accounting effect)
     sub_category_id  = Column(Integer, nullable=True)   # DC_LEDGER_CATEGORY_001: expense_sub_category.id (display only, no accounting effect)
+    is_expense_advance = Column(Boolean, nullable=False, default=False, index=True)  # DC_EXP_ADVANCE_001: True if operational cash advance for expense passbook
 
     created_by_id = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
     created_at = Column(DateTime, default=get_indian_time, nullable=False)
@@ -1643,6 +1651,7 @@ class JournalVoucher(BaseModel):
     category_id = Column(Integer, nullable=True)
     # DC_INCOME_CAT_001 (May 2026): optional income sub-category tag
     income_category_id = Column(Integer, nullable=True)
+    is_expense_advance = Column(Boolean, nullable=False, default=False, index=True)  # DC_EXP_ADVANCE_001: True if operational cash advance for expense passbook
 
     status = Column(String(20), nullable=False, default='POSTED')   # POSTED/CANCELLED
 
@@ -2272,6 +2281,7 @@ class ExpenseEntry(BaseModel):
 
     ledger_updated = Column(Boolean, default=False, nullable=False)
     show_in_ledger = Column(Boolean, default=False, nullable=False)  # DC-SHOW-IN-LEDGER-001: optional, editable anytime
+    is_external = Column(Boolean, default=False, nullable=False)  # DC-EXTERNAL-001: external party flag
 
     # DC-RETURN-001: Purchase Return / Debit Note flag
     is_return = Column(Boolean, default=False, nullable=False)

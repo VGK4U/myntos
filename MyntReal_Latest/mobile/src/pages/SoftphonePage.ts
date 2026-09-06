@@ -7,6 +7,7 @@
  */
 
 import { apiService } from '../services/api.service';
+import { telephonyService } from '../services/telephony.service';
 import { PageHeader } from '../components/PageHeader';
 
 interface CallRecord {
@@ -92,11 +93,7 @@ export class SoftphonePage {
   private audioPlayProgress: number = 0;
   // Return route (for automatic return to CRM page after call)
   private returnUrl: string | null = null;
-
-  // Plivo WebRTC Browser Client
-  private plivoClient: any = null;
-  private isWebRTCRegistered: boolean = false;
-  private localAudioStream: MediaStream | null = null;
+  private telephonyUnsub: (() => void) | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -140,7 +137,14 @@ export class SoftphonePage {
 
     this.render();
     this.loadRecentCalls();
-    await this.initPlivoWebRTC();
+
+    if (!this.telephonyUnsub) {
+      this.telephonyUnsub = telephonyService.subscribe((session) => {
+        this.handleTelephonyStateChange(session);
+      });
+    }
+
+    await telephonyService.initPlivoWebRTC();
 
     if (shouldAutoStart && autoDialNum) {
       setTimeout(() => {
@@ -149,153 +153,53 @@ export class SoftphonePage {
     }
   }
 
-  private heartbeatInterval: any = null;
+  private handleTelephonyStateChange(session: any): void {
+    const wasInCall = this.isInCall;
+    this.isInCall = session.state !== 'idle' && session.state !== 'ended' && session.state !== 'failed';
+    this.isCallConnected = session.state === 'connected';
+    this.callDuration = session.durationSeconds;
+    this.isMuted = session.isMuted;
+    this.isSpeaker = session.isSpeaker;
+    this.isHold = session.isHeld;
+    this.activeCallSessionId = session.sessionId;
 
-  private startHeartbeatLoop(): void {
-    if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
-    this.heartbeatInterval = setInterval(async () => {
-      if (this.isInCall) {
-        try {
-          await apiService.post('/telephony/plivo/browser/register', {
-            is_registered: true,
-            in_call: true,
-            call_session_id: this.currentCallSessionId
-          });
-        } catch (_) {}
-      }
-    }, 15000);
-  }
-
-  private stopHeartbeatLoop(): void {
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-      this.heartbeatInterval = null;
+    if (session.state === 'ringing' && session.isIncoming) {
+      this.selectedContactName = session.contactName || 'Incoming Inquiry';
+      this.dialNumber = session.destinationPhone || '';
+      this.callStatusText = 'Incoming Call...';
+    } else if (session.state === 'connecting') {
+      this.callStatusText = 'Connecting...';
+    } else if (session.state === 'ringing') {
+      this.callStatusText = 'Ringing...';
+    } else if (session.state === 'connected') {
+      this.callStatusText = 'Connected / In Call';
+    } else if (session.state === 'ended') {
+      this.callStatusText = 'Call ended';
+    } else if (session.state === 'failed') {
+      this.callStatusText = session.errorMessage || 'Call failed';
     }
-  }
 
-  private async initPlivoWebRTC(): Promise<void> {
-    try {
-      // 1. Ensure remote audio DOM element exists for zero-latency audio playback
-      if (typeof document !== 'undefined' && !document.getElementById('plivoRemoteAudio')) {
-        const audioEl = document.createElement('audio');
-        audioEl.id = 'plivoRemoteAudio';
-        audioEl.autoplay = true;
-        audioEl.setAttribute('playsinline', 'true');
-        audioEl.style.display = 'none';
-        document.body.appendChild(audioEl);
+    if (this.isInCall !== wasInCall || session.state === 'ended' || session.state === 'failed') {
+      this.render();
+    } else if (this.isInCall) {
+      const timerEl = document.getElementById('softphoneCallTimer');
+      if (timerEl && this.isCallConnected) {
+        const mins = Math.floor(this.callDuration / 60).toString().padStart(2, '0');
+        const secs = (this.callDuration % 60).toString().padStart(2, '0');
+        timerEl.textContent = `${mins}:${secs}`;
       }
-
-      // 2. Pre-warm local microphone tracks so audio is instant when call connects
-      if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia && !this.localAudioStream) {
-        try {
-          this.localAudioStream = await navigator.mediaDevices.getUserMedia({
-            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-          });
-          console.log('[SoftphonePage] Microphone pre-warmed and audio tracks ready');
-        } catch (micErr) {
-          console.warn('[SoftphonePage] Mic pre-warm notice:', micErr);
-        }
+      const statusEl = document.getElementById('softphoneCallStatusText');
+      if (statusEl) {
+        statusEl.textContent = this.callStatusText;
+        statusEl.style.color = this.isCallConnected ? '#22c55e' : '#38bdf8';
       }
-
-      if (typeof (window as any).Plivo === 'undefined') {
-        await new Promise((resolve) => {
-          const script = document.createElement('script');
-          script.src = 'https://cdn.plivo.com/sdk/browser/v2/plivo.min.js';
-          script.async = true;
-          script.onload = () => resolve(true);
-          script.onerror = () => resolve(false);
-          document.head.appendChild(script);
-        });
-      }
-
-      if (typeof (window as any).Plivo !== 'undefined') {
-        const PlivoConstructor = (window as any).Plivo;
-        if (!this.plivoClient) {
-          if (typeof PlivoConstructor === 'function') {
-            const sdk = new PlivoConstructor({
-              allowMultipleIncomingCalls: true,
-              enableDscp: true
-            });
-            this.plivoClient = sdk.client || sdk;
-          } else if (PlivoConstructor.Client) {
-            this.plivoClient = new PlivoConstructor.Client();
-          }
-
-          if (this.plivoClient) {
-            this.plivoClient.on('onLogin', (data: any) => {
-              console.log('[SoftphonePage] Plivo WebRTC logged in successfully:', data);
-              this.isWebRTCRegistered = true;
-            });
-
-            this.plivoClient.on('onLogout', () => {
-              this.isWebRTCRegistered = false;
-            });
-
-            this.plivoClient.on('onLoginFailed', (reason: any) => {
-              console.warn('[SoftphonePage] Plivo WebRTC login failed:', reason);
-              this.isWebRTCRegistered = false;
-            });
-
-            this.plivoClient.on('onCallAnswered', (callInfo: any) => {
-              console.log('[SoftphonePage] Plivo WebRTC call connected / answered:', callInfo);
-              this.isCallConnected = true;
-              this.callStatusText = 'Connected / In Call';
-              const statusEl = document.getElementById('softphoneCallStatusText');
-              if (statusEl) {
-                statusEl.textContent = this.callStatusText;
-                statusEl.style.color = '#22c55e';
-              }
-              const remoteAudio = document.getElementById('plivoRemoteAudio') as HTMLAudioElement;
-              if (remoteAudio && typeof remoteAudio.play === 'function') {
-                remoteAudio.play().catch(() => {});
-              }
-              this.startCallTimer();
-              this.startHeartbeatLoop();
-            });
-
-            this.plivoClient.on('onMediaConnected', () => {
-              console.log('[SoftphonePage] Plivo WebRTC media stream established');
-              const remoteAudio = document.getElementById('plivoRemoteAudio') as HTMLAudioElement;
-              if (remoteAudio && typeof remoteAudio.play === 'function') {
-                remoteAudio.play().catch(() => {});
-              }
-            });
-
-            this.plivoClient.on('onCallTerminated', () => {
-              console.log('[SoftphonePage] Plivo WebRTC call terminated');
-              this.stopHeartbeatLoop();
-              this.endCall();
-            });
-
-            this.plivoClient.on('onCallFailed', (reason: any) => {
-              console.warn('[SoftphonePage] Plivo WebRTC call failed:', reason);
-              this.stopHeartbeatLoop();
-              this.endCall();
-            });
-          }
-        }
-
-        // Fetch token & register
-        const tokenResp = await apiService.get<any>('/telephony/plivo/browser/token');
-        const payload = tokenResp?.data || tokenResp;
-        const accessToken = payload?.access_token || tokenResp?.access_token;
-        if (accessToken && this.plivoClient) {
-          if (typeof this.plivoClient.loginWithAccessToken === 'function') {
-            this.plivoClient.loginWithAccessToken(accessToken);
-          } else if (typeof this.plivoClient.login === 'function') {
-            this.plivoClient.login(accessToken);
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('[SoftphonePage] Plivo WebRTC init error:', e);
     }
   }
 
   public cleanup(): void {
-    if (this.callTimerInterval) {
-      clearInterval(this.callTimerInterval);
-      this.callTimerInterval = null;
+    if (this.telephonyUnsub) {
+      this.telephonyUnsub();
+      this.telephonyUnsub = null;
     }
     if (this.currentAudio) {
       this.currentAudio.pause();
@@ -303,21 +207,23 @@ export class SoftphonePage {
     }
   }
 
+  private getISTDateString(d: Date = new Date()): string {
+    return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  }
+
   private getDateRangeParams(): { start_date?: string; end_date?: string } {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = this.getISTDateString();
     if (this.dateRangePreset === 'TODAY') {
       return { start_date: todayStr, end_date: todayStr };
     }
     if (this.dateRangePreset === 'YESTERDAY') {
-      const d = new Date();
-      d.setDate(d.getDate() - 1);
-      const yestStr = d.toISOString().split('T')[0];
+      const d = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const yestStr = this.getISTDateString(d);
       return { start_date: yestStr, end_date: yestStr };
     }
     if (this.dateRangePreset === 'WEEK') {
-      const d = new Date();
-      d.setDate(d.getDate() - 7);
-      const pastStr = d.toISOString().split('T')[0];
+      const d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const pastStr = this.getISTDateString(d);
       return { start_date: pastStr, end_date: todayStr };
     }
     if (this.dateRangePreset === 'CUSTOM' && this.customStartDate) {
@@ -333,14 +239,7 @@ export class SoftphonePage {
     this.isLoadingHistory = true;
     try {
       const dateParams = this.getDateRangeParams();
-      let queryUrl = `/crm/dialer/call-history?per_page=100`;
-      
-      if (this.directionFilter !== 'ALL') {
-        queryUrl += `&call_type=${this.directionFilter}`;
-      }
-      if (this.targetStaffId) {
-        queryUrl += `&staff_id=${encodeURIComponent(this.targetStaffId)}`;
-      }
+      let queryUrl = `/telephony/incoming-calls?scope=my&page=1&page_size=50`;
       if (dateParams.start_date) {
         queryUrl += `&start_date=${dateParams.start_date}`;
       }
@@ -348,29 +247,51 @@ export class SoftphonePage {
         queryUrl += `&end_date=${dateParams.end_date}`;
       }
 
-      const response = await apiService.get<any>(queryUrl);
       let apiEntries: CallRecord[] = [];
-      
-      if (response && response.success) {
-        const rawEntries = response.entries || (response.data && response.data.entries) || [];
-        this.isManager = Boolean(response.is_manager || (response.data && response.data.is_manager));
-        this.downlineMembers = response.downline_members || (response.data && response.data.downline_members) || [];
+      try {
+        const response = await apiService.get<any>(queryUrl);
+        if (response && (response.items || response.entries)) {
+          const rawItems = response.items || response.entries || [];
+          this.isManager = Boolean(response.current_user_can_view_overall || response.is_manager);
 
-        apiEntries = rawEntries.map((e: any) => ({
-          phone_number: e.phone || '',
-          contact_name: e.name || e.contact_name || '',
-          call_type: (e.call_type || 'OUTGOING').toUpperCase(),
-          dialed_at: e.dialed_at,
-          duration_seconds: e.duration_seconds || 0,
-          source: (e.source === 'native' ? 'native' : 'dialer') as any,
-          has_recording: Boolean(e.has_recording || e.recording_id),
-          recording_id: e.recording_id || null,
-          recording_stream_url: e.recording_stream_url || (e.recording_id ? `/api/v1/call-tracking/recordings/${e.recording_id}/stream` : null),
-          staff_id: e.staff_id,
-          staff_name: e.staff_name,
-          staff_emp_code: e.staff_emp_code,
-          is_downline: Boolean(e.is_downline)
-        }));
+          apiEntries = rawItems.map((e: any) => ({
+            id: e.id,
+            phone_number: e.customer_phone_masked || e.phone_masked || e.customer_phone || e.phone || '',
+            contact_name: e.customer_name || e.name || e.contact_name || 'Guest Caller',
+            call_type: (e.direction === 'inbound' ? (e.duration_seconds > 0 ? 'INCOMING' : 'MISSED') : 'OUTGOING') as any,
+            dialed_at: e.started_at || e.dialed_at,
+            duration_seconds: e.duration_seconds || 0,
+            source: (e.direction === 'inbound' ? 'native' : 'softphone') as any,
+            has_recording: Boolean(e.has_recording || e.recording_url),
+            recording_id: e.id,
+            recording_stream_url: e.recording_url || (e.has_recording ? `/api/v1/telephony/calls/${e.call_session_id || e.id}/recording` : null),
+            staff_id: e.operator_id,
+            staff_name: e.operator_name,
+            staff_emp_code: e.operator_emp_code,
+            is_downline: false
+          }));
+        }
+      } catch (err) {
+        console.warn('[SoftphonePage] Primary telephony API failed, trying CRM fallback:', err);
+        const fallbackRes = await apiService.get<any>(`/crm/dialer/call-history?per_page=50`);
+        if (fallbackRes && (fallbackRes.entries || fallbackRes.data)) {
+          const rawEntries = fallbackRes.entries || fallbackRes.data?.entries || [];
+          apiEntries = rawEntries.map((e: any) => ({
+            phone_number: e.phone || '',
+            contact_name: e.name || e.contact_name || '',
+            call_type: (e.call_type || 'OUTGOING').toUpperCase() as any,
+            dialed_at: e.dialed_at,
+            duration_seconds: e.duration_seconds || 0,
+            source: 'dialer' as any,
+            has_recording: Boolean(e.has_recording || e.recording_id),
+            recording_id: e.recording_id || null,
+            recording_stream_url: e.recording_stream_url || (e.recording_id ? `/api/v1/call-tracking/recordings/${e.recording_id}/stream` : null),
+            staff_id: e.staff_id,
+            staff_name: e.staff_name,
+            staff_emp_code: e.staff_emp_code,
+            is_downline: Boolean(e.is_downline)
+          }));
+        }
       }
 
       // 2. Merge with locally saved in-app softphone calls
@@ -576,92 +497,6 @@ export class SoftphonePage {
     }
   }
 
-  private async createCallSession(phone: string): Promise<string> {
-    const cleanDest = phone.startsWith('+') ? phone : `+91${phone.replace(/\D/g, '').slice(-10)}`;
-    try {
-      const resp = await apiService.post<any>('/telephony/plivo/browser/call/initiate', {
-        destination_phone: cleanDest,
-        lead_id: null
-      });
-      const data = resp?.data || resp;
-      if (data && data.call_session_id) {
-        this.activeCallSessionId = data.call_session_id;
-        return data.call_session_id;
-      }
-    } catch (e) {
-      console.warn('[SoftphonePage] Session initiation error:', e);
-    }
-    const fallbackId = `vcs_mob_${Date.now()}`;
-    this.activeCallSessionId = fallbackId;
-    return fallbackId;
-  }
-
-  private startSessionStatusPolling(sessionId: string): void {
-    if (this.callStatusPollInterval) clearInterval(this.callStatusPollInterval);
-    this.callStatusPollInterval = setInterval(async () => {
-      if (!this.isInCall) {
-        clearInterval(this.callStatusPollInterval);
-        this.callStatusPollInterval = null;
-        return;
-      }
-      try {
-        const res = await apiService.get<any>(`/telephony/plivo/calls/session-status/${sessionId}`);
-        const statusData = res?.data || res;
-        if (statusData) {
-          const st = String(statusData.status || statusData.call_state || '').toLowerCase();
-          
-          // Call Answered / In Progress ➔ Start Timer Now!
-          if (st === 'in-progress' || st === 'answered' || st === 'connected' || statusData.is_connected === true) {
-            if (!this.isCallConnected) {
-              this.isCallConnected = true;
-              this.callStatusText = 'Connected / In Call';
-              const statusEl = document.getElementById('softphoneCallStatusText');
-              if (statusEl) {
-                statusEl.textContent = this.callStatusText;
-                statusEl.style.color = '#22c55e';
-              }
-              this.startCallTimer();
-            }
-          } else if (st === 'ringing' || st === 'initiated' || st === 'queued') {
-            if (!this.isCallConnected) {
-              this.callStatusText = 'Ringing...';
-              const statusEl = document.getElementById('softphoneCallStatusText');
-              if (statusEl) {
-                statusEl.textContent = this.callStatusText;
-                statusEl.style.color = '#38bdf8';
-              }
-            }
-          } else if (st === 'completed' || st === 'failed' || st === 'hungup' || st === 'busy' || st === 'no-answer') {
-            console.log('[SoftphonePage] Call ended remotely on server:', st);
-            this.endCall();
-          }
-        }
-      } catch (err) {
-        // Continue polling
-      }
-    }, 1200);
-  }
-
-  private startCallTimer(): void {
-    if (this.callTimerInterval) clearInterval(this.callTimerInterval);
-    this.callDuration = 0;
-    const timerEl = document.getElementById('softphoneCallTimer');
-    if (timerEl) {
-      timerEl.style.fontSize = '26px';
-      timerEl.style.color = '#cbd5e1';
-      timerEl.textContent = '00:00';
-    }
-    this.callTimerInterval = setInterval(() => {
-      this.callDuration++;
-      const el = document.getElementById('softphoneCallTimer');
-      if (el) {
-        const mins = Math.floor(this.callDuration / 60).toString().padStart(2, '0');
-        const secs = (this.callDuration % 60).toString().padStart(2, '0');
-        el.textContent = `${mins}:${secs}`;
-      }
-    }, 1000);
-  }
-
   private async startCall(numberToDial?: string, contactName?: string, isDirectSim: boolean = false): Promise<void> {
     const target = (numberToDial || this.dialNumber || '').trim();
     if (!target || target.replace(/[^0-9]/g, '').length < 3) {
@@ -673,131 +508,24 @@ export class SoftphonePage {
     this.dialNumber = target;
     if (contactName) this.selectedContactName = contactName;
 
-    // 1. Verify Plivo WebRTC registration before placing call
-    if (!this.isWebRTCRegistered) {
-      const statusEl = document.getElementById('softphoneCallStatusText');
-      if (statusEl) {
-        statusEl.textContent = 'Connecting to calling network...';
-        statusEl.style.color = '#f59e0b';
-      }
-      await this.initPlivoWebRTC();
-    }
-
-    if (!this.isWebRTCRegistered || !this.plivoClient || typeof this.plivoClient.call !== 'function') {
-      alert('Softphone is currently connecting to the telephony network. Please wait a few seconds and try again.');
+    const res = await telephonyService.startCall(cleanNumber, this.selectedContactName);
+    if (!res.success) {
+      alert(res.error || 'Failed to place call');
+      this.isInCall = false;
+      this.render();
       return;
     }
-
-    this.isInCall = true;
-    this.isCallConnected = false;
-    this.callDuration = 0;
-    this.callStartTime = Date.now();
-    this.isMuted = false;
-    this.isSpeaker = false;
-    this.isHold = false;
-    this.callStatusText = 'Calling...';
-
-    if (this.callTimerInterval) {
-      clearInterval(this.callTimerInterval);
-      this.callTimerInterval = null;
-    }
-
-    // 2. Request microphone access for real-time 2-way WebRTC audio
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      try {
-        this.localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        console.log('[SoftphonePage] Microphone permission granted');
-      } catch (micErr) {
-        console.warn('[SoftphonePage] Microphone permission denied/unavailable:', micErr);
-      }
-    }
-
-    // 3. Prepare backend VoIPCallSession for CRM tracking & audit logs (WITHOUT creating secondary REST PSTN call)
-    const sessionId = await this.createCallSession(cleanNumber);
-
-    // 4. Initiate the SINGLE Plivo WebRTC call directly from the client
-    try {
-      const extraHeaders = {
-        'X-PH-Call-Session-ID': sessionId,
-        'X-PH-Destination': cleanNumber
-      };
-      this.plivoClient.call(cleanNumber, extraHeaders);
-    } catch (err) {
-      console.warn('[SoftphonePage] Plivo WebRTC client dial error:', err);
-      this.endCall();
-      return;
-    }
-
-    // 5. Route audio to normal in-call EARPIECE by default (speaker OFF)
-    this.isSpeaker = false;
-    try {
-      if ((window as any).Capacitor?.Plugins?.AudioRouting) {
-        (window as any).Capacitor.Plugins.AudioRouting.setSpeakerphoneOn({ enabled: false });
-      }
-    } catch (_) {}
-
-    // 6. Start carrier status polling watcher
-    if (sessionId) {
-      this.startSessionStatusPolling(sessionId);
-    }
-
-    this.render();
   }
 
   private triggerNativeSimCall(): void {
-    const cleanNumber = (this.dialNumber || '').replace(/[^0-9+]/g, '');
-    if (cleanNumber) {
-      window.location.href = `tel:${cleanNumber}`;
-    }
+    telephonyService.triggerDirectSimCall(this.dialNumber);
   }
 
   private endCall(): void {
     this.isInCall = false;
     this.isCallConnected = false;
-    this.stopHeartbeatLoop();
-    if (this.callTimerInterval) {
-      clearInterval(this.callTimerInterval);
-      this.callTimerInterval = null;
-    }
-    if (this.callStatusPollInterval) {
-      clearInterval(this.callStatusPollInterval);
-      this.callStatusPollInterval = null;
-    }
+    telephonyService.endCall();
 
-    // Reset Audio Routing back to normal media mode
-    this.isSpeaker = false;
-    try {
-      if ((window as any).Capacitor?.Plugins?.AudioRouting) {
-        const ar = (window as any).Capacitor.Plugins.AudioRouting;
-        if (typeof ar.resetAudioMode === 'function') {
-          ar.resetAudioMode();
-        } else {
-          ar.setSpeakerphoneOn({ enabled: false });
-        }
-      }
-    } catch (_) {}
-
-    // Hangup Plivo WebRTC client
-    if (this.plivoClient && typeof this.plivoClient.hangup === 'function') {
-      try { this.plivoClient.hangup(); } catch (_) {}
-    }
-
-    // Stop mic stream
-    if (this.localAudioStream) {
-      try {
-        this.localAudioStream.getTracks().forEach(t => t.stop());
-      } catch (_) {}
-      this.localAudioStream = null;
-    }
-
-    if (this.dialNumber) {
-      this.saveSoftphoneCall(this.dialNumber, this.selectedContactName, this.callDuration);
-    }
-
-    this.activeCallSessionId = null;
-    this.callDuration = 0;
-
-    // If navigated from CRM leads/pages with a return route, navigate straight back!
     if (this.returnUrl) {
       const dest = this.returnUrl;
       this.returnUrl = null;
@@ -811,34 +539,17 @@ export class SoftphonePage {
   }
 
   private toggleMute(): void {
-    this.isMuted = !this.isMuted;
-    if (this.plivoClient) {
-      if (this.isMuted && typeof this.plivoClient.mute === 'function') {
-        this.plivoClient.mute();
-      } else if (!this.isMuted && typeof this.plivoClient.unmute === 'function') {
-        this.plivoClient.unmute();
-      }
-    }
-    if (this.localAudioStream) {
-      this.localAudioStream.getAudioTracks().forEach(t => { t.enabled = !this.isMuted; });
-    }
+    this.isMuted = telephonyService.toggleMute();
     this.render();
   }
 
   private async toggleSpeaker(): Promise<void> {
-    this.isSpeaker = !this.isSpeaker;
-    try {
-      if ((window as any).Capacitor?.Plugins?.AudioRouting) {
-        await (window as any).Capacitor.Plugins.AudioRouting.setSpeakerphoneOn({ enabled: this.isSpeaker });
-      }
-    } catch (err) {
-      console.warn('[SoftphonePage] AudioRouting toggle error:', err);
-    }
+    this.isSpeaker = await telephonyService.toggleSpeaker();
     this.render();
   }
 
   private toggleHold(): void {
-    this.isHold = !this.isHold;
+    this.isHold = telephonyService.toggleHold();
     this.render();
   }
 
@@ -890,19 +601,34 @@ export class SoftphonePage {
     return (str || '').replace(/"/g, '&quot;');
   }
 
+  private parseISTDate(dateStr?: string): Date | null {
+    if (!dateStr) return null;
+    let str = String(dateStr).trim();
+    if (!str) return null;
+    if (!str.includes('+') && !str.endsWith('Z') && !str.endsWith('z')) {
+      str = str + '+05:30';
+    }
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
   private formatRelativeTime(dateStr?: string): string {
     if (!dateStr) return 'Recent';
     try {
-      const d = new Date(dateStr);
+      const d = this.parseISTDate(dateStr);
+      if (!d) return dateStr;
       const now = new Date();
-      const diffMs = now.getTime() - d.getTime();
-      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+      const dDateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      const nowDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      const timeStr = d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
 
-      if (diffDays === 0) return `Today, ${timeStr}`;
-      if (diffDays === 1) return `Yesterday, ${timeStr}`;
-      if (diffDays < 7) return `${diffDays}d ago, ${timeStr}`;
-      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + `, ${timeStr}`;
+      if (dDateStr === nowDateStr) return `Today, ${timeStr}`;
+
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const yestDateStr = yesterday.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      if (dDateStr === yestDateStr) return `Yesterday, ${timeStr}`;
+
+      return d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short' }) + `, ${timeStr}`;
     } catch {
       return dateStr;
     }
@@ -1113,8 +839,33 @@ export class SoftphonePage {
   private renderInCallScreen(): string {
     const mins = Math.floor(this.callDuration / 60).toString().padStart(2, '0');
     const secs = (this.callDuration % 60).toString().padStart(2, '0');
-    const cleanNumber = (this.dialNumber || '').replace(/[^0-9+]/g, '');
     const maskedPhone = this.maskPhone(this.dialNumber);
+    const session = telephonyService.getSession();
+    const isIncomingRinging = session.isIncoming && !this.isCallConnected;
+
+    if (isIncomingRinging) {
+      return `
+        <div style="max-width: 380px; margin: 20px auto; padding: 20px; text-align: center;">
+          <div style="width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 800; color: #fff; margin: 0 auto 16px auto; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);">
+            <i class="fas fa-phone-volume fa-shake"></i>
+          </div>
+
+          <h3 style="font-size: 22px; font-weight: 700; margin: 0 0 4px 0; color: #fff;">${this.selectedContactName || 'Incoming Caller'}</h3>
+          <div style="font-size: 14px; color: #94a3b8; margin-bottom: 6px;">${maskedPhone}</div>
+          <p id="softphoneCallStatusText" style="font-size: 14px; color: #38bdf8; font-weight: 600; margin: 0 0 24px 0;">Incoming Call...</p>
+
+          <!-- Answer & Reject Button Pair -->
+          <div style="display: flex; align-items: center; justify-content: center; gap: 32px; margin-top: 24px;">
+            <button id="softphoneAnswerCallBtn" style="width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); border: none; color: #fff; font-size: 26px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4); cursor: pointer;" title="Answer Call">
+              <i class="fas fa-phone"></i>
+            </button>
+            <button id="softphoneRejectCallBtn" style="width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #b91c1c); border: none; color: #fff; font-size: 26px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4); cursor: pointer;" title="Decline Call">
+              <i class="fas fa-phone-slash"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }
 
     return `
       <div style="max-width: 380px; margin: 20px auto; padding: 20px; text-align: center;">
@@ -1492,6 +1243,8 @@ export class SoftphonePage {
 
     // Call Actions
     document.getElementById('softphoneStartCallBtn')?.addEventListener('click', () => this.startCall());
+    document.getElementById('softphoneAnswerCallBtn')?.addEventListener('click', () => telephonyService.answerIncomingCall());
+    document.getElementById('softphoneRejectCallBtn')?.addEventListener('click', () => telephonyService.rejectIncomingCall());
     document.getElementById('softphoneDirectSimBtn')?.addEventListener('click', () => this.startCall(undefined, undefined, true));
     document.getElementById('inCallSwitchSimBtn')?.addEventListener('click', () => this.triggerNativeSimCall());
     document.getElementById('softphoneEndCallBtn')?.addEventListener('click', () => this.endCall());

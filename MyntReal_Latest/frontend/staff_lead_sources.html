@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mynt Real LLP Staff Portal - Lead Sources</title>
+    <title>Mynt Real LLP Staff Portal - CRM Settings</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="/public/js/staff-token-manager.js"></script>
     <script src="/public/js/staff-fetch.js"></script>
-  <script src="/public/js/nda-enforcement.js"></script>
+    <script src="/public/js/nda-enforcement.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -19,82 +19,119 @@
         
         .main-content {
             margin-left: 280px;
-            transition: margin-left 0.3s; padding-top: 88px;
+            transition: margin-left 0.3s;
+            padding-top: 88px;
         }
 
-        .header-logo {
-            height: 36px;
-            width: auto;
-        }
-        .user-info-details {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .user-info-name {
-            font-size: 14px;
-            font-weight: 600;
-            color: #1f2937;
-        }
-        
-        .user-info-meta {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            color: #6b7280;
-        }
-        
-        .user-info-role {
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        
-        .role-badge-supreme { background: #fef2f2; color: #dc2626; }
-        .role-badge-hr { background: #f3e8ff; color: #7c3aed; }
-        .role-badge-leadership { background: #fef3c7; color: #d97706; }
-        .role-badge-default { background: #f3f4f6; color: #374151; }
-
+        .header-logo { height: 36px; width: auto; }
         .content-area { padding: 24px; }
         
         .page-header-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
             border-radius: 12px;
             padding: 24px;
             color: white;
             margin-bottom: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
         }
         
         .card { border: none; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 12px; }
         .card-body { padding: 20px; }
         
+        .nav-tabs-custom {
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 20px;
+        }
+        .nav-tabs-custom .nav-link {
+            border: none;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 15px;
+            padding: 12px 20px;
+            border-radius: 8px 8px 0 0;
+            background: transparent;
+            transition: all 0.2s;
+        }
+        .nav-tabs-custom .nav-link:hover {
+            color: #2563eb;
+            background: #f8fafc;
+        }
+        .nav-tabs-custom .nav-link.active {
+            color: #2563eb;
+            background: white;
+            border-bottom: 3px solid #2563eb;
+        }
+        
         .table th { 
-            background: #f9fafb; 
+            background: #f8fafc; 
             font-weight: 600; 
             font-size: 13px; 
             text-transform: uppercase; 
-            color: #6b7280;
-            border: none;
+            color: #64748b;
+            border-bottom: 1px solid #e2e8f0;
         }
-        
         .table td {
             vertical-align: middle;
-            border-color: #f3f4f6;
+            border-color: #f1f5f9;
         }
         
         .badge { font-weight: 500; padding: 6px 12px; }
+        .status-active { background: #dcfce7; color: #16a34a; }
+        .status-inactive { background: #fee2e2; color: #dc2626; }
         
-        .color-preview {
-            width: 24px;
-            height: 24px;
-            border-radius: 4px;
-            border: 1px solid #e5e7eb;
-            display: inline-block;
+        .member-chip {
+            display: inline-flex;
+            align-items: center;
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #dbeafe;
+            border-radius: 16px;
+            padding: 3px 10px;
+            font-size: 12px;
+            font-weight: 500;
+            margin: 2px 4px 2px 0;
+        }
+        .member-chip .emp-code {
+            font-weight: 700;
+            margin-right: 4px;
+            opacity: 0.8;
         }
         
+        .staff-picker-box {
+            max-height: 260px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px;
+            background: #fafafa;
+        }
+        .staff-picker-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s;
+            margin-bottom: 4px;
+            background: white;
+            border: 1px solid #f1f5f9;
+        }
+        .staff-picker-item:hover {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+        .staff-picker-item.selected {
+            background: #eff6ff;
+            border-color: #93c5fd;
+        }
+        
+        .color-preview {
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            display: inline-block;
+        }
         .source-icon {
             width: 32px;
             height: 32px;
@@ -102,7 +139,7 @@
             align-items: center;
             justify-content: center;
             border-radius: 6px;
-            background: #f3f4f6;
+            background: #f1f5f9;
         }
         
         .btn-action {
@@ -111,36 +148,20 @@
             border-radius: 6px;
         }
         
-        .company-selector {
-            min-width: 200px;
-        }
-        
-        .status-active { background: #dcfce7; color: #16a34a; }
-        .status-inactive { background: #fee2e2; color: #dc2626; }
-        
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255,255,255,0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-        
         .empty-state {
             text-align: center;
-            padding: 60px 20px;
-            color: #6b7280;
+            padding: 50px 20px;
+            color: #64748b;
+        }
+        .empty-state i {
+            font-size: 44px;
+            margin-bottom: 14px;
+            opacity: 0.5;
         }
         
-        .empty-state i {
-            font-size: 48px;
-            margin-bottom: 16px;
-            opacity: 0.5;
+        .forbidden-container {
+            text-align: center;
+            padding: 80px 20px;
         }
     </style>
     <script src="/staff_header.js"></script>
@@ -149,121 +170,230 @@
     <nav id="staffSidebar"></nav>
     
     <div class="main-content">
-    <div id="headerContainer"></div>
+        <div id="headerContainer"></div>
 
-    <div class="content-area">
-            <div class="page-header-card">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h3 class="mb-2"><i class="fas fa-tags me-3"></i>Lead Sources</h3>
-                        <p class="mb-0 opacity-90">Manage lead sources catalog for your company</p>
+        <div class="content-area">
+            <!-- Access Denied State (Hidden by default) -->
+            <div id="accessDeniedSection" class="card d-none">
+                <div class="card-body forbidden-container">
+                    <div class="mb-3">
+                        <i class="fas fa-lock text-danger" style="font-size: 54px;"></i>
                     </div>
-                    <div>
-                        <a href="/staff/dashboard" class="btn btn-outline-light btn-sm">
-                            <i class="fas fa-home me-2"></i>Dashboard
-                        </a>
-                    </div>
+                    <h3 class="fw-bold text-gray-800 mb-2">403 — Access Restricted</h3>
+                    <p class="text-muted mb-4" style="max-width: 500px; margin: 0 auto;">
+                        CRM Settings (Lead Categories & Handler Lead Routing) is strictly reserved for Authorized Supreme & Leadership Personnel.
+                    </p>
+                    <a href="/staff/dashboard" class="btn btn-primary px-4">
+                        <i class="fas fa-arrow-left me-2"></i>Return to Dashboard
+                    </a>
                 </div>
             </div>
-            
-            <div class="card mb-4">
-                <div class="card-body">
+
+            <!-- Main CRM Settings Container -->
+            <div id="crmSettingsContainer">
+                <div class="page-header-card">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <label class="fw-semibold">Company:</label>
-                            <select class="form-select company-selector" id="companySelector">
-                                <option value="">Loading...</option>
-                            </select>
+                        <div>
+                            <h3 class="mb-1 fw-bold"><i class="fas fa-sliders-h me-2"></i>CRM Settings</h3>
+                            <p class="mb-0 opacity-80 small">Configure Lead Categories and Canonical Handler-Based Routing for New CRM Leads</p>
                         </div>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-outline-primary btn-sm" onclick="seedDefaults()" id="seedBtn">
-                                <i class="fas fa-seedling me-2"></i>Seed Defaults
-                            </button>
-                            <button class="btn btn-primary btn-sm" onclick="showAddModal()">
-                                <i class="fas fa-plus me-2"></i>Add Source
-                            </button>
+                            <a href="/staff/crm/dashboard" class="btn btn-outline-light btn-sm">
+                                <i class="fas fa-chart-line me-1"></i>CRM Dashboard
+                            </a>
+                            <a href="/staff/leads" class="btn btn-outline-light btn-sm">
+                                <i class="fas fa-list me-1"></i>Staff Leads
+                            </a>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="card">
-                <div class="card-body">
-                    <div id="loadingState" class="text-center py-4">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
+
+                <!-- Navigation Tabs -->
+                <ul class="nav nav-tabs nav-tabs-custom" id="crmSettingsTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="categories-tab" data-bs-toggle="tab" data-bs-target="#categoriesPane" type="button" role="tab">
+                            <i class="fas fa-tags me-2"></i>Categories
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="handlers-tab" data-bs-toggle="tab" data-bs-target="#handlersPane" type="button" role="tab">
+                            <i class="fas fa-user-friends me-2"></i>Handlers & Routing
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="crmSettingsTabContent">
+                    <!-- ========================================== -->
+                    <!-- TAB 1: CATEGORIES                          -->
+                    <!-- ========================================== -->
+                    <div class="tab-pane fade show active" id="categoriesPane" role="tabpanel">
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <label class="fw-semibold text-secondary">Company:</label>
+                                        <select class="form-select" id="companySelector" style="min-width: 220px;">
+                                            <option value="">Loading Companies...</option>
+                                        </select>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-outline-secondary btn-sm" onclick="seedDefaults()" id="seedBtn">
+                                            <i class="fas fa-seedling me-1"></i>Seed Defaults
+                                        </button>
+                                        <button class="btn btn-primary btn-sm" onclick="showAddCategoryModal()">
+                                            <i class="fas fa-plus me-1"></i>Add Category
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-body">
+                                <div id="categoriesLoading" class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                                <div id="categoriesEmpty" class="empty-state d-none">
+                                    <i class="fas fa-tags"></i>
+                                    <h5>No Categories Found</h5>
+                                    <p>Click "Seed Defaults" to add standard lead categories or "Add Category" to create a new one.</p>
+                                </div>
+                                <div class="table-responsive d-none" id="categoriesTableContainer">
+                                    <table class="table table-hover align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 70px;">Order</th>
+                                                <th>Category Name</th>
+                                                <th>Description</th>
+                                                <th style="width: 80px;">Icon</th>
+                                                <th style="width: 80px;">Color</th>
+                                                <th style="width: 100px;">Status</th>
+                                                <th style="width: 130px;" class="text-end">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="categoriesTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div id="emptyState" class="empty-state d-none">
-                        <i class="fas fa-tags"></i>
-                        <h5>No Lead Sources Found</h5>
-                        <p>Click "Seed Defaults" to add standard lead sources or "Add Source" to create a custom one.</p>
-                    </div>
-                    <div class="table-responsive d-none" id="tableContainer">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Order</th>
-                                    <th>Name</th>
-                                    <th>Description</th>
-                                    <th>Icon</th>
-                                    <th>Color</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="sourcesTableBody">
-                            </tbody>
-                        </table>
+
+                    <!-- ========================================== -->
+                    <!-- TAB 2: HANDLERS & ROUTING                  -->
+                    <!-- ========================================== -->
+                    <div class="tab-pane fade" id="handlersPane" role="tabpanel">
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Company</label>
+                                        <select class="form-select form-select-sm" id="handlerFilterCompany" onchange="filterHandlers()">
+                                            <option value="">All Companies</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Department</label>
+                                        <select class="form-select form-select-sm" id="handlerFilterDept" onchange="filterHandlers()">
+                                            <option value="">All Departments</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Search</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                            <input type="text" class="form-control" id="handlerSearchInput" placeholder="Category or member..." oninput="filterHandlers()">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 text-md-end pt-md-3">
+                                        <button class="btn btn-primary btn-sm w-100 w-md-auto" onclick="showAddHandlerModal()">
+                                            <i class="fas fa-user-plus me-1"></i>Add Handler Mapping
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-body">
+                                <div id="handlersLoading" class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                                <div id="handlersEmpty" class="empty-state d-none">
+                                    <i class="fas fa-user-friends"></i>
+                                    <h5>No Handler Mappings Found</h5>
+                                    <p>Create a handler mapping to configure which team members receive new leads for a specific Company + Department + Category combination.</p>
+                                </div>
+                                <div class="table-responsive d-none" id="handlersTableContainer">
+                                    <table class="table table-hover align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 160px;">Company</th>
+                                                <th style="width: 150px;">Department</th>
+                                                <th style="width: 170px;">Segment / Category</th>
+                                                <th>Associated Active Team</th>
+                                                <th style="width: 100px;">Status</th>
+                                                <th style="width: 120px;" class="text-end">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="handlersTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <div class="modal fade" id="sourceModal" tabindex="-1">
+
+    <!-- Category Modal -->
+    <div class="modal fade" id="categoryModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Add Lead Source</h5>
+                    <h5 class="modal-title" id="catModalTitle">Add Category</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="sourceForm">
-                        <input type="hidden" id="sourceId">
+                    <form id="categoryForm">
+                        <input type="hidden" id="categoryId">
                         <div class="mb-3">
-                            <label class="form-label">Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="sourceName" required>
+                            <label class="form-label fw-semibold">Category Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="catName" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Description</label>
-                            <textarea class="form-control" id="sourceDescription" rows="2"></textarea>
+                            <textarea class="form-control" id="catDescription" rows="2"></textarea>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Icon (FontAwesome class)</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i id="iconPreview" class="fas fa-tag"></i></span>
-                                    <input type="text" class="form-control" id="sourceIcon" placeholder="fas fa-globe" oninput="updateIconPreview()">
+                                    <input type="text" class="form-control" id="catIcon" placeholder="fas fa-globe" oninput="updateIconPreview()">
                                 </div>
-                                <small class="text-muted">e.g., fas fa-globe, fas fa-phone</small>
+                                <small class="text-muted">e.g., fas fa-solar-panel, fas fa-car</small>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Color</label>
                                 <div class="input-group">
-                                    <input type="color" class="form-control form-control-color" id="sourceColor" value="#6366f1">
-                                    <input type="text" class="form-control" id="sourceColorText" placeholder="#6366f1" oninput="syncColorFromText()">
+                                    <input type="color" class="form-control form-control-color" id="catColor" value="#3b82f6">
+                                    <input type="text" class="form-control" id="catColorText" placeholder="#3b82f6" oninput="syncCatColorText()">
                                 </div>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Display Order</label>
-                                <input type="number" class="form-control" id="sourceOrder" value="0" min="0">
+                                <input type="number" class="form-control" id="catOrder" value="0" min="0">
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Status</label>
-                                <select class="form-select" id="sourceStatus">
+                                <select class="form-select" id="catStatus">
                                     <option value="true">Active</option>
                                     <option value="false">Inactive</option>
                                 </select>
@@ -273,29 +403,102 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveSource()">
-                        <i class="fas fa-save me-2"></i>Save
+                    <button type="button" class="btn btn-primary" onclick="saveCategory()">
+                        <i class="fas fa-save me-1"></i>Save Category
                     </button>
                 </div>
             </div>
         </div>
     </div>
-    
+
+    <!-- Handler Modal -->
+    <div class="modal fade" id="handlerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="handlerModalTitle">Add Handler Mapping</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="handlerForm">
+                        <input type="hidden" id="handlerId">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Company <span class="text-danger">*</span></label>
+                                <select class="form-select" id="modalHandlerCompany" required onchange="onModalCompanyChange()">
+                                    <option value="">Select Company</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Department <span class="text-danger">*</span></label>
+                                <select class="form-select" id="modalHandlerDept" required onchange="onModalDeptChange()">
+                                    <option value="">Select Department</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Segment / Category <span class="text-danger">*</span></label>
+                                <select class="form-select" id="modalHandlerCategory" required>
+                                    <option value="">Select Category</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-semibold mb-0">
+                                    Associated Team Members <span class="text-danger">*</span>
+                                    <span class="badge bg-primary ms-2" id="selectedStaffCount">0 selected</span>
+                                </label>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="selectAllFilteredStaff()">Select Filtered</button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="clearSelectedStaff()">Clear</button>
+                                </div>
+                            </div>
+                            <div class="input-group input-group-sm mb-2">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" class="form-control" id="staffSearchFilter" placeholder="Filter staff by name or code..." oninput="renderStaffPickerList()">
+                            </div>
+                            <div class="staff-picker-box" id="staffPickerContainer">
+                                <!-- Rendered dynamically -->
+                            </div>
+                        </div>
+
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="modalHandlerActive" checked>
+                                    <label class="form-check-label fw-semibold" for="modalHandlerActive">Active Handler Routing</label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveHandler()">
+                        <i class="fas fa-save me-1"></i>Save Handler
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
     <div class="modal fade" id="deleteModal" tabindex="-1">
         <div class="modal-dialog modal-sm">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Confirm Delete</h5>
+                    <h5 class="modal-title" id="deleteModalTitle">Confirm Delete</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to delete this lead source?</p>
-                    <p class="text-danger small">This action cannot be undone.</p>
+                    <p id="deleteModalText">Are you sure you want to delete this item?</p>
+                    <p class="text-danger small mb-0">This action cannot be undone.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete()">
-                        <i class="fas fa-trash me-2"></i>Delete
+                    <button type="button" class="btn btn-danger btn-sm" id="confirmDeleteBtn">
+                        <i class="fas fa-trash me-1"></i>Delete
                     </button>
                 </div>
             </div>
@@ -305,332 +508,668 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/staff_sidebar.js?v=20260602c"></script>
     <script>
+        // State
+        let optionsData = { companies: [], departments: [], categories: [], active_staff: [] };
         let currentCompanyId = null;
-        let sources = [];
-        let deleteSourceId = null;
-        let sourceModal = null;
-        let deleteModal = null;
+        let categories = [];
+        let handlers = [];
+        let selectedMemberIds = new Set();
+        let deleteTarget = { type: null, id: null };
         
+        // Modals
+        let categoryModal = null;
+        let handlerModal = null;
+        let deleteModal = null;
+
         document.addEventListener('DOMContentLoaded', async function() {
             await StaffSidebar.init();
-            StaffHeader.inject('Lead Sources', 'fas fa-tags');
-            sourceModal = new bootstrap.Modal(document.getElementById('sourceModal'));
+            StaffHeader.inject('CRM Settings', 'fas fa-sliders-h');
+            
+            categoryModal = new bootstrap.Modal(document.getElementById('categoryModal'));
+            handlerModal = new bootstrap.Modal(document.getElementById('handlerModal'));
             deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-            
-            await loadUserInfo();
-            await loadCompanies();
-            
-            document.getElementById('sourceColor').addEventListener('change', function() {
-                document.getElementById('sourceColorText').value = this.value;
+
+            document.getElementById('confirmDeleteBtn').addEventListener('click', executeDelete);
+            document.getElementById('catColor').addEventListener('change', function() {
+                document.getElementById('catColorText').value = this.value;
             });
+
+            // Access Check
+            const hasAccess = await checkAccess();
+            if (!hasAccess) return;
+
+            await loadAllOptions();
+            await loadCategories();
+            await loadHandlers();
         });
-        
-        async function loadUserInfo() {
+
+        // ==========================================
+        // ACCESS CONTROL
+        // ==========================================
+        async function checkAccess() {
             try {
-                const response = await staffFetchJson('/api/v1/staff/auth/me');
-                if (response && response.staff) {
-                    const staff = response.staff;
-                    document.getElementById('headerUserName').textContent = staff.name || 'Staff User';
-                    document.getElementById('headerUserInitials').textContent = getInitials(staff.name);
-                    document.getElementById('headerUserRole').textContent = staff.staff_type || 'Staff';
-                    document.getElementById('headerUserEmpId').textContent = staff.emp_code || '';
+                const res = await staffFetchJson('/api/v1/crm/settings/access-check');
+                if (res && res.success && res.access_granted) {
+                    return true;
                 }
-            } catch (error) {
-                console.error('Error loading user info:', error);
+            } catch (err) {
+                console.warn('Access check error:', err);
+            }
+            // Show forbidden screen
+            document.getElementById('accessDeniedSection').classList.remove('d-none');
+            document.getElementById('crmSettingsContainer').classList.add('d-none');
+            return false;
+        }
+
+        // ==========================================
+        // LOAD OPTIONS & METADATA
+        // ==========================================
+        async function loadAllOptions() {
+            try {
+                const res = await staffFetchJson('/api/v1/crm/settings/options');
+                if (res && res.success) {
+                    optionsData = res.data || optionsData;
+                    populateFilterDropdowns();
+                    populateModalDropdowns();
+                }
+            } catch (err) {
+                console.error('Failed to load CRM Settings options:', err);
+                showToast('Failed to load metadata options', 'error');
             }
         }
-        
-        function getInitials(name) {
-            if (!name) return '--';
-            return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-        }
-        
-        async function loadCompanies() {
-            try {
-                const response = await staffFetchJson('/api/v1/crm/my-companies');
-                if (response && response.success && response.companies) {
-                    const selector = document.getElementById('companySelector');
-                    selector.innerHTML = response.companies.map(c => 
-                        `<option value="${c.id}">${c.company_name}</option>`
-                    ).join('');
-                    
-                    if (response.companies.length > 0) {
-                        currentCompanyId = response.companies[0].id;
-                        loadSources();
-                    }
-                    
-                    selector.addEventListener('change', function() {
-                        currentCompanyId = parseInt(this.value);
-                        loadSources();
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading companies:', error);
-                showToast('Failed to load companies', 'error');
+
+        function populateFilterDropdowns() {
+            // Company selector in Categories Tab
+            const coSel = document.getElementById('companySelector');
+            coSel.innerHTML = optionsData.companies.map(c => 
+                `<option value="${c.id}">${escapeHtml(c.name)}</option>`
+            ).join('');
+            if (optionsData.companies.length > 0) {
+                currentCompanyId = optionsData.companies[0].id;
             }
+            coSel.addEventListener('change', function() {
+                currentCompanyId = parseInt(this.value);
+                loadCategories();
+            });
+
+            // Filters in Handlers Tab
+            const hCoFilter = document.getElementById('handlerFilterCompany');
+            hCoFilter.innerHTML = `<option value="">All Companies</option>` + optionsData.companies.map(c =>
+                `<option value="${c.id}">${escapeHtml(c.name)}</option>`
+            ).join('');
+
+            const hDeptFilter = document.getElementById('handlerFilterDept');
+            hDeptFilter.innerHTML = `<option value="">All Departments</option>` + optionsData.departments.map(d =>
+                `<option value="${d.id}">${escapeHtml(d.name)}</option>`
+            ).join('');
         }
-        
-        async function loadSources() {
-            if (!currentCompanyId) return;
-            
-            document.getElementById('loadingState').classList.remove('d-none');
-            document.getElementById('tableContainer').classList.add('d-none');
-            document.getElementById('emptyState').classList.add('d-none');
-            
-            try {
-                const response = await staffFetchJson(`/api/v1/crm/sources?company_id=${currentCompanyId}&include_inactive=true`);
-                if (response && response.success) {
-                    sources = response.data || [];
-                    renderSources();
-                }
-            } catch (error) {
-                console.error('Error loading sources:', error);
-                showToast('Failed to load lead sources', 'error');
-            }
-            
-            document.getElementById('loadingState').classList.add('d-none');
+
+        function populateModalDropdowns() {
+            const mCo = document.getElementById('modalHandlerCompany');
+            mCo.innerHTML = `<option value="">Select Company</option>` + optionsData.companies.map(c =>
+                `<option value="${c.id}">${escapeHtml(c.name)}</option>`
+            ).join('');
+
+            const mDept = document.getElementById('modalHandlerDept');
+            mDept.innerHTML = `<option value="">Select Department</option>` + optionsData.departments.map(d =>
+                `<option value="${d.id}">${escapeHtml(d.name)}</option>`
+            ).join('');
         }
-        
-        function renderSources() {
-            const tbody = document.getElementById('sourcesTableBody');
-            
-            if (sources.length === 0) {
-                document.getElementById('emptyState').classList.remove('d-none');
-                document.getElementById('tableContainer').classList.add('d-none');
+
+        function onModalCompanyChange() {
+            const coId = parseInt(document.getElementById('modalHandlerCompany').value);
+            const catSel = document.getElementById('modalHandlerCategory');
+            if (!coId) {
+                catSel.innerHTML = `<option value="">Select Category</option>`;
                 return;
             }
+            const filteredCats = optionsData.categories.filter(c => c.company_id === coId);
+            catSel.innerHTML = `<option value="">Select Category</option>` + filteredCats.map(c =>
+                `<option value="${c.id}">${escapeHtml(c.name)}</option>`
+            ).join('');
+        }
+
+        function onModalDeptChange() {
+            renderStaffPickerList();
+        }
+
+        // ==========================================
+        // CATEGORIES (TAB 1)
+        // ==========================================
+        async function loadCategories() {
+            if (!currentCompanyId) return;
             
-            document.getElementById('emptyState').classList.add('d-none');
-            document.getElementById('tableContainer').classList.remove('d-none');
+            document.getElementById('categoriesLoading').classList.remove('d-none');
+            document.getElementById('categoriesTableContainer').classList.add('d-none');
+            document.getElementById('categoriesEmpty').classList.add('d-none');
             
-            tbody.innerHTML = sources.map(source => `
+            try {
+                const res = await staffFetchJson(`/api/v1/crm/sources?company_id=${currentCompanyId}&include_inactive=true`);
+                if (res && res.success) {
+                    categories = res.data || [];
+                    renderCategories();
+                }
+            } catch (err) {
+                console.error('Error loading categories:', err);
+                showToast('Failed to load categories', 'error');
+            }
+            document.getElementById('categoriesLoading').classList.add('d-none');
+        }
+
+        function renderCategories() {
+            const tbody = document.getElementById('categoriesTableBody');
+            if (categories.length === 0) {
+                document.getElementById('categoriesEmpty').classList.remove('d-none');
+                document.getElementById('categoriesTableContainer').classList.add('d-none');
+                return;
+            }
+            document.getElementById('categoriesEmpty').classList.add('d-none');
+            document.getElementById('categoriesTableContainer').classList.remove('d-none');
+
+            tbody.innerHTML = categories.map(cat => `
                 <tr>
-                    <td>${source.display_order}</td>
-                    <td><strong>${escapeHtml(source.name)}</strong></td>
-                    <td class="text-muted">${escapeHtml(source.description || '-')}</td>
+                    <td class="text-muted fw-semibold">${cat.display_order}</td>
+                    <td><strong class="text-dark">${escapeHtml(cat.name)}</strong></td>
+                    <td class="text-muted small">${escapeHtml(cat.description || '-')}</td>
                     <td>
-                        <div class="source-icon" ${source.color ? `style="background: ${source.color}20; color: ${source.color}"` : ''}>
-                            <i class="${source.icon || 'fas fa-tag'}"></i>
+                        <div class="source-icon" ${cat.color ? `style="background: ${cat.color}20; color: ${cat.color}"` : ''}>
+                            <i class="${cat.icon || 'fas fa-tag'}"></i>
                         </div>
                     </td>
                     <td>
-                        ${source.color ? `<span class="color-preview" style="background: ${source.color}"></span>` : '-'}
+                        ${cat.color ? `<span class="color-preview" style="background: ${cat.color}"></span>` : '-'}
                     </td>
                     <td>
-                        <span class="badge ${source.is_active ? 'status-active' : 'status-inactive'}">
-                            ${source.is_active ? 'Active' : 'Inactive'}
+                        <span class="badge ${cat.is_active ? 'status-active' : 'status-inactive'}">
+                            ${cat.is_active ? 'Active' : 'Inactive'}
                         </span>
                     </td>
-                    <td>
-                        <button class="btn btn-outline-primary btn-action me-1" onclick="editSource(${source.id})" title="Edit">
+                    <td class="text-end">
+                        <button class="btn btn-outline-primary btn-action me-1" onclick="editCategory(${cat.id})" title="Edit">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-outline-${source.is_active ? 'warning' : 'success'} btn-action me-1" 
-                                onclick="toggleActive(${source.id}, ${!source.is_active})" 
-                                title="${source.is_active ? 'Deactivate' : 'Activate'}">
-                            <i class="fas fa-${source.is_active ? 'eye-slash' : 'eye'}"></i>
+                        <button class="btn btn-outline-${cat.is_active ? 'warning' : 'success'} btn-action me-1" 
+                                onclick="toggleCategoryActive(${cat.id}, ${!cat.is_active})" 
+                                title="${cat.is_active ? 'Deactivate' : 'Activate'}">
+                            <i class="fas fa-${cat.is_active ? 'eye-slash' : 'eye'}"></i>
                         </button>
-                        <button class="btn btn-outline-danger btn-action" onclick="deleteSource(${source.id})" title="Delete">
+                        <button class="btn btn-outline-danger btn-action" onclick="askDeleteCategory(${cat.id})" title="Delete">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
                 </tr>
             `).join('');
         }
-        
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-        
-        function showAddModal() {
-            document.getElementById('modalTitle').textContent = 'Add Lead Source';
-            document.getElementById('sourceForm').reset();
-            document.getElementById('sourceId').value = '';
-            document.getElementById('sourceColor').value = '#6366f1';
-            document.getElementById('sourceColorText').value = '#6366f1';
-            document.getElementById('sourceStatus').value = 'true';
+
+        function showAddCategoryModal() {
+            document.getElementById('catModalTitle').textContent = 'Add Lead Category';
+            document.getElementById('categoryForm').reset();
+            document.getElementById('categoryId').value = '';
+            document.getElementById('catColor').value = '#3b82f6';
+            document.getElementById('catColorText').value = '#3b82f6';
+            document.getElementById('catStatus').value = 'true';
             updateIconPreview();
-            sourceModal.show();
+            categoryModal.show();
         }
-        
-        function editSource(id) {
-            const source = sources.find(s => s.id === id);
-            if (!source) return;
-            
-            document.getElementById('modalTitle').textContent = 'Edit Lead Source';
-            document.getElementById('sourceId').value = source.id;
-            document.getElementById('sourceName').value = source.name;
-            document.getElementById('sourceDescription').value = source.description || '';
-            document.getElementById('sourceIcon').value = source.icon || '';
-            document.getElementById('sourceColor').value = source.color || '#6366f1';
-            document.getElementById('sourceColorText').value = source.color || '#6366f1';
-            document.getElementById('sourceOrder').value = source.display_order || 0;
-            document.getElementById('sourceStatus').value = source.is_active ? 'true' : 'false';
+
+        function editCategory(id) {
+            const cat = categories.find(c => c.id === id);
+            if (!cat) return;
+            document.getElementById('catModalTitle').textContent = 'Edit Lead Category';
+            document.getElementById('categoryId').value = cat.id;
+            document.getElementById('catName').value = cat.name;
+            document.getElementById('catDescription').value = cat.description || '';
+            document.getElementById('catIcon').value = cat.icon || '';
+            document.getElementById('catColor').value = cat.color || '#3b82f6';
+            document.getElementById('catColorText').value = cat.color || '#3b82f6';
+            document.getElementById('catOrder').value = cat.display_order || 0;
+            document.getElementById('catStatus').value = cat.is_active ? 'true' : 'false';
             updateIconPreview();
-            sourceModal.show();
+            categoryModal.show();
         }
-        
+
         function updateIconPreview() {
-            const iconClass = document.getElementById('sourceIcon').value || 'fas fa-tag';
+            const iconClass = document.getElementById('catIcon').value || 'fas fa-tag';
             document.getElementById('iconPreview').className = iconClass;
         }
-        
-        function syncColorFromText() {
-            const colorText = document.getElementById('sourceColorText').value;
-            if (/^#[0-9A-Fa-f]{6}$/.test(colorText)) {
-                document.getElementById('sourceColor').value = colorText;
+
+        function syncCatColorText() {
+            const val = document.getElementById('catColorText').value;
+            if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                document.getElementById('catColor').value = val;
             }
         }
-        
-        async function saveSource() {
-            const id = document.getElementById('sourceId').value;
-            const name = document.getElementById('sourceName').value.trim();
-            
+
+        async function saveCategory() {
+            const id = document.getElementById('categoryId').value;
+            const name = document.getElementById('catName').value.trim();
             if (!name) {
-                showToast('Name is required', 'error');
+                showToast('Category name is required', 'error');
                 return;
             }
-            
-            const data = {
+            const payload = {
                 name: name,
-                description: document.getElementById('sourceDescription').value.trim() || null,
-                icon: document.getElementById('sourceIcon').value.trim() || null,
-                color: document.getElementById('sourceColorText').value.trim() || null,
-                display_order: parseInt(document.getElementById('sourceOrder').value) || 0,
-                is_active: document.getElementById('sourceStatus').value === 'true'
+                description: document.getElementById('catDescription').value.trim() || null,
+                icon: document.getElementById('catIcon').value.trim() || null,
+                color: document.getElementById('catColorText').value.trim() || null,
+                display_order: parseInt(document.getElementById('catOrder').value) || 0,
+                is_active: document.getElementById('catStatus').value === 'true'
             };
-            
             try {
-                let response;
+                let res;
                 if (id) {
-                    response = await staffFetchJson(`/api/v1/crm/sources/${id}?company_id=${currentCompanyId}`, {
+                    res = await staffFetchJson(`/api/v1/crm/sources/${id}?company_id=${currentCompanyId}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
+                        body: JSON.stringify(payload)
                     });
                 } else {
-                    response = await staffFetchJson(`/api/v1/crm/sources?company_id=${currentCompanyId}`, {
+                    res = await staffFetchJson(`/api/v1/crm/sources?company_id=${currentCompanyId}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
+                        body: JSON.stringify(payload)
                     });
                 }
-                
-                if (response && response.success) {
-                    showToast(id ? 'Source updated successfully' : 'Source created successfully', 'success');
-                    sourceModal.hide();
-                    loadSources();
+                if (res && res.success) {
+                    showToast(id ? 'Category updated' : 'Category created', 'success');
+                    categoryModal.hide();
+                    loadCategories();
+                    loadAllOptions();
                 } else {
-                    showToast(response?.detail || response?.message || 'Operation failed', 'error');
+                    showToast(res?.detail || res?.message || 'Failed to save category', 'error');
                 }
-            } catch (error) {
-                console.error('Error saving source:', error);
-                showToast('Failed to save lead source', 'error');
+            } catch (err) {
+                console.error('Error saving category:', err);
+                showToast('Failed to save category', 'error');
             }
         }
-        
-        async function toggleActive(id, newStatus) {
+
+        async function toggleCategoryActive(id, newStatus) {
             try {
-                const response = await staffFetchJson(`/api/v1/crm/sources/${id}?company_id=${currentCompanyId}`, {
+                const res = await staffFetchJson(`/api/v1/crm/sources/${id}?company_id=${currentCompanyId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ is_active: newStatus })
                 });
-                
-                if (response && response.success) {
-                    showToast(`Source ${newStatus ? 'activated' : 'deactivated'} successfully`, 'success');
-                    loadSources();
+                if (res && res.success) {
+                    showToast(`Category ${newStatus ? 'activated' : 'deactivated'}`, 'success');
+                    loadCategories();
                 } else {
-                    showToast(response?.detail || 'Operation failed', 'error');
+                    showToast(res?.detail || 'Update failed', 'error');
                 }
-            } catch (error) {
-                console.error('Error toggling status:', error);
-                showToast('Failed to update status', 'error');
+            } catch (err) {
+                console.error('Error toggling category status:', err);
+                showToast('Failed to toggle status', 'error');
             }
         }
-        
-        function deleteSource(id) {
-            deleteSourceId = id;
+
+        function askDeleteCategory(id) {
+            deleteTarget = { type: 'category', id: id };
+            document.getElementById('deleteModalTitle').textContent = 'Delete Lead Category';
+            document.getElementById('deleteModalText').textContent = 'Are you sure you want to delete this lead category?';
             deleteModal.show();
         }
-        
-        async function confirmDelete() {
-            if (!deleteSourceId) return;
-            
-            try {
-                const response = await fetch(`/api/v1/crm/sources/${deleteSourceId}?company_id=${currentCompanyId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('staff_token')}`
-                    }
-                });
-                
-                const data = await response.json().catch(() => null);
-                
-                if (response.ok && data?.success) {
-                    showToast('Source deleted successfully', 'success');
-                    deleteModal.hide();
-                    loadSources();
-                } else if (response.status === 403) {
-                    showToast('Permission denied: Only VGK roles can delete lead sources', 'error');
-                    deleteModal.hide();
-                } else if (response.status === 400 && data?.detail?.includes('leads assigned')) {
-                    showToast('Cannot delete: This source has leads assigned to it', 'error');
-                    deleteModal.hide();
-                } else {
-                    showToast(data?.detail || 'Delete failed', 'error');
-                    deleteModal.hide();
-                }
-            } catch (error) {
-                console.error('Error deleting source:', error);
-                showToast('Failed to delete lead source. Please try again.', 'error');
-                deleteModal.hide();
-            }
-            
-            deleteSourceId = null;
-        }
-        
+
         async function seedDefaults() {
             if (!currentCompanyId) return;
-            
             try {
-                const response = await staffFetchJson(`/api/v1/crm/sources/seed?company_id=${currentCompanyId}`, {
+                const res = await staffFetchJson(`/api/v1/crm/sources/seed?company_id=${currentCompanyId}`, {
                     method: 'POST'
                 });
-                
-                if (response && response.success) {
-                    showToast(response.message || 'Default sources seeded successfully', 'success');
-                    loadSources();
+                if (res && res.success) {
+                    showToast('Default categories seeded', 'success');
+                    loadCategories();
+                    loadAllOptions();
                 } else {
-                    showToast(response?.message || response?.detail || 'Seed operation failed', 'error');
+                    showToast(res?.message || 'Seed failed', 'error');
                 }
-            } catch (error) {
-                console.error('Error seeding defaults:', error);
-                showToast('Failed to seed default sources', 'error');
+            } catch (err) {
+                console.error('Error seeding categories:', err);
+                showToast('Failed to seed defaults', 'error');
             }
         }
-        
+
+        // ==========================================
+        // HANDLERS (TAB 2)
+        // ==========================================
+        async function loadHandlers() {
+            document.getElementById('handlersLoading').classList.remove('d-none');
+            document.getElementById('handlersTableContainer').classList.add('d-none');
+            document.getElementById('handlersEmpty').classList.add('d-none');
+
+            try {
+                const res = await staffFetchJson('/api/v1/crm/settings/handlers');
+                if (res && res.success) {
+                    handlers = res.data || [];
+                    filterHandlers();
+                }
+            } catch (err) {
+                console.error('Error loading handlers:', err);
+                showToast('Failed to load handlers', 'error');
+            }
+            document.getElementById('handlersLoading').classList.add('d-none');
+        }
+
+        function filterHandlers() {
+            const coId = document.getElementById('handlerFilterCompany').value;
+            const deptId = document.getElementById('handlerFilterDept').value;
+            const search = (document.getElementById('handlerSearchInput').value || '').trim().toLowerCase();
+
+            const filtered = handlers.filter(h => {
+                if (coId && h.company_id !== parseInt(coId)) return false;
+                if (deptId && h.department_id !== parseInt(deptId)) return false;
+                if (search) {
+                    const matchCat = (h.category_name || '').toLowerCase().includes(search);
+                    const matchCo = (h.company_name || '').toLowerCase().includes(search);
+                    const matchDept = (h.department_name || '').toLowerCase().includes(search);
+                    const matchMembers = (h.members || []).some(m => 
+                        (m.full_name || '').toLowerCase().includes(search) || 
+                        (m.emp_code || '').toLowerCase().includes(search)
+                    );
+                    if (!matchCat && !matchCo && !matchDept && !matchMembers) return false;
+                }
+                return true;
+            });
+
+            renderHandlers(filtered);
+        }
+
+        function renderHandlers(list) {
+            const tbody = document.getElementById('handlersTableBody');
+            if (list.length === 0) {
+                document.getElementById('handlersEmpty').classList.remove('d-none');
+                document.getElementById('handlersTableContainer').classList.add('d-none');
+                return;
+            }
+            document.getElementById('handlersEmpty').classList.add('d-none');
+            document.getElementById('handlersTableContainer').classList.remove('d-none');
+
+            tbody.innerHTML = list.map(h => {
+                const memberBadges = (h.members || []).map(m => `
+                    <span class="member-chip" title="${escapeHtml(m.department_name || '')}">
+                        <span class="emp-code">${escapeHtml(m.emp_code)}</span> ${escapeHtml(m.full_name)}
+                    </span>
+                `).join('');
+
+                return `
+                    <tr>
+                        <td><strong class="text-dark">${escapeHtml(h.company_name || 'Company #' + h.company_id)}</strong></td>
+                        <td><span class="text-secondary fw-semibold">${escapeHtml(h.department_name || 'Dept #' + h.department_id)}</span></td>
+                        <td>
+                            <span class="badge bg-light text-primary border border-primary-subtle">
+                                <i class="fas fa-tag me-1"></i>${escapeHtml(h.category_name || 'Category #' + h.category_id)}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-wrap align-items-center">
+                                ${memberBadges || '<span class="text-muted small">No active members</span>'}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge ${h.is_active ? 'status-active' : 'status-inactive'}">
+                                ${h.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-outline-primary btn-action me-1" onclick="editHandler(${h.id})" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-${h.is_active ? 'warning' : 'success'} btn-action me-1" 
+                                    onclick="toggleHandlerActive(${h.id})" 
+                                    title="${h.is_active ? 'Deactivate' : 'Activate'}">
+                                <i class="fas fa-${h.is_active ? 'toggle-on' : 'toggle-off'}"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-action" onclick="askDeleteHandler(${h.id})" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function showAddHandlerModal() {
+            document.getElementById('handlerModalTitle').textContent = 'Add Handler Mapping';
+            document.getElementById('handlerForm').reset();
+            document.getElementById('handlerId').value = '';
+            document.getElementById('modalHandlerActive').checked = true;
+            document.getElementById('staffSearchFilter').value = '';
+            selectedMemberIds.clear();
+            updateSelectedCount();
+            populateModalDropdowns();
+            document.getElementById('modalHandlerCategory').innerHTML = `<option value="">Select Category</option>`;
+            renderStaffPickerList();
+            handlerModal.show();
+        }
+
+        function editHandler(id) {
+            const h = handlers.find(item => item.id === id);
+            if (!h) return;
+            document.getElementById('handlerModalTitle').textContent = 'Edit Handler Mapping';
+            document.getElementById('handlerId').value = h.id;
+            document.getElementById('modalHandlerCompany').value = h.company_id;
+            onModalCompanyChange();
+            document.getElementById('modalHandlerDept').value = h.department_id;
+            document.getElementById('modalHandlerCategory').value = h.category_id;
+            document.getElementById('modalHandlerActive').checked = h.is_active;
+
+            selectedMemberIds = new Set((h.members || []).map(m => m.employee_id));
+            updateSelectedCount();
+            document.getElementById('staffSearchFilter').value = '';
+            renderStaffPickerList();
+            handlerModal.show();
+        }
+
+        function renderStaffPickerList() {
+            const container = document.getElementById('staffPickerContainer');
+            const search = (document.getElementById('staffSearchFilter').value || '').trim().toLowerCase();
+
+            const filteredStaff = optionsData.active_staff.filter(s => {
+                if (search) {
+                    const matchName = (s.full_name || '').toLowerCase().includes(search);
+                    const matchCode = (s.emp_code || '').toLowerCase().includes(search);
+                    const matchDept = (s.department_name || '').toLowerCase().includes(search);
+                    if (!matchName && !matchCode && !matchDept) return false;
+                }
+                return true;
+            });
+
+            if (filteredStaff.length === 0) {
+                container.innerHTML = `<div class="text-center text-muted py-3 small">No matching active staff members found</div>`;
+                return;
+            }
+
+            container.innerHTML = filteredStaff.map(s => {
+                const isChecked = selectedMemberIds.has(s.id);
+                return `
+                    <div class="staff-picker-item ${isChecked ? 'selected' : ''}" onclick="toggleStaffMember(${s.id})">
+                        <input class="form-check-input me-2" type="checkbox" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation(); toggleStaffMember(${s.id});">
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <div>
+                                <span class="fw-bold text-dark me-2">${escapeHtml(s.emp_code)}</span>
+                                <span class="text-secondary">${escapeHtml(s.full_name)}</span>
+                            </div>
+                            <span class="badge bg-light text-secondary border small">${escapeHtml(s.department_name || 'Staff')}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleStaffMember(id) {
+            if (selectedMemberIds.has(id)) {
+                selectedMemberIds.delete(id);
+            } else {
+                selectedMemberIds.add(id);
+            }
+            updateSelectedCount();
+            renderStaffPickerList();
+        }
+
+        function selectAllFilteredStaff() {
+            const search = (document.getElementById('staffSearchFilter').value || '').trim().toLowerCase();
+            optionsData.active_staff.forEach(s => {
+                if (!search || (s.full_name || '').toLowerCase().includes(search) || (s.emp_code || '').toLowerCase().includes(search)) {
+                    selectedMemberIds.add(s.id);
+                }
+            });
+            updateSelectedCount();
+            renderStaffPickerList();
+        }
+
+        function clearSelectedStaff() {
+            selectedMemberIds.clear();
+            updateSelectedCount();
+            renderStaffPickerList();
+        }
+
+        function updateSelectedCount() {
+            document.getElementById('selectedStaffCount').textContent = `${selectedMemberIds.size} selected`;
+        }
+
+        async function saveHandler() {
+            const id = document.getElementById('handlerId').value;
+            const companyId = parseInt(document.getElementById('modalHandlerCompany').value);
+            const departmentId = parseInt(document.getElementById('modalHandlerDept').value);
+            const categoryId = parseInt(document.getElementById('modalHandlerCategory').value);
+            const isActive = document.getElementById('modalHandlerActive').checked;
+            const memberIds = Array.from(selectedMemberIds);
+
+            if (!companyId || !departmentId || !categoryId) {
+                showToast('Please select Company, Department, and Category', 'error');
+                return;
+            }
+            if (memberIds.length === 0) {
+                showToast('Please select at least one active team member', 'error');
+                return;
+            }
+
+            const payload = {
+                company_id: companyId,
+                department_id: departmentId,
+                category_id: categoryId,
+                member_ids: memberIds,
+                is_active: isActive
+            };
+
+            try {
+                let res;
+                if (id) {
+                    res = await staffFetchJson(`/api/v1/crm/settings/handlers/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    res = await staffFetchJson('/api/v1/crm/settings/handlers', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                if (res && res.success) {
+                    showToast(id ? 'Handler mapping updated' : 'Handler mapping created', 'success');
+                    handlerModal.hide();
+                    loadHandlers();
+                } else {
+                    showToast(res?.detail || res?.message || 'Failed to save handler mapping', 'error');
+                }
+            } catch (err) {
+                console.error('Error saving handler:', err);
+                showToast('Failed to save handler mapping', 'error');
+            }
+        }
+
+        async function toggleHandlerActive(id) {
+            try {
+                const res = await staffFetchJson(`/api/v1/crm/settings/handlers/${id}/toggle-status`, {
+                    method: 'POST'
+                });
+                if (res && res.success) {
+                    showToast(res.message || 'Status updated', 'success');
+                    loadHandlers();
+                } else {
+                    showToast(res?.detail || 'Status toggle failed', 'error');
+                }
+            } catch (err) {
+                console.error('Error toggling handler status:', err);
+                showToast('Failed to toggle status', 'error');
+            }
+        }
+
+        function askDeleteHandler(id) {
+            deleteTarget = { type: 'handler', id: id };
+            document.getElementById('deleteModalTitle').textContent = 'Delete Handler Mapping';
+            document.getElementById('deleteModalText').textContent = 'Are you sure you want to delete this handler mapping?';
+            deleteModal.show();
+        }
+
+        // ==========================================
+        // GENERIC DELETE HANDLER
+        // ==========================================
+        async function executeDelete() {
+            if (!deleteTarget.id || !deleteTarget.type) return;
+            const { type, id } = deleteTarget;
+            deleteModal.hide();
+
+            try {
+                if (type === 'category') {
+                    const res = await staffFetchJson(`/api/v1/crm/sources/${id}?company_id=${currentCompanyId}`, {
+                        method: 'DELETE'
+                    });
+                    if (res && res.success) {
+                        showToast('Category deleted successfully', 'success');
+                        loadCategories();
+                        loadAllOptions();
+                    } else {
+                        showToast(res?.detail || 'Delete failed', 'error');
+                    }
+                } else if (type === 'handler') {
+                    const res = await staffFetchJson(`/api/v1/crm/settings/handlers/${id}`, {
+                        method: 'DELETE'
+                    });
+                    if (res && res.success) {
+                        showToast('Handler mapping deleted successfully', 'success');
+                        loadHandlers();
+                    } else {
+                        showToast(res?.detail || 'Delete failed', 'error');
+                    }
+                }
+            } catch (err) {
+                console.error('Delete error:', err);
+                showToast('Delete operation failed', 'error');
+            }
+            deleteTarget = { type: null, id: null };
+        }
+
+        // ==========================================
+        // HELPERS
+        // ==========================================
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
         function showToast(message, type = 'info') {
             const toastContainer = document.getElementById('toastContainer') || createToastContainer();
             const toast = document.createElement('div');
-            toast.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} alert-dismissible fade show`;
+            toast.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} alert-dismissible fade show shadow-sm`;
             toast.style.cssText = 'position: relative; margin-bottom: 10px; min-width: 300px;';
             toast.innerHTML = `
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
             toastContainer.appendChild(toast);
-            setTimeout(() => toast.remove(), 5000);
+            setTimeout(() => toast.remove(), 4500);
         }
-        
+
         function createToastContainer() {
             const container = document.createElement('div');
             container.id = 'toastContainer';
-            container.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 1050;';
+            container.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 1060;';
             document.body.appendChild(container);
             return container;
         }

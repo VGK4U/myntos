@@ -1,0 +1,1 @@
+{"version":3,"file":"api-adapter.js","sourceRoot":"","sources":["../../src/adapters/api-adapter.ts"],"names":[],"mappings":"AAwBA,MAAM,CAAC,MAAM,mBAAmB,GAAG;IACjC,aAAa,EAAE,uBAAuB;IACtC,SAAS,EAAE,CAAC,SAAiB,EAAE,EAAE,CAAC,mBAAmB,SAAS,YAAY;IAC1E,WAAW,EAAE,CAAC,SAAiB,EAAE,EAAE,CAAC,mBAAmB,SAAS,MAAM;IACtE,UAAU,EAAE,wBAAwB;IACpC,gBAAgB,EAAE,oBAAoB;CAC9B,CAAC"}

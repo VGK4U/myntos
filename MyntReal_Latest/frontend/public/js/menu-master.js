@@ -82,16 +82,12 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
     order: 4,
     items: [
       { menu_code: "MY_CRM_DASHBOARD", label: "CRM Dashboard", route: "/staff/crm/dashboard", audience: ["STAFF"] },
-      { menu_code: "STAFF_LEADS", label: "Staff Leads", route: "/staff/leads", audience: ["STAFF"] },
-      { menu_code: "TEAM_LEADS", label: "Team Leads", route: "/staff/crm/team-leads", audience: ["STAFF"] },
       { menu_code: "MY_LEADS", label: "My Leads", route: "/staff/my-leads", audience: ["STAFF"] },
-      { menu_code: "LEAD_SOURCES", label: "Lead Sources", route: "/staff/crm/lead-sources", audience: ["STAFF"] },
+      { menu_code: "STAFF_LEADS", label: "Staff Leads", route: "/staff/leads", audience: ["STAFF"] },
+      { menu_code: "CRM_SETTINGS", label: "CRM Settings", route: "/staff/crm/settings", audience: ["STAFF"] },
       { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "/staff/dialer", audience: ["STAFF"] },
       { menu_code: "CALL_QUALITY_REVIEW", label: "Call Quality Review", route: "/staff/call-quality", audience: ["STAFF"] },
-      { menu_code: "STAFF_OPERATOR_CALLS", label: "Operator Calls", route: "/staff/operator-calls", audience: ["STAFF"] },
-      { menu_code: "CRM_WA_INBOX", label: "WhatsApp Center", route: "/staff/whatsapp-center", icon: "fab fa-whatsapp", audience: ["STAFF"] },
-      { menu_code: "CRM_WA_BOT_HUB", label: "WhatsApp Bot Hub", route: "/staff/crm/whatsapp-bot", icon: "fab fa-whatsapp", audience: ["STAFF"] },
-      { menu_code: "CRM_SOFTPHONE_DIALER", label: "Calling & Softphone", route: "/staff/softphone-hub", icon: "fas fa-headset", audience: ["STAFF"] }
+      { menu_code: "STAFF_OPERATOR_CALLS", label: "Operator Calls", route: "/staff/operator-calls", audience: ["STAFF"] }
     ]
   },
   {
@@ -260,6 +256,7 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
       { menu_code: "COMMUNITY_SERVICES", label: "Community Services", route: "/staff/accounts/community-services", audience: ["STAFF"] },
       { menu_code: "staff_razorpay_dashboard", label: "Razorpay Executive", route: "/staff/configuration/razorpay", audience: ["STAFF"] },
       { menu_code: "staff_a1top_dashboard", label: "A1Top Executive", route: "/staff/configuration/a1top", audience: ["STAFF"] },
+      { menu_code: "CALL_FLOW_STUDIO", label: "Call Flow Studio", route: "/staff/call-flow-studio", icon: "fas fa-diagram-project", audience: ["STAFF", "VGK4U"] },
       { menu_code: "AI_CALLING", label: "AI Calling", route: "/staff/crm/ai-calling", audience: ["STAFF"] },
       { menu_code: "VGK_SAAS_MENU_ACCESS", label: "Menu Access Control", route: "/rvz/menu-access-config", icon: "fas fa-key", audience: ["STAFF", "VGK4U"] },
       { menu_code: "SOLAR_VENDORS", label: "Solar Vendors", route: "/staff/solar-vendors", icon: "fas fa-solar-panel", audience: ["STAFF"] },
@@ -491,11 +488,11 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
         sub_section_code: "ZY_PROPERTY_WORKINGS",
         sub_section_label: "ZY Property Workings (16.1)",
         items: [
-          { menu_code: "PROPERTY_MARKETPLACE", label: "Property Marketplace", route: "/rvz/real-dreams/marketplace", audience: ["STAFF"] },
-          { menu_code: "PROPERTY_AMENITIES", label: "Property Amenities", route: "/rvz/real-dreams", audience: ["STAFF"] },
-          { menu_code: "PARTNER_PROFILES", label: "Partner Profiles", route: "/rvz/real-dreams/partners", audience: ["STAFF"] },
-          { menu_code: "PROPERTY_HANDLER", label: "Property Handler", route: "/rvz/real-dreams/properties", audience: ["STAFF"] },
-          { menu_code: "REAL_DREAMS_DASHBOARD", label: "Real Dreams Dashboard", route: "/rvz/real-dreams-dashboard", audience: ["STAFF"] }
+          { menu_code: "PROPERTY_MARKETPLACE", label: "Property Marketplace", route: "/staff/mnr/real-dreams/marketplace", audience: ["STAFF"] },
+          { menu_code: "PROPERTY_AMENITIES", label: "Property Amenities", route: "/staff/mnr/real-dreams", audience: ["STAFF"] },
+          { menu_code: "PARTNER_PROFILES", label: "Partner Profiles", route: "/staff/mnr/real-dreams/partners", audience: ["STAFF"] },
+          { menu_code: "PROPERTY_HANDLER", label: "Property Handler", route: "/staff/mnr/real-dreams/properties", audience: ["STAFF"] },
+          { menu_code: "REAL_DREAMS_DASHBOARD", label: "Real Dreams Dashboard", route: "/staff/mnr/real-dreams", audience: ["STAFF"] }
         ]
       },
       {

@@ -1,0 +1,272 @@
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Start with your business call management with MyOperator. Get a virtual or 1800 toll free number, create departments and get started today." />
+    <meta name="google-site-verification" content="v8OLCK3stxpH9xciyxKs7YsDP9LRGsTaGbaY7YFWUfI" />
+
+    <meta name="author" content="MyOperator" />
+<meta name="application-name" content="MyOpearator" />
+<link rel="shortcut icon" id="favicon1" href="/img/icon.png">
+<link href="/favicon.ico?1548925802" type="image/x-icon" rel="icon"/><link href="/favicon.ico?1548925802" type="image/x-icon" rel="shortcut icon"/><link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+<link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+<link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+<link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+<link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+<link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/android-icon-192x192.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+    <title>Login | MyOperator</title>
+
+    <script>
+        siteURL = "/";
+    </script>
+    <link rel="stylesheet" type="text/css" href="/css/open-sans.css?1548925802"/><link rel="stylesheet" type="text/css" href="/js/bootstrap/dist/css/bootstrap.css?1548925802"/><link rel="stylesheet" type="text/css" href="/fonts/font-awesome-4/css/font-awesome.min.css?1548925802"/><link rel="stylesheet" type="text/css" href="/css/style.css?1750088697"/><link rel="stylesheet" type="text/css" href="/css/myop-style.css?1776962479"/><link rel="stylesheet" type="text/css" href="/css/general-style.css?1758195703"/><link rel="stylesheet" type="text/css" href="/css/responsive-style.css?1750088697"/><link rel="stylesheet" type="text/css" href="/css/validationEngine.jquery.css?1548925802"/><link rel="stylesheet" type="text/css" href="/js/jquery.gritter/css/jquery.gritter.css?1548925802"/><link rel="stylesheet" type="text/css" href="/countrycodebuild/css/intlTelInput.css?1569855884"/><link rel="stylesheet" type="text/css" href="/css/country_flag.css?1548925802"/><link rel="stylesheet" type="text/css" href="/css/login.css?1724832441"/><script type="text/javascript" src="/js/jquery.js?1548925802"></script><script type="text/javascript" src="/js/bootstrap/dist/js/bootstrap.min.js?1548925802"></script><script type="text/javascript" src="/js/login.js?1788193416"></script><script type="text/javascript" src="/js/jquery.validationEngine-en.js?1574751256"></script><script type="text/javascript" src="/js/jquery.validationEngine.js?1548925802"></script><script type="text/javascript" src="/js/jquery.gritter/js/jquery.gritter.js?1548925802"></script><script type="text/javascript" src="/countrycodebuild/js/intlTelInput.js?1569502027"></script><script type="text/javascript" src="/js/country_flag.js?1548925802"></script><!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-NH39HXC');</script>
+<!-- End Google Tag Manager -->
+    <!--   Uncomment only for production     -->
+        <!--   Uncomment only for production     -->
+
+    <style>
+        .navbar-fixed-top {
+            display: none;
+        }
+
+        .floating-btn {
+            display: none;
+        }
+    </style>
+
+</head>
+
+<body class="bg-fa">
+    <!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NH39HXC"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->    <div class="full-width pull-left">
+        <a href="#" target="_blank" id="login-highlight-image-container-parent">
+            <div class="login-img" id="login-highlight-image-container">
+            </div>
+        </a>
+        <div class="login-left-container">
+            <div class="login-text-container">
+                <div class="login-text-label">One platform for</div>
+                <div class="login-main-heading">Call & WhatsApp</div>
+                <div class="login-two-images">
+                    <img src="https://cdn.myoperator.com/dashboard/call-whatsapp-icon.png" alt="Call & WhatsApp" />
+                </div>
+            </div>
+        </div>
+        <div class="login-container">
+            <div class="login-wrapper">
+                <div class="full-width pull-left text-center m-b-30">
+                    <img src="https://cdn.myoperator.com/img/logo-1842%E2%80%8A%C3%97%E2%80%8A454.png" style="width: 190px; height:auto;">
+                </div>
+                <div class="full-width pull-left text-center m-b-40">
+                    <div class="login-title active">
+                        Login
+                    </div>
+                </div>
+                <div class="full-width pull-left text-center">
+                                            <script>
+        var recaptcha_site_key = '6LeL8potAAAAAC2BtSQmsTHLTNMZ663ahrx0yDlt';
+    </script>
+    <script src="https://www.google.com/recaptcha/enterprise.js?render=6LeL8potAAAAAC2BtSQmsTHLTNMZ663ahrx0yDlt" async defer></script>
+<script>
+    var is_ios_app = 0;
+</script>
+
+<form id="login_master" class="pull-left" method="post" data-parsley-namespace="data-parsley-" data-parsley-validate novalidate autocomplete="off" action="/users/login" onSubmit="return validate_login_master(this)" style="margin: 0;">
+    <div class="full-width pull-left">
+
+        <div class="full-width pull-left m-b-30">
+            <label class="login-label">Username</label>
+            <div class="pull-left full-width m-t-5">
+                <input id="phone" name="data[User][username]" type="tel" class="login-input">
+                <input name="webmenu" type="hidden" value="">
+            </div>
+        </div>
+
+        <div class="full-width pull-left m-b-30">
+            <label class="login-label">Password</label>
+            <input id="password" type="password" required class="login-input validate[required]" name="data[User][password]" placeholder="xxxxxx">
+        </div>
+
+        <div class="full-width pull-left m-b-30 text-center remember-div">
+            <input type="checkbox" required class="validate[required] logincheck" name="data[User][remember_me]" value="1" id="logincheck">
+            <label for="logincheck" class="login-remember">Remember me</label>
+        </div>
+
+        <input type="hidden" id="grecaptcha_token" value="" name="data[User][grecaptcha_token]">
+        <input type="hidden" id="grecaptcha_token_ts" value="" name="data[User][grecaptcha_token_ts]">
+
+        <div class="full-width pull-left m-b-30">
+            <button type="submit" class="login-button-new" disabled>
+                LOGIN
+            </button>
+        </div>
+        <div class="full-width pull-left text-center">
+            <a href="https://signup.myoperator.com" id="create_account" class="login-forgot pull-left">Create an account? </a>
+            <a href="/forgot-password" class="login-forgot forgot_password pull-right">Forgot password?</a>
+        </div>
+    </div>
+</form>
+
+
+<script type="text/javascript">
+    var countries_shortcodes = JSON.parse('["nz","in","id","it","jp","kr","my","np","nl","at","no","ph","sg","za","lk","se","ae","gb","hu","au","bd","be","br","us","cn","co","hr","cy","cz","dk","ee","fr","de","gl","hk","is"]');
+
+    var loginIntelInpt = null
+    var redirect_url = 'https://myoperator.typeform.com/to/hjmyxSzK';
+    var outgoing_cookie_value = '';
+
+
+    $(document).ready(function(e) {
+
+        var loginTimeOut = outgoing_cookie_value && setTimeout(() => {
+            window.location = redirect_url;
+        }, 5000);
+
+        function stopInactivityRedirecting() {
+            console.log("track activity");
+            clearTimeout(loginTimeOut);
+        }
+        $(document).on('click', () => {
+            if (loginTimeOut) {
+                stopInactivityRedirecting();
+            }
+        });
+
+        if (is_ios_app === 1 || window.ReactNativeWebView) {
+            $('#create_account').hide();
+            $('.logincheck').prop('checked', true);
+            $('.remember-div').hide();
+            $('.forgot_password').removeClass('pull-right');
+        }
+
+        // We are enabling remamber me checkbox for all devices web and androd mobile 
+        $('.logincheck').prop('checked', true);
+
+        $.get("https://in.app.myoperator.com/GetIp/", function(data) {
+            var dt = data;
+            var country = dt.country;
+            if (country == "") {
+                your_country_code = "IN";
+            } else {
+                your_country_code = country.toUpperCase();
+            }
+            $("#e4").select2("val", your_country_code);
+        }, 'json');
+
+        var input = document.querySelector("#phone");
+        loginIntelInpt = window.intlTelInput(input, {
+            initialCountry: "in",
+            onlyCountries: countries_shortcodes,
+            preferredCountries: false,
+            separateDialCode: true,
+            utilsScript: "https://in.app.myoperator.com/countrycodebuild/js/utils.js",
+            customPlaceholder: function(selectedCountryPlaceholder, selectedCountryData) {
+                return "Phone number";
+            },
+            formatOnDisplay: false
+        });
+
+        input.addEventListener("countrychange", function() {
+            $('input[name=webmenu]').val($('div.iti__selected-dial-code').text());
+        });
+
+        $('input[name=webmenu]').val($('div.iti__selected-dial-code').text());
+
+        // Starts disabled in HTML so a login.js failure fails closed; enable it only once page
+        // init has actually run.
+        $('form#login_master button[type="submit"]').prop("disabled", false);
+    });
+
+    function format(state) {
+        if (!state.id)
+            return state.text; // optgroup
+        return "<img style='width: 19px; float: left; margin-top: 6px;' class='flag' src='https://in.app.myoperator.com/img/flags/" + state.id + ".png'/>" + state.text;
+    }
+
+    function format1(state) {
+        if (!state.id)
+            return state.text; // optgroup
+        return state.text;
+    }
+
+    $("#e4").select2({
+        formatResult: format1,
+        formatSelection: format,
+        escapeMarkup: function(m) {
+            return m;
+        }
+    });
+
+    // A bfcache restore would otherwise leave the form disabled with a stale token, and any
+    // watchdog armed before navigating away still counting down toward a spurious toast.
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted) {
+            cancelPendingCaptchaWatchdogs();
+            $('form#login_master button[type="submit"]').prop("disabled", false);
+            $('form#login_master input[id="grecaptcha_token"]').val('');
+            $('form#login_master input[id="grecaptcha_token_ts"]').val('');
+        }
+    });
+</script>                </div>
+            </div>
+        </div>
+    </div>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3694df9fa1c6ec2',t:'MTc4ODY1Mzk5MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"e3b164e84cd64489862e28bc3596f92a","r":1,"spa":2}' crossorigin="anonymous"></script>
+</body>
+
+<script>
+    $(function() {
+
+        function toggleLoginHiglights(cond) {
+
+            let login_highlight_image_url = "https://cdn.myoperator.com/dashboard/myoperator-panel-login-bg.png";
+            if (cond.matches) {
+                login_highlight_image_url = "https://cdn.myoperator.com/dashboard/mobilelogin-dashboardbg.png";
+            }
+            let login_highlight_redirect_url = "https://support.myoperator.co/portal/kb/articles/what-are-follow-ups-how-to-make-best-use-of-it";
+
+            let is_special_login_highlight_shown = localStorage.getItem("is_special_login_highlight_shown");
+            if (is_special_login_highlight_shown == null || is_special_login_highlight_shown == false) {
+                login_highlight_image_url = "https://cdn.myoperator.com/dashboard/myoperator-panel-login-bg.png";
+                if (cond.matches) {
+                    login_highlight_image_url = "https://cdn.myoperator.com/dashboard/mobilelogin-dashboardbg.png";
+                }
+                login_highlight_redirect_url = "javascript:void(0)";
+            }
+
+            $('#login-highlight-image-container').css('background', `url(${login_highlight_image_url}) no-repeat center top / cover`);
+            $('#login-highlight-image-container-parent').attr("href", login_highlight_redirect_url);
+            if (login_highlight_redirect_url == "javascript:void(0)") {
+                $('#login-highlight-image-container-parent').removeAttr('target');
+            }
+
+        }
+
+        var cond = window.matchMedia("(max-width: 1025px)");
+        toggleLoginHiglights(cond);
+        cond.addListener(toggleLoginHiglights);
+
+    });
+</script>
+<script src="/js/fcm-on-logout.js"></script>
+<!-- Firebase Push Notifications -->
+
+	<script type="text/javascript" src="/js/fcm-on-logout.js?1781021307"></script>
+
+</html>

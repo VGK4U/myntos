@@ -16,6 +16,7 @@ import logging
 import requests
 from typing import Optional, Dict, Any
 from datetime import datetime
+from app.core.timezone import get_indian_time
 
 from app.core.config import settings
 from app.models.voip_enums import CallStateEnum, RecordingStatusEnum
@@ -137,7 +138,7 @@ class InAppWebRTCTelephonyProvider(BaseTelephonyProvider):
             "destination_number": dest_e164,
             "operator_info": operator_info,
             "status": CallStateEnum.DIALING,
-            "created_at": datetime.utcnow(),
+            "created_at": get_indian_time(),
             "duration_seconds": 0,
             "recording_status": RecordingStatusEnum.NOT_STARTED
         }
@@ -172,7 +173,7 @@ class InAppWebRTCTelephonyProvider(BaseTelephonyProvider):
     def hangup_call(self, provider_call_id: str) -> bool:
         if provider_call_id in self._active_sessions:
             self._active_sessions[provider_call_id]["status"] = CallStateEnum.ENDED
-            self._active_sessions[provider_call_id]["ended_at"] = datetime.utcnow()
+            self._active_sessions[provider_call_id]["ended_at"] = get_indian_time()
         logger.info(f"[WEBRTC-PROVIDER] Hangup session: {provider_call_id}")
         return True
 

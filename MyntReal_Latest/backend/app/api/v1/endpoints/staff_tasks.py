@@ -271,13 +271,16 @@ async def create_task(
     if not primary_assignee:
         raise HTTPException(status_code=400, detail="Primary assignee not found or inactive")
     
-    for sec_id in task_data.secondary_assignee_ids:
-        sec_assignee = db.query(StaffEmployee).filter(
-            StaffEmployee.id == sec_id,
-            StaffEmployee.status == 'active'
-        ).first()
-        if not sec_assignee:
-            raise HTTPException(status_code=400, detail=f"Secondary assignee {sec_id} not found or inactive")
+    if task_data.secondary_assignee_ids:
+        active_sec_ids = {
+            emp[0] for emp in db.query(StaffEmployee.id).filter(
+                StaffEmployee.id.in_(task_data.secondary_assignee_ids),
+                StaffEmployee.status == 'active'
+            ).all()
+        }
+        for sec_id in task_data.secondary_assignee_ids:
+            if sec_id not in active_sec_ids:
+                raise HTTPException(status_code=400, detail=f"Secondary assignee {sec_id} not found or inactive")
     
     # WVV: Determine assigner (current user by default)
     assigner_id = current_user.id

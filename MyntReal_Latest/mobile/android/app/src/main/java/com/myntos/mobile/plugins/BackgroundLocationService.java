@@ -33,6 +33,7 @@ import com.myntos.mobile.MainActivity;
 import com.myntos.mobile.R;
 
 import java.io.IOException;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
@@ -279,10 +280,11 @@ public class BackgroundLocationService extends Service {
         float speed = location.getSpeed();
         float batteryLevel = getBatteryLevel();
         long timestamp = System.currentTimeMillis();
+        String clientObservationId = UUID.randomUUID().toString();
         
         Log.d(TAG, String.format(
-            "Location update: lat=%.6f, lng=%.6f, acc=%.1fm, battery=%.0f%%",
-            latitude, longitude, accuracy, batteryLevel
+            "Location update: lat=%.6f, lng=%.6f, acc=%.1fm, battery=%.0f%%, id=%s",
+            latitude, longitude, accuracy, batteryLevel, clientObservationId
         ));
         
         Intent updateIntent = new Intent(BackgroundLocationPlugin.ACTION_LOCATION_UPDATE);
@@ -292,11 +294,12 @@ public class BackgroundLocationService extends Service {
         updateIntent.putExtra("speed", speed);
         updateIntent.putExtra("batteryLevel", batteryLevel);
         updateIntent.putExtra("timestamp", timestamp);
+        updateIntent.putExtra("client_observation_id", clientObservationId);
         sendBroadcast(updateIntent);
         
         long timeSinceLastSend = timestamp - lastSentTimestamp;
         if (timeSinceLastSend >= intervalMs - 5000) {
-            sendLocationToBackend(latitude, longitude, accuracy, speed, batteryLevel, timestamp);
+            sendLocationToBackend(latitude, longitude, accuracy, speed, batteryLevel, timestamp, clientObservationId);
             lastSentTimestamp = timestamp;
         }
     }
@@ -308,23 +311,23 @@ public class BackgroundLocationService extends Service {
         if (batteryStatus != null) {
             int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
             int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-            if (level >= 0 && scale > 0) {
-                return (level * 100f) / scale;
+            if (level != -1 && scale != -1) {
+                return (level / (float) scale) * 100.0f;
             }
         }
-        return 100f;
+        return 100.0f;
     }
     
     private void sendLocationToBackend(double lat, double lng, float accuracy, 
-                                        float speed, float batteryLevel, long timestamp) {
+                                        float speed, float batteryLevel, long timestamp, String clientObservationId) {
         if (apiUrl == null || apiUrl.isEmpty() || authToken == null || authToken.isEmpty()) {
             Log.w(TAG, "API URL or auth token not configured, skipping backend send");
             return;
         }
         
         String json = String.format(
-            "{\"latitude\": %.8f, \"longitude\": %.8f, \"accuracy\": %.2f, \"speed\": %.2f, \"battery_level\": %.0f, \"timestamp\": %d, \"source\": \"native_background\"}",
-            lat, lng, accuracy, speed, batteryLevel, timestamp
+            "{\"latitude\": %.8f, \"longitude\": %.8f, \"accuracy\": %.2f, \"speed\": %.2f, \"battery_level\": %.0f, \"timestamp\": %d, \"source\": \"native_background\", \"client_observation_id\": \"%s\"}",
+            lat, lng, accuracy, speed, batteryLevel, timestamp, clientObservationId
         );
         
         RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));

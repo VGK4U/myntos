@@ -338,16 +338,10 @@ class CallFlowSimulator:
                 schedule = bh_record.schedule_data
 
         if not schedule:
-            # Default standard hours: Mon-Fri 09:30 - 18:30
-            if weekday_key in ('mon', 'tue', 'wed', 'thu', 'fri'):
-                if "09:30" <= current_time_str <= "18:30":
-                    return True, "Standard Mon-Fri working hours (09:30-18:30)"
-                return False, "After hours (outside 09:30-18:30)"
-            elif weekday_key == 'sat':
-                if "10:00" <= current_time_str <= "16:00":
-                    return True, "Saturday working hours (10:00-16:00)"
-                return False, "After hours on Saturday"
-            return False, "Closed on Sunday"
+            # Default standard MyntOS calling hours: 09:00 - 20:00 Monday to Sunday
+            if "09:00" <= current_time_str <= "20:00":
+                return True, "Standard Calling Window (09:00-20:00 IST)"
+            return False, "After hours (outside 09:00-20:00 IST)"
 
         day_sched = schedule.get(weekday_key) or schedule.get(f"{weekday_key}_hours")
         if not day_sched or day_sched == 'closed' or day_sched.get('enabled') is False:

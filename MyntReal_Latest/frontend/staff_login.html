@@ -343,7 +343,7 @@
             <div class="login-body">
                 <div id="alertContainer"></div>
                 
-                <form id="loginForm">
+                <form id="loginForm" onsubmit="handleLogin(event); return false;">
                     <div class="form-group">
                         <label>Employee ID / Mobile Number</label>
                         <div class="input-group">
@@ -366,7 +366,7 @@
                         </div>
                     </div>
                     
-                    <button type="submit" class="btn-login" id="loginBtn">
+                    <button type="button" class="btn-login" id="loginBtn" onclick="handleLogin(event)">
                         <i class="fas fa-sign-in-alt me-2"></i>Login
                     </button>
                     <div style="text-align:center;margin-top:12px">
@@ -558,13 +558,7 @@
         }
         
         document.addEventListener('DOMContentLoaded', async function() {
-            // 1. Immediately bind form submission listener synchronously
-            const loginForm = document.getElementById('loginForm');
-            if (loginForm) {
-                loginForm.addEventListener('submit', handleLogin);
-            }
-
-            // 2. Handle explicit logout
+            // 1. Handle explicit logout
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('logout') === 'true') {
                 localStorage.removeItem('staff_token');
@@ -624,8 +618,11 @@
             }
         }
         
+        let isLoggingIn = false;
         async function handleLogin(e) {
-            e.preventDefault();
+            if (e && e.preventDefault) e.preventDefault();
+            if (isLoggingIn) return;
+            isLoggingIn = true;
             
             const employeeId = document.getElementById('employeeId').value.toUpperCase().trim();
             const password = document.getElementById('password').value;
@@ -636,18 +633,34 @@
             loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Logging in...';
             alertContainer.innerHTML = '';
             
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 45000);
+            
             try {
                 const response = await fetch('/api/v1/staff/auth/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ employee_id: employeeId, password })
+                    body: JSON.stringify({ employee_id: employeeId, password }),
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
                 
                 const data = await response.json();
                 
                 if (response.ok && data.access_token) {
+                    // Handle pending NDA / agreement gate before granting full session access
+                    if (data.nda_required && data.nda_data) {
+                        pendingNdaData = data.nda_data;
+                        pendingToken = data.access_token;
+                        pendingEmployee = data.employee;
+                        showNdaModal(data.nda_data, data.employee || {});
+                        loginBtn.disabled = false;
+                        loginBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Login';
+                        return;
+                    }
+
                     // Commit session immediately upon valid authentication
                     try {
                         localStorage.setItem('staff_token', data.access_token);
@@ -700,6 +713,7 @@
                     </div>
                 `;
                 
+                isLoggingIn = false;
                 loginBtn.disabled = false;
                 loginBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Login';
             }

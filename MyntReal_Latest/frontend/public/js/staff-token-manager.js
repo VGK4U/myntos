@@ -15,10 +15,11 @@
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
         const loadSoftphone = () => {
             const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
-            if (token && !window.PlivoSoftphoneLoaded) {
+            if (token && !window.PlivoSoftphone && !window.PlivoSoftphoneLoaded && !document.getElementById('plivoSoftphoneScript')) {
                 window.PlivoSoftphoneLoaded = true;
                 const script = document.createElement('script');
-                script.src = '/public/js/plivo-softphone.js?v=' + Date.now();
+                script.id = 'plivoSoftphoneScript';
+                script.src = '/public/js/plivo-softphone.js?v=2.0';
                 script.async = true;
                 document.head.appendChild(script);
             }

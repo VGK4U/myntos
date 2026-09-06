@@ -109,7 +109,7 @@ class VoIPCallService:
 
         # 4. Concurrency & Double-Dial Protection
         # Check if this operator already has an active ongoing call to prevent rapid double-clicks
-        active_cutoff = datetime.utcnow()
+        active_cutoff = get_indian_time()
         active_session = db.query(VoIPCallSession).filter(
             VoIPCallSession.operator_user_ref == operator_user_ref,
             VoIPCallSession.destination_number == dest_e164,
@@ -272,7 +272,8 @@ class VoIPCallService:
         db: Session,
         current_user: Any,
         call_session_id: str,
-        reason: Optional[str] = None
+        reason: Optional[str] = None,
+        duration_seconds: Optional[int] = None
     ) -> VoIPCallSession:
         """
         Request immediate call termination from client.
@@ -285,8 +286,9 @@ class VoIPCallService:
             raise HTTPException(status_code=404, detail=f"Call session '{call_session_id}' not found")
 
         # Tenant isolation
-        user_company_id = getattr(current_user, 'company_id', 1) or 1
-        if session.company_id != user_company_id:
+        user_company_id = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', None) or 1
+        is_supreme = getattr(current_user, 'is_supreme', False)
+        if not is_supreme and session.company_id and session.company_id != user_company_id:
             raise HTTPException(status_code=403, detail="Unauthorized access to this call session")
 
         # If already terminal, return directly (idempotent)
@@ -302,10 +304,18 @@ class VoIPCallService:
         session.ended_at = get_indian_time()
         session.termination_reason = reason or "operator_requested_hangup"
 
-        if session.answered_at and session.ended_at:
+        if duration_seconds is not None and duration_seconds > 0:
+            session.duration_seconds = duration_seconds
+        elif session.answered_at and session.ended_at:
             session.duration_seconds = max(0, int((session.ended_at - session.answered_at).total_seconds()))
         elif session.started_at and session.ended_at:
             session.duration_seconds = max(0, int((session.ended_at - session.started_at).total_seconds()))
+
+        # Mark recording endpoint for connected calls
+        if (session.duration_seconds or 0) > 0 and not session.recording_storage_key:
+            session.recording_storage_key = f"/api/v1/telephony/calls/{session.call_session_id}/recording"
+            session.recording_status = "AVAILABLE"
+            session.recording_duration_seconds = session.duration_seconds
 
         # Update OperatorCall
         if session.operator_call_id:
@@ -314,6 +324,41 @@ class VoIPCallService:
                 op_call.status = 'ended'
                 op_call.ended_at = session.ended_at
                 op_call.duration_seconds = session.duration_seconds
+
+        # DC_SOFTPHONE_SYNC: Sync duration and terminal call_type to StaffCallLog
+        if session.operator_id:
+            try:
+                from app.models.call_tracking import StaffCallLog
+                existing_log = db.query(StaffCallLog).filter(
+                    StaffCallLog.device_call_id == session.call_session_id
+                ).first()
+                call_dt = session.answered_at or session.started_at or session.created_at or get_indian_time()
+                call_type_val = 'OUTGOING' if (session.duration_seconds or 0) > 0 else 'MISSED'
+                has_rec = bool(session.recording_storage_key) or ((session.duration_seconds or 0) > 0)
+                if existing_log:
+                    existing_log.duration_seconds = session.duration_seconds or 0
+                    existing_log.call_type = call_type_val
+                    existing_log.has_recording = has_rec
+                else:
+                    db.add(StaffCallLog(
+                        company_id=session.company_id or 1,
+                        staff_id=session.operator_id,
+                        phone_number=session.destination_number or session.customer_phone or '',
+                        contact_name=session.operator_name or '',
+                        call_type=call_type_val,
+                        call_datetime=call_dt,
+                        call_date=call_dt.strftime('%Y-%m-%d'),
+                        duration_seconds=session.duration_seconds or 0,
+                        source='softphone',
+                        device_call_id=session.call_session_id,
+                        matched_lead_id=session.lead_id,
+                        matched_at=get_indian_time() if session.lead_id else None,
+                        has_recording=has_rec,
+                        synced_at=get_indian_time(),
+                        created_at=get_indian_time()
+                    ))
+            except Exception as e:
+                logger.warning(f"[VOIP-CALL-ENDED-SYNC] StaffCallLog sync error: {e}")
 
         db.commit()
         db.refresh(session)
@@ -532,8 +577,9 @@ class VoIPCallService:
             raise HTTPException(status_code=404, detail="Call session not found")
 
         # Tenant isolation
-        user_company_id = getattr(current_user, 'company_id', 1) or 1
-        if session.company_id != user_company_id:
+        user_company_id = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', None) or 1
+        is_supreme = getattr(current_user, 'is_supreme', False)
+        if not is_supreme and session.company_id and session.company_id != user_company_id:
             raise HTTPException(status_code=403, detail="Unauthorized access to this call recording")
 
         if session.recording_status != RecordingStatusEnum.AVAILABLE.value or not session.recording_storage_key:

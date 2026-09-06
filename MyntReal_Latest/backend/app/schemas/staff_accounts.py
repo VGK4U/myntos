@@ -1767,6 +1767,12 @@ class IncomeEntryBase(BaseModel):
     
     narration: Optional[str] = Field(None, description="Transaction narration")
     show_in_ledger: Optional[bool] = Field(False, description="DC-SHOW-IN-LEDGER-001: if true, this entry posts to the transaction ledger")
+    is_external: Optional[bool] = Field(False, description="DC-EXTERNAL-001: if true, marks external party transaction")
+    
+    # Service ticket breakdown fields
+    spares_amount: Optional[Decimal] = Field(Decimal('0'), description="Spares fee component")
+    service_amount: Optional[Decimal] = Field(Decimal('0'), description="Service/Labour fee component")
+    ticket_total_amount: Optional[Decimal] = Field(None, description="Overall ticket total amount")
     
     model_config = {"extra": "forbid"}
     
@@ -1815,6 +1821,12 @@ class IncomeEntryUpdate(BaseModel):
     
     narration: Optional[str] = None
     show_in_ledger: Optional[bool] = None
+    is_external: Optional[bool] = None
+
+    # Service ticket breakdown fields
+    spares_amount: Optional[Decimal] = None
+    service_amount: Optional[Decimal] = None
+    ticket_total_amount: Optional[Decimal] = None
 
     destination_type: Optional[str] = Field(None, max_length=20, description="COMPANY_ACCOUNT or EMPLOYEE")
     destination_company_id: Optional[int] = None
@@ -1861,6 +1873,7 @@ class IncomeEntryStatusUpdate(BaseModel):
     destination_type: Optional[str] = Field(None, description="COMPANY_ACCOUNT, EMPLOYEE or SOLAR_VENDOR")
     destination_company_id: Optional[int] = Field(None, description="destination_company_id when COMPANY_ACCOUNT")
     destination_employee_id: Optional[int] = Field(None, description="destination_employee_id when EMPLOYEE")
+    amount: Optional[Decimal] = Field(None, ge=0, description="Modified transaction amount upon confirmation (addition only)")
 
     model_config = {"extra": "ignore"}
 
@@ -1933,6 +1946,12 @@ class IncomeEntryResponse(BaseModel):
     
     ledger_updated: bool = False
     show_in_ledger: bool = False
+    is_external: bool = False
+    
+    # Service ticket breakdown fields
+    spares_amount: Optional[Decimal] = Decimal('0')
+    service_amount: Optional[Decimal] = Decimal('0')
+    ticket_total_amount: Optional[Decimal] = None
     
     created_by_id: Optional[int] = None
     updated_by_id: Optional[int] = None
@@ -2940,6 +2959,7 @@ class ExpenseEntryCreate(BaseModel):
     tds_amount: Decimal = Decimal('0')
 
     show_in_ledger: Optional[bool] = Field(False, description="DC-SHOW-IN-LEDGER-001: if true, this entry posts to the transaction ledger")
+    is_external: Optional[bool] = Field(False, description="DC-EXTERNAL-001: if true, marks external party transaction")
 
     @field_validator('amount')
     @classmethod
@@ -2977,6 +2997,7 @@ class ExpenseEntryUpdate(BaseModel):
     tds_amount: Optional[Decimal] = None
 
     show_in_ledger: Optional[bool] = None
+    is_external: Optional[bool] = None
 
 
 class ExpenseEntrySubmit(BaseModel):
@@ -2988,6 +3009,8 @@ class ExpenseEntryApprove(BaseModel):
     """Schema for approving/rejecting an expense entry"""
     action: str = Field(..., pattern='^(APPROVE|REJECT|RETURN)$')
     remarks: Optional[str] = Field(None, max_length=500)
+    company_id: Optional[int] = Field(None, description="Override company ID (MR10001 / MR10025 only)")
+    amount: Optional[Decimal] = Field(None, ge=0, description="Override amount (MR10001 / MR10025 only)")
 
 
 class ExpenseEntryMarkPaid(BaseModel):
@@ -3066,6 +3089,7 @@ class ExpenseEntryResponse(BaseModel):
 
     ledger_updated: bool = False
     show_in_ledger: bool = False
+    is_external: bool = False
 
     created_by_id: Optional[int] = None
     created_by_name: Optional[str] = None

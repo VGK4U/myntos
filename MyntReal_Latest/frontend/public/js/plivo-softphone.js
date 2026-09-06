@@ -11,6 +11,12 @@
 
     if (typeof window === 'undefined') return;
 
+    // Guaranteed Singleton: Prevent duplicate script instances and redundant Plivo client connections
+    if (window.PlivoSoftphone) {
+        console.log('[PLIVO-SOFTPHONE] Reusing existing singleton instance on window.');
+        return;
+    }
+
     class MyntOSPlivoSoftphone {
         constructor() {
             this.client = null;
@@ -19,6 +25,13 @@
             this.isInitialized = false;
             this.isRegistered = false;
             this.agentStatus = 'available'; // available | busy | break | offline
+
+            // Registration State Machine
+            this.registrationState = 'UNINITIALIZED'; // 'UNINITIALIZED' | 'CONNECTING' | 'REGISTERED' | 'REGISTRATION_FAILED'
+            this.registrationPromise = null;
+            this.registrationResolve = null;
+            this.registrationReject = null;
+            this.loginAttemptInProgress = false;
 
             // Active Call State
             this.activeCall = null;
@@ -32,10 +45,16 @@
             // Incoming Call State
             this.incomingCallObj = null;
 
-            this.init();
+            if (document.readyState === 'loading' || !document.body) {
+                document.addEventListener('DOMContentLoaded', () => this.init());
+            } else {
+                this.init();
+            }
         }
 
         async init() {
+            if (this.isInitialized) return;
+            this.isInitialized = true;
             console.log('[PLIVO-SOFTPHONE] Initializing MyntOS Browser Softphone...');
             this.injectUIElements();
             this.ensureRemoteAudioElement();
@@ -44,24 +63,32 @@
         }
 
         ensureRemoteAudioElement() {
-            if (!document.getElementById('plivoRemoteAudio')) {
-                const audioEl = document.createElement('audio');
+            if (!document.body) return;
+            let audioEl = document.getElementById('plivoRemoteAudio');
+            if (!audioEl) {
+                audioEl = document.createElement('audio');
                 audioEl.id = 'plivoRemoteAudio';
                 audioEl.autoplay = true;
+                audioEl.volume = 1.0;
+                audioEl.muted = false;
                 audioEl.setAttribute('playsinline', 'true');
                 audioEl.style.display = 'none';
                 document.body.appendChild(audioEl);
+            } else {
+                audioEl.volume = 1.0;
+                audioEl.muted = false;
             }
         }
 
         async prewarmMicrophone() {
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && !this.localAudioStream) {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({
                         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
                     });
-                    this.localAudioStream = stream;
-                    console.log('[PLIVO-SOFTPHONE] Microphone pre-warmed and audio tracks ready');
+                    // Verify tracks and stop test stream so Plivo SDK has exclusive, conflict-free mic access
+                    stream.getTracks().forEach(t => t.stop());
+                    console.log('[PLIVO-SOFTPHONE] Microphone verified and hardware AEC ready');
                 } catch (micErr) {
                     console.warn('[PLIVO-SOFTPHONE] Mic pre-warm notice:', micErr);
                 }
@@ -92,14 +119,39 @@
 
         async setupPlivoClient() {
             try {
+                // Plivo WebRTC SDK requires HTTPS / secure context or localhost.
+                // On insecure LAN HTTP (e.g. http://192.168.1.10:5001), navigator.mediaDevices may be restricted by modern mobile browsers.
+                const isSecureOrLocal = window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                const hasMedia = typeof navigator !== 'undefined' && navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function';
+
+                if (!isSecureOrLocal && !hasMedia) {
+                    console.warn('[PLIVO-SOFTPHONE] Insecure HTTP context detected; Plivo WebRTC requires HTTPS or localhost. Direct SIM & MyOperator calling remain active.');
+                    this.setupMockClient();
+                    return;
+                }
+
+                const audioConstraints = {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    channelCount: 1,
+                    sampleRate: 48000
+                };
+
                 if (typeof window.Plivo !== 'undefined') {
                     if (typeof window.Plivo === 'function') {
                         this.sdk = new window.Plivo({
-                            allowMultipleIncomingCalls: true
+                            allowMultipleIncomingCalls: true,
+                            audioConstraints: audioConstraints,
+                            audioElementOption: {
+                                remoteAudioId: 'plivoRemoteAudio'
+                            }
                         });
                         this.client = this.sdk.client || this.sdk;
                     } else if (window.Plivo.Client) {
-                        this.client = new window.Plivo.Client();
+                        this.client = new window.Plivo.Client({
+                            audioConstraints: audioConstraints
+                        });
                     }
                     this.bindClientEvents();
                 } else {
@@ -107,7 +159,8 @@
                 }
                 await this.refreshAndLogin();
             } catch (err) {
-                console.error('[PLIVO-SOFTPHONE] Error during client setup:', err);
+                console.warn('[PLIVO-SOFTPHONE] WebRTC client setup skipped (insecure context or unsupported environment):', err);
+                this.setupMockClient();
             }
         }
 
@@ -147,11 +200,7 @@
             this.client.on('onLogin', (data) => this.onLoginSuccess(data));
             this.client.on('onLogout', () => this.onLogoutSuccess());
             this.client.on('onLoginFailed', (reason) => {
-                console.warn('[PLIVO-SOFTPHONE] WebRTC registration failed:', reason);
-                this.isRegistered = false;
-                this.updateUIStatus('offline', 'Connecting...');
-                // Auto-retry token refresh & login after delay
-                setTimeout(() => this.refreshAndLogin(), 5000);
+                this.onLoginFailed(reason);
             });
             this.client.on('onIncomingCall', (callerName, extraHeaders, callInfo) => {
                 this.handleIncomingCall(callerName, extraHeaders, callInfo);
@@ -161,6 +210,10 @@
             });
             this.client.on('onCallAnswered', (callInfo) => {
                 this.onCallConnected(callInfo);
+            });
+            this.client.on('onMediaConnected', (callInfo) => {
+                console.log('[PLIVO-SOFTPHONE] Media stream established / active');
+                this.onMediaConnected(callInfo);
             });
             this.client.on('onCallTerminated', () => {
                 this.onCallTerminated();
@@ -172,11 +225,33 @@
         }
 
         async refreshAndLogin() {
+            if (this.isRegistered && this.registrationState === 'REGISTERED') {
+                return true;
+            }
+
+            if (this.loginAttemptInProgress && this.registrationPromise) {
+                console.log('[PLIVO-SOFTPHONE] Registration already in progress. Awaiting existing promise...');
+                return this.registrationPromise;
+            }
+
+            this.loginAttemptInProgress = true;
+            this.registrationState = 'CONNECTING';
+            this.updateUIStatus('connecting', 'Connecting...');
+
+            this.registrationPromise = new Promise((resolve, reject) => {
+                this.registrationResolve = resolve;
+                this.registrationReject = reject;
+            });
+
             try {
                 const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
                 if (!token) {
                     console.warn('[PLIVO-SOFTPHONE] No staff auth token available. Deferring login.');
-                    return;
+                    this.registrationState = 'UNINITIALIZED';
+                    this.loginAttemptInProgress = false;
+                    if (this.registrationReject) this.registrationReject(new Error('No auth token'));
+                    this.registrationPromise = null;
+                    return false;
                 }
 
                 // Fetch short-lived JWT from backend
@@ -186,7 +261,11 @@
 
                 if (!resp.ok) {
                     console.warn('[PLIVO-SOFTPHONE] Could not acquire Plivo JWT token:', resp.status);
-                    return;
+                    this.registrationState = 'REGISTRATION_FAILED';
+                    this.loginAttemptInProgress = false;
+                    if (this.registrationReject) this.registrationReject(new Error(`HTTP ${resp.status}`));
+                    this.registrationPromise = null;
+                    return false;
                 }
 
                 const data = await resp.json();
@@ -203,24 +282,96 @@
                             this.client.login(this.jwtToken);
                         }
                     }
+                } else {
+                    this.registrationState = 'REGISTRATION_FAILED';
+                    this.loginAttemptInProgress = false;
+                    if (this.registrationReject) this.registrationReject(new Error('Invalid token response'));
+                    this.registrationPromise = null;
+                    return false;
                 }
             } catch (err) {
                 console.error('[PLIVO-SOFTPHONE] Error acquiring browser token:', err);
+                this.registrationState = 'REGISTRATION_FAILED';
+                this.loginAttemptInProgress = false;
+                if (this.registrationReject) this.registrationReject(err);
+                this.registrationPromise = null;
+                return false;
             }
+
+            return this.registrationPromise;
         }
 
         onLoginSuccess(data) {
             this.isRegistered = true;
             this.isInitialized = true;
+            this.registrationState = 'REGISTERED';
+            this.loginAttemptInProgress = false;
             console.log('[PLIVO-SOFTPHONE] Successfully registered with Plivo WebRTC gateway:', data);
             this.updateUIStatus('available', 'Online');
             this.notifyBackendRegistration(true);
+            if (this.registrationResolve) {
+                this.registrationResolve(true);
+                this.registrationResolve = null;
+                this.registrationReject = null;
+            }
+            this.registrationPromise = null;
+        }
+
+        onLoginFailed(reason) {
+            console.warn('[PLIVO-SOFTPHONE] WebRTC registration failed:', reason);
+            this.isRegistered = false;
+            this.registrationState = 'REGISTRATION_FAILED';
+            this.loginAttemptInProgress = false;
+            this.updateUIStatus('offline', 'Offline');
+            if (this.registrationReject) {
+                this.registrationReject(new Error(typeof reason === 'string' ? reason : JSON.stringify(reason || 'Login failed')));
+                this.registrationResolve = null;
+                this.registrationReject = null;
+            }
+            this.registrationPromise = null;
+            // Controlled auto-retry after delay if not active in call
+            if (!this.isCallActive) {
+                setTimeout(() => {
+                    if (!this.isRegistered && this.registrationState !== 'CONNECTING') {
+                        this.refreshAndLogin().catch(() => {});
+                    }
+                }, 5000);
+            }
         }
 
         onLogoutSuccess() {
             this.isRegistered = false;
+            this.registrationState = 'UNINITIALIZED';
+            this.loginAttemptInProgress = false;
             this.updateUIStatus('offline', 'Offline');
             this.notifyBackendRegistration(false);
+        }
+
+        async ensureRegistered(timeoutMs = 12000) {
+            if (this.isRegistered && this.registrationState === 'REGISTERED') {
+                return true;
+            }
+
+            let promiseToAwait = this.registrationPromise;
+            if (!promiseToAwait && !this.loginAttemptInProgress) {
+                promiseToAwait = this.refreshAndLogin();
+            }
+
+            if (!promiseToAwait) {
+                return this.isRegistered && this.registrationState === 'REGISTERED';
+            }
+
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Registration timed out')), timeoutMs)
+            );
+
+            try {
+                await Promise.race([promiseToAwait, timeoutPromise]);
+                return this.isRegistered && this.registrationState === 'REGISTERED';
+            } catch (err) {
+                console.warn('[PLIVO-SOFTPHONE] ensureRegistered notice:', err.message || err);
+                return this.isRegistered && this.registrationState === 'REGISTERED';
+            }
         }
 
         async notifyBackendRegistration(isRegistered) {
@@ -245,16 +396,47 @@
         }
 
         openDialpadAndCall(number, leadName = null, leadId = null) {
-            return this.dial(number, leadId, leadName);
+            return this.openCallDialer({ phoneNumber: number, name: leadName, entityId: leadId, autoStart: true });
         }
 
         openDialpad(phoneNumber = '', contactName = '', leadId = null) {
+            return this.openCallDialer({ phoneNumber, name: contactName, entityId: leadId, autoStart: false });
+        }
+
+        openCallDialer(intent) {
+            if (!intent) return;
+            const phone = (typeof intent === 'string' ? intent : (intent.phoneNumber || intent.phone || '')).trim();
+            const name = (typeof intent === 'object' ? (intent.name || intent.contactName || '') : '') || 'Contact Lead';
+            const entityId = typeof intent === 'object' ? (intent.entityId || intent.leadId || null) : null;
+            const autoStart = typeof intent === 'object' ? !!intent.autoStart : false;
+
+            this.activeDestination = phone;
+            this.activeLeadName = name;
+            this.activeLeadId = entityId;
+
             this.openSoftphoneDock();
             this.switchTab('keypad');
+
             const input = document.getElementById('softphoneDisplayInput');
-            if (input && phoneNumber) {
-                input.value = phoneNumber.replace(/\D/g, '').slice(-10);
+            if (input) {
+                input.value = phone ? phone.replace(/\D/g, '').slice(-10) : '';
                 this.onKeypadInputChange(input.value);
+            }
+
+            const headerNameEl = document.getElementById('softphoneHeaderLeadName');
+            if (headerNameEl) {
+                if (name && name !== 'Contact Lead') {
+                    headerNameEl.textContent = `👤 ${name}`;
+                    headerNameEl.style.display = 'block';
+                } else {
+                    headerNameEl.style.display = 'none';
+                }
+            }
+
+            if (autoStart && phone) {
+                setTimeout(() => {
+                    this.dial(phone, entityId, name);
+                }, 150);
             }
         }
 
@@ -282,73 +464,110 @@
             }
         }
 
+        closeCallMethodModal() {
+            const modal = document.getElementById('myntosCallMethodModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
         showCallMethodModal(destinationPhone, leadId = null, leadName = null) {
             let modal = document.getElementById('myntosCallMethodModal');
             if (!modal) {
                 modal = document.createElement('div');
                 modal.id = 'myntosCallMethodModal';
-                modal.style.cssText = `
-                    position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7);
-                    backdrop-filter: blur(4px); z-index: 99999; display: flex;
-                    align-items: center; justify-content: center; padding: 20px;
-                `;
+                document.body.appendChild(modal);
+
+                // Close on Escape key
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        const m = document.getElementById('myntosCallMethodModal');
+                        if (m && m.style.display !== 'none') {
+                            this.closeCallMethodModal();
+                        }
+                    }
+                });
+            }
+
+            // Always ensure the modal is a top-level child of body
+            if (modal.parentElement !== document.body) {
                 document.body.appendChild(modal);
             }
 
-            const displayName = leadName || 'Customer Lead';
+            modal.style.cssText = `
+                position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+                width: 100vw !important; height: 100vh !important; z-index: 2147483647 !important;
+                display: flex !important; align-items: center !important; justify-content: center !important;
+                padding: 16px !important; box-sizing: border-box !important; pointer-events: auto !important;
+                isolation: isolate !important; filter: none !important; -webkit-filter: none !important;
+                backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+                background: transparent !important;
+            `;
+
+            const displayName = String(leadName || 'Customer Lead').replace(/["'<>]/g, '').trim() || 'Customer Lead';
+            const cleanPhoneDisplay = destinationPhone || '—';
+
             modal.innerHTML = `
-                <div style="background: #ffffff; width: 100%; max-width: 440px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                <!-- 1. Dedicated Backdrop: Blur & Darken strictly behind dialog -->
+                <div id="myntosCallMethodModalBackdrop" style="position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; background: rgba(15, 23, 42, 0.75) !important; backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important; z-index: 1 !important; pointer-events: auto !important;" onclick="window.PlivoSoftphone.closeCallMethodModal()"></div>
+
+                <!-- 2. Foreground Modal Dialog Box (100% Opaque, Crisp, High-Contrast, Isolated Compositing Layer) -->
+                <div id="myntosCallMethodDialog" class="myntos-call-method-dialog" style="position: relative !important; z-index: 10 !important; width: 100% !important; max-width: 480px !important; background: #ffffff !important; background-color: #ffffff !important; border-radius: 20px !important; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.5), 0 0 0 1px rgba(226, 232, 240, 0.9) !important; overflow: hidden !important; pointer-events: auto !important; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important; -webkit-font-smoothing: antialiased !important; -moz-osx-font-smoothing: grayscale !important; text-rendering: optimizeLegibility !important; transform: translate3d(0, 0, 0) !important; -webkit-transform: translate3d(0, 0, 0) !important; will-change: transform, opacity !important; filter: none !important; -webkit-filter: none !important; opacity: 1 !important; isolation: isolate !important;">
+                    
                     <!-- Header -->
-                    <div style="background: linear-gradient(135deg, #2563eb, #1d4ed8); padding: 20px 24px; color: white; display: flex; align-items: center; justify-content: space-between;">
-                        <div>
-                            <div style="font-size: 18px; font-weight: 700; letter-spacing: -0.01em;">Choose Calling Method</div>
-                            <div style="font-size: 13px; opacity: 0.9; margin-top: 2px;">Lead: <strong>${displayName}</strong> (${destinationPhone})</div>
+                    <div style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%) !important; padding: 18px 22px !important; color: #ffffff !important; display: flex !important; align-items: center !important; justify-content: space-between !important; border-bottom: 1px solid rgba(255,255,255,0.15) !important;">
+                        <div style="min-width: 0 !important; flex: 1 !important;">
+                            <div style="font-size: 18px !important; font-weight: 700 !important; letter-spacing: -0.01em !important; color: #ffffff !important; line-height: 1.25 !important;">Choose Calling Method</div>
+                            <div style="font-size: 13px !important; color: #e0e7ff !important; margin-top: 3px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
+                                Lead: <strong style="color: #ffffff !important; font-weight: 700 !important;">${displayName}</strong> <span style="opacity: 0.85 !important;">(${cleanPhoneDisplay})</span>
+                            </div>
                         </div>
-                        <button onclick="document.getElementById('myntosCallMethodModal').style.display='none'" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;">✕</button>
+                        <button onclick="window.PlivoSoftphone.closeCallMethodModal()" style="background: rgba(255,255,255,0.18) !important; border: 1px solid rgba(255,255,255,0.25) !important; color: #ffffff !important; width: 32px !important; height: 32px !important; border-radius: 50% !important; cursor: pointer !important; font-size: 14px !important; display: flex !important; align-items: center !important; justify-content: center !important; flex-shrink: 0 !important; margin-left: 12px !important; transition: all 0.15s ease !important;" onmouseover="this.style.background='rgba(255,255,255,0.3)'; this.style.transform='scale(1.05)';" onmouseout="this.style.background='rgba(255,255,255,0.18)'; this.style.transform='scale(1)';" title="Close modal (Esc)">✕</button>
                     </div>
 
                     <!-- Body Options -->
-                    <div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 12px;">
+                    <div style="padding: 20px 22px !important; display: flex !important; flex-direction: column !important; gap: 12px !important; background: #ffffff !important; background-color: #ffffff !important;">
+                        
                         <!-- 1. Plivo Cloud Softphone -->
-                        <div onclick="window.PlivoSoftphone.selectCallMethod('plivo', '${destinationPhone}', '${leadId || ''}', '${displayName}')" 
-                             style="border: 2px solid #e2e8f0; border-radius: 14px; padding: 14px 16px; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: all 0.15s ease; background: #f8fafc;"
-                             onmouseover="this.style.borderColor='#2563eb'; this.style.background='#eff6ff';"
-                             onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc';">
-                            <div style="width: 44px; height: 44px; border-radius: 12px; background: #dbeafe; color: #1d4ed8; font-size: 22px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">🎧</div>
-                            <div style="flex-grow: 1;">
-                                <div style="font-weight: 700; font-size: 15px; color: #0f172a;">MyntOS Cloud Softphone</div>
-                                <div style="font-size: 12px; color: #64748b; margin-top: 1px;">Plivo Cloud Trunk (+918031728899) with Call Recording & AI</div>
+                        <div onclick="window.PlivoSoftphone.selectCallMethod('plivo', '${destinationPhone}', '${leadId || ''}', '${displayName.replace(/'/g, "\\'")}')" 
+                             style="border: 2px solid #e2e8f0 !important; border-radius: 14px !important; padding: 14px 16px !important; cursor: pointer !important; display: flex !important; align-items: center !important; gap: 14px !important; transition: all 0.15s ease !important; background: #ffffff !important; background-color: #ffffff !important;"
+                             onmouseover="this.style.borderColor='#2563eb'; this.style.background='#eff6ff'; this.style.transform='translateY(-1px)';"
+                             onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#ffffff'; this.style.transform='none';">
+                            <div style="width: 44px !important; height: 44px !important; border-radius: 12px !important; background: #dbeafe !important; color: #1d4ed8 !important; font-size: 22px !important; display: flex !important; align-items: center !important; justify-content: center !important; flex-shrink: 0 !important; border: 1px solid #bfdbfe !important;">🎧</div>
+                            <div style="flex-grow: 1 !important;">
+                                <div style="font-weight: 700 !important; font-size: 15px !important; color: #0f172a !important; line-height: 1.2 !important;">MyntOS Cloud Softphone</div>
+                                <div style="font-size: 12px !important; color: #475569 !important; margin-top: 2px !important;">Plivo Cloud Trunk (+918031728899) with Call Recording &amp; AI</div>
                             </div>
                         </div>
 
                         <!-- 2. Direct Mobile Calling -->
-                        <div onclick="window.PlivoSoftphone.selectCallMethod('mobile', '${destinationPhone}', '${leadId || ''}', '${displayName}')" 
-                             style="border: 2px solid #e2e8f0; border-radius: 14px; padding: 14px 16px; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: all 0.15s ease; background: #f8fafc;"
-                             onmouseover="this.style.borderColor='#10b981'; this.style.background='#ecfdf5';"
-                             onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc';">
-                            <div style="width: 44px; height: 44px; border-radius: 12px; background: #d1fae5; color: #059669; font-size: 22px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">📱</div>
-                            <div style="flex-grow: 1;">
-                                <div style="font-weight: 700; font-size: 15px; color: #0f172a;">Direct Mobile Calling</div>
-                                <div style="font-size: 12px; color: #64748b; margin-top: 1px;">Open phone app (SIM 1 / SIM 2 / Native Dialer)</div>
+                        <div onclick="window.PlivoSoftphone.selectCallMethod('mobile', '${destinationPhone}', '${leadId || ''}', '${displayName.replace(/'/g, "\\'")}')" 
+                             style="border: 2px solid #e2e8f0 !important; border-radius: 14px !important; padding: 14px 16px !important; cursor: pointer !important; display: flex !important; align-items: center !important; gap: 14px !important; transition: all 0.15s ease !important; background: #ffffff !important; background-color: #ffffff !important;"
+                             onmouseover="this.style.borderColor='#10b981'; this.style.background='#ecfdf5'; this.style.transform='translateY(-1px)';"
+                             onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#ffffff'; this.style.transform='none';">
+                            <div style="width: 44px !important; height: 44px !important; border-radius: 12px !important; background: #d1fae5 !important; color: #059669 !important; font-size: 22px !important; display: flex !important; align-items: center !important; justify-content: center !important; flex-shrink: 0 !important; border: 1px solid #a7f3d0 !important;">📱</div>
+                            <div style="flex-grow: 1 !important;">
+                                <div style="font-weight: 700 !important; font-size: 15px !important; color: #0f172a !important; line-height: 1.2 !important;">Direct Mobile Calling</div>
+                                <div style="font-size: 12px !important; color: #475569 !important; margin-top: 2px !important;">Open phone app (SIM 1 / SIM 2 / Native Dialer)</div>
                             </div>
                         </div>
 
                         <!-- 3. MyOperator Calling -->
-                        <div onclick="window.PlivoSoftphone.selectCallMethod('myoperator', '${destinationPhone}', '${leadId || ''}', '${displayName}')" 
-                             style="border: 2px solid #e2e8f0; border-radius: 14px; padding: 14px 16px; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: all 0.15s ease; background: #f8fafc;"
-                             onmouseover="this.style.borderColor='#8b5cf6'; this.style.background='#f5f3ff';"
-                             onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc';">
-                            <div style="width: 44px; height: 44px; border-radius: 12px; background: #ede9fe; color: #6d28d9; font-size: 22px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">🏢</div>
-                            <div style="flex-grow: 1;">
-                                <div style="font-weight: 700; font-size: 15px; color: #0f172a;">MyOperator Office Trunk</div>
-                                <div style="font-size: 12px; color: #64748b; margin-top: 1px;">Corporate OBD Bridge & Smart IVR Office Routing</div>
+                        <div onclick="window.PlivoSoftphone.selectCallMethod('myoperator', '${destinationPhone}', '${leadId || ''}', '${displayName.replace(/'/g, "\\'")}')" 
+                             style="border: 2px solid #e2e8f0 !important; border-radius: 14px !important; padding: 14px 16px !important; cursor: pointer !important; display: flex !important; align-items: center !important; gap: 14px !important; transition: all 0.15s ease !important; background: #ffffff !important; background-color: #ffffff !important;"
+                             onmouseover="this.style.borderColor='#8b5cf6'; this.style.background='#f5f3ff'; this.style.transform='translateY(-1px)';"
+                             onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#ffffff'; this.style.transform='none';">
+                            <div style="width: 44px !important; height: 44px !important; border-radius: 12px !important; background: #ede9fe !important; color: #6d28d9 !important; font-size: 22px !important; display: flex !important; align-items: center !important; justify-content: center !important; flex-shrink: 0 !important; border: 1px solid #ddd6fe !important;">🏢</div>
+                            <div style="flex-grow: 1 !important;">
+                                <div style="font-weight: 700 !important; font-size: 15px !important; color: #0f172a !important; line-height: 1.2 !important;">MyOperator Office Trunk</div>
+                                <div style="font-size: 12px !important; color: #475569 !important; margin-top: 2px !important;">Corporate OBD Bridge &amp; Smart IVR Office Routing</div>
                             </div>
                         </div>
 
                         <!-- Remember choice -->
-                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px; padding: 0 4px;">
-                            <input type="checkbox" id="chkRememberCallChoice" style="cursor: pointer; width: 16px; height: 16px;">
-                            <label for="chkRememberCallChoice" style="font-size: 13px; color: #64748b; cursor: pointer; user-select: none;">Remember my choice for this session</label>
+                        <div style="display: flex !important; align-items: center !important; gap: 8px !important; margin-top: 4px !important; padding: 4px 2px !important;">
+                            <input type="checkbox" id="chkRememberCallChoice" style="cursor: pointer !important; width: 16px !important; height: 16px !important; accent-color: #2563eb !important;">
+                            <label for="chkRememberCallChoice" style="font-size: 13px !important; font-weight: 500 !important; color: #475569 !important; cursor: pointer !important; user-select: none !important;">Remember my choice for this session</label>
                         </div>
                     </div>
                 </div>
@@ -361,8 +580,7 @@
             if (chk && chk.checked) {
                 sessionStorage.setItem('myntos_preferred_call_method', method);
             }
-            const modal = document.getElementById('myntosCallMethodModal');
-            if (modal) modal.style.display = 'none';
+            this.closeCallMethodModal();
 
             if (method === 'mobile') {
                 this.executeMobileDial(destinationPhone);
@@ -409,14 +627,16 @@
                 return;
             }
 
-            if (!this.isRegistered) {
-                console.log('[PLIVO-SOFTPHONE] Registration not yet confirmed. Refreshing token...');
-                await this.refreshAndLogin();
-            }
-
-            if (!this.isRegistered) {
-                alert('Softphone is currently connecting to the telephony network. Please wait a few seconds and try again.');
-                return;
+            // Await actual WebRTC gateway registration rather than assuming instant sync
+            if (!this.isRegistered || this.registrationState !== 'REGISTERED') {
+                console.log('[PLIVO-SOFTPHONE] Awaiting WebRTC gateway registration before dialing...');
+                this.updateUIStatus('connecting', 'Connecting...');
+                const isReady = await this.ensureRegistered(12000);
+                if (!isReady || !this.isRegistered || !this.client || typeof this.client.call !== 'function') {
+                    alert('Unable to connect to the telephony network. Please check your internet connection or reload the page.');
+                    this.updateUIStatus('offline', 'Offline');
+                    return;
+                }
             }
 
             this.isCallActive = true;
@@ -427,15 +647,12 @@
             this.openSoftphoneDock();
             this.showCallInProgressUI(destinationPhone, leadName || 'Customer Lead');
 
-            // Request microphone access for real-time 2-way WebRTC audio
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    this.localAudioStream = stream;
-                    console.log('[PLIVO-SOFTPHONE] Microphone access granted for 2-way audio stream');
-                } catch (micErr) {
-                    console.warn('[PLIVO-SOFTPHONE] Microphone permission not granted:', micErr);
-                }
+            // Ensure remote audio playback element is ready and at full volume
+            this.ensureRemoteAudioElement();
+            const prewarmAudio = document.getElementById('plivoRemoteAudio');
+            if (prewarmAudio) {
+                prewarmAudio.volume = 1.0;
+                prewarmAudio.muted = false;
             }
 
             try {
@@ -497,11 +714,17 @@
 
             const callerPhone = callerName || callInfo?.src || 'Unknown Caller';
             const leadName = extraHeaders?.['X-PH-Lead-Name'] || 'Incoming Inquiry';
+            const maskedPhone = this.maskPhone(callerPhone);
+
+            this.activeDestination = callerPhone;
+            this.activeLeadName = leadName;
 
             const banner = document.getElementById('plivoIncomingBanner');
             if (banner) {
-                document.getElementById('incomingCallerName').textContent = leadName;
-                document.getElementById('incomingCallerPhone').textContent = callerPhone;
+                const nameEl = document.getElementById('incomingCallerName');
+                const phoneEl = document.getElementById('incomingCallerPhone');
+                if (nameEl) nameEl.textContent = leadName;
+                if (phoneEl) phoneEl.textContent = maskedPhone;
                 banner.style.display = 'block';
                 this.playRingtone();
             }
@@ -515,7 +738,7 @@
                 this.incomingCallObj.answer();
             }
             this.openSoftphoneDock();
-            this.showCallInProgressUI(document.getElementById('incomingCallerPhone').textContent, 'Incoming Customer');
+            this.showCallInProgressUI(this.activeDestination, this.activeLeadName || 'Incoming Customer');
         }
 
         rejectIncomingCall() {
@@ -595,6 +818,23 @@
             }
         }
 
+        onMediaConnected(callInfo) {
+            console.log('[PLIVO-SOFTPHONE] WebRTC media track active');
+            const remoteAudio = document.getElementById('plivoRemoteAudio');
+            if (remoteAudio) {
+                remoteAudio.volume = 1.0;
+                remoteAudio.muted = false;
+                if (typeof remoteAudio.play === 'function') {
+                    remoteAudio.play().catch((err) => {
+                        console.warn('[PLIVO-SOFTPHONE] Remote audio autoplay deferred/warning:', err);
+                    });
+                }
+            }
+            if (!this.isCallActive || !this.callTimerInterval) {
+                this.onCallConnected(callInfo);
+            }
+        }
+
         onCallConnected(callInfo) {
             console.log('[PLIVO-SOFTPHONE] Call connected / active');
             this.isCallActive = true;
@@ -604,10 +844,16 @@
                 statusLabel.className = 'badge bg-success px-2 py-1';
             }
             const remoteAudio = document.getElementById('plivoRemoteAudio');
-            if (remoteAudio && typeof remoteAudio.play === 'function') {
-                remoteAudio.play().catch(() => {});
+            if (remoteAudio) {
+                remoteAudio.volume = 1.0;
+                remoteAudio.muted = false;
+                if (typeof remoteAudio.play === 'function') {
+                    remoteAudio.play().catch(() => {});
+                }
             }
-            this.startCallTimer();
+            if (!this.callTimerInterval) {
+                this.startCallTimer();
+            }
             this.startHeartbeatLoop();
 
             this.syncCallEvent('connected');
@@ -636,6 +882,9 @@
             const mins = String(Math.floor(this.callSeconds / 60)).padStart(2, '0');
             const secs = String(this.callSeconds % 60).padStart(2, '0');
             const finalDuration = `${mins}:${secs}`;
+            const durSecs = this.callSeconds || 0;
+            const sid = this.activeSessionId;
+
             this.stopCallTimer();
 
             const statusLabel = document.getElementById('callStatusLabel');
@@ -647,7 +896,28 @@
             // Auto-submit quick disposition if selected
             this.submitQuickDisposition();
 
-            this.syncCallEvent('ended');
+            // End session and sync terminal call duration to backend
+            if (sid) {
+                const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
+                fetch('/api/v1/telephony/plivo/browser/call/end', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        call_session_id: sid,
+                        duration_seconds: durSecs
+                    })
+                }).catch(() => {});
+
+                fetch('/api/v1/telephony/plivo/browser/call-event', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        call_session_id: sid,
+                        event_type: 'ended',
+                        duration_seconds: durSecs
+                    })
+                }).catch(() => {});
+            }
 
             if (this.localAudioStream) {
                 try {
@@ -666,7 +936,6 @@
                 } catch (_) {}
             }
 
-            const sid = this.activeSessionId;
             this.activeSessionId = null;
             this.activeLeadContext = null;
 
@@ -722,7 +991,10 @@
                 fetch('/api/v1/telephony/plivo/browser/call/end', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ call_session_id: this.activeSessionId })
+                    body: JSON.stringify({ 
+                        call_session_id: this.activeSessionId,
+                        duration_seconds: this.callSeconds || 0
+                    })
                 }).catch(() => {});
             }
             this.onCallTerminated();
@@ -798,7 +1070,7 @@
             }
         }
 
-        async syncCallEvent(eventType) {
+        async syncCallEvent(eventType, extraData = {}) {
             if (!this.activeSessionId) return;
             try {
                 const token = localStorage.getItem('staff_token');
@@ -807,7 +1079,9 @@
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         call_session_id: this.activeSessionId,
-                        event_type: eventType
+                        event_type: eventType,
+                        duration_seconds: this.callSeconds || 0,
+                        ...extraData
                     })
                 });
             } catch (_) {}
@@ -819,11 +1093,14 @@
             this.stopCallTimer();
             this.callSeconds = 0;
             const timerEl = document.getElementById('callTimerDisplay');
+            const pillTimer = document.getElementById('desktopPillTimer');
             this.callTimerInterval = setInterval(() => {
                 this.callSeconds++;
                 const mins = String(Math.floor(this.callSeconds / 60)).padStart(2, '0');
                 const secs = String(this.callSeconds % 60).padStart(2, '0');
-                if (timerEl) timerEl.textContent = `${mins}:${secs}`;
+                const formatted = `${mins}:${secs}`;
+                if (timerEl) timerEl.textContent = formatted;
+                if (pillTimer) pillTimer.textContent = formatted;
             }, 1000);
         }
 
@@ -865,27 +1142,27 @@
         }
 
         injectUIElements() {
-            if (document.getElementById('myntosSoftphoneWidget')) return;
+            if (!document.body || document.getElementById('myntosSoftphoneWidget')) return;
 
             const html = `
                 <!-- Mobile & Desktop Backdrop -->
-                <div id="myntosSoftphoneBackdrop" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(3px); z-index: 99998; transition: opacity 0.2s ease;" onclick="window.PlivoSoftphone.onBackdropClick()"></div>
+                <div id="myntosSoftphoneBackdrop" style="display: none; position: fixed; inset: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 2147483646; transition: opacity 0.2s ease;" onclick="window.PlivoSoftphone.onBackdropClick()"></div>
 
-                <!-- Global Softphone Floating Dock & Overlay (Floating toggle button removed; dedicated page available) -->
-                <div id="myntosSoftphoneWidget" style="position: fixed; bottom: 84px; right: 24px; z-index: 99999; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; pointer-events: none;">
+                <!-- Global Softphone Centered Modal -->
+                <div id="myntosSoftphoneWidget" style="position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 2147483647; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; pointer-events: none; display: none; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; isolation: isolate;">
 
-                    <!-- Expanded Mobile Softphone Modal Card (shown only when dialing programmatically) -->
-                    <div id="plivoSoftphoneDockCard" class="card shadow-lg border-0 rounded-4 mt-2" style="display: none; width: 360px; background: #ffffff; box-shadow: 0 20px 45px rgba(15,23,42,0.3) !important; overflow: hidden; border: 1px solid #e2e8f0; position: relative; pointer-events: auto;">
+                    <!-- Expanded Softphone Modal Dialog Card -->
+                    <div id="plivoSoftphoneDockCard" class="card shadow-lg border-0 rounded-4" style="display: none; width: 100%; max-width: 420px; background: #ffffff; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.6), 0 0 0 1px rgba(226, 232, 240, 0.9) !important; overflow: hidden; border: none; position: relative; pointer-events: auto; margin: auto; animation: modalPopIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);">
                         
                         <!-- Header -->
-                        <div style="background: linear-gradient(135deg, #1e293b, #0f172a); padding: 14px 16px; color: #ffffff; display: flex; align-items: center; justify-content: space-between;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <div style="width: 30px; height: 30px; border-radius: 8px; background: rgba(37,99,235,0.25); color: #60a5fa; display: flex; align-items: center; justify-content: center; font-size: 14px;">
+                        <div id="desktopSoftphoneHeader" style="background: linear-gradient(135deg, #1e293b, #0f172a); padding: 14px 16px; color: #ffffff; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: move; user-select: none;">
+                            <div style="display: flex; align-items: center; gap: 8px; pointer-events: none;">
+                                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(37,99,235,0.25); color: #60a5fa; display: flex; align-items: center; justify-content: center; font-size: 14px;">
                                     <i class="fa-solid fa-phone"></i>
                                 </div>
                                 <div>
                                     <div style="font-weight: 700; font-size: 14px; line-height: 1.2;">MyntOS Softphone</div>
-                                    <div style="font-size: 11px; color: #94a3b8;">Cloud Telephony Trunk</div>
+                                    <div id="softphoneHeaderLeadName" style="font-size: 11px; color: #38bdf8; font-weight: 600; display: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;"></div>
                                 </div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
@@ -894,7 +1171,8 @@
                                     <option value="busy">🔴 Busy</option>
                                     <option value="break">🟡 Break</option>
                                 </select>
-                                <button onclick="window.PlivoSoftphone.closeSoftphoneDock()" style="background: rgba(255,255,255,0.15); border: none; color: #cbd5e1; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px;" title="Close dialpad">✕</button>
+                                <button onclick="window.PlivoSoftphone.minimizeSoftphone()" style="background: rgba(255,255,255,0.15); border: none; color: #cbd5e1; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold;" title="Minimize call window">⚊</button>
+                                <button onclick="window.PlivoSoftphone.closeSoftphoneDock()" style="background: rgba(255,255,255,0.15); border: none; color: #cbd5e1; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px;" title="Minimize or close dialpad">✕</button>
                             </div>
                         </div>
 
@@ -1081,15 +1359,28 @@
                                         </button>
                                     </div>
 
-                                    <!-- Hangup Red Button -->
-                                    <button onclick="window.PlivoSoftphone.hangup()" style="width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #dc2626); border: none; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 8px 20px rgba(239,68,68,0.4); display: flex; align-items: center; justify-content: center;" title="End Call">
-                                        <i class="fa-solid fa-phone-slash"></i>
-                                    </button>
+                                    <!-- Hangup Red Button & Direct SIM Fallback -->
+                                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                                        <button onclick="window.PlivoSoftphone.hangup()" style="width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #dc2626); border: none; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 8px 20px rgba(239,68,68,0.4); display: flex; align-items: center; justify-content: center;" title="End Call">
+                                            <i class="fa-solid fa-phone-slash"></i>
+                                        </button>
+                                        <button onclick="window.PlivoSoftphone.executeMobileDial(window.PlivoSoftphone.activeDestination)" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #38bdf8; border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                            <i class="fa-solid fa-mobile-screen"></i> Direct SIM Call
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
                         </div>
                     </div>
+                </div>
+
+                <!-- Desktop Minimized Floating Pill (Compact Draggable Widget) -->
+                <div id="plivoSoftphoneMinimizedPill" style="display: none; position: fixed; bottom: 24px; right: 24px; z-index: 2147483647; align-items: center; gap: 8px; background: linear-gradient(135deg, #0f172a, #1e293b); color: #ffffff; border: 1px solid #38bdf8; border-radius: 9999px; padding: 8px 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.5), 0 0 15px rgba(56,189,248,0.3); cursor: move; pointer-events: auto; user-select: none; touch-action: none;">
+                    <div style="width: 10px; height: 10px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 8px #22c55e;"></div>
+                    <div style="font-weight: 700; font-size: 12px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="desktopPillName">Contact Lead</div>
+                    <div style="color: #38bdf8; font-weight: 700; font-size: 12px;" id="desktopPillTimer">00:00</div>
+                    <button onclick="window.PlivoSoftphone.restoreSoftphone()" style="background: rgba(56,189,248,0.2); border: 1px solid rgba(56,189,248,0.4); color: #38bdf8; border-radius: 50%; width: 24px; height: 24px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-left: 2px;" title="Restore call window">▲</button>
                 </div>
 
                 <!-- Global Incoming Call Banner -->
@@ -1147,12 +1438,16 @@
                         margin-top: 2px;
                     }
 
-                    @media (max-width: 768px) {
-                        #myntosSoftphoneWidget {
-                            bottom: 12px !important;
-                            right: 12px !important;
-                            left: 12px !important;
-                        }
+                    @keyframes modalPopIn {
+                        0% { opacity: 0; transform: scale(0.95) translateY(8px); }
+                        100% { opacity: 1; transform: scale(1) translateY(0); }
+                    }
+
+                    .myntos-call-method-dialog {
+                        animation: modalPopIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+                    }
+
+                    @media (max-width: 600px) {
                         #plivoSoftphoneDockCard {
                             position: fixed !important;
                             bottom: 0 !important;
@@ -1166,6 +1461,7 @@
                             box-shadow: 0 -10px 40px rgba(0,0,0,0.35) !important;
                             z-index: 100000 !important;
                         }
+                    }
                 </style>
             `;
 
@@ -1409,27 +1705,73 @@
         }
 
         toggleDock() {
+            if (window.location.pathname.includes('/staff/softphone-hub') || document.getElementById('hubInCallView')) {
+                return;
+            }
+            const widget = document.getElementById('myntosSoftphoneWidget');
             const card = document.getElementById('plivoSoftphoneDockCard');
             const backdrop = document.getElementById('myntosSoftphoneBackdrop');
-            if (card) {
-                const isOpening = card.style.display === 'none' || !card.style.display;
-                card.style.display = isOpening ? 'block' : 'none';
-                if (backdrop) backdrop.style.display = isOpening ? 'block' : 'none';
-            }
+            const isOpening = !card || card.style.display === 'none' || !card.style.display;
+            if (widget) widget.style.display = isOpening ? 'flex' : 'none';
+            if (card) card.style.display = isOpening ? 'block' : 'none';
+            if (backdrop) backdrop.style.display = isOpening ? 'block' : 'none';
         }
 
         openSoftphoneDock() {
+            if (window.location.pathname.includes('/staff/softphone-hub') || document.getElementById('hubInCallView')) {
+                return;
+            }
+            const widget = document.getElementById('myntosSoftphoneWidget');
             const card = document.getElementById('plivoSoftphoneDockCard');
             const backdrop = document.getElementById('myntosSoftphoneBackdrop');
+            if (widget) widget.style.display = 'flex';
             if (card) card.style.display = 'block';
-            if (backdrop) backdrop.style.display = 'block';
+            if (backdrop && !this.isCallActive) backdrop.style.display = 'block';
+            this.initDraggables();
         }
 
         closeSoftphoneDock() {
+            if (this.isCallActive) {
+                this.minimizeSoftphone();
+                return;
+            }
+            const widget = document.getElementById('myntosSoftphoneWidget');
             const card = document.getElementById('plivoSoftphoneDockCard');
             const backdrop = document.getElementById('myntosSoftphoneBackdrop');
+            const pill = document.getElementById('plivoSoftphoneMinimizedPill');
+            if (widget) widget.style.display = 'none';
             if (card) card.style.display = 'none';
             if (backdrop) backdrop.style.display = 'none';
+            if (pill) pill.style.display = 'none';
+        }
+
+        minimizeSoftphone() {
+            const card = document.getElementById('plivoSoftphoneDockCard');
+            const backdrop = document.getElementById('myntosSoftphoneBackdrop');
+            const pill = document.getElementById('plivoSoftphoneMinimizedPill');
+            if (card) card.style.display = 'none';
+            if (backdrop) backdrop.style.display = 'none';
+            if (pill) {
+                pill.style.display = 'flex';
+                const pillName = document.getElementById('desktopPillName');
+                if (pillName) pillName.textContent = this.activeLeadName || 'Contact Lead';
+                const pillTimer = document.getElementById('desktopPillTimer');
+                if (pillTimer) {
+                    const mins = String(Math.floor(this.callSeconds / 60)).padStart(2, '0');
+                    const secs = String(this.callSeconds % 60).padStart(2, '0');
+                    pillTimer.textContent = `${mins}:${secs}`;
+                }
+            }
+            this.initDraggables();
+        }
+
+        restoreSoftphone() {
+            const card = document.getElementById('plivoSoftphoneDockCard');
+            const pill = document.getElementById('plivoSoftphoneMinimizedPill');
+            if (pill) pill.style.display = 'none';
+            if (card) card.style.display = 'block';
+            const widget = document.getElementById('myntosSoftphoneWidget');
+            if (widget) widget.style.display = 'flex';
         }
 
         onBackdropClick() {
@@ -1440,6 +1782,9 @@
 
         showCallInProgressUI(phone, name) {
             this.openSoftphoneDock();
+            const backdrop = document.getElementById('myntosSoftphoneBackdrop');
+            if (backdrop) backdrop.style.display = 'none'; // Unblock underlying page
+
             const inCallView = document.getElementById('softphoneInCallView');
             if (inCallView) inCallView.style.display = 'flex';
             
@@ -1467,6 +1812,95 @@
             this.addRecentCall(phone, name, 'outbound');
         }
 
+        initDraggables() {
+            if (this.draggablesInitialized) return;
+            const header = document.getElementById('desktopSoftphoneHeader');
+            const card = document.getElementById('plivoSoftphoneDockCard');
+            const pill = document.getElementById('plivoSoftphoneMinimizedPill');
+
+            if (header && card) {
+                let isDragging = false;
+                let startX = 0, startY = 0, initialLeft = 0, initialTop = 0;
+
+                header.addEventListener('pointerdown', (e) => {
+                    if (e.target.closest('button, select, input, a')) return;
+                    isDragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    const rect = card.getBoundingClientRect();
+                    initialLeft = rect.left;
+                    initialTop = rect.top;
+                    card.style.position = 'fixed';
+                    card.style.margin = '0';
+                    card.style.left = `${initialLeft}px`;
+                    card.style.top = `${initialTop}px`;
+                    try { header.setPointerCapture(e.pointerId); } catch (_) {}
+                    e.preventDefault();
+                });
+
+                header.addEventListener('pointermove', (e) => {
+                    if (!isDragging) return;
+                    const dx = e.clientX - startX;
+                    const dy = e.clientY - startY;
+                    const newLeft = Math.max(12, Math.min(window.innerWidth - card.offsetWidth - 12, initialLeft + dx));
+                    const newTop = Math.max(12, Math.min(window.innerHeight - card.offsetHeight - 12, initialTop + dy));
+                    card.style.left = `${newLeft}px`;
+                    card.style.top = `${newTop}px`;
+                });
+
+                const stopDrag = (e) => {
+                    if (isDragging) {
+                        isDragging = false;
+                        try { header.releasePointerCapture(e.pointerId); } catch (_) {}
+                    }
+                };
+                header.addEventListener('pointerup', stopDrag);
+                header.addEventListener('pointercancel', stopDrag);
+            }
+
+            if (pill) {
+                let isDraggingPill = false;
+                let pStartX = 0, pStartY = 0, pInitLeft = 0, pInitTop = 0;
+
+                pill.addEventListener('pointerdown', (e) => {
+                    if (e.target.closest('button')) return;
+                    isDraggingPill = true;
+                    pStartX = e.clientX;
+                    pStartY = e.clientY;
+                    const rect = pill.getBoundingClientRect();
+                    pInitLeft = rect.left;
+                    pInitTop = rect.top;
+                    pill.style.right = 'auto';
+                    pill.style.bottom = 'auto';
+                    pill.style.left = `${pInitLeft}px`;
+                    pill.style.top = `${pInitTop}px`;
+                    try { pill.setPointerCapture(e.pointerId); } catch (_) {}
+                    e.preventDefault();
+                });
+
+                pill.addEventListener('pointermove', (e) => {
+                    if (!isDraggingPill) return;
+                    const dx = e.clientX - pStartX;
+                    const dy = e.clientY - pStartY;
+                    const newLeft = Math.max(12, Math.min(window.innerWidth - pill.offsetWidth - 12, pInitLeft + dx));
+                    const newTop = Math.max(12, Math.min(window.innerHeight - pill.offsetHeight - 12, pInitTop + dy));
+                    pill.style.left = `${newLeft}px`;
+                    pill.style.top = `${newTop}px`;
+                });
+
+                const stopPillDrag = (e) => {
+                    if (isDraggingPill) {
+                        isDraggingPill = false;
+                        try { pill.releasePointerCapture(e.pointerId); } catch (_) {}
+                    }
+                };
+                pill.addEventListener('pointerup', stopPillDrag);
+                pill.addEventListener('pointercancel', stopPillDrag);
+            }
+
+            this.draggablesInitialized = true;
+        }
+
         hideCallInProgressUI() {
             const inCallView = document.getElementById('softphoneInCallView');
             if (inCallView) inCallView.style.display = 'none';
@@ -1488,29 +1922,49 @@
     // Mount singleton on window
     const instance = new MyntOSPlivoSoftphone();
     window.PlivoSoftphone = instance;
+    window.openCallDialer = (intent) => instance.openCallDialer(intent);
 
     window.triggerLeadCall = (phone, name, leadId) => {
-        instance.dialOutboundCall(phone, leadId, name);
+        instance.openCallDialer({
+            phoneNumber: phone,
+            name: name || 'Contact Lead',
+            entityId: leadId || null,
+            entityType: 'lead',
+            autoStart: true
+        });
     };
 
     window.makeMyntOSCall = (phone, leadId, leadName) => {
-        instance.dialOutboundCall(phone, leadId, leadName);
+        instance.openCallDialer({
+            phoneNumber: phone,
+            name: leadName || 'Contact Lead',
+            entityId: leadId || null,
+            entityType: 'lead',
+            autoStart: true
+        });
     };
 
     // Global interceptor for all telephone / dial buttons across CRM and Auto Dialer
     if (typeof document !== 'undefined') {
         document.addEventListener('DOMContentLoaded', () => {
             document.addEventListener('click', (e) => {
-                const telLink = e.target.closest('a[href^="tel:"], .make-call-btn, .crm-call-trigger, [data-phone]');
+                const telLink = e.target.closest('a[href^="tel:"], .btn-dial, .make-call-btn, .crm-call-trigger, .action-btn.call, .action-btn.call-btn, .dial-btn-badge, .contact-call-btn, button[data-action="call"]');
                 if (telLink && !telLink.closest('#myntosCallMethodModal') && !telLink.closest('#plivoSoftphoneDockCard') && !telLink.closest('#myntosSoftphoneWidget')) {
                     const rawHref = telLink.getAttribute('href') || '';
-                    const phone = (rawHref.startsWith('tel:') ? rawHref.replace(/^tel:/i, '') : telLink.getAttribute('data-phone')) || '';
+                    const phone = (rawHref.startsWith('tel:') ? rawHref.replace(/^tel:/i, '') : (telLink.getAttribute('data-phone') || telLink.getAttribute('data-destination') || '')) || '';
                     if (phone) {
                         e.preventDefault();
                         e.stopPropagation();
-                        const leadName = telLink.getAttribute('data-lead-name') || telLink.getAttribute('data-name') || 'Customer Lead';
-                        const leadId = telLink.getAttribute('data-lead-id') || null;
-                        instance.dial(phone, leadId, leadName);
+                        const leadCard = telLink.closest('[data-id], .lead-card, .card, tr');
+                        const leadName = telLink.getAttribute('data-lead-name') || telLink.getAttribute('data-name') || leadCard?.querySelector('.lead-name, .customer-name, strong')?.textContent?.trim() || 'Contact Lead';
+                        const leadId = telLink.getAttribute('data-lead-id') || telLink.getAttribute('data-id') || leadCard?.getAttribute('data-id') || null;
+                        instance.openCallDialer({
+                            phoneNumber: phone,
+                            name: leadName,
+                            entityId: leadId,
+                            entityType: 'lead',
+                            autoStart: true
+                        });
                     }
                 }
             }, true);

@@ -168,6 +168,17 @@ interface ConsolidatedRow {
   fund_used: number;
   fund_transferred_out?: number;
   fund_transferred_in?: number;
+  total_in?: number;
+  total_out?: number;
+  net_balance?: number;
+  income_entries?: number;
+  bank_alloc_in?: number;
+  ledger_exp?: number;
+  ext_exp?: number;
+  draft_in?: number;
+  draft_out?: number;
+  draft_balance?: number;
+  final_balance?: number;
   cash_received: number;
   cash_balance: number;
   cash_receipt_count?: number;
@@ -497,6 +508,7 @@ export default function ExpensesPage() {
   };
 
   // ==========================================
+  // ==========================================
   // Data Fetching: My Expenses
   // ==========================================
   const fetchMyExpenses = async () => {
@@ -508,8 +520,10 @@ export default function ExpensesPage() {
       if (filterStatus) params.append("status", filterStatus);
       if (filterCompany) params.append("company_id", filterCompany);
       if (filterCategory) params.append("category_id", filterCategory);
-      if (filterFromDate) params.append("from_date", filterFromDate);
-      if (filterToDate) params.append("to_date", filterToDate);
+      const fromDate = qfPresetMy === "overall" ? "" : filterFromDate;
+      const toDate = qfPresetMy === "overall" ? "" : filterToDate;
+      if (fromDate) params.append("from_date", fromDate);
+      if (toDate) params.append("to_date", toDate);
 
       const res = await api.get(`/staff/accounts/expense-entries?${params.toString()}`);
       if (res.data) {
@@ -540,8 +554,10 @@ export default function ExpensesPage() {
       if (teamFilterCompany) params.append("company_id", teamFilterCompany);
       if (teamFilterStatus) params.append("status", teamFilterStatus);
       if (teamFilterEmployee) params.append("employee_id", teamFilterEmployee);
-      if (teamFilterFrom) params.append("from_date", teamFilterFrom);
-      if (teamFilterTo) params.append("to_date", teamFilterTo);
+      const fromDate = qfPresetTeam === "overall" ? "" : teamFilterFrom;
+      const toDate = qfPresetTeam === "overall" ? "" : teamFilterTo;
+      if (fromDate) params.append("from_date", fromDate);
+      if (toDate) params.append("to_date", toDate);
 
       const res = await api.get(`/staff/accounts/expense-entries?${params.toString()}`);
       if (res.data) {
@@ -610,8 +626,10 @@ export default function ExpensesPage() {
       const params = new URLSearchParams();
       params.append("_", Date.now().toString());
       if (consoCompany) params.append("company_id", consoCompany);
-      if (consoFromDate) params.append("from_date", consoFromDate);
-      if (consoToDate) params.append("to_date", consoToDate);
+      const fromDate = qfPresetConso === "overall" ? "" : consoFromDate;
+      const toDate = qfPresetConso === "overall" ? "" : consoToDate;
+      if (fromDate) params.append("from_date", fromDate);
+      if (toDate) params.append("to_date", toDate);
       if (consoSearch.trim()) params.append("search", consoSearch.trim());
 
       const res = await api.get(`/staff/accounts/expense-consolidated?${params.toString()}`);
@@ -670,6 +688,12 @@ export default function ExpensesPage() {
     teamFilterFrom,
     teamFilterTo
   ]);
+
+  useEffect(() => {
+    if (isAuthenticated && token && activeTab === "consolidated") {
+      fetchConsolidatedSummary();
+    }
+  }, [isAuthenticated, token, activeTab, consoCompany, consoFromDate, consoToDate, qfPresetConso, consoSearch]);
 
   useEffect(() => {
     if (teamFilterEmployee) {
@@ -1201,8 +1225,8 @@ export default function ExpensesPage() {
       if (paidOnly) params.append("is_paid", "true");
       if (tab === "team") params.append("team_view", "true");
 
-      const from = tab === "my" ? filterFromDate : teamFilterFrom;
-      const to = tab === "my" ? filterToDate : teamFilterTo;
+      const from = tab === "my" ? (qfPresetMy === "overall" ? "" : filterFromDate) : (qfPresetTeam === "overall" ? "" : teamFilterFrom);
+      const to = tab === "my" ? (qfPresetMy === "overall" ? "" : filterToDate) : (qfPresetTeam === "overall" ? "" : teamFilterTo);
       const comp = tab === "my" ? filterCompany : teamFilterCompany;
 
       if (from) params.append("from_date", from);
@@ -1253,47 +1277,77 @@ export default function ExpensesPage() {
       "Emp Code",
       "Department",
       "Role",
-      "Fund Allocated",
-      "Fund Balance",
-      "Fund Used",
-      "Cash Received (IN)",
-      "Cash Balance",
-      "Total Expenses",
-      "Draft",
-      "Submitted",
-      "Approved",
-      "Rejected",
-      "Paid",
-      "Approved Amount",
-      "Rejected Amount",
-      "Paid Amount",
+      // Section 1: Confirmed Flow
+      "Income (IN)",
+      "Bank Alloc (IN)",
+      "Transfer (IN)",
+      "Total Confirmed (IN)",
+      "Transfer (OUT)",
+      "Bank Alloc Exp (OUT)",
+      "Ext Ledger Exp (OUT)",
+      "Total Confirmed (OUT)",
+      "Confirmed Net Balance",
+      // Section 2: Drafts Only Flow
+      "Drafts (IN)",
+      "Drafts (OUT)",
+      "Drafts Net Balance",
+      "Final Balance (Net + Drafts)",
+      // Section 3: Status Breakdown
+      "Draft Count",
       "Draft Amount",
-      "Submitted Amount"
+      "Submitted Count",
+      "Submitted Amount",
+      "Approved Count",
+      "Approved Amount",
+      "Rejected Count",
+      "Rejected Amount",
+      "Paid Count",
+      "Paid Amount"
     ];
 
-    const rows = consoRows.map((r, i) => [
-      i + 1,
-      `"${r.full_name}"`,
-      `"${r.emp_code}"`,
-      `"${r.department || ""}"`,
-      `"${r.role || ""}"`,
-      r.fund_allocated,
-      r.fund_balance,
-      r.fund_used,
-      r.cash_received,
-      r.cash_balance,
-      r.total_expenses,
-      r.draft_count,
-      r.submitted_count,
-      r.approved_count,
-      r.rejected_count,
-      r.paid_count,
-      r.approved_amount,
-      r.rejected_amount,
-      r.paid_amount,
-      r.draft_amount,
-      r.submitted_amount
-    ]);
+    const rows = consoRows.map((r, i) => {
+      const totIn = r.total_in != null ? r.total_in : (Number(r.income_entries || 0) + Number(r.bank_alloc_in || 0) + Number(r.fund_transferred_in || 0));
+      const totOut = r.total_out != null ? r.total_out : (Number(r.ledger_exp || 0) + Number(r.ext_exp || 0) + Number(r.fund_transferred_out || 0));
+      const netBal = r.net_balance != null ? r.net_balance : (r.balance || 0);
+      const draftIn = r.draft_in != null ? r.draft_in : 0;
+      const draftOut = r.draft_out != null ? r.draft_out : (r.draft_amount || 0);
+      const draftBal = r.draft_balance != null ? r.draft_balance : (draftIn - draftOut);
+      const finalBal = r.final_balance != null ? r.final_balance : (netBal + draftBal);
+
+      return [
+        i + 1,
+        `"${r.full_name}"`,
+        `"${r.emp_code}"`,
+        `"${r.department || ""}"`,
+        `"${r.role || ""}"`,
+        // Section 1
+        r.income_entries || 0,
+        r.bank_alloc_in || 0,
+        r.fund_transferred_in || 0,
+        totIn,
+        r.fund_transferred_out || 0,
+        r.ledger_exp || 0,
+        r.ext_exp || 0,
+        totOut,
+        netBal,
+        // Section 2
+        draftIn,
+        draftOut,
+        draftBal,
+        finalBal,
+        // Section 3
+        r.draft_count || 0,
+        r.draft_amount || 0,
+        r.submitted_count || 0,
+        r.submitted_amount || 0,
+        r.approved_count || 0,
+        r.approved_amount || 0,
+        r.rejected_count || 0,
+        r.rejected_amount || 0,
+        r.paid_count || 0,
+        r.paid_amount || 0
+      ];
+    });
 
     const csvContent = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -1312,6 +1366,13 @@ export default function ExpensesPage() {
       acc.fund_used += Number(r.fund_used || 0);
       acc.cash_received += Number(r.cash_received || 0);
       acc.cash_balance += Number(r.cash_balance || 0);
+      acc.total_in += Number(r.total_in || (Number(r.income_entries || 0) + Number(r.bank_alloc_in || 0) + Number(r.fund_transferred_in || 0)));
+      acc.total_out += Number(r.total_out || (Number(r.ledger_exp || 0) + Number(r.ext_exp || 0) + Number(r.fund_transferred_out || 0)));
+      acc.net_balance += Number(r.net_balance || r.balance || 0);
+      acc.draft_in += Number(r.draft_in || 0);
+      acc.draft_out += Number(r.draft_out || (r.draft_amount || 0));
+      acc.draft_balance += Number(r.draft_balance || (Number(r.draft_in || 0) - Number(r.draft_out || (r.draft_amount || 0))));
+      acc.final_balance += Number(r.final_balance || (Number(r.net_balance || 0) + Number(r.draft_balance || 0)));
       acc.total_expenses += Number(r.total_expenses || 0);
       acc.draft_count += Number(r.draft_count || 0);
       acc.submitted_count += Number(r.submitted_count || 0);
@@ -1331,6 +1392,13 @@ export default function ExpensesPage() {
       fund_used: 0,
       cash_received: 0,
       cash_balance: 0,
+      total_in: 0,
+      total_out: 0,
+      net_balance: 0,
+      draft_in: 0,
+      draft_out: 0,
+      draft_balance: 0,
+      final_balance: 0,
       total_expenses: 0,
       draft_count: 0,
       submitted_count: 0,
@@ -1657,10 +1725,35 @@ export default function ExpensesPage() {
                 {p.label}
               </button>
             ))}
+
+            {qfPresetMy === "custom" && (
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1">
+                <span className="text-xs font-semibold text-gray-600">From:</span>
+                <input
+                  type="date"
+                  value={filterFromDate}
+                  onChange={(e) => {
+                    setFilterFromDate(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="px-2 py-0.5 text-xs border border-gray-300 rounded bg-white"
+                />
+                <span className="text-xs font-semibold text-gray-600">To:</span>
+                <input
+                  type="date"
+                  value={filterToDate}
+                  onChange={(e) => {
+                    setFilterToDate(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="px-2 py-0.5 text-xs border border-gray-300 rounded bg-white"
+                />
+              </div>
+            )}
           </div>
 
           {/* Detailed Filters Row */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-5 gap-3">
+          <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Status</label>
               <select
@@ -1715,34 +1808,6 @@ export default function ExpensesPage() {
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">From Date</label>
-              <input
-                type="date"
-                value={filterFromDate}
-                onChange={(e) => {
-                  setFilterFromDate(e.target.value);
-                  setQfPresetMy("custom");
-                  setCurrentPage(1);
-                }}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50/50 focus:ring-2 focus:ring-red-500 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">To Date</label>
-              <input
-                type="date"
-                value={filterToDate}
-                onChange={(e) => {
-                  setFilterToDate(e.target.value);
-                  setQfPresetMy("custom");
-                  setCurrentPage(1);
-                }}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50/50 focus:ring-2 focus:ring-red-500 focus:outline-none"
-              />
             </div>
           </div>
 
@@ -2147,6 +2212,31 @@ export default function ExpensesPage() {
                 {p.label}
               </button>
             ))}
+
+            {qfPresetTeam === "custom" && (
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1">
+                <span className="text-xs font-semibold text-gray-600">From:</span>
+                <input
+                  type="date"
+                  value={teamFilterFrom}
+                  onChange={(e) => {
+                    setTeamFilterFrom(e.target.value);
+                    setTeamPage(1);
+                  }}
+                  className="px-2 py-0.5 text-xs border border-gray-300 rounded bg-white"
+                />
+                <span className="text-xs font-semibold text-gray-600">To:</span>
+                <input
+                  type="date"
+                  value={teamFilterTo}
+                  onChange={(e) => {
+                    setTeamFilterTo(e.target.value);
+                    setTeamPage(1);
+                  }}
+                  className="px-2 py-0.5 text-xs border border-gray-300 rounded bg-white"
+                />
+              </div>
+            )}
           </div>
 
           {/* Team Stat Strip */}
@@ -2277,28 +2367,6 @@ export default function ExpensesPage() {
                   </option>
                 ))}
               </select>
-
-              <input
-                type="date"
-                value={teamFilterFrom}
-                onChange={(e) => {
-                  setTeamFilterFrom(e.target.value);
-                  setQfPresetTeam("custom");
-                  setTeamPage(1);
-                }}
-                className="px-3 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
-              />
-
-              <input
-                type="date"
-                value={teamFilterTo}
-                onChange={(e) => {
-                  setTeamFilterTo(e.target.value);
-                  setQfPresetTeam("custom");
-                  setTeamPage(1);
-                }}
-                className="px-3 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
-              />
 
               <button
                 onClick={fetchTeamExpenses}
@@ -2544,6 +2612,25 @@ export default function ExpensesPage() {
                 {p.label}
               </button>
             ))}
+
+            {qfPresetConso === "custom" && (
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1">
+                <span className="text-xs font-semibold text-gray-600">From:</span>
+                <input
+                  type="date"
+                  value={consoFromDate}
+                  onChange={(e) => setConsoFromDate(e.target.value)}
+                  className="px-2 py-0.5 text-xs border border-gray-300 rounded bg-white"
+                />
+                <span className="text-xs font-semibold text-gray-600">To:</span>
+                <input
+                  type="date"
+                  value={consoToDate}
+                  onChange={(e) => setConsoToDate(e.target.value)}
+                  className="px-2 py-0.5 text-xs border border-gray-300 rounded bg-white"
+                />
+              </div>
+            )}
           </div>
 
           {/* Consolidated Filter Card */}
@@ -2562,32 +2649,6 @@ export default function ExpensesPage() {
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">From Date</label>
-              <input
-                type="date"
-                value={consoFromDate}
-                onChange={(e) => {
-                  setConsoFromDate(e.target.value);
-                  setQfPresetConso("custom");
-                }}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">To Date</label>
-              <input
-                type="date"
-                value={consoToDate}
-                onChange={(e) => {
-                  setConsoToDate(e.target.value);
-                  setQfPresetConso("custom");
-                }}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white"
-              />
             </div>
 
             <div>
@@ -2665,26 +2726,68 @@ export default function ExpensesPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
+                    {/* Tier 1 Group Headers */}
+                    <tr className="border-b border-gray-200 text-xs uppercase font-bold tracking-wider whitespace-nowrap">
+                      <th colSpan={3} className="bg-gray-100 text-gray-700 p-2 text-left border-r border-gray-200">
+                        Staff Details
+                      </th>
+                      <th colSpan={3} className="bg-emerald-50 text-emerald-800 p-2 text-center border-r border-emerald-200">
+                        Section 1: Confirmed IN (Inflow)
+                      </th>
+                      <th colSpan={3} className="bg-rose-50 text-rose-800 p-2 text-center border-r border-rose-200">
+                        Section 1: Confirmed OUT (Outflow)
+                      </th>
+                      <th colSpan={1} className="bg-blue-50 text-blue-800 p-2 text-right border-r border-blue-200">
+                        Net Balance
+                      </th>
+                      <th colSpan={4} className="bg-amber-50 text-amber-800 p-2 text-center border-r border-amber-200">
+                        Section 2: Drafts Only Flow
+                      </th>
+                      <th colSpan={5} className="bg-gray-50 text-gray-700 p-2 text-center border-r border-gray-200">
+                        Section 3: Expense Counts
+                      </th>
+                      <th colSpan={5} className="bg-gray-50 text-gray-700 p-2 text-center">
+                        Section 3: Expense Amounts
+                      </th>
+                    </tr>
+                    {/* Tier 2 Column Headers */}
                     <tr className="bg-gray-50 border-b-2 border-gray-200 text-gray-700 font-bold uppercase whitespace-nowrap">
                       <th className="p-3">#</th>
                       <th className="p-3">Employee</th>
-                      <th className="p-3">Dept / Role</th>
-                      <th className="p-3 text-right text-blue-700">Fund Allocated</th>
-                      <th className="p-3 text-right text-emerald-700">Fund Balance</th>
-                      <th className="p-3 text-right text-rose-700">Fund Used</th>
-                      <th className="p-3 text-right text-cyan-700">Cash IN</th>
-                      <th className="p-3 text-right text-purple-700">Cash Balance</th>
-                      <th className="p-3 text-center">Total Exp</th>
+                      <th className="p-3 border-r border-gray-200">Dept / Role</th>
+                      
+                      {/* Section 1 Inflow */}
+                      <th className="p-3 text-right text-cyan-700">Income Entries</th>
+                      <th className="p-3 text-right text-blue-700">Bank Ledgers</th>
+                      <th className="p-3 text-right text-emerald-700 bg-emerald-50 border-r border-emerald-200">Total IN</th>
+                      
+                      {/* Section 1 Outflow */}
+                      <th className="p-3 text-right text-rose-700">Ledger Exp</th>
+                      <th className="p-3 text-right text-orange-700">External Exp</th>
+                      <th className="p-3 text-right text-rose-800 bg-rose-50 border-r border-rose-200">Total OUT</th>
+                      
+                      {/* Section 1 Net Balance */}
+                      <th className="p-3 text-right text-blue-800 bg-blue-50 border-r border-blue-200">Net Balance</th>
+                      
+                      {/* Section 2 Drafts Flow */}
+                      <th className="p-3 text-right text-emerald-700 bg-amber-50/50">Drafts IN</th>
+                      <th className="p-3 text-right text-amber-700 bg-amber-50/50">Drafts OUT</th>
+                      <th className="p-3 text-right text-amber-900 bg-amber-100">Drafts Bal</th>
+                      <th className="p-3 text-right text-purple-800 font-extrabold bg-purple-50 border-r border-purple-200">Final Balance</th>
+
+                      {/* Section 3 Counts */}
                       <th className="p-3 text-center text-gray-500">Draft</th>
                       <th className="p-3 text-center text-amber-600">Submitted</th>
                       <th className="p-3 text-center text-emerald-600">Approved</th>
                       <th className="p-3 text-center text-rose-600">Rejected</th>
-                      <th className="p-3 text-center text-purple-600">Paid</th>
+                      <th className="p-3 text-center text-purple-600 border-r border-gray-200">Paid</th>
+                      
+                      {/* Section 3 Amounts */}
+                      <th className="p-3 text-right text-gray-500">Draft Amt</th>
+                      <th className="p-3 text-right text-amber-600">Submitted Amt</th>
                       <th className="p-3 text-right text-emerald-700">Approved Amt</th>
                       <th className="p-3 text-right text-rose-700">Rejected Amt</th>
                       <th className="p-3 text-right text-purple-700">Paid Amt</th>
-                      <th className="p-3 text-right text-gray-500">Draft Amt</th>
-                      <th className="p-3 text-right text-amber-600">Submitted Amt</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -2703,35 +2806,35 @@ export default function ExpensesPage() {
                           </div>
                           <div className="text-[11px] text-gray-400">{row.emp_code}</div>
                         </td>
-                        <td className="p-3">
+                        <td className="p-3 border-r border-gray-200">
                           <div className="text-gray-800 font-medium">{row.department || "—"}</div>
                           <div className="text-[11px] text-gray-400">{row.role || "—"}</div>
                         </td>
-                        <td className="p-3 text-right font-semibold text-blue-700">{fmt(row.fund_allocated)}</td>
-                        <td
-                          className={`p-3 text-right font-bold ${
-                            row.fund_balance >= 0 ? "text-emerald-700" : "text-rose-700"
-                          }`}
-                        >
-                          {fmt(row.fund_balance)}
+
+                        {/* Section 1 Inflow */}
+                        <td className="p-3 text-right font-medium text-cyan-700">{fmt(row.income_entries ?? row.cash_received)}</td>
+                        <td className="p-3 text-right font-medium text-blue-700">{fmt(row.bank_alloc_in ?? row.fund_allocated)}</td>
+                        <td className="p-3 text-right font-bold text-emerald-700 bg-emerald-50/50 border-r border-emerald-200">{fmt(row.total_in ?? row.cash_received)}</td>
+
+                        {/* Section 1 Outflow */}
+                        <td className="p-3 text-right font-medium text-rose-600">{fmt(row.ledger_exp ?? row.fund_used)}</td>
+                        <td className="p-3 text-right font-medium text-orange-600">{fmt(row.ext_exp || 0)}</td>
+                        <td className="p-3 text-right font-bold text-rose-800 bg-rose-50/50 border-r border-rose-200">{fmt(row.total_out ?? row.fund_used)}</td>
+
+                        {/* Section 1 Net Balance */}
+                        <td className={`p-3 text-right font-bold bg-blue-50/50 border-r border-blue-200 ${(row.net_balance ?? row.fund_balance) >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                          {fmt(row.net_balance ?? row.fund_balance)}
                         </td>
-                        <td className="p-3 text-right text-rose-600 font-medium">{fmt(row.fund_used)}</td>
-                        <td className="p-3 text-right font-semibold text-cyan-700">
-                          {fmt(row.cash_received)}
-                          {row.cash_receipt_count ? (
-                            <span className="text-[10px] text-gray-400 block font-normal">
-                              {row.cash_receipt_count} receipts
-                            </span>
-                          ) : null}
+
+                        {/* Section 2 Drafts Flow */}
+                        <td className="p-3 text-right font-medium text-emerald-700 bg-amber-50/30">{fmt(row.draft_in || 0)}</td>
+                        <td className="p-3 text-right font-medium text-amber-700 bg-amber-50/30">{fmt(row.draft_out ?? row.draft_amount)}</td>
+                        <td className="p-3 text-right font-bold text-amber-900 bg-amber-100/60">{fmt(row.draft_balance ?? -(row.draft_amount || 0))}</td>
+                        <td className={`p-3 text-right font-extrabold bg-purple-50/60 border-r border-purple-200 ${(row.final_balance ?? 0) >= 0 ? "text-emerald-700" : "text-purple-800"}`}>
+                          {fmt(row.final_balance ?? ((row.net_balance ?? row.fund_balance) - (row.draft_amount || 0)))}
                         </td>
-                        <td
-                          className={`p-3 text-right font-bold ${
-                            (row.cash_balance || 0) >= 0 ? "text-purple-700" : "text-rose-700"
-                          }`}
-                        >
-                          {fmt(row.cash_balance || 0)}
-                        </td>
-                        <td className="p-3 text-center font-bold text-gray-900">{row.total_expenses}</td>
+
+                        {/* Section 3 Counts */}
                         <td className="p-3 text-center">
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700">
                             {row.draft_count}
@@ -2752,16 +2855,18 @@ export default function ExpensesPage() {
                             {row.rejected_count}
                           </span>
                         </td>
-                        <td className="p-3 text-center">
+                        <td className="p-3 text-center border-r border-gray-200">
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800">
                             {row.paid_count}
                           </span>
                         </td>
+
+                        {/* Section 3 Amounts */}
+                        <td className="p-3 text-right text-gray-500">{fmt(row.draft_amount)}</td>
+                        <td className="p-3 text-right text-amber-700">{fmt(row.submitted_amount)}</td>
                         <td className="p-3 text-right font-semibold text-emerald-700">{fmt(row.approved_amount)}</td>
                         <td className="p-3 text-right font-semibold text-rose-600">{fmt(row.rejected_amount)}</td>
                         <td className="p-3 text-right font-semibold text-purple-700">{fmt(row.paid_amount)}</td>
-                        <td className="p-3 text-right text-gray-500">{fmt(row.draft_amount)}</td>
-                        <td className="p-3 text-right text-amber-700">{fmt(row.submitted_amount)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -2770,22 +2875,27 @@ export default function ExpensesPage() {
                       <td className="p-3" colSpan={3}>
                         TOTAL ({consoRows.length} Employees)
                       </td>
-                      <td className="p-3 text-right text-blue-800">{fmt(consolidatedTotals.fund_allocated)}</td>
-                      <td className="p-3 text-right text-emerald-800">{fmt(consolidatedTotals.fund_balance)}</td>
-                      <td className="p-3 text-right text-rose-800">{fmt(consolidatedTotals.fund_used)}</td>
                       <td className="p-3 text-right text-cyan-800">{fmt(consolidatedTotals.cash_received)}</td>
-                      <td className="p-3 text-right text-purple-800">{fmt(consolidatedTotals.cash_balance)}</td>
-                      <td className="p-3 text-center">{consolidatedTotals.total_expenses}</td>
+                      <td className="p-3 text-right text-blue-800">{fmt(consolidatedTotals.fund_allocated)}</td>
+                      <td className="p-3 text-right text-emerald-800 bg-emerald-100/50 border-r border-emerald-200">{fmt(consolidatedTotals.total_in)}</td>
+                      <td className="p-3 text-right text-rose-800">{fmt(consolidatedTotals.fund_used)}</td>
+                      <td className="p-3 text-right text-orange-800">₹0.00</td>
+                      <td className="p-3 text-right text-rose-900 bg-rose-100/50 border-r border-rose-200">{fmt(consolidatedTotals.total_out)}</td>
+                      <td className="p-3 text-right text-blue-900 bg-blue-100/50 border-r border-blue-200">{fmt(consolidatedTotals.net_balance)}</td>
+                      <td className="p-3 text-right text-emerald-800 bg-amber-50/50">{fmt(consolidatedTotals.draft_in)}</td>
+                      <td className="p-3 text-right text-amber-800 bg-amber-50/50">{fmt(consolidatedTotals.draft_out)}</td>
+                      <td className="p-3 text-right text-amber-950 bg-amber-100">{fmt(consolidatedTotals.draft_balance)}</td>
+                      <td className="p-3 text-right text-purple-900 bg-purple-100 border-r border-purple-200">{fmt(consolidatedTotals.final_balance)}</td>
                       <td className="p-3 text-center">{consolidatedTotals.draft_count}</td>
                       <td className="p-3 text-center">{consolidatedTotals.submitted_count}</td>
                       <td className="p-3 text-center">{consolidatedTotals.approved_count}</td>
                       <td className="p-3 text-center">{consolidatedTotals.rejected_count}</td>
-                      <td className="p-3 text-center">{consolidatedTotals.paid_count}</td>
+                      <td className="p-3 text-center border-r border-gray-200">{consolidatedTotals.paid_count}</td>
+                      <td className="p-3 text-right text-gray-600">{fmt(consolidatedTotals.draft_amount)}</td>
+                      <td className="p-3 text-right text-amber-800">{fmt(consolidatedTotals.submitted_amount)}</td>
                       <td className="p-3 text-right text-emerald-800">{fmt(consolidatedTotals.approved_amount)}</td>
                       <td className="p-3 text-right text-rose-800">{fmt(consolidatedTotals.rejected_amount)}</td>
                       <td className="p-3 text-right text-purple-800">{fmt(consolidatedTotals.paid_amount)}</td>
-                      <td className="p-3 text-right text-gray-600">{fmt(consolidatedTotals.draft_amount)}</td>
-                      <td className="p-3 text-right text-amber-800">{fmt(consolidatedTotals.submitted_amount)}</td>
                     </tr>
                   </tfoot>
                 </table>

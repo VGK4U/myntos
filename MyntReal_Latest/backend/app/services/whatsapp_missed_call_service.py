@@ -9,12 +9,12 @@ Handles:
 
 import logging
 import requests
-import datetime
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
+from app.core.timezone import get_indian_time, IST
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ def seed_and_submit_missed_call_template(db: Session) -> Dict[str, Any]:
             buttons=MISSED_CALL_TEMPLATE["buttons"],
             is_active=True,
             is_meta_approved=True,
-            created_at=datetime.datetime.utcnow()
+            created_at=get_indian_time()
         )
         db.add(tpl)
         db.commit()
@@ -186,12 +186,12 @@ def handle_missed_call_whatsapp_ack(
 
     phone_core = phone_digits[-10:]
 
-    # Start of today IST in UTC for "spoken today" checks
-    ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
-    start_of_today_utc = (ist_now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=5, minutes=30))
+    # Start of today IST for "spoken today" checks
+    ist_now = get_indian_time()
+    start_of_today_ist = ist_now.replace(hour=0, minute=0, second=0, microsecond=0)
 
     # ── Guard 2: 24-Hour Deduplication Window ──────────────────────────────────
-    twenty_four_hours_ago = datetime.datetime.utcnow() - timedelta(hours=24)
+    twenty_four_hours_ago = ist_now - timedelta(hours=24)
     recent_ack = db.query(MessageLog).filter(
         MessageLog.mobile_number == phone_formatted,
         MessageLog.sent_at >= twenty_four_hours_ago
@@ -205,7 +205,7 @@ def handle_missed_call_whatsapp_ack(
     answered_today = db.query(OperatorCall).filter(
         OperatorCall.caller_number.like(f"%{phone_core}"),
         OperatorCall.status == 'answered',
-        OperatorCall.started_at >= start_of_today_utc
+        OperatorCall.started_at >= start_of_today_ist
     ).first()
 
     if answered_today:
@@ -220,7 +220,7 @@ def handle_missed_call_whatsapp_ack(
     if not lead:
         lead = db.query(CRMLead).filter(CRMLead.phone.like(f"%{phone_core}")).first()
 
-    if lead and lead.last_contact_date and lead.last_contact_date >= start_of_today_utc:
+    if lead and lead.last_contact_date and lead.last_contact_date >= start_of_today_ist:
         logger.info(f"⏭️ Skipping missed call ACK for {phone_formatted} — Lead contacted today in CRM.")
         return {"success": True, "reason": "skipped_already_contacted_today", "phone": phone_formatted}
 
@@ -233,8 +233,8 @@ def handle_missed_call_whatsapp_ack(
             company_id=4,
             status="New",
             source="Missed Call (MyOperator)",
-            created_at=datetime.datetime.utcnow(),
-            updated_at=datetime.datetime.utcnow()
+            created_at=ist_now,
+            updated_at=ist_now
         )
         db.add(lead)
         db.commit()
@@ -296,7 +296,7 @@ def handle_missed_call_whatsapp_ack(
         message_type="missed_call_ack",
         initial_status="sent" if sent_success else "failed",
         current_status="sent" if sent_success else "failed",
-        sent_at=datetime.datetime.utcnow()
+        sent_at=get_indian_time()
     )
     db.add(history_item)
     db.commit()

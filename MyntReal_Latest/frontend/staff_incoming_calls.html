@@ -1,0 +1,2516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Softphone Center — MyntOS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/nda-enforcement.js"></script>
+    <script src="/public/js/plivo-softphone.js?v=20260906_fix"></script>
+    <style>
+        /* High Contrast Theme & Visibility Fixes */
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --border-color: #334155;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --accent-cyan: #06b6d4;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: var(--bg-dark) !important;
+            color: #f8fafc !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            min-height: 100vh;
+        }
+        h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+            color: #ffffff !important;
+        }
+        .text-light {
+            color: #ffffff !important;
+        }
+        .text-muted {
+            color: #94a3b8 !important;
+        }
+        .text-secondary {
+            color: #cbd5e1 !important;
+        }
+
+        /* Dialer Embedded Styles */
+        .dialer-phone-card-dark {
+            background: #1e293b !important;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 22px;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+            color: #f8fafc;
+        }
+        .screen-display-dark {
+            background: #090d16 !important;
+            border-radius: 12px;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .screen-input-dark {
+            border: none;
+            background: transparent;
+            font-size: 22px;
+            font-weight: 700;
+            color: #38bdf8 !important;
+            outline: none;
+            width: 100%;
+            letter-spacing: 1px;
+            font-family: monospace;
+        }
+        .screen-input-dark::placeholder {
+            color: #475569 !important;
+        }
+        .pad-grid-dark {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .pad-btn-dark {
+            background: #182234 !important;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 12px 6px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            user-select: none;
+            color: #ffffff !important;
+        }
+        .pad-btn-dark:hover {
+            background: #253349 !important;
+            border-color: #38bdf8;
+            transform: translateY(-1px);
+        }
+        .pad-btn-dark:active {
+            background: #1e293b !important;
+            transform: scale(0.96);
+        }
+        .pad-num-dark {
+            font-size: 22px;
+            font-weight: 700;
+            line-height: 1.1;
+            color: #ffffff !important;
+        }
+        .pad-sub-dark {
+            font-size: 10px;
+            font-weight: 600;
+            color: #94a3b8 !important;
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+        .big-call-btn-dark {
+            width: 62px;
+            height: 62px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(16,185,129,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            transition: all 0.15s ease;
+        }
+        .big-call-btn-dark:hover {
+            transform: scale(1.08);
+            box-shadow: 0 10px 25px rgba(16,185,129,0.5);
+        }
+        .big-call-btn-dark:active {
+            transform: scale(0.95);
+        }
+
+        /* In-Call Active Screen */
+        .in-call-screen-dark {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px 10px;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+        .call-avatar-dark {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            font-size: 28px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 14px;
+            box-shadow: 0 0 0 8px rgba(59,130,246,0.15);
+            animation: pulseAvatar 2s infinite;
+        }
+        @keyframes pulseAvatar {
+            0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
+            70% { box-shadow: 0 0 0 16px rgba(59,130,246,0); }
+            100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+        }
+        .call-ctrl-btn-dark {
+            background: #182234 !important;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 10px 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            color: #ffffff !important;
+        }
+        .call-ctrl-btn-dark:hover {
+            background: #253349 !important;
+            border-color: #38bdf8;
+        }
+        .call-ctrl-btn-dark.active {
+            background: rgba(239, 68, 68, 0.25) !important;
+            border-color: #ef4444;
+            color: #f87171 !important;
+            font-weight: 700;
+        }
+        .end-call-btn-dark {
+            width: 62px;
+            height: 62px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(239,68,68,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px auto 0;
+            transition: all 0.15s ease;
+        }
+        .end-call-btn-dark:hover {
+            transform: scale(1.08);
+            box-shadow: 0 10px 25px rgba(239,68,68,0.5);
+        }
+        .end-call-btn-dark:active {
+            transform: scale(0.95);
+        }
+
+        .contact-item-dark {
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.15s ease;
+            background: #182234 !important;
+            margin-bottom: 10px;
+        }
+        .contact-item-dark:hover {
+            border-color: #38bdf8;
+            background: #1e293b !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        }
+        .main-content {
+            margin-left: 260px;
+            min-height: 100vh;
+            background-color: var(--bg-dark) !important;
+            transition: margin-left 0.3s ease;
+        }
+        body.sidebar-collapsed-mode .main-content { margin-left: 70px; }
+        @media (max-width: 768px) { .main-content { margin-left: 0 !important; } }
+
+        .content-area {
+            padding: 24px 32px;
+            max-width: 1750px;
+            margin: 0 auto;
+        }
+        .nav-tabs-custom {
+            border-bottom: 2px solid var(--border-color);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .nav-tabs-custom .nav-link {
+            color: #cbd5e1 !important;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 12px 20px;
+            border: none;
+            border-bottom: 3px solid transparent;
+            background: transparent;
+            border-radius: 0;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-tabs-custom .nav-link:hover {
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .nav-tabs-custom .nav-link.active {
+            color: #38bdf8 !important;
+            background: transparent;
+            border-bottom: 3px solid #38bdf8;
+            font-weight: 700;
+        }
+        .nav-tabs-custom .nav-link.restricted-tab {
+            color: #fbbf24 !important;
+        }
+        .nav-tabs-custom .nav-link.restricted-tab.active {
+            color: #fbbf24 !important;
+            border-bottom: 3px solid #fbbf24;
+        }
+
+        .metric-card {
+            background: #1e293b !important;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .metric-card:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+            border-color: #475569;
+        }
+        .metric-value {
+            font-size: 22px;
+            font-weight: 700;
+            line-height: 1.2;
+            color: #ffffff !important;
+        }
+        .metric-label {
+            font-size: 11.5px;
+            color: #94a3b8 !important;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+        .metric-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 17px;
+            flex-shrink: 0;
+        }
+        .filter-panel {
+            background: #1e293b !important;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .preset-btn {
+            font-size: 11px;
+            padding: 5px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: #0f172a !important;
+            color: #cbd5e1 !important;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .preset-btn:hover { color: #ffffff !important; border-color: #64748b; background: #182234 !important; }
+        .preset-btn.active { background: #0284c7 !important; color: #ffffff !important; border-color: #38bdf8; }
+
+        .table-custom {
+            background: #1e293b !important;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .table-custom table {
+            margin-bottom: 0;
+            color: #f8fafc !important;
+            background-color: #1e293b !important;
+        }
+        .table-custom th {
+            background: #0f172a !important;
+            color: #cbd5e1 !important;
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #334155 !important;
+            padding: 12px 14px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .table-custom td {
+            background-color: #1e293b !important;
+            color: #f8fafc !important;
+            border-bottom: 1px solid #283548 !important;
+            padding: 14px 14px;
+            vertical-align: middle;
+            font-size: 13px;
+        }
+        .table-custom tr:hover td {
+            background-color: #243248 !important;
+        }
+        .badge-type {
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+        .badge-type-success { background: rgba(16, 185, 129, 0.18); color: #34d399 !important; border: 1px solid rgba(16, 185, 129, 0.4); }
+        .badge-type-danger { background: rgba(239, 68, 68, 0.18); color: #f87171 !important; border: 1px solid rgba(239, 68, 68, 0.4); }
+        .badge-type-primary { background: rgba(59, 130, 246, 0.18); color: #60a5fa !important; border: 1px solid rgba(59, 130, 246, 0.4); }
+        .badge-type-secondary { background: rgba(148, 163, 184, 0.18); color: #e2e8f0 !important; border: 1px solid rgba(148, 163, 184, 0.4); }
+        .badge-type-purple { background: rgba(139, 92, 246, 0.18); color: #c084fc !important; border: 1px solid rgba(139, 92, 246, 0.4); }
+
+        .audio-scrubber-player {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 4px 10px;
+            min-width: 175px;
+            max-width: 220px;
+        }
+        .audio-scrubber-player .play-btn {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            color: #fff;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .audio-scrubber-player .play-btn:hover { background: #2563eb; transform: scale(1.08); }
+        .scrubber-track-wrapper {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 0;
+        }
+        .audio-slider {
+            height: 4px;
+            cursor: pointer;
+            accent-color: #38bdf8;
+            background: #334155;
+            border-radius: 2px;
+            outline: none;
+            margin: 2px 0;
+            width: 100%;
+        }
+        .audio-time-label {
+            font-size: 10px;
+            color: #94a3b8 !important;
+            font-family: monospace;
+            line-height: 1;
+            margin-top: 1px;
+            white-space: nowrap;
+        }
+
+        .phone-masked {
+            font-family: monospace;
+            font-weight: 600;
+            color: #38bdf8 !important;
+            letter-spacing: 0.5px;
+        }
+        .btn-action-sm {
+            font-size: 11.5px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Slide Out History Drawer */
+        .drawer-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.7);
+            z-index: 1050;
+            display: none;
+            backdrop-filter: blur(2px);
+        }
+        .drawer {
+            position: fixed;
+            top: 0; right: -580px; width: 560px; height: 100vh;
+            background: #1e293b;
+            border-left: 1px solid var(--border-color);
+            z-index: 1060;
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -10px 0 35px rgba(0,0,0,0.6);
+        }
+        .drawer.open { right: 0; }
+        .drawer-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #182234;
+        }
+        .drawer-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .timeline-item {
+            position: relative;
+            padding-left: 24px;
+            padding-bottom: 18px;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 7px; top: 8px; bottom: 0;
+            width: 2px;
+            background: var(--border-color);
+        }
+        .timeline-item:last-child::before { display: none; }
+        .timeline-dot {
+            position: absolute;
+            left: 0; top: 4px;
+            width: 16px; height: 16px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            border: 3px solid #1e293b;
+        }
+        .timeline-dot.incoming { background: #10b981; }
+        .timeline-dot.missed { background: #ef4444; }
+        .timeline-dot.outgoing { background: #3b82f6; }
+        .timeline-dot.voicemail { background: #a855f7; }
+    </style>
+</head>
+<body>
+<script src="/public/js/menu-master.js?v=20260906_fix"></script>
+<script src="/staff_header.js?v=20260906_fix"></script>
+<script src="/staff_sidebar.js?v=20260906_fix"></script>
+
+    <nav id="staffSidebar"></nav>
+
+    <div class="main-content">
+        <div id="headerContainer"></div>
+
+        <div class="content-area">
+            <!-- Top Header & Status Trigger -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                <div>
+                    <h3 class="fw-bold mb-0 text-white"><i class="fa-solid fa-headset text-primary me-2"></i>Softphone Center</h3>
+                    <p class="text-muted small mb-0 fw-medium">Unified Inbound & Outbound Calling, Live Softphone Dialer & Telephony Intelligence</p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center bg-dark border border-secondary rounded px-2 py-1">
+                        <span class="text-muted small me-2"><i class="fa-solid fa-circle-dot text-success me-1"></i>Status:</span>
+                        <select class="form-select form-select-sm bg-dark text-light border-0 py-0" id="headerAgentStatus" style="width: auto; cursor: pointer;" onchange="setGlobalAgentStatus(this.value)">
+                            <option value="available" selected>🟢 Available</option>
+                            <option value="busy">🔴 Busy</option>
+                            <option value="break">🟡 Break</option>
+                        </select>
+                    </div>
+                    <a href="/staff/call-flow-studio" class="btn btn-outline-info btn-sm">
+                        <i class="fa-solid fa-diagram-project me-1"></i> Call Flow Studio
+                    </a>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="handleRefreshClick()">
+                        <i class="fa-solid fa-rotate me-1"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Global Lightweight Persistent Active-Call Banner (shown across all tabs when call active) -->
+            <div id="globalActiveCallPill" class="alert alert-primary d-none align-items-center justify-content-between p-2 mb-3 rounded-3 shadow-sm" style="background: rgba(59, 130, 246, 0.15); border: 1px solid #3b82f6;">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <span class="badge bg-success px-2 py-1"><i class="fa-solid fa-phone-volume fa-fade me-1"></i> <span id="globalCallStatusLabel">Active Call</span></span>
+                    <span class="fw-bold text-white" id="globalCallName">Customer</span>
+                    <span class="font-monospace text-info fw-bold" id="globalCallPhone">+91 ••••••••••</span>
+                    <span class="badge bg-dark border border-secondary text-light font-monospace" id="globalCallTimer">00:00</span>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <button class="btn btn-sm btn-outline-light py-1 px-2" id="globalBtnMute" onclick="toggleHubMute()"><i class="fa-solid fa-microphone-slash"></i> Mute</button>
+                    <button class="btn btn-sm btn-outline-light py-1 px-2" id="globalBtnHold" onclick="toggleHubHold()"><i class="fa-solid fa-pause"></i> Hold</button>
+                    <button class="btn btn-sm btn-info py-1 px-2" onclick="switchScope('dialer')"><i class="fa-solid fa-mobile-screen"></i> Go to Dialer</button>
+                    <button class="btn btn-sm btn-danger py-1 px-2" onclick="endCallFromHub(true)"><i class="fa-solid fa-phone-slash"></i> Hangup</button>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs (5 Tiers: Dialer FIRST & DEFAULT, followed by 4 History Scopes) -->
+            <ul class="nav nav-tabs nav-tabs-custom" id="scopeTabs">
+                <li class="nav-item">
+                    <button class="nav-link active" id="tab-dialer" onclick="switchScope('dialer')">
+                        <i class="fa-solid fa-mobile-screen text-primary me-1"></i> Dialer
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="tab-my" onclick="switchScope('my')">
+                        <i class="fa-solid fa-user me-1"></i> My Calls
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="tab-new_calls" onclick="switchScope('new_calls')">
+                        <i class="fa-solid fa-sparkles text-warning me-1"></i> New Calls
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="tab-team" onclick="switchScope('team')">
+                        <i class="fa-solid fa-users me-1"></i> My Team Calls
+                    </button>
+                </li>
+                <li class="nav-item" id="tab-overall-wrapper" style="display: none;">
+                    <button class="nav-link restricted-tab" id="tab-overall" onclick="switchScope('overall')">
+                        <i class="fa-solid fa-shield-halved me-1"></i> Overall Calls <span class="badge bg-warning text-dark ms-1">Admin / Leadership</span>
+                    </button>
+                </li>
+            </ul>
+
+            <!-- ================= TAB 1: DIALER PANE (DEFAULT) ================= -->
+            <div id="tab-pane-dialer">
+                <div class="row g-4">
+                    <!-- Left Column: Interactive Dialpad & Active In-Call Screen -->
+                    <div class="col-lg-4 col-md-5">
+                        <div class="dialer-phone-card-dark">
+                            <!-- Normal Keypad View -->
+                            <div id="hubKeypadView">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span class="fw-bold fs-6 text-white"><i class="fa-solid fa-mobile-screen me-2 text-primary"></i>Phone Dialpad</span>
+                                    <span class="badge bg-success" id="hubRegistrationBadge"><i class="fa-solid fa-circle-check me-1"></i> Online</span>
+                                </div>
+
+                                <!-- Number Screen Input -->
+                                <div class="screen-display-dark">
+                                    <input type="text" id="hubDialerInput" class="screen-input-dark" placeholder="Enter 10-digit number..." onkeydown="if(event.key==='Enter') dialFromHub()">
+                                    <button onclick="backspaceHub()" class="btn btn-sm btn-link text-secondary p-0" title="Backspace"><i class="fa-solid fa-delete-left fa-lg"></i></button>
+                                </div>
+
+                                <!-- 12-Button Keypad Grid -->
+                                <div class="pad-grid-dark">
+                                    <button class="pad-btn-dark" onclick="pressHubKey('1')"><div class="pad-num-dark">1</div><div class="pad-sub-dark">&nbsp;</div></button>
+                                    <button class="pad-btn-dark" onclick="pressHubKey('2')"><div class="pad-num-dark">2</div><div class="pad-sub-dark">ABC</div></button>
+                                    <button class="pad-btn-dark" onclick="pressHubKey('3')"><div class="pad-num-dark">3</div><div class="pad-sub-dark">DEF</div></button>
+
+                                    <button class="pad-btn-dark" onclick="pressHubKey('4')"><div class="pad-num-dark">4</div><div class="pad-sub-dark">GHI</div></button>
+                                    <button class="pad-btn-dark" onclick="pressHubKey('5')"><div class="pad-num-dark">5</div><div class="pad-sub-dark">JKL</div></button>
+                                    <button class="pad-btn-dark" onclick="pressHubKey('6')"><div class="pad-num-dark">6</div><div class="pad-sub-dark">MNO</div></button>
+
+                                    <button class="pad-btn-dark" onclick="pressHubKey('7')"><div class="pad-num-dark">7</div><div class="pad-sub-dark">PQRS</div></button>
+                                    <button class="pad-btn-dark" onclick="pressHubKey('8')"><div class="pad-num-dark">8</div><div class="pad-sub-dark">TUV</div></button>
+                                    <button class="pad-btn-dark" onclick="pressHubKey('9')"><div class="pad-num-dark">9</div><div class="pad-sub-dark">WXYZ</div></button>
+
+                                    <button class="pad-btn-dark" onclick="pressHubKey('*')"><div class="pad-num-dark" style="font-size: 24px;">*</div><div class="pad-sub-dark">&nbsp;</div></button>
+                                    <button class="pad-btn-dark" onclick="pressHubKey('0')"><div class="pad-num-dark">0</div><div class="pad-sub-dark">+</div></button>
+                                    <button class="pad-btn-dark" onclick="pressHubKey('#')"><div class="pad-num-dark">#</div><div class="pad-sub-dark">&nbsp;</div></button>
+                                </div>
+
+                                <!-- Big Green Call Button -->
+                                <button class="big-call-btn-dark" onclick="dialFromHub()" title="Start Call">
+                                    <i class="fa-solid fa-phone"></i>
+                                </button>
+                            </div>
+
+                            <!-- In-Call Active Screen -->
+                            <div id="hubInCallView" class="in-call-screen-dark">
+                                <div class="call-avatar-dark" id="hubInCallAvatar">C</div>
+                                <h5 class="fw-bold mb-1 text-white" id="hubInCallName">Customer Lead</h5>
+                                <div class="text-info mb-2 font-monospace fw-bold" id="hubInCallPhone">+91 ••••••••••</div>
+                                <span class="badge bg-success px-3 py-1 mb-3" id="hubInCallTimer"><i class="fa-solid fa-phone-volume me-1"></i> Connected • 00:00</span>
+
+                                <!-- Smartphone Call Controls -->
+                                <div class="row g-2 w-100 mb-3" style="max-width: 320px;">
+                                    <div class="col-4">
+                                        <button class="call-ctrl-btn-dark w-100" id="hubBtnMute" onclick="toggleHubMute()">
+                                            <i class="fa-solid fa-microphone-slash"></i>
+                                            <span style="font-size: 11px;" id="hubLabelMute">Mute</span>
+                                        </button>
+                                    </div>
+                                    <div class="col-4">
+                                        <button class="call-ctrl-btn-dark w-100" id="hubBtnSpeaker" onclick="toggleHubSpeaker()">
+                                            <i class="fa-solid fa-volume-high"></i>
+                                            <span style="font-size: 11px;" id="hubLabelSpeaker">Speaker</span>
+                                        </button>
+                                    </div>
+                                    <div class="col-4">
+                                        <button class="call-ctrl-btn-dark w-100" id="hubBtnHold" onclick="toggleHubHold()">
+                                            <i class="fa-solid fa-pause"></i>
+                                            <span style="font-size: 11px;" id="hubLabelHold">Hold</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- In-Call Mini DTMF Keypad Toggle & Drawer -->
+                                <button class="btn btn-sm btn-outline-secondary mb-2 text-light" onclick="toggleHubDTMFPad()">
+                                    <i class="fa-solid fa-table-cells me-1"></i> DTMF Keypad
+                                </button>
+                                <div id="hubInCallDTMFDrawer" style="display: none; margin-bottom: 12px; width: 100%;">
+                                    <div class="pad-grid-dark" style="gap: 6px; margin-bottom: 6px;">
+                                        <button class="pad-btn-dark py-1" onclick="sendDTMFFromHub('1')">1</button>
+                                        <button class="pad-btn-dark py-1" onclick="sendDTMFFromHub('2')">2</button>
+                                        <button class="pad-btn-dark py-1" onclick="sendDTMFFromHub('3')">3</button>
+                                        <button class="pad-btn-dark py-1" onclick="sendDTMFFromHub('4')">4</button>
+                                        <button class="pad-btn-dark py-1" onclick="sendDTMFFromHub('5')">5</button>
+                                        <button class="pad-btn-dark py-1" onclick="sendDTMFFromHub('6')">6</button>
+                                        <button class="pad-btn-dark py-1" onclick="sendDTMFFromHub('7')">7</button>
+                                        <button class="pad-btn-dark py-1" onclick="sendDTMFFromHub('8')">8</button>
+                                        <button class="pad-btn-dark py-1" onclick="sendDTMFFromHub('9')">9</button>
+                                        <button class="pad-btn-dark py-1" onclick="sendDTMFFromHub('*')">*</button>
+                                        <button class="pad-btn-dark py-1" onclick="sendDTMFFromHub('0')">0</button>
+                                        <button class="pad-btn-dark py-1" onclick="sendDTMFFromHub('#')">#</button>
+                                    </div>
+                                </div>
+
+                                <!-- Red End Call Button -->
+                                <button class="end-call-btn-dark" onclick="endCallFromHub(true)" title="Hangup Call">
+                                    <i class="fa-solid fa-phone-slash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Today's Full Telephony Metrics + Last 20 Recent Calls -->
+                    <div class="col-lg-8 col-md-7">
+                        <!-- All 6 Possible Data Labels for the Day -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-xl-2 col-md-4 col-6">
+                                <div class="metric-card">
+                                    <div>
+                                        <div class="metric-value text-white" id="dialer-stat-total">0</div>
+                                        <div class="metric-label">Today's Calls</div>
+                                    </div>
+                                    <div class="metric-icon" style="background: rgba(59, 130, 246, 0.18); color: #60a5fa;">
+                                        <i class="fa-solid fa-phone"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-2 col-md-4 col-6">
+                                <div class="metric-card">
+                                    <div>
+                                        <div class="metric-value text-success" id="dialer-stat-answered">0</div>
+                                        <div class="metric-label">Answered</div>
+                                    </div>
+                                    <div class="metric-icon" style="background: rgba(16, 185, 129, 0.18); color: #34d399;">
+                                        <i class="fa-solid fa-phone-volume"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-2 col-md-4 col-6">
+                                <div class="metric-card">
+                                    <div>
+                                        <div class="metric-value text-danger" id="dialer-stat-missed">0</div>
+                                        <div class="metric-label">Missed</div>
+                                    </div>
+                                    <div class="metric-icon" style="background: rgba(239, 68, 68, 0.18); color: #f87171;">
+                                        <i class="fa-solid fa-phone-slash"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-2 col-md-4 col-6">
+                                <div class="metric-card">
+                                    <div>
+                                        <div class="metric-value text-secondary" id="dialer-stat-unanswered">0</div>
+                                        <div class="metric-label">Unanswered</div>
+                                    </div>
+                                    <div class="metric-icon" style="background: rgba(148, 163, 184, 0.18); color: #cbd5e1;">
+                                        <i class="fa-solid fa-phone-missed"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-2 col-md-4 col-6">
+                                <div class="metric-card">
+                                    <div>
+                                        <div class="metric-value" id="dialer-stat-talktime" style="color: #c084fc;">00m 00s</div>
+                                        <div class="metric-label">Talk Time</div>
+                                    </div>
+                                    <div class="metric-icon" style="background: rgba(139, 92, 246, 0.18); color: #a78bfa;">
+                                        <i class="fa-solid fa-clock-rotate-left"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-2 col-md-4 col-6">
+                                <div class="metric-card">
+                                    <div>
+                                        <div class="metric-value text-info" id="dialer-stat-connrate">0%</div>
+                                        <div class="metric-label">Conn. Rate</div>
+                                    </div>
+                                    <div class="metric-icon" style="background: rgba(6, 182, 212, 0.18); color: #22d3ee;">
+                                        <i class="fa-solid fa-chart-pie"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent History of Last 20 Calls with Full Functionalities -->
+                        <div class="card bg-dark border border-secondary rounded-3 p-3 shadow-sm" style="background: #1e293b !important;">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2 pb-2 border-bottom border-secondary">
+                                <div class="d-flex align-items-center gap-2">
+                                    <h6 class="fw-bold text-white mb-0 fs-6"><i class="fa-solid fa-clock-rotate-left text-info me-2"></i>Recent Call History <span class="badge bg-primary rounded-pill ms-1" id="dialerRecentCallsCount">20</span></h6>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="loadRecentCallsDialer()" title="Refresh recent calls">
+                                        <i class="fa-solid fa-rotate me-1"></i> Refresh
+                                    </button>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="switchScope('my')">
+                                        <i class="fa-solid fa-list me-1"></i> View Full History
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Live Search Input for Last 20 Calls -->
+                            <div class="input-group input-group-sm mb-3">
+                                <span class="input-group-text bg-dark text-muted border-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                <input type="text" id="dialerContactSearch" class="form-control bg-dark text-white border-secondary" placeholder="Search customer name, masked number, or type..." oninput="filterRecentDialerCalls(this.value)">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('dialerContactSearch').value=''; filterRecentDialerCalls('');" title="Clear Search">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+
+                            <!-- Scrollable 20 Recent Calls List -->
+                            <div id="dialerContactsList" style="max-height: 480px; overflow-y: auto; padding-right: 4px;">
+                                <div class="text-center py-5 text-muted">
+                                    <div class="spinner-border spinner-border-sm text-primary mb-2"></div>
+                                    <div>Loading last 20 recent calls...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TABS 2-5: CALL INTELLIGENCE & HISTORY PANES ================= -->
+            <div id="tab-pane-history" style="display: none;">
+                <!-- Metric Summary Cards -->
+                <div class="row g-3 mb-4">
+                <div class="col-md-2 col-6">
+                    <div class="metric-card">
+                        <div>
+                            <div class="metric-value text-light" id="metric-total">0</div>
+                            <div class="metric-label">Total Calls</div>
+                        </div>
+                        <div class="metric-icon" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">
+                            <i class="fa-solid fa-phone"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-6">
+                    <div class="metric-card">
+                        <div>
+                            <div class="metric-value text-success" id="metric-answered">0</div>
+                            <div class="metric-label">Answered</div>
+                        </div>
+                        <div class="metric-icon" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">
+                            <i class="fa-solid fa-phone-volume"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="metric-card">
+                        <div>
+                            <div class="metric-value text-danger" id="metric-missed">0</div>
+                            <div class="metric-label">Missed by Staff</div>
+                        </div>
+                        <div class="metric-icon" style="background: rgba(239, 68, 68, 0.15); color: #f87171;">
+                            <i class="fa-solid fa-phone-slash"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-6">
+                    <div class="metric-card">
+                        <div>
+                            <div class="metric-value text-secondary" id="metric-unanswered">0</div>
+                            <div class="metric-label">Unanswered</div>
+                        </div>
+                        <div class="metric-icon" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1;">
+                            <i class="fa-solid fa-phone-missed"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-12">
+                    <div class="metric-card">
+                        <div>
+                            <div class="metric-value text-purple" id="metric-talk-time" style="color: #c084fc;">00m 00s</div>
+                            <div class="metric-label">Total Talk Time</div>
+                        </div>
+                        <div class="metric-icon" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa;">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Panel -->
+            <div class="filter-panel">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom border-secondary">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small fw-bold"><i class="fa-solid fa-calendar-days me-1"></i> Quick Range:</span>
+                        <button class="preset-btn" data-days="0" onclick="setDatePreset(0, this)">Today</button>
+                        <button class="preset-btn" data-days="1" onclick="setDatePreset(1, this)">Yesterday</button>
+                        <button class="preset-btn" data-days="3" onclick="setDatePreset(3, this)">Last 3 Days</button>
+                        <button class="preset-btn active" data-days="7" onclick="setDatePreset(7, this)">Last 7 Days</button>
+                        <span class="badge bg-secondary text-light ms-2" style="font-size:10px;"><i class="fa-solid fa-lock me-1"></i>Max 7 Days Enforced</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="text-muted small mb-0">Sort By:</label>
+                        <select id="filter-sort" class="form-select form-select-sm bg-dark text-light border-secondary" style="width: 170px;" onchange="loadCalls(1)">
+                            <option value="newest">Date: Newest First</option>
+                            <option value="oldest">Date: Oldest First</option>
+                            <option value="duration_desc">Duration: Longest</option>
+                            <option value="duration_asc">Duration: Shortest</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-3">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-dark text-muted border-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
+                            <input type="text" id="filter-search" class="form-control bg-dark text-light border-secondary" placeholder="Search phone, name, UUID..." onkeyup="if(event.key==='Enter') loadCalls(1)">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <select id="filter-type" class="form-select form-select-sm bg-dark text-light border-secondary" onchange="loadCalls(1)">
+                            <option value="">All Call Types</option>
+                            <option value="inbound_answered">Incoming Answered</option>
+                            <option value="missed_by_staff">Missed by Staff</option>
+                            <option value="outbound_answered">Outgoing Answered</option>
+                            <option value="outbound_unanswered">Outgoing Unanswered</option>
+                            <option value="voicemail">Voicemail</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2" id="team-filter-col" style="display: none;">
+                        <select id="filter-team-member" class="form-select form-select-sm bg-dark text-light border-secondary" onchange="loadCalls(1)">
+                            <option value="">All Team Members</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" id="filter-start-date" class="form-control form-control-sm bg-dark text-light border-secondary" onchange="validateDateRange(); loadCalls(1)">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" id="filter-end-date" class="form-control form-control-sm bg-dark text-light border-secondary" onchange="validateDateRange(); loadCalls(1)">
+                    </div>
+                    <div class="col-md-1 d-flex gap-1">
+                        <button class="btn btn-outline-secondary btn-sm flex-fill" onclick="resetFilters()" title="Reset Filters">
+                            <i class="fa-solid fa-filter-circle-xmark"></i>
+                        </button>
+                        <button class="btn btn-primary btn-sm flex-fill" onclick="loadCalls(1)" title="Apply Filters">
+                            <i class="fa-solid fa-filter"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-custom">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Handled By</th>
+                                <th>Call From</th>
+                                <th>Date / Time (IST)</th>
+                                <th>Direction & Call Type</th>
+                                <th>Customer Name</th>
+                                <th>Customer Number</th>
+                                <th>Source</th>
+                                <th>Duration</th>
+                                <th>Call Recording</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="calls-table-body">
+                            <tr>
+                                <td colspan="10" class="text-center py-5 text-muted">
+                                    <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                                    <div>Loading call history...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination -->
+                <div class="d-flex justify-content-between align-items-center p-3 border-top border-secondary">
+                    <div class="small text-muted" id="pagination-info">Showing 0 calls</div>
+                    <div class="d-flex gap-1" id="pagination-controls"></div>
+                </div>
+            </div>
+            </div> <!-- /tab-pane-history -->
+        </div>
+    </div>
+
+    <!-- Call Detail & Customer Timeline Drawer -->
+    <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+    <div class="drawer" id="call-drawer">
+        <div class="drawer-header">
+            <div>
+                <h5 class="fw-bold mb-0 text-light" id="drawer-customer-name"><i class="fa-solid fa-user-clock text-info me-2"></i>Customer Timeline</h5>
+                <div class="small text-muted font-monospace" id="drawer-phone-masked">+91 ••••••••••</div>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary" onclick="closeDrawer()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="drawer-body" id="drawer-content">
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm text-info mb-2"></div>
+                <div>Fetching customer timeline...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Taken Modal for Missed Calls -->
+    <div class="modal fade" id="actionTakenModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-light border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title"><i class="fa-solid fa-clipboard-check text-success me-2"></i>Record Missed Call Action</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="action-session-id">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Customer Number</label>
+                        <input type="text" id="action-customer-phone" class="form-control bg-secondary text-light border-secondary font-monospace" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-light small fw-bold">Action Taken / Resolution Note <span class="text-danger">*</span></label>
+                        <textarea id="action-notes" class="form-control bg-dark text-light border-secondary" rows="3" placeholder="e.g., Called back customer, interested in Manthra EV / Solar quotation scheduled..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success btn-sm" onclick="saveActionTaken()"><i class="fa-solid fa-check me-1"></i> Save Action</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Softphone Dial Modal -->
+    <div class="modal fade" id="quickDialModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content bg-dark text-light border-secondary">
+                <div class="modal-header border-secondary py-2">
+                    <h6 class="modal-title fw-bold"><i class="fa-solid fa-phone text-success me-2"></i>Softphone Quick Call</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Enter 10-digit Phone Number</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-secondary text-light border-secondary">+91</span>
+                            <input type="tel" id="quick-dial-phone" class="form-control bg-dark text-light border-secondary font-monospace" placeholder="9876543210" maxlength="10">
+                        </div>
+                    </div>
+                    <button class="btn btn-success w-100 fw-bold" onclick="triggerQuickCall()">
+                        <i class="fa-solid fa-phone-volume me-1"></i> Call via Softphone
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentScope = 'dialer';
+        let currentPage = 1;
+        let activeAudio = null;
+        let activePlayBtn = null;
+        let currentUserInfo = null;
+        let actionModalInstance = null;
+        let quickDialModalInstance = null;
+
+        // Shared In-Call & Softphone Telephony State
+        let isCallInProgress = false;
+        let hubTimerInterval = null;
+        let hubCallSeconds = 0;
+        let isHubMuted = false;
+        let isHubHeld = false;
+        let isHubSpeakerOn = false;
+        let activeCallInfo = { phone: '', name: '', sessionId: '' };
+        let cachedRecentDialerCalls = [];
+
+        function parseISTDate(rawDt) {
+            if (!rawDt) return null;
+            let str = String(rawDt).trim();
+            if (!str) return null;
+            // If naive ISO string without timezone, append +05:30 so browser interprets as IST
+            if (!str.includes('+') && !str.endsWith('Z') && !str.endsWith('z')) {
+                str = str + '+05:30';
+            }
+            const d = new Date(str);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof window.StaffSidebar !== 'undefined') {
+                await window.StaffSidebar.init();
+            }
+            if (typeof window.StaffHeader !== 'undefined' && window.StaffHeader.inject) {
+                window.StaffHeader.inject('Softphone Center', 'fas fa-headset', {
+                    showBack: true,
+                    backUrl: '/staff/dashboard'
+                });
+                if (typeof window.StaffHeader.init === 'function') window.StaffHeader.init();
+            }
+            if (typeof window.StaffBackButton !== 'undefined') window.StaffBackButton.init();
+
+            actionModalInstance = new bootstrap.Modal(document.getElementById('actionTakenModal'));
+            if (document.getElementById('quickDialModal')) {
+                quickDialModalInstance = new bootstrap.Modal(document.getElementById('quickDialModal'));
+            }
+
+            // Set default 7-day date range for history tabs
+            setDatePreset(7);
+            
+            // Check current user identity for Overall tab permission
+            await checkUserPermissions();
+
+            // Setup Reactive Event Listeners for Plivo Telephony Singleton
+            setupTelephonyEventListeners();
+
+            // Initial Scope Resolution: Default is #dialer (or hash from URL)
+            const initialScope = (window.location.hash.replace('#', '') || 'dialer').toLowerCase();
+            const validScopes = ['dialer', 'my', 'new_calls', 'team', 'overall'];
+            const targetScope = validScopes.includes(initialScope) ? initialScope : 'dialer';
+            switchScope(targetScope);
+
+            // Load initial recent 20 calls & metrics for Dialer
+            loadRecentCallsDialer();
+            loadTodayDialerMetrics();
+        });
+
+        function setupTelephonyEventListeners() {
+            // 1. Dialing initiated
+            document.addEventListener('plivo:call-dialing', (e) => {
+                const { phone, name, sessionId } = e.detail || {};
+                isCallInProgress = true;
+                activeCallInfo = { phone: phone || 'Unknown', name: name || 'Contact Lead', sessionId };
+                startHubCallUI(phone, name, sessionId, false);
+                updateGlobalActiveCallPill();
+            });
+
+            // 2. Call answered / connected
+            document.addEventListener('plivo:call-connected', (e) => {
+                const { phone, name, sessionId } = e.detail || {};
+                isCallInProgress = true;
+                activeCallInfo = { phone: phone || activeCallInfo.phone, name: name || activeCallInfo.name, sessionId };
+                startHubCallUI(activeCallInfo.phone, activeCallInfo.name, sessionId, true);
+                updateGlobalActiveCallPill();
+            });
+
+            // 3. Call terminated / hung up
+            document.addEventListener('plivo:call-terminated', (e) => {
+                isCallInProgress = false;
+                endCallFromHub(false);
+                updateGlobalActiveCallPill();
+                loadRecentCallsDialer();
+                loadTodayDialerMetrics();
+            });
+
+            // 4. Agent availability update
+            document.addEventListener('plivo:agent-status', (e) => {
+                const status = e.detail?.status || 'available';
+                syncStatusDropdowns(status);
+            });
+        }
+
+        function switchScope(scope) {
+            currentScope = scope;
+            window.location.hash = scope;
+            document.querySelectorAll('#scopeTabs .nav-link').forEach(l => l.classList.remove('active'));
+            const activeTabBtn = document.getElementById(`tab-${scope}`);
+            if (activeTabBtn) activeTabBtn.classList.add('active');
+
+            const dialerPane = document.getElementById('tab-pane-dialer');
+            const historyPane = document.getElementById('tab-pane-history');
+
+            if (scope === 'dialer') {
+                if (dialerPane) dialerPane.style.display = 'block';
+                if (historyPane) historyPane.style.display = 'none';
+                updateGlobalActiveCallPill();
+                loadRecentCallsDialer();
+                loadTodayDialerMetrics();
+            } else {
+                if (dialerPane) dialerPane.style.display = 'none';
+                if (historyPane) historyPane.style.display = 'block';
+                updateGlobalActiveCallPill();
+
+                const teamCol = document.getElementById('team-filter-col');
+                if (scope === 'team' || scope === 'overall') {
+                    if (teamCol) teamCol.style.display = 'block';
+                    const select = document.getElementById('filter-team-member');
+                    if (select && select.options.length <= 1) {
+                        loadTeamMembers();
+                    }
+                } else {
+                    if (teamCol) teamCol.style.display = 'none';
+                    const sel = document.getElementById('filter-team-member');
+                    if (sel) sel.value = '';
+                }
+
+                loadCalls(1);
+            }
+        }
+
+        function updateGlobalActiveCallPill() {
+            const pill = document.getElementById('globalActiveCallPill');
+            if (!pill) return;
+
+            if (isCallInProgress && currentScope !== 'dialer') {
+                pill.classList.remove('d-none');
+                pill.classList.add('d-flex');
+                document.getElementById('globalCallName').textContent = activeCallInfo.name || 'Customer';
+                document.getElementById('globalCallPhone').textContent = maskPhoneNumber(activeCallInfo.phone || '');
+            } else {
+                pill.classList.add('d-none');
+                pill.classList.remove('d-flex');
+            }
+        }
+
+        function maskPhoneNumber(phone) {
+            if (!phone) return '+91 ••••••••••';
+            const digits = phone.replace(/\D/g, '');
+            if (digits.length >= 10) {
+                const last4 = digits.slice(-4);
+                return `+91 ••••••${last4}`;
+            }
+            return phone;
+        }
+
+        function handleRefreshClick() {
+            if (currentScope === 'dialer') {
+                loadRecentCallsDialer();
+                loadTodayDialerMetrics();
+            } else {
+                loadCalls(currentPage);
+            }
+        }
+
+        // ── DIALPAD & SOFTPHONE CALL CONTROLS ─────────────────────────────────
+
+        function pressHubKey(k) {
+            const el = document.getElementById('hubDialerInput');
+            if (el) el.value += k;
+            if (window.PlivoSoftphone && typeof window.PlivoSoftphone.playKeyTone === 'function') {
+                window.PlivoSoftphone.playKeyTone();
+            }
+        }
+
+        function backspaceHub() {
+            const el = document.getElementById('hubDialerInput');
+            if (el && el.value.length > 0) el.value = el.value.slice(0, -1);
+        }
+
+        function dialFromHub(phoneNumber = null, leadName = null) {
+            const phone = phoneNumber || (document.getElementById('hubDialerInput') ? document.getElementById('hubDialerInput').value.trim() : '');
+            if (!phone) {
+                alert('Please enter or select a phone number to call.');
+                return;
+            }
+            const cleanPhone = phone.startsWith('+') ? phone : `+91${phone.replace(/\D/g, '').slice(-10)}`;
+            const name = leadName || 'Contact Lead';
+
+            if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
+                window.PlivoSoftphone.dial(cleanPhone, null, name);
+            } else {
+                // Fallback UI initiation
+                isCallInProgress = true;
+                activeCallInfo = { phone: cleanPhone, name, sessionId: 'local_' + Date.now() };
+                startHubCallUI(cleanPhone, name, activeCallInfo.sessionId, false);
+            }
+        }
+
+        function startHubCallUI(phone, name, sessionId = null, isConnected = false) {
+            const keypadView = document.getElementById('hubKeypadView');
+            const inCallView = document.getElementById('hubInCallView');
+            if (keypadView) keypadView.style.display = 'none';
+            if (inCallView) inCallView.style.display = 'flex';
+
+            const nameEl = document.getElementById('hubInCallName');
+            const phoneEl = document.getElementById('hubInCallPhone');
+            const avatarEl = document.getElementById('hubInCallAvatar');
+            if (nameEl) nameEl.textContent = name || 'Customer Lead';
+            if (phoneEl) phoneEl.textContent = maskPhoneNumber(phone);
+            if (avatarEl) avatarEl.textContent = (name || 'C').slice(0, 2).toUpperCase();
+
+            // Reset states
+            isHubMuted = false;
+            isHubHeld = false;
+            updateHubButtonStates();
+
+            clearInterval(hubTimerInterval);
+            hubTimerInterval = null;
+
+            const timerEl = document.getElementById('hubInCallTimer');
+            if (isConnected) {
+                hubCallSeconds = 0;
+                updateHubTimerDisplay();
+                hubTimerInterval = setInterval(() => {
+                    hubCallSeconds++;
+                    updateHubTimerDisplay();
+                    const globalTimer = document.getElementById('globalCallTimer');
+                    if (globalTimer) {
+                        const m = Math.floor(hubCallSeconds / 60).toString().padStart(2, '0');
+                        const s = (hubCallSeconds % 60).toString().padStart(2, '0');
+                        globalTimer.textContent = `${m}:${s}`;
+                    }
+                }, 1000);
+            } else {
+                hubCallSeconds = 0;
+                if (timerEl) {
+                    timerEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-1 text-warning"></i> Calling...`;
+                }
+            }
+        }
+
+        function updateHubTimerDisplay() {
+            const m = Math.floor(hubCallSeconds / 60).toString().padStart(2, '0');
+            const s = (hubCallSeconds % 60).toString().padStart(2, '0');
+            const timerEl = document.getElementById('hubInCallTimer');
+            if (timerEl) {
+                timerEl.innerHTML = `<i class="fa-solid fa-phone-volume me-1 text-success"></i> Connected • ${m}:${s}`;
+            }
+        }
+
+        function endCallFromHub(triggerHangup = true) {
+            clearInterval(hubTimerInterval);
+            hubTimerInterval = null;
+            hubCallSeconds = 0;
+            isCallInProgress = false;
+
+            const inCallView = document.getElementById('hubInCallView');
+            const keypadView = document.getElementById('hubKeypadView');
+            if (inCallView) inCallView.style.display = 'none';
+            if (keypadView) keypadView.style.display = 'block';
+
+            updateGlobalActiveCallPill();
+
+            if (triggerHangup && window.PlivoSoftphone && typeof window.PlivoSoftphone.hangup === 'function') {
+                window.PlivoSoftphone.hangup();
+            }
+        }
+
+        function toggleHubMute() {
+            isHubMuted = !isHubMuted;
+            if (window.PlivoSoftphone && typeof window.PlivoSoftphone.toggleMute === 'function') {
+                window.PlivoSoftphone.toggleMute();
+            }
+            updateHubButtonStates();
+        }
+
+        function toggleHubHold() {
+            isHubHeld = !isHubHeld;
+            if (window.PlivoSoftphone && typeof window.PlivoSoftphone.toggleHold === 'function') {
+                window.PlivoSoftphone.toggleHold();
+            }
+            updateHubButtonStates();
+        }
+
+        function toggleHubSpeaker() {
+            isHubSpeakerOn = !isHubSpeakerOn;
+            const btn = document.getElementById('hubBtnSpeaker');
+            if (btn) btn.classList.toggle('active', isHubSpeakerOn);
+            if (window.PlivoSoftphone && typeof window.PlivoSoftphone.toggleSpeaker === 'function') {
+                window.PlivoSoftphone.toggleSpeaker();
+            }
+        }
+
+        function toggleHubDTMFPad() {
+            const drawer = document.getElementById('hubInCallDTMFDrawer');
+            if (drawer) {
+                drawer.style.display = (drawer.style.display === 'none' || !drawer.style.display) ? 'block' : 'none';
+            }
+        }
+
+        function sendDTMFFromHub(digit) {
+            if (window.PlivoSoftphone && typeof window.PlivoSoftphone.sendDTMF === 'function') {
+                window.PlivoSoftphone.sendDTMF(digit);
+            }
+        }
+
+        function updateHubButtonStates() {
+            const btnMute = document.getElementById('hubBtnMute');
+            const labelMute = document.getElementById('hubLabelMute');
+            const globalBtnMute = document.getElementById('globalBtnMute');
+            if (btnMute) btnMute.classList.toggle('active', isHubMuted);
+            if (labelMute) labelMute.textContent = isHubMuted ? 'Unmute' : 'Mute';
+            if (globalBtnMute) {
+                globalBtnMute.classList.toggle('btn-warning', isHubMuted);
+                globalBtnMute.classList.toggle('btn-outline-light', !isHubMuted);
+                globalBtnMute.innerHTML = isHubMuted ? '<i class="fa-solid fa-microphone"></i> Unmute' : '<i class="fa-solid fa-microphone-slash"></i> Mute';
+            }
+
+            const btnHold = document.getElementById('hubBtnHold');
+            const labelHold = document.getElementById('hubLabelHold');
+            const globalBtnHold = document.getElementById('globalBtnHold');
+            if (btnHold) btnHold.classList.toggle('active', isHubHeld);
+            if (labelHold) labelHold.textContent = isHubHeld ? 'Unhold' : 'Hold';
+            if (globalBtnHold) {
+                globalBtnHold.classList.toggle('btn-warning', isHubHeld);
+                globalBtnHold.classList.toggle('btn-outline-light', !isHubHeld);
+                globalBtnHold.innerHTML = isHubHeld ? '<i class="fa-solid fa-play"></i> Unhold' : '<i class="fa-solid fa-pause"></i> Hold';
+            }
+        }
+
+        function setGlobalAgentStatus(status) {
+            if (window.PlivoSoftphone && typeof window.PlivoSoftphone.setAgentStatus === 'function') {
+                window.PlivoSoftphone.setAgentStatus(status);
+            }
+            syncStatusDropdowns(status);
+        }
+
+        function syncStatusDropdowns(status) {
+            const headerSelect = document.getElementById('headerAgentStatus');
+            if (headerSelect) headerSelect.value = status;
+            const regBadge = document.getElementById('hubRegistrationBadge');
+            if (regBadge) {
+                if (status === 'available') {
+                    regBadge.className = 'badge bg-success';
+                    regBadge.innerHTML = '<i class="fa-solid fa-circle-check me-1"></i> Online';
+                } else if (status === 'busy') {
+                    regBadge.className = 'badge bg-danger';
+                    regBadge.innerHTML = '<i class="fa-solid fa-circle-dot me-1"></i> Busy';
+                } else if (status === 'break') {
+                    regBadge.className = 'badge bg-warning text-dark';
+                    regBadge.innerHTML = '<i class="fa-solid fa-coffee me-1"></i> Break';
+                }
+            }
+        }
+
+        // ── LAST 20 RECENT CALLS & TODAY'S DATA METRICS ──────────────────────
+
+        async function loadRecentCallsDialer() {
+            const container = document.getElementById('dialerContactsList');
+            if (!container) return;
+            try {
+                // Fetch last 20 recent calls for the logged-in staff user
+                const res = await staffFetch('/api/v1/telephony/incoming-calls?scope=my&page=1&page_size=20&sort_by=newest');
+                if (res && res.items && res.items.length > 0) {
+                    cachedRecentDialerCalls = res.items;
+                    const countBadge = document.getElementById('dialerRecentCallsCount');
+                    if (countBadge) countBadge.textContent = cachedRecentDialerCalls.length;
+                    renderRecentCallsDialer(cachedRecentDialerCalls);
+                } else {
+                    cachedRecentDialerCalls = [];
+                    const countBadge = document.getElementById('dialerRecentCallsCount');
+                    if (countBadge) countBadge.textContent = '0';
+                    container.innerHTML = `
+                        <div class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-phone-slash fa-2x mb-2 text-secondary"></i>
+                            <div class="fw-bold text-light">No Recent Calls Yet</div>
+                            <div class="small">Use the dialpad on the left to place your first outbound call.</div>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                console.warn('Could not load recent dialer calls:', err);
+                container.innerHTML = `
+                    <div class="text-center py-4 text-danger small">
+                        <i class="fa-solid fa-triangle-exclamation me-1"></i> Could not load recent call history.
+                    </div>
+                `;
+            }
+        }
+
+        // Backwards compatibility alias
+        function loadSpeedDialContacts() {
+            return loadRecentCallsDialer();
+        }
+
+        function renderRecentCallsDialer(calls) {
+            const container = document.getElementById('dialerContactsList');
+            if (!container) return;
+            if (!calls || calls.length === 0) {
+                container.innerHTML = '<div class="text-center py-4 text-muted small"><i class="fa-solid fa-filter-circle-xmark me-1"></i> No recent calls matching your search.</div>';
+                return;
+            }
+
+            container.innerHTML = calls.map(c => {
+                const name = escapeHtml(c.customer_name || 'Customer Lead');
+                const phoneMasked = escapeHtml(c.customer_phone_masked || '+91 ••••••••••');
+                const rawCustomerNum = c.raw_caller_number || c.customer_phone || c.customer_number || '';
+                const cleanPhone = (rawCustomerNum || '').replace(/\D/g, '').slice(-10);
+                const sourceBadge = c.contact_source 
+                    ? `<span class="badge bg-secondary bg-opacity-50 text-light px-1.5 py-0.5" style="font-size: 10px;">${escapeHtml(c.contact_source)}</span>`
+                    : `<span class="badge bg-dark border border-secondary text-info px-1.5 py-0.5" style="font-size: 10px;">${escapeHtml(c.source || 'CALL')}</span>`;
+
+                // Direction Pill & Detailed Call Type Badges
+                const isIncoming = (c.direction === 'inbound') || ['inbound_answered', 'missed_by_staff', 'voicemail'].includes(c.computed_type);
+                const directionPill = isIncoming
+                    ? `<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-2 py-0.5 fw-bold font-monospace" style="font-size:10px;"><i class="fa-solid fa-arrow-down-left me-1"></i>IN</span>`
+                    : `<span class="badge bg-primary bg-opacity-25 text-info border border-primary border-opacity-50 px-2 py-0.5 fw-bold font-monospace" style="font-size:10px;"><i class="fa-solid fa-arrow-up-right me-1"></i>OUT</span>`;
+
+                let badgeClass = 'badge-type-secondary';
+                let iconClass = 'fa-phone';
+                let typeText = c.type_label || (isIncoming ? 'Incoming' : 'Outgoing');
+
+                if (c.computed_type === 'inbound_answered') { 
+                    badgeClass = 'badge-type-success'; 
+                    iconClass = 'fa-phone-arrow-down-left'; 
+                    typeText = 'Incoming';
+                } else if (c.computed_type === 'missed_by_staff') { 
+                    badgeClass = 'badge-type-danger'; 
+                    iconClass = 'fa-phone-slash'; 
+                    typeText = 'Missed';
+                } else if (c.computed_type === 'outbound_answered') { 
+                    badgeClass = 'badge-type-primary'; 
+                    iconClass = 'fa-phone-arrow-up-right'; 
+                    typeText = 'Outgoing';
+                } else if (c.computed_type === 'outbound_unanswered') { 
+                    badgeClass = 'badge-type-secondary'; 
+                    iconClass = 'fa-phone-missed'; 
+                    typeText = 'Unanswered';
+                } else if (c.computed_type === 'voicemail') { 
+                    badgeClass = 'badge-type-purple'; 
+                    iconClass = 'fa-voicemail'; 
+                    typeText = 'Voicemail';
+                }
+
+                const typeBadgeHtml = `<span class="badge-type ${badgeClass}" style="font-size:10.5px;padding:3px 6px;"><i class="fa-solid ${iconClass}"></i> ${escapeHtml(typeText)}</span>`;
+
+                // Date & Time (IST)
+                let timeHtml = '—';
+                const rawDt = c.started_at || c.answered_at || c.created_at;
+                const d = parseISTDate(rawDt);
+                if (d) {
+                    const now = new Date();
+                    const dDateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+                    const nowDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+                    const isToday = dDateStr === nowDateStr;
+                    const timeStr = d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
+                    const dateStr = isToday ? 'Today' : d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short' });
+                    timeHtml = `<span class="badge bg-dark border border-secondary text-warning font-monospace" style="font-size:10.5px;"><i class="fa-solid fa-clock text-warning me-1"></i>${dateStr} ${timeStr}</span>`;
+                }
+
+                // Recording Audio Player
+                let recHtml = '';
+                if ((c.has_recording || (c.duration_seconds && c.duration_seconds > 0)) && c.recording_url) {
+                    const playerKey = `dialer_rec_${c.id}`;
+                    recHtml = `
+                        <div class="audio-scrubber-player mt-1" id="player-row-${playerKey}" style="min-width:160px;max-width:200px;padding:2px 8px;">
+                            <button class="play-btn" id="pbtn-${playerKey}" onclick="toggleAudio('${escapeHtml(c.recording_url)}', '${playerKey}', '${escapeHtml(c.duration_formatted)}')" title="Play Recording" style="width:22px;height:22px;font-size:9px;">
+                                <i class="fa-solid fa-play"></i>
+                            </button>
+                            <div class="scrubber-track-wrapper">
+                                <input type="range" class="audio-slider" id="slider-${playerKey}" min="0" max="100" value="0" 
+                                       oninput="seekAudio(this.value, '${playerKey}')" 
+                                       onchange="commitSeekAudio(this.value, '${playerKey}')" 
+                                       title="Seek">
+                                <div class="audio-time-label" id="timer-${playerKey}" style="font-size:9.5px;">00:00 / ${escapeHtml(c.duration_formatted)}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const initialLetter = (name.replace(/[^a-zA-Z]/g, '') || 'C').slice(0, 2).toUpperCase();
+
+                return `
+                    <div class="contact-item-dark">
+                        <div class="d-flex align-items-start gap-3 flex-grow-1 min-w-0">
+                            <div class="call-avatar-dark flex-shrink-0" style="width: 42px; height: 42px; font-size: 15px; margin-bottom: 0; box-shadow: none; animation: none;">
+                                ${initialLetter}
+                            </div>
+                            <div class="min-w-0 flex-grow-1">
+                                <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="fw-bold text-white fs-6" style="cursor:pointer;" onclick="openCustomerHistory('${cleanPhone}', '${name.replace(/'/g, "\\'")}')">${name}</span>
+                                        ${sourceBadge}
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                        ${directionPill}
+                                        ${typeBadgeHtml}
+                                        <span class="badge bg-dark border border-secondary text-warning font-monospace px-1.5 py-0.5" style="font-size:10.5px;">${escapeHtml(c.duration_formatted)}</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="phone-masked font-monospace"><i class="fa-solid fa-phone me-1 text-muted" style="font-size:10px;"></i>${phoneMasked}</span>
+                                        ${timeHtml}
+                                    </div>
+                                    ${recHtml}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 ms-3 flex-shrink-0">
+                            <button class="btn btn-outline-info btn-sm rounded-circle p-2" onclick="openCustomerHistory('${cleanPhone}', '${name.replace(/'/g, "\\'")}')" title="View Customer History" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                            </button>
+                            <button class="btn btn-success btn-sm rounded-circle p-2 shadow-sm" onclick="dialFromHub('${cleanPhone}', '${name.replace(/'/g, "\\'")}')" title="Call ${name}" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
+                                <i class="fa-solid fa-phone"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterRecentDialerCalls(query) {
+            if (!query || !query.trim()) {
+                renderRecentCallsDialer(cachedRecentDialerCalls);
+                return;
+            }
+            const q = query.toLowerCase().trim();
+            const filtered = cachedRecentDialerCalls.filter(c => 
+                (c.customer_name || '').toLowerCase().includes(q) ||
+                (c.customer_phone_masked || '').toLowerCase().includes(q) ||
+                (c.type_label || '').toLowerCase().includes(q) ||
+                (c.source || '').toLowerCase().includes(q) ||
+                (c.contact_source || '').toLowerCase().includes(q) ||
+                (c.operator_name || '').toLowerCase().includes(q)
+            );
+            renderRecentCallsDialer(filtered);
+        }
+
+        // Backwards compatibility alias
+        function filterSpeedDialContacts(query) {
+            filterRecentDialerCalls(query);
+        }
+
+        async function loadTodayDialerMetrics() {
+            try {
+                const now = new Date();
+                const formatYMD = (d) => {
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                };
+                const todayStr = formatYMD(now);
+
+                // Fetch calls strictly for today
+                const res = await staffFetch(`/api/v1/telephony/incoming-calls?scope=my&start_date=${todayStr}&end_date=${todayStr}&page=1&page_size=100`);
+                if (res && res.items) {
+                    const items = res.items || [];
+                    const totalToday = res.total_count || items.length;
+                    const answeredToday = items.filter(c => c.computed_type === 'inbound_answered' || c.computed_type === 'outbound_answered').length;
+                    const missedToday = items.filter(c => c.computed_type === 'missed_by_staff').length;
+                    const unansToday = items.filter(c => c.computed_type === 'outbound_unanswered').length;
+                    const totalSec = items.filter(c => c.computed_type === 'inbound_answered' || c.computed_type === 'outbound_answered')
+                                          .reduce((acc, c) => acc + (c.duration_seconds || 0), 0);
+                    const connRate = totalToday > 0 ? Math.round((answeredToday / totalToday) * 100) + '%' : '0%';
+
+                    const totEl = document.getElementById('dialer-stat-total');
+                    const ansEl = document.getElementById('dialer-stat-answered');
+                    const misEl = document.getElementById('dialer-stat-missed');
+                    const unaEl = document.getElementById('dialer-stat-unanswered');
+                    const ttEl = document.getElementById('dialer-stat-talktime');
+                    const crEl = document.getElementById('dialer-stat-connrate');
+
+                    if (totEl) totEl.textContent = totalToday;
+                    if (ansEl) ansEl.textContent = answeredToday;
+                    if (misEl) misEl.textContent = missedToday;
+                    if (unaEl) unaEl.textContent = unansToday;
+                    if (ttEl) ttEl.textContent = `${Math.floor(totalSec / 60)}m ${totalSec % 60}s`;
+                    if (crEl) crEl.textContent = connRate;
+                }
+            } catch (err) {
+                console.warn('Could not load today dialer metrics:', err);
+            }
+        }
+
+        async function checkUserPermissions() {
+            try {
+                const user = JSON.parse(localStorage.getItem('staff_user') || sessionStorage.getItem('staff_user') || '{}');
+                currentUserInfo = user;
+                const empCode = (user.emp_code || '').toUpperCase();
+                const roleCode = (user.role?.role_code || user.role_code || '').toLowerCase();
+                const staffType = (user.staff_type || '').toUpperCase();
+                const isSupreme = !!user.is_supreme;
+                const isLeadership = isSupreme || ['vgk4u', 'vgk4u_supreme', 'key_leadership', 'ea', 'executive_admin', 'super_admin', 'admin', 'director'].includes(roleCode) ||
+                                     ['VGK4U', 'VGK4U_SUPREME', 'KEY_LEADERSHIP', 'EA', 'DIRECTOR'].includes(staffType) ||
+                                     ['MR10001', 'MR10018', 'MR10016', 'MR10025'].includes(empCode);
+
+                if (isLeadership) {
+                    const wrap = document.getElementById('tab-overall-wrapper');
+                    if (wrap) wrap.style.display = 'block';
+                }
+            } catch (e) {
+                console.error('Permission evaluation error:', e);
+            }
+        }
+
+        async function loadTeamMembers() {
+            try {
+                const res = await staffFetch('/api/v1/telephony/team-members');
+                if (res && res.team_members && res.team_members.length > 0) {
+                    const select = document.getElementById('filter-team-member');
+                    if (select) {
+                        select.innerHTML = '<option value="">All Team Members (' + res.team_members.length + ')</option>' + 
+                            res.team_members.map(m => `<option value="${m.id}">${escapeHtml(m.name)} (${escapeHtml(m.emp_code)}) - ${escapeHtml(m.department)}</option>`).join('');
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not load team members:', e);
+            }
+        }
+
+        function setDatePreset(days, btn = null) {
+            if (btn) {
+                document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+            const now = new Date();
+            const formatYMD = (d) => {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days);
+
+            const stInput = document.getElementById('filter-start-date');
+            const enInput = document.getElementById('filter-end-date');
+            if (stInput) stInput.value = formatYMD(start);
+            if (enInput) enInput.value = formatYMD(end);
+            if (btn && currentScope !== 'dialer') loadCalls(1);
+        }
+
+        function validateDateRange() {
+            const stInput = document.getElementById('filter-start-date');
+            const enInput = document.getElementById('filter-end-date');
+            if (stInput && enInput && stInput.value && enInput.value) {
+                const st = new Date(stInput.value);
+                const en = new Date(enInput.value);
+                const diffTime = Math.abs(en - st);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays > 7) {
+                    alert('Note: Maximum date filter range is limited to 7 days for performance.');
+                    const adjusted = new Date(en);
+                    adjusted.setDate(en.getDate() - 7);
+                    const formatYMD = (d) => {
+                        const year = d.getFullYear();
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    };
+                    stInput.value = formatYMD(adjusted);
+                }
+            }
+        }
+
+        function resetFilters() {
+            const s = document.getElementById('filter-search');
+            const t = document.getElementById('filter-type');
+            const m = document.getElementById('filter-team-member');
+            const so = document.getElementById('filter-sort');
+            if (s) s.value = '';
+            if (t) t.value = '';
+            if (m) m.value = '';
+            if (so) so.value = 'newest';
+            setDatePreset(7);
+            document.querySelectorAll('.preset-btn').forEach(b => {
+                if (b.getAttribute('data-days') === '7') b.classList.add('active');
+                else b.classList.remove('active');
+            });
+            if (currentScope !== 'dialer') loadCalls(1);
+        }
+
+        async function staffFetch(url, options = {}) {
+            const token = localStorage.getItem('staff_token') || 
+                          localStorage.getItem('token') || 
+                          sessionStorage.getItem('staff_token') || 
+                          (document.cookie.match(/staff_token=([^;]+)/) || [])[1] || '';
+            options.headers = {
+                ...(options.headers || {}),
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+            const res = await fetch(url, options);
+            if (res.status === 401) {
+                window.location.href = '/staff/login';
+                throw new Error('Unauthorized');
+            }
+            if (res.status === 403) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.detail || 'Access Restricted: You do not have permission for this view.');
+            }
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.detail || `Request failed with status ${res.status}`);
+            }
+            return res.json();
+        }
+
+        async function loadCalls(page = 1) {
+            currentPage = page;
+            const search = document.getElementById('filter-search').value.trim();
+            const callType = document.getElementById('filter-type').value;
+            const teamMember = document.getElementById('filter-team-member').value;
+            const startDate = document.getElementById('filter-start-date').value;
+            const endDate = document.getElementById('filter-end-date').value;
+            const sortBy = document.getElementById('filter-sort').value;
+
+            let query = `/api/v1/telephony/incoming-calls?scope=${currentScope}&page=${page}&page_size=25&sort_by=${sortBy}`;
+            if (search) query += `&search=${encodeURIComponent(search)}`;
+            if (callType) query += `&call_type=${encodeURIComponent(callType)}`;
+            if (teamMember) query += `&staff_id=${encodeURIComponent(teamMember)}`;
+            if (startDate) query += `&start_date=${encodeURIComponent(startDate)}`;
+            if (endDate) query += `&end_date=${encodeURIComponent(endDate)}`;
+
+            try {
+                const data = await staffFetch(query);
+                if (data && data.current_user_can_view_overall) {
+                    const wrap = document.getElementById('tab-overall-wrapper');
+                    if (wrap) wrap.style.display = 'block';
+                }
+                renderCalls(data);
+            } catch (err) {
+                document.getElementById('calls-table-body').innerHTML = `
+                    <tr><td colspan="10" class="text-center py-4 text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>${escapeHtml(err.message)}</td></tr>
+                `;
+            }
+        }
+
+        function groupConsecutiveCalls(items) {
+            if (!items || items.length === 0) return [];
+            
+            const groups = [];
+            let currentGroup = null;
+
+            for (let i = 0; i < items.length; i++) {
+                const c = items[i];
+                const rawNum = c.raw_caller_number || c.customer_phone || '';
+                const cleanPhone = (rawNum.replace(/\D/g, '')).slice(-10);
+
+                if (currentGroup && cleanPhone && cleanPhone === currentGroup.cleanPhone) {
+                    // Contiguous / consecutive match!
+                    currentGroup.count++;
+                    currentGroup.calls.push(c);
+                    if (c.action_taken) currentGroup.hasActionTaken = true;
+                } else {
+                    // New consecutive sequence
+                    if (currentGroup) {
+                        groups.push(currentGroup);
+                    }
+                    currentGroup = {
+                        latestCall: c,
+                        count: 1,
+                        calls: [c],
+                        cleanPhone: cleanPhone,
+                        rawNumber: rawNum,
+                        hasActionTaken: !!c.action_taken
+                    };
+                }
+            }
+            if (currentGroup) {
+                groups.push(currentGroup);
+            }
+            return groups;
+        }
+
+        function renderCalls(data) {
+            const tbody = document.getElementById('calls-table-body');
+            const items = data.items || [];
+            
+            // Update Metrics
+            document.getElementById('metric-total').innerText = data.total_count || 0;
+            const answeredCount = items.filter(c => c.computed_type === 'inbound_answered' || c.computed_type === 'outbound_answered').length;
+            const missedCount = items.filter(c => c.computed_type === 'missed_by_staff').length;
+            const unansCount = items.filter(c => c.computed_type === 'outbound_unanswered').length;
+            const totalSec = items.reduce((acc, c) => acc + (c.duration_seconds || 0), 0);
+            
+            document.getElementById('metric-answered').innerText = answeredCount;
+            document.getElementById('metric-missed').innerText = missedCount;
+            document.getElementById('metric-unanswered').innerText = unansCount;
+            document.getElementById('metric-talk-time').innerText = `${Math.floor(totalSec / 60)}m ${totalSec % 60}s`;
+
+            if (items.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center py-5 text-muted"><i class="fa-solid fa-inbox fs-2 mb-2 d-block"></i>No call history records found matching your filters.</td></tr>`;
+                document.getElementById('pagination-info').innerText = 'Showing 0 calls';
+                document.getElementById('pagination-controls').innerHTML = '';
+                return;
+            }
+
+            const grouped = groupConsecutiveCalls(items);
+
+            tbody.innerHTML = grouped.map(group => {
+                const c = group.latestCall;
+                const count = group.count;
+
+                // Direction Pill & Detailed Call Type Badges
+                const isIncoming = (c.direction === 'inbound') || ['inbound_answered', 'missed_by_staff', 'voicemail'].includes(c.computed_type);
+                const directionPill = isIncoming
+                    ? `<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-2 py-1 fw-bold font-monospace me-1" style="font-size:10px;"><i class="fa-solid fa-arrow-down-left me-1"></i>IN</span>`
+                    : `<span class="badge bg-primary bg-opacity-25 text-info border border-primary border-opacity-50 px-2 py-1 fw-bold font-monospace me-1" style="font-size:10px;"><i class="fa-solid fa-arrow-up-right me-1"></i>OUT</span>`;
+
+                let badgeClass = 'badge-type-secondary';
+                let iconClass = 'fa-phone';
+                let typeText = c.type_label || (isIncoming ? 'Incoming' : 'Outgoing');
+
+                if (c.computed_type === 'inbound_answered') { 
+                    badgeClass = 'badge-type-success'; 
+                    iconClass = 'fa-phone-arrow-down-left'; 
+                    typeText = 'Incoming';
+                } else if (c.computed_type === 'missed_by_staff') { 
+                    badgeClass = 'badge-type-danger'; 
+                    iconClass = 'fa-phone-slash'; 
+                    typeText = 'Missed by Staff';
+                } else if (c.computed_type === 'outbound_answered') { 
+                    badgeClass = 'badge-type-primary'; 
+                    iconClass = 'fa-phone-arrow-up-right'; 
+                    typeText = 'Outgoing';
+                } else if (c.computed_type === 'outbound_unanswered') { 
+                    badgeClass = 'badge-type-secondary'; 
+                    iconClass = 'fa-phone-missed'; 
+                    typeText = 'Unanswered';
+                } else if (c.computed_type === 'voicemail') { 
+                    badgeClass = 'badge-type-purple'; 
+                    iconClass = 'fa-voicemail'; 
+                    typeText = 'Voicemail';
+                }
+
+                const typeBadgeHtml = `
+                    <div class="d-flex align-items-center gap-1">
+                        ${directionPill}
+                        <span class="badge-type ${badgeClass}"><i class="fa-solid ${iconClass}"></i> ${escapeHtml(typeText)}</span>
+                    </div>
+                `;
+
+                // Recording Audio Scrubber Player
+                let recHtml = `<span class="badge bg-secondary bg-opacity-25 text-muted px-2 py-1" style="font-size:11px;" title="No recording available — Call was not answered (00m 00s duration)"><i class="fa-solid fa-microphone-slash me-1"></i>No Recording</span>`;
+                if ((c.has_recording || (c.duration_seconds && c.duration_seconds > 0)) && c.recording_url) {
+                    recHtml = `
+                        <div class="audio-scrubber-player" id="player-row-${c.id}">
+                            <button class="play-btn" id="pbtn-${c.id}" onclick="toggleAudio('${escapeHtml(c.recording_url)}', '${c.id}', '${escapeHtml(c.duration_formatted)}')" title="Play Call Recording">
+                                <i class="fa-solid fa-play"></i>
+                            </button>
+                            <div class="scrubber-track-wrapper">
+                                <input type="range" class="audio-slider" id="slider-${c.id}" min="0" max="100" value="0" 
+                                       oninput="seekAudio(this.value, '${c.id}')" 
+                                       onchange="commitSeekAudio(this.value, '${c.id}')" 
+                                       title="Drag cursor to seek">
+                                <div class="audio-time-label" id="timer-${c.id}">00:00 / ${escapeHtml(c.duration_formatted)}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const rawCustomerNum = c.raw_caller_number || c.customer_phone || c.customer_number || group.rawNumber || '';
+                const cleanPhoneNum = (rawCustomerNum || '').replace(/\D/g, '').slice(-10);
+                const safeCustName = c.customer_name || 'Guest Caller';
+                const safeLeadId = c.crm_lead_id || '';
+
+                // Action Taken Badge / Button for Missed Calls
+                let missedActionHtml = '';
+                if (c.computed_type === 'missed_by_staff') {
+                    if (group.hasActionTaken || c.action_taken) {
+                        missedActionHtml = `
+                            <span class="badge bg-success-subtle text-success border border-success-subtle btn-action-sm mt-1" title="Action by: ${escapeHtml(c.action_by || '')} (${escapeHtml(c.action_at || '')})\nNote: ${escapeHtml(c.action_notes || '')}">
+                                <i class="fa-solid fa-check-double"></i> Action Taken
+                            </span>
+                        `;
+                    } else {
+                        missedActionHtml = `
+                            <button class="btn btn-warning btn-sm btn-action-sm mt-1" 
+                                    data-session-id="${escapeHtml(c.call_session_id)}" 
+                                    data-phone="${escapeHtml(cleanPhoneNum)}" 
+                                    data-name="${escapeHtml(safeCustName)}" 
+                                    onclick="openActionModal(this.getAttribute('data-session-id'), this.getAttribute('data-phone'), this.getAttribute('data-name'))">
+                                <i class="fa-solid fa-clipboard-check"></i> Action Taken
+                            </button>
+                        `;
+                    }
+                }
+
+                // Date & Time (IST) Formatting with High Contrast
+                let dateStr = '—';
+                const rawDt = c.started_at || c.answered_at || c.created_at;
+                const d = parseISTDate(rawDt);
+                if (d) {
+                    const dateFormatted = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' });
+                    const timeFormatted = d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+                    dateStr = `
+                        <div class="fw-bold text-white fs-6">${dateFormatted}</div>
+                        <div class="badge bg-dark border border-secondary text-warning font-monospace mt-1 px-2 py-0.5 shadow-sm" style="font-size:11px;letter-spacing:0.4px;">
+                            <i class="fa-solid fa-clock text-warning me-1"></i>${timeFormatted}
+                        </div>
+                    `;
+                }
+
+                // Consecutive Call Count Badge
+                const countBadge = count > 1 
+                    ? `<span class="badge bg-primary bg-opacity-75 text-white rounded-pill px-2 py-0.5 ms-1 fw-bold shadow-sm" style="font-size:11px;letter-spacing:0.3px;" title="${count} consecutive calls">(${count})</span>` 
+                    : '';
+
+                return `
+                    <tr>
+                        <td>
+                            <div class="fw-bold text-white fs-6">${escapeHtml(c.operator_name)}</div>
+                            <div class="small text-secondary" style="font-size:11.5px;">${escapeHtml(c.operator_emp_code)} · ${escapeHtml(c.operator_department)}</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-${c.call_from_badge || 'info'} bg-opacity-25 text-${c.call_from_badge || 'info'} border border-${c.call_from_badge || 'info'} border-opacity-50 px-2 py-1 font-monospace" style="font-size:11px;letter-spacing:0.3px;">
+                                <i class="fa-solid ${c.call_from_icon || 'fa-phone'} me-1"></i>${escapeHtml(c.call_from || 'Direct Call')}
+                            </span>
+                        </td>
+                        <td>${dateStr}</td>
+                        <td>${typeBadgeHtml}</td>
+                        <td>
+                            <div class="fw-bold text-white fs-6" style="cursor:pointer;" 
+                                 data-phone="${escapeHtml(cleanPhoneNum)}" 
+                                 data-name="${escapeHtml(safeCustName)}" 
+                                 onclick="triggerHistoryFromEl(this)" 
+                                 title="Click to view history for ${escapeHtml(safeCustName)}">
+                                <i class="fa-solid fa-user text-info me-1" style="font-size:11.5px;"></i>${escapeHtml(safeCustName)}
+                            </div>
+                            ${c.latest_selection ? `<div class="small text-warning mt-0.5" style="font-size:11px;" title="Selected during IVR"><i class="fa-solid fa-sitemap me-1 text-info"></i>${escapeHtml(c.latest_selection)}</div>` : ''}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center" style="cursor:pointer;" 
+                                 data-phone="${escapeHtml(cleanPhoneNum)}" 
+                                 data-name="${escapeHtml(safeCustName)}" 
+                                 onclick="triggerHistoryFromEl(this)" 
+                                 title="Click to view history for ${escapeHtml(safeCustName)} (${count} calls)">
+                                <span class="phone-masked"><i class="fa-solid fa-phone me-1 text-muted" style="font-size:11px;"></i>${escapeHtml(c.customer_phone_masked)}</span>
+                                ${countBadge}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-dark border border-secondary text-info">${escapeHtml(c.source)}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-dark border border-secondary text-warning font-monospace px-2 py-1" style="font-size:12px;letter-spacing:0.5px;">
+                                ${escapeHtml(c.duration_formatted)}
+                            </span>
+                        </td>
+                        <td>${recHtml}</td>
+                        <td class="text-end">
+                            <div class="d-flex flex-column align-items-end gap-1">
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-outline-success btn-sm btn-action-sm px-2 py-1" 
+                                            data-phone="${escapeHtml(cleanPhoneNum)}" 
+                                            data-name="${escapeHtml(safeCustName)}" 
+                                            data-lead-id="${escapeHtml(safeLeadId)}" 
+                                            onclick="triggerDialFromBtn(this)">
+                                        <i class="fa-solid fa-phone"></i> Dial
+                                    </button>
+                                    <button class="btn btn-outline-info btn-sm btn-action-sm px-2 py-1" 
+                                            data-phone="${escapeHtml(cleanPhoneNum)}" 
+                                            data-name="${escapeHtml(safeCustName)}" 
+                                            onclick="triggerHistoryFromEl(this)">
+                                        <i class="fa-solid fa-clock-rotate-left"></i> History ${count > 1 ? `<span class="badge bg-info bg-opacity-75 text-white rounded-pill ms-1">${count}</span>` : ''}
+                                    </button>
+                                </div>
+                                ${missedActionHtml}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Update Pagination
+            const startIdx = (data.page - 1) * data.page_size + 1;
+            const endIdx = Math.min(data.page * data.page_size, data.total_count);
+            document.getElementById('pagination-info').innerText = `Showing ${startIdx}–${endIdx} of ${data.total_count} calls`;
+            
+            let pagHtml = '';
+            if (data.total_pages > 1) {
+                pagHtml += `<button class="btn btn-sm btn-outline-secondary ${data.page === 1 ? 'disabled' : ''}" onclick="loadCalls(${data.page - 1})"><i class="fa-solid fa-chevron-left"></i></button>`;
+                for (let p = Math.max(1, data.page - 2); p <= Math.min(data.total_pages, data.page + 2); p++) {
+                    pagHtml += `<button class="btn btn-sm ${p === data.page ? 'btn-primary' : 'btn-outline-secondary'}" onclick="loadCalls(${p})">${p}</button>`;
+                }
+                pagHtml += `<button class="btn btn-sm btn-outline-secondary ${data.page === data.total_pages ? 'disabled' : ''}" onclick="loadCalls(${data.page + 1})"><i class="fa-solid fa-chevron-right"></i></button>`;
+            }
+            document.getElementById('pagination-controls').innerHTML = pagHtml;
+        }
+
+        function maskPhoneNumber(p) {
+            if (!p) return '—';
+            const clean = String(p).replace(/\D/g, '');
+            if (clean.length < 6) return '••••••';
+            const c10 = clean.slice(-10);
+            return `+91 ${c10.slice(0, 2)}••••${c10.slice(-4)}`;
+        }
+
+        function triggerDialFromBtn(btn) {
+            if (!btn) return;
+            const phone = btn.getAttribute('data-phone') || '';
+            const name = btn.getAttribute('data-name') || 'Customer';
+            const leadId = btn.getAttribute('data-lead-id') || null;
+            dialNumber(phone, name, leadId);
+        }
+
+        function triggerHistoryFromEl(el) {
+            if (!el) return;
+            const phone = el.getAttribute('data-phone') || '';
+            const name = el.getAttribute('data-name') || 'Customer';
+            openCustomerHistory(phone, name);
+        }
+
+        function dialNumber(rawNumber, customerName, leadId = null) {
+            if (!rawNumber) {
+                alert('No phone number available to dial.');
+                return;
+            }
+            const clean = String(rawNumber).replace(/\D/g, '').slice(-10);
+            if (!clean || clean.length < 10) {
+                alert('Invalid 10-digit phone number.');
+                return;
+            }
+            const safeName = (customerName || 'Customer').trim();
+
+            console.log(`[SOFTPHONE] Triggering dial to: ${clean} (${safeName}, leadId: ${leadId})`);
+
+            // 1. Universal Softphone Trigger (opens softphone dock, sets number, starts calling flow)
+            if (window.openCallDialer && typeof window.openCallDialer === 'function') {
+                window.openCallDialer({
+                    phoneNumber: clean,
+                    name: safeName,
+                    entityId: leadId || null,
+                    entityType: 'lead',
+                    autoStart: true
+                });
+                return;
+            }
+            if (typeof triggerLeadCall === 'function') {
+                triggerLeadCall(clean, safeName, leadId);
+                return;
+            }
+            if (window.PlivoSoftphone) {
+                if (typeof window.PlivoSoftphone.openCallDialer === 'function') {
+                    window.PlivoSoftphone.openCallDialer({
+                        phoneNumber: clean,
+                        name: safeName,
+                        entityId: leadId || null,
+                        autoStart: true
+                    });
+                    return;
+                }
+                if (typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+                    window.PlivoSoftphone.dialOutboundCall(clean, leadId, safeName);
+                    return;
+                }
+                if (typeof window.PlivoSoftphone.dial === 'function') {
+                    window.PlivoSoftphone.dial(clean, leadId, safeName);
+                    return;
+                }
+            }
+            if (window.myntosSoftphone && typeof window.myntosSoftphone.call === 'function') {
+                window.myntosSoftphone.call(clean, safeName);
+                return;
+            }
+
+            // Fallback direct softphone dial trigger
+            if (confirm(`Initiate Softphone Outbound Call to +91 ${clean} (${safeName})?`)) {
+                staffFetch('/api/v1/telephony/plivo/make-call', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        destination_number: `+91${clean}`,
+                        customer_name: safeName
+                    })
+                }).then(res => {
+                    alert(res.message || 'Call initiated through Softphone!');
+                    loadCalls(currentPage);
+                }).catch(err => {
+                    alert('Softphone call initiation: ' + err.message);
+                });
+            }
+        }
+
+        function openQuickDialerModal() {
+            if (window.PlivoSoftphone && typeof window.PlivoSoftphone.openSoftphoneDock === 'function') {
+                window.PlivoSoftphone.openSoftphoneDock();
+                return;
+            }
+            document.getElementById('quick-dial-phone').value = '';
+            quickDialModalInstance.show();
+        }
+
+        function triggerQuickCall() {
+            const raw = document.getElementById('quick-dial-phone').value.trim();
+            const clean = raw.replace(/\D/g, '').slice(-10);
+            if (!clean || clean.length < 10) {
+                alert('Please enter a valid 10-digit mobile number.');
+                return;
+            }
+            quickDialModalInstance.hide();
+            dialNumber(clean, 'Quick Outbound');
+        }
+
+        async function openCustomerHistory(rawPhone, customerName = 'Guest Customer') {
+            const clean = (rawPhone || '').replace(/\D/g, '').slice(-10);
+            if (!clean) return;
+
+            const maskedPhone = maskPhoneNumber(clean);
+            document.getElementById('drawer-phone-masked').innerText = maskedPhone;
+            document.getElementById('drawer-customer-name').innerHTML = `<i class="fa-solid fa-user-clock text-info me-2"></i>${escapeHtml(customerName || 'Customer Timeline')}`;
+            document.getElementById('drawer-content').innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <div class="spinner-border spinner-border-sm text-info mb-2"></div>
+                    <div>Fetching customer timeline...</div>
+                </div>
+            `;
+            document.getElementById('drawer-overlay').style.display = 'block';
+            document.getElementById('call-drawer').classList.add('open');
+
+            try {
+                const res = await staffFetch(`/api/v1/telephony/calls/${clean}/customer-history`);
+                renderCustomerHistory(res, customerName);
+            } catch (err) {
+                document.getElementById('drawer-content').innerHTML = `
+                    <div class="alert alert-danger">${escapeHtml(err.message)}</div>
+                `;
+            }
+        }
+
+        function renderCustomerHistory(data, defaultName = 'Guest Customer') {
+            const drawerBody = document.getElementById('drawer-content');
+            const custName = (data.lead && data.lead.name) || data.customer_name || defaultName || 'Guest Customer';
+            const cleanPhone = (data.raw_phone || '').replace(/\D/g, '').slice(-10);
+            const maskedPhone = data.phone_masked || maskPhoneNumber(cleanPhone);
+
+            document.getElementById('drawer-phone-masked').innerText = maskedPhone;
+            document.getElementById('drawer-customer-name').innerHTML = `<i class="fa-solid fa-user-clock text-info me-2"></i>${escapeHtml(custName)}`;
+
+            let leadCard = `
+                <div class="card bg-dark border-secondary p-3 mb-3 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold text-light mb-0"><i class="fa-solid fa-user-tag text-info me-1"></i> ${escapeHtml(custName)}</h6>
+                        <span class="badge bg-primary">${escapeHtml((data.lead && data.lead.status) || 'Customer')}</span>
+                    </div>
+                    <div class="small text-muted mt-2 d-flex flex-column gap-1">
+                        <div><i class="fa-solid fa-phone text-muted me-1"></i><strong>Phone:</strong> <span class="phone-masked font-monospace text-light">${escapeHtml(maskedPhone)}</span></div>
+                        ${data.lead && data.lead.email ? `<div><i class="fa-solid fa-envelope text-muted me-1"></i><strong>Email:</strong> ${escapeHtml(data.lead.email)}</div>` : ''}
+                        ${data.lead && data.lead.city ? `<div><i class="fa-solid fa-location-dot text-muted me-1"></i><strong>City:</strong> ${escapeHtml(data.lead.city)}</div>` : ''}
+                    </div>
+                </div>
+            `;
+
+            const historyList = data.history || [];
+            let timelineHtml = '';
+            if (historyList.length === 0) {
+                timelineHtml = `<div class="text-muted text-center py-4">No previous calls found.</div>`;
+            } else {
+                timelineHtml = historyList.map(h => {
+                    let dotClass = 'incoming';
+                    let badgeClass = 'bg-success text-white';
+                    const isIncoming = (h.direction === 'inbound') || (h.type && h.type.toLowerCase().includes('in')) || (h.type === 'Missed by Staff') || (h.type === 'Voicemail');
+                    const directionPill = isIncoming
+                        ? `<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-1.5 py-0.5 fw-bold font-monospace" style="font-size:10px;"><i class="fa-solid fa-arrow-down-left me-1"></i>IN</span>`
+                        : `<span class="badge bg-primary bg-opacity-25 text-info border border-primary border-opacity-50 px-1.5 py-0.5 fw-bold font-monospace" style="font-size:10px;"><i class="fa-solid fa-arrow-up-right me-1"></i>OUT</span>`;
+
+                    if (h.type === 'Missed by Staff') { dotClass = 'missed'; badgeClass = 'bg-danger text-white'; }
+                    else if (h.type === 'Outgoing') { dotClass = 'outgoing'; badgeClass = 'bg-primary text-white'; }
+                    else if (h.type === 'Voicemail') { dotClass = 'voicemail'; badgeClass = 'bg-purple text-white'; }
+                    else if (h.type === 'Unanswered') { dotClass = 'missed'; badgeClass = 'bg-secondary text-white'; }
+
+                    // Crisp Date & Time (IST) formatting
+                    let dateDisplay = '—';
+                    let timeDisplay = '';
+                    const rawDt = h.started_at || h.created_at;
+                    const dObj = parseISTDate(rawDt);
+                    if (dObj) {
+                        dateDisplay = dObj.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' });
+                        timeDisplay = dObj.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+                    }
+                    
+                    let recAudio = '';
+                    if (h.has_recording && h.recording_url) {
+                        const hId = 'dh_' + h.id;
+                        recAudio = `
+                            <div class="mt-2">
+                                <div class="audio-scrubber-player" id="player-row-${hId}">
+                                    <button class="play-btn" id="pbtn-${hId}" onclick="toggleAudio('${escapeHtml(h.recording_url)}', '${hId}', '${escapeHtml(h.duration_formatted)}')" title="Play Call Recording">
+                                        <i class="fa-solid fa-play"></i>
+                                    </button>
+                                    <div class="scrubber-track-wrapper">
+                                        <input type="range" class="audio-slider" id="slider-${hId}" min="0" max="100" value="0" 
+                                               oninput="seekAudio(this.value, '${hId}')" 
+                                               onchange="commitSeekAudio(this.value, '${hId}')" 
+                                               title="Drag cursor to seek">
+                                        <div class="audio-time-label" id="timer-${hId}">00:00 / ${escapeHtml(h.duration_formatted)}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        recAudio = `<div class="mt-1"><span class="badge bg-secondary bg-opacity-25 text-muted px-2 py-1" style="font-size:10.5px;"><i class="fa-solid fa-microphone-slash me-1"></i>No Recording</span></div>`;
+                    }
+
+                    let ivrSection = '';
+                    if (h.ivr_selections && h.ivr_selections.length > 0) {
+                        const selBadges = h.ivr_selections.map(s => `
+                            <span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-50 me-1 mb-1 px-2 py-1" style="font-size:11px;">
+                                <i class="fa-solid fa-hand-pointer me-1"></i>${escapeHtml(s.label || s.digit)}
+                                ${s.time ? `<span class="text-white-50 ms-1" style="font-size:10px;">(${escapeHtml(s.time)})</span>` : ''}
+                            </span>
+                        `).join('');
+                        ivrSection = `
+                            <div class="mt-2 p-2 rounded bg-black bg-opacity-40 border border-secondary border-opacity-50">
+                                <div class="small fw-bold text-info mb-1" style="font-size:11.5px;"><i class="fa-solid fa-list-check me-1"></i>IVR Options Selected:</div>
+                                <div class="d-flex flex-wrap">${selBadges}</div>
+                            </div>
+                        `;
+                    } else if (h.latest_selection) {
+                        ivrSection = `
+                            <div class="mt-2 p-1 px-2 rounded bg-black bg-opacity-40 border border-secondary border-opacity-50 small text-warning" style="font-size:11.5px;">
+                                <i class="fa-solid fa-hand-pointer me-1"></i>Selected: <strong>${escapeHtml(h.latest_selection)}</strong>
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div class="timeline-item">
+                            <div class="timeline-dot ${dotClass}"></div>
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                                <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                    ${directionPill}
+                                    <span class="badge ${badgeClass} px-2 py-1" style="font-size:11.5px;font-weight:700;">${escapeHtml(h.type)}</span>
+                                    <span class="badge bg-dark border border-secondary text-warning font-monospace px-2 py-1" style="font-size:11.5px;">${escapeHtml(h.duration_formatted)}</span>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-dark bg-opacity-75 text-light border border-secondary font-monospace px-2 py-1 shadow-sm" style="font-size:11px;letter-spacing:0.3px;">
+                                        <i class="fa-solid fa-calendar-days text-info me-1"></i>${dateDisplay}
+                                        ${timeDisplay ? `<span class="text-white-50 mx-1">·</span><i class="fa-solid fa-clock text-warning me-1"></i>${timeDisplay}` : ''}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="small text-light text-opacity-75 mt-1" style="font-size:11.5px;">
+                                Handled By: <strong class="text-white">${escapeHtml(h.operator_name)}</strong> ${h.called_did ? `· DID: <span class="text-white-50">${escapeHtml(maskPhoneNumber(h.called_did))}</span>` : ''}
+                            </div>
+                            ${ivrSection}
+                            ${recAudio}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            drawerBody.innerHTML = `
+                ${leadCard}
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold text-light mb-0"><i class="fa-solid fa-timeline me-1"></i> Interaction History (${data.total_calls || historyList.length})</h6>
+                    <button class="btn btn-success btn-sm" 
+                            data-phone="${escapeHtml(cleanPhone)}" 
+                            data-name="${escapeHtml(custName)}" 
+                            onclick="triggerDialFromBtn(this)">
+                        <i class="fa-solid fa-phone me-1"></i> Call Now
+                    </button>
+                </div>
+                <div>${timelineHtml}</div>
+            `;
+        }
+
+        function closeDrawer() {
+            stopActiveAudio();
+            document.getElementById('call-drawer').classList.remove('open');
+            document.getElementById('drawer-overlay').style.display = 'none';
+        }
+
+        function openActionModal(sessionId, rawPhone, customerName = 'Customer') {
+            document.getElementById('action-session-id').value = sessionId;
+            const clean = (rawPhone || '').replace(/\D/g, '').slice(-10);
+            const maskedPhone = maskPhoneNumber(clean);
+            document.getElementById('action-customer-phone').value = `${customerName} (${maskedPhone})`;
+            document.getElementById('action-notes').value = '';
+            actionModalInstance.show();
+        }
+
+        async function saveActionTaken() {
+            const sessionId = document.getElementById('action-session-id').value;
+            const notes = document.getElementById('action-notes').value.trim();
+            if (!notes) {
+                alert('Please enter a brief resolution note for this missed call.');
+                return;
+            }
+
+            try {
+                const res = await staffFetch(`/api/v1/telephony/calls/${sessionId}/action-taken`, {
+                    method: 'POST',
+                    body: JSON.stringify({ notes })
+                });
+                actionModalInstance.hide();
+                loadCalls(currentPage);
+            } catch (err) {
+                alert('Failed to save action: ' + err.message);
+            }
+        }
+
+        let activePlayerId = null;
+        let isSeeking = false;
+
+        function toggleAudio(url, id, defaultDuration = '00:00') {
+            if (!url) {
+                alert('No recording audio file available for this session.');
+                return;
+            }
+            const btn = document.getElementById(`pbtn-${id}`);
+            const slider = document.getElementById(`slider-${id}`);
+            const timer = document.getElementById(`timer-${id}`);
+
+            // 1. If clicking the currently playing audio button, toggle pause / play
+            if (activeAudio && activePlayerId === id) {
+                if (activeAudio.paused) {
+                    activeAudio.play().then(() => {
+                        if (btn) btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+                    }).catch(err => {
+                        console.warn('Audio resume error:', err);
+                    });
+                } else {
+                    activeAudio.pause();
+                    if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+                }
+                return;
+            }
+            
+            // 2. Stop and fully reset ANY previously playing audio immediately
+            stopActiveAudio();
+
+            activePlayerId = id;
+            if (btn) btn.innerHTML = '<div class="spinner-border spinner-border-sm text-light" style="width:10px;height:10px;" role="status"></div>';
+            
+            const startPlayback = (audioSource) => {
+                activeAudio = new Audio();
+                activeAudio.crossOrigin = 'anonymous';
+                activeAudio.preload = 'auto';
+
+                activeAudio.ontimeupdate = () => {
+                    if (activeAudio && !isSeeking && activeAudio.duration && isFinite(activeAudio.duration)) {
+                        const pct = (activeAudio.currentTime / activeAudio.duration) * 100;
+                        const curSlider = document.getElementById(`slider-${id}`);
+                        const curTimer = document.getElementById(`timer-${id}`);
+                        if (curSlider) curSlider.value = pct;
+                        if (curTimer) {
+                            const curM = String(Math.floor(activeAudio.currentTime / 60)).padStart(2, '0');
+                            const curS = String(Math.floor(activeAudio.currentTime % 60)).padStart(2, '0');
+                            const totM = String(Math.floor(activeAudio.duration / 60)).padStart(2, '0');
+                            const totS = String(Math.floor(activeAudio.duration % 60)).padStart(2, '0');
+                            curTimer.textContent = `${curM}:${curS} / ${totM}:${totS}`;
+                        }
+                    }
+                };
+
+                activeAudio.onended = () => {
+                    stopActiveAudio();
+                };
+
+                activeAudio.src = audioSource;
+                activeAudio.play().then(() => {
+                    if (btn) btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+                }).catch(err => {
+                    console.warn('Direct HTML5 play failed, trying Blob fallback:', err);
+                    // Fallback to fetch Blob
+                    fetch(url)
+                        .then(r => {
+                            if (!r.ok) throw new Error('HTTP ' + r.status);
+                            return r.blob();
+                        })
+                        .then(blob => {
+                            const blobUrl = URL.createObjectURL(blob);
+                            if (activeAudio && activePlayerId === id) {
+                                activeAudio.src = blobUrl;
+                                activeAudio.play().then(() => {
+                                    if (btn) btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+                                }).catch(playErr => {
+                                    console.error('Blob play error:', playErr);
+                                    if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+                                    stopActiveAudio();
+                                    alert('Audio playback interrupted or format not supported.');
+                                });
+                            }
+                        })
+                        .catch(fetchErr => {
+                            console.error('Fetch recording audio failed:', fetchErr);
+                            if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+                            stopActiveAudio();
+                            alert('Audio recording could not be loaded.');
+                        });
+                });
+            };
+
+            startPlayback(url);
+        }
+
+        function seekAudio(value, id) {
+            isSeeking = true;
+            if (activeAudio && activePlayerId === id && activeAudio.duration) {
+                const seekTime = (value / 100) * activeAudio.duration;
+                const timer = document.getElementById(`timer-${id}`);
+                if (timer) {
+                    const curM = String(Math.floor(seekTime / 60)).padStart(2, '0');
+                    const curS = String(Math.floor(seekTime % 60)).padStart(2, '0');
+                    const totM = String(Math.floor(activeAudio.duration / 60)).padStart(2, '0');
+                    const totS = String(Math.floor(activeAudio.duration % 60)).padStart(2, '0');
+                    timer.textContent = `${curM}:${curS} / ${totM}:${totS}`;
+                }
+            }
+        }
+
+        function commitSeekAudio(value, id) {
+            if (activeAudio && activePlayerId === id && activeAudio.duration) {
+                activeAudio.currentTime = (value / 100) * activeAudio.duration;
+            }
+            isSeeking = false;
+        }
+
+        function stopActiveAudio() {
+            if (activeAudio) {
+                activeAudio.pause();
+                activeAudio.currentTime = 0;
+                activeAudio = null;
+            }
+            if (activePlayerId) {
+                const btn = document.getElementById(`pbtn-${activePlayerId}`);
+                const slider = document.getElementById(`slider-${activePlayerId}`);
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+                if (slider) slider.value = 0;
+                activePlayerId = null;
+            }
+            document.querySelectorAll('.play-btn').forEach(b => {
+                b.innerHTML = '<i class="fa-solid fa-play"></i>';
+            });
+            isSeeking = false;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>

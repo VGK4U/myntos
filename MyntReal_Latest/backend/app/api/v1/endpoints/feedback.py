@@ -1807,8 +1807,14 @@ async def share_announcement(
 
 # ===== Public Announcements Endpoint (No Auth Required) =====
 
+_PUBLIC_ANNOUNCEMENTS_CACHE = {}
+_PUBLIC_ANNOUNCEMENTS_CACHE_TTL = 60.0  # 60 seconds
+
+_PUBLIC_CATEGORIES_CACHE = (0.0, [])
+_PUBLIC_CATEGORIES_CACHE_TTL = 120.0  # 120 seconds
+
 @router.api_route("/public/announcements", methods=["GET", "HEAD"], response_model=List[AnnouncementResponse])
-async def get_public_announcements(
+def get_public_announcements(
     limit: int = 5,
     category_id: Optional[int] = None,
     platform: Optional[str] = None,
@@ -1820,8 +1826,9 @@ async def get_public_announcements(
     Returns visible, approved announcements with metadata (ratings, shares, views)
     Limited to 5 announcements by default, max 20
     Optional category_id filter: when provided, returns only that category (e.g. VGK4U Shoutouts)
-    DC Protocol (Jan 23, 2026): Optimized with eager loading for speed
+    DC Protocol: Optimized with in-memory TTL caching + synchronous thread pool execution for sub-millisecond response
     """
+    import time
     from sqlalchemy import func
     from sqlalchemy.orm import joinedload
     from app.models.feedback import AnnouncementRating
@@ -1831,6 +1838,13 @@ async def get_public_announcements(
     if limit < 1:
         limit = 5
 
+    cache_key = f"{limit}:{category_id}:{platform}"
+    now = time.time()
+    if cache_key in _PUBLIC_ANNOUNCEMENTS_CACHE:
+        cached_ts, cached_resp = _PUBLIC_ANNOUNCEMENTS_CACHE[cache_key]
+        if now - cached_ts < _PUBLIC_ANNOUNCEMENTS_CACHE_TTL:
+            return cached_resp
+
     base_filter = [
         FeedbackSubmission.is_visible == True,
         FeedbackSubmission.status == SubmissionStatus.APPROVED
@@ -1839,10 +1853,6 @@ async def get_public_announcements(
         base_filter.append(FeedbackSubmission.category_id == category_id)
     try:
         # Audience targeting: filter by platform if provided
-        # 'mnr' callers see 'mnr' + 'both'; 'vgk' callers see 'vgk' + 'both'; None sees all
-        # DC-FIX: for vgk platform also include anything in the "VGK4U Shoutouts" category
-        # regardless of visible_to — staff intent is clear from category choice.
-        # Category ID is looked up dynamically so hardcoding is avoided.
         if platform in ('mnr', 'vgk'):
             from sqlalchemy import or_, text as _text
             if platform == 'vgk':
@@ -1862,66 +1872,53 @@ async def get_public_announcements(
                     or_(FeedbackSubmission.visible_to == platform, FeedbackSubmission.visible_to == 'both')
                 )
 
-        subquery = db.query(
-            FeedbackSubmission.id,
-            func.coalesce(User.name, FeedbackSubmission.user_id).label('user_name'),
-            func.coalesce(User.city, '').label('city'),
-            func.coalesce(func.avg(AnnouncementRating.rating), 0).label('average_rating'),
-            func.count(AnnouncementRating.id).label('total_ratings')
-        ).outerjoin(
-            User, FeedbackSubmission.user_id == User.id
-        ).outerjoin(
-            AnnouncementRating, FeedbackSubmission.id == AnnouncementRating.submission_id
+        # Step 1: Query top `limit` announcements with eager-loaded media, category and user
+        announcements = db.query(FeedbackSubmission).options(
+            joinedload(FeedbackSubmission.media_files),
+            joinedload(FeedbackSubmission.category),
+            joinedload(FeedbackSubmission.user)
         ).filter(
             *base_filter
-        ).group_by(
-            FeedbackSubmission.id,
-            User.name,
-            User.city,
-            FeedbackSubmission.user_id,
-            FeedbackSubmission.submitted_at,
-            FeedbackSubmission.approved_at
         ).order_by(
             FeedbackSubmission.approved_at.desc().nullslast(),
             FeedbackSubmission.submitted_at.desc()
         ).limit(limit).all()
-        
-        if not subquery:
+
+        if not announcements:
+            if cache_key in _PUBLIC_ANNOUNCEMENTS_CACHE:
+                return _PUBLIC_ANNOUNCEMENTS_CACHE[cache_key][1]
             return []
-        
-        # Step 2: Fetch full announcements with eager-loaded media (single query)
-        announcement_ids = [row[0] for row in subquery]
-        announcements_map = {}
-        
-        full_announcements = db.query(FeedbackSubmission).options(
-            joinedload(FeedbackSubmission.media_files),
-            joinedload(FeedbackSubmission.category)
-        ).filter(FeedbackSubmission.id.in_(announcement_ids)).all()
-        
-        for ann in full_announcements:
-            announcements_map[ann.id] = ann
-        
-        # Build response maintaining original order
-        results = []
-        for row in subquery:
-            ann_id, user_name_val, city_val, avg_rating, total_ratings_val = row
-            ann = announcements_map.get(ann_id)
-            if ann:
-                results.append((ann, user_name_val, city_val, avg_rating, total_ratings_val))
-        
-        # Build response (DC Protocol: optimized with pre-fetched data)
+
+        # Step 2: Fetch ratings aggregates for only these top announcements
+        ann_ids = [ann.id for ann in announcements]
+        ratings_map = {}
+        if ann_ids:
+            ratings_rows = db.query(
+                AnnouncementRating.submission_id,
+                func.coalesce(func.avg(AnnouncementRating.rating), 0),
+                func.count(AnnouncementRating.id)
+            ).filter(
+                AnnouncementRating.submission_id.in_(ann_ids)
+            ).group_by(
+                AnnouncementRating.submission_id
+            ).all()
+            for row in ratings_rows:
+                ratings_map[row[0]] = (float(row[1]) if row[1] else 0.0, int(row[2]) if row[2] else 0)
+
+        # Build response
         response_list = []
-        for ann, user_name_value, city_value, avg_rating, total_ratings_value in results:
-            avg_rating = float(avg_rating) if avg_rating else 0.0
-            total_ratings_value = int(total_ratings_value) if total_ratings_value else 0
-            
+        for ann in announcements:
+            avg_rating, total_ratings_value = ratings_map.get(ann.id, (0.0, 0))
+            user_name_value = ann.user.name if ann.user else (ann.user_id or "Unknown")
+            city_value = ann.user.city if (ann.user and ann.user.city) else ""
+
             approved_media = [
                 build_media_response(m) for m in ann.media_files 
                 if m.media_status == MediaStatus.APPROVED
             ]
-            
+
             display_datetime = ann.approved_at or ann.last_reviewed_at or ann.submitted_at
-            
+
             response_list.append(AnnouncementResponse(
                 id=ann.id,
                 title=ann.title,
@@ -1942,14 +1939,17 @@ async def get_public_announcements(
                 visible_to=getattr(ann, 'visible_to', 'both') or 'both'
             ))
 
+        _PUBLIC_ANNOUNCEMENTS_CACHE[cache_key] = (now, response_list)
         return response_list
     except Exception as exc:
         logger.warning(f"[PUBLIC-ANNOUNCEMENTS] Non-fatal announcements query error (safe fallback): {exc}")
+        if cache_key in _PUBLIC_ANNOUNCEMENTS_CACHE:
+            return _PUBLIC_ANNOUNCEMENTS_CACHE[cache_key][1]
         return []
 
 
 @router.get("/public/categories", response_model=List[CategoryResponse])
-async def get_public_categories(
+def get_public_categories(
     db: Session = Depends(get_db)
 ):
     """
@@ -1957,15 +1957,29 @@ async def get_public_categories(
     Used for announcement submission form on login page
     Only returns active categories
     """
-    categories = db.query(FeedbackCategory).filter(
-        FeedbackCategory.is_active == True
-    ).order_by(FeedbackCategory.name).all()
-    
-    return [build_category_response(cat) for cat in categories]
+    global _PUBLIC_CATEGORIES_CACHE
+    import time
+    now = time.time()
+    if _PUBLIC_CATEGORIES_CACHE[1] and (now - _PUBLIC_CATEGORIES_CACHE[0] < _PUBLIC_CATEGORIES_CACHE_TTL):
+        return _PUBLIC_CATEGORIES_CACHE[1]
+
+    try:
+        categories = db.query(FeedbackCategory).filter(
+            FeedbackCategory.is_active == True
+        ).order_by(FeedbackCategory.name).all()
+        
+        result = [build_category_response(cat) for cat in categories]
+        _PUBLIC_CATEGORIES_CACHE = (now, result)
+        return result
+    except Exception as exc:
+        logger.warning(f"[PUBLIC-CATEGORIES] Query error fallback: {exc}")
+        if _PUBLIC_CATEGORIES_CACHE[1]:
+            return _PUBLIC_CATEGORIES_CACHE[1]
+        return []
 
 
 @router.get("/public/announcement/{announcement_id}", response_model=AnnouncementResponse)
-async def get_public_announcement(
+def get_public_announcement(
     announcement_id: int,
     track_share: bool = False,  # Set to True to increment share count
     track_view: bool = False,  # Set to True to increment view count

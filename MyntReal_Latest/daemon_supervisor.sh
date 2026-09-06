@@ -27,9 +27,8 @@ elif [ -f "$PROJECT_DIR/.env" ]; then
     export $(grep -v '^#' "$PROJECT_DIR/.env" | xargs)
 fi
 
-# Always use local PostgreSQL for local development to prevent AWS RDS network timeouts
-export DATABASE_URL="postgresql://127.0.0.1:5433/myntreal_dev"
-export PROD_DATABASE_URL="postgresql://127.0.0.1:5433/myntreal_dev"
+export DATABASE_URL="${DATABASE_URL:-postgresql://127.0.0.1:5433/myntreal_dev}"
+export PROD_DATABASE_URL="${PROD_DATABASE_URL:-$DATABASE_URL}"
 export SECRET_KEY="${SECRET_KEY:-dev-secret-key-123}"
 export AI_AUDIO_DIR="$PROJECT_DIR/tmp_ai_audio"
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
@@ -44,9 +43,16 @@ NODE_BIN=$(which node 2>/dev/null || echo "/opt/homebrew/bin/node")
 # Function to run Backend Supervisor
 run_backend() {
     while true; do
+        # Defensively release any stale process holding port 8000 before spawning
+        OLD_PIDS=$(lsof -ti :8000 2>/dev/null || true)
+        if [ -n "$OLD_PIDS" ]; then
+            echo "[$(date)] Cleaning up stale process on port 8000 (PIDs: $OLD_PIDS)..." >> "$LOG_DIR/backend.log"
+            kill -9 $OLD_PIDS 2>/dev/null || true
+            sleep 1
+        fi
         echo "[$(date)] Starting FastAPI Backend on port 8000..." >> "$LOG_DIR/backend.log"
         cd "$PROJECT_DIR/backend"
-        "$PYTHON_BIN" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 >> "$LOG_DIR/backend.log" 2>&1 || true
+        "$PYTHON_BIN" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload >> "$LOG_DIR/backend.log" 2>&1 || true
         echo "[$(date)] FastAPI Backend exited. Restarting in 2s..." >> "$LOG_DIR/backend.log"
         sleep 2
     done
@@ -68,6 +74,13 @@ run_frontend() {
 run_whatsapp() {
     if [ -d "$PROJECT_DIR/backend/whatsapp-group-bot" ]; then
         while true; do
+            # Defensively release any stale process holding port 5002 before spawning
+            OLD_WA_PIDS=$(lsof -ti :5002 2>/dev/null || true)
+            if [ -n "$OLD_WA_PIDS" ]; then
+                echo "[$(date)] Cleaning up stale process on port 5002 (PIDs: $OLD_WA_PIDS)..." >> "$LOG_DIR/whatsapp.log"
+                kill -9 $OLD_WA_PIDS 2>/dev/null || true
+                sleep 1
+            fi
             echo "[$(date)] Starting WhatsApp Bot on port 5002..." >> "$LOG_DIR/whatsapp.log"
             cd "$PROJECT_DIR/backend/whatsapp-group-bot"
             export PORT=5002

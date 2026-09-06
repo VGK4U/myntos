@@ -136,6 +136,11 @@ interface IncomeEntry {
   bank_account_name?: string;
   show_in_ledger?: boolean;
   payment_reference?: string;
+  reference_type?: string;
+  reference_id?: string;
+  spares_amount?: number;
+  service_amount?: number;
+  ticket_total_amount?: number;
   narration?: string;
   created_at?: string;
   deleted_by_name?: string;
@@ -336,6 +341,7 @@ export default function IncomeEntriesPage() {
   const [confBankAccountId, setConfBankAccountId] = useState<string>("");
   const [confPayerName, setConfPayerName] = useState<string>("");
   const [confBankAccounts, setConfBankAccounts] = useState<BankAccount[]>([]);
+  const [confEmpTxnAmt, setConfEmpTxnAmt] = useState<string>("");
   const [confEmployeeBalance, setConfEmployeeBalance] = useState<{
     prevBal: number;
     txnAmt: number;
@@ -415,6 +421,29 @@ export default function IncomeEntriesPage() {
   const [edPeriod, setEdPeriod] = useState<EdPeriod>("month");
   const [edFrom, setEdFrom] = useState<string>("");
   const [edTo, setEdTo] = useState<string>("");
+
+  // Service Ticket Breakdown Dialog State
+  const [ticketBreakdownOpen, setTicketBreakdownOpen] = useState(false);
+  const [ticketBreakdownLoading, setTicketBreakdownLoading] = useState(false);
+  const [ticketBreakdownData, setTicketBreakdownData] = useState<any>(null);
+
+  const openTicketBreakdown = async (refId: string) => {
+    if (!refId) return;
+    setTicketBreakdownOpen(true);
+    setTicketBreakdownLoading(true);
+    setTicketBreakdownData(null);
+    try {
+      let res = await api.get(`/tickets/service/tickets/${encodeURIComponent(refId)}/payment-breakdown`);
+      if (!res.data?.success) {
+        res = await api.get(`/tickets/service/reference/${encodeURIComponent(refId)}/payment-breakdown`);
+      }
+      setTicketBreakdownData(res.data);
+    } catch (err: any) {
+      console.warn("Failed to load ticket breakdown:", err);
+    } finally {
+      setTicketBreakdownLoading(false);
+    }
+  };
 
   // ============================================================================
   // Permissions
@@ -741,6 +770,7 @@ export default function IncomeEntriesPage() {
       if (res.data?.balance_summary) {
         const b = res.data.balance_summary;
         const prevBal = parseFloat(b.available_balance) || 0;
+        setConfEmpTxnAmt(String(txnAmt));
         setConfEmployeeBalance({
           name: res.data.employee_name || "Employee",
           prevBal,
@@ -782,6 +812,10 @@ export default function IncomeEntriesPage() {
         payload.destination_company_id = parseInt(confDestCompanyId) || null;
       } else if (confDestType === "EMPLOYEE") {
         payload.destination_employee_id = parseInt(confDestEmployeeId) || null;
+        const customAmt = parseFloat(confEmpTxnAmt);
+        if (!isNaN(customAmt) && customAmt >= 0) {
+          payload.amount = customAmt;
+        }
       } else if (confDestType === "SOLAR_VENDOR") {
         payload.solar_vendor_id = parseInt(confSolarVendorId) || null;
       }
@@ -1477,7 +1511,46 @@ export default function IncomeEntriesPage() {
                         isRejected ? "line-through text-gray-400" : "text-emerald-600"
                       }`}
                     >
-                      {fmt(inc.amount)}
+                      <div>{fmt(inc.amount)}</div>
+                      {((inc.reference_type || "").toUpperCase().includes("SERVICE_TICKET") ||
+                        (inc.revenue_category_name || inc.income_source_name || "").toLowerCase().includes("service") ||
+                        (inc.revenue_category_name || inc.income_source_name || "").toLowerCase().includes("spare") ||
+                        Number(inc.spares_amount || 0) > 0 ||
+                        Number(inc.service_amount || 0) > 0) && (
+                        <div className="mt-1 flex flex-col gap-0.5 text-[9px] font-sans font-medium text-left">
+                          {(Number(inc.spares_amount || 0) > 0 || Number(inc.service_amount || 0) > 0) && (
+                            <div className="flex gap-1 flex-wrap">
+                              {Number(inc.spares_amount || 0) > 0 && (
+                                <span className="bg-sky-50 text-sky-700 border border-sky-200 px-1 py-0.5 rounded font-semibold">
+                                  🔧 Spares: {fmt(Number(inc.spares_amount))}
+                                </span>
+                              )}
+                              {Number(inc.service_amount || 0) > 0 && (
+                                <span className="bg-purple-50 text-purple-700 border border-purple-200 px-1 py-0.5 rounded font-semibold">
+                                  ⚙️ Service: {fmt(Number(inc.service_amount))}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {Number(inc.ticket_total_amount || 0) > 0 && (
+                            <div className="flex items-center justify-between bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded text-gray-700 font-semibold">
+                              <span>Overall: {fmt(Number(inc.ticket_total_amount))}</span>
+                              {inc.reference_id && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openTicketBreakdown(inc.reference_id!);
+                                  }}
+                                  className="text-blue-600 hover:text-blue-800 underline font-bold ml-1"
+                                >
+                                  Breakdown &rarr;
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </td>
                     <td className="py-3 px-3.5 text-gray-700 text-[11px] font-medium">{inc.payment_mode || "—"}</td>
                     <td className="py-3 px-3.5">
@@ -3650,8 +3723,26 @@ export default function IncomeEntriesPage() {
                 </div>
               </div>
               <div>
-                <div className="text-[10px] font-bold text-gray-500 uppercase">AMOUNT</div>
-                <div className="font-bold text-emerald-600 font-mono text-sm">{fmt(confirmingEntry.amount)}</div>
+                <div className="text-[10px] font-bold text-gray-500 uppercase">CONFIRM AMOUNT (₹)</div>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="font-bold text-xs text-emerald-700">₹</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={confEmpTxnAmt}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setConfEmpTxnAmt(v);
+                      const clean = Math.max(0, parseFloat(v) || 0);
+                      setConfEmployeeBalance((prev) =>
+                        prev ? { ...prev, txnAmt: clean, afterBal: prev.prevBal + clean } : null
+                      );
+                    }}
+                    className="w-full px-2 py-1 border border-emerald-400 rounded-lg text-right font-mono font-bold text-xs bg-white text-emerald-700 focus:outline-emerald-600"
+                    title="Edit confirm amount (addition only)"
+                  />
+                </div>
               </div>
               <div>
                 <div className="text-[10px] font-bold text-gray-500 uppercase">DATE</div>
@@ -3763,9 +3854,26 @@ export default function IncomeEntriesPage() {
                       <span>Previous Balance:</span>
                       <span className="font-mono font-semibold">{fmt(confEmployeeBalance.prevBal)}</span>
                     </div>
-                    <div className="flex justify-between text-blue-700">
-                      <span>This Collection:</span>
-                      <span className="font-mono font-bold">+{fmt(confEmployeeBalance.txnAmt)}</span>
+                    <div className="flex justify-between items-center text-emerald-800">
+                      <span>This Collection (Addition):</span>
+                      <div className="flex items-center gap-1">
+                        <span className="font-bold text-xs text-emerald-700">+₹</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={confEmpTxnAmt}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setConfEmpTxnAmt(v);
+                            const clean = Math.max(0, parseFloat(v) || 0);
+                            setConfEmployeeBalance((prev) =>
+                              prev ? { ...prev, txnAmt: clean, afterBal: prev.prevBal + clean } : null
+                            );
+                          }}
+                          className="w-24 px-2 py-0.5 border border-emerald-400 rounded text-right font-mono font-bold text-xs bg-white text-emerald-800 focus:outline-emerald-600"
+                        />
+                      </div>
                     </div>
                     <div className="border-t border-emerald-200 pt-1 flex justify-between font-bold text-emerald-800">
                       <span>Balance After:</span>
@@ -4411,6 +4519,212 @@ export default function IncomeEntriesPage() {
                   Save Changes
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Service Ticket Breakdown Modal */}
+      {ticketBreakdownOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-gray-100 space-y-4 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-indigo-600" />
+                Service Ticket Breakdown:{" "}
+                <span className="text-indigo-600 font-mono">
+                  {ticketBreakdownData?.ticket?.ticket_id || ticketBreakdownData?.ticket?.ticket_number || "Ticket"}
+                </span>
+              </h3>
+              <button
+                onClick={() => setTicketBreakdownOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {ticketBreakdownLoading ? (
+              <div className="text-center py-12 text-gray-500 space-y-2">
+                <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="text-xs">Loading ticket fee breakdown...</p>
+              </div>
+            ) : ticketBreakdownData?.success ? (
+              <div className="space-y-4 text-xs">
+                {/* Customer info header */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex justify-between items-start flex-wrap gap-2">
+                  <div>
+                    <div className="text-sm font-bold text-slate-800">
+                      {ticketBreakdownData.ticket?.customer_name || "Customer"}
+                    </div>
+                    <div className="text-[11px] text-slate-500 mt-0.5 flex gap-2">
+                      <span>📞 {ticketBreakdownData.ticket?.customer_phone || "—"}</span>
+                      <span>•</span>
+                      <span>🛵 {ticketBreakdownData.ticket?.vehicle_number || ticketBreakdownData.ticket?.vehicle_model || "EV"}</span>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold rounded text-[10px] uppercase">
+                    {ticketBreakdownData.ticket?.status || "OPEN"} {ticketBreakdownData.ticket?.sub_status ? `· ${ticketBreakdownData.ticket.sub_status}` : ""}
+                  </span>
+                </div>
+
+                {/* 4 Stat Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="bg-sky-50 border border-sky-200 rounded-xl p-3">
+                    <div className="text-[10px] font-bold text-sky-800 uppercase">🔧 Spares Fee</div>
+                    <div className="text-base font-extrabold text-sky-600 mt-1">
+                      {fmt(ticketBreakdownData.breakdown?.spares_fee_total || 0)}
+                    </div>
+                    <div className="text-[10px] text-sky-700 mt-0.5">
+                      Paid: {fmt(ticketBreakdownData.breakdown?.spares_paid || 0)}
+                    </div>
+                  </div>
+
+                  <div className="bg-purple-50 border border-purple-200 rounded-xl p-3">
+                    <div className="text-[10px] font-bold text-purple-800 uppercase">⚙️ Service & Labour</div>
+                    <div className="text-base font-extrabold text-purple-600 mt-1">
+                      {fmt(ticketBreakdownData.breakdown?.combined_service_fee || ticketBreakdownData.breakdown?.service_fee_total || 0)}
+                    </div>
+                    <div className="text-[10px] text-purple-700 mt-0.5">
+                      Paid: {fmt(ticketBreakdownData.breakdown?.service_paid || 0)}
+                    </div>
+                  </div>
+
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                    <div className="text-[10px] font-bold text-emerald-800 uppercase">🏷️ Overall Total</div>
+                    <div className="text-base font-extrabold text-emerald-600 mt-1">
+                      {fmt(ticketBreakdownData.breakdown?.grand_total || 0)}
+                    </div>
+                    <div className="text-[10px] text-emerald-700 mt-0.5">
+                      Status: {(ticketBreakdownData.breakdown?.payment_status || "PENDING").toUpperCase()}
+                    </div>
+                  </div>
+
+                  <div className={`border rounded-xl p-3 ${
+                    (ticketBreakdownData.breakdown?.balance_due || 0) > 0 ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-slate-200"
+                  }`}>
+                    <div className={`text-[10px] font-bold uppercase ${
+                      (ticketBreakdownData.breakdown?.balance_due || 0) > 0 ? "text-amber-800" : "text-slate-600"
+                    }`}>
+                      💰 Balance Due
+                    </div>
+                    <div className={`text-base font-extrabold mt-1 ${
+                      (ticketBreakdownData.breakdown?.balance_due || 0) > 0 ? "text-amber-600" : "text-emerald-600"
+                    }`}>
+                      {fmt(ticketBreakdownData.breakdown?.balance_due || 0)}
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">
+                      Paid: {fmt(ticketBreakdownData.breakdown?.total_paid || 0)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Items breakdown table */}
+                <div>
+                  <div className="font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                    <ListFilter className="w-3.5 h-3.5 text-indigo-600" /> Billed Items Breakdown
+                  </div>
+                  <div className="border border-slate-200 rounded-xl overflow-hidden max-h-44 overflow-y-auto">
+                    <table className="w-full text-[11px] text-left">
+                      <thead className="bg-slate-100 text-slate-600 font-semibold sticky top-0">
+                        <tr>
+                          <th className="p-2">Item / Description</th>
+                          <th className="p-2">Type</th>
+                          <th className="p-2 text-center">Qty</th>
+                          <th className="p-2 text-right">Rate</th>
+                          <th className="p-2 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {(!ticketBreakdownData.items || ticketBreakdownData.items.length === 0) ? (
+                          <tr>
+                            <td colSpan={5} className="p-3 text-center text-slate-400">No items billed yet</td>
+                          </tr>
+                        ) : (
+                          ticketBreakdownData.items.map((it: any) => (
+                            <tr key={it.id || it.description} className="hover:bg-slate-50">
+                              <td className="p-2 font-medium text-slate-800">{it.description}</td>
+                              <td className="p-2">
+                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                                  it.item_type === "spare" ? "bg-sky-100 text-sky-700" : "bg-purple-100 text-purple-700"
+                                }`}>
+                                  {it.item_type || "spare"}
+                                </span>
+                              </td>
+                              <td className="p-2 text-center">{it.quantity || 1}</td>
+                              <td className="p-2 text-right font-mono">{fmt(it.rate)}</td>
+                              <td className="p-2 text-right font-mono font-bold text-slate-800">{fmt(it.line_total)}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Linked payment entries */}
+                <div>
+                  <div className="font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                    <Receipt className="w-3.5 h-3.5 text-emerald-600" /> Recorded Income Entries
+                  </div>
+                  <div className="border border-slate-200 rounded-xl overflow-hidden max-h-40 overflow-y-auto">
+                    <table className="w-full text-[11px] text-left">
+                      <thead className="bg-slate-100 text-slate-600 font-semibold sticky top-0">
+                        <tr>
+                          <th className="p-2">Entry #</th>
+                          <th className="p-2">Date</th>
+                          <th className="p-2">Mode</th>
+                          <th className="p-2 text-right">Spares</th>
+                          <th className="p-2 text-right">Service</th>
+                          <th className="p-2 text-right">Total Paid</th>
+                          <th className="p-2 text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {(!ticketBreakdownData.payments || ticketBreakdownData.payments.length === 0) ? (
+                          <tr>
+                            <td colSpan={7} className="p-3 text-center text-slate-400">No payment entries found</td>
+                          </tr>
+                        ) : (
+                          ticketBreakdownData.payments.map((p: any) => (
+                            <tr key={p.id} className="hover:bg-slate-50">
+                              <td className="p-2 font-mono text-[10px] text-slate-700">{p.entry_number || p.id}</td>
+                              <td className="p-2 text-slate-500">{p.income_date}</td>
+                              <td className="p-2">{p.payment_mode}</td>
+                              <td className="p-2 text-right font-mono text-sky-700">{fmt(p.spares_amount || 0)}</td>
+                              <td className="p-2 text-right font-mono text-purple-700">{fmt(p.service_amount || 0)}</td>
+                              <td className="p-2 text-right font-mono font-bold text-emerald-700">{fmt(p.amount)}</td>
+                              <td className="p-2 text-center">
+                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                  p.status === "CONFIRMED" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                                }`}>
+                                  {p.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-rose-500 space-y-1">
+                <AlertCircle className="w-6 h-6 mx-auto" />
+                <p className="font-semibold text-xs">Could not load ticket breakdown</p>
+                <p className="text-[11px] text-gray-500">The ticket may not have billing or spare data recorded yet.</p>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setTicketBreakdownOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold text-xs"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

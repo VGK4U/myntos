@@ -8,3 +8,6 @@ export { authService } from './auth.service';
 export { gpsService } from './gps.service';
 export { cameraService } from './camera.service';
 export { callSyncService } from './call-sync.service';
+export { telephonyService } from './telephony.service';
+export { callController } from './call-controller';
+

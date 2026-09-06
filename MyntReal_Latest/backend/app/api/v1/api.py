@@ -53,6 +53,7 @@ from app.api.v1.endpoints import (
     plivo_softphone_api,
     account_deletion,
     bank_contacts,
+    crm_settings,
 )
 
 # Scaffold routers are mounted in main.py at ROOT level to match Flask routing
@@ -200,6 +201,7 @@ api_router.include_router(partner_auth.router, tags=["Partner Authentication"])
 # Universal CRM/Lead Management System (DC Protocol - Dec 08, 2025)
 api_router.include_router(crm.router, prefix="/crm", tags=["Universal CRM - Lead Management"])
 api_router.include_router(bank_contacts.router, prefix="/crm", tags=["CRM - Bank Branch Contacts"])
+api_router.include_router(crm_settings.router, prefix="/crm/settings", tags=["CRM Settings & Handler Routing"])
 
 # Universal Engagement System (DC Protocol - Dec 08, 2025)
 api_router.include_router(universal_engagement.router, tags=["Universal Engagement - Ratings, Comments, Shares"])
@@ -240,6 +242,7 @@ api_router.include_router(call_quality.router, tags=["Call Quality Review System
 api_router.include_router(crm_dialer.router, prefix="/crm", tags=["CRM Auto Dialer"])
 api_router.include_router(voip_dialer.router, tags=["VoIP In-App PSTN Calling & Recordings"])
 api_router.include_router(call_flow_api.router, prefix="/telephony", tags=["MyntOS Native Telephony & Call Flow Designer"])
+api_router.include_router(call_flow_api.router, prefix="/telephony/call-flow", tags=["MyntOS Native Telephony & Call Flow Designer"])
 api_router.include_router(plivo_softphone_api.router, prefix="/telephony/plivo", tags=["Plivo Browser Softphone & Token API"])
 api_router.include_router(crm_lead_sync.router, prefix="/crm", tags=["CRM Google Sheets Lead Sync"])
 api_router.include_router(crm_commissions.router, tags=["CRM Commissions"])

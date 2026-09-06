@@ -1345,13 +1345,15 @@ def crm_lead_send(
     from app.models.crm import CRMLead
     from app.models.whatsapp import WhatsAppTemplate
 
-    lead = db.query(CRMLead).get(lead_id)
-    if not lead:
-        raise HTTPException(404, "Lead not found")
+    lead = None
+    if lead_id and lead_id > 0:
+        lead = db.query(CRMLead).get(lead_id)
+        if not lead:
+            raise HTTPException(404, "Lead not found")
 
-    phone = data.phone or getattr(lead, 'phone', None) or getattr(lead, 'mobile', None)
+    phone = data.phone or (getattr(lead, 'phone', None) if lead else None) or (getattr(lead, 'mobile', None) if lead else None)
     if not phone:
-        raise HTTPException(400, "No phone number available for this lead")
+        raise HTTPException(400, "No phone number available for this WhatsApp send")
 
     # Resolve staff name for activity notes
     staff_id = _get_staff_id(current_user)
@@ -1380,9 +1382,9 @@ def crm_lead_send(
                 }
             template_name = template.name
             context = {
-                "name": getattr(lead, 'name', '') or getattr(lead, 'customer_name', ''),
+                "name": (getattr(lead, 'name', '') if lead else '') or (getattr(lead, 'customer_name', '') if lead else 'Customer'),
                 "phone": phone,
-                "status": getattr(lead, 'status', ''),
+                "status": getattr(lead, 'status', '') if lead else '',
                 **(data.context_vars or {}),
                 **(data.variable_values or {}),   # positional {{1}},{{2}} override
             }
@@ -1391,17 +1393,19 @@ def crm_lead_send(
     if not message:
         raise HTTPException(400, "Provide a template or custom message")
 
+    effective_lead_id = lead_id if (lead_id and lead_id > 0) else None
+
     result = send_direct_whatsapp(
         db=db,
         phone=phone,
         message=message,
         template_id=data.template_id,
-        lead_id=lead_id,
+        lead_id=effective_lead_id,
         staff_id=staff_id,
     )
 
-    # DC-WA-TRACK-001: Log send to crm_wa_sends + crm_lead_notes
-    if result.get("success"):
+    # DC-WA-TRACK-001: Log send to crm_wa_sends + crm_lead_notes if lead exists
+    if result.get("success") and lead:
         try:
             from sqlalchemy import text as _t
             db.execute(_t("""

@@ -290,7 +290,7 @@
         <div class="stat-card purple"><div class="val" id="stat-total">—</div><div class="lbl">Total Calls</div></div>
         <div class="stat-card blue"><div class="val" id="stat-active">—</div><div class="lbl">Active / Live</div></div>
         <div class="stat-card green"><div class="val" id="stat-answered">—</div><div class="lbl">Answered</div></div>
-        <div class="stat-card red"><div class="val" id="stat-missed">—</div><div class="lbl">Missed</div></div>
+        <div class="stat-card red"><div class="val" id="stat-missed">—</div><div class="lbl">Not Answered</div></div>
         <div class="stat-card" style="border-top:3px solid #8b5cf6;"><div class="val" id="stat-voicemail">—</div><div class="lbl">Voicemail</div></div>
         <div class="stat-card amber"><div class="val" id="stat-pending">—</div><div class="lbl">Pending</div></div>
         <div class="stat-card teal"><div class="val" id="stat-disposed">—</div><div class="lbl">Disposed</div></div>
@@ -352,7 +352,7 @@
                 <select class="form-select" id="filter-status">
                     <option value="">All Statuses</option>
                     <option value="answered">Answered</option>
-                    <option value="missed">Missed</option>
+                    <option value="missed">Not Answered</option>
                     <option value="voicemail">Voicemail</option>
                     <option value="active">Active / Ringing</option>
                 </select>
@@ -465,7 +465,7 @@
         <div class="stat-cards" id="dept-stat-cards" style="display:none;">
             <div class="stat-card purple"><div class="val" id="dept-stat-total">—</div><div class="lbl">Total Calls</div></div>
             <div class="stat-card green"><div class="val" id="dept-stat-answered">—</div><div class="lbl">Answered</div></div>
-            <div class="stat-card red"><div class="val" id="dept-stat-missed">—</div><div class="lbl">Missed</div></div>
+            <div class="stat-card red"><div class="val" id="dept-stat-missed">—</div><div class="lbl">Not Answered</div></div>
             <div class="stat-card" style="border-top:3px solid #8b5cf6;"><div class="val" id="dept-stat-voicemail">—</div><div class="lbl">Voicemail</div></div>
             <div class="stat-card teal"><div class="val" id="dept-stat-avg">—</div><div class="lbl">Avg Talk Time</div></div>
         </div>
@@ -481,7 +481,7 @@
                             <th class="text-start">Department / Operator</th>
                             <th>Total Calls</th>
                             <th>Answered</th>
-                            <th>Missed</th>
+                            <th>Not Answered</th>
                             <th>Voicemail</th>
                             <th>Answer Rate</th>
                             <th>Total Talk</th>
@@ -531,7 +531,7 @@
         <div class="stat-cards" id="person-stat-cards" style="display:none;">
             <div class="stat-card purple"><div class="val" id="person-stat-total">—</div><div class="lbl">Total Calls</div></div>
             <div class="stat-card green"><div class="val" id="person-stat-answered">—</div><div class="lbl">Answered</div></div>
-            <div class="stat-card red"><div class="val" id="person-stat-missed">—</div><div class="lbl">Missed</div></div>
+            <div class="stat-card red"><div class="val" id="person-stat-missed">—</div><div class="lbl">Not Answered</div></div>
             <div class="stat-card" style="border-top:3px solid #8b5cf6;"><div class="val" id="person-stat-voicemail">—</div><div class="lbl">Voicemail</div></div>
             <div class="stat-card teal"><div class="val" id="person-stat-avg">—</div><div class="lbl">Avg Talk Time</div></div>
         </div>
@@ -547,7 +547,7 @@
                             <th class="text-start">Staff / Handler</th>
                             <th>Total Calls</th>
                             <th>Answered</th>
-                            <th>Missed</th>
+                            <th>Not Answered</th>
                             <th>Voicemail</th>
                             <th>Answer Rate</th>
                             <th>Total Talk</th>
@@ -844,10 +844,10 @@ async function loadCalls(reset = false) {
 
 function renderRow(c) {
     const isOutbound = c.call_type === 'outbound';
-    // Outbound unanswered calls → show "Not Answered" instead of "Missed"
+    // Outbound unanswered calls → show "Not Answered", Inbound unanswered calls → show "Missed by Staff"
     const isMissedOutbound = c.status === 'missed' && isOutbound;
     const statusClass = isMissedOutbound ? 'badge-not-answered' : `badge-${c.status || 'ended'}`;
-    const statusLabel = isMissedOutbound ? 'Not Answered' : (c.status ? c.status.charAt(0).toUpperCase() + c.status.slice(1) : '—');
+    const statusLabel = isMissedOutbound ? 'Not Answered' : (c.status === 'missed' ? 'Missed by Staff' : (c.status ? c.status.charAt(0).toUpperCase() + c.status.slice(1) : '—'));
     const isActive = ['ringing', 'active'].includes(c.status);
     const duration = c.duration_seconds ? fmtDuration(c.duration_seconds) : '—';
     const time = fmtTime(c.started_at || c.created_at);
@@ -1011,7 +1011,7 @@ function _renderExpandPanel(c) {
     const cphone = esc(c.caller_number);
     const isOutbound = c.call_type === 'outbound';
     const isMissedOutbound = c.status === 'missed' && isOutbound;
-    const statusLabel = isMissedOutbound ? 'Not Answered' : (c.status||'ended').charAt(0).toUpperCase() + (c.status||'ended').slice(1);
+    const statusLabel = isMissedOutbound ? 'Not Answered' : (c.status === 'missed' ? 'Missed by Staff' : (c.status||'ended').charAt(0).toUpperCase() + (c.status||'ended').slice(1));
     const statusClass = isMissedOutbound ? 'badge-not-answered' : `badge-${c.status||'ended'}`;
 
     const cleanExpCallerP = (c.caller_number || '').replace(/\D/g, '').slice(-10);
@@ -1106,7 +1106,7 @@ function _renderExpandPanel(c) {
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
                 <div class="expand-kv"><span class="k">Total</span><span class="v">${cs.total_calls}</span></div>
                 <div class="expand-kv"><span class="k">Answered</span><span class="v" style="color:#059669;">${cs.answered}</span></div>
-                <div class="expand-kv"><span class="k">Missed</span><span class="v" style="color:#dc2626;">${cs.missed}</span></div>
+                <div class="expand-kv"><span class="k">Not Answered</span><span class="v" style="color:#dc2626;">${cs.missed}</span></div>
                 <div class="expand-kv"><span class="k">Talk Time</span><span class="v">${fmtDuration(cs.total_duration)}</span></div>
             </div>
         </div>`;
@@ -1463,7 +1463,7 @@ function _renderDetailContent(content, c) {
     const detailIsOutbound = c.call_type === 'outbound';
     const detailIsMissedOutbound = s === 'missed' && detailIsOutbound;
     const statusClass = detailIsMissedOutbound ? 'badge-not-answered' : `badge-${s}`;
-    const statusLabel = detailIsMissedOutbound ? 'Not Answered' : (s.charAt(0).toUpperCase()+s.slice(1));
+    const statusLabel = detailIsMissedOutbound ? 'Not Answered' : (s === 'missed' ? 'Missed by Staff' : (s.charAt(0).toUpperCase()+s.slice(1)));
 
     const cleanDetCallerP = (c.caller_number || '').replace(/\D/g, '').slice(-10);
     let html = `
@@ -1559,7 +1559,7 @@ function _renderDetailContent(content, c) {
             <div class="detail-grid" style="margin-top:6px;">
                 <div class="detail-item"><label>Total Calls</label><div class="val">${cs.total_calls}</div></div>
                 <div class="detail-item"><label>Answered</label><div class="val" style="color:#059669;">${cs.answered}</div></div>
-                <div class="detail-item"><label>Missed</label><div class="val" style="color:#dc2626;">${cs.missed}</div></div>
+                <div class="detail-item"><label>Not Answered</label><div class="val" style="color:#dc2626;">${cs.missed}</div></div>
                 <div class="detail-item"><label>Total Talk Time</label><div class="val">${fmtDuration(cs.total_duration)}</div></div>
             </div>
         </div>`;
@@ -1616,7 +1616,7 @@ async function openCallerHistory(phone) {
         html += `<div class="detail-grid">
             <div class="detail-item"><label>Total Calls</label><div class="val">${s.total||0}</div></div>
             <div class="detail-item"><label>Answered</label><div class="val" style="color:#059669;">${s.answered||0}</div></div>
-            <div class="detail-item"><label>Missed</label><div class="val" style="color:#dc2626;">${s.missed||0}</div></div>
+            <div class="detail-item"><label>Not Answered</label><div class="val" style="color:#dc2626;">${s.missed||0}</div></div>
             <div class="detail-item"><label>Total Talk Time</label><div class="val">${fmtDuration(s.total_duration)}</div></div>
         </div>`;
 
@@ -1878,7 +1878,7 @@ function _renderReportExpandContent(calls, name) {
         const isOutbound = c.call_type === 'outbound';
         const isMissedOB = c.status === 'missed' && isOutbound;
         const statusClass = isMissedOB ? 'badge-not-answered' : `badge-${c.status||'ended'}`;
-        const statusLabel = isMissedOB ? 'Not Answered' : (c.status||'ended').charAt(0).toUpperCase() + (c.status||'ended').slice(1);
+        const statusLabel = isMissedOB ? 'Not Answered' : (c.status === 'missed' ? 'Missed by Staff' : (c.status||'ended').charAt(0).toUpperCase() + (c.status||'ended').slice(1));
         const esc = s => (s||'').replace(/'/g,"\\'");
         const cid = esc(c.call_id);
         const leadCell = c.crm_lead_id

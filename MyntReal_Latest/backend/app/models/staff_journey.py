@@ -236,11 +236,16 @@ class StaffJourneyTrackPoint(Base):
     GPS track points during journey for route visualization
     DC: Immutable GPS log with timestamp
     WVV Protocol (Dec 05, 2025): Added wvv_compliant flag for degraded GPS acceptance
+    Canonical Location Architecture: client_observation_id for canonical observation identity
     """
     __tablename__ = "staff_journey_track_points"
 
     id = Column(Integer, primary_key=True, index=True)
     journey_id = Column(Integer, ForeignKey("staff_journeys.id"), nullable=False, index=True)
+    
+    # Canonical Observation Identity (UUIDv4 generated at sensor capture)
+    client_observation_id = Column(String(36), nullable=True, index=True)
+    server_received_at = Column(DateTime, nullable=True, default=datetime.utcnow)
     
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
@@ -286,6 +291,8 @@ class StaffJourneyTrackPoint(Base):
         return {
             "id": self.id,
             "journey_id": self.journey_id,
+            "client_observation_id": self.client_observation_id,
+            "server_received_at": self.server_received_at.isoformat() if self.server_received_at else None,
             "latitude": self.latitude,
             "longitude": self.longitude,
             "accuracy": self.accuracy,

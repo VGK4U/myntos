@@ -81,21 +81,38 @@ def get_current_vgk_member(request: Request, db: Session = Depends(get_db)) -> O
     try:
         from jose import jwt, JWTError
         from jose.exceptions import ExpiredSignatureError
+        from sqlalchemy.exc import SQLAlchemyError
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         if payload.get("user_type") != "vgk_member":
             raise HTTPException(status_code=401, detail="Invalid token type")
         partner_id = int(payload.get("sub"))
-        partner = db.query(OfficialPartner).filter(
-            OfficialPartner.id == partner_id,
-            OfficialPartner.category == 'VGK_TEAM'
-        ).first()
+        try:
+            partner = db.query(OfficialPartner).filter(
+                OfficialPartner.id == partner_id,
+                OfficialPartner.category == 'VGK_TEAM'
+            ).first()
+        except SQLAlchemyError as db_err:
+            logger.error(f"[VGK-AUTH-DB] Database failure in get_current_vgk_member: {db_err}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentication database service temporarily unavailable. Please try again."
+            )
         if not partner:
             raise HTTPException(status_code=401, detail="VGK member not found")
         return partner
     except HTTPException:
         raise
-    except Exception as e:
+    except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token",
+                            headers={"WWW-Authenticate": "Bearer"})
+    except Exception as e:
+        from sqlalchemy.exc import SQLAlchemyError
+        if isinstance(e, SQLAlchemyError) or "connection" in str(e).lower() or "timeout" in str(e).lower():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentication database service temporarily unavailable. Please try again."
+            )
+        raise HTTPException(status_code=401, detail="Could not validate credentials",
                             headers={"WWW-Authenticate": "Bearer"})
 
 

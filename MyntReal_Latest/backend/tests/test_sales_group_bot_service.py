@@ -30,7 +30,7 @@ def test_sales_group_bot():
         print("Generated Message Output:\n")
         print(msg)
         assert "SALES TEAM" in msg
-        assert "Total Calls Handled" in msg
+        assert "STAFF LEADERBOARD TODAY" in msg
 
         print("\n--- 3. Testing Instant New Lead Group Alert Formatting ---")
         # Find any sample lead

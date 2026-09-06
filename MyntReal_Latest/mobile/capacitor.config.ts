@@ -3,7 +3,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 // Development mode: Set to true ONLY for local live-reload during active development.
 // MUST be false for any Codemagic / production APK build.
 const DEV_MODE = false;
-const DEV_SERVER_URL = 'https://5305e65f-c4f9-487a-b990-7fdd5e743de1-00-2fjho41r6u5wb.worf.replit.dev/mobile';
+const DEV_SERVER_URL = 'http://192.168.1.10:5001/mobile';
 
 const config: CapacitorConfig = {
   appId: 'com.myntos.mobile',

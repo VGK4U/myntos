@@ -188,6 +188,8 @@ def create_billing_sfms_entries(
         _raw_mode = (getattr(billing, 'payment_mode', None) or 'cash').upper()
         income_payment_mode = _raw_mode if _raw_mode in _VALID_INCOME_MODES else 'CASH'
 
+        grand_bill_total = spares_total + combined_service_labour
+
         if spares_total > 0:
             spares_entry = IncomeEntry(
                 entry_number=generate_income_entry_number(db),
@@ -195,11 +197,14 @@ def create_billing_sfms_entries(
                 income_source_id=income_sources['spares'].id,
                 income_date=today,
                 amount=spares_total,
+                spares_amount=spares_total,
+                service_amount=Decimal('0'),
+                ticket_total_amount=grand_bill_total,
                 reference_type="SERVICE_TICKET_BILLING",
                 reference_id=str(billing.id),
                 payment_mode=income_payment_mode,
                 payer_name=customer_name,
-                narration=f"Spare Parts Revenue - {ticket.ticket_id} - {partner_name} - Customer: {customer_name}",
+                narration=f"Spare Parts Revenue - {ticket.ticket_id} - {partner_name} - Customer: {customer_name} (Spares: ₹{spares_total}, Total: ₹{grand_bill_total})",
                 status="CONFIRMED",
                 confirmed_by_id=confirmed_by_id,
                 confirmed_at=get_indian_time(),
@@ -222,11 +227,14 @@ def create_billing_sfms_entries(
                 income_source_id=income_sources['service'].id,
                 income_date=today,
                 amount=combined_service_labour,
+                spares_amount=Decimal('0'),
+                service_amount=combined_service_labour,
+                ticket_total_amount=grand_bill_total,
                 reference_type="SERVICE_TICKET_BILLING",
                 reference_id=str(billing.id),
                 payment_mode=income_payment_mode,
                 payer_name=customer_name,
-                narration=f"Service Labour Revenue - {ticket.ticket_id} - {partner_name} - Customer: {customer_name} (Service: ₹{service_total}, Labour: ₹{labour_total})",
+                narration=f"Service Labour Revenue - {ticket.ticket_id} - {partner_name} - Customer: {customer_name} (Service: ₹{service_total}, Labour: ₹{labour_total}, Total: ₹{grand_bill_total})",
                 status="CONFIRMED",
                 confirmed_by_id=confirmed_by_id,
                 confirmed_at=get_indian_time(),

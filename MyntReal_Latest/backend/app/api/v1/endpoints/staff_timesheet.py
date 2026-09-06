@@ -197,24 +197,46 @@ async def get_my_entries(
         delta = worked_today.clock_out - worked_today.clock_in
         available_minutes = int(delta.total_seconds() / 60)
 
+    # Bounded bulk lookups for all related entities
+    task_ids = {e.task_id for e in entries if e.task_id}
+    kra_ids = {e.kra_id for e in entries if e.kra_id}
+    lead_ids = {e.lead_id for e in entries if e.lead_id}
+    journey_ids = {e.journey_id for e in entries if e.journey_id}
+
+    task_map = {}
+    if task_ids:
+        for t in db.query(StaffTask.id, StaffTask.title).filter(StaffTask.id.in_(task_ids)).all():
+            task_map[t[0]] = t[1]
+
+    kra_map = {}
+    if kra_ids:
+        from sqlalchemy.orm import joinedload
+        for kra in db.query(StaffKRAAssignment).options(joinedload(StaffKRAAssignment.kra_template)).filter(StaffKRAAssignment.id.in_(kra_ids)).all():
+            kra_map[kra.id] = kra.kra_template.title if kra.kra_template else None
+
+    lead_map = {}
+    if lead_ids:
+        for l in db.query(CRMLead.id, CRMLead.name).filter(CRMLead.id.in_(lead_ids)).all():
+            lead_map[l[0]] = l[1]
+
+    journey_map = {}
+    if journey_ids:
+        for j in db.query(StaffJourney.id, StaffJourney.purpose, StaffJourney.client_name).filter(StaffJourney.id.in_(journey_ids)).all():
+            p_val = j[1].value if hasattr(j[1], 'value') else str(j[1] or '')
+            purpose_str = p_val.replace('_', ' ').title()
+            journey_map[j[0]] = f"{purpose_str} - {j[2] or 'N/A'}"
+
     result = []
     for entry in entries:
         entry_dict = entry.to_dict()
         if entry.task_id:
-            task = db.query(StaffTask).filter(StaffTask.id == entry.task_id).first()
-            entry_dict["task_title"] = task.title if task else None
+            entry_dict["task_title"] = task_map.get(entry.task_id)
         if entry.kra_id:
-            kra = db.query(StaffKRAAssignment).filter(StaffKRAAssignment.id == entry.kra_id).first()
-            entry_dict["kra_title"] = kra.kra_template.title if kra and kra.kra_template else None
+            entry_dict["kra_title"] = kra_map.get(entry.kra_id)
         if entry.lead_id:
-            lead = db.query(CRMLead).filter(CRMLead.id == entry.lead_id).first()
-            entry_dict["lead_name"] = lead.name if lead else None
+            entry_dict["lead_name"] = lead_map.get(entry.lead_id)
         if entry.journey_id:
-            journey = db.query(StaffJourney).filter(StaffJourney.id == entry.journey_id).first()
-            if journey:
-                entry_dict["journey_name"] = f"{journey.purpose.replace('_', ' ').title()} - {journey.client_name or 'N/A'}"
-            else:
-                entry_dict["journey_name"] = None
+            entry_dict["journey_name"] = journey_map.get(entry.journey_id)
         result.append(entry_dict)
 
     logger.info(f"[DC_TIMESHEET_MY] User {current_user.id} fetched {len(result)} entries for {entry_date}")
@@ -274,24 +296,46 @@ async def get_my_history(
     ).all()
     attendance_map = {a.date.isoformat(): a for a in attendance_records}
 
+    # Bounded bulk lookups for history
+    task_ids = {e.task_id for e in entries if e.task_id}
+    kra_ids = {e.kra_id for e in entries if e.kra_id}
+    lead_ids = {e.lead_id for e in entries if e.lead_id}
+    journey_ids = {e.journey_id for e in entries if e.journey_id}
+
+    task_map = {}
+    if task_ids:
+        for t in db.query(StaffTask.id, StaffTask.title).filter(StaffTask.id.in_(task_ids)).all():
+            task_map[t[0]] = t[1]
+
+    kra_map = {}
+    if kra_ids:
+        from sqlalchemy.orm import joinedload
+        for kra in db.query(StaffKRAAssignment).options(joinedload(StaffKRAAssignment.kra_template)).filter(StaffKRAAssignment.id.in_(kra_ids)).all():
+            kra_map[kra.id] = kra.kra_template.title if kra.kra_template else None
+
+    lead_map = {}
+    if lead_ids:
+        for l in db.query(CRMLead.id, CRMLead.name).filter(CRMLead.id.in_(lead_ids)).all():
+            lead_map[l[0]] = l[1]
+
+    journey_map = {}
+    if journey_ids:
+        for j in db.query(StaffJourney.id, StaffJourney.purpose, StaffJourney.client_name).filter(StaffJourney.id.in_(journey_ids)).all():
+            p_val = j[1].value if hasattr(j[1], 'value') else str(j[1] or '')
+            purpose_str = p_val.replace('_', ' ').title()
+            journey_map[j[0]] = f"{purpose_str} - {j[2] or 'N/A'}"
+
     result = []
     for entry in entries:
         entry_dict = entry.to_dict()
         if entry.task_id:
-            task = db.query(StaffTask).filter(StaffTask.id == entry.task_id).first()
-            entry_dict["task_title"] = task.title if task else None
+            entry_dict["task_title"] = task_map.get(entry.task_id)
         if entry.kra_id:
-            kra = db.query(StaffKRAAssignment).filter(StaffKRAAssignment.id == entry.kra_id).first()
-            entry_dict["kra_title"] = kra.kra_template.title if kra and kra.kra_template else None
+            entry_dict["kra_title"] = kra_map.get(entry.kra_id)
         if entry.lead_id:
-            lead = db.query(CRMLead).filter(CRMLead.id == entry.lead_id).first()
-            entry_dict["lead_name"] = lead.name if lead else None
+            entry_dict["lead_name"] = lead_map.get(entry.lead_id)
         if entry.journey_id:
-            journey = db.query(StaffJourney).filter(StaffJourney.id == entry.journey_id).first()
-            if journey:
-                entry_dict["journey_name"] = f"{journey.purpose.replace('_', ' ').title()} - {journey.client_name or 'N/A'}"
-            else:
-                entry_dict["journey_name"] = None
+            entry_dict["journey_name"] = journey_map.get(entry.journey_id)
         
         att = attendance_map.get(entry.date.isoformat())
         if att:

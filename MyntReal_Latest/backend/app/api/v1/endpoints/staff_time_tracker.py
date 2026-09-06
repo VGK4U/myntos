@@ -20,7 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from sqlalchemy.exc import IntegrityError
-from typing import Optional, List
+from typing import Optional, List, Any
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 import pytz
@@ -43,6 +43,7 @@ from app.api.v1.endpoints.staff_task_schemas import (
 )
 from app.services.attendance_evidence_service import AttendanceEvidenceService
 from app.services.location_drift_service import LocationDriftService
+from app.services.location_ingestion_service import LocationIngestionService
 from app.utils.staff_hierarchy import get_accessible_employee_ids, get_team_member_ids
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,7 @@ class LocationUpdateRequest(BaseModel):
     DC_GPS_BODY_FIX_001 (Feb 03, 2026): Accept location data as JSON body
     Fixes: Android native background service sends JSON body, not query params
     Backward compatible: Accepts both 'accuracy' and 'accuracy_m' field names
+    Phase 6 Step 1: Accepts client_observation_id (UUIDv4)
     """
     latitude: float = Field(..., description="Latitude coordinate")
     longitude: float = Field(..., description="Longitude coordinate")
@@ -68,8 +70,9 @@ class LocationUpdateRequest(BaseModel):
     heading: Optional[float] = Field(None, description="Heading/bearing in degrees")
     battery_level: Optional[float] = Field(None, ge=0, le=100, description="Battery level (Android field)")
     battery_percentage: Optional[int] = Field(None, ge=0, le=100, description="Battery percentage")
-    timestamp: Optional[int] = Field(None, description="Unix timestamp from device")
+    timestamp: Optional[Any] = Field(None, description="Timestamp from device")
     source: str = Field("heartbeat", description="Location source identifier")
+    client_observation_id: Optional[str] = Field(None, description="Canonical observation ID (UUIDv4)")
     
     class Config:
         extra = "ignore"  # Ignore extra fields from Android
@@ -370,11 +373,29 @@ async def clock_in(
                 "accuracy_quality": "high" if validated_accuracy <= 50 else ("medium" if validated_accuracy <= 100 else ("low" if validated_accuracy <= 300 else "degraded"))
             }
             
+            norm = LocationIngestionService.normalize_observation({
+                "latitude": location_data['latitude'],
+                "longitude": location_data['longitude'],
+                "accuracy": validated_accuracy,
+                "altitude": location_data.get('altitude'),
+                "speed": location_data.get('speed'),
+                "heading": location_data.get('heading'),
+                "address": location_data.get('address'),
+                "client_observation_id": location_data.get('client_observation_id'),
+                "timestamp": location_data.get('timestamp') or now,
+                "source": "attendance",
+            }, employee_id=current_user.id)
+
             initial_location = StaffRealtimeLocation(
                 employee_id=current_user.id,
-                latitude=location_data['latitude'],
-                longitude=location_data['longitude'],
+                client_observation_id=norm["client_observation_id"],
+                server_received_at=norm["server_received_at"],
+                latitude=norm["latitude"],
+                longitude=norm["longitude"],
                 accuracy_m=validated_accuracy,
+                altitude=norm["altitude"],
+                speed_kmh=norm["speed_kmh"] or 0,
+                heading=norm["heading"],
                 source='attendance',  # DC Protocol: valid sources are attendance, journey, drift, manual, heartbeat
                 attendance_id=attendance.id,
                 is_clocked_in=True,
@@ -384,7 +405,7 @@ async def clock_in(
                 device_info=initial_device_info,
                 ip_address=get_client_ip(request),
                 user_agent=request.headers.get("User-Agent", "") if request else "",
-                captured_at=now
+                captured_at=norm["captured_at"]
             )
             db.add(initial_location)
             
@@ -2117,146 +2138,35 @@ async def update_realtime_location(
             detail=f"GPS Rejected: Accuracy {accuracy_m:.0f}m exceeds maximum 500m limit. Please move to better GPS signal."
         )
     
-    # WVV Compliance: Track if point meets strict 100m accuracy for journey reimbursement
-    is_wvv_compliant = accuracy_m <= 100
-    
-    # Get today's attendance
-    attendance = db.query(StaffAttendance).filter(
-        StaffAttendance.employee_id == current_user.id,
-        StaffAttendance.date == today
-    ).first()
-    
-    # Check if on break
-    active_break = None
-    if attendance:
-        active_break = db.query(StaffAttendanceBreak).filter(
-            StaffAttendanceBreak.attendance_id == attendance.id,
-            StaffAttendanceBreak.break_end == None
-        ).first()
-    
-    # Check if on journey
-    from app.models.staff_journey import StaffJourney, JourneyStatus
-    active_journey = db.query(StaffJourney).filter(
-        StaffJourney.employee_id == current_user.id,
-        StaffJourney.status == JourneyStatus.IN_PROGRESS
-    ).first()
-    
-    # Generate DC code
-    dc_code = generate_realtime_dc_code(current_user.emp_code, now)
-    
-    # DC_BATTERY_001 + DC_GPS_DUAL_TIER_001: Build device_info with battery and WVV compliance
-    device_info_data = {
-        "user_agent": request.headers.get("User-Agent", ""),
-        "is_wvv_compliant": is_wvv_compliant,
-        "accuracy_quality": "high" if accuracy_m <= 50 else ("medium" if accuracy_m <= 100 else ("low" if accuracy_m <= 300 else "degraded"))
+    # Phase 6 Step 1: Delegate to LocationIngestionService
+    obs_payload = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "accuracy_m": accuracy_m,
+        "altitude": altitude,
+        "speed_kmh": speed_kmh,
+        "heading": heading,
+        "battery_percentage": battery_percentage,
+        "source": source,
+        "client_observation_id": getattr(data, 'client_observation_id', None) or request.query_params.get('client_observation_id'),
+        "captured_at": getattr(data, 'timestamp', None) or request.query_params.get('timestamp')
     }
-    if battery_percentage is not None:
-        device_info_data["battery_percentage"] = battery_percentage
-    
-    # Log if degraded GPS for monitoring
-    if not is_wvv_compliant:
-        print(f"[DC_GPS_DUAL_TIER] Degraded GPS accepted: {current_user.emp_code}, accuracy={accuracy_m:.0f}m, quality={device_info_data['accuracy_quality']}")
-    
-    # DC_ALTITUDE_FIX_001: Clamp negative altitude values to 0
-    # Mobile GPS devices may report slightly negative altitude (below sea level)
-    # which can violate database CHECK constraints in production
-    validated_altitude = altitude
-    if altitude is not None and altitude < 0:
-        validated_altitude = 0.0
-        print(f"[DC_ALTITUDE_FIX] Clamped negative altitude {altitude:.2f}m to 0 for {current_user.emp_code}")
-    
-    # DC_APP_VERSION_001 (Jan 28, 2026): Capture app version from headers
-    app_version = request.headers.get("X-App-Version", None)
-    app_platform = request.headers.get("X-App-Platform", None)
-    
-    # Create location record
-    location = StaffRealtimeLocation(
+
+    ingest_res = LocationIngestionService.ingest_realtime_location(
+        db=db,
         employee_id=current_user.id,
-        latitude=latitude,
-        longitude=longitude,
-        accuracy_m=accuracy_m,
-        altitude=validated_altitude,
-        speed_kmh=speed_kmh,
-        heading=heading,
-        source=source,
-        attendance_id=attendance.id if attendance else None,
-        journey_id=active_journey.id if active_journey else None,
-        is_clocked_in=attendance is not None and attendance.clock_out is None,
-        is_on_break=active_break is not None,
-        is_on_journey=active_journey is not None,
-        break_type=active_break.break_type.upper() if active_break and active_break.break_type else None,
-        dc_code=dc_code,
-        device_info=device_info_data,
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("User-Agent", ""),
-        app_version=app_version,
-        app_platform=app_platform,
-        captured_at=now
+        observation_data=obs_payload,
+        request=request
     )
-    
-    # DC_GPS_DEDUP_001 (Feb 2026): Skip insert if dc_code already exists
-    # Race condition: native_background + mobile_heartbeat can fire within the same second
-    # generating identical dc_codes. Pre-check avoids UniqueViolation at commit.
-    _existing_loc = db.query(StaffRealtimeLocation.id).filter(
-        StaffRealtimeLocation.dc_code == dc_code
-    ).first()
-    _loc_queued = False
-    if not _existing_loc:
-        db.add(location)
-        _loc_queued = True
-        print(f"[DC_GPS_HEARTBEAT] Inserting StaffRealtimeLocation for {current_user.emp_code}: lat={latitude}, lng={longitude}, acc={accuracy_m}m, battery={battery_percentage}, source={source}")
-    else:
-        print(f"[DC_GPS_DEDUP] Skipping duplicate dc_code {dc_code} for {current_user.emp_code} (source={source})")
-    
-    # DC Protocol (Jan 28, 2026): Update attendance GPS tracking fields
-    if attendance:
-        attendance.last_gps_at = now
-        attendance.gps_status = 'active'
-        attendance.gps_status_reason = None
-        attendance.gps_status_at = now
-        if battery_percentage is not None:
-            attendance.last_battery_pct = battery_percentage
-        
-        # DC_WORKED_MINUTES_REALTIME_001 (Feb 2026): Calculate worked_minutes on every heartbeat
-        # This ensures real-time updates instead of only at clock-out
-        # DC_BREAK_SYNC_001: Sync break_minutes from StaffAttendanceBreak records before calculation
-        if attendance.clock_in and not attendance.clock_out:
-            # First sync break_minutes from actual break records
-            total_break_mins = db.query(func.coalesce(func.sum(StaffAttendanceBreak.duration_minutes), 0)).filter(
-                StaffAttendanceBreak.attendance_id == attendance.id
-            ).scalar() or 0
-            attendance.break_minutes = int(total_break_mins)
-            
-            # Calculate elapsed time minus breaks
-            elapsed_seconds = (now - attendance.clock_in).total_seconds()
-            attendance.worked_minutes = max(0, int(elapsed_seconds / 60) - attendance.break_minutes)
-            print(f"[DC_WORKED_MINUTES] Updated worked_minutes={attendance.worked_minutes}, break_minutes={attendance.break_minutes} for {current_user.emp_code}")
-    
-    # DC_GPS_DEDUP_002 (Apr 2026): Secondary safety net — catches the rare race condition
-    # where two requests pass the pre-check simultaneously and both try to insert the same
-    # dc_code. On IntegrityError: rollback, expunge location, re-apply attendance fields only.
-    try:
-        db.commit()
-    except IntegrityError as _gps_ie:
-        db.rollback()
-        if _loc_queued:
-            print(f"[DC_GPS_DEDUP_002] Race-condition duplicate dc_code {dc_code} for {current_user.emp_code} — location skipped, retrying attendance-only commit")
-            if attendance and getattr(attendance, 'id', None):
-                _att_retry = db.query(StaffAttendance).filter(StaffAttendance.id == attendance.id).first()
-                if _att_retry:
-                    _att_retry.last_gps_at = now
-                    _att_retry.gps_status = 'active'
-                    _att_retry.gps_status_reason = None
-                    _att_retry.gps_status_at = now
-                    if battery_percentage is not None:
-                        _att_retry.last_battery_pct = battery_percentage
-                    db.commit()
-        else:
-            raise
 
     # DC_SESSION_EXTEND_001: Generate extended session token while clocked in
     # This prevents session expiry while the user is actively tracked
     extended_token = None
+    attendance = db.query(StaffAttendance).filter(
+        StaffAttendance.employee_id == current_user.id,
+        StaffAttendance.date == today
+    ).first()
+
     if attendance and attendance.clock_out is None:
         try:
             auth_header = request.headers.get("Authorization")
@@ -2268,14 +2178,18 @@ async def update_realtime_location(
         except Exception as e:
             print(f"[DC_SESSION_EXTEND_001] Token refresh warning: {e}")
     
+    accuracy_quality = "high" if accuracy_m <= 50 else ("medium" if accuracy_m <= 100 else ("low" if accuracy_m <= 300 else "degraded"))
+
     # DC_GPS_DUAL_TIER_001: Include compliance status in response
     return {
         "success": True,
-        "message": "Location updated" + (" (WVV compliant)" if is_wvv_compliant else " (degraded GPS)"),
-        "dc_code": dc_code,
+        "duplicate": ingest_res.get("duplicate", False),
+        "message": "Location updated" + (" (WVV compliant)" if ingest_res.get("is_wvv_compliant") else " (degraded GPS)"),
+        "dc_code": ingest_res.get("dc_code"),
+        "client_observation_id": ingest_res.get("client_observation_id"),
         "captured_at": now.isoformat(),
-        "is_wvv_compliant": is_wvv_compliant,
-        "accuracy_quality": device_info_data["accuracy_quality"],
+        "is_wvv_compliant": ingest_res.get("is_wvv_compliant", False),
+        "accuracy_quality": accuracy_quality,
         "battery_percentage": battery_percentage,
         "extended_token": extended_token  # DC_SESSION_EXTEND_001: Refreshed token for session continuity
     }
@@ -2478,6 +2392,8 @@ async def report_tracking_gap(
                 # Store gap in device_info of a special location record
                 gap_record = StaffRealtimeLocation(
                     employee_id=employee_id,
+                    client_observation_id=str(uuid.uuid4()),
+                    server_received_at=now,
                     latitude=last_location.get('latitude', 0) if last_location else 0,
                     longitude=last_location.get('longitude', 0) if last_location else 0,
                     accuracy_m=last_location.get('accuracy_m', 9999) if last_location else 9999,
@@ -2669,40 +2585,32 @@ async def get_team_live_locations(
     
     team_ids = [m.id for m in team_members]
     
-    # DC Protocol (Jan 28, 2026): For historical view, get last location of that date
-    # For live view, use 30-minute cutoff
-    if is_historical:
-        # Get last location for target date only
-        target_date_start = datetime.combine(target_date, datetime.min.time())
-        target_date_end = datetime.combine(target_date, datetime.max.time())
-        
-        latest_subq = db.query(
-            StaffRealtimeLocation.employee_id,
-            func.max(StaffRealtimeLocation.captured_at).label('max_captured')
-        ).filter(
-            StaffRealtimeLocation.employee_id.in_(team_ids),
-            StaffRealtimeLocation.captured_at >= target_date_start,
-            StaffRealtimeLocation.captured_at <= target_date_end
-        ).group_by(StaffRealtimeLocation.employee_id).subquery()
-    else:
-        # DC_REALTIME_TOLERANCE_001: Extended cutoff to 30 minutes for network latency
-        cutoff_time = now - timedelta(minutes=30)
-        
-        latest_subq = db.query(
-            StaffRealtimeLocation.employee_id,
-            func.max(StaffRealtimeLocation.captured_at).label('max_captured')
-        ).filter(
-            StaffRealtimeLocation.employee_id.in_(team_ids),
-            StaffRealtimeLocation.captured_at >= cutoff_time
-        ).group_by(StaffRealtimeLocation.employee_id).subquery()
+    target_date_start = datetime.combine(target_date, datetime.min.time())
+    target_date_end = datetime.combine(target_date, datetime.max.time())
     
-    # Get the actual latest records
-    live_locations = db.query(StaffRealtimeLocation).join(
-        latest_subq,
+    # Deterministic 1-to-1 query: Find max captured_at per employee, then tie-break by max(id)
+    latest_ts_subq = db.query(
+        StaffRealtimeLocation.employee_id,
+        func.max(StaffRealtimeLocation.captured_at).label('max_captured')
+    ).filter(
+        StaffRealtimeLocation.employee_id.in_(team_ids),
+        StaffRealtimeLocation.captured_at >= target_date_start,
+        StaffRealtimeLocation.captured_at <= target_date_end
+    ).group_by(StaffRealtimeLocation.employee_id).subquery()
+    
+    latest_id_subq = db.query(
+        func.max(StaffRealtimeLocation.id).label('max_id')
+    ).join(
+        latest_ts_subq,
         and_(
-            StaffRealtimeLocation.employee_id == latest_subq.c.employee_id,
-            StaffRealtimeLocation.captured_at == latest_subq.c.max_captured
+            StaffRealtimeLocation.employee_id == latest_ts_subq.c.employee_id,
+            StaffRealtimeLocation.captured_at == latest_ts_subq.c.max_captured
         )
+    ).group_by(StaffRealtimeLocation.employee_id).subquery()
+    
+    # Get the exact latest records (guaranteed 1-to-1 per employee)
+    live_locations = db.query(StaffRealtimeLocation).filter(
+        StaffRealtimeLocation.id.in_(latest_id_subq.select())
     ).all()
     
     # Get attendance for target date for all team members
@@ -2712,11 +2620,10 @@ async def get_team_live_locations(
     ).all()
     attendance_map = {a.employee_id: a for a in attendances}
     
-    # DC_JOURNEY_AUTHORITATIVE_001: Query active journeys from authoritative table
+    # Query active journeys from authoritative table
     from app.models.staff_journey import JourneyStatus
-    # For historical view, get all journeys; for live view, only in-progress
     if is_historical:
-        active_journeys = []  # No "active" journeys for past dates
+        active_journeys = []  # No active journeys for past dates
         journey_map = {}
     else:
         active_journeys = db.query(StaffJourney).filter(
@@ -2726,7 +2633,7 @@ async def get_team_live_locations(
         ).all()
         journey_map = {j.employee_id: j for j in active_journeys}
     
-    # DC Protocol (Jan 28, 2026): Query all journeys for target date for stats
+    # Query all journeys for target date for summary stats
     all_journeys_target = db.query(StaffJourney).filter(
         StaffJourney.employee_id.in_(team_ids),
         StaffJourney.date == target_date
@@ -2742,28 +2649,7 @@ async def get_team_live_locations(
         journey_stats_map[emp_id]["total_km"] += float(j.total_distance_km or 0)
         journey_stats_map[emp_id]["total_duration_min"] += int(j.total_duration_minutes or 0)
     
-    # DC Protocol (Jan 28, 2026): For historical mode, skip last_known_map since live_locations IS the last known
-    # For live mode, fetch last known location for users without recent GPS
-    if is_historical:
-        # In historical mode, live_locations already contains the last known for that date
-        last_known_map = {}
-    else:
-        # For live mode, fetch last known location for ALL employees (no time cutoff)
-        last_known_subq = db.query(
-            StaffRealtimeLocation.employee_id,
-            func.max(StaffRealtimeLocation.captured_at).label('max_captured')
-        ).filter(
-            StaffRealtimeLocation.employee_id.in_(team_ids)
-        ).group_by(StaffRealtimeLocation.employee_id).subquery()
-        
-        last_known_locations = db.query(StaffRealtimeLocation).join(
-            last_known_subq,
-            and_(
-                StaffRealtimeLocation.employee_id == last_known_subq.c.employee_id,
-                StaffRealtimeLocation.captured_at == last_known_subq.c.max_captured
-            )
-        ).all()
-        last_known_map = {loc.employee_id: loc for loc in last_known_locations}
+    last_known_map = {loc.employee_id: loc for loc in live_locations}
     
     # Build response with employee info
     location_data = []

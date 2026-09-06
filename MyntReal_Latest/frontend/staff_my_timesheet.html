@@ -1418,7 +1418,7 @@
 
         let timelineRefreshInterval;
 
-        document.addEventListener('DOMContentLoaded', async function() {
+        async function initTimesheetPage() {
             const token = localStorage.getItem('staff_token');
             if (!token) {
                 window.location.href = '/staff/login';
@@ -1435,8 +1435,8 @@
             const initials = fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
             if (headerUserInitialsEl) headerUserInitialsEl.textContent = initials || '--';
             
-            await Promise.all([loadTasks(), loadKRAs(), loadLeads()]);
             updateDateDisplay();
+            await Promise.all([loadTasks(), loadKRAs(), loadLeads()]);
             loadEntries();
             loadTimeline();
             loadActivitySummary();
@@ -1462,7 +1462,13 @@
                     console.warn('[DC] Team tab access check failed:', e);
                 }
             }
-        });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initTimesheetPage);
+        } else {
+            initTimesheetPage();
+        }
 
         // Clear interval on page unload
         window.addEventListener('beforeunload', function() {
@@ -3334,11 +3340,16 @@
     <script src="/shared/staff_inactivity_manager.js"></script>
     <script src="/staff_header.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', async function() {
-            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+        function initTimesheetHeader() {
+            if (typeof StaffSidebar !== 'undefined') StaffSidebar.init();
             StaffHeader.inject('My Timesheet', 'fas fa-clock');
             if (typeof StaffHeader !== 'undefined') StaffHeader.init();
-        });
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initTimesheetHeader);
+        } else {
+            initTimesheetHeader();
+        }
     </script>
     </div>
 </body>

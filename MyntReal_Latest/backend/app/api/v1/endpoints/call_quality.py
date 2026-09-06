@@ -14,13 +14,14 @@ from typing import Optional
 from collections import defaultdict
 
 import pytz
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import RedirectResponse, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func, and_, or_
 
 from app.core.database import get_db
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
-from app.models.call_tracking import StaffCallLog, CallQualityReview
+from app.models.call_tracking import StaffCallLog, StaffCallRecording, CallQualityReview
 from app.models.crm import CRMLead
 from app.models.staff import StaffEmployee, StaffRole
 
@@ -85,7 +86,9 @@ def _get_downline_ids(db: Session, manager_id: int, company_id: int) -> list:
 
 
 def _enrich_reviews(db: Session, reviews: list) -> list:
-    """Enrich review dicts with staff name, lead name, call details."""
+    """Enrich review dicts with staff name, lead name, call details, and recording info."""
+    import re
+    from app.models.voip_call_session import VoIPCallSession
     out = []
     for r in reviews:
         d = r.to_dict()
@@ -101,6 +104,8 @@ def _enrich_reviews(db: Session, reviews: list) -> list:
         else:
             d['reviewer_name'] = None
         # Call log details
+        rec = None
+        log = None
         if r.call_log_id:
             log = db.query(StaffCallLog).filter_by(id=r.call_log_id).first()
             if log:
@@ -109,6 +114,13 @@ def _enrich_reviews(db: Session, reviews: list) -> list:
                 d['call_datetime'] = log.call_datetime.isoformat() if log.call_datetime else None
                 d['call_duration_seconds'] = log.duration_seconds
                 d['call_contact_name'] = log.contact_name
+                # Check recording
+                if log.recording_id:
+                    rec = db.query(StaffCallRecording).filter_by(id=log.recording_id).first()
+                if not rec and log.has_recording:
+                    rec = db.query(StaffCallRecording).filter_by(call_log_id=log.id).first()
+                if not rec and log.device_call_id:
+                    rec = db.query(StaffCallRecording).filter_by(device_recording_id=log.device_call_id).first()
             else:
                 d['call_phone'] = None
                 d['call_type'] = None
@@ -123,7 +135,7 @@ def _enrich_reviews(db: Session, reviews: list) -> list:
         if r.lead_id:
             lead = db.query(CRMLead).filter_by(id=r.lead_id).first()
             if lead:
-                d['lead_name'] = lead.full_name
+                d['lead_name'] = lead.name
                 d['lead_phone'] = lead.phone
                 d['lead_status'] = lead.status
                 d['lead_category_id'] = lead.category_id
@@ -133,6 +145,44 @@ def _enrich_reviews(db: Session, reviews: list) -> list:
         else:
             d['lead_name'] = d['lead_phone'] = d['lead_status'] = None
             d['lead_category_id'] = None
+
+        # Real Recording enrichment
+        has_rec = False
+        rec_id = None
+        rec_dur = log.duration_seconds if log else None
+
+        if rec and rec.storage_path:
+            has_rec = True
+            rec_id = rec.id
+        elif log:
+            # Check VoIPCallSession for real recording
+            voip = None
+            if log.device_call_id:
+                voip = db.query(VoIPCallSession).filter(
+                    (VoIPCallSession.call_session_id == log.device_call_id) |
+                    (VoIPCallSession.provider_call_id == log.device_call_id)
+                ).first()
+            if not voip and log.phone_number:
+                clean_digits = re.sub(r'\D', '', log.phone_number)[-10:]
+                if clean_digits:
+                    voip = db.query(VoIPCallSession).filter(
+                        VoIPCallSession.customer_phone.ilike(f"%{clean_digits}%"),
+                        VoIPCallSession.recording_storage_key.isnot(None)
+                    ).order_by(VoIPCallSession.id.desc()).first()
+            if voip and voip.recording_storage_key:
+                has_rec = True
+
+        if has_rec:
+            d['has_recording'] = True
+            d['recording_id'] = rec_id
+            d['recording_url'] = f"/api/v1/call-quality/reviews/{r.id}/recording"
+            d['recording_duration'] = rec_dur
+        else:
+            d['has_recording'] = False
+            d['recording_id'] = None
+            d['recording_url'] = None
+            d['recording_duration'] = None
+
         out.append(d)
     return out
 
@@ -163,7 +213,7 @@ def auto_sample(
     """
     Auto-sample calls for quality review for a given date.
     Creates pending review records for each executive: max(5, ceil(5% of calls)).
-    Priority: 90% from connected calls, 10% from not-connected calls.
+    Strict Rule: Only connected calls (duration > 0s, not missed/rejected) are sampled.
     Idempotent: skips already-sampled call logs for the date.
     """
     role_code = _get_role_code(db, current_user.id)
@@ -197,41 +247,22 @@ def auto_sample(
     for log in logs:
         by_exec[log.staff_id].append(log)
 
-    _CONNECTED_TYPES = {'outgoing', 'incoming', 'OUTGOING', 'INCOMING'}
-
     created = 0
     for staff_id, exec_logs in by_exec.items():
-        eligible = [l for l in exec_logs if l.id not in existing_ids]
+        # STRICTLY ONLY CONNECTED CALLS (duration > 0 and not missed/rejected)
+        eligible = [
+            l for l in exec_logs
+            if l.id not in existing_ids
+            and (l.duration_seconds or 0) > 0
+            and (l.call_type or '').upper() not in ('MISSED', 'REJECTED')
+        ]
         if not eligible:
             continue
-        total = len(exec_logs)
-        sample_n = max(_MIN_SAMPLE, math.ceil(total * _SAMPLE_PCT))
-        sample_n = min(sample_n, len(eligible))
+        total_eligible = len(eligible)
+        sample_n = max(_MIN_SAMPLE, math.ceil(total_eligible * _SAMPLE_PCT))
+        sample_n = min(sample_n, total_eligible)
 
-        # Split into connected (90%) vs not-connected (10%)
-        connected = [l for l in eligible
-                     if l.call_type in _CONNECTED_TYPES and (l.duration_seconds or 0) > 0]
-        not_connected = [l for l in eligible if l not in set(connected)]
-
-        n_conn = round(sample_n * 0.9)
-        n_not  = sample_n - n_conn
-        n_conn = min(n_conn, len(connected))
-        n_not  = min(n_not,  len(not_connected))
-
-        # Fill remaining slots from whichever pool has extras
-        remaining = sample_n - n_conn - n_not
-        if remaining > 0:
-            extra = min(remaining, len(connected) - n_conn)
-            n_conn += extra
-            remaining -= extra
-        if remaining > 0:
-            n_not = min(n_not + remaining, len(not_connected))
-
-        sampled = []
-        if connected and n_conn > 0:
-            sampled += random.sample(connected, n_conn)
-        if not_connected and n_not > 0:
-            sampled += random.sample(not_connected, n_not)
+        sampled = random.sample(eligible, sample_n)
 
         for log in sampled:
             rev = CallQualityReview(
@@ -268,16 +299,24 @@ def list_reviews(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_staff_user),
 ):
-    company_id = _resolve_company_id(company_id, current_user)
     role_code = _get_role_code(db, current_user.id)
     full_access = _is_full_access(role_code)
+    effective_cid = _resolve_company_optional(company_id, full_access, current_user)
 
-    q = db.query(CallQualityReview).filter(CallQualityReview.company_id == company_id)
+    # Strictly filter for connected calls (duration > 0 and not missed/rejected)
+    q = db.query(CallQualityReview).join(
+        StaffCallLog, CallQualityReview.call_log_id == StaffCallLog.id
+    ).filter(
+        StaffCallLog.duration_seconds > 0,
+        StaffCallLog.call_type.notin_(['MISSED', 'missed', 'REJECTED', 'rejected'])
+    )
+
+    if effective_cid:
+        q = q.filter(CallQualityReview.company_id == effective_cid)
 
     if not full_access:
-        downline = _get_downline_ids(db, current_user.id, company_id)
-        if not downline:
-            return {'reviews': [], 'total': 0, 'page': page, 'pages': 0}
+        downline = _get_downline_ids(db, current_user.id, effective_cid)
+        downline.append(current_user.id)
         q = q.filter(CallQualityReview.staff_id.in_(downline))
 
     if staff_id:
@@ -310,10 +349,22 @@ def get_review(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_staff_user),
 ):
-    company_id = _resolve_company_id(company_id, current_user)
-    rev = db.query(CallQualityReview).filter_by(id=review_id, company_id=company_id).first()
+    role_code = _get_role_code(db, current_user.id)
+    full_access = _is_full_access(role_code)
+    effective_cid = _resolve_company_optional(company_id, full_access, current_user)
+
+    q = db.query(CallQualityReview).filter(CallQualityReview.id == review_id)
+    if effective_cid:
+        q = q.filter(CallQualityReview.company_id == effective_cid)
+    rev = q.first()
     if not rev:
         raise HTTPException(404, 'Review not found.')
+
+    if not full_access:
+        downline = _get_downline_ids(db, current_user.id, effective_cid)
+        downline.append(current_user.id)
+        if rev.staff_id not in downline:
+            raise HTTPException(403, 'Unauthorized to view this review.')
 
     enriched = _enrich_reviews(db, [rev])
     result = enriched[0]
@@ -323,7 +374,7 @@ def get_review(
         notes = db.execute(text("""
             SELECT n.note, n.created_at, e.full_name as author
             FROM crm_lead_notes n
-            LEFT JOIN staff_employees e ON e.id = n.created_by_id
+            LEFT JOIN staff_employees e ON (CAST(e.id AS VARCHAR) = n.created_by_id OR e.emp_code = n.created_by_id)
             WHERE n.lead_id = :lid
             ORDER BY n.created_at DESC LIMIT 10
         """), {'lid': rev.lead_id}).fetchall()
@@ -360,10 +411,22 @@ def submit_review(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_staff_user),
 ):
-    company_id = _resolve_company_id(company_id, current_user)
-    rev = db.query(CallQualityReview).filter_by(id=review_id, company_id=company_id).first()
+    role_code = _get_role_code(db, current_user.id)
+    full_access = _is_full_access(role_code)
+    effective_cid = _resolve_company_optional(company_id, full_access, current_user)
+
+    q = db.query(CallQualityReview).filter(CallQualityReview.id == review_id)
+    if effective_cid:
+        q = q.filter(CallQualityReview.company_id == effective_cid)
+    rev = q.first()
     if not rev:
         raise HTTPException(404, 'Review not found.')
+
+    if not full_access:
+        downline = _get_downline_ids(db, current_user.id, effective_cid)
+        downline.append(current_user.id)
+        if rev.staff_id not in downline:
+            raise HTTPException(403, 'Unauthorized to submit this review.')
 
     scores = [
         body.get('score_script'),
@@ -406,25 +469,30 @@ def dashboard(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_staff_user),
 ):
-    company_id = _resolve_company_id(company_id, current_user)
     role_code = _get_role_code(db, current_user.id)
     full_access = _is_full_access(role_code)
+    effective_cid = _resolve_company_optional(company_id, full_access, current_user)
 
     today = _today_ist()
     df = date_from or (date.today() - timedelta(days=29)).strftime('%Y-%m-%d')
     dt = date_to or today
 
-    q = db.query(CallQualityReview).filter(
-        CallQualityReview.company_id == company_id,
+    # Join StaffCallLog to ensure only connected calls are counted in dashboard metrics
+    q = db.query(CallQualityReview).join(
+        StaffCallLog, CallQualityReview.call_log_id == StaffCallLog.id
+    ).filter(
         CallQualityReview.sample_date >= df,
         CallQualityReview.sample_date <= dt,
+        StaffCallLog.duration_seconds > 0,
+        StaffCallLog.call_type.notin_(['MISSED', 'missed', 'REJECTED', 'rejected'])
     )
+    if effective_cid:
+        q = q.filter(CallQualityReview.company_id == effective_cid)
+
     if not full_access:
-        downline = _get_downline_ids(db, current_user.id, company_id)
-        if not downline:
-            q = q.filter(CallQualityReview.staff_id == -1)
-        else:
-            q = q.filter(CallQualityReview.staff_id.in_(downline))
+        downline = _get_downline_ids(db, current_user.id, effective_cid)
+        downline.append(current_user.id)
+        q = q.filter(CallQualityReview.staff_id.in_(downline))
 
     all_reviews = q.all()
 
@@ -784,3 +852,107 @@ def range_report(
         },
         'executives': result_execs,
     }
+
+
+# ── Call Recording Streaming ──────────────────────────────────────────────────
+
+@router.get('/call-quality/reviews/{review_id}/recording')
+def stream_review_recording(
+    review_id: int,
+    request: Request,
+    token: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Stream or redirect to audio recording for a call quality review item.
+    Enforces staff authentication and company segregation.
+    Supports Bearer header, query param token, and staff_token cookie.
+    """
+    staff = None
+    raw_token = token
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.strip():
+        t = auth_header.strip()
+        while t.lower().startswith("bearer "):
+            t = t[7:].strip()
+        raw_token = t.strip('"').strip("'")
+    elif not raw_token:
+        raw_token = request.cookies.get("staff_token") or request.cookies.get("session_token")
+
+    if raw_token:
+        try:
+            from app.core.security import SecurityManager
+            payload = SecurityManager.verify_token(raw_token)
+            if payload:
+                sub = payload.get("sub") or payload.get("employee_id") or payload.get("user_id")
+                if sub and str(sub).isdigit():
+                    staff = db.query(StaffEmployee).filter_by(id=int(sub)).first()
+                if not staff and payload.get("emp_code"):
+                    staff = db.query(StaffEmployee).filter_by(emp_code=payload.get("emp_code")).first()
+        except Exception:
+            pass
+
+    if not staff:
+        raise HTTPException(status_code=401, detail="Staff authentication required")
+
+    rev = db.query(CallQualityReview).filter_by(id=review_id).first()
+    if not rev:
+        raise HTTPException(status_code=404, detail="Quality review record not found")
+
+    if staff.base_company_id != rev.company_id and not getattr(staff, 'is_superuser', False):
+        raise HTTPException(status_code=403, detail="Access denied for this company")
+
+    recording = None
+    log = None
+    if rev.call_log_id:
+        log = db.query(StaffCallLog).filter_by(id=rev.call_log_id).first()
+        if log:
+            if log.recording_id:
+                recording = db.query(StaffCallRecording).filter_by(id=log.recording_id).first()
+            if not recording and log.has_recording:
+                recording = db.query(StaffCallRecording).filter_by(call_log_id=log.id).first()
+            if not recording and log.device_call_id:
+                recording = db.query(StaffCallRecording).filter_by(device_recording_id=log.device_call_id).first()
+
+    if recording and recording.storage_path:
+        s3_key = recording.storage_path.replace('\\', '/')
+        if s3_key.startswith("http://") or s3_key.startswith("https://"):
+            return RedirectResponse(url=s3_key)
+
+        if "uploads/" in s3_key:
+            s3_key = s3_key.split("uploads/")[-1].lstrip("/")
+        elif "call_recordings/" in s3_key:
+            s3_key = s3_key[s3_key.find("call_recordings/"):]
+
+        from app.services.object_storage import storage_service
+        file_url = storage_service.get_file_url(s3_key)
+        return RedirectResponse(url=file_url)
+
+    # Check VoIPCallSession if device_call_id or phone matches
+    if log:
+        import re
+        from app.models.voip_call_session import VoIPCallSession
+        voip = None
+        if log.device_call_id:
+            voip = db.query(VoIPCallSession).filter(
+                (VoIPCallSession.call_session_id == log.device_call_id) |
+                (VoIPCallSession.provider_call_id == log.device_call_id)
+            ).first()
+        if not voip and log.phone_number:
+            clean_digits = re.sub(r'\D', '', log.phone_number)[-10:]
+            if clean_digits:
+                voip = db.query(VoIPCallSession).filter(
+                    VoIPCallSession.customer_phone.ilike(f"%{clean_digits}%"),
+                    VoIPCallSession.duration_seconds > 0
+                ).order_by(VoIPCallSession.id.desc()).first()
+
+        if voip and voip.recording_storage_key:
+            rec_url = voip.recording_storage_key
+            if rec_url.startswith("http://") or rec_url.startswith("https://"):
+                return RedirectResponse(url=rec_url)
+            if rec_url.startswith("/"):
+                return RedirectResponse(url=rec_url)
+
+    # If no real recording exists, return 404 (do not serve synthetic AI audio)
+    raise HTTPException(status_code=404, detail="Actual call recording not found for this call")
+

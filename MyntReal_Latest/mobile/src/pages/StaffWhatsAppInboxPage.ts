@@ -22,6 +22,7 @@ export class StaffWhatsAppInboxPage {
   private gatewayConnected: boolean = true;
   private gatewayQr: string = '';
   private gatewayStatus: string = 'checking';
+  private lastStatusTimestamp: number = 0;
   private qrPollingTimer: any = null;
 
   // ── CRM Inbox State ────────────────────────────────────────────────────────
@@ -103,8 +104,14 @@ export class StaffWhatsAppInboxPage {
     try {
       const res = await apiService.get<any>('/whatsapp/bot-status');
       if (res.success && res.data) {
-        this.gatewayConnected = !!res.data.connected;
-        this.gatewayStatus = res.data.status || (this.gatewayConnected ? 'connected' : 'disconnected');
+        const respTs = res.data.timestamp || 0;
+        if (respTs && this.lastStatusTimestamp && respTs < this.lastStatusTimestamp) {
+          // Stale API response guard: drop out-of-order response
+          return;
+        }
+        if (respTs) this.lastStatusTimestamp = respTs;
+        this.gatewayStatus = res.data.connection_state || res.data.status || 'disconnected';
+        this.gatewayConnected = (this.gatewayStatus === 'connected');
         this.gatewayQr = res.data.qr || '';
       } else {
         this.gatewayConnected = false;
@@ -166,6 +173,28 @@ export class StaffWhatsAppInboxPage {
     const isAdmin = this.isWhatsAppAdmin();
     const isKeyLeadership = this.isKeyLeadershipOrAdmin();
 
+    let statusPillText = '● Disconnected';
+    let statusPillBg = 'rgba(239,68,68,0.2)';
+    let statusPillBorder = '#ef4444';
+    let statusPillCol = '#fecaca';
+
+    if (this.gatewayStatus === 'connected') {
+      statusPillText = '● Connected';
+      statusPillBg = 'rgba(37,211,102,0.2)';
+      statusPillBorder = '#25d366';
+      statusPillCol = '#a7f3d0';
+    } else if (this.gatewayStatus === 'reconnecting') {
+      statusPillText = '● Reconnecting...';
+      statusPillBg = 'rgba(245,158,11,0.2)';
+      statusPillBorder = '#f59e0b';
+      statusPillCol = '#fde68a';
+    } else if (this.gatewayStatus === 'qr_ready') {
+      statusPillText = '● Scan QR Required';
+      statusPillBg = 'rgba(245,158,11,0.2)';
+      statusPillBorder = '#f59e0b';
+      statusPillCol = '#fde68a';
+    }
+
     this.container.innerHTML = `
       ${PageHeader.render({
         title: 'WhatsApp Center',
@@ -191,8 +220,8 @@ export class StaffWhatsAppInboxPage {
               </div>
             </div>
             <div style="display: flex; align-items: center; gap: 6px;">
-              <span style="background: ${this.gatewayConnected ? 'rgba(37,211,102,0.2)' : 'rgba(239,68,68,0.2)'}; border: 1px solid ${this.gatewayConnected ? '#25d366' : '#ef4444'}; color: ${this.gatewayConnected ? '#a7f3d0' : '#fecaca'}; border-radius: 20px; padding: 3px 8px; font-size: 11px; font-weight: 700;">
-                ● ${this.gatewayConnected ? 'Connected' : 'Logged Out'}
+              <span style="background: ${statusPillBg}; border: 1px solid ${statusPillBorder}; color: ${statusPillCol}; border-radius: 20px; padding: 3px 8px; font-size: 11px; font-weight: 700;">
+                ${statusPillText}
               </span>
               <button id="waNewMsgBtn" style="background: #25d366; color: #0f172a; border: none; border-radius: 16px; padding: 5px 12px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                 <i class="fas fa-plus"></i> New Message
@@ -201,14 +230,14 @@ export class StaffWhatsAppInboxPage {
           </div>
         </div>
 
-        <!-- Disconnected / Scan QR Warning Banner -->
-        ${!this.gatewayConnected ? `
+        <!-- Scan QR Required Warning Banner (ONLY when QR scan is genuinely required, NEVER on reconnecting) -->
+        ${(this.gatewayStatus === 'qr_ready' || (this.gatewayStatus === 'disconnected' && this.gatewayQr)) ? `
           <div style="background: linear-gradient(135deg, #78350f, #92400e); border: 1px solid #f59e0b; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
             <div style="display: flex; align-items: center; gap: 10px;">
               <i class="fas fa-qrcode" style="font-size: 22px; color: #fbbf24;"></i>
               <div>
-                <div style="font-size: 13px; font-weight: 700; color: #fef3c7;">WhatsApp Logged Out / Disconnected</div>
-                <div style="font-size: 11px; color: #fde68a;">Scan QR code to link your WhatsApp account</div>
+                <div style="font-size: 13px; font-weight: 700; color: #fef3c7;">Link WhatsApp Account</div>
+                <div style="font-size: 11px; color: #fde68a;">Scan QR code with your phone to link your WhatsApp session</div>
               </div>
             </div>
             <button id="waOpenScanQrBtn" style="background: #25d366; color: #0f172a; border: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap;">

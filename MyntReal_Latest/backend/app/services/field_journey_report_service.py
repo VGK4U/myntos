@@ -14,11 +14,11 @@ Includes:
 import os
 import json
 import logging
-import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from app.core.timezone import get_indian_time, IST
 
 logger = logging.getLogger(__name__)
 
@@ -39,14 +39,13 @@ def get_today_field_journey_stats(db: Session) -> Dict[str, Any]:
     """
     Aggregates today's field staff journey statistics and calculates distance deltas + GPS locations.
     """
-    ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
+    ist_now = get_indian_time()
     date_str = ist_now.strftime("%Y-%m-%d")
     time_str = ist_now.strftime("%I:%M %p")
 
-    # Calculate UTC bounds for today
-    start_of_today_ist = datetime.datetime(ist_now.year, ist_now.month, ist_now.day, 0, 0, 0)
-    start_of_today_utc = start_of_today_ist - timedelta(hours=5, minutes=30)
-    end_of_today_utc = start_of_today_utc + timedelta(days=1)
+    # Calculate IST bounds for today
+    start_of_today_ist = ist_now.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_today_ist = start_of_today_ist + timedelta(days=1)
 
     # Load ALL journeys for today (active, completed, paused, ended)
     rows = db.execute(text("""
@@ -560,7 +559,7 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(
             message_body=report_msg[:500],
             initial_status="sent" if group_result else "failed",
             current_status="sent" if group_result else "failed",
-            sent_at=datetime.datetime.utcnow()
+            sent_at=get_indian_time()
         )
         db.add(log_entry)
         db.commit()

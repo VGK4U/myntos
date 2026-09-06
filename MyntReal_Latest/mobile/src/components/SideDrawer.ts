@@ -92,7 +92,7 @@ const ROUTE_PATH_MAP: Record<string, string> = {
   '/staff/crm/team-leads': 'staff-team-leads',
   '/staff/crm/lead-sources': 'staff-lead-sources',
   '/staff/call-management': 'staff-call-tracking',
-  '/staff/dialer': 'softphone',
+  '/staff/dialer': 'auto-dialer',
   '/staff/softphone': 'softphone',
   '/staff/calling-page': 'softphone',
   '/staff/calling': 'softphone',
@@ -741,7 +741,7 @@ export class SideDrawer {
       const codeUpper = (rawCode || '').toUpperCase();
       const routeLower = (rawRoutePath || '').toLowerCase();
 
-      if (codeUpper.includes('AUTO_DIALER') || routeLower.includes('auto-dialer') || codeUpper === 'AUTO_DIALER') {
+      if (codeUpper.includes('AUTO_DIALER') || routeLower.includes('auto-dialer') || routeLower === '/staff/dialer' || codeUpper === 'STAFF_AUTO_DIALER' || codeUpper === 'AUTO_DIALER') {
         label = 'Auto Dialer';
       } else if (codeUpper.includes('BANK_WISE_LEADS') || routeLower.includes('bank-wise-leads')) {
         label = 'Field staff leads';
@@ -753,7 +753,7 @@ export class SideDrawer {
         label = 'Category Lead Master';
       } else if (codeUpper.includes('WHATSAPP') || routeLower.includes('whatsapp')) {
         label = 'WhatsApp Center';
-      } else if (codeUpper.includes('SOFTPHONE') || codeUpper.includes('DIALER') || routeLower.includes('softphone') || routeLower.includes('dialer')) {
+      } else if (codeUpper.includes('SOFTPHONE') || codeUpper === 'PHONE_DIALPAD' || routeLower.includes('softphone') || routeLower.includes('calling') || routeLower.includes('phone-dialpad')) {
         label = 'Calling & Softphone';
       }
 
@@ -851,10 +851,10 @@ export class SideDrawer {
     }
 
     // Ensure Auto Dialer is guaranteed in CRM_MODULE or WORKFLOWS section
-    let crmSec = sectionMap.get('CRM_MODULE') || sectionMap.get('CRM_LEADS') || sectionMap.get('WORKFLOWS');
+    let crmSec = sectionMap.get('CRM_MODULE') || sectionMap.get('CRM_LEADS') || sectionMap.get('crm') || sectionMap.get('CRM') || sectionMap.get('WORKFLOWS');
     if (crmSec) {
       crmSec.items = crmSec.items || [];
-      const hasAutoDialer = crmSec.items.some(i => i.route === 'auto-dialer' || i.menu_code === 'AUTO_DIALER');
+      const hasAutoDialer = crmSec.items.some(i => i.route === 'auto-dialer' || i.menu_code === 'AUTO_DIALER' || i.menu_code === 'staff_auto_dialer');
       if (!hasAutoDialer) {
         crmSec.items.push({
           menu_code: "AUTO_DIALER",

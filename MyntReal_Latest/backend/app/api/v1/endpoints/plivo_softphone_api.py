@@ -171,10 +171,14 @@ def end_browser_call(
     if not call_session_id:
         raise HTTPException(status_code=400, detail="call_session_id is required")
 
+    dur = payload.get("duration_seconds")
+    duration_seconds = int(dur) if dur is not None and str(dur).isdigit() and int(dur) > 0 else None
+
     return VoIPCallService.end_in_app_call(
         db=db,
         current_user=current_user,
-        call_session_id=call_session_id
+        call_session_id=call_session_id,
+        duration_seconds=duration_seconds
     )
 
 
@@ -218,8 +222,13 @@ def sync_browser_call_event(
             session.answered_at = get_indian_time()
         elif new_state in (CallStateEnum.ENDED.value, CallStateEnum.REJECTED.value, CallStateEnum.BUSY.value):
             session.ended_at = get_indian_time()
-            if session.answered_at:
+            explicit_dur = payload.get("duration_seconds")
+            if explicit_dur is not None and int(explicit_dur) > 0:
+                session.duration_seconds = int(explicit_dur)
+            elif session.answered_at:
                 session.duration_seconds = int((session.ended_at - session.answered_at).total_seconds())
+            elif session.started_at:
+                session.duration_seconds = max(0, int((session.ended_at - session.started_at).total_seconds()))
 
             # DC_SOFTPHONE_SYNC: Sync to StaffCallLog for unified CRM performance & talk time
             if session.operator_id:
@@ -228,7 +237,7 @@ def sync_browser_call_event(
                     existing_log = db.query(StaffCallLog).filter(
                         StaffCallLog.device_call_id == session.call_session_id
                     ).first()
-                    call_dt = session.answered_at or session.created_at or get_indian_time()
+                    call_dt = session.answered_at or session.started_at or session.created_at or get_indian_time()
                     call_type_val = 'OUTGOING' if new_state == CallStateEnum.ENDED.value and (session.duration_seconds or 0) > 0 else 'MISSED'
                     if not existing_log:
                         db.add(StaffCallLog(
@@ -338,22 +347,22 @@ def search_softphone_contacts(
     try:
         users = db.query(User).filter(
             or_(
-                User.full_name.ilike(term),
-                User.phone.ilike(term),
-                User.username.ilike(term)
+                User.name.ilike(term),
+                User.phone_number.ilike(term),
+                User.id.ilike(term)
             )
         ).limit(10).all()
 
         for u in users:
-            phone = getattr(u, 'phone', None) or getattr(u, 'phone_number', None)
+            phone = getattr(u, 'phone_number', None) or getattr(u, 'phone', None)
             if phone:
                 results.append({
                     "id": f"user_{u.id}",
-                    "name": u.full_name or u.username or "Member",
+                    "name": getattr(u, 'name', None) or "Member",
                     "phone": phone,
                     "type": "member",
                     "badge": "Member",
-                    "subtitle": f"{u.username or ''} • MNR Member"
+                    "subtitle": f"{u.id or ''} • MNR Member"
                 })
     except Exception as e:
         logger.warning(f"[SOFTPHONE_SEARCH] User query error: {e}")
@@ -371,12 +380,15 @@ def get_softphone_call_history(
     limit: int = 50,
     direction: Optional[str] = None,
     status: Optional[str] = None,
+    scope: str = Query("my", description="Scope: 'my' (user calls), 'team' (downline calls), 'overall' (all company calls)"),
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(get_current_staff_user)
 ):
     """
-    Returns call logs & history for the current logged-in staff employee.
-    Queries VoIPCallSession and OperatorCall records.
+    Returns call logs & history strictly scoped for the current logged-in staff employee.
+    - scope='my': Only calls handled or placed by the logged-in employee.
+    - scope='team': Calls handled/placed by downline team members.
+    - scope='overall': Restricted ONLY to MR10001 / Yaswanth.
     """
     company_id = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', 1) or 1
     emp_code = getattr(current_user, 'emp_code', None) or str(current_user.id)
@@ -384,14 +396,24 @@ def get_softphone_call_history(
     calls = []
     try:
         query = db.query(VoIPCallSession)
-        # If not super-admin, filter by operator
-        is_super = getattr(current_user, 'is_super_admin', False) or (getattr(current_user.role, 'role_code', '') or '').lower() in ('vgk4u', 'vgk4u_supreme')
-        if not is_super:
+
+        # Scoping logic
+        if scope == "overall":
+            emp_code_val = (getattr(current_user, 'emp_code', '') or '').upper()
+            full_name_val = ((getattr(current_user, 'first_name', '') or '') + ' ' + (getattr(current_user, 'last_name', '') or '') + ' ' + (getattr(current_user, 'full_name', '') or '')).lower()
+            is_supreme_val = getattr(current_user, 'is_supreme', False)
+            role_code_val = getattr(getattr(current_user, 'role', None), 'role_code', '').lower()
+            if emp_code_val != 'MR10001' and 'yaswanth' not in full_name_val and not is_supreme_val and role_code_val not in ('vgk4u', 'vgk4u_supreme'):
+                raise HTTPException(status_code=403, detail="Forbidden: Overall Calls view is restricted to MR10001 and Yaswanth.")
+        elif scope == "team":
+            from app.utils.staff_hierarchy import get_recursive_downline
+            downline_ids = get_recursive_downline(current_user.id, db, StaffEmployee, include_manager=True)
+            query = query.filter(VoIPCallSession.operator_id.in_(downline_ids))
+        else: # scope == "my"
             query = query.filter(
                 or_(
                     VoIPCallSession.operator_id == current_user.id,
-                    VoIPCallSession.operator_user_ref == emp_code,
-                    VoIPCallSession.company_id == company_id
+                    VoIPCallSession.operator_user_ref == emp_code
                 )
             )
 

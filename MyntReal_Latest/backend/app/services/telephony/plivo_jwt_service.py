@@ -54,7 +54,7 @@ class PlivoJWTService:
 
         auth_id = getattr(settings, 'PLIVO_AUTH_ID', None) or os.getenv("PLIVO_AUTH_ID")
         auth_token = getattr(settings, 'PLIVO_AUTH_TOKEN', None) or os.getenv("PLIVO_AUTH_TOKEN")
-        app_id = getattr(settings, 'PLIVO_APP_ID', None) or os.getenv("PLIVO_APP_ID")
+        app_id = getattr(settings, 'PLIVO_APP_ID', None) or os.getenv("PLIVO_APP_ID") or "10583407997011554"
 
         if endpoint and endpoint.plivo_endpoint_id:
             return endpoint
@@ -74,10 +74,9 @@ class PlivoJWTService:
                 payload = {
                     "username": base_username,
                     "password": raw_password,
-                    "alias": clean_alias
+                    "alias": clean_alias,
+                    "app_id": app_id
                 }
-                if app_id:
-                    payload["app_id"] = app_id
 
                 resp = requests.post(
                     plivo_url,

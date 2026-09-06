@@ -260,13 +260,19 @@
         let confirmingEntryId = null;
         let confirmingEntry = null;
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+        async function initEstimationsPage() {
+            if (typeof StaffSidebar !== 'undefined') StaffSidebar.init();
             if (typeof StaffHeader !== 'undefined') { StaffHeader.inject('Estimations', 'fas fa-calculator'); StaffHeader.init(); }
             if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
             await loadCompanies();
             await refreshData();
-        });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initEstimationsPage);
+        } else {
+            initEstimationsPage();
+        }
 
         async function loadCompanies() {
             try {
@@ -300,22 +306,32 @@
         async function loadEstimationData() {
             try {
                 const cq = estimationCompanyId ? `?company_id=${estimationCompanyId}` : '';
-                const [rIn, rOut, rStock, rSummary] = await Promise.all([
-                    staffFetch(`${API_BASE}/income-entries/estimations${cq}`),
+                // Controlled concurrency for independent primary data
+                const rIn = await staffFetch(`${API_BASE}/income-entries/estimations${cq}`);
+                if (rIn.ok) { const d = await rIn.json(); estInEntries = d.entries || []; }
+                
+                const [rOut, rStock, rSummary] = await Promise.all([
                     staffFetch(`${API_BASE}/income-entries/estimations/out${cq}`),
                     staffFetch(`${API_BASE}/income-entries/estimations/stock${cq}`),
                     staffFetch(`${API_BASE}/income-entries/estimations/executive-summary${cq}`)
                 ]);
-                if (rIn.ok)      { const d = await rIn.json();      estInEntries = d.entries || []; }
                 if (rOut.ok)     { const d = await rOut.json();     estOutRecords = d.records || []; }
                 if (rStock.ok)   { const d = await rStock.json();   estStock = d.stock_movements || []; }
                 if (rSummary.ok) { const d = await rSummary.json(); estSummary = d.summary || null; }
+                
+                // Single bounded bulk payment query instead of N+1 fetch loop
                 estPayments = [];
-                for (const e of estInEntries.slice(0, 30)) {
+                const targetIds = estInEntries.slice(0, 50).map(e => e.id).filter(Boolean);
+                if (targetIds.length > 0) {
                     try {
-                        const rp = await staffFetch(`${API_BASE}/income-entries/${e.id}/estimation-payments`);
-                        if (rp.ok) { const dp = await rp.json(); (dp.payments || []).forEach(p => { p._entry_number = e.entry_number; estPayments.push(p); }); }
-                    } catch(pe) {}
+                        const rp = await staffFetch(`${API_BASE}/income-entries/bulk-estimation-payments?entry_ids=${targetIds.join(',')}`);
+                        if (rp.ok) {
+                            const dp = await rp.json();
+                            estPayments = dp.payments || [];
+                        }
+                    } catch(pe) {
+                        console.warn('[ESTIMATIONS] Bulk payment fetch note:', pe);
+                    }
                 }
             } catch(e) { if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') console.error(e); }
         }

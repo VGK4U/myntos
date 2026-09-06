@@ -7,6 +7,7 @@ export interface LocationUpdate {
   speed: number;
   batteryLevel: number;
   timestamp: number;
+  client_observation_id?: string;
 }
 
 export interface ServiceStatus {
@@ -35,9 +36,9 @@ export interface BackgroundLocationPlugin {
   isTracking(): Promise<{ isTracking: boolean }>;
   updateInterval(options: { intervalMs: number }): Promise<{ success: boolean; intervalMs: number }>;
   checkPermissions(): Promise<PermissionStatus>;
-  requestPermissions(): Promise<{ granted: boolean }>;
-  isIgnoringBatteryOptimizations(): Promise<{ isIgnoring: boolean }>;
-  requestBatteryOptimizationExemption(): Promise<{ requested: boolean; alreadyExempt?: boolean }>;
+  requestPermissions(): Promise<{ granted: boolean; status?: string }>;
+  isIgnoringBatteryOptimizations?(): Promise<{ isIgnoring: boolean }>;
+  requestBatteryOptimizationExemption?(): Promise<{ requested: boolean; alreadyExempt?: boolean }>;
   addListener(
     eventName: 'locationUpdate',
     listenerFunc: (data: LocationUpdate) => void

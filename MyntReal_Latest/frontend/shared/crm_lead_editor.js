@@ -463,7 +463,7 @@ class CRMLeadEditor {
                                             <option value="">All Types</option>
                                             <option value="INCOMING">Incoming</option>
                                             <option value="OUTGOING">Outgoing</option>
-                                            <option value="MISSED">Missed</option>
+                                            <option value="MISSED">Not Answered</option>
                                         </select>
                                         <button class="btn btn-sm btn-outline-secondary" onclick="window.crmLeadEditor.resetCallFilters()" title="Reset Filters">
                                             <i class="fas fa-undo"></i>
@@ -1980,7 +1980,7 @@ class CRMLeadEditor {
                 summaryDiv.innerHTML = `
                     <div class="col-auto"><span class="badge bg-success"><i class="fas fa-phone me-1"></i>${summary.outgoing || 0} Outgoing</span></div>
                     <div class="col-auto"><span class="badge bg-primary"><i class="fas fa-phone-volume me-1"></i>${summary.incoming || 0} Incoming</span></div>
-                    <div class="col-auto"><span class="badge bg-danger"><i class="fas fa-phone-slash me-1"></i>${summary.missed || 0} Missed</span></div>
+                    <div class="col-auto"><span class="badge bg-danger"><i class="fas fa-phone-slash me-1"></i>${summary.missed || 0} Not Answered</span></div>
                     <div class="col-auto"><span class="badge bg-secondary"><i class="fas fa-clock me-1"></i>${totalMins}m ${totalSecs}s Total</span></div>
                     <div class="col-auto"><span class="badge bg-info"><i class="fas fa-user-tie me-1"></i>${summary.staff_involved || 0} Staff</span></div>
                 `;
@@ -2003,7 +2003,7 @@ class CRMLeadEditor {
                             <div class="mt-1">
                                 <span class="badge bg-success badge-sm">${s.outgoing} Out</span>
                                 <span class="badge bg-primary badge-sm">${s.incoming} In</span>
-                                <span class="badge bg-danger badge-sm">${s.missed} Miss</span>
+                                <span class="badge bg-danger badge-sm">${s.missed} Not Ans</span>
                             </div>
                             <div class="text-muted mt-1">${s.total_calls} calls &middot; ${dur}m</div>
                         </div>`;
@@ -2035,10 +2035,16 @@ class CRMLeadEditor {
                     const durationStr = call.duration_seconds > 0 ? `${mins}m ${secs}s` : '-';
                     
                     let typeBadge = '';
+                    const src = (call.source || '').toLowerCase();
+                    const isOutbound = call.call_type === 'OUTGOING' || call.direction === 'outbound' || src === 'softphone' || src === 'dialer' || src === 'direct' || src === 'in_app_pstn' || src === 'myoperator';
                     switch(call.call_type) {
                         case 'OUTGOING': typeBadge = '<span class="badge bg-success"><i class="fas fa-arrow-up me-1"></i>Out</span>'; break;
                         case 'INCOMING': typeBadge = '<span class="badge bg-primary"><i class="fas fa-arrow-down me-1"></i>In</span>'; break;
-                        case 'MISSED': typeBadge = '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Missed</span>'; break;
+                        case 'MISSED': 
+                            typeBadge = isOutbound
+                                ? '<span class="badge bg-danger" title="Customer did not pick up"><i class="fas fa-phone-slash me-1"></i>Not Answered</span>'
+                                : '<span class="badge" style="background:#b91c1c;color:#fff;" title="Staff did not answer incoming call"><i class="fas fa-phone-slash me-1"></i>Missed by Staff</span>'; 
+                            break;
                         case 'REJECTED': typeBadge = '<span class="badge bg-warning text-dark"><i class="fas fa-ban me-1"></i>Rejected</span>'; break;
                         default: typeBadge = `<span class="badge bg-secondary">${call.call_type}</span>`;
                     }

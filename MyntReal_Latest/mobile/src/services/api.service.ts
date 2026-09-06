@@ -9,9 +9,7 @@ import { Preferences } from '@capacitor/preferences';
 import { networkRuntime } from '../runtime';
 import { APP_CONFIG } from '../config/app.config';
 
-// DC Protocol: Use centralized configuration from APP_CONFIG
-const API_BASE = APP_CONFIG.API_BASE_URL;
-const MEDIA_BASE = APP_CONFIG.MEDIA_BASE_URL;
+// DC Protocol: Use centralized dynamic configuration from APP_CONFIG
 
 const RETRY_STATUS_CODES = [408, 429, 500, 502, 503, 504];
 const MAX_RETRIES = 3;
@@ -99,7 +97,7 @@ class ApiService {
   }
 
   getBaseUrl(): string {
-    return API_BASE;
+    return APP_CONFIG.API_BASE_URL;
   }
 
   getMediaUrl(path: string | null | undefined): string {
@@ -107,10 +105,11 @@ class ApiService {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return path;
     }
+    const mediaBase = APP_CONFIG.MEDIA_BASE_URL;
     if (path.startsWith('/')) {
-      return MEDIA_BASE + path;
+      return mediaBase + path;
     }
-    return MEDIA_BASE + '/' + path;
+    return mediaBase + '/' + path;
   }
 
   // DC_SESSION_EXPIRY_001: Session expiration handling for journey resilience
@@ -207,7 +206,8 @@ class ApiService {
       if (!normalizedEndpoint.startsWith('/')) {
         normalizedEndpoint = '/' + normalizedEndpoint;
       }
-      const targetUrl = `${API_BASE}${normalizedEndpoint}`;
+      const baseUrl = this.getBaseUrl();
+      const targetUrl = `${baseUrl}${normalizedEndpoint}`;
 
       let response: Response;
       try {
@@ -313,7 +313,8 @@ class ApiService {
 
   async getPublic<T>(endpoint: string): Promise<ApiResponse<T>> {
     try {
-      const url = `${API_BASE}${endpoint}`;
+      const baseUrl = this.getBaseUrl();
+      const url = `${baseUrl}${endpoint}`;
       const response = await fetch(url, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
@@ -449,11 +450,14 @@ class ApiService {
 
   // Location heartbeat
   // DC_GPS_BODY_FIX_001: Send as JSON body instead of query params
+  // Phase 6 Step 1: Support client_observation_id
   async sendLocationHeartbeat(
     latitude: number,
     longitude: number,
     accuracy_m: number,
-    battery_percentage?: number
+    battery_percentage?: number,
+    client_observation_id?: string,
+    timestamp?: string | number
   ): Promise<ApiResponse<any>> {
     const bodyData: Record<string, any> = {
       latitude,
@@ -464,6 +468,14 @@ class ApiService {
     
     if (battery_percentage !== undefined) {
       bodyData.battery_percentage = battery_percentage;
+    }
+
+    if (client_observation_id) {
+      bodyData.client_observation_id = client_observation_id;
+    }
+
+    if (timestamp !== undefined) {
+      bodyData.timestamp = timestamp;
     }
     
     return this.post('/staff/attendance/location/update', bodyData);
@@ -485,6 +497,7 @@ class ApiService {
       altitude?: number;
       speed?: number;
       heading?: number;
+      client_observation_id?: string;
     };
     gps_enabled: boolean;
     gps_permission_denied: boolean;
@@ -505,6 +518,7 @@ class ApiService {
         altitude?: number;
         speed?: number;
         heading?: number;
+        client_observation_id?: string;
       };
       notes?: string;
     }
@@ -524,9 +538,13 @@ class ApiService {
         heading?: number;
         battery_percentage?: number;
         address?: string;
+        client_observation_id?: string;
+        timestamp?: string | number;
       };
       speed_kmh?: number;
       battery_percentage?: number;
+      client_observation_id?: string;
+      timestamp?: string | number;
     }
   ): Promise<ApiResponse<any>> {
     return this.post(`/staff/journeys/${journeyId}/heartbeat`, params);

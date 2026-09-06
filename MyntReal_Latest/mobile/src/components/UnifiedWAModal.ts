@@ -248,7 +248,7 @@ class UnifiedWAModal {
       this.showFeedback('Dispatching via WhatsApp Cloud API...', 'info');
 
       try {
-        const leadTargetId = leadId && leadId !== 'new' ? leadId : 'direct';
+        const leadTargetId = (leadId && leadId !== 'new' && !isNaN(Number(leadId))) ? Number(leadId) : 0;
         const response = await apiService.post<any>(`/whatsapp-config/crm-lead-send/${leadTargetId}`, {
           phone: cleanPhone,
           custom_message: msg,
@@ -281,9 +281,9 @@ class UnifiedWAModal {
       return;
     }
 
-    // Mode 2: Scan WhatsApp (Common Number on Port 5002)
+    // Mode 2: Scan WhatsApp (Common Number)
     if (sendBtnLabel) sendBtnLabel.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sending via Common Bot...';
-    this.showFeedback('Connecting to Common Scan WhatsApp Bot on Port 5002...', 'info');
+    this.showFeedback('Connecting to WhatsApp Bot Gateway...', 'info');
 
     try {
       const response = await apiService.post<any>('/whatsapp/send-message', {
