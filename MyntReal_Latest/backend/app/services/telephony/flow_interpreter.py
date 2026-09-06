@@ -78,9 +78,12 @@ class CallFlowInterpreter:
         elif len(clean_dest_digits) > 10 and not clean_dest_digits.startswith('91'):
             clean_dest_digits = f"91{clean_dest_digits[-10:]}"
 
+        clean_dest = f"+{clean_dest_digits}" if clean_dest_digits else called_str
+
         clean_caller_id = "".join([c for c in (getattr(settings, 'PLIVO_DEFAULT_CALLER_ID', None) or os.getenv("PLIVO_DEFAULT_CALLER_ID", "918031728899")) if c.isdigit()])
         if not clean_caller_id:
             clean_caller_id = "918031728899"
+        outbound_caller_id = f"+{clean_caller_id}" if not clean_caller_id.startswith('+') else clean_caller_id
 
         domain = base_api_url if (base_api_url and "localhost" not in base_api_url and "127.0.0.1" not in base_api_url) else "https://www.myntreal.com"
         rec_cb = f"{domain}/api/v1/telephony/plivo/recording-callback"

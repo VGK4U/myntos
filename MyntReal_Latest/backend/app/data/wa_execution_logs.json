@@ -1,5 +1,34 @@
 [
   {
+    "id": "log_50112713",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "06 Sep 2026, 07:00:02 PM IST",
+    "iso_timestamp": "2026-09-06T19:00:02.212653",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 10,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 10,
+      "created": 0,
+      "updated": 10,
+      "skipped": 0,
+      "followups_created": 4
+    }
+  },
+  {
     "id": "log_2bd10aae",
     "job_id": "missed_call_ack",
     "job_name": "Instant Missed Call Auto-ACK",

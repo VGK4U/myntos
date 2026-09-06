@@ -107,6 +107,8 @@ else:
             "keepalives_count": 5,
         }
 
+        engine = create_engine(
+            settings.DATABASE_URL,
             pool_size=15,
             max_overflow=15,
             pool_timeout=30,

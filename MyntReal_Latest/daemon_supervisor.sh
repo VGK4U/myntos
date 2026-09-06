@@ -52,7 +52,7 @@ run_backend() {
         fi
         echo "[$(date)] Starting FastAPI Backend on port 8000..." >> "$LOG_DIR/backend.log"
         cd "$PROJECT_DIR/backend"
-        "$PYTHON_BIN" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload >> "$LOG_DIR/backend.log" 2>&1 || true
+        "$PYTHON_BIN" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 >> "$LOG_DIR/backend.log" 2>&1 || true
         echo "[$(date)] FastAPI Backend exited. Restarting in 2s..." >> "$LOG_DIR/backend.log"
         sleep 2
     done

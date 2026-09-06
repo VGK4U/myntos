@@ -8,7 +8,7 @@ do_not_call is a lead STATUS value — filterable and manager-changeable.
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, and_, text
+from sqlalchemy import func, or_, and_, text, case
 from typing import Optional, List, Dict
 from datetime import datetime, timedelta
 import pytz
@@ -132,22 +132,23 @@ async def _push_dialer_ws(user_ref: str, payload: dict) -> None:
             logger.warning("[DC_DIALER_WS] Queue full for user_ref=%s — dropping same-worker push", user_ref)
 
 # DC_DIALER: Statuses that permanently disqualify a lead from the dialer queue
-# NOTE: 'lost' is handled separately — lost leads re-enter after 60 days (_LOST_REENTRY_DAYS)
+# NOTE: 'lost' and 'not_interested' re-enter after 20 days (_LOST_REENTRY_DAYS)
 DIALER_EXCLUDE_STATUSES = {'won', 'completed', 'do_not_call'}
-_LOST_REENTRY_DAYS = 60
+DIALER_LOST_STATUSES = {'lost', 'not_interested', 'not interested', 'not interest'}
+_LOST_REENTRY_DAYS = 20
 
 
 def _dialer_active_filter(now: datetime):
     """DC_LOST_REENTRY: Returns a SQLAlchemy condition for dialer-eligible leads.
     - Won / completed / do_not_call: permanently excluded.
-    - Lost: excluded for 60 days from lost_at, then re-enters the queue.
+    - Lost / Not Interested: excluded for 20 days from lost_at / last_contact / updated_at, then re-enters the queue.
     """
     cutoff = now - timedelta(days=_LOST_REENTRY_DAYS)
     return and_(
-        ~CRMLead.status.in_(DIALER_EXCLUDE_STATUSES),
+        ~func.lower(func.coalesce(CRMLead.status, '')).in_(DIALER_EXCLUDE_STATUSES),
         or_(
-            CRMLead.status != 'lost',
-            and_(CRMLead.lost_at.isnot(None), CRMLead.lost_at < cutoff),
+            ~func.lower(func.coalesce(CRMLead.status, '')).in_(DIALER_LOST_STATUSES),
+            func.coalesce(CRMLead.lost_at, CRMLead.last_contact_date, CRMLead.updated_at, CRMLead.created_at) < cutoff,
         ),
     )
 
@@ -494,30 +495,121 @@ def _needs_second_contact(lead) -> bool:
     return (get_ist_now() - lead.last_contact_date).days >= 3
 
 
+def _is_lost_or_not_interested(lead) -> bool:
+    s = (lead.status or '').strip().lower()
+    return s in DIALER_LOST_STATUSES
+
+
+def _is_backlog_not_connected(lead) -> bool:
+    """Lead has been contacted/attempted before but not connected, and idle for >= 20 days."""
+    if _is_lost_or_not_interested(lead):
+        return False
+    if (lead.status or '').strip().lower() in DIALER_EXCLUDE_STATUSES:
+        return False
+    last_touch = lead.last_contact_date or lead.updated_at or lead.created_at
+    if not last_touch:
+        return False
+    days_idle = (get_ist_now() - last_touch).days
+    return days_idle >= 20
+
+
 def _queue_priority(lead) -> int:
-    """Lower = higher priority."""
-    if _is_overdue(lead):
+    """
+    Option A Priority Hierarchy (Lower = higher priority):
+    1. Fresh New Inbound Leads (status in 'new'/'fresh', uncontacted) -> instant speed-to-lead
+    2. Today's Scheduled Callbacks (next_followup_date is today)
+    3. Overdue Follow-ups (next_followup_date < today)
+    4. 2nd Contact / In-Progress Re-engagements (status = 'contacted', >3 days idle)
+    5. Old Backlog / Not Connected (>= 20 days idle)
+    6. Lost / Not Interested (Re-entry pool after 20 days cooldown)
+    7. All Other Active Leads
+    """
+    status_lower = (lead.status or '').strip().lower()
+
+    # Tier 1: Fresh New Inbound Leads (Uncontacted / New)
+    if status_lower in ('new', 'fresh') and not lead.last_contact_date:
         return 1
+
+    # Tier 2: Today's Scheduled Callbacks
     if _is_due_today(lead):
         return 2
-    if lead.status == 'new':
+
+    # Tier 3: Overdue Follow-ups
+    if _is_overdue(lead):
         return 3
+
+    # Tier 4: 2nd Contact / Re-engagement (3-19 days idle)
     if _needs_second_contact(lead):
         return 4
-    return 5
+
+    # Tier 5: Old Backlog / Not Connected (>= 20 days idle)
+    if _is_backlog_not_connected(lead):
+        return 5
+
+    # Tier 6: Lost / Not Interested (Re-entry pool after 20 days)
+    if _is_lost_or_not_interested(lead):
+        return 6
+
+    return 7
+
+
+_SAFE_EPOCH = datetime(1970, 1, 1)
+
+
+def _safe_ts(dt: Optional[datetime], default_val: float = 0.0) -> float:
+    """Safe POSIX seconds calculator that works cross-platform without platform year range limits."""
+    if not dt:
+        return default_val
+    try:
+        if getattr(dt, 'tzinfo', None):
+            dt = dt.replace(tzinfo=None)
+        return (dt - _SAFE_EPOCH).total_seconds()
+    except Exception:
+        return default_val
+
+
+def _lead_subsort_key(lead, tier: int) -> float:
+    """
+    Secondary sort key within each tier:
+    - Tier 1 (New Leads): Newest created first (created_at DESC)
+    - Tier 2 (Due Today): Earliest scheduled callback first (next_followup_date ASC)
+    - Tier 3 (Overdue): Most recent overdue first (next_followup_date DESC)
+    - Tier 4 (2nd Contact): Longest waiting first (last_contact_date ASC)
+    - Tier 5 (Old Backlog): Longest idle first (last_contact_date / updated_at ASC)
+    - Tier 6 (Lost / Not Interested): Longest since lost first (lost_at / updated_at ASC)
+    """
+    if tier == 1:
+        # Newest first -> negative timestamp
+        ts = _safe_ts(lead.created_at, 0.0)
+        return -ts
+    elif tier == 2:
+        # Due today: earliest time today first
+        return _safe_ts(lead.next_followup_date, 9999999999.0)
+    elif tier == 3:
+        # Overdue: most recent overdue first (yesterday before 6 months ago)
+        ts = _safe_ts(lead.next_followup_date, 0.0)
+        return -ts
+    elif tier == 4:
+        # 2nd contact: waiting longest first
+        return _safe_ts(lead.last_contact_date, 0.0)
+    elif tier in (5, 6):
+        # Rotation: oldest touched first
+        touch = lead.lost_at or lead.last_contact_date or lead.updated_at or lead.created_at
+        return _safe_ts(touch, 0.0)
+    else:
+        return _safe_ts(lead.created_at, 0.0)
 
 
 def _queue_sort_key(lead) -> tuple:
-    """Sort key: (priority, created_at) so ties broken by oldest-first."""
-    return (_queue_priority(lead), lead.created_at or datetime.min)
+    tier = _queue_priority(lead)
+    sub = _lead_subsort_key(lead, tier)
+    return (tier, sub)
 
 
 def _make_category_sort_key(cat_priority_ids: List[int]):
     """
-    DC_CAT_PRIORITY: Returns a sort key function that respects telecaller category preference.
-    Within each urgency tier (overdue/due_today/new/second_contact/upcoming), leads whose
-    category_id appears earliest in cat_priority_ids come first.
-    Leads not in the priority list are sorted after all preferred-category leads in that tier.
+    DC_CAT_PRIORITY: Respects telecaller category preference with Option A sub-sorting.
+    Within each urgency tier, preferred categories come first, then sub-sorted by tier rule.
     """
     n = len(cat_priority_ids)
 
@@ -530,7 +622,8 @@ def _make_category_sort_key(cat_priority_ids: List[int]):
                 cat_rank = n
         else:
             cat_rank = n
-        return (tier, cat_rank, lead.created_at or datetime.min)
+        sub = _lead_subsort_key(lead, tier)
+        return (tier, cat_rank, sub)
 
     return _key
 
@@ -668,10 +761,10 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
         u_exclude = a_ids | dialed_today | nmc_excluded
         u_filter = [
             CRMLead.company_id.in_(co_ids),
-            CRMLead.status.notin_(['won', 'lost', 'completed', 'do_not_call']),
+            _dialer_active_filter(_now),
             or_(
                 # DC-NEW-LEADS-UNASSIGNED-POOL-001: All 'new' status leads are universally available to all telecallers
-                CRMLead.status == 'new',
+                CRMLead.status.in_(['new', 'fresh', 'New', 'Fresh']),
                 # Truly unassigned leads
                 and_(
                     or_(
@@ -725,7 +818,10 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
 
         if u_exclude:
             u_filter.append(CRMLead.id.notin_(u_exclude))
-        u_q = db.query(CRMLead).filter(*u_filter).limit(200).all()
+        u_q = db.query(CRMLead).filter(*u_filter).order_by(
+            case((CRMLead.status.in_(['new', 'fresh', 'New', 'Fresh']), 1), else_=2),
+            CRMLead.created_at.desc()
+        ).limit(300).all()
 
         # DC_NEW_LEADS_FIX: merge and sort so new leads interleave by urgency tier,
         # with segment preference (dialer_category_priority) as secondary sort key
@@ -831,9 +927,9 @@ def _build_queue_for_mnr(user: User, db: Session) -> List[dict]:
     if company_ids:
         unassigned_filter = [
             CRMLead.company_id.in_(company_ids),
-            CRMLead.status.notin_(['won', 'lost', 'completed', 'do_not_call']),
+            _dialer_active_filter(_now),
             or_(
-                CRMLead.status == 'new',
+                CRMLead.status.in_(['new', 'fresh', 'New', 'Fresh']),
                 and_(
                     or_(
                         CRMLead.handler_type == 'unassigned',
@@ -856,7 +952,10 @@ def _build_queue_for_mnr(user: User, db: Session) -> List[dict]:
             unassigned_filter.append(CRMLead.id.notin_(dialed_today))
         if nmc_excluded:
             unassigned_filter.append(CRMLead.id.notin_(nmc_excluded))
-        unassigned_leads = db.query(CRMLead).filter(*unassigned_filter).limit(200).all()
+        unassigned_leads = db.query(CRMLead).filter(*unassigned_filter).order_by(
+            case((CRMLead.status.in_(['new', 'fresh', 'New', 'Fresh']), 1), else_=2),
+            CRMLead.created_at.desc()
+        ).limit(300).all()
 
     # DC_NEW_LEADS_FIX: Merge assigned + unassigned into one pool and sort by priority.
     all_leads = sorted(assigned_q + unassigned_leads, key=_queue_sort_key)

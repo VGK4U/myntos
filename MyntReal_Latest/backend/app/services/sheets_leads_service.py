@@ -196,18 +196,26 @@ def row_to_crm_lead(row: List[str], col_map: Dict[str, int],
     elif any(k in combined_ctx for k in ['real estate', 'property', 'plot', 'flat', 'apartment', 'villa', 'venture', 'land', 'real dreams']):
         target_company_id = 1  # Real Dreams
 
-    # Automatic Category Resolution (Solar=19, EV B2C=15, Insurance=17, Real Dreams=18, ETC Training=16)
-    target_category_id = 19
+    # Automatic Category Resolution (Company-aware)
+    co_cat_map = {
+        1: {'training': 30, 'solar': 36, 'ev_b2c': 32, 'ev_b2b': 31, 'ev_spares': 33, 'insurance': 34, 'real_dreams': 35},
+        2: {'training': 42, 'solar': 48, 'ev_b2c': 44, 'ev_b2b': 43, 'ev_spares': 45, 'insurance': 46, 'real_dreams': 47},
+        3: {'training': 3,  'solar': 6,  'ev_b2c': 2,  'ev_b2b': 1,  'ev_spares': 5,  'insurance': 7,  'real_dreams': 4},
+        4: {'training': 13, 'solar': 19, 'ev_b2c': 15, 'ev_b2b': 14, 'ev_spares': 16, 'insurance': 17, 'real_dreams': 18},
+    }
+    cat_keys = co_cat_map.get(target_company_id, co_cat_map[4])
+    target_category_id = cat_keys.get('solar', 19)
+
     if any(k in combined_ctx for k in ['etc', 'training', 'career', 'trading']):
-        target_category_id = 16  # ETC Training
+        target_category_id = cat_keys.get('training', 13)
     elif any(k in combined_ctx for k in ['solar', 'har ghar solar', 'hrs', 'sun', 'panel', 'electricity']):
-        target_category_id = 19  # Solar
+        target_category_id = cat_keys.get('solar', 19)
     elif any(k in combined_ctx for k in ['ev b2c', 'ev', 'vehicle', 'car', 'bike']):
-        target_category_id = 15  # EV B2C
+        target_category_id = cat_keys.get('ev_b2c', 15)
     elif any(k in combined_ctx for k in ['insurance', 'health', 'life', 'motor']):
-        target_category_id = 17  # Insurance
+        target_category_id = cat_keys.get('insurance', 17)
     elif any(k in combined_ctx for k in ['real estate', 'property', 'plot', 'flat', 'apartment', 'villa']):
-        target_category_id = 18  # Real Dreams
+        target_category_id = cat_keys.get('real_dreams', 18)
 
     return {
         'company_id':           target_company_id,
