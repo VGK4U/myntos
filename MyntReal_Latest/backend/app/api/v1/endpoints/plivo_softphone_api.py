@@ -112,6 +112,9 @@ def initiate_browser_outbound_call(
 
     company_id = getattr(current_user, 'base_company_id', 1) or 1
 
+    is_webrtc = payload.get("is_webrtc", False)
+    dispatch_provider_call = payload.get("dispatch_provider_call", not is_webrtc)
+
     # Use VoIPCallService to coordinate session creation, validation, and CRM audit log
     try:
         session = VoIPCallService.initiate_in_app_call(
@@ -119,7 +122,8 @@ def initiate_browser_outbound_call(
             current_user=current_user,
             customer_phone=destination_phone,
             lead_id=lead_id,
-            provider_name="plivo"
+            provider_name="plivo",
+            dispatch_provider_call=dispatch_provider_call
         )
     except Exception as e:
         logger.warning(f"[VOIP-SOFTPHONE] initiate_in_app_call error: {e}")

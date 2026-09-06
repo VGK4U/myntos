@@ -107,16 +107,20 @@ else:
             "keepalives_count": 5,
         }
 
-        engine = create_engine(
-            _db_url_str,
-            pool_pre_ping=True,
-            pool_size=10,
-            max_overflow=10,
+            pool_size=15,
+            max_overflow=15,
             pool_timeout=30,
-            pool_recycle=1800,
+            pool_recycle=300,
             pool_use_lifo=True,
             pool_reset_on_return='rollback',
-            connect_args=_connect_args,
+            connect_args={
+                "connect_timeout": 15,
+                "sslmode": "require",
+                "keepalives": 1,
+                "keepalives_idle": 30,
+                "keepalives_interval": 10,
+                "keepalives_count": 3,
+            },
             echo=False
         )
 

@@ -1482,7 +1482,7 @@ export class LoginPage {
       const result = await Promise.race([
         authService.loginWithPassword(userId, password, this.selectedPortal),
         new Promise<{ success: boolean; error?: string }>(r => 
-          setTimeout(() => r({ success: false, error: 'Login request timed out. Please check your network connection.' }), 15000)
+          setTimeout(() => r({ success: false, error: 'Login request timed out. Please check your network connection.' }), 30000)
         )
       ]);
 

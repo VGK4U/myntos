@@ -5078,6 +5078,8 @@ def update_credit_overdue_status():
         updated_count = AccountsCreditService.update_overdue_status(db)
         logger.info(f"✅ DC_CREDIT_001: Updated {updated_count} items to OVERDUE status")
     except Exception as e:
+        logger.error(f"❌ DC_CREDIT_001 error: {e}")
+    finally:
         db.close()
 
 

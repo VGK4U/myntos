@@ -366,22 +366,22 @@ class ApiService {
 
   // Staff Authentication
   async staffLogin(employeeId: string, password: string): Promise<ApiResponse<any>> {
-    return this.post('/staff/auth/login', { employee_id: employeeId, password });
+    return this.request('POST', '/staff/auth/login', { employee_id: employeeId, password }, false, false, 15000);
   }
 
   // MNR Authentication
   async mnrLogin(username: string, password: string): Promise<ApiResponse<any>> {
-    return this.post('/auth/login', { username: username, password });
+    return this.request('POST', '/auth/login', { username: username, password }, false, false, 15000);
   }
 
   // Partner Authentication
   async partnerLogin(partnerCode: string, password: string): Promise<ApiResponse<any>> {
-    return this.post('/partner/auth/login', { partner_code: partnerCode, password });
+    return this.request('POST', '/partner/auth/login', { partner_code: partnerCode, password }, false, false, 15000);
   }
 
   // VGK Authentication
   async vgkLogin(identifier: string, password: string): Promise<ApiResponse<any>> {
-    return this.post('/vgk/auth/login', { identifier, password });
+    return this.request('POST', '/vgk/auth/login', { identifier, password }, false, false, 15000);
   }
 
   // Format base64 to data URL (DC_PHOTO_VALIDATION_001)

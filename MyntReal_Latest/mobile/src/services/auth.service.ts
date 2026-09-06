@@ -286,9 +286,9 @@ class AuthService {
       };
       await this.saveAuthState();
 
-      // Fetch and store menu settings for Staff portal
+      // Fetch and store menu settings for Staff portal in background
       if (portal === 'staff') {
-        await this.fetchAndSaveMenuSettings();
+        this.fetchAndSaveMenuSettings().catch(err => console.warn('[DC_AUTH] Menu settings background fetch error:', err));
       }
 
       // DC_SESSION_EXPIRY_001: Reset session expired state after successful login
