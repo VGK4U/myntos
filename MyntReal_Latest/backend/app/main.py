@@ -16559,12 +16559,15 @@ async def serve_staff_progress():
 
 
 @app.get("/staff/softphone", include_in_schema=False)
+@app.get("/staff/softphone-center", include_in_schema=False)
+@app.get("/staff/incoming-calls", include_in_schema=False)
 @app.get("/staff/calling", include_in_schema=False)
+@app.get("/staff/calling-page", include_in_schema=False)
 @app.get("/staff/softphone-hub", include_in_schema=False)
-async def serve_staff_softphone_hub():
+async def serve_staff_softphone_center():
     from fastapi.responses import FileResponse
     _workspace_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    target_file = os.path.join(_workspace_root, "frontend", "staff_softphone_hub.html")
+    target_file = os.path.join(_workspace_root, "frontend", "staff_incoming_calls.html")
     if os.path.exists(target_file):
         return FileResponse(target_file, media_type="text/html")
     raise HTTPException(status_code=404, detail="Softphone page not found")

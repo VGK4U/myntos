@@ -602,6 +602,11 @@
                         <i class="fa-solid fa-users me-1"></i> My Team Calls
                     </button>
                 </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="tab-contacts" onclick="switchScope('contacts')">
+                        <i class="fa-solid fa-address-book text-info me-1"></i> Contacts & Assigned Leads
+                    </button>
+                </li>
                 <li class="nav-item" id="tab-overall-wrapper" style="display: none;">
                     <button class="nav-link restricted-tab" id="tab-overall" onclick="switchScope('overall')">
                         <i class="fa-solid fa-shield-halved me-1"></i> Overall Calls <span class="badge bg-warning text-dark ms-1">Admin / Leadership</span>
@@ -977,6 +982,59 @@
                 </div>
             </div>
             </div> <!-- /tab-pane-history -->
+
+            <!-- ================= TAB 6: CONTACTS & ASSIGNED LEADS PANE ================= -->
+            <div id="tab-pane-contacts" style="display: none;">
+                <div class="card bg-dark border border-secondary rounded-3 p-3 shadow-sm" style="background: #1e293b !important;">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2 pb-2 border-bottom border-secondary">
+                        <div class="d-flex align-items-center gap-2">
+                            <h6 class="fw-bold text-white mb-0 fs-6">
+                                <i class="fa-solid fa-address-book text-info me-2"></i>My Contacts & Assigned Leads 
+                                <span class="badge bg-primary rounded-pill ms-1" id="contactsTotalCount">0</span>
+                            </h6>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="btn-group btn-group-sm" role="group" id="contactsSourceGroup">
+                                <button type="button" class="btn btn-primary btn-sm px-3 fw-semibold active" id="btnContactAll" onclick="setContactSourceFilter('all')">
+                                    All Contacts
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-3 fw-semibold" id="btnContactLeads" onclick="setContactSourceFilter('leads')">
+                                    <i class="fa-solid fa-user-tag text-info me-1"></i> Assigned Leads
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-3 fw-semibold" id="btnContactSynced" onclick="setContactSourceFilter('synced_contacts')">
+                                    <i class="fa-solid fa-mobile-screen-button text-success me-1"></i> Synced Mobile Contacts
+                                </button>
+                            </div>
+                            <button class="btn btn-outline-primary btn-sm" onclick="loadMyContacts(1)">
+                                <i class="fa-solid fa-rotate me-1"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Live Search Input for Contacts -->
+                    <div class="input-group input-group-sm mb-3">
+                        <span class="input-group-text bg-dark text-muted border-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" id="myContactsSearch" class="form-control bg-dark text-white border-secondary" placeholder="Search contact name, phone number, city, or status..." oninput="searchMyContactsDebounced(this.value)">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('myContactsSearch').value=''; searchMyContactsDebounced('');" title="Clear Search">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <!-- Scrollable Contacts Grid / List -->
+                    <div id="myContactsList" style="max-height: 520px; overflow-y: auto; padding-right: 4px;">
+                        <div class="text-center py-5 text-muted">
+                            <div class="spinner-border spinner-border-sm text-info mb-2"></div>
+                            <div>Loading your assigned leads & synced mobile contacts...</div>
+                        </div>
+                    </div>
+
+                    <!-- Contacts Pagination -->
+                    <div class="d-flex justify-content-between align-items-center pt-3 mt-2 border-top border-secondary">
+                        <div class="small text-muted" id="contacts-pagination-info">Showing 0 contacts</div>
+                        <div class="d-flex gap-1" id="contacts-pagination-controls"></div>
+                    </div>
+                </div>
+            </div> <!-- /tab-pane-contacts -->
         </div>
     </div>
 
@@ -1110,7 +1168,7 @@
 
             // Initial Scope Resolution: Default is #dialer (or hash from URL)
             const initialScope = (window.location.hash.replace('#', '') || 'dialer').toLowerCase();
-            const validScopes = ['dialer', 'my', 'new_calls', 'team', 'overall'];
+            const validScopes = ['dialer', 'my', 'new_calls', 'team', 'overall', 'contacts'];
             const targetScope = validScopes.includes(initialScope) ? initialScope : 'dialer';
             switchScope(targetScope);
 
@@ -1125,7 +1183,16 @@
                 const { phone, name, sessionId } = e.detail || {};
                 isCallInProgress = true;
                 activeCallInfo = { phone: phone || 'Unknown', name: name || 'Contact Lead', sessionId };
-                startHubCallUI(phone, name, sessionId, false);
+                startHubCallUI(phone, name, sessionId, 'dialing');
+                updateGlobalActiveCallPill();
+            });
+
+            // 1b. Call ringing on destination device
+            document.addEventListener('plivo:call-ringing', (e) => {
+                const { phone, name, sessionId } = e.detail || {};
+                isCallInProgress = true;
+                activeCallInfo = { phone: phone || activeCallInfo.phone, name: name || activeCallInfo.name, sessionId };
+                startHubCallUI(activeCallInfo.phone, activeCallInfo.name, sessionId, 'ringing');
                 updateGlobalActiveCallPill();
             });
 
@@ -1134,7 +1201,7 @@
                 const { phone, name, sessionId } = e.detail || {};
                 isCallInProgress = true;
                 activeCallInfo = { phone: phone || activeCallInfo.phone, name: name || activeCallInfo.name, sessionId };
-                startHubCallUI(activeCallInfo.phone, activeCallInfo.name, sessionId, true);
+                startHubCallUI(activeCallInfo.phone, activeCallInfo.name, sessionId, 'connected');
                 updateGlobalActiveCallPill();
             });
 
@@ -1163,16 +1230,25 @@
 
             const dialerPane = document.getElementById('tab-pane-dialer');
             const historyPane = document.getElementById('tab-pane-history');
+            const contactsPane = document.getElementById('tab-pane-contacts');
 
             if (scope === 'dialer') {
                 if (dialerPane) dialerPane.style.display = 'block';
                 if (historyPane) historyPane.style.display = 'none';
+                if (contactsPane) contactsPane.style.display = 'none';
                 updateGlobalActiveCallPill();
                 loadRecentCallsDialer();
                 loadTodayDialerMetrics();
+            } else if (scope === 'contacts') {
+                if (dialerPane) dialerPane.style.display = 'none';
+                if (historyPane) historyPane.style.display = 'none';
+                if (contactsPane) contactsPane.style.display = 'block';
+                updateGlobalActiveCallPill();
+                loadMyContacts(1);
             } else {
                 if (dialerPane) dialerPane.style.display = 'none';
                 if (historyPane) historyPane.style.display = 'block';
+                if (contactsPane) contactsPane.style.display = 'none';
                 updateGlobalActiveCallPill();
 
                 const teamCol = document.getElementById('team-filter-col');
@@ -1260,7 +1336,7 @@
             }
         }
 
-        function startHubCallUI(phone, name, sessionId = null, isConnected = false) {
+        function startHubCallUI(phone, name, sessionId = null, callState = false) {
             const keypadView = document.getElementById('hubKeypadView');
             const inCallView = document.getElementById('hubInCallView');
             if (keypadView) keypadView.style.display = 'none';
@@ -1278,27 +1354,38 @@
             isHubHeld = false;
             updateHubButtonStates();
 
-            clearInterval(hubTimerInterval);
-            hubTimerInterval = null;
-
             const timerEl = document.getElementById('hubInCallTimer');
-            if (isConnected) {
-                hubCallSeconds = 0;
-                updateHubTimerDisplay();
-                hubTimerInterval = setInterval(() => {
-                    hubCallSeconds++;
+
+            if (callState === true || callState === 'connected') {
+                if (timerEl) timerEl.className = 'badge bg-success px-3 py-1 mb-3';
+                if (!hubTimerInterval) {
+                    hubCallSeconds = 0;
                     updateHubTimerDisplay();
-                    const globalTimer = document.getElementById('globalCallTimer');
-                    if (globalTimer) {
-                        const m = Math.floor(hubCallSeconds / 60).toString().padStart(2, '0');
-                        const s = (hubCallSeconds % 60).toString().padStart(2, '0');
-                        globalTimer.textContent = `${m}:${s}`;
-                    }
-                }, 1000);
+                    hubTimerInterval = setInterval(() => {
+                        hubCallSeconds++;
+                        updateHubTimerDisplay();
+                        const globalTimer = document.getElementById('globalCallTimer');
+                        if (globalTimer) {
+                            const m = Math.floor(hubCallSeconds / 60).toString().padStart(2, '0');
+                            const s = (hubCallSeconds % 60).toString().padStart(2, '0');
+                            globalTimer.textContent = `${m}:${s}`;
+                        }
+                    }, 1000);
+                }
+            } else if (callState === 'ringing') {
+                clearInterval(hubTimerInterval);
+                hubTimerInterval = null;
+                if (timerEl) {
+                    timerEl.className = 'badge bg-info px-3 py-1 mb-3';
+                    timerEl.innerHTML = `<i class="fa-solid fa-bell fa-bounce me-1 text-white"></i> Ringing...`;
+                }
             } else {
+                clearInterval(hubTimerInterval);
+                hubTimerInterval = null;
                 hubCallSeconds = 0;
                 if (timerEl) {
-                    timerEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-1 text-warning"></i> Calling...`;
+                    timerEl.className = 'badge bg-warning text-dark px-3 py-1 mb-3';
+                    timerEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-1"></i> Calling...`;
                 }
             }
         }
@@ -2510,6 +2597,131 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+        }
+
+        // ── CONTACTS & ASSIGNED LEADS TAB LOGIC ─────────────────────────────
+        let currentContactSource = 'all';
+        let currentContactsPage = 1;
+        let contactsDebounceTimer = null;
+
+        function setContactSourceFilter(source) {
+            currentContactSource = source;
+            ['All', 'Leads', 'Synced'].forEach(key => {
+                const btn = document.getElementById('btnContact' + key);
+                if (btn) {
+                    const match = (key === 'All' && source === 'all') || 
+                                  (key === 'Leads' && source === 'leads') || 
+                                  (key === 'Synced' && source === 'synced_contacts');
+                    btn.className = match ? 'btn btn-primary btn-sm px-3 fw-semibold active' : 'btn btn-outline-secondary btn-sm px-3 fw-semibold';
+                }
+            });
+            loadMyContacts(1);
+        }
+
+        function searchMyContactsDebounced(q) {
+            clearTimeout(contactsDebounceTimer);
+            contactsDebounceTimer = setTimeout(() => {
+                loadMyContacts(1);
+            }, 250);
+        }
+
+        async function loadMyContacts(page = 1) {
+            currentContactsPage = page;
+            const list = document.getElementById('myContactsList');
+            if (list) list.innerHTML = `<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm text-info mb-2"></div><div>Fetching your contacts...</div></div>`;
+
+            const q = (document.getElementById('myContactsSearch')?.value || '').trim();
+            let url = `/api/v1/telephony/my-contacts?page=${page}&page_size=30&source_type=${currentContactSource}`;
+            if (q) url += `&q=${encodeURIComponent(q)}`;
+
+            try {
+                const data = await staffFetch(url);
+                renderMyContacts(data);
+            } catch (err) {
+                if (list) list.innerHTML = `<div class="text-center py-4 text-danger small"><i class="fa-solid fa-triangle-exclamation me-1"></i> Failed to load contacts: ${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        function renderMyContacts(data) {
+            const list = document.getElementById('myContactsList');
+            if (!list) return;
+
+            const contacts = data.contacts || [];
+            const countBadge = document.getElementById('contactsTotalCount');
+            if (countBadge) countBadge.textContent = data.total || contacts.length;
+
+            if (contacts.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-5 text-muted">
+                        <i class="fa-solid fa-address-book fa-2x mb-2 opacity-50"></i>
+                        <div class="fw-bold text-light">No Contacts Found</div>
+                        <div class="small">No assigned CRM leads or synced mobile contacts matched your filter.</div>
+                    </div>
+                `;
+                document.getElementById('contacts-pagination-info').innerText = 'Showing 0 contacts';
+                document.getElementById('contacts-pagination-controls').innerHTML = '';
+                return;
+            }
+
+            list.innerHTML = contacts.map(c => {
+                const name = escapeHtml(c.name || 'Contact');
+                const maskedPhone = escapeHtml(c.masked_phone || c.phone || '—');
+                const cleanPhone = c.raw_phone || '';
+                const leadId = c.lead_id || '';
+                const initialLetter = (name.replace(/[^a-zA-Z]/g, '') || 'C').slice(0, 2).toUpperCase();
+
+                const isLead = c.source_type === 'assigned_lead';
+                const sourceBadge = isLead
+                    ? `<span class="badge bg-primary bg-opacity-25 text-info border border-primary border-opacity-50 px-2 py-0.5" style="font-size:10.5px;"><i class="fa-solid fa-user-tag me-1"></i>${escapeHtml(c.badge)}</span>`
+                    : `<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-2 py-0.5" style="font-size:10.5px;"><i class="fa-solid fa-mobile-screen-button me-1"></i>${escapeHtml(c.badge)}</span>`;
+
+                return `
+                    <div class="contact-item-dark">
+                        <div class="d-flex align-items-center gap-3 flex-grow-1 min-w-0">
+                            <div class="call-avatar-dark flex-shrink-0" style="width: 44px; height: 44px; font-size: 16px; margin-bottom: 0; box-shadow: none; animation: none; background: ${isLead ? 'linear-gradient(135deg, #0284c7, #0369a1)' : 'linear-gradient(135deg, #059669, #047857)'};">
+                                ${initialLetter}
+                            </div>
+                            <div class="min-w-0 flex-grow-1">
+                                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                    <span class="fw-bold text-white fs-6" style="cursor:pointer;" onclick="openCustomerHistory('${cleanPhone}', '${name.replace(/'/g, "\\'")}')">${name}</span>
+                                    ${sourceBadge}
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="phone-masked font-monospace"><i class="fa-solid fa-phone me-1 text-muted" style="font-size:10px;"></i>${maskedPhone}</span>
+                                    <span class="text-muted small">${escapeHtml(c.subtitle || '')}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 ms-3 flex-shrink-0">
+                            <button class="btn btn-outline-info btn-sm rounded-circle p-2" onclick="openCustomerHistory('${cleanPhone}', '${name.replace(/'/g, "\\'")}')" title="View Customer History" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                            </button>
+                            <button class="btn btn-success btn-sm rounded-circle p-2 shadow-sm" onclick="dialFromHub('${cleanPhone}', '${name.replace(/'/g, "\\'")}', '${leadId}')" title="Call ${name}" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
+                                <i class="fa-solid fa-phone"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Update Contacts Pagination
+            const total = data.total || contacts.length;
+            const pageSize = data.page_size || 30;
+            const totalPages = Math.ceil(total / pageSize);
+            const startIdx = (data.page - 1) * pageSize + 1;
+            const endIdx = Math.min(data.page * pageSize, total);
+
+            document.getElementById('contacts-pagination-info').innerText = `Showing ${startIdx}–${endIdx} of ${total} contacts`;
+
+            let pagHtml = '';
+            if (totalPages > 1) {
+                pagHtml += `<button class="btn btn-sm btn-outline-secondary ${data.page === 1 ? 'disabled' : ''}" onclick="loadMyContacts(${data.page - 1})"><i class="fa-solid fa-chevron-left"></i></button>`;
+                for (let p = Math.max(1, data.page - 2); p <= Math.min(totalPages, data.page + 2); p++) {
+                    pagHtml += `<button class="btn btn-sm ${p === data.page ? 'btn-primary' : 'btn-outline-secondary'}" onclick="loadMyContacts(${p})">${p}</button>`;
+                }
+                pagHtml += `<button class="btn btn-sm btn-outline-secondary ${data.page === totalPages ? 'disabled' : ''}" onclick="loadMyContacts(${data.page + 1})"><i class="fa-solid fa-chevron-right"></i></button>`;
+            }
+            document.getElementById('contacts-pagination-controls').innerHTML = pagHtml;
         }
     </script>
 </body>

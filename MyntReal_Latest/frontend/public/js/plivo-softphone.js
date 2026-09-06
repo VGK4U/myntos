@@ -133,9 +133,7 @@
                 const audioConstraints = {
                     echoCancellation: true,
                     noiseSuppression: true,
-                    autoGainControl: true,
-                    channelCount: 1,
-                    sampleRate: 48000
+                    autoGainControl: true
                 };
 
                 if (typeof window.Plivo !== 'undefined') {
@@ -153,6 +151,17 @@
                             audioConstraints: audioConstraints
                         });
                     }
+
+                    // Attach remote audio element for Plivo WebRTC media stream negotiation
+                    const audioEl = document.getElementById('plivoRemoteAudio');
+                    if (audioEl && this.client) {
+                        if (typeof this.client.setAudioElement === 'function') {
+                            this.client.setAudioElement(audioEl);
+                        } else if (typeof this.client.setAudioElementOption === 'function') {
+                            this.client.setAudioElementOption({ remoteAudioId: 'plivoRemoteAudio' });
+                        }
+                    }
+
                     this.bindClientEvents();
                 } else {
                     this.setupMockClient();
@@ -207,6 +216,12 @@
             });
             this.client.on('onIncomingCallCanceled', () => {
                 this.dismissIncomingCallBanner();
+            });
+            this.client.on('onCallRinging', (callInfo) => {
+                this.onCallRinging(callInfo);
+            });
+            this.client.on('onRinging', (callInfo) => {
+                this.onCallRinging(callInfo);
             });
             this.client.on('onCallAnswered', (callInfo) => {
                 this.onCallConnected(callInfo);
@@ -775,14 +790,14 @@
                     });
                     if (resp.ok) {
                         const data = await resp.json();
-                        if (data && data.is_terminal) {
+                        if (data && data.success && data.is_terminal === true) {
                             console.log(`[PLIVO-SOFTPHONE] Carrier disconnected call ${sessionId} (Status: ${data.status}, Duration: ${data.duration_seconds}s)`);
                             this.stopSessionWatcher();
                             this.onCallTerminated();
                         }
                     }
                 } catch (_) {}
-            }, 2000);
+            }, 3000);
         }
 
         stopSessionWatcher() {
@@ -817,11 +832,21 @@
             }, 15000);
         }
 
-        stopHeartbeatLoop() {
-            if (this.heartbeatInterval) {
-                clearInterval(this.heartbeatInterval);
-                this.heartbeatInterval = null;
+        onCallRinging(callInfo) {
+            console.log('[PLIVO-SOFTPHONE] Destination phone ringing...');
+            const statusLabel = document.getElementById('callStatusLabel');
+            if (statusLabel) {
+                statusLabel.textContent = 'Ringing...';
+                statusLabel.className = 'badge bg-info px-2 py-1';
             }
+            this.syncCallEvent('ringing');
+            document.dispatchEvent(new CustomEvent('plivo:call-ringing', {
+                detail: {
+                    phone: this.activeDestination || callInfo?.destination || '',
+                    name: this.activeLeadName || 'Contact Lead',
+                    sessionId: this.activeSessionId
+                }
+            }));
         }
 
         onMediaConnected(callInfo) {

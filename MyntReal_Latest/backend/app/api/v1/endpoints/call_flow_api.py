@@ -7,6 +7,7 @@ Created: Sep 2026
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, Body, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func, and_, or_, not_
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta, timezone
 import os
@@ -457,22 +458,33 @@ async def plivo_inbound_answer(
     or when an outbound click-to-call is answered by the customer.
     Returns dynamic Plivo XML.
     """
-    form_data = await request.form()
-    caller_phone = form_data.get("From", "")
-    called_did = form_data.get("To", "")
-    call_uuid = form_data.get("CallUUID", "")
-    session_id_param = request.query_params.get("session_id") or form_data.get("session_id") or form_data.get("X-PH-Call-Session-ID", "")
+    try:
+        form_data = await request.form()
+        caller_phone = form_data.get("From", "")
+        called_did = form_data.get("To", "")
+        call_uuid = form_data.get("CallUUID", "")
+        session_id_param = request.query_params.get("session_id") or form_data.get("session_id") or form_data.get("X-PH-Call-Session-ID", "")
 
-    base_url = _get_public_base_url(request)
-    xml_str = CallFlowInterpreter.handle_inbound_call(
-        db=db,
-        caller_phone=caller_phone,
-        called_did=called_did,
-        provider_call_id=call_uuid,
-        base_api_url=base_url,
-        call_session_id=session_id_param
-    )
-    return Response(content=xml_str, media_type="application/xml")
+        base_url = _get_public_base_url(request)
+        xml_str = CallFlowInterpreter.handle_inbound_call(
+            db=db,
+            caller_phone=caller_phone,
+            called_did=called_did,
+            provider_call_id=call_uuid,
+            base_api_url=base_url,
+            call_session_id=session_id_param
+        )
+        return Response(content=xml_str, media_type="application/xml")
+    except Exception as e:
+        logger.error(f"[PLIVO-INBOUND-EXCEPTION] Exception in plivo_inbound_answer: {e}")
+        fallback_caller_id = getattr(settings, 'PLIVO_DEFAULT_CALLER_ID', None) or os.getenv("PLIVO_DEFAULT_CALLER_ID", "+918031728899")
+        fallback_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Dial callerId="{fallback_caller_id}">
+        <Number>{called_did if called_did else "+918875551666"}</Number>
+    </Dial>
+</Response>"""
+        return Response(content=fallback_xml, media_type="application/xml")
 
 
 @router.post("/plivo/flow-step")
@@ -791,6 +803,7 @@ async def plivo_application_hangup(
         called = payload.get("To") or "+918031728899"
         dir_str = (payload.get("Direction") or "inbound").lower()
         new_sid = session_id_param or (f"vcs_in_{call_uuid[-12:]}" if call_uuid else f"vcs_{int(datetime.now().timestamp())}")
+        is_active_initial = effective_status in ("answered", "connected", "ringing", "dialing", "in-progress")
         session = VoIPCallSession(
             company_id=1,
             call_session_id=new_sid,
@@ -801,10 +814,11 @@ async def plivo_application_hangup(
             destination_number=called,
             direction=dir_str,
             call_method=CallMethodEnum.IN_APP_PSTN.value,
-            status=target_state,
+            status=CallStateEnum.ANSWERED.value if effective_status in ("answered", "connected") else target_state,
             duration_seconds=duration_sec,
             started_at=get_indian_time(),
-            ended_at=get_indian_time()
+            answered_at=get_indian_time() if effective_status in ("answered", "connected") else None,
+            ended_at=None if is_active_initial else get_indian_time()
         )
         db.add(session)
         db.commit()
@@ -812,12 +826,20 @@ async def plivo_application_hangup(
         logger.info(f"[PLIVO-HANGUP] Created fallback VoIPCallSession #{session.id} ({new_sid}) for {caller}")
 
     # 5. Idempotent state updates
-    if duration_sec > 0 or effective_status in ("completed", "answered"):
-        session.status = CallStateEnum.ENDED.value
+    if effective_status in ("answered", "connected"):
+        session.status = CallStateEnum.ANSWERED.value
+        session.ended_at = None
         if not session.answered_at:
-            session.answered_at = session.started_at or get_indian_time()
-    elif not CallStateEnum(session.status).is_terminal():
+            session.answered_at = get_indian_time()
+    elif effective_status in ("completed", "hangup", "cancelled", "failed", "busy", "no-answer", "rejected"):
         session.status = target_state
+        if not session.ended_at:
+            session.ended_at = get_indian_time()
+    elif not CallStateEnum(session.status).is_terminal():
+        if effective_status not in ("in-progress", "ringing", "dialing"):
+            session.status = target_state
+            if not session.ended_at:
+                session.ended_at = get_indian_time()
 
     if duration_sec > (session.duration_seconds or 0):
         session.duration_seconds = duration_sec
@@ -832,7 +854,7 @@ async def plivo_application_hangup(
     if hangup_cause_name or hangup_source:
         session.termination_reason = f"{hangup_cause_name} ({hangup_source})" if hangup_source else hangup_cause_name
 
-    if not session.ended_at:
+    if CallStateEnum(session.status).is_terminal() and not session.ended_at:
         session.ended_at = get_indian_time()
 
     # Link OperatorCall record if present
@@ -1015,48 +1037,19 @@ def get_call_session_status(
         return {
             "success": False,
             "call_session_id": session_id,
-            "status": "ended",
-            "is_terminal": True,
+            "status": "dialing",
+            "is_terminal": False,
             "duration_seconds": 0
         }
 
-    status_val = session.status or "ended"
-    is_terminal = CallStateEnum(status_val).is_terminal() if status_val in CallStateEnum._value2member_map_ else (status_val in ("ended", "completed", "failed", "busy", "no-answer", "rejected"))
-
-    # Active Live Plivo Carrier Query to detect connection/disconnection in real-time
-    if not is_terminal and session.provider_call_id and not session.provider_call_id.startswith("plivo_vcs_"):
-        auth_id = getattr(settings, 'PLIVO_AUTH_ID', None)
-        auth_token = getattr(settings, 'PLIVO_AUTH_TOKEN', None)
-        if auth_id and auth_token and not auth_id.startswith("mock_"):
-            try:
-                import requests as _req
-                p_url = f"https://api.plivo.com/v1/Account/{auth_id}/Call/{session.provider_call_id}/"
-                p_resp = _req.get(p_url, auth=(auth_id, auth_token), timeout=2.5)
-                if p_resp.status_code == 200:
-                    p_data = p_resp.json()
-                    end_t = p_data.get("end_time")
-                    call_st = (p_data.get("call_state") or p_data.get("call_status") or "").upper()
-                    if end_t or call_st in ("COMPLETED", "HANGUP", "FAILED", "BUSY", "NO_ANSWER"):
-                        is_terminal = True
-                        status_val = "ended"
-                        session.status = CallStateEnum.ENDED.value
-                        dur = int(p_data.get("call_duration") or p_data.get("billed_duration") or 0)
-                        session.duration_seconds = dur
-                        session.ended_at = get_indian_time()
-                        if dur > 0 and not session.answered_at:
-                            session.answered_at = session.started_at or get_indian_time()
-                        hang_cause = p_data.get("hangup_cause_name") or "Normal Hangup"
-                        hang_src = p_data.get("hangup_source") or "Carrier"
-                        session.termination_reason = f"{hang_cause} ({hang_src})"
-                        db.commit()
-                    elif call_st in ("ANSWER", "ANSWERED", "IN-PROGRESS", "CONNECTED"):
-                        status_val = "answered"
-                        session.status = CallStateEnum.CONNECTED.value
-                        if not session.answered_at:
-                            session.answered_at = get_indian_time()
-                        db.commit()
-            except Exception as pe:
-                logger.warning(f"[POLLER-PLIVO-CHECK] Failed live query: {pe}")
+    status_val = session.status or "dialing"
+    if status_val in ("answered", "connected", "ringing", "dialing", "in-progress"):
+        is_terminal = False
+    else:
+        is_terminal = (
+            session.ended_at is not None or 
+            (CallStateEnum(status_val).is_terminal() if status_val in CallStateEnum._value2member_map_ else (status_val in ("ended", "completed", "failed", "busy", "no-answer", "rejected", "hangup", "canceled")))
+        )
 
     # Compute live duration
     dur_sec = session.duration_seconds or 0
@@ -1282,6 +1275,120 @@ def get_downline_team_members(
     }
 
 
+@router.get("/my-contacts")
+def list_my_contacts(
+    q: Optional[str] = Query(None),
+    source_type: Optional[str] = Query("all", description="Scope: 'all', 'leads', 'synced_contacts'"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(30, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Returns contacts strictly scoped to the logged-in staff member:
+    1. Assigned CRM Leads (where handler_id == staff.id or assigned to company)
+    2. Synced Mobile Contacts (uploaded from this staff member's mobile phone)
+    """
+    from app.models.crm import CRMLead
+    from app.models.call_tracking import StaffCallLog
+    from sqlalchemy import or_, and_, desc
+
+    user_id_str = str(current_user.id)
+    company_id = getattr(current_user, 'base_company_id', 1) or getattr(current_user, 'company_id', 1) or 1
+    term = f"%{q.strip()}%" if q and q.strip() else None
+
+    contacts_map = {}  # key: clean 10-digit phone number
+
+    # 1. Fetch Assigned CRM Leads
+    if source_type in ("all", "leads"):
+        lead_query = db.query(CRMLead).filter(
+            or_(
+                CRMLead.handler_id == user_id_str,
+                and_(CRMLead.handler_type == 'staff', CRMLead.handler_id == user_id_str),
+                CRMLead.company_id == company_id
+            )
+        )
+        if term:
+            lead_query = lead_query.filter(
+                or_(
+                    CRMLead.name.ilike(term),
+                    CRMLead.phone.ilike(term),
+                    CRMLead.alternate_phone.ilike(term),
+                    CRMLead.email.ilike(term),
+                    CRMLead.city.ilike(term)
+                )
+            )
+        leads = lead_query.order_by(desc(CRMLead.id)).limit(200).all()
+        for l in leads:
+            p_raw = l.phone or l.alternate_phone
+            clean_p = re.sub(r'\D', '', p_raw or '')[-10:]
+            if clean_p and len(clean_p) == 10 and clean_p not in contacts_map:
+                contacts_map[clean_p] = {
+                    "id": f"lead_{l.id}",
+                    "lead_id": l.id,
+                    "name": (l.name or "Assigned Lead").strip(),
+                    "phone": f"+91 {clean_p[:2]}••••{clean_p[-4:]}",
+                    "raw_phone": clean_p,
+                    "masked_phone": f"+91 {clean_p[:2]}••••{clean_p[-4:]}",
+                    "source_type": "assigned_lead",
+                    "badge": "Assigned CRM Lead",
+                    "subtitle": f"{l.source or 'CRM'} • {l.status or 'Active'}" + (f" • {l.city}" if getattr(l, 'city', None) else ""),
+                    "city": getattr(l, 'city', None)
+                }
+
+    # 2. Fetch Synced Mobile Contacts (from StaffCallLog) for this staff user
+    if source_type in ("all", "synced_contacts"):
+        scl_query = db.query(
+            StaffCallLog.phone_number,
+            StaffCallLog.contact_name,
+            StaffCallLog.matched_lead_id
+        ).filter(
+            StaffCallLog.staff_id == current_user.id,
+            StaffCallLog.contact_name.isnot(None),
+            StaffCallLog.contact_name != '',
+            ~StaffCallLog.contact_name.ilike('%unknown%')
+        )
+        if term:
+            scl_query = scl_query.filter(
+                or_(
+                    StaffCallLog.contact_name.ilike(term),
+                    StaffCallLog.phone_number.ilike(term)
+                )
+            )
+        scls = scl_query.order_by(desc(StaffCallLog.id)).limit(300).all()
+        for row in scls:
+            clean_p = re.sub(r'\D', '', row.phone_number or '')[-10:]
+            if clean_p and len(clean_p) == 10 and clean_p not in contacts_map:
+                contacts_map[clean_p] = {
+                    "id": f"scl_{clean_p}",
+                    "lead_id": row.matched_lead_id,
+                    "name": row.contact_name.strip(),
+                    "phone": f"+91 {clean_p[:2]}••••{clean_p[-4:]}",
+                    "raw_phone": clean_p,
+                    "masked_phone": f"+91 {clean_p[:2]}••••{clean_p[-4:]}",
+                    "source_type": "synced_mobile",
+                    "badge": "Synced Mobile Contact",
+                    "subtitle": "Personal Phone Sync",
+                    "city": None
+                }
+
+    all_contacts = list(contacts_map.values())
+    total_count = len(all_contacts)
+
+    # Paginate
+    start_idx = (page - 1) * page_size
+    end_idx = start_idx + page_size
+    page_items = all_contacts[start_idx:end_idx]
+
+    return {
+        "success": True,
+        "total": total_count,
+        "page": page,
+        "page_size": page_size,
+        "contacts": page_items
+    }
+
+
 @router.get("/incoming-calls")
 @router.get("/call-history")
 def list_incoming_calls(
@@ -1350,7 +1457,6 @@ def list_incoming_calls(
         if staff_id:
             query = query.filter(VoIPCallSession.operator_id == staff_id)
     elif scope_clean in ("new_calls", "new"):
-        from sqlalchemy import func, and_, or_, not_
         # 1. Incoming calls only
         query = query.filter(VoIPCallSession.direction == "inbound")
         # 2. Never connected with live staff agent during inbound
@@ -1388,19 +1494,14 @@ def list_incoming_calls(
         if staff_id and staff_id in downline_ids:
             query = query.filter(VoIPCallSession.operator_id == staff_id)
         else:
-            if is_overall_authorized:
-                query = query.filter(
-                    (VoIPCallSession.operator_id.in_(downline_ids)) | (VoIPCallSession.operator_id.is_(None))
-                )
-            else:
-                query = query.filter(VoIPCallSession.operator_id.in_(downline_ids))
+            query = query.filter(VoIPCallSession.operator_id.in_(downline_ids))
     else: # default: 'my'
-        if is_overall_authorized:
-            query = query.filter(
-                (VoIPCallSession.operator_id == current_user.id) | (VoIPCallSession.operator_id.is_(None))
+        query = query.filter(
+            or_(
+                VoIPCallSession.operator_id == current_user.id,
+                VoIPCallSession.operator_user_ref == emp_code
             )
-        else:
-            query = query.filter(VoIPCallSession.operator_id == current_user.id)
+        )
 
     # 2. Date Filtering with Enforced 7-Day Window
     now_ist = datetime.now(IST)

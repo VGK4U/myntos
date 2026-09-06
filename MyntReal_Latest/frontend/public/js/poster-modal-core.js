@@ -348,21 +348,72 @@
   }
 
   function resolvePosterMediaUrl(path) {
-    if (!path || path === 'None' || path === 'null') return '';
-    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
-      return path;
+    if (!path || path === 'None' || path === 'null' || path === 'undefined') return '';
+    let p = String(path).trim();
+    if (p.startsWith('http://') || p.startsWith('https://') || p.startsWith('data:')) {
+      return p;
     }
-    if (path.startsWith('/storage/')) {
-      return window.location.origin + path;
+    p = p.replace(/^\/+/, '');
+    if (p.startsWith('private/')) {
+      p = p.replace(/^private\//, '');
     }
-    if (path.startsWith('storage/')) {
-      return window.location.origin + '/' + path;
+    if (p.startsWith('storage/')) {
+      return window.location.origin + '/' + p;
     }
-    if (path.startsWith('/')) {
-      return window.location.origin + '/storage' + path;
-    }
-    return window.location.origin + '/storage/' + path;
+    return window.location.origin + '/storage/' + p;
   }
+
+  function loadPhotoWithFallback(imgEl, avatarEl, candidatePaths, initialsText) {
+    if (!imgEl) return;
+    const validPaths = (candidatePaths || [])
+      .map(p => (p && p !== 'None' && p !== 'null' && p !== 'undefined') ? String(p).trim() : '')
+      .filter(Boolean);
+    const uniqueCandidates = [...new Set(validPaths)];
+    let currentIndex = 0;
+
+    function tryNextCandidate() {
+      if (currentIndex >= uniqueCandidates.length) {
+        imgEl.style.display = 'none';
+        if (avatarEl) {
+          if (initialsText) avatarEl.textContent = initialsText;
+          avatarEl.style.display = 'flex';
+        }
+        return;
+      }
+      const currentPath = uniqueCandidates[currentIndex];
+      const resolvedUrl = resolvePosterMediaUrl(currentPath);
+      if (!resolvedUrl) {
+        currentIndex++;
+        tryNextCandidate();
+        return;
+      }
+      let triedWithoutCors = false;
+      if (resolvedUrl.startsWith('http') && !resolvedUrl.includes(window.location.host)) {
+        imgEl.crossOrigin = "anonymous";
+      } else {
+        try { imgEl.removeAttribute('crossorigin'); } catch(e){}
+      }
+      imgEl.onload = () => {
+        imgEl.style.display = 'block';
+        if (avatarEl) avatarEl.style.display = 'none';
+      };
+      imgEl.onerror = () => {
+        if (!triedWithoutCors) {
+          triedWithoutCors = true;
+          try { imgEl.removeAttribute('crossOrigin'); } catch(e){}
+          imgEl.src = resolvedUrl;
+          return;
+        }
+        currentIndex++;
+        tryNextCandidate();
+      };
+      const finalSrc = resolvedUrl.includes('?') ? resolvedUrl : (resolvedUrl + '?t=' + Date.now());
+      imgEl.src = finalSrc;
+    }
+
+    tryNextCandidate();
+  }
+
 
   function closePosterModal() {
     const el = document.getElementById('posterModal');
@@ -418,44 +469,16 @@
       const initials = (m.partner_name || '').trim().split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase();
       if (prevAvatar) prevAvatar.textContent = initials;
 
-      function getValidPhotoPath(obj) {
-        if (!obj) return '';
-        const fields = [obj.passport_photo, obj.logo_path, obj.profile_image, obj.photo_url, obj.avatar_url, obj.id_card_photo, obj.photo];
-        for (const f of fields) {
-          if (f && f !== 'None' && f !== 'null' && f !== 'undefined' && String(f).trim() !== '') {
-            return f;
-          }
-        }
-        return '';
-      }
-      const photoPath = getValidPhotoPath(m);
-      const resolvedUrl = resolvePosterMediaUrl(photoPath);
-      if (resolvedUrl && prevImg) {
-        let triedWithoutCors = false;
-        if (resolvedUrl.startsWith('http') && !resolvedUrl.includes(window.location.host)) {
-          prevImg.crossOrigin = "anonymous";
-        } else {
-          prevImg.removeAttribute('crossorigin');
-        }
-        prevImg.onload = () => {
-          prevImg.style.display = 'block';
-          if (prevAvatar) prevAvatar.style.display = 'none';
-        };
-        prevImg.onerror = () => {
-          if (!triedWithoutCors) {
-            triedWithoutCors = true;
-            try { prevImg.removeAttribute('crossOrigin'); } catch(err){}
-            prevImg.src = resolvedUrl;
-            return;
-          }
-          prevImg.style.display = 'none';
-          if (prevAvatar) prevAvatar.style.display = 'flex';
-        };
-        prevImg.src = resolvedUrl.includes('?') ? resolvedUrl : (resolvedUrl + '?t=' + Date.now());
-      } else {
-        if (prevImg) prevImg.style.display = 'none';
-        if (prevAvatar) prevAvatar.style.display = 'flex';
-      }
+      const memberCandidates = [
+        m.logo_path,
+        m.passport_photo,
+        m.profile_image,
+        m.photo_url,
+        m.avatar_url,
+        m.id_card_photo,
+        m.photo
+      ];
+      loadPhotoWithFallback(prevImg, prevAvatar, memberCandidates, initials);
 
       const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
       const targetPid = m.id || partnerId;
@@ -722,40 +745,16 @@
       const seniorImg = document.getElementById('prevSeniorImg');
       const seniorAvatar = document.getElementById('prevSeniorAvatar');
       if (seniorImg) {
-        const seniorPhotoPath = getValidPhotoPath({
-          passport_photo: m.senior_photo,
-          logo_path: m.senior_passport_photo || m.senior_logo_path,
-          profile_image: m.senior_profile_image,
-          photo_url: m.senior_photo_url,
-          avatar_url: m.senior_avatar_url
-        });
-        const resolvedSeniorUrl = resolvePosterMediaUrl(seniorPhotoPath);
-        if (resolvedSeniorUrl) {
-          let triedSeniorWithoutCors = false;
-          if (resolvedSeniorUrl.startsWith('http') && !resolvedSeniorUrl.includes(window.location.host)) {
-            seniorImg.crossOrigin = "anonymous";
-          } else {
-            seniorImg.removeAttribute('crossorigin');
-          }
-          seniorImg.onload = () => {
-            seniorImg.style.display = 'block';
-            if (seniorAvatar) seniorAvatar.style.display = 'none';
-          };
-          seniorImg.onerror = () => {
-            if (!triedSeniorWithoutCors) {
-              triedSeniorWithoutCors = true;
-              try { seniorImg.removeAttribute('crossOrigin'); } catch(err){}
-              seniorImg.src = resolvedSeniorUrl;
-              return;
-            }
-            seniorImg.style.display = 'none';
-            if (seniorAvatar) seniorAvatar.style.display = 'flex';
-          };
-          seniorImg.src = resolvedSeniorUrl.includes('?') ? resolvedSeniorUrl : (resolvedSeniorUrl + '?t=' + Date.now());
-        } else {
-          seniorImg.style.display = 'none';
-          if (seniorAvatar) seniorAvatar.style.display = 'flex';
-        }
+        const seniorInitials = (seniorName || 'SR').trim().split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase();
+        const seniorCandidates = [
+          m.senior_logo_path,
+          m.senior_photo,
+          m.senior_passport_photo,
+          m.senior_profile_image,
+          m.senior_photo_url,
+          m.senior_avatar_url
+        ];
+        loadPhotoWithFallback(seniorImg, seniorAvatar, seniorCandidates, seniorInitials);
       }
 
       if (document.getElementById('postThemePreset')) document.getElementById('postThemePreset').value = 'celebration_graphic';

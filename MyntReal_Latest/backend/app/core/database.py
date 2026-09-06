@@ -109,9 +109,9 @@ else:
 
         engine = create_engine(
             settings.DATABASE_URL,
-            pool_size=15,
-            max_overflow=15,
-            pool_timeout=30,
+            pool_size=30,
+            max_overflow=30,
+            pool_timeout=15,
             pool_recycle=300,
             pool_use_lifo=True,
             pool_reset_on_return='rollback',

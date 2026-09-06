@@ -25,56 +25,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <style>
-    /* Critical CSS for faster initial load */
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #1a1a2e;
-      color: white;
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-    }
-    #app {
-      min-height: 100vh;
-    }
-    /* DC_FOUC_FIX_001: landscape-warning MUST be hidden before external CSS loads.
-       Without this, the div renders as display:block during the 229KB CSS load window
-       causing a permanent visible "Please Rotate" text on every startup. */
-    .landscape-warning { display: none; }
-    .splash {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-    }
-    .splash-logo {
-      width: 80px;
-      height: 80px;
-      border-radius: 20px;
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .splash-text {
-      font-size: 24px;
-      font-weight: 700;
-    }
-    .splash-loader {
-      width: 40px;
-      height: 40px;
-      border: 3px solid rgba(255,255,255,0.2);
-      border-top-color: #10b981;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-  </style>
+
   <script type="module" crossorigin src="./assets/index-ycjmFgD0.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/vendor-capacitor-core-zwN_Y1fq.js">
   <link rel="modulepreload" crossorigin href="./assets/vendor-capacitor-plugins-DTPsYLMi.js">
@@ -141,7 +92,7 @@
       // Cancel the timer if the module loads successfully
       window.__splashGuardTimer = splashTimer;
     })();
-  </script>
+  </script>
   <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
   <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 </body>

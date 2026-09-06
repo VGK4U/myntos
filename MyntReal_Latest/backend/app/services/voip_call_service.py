@@ -9,7 +9,7 @@ import re
 import json
 import logging
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, desc
 from fastapi import HTTPException
@@ -109,11 +109,12 @@ class VoIPCallService:
                 raise HTTPException(status_code=403, detail="Unauthorized: Lead belongs to a different company organization")
 
         # 4. Concurrency & Double-Dial Protection
-        # Check if this operator already has an active ongoing call to prevent rapid double-clicks
-        active_cutoff = get_indian_time()
+        # Check if this operator already has an active ongoing call to prevent rapid double-clicks (within last 45 seconds)
+        active_cutoff = get_indian_time() - timedelta(seconds=45)
         active_session = db.query(VoIPCallSession).filter(
             VoIPCallSession.operator_user_ref == operator_user_ref,
             VoIPCallSession.destination_number == dest_e164,
+            VoIPCallSession.created_at >= active_cutoff,
             VoIPCallSession.status.in_([
                 CallStateEnum.CREATED.value,
                 CallStateEnum.DIALING.value,

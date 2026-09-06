@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && cp -r dist/* ../frontend/public/mobile/",
+    "build": "tsc && vite build && node -e \"const fs=require('fs'); fs.cpSync('dist', '../frontend/public/mobile', {recursive: true});\"",
     "build:full": "cd ../shared/journey-core && npm install && npm run build && cd ../../mobile && tsc && vite build && cp -r dist/* ../frontend/public/mobile/",
     "preview": "vite preview",
     "cap:init": "npx cap init 'MyntReal' com.myntos.mobile --web-dir dist",

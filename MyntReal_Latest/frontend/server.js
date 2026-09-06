@@ -19996,7 +19996,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
-  } else if (url.startsWith('/staff/softphone-center') || url.startsWith('/staff/softphone-hub') || url.startsWith('/staff/incoming-calls') || url.startsWith('/staff/calling') || url.startsWith('/staff/calling-page') || url.startsWith('/staff/telephony/incoming-calls') || url.startsWith('/staff/telephony/calls')) {
+  } else if (url.startsWith('/staff/softphone-center') || url.startsWith('/staff/softphone') || url.startsWith('/staff/softphone-hub') || url.startsWith('/staff/incoming-calls') || url.startsWith('/staff/calling') || url.startsWith('/staff/calling-page') || url.startsWith('/staff/telephony/incoming-calls') || url.startsWith('/staff/telephony/calls')) {
     const filePath = path.join(__dirname, 'staff_incoming_calls.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Softphone Center not found'); return; }
