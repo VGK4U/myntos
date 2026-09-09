@@ -109,6 +109,7 @@ else:
 
         engine = create_engine(
             settings.DATABASE_URL,
+            pool_pre_ping=True,
             pool_size=30,
             max_overflow=30,
             pool_timeout=15,

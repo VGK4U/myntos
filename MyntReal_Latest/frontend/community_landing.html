@@ -2992,8 +2992,8 @@
                     body: formData
                 });
                 
-                const json = await res.json();
-                if (!res.ok) throw new Error(json.detail || 'Registration failed');
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(json.detail || json.message || (json.errors && json.errors[0]) || 'Registration failed. Please check form details.');
 
                 if (json.success) {
                     // Toggle views
