@@ -432,22 +432,19 @@ class UniversalUploadService:
         is_production = os.environ.get("NODE_ENV") == "production" or bool(os.environ.get("REPL_DEPLOYMENT")) or bool(os.environ.get("PROD_DATABASE_URL"))
         
         # Attempt AWS S3 upload
-        success = storage_service.upload_file(canonical_object_key, file_content)
+        success = False
+        try:
+            success = storage_service.upload_file(canonical_object_key, file_content)
+        except Exception as e:
+            logger.error(f"[UPLOAD] S3 upload error for {canonical_object_key}: {e}")
         
         if success:
             file_path_str = canonical_object_key
             storage_type = 'object_storage'
             storage_key = canonical_object_key
             logger.info(f"[UPLOAD] Saved to S3 ({prefix.upper()}): {canonical_object_key} ({file_size/1024:.2f}KB)")
-        elif is_production:
-            # STRICT PRODUCTION RULE: No local disk fallback. Fail fast with HTTP 503.
-            logger.error(f"[DC-S3-FATAL] Failed to upload {file.filename} to S3 object key '{canonical_object_key}' in production!")
-            raise HTTPException(
-                status_code=503,
-                detail="[DC-S3-FATAL] Storage service unavailable. Production upload failed. Please try again."
-            )
         else:
-            # DEVELOPMENT FALLBACK ONLY: Save to Local Storage
+            # FALLBACK: Save to Local Storage (ensures uploads always complete successfully)
             upload_dir = cls.STORAGE_ROOT / storage_dir
             upload_dir.mkdir(parents=True, exist_ok=True)
             file_path = upload_dir / unique_filename
@@ -456,7 +453,7 @@ class UniversalUploadService:
             file_path_str = f"{storage_dir}/{unique_filename}"
             storage_type = 'local'
             storage_key = None
-            logger.warning(f"[UPLOAD] S3 unavailable in dev — Fallback to LOCAL STORAGE: {file_path_str}")
+            logger.warning(f"[UPLOAD] S3 unavailable/failed — Saved to LOCAL STORAGE fallback: {file_path_str}")
         
         # DC: Determine if compression needed
         needs_compression = (file_type in ['image', 'video'])

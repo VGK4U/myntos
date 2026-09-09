@@ -17,14 +17,17 @@ class S3StorageService:
             if self.bucket_name == "None":
                 self.bucket_name = None
             
+            from botocore.config import Config
             region = os.environ.get("AWS_REGION", "ap-south-2")
             endpoint_url = f"https://s3.{region}.amazonaws.com"
+            s3_config = Config(connect_timeout=4, read_timeout=8, retries={'max_attempts': 2})
             self.s3_client = boto3.client(
                 's3',
                 aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
                 aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
                 region_name=region,
-                endpoint_url=endpoint_url
+                endpoint_url=endpoint_url,
+                config=s3_config
             )
             if not self.bucket_name or self.bucket_name == 'None':
                 logger.error("❌ AWS_S3_BUCKET_NAME not found in environment variables")

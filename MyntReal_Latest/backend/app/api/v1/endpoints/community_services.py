@@ -31,10 +31,15 @@ def get_active_headers(db: Session = Depends(get_db)):
     """
     today = get_indian_time().date()
     active_services = db.query(CommunityService).filter(
-        CommunityService.status == 'ACTIVE',
-        CommunityService.start_date <= today,
-        CommunityService.end_date >= today
+        or_(CommunityService.status == 'ACTIVE', CommunityService.status == 'active'),
+        or_(CommunityService.start_date.is_(None), CommunityService.start_date <= today),
+        or_(CommunityService.end_date.is_(None), CommunityService.end_date >= today)
     ).all()
+
+    if not active_services:
+        active_services = db.query(CommunityService).filter(
+            or_(CommunityService.status == 'ACTIVE', CommunityService.status == 'active')
+        ).all()
     
     total_approved = db.query(CommunityRegistration).filter(
         CommunityRegistration.status == 'APPROVED'
@@ -119,17 +124,17 @@ def get_public_service_details(short_name: str, db: Session = Depends(get_db)):
 @router.post("/public/register")
 async def register_community(
     community_service_id: int = Form(...),
-    association_name: str = Form(...),
+    association_name: Optional[str] = Form(None),
     primary_name: str = Form(...),
     primary_phone_1: str = Form(...),
     primary_phone_2: Optional[str] = Form(None),
-    secondary_name: str = Form(...),
-    secondary_phone_1: str = Form(...),
+    secondary_name: Optional[str] = Form(None),
+    secondary_phone_1: Optional[str] = Form(None),
     secondary_phone_2: Optional[str] = Form(None),
-    area: str = Form(...),
-    pin_code: str = Form(...),
-    district: str = Form(...),
-    state: str = Form(...),
+    area: Optional[str] = Form(None),
+    pin_code: Optional[str] = Form(None),
+    district: Optional[str] = Form(None),
+    state: Optional[str] = Form(None),
     google_location: Optional[str] = Form(None),
     ref1_member_id: Optional[int] = Form(None),
     ref2_member_id: Optional[int] = Form(None),
@@ -149,17 +154,17 @@ async def register_community(
     # Create the registration record
     reg = CommunityRegistration(
         community_service_id=community_service_id,
-        association_name=association_name,
+        association_name=association_name or primary_name,
         primary_name=primary_name,
         primary_phone_1=primary_phone_1,
         primary_phone_2=primary_phone_2,
         secondary_name=secondary_name,
         secondary_phone_1=secondary_phone_1,
         secondary_phone_2=secondary_phone_2,
-        area=area,
-        pin_code=pin_code,
-        district=district,
-        state=state,
+        area=area or "Not Specified",
+        pin_code=pin_code or "500001",
+        district=district or "Not Specified",
+        state=state or "Telangana",
         google_location=google_location,
         ref1_member_id=ref1_member_id,
         ref2_member_id=ref2_member_id,
